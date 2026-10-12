@@ -1,0 +1,88 @@
+# CI for every pull request into main and every push to main (DevOps design §3.2).
+# One workflow, one job per part of the repo. The `changes` job looks at which folders changed and the
+# other jobs run only when their folder changed. A job skipped this way still reports success, so it
+# can be a required check without blocking PRs that don't touch its folder.
+# Jobs: frontend (KAN-4). Backend comes with KAN-6.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read # paths-filter reads the PR's changed files through the API
+
+concurrency:
+  # A new push to the same PR cancels the run that is still going; runs on main always finish.
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+
+  frontend:
+    name: frontend
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # The commands and their order come from frontend guideline 11 §5.
+      - name: Install (npm ci)
+        run: npm ci --no-audit --no-fund
+
+      - name: Format (Prettier)
+        run: npm run format:check
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Types (tsc)
+        run: npm run typecheck
+
+      - name: Tests (Vitest)
+        run: npm run test
+
+      - name: Generated API client matches openapi/tsolve-api.yaml
+        run: |
+          npm run generate:api
+          if ! git diff --exit-code -- src/shared/api/generated || [ -n "$(git status --porcelain -- src/shared/api/generated)" ]; then
+            echo "::error::src/shared/api/generated is out of date. Run 'npm run generate:api' in frontend/ and commit the result."
+            exit 1
+          fi
+
+      - name: Build (Vite)
+        run: npm run build
