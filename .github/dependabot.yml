@@ -6,6 +6,21 @@
 # docker for /backend with the backend Dockerfile (KAN-9).
 version: 2
 updates:
+  # ---- repo root: the git hook tools (husky, lint-staged, commitlint) ----
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Asia/Ho_Chi_Minh
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      repo-tools:
+        update-types: [minor, patch]
+
   # ---- frontend: npm packages ----
   - package-ecosystem: npm
     directory: /frontend

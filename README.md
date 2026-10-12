@@ -35,6 +35,25 @@ Project documents (SRS, design, ADRs, reports) are not in this repo; they live i
 
 JDK 21, Maven 3.9+, Node 24 LTS (`frontend/.nvmrc`), Docker Desktop (for PostgreSQL).
 
+## Git hooks (one-time setup)
+
+Every commit is checked on your machine before it is created; CI runs the same checks on the PR.
+
+```bash
+# in the repo root, once after cloning (PowerShell, Git Bash or the IntelliJ / VS Code terminal)
+winget install --id Gitleaks.Gitleaks   # secret scanner; open a new terminal afterwards
+npm ci                                  # installs husky, lint-staged, commitlint and turns the hooks on
+cd frontend && npm ci                   # the hook uses the frontend's own Prettier and ESLint
+```
+
+| Hook | What it does |
+|---|---|
+| pre-commit | gitleaks scans the staged changes for secrets; ESLint `--fix` and Prettier fix the staged `frontend/` files (generated API code is skipped) and add the fixes to the commit |
+| commit-msg | the message must be `type(scope): summary (KAN-123)`, e.g. `feat(review): add the reject popup (KAN-42)` |
+
+If a hook stops your commit, read the message, fix the cause and commit again. `git commit --no-verify`
+skips the hooks but not CI. Rules: `commitlint.config.mjs`, `lint-staged.config.mjs`, `.husky/`.
+
 ## Run locally
 
 ```bash
@@ -75,13 +94,14 @@ cd frontend && npm run format:check && npm run lint && npm run typecheck && npm 
 
 Trunk-based: `main` is always deployable and protected; every change goes through a short-lived branch and a pull request.
 
-- **Branch:** `<type>/<JIRA-KEY>-<module>-<short-description>`, e.g. `feature/TS-42-solution-draft-endpoint`.
+- **Branch:** `<type>/<JIRA-KEY>-<module>-<short-description>`, e.g. `feature/KAN-42-solution-draft-endpoint`.
   Types: `feature/`, `fix/`, `hotfix/`, `chore/`, `test/`.
-- **Commit and PR title:** Conventional Commits with the Jira key, e.g. `feat(solution): add draft creation endpoint (TS-42)`.
+- **Commit and PR title:** Conventional Commits with the Jira key, e.g. `feat(solution): add draft creation endpoint (KAN-42)`
+  (checked by the commit-msg hook and in CI).
 - **Merge:** squash and merge after CI is green and a CODEOWNER approves; the branch is deleted after merge.
 - Sync your branch with `main` at least daily. Keep PRs under ~400 changed lines.
 - Schema changes only through new Flyway migrations; never edit a merged migration.
 - Never commit secrets: `.env` files are git-ignored, only `.env.example` files are committed.
 - Only `PUBLISHED` solutions appear in default reuse results.
 
-`TS` is a placeholder until the real Jira project key exists (`TS-0` = no issue yet).
+The Jira project key is `KAN` (older commits use the placeholder `TS-0`).
