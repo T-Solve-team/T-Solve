@@ -1,0 +1,35 @@
+# Who must approve a pull request (DevOps design §1.6). Every member may change any folder; this file
+# only decides whose approval is required. Each changed file needs an approval from ONE owner of the
+# last line that matches it, so a PR that changes frontend/ and backend/ needs both owners.
+#
+# Use real GitHub handles only: GitHub ignores an owner it does not know, and a path whose owners are
+# all unknown is left with no required reviewer. Fill in a commented line when its owner is decided.
+
+# ---- default (root files, docker-compose.yml, README, …): DevOps owner ----
+*                                            @trhieudev1309
+
+# ---- frontend: FE lead (guideline 02 §5) ----
+# The API spec (frontend/openapi/) is part of frontend/. A backend endpoint changes it in the same PR
+# as the backend code, so the backend owner approves that PR too.
+/frontend/                                   @trhieudev1309
+# /frontend/src/features/auth/                 @<owner-auth>
+# /frontend/src/features/my-profile/           @<owner-my-profile>
+# /frontend/src/features/users/                @<owner-users>
+# /frontend/src/features/workspace/            @<owner-workspace>
+# /frontend/src/features/jira-integration/     @<owner-jira-integration>
+# /frontend/src/features/ticket-import/        @<owner-ticket-import>
+# /frontend/src/features/tickets/              @<owner-tickets>
+# /frontend/src/features/search/               @<owner-search>
+# /frontend/src/features/review/               @<owner-review>
+# /frontend/src/features/feedback/             @<owner-feedback>
+# /frontend/src/features/knowledge-dashboard/  @<owner-knowledge-dashboard>
+# /frontend/src/features/audit-log/            @<owner-audit-log>
+
+# ---- backend: BE lead ----
+/backend/                                    @bluebearccc
+# /backend/src/main/java/vn/tsolve/<module>/   @<module-owner>
+# /backend/src/main/resources/db/migration/    @<db-owner>
+
+# ---- DevOps: infra and CI (keep these lines last) ----
+/infra/                                      @trhieudev1309
+/.github/                                    @trhieudev1309
