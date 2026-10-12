@@ -2,8 +2,7 @@
 # Minor and patch updates come grouped in one PR per folder; majors come one by one, so the owner can
 # check them first. PR titles look like "chore(deps): bump …": no Jira key, which the PR-title check
 # allows for Dependabot.
-# Ecosystems are added when their files exist: github-actions with the first workflow (KAN-4),
-# docker for /backend with the backend Dockerfile (KAN-9).
+# Ecosystems are added when their files exist: docker for /backend with the backend Dockerfile (KAN-9).
 version: 2
 updates:
   # ---- repo root: the git hook tools (husky, lint-staged, commitlint) ----
@@ -74,3 +73,18 @@ updates:
       # Moving to Spring Boot 4 is a team decision (backend baseline), not an automatic bump.
       - dependency-name: "org.springframework.boot:*"
         update-types: ["version-update:semver-major"]
+
+  # ---- GitHub Actions used by .github/workflows (pinned by commit SHA; Dependabot updates the SHA) ----
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Asia/Ho_Chi_Minh
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions:
+        update-types: [minor, patch]
