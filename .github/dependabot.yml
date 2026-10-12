@@ -1,0 +1,61 @@
+# Dependabot opens weekly update PRs (DevOps design §2, guideline 11 §5).
+# Minor and patch updates come grouped in one PR per folder; majors come one by one, so the owner can
+# check them first. PR titles look like "chore(deps): bump …": no Jira key, which the PR-title check
+# allows for Dependabot.
+# Ecosystems are added when their files exist: github-actions with the first workflow (KAN-4),
+# docker for /backend with the backend Dockerfile (KAN-9).
+version: 2
+updates:
+  # ---- frontend: npm packages ----
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Asia/Ho_Chi_Minh
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      frontend-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # TypeScript stays on ~6.0: typescript-eslint supports TS < 6.1 (FE decision log).
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+
+  # ---- frontend: the two base images in frontend/Dockerfile ----
+  - package-ecosystem: docker
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Asia/Ho_Chi_Minh
+    commit-message:
+      prefix: chore
+      include: scope
+    ignore:
+      # The Node major follows frontend/.nvmrc (24 LTS); change both together, by hand.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+
+  # ---- backend: Maven ----
+  - package-ecosystem: maven
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Asia/Ho_Chi_Minh
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      backend-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Moving to Spring Boot 4 is a team decision (backend baseline), not an automatic bump.
+      - dependency-name: "org.springframework.boot:*"
+        update-types: ["version-update:semver-major"]
