@@ -1,0 +1,31 @@
+# Editor settings for the whole repo (https://editorconfig.org). IntelliJ reads this file out of the
+# box; VS Code needs the "EditorConfig for VS Code" extension. Formatters (Prettier, Spotless) still
+# decide the final layout; this file only makes editors start from the same defaults.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Backend: Java, Maven and SQL use 4 spaces.
+[*.{java,xml,sql}]
+indent_size = 4
+
+# Caddyfiles use tabs (what `caddy fmt` writes).
+[{Caddyfile,*.Caddyfile}]
+indent_style = tab
+
+[Makefile]
+indent_style = tab
+
+# Markdown: a line ending in two spaces is a line break, so keep trailing spaces.
+[*.md]
+trim_trailing_whitespace = false
+
+# Windows scripts keep CRLF (matches .gitattributes).
+[*.{bat,cmd}]
+end_of_line = crlf
