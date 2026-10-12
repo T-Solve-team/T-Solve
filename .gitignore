@@ -1,19 +1,31 @@
-# Backend
-backend/target/
+# ---- Backend (Java / Maven) ----
+target/
+build/
+out/
 *.class
 *.log
 
-# Frontend
-frontend/node_modules/
-frontend/dist/
+# ---- Frontend (frontend/.gitignore has the rest) ----
+node_modules/
+dist/
+coverage/
 
-# IDE / OS
+# ---- Secrets: never commit them (DevOps design §6) ----
+# Real values live in GitHub Actions secrets and in the .env files on the server.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- Database dumps (they hold personal data) ----
+*.dump
+*.sql.gz
+backups/
+
+# ---- IDE / OS ----
 .idea/
 .vscode/
 *.iml
 .DS_Store
 Thumbs.db
-
-# Env
-.env
-*.env.local
