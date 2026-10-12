@@ -1,0 +1,2 @@
+# Checks the commit message format (commitlint.config.mjs): type(scope): summary (KAN-123)
+npx --no -- commitlint --edit "$1"

@@ -1,0 +1,13 @@
+# Runs before every commit (DevOps design §2). Skipping it with --no-verify does not skip CI: the same
+# checks run on the pull request.
+
+# 1. Secret scan of the staged changes. A leaked secret must be rotated, so stop it here.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks is not installed, so the staged changes cannot be scanned for secrets." >&2
+  echo "Install it once (Windows: winget install --id Gitleaks.Gitleaks), open a new terminal, commit again." >&2
+  exit 1
+fi
+gitleaks git --pre-commit --staged --redact --no-banner --verbose --log-level warn || exit 1
+
+# 2. Format and lint the staged files (lint-staged.config.mjs).
+npx --no -- lint-staged
