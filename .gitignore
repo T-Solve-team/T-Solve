@@ -27,5 +27,6 @@ backups/
 .idea/
 .vscode/
 *.iml
+.claude/settings.local.json
 .DS_Store
 Thumbs.db

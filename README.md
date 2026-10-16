@@ -72,6 +72,25 @@ npm run dev
 
 The frontend also runs without the backend (mock mode); see `frontend/README.md`.
 
+## AI context (Claude Code)
+
+`/tsolve-context [topic]` loads the requirements and design (SRS, reports, plan) into Claude Code, e.g.
+`/tsolve-context UC-30`. It converts your local copy of the Google Drive docs folder to Markdown in `<docs>/_context/`
+(`scripts/build_context.py`) and reads the project summary in `.claude/tsolve-project.md`. One-time setup:
+
+```bash
+pip install "markitdown[docx,pdf,xlsx]"
+```
+
+Then create `.claude/settings.local.json` (git-ignored) with the path of your docs folder and restart Claude Code:
+
+```json
+{
+  "env": { "TSOLVE_DOCS": "C:/path/to/SEP490_G89" },
+  "permissions": { "additionalDirectories": ["C:/path/to/SEP490_G89"] }
+}
+```
+
 ## Tests
 
 ```bash
