@@ -1,0 +1,22 @@
+harnessclaude:
+  version: "1.1.0"
+layout: monorepo
+project: T-Solve
+mode: blueprint
+language: English
+
+repos:
+  # Repos this project's modules change. Paths are relative to this folder.
+  # Empty: the repo that holds this folder. The onboard skill fills in the details.
+  # api:
+  #   path: ../api
+
+sources:
+  # Mode-specific inputs
+  # docs: ./artifacts/00-baseline/requirements.pdf
+
+iterations:
+  enabled: true
+  duration: "2"
+  start_date: "2026-10-17"
+  demo_day: Friday

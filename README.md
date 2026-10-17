@@ -91,6 +91,12 @@ Then create `.claude/settings.local.json` (git-ignored) with the path of your do
 }
 ```
 
+## AI workflow (HarnessClaude)
+
+AI-assisted work follows **HarnessClaude** (`harnessclaude/`): requirements → spec → design → tasks → code →
+independent review, enforced by hooks — no code without an approved spec. Needs [Bun](https://bun.sh).
+Read [harnessclaude/README.md](harnessclaude/README.md) before your first session.
+
 ## Tests
 
 ```bash
