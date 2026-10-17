@@ -1,12 +1,14 @@
 /**
- * Shared I/O for harnessclaude hooks — runs under both Claude Code and Cursor.
+ * Shared I/O for harnessclaude hooks — runs under Claude Code, Cursor, and Codex.
  *
  * Input:  one JSON object on stdin.
  *   Claude Code: { session_id, cwd, hook_event_name: "PreToolUse", tool_name, tool_input }
  *   Cursor:      { cursor_version, workspace_roots, hook_event_name: "preToolUse" | "beforeReadFile"
  *                  | "sessionStart", tool_name?, tool_input?, file_path?, command? }
+ *   Codex:       Claude Code's shape; edits come as tool_name "apply_patch" with the patch in
+ *                tool_input.command. Codex hooks are registered with a `--codex` argument.
  * Output: allow = exit 0 with no output. deny/ask = JSON in the shape each editor reads, exit 0.
- * A crash exits non-zero, which both editors treat as non-blocking (fail-open).
+ * A crash exits non-zero, which every editor treats as non-blocking (fail-open).
  */
 import { realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
@@ -24,6 +26,18 @@ export async function readInput(): Promise<HookInput> {
 
 export function isCursor(input: HookInput): boolean {
   return "cursor_version" in input || /^[a-z]/.test(input.hook_event_name ?? "");
+}
+
+/** Codex hooks are registered with `--codex`: Codex sends no field that tells it apart from Claude Code. */
+export function isCodex(): boolean {
+  return process.argv.includes("--codex");
+}
+
+const isPatch = (input: HookInput) => input.tool_name === "apply_patch";
+
+/** The files a Codex patch adds, updates, deletes, or moves to. */
+export function patchPaths(patch: string): string[] {
+  return [...patch.matchAll(/^\*\*\* (?:(?:Add|Update|Delete) File|Move to): (.+?)\s*$/gm)].map((m) => m[1]);
 }
 
 /** The harnessclaude workspace directory: the parent of the hooks/ directory. */
@@ -45,7 +59,7 @@ export function projectRoot(hooksDir: string): string {
 export function targetPaths(input: HookInput): string[] {
   const sources = [input.tool_input ?? {}, input];
   const keys = ["file_path", "path", "notebook_path", "target_file"];
-  const paths: string[] = [];
+  const paths: string[] = isPatch(input) ? patchPaths(input.tool_input?.command ?? "") : [];
   for (const source of sources) {
     for (const key of keys) {
       if (typeof source[key] === "string" && source[key]) paths.push(source[key]);
@@ -54,7 +68,9 @@ export function targetPaths(input: HookInput): string[] {
   return [...new Set(paths)];
 }
 
+/** The shell command the tool runs; a Codex patch is not one. */
 export function shellCommand(input: HookInput): string {
+  if (isPatch(input)) return "";
   return input.tool_input?.command ?? input.command ?? "";
 }
 
@@ -113,6 +129,11 @@ export function allow(): never {
 
 /** Block ("deny") or hand the decision to the user ("ask") with a reason the agent can act on. */
 export function decide(input: HookInput, decision: "deny" | "ask", reason: string): never {
+  // Codex runs the tool anyway when a hook answers "ask", so the user confirms by running it themselves.
+  if (decision === "ask" && isCodex()) {
+    decision = "deny";
+    reason += ` [Codex cannot ask for confirmation from a hook, so this was blocked. Show the user this message; if they approve, they run the command themselves in their own terminal — do not retry it or work around it.]`;
+  }
   if (isCursor(input)) {
     console.log(JSON.stringify({ permission: decision, user_message: reason, agent_message: reason }));
   } else {

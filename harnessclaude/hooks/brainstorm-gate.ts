@@ -16,7 +16,8 @@
  * Shell commands are checked for the files they write (lib/shell-writes.ts) the same way.
  *
  * Registered for: Claude Code PreToolUse (Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell),
- *                 Cursor preToolUse (Write|Delete|Shell).
+ *                 Cursor preToolUse (Write|Delete|Shell),
+ *                 Codex PreToolUse (Bash|apply_patch).
  */
 import { join, relative } from "node:path";
 import {
@@ -39,7 +40,13 @@ import { matchesAny, modulePaths, moduleRepoKeys } from "./lib/workspace";
 
 const CODE_OPEN = ["planned", "implementing", "evaluating"];
 /** Editor settings that register the hooks: removing them turns the gate off. */
-const EDITOR_SETTINGS = [".claude/settings.json", ".claude/settings.local.json", ".cursor/hooks.json"];
+const EDITOR_SETTINGS = [
+  ".claude/settings.json",
+  ".claude/settings.local.json",
+  ".cursor/hooks.json",
+  ".codex/hooks.json",
+  ".codex/config.toml",
+];
 
 type Module = { status?: string; currentPhase?: string };
 

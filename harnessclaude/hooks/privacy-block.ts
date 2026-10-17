@@ -4,7 +4,8 @@
  * permission prompt, so approval happens in the UI, not in the conversation.
  *
  * Registered for: Claude Code PreToolUse (Read|Edit|Write|MultiEdit|Grep|Bash|PowerShell),
- *                 Cursor beforeReadFile and preToolUse (Shell).
+ *                 Cursor beforeReadFile and preToolUse (Shell),
+ *                 Codex PreToolUse (Bash|apply_patch) — Codex cannot ask, so it blocks instead.
  */
 import { basename } from "node:path";
 import { allow, decide, readInput, shellCommand, targetPaths } from "./lib/hook-io";
