@@ -21,7 +21,8 @@ Every backend design and task follows "Backend Coding Conventions" at the end of
 backend/src/main/java/vn/tsolve/
 ├── <module>/            one folder per module from module-map.md (e.g. ticket, knowledge, search)
 │   ├── controller/      REST endpoints + springdoc annotations
-│   ├── service/         business rules, @Transactional boundaries
+│   ├── service/         <Entity>Service interfaces — what controllers and other modules call
+│   │   └── impl/        <Entity>ServiceImpl: business rules, @Transactional boundaries
 │   ├── repository/      Spring Data JPA interfaces
 │   ├── entity/          JPA entities + enums owned by the module
 │   ├── dto/             request/response records
@@ -30,13 +31,14 @@ backend/src/main/java/vn/tsolve/
 ```
 
 - Calls go one way: controller → service → repository. A controller never touches a repository.
-- A module uses another module only through that module's `service/` classes and `dto/` records —
+- Controllers and other modules depend on `service/` interfaces only, never on `service/impl/`.
+- A module uses another module only through that module's `service/` interfaces and `dto/` records —
   never its `repository/`, `entity/` or `mapper/`. Both rules are checked in code review.
 - Layers a module does not need are not created.
 
 ## Communication Patterns
 
-**Between modules:** in-process calls to the other module's service classes (see Backend Code Structure)
+**Between modules:** in-process calls to the other module's service interfaces (see Backend Code Structure)
 **Between frontend and backend:** REST JSON under `/api/v1/**`; the agreed contract is `frontend/openapi/tsolve-api.yaml`
 
 ## Shared Infrastructure
@@ -85,7 +87,8 @@ Standard Java / Spring Boot practice, kept small on purpose. Code that breaks a 
 |------|------|---------|
 | Package | lowercase, singular | `vn.tsolve.knowledge.service` |
 | Class / record / enum | PascalCase noun | `Solution`, `SolutionStatus` |
-| Layer classes | `<Entity>Controller`, `<Entity>Service`, `<Entity>Repository` | `SolutionService` |
+| Layer classes | `<Entity>Controller`, `<Entity>Repository` | `SolutionController` |
+| Service | interface `<Entity>Service` + implementation `<Entity>ServiceImpl` in `service/impl/` — always, even with one implementation | `SolutionService`, `SolutionServiceImpl` |
 | External system client | interface `<System>Client`, one class per implementation | `AiClient`, `OllamaAiClient` |
 | DTO | `<Action><Entity>Request`, `<Entity>Response` | `CreateSolutionRequest`, `SolutionResponse` |
 | Mapper | `<Entity>Mapper` in `mapper/` | `SolutionMapper` |
@@ -103,7 +106,7 @@ Standard Java / Spring Boot practice, kept small on purpose. Code that breaks a 
 ### Layers
 
 - **Controller** (`@RestController`): takes the validated input (`@Valid`), calls **one** service method, returns its DTO. No business logic, no `@Transactional`, no repository, no mapper.
-- **Service** (`@Service` class — no interface): business rules and transactions — `@Transactional` on writes, `@Transactional(readOnly = true)` on reads. Never returns `null`: return `Optional` or throw. Returns DTOs; entities never leave the service layer.
+- **Service** (interface `<Entity>Service` + `@Service` class `service/impl/<Entity>ServiceImpl`; required even with one implementation): the interface declares what callers may use; the impl holds the business rules and transactions — `@Transactional` on writes, `@Transactional(readOnly = true)` on reads. Never returns `null`: return `Optional` or throw. Returns DTOs; entities never leave the service layer.
 - **Repository**: Spring Data `JpaRepository`; derived queries first, JPQL `@Query` when the name gets unreadable, native SQL only for pgvector / full-text.
 - **Entity** (`@Entity`): one table; `protected` no-arg constructor; created through a constructor and changed through intention-revealing methods (`edit(…)`, `publish()`) — no setters; enums as `@Enumerated(EnumType.STRING)`.
 - **DTO**: Java `record`. Requests carry Bean Validation (`@NotBlank`, `@Size`, …).
@@ -112,8 +115,8 @@ Standard Java / Spring Boot practice, kept small on purpose. Code that breaks a 
 ### Design principles (SOLID, kept practical)
 
 - One controller per resource, one service per aggregate; split a class when it does two jobs.
-- Add an interface only where there are two or more implementations or an external system behind it (`AiClient`, `JiraClient`, mail) — never for a service with one implementation. Mockito mocks classes directly.
-- Not used (over-engineering here): service interfaces with a single `…Impl`, abstract base services, generic CRUD superclasses, separate domain models beside the JPA entities, one class per use case.
+- Dependency inversion: every service is an interface with its implementation in `service/impl/`, even when there is only one; callers inject the interface. External systems sit behind an interface too (`AiClient`, `JiraClient`, mail).
+- Not used (over-engineering here): abstract base services, generic CRUD superclasses, separate domain models beside the JPA entities, one class per use case.
 
 ### API documentation (springdoc)
 
