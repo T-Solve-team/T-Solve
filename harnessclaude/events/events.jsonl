@@ -9,3 +9,5 @@
 {"ts":"2026-10-18T19:23:49.823Z","type":"quick-closed","what":"backend: add springdoc-openapi for API documentation","files":["backend/pom.xml"]}
 {"ts":"2026-10-18T19:28:18.673Z","type":"quick-opened","what":"project rules: commit each feature with the user, never merge main","files":["CLAUDE.md","AGENTS.md"]}
 {"ts":"2026-10-18T19:28:49.458Z","type":"quick-closed","what":"project rules: commit each feature with the user, never merge main","files":["CLAUDE.md","AGENTS.md"]}
+{"ts":"2026-10-18T19:36:29.023Z","type":"quick-opened","what":"backend: ArchUnit layer and module rules, default for non-sensitive config","files":["backend/pom.xml","backend/src/test/java/vn/tsolve/ArchitectureTest.java","backend/src/main/resources/application.yml",".env.example","README.md"]}
+{"ts":"2026-10-18T19:38:33.135Z","type":"quick-closed","what":"backend: ArchUnit layer and module rules, default for non-sensitive config","files":["backend/pom.xml","backend/src/test/java/vn/tsolve/ArchitectureTest.java","backend/src/main/resources/application.yml",".env.example","README.md"]}
