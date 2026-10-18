@@ -23,3 +23,9 @@ This project uses the HarnessClaude agentic SDLC framework. Its workspace is `ha
 
 Specs, designs, and plans live in `harnessclaude/artifacts/`, not in `docs/` or other plan folders.
 <!-- harnessclaude:end -->
+
+## Project rules (T-Solve)
+
+- **Commit per feature, with the user.** When a feature's code is done and `verify` passes (tests + `mvn spotless:check`), stop before the next feature and report to the user: the feature, the files changed, the test result, and the proposed commit message. Commit that feature as soon as the user agrees — one feature per commit (plus its harness commit), never several features or unrelated changes in one commit.
+- Push only to the current working branch, and only when the user asks; never merge into `main`.
+- Backend architecture and coding conventions: `harnessclaude/artifacts/03-modules/architecture.md`.
