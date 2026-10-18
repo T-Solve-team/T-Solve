@@ -5,3 +5,5 @@
 {"ts":"2026-10-18T19:02:33.223Z","type":"quick-closed","what":"env-only docker-compose and .env.example, docs for Liquibase and env setup","files":["docker-compose.yml",".env.example","README.md",".claude/tsolve-project.md"]}
 {"ts":"2026-10-18T19:05:23.853Z","type":"quick-opened","what":"project context: Flyway replaced by Liquibase in the tech stack","files":[".claude/tsolve-project.md"]}
 {"ts":"2026-10-18T19:05:42.306Z","type":"quick-closed","what":"project context: Flyway replaced by Liquibase in the tech stack","files":[".claude/tsolve-project.md"]}
+{"ts":"2026-10-18T19:21:08.553Z","type":"quick-opened","what":"backend: add springdoc-openapi for API documentation","files":["backend/pom.xml"]}
+{"ts":"2026-10-18T19:23:49.823Z","type":"quick-closed","what":"backend: add springdoc-openapi for API documentation","files":["backend/pom.xml"]}
