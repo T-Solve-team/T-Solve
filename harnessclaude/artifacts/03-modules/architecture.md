@@ -34,6 +34,7 @@ backend/src/main/java/vn/tsolve/
 - Controllers and other modules depend on `service/` interfaces only, never on `service/impl/`.
 - A module uses another module only through that module's `service/` interfaces and `dto/` records —
   never its `repository/`, `entity/` or `mapper/`. Both rules are checked in code review.
+- An entity refers to another module's entity by its id, never through a JPA association (`@ManyToOne`, …).
 - Layers a module does not need are not created.
 
 ## Communication Patterns
@@ -105,7 +106,7 @@ Standard Java / Spring Boot practice, kept small on purpose. Code that breaks a 
 
 ### Layers
 
-- **Controller** (`@RestController`): takes the validated input (`@Valid`), calls **one** service method, returns its DTO. No business logic, no `@Transactional`, no repository, no mapper.
+- **Controller** (`@RestController`): takes the validated input (`@Valid`), calls **one** service method, returns its DTO in a `ResponseEntity` (`ok(dto)`, `status(CREATED).body(dto)`, `noContent().build()`). No business logic, no `@Transactional`, no repository, no mapper.
 - **Service** (interface `<Entity>Service` + `@Service` class `service/impl/<Entity>ServiceImpl`; required even with one implementation): the interface declares what callers may use; the impl holds the business rules and transactions — `@Transactional` on writes, `@Transactional(readOnly = true)` on reads. Never returns `null`: return `Optional` or throw. Returns DTOs; entities never leave the service layer.
 - **Repository**: Spring Data `JpaRepository`; derived queries first, JPQL `@Query` when the name gets unreadable, native SQL only for pgvector / full-text.
 - **Entity** (`@Entity`): one table; `protected` no-arg constructor; created through a constructor and changed through intention-revealing methods (`edit(…)`, `publish()`) — no setters; enums as `@Enumerated(EnumType.STRING)`.
@@ -114,7 +115,7 @@ Standard Java / Spring Boot practice, kept small on purpose. Code that breaks a 
 
 ### Design principles (SOLID, kept practical)
 
-- One controller per resource, one service per aggregate; split a class when it does two jobs.
+- One controller per resource; services are split by feature, each named after its main entity. Split a class when it does two jobs.
 - Dependency inversion: every service is an interface with its implementation in `service/impl/`, even when there is only one; callers inject the interface. External systems sit behind an interface too (`AiClient`, `JiraClient`, mail).
 - Not used (over-engineering here): abstract base services, generic CRUD superclasses, separate domain models beside the JPA entities, one class per use case.
 
@@ -144,7 +145,7 @@ The YAML contract (`frontend/openapi/tsolve-api.yaml`) is the source of truth; c
 - An API change updates the YAML contract first, then the code.
 - Status codes: 200 read/update, 201 create, 204 delete, 400 validation, 401/403 auth, 404 not found, 409 business-rule conflict.
 - Errors are thrown, not returned: `NotFoundException` → 404, `BusinessRuleException` → 409, validation → 400, all rendered by `common/error/GlobalExceptionHandler` as RFC 9457 `ProblemDetail` with a `code` property holding the SRS message code (MSGxx). No try/catch in controllers; never invent message text.
-- Paging: lists that can grow take `page` (from 0), `size`, `sort` as a `Pageable` and return Spring Data's `PagedModel` — `{content, page: {size, number, totalElements, totalPages}}`.
+- Paging: lists that can grow take `page` (from 0), `size`, `sort` as a `Pageable`; the service returns `Page<XxxResponse>`, the controller returns `ResponseEntity<PagedModel<XxxResponse>>` (`new PagedModel<>(page)`) — `{content, page: {size, number, totalElements, totalPages}}`.
 - Every endpoint declares its allowed roles with `@PreAuthorize` (role names as constants); the security config also requires authentication for any other request, so a missing annotation never opens an endpoint.
 - Audit: approve, reject, request changes, publish/unpublish, import, delete, role or permission change, and Jira configuration change each record an audit event (actor, action, resource) through one `AuditService.record(…)` call, in the same transaction, on success.
 
