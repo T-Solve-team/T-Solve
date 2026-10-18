@@ -1,9 +1,6 @@
 --liquibase formatted sql
 
 --changeset core:001-init-core-schema
--- A database first built by the old Flyway V1 script already has this schema: mark the changeset as run.
---preconditions onFail:MARK_RAN
---precondition-sql-check expectedResult:0 SELECT count(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'workspace'
 
 -- T-Solve core schema (MVP). T-Solve stores snapshots of resolved tickets and owns the Solution lifecycle;
 -- the ticket lifecycle itself stays in the source ticket tracker.
