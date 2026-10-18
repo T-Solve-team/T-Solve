@@ -7,3 +7,5 @@
 {"ts":"2026-10-18T19:05:42.306Z","type":"quick-closed","what":"project context: Flyway replaced by Liquibase in the tech stack","files":[".claude/tsolve-project.md"]}
 {"ts":"2026-10-18T19:21:08.553Z","type":"quick-opened","what":"backend: add springdoc-openapi for API documentation","files":["backend/pom.xml"]}
 {"ts":"2026-10-18T19:23:49.823Z","type":"quick-closed","what":"backend: add springdoc-openapi for API documentation","files":["backend/pom.xml"]}
+{"ts":"2026-10-18T19:28:18.673Z","type":"quick-opened","what":"project rules: commit each feature with the user, never merge main","files":["CLAUDE.md","AGENTS.md"]}
+{"ts":"2026-10-18T19:28:49.458Z","type":"quick-closed","what":"project rules: commit each feature with the user, never merge main","files":["CLAUDE.md","AGENTS.md"]}
