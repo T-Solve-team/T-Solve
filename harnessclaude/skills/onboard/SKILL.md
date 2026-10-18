@@ -61,7 +61,7 @@ The harness folder has no `default_branch`: report only its current branch. Do n
 
 Read, if they exist: `artifacts/00-baseline/concept-brief.md`, `artifacts/02-discovery/context-brief.md`, `artifacts/03-modules/architecture.md`, `artifacts/_registry/artifact-index.md`, `progress.json`.
 
-Write at most 15 lines:
+Write a short briefing a newcomer can take in at a glance:
 - What the project is, in one or two sentences.
 - The current phase and each module's status, with spec approved or not and features passing.
 - For each active module: its branch and its repos.

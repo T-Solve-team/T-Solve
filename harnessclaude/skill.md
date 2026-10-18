@@ -166,7 +166,7 @@ When the Agent/Task tool is available, use these instead of role-playing in the 
 | harnessclaude-developer | implement — one task per subagent with only that task's context |
 | harnessclaude-researcher | research, scout (codebase map of large repos) |
 
-Always verify a subagent's result yourself (diff + fresh test run) before updating progress.json. Without subagents (Cursor), follow the same skills inline.
+Always verify a subagent's result yourself (diff + fresh test run) before updating progress.json. Without subagents (Cursor, Codex), follow the same skills inline.
 
 ## Repos and Git
 
@@ -184,7 +184,7 @@ Always verify a subagent's result yourself (diff + fresh test run) before updati
 
 ## Rules
 
-- Always read progress.json before taking action
+- The session hook shows each module's status; read progress.json when you need feature status, branches, or recorded commits
 - Write outside harnessclaude/ only in the module's repos (Repos and Git): code only in implement (fixing included) for modules whose approved spec allows it, the files of an open quick change (Size the Work), E2E tests by qa-engineer under `$E2E` for such a module, or when the user explicitly asks
 - Never fill a spec gap with a guess: write `[NEEDS CLARIFICATION: <question>]` in the spec and ask the user
 - Fix the spec, not the code: a changed requirement goes into the spec first (Changelog row, `check`, user approval), then into code
