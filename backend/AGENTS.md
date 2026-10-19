@@ -195,8 +195,9 @@ change updates the contract first, then the code. On the controller, keep annota
 Every bug found — in testing, review, a demo or production — is logged in [`docs/bug-log.md`](../docs/bug-log.md)
 (the steps are at the top of that file). The test report takes its defect list from that table.
 
-- Log it when you find it, even if you do not fix it now.
-- Fix it test-first: a test that fails before the fix, named with the bug id (`keepsFirstImport_BUG_004`).
+- Log it when you find it, even if you do not fix it now. Name who found it and its **Owner** (who fixes it,
+  normally the developer of that module) by full name.
+- The owner fixes it test-first: a test that fails before the fix, named with the bug id (`keepsFirstImport_BUG_004`).
 - The fix PR updates the bug's row (status, PR, test) in the same PR.
 
 ## Notes for AI agents
