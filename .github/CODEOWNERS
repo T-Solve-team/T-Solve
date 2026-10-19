@@ -26,7 +26,7 @@
 # /frontend/src/features/audit-log/            @<owner-audit-log>
 
 # ---- backend: BE lead ----
-/backend/                                    @bluebearccc
+/backend/                                    @anhtranhai835
 # /backend/src/main/java/vn/tsolve/<module>/   @<module-owner>
 # /backend/src/main/resources/db/migration/    @<db-owner>
 
