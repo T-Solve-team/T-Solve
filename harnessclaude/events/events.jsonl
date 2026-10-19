@@ -15,3 +15,5 @@
 {"ts":"2026-10-18T19:46:11.051Z","type":"quick-closed","what":"remove Flyway precondition from changeset 001 and the outdated SolutionStatusTest","files":["backend/src/main/resources/db/changelog/changes/001-init-core-schema.sql","backend/src/test/java/vn/tsolve/knowledge/SolutionStatusTest.java"]}
 {"ts":"2026-10-18T20:15:09.700Z","type":"quick-opened","what":"add Spring Security starter and spring-security-test to the backend pom","files":["backend/pom.xml"]}
 {"ts":"2026-10-18T20:17:40.097Z","type":"quick-closed","what":"add Spring Security starter and spring-security-test to the backend pom","files":["backend/pom.xml"]}
+{"ts":"2026-10-19T14:38:32.098Z","type":"quick-opened","what":"Backend conventions as team docs (backend/AGENTS.md) and a bug log","files":["backend/AGENTS.md","backend/CLAUDE.md","docs/bug-log.md","AGENTS.md","CLAUDE.md"]}
+{"ts":"2026-10-19T14:39:59.790Z","type":"quick-opened","what":"README: point to backend/AGENTS.md and docs/bug-log.md","files":["README.md"]}
