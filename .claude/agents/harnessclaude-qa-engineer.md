@@ -146,7 +146,7 @@ If a test has a UI flow (fill form → click submit → see result), it is autom
 
 **Sub-agent partitioning for generation:**
 
-ALWAYS use sub-agents for Phase 3 generation. Partition by Function group from the manifest, with a **max of 12 TCs per sub-agent**. If a Function group exceeds 12 TCs, split it into chunks of ≤12 by TC range.
+When the Agent/Task tool is available, generate Phase 3 with sub-agents: partition by Function group from the manifest, with a **max of 12 TCs per sub-agent**; split a larger group into chunks of ≤12 by TC range. Without sub-agents, generate the same chunks one at a time inline.
 
 **Parent agent responsibilities (before spawning):**
 1. Complete Phase 2 (Selector Discovery) — build the full selector map

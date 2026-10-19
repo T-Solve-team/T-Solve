@@ -1,3 +1,7 @@
+--liquibase formatted sql
+
+--changeset core:001-init-core-schema
+
 -- T-Solve core schema (MVP). T-Solve stores snapshots of resolved tickets and owns the Solution lifecycle;
 -- the ticket lifecycle itself stays in the source ticket tracker.
 

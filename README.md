@@ -11,7 +11,7 @@ Resolved Ticket -> Knowledge Candidate -> Review -> Published Solution -> Search
 
 ```
 t-solve/
-├── backend/               Spring Boot 3 (Java 21, Maven) - modular monolith
+├── backend/               Spring Boot 3 (Java 21, Maven) - modular monolith; conventions in backend/AGENTS.md
 │   └── src/main/java/vn/tsolve/
 │       ├── ticket/        resolved-ticket snapshots + idempotent import
 │       ├── knowledge/     solution + lifecycle (DRAFT -> ... -> ARCHIVED)
@@ -20,14 +20,19 @@ t-solve/
 │       ├── search/        (planned) keyword + semantic search
 │       ├── analytics/     (planned) dashboard, reuse metrics, audit
 │       └── common/        config, error handling
-│   └── src/main/resources/db/migration/   Flyway migrations (schema owner)
+│   └── src/main/resources/db/changelog/   Liquibase changelog (schema owner): master XML + SQL changesets
 ├── frontend/              React 19 + TypeScript + Vite + Ant Design 6 (see frontend/README.md)
+├── docs/bug-log.md        every bug found, its fix and its test (source of the test report's defect list)
 ├── infra/                 (planned) server compose files, main Caddyfile, monitoring, backup scripts, runbook
 ├── .github/               (planned) CI/CD workflows, CODEOWNERS, PR template, Dependabot
 ├── docker-compose.yml     PostgreSQL 16 + pgvector for local dev
 ├── .editorconfig          editor defaults (LF, UTF-8, indentation)
-└── .env.example           local backend settings (copy to .env)
+└── .env.example           names of the backend settings (copy to .env and fill in)
 ```
+
+Backend conventions (layered, one folder per module, MapStruct, Liquibase, env-only config):
+[`backend/AGENTS.md`](backend/AGENTS.md) — the team's rules, read by people and every AI tool, like
+[`frontend/AGENTS.md`](frontend/AGENTS.md) for the frontend. Bugs are logged in [`docs/bug-log.md`](docs/bug-log.md).
 
 Project documents (SRS, design, ADRs, reports) are not in this repo; they live in the team's Google Drive.
 
@@ -57,10 +62,13 @@ skips the hooks but not CI. Rules: `commitlint.config.mjs`, `lint-staged.config.
 ## Run locally
 
 ```bash
+# 0. settings, once: copy the names and fill in the values (DB values = those of the db service in docker-compose.yml)
+cp .env.example .env
+
 # 1. database
 docker compose up -d db
 
-# 2. backend  (http://localhost:8080, health: /actuator/health)
+# 2. backend  (health: /actuator/health on SERVER_PORT; Liquibase applies the changelog on start)
 cd backend
 mvn spring-boot:run
 
@@ -100,7 +108,7 @@ Read [harnessclaude/README.md](harnessclaude/README.md) before your first sessio
 ## Tests
 
 ```bash
-cd backend  && mvn test
+cd backend  && mvn verify          # tests + Spotless format check (mvn spotless:apply fixes formatting)
 cd frontend && npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build
 ```
 
@@ -125,7 +133,9 @@ Trunk-based: `main` is always deployable and protected; every change goes throug
   (checked by the commit-msg hook and in CI).
 - **Merge:** squash and merge after CI is green and a CODEOWNER approves; the branch is deleted after merge.
 - Sync your branch with `main` at least daily. Keep PRs under ~400 changed lines.
-- Schema changes only through new Flyway migrations; never edit a merged migration.
+- Schema changes only through a new Liquibase changeset (`db/changelog/changes/NNN-<slug>.sql`, included in
+  `db.changelog-master.xml`); never edit an applied changeset.
+- Config files hold only `${VAR}` placeholders, never real values or defaults; values live in `.env` or the server environment.
 - Never commit secrets: `.env` files are git-ignored, only `.env.example` files are committed.
 - Only `PUBLISHED` solutions appear in default reuse results.
 

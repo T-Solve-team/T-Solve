@@ -31,7 +31,7 @@ New (14/10): FE-10 AI Ticket Triage (Simple/Complex/Sensitive on Jira Create iss
 
 ## Tech stack
 FE React 19 + TypeScript + Vite + Ant Design 6 · BE Spring Boot 3 (Java 21, Maven, modular monolith) ·
-PostgreSQL 16 + pgvector · Flyway · Docker Compose + Caddy on a VPS (Vietnam) · Jira App on Atlassian Forge (Forge Remote) ·
+PostgreSQL 16 + pgvector · Liquibase · Docker Compose + Caddy on a VPS (Vietnam) · Jira App on Atlassian Forge (Forge Remote) ·
 Google OIDC · Ollama + Qwen3 (4B classify, 8B generate; local, PII-masked) · Embedding bge-m3 via OpenRouter · SMTP email.
 AI model choice pending benchmark (DOCS/`Notes/Chon_Model_AI.md`).
 

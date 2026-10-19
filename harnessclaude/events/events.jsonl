@@ -1,2 +1,22 @@
 {"ts":"2026-10-17T03:20:29.195Z","type":"quick-opened","what":"link the HarnessClaude guide from the root README","files":["README.md"]}
 {"ts":"2026-10-17T03:20:55.090Z","type":"quick-closed","what":"link the HarnessClaude guide from the root README","files":["README.md"]}
+{"ts":"2026-10-18T18:44:56.805Z","type":"quick-opened","what":"backend: Flyway to Liquibase, MapStruct and Spotless setup, env-only application.yml","files":["backend/pom.xml","backend/src/main/resources/application.yml","backend/src/main/resources/db/changelog/db.changelog-master.xml","backend/src/main/resources/db/changelog/changes/001-init-core-schema.sql","backend/src/main/resources/db/migration/V1__init_core_schema.sql"]}
+{"ts":"2026-10-18T18:54:33.977Z","type":"quick-opened","what":"env-only docker-compose and .env.example, docs for Liquibase and env setup","files":["docker-compose.yml",".env.example","README.md",".claude/tsolve-project.md"]}
+{"ts":"2026-10-18T19:02:33.223Z","type":"quick-closed","what":"env-only docker-compose and .env.example, docs for Liquibase and env setup","files":["docker-compose.yml",".env.example","README.md",".claude/tsolve-project.md"]}
+{"ts":"2026-10-18T19:05:23.853Z","type":"quick-opened","what":"project context: Flyway replaced by Liquibase in the tech stack","files":[".claude/tsolve-project.md"]}
+{"ts":"2026-10-18T19:05:42.306Z","type":"quick-closed","what":"project context: Flyway replaced by Liquibase in the tech stack","files":[".claude/tsolve-project.md"]}
+{"ts":"2026-10-18T19:21:08.553Z","type":"quick-opened","what":"backend: add springdoc-openapi for API documentation","files":["backend/pom.xml"]}
+{"ts":"2026-10-18T19:23:49.823Z","type":"quick-closed","what":"backend: add springdoc-openapi for API documentation","files":["backend/pom.xml"]}
+{"ts":"2026-10-18T19:28:18.673Z","type":"quick-opened","what":"project rules: commit each feature with the user, never merge main","files":["CLAUDE.md","AGENTS.md"]}
+{"ts":"2026-10-18T19:28:49.458Z","type":"quick-closed","what":"project rules: commit each feature with the user, never merge main","files":["CLAUDE.md","AGENTS.md"]}
+{"ts":"2026-10-18T19:36:29.023Z","type":"quick-opened","what":"backend: ArchUnit layer and module rules, default for non-sensitive config","files":["backend/pom.xml","backend/src/test/java/vn/tsolve/ArchitectureTest.java","backend/src/main/resources/application.yml",".env.example","README.md"]}
+{"ts":"2026-10-18T19:38:33.135Z","type":"quick-closed","what":"backend: ArchUnit layer and module rules, default for non-sensitive config","files":["backend/pom.xml","backend/src/test/java/vn/tsolve/ArchitectureTest.java","backend/src/main/resources/application.yml",".env.example","README.md"]}
+{"ts":"2026-10-18T19:44:12.234Z","type":"quick-opened","what":"remove Flyway precondition from changeset 001 and the outdated SolutionStatusTest","files":["backend/src/main/resources/db/changelog/changes/001-init-core-schema.sql","backend/src/test/java/vn/tsolve/knowledge/SolutionStatusTest.java"]}
+{"ts":"2026-10-18T19:46:11.051Z","type":"quick-closed","what":"remove Flyway precondition from changeset 001 and the outdated SolutionStatusTest","files":["backend/src/main/resources/db/changelog/changes/001-init-core-schema.sql","backend/src/test/java/vn/tsolve/knowledge/SolutionStatusTest.java"]}
+{"ts":"2026-10-18T20:15:09.700Z","type":"quick-opened","what":"add Spring Security starter and spring-security-test to the backend pom","files":["backend/pom.xml"]}
+{"ts":"2026-10-18T20:17:40.097Z","type":"quick-closed","what":"add Spring Security starter and spring-security-test to the backend pom","files":["backend/pom.xml"]}
+{"ts":"2026-10-19T14:38:32.098Z","type":"quick-opened","what":"Backend conventions as team docs (backend/AGENTS.md) and a bug log","files":["backend/AGENTS.md","backend/CLAUDE.md","docs/bug-log.md","AGENTS.md","CLAUDE.md"]}
+{"ts":"2026-10-19T14:39:59.790Z","type":"quick-opened","what":"README: point to backend/AGENTS.md and docs/bug-log.md","files":["README.md"]}
+{"ts":"2026-10-19T14:40:32.577Z","type":"quick-closed","what":"README: point to backend/AGENTS.md and docs/bug-log.md","files":["README.md"]}
+{"ts":"2026-10-19T14:43:29.072Z","type":"quick-opened","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}
+{"ts":"2026-10-19T14:43:48.790Z","type":"quick-closed","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}

@@ -186,6 +186,9 @@ These rules are non-negotiable:
 {Same structure as above — all subsection headings present}
 ...
 
+## Out of Scope
+- {what this module deliberately does not do, and where it goes instead (a later module or iteration)}
+
 ## Interface Contracts
 
 ### Exposed by this module
