@@ -17,3 +17,4 @@
 {"ts":"2026-10-18T20:17:40.097Z","type":"quick-closed","what":"add Spring Security starter and spring-security-test to the backend pom","files":["backend/pom.xml"]}
 {"ts":"2026-10-19T14:38:32.098Z","type":"quick-opened","what":"Backend conventions as team docs (backend/AGENTS.md) and a bug log","files":["backend/AGENTS.md","backend/CLAUDE.md","docs/bug-log.md","AGENTS.md","CLAUDE.md"]}
 {"ts":"2026-10-19T14:39:59.790Z","type":"quick-opened","what":"README: point to backend/AGENTS.md and docs/bug-log.md","files":["README.md"]}
+{"ts":"2026-10-19T14:40:32.577Z","type":"quick-closed","what":"README: point to backend/AGENTS.md and docs/bug-log.md","files":["README.md"]}
