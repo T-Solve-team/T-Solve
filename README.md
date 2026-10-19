@@ -11,7 +11,7 @@ Resolved Ticket -> Knowledge Candidate -> Review -> Published Solution -> Search
 
 ```
 t-solve/
-├── backend/               Spring Boot 3 (Java 21, Maven) - modular monolith
+├── backend/               Spring Boot 3 (Java 21, Maven) - modular monolith; conventions in backend/AGENTS.md
 │   └── src/main/java/vn/tsolve/
 │       ├── ticket/        resolved-ticket snapshots + idempotent import
 │       ├── knowledge/     solution + lifecycle (DRAFT -> ... -> ARCHIVED)
@@ -22,6 +22,7 @@ t-solve/
 │       └── common/        config, error handling
 │   └── src/main/resources/db/changelog/   Liquibase changelog (schema owner): master XML + SQL changesets
 ├── frontend/              React 19 + TypeScript + Vite + Ant Design 6 (see frontend/README.md)
+├── docs/bug-log.md        every bug found, its fix and its test (source of the test report's defect list)
 ├── infra/                 (planned) server compose files, main Caddyfile, monitoring, backup scripts, runbook
 ├── .github/               (planned) CI/CD workflows, CODEOWNERS, PR template, Dependabot
 ├── docker-compose.yml     PostgreSQL 16 + pgvector for local dev
@@ -29,8 +30,9 @@ t-solve/
 └── .env.example           names of the backend settings (copy to .env and fill in)
 ```
 
-Backend architecture and coding conventions (layered, one folder per module, MapStruct, Liquibase, env-only
-config): `harnessclaude/artifacts/03-modules/architecture.md`.
+Backend conventions (layered, one folder per module, MapStruct, Liquibase, env-only config):
+[`backend/AGENTS.md`](backend/AGENTS.md) — the team's rules, read by people and every AI tool, like
+[`frontend/AGENTS.md`](frontend/AGENTS.md) for the frontend. Bugs are logged in [`docs/bug-log.md`](docs/bug-log.md).
 
 Project documents (SRS, design, ADRs, reports) are not in this repo; they live in the team's Google Drive.
 
