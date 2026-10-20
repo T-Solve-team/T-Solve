@@ -30,6 +30,9 @@
 # /backend/src/main/java/vn/tsolve/<module>/   @<module-owner>
 # /backend/src/main/resources/db/migration/    @<db-owner>
 
+# ---- Jira App (Forge): Jira App owner ----
+# /jira-app/                                  @<binh-github-handle>
+
 # ---- DevOps: infra and CI (keep these lines last) ----
 /infra/                                      @trhieudev1309
 /.github/                                    @trhieudev1309
