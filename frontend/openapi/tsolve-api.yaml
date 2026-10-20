@@ -1,12 +1,12 @@
 openapi: 3.1.0
 info:
   title: T-Solve API
-  version: 0.1.0-stub
+  version: 0.2.0-review
   description: >
-    STUB written by the frontend (scaffold step 5.3) so the web app can be built before the backend exists.
-    It is replaced by the backend's real spec with `npm run api:pull`. Every shape here is a proposal that the
-    backend must agree to (frontend guideline 06 §6 and the decision log): Problem Details errors with an MSG
-    `code`, Spring-style paging (`page` from 0, `size`, `sort`), and the `/me` session shape.
+    Review endpoints implement Report 3 v3460 (UC-29, UC-30). Session endpoints remain integration
+    contracts awaiting the identity module. Errors use Problem Details with an MSG code; paging uses
+    Spring Page metadata. Real authentication, session/CSRF transport, Project authorization and email
+    delivery require their documented integration adapters.
 tags:
   - name: session
     description: Who is signed in.
@@ -39,11 +39,11 @@ paths:
     get:
       tags: [review]
       operationId: getReviewQueue
-      summary: Pending review tickets of the Projects the user is Project Manager of (SRS 7.1).
+      summary: Pending review Solution Form tickets of the signed-in Project Manager (UC-29).
       parameters:
-        - name: departmentId
+        - name: projectId
           in: query
-          description: One Department; omitted = all Departments of the Project Manager.
+          description: One managed Project; omitted = all Projects currently managed by the reviewer.
           schema:
             type: integer
             format: int64
@@ -67,7 +67,7 @@ paths:
       operationId: getReviewQueueTicketIds
       summary: Ids of every ticket in the queue, for "Select all" (all pages, not only the one shown).
       parameters:
-        - name: departmentId
+        - name: projectId
           in: query
           schema:
             type: integer
@@ -87,7 +87,7 @@ paths:
     post:
       tags: [review]
       operationId: approveTickets
-      summary: Approves and publishes the tickets (MSG18).
+      summary: Approves and publishes the tickets (MSG14).
       requestBody:
         required: true
         content:
@@ -109,11 +109,13 @@ paths:
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
   /api/v1/reviews/reject:
     post:
       tags: [review]
       operationId: rejectTickets
-      summary: Rejects the tickets with one reason (MSG19 confirm, MSG20 result).
+      summary: Rejects the tickets with one reason (MSG15 confirm, MSG16 result).
       requestBody:
         required: true
         content:
@@ -135,11 +137,13 @@ paths:
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
   /api/v1/reviews/request-changes:
     post:
       tags: [review]
       operationId: requestTicketChanges
-      summary: Sends the tickets back to their authors with one comment (MSG21).
+      summary: Requests changes on one Solution Form ticket (MSG17).
       requestBody:
         required: true
         content:
@@ -160,6 +164,36 @@ paths:
         '403':
           $ref: '#/components/responses/Problem'
         '409':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/tickets/{ticketId}:
+    get:
+      tags: [review]
+      operationId: getReviewTicket
+      summary: Read-only review ticket detail in the authenticated user's authorized Projects.
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Ticket, saved Solution and Evidence references. Evidence file retrieval is external.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewTicketResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
           $ref: '#/components/responses/Problem'
 components:
   parameters:
@@ -338,9 +372,11 @@ components:
         ticketIds:
           type: array
           minItems: 1
+          uniqueItems: true
           items:
             type: integer
             format: int64
+            minimum: 1
     RejectTicketsRequest:
       type: object
       required: [ticketIds, reason]
@@ -348,36 +384,104 @@ components:
         ticketIds:
           type: array
           minItems: 1
+          uniqueItems: true
           items:
             type: integer
             format: int64
+            minimum: 1
         reason:
           type: string
           minLength: 1
           maxLength: 1000
-          description: Stored in Review History; not sent to the author.
+          description: Stored in Review History and queued for email to the writer.
     RequestChangesRequest:
       type: object
-      required: [ticketIds, comment]
+      required: [ticketId, comment]
       properties:
-        ticketIds:
-          type: array
-          minItems: 1
-          items:
-            type: integer
-            format: int64
+        ticketId:
+          type: integer
+          format: int64
+          minimum: 1
         comment:
           type: string
           minLength: 1
           maxLength: 1000
-          description: Shown to each author in Jira (MSG53).
+          description: Stored for the writer's Jira Issue Panel (MSG64) and queued for email.
     ReviewDecisionResult:
       type: object
       required: [count]
       properties:
         count:
           type: integer
-          description: Number of tickets the decision was applied to (the {count} of MSG18 / MSG20 / MSG21).
+          description: Number of tickets the decision was applied to; always 1 for Request changes.
+    ReviewTicketResponse:
+      type: object
+      required: [ticketId, sourceTicketId, title, project, source, writerId, authorName, status, enteredQueueAt, reviewDueDate, updatedAt, solution, evidence]
+      properties:
+        ticketId:
+          type: integer
+          format: int64
+        sourceTicketId:
+          type: string
+        title:
+          type: string
+        project:
+          $ref: '#/components/schemas/ProjectRef'
+        source:
+          $ref: '#/components/schemas/TicketSource'
+        writerId:
+          type: string
+        authorName:
+          type: string
+        status:
+          type: string
+          enum: [PENDING_REVIEW, CHANGES_REQUESTED, PUBLISHED, REJECTED, UNPUBLISHED, EXPIRED]
+        enteredQueueAt:
+          type: string
+          format: date-time
+        reviewDueDate:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        reviewComment:
+          type: [string, 'null']
+        solution:
+          $ref: '#/components/schemas/SolutionSections'
+        evidence:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/SavedEvidenceReference'
+    SolutionSections:
+      type: object
+      properties:
+        symptoms:
+          type: [string, 'null']
+        rootCause:
+          type: [string, 'null']
+        resolutionSteps:
+          type: [string, 'null']
+        workaround:
+          type: [string, 'null']
+        scopeOfApplicability:
+          type: [string, 'null']
+    SavedEvidenceReference:
+      type: object
+      required: [evidenceId, name, mediaType, sizeBytes]
+      properties:
+        evidenceId:
+          type: string
+        name:
+          type: string
+        mediaType:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 10485760
     FieldError:
       type: object
       required: [field, code]
