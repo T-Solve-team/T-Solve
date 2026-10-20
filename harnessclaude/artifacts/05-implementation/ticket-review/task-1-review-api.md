@@ -93,3 +93,19 @@ Present the backend files, checks and proposed commit message to the user. After
 - Code commit: default@4d36a48 (`feat(ticket-review): implement transactional review API (KAN-24)`). Includes review backend, migration, OpenAPI contract, regression tests, local manual harness and permanent bug ledger.
 - Verification evidence remains 34 passing backend tests (including Spotless) and 18 passing live HTTP checks; staged whitespace check passed before commit.
 - No push, merge or PR. Frontend integration is pending. The commit checkpoint for starting Task 2 is satisfied; the official trace limitation BUG-008 remains open, so feature/module status has not been advanced past its evidence gate.
+
+## Debug — CI generated API drift (BUG-013, KAN-24)
+
+- Root cause: backend commit changed frontend/openapi/tsolve-api.yaml but deferred generation. CI correctly detected drift. Regenerating also exposed five consumer type errors; the new contract uses projectId and single-ticket changes.
+- Fix: ran npm run generate:api, updated queue Project filtering and select-all params/mocks, removed Request Changes from the queue, and changed the reusable modal to a single ticketId. Generated files were never hand edited; the CI check is unchanged.
+- Regressions: two BUG-013 page tests first failed on the old bulk button and missing Project filter; both pass after the fix. Added a single-ticket modal network payload test instead of retaining the obsolete bulk-mutation expectation.
+- Verification: format:check, lint, typecheck, build all exit 0. Full suite: 11 files, 65 tests passed. A second generation has identical SHA-256 hashes for every generated file, including newly created files. git diff --check passes.
+- BUG-014: initial full suite had nine pre-test ENOENT failures under sandbox AC/Temp. Retried with TEMP/TMP pointing at ignored frontend/node_modules/.cache/vitest-temp; all suites passed. Exact underlying OS cause remains unconfirmed; no repository test settings changed.
+- Graphify refreshed to 1,591 nodes / 3,698 edges; missing SQL parser remains the known limitation.
+- Commit pending user agreement. Proposed: fix(review): sync generated client with API contract (KAN-24).
+- Scope: this repairs CI and its directly broken consumers. Report 3 MSG migration, actual Ticket Detail actions and live session/CSRF integration remain Task 2; no complete FE/BE manual flow is claimed.
+
+### BUG-013 commit
+- User approved the proposed fix commit.
+- Code commit: default@b6098c5 (`fix(review): sync generated client with API contract (KAN-24)`).
+- Staged secret scan and whitespace check passed. No push requested for this fix.
