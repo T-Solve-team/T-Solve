@@ -1,0 +1,117 @@
+---
+module: ticket-review
+date: 2026-10-20
+owner: BA
+---
+
+# Spec: ticket-review
+
+## Changelog
+| Date | Story | Change | Reason |
+|------|-------|--------|--------|
+| 2026-10-20 | STORY-001 to STORY-006 | Initial review contract from Report 3 v3460; auth/email implementations excluded by user choice | Requested Approve / Reject / Request changes across backend and frontend |
+
+## Requirements
+
+### Functional
+1. Implement UC-29 and the Approve, Reject and Request changes branches of UC-30, with Ticket Detail support from UC-24.
+2. Persist each decision and its audit event; preserve history data required by UC-32 without building the full history screen.
+3. Use the current SRS's Project scope and MSG codes, superseding obsolete frontend behavior.
+4. Expose explicit auth/Project and email integration seams; do not provide fake identities or pretend that an email was delivered.
+
+### Non-Functional
+1. No new npm dependency or backend framework. Follow backend layering and generated frontend API client conventions.
+2. Concurrent writes and multi-ticket failures leave no partial status/history/audit/notification results.
+3. Named AC and bug regression tests plus the repository's required checks pass before reporting implementation complete.
+
+## User Stories
+
+### STORY-001: View my review queue
+- As a Project Manager, I want my Projects' waiting tickets so that I can select the tickets I can review.
+- Acceptance:
+  - AC-001.1: WHEN an authorized Project Manager loads the Review Queue, THE system SHALL return only Pending review Solution Form tickets in Projects they currently manage, ordered by earliest review due date by default.
+  - AC-001.2: WHEN the Project Manager filters by Project or changes page or supported column sort, THE system SHALL apply the filter and paging on the server and retain the list state in the frontend URL.
+  - AC-001.3: WHEN the Project Manager selects all tickets, THE system SHALL select all eligible ticket IDs matching the current Project filter across pages.
+  - AC-001.4: IF the queue is empty or cannot load, THEN THE frontend SHALL show MSG13 for an empty queue or the API's SRS error code with a retry action for a failed query.
+  - AC-001.5: IF the requester is unauthenticated, is not a Project Manager, or requests an unmanaged Project, THEN THE backend SHALL deny the request without returning that Project's ticket data.
+
+### STORY-002: Approve and publish
+- As the Project Manager, I want to approve one or several tickets so that their Solutions become Published knowledge.
+- Acceptance:
+  - AC-002.1: WHEN the Project Manager approves eligible Pending review tickets, THE system SHALL set each ticket to Published, save one decision per ticket and remove those tickets from the queue.
+  - AC-002.2: WHEN two or more tickets are approved from the queue, THE frontend SHALL require confirmation using MSG19 before sending the mutation and show MSG14 after success.
+  - AC-002.3: WHEN one ticket is approved from the queue or Ticket Detail, THE frontend SHALL submit that decision without the bulk confirmation and show MSG14 after success.
+  - AC-002.4: IF a selected ticket has an empty Solution, THEN THE system SHALL prevent approval and show MSG20 without publishing any ticket in that request.
+  - AC-002.5: WHEN a Project Manager approves a ticket they wrote, THE system SHALL allow the decision and retain both writer and reviewer identity in history.
+
+### STORY-003: Reject with a reason
+- As the Project Manager, I want to reject incorrect Solutions with a reason so that the decision is final and explainable.
+- Acceptance:
+  - AC-003.1: WHEN the Project Manager rejects one or several eligible tickets, THE frontend SHALL show MSG15 and require one reason for the entire selection.
+  - AC-003.2: WHEN rejection succeeds, THE system SHALL set each ticket to Rejected, persist its reason and decision, remove it from the queue and show MSG16.
+  - AC-003.3: IF the rejection reason is missing or whitespace-only or exceeds 1,000 characters, THEN THE system SHALL return the corresponding MSG01 or MSG02 field error and preserve ticket state and the open popup.
+  - AC-003.4: IF a Rejected ticket is submitted for another review decision, THEN THE backend SHALL reject the transition without changing it or returning it to the queue or Published results.
+
+### STORY-004: Request changes on one ticket
+- As the Project Manager, I want the writer to correct one Solution Form ticket so that I can review the corrected Solution later.
+- Acceptance:
+  - AC-004.1: WHEN the Project Manager opens a Pending review Solution Form ticket's detail, THE frontend SHALL offer Request changes for that single ticket and show its Solution and saved Evidence references read-only.
+  - AC-004.2: WHEN a valid change comment is submitted, THE system SHALL set the ticket to Changes requested, save the comment and decision, preserve the stored review due date, remove it from the queue and show MSG17.
+  - AC-004.3: IF the comment is missing or whitespace-only or exceeds 1,000 characters, THEN THE system SHALL return MSG01 or MSG02 and preserve ticket state and the popup.
+  - AC-004.4: IF a change request targets multiple tickets or a ticket from another source, THEN THE backend SHALL reject the request without changes; the frontend SHALL expose no bulk Request changes action and SHALL use MSG18 to explain source restrictions where applicable.
+
+### STORY-005: Enforce safe decisions and retain evidence
+- As the team, I want decisions to be authorized, atomic and auditable so that retries and failures cannot corrupt review results.
+- Acceptance:
+  - AC-005.1: IF any selected ticket is missing, outside the reviewer's managed Projects, or no longer Pending review, THEN THE backend SHALL reject the entire decision request without partial writes.
+  - AC-005.2: WHEN any decision succeeds, THE system SHALL persist the actor, action, ticket resource, decision time, writer and reason/comment as applicable, with one append-only history record and one AuditService.record call per ticket in the same transaction.
+  - AC-005.3: IF persistence fails or concurrent requests attempt to decide the same ticket, THEN THE system SHALL allow at most one successful decision per Pending review state and SHALL roll back failed requests completely.
+  - AC-005.4: WHEN a decision succeeds, THE system SHALL preserve the saved Solution, Evidence, Jira issue status and stored review due date.
+  - AC-005.5: IF a decision payload is empty or contains invalid or repeated ticket IDs, THEN THE backend SHALL reject it before writing any decision records.
+  - AC-005.6: WHEN a Published-ticket consumer queries the review service, THE system SHALL expose only Published tickets within the authorization scope supplied by the trusted integration.
+
+### STORY-006: Integrate auth and notifications explicitly
+- As the integration developer, I want clear seams so that real authentication and delivery can be connected without rewriting decision logic.
+- Acceptance:
+  - AC-006.1: WHEN the backend determines reviewer identity or Project rights, THE system SHALL obtain them exclusively from a trusted server-side auth/Project interface and SHALL ignore client-supplied actor or management claims.
+  - AC-006.2: IF the auth/Project integration is absent or cannot verify access, THEN THE module SHALL deny review access without a default reviewer or permissive fallback.
+  - AC-006.3: WHEN a ticket is rejected or changes are requested, THE system SHALL save one pending email handoff per ticket containing recipient identity, decision, reason/comment and decision reference in the same transaction, without sending network email inside the transaction.
+  - AC-006.4: IF the external email integration is unavailable, THEN THE system SHALL retain the committed decision and its pending notification without claiming delivery; the integration contract SHALL require the sender to log errors and retry at most three times within one hour under GBR-27.
+  - AC-006.5: WHEN the frontend operates with mocking disabled, THE review UI SHALL use the generated real review endpoints and SHALL handle loading, empty, error and mutation-pending states.
+  - AC-006.6: WHEN implementation is delivered, THE integration documentation SHALL identify auth, Project rights, ticket submission, Evidence retrieval, mail delivery/retry and downstream search/triage/chatbot integration as external prerequisites and distinguish automated contract tests from a complete live test.
+
+## Out of Scope
+- Implementing Google OIDC, account administration, /me session provisioning or Project administration/assignments. The existing frontend session guard still requires its real upstream /me implementation.
+- Implementing SMTP transport, email delivery worker or retries; this module persists handoffs and defines that integration's obligations.
+- Jira submission/resubmission, issue-panel rendering, Evidence upload/download storage and AI drafting. Expose review data/comment for their integrations; never fabricate evidence URLs or Jira delivery.
+- Search engine, triage, chatbot, full Review History screen, expiry scheduler, send back, unpublish and re-publish.
+- Changing legacy Solution lifecycle endpoints or migrating historical data into review automatically.
+- Production deployment, commits without agreement, pushing, merging or opening a PR.
+
+## Interface Contracts
+
+### Exposed by this module
+- `GET /api/v1/review-queue?projectId=&page=0&size=20&sort=reviewDueDate,asc` returns Spring-style `{content,page}`; only a documented allowlist of sort fields is accepted.
+- `GET /api/v1/review-queue/ticket-ids?projectId=` returns `{ticketIds}` for the same authorization/filter scope.
+- `POST /api/v1/reviews/approve`: `{ticketIds: number[]}`; `POST /api/v1/reviews/reject`: `{ticketIds: number[], reason: string}`; `POST /api/v1/reviews/request-changes`: `{ticketId: number, comment: string}`. Success returns `{count}`. IDs are positive integers; reasons/comments are required and limited to 1,000 characters.
+- Ticket Detail read API returns review ticket identity, Project, writer, source, status, review dates, Solution sections, Evidence metadata and current review comment; server-side access is mandatory.
+- Java service interfaces use DTO records for ticket registration, Published ticket retrieval, audit recording and pending notification consumption. Entities do not leave the service layer.
+- Failure responses are RFC 9457 Problem Details with SRS `code` and structured validation fields: 400 invalid input, 401 unauthenticated, 403 unauthorized, 404 missing resource, 409 state conflict, 500 persistence failure.
+- A new forward-only Liquibase migration is required for review persistence and notification handoffs. Existing changesets are not edited. No existing-data migration or destructive operation is included.
+- Shared frontend MSG catalog and generated API files need scoped updates to implement the current SRS. Generated files are produced only by `npm run generate:api`; this shared-file work must receive the team's normal FE Lead review before merge.
+
+### Required from other modules
+- Auth/Project port: active authenticated actor and current managed Project/access scope; missing adapter denies access. Identity/rights never come from request JSON or query parameters.
+- Submission port input: ticket/source identity, Project reference, writer, Solution sections, Evidence metadata and already determined queue/review due dates. The submitting integration owns membership checks and initial date calculation under GBR-10.
+- Email sender: consumes pending records and implements actual delivery/retry under GBR-27. A pending record is not delivery evidence.
+- Existing /me endpoint supplies frontend session and managed Project references. This module does not replace it with mock data.
+
+## Definition of Done
+- [ ] Spec approved and design/tasks reviewed before code; module and feature transitions use sdd.ts.
+- [ ] Every criterion has an automated test naming its AC ID; every fixed bug has a regression test naming its BUG ID.
+- [ ] Backend Maven verify and spotless:check pass; frontend format:check, lint, typecheck, tests and build pass.
+- [ ] OpenAPI is updated first; generated client is regenerated and verified.
+- [ ] Browser verification covers queue selection, confirmation, field errors, Ticket Detail and one-ticket Request changes.
+- [ ] Bug log retains found defects, including resolved defects, with honest verification status.
+- [ ] Missing live integrations and remaining test limitations are documented.
+- [ ] Stop after each verified feature and request its individual commit agreement before starting the next feature.

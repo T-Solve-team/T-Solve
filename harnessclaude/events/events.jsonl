@@ -20,3 +20,11 @@
 {"ts":"2026-10-19T14:40:32.577Z","type":"quick-closed","what":"README: point to backend/AGENTS.md and docs/bug-log.md","files":["README.md"]}
 {"ts":"2026-10-19T14:43:29.072Z","type":"quick-opened","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}
 {"ts":"2026-10-19T14:43:48.790Z","type":"quick-closed","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}
+{"ts":"2026-10-20T14:34:26.139Z","type":"module-status","module":"ticket-review","from":null,"to":"decomposed"}
+{"ts":"2026-10-20T14:59:10.465Z","type":"spec-approved","module":"ticket-review","specHash":"9dd13a5fbaab750dc0017b3816b9c04035c5acf1337e3dc86c83484a6cb0a2f6"}
+{"ts":"2026-10-20T14:59:38.945Z","type":"module-status","module":"ticket-review","from":"decomposed","to":"planned"}
+{"ts":"2026-10-20T14:59:38.982Z","type":"feature-status","module":"ticket-review","feature":"review-api","from":null,"to":"pending"}
+{"ts":"2026-10-20T14:59:39.017Z","type":"feature-status","module":"ticket-review","feature":"review-ui","from":null,"to":"pending"}
+{"ts":"2026-10-20T14:59:39.053Z","type":"module-status","module":"ticket-review","from":"planned","to":"implementing"}
+{"ts":"2026-10-20T14:59:39.175Z","type":"feature-status","module":"ticket-review","feature":"review-api","from":"pending","to":"in-progress"}
+{"ts":"2026-10-20T16:03:56.840Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"4d36a48347e73c80edbf737a9fe6499e23783733"}

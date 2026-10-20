@@ -13,6 +13,7 @@ repos:
 
 sources:
   # Mode-specific inputs
+  docs: "D:/Down/SEP490_G89-20261008T124855Z-1-001/SEP490_G89/Report/T-Solve_Report3_Software_Requirement_Specification_EN_v3460.docx"
   # docs: ./artifacts/00-baseline/requirements.pdf
 
 iterations:
