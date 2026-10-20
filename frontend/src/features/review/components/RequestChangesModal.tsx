@@ -9,7 +9,7 @@ type RequestChangesFormValues = Pick<RequestChangesRequest, 'comment'>;
 const COMMENT_MAX = 1000;
 
 type RequestChangesModalProps = {
-  ticketIds: number[];
+  ticketId: number;
   isOpen: boolean;
   onClose: () => void;
   /** After the tickets were sent back (MSG21 is already shown). */
@@ -18,10 +18,10 @@ type RequestChangesModalProps = {
 
 /**
  * 7.2 Request Changes (popup) — SRS III.7.2. Comment * (shown to each author in Jira, MSG53) · Send ·
- * Cancel. From the Review Queue it takes every selected ticket with one comment (decision FE-34).
+ * Cancel. Report 3 permits one ticket from Ticket Detail only.
  */
 export function RequestChangesModal({
-  ticketIds,
+  ticketId,
   isOpen,
   onClose,
   onSent,
@@ -31,7 +31,7 @@ export function RequestChangesModal({
 
   function handleSubmit(values: RequestChangesFormValues) {
     requestChanges.mutate(
-      { data: { ticketIds, comment: values.comment } },
+      { data: { ticketId, comment: values.comment } },
       {
         onSuccess: onSent,
         onError: (error) => {

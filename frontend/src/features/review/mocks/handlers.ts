@@ -9,7 +9,7 @@ import type {
 import { getGetReviewQueueMockHandler } from '@/shared/api/generated/review/review.msw';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { parseSort } from '@/shared/lib';
-import { departmentOf, seedReviewQueue } from './data';
+import { seedReviewQueue } from './data';
 
 /** The pending tickets of the mock backend. Decisions remove tickets from it, like the real queue. */
 let queue = seedReviewQueue();
@@ -19,9 +19,9 @@ export function resetMockData(): void {
   queue = seedReviewQueue();
 }
 
-function inDepartment(url: URL): ReviewQueueItem[] {
-  const departmentId = url.searchParams.get('departmentId');
-  return departmentId ? queue.filter((t) => String(departmentOf(t)) === departmentId) : queue;
+function inProject(url: URL): ReviewQueueItem[] {
+  const projectId = url.searchParams.get('projectId');
+  return projectId ? queue.filter((t) => String(t.project.projectId) === projectId) : queue;
 }
 
 const SORT_VALUE: Record<string, (t: ReviewQueueItem) => string> = {
@@ -62,7 +62,7 @@ export const handlers: HttpHandler[] = [
     const url = new URL(request.url);
     const size = Number(url.searchParams.get('size')) || 20;
     const page = Number(url.searchParams.get('page')) || 0;
-    const all = sorted(inDepartment(url), url);
+    const all = sorted(inProject(url), url);
     return {
       content: all.slice(page * size, page * size + size),
       page: {
@@ -75,7 +75,7 @@ export const handlers: HttpHandler[] = [
   }),
 
   http.get('*/api/v1/review-queue/ticket-ids', ({ request }) =>
-    HttpResponse.json({ ticketIds: inDepartment(new URL(request.url)).map((t) => t.ticketId) }),
+    HttpResponse.json({ ticketIds: inProject(new URL(request.url)).map((t) => t.ticketId) }),
   ),
 
   http.post('*/api/v1/reviews/approve', async ({ request }) => {
@@ -103,6 +103,6 @@ export const handlers: HttpHandler[] = [
         fieldErrors: [{ field: 'comment', code: 'MSG01', params: { field_name: 'Comment' } }],
       });
     }
-    return decide(body.ticketIds);
+    return decide([body.ticketId]);
   }),
 ];

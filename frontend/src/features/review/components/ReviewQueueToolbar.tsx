@@ -1,12 +1,12 @@
 import { Button, Flex, Select, Typography } from 'antd';
+import type { ProjectMembership } from '@/shared/api';
 import styles from './ReviewQueueToolbar.module.css';
 
 type ReviewQueueToolbarProps = {
-  departments: { departmentId: number; name: string }[];
-  departmentId: number | undefined;
-  onDepartmentChange: (departmentId: number | undefined) => void;
+  projects: ProjectMembership[];
+  projectId: number | undefined;
+  onProjectChange: (projectId: number | undefined) => void;
   selectedCount: number;
-  onRequestChanges: () => void;
   onReject: () => void;
   onApprove: () => void;
 };
@@ -14,15 +14,13 @@ type ReviewQueueToolbarProps = {
 const ALL = 'ALL';
 
 /**
- * Figma 7.1 toolbar: Department filter (callout 1) and the selection count on the left; Request Changes (6),
- * Reject (5) and Approve (4) on the right, enabled once a ticket is selected.
+ * Report 3 queue: Project filter, selection count and Approve/Reject actions.
  */
 export function ReviewQueueToolbar({
-  departments,
-  departmentId,
-  onDepartmentChange,
+  projects,
+  projectId,
+  onProjectChange,
   selectedCount,
-  onRequestChanges,
   onReject,
   onApprove,
 }: ReviewQueueToolbarProps) {
@@ -31,15 +29,18 @@ export function ReviewQueueToolbar({
     <Flex justify="space-between" align="end" gap="middle" wrap>
       <Flex align="end" gap="middle">
         <Flex vertical gap="small">
-          <label htmlFor="review-queue-department">Department</label>
+          <label htmlFor="review-queue-project">Project</label>
           <Select<number | typeof ALL>
-            id="review-queue-department"
-            className={styles.department}
-            value={departmentId ?? ALL}
-            onChange={(value) => onDepartmentChange(value === ALL ? undefined : value)}
+            id="review-queue-project"
+            className={styles.project}
+            value={projectId ?? ALL}
+            onChange={(value) => onProjectChange(value === ALL ? undefined : value)}
             options={[
-              { value: ALL, label: 'All Departments' },
-              ...departments.map((d) => ({ value: d.departmentId, label: d.name })),
+              { value: ALL, label: 'All Projects' },
+              ...projects.map((project) => ({
+                value: project.projectId,
+                label: project.jiraProjectKey,
+              })),
             ]}
           />
         </Flex>
@@ -48,9 +49,6 @@ export function ReviewQueueToolbar({
         </Typography.Text>
       </Flex>
       <Flex gap="middle">
-        <Button disabled={!hasSelection} onClick={onRequestChanges}>
-          Request Changes
-        </Button>
         <Button disabled={!hasSelection} onClick={onReject}>
           Reject
         </Button>

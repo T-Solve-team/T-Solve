@@ -5,7 +5,6 @@ import { useSession } from '@/shared/auth';
 import { useListSearchParams } from '@/shared/routing';
 import { ConfirmDialog } from '@/shared/ui';
 import { RejectTicketModal } from '../components/RejectTicketModal';
-import { RequestChangesModal } from '../components/RequestChangesModal';
 import { ReviewQueueTable } from '../components/ReviewQueueTable';
 import { ReviewQueueToolbar } from '../components/ReviewQueueToolbar';
 import { useQueueTicketIds } from '../hooks/useQueueTicketIds';
@@ -13,20 +12,20 @@ import { useApproveSelectedTickets } from '../hooks/useReviewDecisions';
 import { useReviewQueue } from '../hooks/useReviewQueue';
 import styles from './ReviewQueuePage.module.css';
 
-type OpenDialog = 'confirmApprove' | 'reject' | 'requestChanges' | null;
+type OpenDialog = 'confirmApprove' | 'reject' | null;
 
-/** "?departmentId=2" → 2; missing or invalid → all Departments. */
-function toDepartmentId(value: string | null): number | undefined {
+/** Missing or invalid Project id means all managed Projects. */
+function toProjectId(value: string | null): number | undefined {
   const id = Number(value);
-  return value && Number.isInteger(id) ? id : undefined;
+  return value && Number.isInteger(id) && id > 0 ? id : undefined;
 }
 
 export function ReviewQueuePage() {
   const { session } = useSession();
   const list = useListSearchParams({ field: 'reviewDueDate', order: 'asc' }); // SRS: earliest due first
-  const departmentId = toDepartmentId(list.getFilter('departmentId'));
-  const queue = useReviewQueue({ departmentId, ...list.apiPaging });
-  const loadAllTicketIds = useQueueTicketIds(departmentId);
+  const projectId = toProjectId(list.getFilter('projectId'));
+  const queue = useReviewQueue({ projectId, ...list.apiPaging });
+  const loadAllTicketIds = useQueueTicketIds(projectId);
   const approve = useApproveSelectedTickets();
 
   // Selected tickets, across pages. Local state: it belongs to this screen only (guideline 05 C8).
@@ -38,11 +37,8 @@ export function ReviewQueuePage() {
     setSelectedIds([]);
   }
 
-  function handleDepartmentChange(nextDepartmentId: number | undefined) {
-    list.setFilter(
-      'departmentId',
-      nextDepartmentId === undefined ? null : String(nextDepartmentId),
-    );
+  function handleProjectChange(nextProjectId: number | undefined) {
+    list.setFilter('projectId', nextProjectId === undefined ? null : String(nextProjectId));
     setSelectedIds([]); // a selection belongs to the filter it was made in
   }
 
@@ -63,11 +59,12 @@ export function ReviewQueuePage() {
   return (
     <Flex vertical gap="large">
       <ReviewQueueToolbar
-        departments={session?.departments ?? []}
-        departmentId={departmentId}
-        onDepartmentChange={handleDepartmentChange}
+        projects={
+          session?.projects.filter((project) => project.roleInProject === 'PROJECT_MANAGER') ?? []
+        }
+        projectId={projectId}
+        onProjectChange={handleProjectChange}
         selectedCount={selectedIds.length}
-        onRequestChanges={() => setOpenDialog('requestChanges')}
         onReject={() => setOpenDialog('reject')}
         onApprove={handleApprove}
       />
@@ -101,12 +98,6 @@ export function ReviewQueuePage() {
         isOpen={openDialog === 'reject'}
         onClose={() => setOpenDialog(null)}
         onRejected={finishDecision}
-      />
-      <RequestChangesModal
-        ticketIds={selectedIds}
-        isOpen={openDialog === 'requestChanges'}
-        onClose={() => setOpenDialog(null)}
-        onSent={finishDecision}
       />
     </Flex>
   );

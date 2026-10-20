@@ -93,21 +93,11 @@ describe('ReviewQueuePage', () => {
     );
   });
 
-  it('requests changes for every selected ticket with one comment (MSG21)', async () => {
+  it('does not offer bulk Request Changes (BUG-001, BUG-013, AC-003.1)', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('checkbox', { name: 'Select ITNET-0415' }));
-    await user.click(screen.getByRole('button', { name: 'Request Changes' }));
-
-    const dialog = await screen.findByRole('dialog');
-    await user.type(
-      within(dialog).getByLabelText('Comment'),
-      'Please add the exact error message.',
-    );
-    await user.click(within(dialog).getByRole('button', { name: 'Send' }));
-
-    expect(await screen.findByText(msg('MSG21'))).toBeInTheDocument();
-    expect(await screen.findByText('Total 56 items')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Request Changes' })).not.toBeInTheDocument();
   });
 
   it('"Select all" selects every ticket in the queue, not only this page', async () => {
@@ -116,12 +106,12 @@ describe('ReviewQueuePage', () => {
     expect(await screen.findByText('58 selected')).toBeInTheDocument();
   });
 
-  it('filters by Department and keeps the filter in the URL', async () => {
+  it('filters by Project and keeps the filter in the URL (BUG-003, BUG-013, AC-001.2)', async () => {
     const { user, router } = await openQueue();
-    await user.click(screen.getByRole('combobox', { name: 'Department' }));
-    await user.click(await screen.findByTitle('HR'));
+    await user.click(screen.getByRole('combobox', { name: 'Project' }));
+    await user.click(await screen.findByTitle('HRHELP'));
 
-    await waitFor(() => expect(router.state.location.search).toBe('?departmentId=2'));
+    await waitFor(() => expect(router.state.location.search).toBe('?projectId=201'));
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: 'ITSUP-1031' })).not.toBeInTheDocument(),
     );
