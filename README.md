@@ -22,6 +22,7 @@ t-solve/
 │       └── common/        config, error handling
 │   └── src/main/resources/db/changelog/   Liquibase changelog (schema owner): master XML + SQL changesets
 ├── frontend/              React 19 + TypeScript + Vite + Ant Design 6 (see frontend/README.md)
+├── jira-app/              T-Solve Jira App on Atlassian Forge, UI Kit (see jira-app/AGENTS.md)
 ├── docs/bug-log.md        every bug found, its fix and its test (source of the test report's defect list)
 ├── infra/                 (planned) server compose files, main Caddyfile, monitoring, backup scripts, runbook
 ├── .github/               (planned) CI/CD workflows, CODEOWNERS, PR template, Dependabot
