@@ -20,3 +20,5 @@
 {"ts":"2026-10-19T14:40:32.577Z","type":"quick-closed","what":"README: point to backend/AGENTS.md and docs/bug-log.md","files":["README.md"]}
 {"ts":"2026-10-19T14:43:29.072Z","type":"quick-opened","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}
 {"ts":"2026-10-19T14:43:48.790Z","type":"quick-closed","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}
+{"ts":"2026-10-21T12:50:30.391Z","type":"quick-opened","what":"AGENTS.md: add exception/client folders, common layout, test layout; log ProblemDetail mismatch bug","files":["backend/AGENTS.md","docs/bug-log.md"]}
+{"ts":"2026-10-21T12:52:43.722Z","type":"quick-closed","what":"AGENTS.md: add exception/client folders, common layout, test layout; log ProblemDetail mismatch bug","files":["backend/AGENTS.md","docs/bug-log.md"]}

@@ -26,3 +26,4 @@ workaround · `Medium` wrong, but there is a workaround · `Low` cosmetic, typo.
 
 | ID | Found on | Found by | Owner | Area | Severity | Summary | Steps · expected · actual | Status | Jira | Fixed in | Test | Notes |
 |----|----------|----------|-------|------|----------|---------|---------------------------|--------|------|----------|------|-------|
+| BUG-001 | 2026-10-21 | Anh Tran Hai | Anh Tran Hai | backend · common/exception | Medium | Error responses are not RFC 9457 `ProblemDetail` and carry no MSG code | Call any endpoint with an unknown id · expected: `ProblemDetail` body with `code` (MSGxx), as in `backend/AGENTS.md` §5 · actual: `GlobalExceptionHandler` returns a `{timestamp, status, message}` map; base exceptions take no code | Open | | | | |
