@@ -14,6 +14,7 @@ repos:
 sources:
   # Mode-specific inputs
   # docs: ./artifacts/00-baseline/requirements.pdf
+  srs: ../../SEP490_G89-TaiLieu/SEP490_G89/_context/Report/Minh_sua_report123/T-Solve_Report3_Software_Requirement_Specification_EN_v3456.docx.md
 
 iterations:
   enabled: true
