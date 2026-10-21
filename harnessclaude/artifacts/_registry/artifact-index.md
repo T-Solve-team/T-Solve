@@ -16,3 +16,5 @@ Master registry of all artifacts in this workspace.
 | — | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-1-review-api.md |
 | — | test-report | ticket-review | draft | artifacts/06-evaluation/ticket-review/task-1-review-api-test-report.md |
 | — | manual-guide | ticket-review | draft | artifacts/05-implementation/ticket-review/task-1-review-api-manual-test.md |
+| — | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-2-review-ui.md |
+| — | manual-guide | ticket-review | draft | artifacts/05-implementation/ticket-review/task-2-manual-test.md |
