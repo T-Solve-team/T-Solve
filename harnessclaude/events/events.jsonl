@@ -22,3 +22,20 @@
 {"ts":"2026-10-19T14:43:48.790Z","type":"quick-closed","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}
 {"ts":"2026-10-21T12:45:05.172Z","type":"module-status","module":"tracker","from":null,"to":"decomposed"}
 {"ts":"2026-10-21T12:45:05.405Z","type":"module-status","module":"jira-app","from":null,"to":"decomposed"}
+{"ts":"2026-10-21T13:29:21.183Z","type":"spec-approved","module":"tracker","specHash":"ba8598baf01cc94fc957b0e25db153ef7530c766cf48f7113cb1aaa0ff2b23fa"}
+{"ts":"2026-10-21T13:46:06.211Z","type":"spec-approved","module":"tracker","specHash":"3d6e340178b268c5defe1b27ac43b38ff1624ddc888662d5b8b4e908bc3dae98"}
+{"ts":"2026-10-21T13:46:11.442Z","type":"module-status","module":"tracker","from":"decomposed","to":"planned"}
+{"ts":"2026-10-21T13:46:11.677Z","type":"feature-status","module":"tracker","feature":"forge-remote-spike","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:11.911Z","type":"feature-status","module":"tracker","feature":"tracker-foundation","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:12.162Z","type":"feature-status","module":"tracker","feature":"fit-verification","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:12.396Z","type":"feature-status","module":"tracker","feature":"jira-site-registration","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:12.641Z","type":"feature-status","module":"tracker","feature":"token-cipher","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:12.877Z","type":"feature-status","module":"tracker","feature":"receive-issue-events","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:13.105Z","type":"feature-status","module":"tracker","feature":"jira-client","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:13.342Z","type":"feature-status","module":"tracker","feature":"event-worker","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:13.583Z","type":"feature-status","module":"tracker","feature":"triage-on-create","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:13.834Z","type":"feature-status","module":"tracker","feature":"draft-on-done","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:14.088Z","type":"feature-status","module":"tracker","feature":"issue-panel","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:14.340Z","type":"feature-status","module":"tracker","feature":"solution-form","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:14.580Z","type":"feature-status","module":"tracker","feature":"suggestion-answer","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:14.836Z","type":"feature-status","module":"tracker","feature":"event-cleanup","from":null,"to":"pending"}

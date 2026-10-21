@@ -10,3 +10,7 @@ Master registry of all artifacts in this workspace.
 | — | module-map | — | draft | artifacts/03-modules/module-map.md |
 | — | module | tracker | draft | artifacts/03-modules/tracker/module.md |
 | — | module | jira-app | draft | artifacts/03-modules/jira-app/module.md |
+| — | spec | tracker | draft | artifacts/03-modules/tracker/spec.md |
+| — | design | tracker | draft | artifacts/04-plans/tracker/design.md |
+| — | design | tracker | draft | artifacts/04-plans/tracker/iteration-1/design.md |
+| — | tasks | tracker | draft | artifacts/04-plans/tracker/iteration-1/tasks.md |

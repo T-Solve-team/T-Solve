@@ -29,9 +29,9 @@ hands work to the business modules (`triage`, `search`, `ticket`, `review`, `ai`
    Jira REST API itself; the Jira App does not send ticket content (Q4 revised, diagram point 4).
 2. **Project filtering on the server.** The app reports events for every project; the server ignores tickets
    of projects not linked to a T-Solve Project (`jiraProjectKey`) (Q2).
-3. **Triage.** The server passes the new ticket to AI Ticket Triage (owned by another member) and returns the
-   triage decision; the Jira App posts it as an **internal** comment on the ticket. Its content is defined by
-   the triage owner (diagram point 2).
+3. **Triage.** The server passes the new ticket to AI Ticket Triage (owned by another member). Only when the
+   ticket is Simple with a suggested solution does T-Solve comment MSG80 for the reporter; the reporter answers
+   MSG81 Yes/No in the panel without signing in (SRS System Messages; reporter rule to confirm with the team).
 4. **Suggestions.** Suggestions are computed when the ticket is created and stored; the Issue Panel shows them
    to Staff and has a "search again" action that recomputes from the ticket's current content (Q8, Q9). Nothing
    is posted to the reporter/customer.
@@ -42,10 +42,11 @@ hands work to the business modules (`triage`, `search`, `ticket`, `review`, `ai`
 6. **AI draft → Solution Form.** The server (`ticket` package, another member) creates an AI draft Solution from
    that data. The Solution Form in the Issue Panel shows the draft; the Staff member edits and submits it, and
    the submitted Solution enters the Review Queue for a Project Manager (diagram point 3).
-7. **"No Solution needed".** The Solution Form lets Staff close a Done ticket without a Solution, with a reason
-   (e.g. duplicate, not reusable); the ticket is then no longer flagged.
-8. **Reminders.** When a ticket enters Done without a submitted Solution, the Jira App posts an internal
-   comment mentioning the assignee; the Issue Panel shows a warning while the Solution is still missing.
+7. **Closing the form.** Per SRS MSG70, the Solution Form opens after the issue is resolved; closing it
+   submits an empty Solution for review (the PM then requests changes or rejects, MSG20). The earlier
+   "No Solution needed" idea was dropped for the SRS behaviour.
+8. **No reminder comments.** The SRS has no reminder message; the panel shows the Solution Form state
+   (MSG64, MSG65, MSG67, MSG77) instead.
 9. **Done again.** Every transition into Done is reported; the server updates the unsubmitted draft for that
    issue, or starts a new draft if a Solution was already submitted/approved. The app keeps no "already sent"
    state (Q12).
@@ -106,6 +107,8 @@ hands work to the business modules (`triage`, `search`, `ticket`, `review`, `ai`
 
 ## Sources
 - Discovery conversation with the user, 2026-10-21 (Q1–Q14 and diagram points 1–4)
+- SRS `System_Messages.docx` (MSG01–MSG118), shared 2026-10-21 — overrides earlier choices where they differ:
+  Jira site entered by the Admin in Workspace Setup (MSG61), panel needs sign-in (MSG62)
 - Architecture diagram "T-Solve – Architecture Diagram (Report 4, I.1 Software Architecture)", shared in chat
 - User's prototype Forge code (panel resolver + `onIssueUpdated` trigger), pasted in chat
 - `jira-app/AGENTS.md`, `frontend/openapi/tsolve-api.yaml`, `harnessclaude/artifacts/03-modules/architecture.md`
