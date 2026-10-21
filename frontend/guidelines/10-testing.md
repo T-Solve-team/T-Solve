@@ -85,6 +85,10 @@ hook option (`refetchInterval`), not real waiting.
 ### T6 — File and name conventions.
 Test file sits next to its subject: `ReviewQueuePage.test.tsx`. `describe` = the unit
 (`'ReviewQueuePage'`); `it` = the behaviour in plain English (`'shows MSG16 when no tickets are waiting'`).
+When the work has a HarnessClaude spec, the `it` starts with the id of the acceptance criterion it proves:
+`it('AC-002.1 lists the pending tickets of my Projects')` — `bun harnessclaude/hooks/sdd.ts trace <module>`
+looks for that id. A bug fix ends with the bug id from `docs/bug-log.md`:
+`it('keeps the selection after Approve (BUG-004)')`.
 `vi.mock`/`vi.hoisted`, if ever needed, go at the top level of the file (Vitest 5 requirement).
 
 ## 4. Example — a page test
@@ -190,6 +194,7 @@ more is doing too much; split it.
 - [ ] At least one page test for the feature (happy + empty + error).
 - [ ] Each mutation flow you added has a test (confirm → toast → refreshed list).
 - [ ] Queries by role/label/text; MSG texts via `msg()`; no `vi.mock` of API hooks.
+- [ ] With a HarnessClaude spec: every acceptance criterion has a test that names its id (`sdd.ts trace` passes).
 - [ ] `npm run test` passes locally.
 
 ---

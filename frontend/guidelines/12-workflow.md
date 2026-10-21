@@ -264,6 +264,11 @@ Follow DevOps §1.4 (`git fetch && git merge origin/main` at least daily). After
 
 - Give it `AGENTS.md` (Claude Code reads `CLAUDE.md`, which imports it), the guideline files for the task,
   the SRS section text and a screenshot of the Figma frame. Name the feature folder it may change.
+- In this repo the agent works through **HarnessClaude** (the root `CLAUDE.md`; guide:
+  `harnessclaude/README.md`), and its hooks enforce it. A new screen or a changed behaviour goes into the
+  module's spec first; code is written only after you approve that spec. A small fix that changes no
+  acceptance criterion (a label, a style, a bug against an existing criterion) is a quick change: the agent
+  names the files and you confirm them. Each test names the criterion it proves ([10](10-testing.md) T6).
 - Ask for one screen per session; ask it to run
   `npm run format:check && npm run lint && npm run typecheck && npm run test`.
 - Review its output exactly like a teammate's PR, with the checklist above. Watch for: invented MSG texts

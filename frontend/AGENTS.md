@@ -102,3 +102,6 @@ doubt, copy how it does things.
 - Screen names, field names, button labels, statuses and MSG texts are English and fixed by the SRS.
   If the task does not give them and they are not in these guidelines or the code, **ask** — do not invent.
 - Do not add files outside the structure in [01](guidelines/01-project-structure.md).
+- AI work goes through **HarnessClaude** (the root `CLAUDE.md`): a new screen or a changed behaviour goes into
+  its module's spec first and is coded only after the spec is approved; a small fix that changes no acceptance
+  criterion is a quick change. Tests name the criterion they prove ([10](guidelines/10-testing.md) T6).
