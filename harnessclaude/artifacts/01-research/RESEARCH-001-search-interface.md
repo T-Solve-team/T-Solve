@@ -2,15 +2,15 @@
 id: RESEARCH-001
 title: Search interface and search_document table
 question: What does the search package offer to chatbot, triage, tracker, review and import, and how does it store its index?
-status: in-progress
+status: complete
 date: 2026-10-21
 related: [search]
 ---
 
 # Search interface and search_document table
 
-Draft contract for UC-26 (owner: Trần Hải Anh), shared early so the chatbot (Trần Trung Hiếu) can code
-against a stub in week 1. Not code yet: it goes into `artifacts/03-modules/search/spec.md` once agreed.
+Agreed contract (2026-10-21) for UC-26 (owner: Trần Hải Anh), shared early so the chatbot (Trần Trung Hiếu) can code
+against a stub in week 1. It goes into `artifacts/03-modules/search/spec.md`; the Open Questions below do not change the method signatures.
 Comments on this file are welcome; change it in a commit on `feat/search`.
 
 ## Research Question
