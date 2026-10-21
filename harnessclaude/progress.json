@@ -1,9 +1,37 @@
 {
   "project": "T-Solve",
   "version": 2,
-  "phase": "init",
+  "phase": "decompose",
   "status": "active",
-  "modules": {},
+  "modules": {
+    "tracker": {
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "forge-remote-spike": "pending",
+        "tracker-foundation": "pending",
+        "fit-verification": "pending",
+        "jira-site-registration": "pending",
+        "token-cipher": "pending",
+        "receive-issue-events": "pending",
+        "jira-client": "pending",
+        "event-worker": "pending",
+        "triage-on-create": "pending",
+        "draft-on-done": "pending",
+        "issue-panel": "pending",
+        "solution-form": "pending",
+        "suggestion-answer": "pending",
+        "event-cleanup": "pending"
+      },
+      "lastUpdated": "2026-10-21T13:46:14.836Z"
+    },
+    "jira-app": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-21T12:45:05.405Z"
+    }
+  },
   "dependencies": {},
   "currentIteration": 1
 }
