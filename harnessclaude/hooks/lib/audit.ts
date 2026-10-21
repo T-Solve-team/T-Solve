@@ -38,7 +38,9 @@ const CODE_OPEN = ["planned", "implementing", "evaluating"];
 async function filesUnder(dir: string): Promise<string[]> {
   try {
     const entries = await readdir(dir, { recursive: true, withFileTypes: true });
-    return entries.filter((e) => e.isFile()).map((e) => join(e.parentPath, e.name));
+    return entries
+      .filter((e) => e.isFile() && e.name !== ".gitkeep")
+      .map((e) => join(e.parentPath, e.name));
   } catch {
     return [];
   }
