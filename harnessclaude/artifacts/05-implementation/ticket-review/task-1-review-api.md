@@ -109,3 +109,17 @@ Present the backend files, checks and proposed commit message to the user. After
 - User approved the proposed fix commit.
 - Code commit: default@b6098c5 (`fix(review): sync generated client with API contract (KAN-24)`).
 - Staged secret scan and whitespace check passed. No push requested for this fix.
+
+## Debug — Form timer teardown and PR title (2026-10-21)
+
+- BUG-015: user supplied CI evidence of 65 passing tests plus an unhandled useDelayState timeout after jsdom disposal. Ant Design useDebounce schedules empty error/warning lists after 10 ms; installed useDelayState has no unmount cleanup.
+- User approved a quick change scoped to frontend/src/shared/forms/forms.test.tsx and docs/bug-log.md. No production or shared infrastructure changes.
+- Red regression: rendering and unmounting Form leaves three pending timers. Test leaves no delayed Form updates after teardown (BUG-015) failed expected 0, actual 3.
+- Fix: fake only setTimeout/clearTimeout for this suite, cleanup React then execute pending callbacks inside act while jsdom still exists, assert zero pending timers and restore real timers in finally. Existing field assertions use vi.waitFor so fake time progresses. Initial direct findBy waits stalled under the fake clock; switching to Vitest clock-aware waits resolved that test-harness issue without changing validation assertions.
+- Focused suite passes all five tests. No catch-all exception handler, disabled tests, ignored errors, changed dependency or production behavior.
+- BUG-016: PR #26 initially had invalid title Feat/ticket review. Connector metadata write was denied 403; user changed it. Readback confirmed feat(review): add transactional ticket review API (KAN-24), matching the repository type/scope/Jira rules.
+- Format, lint, typecheck and build pass. First full-suite run: 65 passed, one unrelated ADMIN lazy route heading timeout, no unhandled errors. Logged BUG-017, kept route source unchanged because it is outside the approved quick change. Full-suite rerun in progress without competing verification commands.
+- Graphify refreshed: 1,595 nodes / 3,699 edges; known missing SQL parser remains.
+- Final standalone full-suite rerun: **11 files, 66 tests passed, exit 0, no unhandled errors**. Non-fatal jsdom pseudo-element getComputedStyle warnings remain visible. BUG-017 remains open as an intermittent route-test timing issue; the successful rerun is not represented as a route fix.
+- Proposed quick-change commit: fix(test): drain form debounce timers before teardown (KAN-24). Awaiting the per-feature user commit checkpoint; no commit or push performed.
+- User approved commit. Quick-change code commit: default@4d9fce7 (`fix(test): drain form debounce timers before teardown (KAN-24)`). Staged secret scan and whitespace checks passed. Closed the approved quick change with sdd.ts quick done. No push performed.
