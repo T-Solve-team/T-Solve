@@ -20,3 +20,5 @@
 {"ts":"2026-10-19T14:40:32.577Z","type":"quick-closed","what":"README: point to backend/AGENTS.md and docs/bug-log.md","files":["README.md"]}
 {"ts":"2026-10-19T14:43:29.072Z","type":"quick-opened","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}
 {"ts":"2026-10-19T14:43:48.790Z","type":"quick-closed","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}
+{"ts":"2026-10-21T12:45:05.172Z","type":"module-status","module":"tracker","from":null,"to":"decomposed"}
+{"ts":"2026-10-21T12:45:05.405Z","type":"module-status","module":"jira-app","from":null,"to":"decomposed"}

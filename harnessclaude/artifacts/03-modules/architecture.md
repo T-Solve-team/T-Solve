@@ -23,6 +23,9 @@ Folder tree and dependency rules: `backend/AGENTS.md` §1.
 
 **Between modules:** in-process calls to the other module's service interfaces (see Backend Code Structure)
 **Between frontend and backend:** REST JSON under `/api/v1/**`; the agreed contract is `frontend/openapi/tsolve-api.yaml`
+**Between the Jira App and backend:** Forge Remote calls to the Jira App API (REST JSON, same contract file),
+authenticated by the Forge Invocation Token (FIT); the backend reads Jira with the Forge app system token
+through the `tracker` package (`TicketTrackerClientFactory` → `JiraClient`), never with stored Jira API tokens.
 
 ## Shared Infrastructure
 
@@ -36,7 +39,8 @@ Folder tree and dependency rules: `backend/AGENTS.md` §1.
 
 ## Repo Structure
 
-**Chosen:** monorepo — `backend/` (Spring Boot), `frontend/` (React), `harnessclaude/` (this workspace).
+**Chosen:** monorepo — `backend/` (Spring Boot), `frontend/` (React), `jira-app/` (Atlassian Forge, UI Kit),
+`harnessclaude/` (this workspace).
 
 ## Deployment Topology
 
