@@ -60,6 +60,9 @@ cd frontend && npm ci                   # the hook uses the frontend's own Prett
 If a hook stops your commit, read the message, fix the cause and commit again. `git commit --no-verify`
 skips the hooks but not CI. Rules: `commitlint.config.mjs`, `lint-staged.config.mjs`, `.husky/`.
 
+On GitHub, the **PR checks** workflow re-checks the PR title (it becomes the commit on `main`) and scans every
+commit of the PR for secrets. A gitleaks false alarm: add its `Fingerprint:` line to `.gitleaksignore`.
+
 ## Run locally
 
 ```bash
