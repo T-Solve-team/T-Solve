@@ -33,7 +33,7 @@ import vn.tsolve.ticket.service.ReviewAccessService;
 /** Explicitly imported by the test-only main class; never scanned into the production application. */
 @TestConfiguration(proxyBeanMethods = false)
 @Profile("manual-review")
-@Import(ManualReviewToolsController.class)
+@Import({ManualReviewToolsController.class, ManualReviewSessionController.class})
 public class ManualReviewConfiguration {
     @Bean
     WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> manualLoopbackOnly() {
@@ -66,6 +66,12 @@ public class ManualReviewConfiguration {
                                 .anyRequest()
                                 .authenticated())
                 .httpBasic(withDefaults())
+                .formLogin(login -> login.defaultSuccessUrl("http://localhost:5173/review-queue", true))
+                .exceptionHandling(errors -> errors.defaultAuthenticationEntryPointFor(
+                        (request, response, exception) -> response.setStatus(401),
+                        request -> request.getRequestURI().startsWith("/api/")))
+                .logout(logout -> logout.logoutUrl("/api/v1/auth/logout")
+                        .logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)))
                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
                 .build();

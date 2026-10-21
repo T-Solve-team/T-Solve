@@ -8,9 +8,8 @@ type MessageDefinition = {
 };
 
 /**
- * System messages — SRS v2, V.2 System Messages. Texts are copied verbatim; never edit them here without an
- * SRS change (guideline 06 §6). `{name}` placeholders are filled by `msg()`.
- * Retired codes (MSG09, MSG11–15, MSG17, MSG23–28, MSG37, MSG48, MSG49, MSG69) are intentionally absent.
+ * Review messages MSG13–MSG20 follow Report 3 v3460; other feature messages retain their existing scope.
+ * Texts are copied from the SRS. `{name}` placeholders are filled by `msg()`.
  *
  * type = how the SRS says it is shown: field (red text under the field) · inline (in the page) · toast ·
  * confirm (confirm dialog) · tooltip · banner (Jira App panel).
@@ -28,13 +27,27 @@ export const MESSAGES = {
     type: 'inline',
     text: 'This account is not registered in T-Solve. Please contact your Admin.',
   },
-  MSG16: { type: 'inline', text: 'No tickets are waiting for review.' },
-  MSG18: { type: 'toast', level: 'success', text: '{count} ticket(s) approved and published.' },
-  MSG19: {
+  MSG13: { type: 'inline', text: 'No tickets are waiting for review.' },
+  MSG14: { type: 'toast', level: 'success', text: '{count} ticket(s) approved and published.' },
+  MSG15: {
     type: 'confirm',
-    text: 'Reject {count} ticket(s)? Rejected tickets are final: they will not be published, will not return to the review queue and are not sent back to the author.',
+    text: 'Reject {count} ticket(s)? Rejected tickets are final: they will not be published and will not return to the review queue. The author will receive the reason by email.',
   },
-  MSG20: { type: 'toast', level: 'success', text: '{count} ticket(s) rejected.' },
+  MSG16: { type: 'toast', level: 'success', text: '{count} ticket(s) rejected.' },
+  MSG17: {
+    type: 'toast',
+    level: 'success',
+    text: 'Changes requested. The author will see your comment in Jira and receive it by email.',
+  },
+  MSG18: {
+    type: 'tooltip',
+    text: 'Request changes is only available for tickets submitted from the Solution Form in Jira.',
+  },
+  MSG19: { type: 'confirm', text: 'Approve and publish {count} ticket(s)?' },
+  MSG20: {
+    type: 'inline',
+    text: 'This ticket has an empty solution and cannot be approved. Request changes or reject it.',
+  },
   MSG21: {
     type: 'toast',
     level: 'success',

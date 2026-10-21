@@ -12,6 +12,10 @@ import { ApiError, apiErrorFromResponse } from './errors';
 export async function http<T>(url: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+  if (!['GET', 'HEAD', 'OPTIONS'].includes((init.method ?? 'GET').toUpperCase())) {
+    const token = document.cookie.split('; ').find((cookie) => cookie.startsWith('XSRF-TOKEN='));
+    if (token) headers.set('X-XSRF-TOKEN', decodeURIComponent(token.slice('XSRF-TOKEN='.length)));
+  }
 
   let response: Response;
   try {

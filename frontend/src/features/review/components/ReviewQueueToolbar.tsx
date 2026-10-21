@@ -7,6 +7,7 @@ type ReviewQueueToolbarProps = {
   projectId: number | undefined;
   onProjectChange: (projectId: number | undefined) => void;
   selectedCount: number;
+  isBusy: boolean;
   onReject: () => void;
   onApprove: () => void;
 };
@@ -21,6 +22,7 @@ export function ReviewQueueToolbar({
   projectId,
   onProjectChange,
   selectedCount,
+  isBusy,
   onReject,
   onApprove,
 }: ReviewQueueToolbarProps) {
@@ -49,10 +51,10 @@ export function ReviewQueueToolbar({
         </Typography.Text>
       </Flex>
       <Flex gap="middle">
-        <Button disabled={!hasSelection} onClick={onReject}>
+        <Button disabled={!hasSelection || isBusy} onClick={onReject}>
           Reject
         </Button>
-        <Button type="primary" disabled={!hasSelection} onClick={onApprove}>
+        <Button type="primary" disabled={!hasSelection || isBusy} onClick={onApprove}>
           Approve
         </Button>
       </Flex>

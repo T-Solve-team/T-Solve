@@ -32,10 +32,10 @@ describe('DataTable', () => {
         columns={COLUMNS}
         rows={[]}
         rowKey={(r) => r.id}
-        emptyCode="MSG16"
+        emptyCode="MSG13"
       />,
     );
-    expect(screen.getByText(msg('MSG16'))).toBeInTheDocument();
+    expect(screen.getByText(msg('MSG13'))).toBeInTheDocument();
   });
 
   it('shows the error with a retry instead of the table', async () => {

@@ -107,7 +107,7 @@ export function KitPage() {
       <SectionCard title="Web/Empty & Loading (EmptyState, LoadingState, ErrorState)">
         <Flex gap="large">
           <EmptyState />
-          <EmptyState code="MSG16" />
+          <EmptyState code="MSG13" />
           <LoadingState />
           <ErrorState onRetry={() => undefined} />
         </Flex>

@@ -1,7 +1,9 @@
 /** 7.1 Review Queue — SRS III.7.1, Figma "7.1 Review Queue" (decisions FE-10, FE-34). */
 import { Flex } from 'antd';
 import { useState } from 'react';
+import { isApiError } from '@/shared/api';
 import { useSession } from '@/shared/auth';
+import { showMessage } from '@/shared/messages';
 import { useListSearchParams } from '@/shared/routing';
 import { ConfirmDialog } from '@/shared/ui';
 import { RejectTicketModal } from '../components/RejectTicketModal';
@@ -43,7 +45,11 @@ export function ReviewQueuePage() {
   }
 
   async function handleSelectAll(isChecked: boolean) {
-    setSelectedIds(isChecked ? await loadAllTicketIds() : []);
+    try {
+      setSelectedIds(isChecked ? await loadAllTicketIds() : []);
+    } catch (error) {
+      showMessage(isApiError(error) ? error.code : 'MSG06', isApiError(error) ? error.params : {});
+    }
   }
 
   function runApprove() {
@@ -65,6 +71,7 @@ export function ReviewQueuePage() {
         projectId={projectId}
         onProjectChange={handleProjectChange}
         selectedCount={selectedIds.length}
+        isBusy={approve.isPending || openDialog !== null}
         onReject={() => setOpenDialog('reject')}
         onApprove={handleApprove}
       />
@@ -87,7 +94,7 @@ export function ReviewQueuePage() {
 
       <ConfirmDialog
         isOpen={openDialog === 'confirmApprove'}
-        code="MSG90"
+        code="MSG19"
         params={{ count: selectedIds.length }}
         isConfirming={approve.isPending}
         onConfirm={runApprove}

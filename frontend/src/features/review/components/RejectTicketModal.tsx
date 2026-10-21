@@ -55,7 +55,7 @@ export function RejectTicketModal({
       onCancel={onClose}
     >
       <Flex vertical gap="middle">
-        <Alert type="warning" showIcon title={msg('MSG19', { count: ticketIds.length })} />
+        <Alert type="warning" showIcon title={msg('MSG15', { count: ticketIds.length })} />
         <FormField<RejectFormValues>
           name="reason"
           label="Reason"
