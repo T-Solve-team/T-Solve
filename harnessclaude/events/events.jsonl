@@ -60,3 +60,5 @@
 {"ts":"2026-10-21T18:01:44.761Z","type":"feature-status","module":"import-ticket-list","feature":"csv-import-schema","from":"pending","to":"in-progress"}
 {"ts":"2026-10-22T09:42:14.222Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"7c1385deb3ccc0ea08724c96c1e6319a8c9ae886"}
 {"ts":"2026-10-22T09:42:14.353Z","type":"feature-status","module":"import-ticket-list","feature":"csv-import-schema","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-22T09:42:40.339Z","type":"feature-status","module":"import-ticket-list","feature":"csv-parser","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T09:47:04.092Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"37f8037f5533f0ed0848386a59a784d1050ca7ff"}
