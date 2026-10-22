@@ -62,3 +62,6 @@
 {"ts":"2026-10-22T15:46:42.619Z","type":"feature-status","module":"fe-foundation","feature":"route-map","from":"evaluating","to":"passing"}
 {"ts":"2026-10-22T15:47:39.095Z","type":"quick-opened","what":"BUG-003: the global error test times out in the full frontend suite","files":["docs/bug-log.md","frontend/src/app/providers/global-errors.test.tsx"]}
 {"ts":"2026-10-22T15:53:41.240Z","type":"quick-closed","what":"BUG-003: the global error test times out in the full frontend suite","files":["docs/bug-log.md","frontend/src/app/providers/global-errors.test.tsx"]}
+{"ts":"2026-10-22T15:59:18.078Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T16:07:48.237Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"03f8f8c3a2ebcece920d9d667e619442534148d0"}
+{"ts":"2026-10-22T16:07:48.441Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":"in-progress","to":"evaluating"}
