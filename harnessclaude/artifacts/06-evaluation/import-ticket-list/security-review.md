@@ -42,3 +42,41 @@ Reviewer: harnessclaude reviewer (independent; judged only from spec, design and
 8. **[LOW][STRIDE-Info]** Unhandled exceptions (e.g. `DataIntegrityViolationException` on two concurrent uploads by one PM, `MissingServletRequestParameterException`) fall back to Spring Boot's default error body, not `ProblemDetail` with `code`. No stack trace is exposed (Boot default), so Low.
 
 Critical/High findings make the related feature's review verdict fail: finding 1 → **csv-confirm** (task 9).
+
+## Attempt 2 (2026-10-23)
+
+Scope: commit range `d15e991..58e0a06` (repo `default`, branch `feat/KAN-31-import-ticket-csv`): `3905cdc` (csv-confirm fix) and `58e0a06` (task 14, preview-rows-access). Files: `ImportConfirmServiceImpl.java`, `ImportPreviewServiceImpl.java`, `ImportPreviewRepository.java`, `TicketsPublishedEvent.java`, `application.yml`, and the three test classes. Judged against the spec version approved as b3015b47.
+
+| Category | Critical | High | Medium | Low |
+|----------|----------|------|--------|-----|
+| Secrets | 0 | 0 | 0 | 0 |
+| Dependencies | 0 | 0 | 0 | 0 |
+| Code | 0 | 0 | 0 | 2 |
+| STRIDE | 0 | 0 | 0 | 1 |
+
+### Checks run
+- **Secrets:** a grep of the range's added lines for `password|secret|api_key|token|PRIVATE KEY` finds nothing.
+- **Dependencies:** no dependency changed in the range (`pom.xml` untouched).
+- **Dangerous patterns:** no native SQL, `Runtime.exec` or deserialization was added. The new `lockByIdAndOwner` is JPQL with bound parameters (`ImportPreviewRepository.java:19-21`).
+- **Logs:** the `mvn verify` log of this run contains no ticket values (grep for `insert into ticket`, `Login fails`, `Error 500` and `Bad token` finds nothing). Failure lines carry only the exception type and SQLState.
+
+### Earlier findings
+| # | Finding (2026-10-22) | Status |
+|---|---|---|
+| 1 | [HIGH][EoP] Confirm did not re-check Project management | **Resolved.** The spec gained AC-004.11 and AC-003.4. Confirm checks `ImportConfirmServiceImpl.java:97-102` (MSG40, then 403 MSG08, with no Import Batch). The rows list, row detail and remove-rows check `ImportPreviewServiceImpl.java:84-92` (403 MSG08 after the owner check). Both are tested. |
+| 2 | [MEDIUM] Ticket content in logs | **Resolved.** `application.yml:31-36` (loggers OFF) and the service's own log line (`ImportConfirmServiceImpl.java:126-131`), verified in this run's log. |
+| 3 | [MEDIUM][DoS] `IN (...)` bind limit | **Knowingly deferred** (design E8). The NFR file size stays far below the limit, and the follow-up is to chunk `findExistingTicketIds`. Still open at `ImportConfirmServiceImpl.java:165` and `CsvImportServiceImpl.java:85`. |
+| 4 | [MEDIUM][Tampering] Unlocked Confirm read | **Resolved** for a double Confirm (`PESSIMISTIC_WRITE` lock, Valid rows read again, 404 without a Failed batch; IT on PostgreSQL). **Partly resolved** for remove-rows racing a Confirm: new finding A. |
+| 5 | [LOW] `RemoveRowsRequest.rowNumbers` unbounded | Open (not in the range). |
+| 6 | [LOW] File name over 255 characters gives 500 | Open (not in the range). |
+| 7 | [LOW] Stub `ProjectAccess` is a plain `@Component` | Open (not in the range). |
+| 8 | [LOW] Some unhandled exceptions are not `ProblemDetail` | Open (not in the range). |
+
+### New findings
+A. **[LOW][STRIDE-Tampering]** `ImportPreviewServiceImpl.java:84-87`: `removeRows` does not take the preview lock that Confirm holds, so a remove-rows that commits while a Confirm is running can still have its row imported. The same PM has to act twice at once.
+   - Fix: load the preview with `lockByIdAndOwner` in `removeRows`.
+B. **[LOW][CODE]** `ImportConfirmServiceImpl.java:110`: every `DataIntegrityViolationException` is reported as `TicketIdTaken` (409), including violations that have nothing to do with Ticket IDs. That misstates the cause in the Failed batch.
+   - Fix: give 409 only for constraint `uq_ticket_ticket_id`.
+C. **[LOW][STRIDE-Repudiation/ops]** `application.yml:35-36`: `SqlExceptionHelper` is OFF application-wide, so SQL errors elsewhere are silent unless their caller logs them. This was accepted by design E5. Each new module should log its own SQL failures, without values.
+
+No Critical or High findings remain. Nothing here blocks **csv-confirm** (task 9, attempt 2) or **preview-rows-access** (task 14, attempt 1).

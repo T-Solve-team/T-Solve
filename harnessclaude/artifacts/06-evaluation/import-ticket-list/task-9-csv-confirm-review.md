@@ -2,12 +2,81 @@
 module: import-ticket-list
 feature: csv-confirm
 task: 9
-verdict: fail
-attempt: 1
-date: 2026-10-22
+verdict: pass
+attempt: 2
+date: 2026-10-23
 reviewer: harnessclaude reviewer (independent subagent)
 iteration: 1
 ---
+
+# Review: import-ticket-list — Task 9: Confirm the import — Attempt 2 (2026-10-23)
+
+## Summary
+Re-review of the fix commit `3905cdc` (range `d15e991..58e0a06`, repo `default`, branch `feat/KAN-31-import-ticket-csv`) against the spec version approved as b3015b47 (Changelog 2026-10-22: new AC-004.11 and AC-004.12, reworded AC-004.6). The attempt-1 blocker is fixed. Confirm now checks `isActive`, which gives MSG40, and then `managesActive`, which gives 403 MSG08. Both checks run before the transaction, so neither records an Import Batch. Inside the transaction the code locks the preview with `PESSIMISTIC_WRITE`, reads the Valid rows again, and returns 404 without a Failed batch when another Confirm has already taken the preview. A taken ID caught by the unique constraint now gives 409. The event is published inside the transaction and reaches `AFTER_COMMIT` listeners; the IT shows that a listener failing after commit does not undo the import. Ticket values no longer appear in the logs: I checked this in this run's `mvn verify` output. Every AC of STORY-004 has a test that checks it, and 99/99 tests pass. No CRITICAL code-review finding and no Critical/High security finding remain. **Verdict pass.** The informational findings below do not block.
+
+## Criteria
+
+| Criterion | Result | Detail |
+|-----------|--------|--------|
+| Functionality | pass | AC-004.1–004.12 implemented. `ImportConfirmServiceImpl.java:97-102`: MSG40 first, then 403. `:151-160`: locked re-load with 404, and the Valid rows read again. `:110-112`: unique-constraint path gives 409. `:187`: event published inside the transaction. |
+| Completeness | pass | Every AC of STORY-004 has a test that names it and checks the behaviour (table below). Nothing EXTRA. |
+| Correctness | pass | `mvn verify`: 93 unit tests and 6 `ImportConfirmIT` tests, 0 failed or skipped. `spotless:check` passes. No CRITICAL finding. |
+| Integration | pass | The `TicketsPublishedEvent` Javadoc tells listeners to use `@TransactionalEventListener(AFTER_COMMIT)` (design E4). `ImportConfirmIT` listens that way and proves delivery after commit from a separate connection (`ImportConfirmIT.java:164,176`). OpenAPI already lists 403/404/409 for `/confirm`. |
+
+## Traceability
+`bun harnessclaude/hooks/sdd.ts trace import-ticket-list STORY-003 STORY-004` → `trace import-ticket-list (STORY-003, STORY-004): 0/16 acceptance criteria have a test` (every AC ✗ "no test under this module's paths"). This is the known harness gap: the tool does not see JUnit methods named `_AC_XXX_Y` (FEEDBACK.md). For the manual trace I grepped `backend/src/test` for `_AC_004_N` and read each test:
+
+| AC | Tests (`ImportConfirmServiceImplTest` unless noted) | Status |
+|---|---|---|
+| AC-004.1 | savesEachValidRowAsAPublishedTicket_AC_004_1 | PASS |
+| AC-004.2 | recordsAnApproveDecisionByTheProjectManagerPerTicket_AC_004_2 | PASS |
+| AC-004.3 | recordsOneCompletedImportBatchAndLinksTheTickets_AC_004_3 | PASS |
+| AC-004.4 | returnsMsg32AndDeletesThePreview_AC_004_4; ImportControllerTest.confirmReturnsTheImportResult_AC_004_4 | PASS |
+| AC-004.5 | rejectsPreviewWithoutValidRows_AC_004_5 | PASS |
+| AC-004.6 (reworded) | rejectsWhenTheProjectIsNoLongerActive_AC_004_6: 409 MSG40, no `saveAll`, no `recordFailed`. The rejection comes before the transaction, so no Completed batch is possible either. | PASS |
+| AC-004.7 | failsWholeConfirmWhenATicketIdWasTakenMeanwhile_AC_004_7; uniqueConstraintOnTicketIdIsAlsoATakenId_AC_004_7 (:253); ImportControllerTest.confirmFailureIsMsg33_AC_004_7 | PASS |
+| AC-004.8 | savingFailureImportsNothingAndRecordsAFailedBatch_AC_004_8; failureToRecordTheFailedBatchStillAnswersMsg33_AC_004_8 (:281); ImportConfirmIT.savingFailureRollsBackEveryTicketButKeepsTheFailedBatch_AC_004_8 | PASS |
+| AC-004.9 | rejectsAnotherUsersPreview_AC_004_9 | PASS |
+| AC-004.10 | publishesTheNewTicketIdsInsideTheImportTransaction_AC_004_10 (:297); ImportConfirmIT.eventArrivesAfterTheTicketsAreCommitted_AC_004_10, aListenerFailingAfterCommitDoesNotUndoTheImport_AC_004_10 | PASS |
+| AC-004.11 (new) | rejectsCallerWhoNoLongerManagesTheProject_AC_004_11 (:314): 403 MSG08, no `saveAll`, no batch save, no `recordFailed`, no transaction. inactiveProjectIsCheckedBeforeManagement_AC_004_11 (:328): MSG40 wins. | PASS |
+| AC-004.12 (new) | secondConfirmOfTheSamePreviewIsNotFoundWithoutAFailedBatch_AC_004_12 (:338); validRowsAreReadAgainUnderTheLock_AC_004_12 (:350); ImportConfirmIT.secondConfirmOfTheSamePreviewIsNotFound_AC_004_12 (:189), which uses two real threads on PostgreSQL: one "ok", one "404", exactly one COMPLETED batch, one event. | PASS |
+
+### Attempt-1 findings
+| # | Attempt-1 finding | Status |
+|---|---|---|
+| 1 | [High] Confirm did not re-check that the caller manages the Project | **Resolved.** The spec gained AC-004.11. `ImportConfirmServiceImpl.java:100-102` and the tests above. |
+| 2 | [Medium] Unlocked read gave a double Confirm a spurious Failed batch | **Resolved** for a double Confirm (`:151-160`, `ImportPreviewRepository.lockByIdAndOwner`). **Partly resolved** for remove-rows racing a Confirm: see issue 1 below. |
+| 3 | [Medium] Unique-constraint path returned 500 | **Resolved.** `:110-112` gives 409 with `TicketIdTaken: MSG33`, and this run's IT log shows `DataIntegrityViolationException (SQLState 23505)` taking this path. See issue 2 for how broad the catch is. |
+| 4 | [Medium] Event published outside the transaction | **Resolved** (design E4). `:187`, with the Javadoc on `TicketsPublishedEvent` and the AFTER_COMMIT IT. |
+| 5 | [Medium] Ticket content in the logs | **Resolved.** `application.yml:31-36` sets both loggers to OFF, and the service logs only the exception type and SQLState (`:126-131`). In this run's verify log, grep finds no `insert into ticket` and none of `Login fails` / `Error 500` / `Bad token`. See issue 4. |
+| 6 | [Medium] `IN (...)` bind limit | **Knowingly deferred** (design E8). Still at `:165`. |
+| 7 | [Low] Recorder failure hid MSG33 | **Resolved.** `:132-139`, tested at `:281`. |
+
+## Issues
+CRITICAL (blocks pass): none.
+
+Informational (does not block):
+1. [Low] `backend/src/main/java/vn/tsolve/ticket/service/impl/ImportPreviewServiceImpl.java:84-87,65-72`: remove-rows does not take the preview lock that Confirm holds. A remove-rows that starts after Confirm read the Valid rows (`ImportConfirmServiceImpl.java:157`) still commits and returns 200, and Confirm then imports the row the PM has just removed (AC-003.1, "exclude them from Confirm"). The window is narrow and needs the same PM to act twice at once.
+   Fix: in `removeRows`, load the preview with `previews.lockByIdAndOwner(previewId, user)`, so it waits for a running Confirm and then gets 404.
+2. [Low] `ImportConfirmServiceImpl.java:110`: every `DataIntegrityViolationException` is treated as "Ticket ID taken" (409, batch error `TicketIdTaken: MSG33`). A NOT NULL, FK or length violation is a saving failure, which should give 500 (spec Interface Contracts), and the Failed batch then names the wrong cause.
+   Fix: give 409 only for SQLState 23505 on constraint `uq_ticket_ticket_id` (e.g. via Hibernate `ConstraintViolationException.getConstraintName()`); otherwise use the 500 branch.
+3. [Low] `ImportConfirmIT.java:240`: `uniqueTicketIdIsTheLastGuardAgainstTwoConfirmsAtOnce` checks only the code MSG33. Only the unit test (`:253`) checks the 409 status. Fix: also assert `getStatus() == CONFLICT` in the IT.
+4. [Low] `backend/src/main/resources/application.yml:35-36`: `SqlExceptionHelper` is OFF for the whole application, so SQL errors in other modules are no longer logged unless their caller logs them. That is accepted by design E5. Note it for the modules that come next.
+5. [Low, performance] `ImportConfirmServiceImpl.java:91-93`: the pre-check loads every Valid row entity (up to about 5,000 rows of up to 10,000 characters) only to test whether any exist, and `:157` loads them again. Fix: use an `existsByIdPreviewIdAndStatus` or count query for the pre-check.
+
+## Assumptions made
+- The `sdd.ts trace` result (0/16) is a tool limitation, not missing tests. I used the manual `_AC_XXX_Y` trace instead, as the dispatcher instructed.
+- AC-004.10 says "publish … after the transaction commits". I read it as *delivered* after commit to listeners written as the event's Javadoc requires (`@TransactionalEventListener(AFTER_COMMIT)`, design E4). A plain `@EventListener` would now run before the commit. **Open judgment call for the user:** is a Javadoc rule enough, or should the spec or AGENTS.md state it?
+- The `IN (...)` bind limit stays deferred (design E8) and does not block.
+- `docs/bug-log.md` has no rows for the attempt-1 findings. I took findings on unmerged in-module code to be handled by the harness fixing loop rather than as logged bugs. **Open judgment call for the user:** should evaluation findings also go into the bug log (project rule "Log every bug")?
+- Coverage was not measured (no JaCoCo), and the spec sets no threshold. Same open question as attempt 1.
+
+## Test Report
+`task-9-csv-confirm-test-report.md` (attempt 2): `mvn verify` exit 0, with 99 tests (93 Surefire and 6 Failsafe `ImportConfirmIT` on PostgreSQL 16), 0 failed or skipped. `mvn spotless:check` passes. Coverage not measured. Security: `security-review.md`, section "Attempt 2 (2026-10-23)".
+
+---
+
+# Attempt 1 (2026-10-22) — verdict fail
 
 # Review: import-ticket-list — Task 9: Confirm the import
 

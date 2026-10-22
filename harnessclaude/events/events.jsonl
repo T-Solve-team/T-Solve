@@ -113,3 +113,5 @@
 {"ts":"2026-10-22T11:27:15.102Z","type":"feature-status","module":"import-ticket-list","feature":"preview-rows-access","from":"pending","to":"in-progress"}
 {"ts":"2026-10-22T11:33:47.874Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"58e0a0674251e929d2c38e31b8eacb78f861e984"}
 {"ts":"2026-10-22T11:33:48.149Z","type":"feature-status","module":"import-ticket-list","feature":"preview-rows-access","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-22T11:57:23.953Z","type":"feature-status","module":"import-ticket-list","feature":"csv-confirm","from":"evaluating","to":"passing"}
+{"ts":"2026-10-22T11:57:24.418Z","type":"feature-status","module":"import-ticket-list","feature":"preview-rows-access","from":"evaluating","to":"passing"}

@@ -16,14 +16,14 @@
         "csv-upload": "passing",
         "preview-rows": "passing",
         "import-endpoints": "passing",
-        "csv-confirm": "evaluating",
+        "csv-confirm": "passing",
         "preview-cleanup": "passing",
         "csv-import-performance": "passing",
         "retire-snapshot-import": "passing",
         "csv-confirm-db-tests": "passing",
-        "preview-rows-access": "evaluating"
+        "preview-rows-access": "passing"
       },
-      "lastUpdated": "2026-10-22T11:33:48.143Z",
+      "lastUpdated": "2026-10-22T11:57:24.415Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
