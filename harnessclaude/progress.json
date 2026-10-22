@@ -21,15 +21,15 @@
         "csv-import-performance": "passing",
         "retire-snapshot-import": "passing",
         "csv-confirm-db-tests": "passing",
-        "preview-rows-access": "pending"
+        "preview-rows-access": "evaluating"
       },
-      "lastUpdated": "2026-10-22T11:27:05.835Z",
+      "lastUpdated": "2026-10-22T11:33:48.143Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "3905cdcbef623074a717c1254a74925bd2ce6473"
+        "default": "58e0a0674251e929d2c38e31b8eacb78f861e984"
       }
     }
   },
