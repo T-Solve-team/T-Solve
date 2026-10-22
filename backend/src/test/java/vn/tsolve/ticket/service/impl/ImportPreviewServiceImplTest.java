@@ -2,6 +2,7 @@ package vn.tsolve.ticket.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -22,7 +23,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
+import vn.tsolve.common.error.MessageCodeException;
 import vn.tsolve.common.error.NotFoundException;
 import vn.tsolve.ticket.csv.RowError;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
@@ -36,6 +39,7 @@ import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.mapper.ImportPreviewMapperImpl;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
+import vn.tsolve.ticket.service.ProjectAccess;
 
 class ImportPreviewServiceImplTest {
 
@@ -44,8 +48,9 @@ class ImportPreviewServiceImplTest {
 
     private final ImportPreviewRepository previews = mock(ImportPreviewRepository.class);
     private final ImportPreviewRowRepository rows = mock(ImportPreviewRowRepository.class);
+    private final ProjectAccess projects = mock(ProjectAccess.class);
     private final ImportPreviewServiceImpl service =
-            new ImportPreviewServiceImpl(previews, rows, new ImportPreviewMapperImpl());
+            new ImportPreviewServiceImpl(previews, rows, new ImportPreviewMapperImpl(), projects);
 
     private static ImportPreviewRow row(int rowNo, String symptoms, List<RowError> errors) {
         return new ImportPreviewRow(
@@ -62,6 +67,7 @@ class ImportPreviewServiceImplTest {
         ReflectionTestUtils.setField(preview, "id", ID);
         when(previews.findByIdAndOwner(eq(ID), any()))
                 .thenAnswer(call -> PM.equals(call.getArgument(1)) ? Optional.of(preview) : Optional.empty());
+        when(projects.managesActive(PM, 1L)).thenReturn(true);
     }
 
     @Test
@@ -155,5 +161,20 @@ class ImportPreviewServiceImplTest {
         assertThat(row.symptoms()).isEqualTo(longSymptoms);
         assertThat(row.description()).isEqualTo("Long story");
         assertThat(row.status()).isEqualTo(PreviewRowStatus.VALID);
+    }
+
+    @Test
+    void callerWhoNoLongerManagesTheProjectCannotReadOrChangeRows_AC_003_4() {
+        when(projects.managesActive(PM, 1L)).thenReturn(false);
+
+        for (Runnable call : List.<Runnable>of(
+                () -> service.rows(PM, ID, null, PageRequest.of(0, 20)),
+                () -> service.row(PM, ID, 1),
+                () -> service.removeRows(PM, ID, List.of(1)))) {
+            MessageCodeException e = catchThrowableOfType(call::run, MessageCodeException.class);
+            assertThat(e.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(e.getCode()).isEqualTo("MSG08");
+        }
+        verifyNoInteractions(rows);
     }
 }

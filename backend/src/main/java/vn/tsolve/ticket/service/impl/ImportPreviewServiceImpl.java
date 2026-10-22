@@ -14,10 +14,12 @@ import vn.tsolve.ticket.dto.ImportPreviewRowSummary;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
+import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.mapper.ImportPreviewMapper;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
 import vn.tsolve.ticket.service.ImportPreviewService;
+import vn.tsolve.ticket.service.ProjectAccess;
 
 @Service
 public class ImportPreviewServiceImpl implements ImportPreviewService {
@@ -27,12 +29,17 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
     private final ImportPreviewRepository previews;
     private final ImportPreviewRowRepository previewRows;
     private final ImportPreviewMapper mapper;
+    private final ProjectAccess projects;
 
     public ImportPreviewServiceImpl(
-            ImportPreviewRepository previews, ImportPreviewRowRepository previewRows, ImportPreviewMapper mapper) {
+            ImportPreviewRepository previews,
+            ImportPreviewRowRepository previewRows,
+            ImportPreviewMapper mapper,
+            ProjectAccess projects) {
         this.previews = previews;
         this.previewRows = previewRows;
         this.mapper = mapper;
+        this.projects = projects;
     }
 
     @Override
@@ -73,10 +80,15 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
                 page(preview.getId(), null, PageRequest.of(0, CsvImportServiceImpl.FIRST_PAGE_SIZE)));
     }
 
+    /** The caller's own preview of a Project they still manage (AC-003.2, AC-003.4). */
     private ImportPreview owned(String user, long previewId) {
         // another user's preview is "not found", so ids cannot be probed (design: Cross-user access)
-        return previews.findByIdAndOwner(previewId, user)
+        ImportPreview preview = previews.findByIdAndOwner(previewId, user)
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
+        if (!projects.managesActive(user, preview.getProjectId())) {
+            throw new ProjectAccessDeniedException();
+        }
+        return preview;
     }
 
     private Page<ImportPreviewRowSummary> page(long previewId, PreviewRowStatus status, Pageable requested) {
