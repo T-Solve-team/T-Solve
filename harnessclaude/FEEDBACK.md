@@ -22,3 +22,9 @@ Append-only log of framework friction captured during usage.
 - The AC mention pattern is `/\bAC-\d{3}\.\d+\b/`. `backend/AGENTS.md` §2 makes test methods cite ids as `…_AC_001_3`, which is a legal Java identifier, while `AC-001.3` is not, so the pattern never matches.
 - Effect: `trace` reports 0/N for a Java module even when every AC has a passing test, so the "trace must exit 0 before evaluating" gate cannot be met.
 - Suggested fix: add `**/*Test.java` and `**/*IT.java` to the test globs, and accept `AC_\d{3}_\d+` as a spelling of `AC-\d{3}.\d+` (normalise before matching).
+
+## 2026-10-22 — discover / decompose (`progress.json` `phase`)
+
+**Type:** gap
+**Context:** The discover skill says to set `phase` in `progress.json` to `decompose`, but no `sdd.ts` command changes `phase` and the rules forbid editing `progress.json` by hand, so T-Solve stays at `phase: init` after discover and decompose (KAN-64). Also: `frontmatterList` splits an inline `[a, b]` list on commas, so a brace glob like `src/{a,b}/**` in `paths` breaks silently.
+**Suggestion:** Add `sdd.ts phase <phase>` (or set it from `sdd.ts status … decomposed`); document that `paths` must use `- item` lists or glob without braces.

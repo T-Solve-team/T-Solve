@@ -1,95 +1,100 @@
 ---
 project: T-Solve
 mode: blueprint
-date: 2026-10-21
+date: 2026-10-22
 ---
 
-# Context Brief: T-Solve — Ticket Import & Repository (epic KAN-29)
-
-> Scope: this brief covers only the **Ticket Import & Repository** epic (UC-20 to UC-23). The user chose this scope on 2026-10-21. Other epics get their own discovery when they start.
+# Context Brief: T-Solve
 
 ## Project Overview
-T-Solve keeps the knowledge of resolved Jira issues as reusable Tickets: a snapshot of the issue plus a structured Solution. Most Tickets come from the Solution Form in Jira (UC-19), which a later epic covers. This epic covers the ways a Project Manager (PM) brings in tickets resolved **before** T-Solve existed, or outside Jira:
-- UC-20 Import tickets from Jira
-- UC-21 Import tickets from CSV (Jira task **KAN-31**, the first feature)
-- UC-22 Create ticket manually
-- UC-23 View import history
+
+T-Solve (Ticket Solution Repository Application) is a knowledge layer next to a ticket tracker (Jira in the MVP);
+it does not replace it. A Ticket Resolver writes a Solution when they resolve an issue; the Project Manager of
+that Project reviews it; Published tickets are searched and reused, suggested back to new issues by AI Ticket
+Triage, and used by the Knowledge Chatbot together with the Wiki documents of each Department's Space.
+Capstone project SEP490_G89, FPT University, Fall 2026.
+
+Report3 is the current requirements baseline. It changed the product the code was started on (SRS v2): five
+roles, several per user; every message code renumbered; three new features (AI Ticket Triage, Wiki, Knowledge
+Chatbot). The code on `main` still follows SRS v2 in the web app's roles, catalog and routes, and in the backend
+skeleton.
 
 ## Goals
-- A PM can fill the knowledge base with past resolved tickets in one sitting per import. They become searchable at once, without a second review.
-- Every import is traceable: one Import History record per import, Completed or Failed, never edited or deleted.
-- No duplicate tickets: a Ticket ID exists only once.
+
+- Deliver the 13 Report3 features as working slices (API + screens) on the VPS for the demo, then the testing
+  phase.
+- Every member plans and builds their own module through HarnessClaude, on one shared module map, without
+  colliding with the others.
+- Shared bases first (roles, session, errors, message catalog), so feature modules build on them.
 
 ## Key Requirements
 
 ### Functional
-1. **Import is review (GBR-23):** imported tickets are saved directly as **Published**, with an approve decision by the importing PM. They skip the Review Queue and never become Expired.
-2. **Solution template (GBR-33):** each ticket's Solution has five sections: Symptoms, Root cause, Resolution steps, Workaround, Scope of applicability. The sections total at most 10,000 characters (MSG02).
-3. **CSV import (UC-21):**
-   - Upload: one `.csv` file, UTF-8, ≤ 10 MB (MSG27, MSG28), with the required columns present (MSG29).
-   - Import Preview: lists valid rows (Solution read-only) and invalid rows with error details (MSG30, MSG31). The PM can remove rows.
-   - Confirm imports the valid rows (MSG32) and skips the invalid ones. Confirm is disabled when no valid row is left.
-   - Every row belongs to the Project the PM selected. The writer comes from the optional `author` column.
-4. **Jira import (UC-20):**
-   - Pull: the PM picks a resolved date range (MSG01, MSG39). The pull returns at most 100 issues with no Ticket yet, oldest first (GBR-15); MSG35 when more match.
-   - Preview: the PM writes a Solution per issue in the Import Ticket Preview popup, or one Solution for several issues (MSG36). The PM can remove issues.
-   - Finish is enabled only when every remaining issue has the required sections. Issues that got a Ticket meanwhile are skipped (MSG38).
-   - Errors: a Jira error records a Failed import (MSG50).
-5. **Manual entry (UC-22):**
-   - Fields: Ticket ID (≤ 50 characters, unique, MSG31), title, description, Solution, and optional Evidence (≤ 5 files of ≤ 10 MB each, allowed types; MSG34, MSG72; GBR-06).
-   - Saved tickets are Published and their Evidence is locked.
-6. **Import History (UC-23):** lists the imports of the PM's own Projects with source, date range or file name, published count, removed/error count, errors and date.
-7. **Drafts (GBR-26):**
-   - The PM can save the Import Preview (Jira or CSV) or the Manual entry tab as a private Draft (MSG41), reopen it, or delete it (MSG42).
-   - Validation runs only on Finish/Confirm.
-   - A Draft creates no Import Batch, and it is deleted after a successful import.
-8. **Leaving and failure:**
-   - Leaving the preview asks MSG37.
-   - A Project that is no longer Active on Finish/Confirm blocks the import (MSG40).
-   - A failed import imports nothing (MSG33) but is still recorded as Failed.
-9. **Access:** only a PM, and only for Projects they manage.
+Report3 groups 53 use cases into 13 features:
+1. **Role-Based Access Control** (UC-01–09): sign in with the company account (OIDC, Google in the MVP), log out
+   (clears the session's chat history), my profile, user list, add user, account status, roles and Department,
+   hand over Projects and Spaces.
+2. **Workspace & Department Management** (UC-10–15): company information of the single Workspace; create,
+   update, delete and restore Departments.
+3. **Ticket tracker integration** (UC-16–18): add and configure a Project linked to a tracker project; add and
+   remove Ticket Resolvers.
+4. **Solution Authoring & Standardisation** (UC-19): submit a Solution from the tracker's Solution Form (five
+   sections, AI drafting and rewriting, drafts).
+5. **Ticket Import & Repository** (UC-20–25): import from the tracker, CSV or manual entry (Published at once,
+   GBR-23), import history, ticket detail, unpublish and re-publish.
+6. **Intelligent Retrieval** (UC-26–27): semantic search of Published tickets; ticket list.
+7. **Reuse & Feedback** (UC-28): Helpful / Not helpful feedback on Published tickets.
+8. **Review & Approval Workflow** (UC-29–33): review queue, approve / reject / request changes, expired tickets,
+   review history, JOB-02 expiry.
+9. **Dashboard & Audit** (UC-34–35): knowledge dashboard (Department or Workspace), audit log.
+10. **AI Ticket Triage** (UC-36–37): Simple / Complex classification of a new issue; a suggested solution posted
+    on Simple issues from Published tickets and Wiki documents; triage history.
+11. **Wiki Space Management** (UC-38–47): Space access, folders (≤ 3 levels), trash.
+12. **Wiki Document Management** (UC-48–50): upload, view, delete Wiki documents.
+13. **Knowledge Chatbot** (UC-51–53): answers with citations from Published Solutions and the Wiki documents the
+    user may see; session-only history; ratings.
+
+Roles (UC list 4.1, GBR-28): Employee (every account), Ticket Resolver, Project Manager, Knowledge Manager, Admin;
+a user can hold several and the permissions add up. Access per action: Permission Matrix 4.4 with footnotes ¹–⁹.
 
 ### Non-Functional
-1. CSV: a 10 MB file (about 5,000 tickets) is validated and previewed within **60 s**. One file per user at a time.
-2. Jira import: the preview (≤ 100 issues) shows within **30 s**; Finish is confirmed within **5 s**.
-3. All-or-nothing import: either every valid row becomes a ticket, or none does.
-4. Imported tickets must become searchable (Search and Issue Panel) right after import.
+1. Personal data is PII-masked before any text goes to an AI model; ticket details never appear in Chatbot
+   answers or triage comments (GBR-35, GBR-36).
+2. AI is optional: an AI failure never breaks a flow (GBR-12).
+3. The backend re-checks every permission; the UI only hides what a user cannot do.
+4. Every acceptance criterion has a test that names its id; every bug is logged in `docs/bug-log.md`.
+5. One deployable backend (modular monolith) and one static web app, Docker Compose + Caddy on one VPS.
 
 ## Constraints & Assumptions
-- Modular monolith: Spring Boot 3.3.5, Java 21, PostgreSQL 16 + pgvector, Liquibase, REST `/api/v1/**` (architecture.md). Backend conventions: `backend/AGENTS.md`.
-- CSV parsing per RESEARCH-001:
-  - Apache Commons CSV.
-  - Strip the BOM and decode strict UTF-8.
-  - Raise the multipart limit to 10 MB (Spring's default is 1 MB).
-  - Persist the parsed preview server-side, so it doubles as the Draft.
-- Assumption: Project, Department, PM role and Jira project token come from other epics (workspace/identity). Until those exist, this module needs stubs or minimal tables for them.
-- **Existing code conflict:** `backend/.../ticket/` already has `ResolvedTicketSnapshot`, `POST /api/tickets/import` and an **idempotent upsert** on `source + externalId`. The SRS requires **rejecting** an existing Ticket ID (MSG31). The existing model has no Project and no Solution sections; the Solution lives separately in `knowledge/Solution`. The plan must decide: extend or replace.
-
-## Gaps and contradictions (to settle in the spec as `[NEEDS CLARIFICATION]`)
-- Required Solution sections: GBR-33 says Symptoms and Resolution steps; the screen field and UC-19 say every section except Workaround.
-- Change log 04/10 says "an import cannot be saved as a draft", but UC-20/UC-21 and GBR-26 (newer) allow Drafts. Assume Drafts are allowed.
-- The full CSV template header is not specified: `description`? `resolved_date` and its format?
-- Duplicate Ticket IDs inside one CSV file: no rule.
-- Non-UTF-8 or `;`-delimited files: which message?
-- Max length of title, description and author.
-- Ticket ID format for Jira imports (the Jira key) and for CSV/manual: the same namespace?
-- Retention of abandoned (non-Draft) previews.
-- SRS v3460 on Drive is newer than the v3456 extract that was read.
+- **Source of truth:** Report3 (`UC_list_and_Actors` 4.1, 4.2, 4.4; `Business_Rules` GBR-01…36; `System_Messages`).
+  The FE Lead's decisions D1–D6 (gap report, 21/10) win where they differ — Request changes keeps several tickets
+  with one comment (D1); a Solution is never empty, no MSG20 (D2); Hand Over messages (D3); catalog, upload types,
+  `{tracker_name}` "Jira", menu order and Workspace Setup (D4); every UC is settled (D5); Architecture.jpg stays
+  as it is (D6). Report3 will be corrected. SRS v3460 is a layout template only.
+- **Architecture:** `artifacts/03-modules/architecture.md` (modular monolith, REST under `/api/v1/**`, the
+  contract in `frontend/openapi/tsolve-api.yaml`, PostgreSQL + pgvector, Liquibase). Team rules: `backend/AGENTS.md`,
+  `frontend/AGENTS.md`.
+- **Team:** one owner per module (or per part of a module) from the team table; Trần Trung Hiếu acts as Team Lead
+  while Đặng Nhật Minh is away. Owners plan their own module; the Team Lead approves the specs.
+- **Timeline:** product by 15/11 (demo on the VPS), Report 4 on 07/11, testing after 15/11.
+- **Work in flight:** PR #26 (KAN-24) builds the review flow; its module joins this map.
 
 ## Risks
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|------------|------------|
-| Project/Department/RBAC modules don't exist yet | High | High | Minimal tables or stubs behind service interfaces; replace them when those epics land |
-| Existing `ticket` package conflicts with the SRS model | Medium | High | Decide extend vs replace in the plan; check callers with impact analysis first |
-| 10 MB / 5,000-row preview within 60 s, with a uniqueness check | Medium | Low | Streaming parser, one batch ID query, batch insert |
-| Search indexing (embeddings) on publish slows Confirm or fails it | Medium | Medium | Index after commit (async). Indexing is not part of the import transaction |
-| SRS contradictions lead to rework | Medium | Medium | Settle the clarifications before approving the spec |
+| The code follows SRS v2 (roles, MSG codes, routes) | Features built on the wrong base | Confirmed | `be-foundation` and `fe-foundation` first; feature modules after them |
+| Report3 still differs from D1–D6 | Members follow Report3 and contradict the decisions | High | Specs cite the decisions; document owners correct Report3 |
+| Modules overlap in shared files | Gate and trace conflicts, merge conflicts | Medium | Test paths never overlap; shared contract files listed where needed; one owner per module |
+| AI quality and speed (local models, Vietnamese text) | Triage and Chatbot below expectations | Medium | AI optional (GBR-12); fallbacks per flow; benchmark before the demo |
+| Short time, part-time team, a member away | Modules late | High | Build order by dependency; parallel work against mocked interfaces |
 
 ## Suggested Module Boundaries
-- **import-ticket-list** (epic KAN-29): UC-20, UC-21, UC-22, UC-23 — Import Tickets screen (Jira / CSV / Manual tabs), Import Preview, Import Ticket Preview popup, Import Drafts, Import History, Import Batch. First feature: **KAN-31 CSV import (UC-21)**, then manual entry, import history, Jira import.
-- Depends on (outside this brief, other epics): identity/RBAC (PM role), workspace (Project, Department, Jira token), search (indexing Published tickets). Until those modules are decomposed, they are not modelled in progress.json.
+Full-stack modules cut along the Report3 features, two foundations and the Jira App — see
+`artifacts/03-modules/module-map.md` for the list, owners, dependencies and order.
 
 ## Sources
-- SRS Report 3 `T-Solve_Report3_Software_Requirement_Specification_EN_v3456` — extract at `SEP490_G89-TaiLieu/SEP490_G89/_context/Report/Minh_sua_report123/`. Sections used: UC-20 to UC-23, GBR-06/15/23/26/33, business rules, entities Ticket / Import History / Draft, screen fields, MSG27–MSG42, MSG50, Performance §2.2.
-- `artifacts/01-research/RESEARCH-001-import-ticket-csv.md`
-- `artifacts/03-modules/architecture.md`, `backend/` source (`ticket`, `knowledge` packages)
+- Report3 (team docs folder `Report3/`): `UC_list_and_Actors` (4.1 Actors, 4.2 UC-01…53, 4.4 Permission Matrix
+  and footnotes ¹–⁹), `Business_Rules` (GBR-01…36), `System_Messages` (103 codes), `Architecture.jpg`.
+- `Claude decisions/`: `T-Solve_FE_spec_gap_Report3.md` (decisions D1–D6), `T-Solve_UI_design_v3_decisions.md`,
+  `T-Solve_Jira_ticket_convention.md`.
+- The code on `main`, `backend/AGENTS.md`, `frontend/AGENTS.md`, `architecture.md`; PR #26 (KAN-24).

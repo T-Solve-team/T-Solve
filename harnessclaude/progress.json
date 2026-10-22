@@ -31,6 +31,84 @@
       "lastCommit": {
         "default": "58e0a0674251e929d2c38e31b8eacb78f861e984"
       }
+    },
+    "be-foundation": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:21.968Z"
+    },
+    "fe-foundation": {
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "roles-session": "pending",
+        "guards-menus": "pending",
+        "route-map": "pending",
+        "catalog-tags": "pending",
+        "guidelines": "pending"
+      },
+      "lastUpdated": "2026-10-22T14:52:01.207Z"
+    },
+    "identity": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.379Z"
+    },
+    "workspace": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.576Z"
+    },
+    "project-integration": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.778Z"
+    },
+    "wiki": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.980Z"
+    },
+    "ticket-repository": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.187Z"
+    },
+    "search": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.392Z"
+    },
+    "triage": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.605Z"
+    },
+    "chatbot": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.819Z"
+    },
+    "jira-app": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:24.029Z"
+    },
+    "dashboard-audit": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:24.227Z"
     }
   },
   "dependencies": {},
