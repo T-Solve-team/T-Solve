@@ -56,6 +56,29 @@ describe('Workspace Setup', () => {
     expect(router.state.location.pathname).toBe('/profile');
   });
 
+  it('AC-003.2 treats a trailing slash as the same screen (My Profile stays open)', async () => {
+    workspaceNotSetUp('admin');
+    const { router } = renderApp('/profile/', { user: 'admin' });
+    expect(await heading('My Profile')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/profile/');
+  });
+
+  it('AC-003.2 still shows 404 for an unknown path while the Workspace is not set up', async () => {
+    workspaceNotSetUp('admin');
+    const { router } = renderApp('/no-such-screen', { user: 'admin' });
+    expect(
+      await screen.findByText('This page does not exist.', {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/no-such-screen');
+  });
+
+  it('AC-003.2 does not redirect the dev kit page while the Workspace is not set up', async () => {
+    workspaceNotSetUp('admin');
+    const { router } = renderApp('/dev/kit', { user: 'admin' });
+    expect(await heading('Kit (dev only)')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/dev/kit');
+  });
+
   it('AC-003.3 does not redirect a user without the Admin role while the Workspace is not set up', async () => {
     workspaceNotSetUp('tr');
     const { router } = renderApp('/', { user: 'tr' });

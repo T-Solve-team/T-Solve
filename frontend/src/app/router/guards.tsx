@@ -50,11 +50,12 @@ const OPEN_BEFORE_SETUP: readonly string[] = [paths.workspaceSetup, paths.profil
 export function RequireWorkspace() {
   const { session, hasRole } = useSession();
   const { pathname } = useLocation();
+  const screen = pathname.replace(/\/+$/, '') || '/'; // '/profile/' is the same screen as '/profile'
   if (
     session &&
     !session.workspaceReady &&
     hasRole('ADMIN') &&
-    !OPEN_BEFORE_SETUP.includes(pathname)
+    !OPEN_BEFORE_SETUP.includes(screen)
   ) {
     return <Navigate to={paths.workspaceSetup} replace />;
   }

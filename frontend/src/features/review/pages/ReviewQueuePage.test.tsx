@@ -41,13 +41,14 @@ describe('ReviewQueuePage', () => {
       }),
     );
     renderApp('/review-queue');
-    expect(await screen.findByText(msg('MSG16'))).toBeInTheDocument();
+    // BUG-004: every test's first findBy after a render waits up to 5 s (guideline 10 §6), not only the file's first.
+    expect(await screen.findByText(msg('MSG16'), {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it('shows the error in place, with Try again, when the queue cannot be loaded', async () => {
     server.use(http.get('*/api/v1/review-queue', () => problem(500)));
     renderApp('/review-queue');
-    expect(await screen.findByRole('alert')).toHaveTextContent(msg('MSG06'));
+    expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(msg('MSG06'));
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
