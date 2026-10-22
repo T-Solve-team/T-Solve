@@ -78,3 +78,6 @@
 {"ts":"2026-10-22T10:03:25.538Z","type":"feature-status","module":"import-ticket-list","feature":"import-endpoints","from":"pending","to":"in-progress"}
 {"ts":"2026-10-22T10:07:12.810Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"586b7c64ace7146899e1385bd9fad1476239d59b"}
 {"ts":"2026-10-22T10:07:12.935Z","type":"feature-status","module":"import-ticket-list","feature":"import-endpoints","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-22T10:07:19.652Z","type":"feature-status","module":"import-ticket-list","feature":"csv-confirm","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T10:11:55.183Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"f77e38feec1f231a175d1b7e59ea73a2dd620e96"}
+{"ts":"2026-10-22T10:11:55.319Z","type":"feature-status","module":"import-ticket-list","feature":"csv-confirm","from":"in-progress","to":"evaluating"}
