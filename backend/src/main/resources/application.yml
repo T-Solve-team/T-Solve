@@ -28,6 +28,13 @@ spring:
 server:
   port: ${SERVER_PORT}
 
+logging:
+  level:
+    # their messages carry the values of a failed insert, i.e. ticket content (AGENTS.md §9); the services log
+    # their own line with the exception type and SQLState instead
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
+    org.hibernate.orm.jdbc.batch: OFF
+
 management:
   endpoints:
     web:

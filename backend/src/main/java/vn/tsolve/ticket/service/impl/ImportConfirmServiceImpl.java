@@ -1,5 +1,6 @@
 package vn.tsolve.ticket.service.impl;
 
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -7,6 +8,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -24,6 +26,7 @@ import vn.tsolve.ticket.entity.TicketReviewDecision;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.exception.ImportFailedException;
 import vn.tsolve.ticket.exception.NothingToImportException;
+import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.exception.ProjectNotActiveException;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
@@ -34,8 +37,9 @@ import vn.tsolve.ticket.service.ImportConfirmService;
 import vn.tsolve.ticket.service.ProjectAccess;
 
 /**
- * Confirm (UC-21 steps 7–9). The import runs in one transaction; when it fails, the Failed Import Batch is written
- * afterwards in a transaction of its own, and the "tickets published" event is sent only once the import committed.
+ * Confirm (UC-21 steps 7–9). The import runs in one transaction that locks the preview; when it fails, the Failed
+ * Import Batch is written afterwards in a transaction of its own. The "tickets published" event is published inside
+ * the import transaction for {@code @TransactionalEventListener(AFTER_COMMIT)} listeners.
  */
 @Service
 public class ImportConfirmServiceImpl implements ImportConfirmService {
@@ -76,7 +80,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
     /** A Ticket ID became an existing Ticket after the preview was made (AC-004.7). */
     private static class TicketIdTakenException extends RuntimeException {}
 
-    private record Imported(long batchId, List<Long> ticketIds) {}
+    private record Imported(long batchId, int created, long skipped) {}
 
     @Override
     public ImportResultResponse confirm(String user, long previewId) {
@@ -84,41 +88,77 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
-        List<ImportPreviewRow> valid = previewRows.findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID);
-        if (valid.isEmpty()) {
+        if (previewRows
+                .findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID)
+                .isEmpty()) {
             throw new NothingToImportException(errorRows);
         }
-        // rejected before anything starts, so no Import Batch is recorded (design B1)
+        // rejected before anything starts, so no Import Batch is recorded (design B1, E1): MSG40 first, then 403
         if (!projects.isActive(preview.getProjectId())) {
             throw new ProjectNotActiveException();
+        }
+        if (!projects.managesActive(user, preview.getProjectId())) {
+            throw new ProjectAccessDeniedException();
         }
 
         Imported imported;
         try {
-            imported = transaction.execute(status -> importRows(user, preview, valid, errorRows, removedRows));
-        } catch (TicketIdTakenException e) {
-            recorder.recordFailed(
-                    preview, new ImportBatchRecorder.Counts(errorRows, removedRows), "TicketIdTaken: MSG33");
+            imported = transaction.execute(status -> importRows(user, previewId));
+        } catch (NotFoundException | NothingToImportException e) {
+            // another Confirm or remove-rows got there first: nothing was attempted (AC-004.12)
+            throw e;
+        } catch (TicketIdTakenException | DataIntegrityViolationException e) {
+            fail(preview, errorRows, removedRows, "TicketIdTaken", e);
             throw new ImportFailedException(HttpStatus.CONFLICT);
         } catch (RuntimeException e) {
-            recorder.recordFailed(
-                    preview,
-                    new ImportBatchRecorder.Counts(errorRows, removedRows),
-                    e.getClass().getSimpleName() + ": MSG33");
+            fail(preview, errorRows, removedRows, e.getClass().getSimpleName(), e);
             throw new ImportFailedException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        publish(imported.ticketIds());
-        long skipped = errorRows + removedRows;
         return new ImportResultResponse(
                 imported.batchId(),
-                valid.size(),
-                skipped,
-                new MessageRef("MSG32", Map.of("created", valid.size(), "skipped", skipped)));
+                imported.created(),
+                imported.skipped(),
+                new MessageRef("MSG32", Map.of("created", imported.created(), "skipped", imported.skipped())));
     }
 
-    private Imported importRows(
-            String user, ImportPreview preview, List<ImportPreviewRow> valid, long errorRows, long removedRows) {
+    /** Records the Failed batch; never lets a recording problem hide the MSG33 answer (design E5, E6). */
+    private void fail(ImportPreview preview, long errorRows, long removedRows, String reason, RuntimeException cause) {
+        log.warn(
+                "Import of preview {} failed: {} (SQLState {})",
+                preview.getId(),
+                cause.getClass().getSimpleName(),
+                sqlState(cause));
+        try {
+            recorder.recordFailed(preview, new ImportBatchRecorder.Counts(errorRows, removedRows), reason + ": MSG33");
+        } catch (RuntimeException e) {
+            log.error(
+                    "Could not record the Failed Import Batch of preview {}: {}",
+                    preview.getId(),
+                    e.getClass().getSimpleName());
+        }
+    }
+
+    private static String sqlState(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof SQLException sql) {
+                return sql.getSQLState();
+            }
+        }
+        return "none";
+    }
+
+    private Imported importRows(String user, long previewId) {
+        // the lock makes a second Confirm of this preview wait, then find it gone (AC-004.12)
+        ImportPreview preview = previews.lockByIdAndOwner(previewId, user)
+                .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
+        long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
+        long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
+        List<ImportPreviewRow> valid = previewRows.findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID);
+        if (valid.isEmpty()) {
+            throw new NothingToImportException(errorRows);
+        }
+
         List<String> ids = valid.stream()
                 .map(r -> CsvRowValidator.trim(r.getValues().ticketId()))
                 .toList();
@@ -143,7 +183,9 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 .map(id -> TicketReviewDecision.approve(id, user))
                 .toList());
         previews.deleteById(preview.getId());
-        return new Imported(batch.getId(), ticketIds);
+        // inside the transaction: @TransactionalEventListener(AFTER_COMMIT) listeners get it once this commits
+        events.publishEvent(new TicketsPublishedEvent(ticketIds));
+        return new Imported(batch.getId(), valid.size(), errorRows + removedRows);
     }
 
     private static Ticket toTicket(ImportPreviewRow.Values v, ImportPreview preview, long batchId) {
@@ -163,14 +205,5 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                         CsvRowValidator.trim(v.resolutionSteps()),
                         CsvRowValidator.trim(v.workaround()),
                         CsvRowValidator.trim(v.scope())));
-    }
-
-    /** The tickets are already committed; a failing listener must not turn the import into an error. */
-    private void publish(List<Long> ticketIds) {
-        try {
-            events.publishEvent(new TicketsPublishedEvent(ticketIds));
-        } catch (RuntimeException e) {
-            log.warn("TicketsPublishedEvent listener failed for {} tickets", ticketIds.size(), e);
-        }
     }
 }

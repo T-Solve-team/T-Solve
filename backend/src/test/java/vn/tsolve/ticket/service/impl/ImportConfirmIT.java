@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -12,6 +15,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,17 +23,19 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.event.EventListener;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.error.MessageCodeException;
+import vn.tsolve.common.error.NotFoundException;
+import vn.tsolve.ticket.dto.ImportResultResponse;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.service.CsvImportService;
 import vn.tsolve.ticket.service.ImportConfirmService;
@@ -72,25 +78,35 @@ class ImportConfirmIT {
     @TestConfiguration
     static class Listener {
         @Bean
-        PublishedEvents publishedEvents(JdbcTemplate jdbc) {
-            return new PublishedEvents(jdbc);
+        PublishedEvents publishedEvents(DataSource dataSource) {
+            return new PublishedEvents(dataSource);
         }
     }
 
-    /** Records, for each event, whether a transaction was still open and how many tickets other sessions see. */
+    /**
+     * Listens the way TicketsPublishedEvent asks (AFTER_COMMIT) and records how many tickets a separate database
+     * connection already sees; it can be told to fail, like a broken search listener.
+     */
     static class PublishedEvents {
         final List<String> seen = new CopyOnWriteArrayList<>();
-        private final JdbcTemplate jdbc;
+        volatile boolean failNext;
+        private final DataSource dataSource;
 
-        PublishedEvents(JdbcTemplate jdbc) {
-            this.jdbc = jdbc;
+        PublishedEvents(DataSource dataSource) {
+            this.dataSource = dataSource;
         }
 
-        @EventListener
-        void on(TicketsPublishedEvent event) {
-            Integer visible = jdbc.queryForObject("select count(*) from ticket", Integer.class);
-            seen.add("tx=" + TransactionSynchronizationManager.isActualTransactionActive() + " ids="
-                    + event.ticketIds().size() + " visible=" + visible);
+        @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+        void on(TicketsPublishedEvent event) throws SQLException {
+            // a connection of its own, not the one bound to the import transaction
+            try (Connection c = dataSource.getConnection();
+                    ResultSet r = c.createStatement().executeQuery("select count(*) from ticket")) {
+                r.next();
+                seen.add("ids=" + event.ticketIds().size() + " visible=" + r.getInt(1));
+            }
+            if (failNext) {
+                throw new IllegalStateException("search down");
+            }
         }
     }
 
@@ -102,6 +118,7 @@ class ImportConfirmIT {
         jdbc.execute("delete from import_preview");
         jdbc.execute("drop trigger if exists fail_for_boom on ticket_review_decision");
         published.seen.clear();
+        published.failNext = false;
     }
 
     private long upload(String user, String... ids) {
@@ -149,10 +166,53 @@ class ImportConfirmIT {
 
         confirms.confirm("pm-a", preview);
 
-        assertThat(published.seen).containsExactly("tx=false ids=3 visible=3");
+        assertThat(published.seen).containsExactly("ids=3 visible=3");
         assertThat(count("ticket")).isEqualTo(3);
         assertThat(count("ticket_review_decision")).isEqualTo(3);
         assertThat(count("import_preview")).isZero();
+    }
+
+    @Test
+    void aListenerFailingAfterCommitDoesNotUndoTheImport_AC_004_10() {
+        published.failNext = true;
+        long preview = upload("pm-a", "T-1", "T-2");
+
+        ImportResultResponse result = confirms.confirm("pm-a", preview);
+
+        assertThat(result.created()).isEqualTo(2);
+        assertThat(count("ticket")).isEqualTo(2);
+        assertThat(jdbc.queryForList("select status from import_batch", String.class))
+                .containsExactly("COMPLETED");
+    }
+
+    @Test
+    void secondConfirmOfTheSamePreviewIsNotFound_AC_004_12() throws Exception {
+        long preview = upload("pm-a", "T-1", "T-2");
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        Callable<String> confirm = () -> {
+            start.await();
+            try {
+                confirms.confirm("pm-a", preview);
+                return "ok";
+            } catch (NotFoundException e) {
+                return "404";
+            } catch (MessageCodeException e) {
+                return e.getCode();
+            }
+        };
+        Future<String> a = pool.submit(confirm);
+        Future<String> b = pool.submit(confirm);
+        start.countDown();
+
+        List<String> outcomes = List.of(a.get(), b.get());
+        pool.shutdown();
+
+        assertThat(outcomes).containsExactlyInAnyOrder("ok", "404");
+        assertThat(count("ticket")).isEqualTo(2);
+        assertThat(jdbc.queryForList("select status from import_batch", String.class))
+                .containsExactly("COMPLETED");
+        assertThat(published.seen).containsExactly("ids=2 visible=2");
     }
 
     @Test
