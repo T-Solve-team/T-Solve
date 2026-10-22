@@ -35,6 +35,14 @@
 {"ts":"2026-10-21T13:35:49.855Z","type":"quick-closed","what":"Fix delayed Form validation teardown BUG-015","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-10-21T13:47:30.072Z","type":"feature-status","module":"ticket-review","feature":"review-ui","from":"pending","to":"in-progress"}
 {"ts":"2026-10-21T14:30:54.157Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"6021e9c024f9d2aa59c0c74a591dbd13fb115c0b"}
+{"ts":"2026-10-21T18:10:39.312Z","type":"quick-opened","what":"project rules: frontend verify commands and where the frontend conventions are","files":["CLAUDE.md","AGENTS.md"]}
+{"ts":"2026-10-21T18:13:14.967Z","type":"quick-closed","what":"project rules: frontend verify commands and where the frontend conventions are","files":["CLAUDE.md","AGENTS.md"]}
+{"ts":"2026-10-21T18:14:30.059Z","type":"quick-opened","what":"frontend docs: tests cite the AC id; AI work goes through the harness","files":["frontend/AGENTS.md","frontend/guidelines/10-testing.md","frontend/guidelines/12-workflow.md"]}
+{"ts":"2026-10-21T18:26:26.570Z","type":"quick-closed","what":"frontend docs: tests cite the AC id; AI work goes through the harness","files":["frontend/AGENTS.md","frontend/guidelines/10-testing.md","frontend/guidelines/12-workflow.md"]}
 {"ts":"2026-10-21T18:27:04.941Z","type":"quick-opened","what":"BUG-002: the landing page route test times out in the full suite","files":["docs/bug-log.md","frontend/src/app/router/routes.test.tsx"]}
 {"ts":"2026-10-21T18:31:15.774Z","type":"quick-closed","what":"BUG-002: the landing page route test times out in the full suite","files":["docs/bug-log.md","frontend/src/app/router/routes.test.tsx"]}
 {"ts":"2026-10-22T11:47:40.525Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"b6370ac10d395246fcb7b31e8f2445831f155211"}
+{"ts":"2026-10-22T12:32:58.630Z","type":"quick-opened","what":"reviewer findings: frontend done includes build and generate:api, bug-log rule, AC checklist line","files":["frontend/AGENTS.md","frontend/guidelines/12-workflow.md"]}
+{"ts":"2026-10-22T12:37:45.134Z","type":"quick-closed","what":"reviewer findings: frontend done includes build and generate:api, bug-log rule, AC checklist line","files":["frontend/AGENTS.md","frontend/guidelines/12-workflow.md"]}
+{"ts":"2026-10-22T12:49:56.896Z","type":"quick-opened","what":"project rules: the team git rules win over the harness branch and commit defaults","files":["CLAUDE.md","AGENTS.md"]}
+{"ts":"2026-10-22T12:51:49.090Z","type":"quick-closed","what":"project rules: the team git rules win over the harness branch and commit defaults","files":["CLAUDE.md","AGENTS.md"]}
