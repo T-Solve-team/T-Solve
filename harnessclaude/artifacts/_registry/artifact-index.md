@@ -24,3 +24,9 @@ Master registry of all artifacts in this workspace.
 | — | design | fe-foundation | draft | artifacts/04-plans/fe-foundation/design.md |
 | — | design | fe-foundation | draft | artifacts/04-plans/fe-foundation/iteration-1/design.md |
 | — | tasks | fe-foundation | draft | artifacts/04-plans/fe-foundation/iteration-1/tasks.md |
+| RESEARCH-001 | research | — | complete | artifacts/01-research/RESEARCH-001-import-ticket-csv.md |
+| — | module | import-ticket-list | complete | artifacts/03-modules/import-ticket-list/module.md |
+| — | spec | import-ticket-list | approved | artifacts/03-modules/import-ticket-list/spec.md |
+| — | design | import-ticket-list | draft | artifacts/04-plans/import-ticket-list/design.md |
+| — | design | import-ticket-list | draft | artifacts/04-plans/import-ticket-list/iteration-1/design.md |
+| — | tasks | import-ticket-list | draft | artifacts/04-plans/import-ticket-list/iteration-1/tasks.md |

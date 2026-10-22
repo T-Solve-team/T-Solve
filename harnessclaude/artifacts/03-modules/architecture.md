@@ -42,7 +42,7 @@ changes the YAML in the same PR (`frontend/guidelines/06-data-layer.md` §2).
 |----------|---------------------|--------|
 | Database | shared | PostgreSQL 16 + pgvector, one schema |
 | Schema migrations | shared | Liquibase: `db/changelog/db.changelog-master.xml` includes formatted-SQL changesets in `db/changelog/changes/NNN-<slug>.sql`; never edit an applied changeset, add a new one |
-| Auth/Identity | TBD | Google OIDC (decompose) |
+| Auth/Identity | shared, deferred | Google OIDC, settled when the identity module is decomposed. Until then, modules read the current user and role from Spring Security's `Authentication`, and tests use `@WithMockUser` (decided 2026-10-21) |
 | Logging | shared | SLF4J to stdout |
 | API docs | shared | springdoc-openapi: `/v3/api-docs`, Swagger UI `/swagger-ui.html` |
 

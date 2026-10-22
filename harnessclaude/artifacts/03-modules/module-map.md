@@ -32,6 +32,9 @@ its spec. Owners can change: edit the Owner column and the module's `module.md`.
 `ticket-review` comes with PR #26 (KAN-24): its `module.md`, spec and status join this map when that PR merges,
 with the paths below.
 
+`import-ticket-list` (KAN-31, CSV import, UC-21) was planned and completed before this map, as its own module. Its
+work is the first part of `ticket-repository` and uses the `ticket-repository` paths below.
+
 ## Dependency Graph
 
 ```mermaid
