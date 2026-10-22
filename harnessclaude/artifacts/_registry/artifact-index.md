@@ -31,3 +31,5 @@ Master registry of all artifacts in this workspace.
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-3-route-map-review.md |
 | — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-3-route-map-test-report.md |
 | — | session-log | fe-foundation | evaluating | artifacts/05-implementation/fe-foundation/task-2-guards-menus.md |
+| — | review | fe-foundation | fail | artifacts/06-evaluation/fe-foundation/task-2-guards-menus-review.md |
+| — | test-report | fe-foundation | fail | artifacts/06-evaluation/fe-foundation/task-2-guards-menus-test-report.md |
