@@ -47,7 +47,7 @@ Folder tree and dependency rules: `backend/AGENTS.md` §1.
 | Concern | Decision | Detail |
 |---------|----------|--------|
 | Configuration | env vars | Config files hold `${VAR}` placeholders. Secrets, credentials, hosts and URLs have **no** default — they come only from `.env` (git-ignored; Spring reads it via `spring.config.import`) or the server's environment. Non-sensitive values (a port, a feature flag) may carry a default: `${SERVER_PORT:8080}`. `.env.example` lists every name with no real value. |
-| Error handling | `common/error` | Domain exceptions → `GlobalExceptionHandler` → RFC 9457 `ProblemDetail` with an SRS `code` (MSGxx) |
+| Error handling | `common/exception` + `<module>/exception` | Module exceptions extend the base exceptions in `common/exception`; one global handler: domain exceptions → `GlobalExceptionHandler` → RFC 9457 `ProblemDetail` with an SRS `code` (MSGxx) |
 | Security | deny by default | Every endpoint declares its roles with `@PreAuthorize`; the backend always re-checks permissions |
 | Audit | listed actions | The actions in "REST, errors, security" record an audit event; `audit_event` is never updated or deleted |
 | API docs | springdoc | Minimal annotations on controllers; the YAML contract is the source of truth |
