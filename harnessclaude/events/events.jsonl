@@ -86,3 +86,7 @@
 {"ts":"2026-10-22T10:14:54.806Z","type":"feature-status","module":"import-ticket-list","feature":"preview-cleanup","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-22T10:15:02.003Z","type":"feature-status","module":"import-ticket-list","feature":"csv-import-performance","from":"pending","to":"in-progress"}
 {"ts":"2026-10-22T10:18:39.434Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"b6881426819dee32e848ed6cfd8e3c9a776fe058"}
+{"ts":"2026-10-22T10:18:47.192Z","type":"feature-status","module":"import-ticket-list","feature":"retire-snapshot-import","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T10:18:53.974Z","type":"feature-status","module":"import-ticket-list","feature":"csv-import-performance","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-22T10:24:54.441Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"4bbbc4af126d1b3c1e9e6442a30171dc4a1c98cf"}
+{"ts":"2026-10-22T10:24:54.566Z","type":"feature-status","module":"import-ticket-list","feature":"retire-snapshot-import","from":"in-progress","to":"evaluating"}
