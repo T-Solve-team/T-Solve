@@ -15,18 +15,18 @@
       "currentPhase": "implement",
       "features": {
         "roles-session": "passing",
-        "guards-menus": "pending",
+        "guards-menus": "passing",
         "route-map": "passing",
         "catalog-tags": "pending",
         "guidelines": "pending"
       },
-      "lastUpdated": "2026-10-22T15:46:42.618Z",
+      "lastUpdated": "2026-10-22T16:33:53.297Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "02e9fc35aa5fa2689b852018934bc7f804af19b6"
+        "default": "2381c5f5a82a662cd1563dc47d50096fd4d88ead"
       }
     },
     "identity": {

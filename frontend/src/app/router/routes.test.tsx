@@ -7,28 +7,31 @@ describe('routing and access', () => {
     ['ADMIN', '/users', 'User List'],
     ['PROJECT_MANAGER', '/review-queue', 'Review Queue'],
     ['TICKET_RESOLVER', '/search', 'Search'],
-  ] as const)('sends %s from "/" to their landing page (BUG-002)', async (role, path, title) => {
-    const { router } = renderApp('/', { role });
-    // The first findBy also loads the lazy page module: give it more time (guideline 10 §6).
-    expect(
-      await screen.findByRole('heading', { level: 1, name: title }, { timeout: 5000 }),
-    ).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe(path);
-  });
+  ] as const)(
+    'AC-003.1 sends %s from "/" to their landing page (BUG-002)',
+    async (role, path, title) => {
+      const { router } = renderApp('/', { role });
+      // The first findBy also loads the lazy page module: give it more time (guideline 10 §6).
+      expect(
+        await screen.findByRole('heading', { level: 1, name: title }, { timeout: 5000 }),
+      ).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe(path);
+    },
+  );
 
-  it('shows 403 with MSG08 when the role may not open the screen, keeping the URL', async () => {
+  it('AC-002.2 shows 403 with MSG08 when the role may not open the screen, keeping the URL', async () => {
     const { router } = renderApp('/review-queue', { role: 'TICKET_RESOLVER' });
     expect(await screen.findByText(msg('MSG08'))).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/review-queue');
   });
 
-  it('sends a signed-out user to Login with a returnTo link', async () => {
+  it('AC-002.3 sends a signed-out user to Login with a returnTo link', async () => {
     const { router } = renderApp('/tickets/42', { role: null });
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(router.state.location.search).toBe(`?returnTo=${encodeURIComponent('/tickets/42')}`);
   });
 
-  it('sends a signed-in user away from Login', async () => {
+  it('AC-002.4 sends a signed-in user away from Login to their landing page', async () => {
     const { router } = renderApp('/login', { role: 'TICKET_RESOLVER' });
     await waitFor(() => expect(router.state.location.pathname).toBe('/search'));
   });
@@ -38,15 +41,20 @@ describe('routing and access', () => {
     expect(await screen.findByText('This page does not exist.')).toBeInTheDocument();
   });
 
-  it("shows the role's menu and highlights the list of a detail screen", async () => {
+  it("AC-004.3 shows the user's menu and highlights the list of a detail screen", async () => {
     renderApp('/tickets/42', { role: 'TICKET_RESOLVER' });
     const menu = await screen.findByRole('menu', { name: 'Main menu' });
     const items = await waitFor(() => {
       const found = menu.querySelectorAll('[role="menuitem"]');
-      expect(found).toHaveLength(2);
+      expect(found).toHaveLength(4);
       return found;
     });
-    expect([...items].map((item) => item.textContent)).toEqual(['Search', 'Ticket List']);
+    expect([...items].map((item) => item.textContent)).toEqual([
+      'Search',
+      'Ticket List',
+      'Knowledge Chatbot',
+      'Wiki',
+    ]);
     expect(menu.querySelector('.ant-menu-item-selected')?.textContent).toBe('Ticket List');
   });
 });
