@@ -119,12 +119,13 @@ describe('ReviewQueuePage', () => {
   it('filters by Department and keeps the filter in the URL', async () => {
     const { user, router } = await openQueue();
     await user.click(screen.getByRole('combobox', { name: 'Department' }));
-    await user.click(await screen.findByTitle('HR'));
+    // The mock Project Manager has exactly one Department, IT (GBR-16).
+    await user.click(await screen.findByTitle('IT'));
 
-    await waitFor(() => expect(router.state.location.search).toBe('?departmentId=2'));
+    await waitFor(() => expect(router.state.location.search).toBe('?departmentId=1'));
     await waitFor(() =>
-      expect(screen.queryByRole('link', { name: 'ITSUP-1031' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('link', { name: 'HRHELP-0318' })).not.toBeInTheDocument(),
     );
-    expect(screen.getByRole('link', { name: 'HRHELP-0318' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'ITSUP-1031' })).toBeInTheDocument();
   });
 });

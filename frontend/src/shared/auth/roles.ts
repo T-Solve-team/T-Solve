@@ -1,11 +1,27 @@
-/** The four fixed roles (glossary "Role"). Values are the API spellings (guideline 03 §5). */
-export const ROLES = ['ADMIN', 'DEPARTMENT_MANAGER', 'PROJECT_MANAGER', 'STAFF'] as const;
+import type { Role as ApiRole } from '@/shared/api';
+
+/**
+ * The five roles (Report3 4.1, glossary "Role"). Values are the API spellings (guideline 03 §5). A user can hold
+ * several; every user has EMPLOYEE (GBR-28).
+ */
+export const ROLES = [
+  'EMPLOYEE',
+  'TICKET_RESOLVER',
+  'PROJECT_MANAGER',
+  'KNOWLEDGE_MANAGER',
+  'ADMIN',
+] as const satisfies readonly ApiRole[];
 export type Role = (typeof ROLES)[number];
 
-/** UI text for each role — exactly as in the SRS. */
+/** UI text for each role — exactly as in Report3. */
 export const ROLE_LABELS: Record<Role, string> = {
-  ADMIN: 'Admin',
-  DEPARTMENT_MANAGER: 'Department Manager',
+  EMPLOYEE: 'Employee',
+  TICKET_RESOLVER: 'Ticket Resolver',
   PROJECT_MANAGER: 'Project Manager',
-  STAFF: 'Staff',
+  KNOWLEDGE_MANAGER: 'Knowledge Manager',
+  ADMIN: 'Admin',
 };
+
+export function isRole(value: string): value is Role {
+  return (ROLES as readonly string[]).includes(value);
+}

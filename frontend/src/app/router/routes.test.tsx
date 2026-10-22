@@ -5,9 +5,8 @@ import { renderApp } from '@/test/render';
 describe('routing and access', () => {
   it.each([
     ['ADMIN', '/users', 'User List'],
-    ['DEPARTMENT_MANAGER', '/dashboard', 'Knowledge Dashboard'],
     ['PROJECT_MANAGER', '/review-queue', 'Review Queue'],
-    ['STAFF', '/search', 'Search'],
+    ['TICKET_RESOLVER', '/search', 'Search'],
   ] as const)('sends %s from "/" to their landing page (BUG-002)', async (role, path, title) => {
     const { router } = renderApp('/', { role });
     // The first findBy also loads the lazy page module: give it more time (guideline 10 §6).
@@ -18,7 +17,7 @@ describe('routing and access', () => {
   });
 
   it('shows 403 with MSG08 when the role may not open the screen, keeping the URL', async () => {
-    const { router } = renderApp('/review-queue', { role: 'STAFF' });
+    const { router } = renderApp('/review-queue', { role: 'TICKET_RESOLVER' });
     expect(await screen.findByText(msg('MSG08'))).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/review-queue');
   });
@@ -30,7 +29,7 @@ describe('routing and access', () => {
   });
 
   it('sends a signed-in user away from Login', async () => {
-    const { router } = renderApp('/login', { role: 'STAFF' });
+    const { router } = renderApp('/login', { role: 'TICKET_RESOLVER' });
     await waitFor(() => expect(router.state.location.pathname).toBe('/search'));
   });
 
@@ -40,19 +39,14 @@ describe('routing and access', () => {
   });
 
   it("shows the role's menu and highlights the list of a detail screen", async () => {
-    renderApp('/tickets/42', { role: 'DEPARTMENT_MANAGER' });
+    renderApp('/tickets/42', { role: 'TICKET_RESOLVER' });
     const menu = await screen.findByRole('menu', { name: 'Main menu' });
     const items = await waitFor(() => {
       const found = menu.querySelectorAll('[role="menuitem"]');
-      expect(found).toHaveLength(4);
+      expect(found).toHaveLength(2);
       return found;
     });
-    expect([...items].map((item) => item.textContent)).toEqual([
-      'Knowledge Dashboard',
-      'Search',
-      'Ticket List',
-      'Jira Integration',
-    ]);
+    expect([...items].map((item) => item.textContent)).toEqual(['Search', 'Ticket List']);
     expect(menu.querySelector('.ant-menu-item-selected')?.textContent).toBe('Ticket List');
   });
 });

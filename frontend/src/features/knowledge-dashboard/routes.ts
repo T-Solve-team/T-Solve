@@ -5,7 +5,7 @@ export const knowledgeDashboardRoutes: FeatureRoute[] = [
   {
     path: paths.knowledgeDashboard,
     title: 'Knowledge Dashboard', // 9.1
-    roles: ['DEPARTMENT_MANAGER', 'PROJECT_MANAGER', 'ADMIN'],
+    roles: ['PROJECT_MANAGER', 'ADMIN'],
     lazy: () => import('./pages/KnowledgeDashboardPage'),
   },
 ];

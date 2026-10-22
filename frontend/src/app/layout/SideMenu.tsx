@@ -1,14 +1,14 @@
 import { Menu } from 'antd';
 import { Link, useLocation } from 'react-router';
-import type { Role } from '@/shared/auth';
+import { mainRole, type Role } from '@/shared/auth';
 import { MENUS, selectedMenuPath } from './menu-config';
 
-type SideMenuProps = { role: Role };
+type SideMenuProps = { roles: readonly Role[] };
 
-/** Figma "Web/Menu Item" list for the signed-in role. */
-export function SideMenu({ role }: SideMenuProps) {
+/** Figma "Web/Menu Item" list for the signed-in user (the menu of their main role until KAN-60). */
+export function SideMenu({ roles }: SideMenuProps) {
   const { pathname } = useLocation();
-  const entries = MENUS[role];
+  const entries = MENUS[mainRole(roles)];
   const selected = selectedMenuPath(entries, pathname);
 
   return (

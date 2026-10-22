@@ -9,14 +9,18 @@
 import type { DepartmentRef } from './departmentRef';
 import type { ProjectMembership } from './projectMembership';
 import type { Role } from './role';
+import type { SpaceRef } from './spaceRef';
 import type { UserSummary } from './userSummary';
 
 /**
- * The signed-in user (SRS 1.2.1). projects = Projects the user belongs to with their role in each (empty for Admin and Department Manager); departments = the user's Departments (from their Projects, or the ones a Department Manager manages).
+ * The signed-in user (Report3 UC-01, UC-03; GBR-02, GBR-16, GBR-28). roles = all of the user's roles, EMPLOYEE included. department = the Department of a Project Manager (exactly one), null for everyone else. departments = the Project Manager's Department, or the Departments of a Ticket Resolver's Projects; empty for others. projects = the Projects the user belongs to with their role in each. managedSpaces = the Spaces a Knowledge Manager manages. workspaceReady = false until the Admin has entered the company information (2.1 Workspace Setup).
  */
 export interface CurrentUser {
   user: UserSummary;
-  role: Role;
-  projects: ProjectMembership[];
+  roles: Role[];
+  department: DepartmentRef | null;
   departments: DepartmentRef[];
+  projects: ProjectMembership[];
+  managedSpaces: SpaceRef[];
+  workspaceReady: boolean;
 }

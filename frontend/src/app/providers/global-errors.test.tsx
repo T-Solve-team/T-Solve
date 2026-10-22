@@ -4,7 +4,7 @@ import { http as mock } from 'msw';
 import { server } from '@/mocks/server';
 import { approveTickets, getReviewQueue } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
-import { setDevRole } from '@/shared/auth';
+import { setDevUser } from '@/shared/auth';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 
@@ -46,7 +46,7 @@ describe('global error handling', () => {
     await screen.findByRole('heading', { level: 1, name: 'Review Queue' });
 
     // The session expires on the server: every request now answers 401.
-    setDevRole(null);
+    setDevUser(null);
     server.use(mock.get('*/api/v1/review-queue', () => problem(401)));
     await queryClient
       .fetchQuery({ queryKey: ['expired'], queryFn: () => getReviewQueue() })

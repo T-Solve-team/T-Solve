@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import type { Role } from '@/shared/auth/roles';
+import { ROLES, type Role } from '@/shared/auth/roles';
 
 /**
  * One screen of a feature (guideline 08 §2). The app turns these into React Router routes behind the
@@ -16,9 +16,5 @@ export type FeatureRoute = {
   lazy: () => Promise<{ default: ComponentType }>;
 };
 
-export const ALL_SIGNED_IN_ROLES = [
-  'ADMIN',
-  'DEPARTMENT_MANAGER',
-  'PROJECT_MANAGER',
-  'STAFF',
-] as const;
+/** Every signed-in user (each has Employee); KAN-61 replaces it with ['EMPLOYEE']. */
+export const ALL_SIGNED_IN_ROLES = ROLES;

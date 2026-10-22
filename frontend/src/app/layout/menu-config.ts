@@ -60,7 +60,9 @@ const AUDIT_LOG = { label: 'Audit Log', path: paths.auditLog, icon: FileSearchOu
  * Pre-filled; changes need a UI-decision change first (guideline 07 §5).
  */
 export const MENUS: Record<Role, readonly MenuEntry[]> = {
-  STAFF: [SEARCH, TICKET_LIST],
+  // Employee and Knowledge Manager items (Wiki, Knowledge Chatbot) come with their routes (KAN-61).
+  EMPLOYEE: [],
+  TICKET_RESOLVER: [SEARCH, TICKET_LIST],
   PROJECT_MANAGER: [
     REVIEW_QUEUE,
     REVIEW_HISTORY,
@@ -72,7 +74,7 @@ export const MENUS: Record<Role, readonly MenuEntry[]> = {
     DASHBOARD,
     JIRA_INTEGRATION,
   ],
-  DEPARTMENT_MANAGER: [DASHBOARD, SEARCH, TICKET_LIST, JIRA_INTEGRATION],
+  KNOWLEDGE_MANAGER: [],
   ADMIN: [USER_LIST, WORKSPACE_SETTINGS, JIRA_INTEGRATION, AUDIT_LOG, DASHBOARD],
 };
 
