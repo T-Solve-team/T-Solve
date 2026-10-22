@@ -2,8 +2,8 @@
 module: fe-foundation
 feature: guards-menus
 task: 2
-verdict: fail
-attempt: 1
+verdict: pass
+attempt: 2
 date: 2026-10-22
 reviewer: harnessclaude-reviewer
 iteration: 1
@@ -12,21 +12,21 @@ iteration: 1
 # Review: fe-foundation — Task 2: Guards, landing page, Workspace Setup redirect and menus
 
 ## Summary
-The code meets STORY-002, STORY-003 and STORY-004: the any-role guard, `landingPath(roles)`, `RequireWorkspace`,
-the per-role `MENUS`, and `menuFor(roles)` in the D4 order all match the spec. Every criterion has a test that
-checks it. Format, lint, typecheck and build pass. The verdict is **fail** because the full suite failed in 1 of
-3 runs. The failing test is in `ReviewQueuePage.test.tsx`, the file BUG-004 was about, and it times out the same
-way. So the BUG-004 fix is incomplete: the file is still flaky in the full suite, and `docs/bug-log.md` marks it
-`Fixed` too soon (NFR 2, NFR 5).
+All four attempt-1 issues are resolved in `03f8f8c..2381c5f`. The Review Queue tests that waited only 1 s after a
+render now wait 5 s (guideline 10 §6, no higher), Vitest runs files on half the cores (FE Lead approved), and the
+BUG-004 row explains the full fix. `RequireWorkspace` now strips a trailing slash, and three new tests cover the
+trailing slash, the 404 page and `/dev/kit` while the Workspace is not set up. Format, lint, typecheck and build
+pass. The full suite passed 158/158 in 3 of 3 runs. Trace: 13/13. STORY-002, STORY-003 and STORY-004 still hold as
+verified in attempt 1. One new Low, informational finding (case-insensitive paths). It does not block.
 
 ## Criteria
 
 | Criterion | Result | Detail |
 |-----------|--------|--------|
-| Functionality | pass | Stage 1, all 13 PASS. AC-002.1 `hasAnyRole` (`guards.tsx:22-26`); AC-002.2 403 in place, URL kept; AC-002.3 `returnTo` (`guards.tsx:14-17`); AC-002.4 and AC-003.1 `landingPath` (`landing.ts:5-15`), first match Admin → PM → KM → TR → Chatbot; AC-003.2/3 `RequireWorkspace` (`guards.tsx:43-62`) only for `ADMIN`, except `/workspace-setup` and `/profile`; Login is outside it (GuestOnly); AC-003.4 error page before any redirect (RequireAuth); AC-004.1 `MENUS` matches the spec lists item by item; AC-004.2 `menuFor` (`menu-config.ts:96-110`) in order A, PM, KM, TR, E, first entry kept; AC-004.3/4 `selectedMenuPath` longest segment prefix, or null |
-| Completeness | pass | No MISSING. Design edge rules hold by construction: the `*` 404 and `/dev/kit` routes sit outside `RequireWorkspace` (`routes.tsx:52-76`), so they are not redirected; the session error page appears before any redirect. No EXTRA behaviour. `LANDING_PATHS` and `mainRole` were removed and nothing else uses them (grep). `AppShell.tsx` needed no change (it already passes `session.roles`) |
-| Correctness | fail | Full suite run 1: 154/155. `ReviewQueuePage.test.tsx:50` `shows the error in place, with Try again, when the queue cannot be loaded` did not find `role="alert"` within 1193 ms. Runs 2 and 3 passed 155/155, and the file passes alone. The BUG-004 fix (`ReviewQueuePage.test.tsx:20-24`) covers only the first test |
-| Integration | pass | `@/shared/auth` exports `landingPath(roles)` as the spec's interface contract says (`index.ts:10`). `SideMenu` takes `roles`. The route-table test (Task 3, AC-002.5) still passes. `/me` and `generate:api` are untouched. Security: the guards only hide screens (the backend re-checks); no secret or dangerous pattern; `npm audit` 0; no Critical or High finding |
+| Functionality | pass | Unchanged from attempt 1 apart from `guards.tsx:53`: `pathname.replace(/\/+$/, '') \|\| '/'`. So `/profile/` and `/workspace-setup/` stay open before setup, `/` maps to `/` and is still redirected for an Admin, and non-Admins are not affected (AC-003.2, AC-003.3). AC-002.1–AC-004.4 as verified in attempt 1 (any-role guard, 403 in place, `returnTo`, `landingPath` first match, `RequireWorkspace`, `MENUS`, `menuFor` order, `selectedMenuPath`) |
+| Completeness | pass | No MISSING. The design's edge rules now have tests: `guards.test.tsx` "still shows 404 for an unknown path…" and "does not redirect the dev kit page…". Both would fail if a redirect changed the pathname. No EXTRA behaviour: the fix adds only the slash normalization, test waits, and the `maxWorkers` setting |
+| Correctness | pass | Full suite 158/158 in 3 of 3 runs (exit 0). `ReviewQueuePage.test.tsx:45` and `:51` now give their first `findBy` 5 s. All other tests in the file use `openQueue` (5 s, `:15`), and the `beforeAll` pre-import stays. `vite.config.ts:55` `maxWorkers: '50%'` is a valid top-level option in Vitest 5 |
+| Integration | pass | No interface change since attempt 1: `@/shared/auth` exports `landingPath(roles)`, and `SideMenu` takes `roles`. The route-table test (AC-002.5) passes. `/me`, `openapi/**` and `generated/**` are untouched. Security: the guards only hide screens (the backend re-checks); no secret or dangerous pattern; `npm audit --omit=dev` 0 |
 
 ## Traceability
 ```
@@ -48,38 +48,33 @@ trace fe-foundation (STORY-002, STORY-003, STORY-004): 13/13 acceptance criteria
 
 ## Issues
 
-CRITICAL (blocks pass):
-1. [`frontend/src/features/review/pages/ReviewQueuePage.test.tsx:50`] **High.** A test fails now and then in the
-   full suite (1 of 3 runs, `Unable to find role="alert"` after about 1.2 s). The cause is the same as BUG-004.
-   The `beforeAll` pre-import (`:20-24`) only warms the page module. Each test still renders the shell, `/me` and
-   the queue request under parallel load, and `:50` (and `:44`, `shows MSG16 …`) wait only the default 1 s.
-   Fix: give the first `findBy` after each `renderApp` in this file `{ timeout: 5000 }`, which guideline 10 §6
-   allows (do not go higher), for example through a small helper. Name the fixed test with the bug id (reopen
-   BUG-004, or add a new bug row), then run the full suite several times.
-2. [`docs/bug-log.md:32`] **Medium.** BUG-004 is marked `Fixed`, but the file still flakes. Its Notes say "fixed
-   without a longer timeout", which covers only the first test. Fix: when issue 1 is fixed, update the row (cause
-   and Notes), and fill in "Fixed in" with the PR once it is opened (bug-log step 5).
+Attempt-1 issues:
+1. `ReviewQueuePage.test.tsx:50` flake: **resolved.** `:45` and `:51` wait 5 s, and `maxWorkers: '50%'` was added.
+   No failure in 3 full runs.
+2. `docs/bug-log.md:32` BUG-004 marked Fixed too soon: **resolved.** The Notes now describe the three parts of the
+   fix and cite this review. "Fixed in" stays empty until the PR is opened (bug-log step 5).
+3. `guards.tsx` trailing slash: **resolved** (`guards.tsx:53`, test "treats a trailing slash as the same screen").
+4. No test for 404 / `/dev/kit` before setup: **resolved** (two new tests in `guards.test.tsx`).
 
-Informational (does not block):
-3. [`frontend/src/app/router/guards.tsx:44,57`] **Low.** `OPEN_BEFORE_SETUP.includes(pathname)` is an exact match.
-   A trailing slash (`/profile/`), which React Router still matches to My Profile, sends the Admin to Workspace
-   Setup. Fix: normalize the trailing slash, or use `matchPath`.
-4. [`frontend/src/app/router/guards.test.tsx`] **Low.** No test covers the design's edge rules while the
-   Workspace is not set up: an unknown path shows 404, and `/dev/kit` is not redirected. Both hold in
-   `routes.tsx:52-76` today. Fix: add one test so a later reshuffle of the route tree cannot break them.
+New, informational (does not block):
+5. [`frontend/src/app/router/guards.tsx:53,58`] **Low.** React Router matches paths case-insensitively by default
+   (no `caseSensitive` in `routes.tsx`). So `/Profile` renders My Profile, but `OPEN_BEFORE_SETUP.includes` is
+   case-sensitive and sends an Admin to Workspace Setup. Nothing links to such a URL, and the Admin can still set
+   up the Workspace. Suggested fix, if wanted: compare `screen.toLowerCase()`, or use `matchPath` for each open
+   path. It could be logged as a bug.
 
 ## Test Report
-`task-2-guards-menus-test-report.md`. Format: pass. Lint: pass. Typecheck: pass. Build: pass (`✓ built in 1.36s`).
-Full suite: run 1 154/155 (1 failed, exit 1), runs 2 and 3 155/155 (exit 0). The Review Queue file passes alone,
-9/9. Trace 13/13. No coverage script, and the spec sets no threshold. `npm audit --omit=dev`: 0 vulnerabilities.
+`task-2-guards-menus-test-report.md`. Format: pass. Lint: pass. Typecheck: pass. Build: pass (`✓ built in 756ms`).
+Full suite: 158/158 in runs 1, 2 and 3 (exit 0; 49.0 s, 57.8 s, 58.0 s). Trace: 13/13. No coverage script, and the
+spec sets no threshold. `npm audit --omit=dev`: 0 vulnerabilities.
 
 ## Assumptions made
-- **AC-003.2, "or Login".** A signed-in Admin who opens `/login` is sent to the landing page (AC-002.4, User List)
-  and from there to Workspace Setup. I took the Login exception to mean "Login itself is not replaced by the
-  redirect". Showing the Login page to a signed-in Admin would break AC-002.4. I counted this as PASS; the user
-  should confirm.
-- **Flaky test as a blocker.** I treated a test that fails intermittently, in the file BUG-004 was about, as a
-  failing test (the evaluate rule), even though it is not the test named `(BUG-004)`. It is unknown whether the
-  same flake happens on `main` (not checked, to avoid changing the working tree). The user may decide it is a
-  separate, pre-existing bug and pass this task once it is logged.
-- **Reopen or new bug.** Whether to reopen BUG-004 or log a new bug is the user's call.
+- **AC-003.2, "or Login"** (carried from attempt 1, not yet confirmed). A signed-in Admin who opens `/login` is sent
+  to the landing page (AC-002.4) and from there to Workspace Setup. I read the Login exception as "Login itself is
+  not replaced by the redirect". I counted this as PASS; the user should confirm.
+- **Flake judged by 3 runs.** Three clean full runs, plus a fix that addresses the cause (short waits under parallel
+  load), are taken as enough to close attempt-1 issue 1. An intermittent failure cannot be fully ruled out. If it
+  comes back, it is a new bug row.
+- **`maxWorkers: '50%'`** is outside the task's planned files. The dispatcher says the FE Lead approved it, and I
+  accepted it as in scope for BUG-004.
+- **Issue 5 left non-blocking.** The spec names no URL case rule. Whether to log it as a bug is the user's call.

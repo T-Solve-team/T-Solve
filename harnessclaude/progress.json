@@ -15,12 +15,12 @@
       "currentPhase": "implement",
       "features": {
         "roles-session": "passing",
-        "guards-menus": "evaluating",
+        "guards-menus": "passing",
         "route-map": "passing",
         "catalog-tags": "pending",
         "guidelines": "pending"
       },
-      "lastUpdated": "2026-10-22T16:28:18.156Z",
+      "lastUpdated": "2026-10-22T16:33:53.297Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
