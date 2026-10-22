@@ -396,17 +396,21 @@ components:
           description: Stored in Review History and queued for email to the writer.
     RequestChangesRequest:
       type: object
-      required: [ticketId, comment]
+      required: [ticketIds, comment]
       properties:
-        ticketId:
-          type: integer
-          format: int64
-          minimum: 1
+        ticketIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: integer
+            format: int64
+            minimum: 1
         comment:
           type: string
           minLength: 1
           maxLength: 1000
-          description: Stored for the writer's Jira Issue Panel (MSG64) and queued for email.
+          description: One shared comment stored for every selected Solution Form ticket and queued for email.
     ReviewDecisionResult:
       type: object
       required: [count]

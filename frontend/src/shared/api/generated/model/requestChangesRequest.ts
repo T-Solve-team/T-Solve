@@ -8,10 +8,13 @@
  */
 
 export interface RequestChangesRequest {
-  /** @minimum 1 */
-  ticketId: number;
   /**
-   * Stored for the writer's Jira Issue Panel (MSG64) and queued for email.
+   * @minItems 1
+   * @items.minimum 1
+   */
+  ticketIds: number[];
+  /**
+   * One shared comment stored for every selected Solution Form ticket and queued for email.
    * @minLength 1
    * @maxLength 1000
    */

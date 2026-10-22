@@ -58,7 +58,7 @@ class ReviewServiceTest {
 
     @Test
     @org.junit.jupiter.api.DisplayName(
-            "AC-006.2 denies access without an auth adapter; Mockito executes on JDK 21 (BUG-004)")
+            "AC-006.2 denies access without an auth adapter; Mockito executes on JDK 21 (BUG-006)")
     void deniesWhenIdentityIntegrationIsAbsent_AC_006_2() {
         assertThatThrownBy(() -> service.queue(null, PageRequest.of(0, 20)))
                 .isInstanceOfSatisfying(ReviewException.class, error -> assertThat(error.getCode())
@@ -127,11 +127,40 @@ class ReviewServiceTest {
     }
 
     @Test
-    void refusesMoreThanOneChangeTarget_AC_004_4_BUG_001() {
+    void sharesOneCommentAcrossSelectedTickets_AC_004_1_AC_004_2() {
         manager();
+        ReviewTicket first = ticket(1L, 10L);
+        ReviewTicket second = ticket(2L, 10L);
+        when(tickets.lockById(1L)).thenReturn(Optional.of(first));
+        when(tickets.lockById(2L)).thenReturn(Optional.of(second));
+        when(decisions.save(any())).thenAnswer(call -> {
+            ReviewDecision decision = call.getArgument(0);
+            ReflectionTestUtils.setField(decision, "id", 50L);
+            return decision;
+        });
+        assertThat(service.decide(List.of(2L, 1L), ReviewAction.REQUEST_CHANGES, "Add steps")
+                        .count())
+                .isEqualTo(2);
+        assertThat(first.getReviewComment()).isEqualTo("Add steps");
+        assertThat(second.getReviewComment()).isEqualTo("Add steps");
+        verify(audit).record(eq("pm"), eq("REQUEST_CHANGES"), eq("ticket:1"), any());
+        verify(audit).record(eq("pm"), eq("REQUEST_CHANGES"), eq("ticket:2"), any());
+        verify(notifications, org.mockito.Mockito.times(2)).save(any());
+    }
+
+    @Test
+    void rejectsEntireChangeBatchForInvalidSource_AC_004_4_AC_005_1() {
+        manager();
+        ReviewTicket first = ticket(1L, 10L);
+        ReviewTicket second = ticket(2L, 10L);
+        ReflectionTestUtils.setField(second, "source", ReviewSource.MANUAL);
+        when(tickets.lockById(1L)).thenReturn(Optional.of(first));
+        when(tickets.lockById(2L)).thenReturn(Optional.of(second));
         assertThatThrownBy(() -> service.decide(List.of(1L, 2L), ReviewAction.REQUEST_CHANGES, "Add steps"))
-                .isInstanceOf(ReviewException.class);
-        verifyNoInteractions(tickets, decisions, notifications, audit);
+                .isInstanceOfSatisfying(ReviewException.class, error -> assertThat(error.getCode())
+                        .isEqualTo("MSG18"));
+        assertThat(first.getStatus()).isEqualTo(ReviewStatus.PENDING_REVIEW);
+        verifyNoInteractions(decisions, notifications, audit);
     }
 
     @Test

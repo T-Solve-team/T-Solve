@@ -70,7 +70,7 @@ describe('Ticket Detail review', () => {
     ['Reject', 'Reason', 'Incorrect steps', 'Reject', 'Rejected'],
     ['Request Changes', 'Comment', 'Add error details', 'Send', 'Changes requested'],
   ])(
-    'submits %s, validates required input and refreshes detail (BUG-001, AC-003.3, AC-004.2)',
+    'AC-003.3, AC-004.2 submits %s, validates required input and refreshes detail (BUG-020)',
     async (action, field, comment, confirm, status) => {
       const { user } = await openDetail();
       const due = ticket.reviewDueDate;
@@ -85,18 +85,17 @@ describe('Ticket Detail review', () => {
       await user.click(within(dialog).getByRole('button', { name: confirm }));
       expect(await screen.findByText(status, { exact: true })).toBeInTheDocument();
       expect(submitted).toEqual(
-        action === 'Reject' ? { ticketIds: [1], reason: comment } : { ticketId: 1, comment },
+        action === 'Reject' ? { ticketIds: [1], reason: comment } : { ticketIds: [1], comment },
       );
       expect(ticket.reviewDueDate).toBe(due);
       if (action === 'Request Changes') expect(screen.getByText(comment)).toBeInTheDocument();
     },
   );
 
-  it('AC-002.4, AC-004.4 disables empty Solution approval and explains source restriction', async () => {
-    ticket = { ...ticket, solution: {}, source: 'MANUAL' };
+  it('AC-004.4 explains the Request changes source restriction', async () => {
+    ticket = { ...ticket, source: 'MANUAL' };
     const { user } = await openDetail();
-    expect(screen.getByRole('button', { name: 'Approve' })).toBeDisabled();
-    expect(screen.getByText(msg('MSG20'))).toBeInTheDocument();
+
     const changes = screen.getByRole('button', { name: 'Request Changes' });
     expect(changes).toBeDisabled();
     await user.hover(changes.parentElement ?? changes);

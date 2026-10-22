@@ -1,4 +1,4 @@
-import { Alert, Button, Flex, Tooltip } from 'antd';
+import { Button, Flex, Tooltip } from 'antd';
 import { useState } from 'react';
 import type { ReviewTicketResponse } from '@/shared/api';
 import { useSession } from '@/shared/auth';
@@ -14,16 +14,10 @@ export function TicketDecisionActions({ ticket }: { ticket: ReviewTicketResponse
   const [dialog, setDialog] = useState<'reject' | 'changes' | null>(null);
   if (!isProjectManagerOf(ticket.project.projectId) || ticket.status !== 'PENDING_REVIEW')
     return null;
-  const { symptoms, rootCause, resolutionSteps, workaround, scopeOfApplicability } =
-    ticket.solution;
-  const isEmpty = [symptoms, rootCause, resolutionSteps, workaround, scopeOfApplicability].every(
-    (value) => !value?.trim(),
-  );
   const isForm = ticket.source === 'SOLUTION_FORM';
   const isBusy = approve.isPending || dialog !== null;
   return (
     <Flex vertical gap="middle">
-      {isEmpty && <Alert type="warning" showIcon title={msg('MSG20')} />}
       <Flex gap="middle" wrap>
         <Tooltip title={!isForm ? msg('MSG18') : undefined}>
           <span>
@@ -38,7 +32,7 @@ export function TicketDecisionActions({ ticket }: { ticket: ReviewTicketResponse
         <Button
           type="primary"
           loading={approve.isPending}
-          disabled={isEmpty || isBusy}
+          disabled={isBusy}
           onClick={() => approve.mutate({ data: { ticketIds: [ticket.ticketId] } })}
         >
           Approve
@@ -51,7 +45,7 @@ export function TicketDecisionActions({ ticket }: { ticket: ReviewTicketResponse
         onRejected={() => setDialog(null)}
       />
       <RequestChangesModal
-        ticketId={ticket.ticketId}
+        ticketIds={[ticket.ticketId]}
         isOpen={dialog === 'changes'}
         onClose={() => setDialog(null)}
         onSent={() => setDialog(null)}

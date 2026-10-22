@@ -145,6 +145,6 @@ export const handlers: HttpHandler[] = [
         fieldErrors: [{ field: 'comment', code: 'MSG01', params: { field_name: 'Comment' } }],
       });
     }
-    return decide([body.ticketId], 'CHANGES_REQUESTED', body.comment);
+    return decide(body.ticketIds, 'CHANGES_REQUESTED', body.comment);
   }),
 ];

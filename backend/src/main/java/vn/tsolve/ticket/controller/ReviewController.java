@@ -81,10 +81,9 @@ public class ReviewController {
 
     @PostMapping("/api/v1/reviews/request-changes")
     @PreAuthorize(MANAGER)
-    @Operation(operationId = "requestTicketChanges", summary = "Request changes to one ticket")
+    @Operation(operationId = "requestTicketChanges", summary = "Request changes to selected tickets with one comment")
     public ResponseEntity<ReviewDecisionResult> changes(@Valid @RequestBody RequestChangesRequest request) {
-        return ResponseEntity.ok(
-                service.decide(List.of(request.ticketId()), ReviewAction.REQUEST_CHANGES, request.comment()));
+        return ResponseEntity.ok(service.decide(request.ticketIds(), ReviewAction.REQUEST_CHANGES, request.comment()));
     }
 
     public record TicketIdList(List<Long> ticketIds) {}

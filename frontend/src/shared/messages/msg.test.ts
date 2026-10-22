@@ -14,11 +14,21 @@ describe('msg', () => {
   });
 
   it('has no retired codes', () => {
-    const retired = ['MSG09', 'MSG11', 'MSG23', 'MSG28', 'MSG37', 'MSG48', 'MSG49', 'MSG69'];
+    const retired = [
+      'MSG09',
+      'MSG11',
+      'MSG20',
+      'MSG23',
+      'MSG28',
+      'MSG37',
+      'MSG48',
+      'MSG49',
+      'MSG69',
+    ];
     for (const code of retired) expect(MESSAGES).not.toHaveProperty(code);
   });
 
-  it('uses Report 3 review message types (BUG-002, AC-002.2)', () => {
+  it('AC-002.2 uses Report3 review message types (BUG-004)', () => {
     expect(MESSAGES).toMatchObject({
       MSG13: { type: 'inline' },
       MSG14: { type: 'toast' },
@@ -27,7 +37,6 @@ describe('msg', () => {
       MSG17: { type: 'toast' },
       MSG18: { type: 'tooltip' },
       MSG19: { type: 'confirm', text: 'Approve and publish {count} ticket(s)?' },
-      MSG20: { type: 'inline' },
     });
   });
 });

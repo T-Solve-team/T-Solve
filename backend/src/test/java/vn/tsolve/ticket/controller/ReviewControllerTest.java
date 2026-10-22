@@ -59,19 +59,22 @@ class ReviewControllerTest {
         mvc.perform(post("/api/v1/reviews/request-changes")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"ticketId\":1,\"comment\":\"\"}"))
+                        .content("{\"ticketIds\":[1],\"comment\":\"\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("comment"));
     }
 
     @Test
     @WithMockUser(roles = "PROJECT_MANAGER")
-    void refusesBulkChangeRequest_AC_004_4_BUG_001() throws Exception {
+    void acceptsBulkChangeRequest_AC_004_1_AC_004_2() throws Exception {
+        when(review.decide(List.of(1L, 2L), ReviewAction.REQUEST_CHANGES, "Add steps"))
+                .thenReturn(new ReviewDecisionResult(2));
         mvc.perform(post("/api/v1/reviews/request-changes")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"ticketIds\":[1,2],\"comment\":\"Add steps\"}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(2));
     }
 
     @Test
@@ -82,23 +85,23 @@ class ReviewControllerTest {
         mvc.perform(post("/api/v1/reviews/request-changes")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"ticketId\":1,\"comment\":\"Add steps\",\"actorId\":\"admin\"}"))
+                        .content("{\"ticketIds\":[1],\"comment\":\"Add steps\",\"actorId\":\"admin\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.count").value(1));
     }
 
     @Test
     @WithMockUser(roles = "PROJECT_MANAGER")
-    void rendersBusinessRuleAsProblemDetail_AC_002_4() throws Exception {
+    void rendersStateConflictAsProblemDetail_AC_005_1() throws Exception {
         when(review.decide(any(), eq(ReviewAction.APPROVE), any()))
-                .thenThrow(new ReviewException(HttpStatus.CONFLICT, "MSG20"));
+                .thenThrow(new ReviewException(HttpStatus.CONFLICT, "MSG06"));
         mvc.perform(post("/api/v1/reviews/approve")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"ticketIds\":[1]}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.code").value("MSG20"));
+                .andExpect(jsonPath("$.code").value("MSG06"));
     }
 
     @Test
@@ -112,7 +115,7 @@ class ReviewControllerTest {
 
     @Test
     @WithMockUser(roles = "PROJECT_MANAGER")
-    void refusesFractionalTicketIds_AC_005_5_BUG_006() throws Exception {
+    void refusesFractionalTicketIds_AC_005_5_BUG_008() throws Exception {
         when(review.decide(any(), eq(ReviewAction.APPROVE), any())).thenReturn(new ReviewDecisionResult(1));
         mvc.perform(post("/api/v1/reviews/approve")
                         .with(csrf())
@@ -127,7 +130,7 @@ class ReviewControllerTest {
         mvc.perform(post("/api/v1/reviews/request-changes")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"ticketId\":1.5,\"comment\":\"Add steps\"}"))
+                        .content("{\"ticketIds\":[1.5],\"comment\":\"Add steps\"}"))
                 .andExpect(status().isBadRequest());
     }
 }

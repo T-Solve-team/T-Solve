@@ -12,7 +12,7 @@ type RejectTicketModalProps = {
   ticketIds: number[];
   isOpen: boolean;
   onClose: () => void;
-  /** After a successful rejection (MSG20 is already shown). */
+  /** After a successful rejection (MSG16 is already shown). */
   onRejected: () => void;
 };
 

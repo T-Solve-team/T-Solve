@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 class GlobalExceptionHandlerTest {
     @Test
-    void rendersSharedErrorsAsProblemDetail_BUG_023() throws Exception {
+    void rendersSharedErrorsAsProblemDetail_BUG_001() throws Exception {
         var mvc = MockMvcBuilders.standaloneSetup(new FailureController())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();

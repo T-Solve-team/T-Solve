@@ -144,15 +144,17 @@ class ReviewPostgresTest {
         assertThat(notificationCount(ticket.ticketId())).isEqualTo(1);
     }
 
-    @Test
-    void rollsBackEntireBatchWhenSecondAuditFails_AC_005_1_AC_005_2_AC_005_3_BUG_005() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(
+            value = ReviewAction.class,
+            names = {"REJECT", "REQUEST_CHANGES"})
+    void rollsBackEntireBatchWhenSecondAuditFails_AC_005_1_AC_005_2_AC_005_3_BUG_007(ReviewAction action) {
         ReviewTicketResponse first = submit();
         ReviewTicketResponse second = submit();
         doThrow(new DataIntegrityViolationException("forced test failure"))
                 .when(AopTestUtils.<AuditService>getUltimateTargetObject(audit))
                 .record(anyString(), anyString(), eq("ticket:" + second.ticketId()), any());
-        assertThatThrownBy(() ->
-                        review.decide(List.of(first.ticketId(), second.ticketId()), ReviewAction.REJECT, "Incomplete"))
+        assertThatThrownBy(() -> review.decide(List.of(first.ticketId(), second.ticketId()), action, "Incomplete"))
                 .isInstanceOf(DataIntegrityViolationException.class);
         for (long id : List.of(first.ticketId(), second.ticketId())) {
             assertThat(review.get(id).status()).isEqualTo(ReviewStatus.PENDING_REVIEW);
@@ -205,28 +207,43 @@ class ReviewPostgresTest {
     }
 
     @Test
-    void rejectsEntireBatchWhenOneSolutionIsEmpty_AC_002_4_AC_005_1() {
-        ReviewTicketResponse complete = submit();
-        ReviewTicketResponse empty =
-                review.registerSubmission(registration(new SolutionSections("  ", null, null, null, null)));
-        assertThatThrownBy(
-                        () -> review.decide(List.of(complete.ticketId(), empty.ticketId()), ReviewAction.APPROVE, null))
-                .isInstanceOfSatisfying(ReviewException.class, error -> assertThat(error.getCode())
-                        .isEqualTo("MSG20"));
-        assertThat(review.get(complete.ticketId()).status()).isEqualTo(ReviewStatus.PENDING_REVIEW);
-        assertThat(decisionCount(complete.ticketId())).isZero();
-        assertThat(auditCount(complete.ticketId())).isZero();
-    }
-
-    @Test
-    void storesExactlyOneSolutionEvenWhenAllSectionsAreEmpty_AC_002_4_BUG_007() {
-        ReviewTicketResponse empty =
-                review.registerSubmission(registration(new SolutionSections(null, null, null, null, null)));
+    void storesExactlyOnePopulatedSolution_AC_005_4_BUG_009() {
+        ReviewTicketResponse ticket = submit();
         assertThat(jdbc.queryForObject(
                         "select count(*) from ticket_review_solution where ticket_id=?",
                         Integer.class,
-                        empty.ticketId()))
+                        ticket.ticketId()))
                 .isEqualTo(1);
+    }
+
+    @Test
+    void apiSharesCommentAndPerTicketRecordsAcrossBatch_AC_004_1_AC_004_2_AC_005_2_AC_006_3() throws Exception {
+        ReviewTicketResponse first = submit();
+        ReviewTicketResponse second = submit();
+        mvc.perform(post("/api/v1/reviews/request-changes")
+                        .with(user("pm").roles("PROJECT_MANAGER"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ticketIds\":[" + first.ticketId() + "," + second.ticketId()
+                                + "],\"comment\":\"Shared steps\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(2));
+        for (ReviewTicketResponse before : List.of(first, second)) {
+            ReviewTicketResponse after = review.get(before.ticketId());
+            assertThat(after.status()).isEqualTo(ReviewStatus.CHANGES_REQUESTED);
+            assertThat(after.reviewComment()).isEqualTo("Shared steps");
+            assertThat(after.reviewDueDate()).isEqualTo(before.reviewDueDate());
+            assertThat(after.solution()).isEqualTo(before.solution());
+            assertThat(after.evidence()).isEqualTo(before.evidence());
+            assertThat(decisionCount(before.ticketId())).isEqualTo(1);
+            assertThat(auditCount(before.ticketId())).isEqualTo(1);
+            assertThat(notificationCount(before.ticketId())).isEqualTo(1);
+            assertThat(jdbc.queryForObject(
+                            "select n.comment from ticket_review_notification n join ticket_review_decision d on n.decision_id=d.id where d.ticket_id=?",
+                            String.class,
+                            before.ticketId()))
+                    .isEqualTo("Shared steps");
+        }
     }
 
     @Test
@@ -242,7 +259,7 @@ class ReviewPostgresTest {
                         .with(user("pm").roles("PROJECT_MANAGER"))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"ticketId\":" + ticket.ticketId() + ",\"comment\":\"Add steps\"}"))
+                        .content("{\"ticketIds\":[" + ticket.ticketId() + "],\"comment\":\"Add steps\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.count").value(1));
         mvc.perform(get("/api/v1/tickets/" + ticket.ticketId()).with(user("pm").roles("PROJECT_MANAGER")))
@@ -260,7 +277,7 @@ class ReviewPostgresTest {
     }
 
     @Test
-    void swaggerDocumentsIndividualPagingParameters_BUG_011() throws Exception {
+    void swaggerDocumentsIndividualPagingParameters_BUG_013() throws Exception {
         String schema = mvc.perform(get("/v3/api-docs").with(user("pm").roles("PROJECT_MANAGER")))
                 .andExpect(status().isOk())
                 .andReturn()

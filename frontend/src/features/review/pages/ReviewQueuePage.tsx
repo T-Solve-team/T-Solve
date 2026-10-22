@@ -6,6 +6,7 @@ import { useSession } from '@/shared/auth';
 import { showMessage } from '@/shared/messages';
 import { useListSearchParams } from '@/shared/routing';
 import { ConfirmDialog } from '@/shared/ui';
+import { RequestChangesModal } from '../components/RequestChangesModal';
 import { RejectTicketModal } from '../components/RejectTicketModal';
 import { ReviewQueueTable } from '../components/ReviewQueueTable';
 import { ReviewQueueToolbar } from '../components/ReviewQueueToolbar';
@@ -14,7 +15,7 @@ import { useApproveSelectedTickets } from '../hooks/useReviewDecisions';
 import { useReviewQueue } from '../hooks/useReviewQueue';
 import styles from './ReviewQueuePage.module.css';
 
-type OpenDialog = 'confirmApprove' | 'reject' | null;
+type OpenDialog = 'confirmApprove' | 'reject' | 'changes' | null;
 
 /** Missing or invalid Project id means all managed Projects. */
 function toProjectId(value: string | null): number | undefined {
@@ -56,7 +57,7 @@ export function ReviewQueuePage() {
     approve.mutate({ data: { ticketIds: selectedIds } }, { onSuccess: finishDecision });
   }
 
-  // SRS 7.1: approving two or more tickets asks first (MSG90); one ticket is approved at once.
+  // SRS 7.1: approving two or more tickets asks first (MSG19); one ticket is approved at once.
   function handleApprove() {
     if (selectedIds.length >= 2) setOpenDialog('confirmApprove');
     else runApprove();
@@ -72,6 +73,7 @@ export function ReviewQueuePage() {
         onProjectChange={handleProjectChange}
         selectedCount={selectedIds.length}
         isBusy={approve.isPending || openDialog !== null}
+        onRequestChanges={() => setOpenDialog('changes')}
         onReject={() => setOpenDialog('reject')}
         onApprove={handleApprove}
       />
@@ -99,6 +101,12 @@ export function ReviewQueuePage() {
         isConfirming={approve.isPending}
         onConfirm={runApprove}
         onCancel={() => setOpenDialog(null)}
+      />
+      <RequestChangesModal
+        ticketIds={selectedIds}
+        isOpen={openDialog === 'changes'}
+        onClose={() => setOpenDialog(null)}
+        onSent={finishDecision}
       />
       <RejectTicketModal
         ticketIds={selectedIds}

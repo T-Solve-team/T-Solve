@@ -101,7 +101,7 @@ public class ReviewServiceImpl implements ReviewService {
     public ReviewDecisionResult decide(List<Long> ticketIds, ReviewAction action, String comment) {
         ReviewActor actor = currentActor();
         validateIds(ticketIds);
-        if (action == null || (action == ReviewAction.REQUEST_CHANGES && ticketIds.size() != 1)) {
+        if (action == null) {
             throw new ReviewException(HttpStatus.BAD_REQUEST, "MSG06");
         }
         List<ReviewTicket> selected = new ArrayList<>();

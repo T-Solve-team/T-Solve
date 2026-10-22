@@ -11,7 +11,7 @@ describe('RequestChangesModal', () => {
     const user = userEvent.setup();
     const onSent = vi.fn();
     renderWithProviders(
-      <RequestChangesModal ticketId={7} isOpen onClose={vi.fn()} onSent={onSent} />,
+      <RequestChangesModal ticketIds={[7, 8]} isOpen onClose={vi.fn()} onSent={onSent} />,
     );
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Send' }));
@@ -27,23 +27,23 @@ describe('RequestChangesModal', () => {
     ).toBeInTheDocument();
     expect(onSent).not.toHaveBeenCalled();
   });
-  it('AC-003.1 submits one ticketId with the comment (BUG-013)', async () => {
+  it('AC-004.1 submits every selected ticketId with one comment (BUG-015)', async () => {
     let submitted: unknown;
     server.use(
       http.post('*/api/v1/reviews/request-changes', async ({ request }) => {
         submitted = await request.json();
-        return HttpResponse.json({ count: 1 });
+        return HttpResponse.json({ count: 2 });
       }),
     );
     const onSent = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <RequestChangesModal ticketId={7} isOpen onClose={vi.fn()} onSent={onSent} />,
+      <RequestChangesModal ticketIds={[7, 8]} isOpen onClose={vi.fn()} onSent={onSent} />,
     );
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText('Comment'), 'Add the exact error message.');
     await user.click(within(dialog).getByRole('button', { name: 'Send' }));
     await vi.waitFor(() => expect(onSent).toHaveBeenCalledOnce());
-    expect(submitted).toEqual({ ticketId: 7, comment: 'Add the exact error message.' });
+    expect(submitted).toEqual({ ticketIds: [7, 8], comment: 'Add the exact error message.' });
   });
 });

@@ -62,12 +62,12 @@ public class ManualReviewToolsController {
         String batch = UUID.randomUUID().toString().substring(0, 8);
         current = new Fixtures(
                 batch,
-                submit(batch, "APPROVE", 10L, false, ReviewSource.SOLUTION_FORM).ticketId(),
-                submit(batch, "REJECT", 10L, false, ReviewSource.SOLUTION_FORM).ticketId(),
-                submit(batch, "CHANGES", 10L, false, ReviewSource.SOLUTION_FORM).ticketId(),
-                submit(batch, "EMPTY", 10L, true, ReviewSource.SOLUTION_FORM).ticketId(),
-                submit(batch, "FOREIGN", 20L, false, ReviewSource.SOLUTION_FORM).ticketId(),
-                submit(batch, "IMPORTED", 10L, false, ReviewSource.MANUAL).ticketId());
+                submit(batch, "APPROVE", 10L, ReviewSource.SOLUTION_FORM).ticketId(),
+                submit(batch, "REJECT", 10L, ReviewSource.SOLUTION_FORM).ticketId(),
+                submit(batch, "CHANGES", 10L, ReviewSource.SOLUTION_FORM).ticketId(),
+                submit(batch, "CHANGES-SECOND", 10L, ReviewSource.SOLUTION_FORM).ticketId(),
+                submit(batch, "FOREIGN", 20L, ReviewSource.SOLUTION_FORM).ticketId(),
+                submit(batch, "IMPORTED", 10L, ReviewSource.MANUAL).ticketId());
         return current;
     }
 
@@ -94,17 +94,14 @@ public class ManualReviewToolsController {
                                 ticketId));
     }
 
-    private ReviewTicketResponse submit(
-            String batch, String label, long projectId, boolean empty, ReviewSource source) {
+    private ReviewTicketResponse submit(String batch, String label, long projectId, ReviewSource source) {
         Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
-        SolutionSections solution = empty
-                ? new SolutionSections(null, null, null, null, null)
-                : new SolutionSections(
-                        "VPN connection fails",
-                        "Expired certificate",
-                        "Renew certificate and reconnect",
-                        null,
-                        "Managed VPN clients");
+        SolutionSections solution = new SolutionSections(
+                "VPN connection fails",
+                "Expired certificate",
+                "Renew certificate and reconnect",
+                null,
+                "Managed VPN clients");
         return review.registerSubmission(new ReviewRegistration(
                 "MANUAL-" + batch + "-" + label,
                 "Manual test " + label,
@@ -124,7 +121,7 @@ public class ManualReviewToolsController {
             long approveId,
             long rejectId,
             long changesId,
-            long emptySolutionId,
+            long secondChangesId,
             long foreignTicketId,
             long importedTicketId) {}
 }

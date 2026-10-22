@@ -8,7 +8,7 @@ type MessageDefinition = {
 };
 
 /**
- * Review messages MSG13–MSG20 follow Report 3 v3460; other feature messages retain their existing scope.
+ * Review messages MSG13–MSG19 follow Report3; MSG20 is removed under FE Lead D2; other feature messages retain their existing scope.
  * Texts are copied from the SRS. `{name}` placeholders are filled by `msg()`.
  *
  * type = how the SRS says it is shown: field (red text under the field) · inline (in the page) · toast ·
@@ -44,10 +44,6 @@ export const MESSAGES = {
     text: 'Request changes is only available for tickets submitted from the Solution Form in Jira.',
   },
   MSG19: { type: 'confirm', text: 'Approve and publish {count} ticket(s)?' },
-  MSG20: {
-    type: 'inline',
-    text: 'This ticket has an empty solution and cannot be approved. Request changes or reject it.',
-  },
   MSG21: {
     type: 'toast',
     level: 'success',

@@ -93,20 +93,35 @@ describe('ReviewQueuePage', () => {
     );
   });
 
-  it('AC-003.1 does not offer bulk Request Changes (BUG-001, BUG-013)', async () => {
+  it('AC-004.1, AC-004.2 applies one change comment to several selected tickets', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('checkbox', { name: 'Select ITNET-0415' }));
-    expect(screen.queryByRole('button', { name: 'Request Changes' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Request Changes' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Comment'), 'Add reproduction steps');
+    await user.click(within(dialog).getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText(msg('MSG17'))).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('link', { name: 'ITSUP-1031' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'ITNET-0415' })).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('0 selected')).toBeInTheDocument();
   });
 
-  it('AC-001.3 "Select all" selects every ticket in the queue, not only this page', async () => {
+  it('AC-001.3, AC-004.1 applies one change comment to all tickets across pages', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select all' }));
     expect(await screen.findByText('58 selected')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Request Changes' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Comment'), 'Clarify the resolution');
+    await user.click(within(dialog).getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText(msg('MSG17'))).toBeInTheDocument();
+    expect(await screen.findByText(msg('MSG13'))).toBeInTheDocument();
   });
 
-  it('AC-006.5 reports a failed Select all request and preserves selection (BUG-022)', async () => {
+  it('AC-006.5 reports a failed Select all request and preserves selection (BUG-023)', async () => {
     server.use(http.get('*/api/v1/review-queue/ticket-ids', () => problem(500)));
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
@@ -115,7 +130,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('1 selected')).toBeInTheDocument();
   });
 
-  it('AC-001.2 filters by Project and keeps the filter in the URL (BUG-003, BUG-013)', async () => {
+  it('AC-001.2 filters by Project and keeps the filter in the URL (BUG-005, BUG-015)', async () => {
     const { user, router } = await openQueue();
     await user.click(screen.getByRole('combobox', { name: 'Project' }));
     await user.click(await screen.findByTitle('HRHELP'));

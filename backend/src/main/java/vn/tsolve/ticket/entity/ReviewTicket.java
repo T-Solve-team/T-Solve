@@ -138,9 +138,6 @@ public class ReviewTicket {
     public void validateDecision(ReviewAction action, String comment) {
         Objects.requireNonNull(action);
         if (status != ReviewStatus.PENDING_REVIEW) throw new ReviewException(HttpStatus.CONFLICT, "MSG06");
-        if (action == ReviewAction.APPROVE && getSolution().isEmpty()) {
-            throw new ReviewException(HttpStatus.CONFLICT, "MSG20");
-        }
         if (action == ReviewAction.REQUEST_CHANGES && source != ReviewSource.SOLUTION_FORM) {
             throw new ReviewException(HttpStatus.CONFLICT, "MSG18");
         }
