@@ -26,6 +26,8 @@ Folder tree and dependency rules: `backend/AGENTS.md` §1.
 **Chosen:** React single-page app, one folder per feature under `frontend/src/features/`; other code imports a
 feature only through its `index.ts`; `src/app/` and `src/shared/` change only with the FE Lead's review.
 Folder tree and import rules: `frontend/guidelines/01-project-structure.md`; ownership: `02-conflict-avoidance.md`.
+A module that owns frontend code lists its `frontend/src/features/<feature>/**` folders in `paths` (module.md),
+so the gate opens them for it and `sdd.ts trace` counts their tests.
 
 ## Communication Patterns
 
@@ -56,7 +58,7 @@ changes the YAML in the same PR (`frontend/guidelines/06-data-layer.md` §2).
 
 | Concern | Decision | Detail |
 |---------|----------|--------|
-| Configuration | env vars | Config files hold `${VAR}` placeholders. Secrets, credentials, hosts and URLs have **no** default — they come only from `.env` (git-ignored; Spring reads it via `spring.config.import`) or the server's environment. Non-sensitive values (a port, a feature flag) may carry a default: `${SERVER_PORT:8080}`. `.env.example` lists every name with no real value. Frontend: `VITE_*` values are build-time and end up in the browser, so they are never secret; `frontend/.env.example` lists them (`frontend/guidelines/11-code-quality-and-tooling.md` §6). |
+| Configuration | env vars | Config files hold `${VAR}` placeholders. Secrets, credentials, hosts and URLs have **no** default — they come only from `.env` (git-ignored; Spring reads it via `spring.config.import`) or the server's environment. Non-sensitive values (a port, a feature flag) may carry a default: `${SERVER_PORT:8080}`. `.env.example` lists every name with no real value. Frontend: `VITE_*` values are build-time and end up in the browser, so they are never secret; `frontend/.env.example` lists them; Docker build args: `frontend/guidelines/11-code-quality-and-tooling.md` §6. |
 | Error handling | `common/exception` + `<module>/exception` | Module exceptions extend the base exceptions in `common/exception`; one global handler: domain exceptions → `GlobalExceptionHandler` → RFC 9457 `ProblemDetail` with an SRS `code` (MSGxx). The frontend shows it by its `code` through the MSG catalog (`frontend/src/shared/messages/catalog.ts`) and never types message text (`frontend/guidelines/06-data-layer.md` §6) |
 | Security | deny by default | Every endpoint declares its roles with `@PreAuthorize`; the backend always re-checks permissions. A frontend route lists its roles and the guard does the rest; the UI only hides what a user cannot do (`frontend/guidelines/08-routing-and-access.md`) |
 | Audit | listed actions | The actions in "REST, errors, security" record an audit event; `audit_event` is never updated or deleted |
