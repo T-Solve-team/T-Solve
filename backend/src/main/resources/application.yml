@@ -20,6 +20,10 @@ spring:
         order_inserts: true
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
+  servlet:
+    multipart:
+      max-file-size: 10MB     # SRS UC-21: one CSV of at most 10 MB (MSG28)
+      max-request-size: 11MB
 
 server:
   port: ${SERVER_PORT}
@@ -33,3 +37,7 @@ management:
 tsolve:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId". Empty = nobody can import.
+  stub:
+    projects: ${TSOLVE_STUB_PROJECTS:}
+    inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}
