@@ -8,9 +8,12 @@ describe('routing and access', () => {
     ['DEPARTMENT_MANAGER', '/dashboard', 'Knowledge Dashboard'],
     ['PROJECT_MANAGER', '/review-queue', 'Review Queue'],
     ['STAFF', '/search', 'Search'],
-  ] as const)('sends %s from "/" to their landing page', async (role, path, title) => {
+  ] as const)('sends %s from "/" to their landing page (BUG-017)', async (role, path, title) => {
     const { router } = renderApp('/', { role });
-    expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument();
+    // The first findBy also loads the lazy page module: give it more time (guideline 10 §6).
+    expect(
+      await screen.findByRole('heading', { level: 1, name: title }, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(path);
   });
 
