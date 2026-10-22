@@ -56,8 +56,11 @@ Each rule is enforced by a tool where possible (marked 🔒). Details and exampl
 11. **No new npm dependency** without FE Lead approval and an entry in the decision log; add it in its own
     small PR. → [02](guidelines/02-conflict-avoidance.md), [13](guidelines/13-decision-log.md)
 12. **Before you say "done":** `npm run format:check && npm run lint && npm run typecheck && npm run test`
-    must pass (`npm run format` fixes formatting).
+    must pass (`npm run format` fixes formatting). An AI agent (the harness `verify`) also runs `npm run build`,
+    and `npm run generate:api` must leave no diff in `src/shared/api/generated` — CI checks both.
     → [11](guidelines/11-code-quality-and-tooling.md)
+13. **Every bug gets a row in [`docs/bug-log.md`](../docs/bug-log.md);** its fix comes with a test that names
+    the bug id: `it('keeps the selection after Approve (BUG-004)')`. → [10](guidelines/10-testing.md) T6
 
 ## npm scripts
 
@@ -102,3 +105,6 @@ doubt, copy how it does things.
 - Screen names, field names, button labels, statuses and MSG texts are English and fixed by the SRS.
   If the task does not give them and they are not in these guidelines or the code, **ask** — do not invent.
 - Do not add files outside the structure in [01](guidelines/01-project-structure.md).
+- AI work goes through **HarnessClaude** (the root `CLAUDE.md`): a new screen or a changed behaviour goes into
+  its module's spec first and is coded only after the spec is approved; a small fix that changes no acceptance
+  criterion is a quick change. Tests name the criterion they prove ([10](guidelines/10-testing.md) T6).

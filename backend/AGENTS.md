@@ -57,18 +57,28 @@ backend/src/main/java/vn/tsolve/
 │   ├── repository/      Spring Data JPA interfaces
 │   ├── entity/          JPA entities + enums owned by the module
 │   ├── dto/             request/response records
-│   └── mapper/          MapStruct mappers entity → response dto
-└── common/              config, error handling, shared utilities (no business logic)
+│   ├── mapper/          MapStruct mappers entity → response dto
+│   ├── exception/       the module's own exceptions, each extending a base in common/exception (§5)
+│   └── client/          <System>Client interfaces + implementations for external systems (AI, Jira, mail)
+└── common/              shared infrastructure only — no business logic, no entities
+    ├── config/          @Configuration classes, the OpenAPI bean, @ConfigurationProperties records
+    ├── exception/       base exceptions (NotFoundException, BusinessRuleException, …) + GlobalExceptionHandler
+    ├── security/        security config, role constants
+    └── util/            only when two modules need the same helper
 
 backend/src/main/resources/
 ├── application.yml      ${VAR} placeholders only (§4)
 └── db/changelog/        db.changelog-master.xml + changes/NNN-<slug>.sql (§7)
+
+backend/src/test/java/vn/tsolve/   mirrors main: a test sits in the same package as the class it tests
 ```
 
 - Calls go one way: controller → service → repository. A controller never touches a repository.
 - Controllers and other modules depend on `service/` interfaces only, never on `service/impl/`.
 - A module uses another module only through that module's `service/` interfaces and `dto/` records —
-  never its `repository/`, `entity/` or `mapper/`.
+  never its `repository/`, `entity/`, `mapper/` or `client/`. Another module's exceptions may be caught.
+- No cycles between modules: if A calls B, B never calls A. Move the shared piece into the lower module.
+- `common/` depends on no module; every module may depend on `common/`.
 - An entity refers to another module's entity by its id, never through a JPA association (`@ManyToOne`, …).
 - Layers a module does not need are not created.
 - The classes now in `knowledge/` and `ticket/` predate this layout; they move into it when their module is built.
@@ -84,7 +94,7 @@ backend/src/main/resources/
 | External system client | interface `<System>Client`, one class per implementation | `AiClient`, `OllamaAiClient` |
 | DTO | `<Action><Entity>Request`, `<Entity>Response` | `CreateSolutionRequest`, `SolutionResponse` |
 | Mapper | `<Entity>Mapper` in `mapper/` | `SolutionMapper` |
-| Exception | `<Reason>Exception` | `NotFoundException` |
+| Exception | base: `<Reason>Exception` in `common/exception/`; module: `<Entity><Reason>Exception` in `<module>/exception/` | `NotFoundException`, `SolutionNotFoundException` |
 | Method / field | camelCase; methods start with a verb | `createDraft`, `reviewDueAt` |
 | Constant | `static final` UPPER_SNAKE_CASE | `MAX_IMPORT_SIZE` |
 | Boolean | `is` / `has` / `can` prefix | `isPublished()` |
@@ -139,8 +149,12 @@ Design, kept practical:
 - Status codes: 200 read/update, 201 create, 204 delete, 400 validation, 401/403 auth, 404 not found,
   409 business-rule conflict.
 - Errors are thrown, not returned: `NotFoundException` → 404, `BusinessRuleException` → 409, validation → 400,
-  all rendered by `common/error/GlobalExceptionHandler` as RFC 9457 `ProblemDetail` with a `code` property
+  all rendered by `common/exception/GlobalExceptionHandler` as RFC 9457 `ProblemDetail` with a `code` property
   holding the SRS message code (MSGxx). No try/catch in controllers; never invent message text.
+- Base exceptions live in `common/exception/` and carry the MSG code (`new NotFoundException("MSG12", …)`).
+  A module adds its own exception in `<module>/exception/` only when the name tells the reader something
+  (`SolutionNotFoundException extends NotFoundException`); it extends a base, so the one global handler maps it
+  to its status — no `@ExceptionHandler` in a module. Exceptions are unchecked (`RuntimeException`).
 - Paging: lists that can grow take `page` (from 0), `size`, `sort` as a `Pageable`; the service returns
   `Page<XxxResponse>`, the controller returns `ResponseEntity<PagedModel<XxxResponse>>` (`new PagedModel<>(page)`)
   — `{content, page: {size, number, totalElements, totalPages}}`.
