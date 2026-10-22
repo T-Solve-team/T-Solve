@@ -18,17 +18,17 @@
         "import-endpoints": "evaluating",
         "csv-confirm": "evaluating",
         "preview-cleanup": "evaluating",
-        "csv-import-performance": "pending",
+        "csv-import-performance": "in-progress",
         "retire-snapshot-import": "pending",
         "csv-confirm-db-tests": "pending"
       },
-      "lastUpdated": "2026-10-22T10:14:54.804Z",
+      "lastUpdated": "2026-10-22T10:18:39.425Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "93dfb5c10fbdf9097fe390083817fe1c3ef23363"
+        "default": "b6881426819dee32e848ed6cfd8e3c9a776fe058"
       }
     }
   },
