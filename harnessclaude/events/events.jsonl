@@ -57,3 +57,6 @@
 {"ts":"2026-10-21T17:57:07.056Z","type":"quick-closed","what":"Prettier format of the v3456 MSG catalog","files":[".claude/worktrees/recursing-gauss-5887f2/frontend/src/shared/messages/catalog.ts"]}
 {"ts":"2026-10-21T18:01:17.559Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"b791cc4a0c383590a440da004204367da257ca52"}
 {"ts":"2026-10-21T18:01:17.666Z","type":"feature-status","module":"import-ticket-list","feature":"csv-import-contract","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-21T18:01:44.761Z","type":"feature-status","module":"import-ticket-list","feature":"csv-import-schema","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T09:42:14.222Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"7c1385deb3ccc0ea08724c96c1e6319a8c9ae886"}
+{"ts":"2026-10-22T09:42:14.353Z","type":"feature-status","module":"import-ticket-list","feature":"csv-import-schema","from":"in-progress","to":"evaluating"}
