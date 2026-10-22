@@ -3,7 +3,80 @@
   "version": 2,
   "phase": "init",
   "status": "active",
-  "modules": {},
+  "modules": {
+    "be-foundation": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:21.968Z"
+    },
+    "fe-foundation": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.167Z"
+    },
+    "identity": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.379Z"
+    },
+    "workspace": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.576Z"
+    },
+    "project-integration": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.778Z"
+    },
+    "wiki": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.980Z"
+    },
+    "ticket-repository": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.187Z"
+    },
+    "search": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.392Z"
+    },
+    "triage": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.605Z"
+    },
+    "chatbot": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.819Z"
+    },
+    "jira-app": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:24.029Z"
+    },
+    "dashboard-audit": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:24.227Z"
+    }
+  },
   "dependencies": {},
   "currentIteration": 1
 }
