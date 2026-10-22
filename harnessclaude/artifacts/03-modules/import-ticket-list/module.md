@@ -3,7 +3,7 @@ name: import-ticket-list
 repos: [default]
 dependencies: []
 complexity: large
-paths: [backend/src/main/java/vn/tsolve/ticket/**, backend/src/test/java/vn/tsolve/ticket/**, backend/src/main/resources/db/changelog/changes/*-ticket-import*.sql, backend/src/main/resources/db/changelog/db.changelog-master.xml, backend/src/main/resources/application.yml, backend/pom.xml, backend/AGENTS.md, backend/src/main/java/vn/tsolve/common/error/**, backend/src/test/java/vn/tsolve/common/error/**, .env.example, frontend/openapi/tsolve-api.yaml, frontend/src/shared/api/generated/**, frontend/src/features/ticket-import/**]
+paths: [backend/src/main/java/vn/tsolve/ticket/**, backend/src/test/java/vn/tsolve/ticket/**, backend/src/main/resources/db/changelog/changes/*-ticket-import*.sql, backend/src/main/resources/db/changelog/db.changelog-master.xml, backend/src/main/resources/application.yml, backend/pom.xml, backend/AGENTS.md, backend/src/main/java/vn/tsolve/common/error/**, backend/src/test/java/vn/tsolve/common/error/**, backend/src/main/java/vn/tsolve/common/config/MethodSecurityConfig.java, .env.example, frontend/openapi/tsolve-api.yaml, frontend/src/shared/api/generated/**, frontend/src/features/ticket-import/**]
 ---
 
 # Module: import-ticket-list
