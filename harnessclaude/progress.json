@@ -11,10 +11,16 @@
       "lastUpdated": "2026-10-22T14:21:21.968Z"
     },
     "fe-foundation": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:22.167Z"
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "roles-session": "pending",
+        "guards-menus": "pending",
+        "route-map": "pending",
+        "catalog-tags": "pending",
+        "guidelines": "pending"
+      },
+      "lastUpdated": "2026-10-22T14:52:01.207Z"
     },
     "identity": {
       "status": "decomposed",
