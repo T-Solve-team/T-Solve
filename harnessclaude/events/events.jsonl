@@ -62,3 +62,7 @@
 {"ts":"2026-10-22T09:42:14.353Z","type":"feature-status","module":"import-ticket-list","feature":"csv-import-schema","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-22T09:42:40.339Z","type":"feature-status","module":"import-ticket-list","feature":"csv-parser","from":"pending","to":"in-progress"}
 {"ts":"2026-10-22T09:47:04.092Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"37f8037f5533f0ed0848386a59a784d1050ca7ff"}
+{"ts":"2026-10-22T09:47:11.319Z","type":"feature-status","module":"import-ticket-list","feature":"csv-row-validation","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T09:47:19.118Z","type":"feature-status","module":"import-ticket-list","feature":"csv-parser","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-22T09:52:01.981Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"230a3321f2c30d781b3459f21b0bda56f4959f8c"}
+{"ts":"2026-10-22T09:52:02.116Z","type":"feature-status","module":"import-ticket-list","feature":"csv-row-validation","from":"in-progress","to":"evaluating"}
