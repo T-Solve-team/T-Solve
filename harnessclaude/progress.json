@@ -16,17 +16,17 @@
       "features": {
         "roles-session": "passing",
         "guards-menus": "pending",
-        "route-map": "pending",
+        "route-map": "passing",
         "catalog-tags": "pending",
         "guidelines": "pending"
       },
-      "lastUpdated": "2026-10-22T15:22:55.779Z",
+      "lastUpdated": "2026-10-22T15:46:42.618Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "d9bfc7bdf8d246f66b160d9214ffe19a9351a9b5"
+        "default": "02e9fc35aa5fa2689b852018934bc7f804af19b6"
       }
     },
     "identity": {

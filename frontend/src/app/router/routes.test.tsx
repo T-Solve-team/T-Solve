@@ -33,7 +33,7 @@ describe('routing and access', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/search'));
   });
 
-  it('shows 404 for an unknown path', async () => {
+  it('AC-005.5 shows 404 for an unknown path', async () => {
     renderApp('/no-such-screen');
     expect(await screen.findByText('This page does not exist.')).toBeInTheDocument();
   });

@@ -27,3 +27,6 @@ Master registry of all artifacts in this workspace.
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-1-roles-session.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-1-roles-session-review.md |
 | — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-1-roles-session-test-report.md |
+| — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-3-route-map.md |
+| — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-3-route-map-review.md |
+| — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-3-route-map-test-report.md |
