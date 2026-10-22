@@ -35,6 +35,9 @@ so the gate opens them for it and `sdd.ts trace` counts their tests.
 **Between frontend and backend:** REST JSON under `/api/v1/**`; the agreed contract is `frontend/openapi/tsolve-api.yaml`.
 The frontend client is generated from it (`npm run generate:api`) and never hand-written; a backend endpoint
 changes the YAML in the same PR (`frontend/guidelines/06-data-layer.md` §2).
+**Between the Jira App and backend:** Forge Remote calls to the Jira App API (REST JSON, same contract file),
+authenticated by the Forge Invocation Token (FIT); the backend reads Jira with the Forge app system token
+through the `tracker` package (`TicketTrackerClientFactory` → `JiraClient`), never with stored Jira API tokens.
 
 ## Shared Infrastructure
 
@@ -48,7 +51,8 @@ changes the YAML in the same PR (`frontend/guidelines/06-data-layer.md` §2).
 
 ## Repo Structure
 
-**Chosen:** monorepo — `backend/` (Spring Boot), `frontend/` (React), `harnessclaude/` (this workspace).
+**Chosen:** monorepo — `backend/` (Spring Boot), `frontend/` (React), `jira-app/` (Atlassian Forge, UI Kit),
+`harnessclaude/` (this workspace).
 
 ## Deployment Topology
 
