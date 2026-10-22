@@ -60,3 +60,11 @@ Both features belong to the current iteration's requested review scope. Code sta
 **Verification:** format:check, lint, typecheck, full tests and build; browser queue/detail/confirmation/validation flows; final sdd.ts trace for all six stories. Do not call mock-backed checks a complete live test.
 
 **Risk tests:** all frontend cases in master rows 2, 4, 6, 10 and 12; BUG-001–BUG-003; failed mutation leaves selection and popup intact; mutation pending prevents duplicate submission.
+## Task 3: Align review exceptions with the main branch rules
+
+User decision on 2026-10-22: refactor review to shared exceptions and one global handler after syncing main. Acceptance criteria and API contract are unchanged.
+
+- Move common exceptions/handler to common/exception and make ReviewException in ticket/exception extend the shared ApiException.
+- Preserve review statuses, MSG codes, params and fieldErrors; no module-owned exception handlers and no common-to-module dependency.
+- Migrate the three legacy callers to the shared exception package and existing MSG06 fallback rather than inventing message text; close main's BUG-023 with a failing-first regression.
+- Verify shared MVC errors, review entity/service/controller regressions, PostgreSQL transactions/concurrency, Spotless and the full frontend suite.
