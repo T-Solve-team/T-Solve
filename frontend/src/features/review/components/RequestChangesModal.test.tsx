@@ -7,7 +7,7 @@ import { msg } from '@/shared/messages';
 import { RequestChangesModal } from './RequestChangesModal';
 
 describe('RequestChangesModal', () => {
-  it('keeps the popup open for blank or oversized comments (AC-004.3)', async () => {
+  it('AC-004.3 keeps the popup open for blank or oversized comments', async () => {
     const user = userEvent.setup();
     const onSent = vi.fn();
     renderWithProviders(
@@ -27,7 +27,7 @@ describe('RequestChangesModal', () => {
     ).toBeInTheDocument();
     expect(onSent).not.toHaveBeenCalled();
   });
-  it('submits one ticketId with the comment (BUG-013, AC-003.1)', async () => {
+  it('AC-003.1 submits one ticketId with the comment (BUG-013)', async () => {
     let submitted: unknown;
     server.use(
       http.post('*/api/v1/reviews/request-changes', async ({ request }) => {

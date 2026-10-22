@@ -17,7 +17,7 @@ async function openQueue(path = '/review-queue') {
 }
 
 describe('ReviewQueuePage', () => {
-  it('lists the pending tickets of my Projects, earliest review due date first, 20 per page (AC-001.1)', async () => {
+  it('AC-001.1 lists the pending tickets of my Projects, earliest review due date first, 20 per page', async () => {
     await openQueue();
     const table = screen.getByRole('table');
     const rows = within(table).getAllByRole('row').slice(1); // without the header row
@@ -27,7 +27,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('Total 58 items')).toBeInTheDocument();
   });
 
-  it('shows MSG13 when no tickets are waiting (AC-001.4)', async () => {
+  it('AC-001.4 shows MSG13 when no tickets are waiting', async () => {
     server.use(
       getGetReviewQueueMockHandler({
         content: [],
@@ -38,14 +38,14 @@ describe('ReviewQueuePage', () => {
     expect(await screen.findByText(msg('MSG13'))).toBeInTheDocument();
   });
 
-  it('shows the error in place, with Try again, when the queue cannot be loaded (AC-001.4)', async () => {
+  it('AC-001.4 shows the error in place, with Try again, when the queue cannot be loaded', async () => {
     server.use(http.get('*/api/v1/review-queue', () => problem(500)));
     renderApp('/review-queue');
     expect(await screen.findByRole('alert')).toHaveTextContent(msg('MSG06'));
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
-  it('approves one ticket at once (no confirm) and shows MSG14 (AC-002.1, AC-002.3)', async () => {
+  it('AC-002.1, AC-002.3 approves one ticket at once (no confirm) and shows MSG14', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('button', { name: 'Approve' }));
@@ -56,7 +56,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('0 selected')).toBeInTheDocument();
   });
 
-  it('asks MSG19 before approving two tickets, then shows MSG14 (AC-002.2)', async () => {
+  it('AC-002.2 asks MSG19 before approving two tickets, then shows MSG14', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1102' }));
@@ -71,7 +71,7 @@ describe('ReviewQueuePage', () => {
     expect(await screen.findByText('Total 56 items')).toBeInTheDocument();
   });
 
-  it('rejects with a reason: MSG15 in the popup, MSG01 when empty, MSG16 when done (AC-003.1, AC-003.2, AC-003.3)', async () => {
+  it('AC-003.1, AC-003.2, AC-003.3 rejects with a reason: MSG15 in the popup, MSG01 when empty, MSG16 when done', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('button', { name: 'Reject' }));
@@ -93,20 +93,20 @@ describe('ReviewQueuePage', () => {
     );
   });
 
-  it('does not offer bulk Request Changes (BUG-001, BUG-013, AC-003.1)', async () => {
+  it('AC-003.1 does not offer bulk Request Changes (BUG-001, BUG-013)', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('checkbox', { name: 'Select ITNET-0415' }));
     expect(screen.queryByRole('button', { name: 'Request Changes' })).not.toBeInTheDocument();
   });
 
-  it('"Select all" selects every ticket in the queue, not only this page (AC-001.3)', async () => {
+  it('AC-001.3 "Select all" selects every ticket in the queue, not only this page', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select all' }));
     expect(await screen.findByText('58 selected')).toBeInTheDocument();
   });
 
-  it('reports a failed Select all request and preserves selection (BUG-022, AC-006.5)', async () => {
+  it('AC-006.5 reports a failed Select all request and preserves selection (BUG-022)', async () => {
     server.use(http.get('*/api/v1/review-queue/ticket-ids', () => problem(500)));
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
@@ -115,7 +115,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('1 selected')).toBeInTheDocument();
   });
 
-  it('filters by Project and keeps the filter in the URL (BUG-003, BUG-013, AC-001.2)', async () => {
+  it('AC-001.2 filters by Project and keeps the filter in the URL (BUG-003, BUG-013)', async () => {
     const { user, router } = await openQueue();
     await user.click(screen.getByRole('combobox', { name: 'Project' }));
     await user.click(await screen.findByTitle('HRHELP'));

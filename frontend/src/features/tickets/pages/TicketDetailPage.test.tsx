@@ -54,7 +54,7 @@ async function openDetail() {
 }
 
 describe('Ticket Detail review', () => {
-  it('shows Solution and Evidence read-only and approves one ticket without confirmation (AC-002.3, AC-004.1)', async () => {
+  it('AC-002.3, AC-004.1 shows Solution and Evidence read-only and approves one ticket without confirmation', async () => {
     const { user } = await openDetail();
     expect(screen.getByText('Renew certificate')).toBeInTheDocument();
     expect(screen.getByText(/error.png/)).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe('Ticket Detail review', () => {
     },
   );
 
-  it('disables empty Solution approval and explains source restriction (AC-002.4, AC-004.4)', async () => {
+  it('AC-002.4, AC-004.4 disables empty Solution approval and explains source restriction', async () => {
     ticket = { ...ticket, solution: {}, source: 'MANUAL' };
     const { user } = await openDetail();
     expect(screen.getByRole('button', { name: 'Approve' })).toBeDisabled();
@@ -103,14 +103,14 @@ describe('Ticket Detail review', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent(msg('MSG18'));
   });
 
-  it('hides decisions for a different Project manager (AC-006.1)', async () => {
+  it('AC-006.1 hides decisions for a different Project manager', async () => {
     ticket = { ...ticket, project: { projectId: 999, name: 'Other Project' } };
     await openDetail();
     expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reject' })).not.toBeInTheDocument();
   });
 
-  it('preserves the popup and comment after a failed save (AC-004.3, AC-005.1)', async () => {
+  it('AC-004.3, AC-005.1 preserves the popup and comment after a failed save', async () => {
     server.use(http.post('*/api/v1/reviews/request-changes', () => problem(500)));
     const { user } = await openDetail();
     await user.click(screen.getByRole('button', { name: 'Request Changes' }));
@@ -122,7 +122,7 @@ describe('Ticket Detail review', () => {
     expect(ticket.status).toBe('PENDING_REVIEW');
   });
 
-  it('blocks duplicate decisions while a mutation is pending (AC-006.5)', async () => {
+  it('AC-006.5 blocks duplicate decisions while a mutation is pending', async () => {
     let release = () => {};
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -144,7 +144,7 @@ describe('Ticket Detail review', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Reject' })).toBeEnabled());
   });
 
-  it('shows loading then an access error with retry (AC-006.5)', async () => {
+  it('AC-006.5 shows loading then an access error with retry', async () => {
     server.use(
       http.get('*/api/v1/tickets/1', async () => {
         await delay(100);
