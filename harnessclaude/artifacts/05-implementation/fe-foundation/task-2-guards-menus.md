@@ -41,3 +41,22 @@ none
 
 ### Next up
 Evaluate guards-menus; then Task 4 catalog-tags (KAN-62).
+
+## Session 2026-10-23 03:10
+
+### Working on: guards-menus — fixing (review attempt 1: fail)
+- High: the Review Queue file still flaked (`shows the error in place…` at the 1 s default). Fix: every test's
+  first `findBy` after a render waits up to 5 s; and, because the first test still failed once in 4 runs with the
+  preload, Vitest now runs test files on half the CPU cores (`maxWorkers: '50%'` in `vite.config.ts`, FE Lead's OK,
+  22/10). BUG-004 row updated.
+- Low: `RequireWorkspace` compares the path without a trailing slash (`/profile/` stays open); test added first (red).
+- Low: tests added for the edge rules — 404 on an unknown path and `/dev/kit` are not redirected before setup.
+- Commit: default@2381c5f
+
+### Verify
+- `format:check`, `lint`, `typecheck`, `build`: exit 0.
+- `npm run test`: 158/158 in 5 of 5 full runs (41–58 s each).
+- trace STORY-002, STORY-003, STORY-004: 13/13.
+
+### Next up
+Evaluation attempt 2.
