@@ -16,6 +16,7 @@ This version covers only **KAN-31 Import tickets from CSV (UC-21)**. Jira import
 | 2026-10-21 | STORY-001..006 | Initial spec for KAN-31 CSV import | — |
 | 2026-10-21 | STORY-001, STORY-002 | AC-001.1 returns the first page of rows; AC-002.8 lists rows page by page with Solution sections cut to 200 characters; new AC-002.11 (row filter by result) | Risk review: 5,000 rows × 10,000 characters made one response tens of MB |
 | 2026-10-21 | STORY-002..004 | AC-002.1 names AC-002.7; AC-002.7 uses Vietnam time; AC-003.1 allows removing Error rows; AC-003.2 also covers reading rows; AC-004.1 saves description and resolved date and trims values; AC-004.7/004.8 define the Failed batch; status code per rejection | Builder check (user: Failed batch only for the MSG33 cases) |
+| 2026-10-22 | STORY-003, STORY-004 | New AC-003.4 (rows list, row detail and remove-rows re-check that the caller manages an Active Project → 403 MSG08); new AC-004.11 (Confirm by a caller who no longer manages the Active Project → 403 MSG08, after the MSG40 check); new AC-004.12 (a second Confirm of the same preview → 404, no Import Batch); AC-004.6 says it records no Import Batch | Evaluation attempt 1 of csv-confirm: NFR 3 had no criterion for Confirm and the rows endpoints; design edge case 21 was not in the spec (user decisions 2026-10-22) |
 
 ## Decisions taken while planning (2026-10-21, with the user)
 | # | Question | Decision |
@@ -81,6 +82,7 @@ This version covers only **KAN-31 Import tickets from CSV (UC-21)**. Jira import
   - AC-003.1: WHEN the Project Manager removes rows from their preview, THE system SHALL mark those rows Removed, whether they were Valid or Error, and exclude them from Confirm.
   - AC-003.2: IF the preview belongs to another user, has been confirmed, or no longer exists, or the requested row number does not exist in it, THEN THE system SHALL reject the read or change with HTTP 404 and change nothing.
   - AC-003.3: WHEN the Project Manager opens one row of their preview, THE system SHALL return its full content, including every Solution section, read-only.
+  - AC-003.4: IF the caller no longer manages the preview's Project or the Project is no longer Active, THEN THE system SHALL reject listing rows, opening a row and removing rows with HTTP 403 (MSG08) and change nothing.
 
 ### STORY-004: Confirm the import
 - As a Project Manager, I want to confirm the preview so that the valid tickets are published immediately.
@@ -90,11 +92,13 @@ This version covers only **KAN-31 Import tickets from CSV (UC-21)**. Jira import
   - AC-004.3: WHEN Confirm succeeds, THE system SHALL record one Import Batch with the Project, the Project Manager, source CSV, the file name, the number of tickets published, the number of Error and Removed rows, status Completed and the date, and link each new Ticket to it.
   - AC-004.4: WHEN Confirm succeeds, THE system SHALL return MSG32 with the created count and the skipped count (Error + Removed rows) and delete the preview.
   - AC-004.5: IF the preview has no Valid, non-removed row, THEN THE system SHALL reject Confirm with HTTP 409 and import nothing.
-  - AC-004.6: IF the preview's Project is no longer Active at Confirm, THEN THE system SHALL reject Confirm with MSG40 and import nothing.
+  - AC-004.6: IF the preview's Project is no longer Active at Confirm, THEN THE system SHALL reject Confirm with MSG40, import nothing and record no Import Batch.
   - AC-004.7: IF a Valid row's `ticket_id` has become an existing Ticket since the preview was created, THEN THE system SHALL fail the whole Confirm with MSG33, import nothing, and record one Import Batch with status Failed.
   - AC-004.8: IF saving any Ticket fails, THEN THE system SHALL import no Ticket, return MSG33, and still record one Import Batch with status Failed, 0 published, and an error description that contains no row content.
   - AC-004.9: IF the preview belongs to another user or no longer exists, THEN THE system SHALL reject Confirm with HTTP 404.
   - AC-004.10: WHEN Confirm succeeds, THE system SHALL publish a "tickets published" event with the new Ticket ids after the transaction commits.
+  - AC-004.11: IF the preview's Project is Active but the caller no longer manages it, THEN THE system SHALL reject Confirm with HTTP 403 (MSG08), import nothing and record no Import Batch. (The MSG40 check of AC-004.6 comes first.)
+  - AC-004.12: IF the same preview is confirmed again while or after a Confirm of it succeeds, THEN THE system SHALL reject the second Confirm with HTTP 404, record no Import Batch for it, and leave the first import unchanged.
 
 ### STORY-005: Download the CSV template
 - As a Project Manager, I want to download a CSV template so that my file has the right columns.
@@ -133,7 +137,7 @@ All under `/api/v1`, role Project Manager, errors as RFC 9457 `ProblemDetail` wi
 | `POST /imports/previews/{previewId}/confirm` | — | `ImportResultResponse` (importBatchId, created, skipped, message MSG32) |
 | Event `TicketsPublishedEvent` | in-process, after commit | `{ ticketIds: [] }` |
 
-Rejections: MSG27, MSG29, MSG04 → 400 · MSG28 → 413 · no PM role or Project not managed → 403 (MSG08) · preview or row not found → 404 (MSG04) · no Valid row left → 409 (MSG30) · MSG40 → 409 · MSG33 because a Ticket ID was taken → 409, because saving failed → 500. Only the two MSG33 cases record a Failed Import Batch.
+Rejections: MSG27, MSG29, MSG04 → 400 · MSG28 → 413 · no PM role or Project not managed → 403 (MSG08) · preview or row not found, or the preview already confirmed → 404 (MSG04) · no Valid row left → 409 (MSG30) · MSG40 → 409 · MSG33 because a Ticket ID was taken → 409, because saving failed → 500. Only the two MSG33 cases record a Failed Import Batch.
 
 ### Required from other modules
 | Need | Interface (in `vn.tsolve.ticket.service`) | Until the module exists |

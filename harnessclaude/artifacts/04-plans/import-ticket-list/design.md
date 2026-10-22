@@ -157,6 +157,18 @@ The preview rows keep raw text without length limits, so an Error row can still 
 | B9 | Identity | Spring Security `Authentication` is the identity interface until the identity module exists (architecture.md updated) |
 | B10 | Error rows can be removed | Yes; they then count as Removed (spec AC-003.1). MSG30 is recomputed on every response |
 
+## Evaluation attempt 1 — fix decisions (2026-10-22)
+| # | Item | Decided |
+|---|------|---------|
+| E1 | Confirm access (AC-004.11) | Before the transaction: `isActive` → MSG40 (409), then `managesActive(user, project)` → `ProjectAccessDeniedException` (403 MSG08). Neither records an Import Batch (user: MSG40 first) |
+| E2 | Double Confirm (AC-004.12) | Inside the transaction the preview is re-loaded with `@Lock(PESSIMISTIC_WRITE)` (`ImportPreviewRepository.lockByIdAndOwner`) and its Valid rows are re-read. The second Confirm waits for the first; it then finds the preview gone → `NotFoundException` (404), which is re-thrown without recording a Failed batch (user decision) |
+| E3 | Taken id caught by the unique constraint | A `DataIntegrityViolationException` is treated like the pre-check: 409 MSG33 with error `TicketIdTaken: MSG33` (spec Interface Contracts) |
+| E4 | Event delivery | `TicketsPublishedEvent` is published inside the import transaction, and listeners use `@TransactionalEventListener(phase = AFTER_COMMIT)` (Javadoc on the event). This replaces Task 9's "publish after execute": with that, the AFTER_COMMIT listeners the design asks for were never called. A listener that fails after commit does not undo the import |
+| E5 | Ticket content in logs | `logging.level` for `org.hibernate.engine.jdbc.spi.SqlExceptionHelper` and `org.hibernate.orm.jdbc.batch` set to OFF in `application.yml`, because their messages carry the bound values (AGENTS §9). The service logs its own line instead: exception type and SQLState, no values |
+| E6 | Recorder failure | If `recordFailed` itself throws, it is logged (no content) and the client still gets `ImportFailedException` (MSG33) |
+| E7 | Rows endpoints access (AC-003.4) | `ImportPreviewServiceImpl` checks `managesActive(user, preview.projectId)` after the owner check → 403 MSG08. Task 14 |
+| E8 | `IN (...)` bind limit (> 65,535 ids) | Not fixed now: the NFR file (10 MB, about 5,000 rows) stays far below it. Follow-up: chunk `findExistingTicketIds` |
+
 ## File Structure
 ```
 backend/

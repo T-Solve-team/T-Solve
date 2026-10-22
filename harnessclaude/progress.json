@@ -8,27 +8,28 @@
       "status": "implementing",
       "currentPhase": "implement",
       "features": {
-        "csv-import-contract": "evaluating",
-        "csv-import-schema": "evaluating",
-        "csv-parser": "evaluating",
-        "csv-row-validation": "evaluating",
-        "project-access-errors": "evaluating",
-        "csv-upload": "evaluating",
-        "preview-rows": "evaluating",
-        "import-endpoints": "evaluating",
+        "csv-import-contract": "passing",
+        "csv-import-schema": "passing",
+        "csv-parser": "passing",
+        "csv-row-validation": "passing",
+        "project-access-errors": "passing",
+        "csv-upload": "passing",
+        "preview-rows": "passing",
+        "import-endpoints": "passing",
         "csv-confirm": "evaluating",
-        "preview-cleanup": "evaluating",
-        "csv-import-performance": "evaluating",
-        "retire-snapshot-import": "evaluating",
-        "csv-confirm-db-tests": "evaluating"
+        "preview-cleanup": "passing",
+        "csv-import-performance": "passing",
+        "retire-snapshot-import": "passing",
+        "csv-confirm-db-tests": "passing",
+        "preview-rows-access": "pending"
       },
-      "lastUpdated": "2026-10-22T10:37:15.672Z",
+      "lastUpdated": "2026-10-22T11:27:05.835Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "d15e991607eb44a7ce1c24621a28d76cf6e96e8e"
+        "default": "3905cdcbef623074a717c1254a74925bd2ce6473"
       }
     }
   },

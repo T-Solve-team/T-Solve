@@ -1,7 +1,7 @@
 ---
 module: import-ticket-list
 date: 2026-10-21
-total_tasks: 13
+total_tasks: 14
 owner: Dev
 ---
 
@@ -240,3 +240,16 @@ If any step fails, the transaction rolls back, and `ImportBatchRecorder.recordFa
 - Test: the file above (AC-004.8, AC-004.10)
 **Dependencies:** Task 9
 **Estimated size:** medium
+
+---
+
+## Task 14: Re-check Project access on preview rows
+
+**Story:** STORY-003
+**Feature:** preview-rows-access
+**Description:** Spec change of 2026-10-22 (AC-003.4, design E7). `ImportPreviewServiceImpl.rows`, `row` and `removeRows` call `ProjectAccess.managesActive(user, preview.projectId)` after loading the caller's preview, and throw `ProjectAccessDeniedException` (403 MSG08) without reading or changing rows. The csv-confirm fix (AC-004.11, AC-004.12, design E1–E6) is done in the fixing loop of Task 9, not here.
+**Files:**
+- Modify: `T/service/impl/ImportPreviewServiceImpl.java`
+- Test: `TT/service/impl/ImportPreviewServiceImplTest.java` (AC-003.4)
+**Dependencies:** Task 7
+**Estimated size:** small
