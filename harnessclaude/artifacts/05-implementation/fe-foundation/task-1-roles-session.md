@@ -2,7 +2,7 @@
 
 **Module:** fe-foundation
 **Assignee:** Trần Trung Hiếu
-**Status:** evaluating
+**Status:** passing
 **Iteration:** 1
 
 ---
@@ -45,3 +45,18 @@ none
 
 ### Next up
 Evaluate roles-session; then Task 2 guards-menus (KAN-60).
+
+## Session 2026-10-23 00:10
+
+### Working on: roles-session — evaluation
+- Independent review (harnessclaude-reviewer, attempt 1): **pass** —
+  `06-evaluation/fe-foundation/task-1-roles-session-review.md`, test report next to it.
+- The FE Lead chose to mark the feature passing and leave two review findings for later:
+  - MEDIUM: the AC-008.1 test does not check that cached mutations are dropped, and edge case 11 (Critical in
+    the design: user B signs in after user A logged out, same browser) has no test.
+  - LOW: `shared/auth/session.test.ts` uses `as unknown as CurrentUser` (guideline 04 R4); `toSession` could take
+    `roles: readonly string[]` instead.
+- Status: passing.
+
+### Next up
+Task 2 guards-menus (KAN-60); the two follow-ups above when Task 1's area is next touched.
