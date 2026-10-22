@@ -9,14 +9,23 @@ owner: BA
 ## Changelog
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
-| 2026-10-20 | STORY-001 to STORY-006 | Initial review contract from Report 3 v3460; auth/email implementations excluded by user choice | Requested Approve / Reject / Request changes across backend and frontend |
+| 2026-10-20 | STORY-001 to STORY-006 | Initial review contract (originally based on SRS v3460 layout template); auth/email implementations excluded by user choice | Requested Approve / Reject / Request changes across backend and frontend |
+| 2026-10-22 | STORY-002, STORY-004 | D1: Request changes supports selected/all eligible tickets with one comment; D2: remove AC-002.4 and empty-Solution handling; correct authoritative sources | FE Lead decisions D1/D2 (21/10), reaffirmed in PR review; Report3 documents will be corrected |
+
+## Sources and precedence
+
+- Authoritative business sources: `Report3/UC_list_and_Actors (1).docx`, `Report3/Business_Rules.docx`, and `Report3/System_Messages.docx` in the team documentation folder. A portable source index is in `harnessclaude/artifacts/00-baseline/Report3/README.md`.
+- The SRS v3460 file is a layout template, not the requirements source.
+- FE Lead D1 (21/10), reaffirmed by this review: Request changes supports several selected tickets with one shared comment, as FE-34 implements. This overrides the current single-ticket wording of GBR-09 / UC-30 until corrected.
+- FE Lead D2: a Ticket always has a populated Solution. This overrides empty-Solution wording in GBR-04 / GBR-08 / GBR-09 and MSG20 / MSG70 until corrected. Review has no empty-Solution flag or MSG20 handling. The trusted submission integration supplies valid populated Solutions.
+- Catalog edits in this PR stay within MSG13–MSG20, with MSG20 removed under D2. Other catalog entries are left for the frontend foundation change.
 
 ## Requirements
 
 ### Functional
 1. Implement UC-29 and the Approve, Reject and Request changes branches of UC-30, with Ticket Detail support from UC-24.
 2. Persist each decision and its audit event; preserve history data required by UC-32 without building the full history screen.
-3. Use the current SRS's Project scope and MSG codes, superseding obsolete frontend behavior.
+3. Use Report3 Project scope and review MSG codes, with FE Lead D1/D2 taking precedence over the document wording awaiting correction.
 4. Expose explicit auth/Project and email integration seams; do not provide fake identities or pretend that an email was delivered.
 
 ### Non-Functional
@@ -41,7 +50,6 @@ owner: BA
   - AC-002.1: WHEN the Project Manager approves eligible Pending review tickets, THE system SHALL set each ticket to Published, save one decision per ticket and remove those tickets from the queue.
   - AC-002.2: WHEN two or more tickets are approved from the queue, THE frontend SHALL require confirmation using MSG19 before sending the mutation and show MSG14 after success.
   - AC-002.3: WHEN one ticket is approved from the queue or Ticket Detail, THE frontend SHALL submit that decision without the bulk confirmation and show MSG14 after success.
-  - AC-002.4: IF a selected ticket has an empty Solution, THEN THE system SHALL prevent approval and show MSG20 without publishing any ticket in that request.
   - AC-002.5: WHEN a Project Manager approves a ticket they wrote, THE system SHALL allow the decision and retain both writer and reviewer identity in history.
 
 ### STORY-003: Reject with a reason
@@ -52,13 +60,13 @@ owner: BA
   - AC-003.3: IF the rejection reason is missing or whitespace-only or exceeds 1,000 characters, THEN THE system SHALL return the corresponding MSG01 or MSG02 field error and preserve ticket state and the open popup.
   - AC-003.4: IF a Rejected ticket is submitted for another review decision, THEN THE backend SHALL reject the transition without changing it or returning it to the queue or Published results.
 
-### STORY-004: Request changes on one ticket
-- As the Project Manager, I want the writer to correct one Solution Form ticket so that I can review the corrected Solution later.
+### STORY-004: Request changes on selected tickets
+- As the Project Manager, I want writers to correct selected Solution Form tickets using one shared comment so that I can review their corrected Solutions later.
 - Acceptance:
-  - AC-004.1: WHEN the Project Manager opens a Pending review Solution Form ticket's detail, THE frontend SHALL offer Request changes for that single ticket and show its Solution and saved Evidence references read-only.
-  - AC-004.2: WHEN a valid change comment is submitted, THE system SHALL set the ticket to Changes requested, save the comment and decision, preserve the stored review due date, remove it from the queue and show MSG17.
+  - AC-004.1: WHEN the Project Manager selects one, several or all eligible Pending review Solution Form tickets in the Review Queue or opens one eligible ticket in Ticket Detail, THE frontend SHALL offer one Request changes form whose comment applies to every selected ticket and SHALL show Solution and saved Evidence references read-only in Ticket Detail.
+  - AC-004.2: WHEN a valid change comment is submitted for selected eligible tickets, THE system SHALL atomically set every selected ticket to Changes requested, save the same comment and one decision per ticket, preserve each stored review due date, remove those tickets from the queue and show MSG17.
   - AC-004.3: IF the comment is missing or whitespace-only or exceeds 1,000 characters, THEN THE system SHALL return MSG01 or MSG02 and preserve ticket state and the popup.
-  - AC-004.4: IF a change request targets multiple tickets or a ticket from another source, THEN THE backend SHALL reject the request without changes; the frontend SHALL expose no bulk Request changes action and SHALL use MSG18 to explain source restrictions where applicable.
+  - AC-004.4: IF a change request includes any ticket that did not come from the Solution Form, THEN THE backend SHALL reject the entire request without changes and THE frontend SHALL use MSG18 to explain the source restriction where applicable.
 
 ### STORY-005: Enforce safe decisions and retain evidence
 - As the team, I want decisions to be authorized, atomic and auditable so that retries and failures cannot corrupt review results.
@@ -93,12 +101,12 @@ owner: BA
 ### Exposed by this module
 - `GET /api/v1/review-queue?projectId=&page=0&size=20&sort=reviewDueDate,asc` returns Spring-style `{content,page}`; only a documented allowlist of sort fields is accepted.
 - `GET /api/v1/review-queue/ticket-ids?projectId=` returns `{ticketIds}` for the same authorization/filter scope.
-- `POST /api/v1/reviews/approve`: `{ticketIds: number[]}`; `POST /api/v1/reviews/reject`: `{ticketIds: number[], reason: string}`; `POST /api/v1/reviews/request-changes`: `{ticketId: number, comment: string}`. Success returns `{count}`. IDs are positive integers; reasons/comments are required and limited to 1,000 characters.
+- `POST /api/v1/reviews/approve`: `{ticketIds: number[]}`; `POST /api/v1/reviews/reject`: `{ticketIds: number[], reason: string}`; `POST /api/v1/reviews/request-changes`: `{ticketIds: number[], comment: string}`. Success returns `{count}`. IDs are positive integers; reasons/comments are required and limited to 1,000 characters.
 - Ticket Detail read API returns review ticket identity, Project, writer, source, status, review dates, Solution sections, Evidence metadata and current review comment; server-side access is mandatory.
 - Java service interfaces use DTO records for ticket registration, Published ticket retrieval, audit recording and pending notification consumption. Entities do not leave the service layer.
 - Failure responses are RFC 9457 Problem Details with SRS `code` and structured validation fields: 400 invalid input, 401 unauthenticated, 403 unauthorized, 404 missing resource, 409 state conflict, 500 persistence failure.
 - A new forward-only Liquibase migration is required for review persistence and notification handoffs. Existing changesets are not edited. No existing-data migration or destructive operation is included.
-- Shared frontend MSG catalog and generated API files need scoped updates to implement the current SRS. Generated files are produced only by `npm run generate:api`; this shared-file work must receive the team's normal FE Lead review before merge.
+- Shared frontend MSG catalog and generated API files need scoped updates to implement the Report3 decisions. Generated files are produced only by `npm run generate:api`; this shared-file work must receive the team's normal FE Lead review before merge.
 
 ### Required from other modules
 - Auth/Project port: active authenticated actor and current managed Project/access scope; missing adapter denies access. Identity/rights never come from request JSON or query parameters.
@@ -111,7 +119,7 @@ owner: BA
 - [ ] Every criterion has an automated test naming its AC ID; every fixed bug has a regression test naming its BUG ID.
 - [ ] Backend Maven verify and spotless:check pass; frontend format:check, lint, typecheck, tests and build pass.
 - [ ] OpenAPI is updated first; generated client is regenerated and verified.
-- [ ] Browser verification covers queue selection, confirmation, field errors, Ticket Detail and one-ticket Request changes.
+- [ ] Browser verification covers queue selection, confirmation, field errors, Ticket Detail and multi-ticket Request changes with one shared comment.
 - [ ] Bug log retains found defects, including resolved defects, with honest verification status.
 - [ ] Missing live integrations and remaining test limitations are documented.
 - [ ] Stop after each verified feature and request its individual commit agreement before starting the next feature.

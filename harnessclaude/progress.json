@@ -9,15 +9,16 @@
       "currentPhase": "implement",
       "features": {
         "review-api": "in-progress",
-        "review-ui": "in-progress"
+        "review-ui": "in-progress",
+        "review-lead-amendments": "in-progress"
       },
-      "lastUpdated": "2026-10-22T11:47:40.517Z",
+      "lastUpdated": "2026-10-22T14:11:53.122Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b6370ac10d395246fcb7b31e8f2445831f155211"
+        "default": "61ca98e7bfba62914521f47c99751ea4acbd033a"
       }
     }
   },

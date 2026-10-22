@@ -31,8 +31,8 @@
 {"ts":"2026-10-20T16:14:09.647Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"b6098c58e59d47302526e42bb1229d78a519f22f"}
 {"ts":"2026-10-21T12:50:30.391Z","type":"quick-opened","what":"AGENTS.md: add exception/client folders, common layout, test layout; log ProblemDetail mismatch bug","files":["backend/AGENTS.md","docs/bug-log.md"]}
 {"ts":"2026-10-21T12:52:43.722Z","type":"quick-closed","what":"AGENTS.md: add exception/client folders, common layout, test layout; log ProblemDetail mismatch bug","files":["backend/AGENTS.md","docs/bug-log.md"]}
-{"ts":"2026-10-21T13:28:12.777Z","type":"quick-opened","what":"Fix delayed Form validation teardown BUG-015","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-21T13:35:49.855Z","type":"quick-closed","what":"Fix delayed Form validation teardown BUG-015","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-21T13:28:12.777Z","type":"quick-opened","what":"Fix delayed Form validation teardown BUG-017","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-21T13:35:49.855Z","type":"quick-closed","what":"Fix delayed Form validation teardown BUG-017","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-10-21T13:47:30.072Z","type":"feature-status","module":"ticket-review","feature":"review-ui","from":"pending","to":"in-progress"}
 {"ts":"2026-10-21T14:30:54.157Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"6021e9c024f9d2aa59c0c74a591dbd13fb115c0b"}
 {"ts":"2026-10-21T18:10:39.312Z","type":"quick-opened","what":"project rules: frontend verify commands and where the frontend conventions are","files":["CLAUDE.md","AGENTS.md"]}
@@ -48,3 +48,7 @@
 {"ts":"2026-10-22T12:51:49.090Z","type":"quick-closed","what":"project rules: the team git rules win over the harness branch and commit defaults","files":["CLAUDE.md","AGENTS.md"]}
 {"ts":"2026-10-22T13:04:01.953Z","type":"quick-opened","what":"Normalize review frontend test names to AC prefix and BUG suffix","files":["frontend/src/features/review/components/RequestChangesModal.test.tsx","frontend/src/features/review/pages/ReviewQueuePage.test.tsx","frontend/src/features/tickets/pages/TicketDetailPage.test.tsx"]}
 {"ts":"2026-10-22T13:14:30.108Z","type":"quick-closed","what":"Normalize review frontend test names to AC prefix and BUG suffix","files":["frontend/src/features/review/components/RequestChangesModal.test.tsx","frontend/src/features/review/pages/ReviewQueuePage.test.tsx","frontend/src/features/tickets/pages/TicketDetailPage.test.tsx"]}
+{"ts":"2026-10-22T13:47:03.383Z","type":"spec-approved","module":"ticket-review","specHash":"5d4de2285469e55a8ceef828fb6913b2d2fb514c0144575e6154ce9eaffd5c79"}
+{"ts":"2026-10-22T13:48:53.476Z","type":"feature-status","module":"ticket-review","feature":"review-lead-amendments","from":null,"to":"pending"}
+{"ts":"2026-10-22T13:48:53.554Z","type":"feature-status","module":"ticket-review","feature":"review-lead-amendments","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T14:11:53.130Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"61ca98e7bfba62914521f47c99751ea4acbd033a"}

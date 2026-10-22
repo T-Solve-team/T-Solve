@@ -9,7 +9,7 @@ Môi trường local riêng, frontend đã tắt mock. Backend dùng PostgreSQL 
 3. Batch mới sau smoke: http://localhost:5173/tickets/73 để Approve; /tickets/74 để Reject; /tickets/75 để Request Changes. Các ID thay đổi sau khi tạo batch mới hoặc khởi động lại backend; luôn kiểm tra GET /manual-review/fixtures.
 4. Reject: gửi khi Reason rỗng/whitespace, nhập trên 1.000 ký tự, rồi nhập lý do hợp lệ. Lỗi phải giữ popup; thành công đổi sang Rejected, bỏ nút duyệt và ra khỏi queue.
 5. Request Changes: thử Comment bắt buộc/max 1.000; gửi comment hợp lệ. Detail đổi Changes requested, hiện review comment, giữ nguyên Review due date và không còn trong queue.
-6. /tickets/76 có Solution rỗng: hiện MSG20 và khóa Approve. Vẫn có thể Reject hoặc Request Changes.
+6. Theo D1/D2: tạo fixture mới, chọn changesId và secondChangesId trong queue rồi Request Changes; một comment áp dụng cho cả hai. Không còn trường hợp Solution rỗng hoặc MSG20.
 7. /tickets/77 ở Project khác: PM hiện tại phải nhận MSG08. /tickets/78 là Manual import đã Published, không có nút duyệt và không vào queue.
 8. Reload ticket đã xử lý: trạng thái vẫn được lưu; không thể quyết định lại.
 

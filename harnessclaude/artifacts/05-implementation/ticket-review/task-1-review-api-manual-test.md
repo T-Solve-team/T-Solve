@@ -11,7 +11,7 @@
 - Frontend: http://127.0.0.1:5173/review-queue — mock hiện có, mặc định Project Manager, khoảng 58 ticket mẫu.
 - Backend Swagger: http://127.0.0.1:8080/swagger-ui/index.html — API review thật, PostgreSQL riêng và adapter đăng nhập chỉ trong test classpath.
 
-Frontend chưa được cập nhật để gọi backend mới. Khi thao tác FE, bạn đang thử hành vi mock cũ, gồm các bug đã ghi BUG-001–BUG-003. Để kiểm tra phần backend vừa triển khai, dùng Swagger theo hướng dẫn dưới đây. Không coi việc bấm FE mock là bằng chứng backend đã lưu dữ liệu.
+Frontend chưa được cập nhật để gọi backend mới. Khi thao tác FE, bạn đang thử hành vi mock cũ, gồm các bug đã ghi BUG-003–BUG-005. Để kiểm tra phần backend vừa triển khai, dùng Swagger theo hướng dẫn dưới đây. Không coi việc bấm FE mock là bằng chứng backend đã lưu dữ liệu.
 
 Auth manual và công cụ tạo dữ liệu nằm trong `backend/src/test/java/vn/tsolve/ticket/manual/`, chỉ nạp qua main test với profile `manual-review`. Chúng không có trong jar production. Backend chỉ lắng nghe loopback. Email dừng ở bản ghi pending; OIDC, SMTP và Jira chưa được tích hợp trong scope đã chốt.
 
@@ -33,7 +33,7 @@ Batch tại thời điểm bàn giao: `467d29c5`. GET fixtures là nguồn đún
 | approveId | 43 | Approve, gồm trường hợp người duyệt cũng là writer |
 | rejectId | 44 | Reject với reason |
 | changesId | 45 | Request changes với comment |
-| emptySolutionId | 46 | Không được Approve vì Solution trống |
+| secondChangesId | (lấy từ fixtures mới) | Ticket có Solution đầy đủ để test Request changes hàng loạt |
 | foreignTicketId | 47 | Ticket của Project 20; pm của Project 10 không được duyệt |
 | importedTicketId | 48 | Source MANUAL, đã Published, không đi qua Review Queue |
 
@@ -90,7 +90,6 @@ Chỉ xác nhận một quyết định lần đầu sau khi tạo fixture. Nh�
 
 | Ca manual | Thao tác | Mong đợi |
 |-----------|----------|----------|
-| Solution trống | Approve `[46]` | 409, code MSG20; trạng thái vẫn Pending review |
 | Sai Project | pm Approve `[47]` hoặc GET queue với projectId=20 | 403, không thay đổi ticket |
 | Reason/comment trống | Gửi `"   "` hoặc bỏ trường bắt buộc | 400, MSG01 ở fieldErrors |
 | Quá 1.000 ký tự | Reason/comment dài 1.001 ký tự | 400, MSG02 ở fieldErrors |
@@ -109,7 +108,7 @@ Ba tài khoản manual **pm**, **otherpm**, **employee** cùng dùng password ma
 2. Gọi `POST /manual-review/fixtures` để tạo batch mới. Lịch sử cũ được giữ, không xóa hoặc sửa audit.
 3. Dùng các ID mới trong response.
 4. Bulk approve thành công: lấy `approveId` và `rejectId` của batch mới, gửi cả hai trong ticketIds; mong đợi count=2 và mỗi ticket có decision/audit riêng.
-5. Bulk lỗi: ở một batch mới khác, Approve `[approveId, emptySolutionId]`; mong đợi 409 và cả hai vẫn Pending review, không tạo record. Đừng trộn ID đã xử lý của batch trước khi muốn kiểm tra bulk thành công.
+5. Bulk lỗi: ở một batch mới khác, Approve `[approveId, foreignTicketId]`; mong đợi 403 và cả hai vẫn Pending review, không tạo record. Đừng trộn ID đã xử lý của batch trước khi muốn kiểm tra bulk thành công.
 
 ## Bằng chứng kiểm tra trước bàn giao
 
@@ -117,7 +116,7 @@ Ba tài khoản manual **pm**, **otherpm**, **employee** cùng dùng password ma
 - HTTP smoke trên server đang chạy: **18 checks passed**, gồm ba quyết định, record DB, CSRF, quyền Project, input lỗi và bulk atomicity.
 - Đã thao tác trực tiếp **Authorize → GET CSRF → POST fixtures** trên Swagger và nhận **200**, header X-XSRF-TOKEN được gửi tự động.
 - Frontend đã kiểm tra bằng trình duyệt: Review Queue hiển thị 58 ticket mock. Chưa kiểm tra FE nối BE vì feature đó còn pending.
-- Bug mới trong lần chuẩn bị manual: BUG-009–BUG-012 được giữ trong `docs/bug-log.md`, kể cả đã sửa. BUG-008 của trace vẫn mở.
+- Bug mới trong lần chuẩn bị manual: BUG-011–BUG-014 được giữ trong `docs/bug-log.md`, kể cả đã sửa. BUG-010 của trace vẫn mở.
 - Script kiểm tra lại HTTP, dùng PowerShell 7 khi cả hai server còn chạy:
 
 ```powershell
@@ -155,7 +154,7 @@ $env:MANUAL_REVIEW_PASSWORD = 'Review-Local-2026'
   '-Dspring-boot.run.arguments=--springdoc.swagger-ui.csrf.enabled=true'
 ```
 
-JDK trong target là công cụ local tạm; Maven clean sẽ xóa nó. Khi đó dùng JDK 21 đã cài của bạn và đổi JAVA_HOME. Không dùng biến môi trường SPRINGDOC_SWAGGER_UI_CSRF_ENABLED; BUG-009 đã ghi lý do truyền canonical property qua argument.
+JDK trong target là công cụ local tạm; Maven clean sẽ xóa nó. Khi đó dùng JDK 21 đã cài của bạn và đổi JAVA_HOME. Không dùng biến môi trường SPRINGDOC_SWAGGER_UI_CSRF_ENABLED; BUG-011 đã ghi lý do truyền canonical property qua argument.
 
 Frontend, trong terminal khác tại `D:/T-Solve/frontend`:
 
@@ -168,3 +167,4 @@ $env:VITE_API_BASE_URL = ''
 ```
 
 Dependencies đã cài từ package-lock. Server FE dùng Node 24.19.0, đúng engine yêu cầu. Với terminal do bạn mở, Ctrl+C dừng server tương ứng; dữ liệu manual nằm trong container vẫn được giữ khi chỉ dừng ứng dụng.
+D1/D2: tạo batch fixture mới, lấy changesId và secondChangesId, gửi Request changes với ticketIds chứa cả hai và một comment. Cả hai thành Changes requested, giữ deadline, có một history/audit/pending notification mỗi ticket. Không còn fixture hoặc luồng Solution rỗng.

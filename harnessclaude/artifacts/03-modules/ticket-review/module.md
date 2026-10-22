@@ -3,13 +3,13 @@ name: ticket-review
 repos: [default]
 dependencies: []
 complexity: large
-paths: [backend/src/main/java/vn/tsolve/common/exception/**, backend/src/main/java/vn/tsolve/common/error/**, backend/src/test/java/vn/tsolve/common/exception/**, backend/src/main/java/vn/tsolve/knowledge/Solution.java, backend/src/main/java/vn/tsolve/knowledge/SolutionService.java, backend/src/main/java/vn/tsolve/ticket/**, backend/src/test/java/vn/tsolve/ticket/**, backend/src/main/resources/db/changelog/**, frontend/src/features/review/**, frontend/src/features/tickets/**, frontend/openapi/**, frontend/src/shared/api/generated/**, frontend/src/shared/api/http.ts, frontend/src/shared/api/http.test.ts, frontend/src/shared/messages/**, frontend/src/app/dev/KitPage.tsx, frontend/src/shared/ui/DataTable/DataTable.test.tsx, docs/bug-log.md]
+paths: [frontend/src/app/router/routes.test.tsx, frontend/src/shared/forms/forms.test.tsx, backend/src/main/java/vn/tsolve/common/exception/**, backend/src/main/java/vn/tsolve/common/error/**, backend/src/test/java/vn/tsolve/common/exception/**, backend/src/main/java/vn/tsolve/knowledge/Solution.java, backend/src/main/java/vn/tsolve/knowledge/SolutionService.java, backend/src/main/java/vn/tsolve/ticket/**, backend/src/test/java/vn/tsolve/ticket/**, backend/src/main/resources/db/changelog/**, frontend/src/features/review/**, frontend/src/features/tickets/**, frontend/openapi/**, frontend/src/shared/api/generated/**, frontend/src/shared/api/http.ts, frontend/src/shared/api/http.test.ts, frontend/src/shared/messages/**, frontend/src/app/dev/KitPage.tsx, frontend/src/shared/ui/DataTable/DataTable.test.tsx, docs/bug-log.md]
 ---
 
 # Module: ticket-review
 
 ## Description
-Ticket-level Approve, Reject and Request changes, implemented sequentially against Report 3 v3460. External identity, Project administration and mail delivery remain integration responsibilities as selected by the user.
+Ticket-level Approve, Reject and Request changes, implemented sequentially against Report3 with FE Lead D1/D2. External identity, Project administration and mail delivery remain integration responsibilities as selected by the user.
 
 ## Responsibilities
 - Own queue queries, ticket-level review state and three review decisions.

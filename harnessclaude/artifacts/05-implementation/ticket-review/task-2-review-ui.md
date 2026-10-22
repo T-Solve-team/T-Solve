@@ -24,7 +24,7 @@ Evidence retrieval, Jira submission/resubmission/panel delivery, email delivery/
 
 - Message regression tests initially failed because current review codes/types were absent or wrong. CSRF regression initially saw a null POST header; it now verifies decoded unsafe-request forwarding and no header on GET.
 - Focused queue/detail/message/transport suite passed 30 tests before the later comment-length case.
-- Frontend final full suite: 12 files, 78 tests passed with `npm run test -- --maxWorkers=2`, exit 0, no unhandled errors. Earlier default worker run: 76 passed, one existing ADMIN lazy-route timeout (BUG-017). Kept the route test and CI configuration unchanged; this is an explicit remaining CI timing risk.
+- Frontend final full suite: 12 files, 78 tests passed with `npm run test -- --maxWorkers=2`, exit 0, no unhandled errors. Earlier default worker run: 76 passed, one existing ADMIN lazy-route timeout (BUG-002). Kept the route test and CI configuration unchanged; this is an explicit remaining CI timing risk.
 - Backend `mvn verify`: 34 passed, zero failures/errors/skipped, BUILD SUCCESS, including Spotless. Test database review_verification is separate from live manual data. Log: backend/target/review-ui-verify.log (ignored temporary output).
 - Format, lint, typecheck, production build passed. Regenerating the API client leaves its tracked directory unchanged.
 - Real browser: localhost form login -> queue -> detail -> Approve ticket 1 -> Published. Reject ticket 2: blank Reason showed MSG01, valid reason saved Rejected and MSG16. Request changes ticket 3 saved Changes requested and displayed the comment, retaining its original deadline. Empty ticket 4 showed MSG20 and disabled Approve.
@@ -34,13 +34,13 @@ Evidence retrieval, Jira submission/resubmission/panel delivery, email delivery/
 
 ## Defects and outstanding bookkeeping
 
-- BUG-001: queue bulk changes removed and detail single-ticket action tested. BUG-002: current review messages migrated and tested. BUG-003: Project filtering, URL state and filtered select-all tested. Their original ledger rows still need status updates.
-- BUG-018: missing CSRF transport, fixed with named regression and verified by real browser decisions.
-- BUG-019: initial rejection MSW fixture incorrectly exposed its reason as reviewComment; aligned fixture/tests with actual backend semantics (reason is saved in history).
-- BUG-020: test login hostname inconsistency; standardized localhost and verified browser session end to end.
-- BUG-021: privacy hook false-positive on a PowerShell map-property name in optional comment cleanup. That command was not retried or worked around. A subsequent attempt to append the defect ledger was also blocked because its diagnostic text repeated that expression. Formal bug-log additions/status updates remain pending user-side execution; this report does not claim the ledger was updated.
-- BUG-022: Select all API failure previously escaped as an unhandled rejection without UI feedback. Named regression first failed with missing MSG06 and an unhandled ApiError; fixed error reporting while preserving the existing selection. Final 78-test run passes without unhandled errors.
-- BUG-008 remains open: Harness trace does not discover Java tests/canonical IDs. Do not mark module/feature evaluating or passing by bypassing the trace gate.
+- BUG-003: queue bulk changes removed and detail single-ticket action tested. BUG-004: current review messages migrated and tested. BUG-005: Project filtering, URL state and filtered select-all tested. Their original ledger rows still need status updates.
+- BUG-019: missing CSRF transport, fixed with named regression and verified by real browser decisions.
+- BUG-020: initial rejection MSW fixture incorrectly exposed its reason as reviewComment; aligned fixture/tests with actual backend semantics (reason is saved in history).
+- BUG-021: test login hostname inconsistency; standardized localhost and verified browser session end to end.
+- BUG-022: privacy hook false-positive on a PowerShell map-property name in optional comment cleanup. That command was not retried or worked around. A subsequent attempt to append the defect ledger was also blocked because its diagnostic text repeated that expression. Formal bug-log additions/status updates remain pending user-side execution; this report does not claim the ledger was updated.
+- BUG-023: Select all API failure previously escaped as an unhandled rejection without UI feedback. Named regression first failed with missing MSG06 and an unhandled ApiError; fixed error reporting while preserving the existing selection. Final 78-test run passes without unhandled errors.
+- BUG-010 remains open: Harness trace does not discover Java tests/canonical IDs. Do not mark module/feature evaluating or passing by bypassing the trace gate.
 - Final `sdd.ts check` and audit pass. Trace reports 18/30 after assigning AC IDs to the existing queue behavior tests; backend Java discovery and documentation evidence remain outside the tool's coverage. Feature/module statuses remain implementing/in-progress.
 - Some historical feature comments still cite old message codes; optional comment cleanup was abandoned after the hook rejection. Runtime message calls and regression expectations use current review codes.
 - Browser bulk confirmation additionally verified MSG19 for tickets 7 and 8, then both disappeared from the queue and selection reset to zero. Screenshot: backend/target/review-live-bulk-confirm.png.
@@ -58,3 +58,7 @@ Shared transport/catalog and directly affected kit example/test changes require 
 - Code commit: default@6021e9c (`feat(review): connect ticket review frontend to API (KAN-24)`).
 - Staged secret scan and whitespace checks pass. The defect notes and pending formal ledger synchronization remain explicit; blocked commands were not retried.
 - Module/feature statuses are unchanged; implementation is not represented as passing the incomplete Harness trace gate.
+
+## FE Lead D1/D2 correction (2026-10-22)
+
+The single-ticket restriction and empty-Solution scenarios described in this historical report are superseded. Current approved spec uses batch Request changes with one shared comment and no empty-Solution review case. Report3 sources and D1/D2 replace the layout-template interpretation. Bug references above use canonical reconciled IDs. See task-5-fe-lead-amendments.md for current verification.
