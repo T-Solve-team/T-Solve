@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router';
-import { LANDING_PATHS, mainRole, useSession, type Role } from '@/shared/auth';
+import { landingPath, useSession, type Role } from '@/shared/auth';
 import { paths } from '@/shared/routing';
 import { ForbiddenPage } from '../pages/ForbiddenPage';
 import { SessionErrorPage } from '../pages/SessionErrorPage';
@@ -30,12 +30,33 @@ export function GuestOnly() {
   const { session, isPending, isError, retry } = useSession();
   if (isPending) return <FullPageLoading />;
   if (isError) return <SessionErrorPage onRetry={() => void retry()} />;
-  if (session) return <Navigate to={LANDING_PATHS[mainRole(session.roles)]} replace />;
+  if (session) return <Navigate to={landingPath(session.roles)} replace />;
   return <Outlet />;
 }
 
 /** "/" → the landing page of the signed-in user. */
 export function LandingRedirect() {
   const { session } = useSession();
-  return session ? <Navigate to={LANDING_PATHS[mainRole(session.roles)]} replace /> : null;
+  return session ? <Navigate to={landingPath(session.roles)} replace /> : null;
+}
+
+/** Screens an Admin may open while the Workspace is not set up (AC-003.2). */
+const OPEN_BEFORE_SETUP: readonly string[] = [paths.workspaceSetup, paths.profile];
+
+/**
+ * While the Workspace has no company information (`workspaceReady` false), an Admin is sent to 2.1 Workspace
+ * Setup first (UC-10, MSG60); other users are not redirected (AC-003.3).
+ */
+export function RequireWorkspace() {
+  const { session, hasRole } = useSession();
+  const { pathname } = useLocation();
+  if (
+    session &&
+    !session.workspaceReady &&
+    hasRole('ADMIN') &&
+    !OPEN_BEFORE_SETUP.includes(pathname)
+  ) {
+    return <Navigate to={paths.workspaceSetup} replace />;
+  }
+  return <Outlet />;
 }

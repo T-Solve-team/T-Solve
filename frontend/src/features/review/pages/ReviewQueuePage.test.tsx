@@ -17,7 +17,13 @@ async function openQueue(path = '/review-queue') {
 }
 
 describe('ReviewQueuePage', () => {
-  it('lists the pending tickets of my Projects, earliest review due date first, 20 per page', async () => {
+  // BUG-004: load the lazy page module once before the tests, so the first test's 5 s wait covers only the
+  // render, not the module load as well (guideline 10 §6 forbids longer timeouts).
+  beforeAll(async () => {
+    await import('./ReviewQueuePage');
+  });
+
+  it('lists the pending tickets of my Projects, earliest review due date first, 20 per page (BUG-004)', async () => {
     await openQueue();
     const table = screen.getByRole('table');
     const rows = within(table).getAllByRole('row').slice(1); // without the header row

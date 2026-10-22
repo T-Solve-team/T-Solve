@@ -7,5 +7,5 @@ export {
   useSession,
   useSignOut,
 } from './useSession';
-export { LANDING_PATHS, mainRole } from './landing';
+export { landingPath } from './landing';
 export { DEV_USER_FOR_ROLE, DEV_USERS, getDevUser, setDevUser, type DevUserId } from './dev-user';

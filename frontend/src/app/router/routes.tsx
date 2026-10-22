@@ -5,7 +5,7 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 import { RouteErrorPage } from '../pages/RouteErrorPage';
 import { featureRoutes } from './feature-routes';
 import { FullPageLoading } from './FullPageLoading';
-import { GuestOnly, LandingRedirect, RequireAuth, RequireRole } from './guards';
+import { GuestOnly, LandingRedirect, RequireAuth, RequireRole, RequireWorkspace } from './guards';
 import { RootLayout } from './RootLayout';
 
 function toPageRoute(route: FeatureRoute): RouteObject {
@@ -19,8 +19,8 @@ function toPageRoute(route: FeatureRoute): RouteObject {
 }
 
 /**
- * Route tree (guideline 08): guest screens · signed-in screens inside the AppShell, each behind its
- * role guard · "/" → landing page · unknown paths → 404. Built from `featureRoutes`.
+ * Route tree (guideline 08): guest screens · signed-in screens inside the AppShell, behind the Workspace Setup
+ * redirect and each behind its role guard · "/" → landing page · unknown paths → 404. Built from `featureRoutes`.
  */
 export function buildRoutes(routes: readonly FeatureRoute[] = featureRoutes): RouteObject[] {
   const guest = routes.flatMap((route) => (route.roles === 'GUEST' ? [route] : []));
@@ -49,13 +49,18 @@ export function buildRoutes(routes: readonly FeatureRoute[] = featureRoutes): Ro
             {
               element: <AppShell />,
               children: [
-                { index: true, element: <LandingRedirect /> },
-                ...signedIn.map((route) => ({
-                  path: route.path,
-                  handle: { title: route.title },
-                  element: <RequireRole roles={route.roles} />,
-                  children: [toPageRoute(route)],
-                })),
+                {
+                  element: <RequireWorkspace />,
+                  children: [
+                    { index: true, element: <LandingRedirect /> },
+                    ...signedIn.map((route) => ({
+                      path: route.path,
+                      handle: { title: route.title },
+                      element: <RequireRole roles={route.roles} />,
+                      children: [toPageRoute(route)],
+                    })),
+                  ],
+                },
                 // Dev builds only: every kit component on one page (guideline 07 §3). `import.meta.env.DEV`
                 // is written literally so production builds drop the page.
                 ...(import.meta.env.DEV
