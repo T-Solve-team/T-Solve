@@ -90,3 +90,6 @@
 {"ts":"2026-10-22T10:18:53.974Z","type":"feature-status","module":"import-ticket-list","feature":"csv-import-performance","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-22T10:24:54.441Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"4bbbc4af126d1b3c1e9e6442a30171dc4a1c98cf"}
 {"ts":"2026-10-22T10:24:54.566Z","type":"feature-status","module":"import-ticket-list","feature":"retire-snapshot-import","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-22T10:25:07.238Z","type":"feature-status","module":"import-ticket-list","feature":"csv-confirm-db-tests","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T10:37:15.408Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"d15e991607eb44a7ce1c24621a28d76cf6e96e8e"}
+{"ts":"2026-10-22T10:37:15.675Z","type":"feature-status","module":"import-ticket-list","feature":"csv-confirm-db-tests","from":"in-progress","to":"evaluating"}

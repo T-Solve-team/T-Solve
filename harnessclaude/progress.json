@@ -20,15 +20,15 @@
         "preview-cleanup": "evaluating",
         "csv-import-performance": "evaluating",
         "retire-snapshot-import": "evaluating",
-        "csv-confirm-db-tests": "pending"
+        "csv-confirm-db-tests": "evaluating"
       },
-      "lastUpdated": "2026-10-22T10:24:54.564Z",
+      "lastUpdated": "2026-10-22T10:37:15.672Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "4bbbc4af126d1b3c1e9e6442a30171dc4a1c98cf"
+        "default": "d15e991607eb44a7ce1c24621a28d76cf6e96e8e"
       }
     }
   },
