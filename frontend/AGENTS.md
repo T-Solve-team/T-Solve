@@ -56,8 +56,11 @@ Each rule is enforced by a tool where possible (marked 🔒). Details and exampl
 11. **No new npm dependency** without FE Lead approval and an entry in the decision log; add it in its own
     small PR. → [02](guidelines/02-conflict-avoidance.md), [13](guidelines/13-decision-log.md)
 12. **Before you say "done":** `npm run format:check && npm run lint && npm run typecheck && npm run test`
-    must pass (`npm run format` fixes formatting).
+    must pass (`npm run format` fixes formatting). An AI agent (the harness `verify`) also runs `npm run build`,
+    and `npm run generate:api` must leave no diff in `src/shared/api/generated` — CI checks both.
     → [11](guidelines/11-code-quality-and-tooling.md)
+13. **Every bug gets a row in [`docs/bug-log.md`](../docs/bug-log.md);** its fix comes with a test that names
+    the bug id: `it('keeps the selection after Approve (BUG-004)')`. → [10](guidelines/10-testing.md) T6
 
 ## npm scripts
 
