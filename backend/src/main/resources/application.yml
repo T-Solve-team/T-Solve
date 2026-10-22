@@ -13,6 +13,11 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate      # schema is owned by Liquibase
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 100     # imports insert thousands of rows at once
+        order_inserts: true
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
 
