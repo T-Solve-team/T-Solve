@@ -137,7 +137,7 @@ public class CsvRowValidator {
         return cells;
     }
 
-    static String trim(String value) {
+    public static String trim(String value) {
         if (value == null) {
             return null;
         }

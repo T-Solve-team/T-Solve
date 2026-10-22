@@ -25,9 +25,11 @@ import org.springframework.web.multipart.MultipartFile;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowSummary;
+import vn.tsolve.ticket.dto.ImportResultResponse;
 import vn.tsolve.ticket.dto.RemoveRowsRequest;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.service.CsvImportService;
+import vn.tsolve.ticket.service.ImportConfirmService;
 import vn.tsolve.ticket.service.ImportPreviewService;
 
 /** Import tickets from CSV (UC-21); contract in frontend/openapi/tsolve-api.yaml, tag "import". */
@@ -43,10 +45,12 @@ public class ImportController {
 
     private final CsvImportService csvImports;
     private final ImportPreviewService previews;
+    private final ImportConfirmService confirms;
 
-    public ImportController(CsvImportService csvImports, ImportPreviewService previews) {
+    public ImportController(CsvImportService csvImports, ImportPreviewService previews, ImportConfirmService confirms) {
         this.csvImports = csvImports;
         this.previews = previews;
+        this.confirms = confirms;
     }
 
     @GetMapping("/csv/template")
@@ -103,5 +107,15 @@ public class ImportController {
     public ResponseEntity<ImportPreviewResponse> removeImportPreviewRows(
             @PathVariable long previewId, @Valid @RequestBody RemoveRowsRequest request, Principal user) {
         return ResponseEntity.ok(previews.removeRows(user.getName(), previewId, request.rowNumbers()));
+    }
+
+    @PostMapping("/previews/{previewId}/confirm")
+    @Operation(operationId = "confirmImport", summary = "Imports the remaining Valid rows as Published tickets.")
+    @ApiResponse(responseCode = "403")
+    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "409")
+    @ApiResponse(responseCode = "500")
+    public ResponseEntity<ImportResultResponse> confirmImport(@PathVariable long previewId, Principal user) {
+        return ResponseEntity.ok(confirms.confirm(user.getName(), previewId));
     }
 }

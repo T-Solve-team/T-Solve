@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -34,9 +36,13 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import vn.tsolve.common.config.MethodSecurityConfig;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
+import vn.tsolve.ticket.dto.ImportResultResponse;
+import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
+import vn.tsolve.ticket.exception.ImportFailedException;
 import vn.tsolve.ticket.exception.UploadTooLargeException;
 import vn.tsolve.ticket.service.CsvImportService;
+import vn.tsolve.ticket.service.ImportConfirmService;
 import vn.tsolve.ticket.service.ImportPreviewService;
 
 @WebMvcTest(ImportController.class)
@@ -55,6 +61,40 @@ class ImportControllerTest {
 
     @MockBean
     private ImportPreviewService previews;
+
+    @MockBean
+    private ImportConfirmService confirms;
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void confirmReturnsTheImportResult_AC_004_4() throws Exception {
+        when(confirms.confirm("pm@company.vn", 42L))
+                .thenReturn(new ImportResultResponse(
+                        7L, 2, 3L, new MessageRef("MSG32", Map.of("created", 2, "skipped", 3L))));
+
+        mvc.perform(post("/api/v1/imports/previews/42/confirm").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.importBatchId").value(7))
+                .andExpect(jsonPath("$.message.code").value("MSG32"))
+                .andExpect(jsonPath("$.message.params.created").value(2));
+    }
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void confirmFailureIsMsg33_AC_004_7() throws Exception {
+        when(confirms.confirm("pm@company.vn", 42L)).thenThrow(new ImportFailedException(HttpStatus.CONFLICT));
+
+        mvc.perform(post("/api/v1/imports/previews/42/confirm").with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("MSG33"));
+    }
+
+    @Test
+    @WithMockUser(username = "staff@company.vn", roles = "STAFF")
+    void confirmNeedsProjectManagerRole_AC_001_10() throws Exception {
+        mvc.perform(post("/api/v1/imports/previews/42/confirm").with(csrf())).andExpect(status().isForbidden());
+        verifyNoInteractions(confirms);
+    }
 
     private static final MockMultipartFile FILE =
             new MockMultipartFile("file", "tickets.csv", "text/csv", "ticket_id\n".getBytes());
