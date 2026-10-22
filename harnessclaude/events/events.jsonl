@@ -30,3 +30,5 @@
 {"ts":"2026-10-21T18:31:15.774Z","type":"quick-closed","what":"BUG-002: the landing page route test times out in the full suite","files":["docs/bug-log.md","frontend/src/app/router/routes.test.tsx"]}
 {"ts":"2026-10-22T12:32:58.630Z","type":"quick-opened","what":"reviewer findings: frontend done includes build and generate:api, bug-log rule, AC checklist line","files":["frontend/AGENTS.md","frontend/guidelines/12-workflow.md"]}
 {"ts":"2026-10-22T12:37:45.134Z","type":"quick-closed","what":"reviewer findings: frontend done includes build and generate:api, bug-log rule, AC checklist line","files":["frontend/AGENTS.md","frontend/guidelines/12-workflow.md"]}
+{"ts":"2026-10-22T12:49:56.896Z","type":"quick-opened","what":"project rules: the team git rules win over the harness branch and commit defaults","files":["CLAUDE.md","AGENTS.md"]}
+{"ts":"2026-10-22T12:51:49.090Z","type":"quick-closed","what":"project rules: the team git rules win over the harness branch and commit defaults","files":["CLAUDE.md","AGENTS.md"]}
