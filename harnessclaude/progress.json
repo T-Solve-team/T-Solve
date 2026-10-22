@@ -14,7 +14,7 @@
         "csv-row-validation": "evaluating",
         "project-access-errors": "evaluating",
         "csv-upload": "evaluating",
-        "preview-rows": "pending",
+        "preview-rows": "evaluating",
         "import-endpoints": "pending",
         "csv-confirm": "pending",
         "preview-cleanup": "pending",
@@ -22,13 +22,13 @@
         "retire-snapshot-import": "pending",
         "csv-confirm-db-tests": "pending"
       },
-      "lastUpdated": "2026-10-22T09:59:23.852Z",
+      "lastUpdated": "2026-10-22T10:03:18.636Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "e1c0b4cd7d157233f96317e1cd9536962f5ba13d"
+        "default": "3d37a003d97c5f15e3c37818e869f5999a78e33d"
       }
     }
   },
