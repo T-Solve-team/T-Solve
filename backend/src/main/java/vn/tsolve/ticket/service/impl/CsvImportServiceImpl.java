@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import vn.tsolve.ticket.csv.CsvColumns;
 import vn.tsolve.ticket.csv.CsvRowValidator;
 import vn.tsolve.ticket.csv.CsvTicketParser;
 import vn.tsolve.ticket.csv.ParsedCsv;
@@ -105,6 +106,11 @@ public class CsvImportServiceImpl implements CsvImportService {
                 rows.size() - valid,
                 0,
                 new PageImpl<>(firstPage, PageRequest.of(0, FIRST_PAGE_SIZE), rows.size()));
+    }
+
+    @Override
+    public String template() {
+        return String.join(",", CsvColumns.TEMPLATE) + "\n";
     }
 
     private ParsedCsv parse(MultipartFile file) {

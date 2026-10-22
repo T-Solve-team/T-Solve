@@ -211,6 +211,13 @@ class CsvImportServiceImplTest {
     }
 
     @Test
+    void templateIsTheHeaderRowOnly_AC_005_1() {
+        assertThat(service.template())
+                .isEqualTo("ticket_id,title,description,author,resolved_date,symptoms,root_cause,"
+                        + "resolution_steps,workaround,scope\n");
+    }
+
+    @Test
     void listCutsSolutionSectionsToTwoHundredCharacters_AC_002_8() {
         String longSymptoms = "😀".repeat(250);
         String body = HEADER + "T-1,Login fails," + longSymptoms + ",Bad token,Restart,All users\n";

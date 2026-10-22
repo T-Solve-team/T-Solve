@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -37,6 +38,14 @@ class GlobalExceptionHandlerTest {
 
         assertThat(p.getStatus()).isEqualTo(413);
         assertThat(p.getProperties()).containsEntry("code", "MSG28");
+    }
+
+    @Test
+    void missingRoleIsForbiddenWithMsg08_AC_001_10() {
+        ProblemDetail p = handler.accessDenied(new AccessDeniedException("Access Denied"));
+
+        assertThat(p.getStatus()).isEqualTo(403);
+        assertThat(p.getProperties()).containsEntry("code", "MSG08");
     }
 
     @Test
