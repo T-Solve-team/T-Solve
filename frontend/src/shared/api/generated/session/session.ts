@@ -49,7 +49,7 @@ export const getGetMeUrl = () => {
 };
 
 /**
- * @summary The signed-in user, their role, Projects and Departments.
+ * @summary The signed-in user with all their roles, Department(s), Projects and managed Spaces.
  */
 export const getMe = async (options?: Parameters<typeof http>[1]): Promise<CurrentUser> => {
   return http<CurrentUser>(getGetMeUrl(), {
@@ -133,7 +133,7 @@ export function useGetMe<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary The signed-in user, their role, Projects and Departments.
+ * @summary The signed-in user with all their roles, Department(s), Projects and managed Spaces.
  */
 
 export function useGetMe<

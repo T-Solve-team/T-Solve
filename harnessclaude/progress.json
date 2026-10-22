@@ -11,16 +11,23 @@
       "lastUpdated": "2026-10-22T14:21:21.968Z"
     },
     "fe-foundation": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
-        "roles-session": "pending",
+        "roles-session": "passing",
         "guards-menus": "pending",
         "route-map": "pending",
         "catalog-tags": "pending",
         "guidelines": "pending"
       },
-      "lastUpdated": "2026-10-22T14:52:01.207Z"
+      "lastUpdated": "2026-10-22T15:22:55.779Z",
+      "branch": "feat/fe-foundation",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "d9bfc7bdf8d246f66b160d9214ffe19a9351a9b5"
+      }
     },
     "identity": {
       "status": "decomposed",

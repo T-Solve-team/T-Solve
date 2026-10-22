@@ -3,7 +3,7 @@ import { MENUS, selectedMenuPath } from './menu-config';
 describe('MENUS', () => {
   it('matches the approved menus per role, landing page first', () => {
     const labels = (role: keyof typeof MENUS) => MENUS[role].map((entry) => entry.label);
-    expect(labels('STAFF')).toEqual(['Search', 'Ticket List']);
+    expect(labels('TICKET_RESOLVER')).toEqual(['Search', 'Ticket List']);
     expect(labels('PROJECT_MANAGER')).toEqual([
       'Review Queue',
       'Review History',
@@ -15,12 +15,9 @@ describe('MENUS', () => {
       'Knowledge Dashboard',
       'Jira Integration',
     ]);
-    expect(labels('DEPARTMENT_MANAGER')).toEqual([
-      'Knowledge Dashboard',
-      'Search',
-      'Ticket List',
-      'Jira Integration',
-    ]);
+    // Employee and Knowledge Manager items arrive with the Wiki and Chatbot routes (KAN-61).
+    expect(labels('EMPLOYEE')).toEqual([]);
+    expect(labels('KNOWLEDGE_MANAGER')).toEqual([]);
     expect(labels('ADMIN')).toEqual([
       'User List',
       'Workspace Settings',

@@ -24,3 +24,6 @@ Master registry of all artifacts in this workspace.
 | — | design | fe-foundation | draft | artifacts/04-plans/fe-foundation/design.md |
 | — | design | fe-foundation | draft | artifacts/04-plans/fe-foundation/iteration-1/design.md |
 | — | tasks | fe-foundation | draft | artifacts/04-plans/fe-foundation/iteration-1/tasks.md |
+| — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-1-roles-session.md |
+| — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-1-roles-session-review.md |
+| — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-1-roles-session-test-report.md |

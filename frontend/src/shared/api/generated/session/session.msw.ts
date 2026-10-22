@@ -22,7 +22,20 @@ export const getGetMeResponseMock = (
     fullName: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.internet.email(),
   },
-  role: faker.helpers.arrayElement(Object.values(Role)),
+  roles: faker.helpers.arrayElements(Object.values(Role)),
+  department: faker.helpers.arrayElement([
+    {
+      departmentId: faker.number.int(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    null,
+  ]),
+  departments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      departmentId: faker.number.int(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
   projects: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       projectId: faker.number.int(),
@@ -32,12 +45,13 @@ export const getGetMeResponseMock = (
       roleInProject: faker.helpers.arrayElement(Object.values(ProjectRole)),
     }),
   ),
-  departments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+  managedSpaces: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
-      departmentId: faker.number.int(),
+      spaceId: faker.number.int(),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     }),
   ),
+  workspaceReady: faker.datatype.boolean(),
   ...overrideResponse,
 });
 

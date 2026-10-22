@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router';
-import { LANDING_PATHS, useSession, type Role } from '@/shared/auth';
+import { LANDING_PATHS, mainRole, useSession, type Role } from '@/shared/auth';
 import { paths } from '@/shared/routing';
 import { ForbiddenPage } from '../pages/ForbiddenPage';
 import { SessionErrorPage } from '../pages/SessionErrorPage';
@@ -20,8 +20,8 @@ export function RequireAuth() {
 
 /** The screen's allowed roles; anyone else sees 403 with MSG08 in place. */
 export function RequireRole({ roles }: { roles: readonly Role[] }) {
-  const { role } = useSession();
-  if (!role || !roles.includes(role)) return <ForbiddenPage />;
+  const { hasAnyRole } = useSession();
+  if (!hasAnyRole(roles)) return <ForbiddenPage />;
   return <Outlet />;
 }
 
@@ -30,12 +30,12 @@ export function GuestOnly() {
   const { session, isPending, isError, retry } = useSession();
   if (isPending) return <FullPageLoading />;
   if (isError) return <SessionErrorPage onRetry={() => void retry()} />;
-  if (session) return <Navigate to={LANDING_PATHS[session.role]} replace />;
+  if (session) return <Navigate to={LANDING_PATHS[mainRole(session.roles)]} replace />;
   return <Outlet />;
 }
 
-/** "/" → the landing page of the signed-in role. */
+/** "/" → the landing page of the signed-in user. */
 export function LandingRedirect() {
-  const { role } = useSession();
-  return role ? <Navigate to={LANDING_PATHS[role]} replace /> : null;
+  const { session } = useSession();
+  return session ? <Navigate to={LANDING_PATHS[mainRole(session.roles)]} replace /> : null;
 }

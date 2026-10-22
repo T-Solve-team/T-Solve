@@ -30,6 +30,7 @@ export * from './reviewQueuePage';
 export * from './role';
 export * from './sizeParameter';
 export * from './sortParameter';
+export * from './spaceRef';
 export * from './ticketIdList';
 export * from './ticketSource';
 export * from './userSummary';
