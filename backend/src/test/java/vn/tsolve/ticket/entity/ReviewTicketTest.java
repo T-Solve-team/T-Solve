@@ -11,7 +11,7 @@ import vn.tsolve.ticket.dto.ReviewRegistration;
 import vn.tsolve.ticket.dto.ReviewSource;
 import vn.tsolve.ticket.dto.ReviewStatus;
 import vn.tsolve.ticket.dto.SolutionSections;
-import vn.tsolve.ticket.service.ReviewException;
+import vn.tsolve.ticket.exception.ReviewException;
 
 class ReviewTicketTest {
     private static final Instant ENTERED = Instant.parse("2026-10-20T09:00:00Z");

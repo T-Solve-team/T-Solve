@@ -1,19 +1,19 @@
-package vn.tsolve.ticket.service;
+package vn.tsolve.common.exception;
 
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 
-public class ReviewException extends RuntimeException {
+public class ApiException extends RuntimeException {
     private final HttpStatus status;
     private final String code;
     private final String field;
     private final Map<String, Object> params;
 
-    public ReviewException(HttpStatus status, String code) {
+    public ApiException(HttpStatus status, String code) {
         this(status, code, null, Map.of());
     }
 
-    public ReviewException(HttpStatus status, String code, String field, Map<String, Object> params) {
+    public ApiException(HttpStatus status, String code, String field, Map<String, Object> params) {
         super(code);
         this.status = status;
         this.code = code;

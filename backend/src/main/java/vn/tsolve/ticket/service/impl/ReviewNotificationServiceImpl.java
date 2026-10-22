@@ -8,9 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.ticket.dto.PendingReviewNotification;
+import vn.tsolve.ticket.exception.ReviewException;
 import vn.tsolve.ticket.mapper.ReviewMapper;
 import vn.tsolve.ticket.repository.ReviewNotificationRepository;
-import vn.tsolve.ticket.service.ReviewException;
 import vn.tsolve.ticket.service.ReviewNotificationService;
 
 @Service

@@ -1,30 +1,27 @@
-package vn.tsolve.ticket.controller;
+package vn.tsolve.common.exception;
 
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import vn.tsolve.ticket.service.ReviewException;
 
-@Order(Ordered.HIGHEST_PRECEDENCE)
-@RestControllerAdvice(assignableTypes = ReviewController.class)
-public class ReviewExceptionHandler {
-    private static final Logger LOG = LoggerFactory.getLogger(ReviewExceptionHandler.class);
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(ReviewException.class)
-    public ProblemDetail review(ReviewException error) {
+    @ExceptionHandler(ApiException.class)
+    public ProblemDetail application(ApiException error) {
         ProblemDetail detail = problem(error.getStatus(), error.getCode());
         detail.setProperty("params", error.getParams());
         if (error.getField() != null) {
@@ -62,8 +59,13 @@ public class ReviewExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ProblemDetail failed(Exception error) {
+        if (error instanceof ErrorResponse response) {
+            ProblemDetail detail = ProblemDetail.forStatus(response.getStatusCode());
+            detail.setProperty("code", "MSG06");
+            return detail;
+        }
         // Do not log exception payloads: database errors can contain ticket text or identity data.
-        LOG.error("Review request failed ({})", error.getClass().getSimpleName());
+        LOG.error("Request failed ({})", error.getClass().getSimpleName());
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, "MSG06");
     }
 

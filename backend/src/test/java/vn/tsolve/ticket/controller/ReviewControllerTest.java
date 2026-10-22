@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import vn.tsolve.ticket.config.ReviewSecurityConfig;
 import vn.tsolve.ticket.dto.ReviewAction;
 import vn.tsolve.ticket.dto.ReviewDecisionResult;
-import vn.tsolve.ticket.service.ReviewException;
+import vn.tsolve.ticket.exception.ReviewException;
 import vn.tsolve.ticket.service.ReviewService;
 
 @WebMvcTest(ReviewController.class)

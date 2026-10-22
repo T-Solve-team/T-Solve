@@ -45,9 +45,9 @@ import vn.tsolve.ticket.dto.ReviewSource;
 import vn.tsolve.ticket.dto.ReviewStatus;
 import vn.tsolve.ticket.dto.ReviewTicketResponse;
 import vn.tsolve.ticket.dto.SolutionSections;
+import vn.tsolve.ticket.exception.ReviewException;
 import vn.tsolve.ticket.service.AuditService;
 import vn.tsolve.ticket.service.ReviewAccessService;
-import vn.tsolve.ticket.service.ReviewException;
 import vn.tsolve.ticket.service.ReviewNotificationService;
 import vn.tsolve.ticket.service.ReviewService;
 

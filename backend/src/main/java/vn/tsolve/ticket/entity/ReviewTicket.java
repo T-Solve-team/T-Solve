@@ -27,7 +27,7 @@ import vn.tsolve.ticket.dto.ReviewRegistration.EvidenceReference;
 import vn.tsolve.ticket.dto.ReviewSource;
 import vn.tsolve.ticket.dto.ReviewStatus;
 import vn.tsolve.ticket.dto.SolutionSections;
-import vn.tsolve.ticket.service.ReviewException;
+import vn.tsolve.ticket.exception.ReviewException;
 
 @Entity
 @Table(name = "ticket_review")
