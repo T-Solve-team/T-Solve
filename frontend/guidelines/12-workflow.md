@@ -245,6 +245,7 @@ patch `shared/` or `app/` in your PR — ask the FE Lead ([02](02-conflict-avoid
 - [ ] Route has the correct roles; actions hidden for users who may not do them
 - [ ] Works with mocks for every role that can open the screen
 - [ ] Page test + mutation tests added; lint, typecheck, test pass
+- [ ] With a HarnessClaude spec: every acceptance criterion has a test that names its id
 - [ ] Spec changed → generate:api run and generated code committed
 - [ ] Screenshot of the screen attached (1366 × 768)
 ```
@@ -264,8 +265,14 @@ Follow DevOps §1.4 (`git fetch && git merge origin/main` at least daily). After
 
 - Give it `AGENTS.md` (Claude Code reads `CLAUDE.md`, which imports it), the guideline files for the task,
   the SRS section text and a screenshot of the Figma frame. Name the feature folder it may change.
+- In this repo the agent works through **HarnessClaude** (the root `CLAUDE.md`; guide:
+  `harnessclaude/README.md`), and its hooks enforce it. A new screen or a changed behaviour goes into the
+  module's spec first; code is written only after you approve that spec. A small fix that changes no
+  acceptance criterion (a label, a style, a bug against an existing criterion) is a quick change: the agent
+  names the files and you confirm them. Each test names the criterion it proves ([10](10-testing.md) T6).
 - Ask for one screen per session; ask it to run
-  `npm run format:check && npm run lint && npm run typecheck && npm run test`.
+  `npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build`, and
+  `npm run generate:api` with no diff in `src/shared/api/generated` (the harness `verify`).
 - Review its output exactly like a teammate's PR, with the checklist above. Watch for: invented MSG texts
   or labels, edits to `shared/`/`app/`, hand-written API types, `useEffect` fetching, raw antd `Table`/`Modal`.
 - You are the author of what you commit. Disclose AI help the way the team agreed (commit trailer /

@@ -7,9 +7,15 @@ language: English
 
 repos:
   # Repos this project's modules change. Paths are relative to this folder.
-  # Empty: the repo that holds this folder. The onboard skill fills in the details.
+  # Without an entry: the repo that holds this folder (`default`). The onboard skill fills in the details.
   # api:
   #   path: ../api
+  # The monorepo (backend/, frontend/, jira-app/): no single role, stack or test_cmd fits it.
+  # Verify commands per part: "Project rules" in the root CLAUDE.md.
+  default:
+    path: ..
+    remote: https://github.com/T-Solve-team/T-Solve.git
+    default_branch: main
 
 sources:
   # Mode-specific inputs
