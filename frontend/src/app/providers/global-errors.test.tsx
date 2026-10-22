@@ -9,10 +9,11 @@ import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 
 describe('global error handling', () => {
-  it('shows a failed mutation as a toast with its MSG code', async () => {
+  it('shows a failed mutation as a toast with its MSG code (BUG-003)', async () => {
     server.use(mock.post('*/api/v1/reviews/approve', () => problem(403)));
     const { queryClient } = renderApp('/review-queue');
-    await screen.findByRole('heading', { level: 1, name: 'Review Queue' });
+    // The first findBy also loads the lazy page module: give it more time (guideline 10 §6).
+    await screen.findByRole('heading', { level: 1, name: 'Review Queue' }, { timeout: 5000 });
 
     await queryClient
       .getMutationCache()
