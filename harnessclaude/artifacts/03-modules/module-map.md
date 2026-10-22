@@ -102,7 +102,8 @@ not exist yet are marked *proposed*; the backend lead confirms them when the mod
 
 Backend paths are under `backend/src/main/java/vn/tsolve/` and `backend/src/test/java/vn/tsolve/`; web app paths
 under `frontend/`. Until `triage`, `wiki` and `chatbot` are planned, `fe-foundation` also owns their placeholder
-folders; each module's planning removes its folder from `fe-foundation`.
+folders, and until `ticket-review` is on `main` it also owns `features/review/**`; each module's planning (or
+arrival) removes its folder from `fe-foundation`.
 
 ## Cross-module interface contracts
 - **Session and roles** (`be-foundation` → all): `GET /api/v1/me` with all roles, Department, Departments,
