@@ -5,7 +5,7 @@ date: 2026-10-23
 
 # Design: be-foundation
 
-Spec: `artifacts/03-modules/be-foundation/spec.md` (approved, version 4d03249e). Conventions: `backend/AGENTS.md`;
+Spec: `artifacts/03-modules/be-foundation/spec.md` (approved, version 26428535). Conventions: `backend/AGENTS.md`;
 system decisions: `artifacts/03-modules/architecture.md`.
 
 ## Architecture Overview
@@ -27,7 +27,8 @@ common/audit      AuditService.record(…) ── JdbcTemplate INSERT in the cal
   a `ProblemDetail`; the handler only adds `code` (and `params`, `fieldErrors`). Security errors happen before the
   `DispatcherServlet`, so the entry point and the access-denied handler write the same body through one helper,
   `ProblemDetails`, as `application/problem+json`.
-- **Security.** One `SecurityFilterChain`: `/actuator/health`, `/v3/api-docs/**`, `/swagger-ui/**`,
+- **Security.** One `SecurityFilterChain`: `/actuator/health`, `/v3/api-docs`, `/v3/api-docs/**`,
+  `/v3/api-docs.yaml` (what `npm run api:pull` downloads; `/v3/api-docs/**` does not match it), `/swagger-ui/**`,
   `/swagger-ui.html` permitted; `/api/**` authenticated; everything else `denyAll`. `@EnableMethodSecurity` for
   `@PreAuthorize`. No form login, no HTTP Basic, no `UserDetailsService`. CORS uses the existing `WebConfig`
   mapping (`http.cors(withDefaults())`). CSRF: cookie `XSRF-TOKEN` (not HTTP-only) and header `X-XSRF-TOKEN`,
@@ -76,7 +77,9 @@ default: PostgreSQL's `now()` is the start time of the transaction, the moment o
 
 Response records (`common/session/dto`), named in the OpenAPI output as the contract names them
 (`@Schema(name = …)`), so `npm run api:pull` keeps `CurrentUser`, `UserSummary`, `DepartmentRef`,
-`ProjectMembership`, `SpaceRef`:
+`ProjectMembership`, `SpaceRef`. Every field is required in the contract, so every record component carries
+`@Schema(requiredMode = REQUIRED)`; `department` also carries `nullable = true` (required, may be null). Without
+them springdoc marks no field required and Orval would generate every field of `CurrentUser` as optional:
 
 | Record | Fields |
 |--------|--------|
@@ -102,11 +105,12 @@ Response records (`common/session/dto`), named in the OpenAPI output as the cont
 | Q7 Tests that need a database | Testcontainers, image `pgvector/pgvector:pg16`, Liquibase applied; AGENTS.md §8 changed | Manual `psql` check; a Maven profile | An automated check of the append-only guarantee and of every changeset; Docker is already needed to run the app (user, 23/10) |
 | Audit write | `JdbcTemplate` INSERT, no entity or repository | JPA entity `AuditEvent` + Spring Data repository in `common` | AGENTS.md §1 allows no entities in `common`; JDBC joins the caller's JPA transaction. `dashboard-audit` maps its own read model in `analytics` |
 | Role names in `@PreAuthorize` | `Roles` with `String` constants (`Roles.ADMIN = "ADMIN"`), used as `@PreAuthorize("hasRole('" + Roles.ADMIN + "')")`; `Role` enum for the principal and `/me` | Enum only (not usable in annotations); plain strings | Annotation values must be compile-time constants; a test keeps `Roles` and `Role` the same five names |
+| OpenAPI schema of `/me` | `@Schema(requiredMode = REQUIRED)` on every component of the five records, `nullable = true` on `department`; a unit test reads the schemas with swagger-core's `ModelConverters` (no Spring context) and checks names, `required` lists and the nullable `department` against the contract | `@NotNull` on response records (cannot say "required but null" for `department`); no check, trust `api:pull` | AC-003.6: the generated types must stay as the contract says; springdoc's default OpenAPI 3.0 output writes `nullable: true`, which Orval turns into `DepartmentRef \| null` like the contract's `anyOf` |
 | Optional lookups | `ObjectProvider<XxxLookup>.getIfAvailable()` | Default no-op beans with `@ConditionalOnMissingBean` | No extra classes; a module adds its bean and `/me` uses it |
 | Validation → MSG code | Constraint `NotBlank`/`NotNull`/`NotEmpty` → MSG01 `{field_name}`; `Size` → MSG02 `{field_name, max_length}` (`max` from the constraint descriptor); `Email` → MSG03; other → MSG06. `field_name` = the request field name (the web app shows its own label). One entry per field; when one field fails several rules, MSG01 wins, then MSG02, MSG03, MSG06 | Spring's default `detail` text | AC-001.4/001.5; the web app's catalog renders the text |
 | `AccessDeniedException` raised inside a controller or service | Handled in `GlobalExceptionHandler` → 403 MSG08 | Let it reach the catch-all | Method security throws inside the `DispatcherServlet`, so the advice sees it before Spring Security does; without its own handler the catch-all would make it a 500 |
 | No generated password | `@SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)` | Leave the default in-memory user | AC-002.10 |
-| Test configuration | `backend/src/test/resources/config/application.yml` with non-secret test values for the placeholders (`SERVER_PORT`, `CORS_ALLOWED_ORIGINS`); the database test gets its connection from Testcontainers (`@ServiceConnection`) | Properties on every test class | `classpath:/config/` overrides `application.yml` in tests only; no secret is committed |
+| Test configuration | `backend/src/test/resources/config/application.yml` with non-secret test values for the placeholders (`SERVER_PORT`, `CORS_ALLOWED_ORIGINS`); the database test gets its connection from Testcontainers (`@ServiceConnection` on a `PostgreSQLContainer` bean, image `DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres")`, else Testcontainers refuses the image); no `org.testcontainers:junit-jupiter` (`@Testcontainers`/`@Container` are not used), as NFR 3 allows only the two test dependencies | Properties on every test class | `classpath:/config/` overrides `application.yml` in tests only; no secret is committed |
 | Swagger UI and CSRF | `springdoc.swagger-ui.csrf.enabled: true` in `application.yml` | Exempt Swagger from CSRF | "Try it out" sends the token like the web app |
 | CSRF in Spring Security 6.3 | The SPA setup from the Spring Security reference: `CookieCsrfTokenRepository.withHttpOnlyFalse()`, a request handler that accepts the raw header value, and a filter that loads the token so the cookie is set on the first response; `csrf.spa()` instead if the managed version has it | Hand-written token logic | Documented recipe; nothing custom beyond it |
 
@@ -125,7 +129,7 @@ Decided in planning (builder check):
 
 ```
 backend/
-├── pom.xml                                         + spring-boot-testcontainers, testcontainers postgresql, junit-jupiter (test)
+├── pom.xml                                         + spring-boot-testcontainers, testcontainers postgresql (test)
 ├── AGENTS.md                                       §8: database tests with Testcontainers where a criterion needs them
 └── src/
     ├── main/java/vn/tsolve/
@@ -161,7 +165,7 @@ backend/
             ├── exception/GlobalExceptionHandlerTest.java
             ├── security/WithTSolveUser.java  WithTSolveUserSecurityContextFactory.java
             │            RolesTest.java  TSolveUserTest.java  SecurityConfigTest.java
-            ├── session/SessionServiceImplTest.java  SessionControllerTest.java
+            ├── session/SessionServiceImplTest.java  SessionControllerTest.java  CurrentUserSchemaTest.java
             ├── audit/AuditServiceImplTest.java  AuditEventDatabaseTest.java
             └── TestcontainersConfiguration.java
 docs/bug-log.md                                      BUG-001 → Fixed
@@ -197,7 +201,7 @@ quotas or workflow here).
 | 14 | STORY-003 | Scale | No lookup implemented, user with no Projects | High | 200; `department: null` present (not omitted), empty lists, `workspaceReady: false` | Task 3 |
 | 15 | STORY-003 | Data integrity | Project Manager's Department also appears through their Projects | Medium | Listed once, `department` first | Task 3 |
 | 16 | STORY-003 | Error cascades | A lookup throws | Medium | 500 MSG06 (no partial answer) | Task 3 |
-| 17 | STORY-003 | Integration | `npm run api:pull` after this module | Medium | Schemas named `CurrentUser`, `UserSummary`, `DepartmentRef`, `ProjectMembership`, `SpaceRef` | Task 3 |
+| 17 | STORY-003 | Integration | `npm run api:pull` after this module | Medium | Schemas named `CurrentUser`, `UserSummary`, `DepartmentRef`, `ProjectMembership`, `SpaceRef`, with the contract's `required` lists and `department` nullable | Task 3 |
 | 18 | STORY-004 | State transitions | Caller's transaction rolls back after `record` | Critical | No audit row | Task 4 |
 | 19 | STORY-004 | Data integrity | `UPDATE`, `DELETE` or `TRUNCATE` on `audit_event` | Critical | Database error; rows unchanged | Task 4 |
 | 20 | STORY-004 | State transitions | `record` with no transaction | High | `IllegalStateException`, no row | Task 4 |

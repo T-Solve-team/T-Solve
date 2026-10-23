@@ -55,8 +55,8 @@
     }
   },
   "be-foundation": {
-    "specHash": "4d03249e43937c1e707752c7bcc3d7a3eeaf48ba6ba831d880aa2b9b1ba3c51d",
-    "approvedAt": "2026-10-23T11:31:20.158Z",
+    "specHash": "264285350f051113182822d7baddd60498e4b7f7f44fee4edeb39fbcff11c799",
+    "approvedAt": "2026-10-23T12:03:13.479Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a request fails with a , THE backend SHALL answer 404 with content type",
@@ -75,12 +75,12 @@
       "AC-002.5": "IF access is denied to a signed-in user, THEN THE backend SHALL answer 403 with a  with",
       "AC-002.6": "IF an endpoint under  has no , THEN THE backend SHALL still answer 401 to a",
       "AC-002.7": "IF a request goes to any other path, THEN THE backend SHALL deny it (any path outside ,",
-      "AC-002.8": "THE backend SHALL answer ,  and the Swagger UI without a signed-in",
+      "AC-002.8": "THE backend SHALL answer , , ,  and",
       "AC-002.9": "WHEN a browser sends a CORS preflight from an origin in , THE backend SHALL",
       "AC-002.10": "THE backend SHALL offer no sign-in of its own (no form login, no HTTP Basic, no generated password);",
       "AC-002.11": "THE backend SHALL require Spring's CSRF token on every , ,  and  to",
       "AC-002.12": "THE backend SHALL offer tests a way to sign in a user with any set of the five roles",
-      "AC-002.13": "IF a , ,  or  to  has no valid CSRF token, THEN THE backend SHALL",
+      "AC-002.13": "IF a signed-in user's , ,  or  has no valid CSRF token, THEN THE backend SHALL",
       "AC-003.1": "WHEN a signed-in user calls , THE backend SHALL answer 200 with  (,",
       "AC-003.2": "WHEN  is answered, THE backend SHALL take  from the Department lookup,",
       "AC-003.3": "WHEN  is answered, THE backend SHALL set  to the user's  (if any) plus the",

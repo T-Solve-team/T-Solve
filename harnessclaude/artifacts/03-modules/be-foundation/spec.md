@@ -11,6 +11,7 @@ owner: BA
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
 | 2026-10-23 | STORY-001..STORY-004 | Initial spec from Report3 (GBR-28, System_Messages, UC-35, Architecture diagram) and the planning decisions Q1–Q7 | The backend base every module builds on (KAN-68); fixes BUG-001 |
+| 2026-10-23 | STORY-002 | AC-002.7 and AC-002.8 also name `/v3/api-docs.yaml`; AC-002.13 covers a signed-in user only (no signed-in user → AC-002.4) | Plan review: `npm run api:pull` downloads `/v3/api-docs.yaml`, which `/v3/api-docs/**` does not match; AC-002.13 contradicted AC-002.4 for a request with no user and no token |
 
 ## Requirements
 
@@ -84,9 +85,10 @@ owner: BA
   - AC-002.6: IF an endpoint under `/api/**` has no `@PreAuthorize`, THEN THE backend SHALL still answer 401 to a
     request with no signed-in user.
   - AC-002.7: IF a request goes to any other path, THEN THE backend SHALL deny it (any path outside `/api/**`,
-    `/actuator/health`, `/v3/api-docs/**` and the Swagger UI).
-  - AC-002.8: THE backend SHALL answer `/actuator/health`, `/v3/api-docs/**` and the Swagger UI without a signed-in
-    user (Docker health check; `npm run api:pull`; production turns the Swagger UI off by configuration).
+    `/actuator/health`, `/v3/api-docs`, `/v3/api-docs/**`, `/v3/api-docs.yaml` and the Swagger UI).
+  - AC-002.8: THE backend SHALL answer `/actuator/health`, `/v3/api-docs`, `/v3/api-docs/**`, `/v3/api-docs.yaml` and
+    the Swagger UI without a signed-in user (Docker health check; `npm run api:pull` downloads
+    `/v3/api-docs.yaml`; production turns the Swagger UI off by configuration).
   - AC-002.9: WHEN a browser sends a CORS preflight from an origin in `CORS_ALLOWED_ORIGINS`, THE backend SHALL
     answer it without a signed-in user.
   - AC-002.10: THE backend SHALL offer no sign-in of its own (no form login, no HTTP Basic, no generated password);
@@ -96,9 +98,10 @@ owner: BA
     (decision Q6).
   - AC-002.12: THE backend SHALL offer tests a way to sign in a user with any set of the five roles
     (`@WithTSolveUser`), so every module tests its role checks without a real sign-in.
-  - AC-002.13: IF a `POST`, `PUT`, `PATCH` or `DELETE` to `/api/**` has no valid CSRF token, THEN THE backend SHALL
-    answer 403 with a `ProblemDetail` with `code` `MSG07` and not run the endpoint (the user reloads or signs in
-    again; MSG08 would wrongly say they lack permission).
+  - AC-002.13: IF a signed-in user's `POST`, `PUT`, `PATCH` or `DELETE` has no valid CSRF token, THEN THE backend SHALL
+    answer 403 with a `ProblemDetail` with `code` `MSG07` and not run the endpoint, for any path under `/api/**` (the
+    user reloads or signs in again; MSG08 would wrongly say they lack permission; with no signed-in user, AC-002.4
+    applies).
 
 ### STORY-003: The session endpoint `/me`
 - As a signed-in user, I want the web app to know who I am and everything my roles give me so that it opens my

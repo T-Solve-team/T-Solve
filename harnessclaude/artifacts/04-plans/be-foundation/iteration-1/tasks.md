@@ -59,7 +59,7 @@ access-denied handler 403 MSG07 for a CSRF failure and MSG08 otherwise, through 
   `WithTSolveUserSecurityContextFactory.java`, `backend/src/test/resources/config/application.yml`
 - Test: `backend/src/test/java/vn/tsolve/common/security/RolesTest.java`, `TSolveUserTest.java`,
   `SecurityConfigTest.java` (`@WebMvcTest` with a test-only controller: 401, 403, several roles, CSRF, CORS
-  preflight, public paths, denied paths)
+  preflight, public paths incl. `/v3/api-docs.yaml`, denied paths)
 **Covers:** AC-002.1–AC-002.13; edge cases 1, 2, 3, 4, 5, 6, 7, 8
 **Dependencies:** Task 1 (`ProblemDetails`)
 **Estimated size:** medium
@@ -71,7 +71,8 @@ access-denied handler 403 MSG07 for a CSRF failure and MSG08 otherwise, through 
 **Story:** STORY-003
 **Feature:** me-session
 **Jira:** KAN-? (to create) · branch `feat/KAN-<n>-be-foundation-me-session`
-**Description:** The four lookup interfaces; DTO records with the contract's schema names; `SessionService` /
+**Description:** The four lookup interfaces; DTO records with the contract's schema names, every component
+`@Schema(requiredMode = REQUIRED)` and `department` also `nullable = true`; `SessionService` /
 `SessionServiceImpl` (user and roles from `TSolveUser.current()`, optional lookups through `ObjectProvider`,
 `departments` = `department` then each Project's Department, once each); `SessionController` `GET /api/v1/me`
 (`operationId` `getMe`, `@PreAuthorize` EMPLOYEE). No contract change.
@@ -82,7 +83,9 @@ access-denied handler 403 MSG07 for a CSRF failure and MSG08 otherwise, through 
   `dto/CurrentUserResponse.java`, `dto/UserSummaryResponse.java`, `dto/DepartmentRef.java`,
   `dto/ProjectMembership.java`, `dto/SpaceRef.java`, `dto/ProjectRole.java`
 - Test: `backend/src/test/java/vn/tsolve/common/session/SessionServiceImplTest.java` (Mockito, lookups present and
-  missing), `SessionControllerTest.java` (`@WebMvcTest`: 200 with every contract field incl. `department: null`, 401)
+  missing), `SessionControllerTest.java` (`@WebMvcTest`: 200 with every contract field incl. `department: null`, 401),
+  `CurrentUserSchemaTest.java` (swagger-core `ModelConverters`: schema names, `required` lists, nullable
+  `department`, as in the contract)
 **Covers:** AC-003.1–AC-003.6; edge cases 14, 15, 16, 17
 **Dependencies:** Task 2 (`TSolveUser`, `@WithTSolveUser`, security)
 **Estimated size:** small
@@ -96,7 +99,9 @@ access-denied handler 403 MSG07 for a CSRF failure and MSG08 otherwise, through 
 **Jira:** KAN-? (to create) · branch `feat/KAN-<n>-be-foundation-audit-writer`
 **Description:** `AuditAction`; `AuditService` / `AuditServiceImpl` (`JdbcTemplate` INSERT; throws without a
 transaction or a signed-in user; non-null arguments); the changeset (next free number at merge) included in the
-master changelog; Testcontainers test dependencies and `TestcontainersConfiguration`; `backend/AGENTS.md` §8 allows
+master changelog; the two Testcontainers test dependencies (`spring-boot-testcontainers`,
+`org.testcontainers:postgresql`; no `junit-jupiter`) and `TestcontainersConfiguration` (a `@ServiceConnection`
+`PostgreSQLContainer` bean, image `pgvector/pgvector:pg16` marked `asCompatibleSubstituteFor("postgres")`); `backend/AGENTS.md` §8 allows
 database tests with Testcontainers; tell the `dashboard-audit` owner the table and the API.
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/common/audit/AuditAction.java`, `AuditService.java`,
