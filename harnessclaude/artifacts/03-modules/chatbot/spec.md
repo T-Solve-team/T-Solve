@@ -13,6 +13,7 @@ owner: BA
 | 2026-10-23 | STORY-001..STORY-004 | Initial spec from Report3 (UC-51–53, GBR-36), SRS §III.12.1 and Figma 12.1 | Plan the Knowledge Chatbot (KAN-69, KAN-48); the backend is mocked for now |
 | 2026-10-23 | STORY-001 | AC-001.13: a 401 signs the user out (MSG07) with no MSG06; a field error on another field than the question shows MSG06 | Review of KAN-71 (findings 1 and 3) |
 | 2026-10-23 | STORY-001 | AC-001.7: the box is emptied only if it still holds the sent question | Review of PR #51 (finding 1): a follow-up typed while waiting was erased |
+| 2026-10-24 | STORY-003, STORY-004 | STORY-003: highlight after the save, remove a rating, ratings kept with the conversation, no comment; retention rule; AC-004.6 rating mocks; contract gains `DELETE` | Plan KAN-75 (UC-53, GBR-36); FE Lead 24/10: the two buttons of Figma 12.1 (c) only, no comment box |
 
 ## Requirements
 
@@ -25,7 +26,11 @@ owner: BA
 4. With no source the Chatbot says so (MSG109) instead of answering; if the AI module fails, MSG06 and the question
    is kept (UC-51 alternative flows).
 5. The conversations are kept for the session only and cleared at logout (UC-52, GBR-36, UC-02).
-6. A user rates an answer Helpful or Not helpful; ratings are kept permanently (UC-53) — built after KAN-48.
+6. A user rates an answer Helpful or Not helpful and can change or remove the rating (UC-53, KAN-75). There is no
+   comment: Figma 12.1 (c) shows only the two buttons (FE Lead, 24/10).
+7. Retention (backend, later): a rating is kept permanently with the rater's identity; the stored question is
+   PII-masked. When the session ends, unrated `ANSWERED` answers are deleted; rated answers and `NO_SOURCE` answers
+   (knowledge gaps) are kept (GBR-36). A Not helpful rating is feedback, not a knowledge gap.
 
 ### Non-Functional
 1. Every acceptance criterion has a test whose `it` name starts with its id; `sdd.ts trace chatbot` passes for the
@@ -109,15 +114,20 @@ owner: BA
 
 ### STORY-003: Rate an answer
 - As an Employee, I want to say whether an answer helped me so that weak answers and missing knowledge can be
-  found. Built after KAN-48 (not in its tasks).
+  found. Built in KAN-75.
 - Acceptance:
   - AC-003.1: THE web app SHALL show Helpful and Not helpful buttons under every answer, the MSG109 answer included.
-  - AC-003.2: WHEN the user clicks Helpful or Not helpful, THE web app SHALL call
-    `PUT /api/v1/chatbot/answers/{answerId}/rating` with that rating and highlight the chosen button.
-  - AC-003.3: WHEN the user rates an answer again, THE web app SHALL send the new rating, which replaces the previous
-    one, and highlight only the new button.
-  - AC-003.4: WHEN a rated answer is shown again in the session (STORY-002), THE web app SHALL highlight its rating.
-  - AC-003.5: IF the rating request fails, THEN THE web app SHALL show MSG06 and keep the previous highlight.
+  - AC-003.2: WHEN the user clicks Helpful or Not helpful on an unrated answer, THE web app SHALL call
+    `PUT /api/v1/chatbot/answers/{answerId}/rating` with that rating, disable both buttons until the response, and
+    highlight the chosen button once it is saved.
+  - AC-003.3: WHEN the user clicks the other button of a rated answer, THE web app SHALL send the new rating, which
+    replaces the previous one, and highlight only the new button once it is saved.
+  - AC-003.4: WHEN a rated answer is shown again in the session (STORY-002), THE web app SHALL highlight its rating,
+    which is kept with the conversation (AC-002.7).
+  - AC-003.5: IF a rating or removal request fails, THEN THE web app SHALL show MSG06 as a toast and keep the
+    previous highlight; a 401 instead signs the user out with MSG07 (fe-foundation), with no MSG06.
+  - AC-003.6: WHEN the user clicks the highlighted button, THE web app SHALL call
+    `DELETE /api/v1/chatbot/answers/{answerId}/rating` and remove the highlight once it succeeds.
 
 ### STORY-004: Mock answers
 - As a developer and a test writer, I want the screen to work in mock mode with answers that show every state, so
@@ -132,6 +142,7 @@ owner: BA
   - AC-004.4: WHEN the mock is asked which Wiki documents are unavailable, THE mock SHALL list the ids of its
     documents that are marked unavailable (at least one cited document) and no others.
   - AC-004.5: WHEN `resetMockData()` runs, THE mock SHALL return to its initial data.
+  - AC-004.6: WHEN the mock is asked to save a rating, or to remove one, THE mock SHALL answer 204.
 
 ## Out of Scope
 - The backend `chatbot` package — added later by a change to this spec once JDK 21 and Maven are set up: the answer
@@ -159,9 +170,14 @@ POST /api/v1/chatbot/answers            # operationId askChatbot
 GET /api/v1/chatbot/unavailable-documents?wikiDocumentIds=1&wikiDocumentIds=2   # operationId listUnavailableCitedDocuments
   200:      UnavailableDocuments          # the given ids the user can no longer view
 
-PUT /api/v1/chatbot/answers/{answerId}/rating   # operationId rateChatbotAnswer — STORY-003, added with it
-  request:  { rating: HELPFUL | NOT_HELPFUL }
+PUT /api/v1/chatbot/answers/{answerId}/rating      # operationId rateChatbotAnswer — STORY-003 (KAN-75)
+  request:  ChatbotRating                          # replaces any earlier rating of this user
   204
+  401, 403, 404: ProblemDetail
+
+DELETE /api/v1/chatbot/answers/{answerId}/rating   # operationId removeChatbotAnswerRating — STORY-003 (KAN-75)
+  204                                              # also when the answer has no rating
+  401, 403, 404: ProblemDetail
 
 ChatbotQuestion:
   required: [question, history]
@@ -183,6 +199,9 @@ ChatbotCitation: oneOf, discriminator type
 CitedSolution:
   required: [symptoms, rootCause, resolutionSteps, workaround, scopeOfApplicability]
   workaround: string | null                # the other four: string
+ChatbotRating:
+  required: [rating]
+  rating:  HELPFUL | NOT_HELPFUL
 UnavailableDocuments:
   required: [wikiDocumentIds]
   wikiDocumentIds: int64[]
@@ -205,7 +224,7 @@ Session storage: `sessionStorage['tsolve.session.chatbot.conversations']`, owned
 
 ## Definition of Done
 - [ ] Every acceptance criterion of STORY-001, STORY-002 and STORY-004 has a test whose name starts with its AC id;
-      `sdd.ts trace chatbot STORY-001 STORY-002 STORY-004` passes (STORY-003 when it is built)
-- [ ] The frontend `verify` passes on every PR (KAN-71, KAN-73, KAN-72)
+      `sdd.ts trace chatbot STORY-001 STORY-002 STORY-003 STORY-004` passes
+- [ ] The frontend `verify` passes on every PR (KAN-71, KAN-73, KAN-72, and the KAN-75 Subtasks)
 - [ ] The search contract (Solution by section) is raised with Hải Anh on PR #30
 - [ ] Each PR is reviewed by the FE Lead

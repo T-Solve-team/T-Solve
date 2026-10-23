@@ -59,10 +59,10 @@ QuestionBox ──submit──► useAskQuestion (generated askChatbot mutation,
 ```ts
 // generated from the contract (spec Interface Contracts)
 ChatbotQuestion, ChatbotTurn, ChatbotAnswer, ChatbotAnswerOutcome, ChatbotCitation,
-WikiDocumentCitation, TicketSolutionCitation, CitedSolution, UnavailableDocuments
+WikiDocumentCitation, TicketSolutionCitation, CitedSolution, UnavailableDocuments, ChatbotRating
 
 // features/chatbot/model.ts
-export type ChatTurn = { question: string; answer: ChatbotAnswer };
+export type ChatTurn = { question: string; answer: ChatbotAnswer; rating?: ChatbotRating['rating'] };  // rating: Task 4
 export type Conversation = { id: string; title: string; startedAt: string; turns: ChatTurn[] };
 export type StoredConversations = { version: 1; userId: number; conversations: Conversation[] };
 export const HISTORY_LIMIT = 10;                      // turns sent with a follow-up (AC-002.5)
@@ -81,7 +81,8 @@ export function toHistory(turns: ChatTurn[]): ChatbotTurn[];  // NO_SOURCE answe
 | `expense` | Taxi expense claim steps | [1] Wiki 9003 "Expense claim guide" (marked unavailable) · [2] ticket Solution |
 | anything else | `NO_SOURCE` | none |
 
-`unavailableDocumentIds` starts as `[9003]`; `resetMockData()` restores it and the answers.
+`unavailableDocumentIds` starts as `[9003]`; `resetMockData()` restores it and the answers. The rating handlers
+(Task 4) keep no state: `PUT` and `DELETE` answer 204 for any `answerId` (AC-004.6).
 
 ## Key Decisions
 
@@ -96,6 +97,13 @@ export function toHistory(turns: ChatTurn[]): ChatbotTurn[];  // NO_SOURCE answe
 | Source filtering | Server only; the frontend never filters | — | GBR-31, GBR-36; the UI cannot be trusted (user, 23/10) |
 | AI failure | MSG06 toast; the question stays in the box, not in the thread | A "Send again" bubble | Matches Figma (e) plus UC-51 "keeps the question" (user, 23/10) |
 | Ratings in KAN-48 | Buttons left out until UC-53 | Disabled buttons | No half-feature (user, 23/10) |
+| Rating comment (KAN-75) | None: the two buttons of Figma 12.1 (c) only | Optional comment of at most 1,000 characters (UC-53 wording, the Story's first draft) | Figma (c) has no comment box (user, 24/10) |
+| KAN-75 scope | Frontend only; the rating paths are MSW mocks | Backend `chatbot_answer` / `chatbot_rating` now | No JDK 21 / Maven; the backend change later stores the rating with the user, keeps rated and `NO_SOURCE` answers, deletes unrated `ANSWERED` ones at session end (spec Requirement 7) (user, 24/10) |
+| Where a rating lives on the client | On its `ChatTurn` (`rating?`), saved with the conversation in `sessionStorage`; storage `version` stays 1 (an optional field) | `GET` the session's ratings | AC-003.4 with no new endpoint; the server is only written to (user, 24/10) |
+| When the highlight changes | After the `PUT` / `DELETE` succeeds; both buttons disabled while it runs | Optimistic, undone on failure | AC-003.5 keeps the previous highlight (user, 24/10) |
+| Rating buttons | antd `Button`s "Helpful" / "Not helpful" under the citations: the rated one `type="primary"`, the other default, `aria-pressed` on both; the highlighted one removes the rating (AC-003.6) | A toggle group | Matches Figma (c); tests find them by role and pressed state |
+| Rating errors | `handlesOwnErrors`: every error but a 401 shows MSG06 (a 401 stays with the global handler: sign out, MSG07) | The global handler | Same pattern as the ask (AC-001.13) |
+| Split (KAN-75) | One task, one PR: contract, mocks, buttons, storage (~350 lines) | Two PRs | One behaviour a user can try (user, 24/10) |
 | Mock answers | Keyword answers; others `NO_SOURCE` | One fixed answer | Demos every Figma state (user, 23/10) |
 | AI provider | Ollama for answers, OpenRouter for embeddings, key in backend `.env` only (GBR-12); the model is chosen in the backend change | — | Report3 decides it (user, 23/10) |
 | Split | Three vertical slices, one PR each, each with the contract and mocks its behaviour needs: KAN-71 ask and answer (ask path), KAN-73 citations (availability path), KAN-72 session conversations | One PR for KAN-48 (~1,250 lines); four PRs with the contract alone (KAN-70, closed) | Each PR is one behaviour a user can try and near 400 changed lines; a contract ships with its first screen (guideline 06 "one feature = one PR"); behaviour comes before the line count: KAN-71 is ~850 lines with tests and is not split further (user, 23/10) |
@@ -114,8 +122,8 @@ export function toHistory(turns: ChatTurn[]): ChatbotTurn[];  // NO_SOURCE answe
 
 ```
 frontend/
-├── openapi/tsolve-api.yaml                         Modify: tag chatbot, ask path and schemas (Task 1); availability path (Task 2)
-├── src/shared/api/generated/**                     Regenerate (npm run generate:api) (Tasks 1, 2)
+├── openapi/tsolve-api.yaml                         Modify: tag chatbot, ask path and schemas (Task 1); availability path (Task 2); rating paths (Task 4)
+├── src/shared/api/generated/**                     Regenerate (npm run generate:api) (Tasks 1, 2, 4)
 └── src/features/chatbot/
     ├── model.ts                                    Create: types, limits, toHistory (Task 1)
     ├── mocks/data.ts                               Create: keyword answers, resetMockData (Task 1); unavailable ids (Task 2)
@@ -125,6 +133,8 @@ frontend/
     ├── hooks/useConversations.ts                   Create: conversations state (Task 1: one conversation in memory; Task 3: list + storage)
     ├── hooks/chatbot-storage.ts (+ .test.ts)       Create: read/write sessionStorage (Task 3)
     ├── hooks/useUnavailableDocuments.ts            Create: availability query (Task 2)
+    ├── hooks/useRateAnswer.ts                      Create: rate / remove mutations, MSG06 (Task 4)
+    ├── components/RatingButtons.tsx                Create: Helpful / Not helpful (Task 4)
     ├── components/QuestionBox.tsx                  Create: form, TextArea, Enter, Send (Task 1)
     ├── components/ConversationThread.tsx           Create: turns, pending answer (Task 1)
     ├── components/ChatAnswer.tsx                   Create: answer text or MSG109 (Task 1), citations (Task 2)
@@ -171,6 +181,13 @@ session and 10 turns), 12 Business logic (no amounts or quotas).
 | 19 | STORY-002 | Integration | Availability request fails | Low | Links shown, no toast | Task 2 |
 | 20 | STORY-002 | Authorization | A cited Wiki document became hidden | Medium | MSG110 in place of its link | Task 2 |
 | 21 | STORY-001 | User types | Employee only, and a user with several roles | Medium | Both open 12.1 (route roles `EMPLOYEE`) | Task 1 |
+| 22 | STORY-003 | Timing | Two clicks on the buttons quickly | High | One request (both disabled while it runs) | Task 4 |
+| 23 | STORY-003 | Timing | The user opens another conversation while a rating is saving | Medium | The rating lands on its own turn (by conversation id and `answerId`) | Task 4 |
+| 24 | STORY-003 | State transitions | Pending answer, or a failed ask (MSG06) | Medium | No rating buttons (no answer yet / no turn) | Task 4 |
+| 25 | STORY-003 | Environment | Storage blocked | Low | The rating is kept in memory (AC-002.11) | Task 4 |
+| 26 | STORY-003 | Data integrity | Stored turn with an unknown `rating` value | Low | Dropped like other broken data (AC-002.8) | Task 4 |
+| 27 | STORY-003 | Error cascades | `DELETE` fails | Medium | MSG06, highlight kept | Task 4 |
+| 28 | STORY-003 | Authorization | 401 on a rating request | Medium | Signed out with MSG07, no MSG06 | Task 4 |
 
 Open questions for the spec owner: none.
 

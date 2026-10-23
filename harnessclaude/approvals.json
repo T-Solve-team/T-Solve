@@ -98,8 +98,8 @@
     }
   },
   "chatbot": {
-    "specHash": "3c134168da3d1bd738c011d02a668cf8f85427cc2b7db8ee9d08b04fff71c939",
-    "approvedAt": "2026-10-23T14:05:13.999Z",
+    "specHash": "5de57dfce54657e05edfd0d3c63d1644b2c10c6bdf6b88e40c5f6614fbf813c6",
+    "approvedAt": "2026-10-23T18:53:11.946Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -128,15 +128,17 @@
       "AC-002.10": "IF that availability request fails, THEN THE web app SHALL show the Wiki citations as links.",
       "AC-002.11": "IF storage is blocked, THEN THE web app SHALL still answer questions and keep the conversations",
       "AC-003.1": "THE web app SHALL show Helpful and Not helpful buttons under every answer, the MSG109 answer included.",
-      "AC-003.2": "WHEN the user clicks Helpful or Not helpful, THE web app SHALL call",
-      "AC-003.3": "WHEN the user rates an answer again, THE web app SHALL send the new rating, which replaces the previous",
-      "AC-003.4": "WHEN a rated answer is shown again in the session (STORY-002), THE web app SHALL highlight its rating.",
-      "AC-003.5": "IF the rating request fails, THEN THE web app SHALL show MSG06 and keep the previous highlight.",
+      "AC-003.2": "WHEN the user clicks Helpful or Not helpful on an unrated answer, THE web app SHALL call",
+      "AC-003.3": "WHEN the user clicks the other button of a rated answer, THE web app SHALL send the new rating, which",
+      "AC-003.4": "WHEN a rated answer is shown again in the session (STORY-002), THE web app SHALL highlight its rating,",
+      "AC-003.5": "IF a rating or removal request fails, THEN THE web app SHALL show MSG06 as a toast and keep the",
+      "AC-003.6": "WHEN the user clicks the highlighted button, THE web app SHALL call",
       "AC-004.1": "WHEN a question contains a keyword of a mock answer, THE mock SHALL answer  with text that",
       "AC-004.2": "IF a question matches no mock answer, THEN THE mock SHALL answer  with no citations.",
       "AC-004.3": "IF a question is empty or longer than 1,000 characters, THEN THE mock SHALL answer 400 with a field",
       "AC-004.4": "WHEN the mock is asked which Wiki documents are unavailable, THE mock SHALL list the ids of its",
-      "AC-004.5": "WHEN  runs, THE mock SHALL return to its initial data."
+      "AC-004.5": "WHEN  runs, THE mock SHALL return to its initial data.",
+      "AC-004.6": "WHEN the mock is asked to save a rating, or to remove one, THE mock SHALL answer 204."
     }
   }
 }
