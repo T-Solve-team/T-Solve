@@ -81,3 +81,4 @@
 {"ts":"2026-10-23T03:59:29.265Z","type":"quick-closed","what":"Update .claude/tsolve-project.md to Report3: source order, five roles, several per user, features","files":[".claude/tsolve-project.md"]}
 {"ts":"2026-10-23T04:24:24.609Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"03f9137bc723d7b770560c9ad3d2d377c8813f5e"}
 {"ts":"2026-10-23T04:24:24.800Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"fixing","to":"evaluating"}
+{"ts":"2026-10-23T04:30:28.550Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"evaluating","to":"passing"}
