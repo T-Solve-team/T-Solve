@@ -10,8 +10,8 @@ status: planned
 
 ## Goal
 
-The Report3 base: the module map, the web app foundation (`fe-foundation`) and the review flow (`ticket-review`),
-so feature modules start on the right model.
+The Report3 base: the module map, the web app foundation (`fe-foundation`), the backend foundation
+(`be-foundation`) and the review flow (`ticket-review`), so feature modules start on the right model.
 
 ## Planned Deliverables
 
@@ -25,6 +25,15 @@ so feature modules start on the right model.
 | 4 · Report3 message catalog and triage status tags (KAN-62) | Trần Trung Hiếu | pending |
 | 5 · Frontend guidelines for Report3 (KAN-63) | Trần Trung Hiếu | pending |
 
+### be-foundation
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · Errors as ProblemDetail with a message code (fixes BUG-001) | Anh Tran Hai | pending |
+| 2 · Five roles, deny-by-default security and CSRF | Anh Tran Hai | pending |
+| 3 · The session endpoint `/me` | Anh Tran Hai | pending |
+| 4 · Audit events (append-only, Testcontainers) | Anh Tran Hai | pending |
+
 ## Demo Script
 
 ### fe-foundation
@@ -33,6 +42,12 @@ so feature modules start on the right model.
 2. Pick "Employee" → lands on the Knowledge Chatbot placeholder; opening `/review-queue` shows the 403 page (MSG08).
 3. Pick "Admin" with the Workspace not set up → sent to 2.1 Workspace Setup.
 4. Log out → Login; signing in as another user shows nothing of the first one.
+
+### be-foundation
+1. `mvn verify` in `backend/`: every AC test passes, including the database tests on a Testcontainers PostgreSQL.
+2. Run the backend; `curl /api/v1/me` with no session → 401 `application/problem+json` with `code` MSG07;
+   `curl /actuator/health` → UP.
+3. In `psql`, `UPDATE audit_event …` and `DELETE FROM audit_event` → refused (append-only).
 
 ## Actual Outcomes
 <!-- filled at end of iteration, split by module -->

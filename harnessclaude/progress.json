@@ -5,10 +5,15 @@
   "status": "active",
   "modules": {
     "be-foundation": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:21.968Z"
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "problem-errors": "pending",
+        "roles-security": "pending",
+        "me-session": "pending",
+        "audit-writer": "pending"
+      },
+      "lastUpdated": "2026-10-23T11:39:13.265Z"
     },
     "fe-foundation": {
       "status": "completed",

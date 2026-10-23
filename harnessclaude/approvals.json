@@ -53,5 +53,48 @@
       "AC-010.3": "THE decision log (guideline 13) SHALL record the role model (several roles per user) and the Report3",
       "AC-010.4": "IF a guideline uses a role value, a  key or a MSG code, THEN THE value SHALL exist in"
     }
+  },
+  "be-foundation": {
+    "specHash": "4d03249e43937c1e707752c7bcc3d7a3eeaf48ba6ba831d880aa2b9b1ba3c51d",
+    "approvedAt": "2026-10-23T11:31:20.158Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN a request fails with a , THE backend SHALL answer 404 with content type",
+      "AC-001.2": "WHEN a request fails with a , THE backend SHALL answer 409 with a",
+      "AC-001.3": "WHERE a  names a field, THE backend SHALL answer 409 with that field in",
+      "AC-001.4": "WHEN request validation fails, THE backend SHALL answer 400 with one  entry per failed",
+      "AC-001.5": "IF a field fails a validation rule other than those in AC-001.4, THEN THE backend SHALL put that field",
+      "AC-001.6": "IF a base exception carries no message code, THEN THE backend SHALL answer with its status and a",
+      "AC-001.7": "IF a request fails with an exception the handler does not know, THEN THE backend SHALL answer 500 with",
+      "AC-001.8": "IF Spring MVC rejects a request itself, THEN THE backend SHALL answer with Spring's status and a",
+      "AC-001.9": "THE base exceptions SHALL live in , and the existing callers in",
+      "AC-002.1": "THE backend SHALL define exactly five roles — , , ,",
+      "AC-002.2": "WHEN a signed-in user is turned into a Spring Security authentication, THE backend SHALL grant",
+      "AC-002.3": "WHEN an endpoint allows several roles, THE backend SHALL let in a user who holds at least one of them.",
+      "AC-002.4": "IF a request to  comes with no signed-in user, THEN THE backend SHALL answer 401 with a",
+      "AC-002.5": "IF access is denied to a signed-in user, THEN THE backend SHALL answer 403 with a  with",
+      "AC-002.6": "IF an endpoint under  has no , THEN THE backend SHALL still answer 401 to a",
+      "AC-002.7": "IF a request goes to any other path, THEN THE backend SHALL deny it (any path outside ,",
+      "AC-002.8": "THE backend SHALL answer ,  and the Swagger UI without a signed-in",
+      "AC-002.9": "WHEN a browser sends a CORS preflight from an origin in , THE backend SHALL",
+      "AC-002.10": "THE backend SHALL offer no sign-in of its own (no form login, no HTTP Basic, no generated password);",
+      "AC-002.11": "THE backend SHALL require Spring's CSRF token on every , ,  and  to",
+      "AC-002.12": "THE backend SHALL offer tests a way to sign in a user with any set of the five roles",
+      "AC-002.13": "IF a , ,  or  to  has no valid CSRF token, THEN THE backend SHALL",
+      "AC-003.1": "WHEN a signed-in user calls , THE backend SHALL answer 200 with  (,",
+      "AC-003.2": "WHEN  is answered, THE backend SHALL take  from the Department lookup,",
+      "AC-003.3": "WHEN  is answered, THE backend SHALL set  to the user's  (if any) plus the",
+      "AC-003.4": "WHILE a lookup has no implementation yet (its module is not built), THE backend SHALL answer  with",
+      "AC-003.5": "IF nobody is signed in, THEN THE backend SHALL answer  with 401 and  .",
+      "AC-003.6": "THE response of  SHALL match the  schema of",
+      "AC-004.1": "THE backend SHALL list the audited actions as : , , ,",
+      "AC-004.2": "WHEN a module calls  inside its transaction, THE backend SHALL store one audit",
+      "AC-004.3": "IF  is called outside a transaction, THEN THE backend SHALL throw and store nothing.",
+      "AC-004.4": "IF  is called with no signed-in user, THEN THE backend SHALL throw and store nothing.",
+      "AC-004.5": "WHEN the caller's transaction rolls back, THE backend SHALL keep no audit event of it.",
+      "AC-004.6": "IF anything tries to update or delete a row of , THEN THE database SHALL reject it.",
+      "AC-004.7": "THE  table SHALL have , , ,  and ,",
+      "AC-004.8": "THE tests of AC-004.5, AC-004.6 and AC-004.7 SHALL run against a real PostgreSQL started by"
+    }
   }
 }
