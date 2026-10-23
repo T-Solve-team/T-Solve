@@ -104,7 +104,16 @@ danger variant (Figma "Danger confirm") is used when the action is destructive o
 | Leave Import Preview | MSG37 | yes |
 | Delete Department · Restore Department | MSG45 · MSG51 | yes · no |
 | Remove Project · Remove member | MSG53 · MSG55 | yes · yes |
+| Delete a Draft | MSG42 | yes |
+| Deactivate an account (it manages no Active Project and no Space) | MSG57 | yes |
+| Remove the Ticket Resolver role from a Project member | MSG78 | yes |
+| Move a Wiki document to the trash · Delete it permanently | MSG100 · MSG103 | yes · yes |
+| Remove a Space access | MSG106 | yes |
 | Session expired | MSG07 | no (info) |
+
+Deactivating the Project Manager of Active Projects, or deactivating a Knowledge Manager (or removing their
+role) while they manage Spaces, opens the Hand Over Responsibilities popup (1.3.3, MSG_NEW_2) instead of a
+confirm dialog (decision D3).
 
 Single-ticket Approve, Request changes and Send back to queue have no extra confirm (Report3 UC-30).
 
