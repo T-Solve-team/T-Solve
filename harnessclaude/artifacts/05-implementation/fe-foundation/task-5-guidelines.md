@@ -2,7 +2,7 @@
 
 **Module:** fe-foundation
 **Assignee:** Trần Trung Hiếu
-**Status:** evaluating
+**Status:** fixing
 **Iteration:** 1
 
 ---
@@ -45,3 +45,18 @@ none
 
 ### Next up
 Evaluate guidelines; the `.claude/tsolve-project.md` quick change.
+
+## Session 2026-10-23 11:30
+
+### Working on: guidelines — evaluation, attempt 1
+- Independent review (harnessclaude-reviewer, attempt 1): **fail** — `06-evaluation/fe-foundation/task-5-guidelines-review.md`.
+  Major: guideline 08 §7 says an import is never saved as a draft; Report3 GBR-26, UC-20, UC-21 and MSG37 allow
+  a Draft (the sentence was already in the old docs).
+- FE Lead (23/10): fix it in this task, with the docs nits 4–7 (`messages:report3` in the AGENTS.md scripts, 07
+  kit and source wording, 01 `useSignOut`, 13 `{count}` of MSG17). Kept: the role check of the test as is; the
+  Project filter ban until the `ticket-review` spec.
+- `.claude/tsolve-project.md` updated to Report3 as a quick change: b638e04.
+- Status: fixing.
+
+### Next up
+Fix the findings, then review attempt 2.

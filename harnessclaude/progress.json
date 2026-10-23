@@ -18,9 +18,9 @@
         "guards-menus": "passing",
         "route-map": "passing",
         "catalog-tags": "passing",
-        "guidelines": "evaluating"
+        "guidelines": "fixing"
       },
-      "lastUpdated": "2026-10-23T03:47:02.481Z",
+      "lastUpdated": "2026-10-23T03:56:25.875Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
