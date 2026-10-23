@@ -25,7 +25,7 @@ describe('global error handling', () => {
   });
 
   it('stays quiet for a mutation that shows its own error', async () => {
-    server.use(mock.post('*/api/v1/reviews/approve', () => problem(409, 'MSG47')));
+    server.use(mock.post('*/api/v1/reviews/approve', () => problem(409, 'MSG49')));
     const { queryClient } = renderApp('/review-queue');
     await screen.findByRole('heading', { level: 1, name: 'Review Queue' });
 
@@ -38,7 +38,7 @@ describe('global error handling', () => {
       .execute(undefined)
       .catch(() => undefined);
 
-    expect(screen.queryByText(msg('MSG47'))).not.toBeInTheDocument();
+    expect(screen.queryByText(msg('MSG49'))).not.toBeInTheDocument();
   });
 
   it('on 401 shows MSG07, then sends the user to Login with returnTo', async () => {

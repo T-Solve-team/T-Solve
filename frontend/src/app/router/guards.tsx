@@ -50,7 +50,8 @@ const OPEN_BEFORE_SETUP: readonly string[] = [paths.workspaceSetup, paths.profil
 export function RequireWorkspace() {
   const { session, hasRole } = useSession();
   const { pathname } = useLocation();
-  const screen = pathname.replace(/\/+$/, '') || '/'; // '/profile/' is the same screen as '/profile'
+  // '/profile/' and '/Profile' are the same screen as '/profile' (the router ignores case; BUG-005).
+  const screen = pathname.replace(/\/+$/, '').toLowerCase() || '/';
   if (
     session &&
     !session.workspaceReady &&

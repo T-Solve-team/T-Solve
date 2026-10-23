@@ -11,7 +11,7 @@ export interface RequestChangesRequest {
   /** @minItems 1 */
   ticketIds: number[];
   /**
-   * Shown to each author in Jira (MSG53).
+   * Shown to each author in Jira (MSG64).
    * @minLength 1
    * @maxLength 1000
    */

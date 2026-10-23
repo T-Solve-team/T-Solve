@@ -4,7 +4,7 @@ import { ModalTitle } from '../ModalTitle';
 
 type ConfirmDialogProps = {
   isOpen: boolean;
-  /** The confirm message (SRS "Confirm dialog" type), e.g. MSG90. */
+  /** The confirm message (SRS "Confirm dialog" type), e.g. MSG19. */
   code: MsgCode;
   params?: MsgParams;
   /** Figma "Danger confirm": destructive or final actions (guideline 09 §5). */

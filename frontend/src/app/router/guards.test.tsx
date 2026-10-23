@@ -63,6 +63,13 @@ describe('Workspace Setup', () => {
     expect(router.state.location.pathname).toBe('/profile/');
   });
 
+  it('AC-003.2 treats a path in other letter case as the same screen (BUG-005)', async () => {
+    workspaceNotSetUp('admin');
+    const { router } = renderApp('/Profile', { user: 'admin' });
+    expect(await heading('My Profile')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/Profile');
+  });
+
   it('AC-003.2 still shows 404 for an unknown path while the Workspace is not set up', async () => {
     workspaceNotSetUp('admin');
     const { router } = renderApp('/no-such-screen', { user: 'admin' });

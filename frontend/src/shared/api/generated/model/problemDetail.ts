@@ -18,7 +18,7 @@ export interface ProblemDetail {
   status: number;
   detail?: string;
   instance?: string;
-  /** SRS message code, e.g. MSG47. Missing or unknown = the web app shows MSG06. */
+  /** SRS message code, e.g. MSG49. Missing or unknown = the web app shows MSG06. */
   code?: string;
   /** Values for the message template, e.g. {"department_name":"IT"}. */
   params?: ProblemDetailParams;

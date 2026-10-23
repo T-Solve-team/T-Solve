@@ -87,7 +87,7 @@ paths:
     post:
       tags: [review]
       operationId: approveTickets
-      summary: Approves and publishes the tickets (MSG18).
+      summary: Approves and publishes the tickets (MSG14).
       requestBody:
         required: true
         content:
@@ -113,7 +113,7 @@ paths:
     post:
       tags: [review]
       operationId: rejectTickets
-      summary: Rejects the tickets with one reason (MSG19 confirm, MSG20 result).
+      summary: Rejects the tickets with one reason (MSG15 confirm, MSG16 result).
       requestBody:
         required: true
         content:
@@ -139,7 +139,7 @@ paths:
     post:
       tags: [review]
       operationId: requestTicketChanges
-      summary: Sends the tickets back to their authors with one comment (MSG21).
+      summary: Sends the tickets back to their authors with one comment (MSG17).
       requestBody:
         required: true
         content:
@@ -395,14 +395,14 @@ components:
           type: string
           minLength: 1
           maxLength: 1000
-          description: Shown to each author in Jira (MSG53).
+          description: Shown to each author in Jira (MSG64).
     ReviewDecisionResult:
       type: object
       required: [count]
       properties:
         count:
           type: integer
-          description: Number of tickets the decision was applied to (the {count} of MSG18 / MSG20 / MSG21).
+          description: Number of tickets the decision was applied to (the {count} of MSG14 / MSG16 / MSG17).
     FieldError:
       type: object
       required: [field, code]
@@ -411,7 +411,7 @@ components:
           type: string
         code:
           type: string
-          description: SRS message code, e.g. MSG47.
+          description: SRS message code, e.g. MSG49.
         params:
           type: object
           additionalProperties:
@@ -433,7 +433,7 @@ components:
           type: string
         code:
           type: string
-          description: SRS message code, e.g. MSG47. Missing or unknown = the web app shows MSG06.
+          description: SRS message code, e.g. MSG49. Missing or unknown = the web app shows MSG06.
         params:
           type: object
           description: Values for the message template, e.g. {"department_name":"IT"}.
