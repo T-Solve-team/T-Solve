@@ -430,7 +430,8 @@ describe('KnowledgeChatbotPage', () => {
       within(thread()).getByRole('link', { name: 'Expense claim guide · Wiki document' }),
     ).toBeInTheDocument();
     expect(screen.queryByText(msg('MSG110'))).not.toBeInTheDocument();
-    expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+    // antd shows a toast a moment after the error: wait for it, expecting it never comes.
+    await expect(screen.findByText(msg('MSG06'), {}, { timeout: 500 })).rejects.toThrow();
   });
 
   it('AC-001.8 shows HTML in an answer as plain text', async () => {
