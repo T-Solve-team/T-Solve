@@ -32,6 +32,8 @@ Master registry of all artifacts in this workspace.
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/design.md |
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/iteration-1/design.md |
 | — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-1/tasks.md |
+| — | session-log | chatbot | evaluating | artifacts/05-implementation/chatbot/task-1-ask-answer.md |
+| — | session-log | fe-foundation | evaluating | artifacts/05-implementation/fe-foundation/task-6-placeholder-rule.md |
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-1-roles-session.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-1-roles-session-review.md |
 | — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-1-roles-session-test-report.md |

@@ -24,8 +24,8 @@ Every test's `it` name starts with the AC id it proves (guideline 10 T6). Each t
 screen in one PR).
 - Contract: the `chatbot` tag and `POST /api/v1/chatbot/answers` with its schemas (spec Interface Contracts);
   regenerate the client. The availability path is Task 2's (its first user), the rating path STORY-003's.
-- Mocks: the answers of the mock data of the design and the ask handler, typed with the generated types;
-  `resetMockData()`.
+- Mocks: the answers of the mock data of the design and the ask handler, typed with the generated types. The
+  answers never change, so `resetMockData()` gets its first data (and AC-004.5) in Task 2.
 - Screen: replace the placeholder with the 12.1 layout (list card on the left, empty for now; thread card with the
   question box). `QuestionBox`: `TextArea` with count 1,000, `rules.required` / `rules.maxLength` with the label
   "Question", Enter sends, Shift+Enter new line. `useAskQuestion`: generated mutation, `handlesOwnErrors`, field
@@ -50,7 +50,7 @@ split further, and its description says so.
   `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx`
 - Modify (change request): `frontend/src/app/router/route-table.test.tsx`,
   `harnessclaude/artifacts/03-modules/fe-foundation/spec.md`
-**Covers:** AC-001.1–AC-001.8, AC-001.12–AC-001.14, AC-004.1–AC-004.3, AC-004.5; edge cases 1–8, 11, 21; risk "ticket details
+**Covers:** AC-001.1–AC-001.8, AC-001.12–AC-001.14, AC-004.1–AC-004.3; edge cases 1–8, 11, 21; risk "ticket details
 leak" (no ticket fields in the contract)
 **Dependencies:** the plan PR (KAN-69) merged
 **Estimated size:** medium
@@ -75,7 +75,7 @@ unavailable link; links kept when the query fails.
 - Create: `frontend/src/features/chatbot/hooks/useUnavailableDocuments.ts`
 - Modify: `frontend/src/features/chatbot/components/ChatAnswer.tsx`, `ConversationThread.tsx`
 - Test: `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx`
-**Covers:** AC-001.9–AC-001.11, AC-002.9, AC-002.10, AC-004.4; edge cases 9, 10, 19, 20
+**Covers:** AC-001.9–AC-001.11, AC-002.9, AC-002.10, AC-004.4, AC-004.5; edge cases 9, 10, 19, 20
 **Dependencies:** Task 1
 **Estimated size:** medium
 

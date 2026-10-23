@@ -1,7 +1,7 @@
 {
   "fe-foundation": {
-    "specHash": "03ad0a31fbf0ad5f0666883afbbe8076ea242e49bde705b7e2b23ae36473e53b",
-    "approvedAt": "2026-10-22T14:51:55.131Z",
+    "specHash": "d9126208393a38924e7cd920c61c3f1e2490105dfa8c4179310c8d602174155c",
+    "approvedAt": "2026-10-23T13:19:15.272Z",
     "by": "user",
     "acs": {
       "AC-001.1": "THE web app SHALL know exactly five roles — , , ,",
@@ -26,7 +26,7 @@
       "AC-004.4": "IF no menu item matches the current path, THEN THE menu SHALL highlight no item.",
       "AC-005.1": "THE web app SHALL have the routed screens of this table, with these paths, titles and roles:",
       "AC-005.2": "THE web app SHALL give these popups no path and SHALL name each in the  of its feature:",
-      "AC-005.3": "WHEN a user who may open 2.1, 10.1, 11.1, 11.2, 11.4, 11.7 or 12.1 opens it, THE web app SHALL show a",
+      "AC-005.3": "WHILE a placeholder screen is not built by its module, THE web app SHALL show a placeholder with the",
       "AC-005.4": "THE features ,  and  SHALL be registered like every other feature (routes,",
       "AC-005.5": "IF a user opens a path that no screen has, THEN THE web app SHALL show the 404 page.",
       "AC-006.1": "THE catalog SHALL hold every code of Report3 System_Messages with its exact text, except the codes",
