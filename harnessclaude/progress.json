@@ -18,15 +18,15 @@
         "guards-menus": "passing",
         "route-map": "passing",
         "catalog-tags": "passing",
-        "guidelines": "fixing"
+        "guidelines": "evaluating"
       },
-      "lastUpdated": "2026-10-23T03:56:25.875Z",
+      "lastUpdated": "2026-10-23T04:24:24.800Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "02f8b86b1b58c69d5e34052b9f679bae92360673"
+        "default": "03f9137bc723d7b770560c9ad3d2d377c8813f5e"
       }
     },
     "identity": {

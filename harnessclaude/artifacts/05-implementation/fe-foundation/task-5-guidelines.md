@@ -2,7 +2,7 @@
 
 **Module:** fe-foundation
 **Assignee:** Trần Trung Hiếu
-**Status:** fixing
+**Status:** evaluating
 **Iteration:** 1
 
 ---
@@ -60,3 +60,19 @@ Evaluate guidelines; the `.claude/tsolve-project.md` quick change.
 
 ### Next up
 Fix the findings, then review attempt 2.
+
+## Session 2026-10-23 12:00
+
+### Working on: guidelines — fixing (review attempt 1)
+- 08 §7: leaving Import Preview asks MSG37 and drops unsaved changes; a Draft saved with Save as draft is kept
+  (GBR-26, UC-20, UC-21).
+- `AGENTS.md` scripts table: `messages:report3` · 07: App Shell "role variants", menus from the UI design v3
+  decisions · 01: `useSignOut` in `useSession.ts` · 13 FE-32: MSG17 has no `{count}`.
+- Commit: default@03f9137
+
+### Verify
+- `npm run format:check`, `lint`, `typecheck`, `build`: exit 0; `generate:api`: no change.
+- `npm run test`: 397/397 (22 files).
+
+### Next up
+Review attempt 2.
