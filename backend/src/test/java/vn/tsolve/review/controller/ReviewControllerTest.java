@@ -37,7 +37,7 @@ class ReviewControllerTest {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"approve", "reject", "request-changes"})
     @WithMockUser(roles = "PROJECT_MANAGER")
-    void rejects501IdsAtHttpBoundary_AC_005_8_BUG_032(String action) throws Exception {
+    void rejects501IdsAtHttpBoundary_AC_005_8_BUG_033(String action) throws Exception {
         String ids = java.util.stream.LongStream.rangeClosed(1, 501)
                 .mapToObj(Long::toString)
                 .collect(java.util.stream.Collectors.joining(","));
@@ -54,7 +54,7 @@ class ReviewControllerTest {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"approve", "reject", "request-changes"})
     @WithMockUser(roles = "PROJECT_MANAGER")
-    void accepts500IdsAtHttpBoundary_AC_005_8_BUG_032(String action) throws Exception {
+    void accepts500IdsAtHttpBoundary_AC_005_8_BUG_033(String action) throws Exception {
         when(review.decide(any(), any(), any())).thenReturn(new ReviewDecisionResult(500));
         String ids = java.util.stream.LongStream.rangeClosed(1, 500)
                 .mapToObj(Long::toString)
@@ -83,7 +83,7 @@ class ReviewControllerTest {
 
     @Test
     @WithMockUser(roles = {"STAFF", "DEPARTMENT_MANAGER"})
-    void refusesRetiredRoles_AC_001_5_BUG_029() throws Exception {
+    void refusesRetiredRoles_AC_001_5_BUG_030() throws Exception {
         mvc.perform(get("/api/v1/tickets/1")).andExpect(status().isForbidden());
     }
 
@@ -155,7 +155,7 @@ class ReviewControllerTest {
 
     @Test
     @WithMockUser(roles = "PROJECT_MANAGER")
-    void refusesFractionalTicketIds_AC_005_5_BUG_011() throws Exception {
+    void refusesFractionalTicketIds_AC_005_5_BUG_012() throws Exception {
         when(review.decide(any(), eq(ReviewAction.APPROVE), any())).thenReturn(new ReviewDecisionResult(1));
         mvc.perform(post("/api/v1/reviews/approve")
                         .with(csrf())

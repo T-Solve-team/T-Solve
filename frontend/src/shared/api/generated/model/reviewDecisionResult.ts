@@ -8,6 +8,6 @@
  */
 
 export interface ReviewDecisionResult {
-  /** Number of tickets the decision was applied to; always 1 for Request changes. */
+  /** Number of tickets the decision was applied to (the {count} of MSG14 / MSG16 / MSG17). */
   count: number;
 }

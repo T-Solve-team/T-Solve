@@ -22,7 +22,7 @@ describe('ReviewQueuePage', () => {
     await import('./ReviewQueuePage');
   });
 
-  it('AC-005.8 keeps all 501 selected and blocks every decision (BUG-032)', async () => {
+  it('AC-005.8 keeps all 501 selected and blocks every decision (BUG-033)', async () => {
     const decisions = vi.fn();
     server.use(
       http.get('*/api/v1/review-queue/ticket-ids', () =>
@@ -49,7 +49,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByRole('button', { name: 'Approve' })).toBeEnabled();
   });
 
-  it('AC-001.1 lists the pending tickets of my Projects, earliest review due date first, 20 per page (BUG-004, BUG-027)', async () => {
+  it('AC-001.1 lists the pending tickets of my Projects, earliest review due date first, 20 per page (BUG-004, BUG-028)', async () => {
     await openQueue();
     const table = screen.getByRole('table');
     const rows = within(table).getAllByRole('row').slice(1); // without the header row
@@ -153,7 +153,7 @@ describe('ReviewQueuePage', () => {
     expect(await screen.findByText(msg('MSG13'), {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
-  it('AC-006.5 reports a failed Select all request and preserves selection (BUG-026)', async () => {
+  it('AC-006.5 reports a failed Select all request and preserves selection (BUG-027)', async () => {
     server.use(http.get('*/api/v1/review-queue/ticket-ids', () => problem(500)));
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
@@ -162,7 +162,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('1 selected')).toBeInTheDocument();
   });
 
-  it('AC-001.2 filters by Project and keeps the filter in the URL (BUG-008, BUG-018, BUG-030)', async () => {
+  it('AC-001.2 filters by Project and keeps the filter in the URL (BUG-009, BUG-019, BUG-031)', async () => {
     const { user, router } = await openQueue();
     await user.click(screen.getByRole('combobox', { name: 'Project' }));
     expect(screen.queryByTitle('HRHELP')).not.toBeInTheDocument();

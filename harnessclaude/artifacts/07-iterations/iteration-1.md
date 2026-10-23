@@ -25,6 +25,7 @@ Knowledge Chatbot screen on mocks (`chatbot`, KAN-48).
 | 3 · Route map with the new screens as placeholders (KAN-61) | Trần Trung Hiếu | pending |
 | 4 · Report3 message catalog and triage status tags (KAN-62) | Trần Trung Hiếu | pending |
 | 5 · Frontend guidelines for Report3 (KAN-63) | Trần Trung Hiếu | pending |
+| 6 · Placeholders only while a screen is not built (change request, KAN-71) | Trần Trung Hiếu | pending |
 
 ### be-foundation
 

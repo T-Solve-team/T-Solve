@@ -89,6 +89,7 @@ describe('route map', () => {
     },
   );
 
+  // The placeholder screens not built yet: a module that builds its screen removes its row (12.1: chatbot, KAN-71).
   it.each([
     ['2.1', 'Workspace Setup', '/workspace-setup', 'ADMIN'],
     ['10.1', 'Triage History', '/triage-history', 'PROJECT_MANAGER'],
@@ -96,7 +97,6 @@ describe('route map', () => {
     ['11.2', 'Wiki Document', '/wiki/documents/7', 'EMPLOYEE'],
     ['11.4', 'Upload Documents', '/wiki/upload', 'KNOWLEDGE_MANAGER'],
     ['11.7', 'Space Settings', '/wiki/spaces/1/settings', 'KNOWLEDGE_MANAGER'],
-    ['12.1', 'Knowledge Chatbot', '/chatbot', 'EMPLOYEE'],
   ] as const)('AC-005.3 shows the placeholder of %s %s', async (number, title, path, role) => {
     renderApp(path, { role });
     // The first findBy also loads the lazy page module: give it more time (guideline 10 §6).

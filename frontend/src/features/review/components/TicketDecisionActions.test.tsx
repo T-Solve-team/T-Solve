@@ -54,7 +54,7 @@ async function openDetail() {
 }
 
 describe('TicketDecisionActions in Ticket Detail', () => {
-  it('AC-006.7 hides Review Queue navigation from non-PMs (BUG-034)', async () => {
+  it('AC-006.7 hides Review Queue navigation from non-PMs (BUG-035)', async () => {
     ticket = { ...ticket, status: 'PUBLISHED' };
     renderApp('/tickets/1', { role: 'TICKET_RESOLVER' });
     await screen.findByRole('heading', { name: 'VPN repair' }, { timeout: 5000 });
@@ -79,7 +79,7 @@ describe('TicketDecisionActions in Ticket Detail', () => {
     ['Reject', 'Reason', 'Incorrect steps', 'Reject', 'Rejected'],
     ['Request Changes', 'Comment', 'Add error details', 'Send', 'Changes requested'],
   ])(
-    'AC-003.3, AC-004.2 submits %s, validates required input and refreshes detail (BUG-023)',
+    'AC-003.3, AC-004.2 submits %s, validates required input and refreshes detail (BUG-024)',
     async (action, field, comment, confirm, status) => {
       const { user } = await openDetail();
       const due = ticket.reviewDueDate;

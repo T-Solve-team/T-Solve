@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 class ReviewRegistrationTest {
     @Test
-    void normalizesAbsentEvidenceAndCopiesProvidedList_BUG_033() {
+    void normalizesAbsentEvidenceAndCopiesProvidedList_BUG_034() {
         var absent = new ReviewRegistration(null, null, 1, null, null, null, null, null, null, null, null);
         assertThat(absent.evidence()).isEmpty();
         var files = new ArrayList<ReviewRegistration.EvidenceReference>();

@@ -31,8 +31,8 @@
 {"ts":"2026-10-20T16:14:09.647Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"b6098c58e59d47302526e42bb1229d78a519f22f"}
 {"ts":"2026-10-21T12:50:30.391Z","type":"quick-opened","what":"AGENTS.md: add exception/client folders, common layout, test layout; log ProblemDetail mismatch bug","files":["backend/AGENTS.md","docs/bug-log.md"]}
 {"ts":"2026-10-21T12:52:43.722Z","type":"quick-closed","what":"AGENTS.md: add exception/client folders, common layout, test layout; log ProblemDetail mismatch bug","files":["backend/AGENTS.md","docs/bug-log.md"]}
-{"ts":"2026-10-21T13:28:12.777Z","type":"quick-opened","what":"Fix delayed Form validation teardown BUG-020","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-21T13:35:49.855Z","type":"quick-closed","what":"Fix delayed Form validation teardown BUG-020","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-21T13:28:12.777Z","type":"quick-opened","what":"Fix delayed Form validation teardown BUG-021","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-21T13:35:49.855Z","type":"quick-closed","what":"Fix delayed Form validation teardown BUG-021","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-10-21T13:47:30.072Z","type":"feature-status","module":"ticket-review","feature":"review-ui","from":"pending","to":"in-progress"}
 {"ts":"2026-10-21T14:30:54.157Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"6021e9c024f9d2aa59c0c74a591dbd13fb115c0b"}
 {"ts":"2026-10-21T18:10:39.312Z","type":"quick-opened","what":"project rules: frontend verify commands and where the frontend conventions are","files":["CLAUDE.md","AGENTS.md"]}
@@ -125,14 +125,34 @@
 {"ts":"2026-10-23T12:37:08.495Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":null,"to":"pending"}
 {"ts":"2026-10-23T12:37:08.666Z","type":"feature-status","module":"chatbot","feature":"citations","from":null,"to":"pending"}
 {"ts":"2026-10-23T12:37:08.833Z","type":"feature-status","module":"chatbot","feature":"session-conversations","from":null,"to":"pending"}
+{"ts":"2026-10-23T12:57:37.413Z","type":"module-status","module":"chatbot","from":"planned","to":"implementing"}
+{"ts":"2026-10-23T12:57:37.580Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"pending","to":"in-progress"}
 {"ts":"2026-10-23T13:09:49.582Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"02393e1b604e1063d5b14a6118da4dc7927cd6b9"}
+{"ts":"2026-10-23T13:19:15.273Z","type":"spec-approved","module":"fe-foundation","specHash":"d9126208393a38924e7cd920c61c3f1e2490105dfa8c4179310c8d602174155c"}
+{"ts":"2026-10-23T13:19:15.453Z","type":"module-status","module":"fe-foundation","from":"completed","to":"planned"}
+{"ts":"2026-10-23T13:19:15.628Z","type":"feature-status","module":"fe-foundation","feature":"placeholder-rule","from":null,"to":"pending"}
+{"ts":"2026-10-23T13:19:15.801Z","type":"module-status","module":"fe-foundation","from":"planned","to":"implementing"}
+{"ts":"2026-10-23T13:19:15.979Z","type":"feature-status","module":"fe-foundation","feature":"placeholder-rule","from":"pending","to":"in-progress"}
+{"ts":"2026-10-23T13:24:14.059Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"507955c893cd293983fbf2d04714bf4a921324f7"}
+{"ts":"2026-10-23T13:24:14.349Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"507955c893cd293983fbf2d04714bf4a921324f7"}
+{"ts":"2026-10-23T13:24:38.935Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-23T13:24:39.109Z","type":"feature-status","module":"fe-foundation","feature":"placeholder-rule","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-23T13:29:37.421Z","type":"module-status","module":"ticket-review","from":null,"to":"decomposed"}
+{"ts":"2026-10-23T13:34:57.806Z","type":"spec-approved","module":"chatbot","specHash":"3528bf93b2a4c74c3a3116629a782c288defa5622f78fcc308b44835374fb307"}
+{"ts":"2026-10-23T13:37:06.985Z","type":"spec-approved","module":"chatbot","specHash":"256c1f93a8b296f48a0d2ef7af91e2534ac9917a251a7d0467075f35ca90c463"}
+{"ts":"2026-10-23T13:37:14.331Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"evaluating","to":"fixing"}
 {"ts":"2026-10-23T13:39:22.584Z","type":"spec-approved","module":"ticket-review","specHash":"1231e5d25367f088678f31991ce572cd7df75ba3c776fb9305d99ab1e4b9e777"}
 {"ts":"2026-10-23T13:39:40.918Z","type":"module-status","module":"ticket-review","from":"decomposed","to":"planned"}
 {"ts":"2026-10-23T13:39:40.957Z","type":"module-status","module":"ticket-review","from":"planned","to":"implementing"}
 {"ts":"2026-10-23T13:39:40.993Z","type":"feature-status","module":"ticket-review","feature":"lead-review-fixes","from":null,"to":"pending"}
 {"ts":"2026-10-23T13:39:41.033Z","type":"feature-status","module":"ticket-review","feature":"lead-review-fixes","from":"pending","to":"in-progress"}
 {"ts":"2026-10-23T13:42:59.994Z","type":"quick-opened","what":"Fix legacy not-found codes and scope Ticket Detail navigation/tests for FE BE review","files":["backend/src/main/java/vn/tsolve/ticket/TicketService.java","backend/src/main/java/vn/tsolve/knowledge/SolutionService.java","backend/src/test/java/vn/tsolve/common/exception/LegacyNotFoundTest.java","frontend/src/features/tickets/pages/TicketDetailPage.tsx","frontend/src/features/tickets/pages/TicketDetailPage.test.tsx"]}
-{"ts":"2026-10-23T13:54:35.111Z","type":"quick-opened","what":"Preserve the validation MSG code in shared ProblemDetail (BUG-037)","files":["backend/src/main/java/vn/tsolve/common/exception/GlobalExceptionHandler.java","backend/src/test/java/vn/tsolve/common/exception/ValidationProblemDetailTest.java"]}
-{"ts":"2026-10-23T14:06:42.674Z","type":"quick-closed","what":"Preserve the validation MSG code in shared ProblemDetail (BUG-037)","files":["backend/src/main/java/vn/tsolve/common/exception/GlobalExceptionHandler.java","backend/src/test/java/vn/tsolve/common/exception/ValidationProblemDetailTest.java"]}
+{"ts":"2026-10-23T13:45:22.974Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"dcc6b5246aec0efb4a7b1bf3b1ebb72da285c132"}
+{"ts":"2026-10-23T13:45:23.137Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"fixing","to":"evaluating"}
+{"ts":"2026-10-23T13:45:23.316Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"evaluating","to":"passing"}
+{"ts":"2026-10-23T13:45:23.480Z","type":"feature-status","module":"fe-foundation","feature":"placeholder-rule","from":"evaluating","to":"passing"}
+{"ts":"2026-10-23T13:45:23.652Z","type":"module-status","module":"fe-foundation","from":"implementing","to":"evaluating"}
+{"ts":"2026-10-23T13:45:23.821Z","type":"module-status","module":"fe-foundation","from":"evaluating","to":"completed"}
+{"ts":"2026-10-23T13:54:35.111Z","type":"quick-opened","what":"Preserve the validation MSG code in shared ProblemDetail (BUG-038)","files":["backend/src/main/java/vn/tsolve/common/exception/GlobalExceptionHandler.java","backend/src/test/java/vn/tsolve/common/exception/ValidationProblemDetailTest.java"]}
+{"ts":"2026-10-23T14:06:42.674Z","type":"quick-closed","what":"Preserve the validation MSG code in shared ProblemDetail (BUG-038)","files":["backend/src/main/java/vn/tsolve/common/exception/GlobalExceptionHandler.java","backend/src/test/java/vn/tsolve/common/exception/ValidationProblemDetailTest.java"]}
 {"ts":"2026-10-23T14:06:44.014Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"19485d9fe31010ae8ad468715f66c8a400883287"}
