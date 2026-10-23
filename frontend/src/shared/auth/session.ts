@@ -7,7 +7,10 @@ import { isRole, type Role } from './roles';
  */
 export type Session = Omit<CurrentUser, 'roles'> & { roles: readonly Role[] };
 
-export function toSession(user: CurrentUser): Session {
-  const known = (user.roles as readonly string[]).filter(isRole);
+/** What `/me` can really send: a newer backend may send a role this build does not know yet. */
+type MeResponse = Omit<CurrentUser, 'roles'> & { roles: readonly string[] };
+
+export function toSession(user: MeResponse): Session {
+  const known = user.roles.filter(isRole);
   return { ...user, roles: known.includes('EMPLOYEE') ? known : ['EMPLOYEE', ...known] };
 }
