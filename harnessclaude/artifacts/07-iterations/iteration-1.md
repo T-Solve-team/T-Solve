@@ -11,7 +11,8 @@ status: planned
 ## Goal
 
 The Report3 base: the module map, the web app foundation (`fe-foundation`), the backend foundation
-(`be-foundation`) and the review flow (`ticket-review`), so feature modules start on the right model.
+(`be-foundation`) and the review flow (`ticket-review`), so feature modules start on the right model; the
+Knowledge Chatbot screen on mocks (`chatbot`, KAN-48).
 
 ## Planned Deliverables
 
@@ -34,6 +35,14 @@ The Report3 base: the module map, the web app foundation (`fe-foundation`), the 
 | 3 · The session endpoint `/me` | Anh Tran Hai | pending |
 | 4 · Audit events (append-only, Testcontainers) | Anh Tran Hai | pending |
 
+### chatbot
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · Ask a question and show the answer, with the API contract and mocks (KAN-71) | Trần Trung Hiếu | pending |
+| 2 · Citations of an answer (KAN-73) | Trần Trung Hiếu | pending |
+| 3 · Session conversations (KAN-72) | Trần Trung Hiếu | pending |
+
 ## Demo Script
 
 ### fe-foundation
@@ -48,6 +57,14 @@ The Report3 base: the module map, the web app foundation (`fe-foundation`), the 
 2. Run the backend; `curl /api/v1/me` with no session → 401 `application/problem+json` with `code` MSG07;
    `curl /actuator/health` → UP.
 3. In `psql`, `UPDATE audit_event …` and `DELETE FROM audit_event` → refused (append-only).
+
+### chatbot
+1. Mock mode, "Employee": lands on Knowledge Chatbot with an empty "New conversation".
+2. Ask "How do I connect to the VPN from home?" → answer with [1] a Wiki document link and [2] "Solution from a
+   ticket"; Show expands the Solution.
+3. Ask "Who won the match?" → MSG109. Ask an expense question → its Wiki citation shows MSG110.
+4. New conversation, ask about leave; the list shows both, newest first; reopen the VPN one and ask a follow-up.
+5. Reload → the conversations are still there. Log out and sign in again → none.
 
 ## Actual Outcomes
 <!-- filled at end of iteration, split by module -->
