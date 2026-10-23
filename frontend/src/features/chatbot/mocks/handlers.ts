@@ -1,10 +1,8 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import type { ChatbotAnswer, ChatbotQuestion } from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
+import { QUESTION_MAX_LENGTH } from '../model';
 import { findMockAnswer } from './data';
-
-/** SRS 12.1: a question has at most 1,000 characters. */
-const QUESTION_MAX_LENGTH = 1000;
 
 /**
  * MSW mock handlers of the "chatbot" feature (guideline 10 §5). Hand-written handlers with realistic data go here;

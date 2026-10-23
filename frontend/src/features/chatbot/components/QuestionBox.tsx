@@ -1,11 +1,12 @@
 import { Button, Flex, Input, type FormInstance } from 'antd';
 import type { KeyboardEvent } from 'react';
+import type { ChatbotQuestion } from '@/shared/api';
 import { rules } from '@/shared/forms';
 import { AppForm, FormField } from '@/shared/ui';
 import { QUESTION_MAX_LENGTH } from '../model';
 import styles from './QuestionBox.module.css';
 
-export type QuestionFormValues = { question: string };
+export type QuestionFormValues = Pick<ChatbotQuestion, 'question'>;
 
 type QuestionBoxProps = {
   form: FormInstance<QuestionFormValues>;

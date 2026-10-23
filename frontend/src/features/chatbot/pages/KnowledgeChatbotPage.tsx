@@ -30,7 +30,11 @@ export function KnowledgeChatbotPage() {
         },
         onError: (error) => {
           if (error.status === 401) return; // the global handler signs the user out (MSG07)
-          if (!applyApiErrors(form, error)) showMessage('MSG06');
+          // BUG-006: only an error on the question can be shown under the box; any other is MSG06.
+          const isOnQuestion = error.fieldErrors.some(
+            (fieldError) => fieldError.field === 'question',
+          );
+          if (!isOnQuestion || !applyApiErrors(form, error)) showMessage('MSG06');
         },
         onSettled: () => {
           isAsking.current = false;

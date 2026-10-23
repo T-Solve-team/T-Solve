@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
+import { setDevUser } from '@/shared/auth';
 import type { ChatbotAnswer, ChatbotQuestion } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
@@ -238,6 +239,36 @@ describe('KnowledgeChatbotPage', () => {
       expect(within(thread()).queryByTestId('pending-answer')).not.toBeInTheDocument();
     },
   );
+
+  it('AC-001.13 leaves a 401 to the sign-out (MSG07) and shows no MSG06', async () => {
+    const { user, box } = await openChatbot();
+    // The session expires on the server: every request now answers 401.
+    setDevUser(null);
+    server.use(http.post('*/api/v1/chatbot/answers', () => problem(401)));
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent(msg('MSG07'));
+    expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+  });
+
+  it('AC-001.13 shows MSG06 for a field error on another field than the question (BUG-006)', async () => {
+    server.use(
+      http.post('*/api/v1/chatbot/answers', () =>
+        problem(400, 'MSG02', {
+          fieldErrors: [
+            { field: 'history', code: 'MSG02', params: { field_name: 'History', max_length: 10 } },
+          ],
+        }),
+      ),
+    );
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+
+    expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+    expect(box).toHaveValue(VPN_QUESTION);
+  });
 
   it('AC-001.14 shows a field error from the server under the box and keeps the question', async () => {
     server.use(
