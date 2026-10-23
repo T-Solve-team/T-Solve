@@ -83,7 +83,7 @@ export function useApproveSelectedTickets() {
   return useApproveTickets({
     mutation: {
       onSuccess: (result) => {
-        showMessage('MSG18', { count: result.count });
+        showMessage('MSG14', { count: result.count });
         return queryClient.invalidateQueries({ queryKey: getGetReviewQueueQueryKey() });
       },
     },
@@ -127,7 +127,7 @@ function), `useGetReviewQueue`, `getGetReviewQueueQueryKey`, `GetReviewQueuePara
 | `isPending` | no data yet | `LoadingState` / table skeleton |
 | `isError` | the request failed | `ErrorState` with retry (MSG06) — unless the global handler redirected (401/403) |
 | `isFetching && !isPending` | background refetch (polling, focus) | nothing, or a subtle spinner — never blank the screen |
-| data with 0 items | empty | `EmptyState` with MSG04, or the screen's code (MSG16 Review Queue) |
+| data with 0 items | empty | `EmptyState` with MSG04, or the screen's code (MSG13 Review Queue) |
 
 `ErrorState` gets its retry action from the page (`onRetry={() => void query.refetch()}`). Never call the
 same query hook *inside* the error component: a new observer of a failed query refetches it on mount, the
@@ -145,9 +145,9 @@ Every error response is an RFC 9457 **Problem Details** object (Spring's `Proble
 {
   "status": 409,
   "title": "Conflict",
-  "code": "MSG47",
+  "code": "MSG49",
   "params": { "department_name": "IT" },
-  "fieldErrors": [{ "field": "jiraProjectKey", "code": "MSG47", "params": { "department_name": "IT" } }]
+  "fieldErrors": [{ "field": "jiraProjectKey", "code": "MSG49", "params": { "department_name": "IT" } }]
 }
 ```
 
@@ -157,29 +157,32 @@ Every error response is an RFC 9457 **Problem Details** object (Spring's `Proble
 *(This contract is our proposal; the backend must implement it — it is recorded in the decision log.)*
 
 ### The catalog
-`src/shared/messages/catalog.ts` holds every **active** MSG code from SRS V.2 with its exact English
-text and its display type. Texts are templates (`{count} ticket(s) approved and published.`).
+`src/shared/messages/catalog.ts` holds every web MSG code of Report3 System_Messages with its exact English
+text and its display type (plus `MSG_NEW_2`, decision D3). Texts are templates
+(`{count} ticket(s) approved and published.`). `{tracker_name}` is filled with `TRACKER_NAME` ("Jira",
+`shared/config/tracker.ts`) unless you pass it. `catalog.test.ts` checks every text against
+`report3-messages.json`, which `npm run messages:report3` builds from the docs folder.
 
 ```ts
 msg('MSG02', { field_name: 'Reason', max_length: 1000 })  // → string, for field errors and inline text
-showMessage('MSG18', { count: 3 })                         // → toast; level from the catalog (error if not a toast code)
+showMessage('MSG14', { count: 3 })                         // → toast; level from the catalog (error if not a toast code)
 await showAcknowledgement('MSG07')                         // → dialog with only OK; resolves when clicked
 ```
 
 `showMessage` / `showAcknowledgement` work outside React too (the global error handler uses them):
 `<MessageHost />`, rendered once by `AppProviders`, connects them to antd's App context.
 
-✅ Do: `showMessage('MSG30')`  ❌ Don't: `message.success('Ticket unpublished.')` 🔒 (raw `message` banned)
+✅ Do: `showMessage('MSG22')`  ❌ Don't: `message.success('Ticket unpublished.')` 🔒 (raw `message` banned)
 
-### Where each message type is shown (SRS V.2 "Loại thông báo")
+### Where each message type is shown (Report3 message type)
 
-| SRS type | UI mechanism | Example |
+| Report3 type | UI mechanism | Example |
 |---|---|---|
-| Red text under the field | `Form.Item` error (`rules` or server `fieldErrors`) — see [09](09-forms-and-validation.md) | MSG01, MSG02, MSG43, MSG47 |
-| Shown in the page | `EmptyState` / inline `Alert` in the page | MSG04, MSG16, MSG36, MSG86 |
-| Toast | `showMessage(code)` | MSG05, MSG18, MSG20, MSG38 |
-| Confirm dialog | `ConfirmDialog` with the code as its text; when the confirm comes with a form, a warning `Alert` at the top of the `FormModal` (MSG19 in Reject Ticket) | MSG29, MSG90, MSG92 · MSG19 |
-| Tooltip | `Tooltip title={msg(code)}` | MSG22 |
+| Red text below the field (or upload area) | `Form.Item` error (`rules` or server `fieldErrors`) — see [09](09-forms-and-validation.md) | MSG01, MSG02, MSG43, MSG49 |
+| Inline | `EmptyState` / inline `Alert` in the page | MSG04, MSG13, MSG30, MSG54 |
+| Toast | `showMessage(code)` | MSG05, MSG14, MSG16, MSG32 |
+| Confirmation dialog | `ConfirmDialog` with the code as its text; when the confirm comes with a form, a warning `Alert` at the top of the `FormModal` (MSG15 in Reject Ticket) | MSG21, MSG19, MSG37 · MSG15 |
+| Tooltip | `Tooltip title={msg(code)}` | MSG18 |
 
 ### Who handles which error
 
@@ -192,7 +195,7 @@ The global part lives in `app/providers/global-errors.ts` (wired into the QueryC
 | a **query** fails (403, 404, 5xx, network) | the screen | `ErrorState` in place with `msg(error.code)` — MSG08 for 403, MSG06 for 5xx. No toast. A role that may not open the screen at all gets the 403 page from the route guard first. |
 | a **mutation** fails | global | toast with `msg(error.code, error.params)` — MSG08 for 403, MSG06 for 5xx / network |
 | business error with a code (4xx) on a **form** | the feature | `meta: { handlesOwnErrors: true }` + map `fieldErrors` onto the fields ([09](09-forms-and-validation.md)) |
-| business error on a page action (e.g. MSG95 on Finish) | the feature | `meta: { handlesOwnErrors: true }` + show it where the SRS says (in page or toast) |
+| business error on a page action (e.g. MSG40 on Finish) | the feature | `meta: { handlesOwnErrors: true }` + show it where the SRS says (in page or toast) |
 
 `meta: { handlesOwnErrors: true }` on a mutation turns the global toast off for it. Never show two
 messages for one error. Retries: queries retry once, except 4xx (never); mutations never retry.
@@ -200,13 +203,17 @@ messages for one error. Retries: queries retry once, except 4xx (never); mutatio
 ## 7. Session
 
 `useSession()` (in `shared/auth`) runs the generated `GET /api/v1/me` request (`staleTime: Infinity`; 401 →
-`null`) and returns `{ session, role, isPending, isError, retry, isProjectManagerOf, isMemberOf }`;
-`session` is the generated `CurrentUser` (`user`, `role`, `projects` with the role in each, `departments`).
-It is the only source of "who am I" — never store the user elsewhere.
+`null`) and returns `{ session, roles, hasRole, hasAnyRole, isPending, isError, retry, isProjectManagerOf,
+isMemberOf }`. `session` is the generated `CurrentUser` with only known roles (`user`, `roles`, `department`,
+`departments`, `projects` with the role in each, `managedSpaces`, `workspaceReady`); `roles` always holds
+`EMPLOYEE` (GBR-28). It is the only source of "who am I" — never store the user elsewhere.
 
-`useSignOut()` calls `POST /api/v1/auth/logout`, then `resetSession()`: every other cached query and mutation
-is dropped (they belong to the previous user) and the session reloads in place, so mounted guards react at
-once. The expired-session flow and the dev role switcher use the same `resetSession()`.
+`useSignOut()` calls `POST /api/v1/auth/logout` and then, even if that fails, `resetSession(client,
+{ signedOut: true })`: every other cached query and mutation is dropped (they belong to the previous user)
+and the session becomes "signed out" without asking the server, so mounted guards react at once (a dev user
+switch reloads the session instead). It also removes browser storage keys that start with `tsolve.session.` (`SESSION_STORAGE_PREFIX`) —
+put per-user data there only under that prefix. The expired-session flow and the dev user switcher use the
+same `resetSession()`.
 
 ## 8. Checklist
 
@@ -217,4 +224,4 @@ once. The expired-session flow and the dev role switcher use the same `resetSess
 - [ ] Spec + generated code + fixes committed together when the API changed.
 
 ---
-*Last verified against code: 2026-10-10, step 5.5 — every path, name, rule and ✅ example checked against the scaffold.*
+*Last verified against code: 2026-10-23, KAN-63 — screens, roles, paths and MSG codes checked against the Report3 foundation (`src/test/guidelines.test.ts`).*
