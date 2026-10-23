@@ -21,10 +21,10 @@ Both features belong to the current iteration's requested review scope. Code sta
 
 **Files:**
 - Modify: `frontend/openapi/tsolve-api.yaml` (contract only; generated client belongs to Task 2).
-- Create: `backend/src/main/java/vn/tsolve/ticket/{controller,service,service/impl,entity,dto,mapper,repository,config}/` review classes described in master design.
+- Create: `backend/src/main/java/vn/tsolve/review/{controller,service,service/impl,entity,dto,mapper,repository,config}/` review classes described in master design.
 - Create: `backend/src/main/resources/db/changelog/changes/002-add-ticket-review.sql`.
 - Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`.
-- Test: `backend/src/test/java/vn/tsolve/ticket/` entity/service/MVC and real PostgreSQL transaction tests.
+- Test: `backend/src/test/java/vn/tsolve/review/` entity/service/MVC and real PostgreSQL transaction tests.
 - Modify: `docs/bug-log.md` for every newly found defect; do not close frontend BUG-006–BUG-008 during backend-only work.
 - Create: `harnessclaude/artifacts/05-implementation/ticket-review/task-1-review-api.md` (session and integration notes).
 
@@ -81,3 +81,9 @@ User decision on 2026-10-22: refactor review to shared exceptions and one global
 **Files:** ticket main/test classes, manual fixtures/smoke, frontend/openapi/tsolve-api.yaml, generated client via orval, review feature, TicketDetail tests, scoped MSG catalog/tests, router test BUG-007 suffix, shared http/forms test BUG suffixes, docs/bug-log.md and affected harness references.
 
 **Verification:** failing-first batch request/atomicity/source-restriction tests; Maven verify on isolated PostgreSQL; frontend format/lint/typecheck/test/build and zero generated diff; verify main's two bug rows exactly and consecutive complete branch ledger. Log every newly found defect and retain known default-suite timeout honestly. No unrelated catalog edits, dependency changes or PR merge.
+
+## Task 7: Address FE/BE module review and conflicts
+**Story ID:** STORY-001, STORY-002, STORY-003, STORY-004, STORY-005, STORY-006
+**Feature:** lead-review-fixes
+
+Move backend review packages/tests, narrow trace paths, move decision component tests, enforce AC-005.7/005.8/006.7, normalize absent Evidence, document route namespaces and missing production integrations. Keep main context/map and replay module tracking. Add named regressions and verify backend PostgreSQL, frontend checks and generated output.

@@ -8,7 +8,7 @@ date: 2026-10-20
 Spec: `artifacts/03-modules/ticket-review/spec.md`
 
 ## Architecture Overview
-Implement within `vn.tsolve.ticket`, following controller → service interface → implementation → repository. Review DTO records and MapStruct mappers prevent JPA entities from leaving services. Keep the old `/api/tickets` and Solution APIs unchanged; those scaffold APIs do not implement the SRS ticket lifecycle.
+Implement within `vn.tsolve.review`, following controller → service interface → implementation → repository. Review DTO records and MapStruct mappers prevent JPA entities from leaving services. Keep the old `/api/tickets` and Solution APIs unchanged; those scaffold APIs do not implement the SRS ticket lifecycle.
 
 `ReviewAccessService` is an integration port. For every service request it supplies the authenticated actor, current managed Project references and readable Project scope from trusted server-side identity/Project data. Its absence denies access. No request field or header can supply the actor or a list of managed Projects. The eventual adapter must revalidate active account and Project rights on every request. Configure method security for review controllers; do not disable CSRF or replace the application's authentication configuration with demo credentials.
 
@@ -47,11 +47,11 @@ Foreign keys prevent orphan review content/history. Add the queue index on Proje
 Decided in planning: internal class names, deterministic sort tie-breaker, row-lock acquisition order, table/index names and scoped error advice are implementation choices; they do not add business behavior.
 
 ## File Structure
-- `backend/src/main/java/vn/tsolve/ticket/controller/`: review endpoints and scoped exception advice.
-- `backend/src/main/java/vn/tsolve/ticket/service/` and `service/impl/`: ReviewService, ReviewAccessService, AuditService, notification handoff interfaces/implementations.
-- `backend/src/main/java/vn/tsolve/ticket/entity/`, `dto/`, `mapper/`, `repository/`: review persistence and records.
-- `backend/src/main/java/vn/tsolve/ticket/config/`: enable method authorization for the module without supplying an identity adapter.
-- `backend/src/test/java/vn/tsolve/ticket/`: entity, service, MVC/authorization and persistence transaction checks.
+- `backend/src/main/java/vn/tsolve/review/controller/`: review endpoints; exceptions use the shared GlobalExceptionHandler.
+- `backend/src/main/java/vn/tsolve/review/service/` and `service/impl/`: ReviewService, ReviewAccessService, AuditService, notification handoff interfaces/implementations.
+- `backend/src/main/java/vn/tsolve/review/entity/`, `dto/`, `mapper/`, `repository/`: review persistence and records.
+- `backend/src/main/java/vn/tsolve/review/config/`: enable method authorization for the module without supplying an identity adapter.
+- `backend/src/test/java/vn/tsolve/review/`: entity, service, MVC/authorization and persistence transaction checks.
 - `frontend/openapi/tsolve-api.yaml`: update first; generated client comes from the existing generator.
 - `frontend/src/features/review/`: Project filter, queue actions and batch decision components/hooks.
 - `frontend/src/features/tickets/pages/TicketDetailPage.tsx`: read-only review detail and actions imported through the review feature's index.
@@ -111,3 +111,14 @@ Re-read spec/module/architecture as implementation inputs. All requested actions
 ## FE Lead amendments (2026-10-22)
 
 Chosen: D1 batch Request changes shares one comment across all selected tickets, including all-page selection. D2 excludes empty-Solution state and removes MSG20 and empty flags. Alternatives: the superseded single-ticket contract and approval-time empty check. Rationale: explicit FE Lead decisions take precedence until the Report3 documents are corrected. Submission integrations guarantee populated Solutions. Keep other catalog codes unchanged. Restore main bug identities, then use consecutive branch IDs from BUG-008; human attribution is Phạm Tùng Dương.
+
+## FE/BE review amendments — 23 October 2026
+
+- Keep backend review code and tests in `vn.tsolve.review`, retaining table names and applied Liquibase changesets. Leave legacy ticket snapshot classes in `vn.tsolve.ticket`.
+- Ticket detail checks Project scope first, then allows unpublished content only to the Project PM or author. Other readers use the Published-only service path (404 MSG04 for unpublished), retaining that consumer interface.
+- All three request schemas and the internal decide port enforce max 500 before locks (400 MSG06); UI disables every action over the limit and explains the limit without truncating Select all or splitting transactions.
+- A null Evidence list means no files; defensive immutable copy remains for non-null lists. Maximum five Evidence items stays constructor-enforced, with no migration edit.
+- Test TicketDecisionActions within the review feature. Other modules retain ownership of their tests; retain page rendering coverage separately without review AC ids. Review Queue navigation is role-gated.
+- Keep `/api/v1/tickets/{id}` as the review read contract for this PR. Legacy snapshot IDs at `/api/tickets/{id}` are distinct; ticket-repository owns eventual mapping/consolidation.
+- Production auth/Project adapter and notification consumer remain excluded by the original scope. They must be connected by be-foundation roles-security/me-session, identity and workspace/Project integration, then email delivery/retry. Upstream task Jira keys are not assigned in the current plan; do not invent KAN numbers.
+- Preserve main context/map and base tracking; replay this module's status/approval commands through sdd.ts.

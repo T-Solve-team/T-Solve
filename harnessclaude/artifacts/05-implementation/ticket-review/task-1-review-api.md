@@ -23,15 +23,15 @@ Paths below are repository-relative; none of the existing legacy Java scaffold c
 
 | Area | Files |
 |------|-------|
-| `backend/src/main/java/vn/tsolve/ticket/config/` | ReviewSecurityConfig.java |
-| `backend/src/main/java/vn/tsolve/ticket/controller/` | ReviewController.java, ReviewExceptionHandler.java |
-| `backend/src/main/java/vn/tsolve/ticket/dto/` | ApproveTicketsRequest.java, IntegralTicketIdDeserializer.java, PendingReviewNotification.java, RejectTicketsRequest.java, RequestChangesRequest.java, ReviewAction.java, ReviewActor.java, ReviewDecisionResult.java, ReviewQueueItem.java, ReviewRegistration.java, ReviewSource.java, ReviewStatus.java, ReviewTicketResponse.java, SolutionSections.java |
-| `backend/src/main/java/vn/tsolve/ticket/entity/` | ReviewAuditEvent.java, ReviewDecision.java, ReviewEvidence.java, ReviewNotification.java, ReviewTicket.java |
-| `backend/src/main/java/vn/tsolve/ticket/mapper/` | ReviewMapper.java |
-| `backend/src/main/java/vn/tsolve/ticket/repository/` | ReviewAuditRepository.java, ReviewDecisionRepository.java, ReviewNotificationRepository.java, ReviewTicketRepository.java |
-| `backend/src/main/java/vn/tsolve/ticket/service/` | AuditService.java, ReviewAccessService.java, ReviewException.java, ReviewNotificationService.java, ReviewService.java |
-| `backend/src/main/java/vn/tsolve/ticket/service/impl/` | AuditServiceImpl.java, ReviewNotificationServiceImpl.java, ReviewServiceImpl.java |
-| `backend/src/test/java/vn/tsolve/ticket/` | ReviewPostgresTest.java, controller/ReviewControllerTest.java, entity/ReviewTicketTest.java, service/ReviewServiceTest.java |
+| `backend/src/main/java/vn/tsolve/review/config/` | ReviewSecurityConfig.java |
+| `backend/src/main/java/vn/tsolve/review/controller/` | ReviewController.java, ReviewExceptionHandler.java |
+| `backend/src/main/java/vn/tsolve/review/dto/` | ApproveTicketsRequest.java, IntegralTicketIdDeserializer.java, PendingReviewNotification.java, RejectTicketsRequest.java, RequestChangesRequest.java, ReviewAction.java, ReviewActor.java, ReviewDecisionResult.java, ReviewQueueItem.java, ReviewRegistration.java, ReviewSource.java, ReviewStatus.java, ReviewTicketResponse.java, SolutionSections.java |
+| `backend/src/main/java/vn/tsolve/review/entity/` | ReviewAuditEvent.java, ReviewDecision.java, ReviewEvidence.java, ReviewNotification.java, ReviewTicket.java |
+| `backend/src/main/java/vn/tsolve/review/mapper/` | ReviewMapper.java |
+| `backend/src/main/java/vn/tsolve/review/repository/` | ReviewAuditRepository.java, ReviewDecisionRepository.java, ReviewNotificationRepository.java, ReviewTicketRepository.java |
+| `backend/src/main/java/vn/tsolve/review/service/` | AuditService.java, ReviewAccessService.java, ReviewException.java, ReviewNotificationService.java, ReviewService.java |
+| `backend/src/main/java/vn/tsolve/review/service/impl/` | AuditServiceImpl.java, ReviewNotificationServiceImpl.java, ReviewServiceImpl.java |
+| `backend/src/test/java/vn/tsolve/review/` | ReviewPostgresTest.java, controller/ReviewControllerTest.java, entity/ReviewTicketTest.java, service/ReviewServiceTest.java |
 | Schema | New `backend/src/main/resources/db/changelog/changes/002-add-ticket-review.sql`; added its include to `db.changelog-master.xml` |
 | Contract and tracking | `frontend/openapi/tsolve-api.yaml`, `docs/bug-log.md`, harness session/test report, registry, progress/events and feedback |
 
@@ -78,7 +78,7 @@ Present the backend files, checks and proposed commit message to the user. After
 
 ## Session 2026-10-20 — User requested FE/BE startup and manual testing
 
-- Added `src/test/java/vn/tsolve/ticket/manual/ManualReviewApplication`, `ManualReviewConfiguration`, `ManualReviewToolsController` and `manual-smoke.ps1`. The explicit manual-review test profile supplies local HTTP Basic test users, a trusted test Project adapter, fresh fixtures and DB inspection. It is absent from the packaged production jar and binds to loopback only. No production auth implementation/fallback was added.
+- Added `src/test/java/vn/tsolve/review/manual/ManualReviewApplication`, `ManualReviewConfiguration`, `ManualReviewToolsController` and `manual-smoke.ps1`. The explicit manual-review test profile supplies local HTTP Basic test users, a trusted test Project adapter, fresh fixtures and DB inspection. It is absent from the packaged production jar and binds to loopback only. No production auth implementation/fallback was added.
 - Frontend is running at loopback port 5173 with the existing mocks and compatible Node 24.19.0. Browser confirmed the Project Manager queue with 58 mock rows. No frontend feature implementation or generated-client regeneration was started.
 - Backend is running at loopback port 8080 with its own `review_manual` database in `tsolve-review-manual-20261020` at loopback port 55432. This container is intentionally left running for the user's manual tests. Verify ran against a separate `review_verification` database.
 - Found and fixed BUG-014–BUG-017, retaining each in the ledger. A manual PowerShell check initially misparsed Problem Details bytes as JSON numbers even though the API correctly returned 409/MSG20; the reusable smoke runner now decodes both body forms.

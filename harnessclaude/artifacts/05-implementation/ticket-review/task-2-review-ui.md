@@ -44,7 +44,7 @@ Evidence retrieval, Jira submission/resubmission/panel delivery, email delivery/
 - Final `sdd.ts check` and audit pass. Trace reports 18/30 after assigning AC IDs to the existing queue behavior tests; backend Java discovery and documentation evidence remain outside the tool's coverage. Feature/module statuses remain implementing/in-progress.
 - Some historical feature comments still cite old message codes; optional comment cleanup was abandoned after the hook rejection. Runtime message calls and regression expectations use current review codes.
 - Browser bulk confirmation additionally verified MSG19 for tickets 7 and 8, then both disappeared from the queue and selection reset to zero. Screenshot: backend/target/review-live-bulk-confirm.png.
-- Production jar inspection confirms zero classes under vn/tsolve/ticket/manual; manual session/login tooling remains test-classpath only. Final whitespace check passes.
+- Production jar inspection confirms zero classes under vn/tsolve/review/manual; manual session/login tooling remains test-classpath only. Final whitespace check passes.
 
 ## Review and commit checkpoint
 

@@ -28,7 +28,7 @@ Docker Desktop cần Running. Container PostgreSQL riêng: `tsolve-review-manual
 Trong backend/, dùng Java 21 và Maven 3.9.9; đặt DB_HOST=127.0.0.1, DB_PORT=55432, DB_NAME=review_manual, DB_USER=review_manual, DB_PASSWORD=review_manual_local, SERVER_PORT=8080, CORS_ALLOWED_ORIGINS=http://localhost:5173 và MANUAL_REVIEW_PASSWORD=Review-Local-2026 trong environment. Đây là credential của DB test local dùng riêng.
 
 ```powershell
-mvn spring-boot:test-run -Dspring-boot.run.main-class=vn.tsolve.ticket.manual.ManualReviewApplication -Dspring-boot.run.profiles=manual-review -Dspring-boot.run.arguments=--springdoc.swagger-ui.csrf.enabled=true
+mvn spring-boot:test-run -Dspring-boot.run.main-class=vn.tsolve.review.manual.ManualReviewApplication -Dspring-boot.run.profiles=manual-review -Dspring-boot.run.arguments=--springdoc.swagger-ui.csrf.enabled=true
 ```
 
 Trong frontend/, dùng Node 24:

@@ -11,6 +11,7 @@ owner: BA
 |------|-------|--------|--------|
 | 2026-10-20 | STORY-001 to STORY-006 | Initial review contract (originally based on SRS v3460 layout template); auth/email implementations excluded by user choice | Requested Approve / Reject / Request changes across backend and frontend |
 | 2026-10-22 | STORY-002, STORY-004 | D1: Request changes supports selected/all eligible tickets with one comment; D2: remove AC-002.4 and empty-Solution handling; correct authoritative sources | FE Lead decisions D1/D2 (21/10), reaffirmed in PR review; Report3 documents will be corrected |
+| 2026-10-23 | STORY-005, STORY-006 | Limit decision batches to 500; restrict unpublished detail to the managing PM or author; hide Review Queue navigation for non-PMs; clarify module ownership and integration prerequisites | FE/BE review of KAN-24 and explicit user decisions |
 
 ## Sources and precedence
 
@@ -77,6 +78,8 @@ owner: BA
   - AC-005.4: WHEN a decision succeeds, THE system SHALL preserve the saved Solution, Evidence, Jira issue status and stored review due date.
   - AC-005.5: IF a decision payload is empty or contains invalid or repeated ticket IDs, THEN THE backend SHALL reject it before writing any decision records.
   - AC-005.6: WHEN a Published-ticket consumer queries the review service, THE system SHALL expose only Published tickets within the authorization scope supplied by the trusted integration.
+  - AC-005.7: WHEN an actor reads a ticket within their trusted Project access scope, THE backend SHALL return an unpublished ticket only to its author or a Project Manager managing that Project, and SHALL return only Published tickets to other readers; IF a reader requests an unpublished ticket they neither manage nor authored, THEN THE backend SHALL return 404 MSG04 without its content or review comment.
+  - AC-005.8: IF any review decision contains more than 500 ticket IDs, THEN THE backend SHALL return 400 MSG06 before acquiring ticket locks or writing records, and THE frontend SHALL disable all decision actions and show guidance to select at most 500 tickets; WHEN Select all exceeds that limit, THE frontend SHALL retain the complete selection until the user narrows it, without splitting it into partially committed requests.
 
 ### STORY-006: Integrate auth and notifications explicitly
 - As the integration developer, I want clear seams so that real authentication and delivery can be connected without rewriting decision logic.
@@ -87,6 +90,7 @@ owner: BA
   - AC-006.4: IF the external email integration is unavailable, THEN THE system SHALL retain the committed decision and its pending notification without claiming delivery; the integration contract SHALL require the sender to log errors and retry at most three times within one hour under GBR-27.
   - AC-006.5: WHEN the frontend operates with mocking disabled, THE review UI SHALL use the generated real review endpoints and SHALL handle loading, empty, error and mutation-pending states.
   - AC-006.6: WHEN implementation is delivered, THE integration documentation SHALL identify auth, Project rights, ticket submission, Evidence retrieval, mail delivery/retry and downstream search/triage/chatbot integration as external prerequisites and distinguish automated contract tests from a complete live test.
+  - AC-006.7: WHEN a user without the Project Manager role reads Ticket Detail, THE frontend SHALL hide navigation to the Review Queue.
 
 ## Out of Scope
 - Implementing Google OIDC, account administration, /me session provisioning or Project administration/assignments. The existing frontend session guard still requires its real upstream /me implementation.
@@ -101,8 +105,9 @@ owner: BA
 ### Exposed by this module
 - `GET /api/v1/review-queue?projectId=&page=0&size=20&sort=reviewDueDate,asc` returns Spring-style `{content,page}`; only a documented allowlist of sort fields is accepted.
 - `GET /api/v1/review-queue/ticket-ids?projectId=` returns `{ticketIds}` for the same authorization/filter scope.
-- `POST /api/v1/reviews/approve`: `{ticketIds: number[]}`; `POST /api/v1/reviews/reject`: `{ticketIds: number[], reason: string}`; `POST /api/v1/reviews/request-changes`: `{ticketIds: number[], comment: string}`. Success returns `{count}`. IDs are positive integers; reasons/comments are required and limited to 1,000 characters.
+- `POST /api/v1/reviews/approve`: `{ticketIds: number[]}`; `POST /api/v1/reviews/reject`: `{ticketIds: number[], reason: string}`; `POST /api/v1/reviews/request-changes`: `{ticketIds: number[], comment: string}`. Success returns `{count}`. IDs are positive integers, with at most 500 IDs per request; reasons/comments are required and limited to 1,000 characters.
 - Ticket Detail read API returns review ticket identity, Project, writer, source, status, review dates, Solution sections, Evidence metadata and current review comment; server-side access is mandatory.
+- `GET /api/v1/tickets/{id}` identifies a review record, while legacy `/api/tickets/{id}` identifies an import snapshot. Their IDs are separate namespaces. The ticket-repository integration must define a source-ticket mapping before consolidation; no URL alias or identity equivalence is assumed in this module.
 - Java service interfaces use DTO records for ticket registration, Published ticket retrieval, audit recording and pending notification consumption. Entities do not leave the service layer.
 - Failure responses are RFC 9457 Problem Details with SRS `code` and structured validation fields: 400 invalid input, 401 unauthenticated, 403 unauthorized, 404 missing resource, 409 state conflict, 500 persistence failure.
 - A new forward-only Liquibase migration is required for review persistence and notification handoffs. Existing changesets are not edited. No existing-data migration or destructive operation is included.

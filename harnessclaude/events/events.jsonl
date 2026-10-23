@@ -127,3 +127,12 @@
 {"ts":"2026-10-23T12:37:08.833Z","type":"feature-status","module":"chatbot","feature":"session-conversations","from":null,"to":"pending"}
 {"ts":"2026-10-23T13:09:49.582Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"02393e1b604e1063d5b14a6118da4dc7927cd6b9"}
 {"ts":"2026-10-23T13:29:37.421Z","type":"module-status","module":"ticket-review","from":null,"to":"decomposed"}
+{"ts":"2026-10-23T13:39:22.584Z","type":"spec-approved","module":"ticket-review","specHash":"1231e5d25367f088678f31991ce572cd7df75ba3c776fb9305d99ab1e4b9e777"}
+{"ts":"2026-10-23T13:39:40.918Z","type":"module-status","module":"ticket-review","from":"decomposed","to":"planned"}
+{"ts":"2026-10-23T13:39:40.957Z","type":"module-status","module":"ticket-review","from":"planned","to":"implementing"}
+{"ts":"2026-10-23T13:39:40.993Z","type":"feature-status","module":"ticket-review","feature":"lead-review-fixes","from":null,"to":"pending"}
+{"ts":"2026-10-23T13:39:41.033Z","type":"feature-status","module":"ticket-review","feature":"lead-review-fixes","from":"pending","to":"in-progress"}
+{"ts":"2026-10-23T13:42:59.994Z","type":"quick-opened","what":"Fix legacy not-found codes and scope Ticket Detail navigation/tests for FE BE review","files":["backend/src/main/java/vn/tsolve/ticket/TicketService.java","backend/src/main/java/vn/tsolve/knowledge/SolutionService.java","backend/src/test/java/vn/tsolve/common/exception/LegacyNotFoundTest.java","frontend/src/features/tickets/pages/TicketDetailPage.tsx","frontend/src/features/tickets/pages/TicketDetailPage.test.tsx"]}
+{"ts":"2026-10-23T13:54:35.111Z","type":"quick-opened","what":"Preserve the validation MSG code in shared ProblemDetail (BUG-037)","files":["backend/src/main/java/vn/tsolve/common/exception/GlobalExceptionHandler.java","backend/src/test/java/vn/tsolve/common/exception/ValidationProblemDetailTest.java"]}
+{"ts":"2026-10-23T14:06:42.674Z","type":"quick-closed","what":"Preserve the validation MSG code in shared ProblemDetail (BUG-037)","files":["backend/src/main/java/vn/tsolve/common/exception/GlobalExceptionHandler.java","backend/src/test/java/vn/tsolve/common/exception/ValidationProblemDetailTest.java"]}
+{"ts":"2026-10-23T14:06:44.014Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"19485d9fe31010ae8ad468715f66c8a400883287"}

@@ -13,7 +13,7 @@
 
 Frontend chưa được cập nhật để gọi backend mới. Khi thao tác FE, bạn đang thử hành vi mock cũ, gồm các bug đã ghi BUG-006–BUG-008. Để kiểm tra phần backend vừa triển khai, dùng Swagger theo hướng dẫn dưới đây. Không coi việc bấm FE mock là bằng chứng backend đã lưu dữ liệu.
 
-Auth manual và công cụ tạo dữ liệu nằm trong `backend/src/test/java/vn/tsolve/ticket/manual/`, chỉ nạp qua main test với profile `manual-review`. Chúng không có trong jar production. Backend chỉ lắng nghe loopback. Email dừng ở bản ghi pending; OIDC, SMTP và Jira chưa được tích hợp trong scope đã chốt.
+Auth manual và công cụ tạo dữ liệu nằm trong `backend/src/test/java/vn/tsolve/review/manual/`, chỉ nạp qua main test với profile `manual-review`. Chúng không có trong jar production. Backend chỉ lắng nghe loopback. Email dừng ở bản ghi pending; OIDC, SMTP và Jira chưa được tích hợp trong scope đã chốt.
 
 ## Đăng nhập Swagger
 
@@ -120,7 +120,7 @@ Ba tài khoản manual **pm**, **otherpm**, **employee** cùng dùng password ma
 - Script kiểm tra lại HTTP, dùng PowerShell 7 khi cả hai server còn chạy:
 
 ```powershell
-& D:/T-Solve/backend/src/test/java/vn/tsolve/ticket/manual/manual-smoke.ps1 `
+& D:/T-Solve/backend/src/test/java/vn/tsolve/review/manual/manual-smoke.ps1 `
   -BaseUrl http://127.0.0.1:8080 -Password Review-Local-2026
 ```
 
@@ -149,7 +149,7 @@ $env:SERVER_PORT = '8080'
 $env:CORS_ALLOWED_ORIGINS = 'http://127.0.0.1:5173'
 $env:MANUAL_REVIEW_PASSWORD = 'Review-Local-2026'
 & C:/Users/anime/Documents/Codex/tools/rtk/rtk.exe mvn spring-boot:test-run `
-  '-Dspring-boot.run.main-class=vn.tsolve.ticket.manual.ManualReviewApplication' `
+  '-Dspring-boot.run.main-class=vn.tsolve.review.manual.ManualReviewApplication' `
   '-Dspring-boot.run.profiles=manual-review' `
   '-Dspring-boot.run.arguments=--springdoc.swagger-ui.csrf.enabled=true'
 ```

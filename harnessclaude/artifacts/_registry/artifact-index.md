@@ -61,3 +61,4 @@ Master registry of all artifacts in this workspace.
 | — | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-5-fe-lead-amendments.md |
 | — | pr-description | ticket-review | draft | artifacts/05-implementation/ticket-review/task-5-pr-description.md |
 | — | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-6-main-setup-sync.md |
+| — | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-7-lead-review.md |

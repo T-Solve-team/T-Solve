@@ -1,9 +1,18 @@
 ---
 name: ticket-review
+owner: Phạm Tùng Dương
 repos: [default]
 dependencies: []
 complexity: large
-paths: [frontend/src/app/router/routes.test.tsx, frontend/src/shared/forms/forms.test.tsx, backend/src/main/java/vn/tsolve/common/exception/**, backend/src/main/java/vn/tsolve/common/error/**, backend/src/test/java/vn/tsolve/common/exception/**, backend/src/main/java/vn/tsolve/knowledge/Solution.java, backend/src/main/java/vn/tsolve/knowledge/SolutionService.java, backend/src/main/java/vn/tsolve/ticket/**, backend/src/test/java/vn/tsolve/ticket/**, backend/src/main/resources/db/changelog/**, frontend/src/features/review/**, frontend/src/features/tickets/**, frontend/openapi/**, frontend/src/shared/api/generated/**, frontend/src/shared/api/http.ts, frontend/src/shared/api/http.test.ts, frontend/src/shared/messages/**, frontend/src/app/dev/KitPage.tsx, frontend/src/shared/ui/DataTable/DataTable.test.tsx, docs/bug-log.md]
+paths:
+  - backend/src/main/java/vn/tsolve/review/**
+  - backend/src/test/java/vn/tsolve/review/**
+  - frontend/src/features/review/**
+  - frontend/openapi/**
+  - frontend/src/shared/api/generated/**
+  - backend/src/main/resources/db/changelog/**
+  - docs/bug-log.md
+  - frontend/src/shared/messages/catalog.ts
 ---
 
 # Module: ticket-review
