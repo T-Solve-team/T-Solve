@@ -1,4 +1,5 @@
 import { Flex, Spin } from 'antd';
+import { useEffect, useRef } from 'react';
 import { useUnavailableDocuments } from '../hooks/useUnavailableDocuments';
 import type { ChatTurn } from '../model';
 import { ChatAnswer } from './ChatAnswer';
@@ -12,6 +13,11 @@ type ConversationThreadProps = {
 
 /** 12.1 conversation thread: each question on the right, its answer below it; a loading answer while waiting. */
 export function ConversationThread({ turns, pendingQuestion }: ConversationThreadProps) {
+  const end = useRef<HTMLDivElement>(null);
+  // The thread scrolls inside its card: bring the newest question or answer into view.
+  useEffect(() => {
+    end.current?.scrollIntoView?.({ block: 'end' });
+  }, [turns, pendingQuestion]);
   const unavailableIds = useUnavailableDocuments(citedWikiDocumentIds(turns));
   return (
     <section aria-label="Conversation" className={styles.thread}>
@@ -31,6 +37,7 @@ export function ConversationThread({ turns, pendingQuestion }: ConversationThrea
           </Flex>
         )}
       </Flex>
+      <div ref={end} />
     </section>
   );
 }

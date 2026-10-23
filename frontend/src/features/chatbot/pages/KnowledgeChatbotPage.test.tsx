@@ -92,6 +92,8 @@ describe('KnowledgeChatbotPage', () => {
     await import('./KnowledgeChatbotPage');
   });
 
+  beforeEach(() => sessionStorage.clear());
+
   afterEach(() => {
     server.events.removeAllListeners();
   });
@@ -527,5 +529,199 @@ describe('KnowledgeChatbotPage', () => {
     ).toBeInTheDocument();
     expect(box).toHaveValue(VPN_QUESTION);
     expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+  });
+});
+
+const LEAVE_QUESTION = 'How is annual leave counted?';
+let scrollIntoView = vi.fn();
+const STORED_KEY = 'tsolve.session.chatbot.conversations';
+
+function conversationList() {
+  return screen.getByRole('list', { name: 'Conversations' });
+}
+
+/** The titles in the list, top to bottom. */
+function listTitles() {
+  return within(conversationList())
+    .getAllByRole('listitem')
+    .map((item) => item.textContent);
+}
+
+/** The New conversation button; the empty entry in the list is the open one, so it is always `current`. */
+function newConversationButton() {
+  return screen.getByRole('button', { name: 'New conversation', current: false });
+}
+
+async function ask(user: ReturnType<typeof userEvent.setup>, box: HTMLElement, question: string) {
+  await user.type(box, `${question}{Enter}`);
+  await waitFor(() => expect(box).toHaveValue(''));
+  await waitFor(() => expect(screen.getByRole('button', { name: /Send/ })).toBeEnabled());
+}
+
+describe('KnowledgeChatbotPage session conversations', () => {
+  beforeAll(async () => {
+    await import('./KnowledgeChatbotPage');
+  });
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+  });
+
+  afterEach(() => {
+    server.events.removeAllListeners();
+    vi.restoreAllMocks();
+  });
+
+  it('AC-002.1 shows an empty "New conversation", selected, and stores nothing', async () => {
+    await openChatbot();
+
+    expect(listTitles()).toEqual(['New conversation']);
+    expect(
+      within(conversationList()).getByRole('button', { name: 'New conversation' }),
+    ).toHaveAttribute('aria-current', 'true');
+    expect(sessionStorage.getItem(STORED_KEY)).toBeNull();
+  });
+
+  it('AC-002.2 saves the conversation, titled with its first question, when the first answer arrives', async () => {
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByText(/Install GlobalProtect/);
+
+    expect(listTitles()).toEqual([VPN_QUESTION]);
+    const stored = JSON.parse(sessionStorage.getItem(STORED_KEY) ?? '{}') as {
+      conversations: { turns: { question: string }[] }[];
+    };
+    expect(stored.conversations).toHaveLength(1);
+    expect(stored.conversations[0]?.turns[0]?.question).toBe(VPN_QUESTION);
+  });
+
+  it('AC-002.3 lists the conversations newest first by start time and highlights the open one', async () => {
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+    await user.click(newConversationButton());
+    await ask(user, box, LEAVE_QUESTION);
+
+    expect(listTitles()).toEqual([LEAVE_QUESTION, VPN_QUESTION]);
+    expect(screen.getByRole('button', { name: LEAVE_QUESTION })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: VPN_QUESTION })).not.toHaveAttribute('aria-current');
+  });
+
+  it('AC-002.3 disables the list while an answer is pending and files the answer in its own conversation (edge 17)', async () => {
+    const release = holdAnswer({ text: 'Held answer [1].' });
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByTestId('pending-answer');
+    expect(newConversationButton()).toBeDisabled();
+    expect(
+      within(conversationList()).getByRole('button', { name: 'New conversation' }),
+    ).toBeDisabled();
+    release();
+
+    expect(await within(thread()).findByText('Held answer [1].')).toBeInTheDocument();
+    expect(listTitles()).toEqual([VPN_QUESTION]);
+  });
+
+  it('AC-002.4 shows the questions, answers and citations of the conversation that is opened', async () => {
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+    await user.click(newConversationButton());
+    await ask(user, box, LEAVE_QUESTION);
+
+    await user.click(screen.getByRole('button', { name: VPN_QUESTION }));
+
+    expect(within(thread()).getByText(VPN_QUESTION)).toBeInTheDocument();
+    expect(within(thread()).getByText(/Install GlobalProtect/)).toBeInTheDocument();
+    expect(within(thread()).getByText('Solution from a ticket', { exact: false })).toBeVisible();
+    expect(within(thread()).queryByText(LEAVE_QUESTION)).not.toBeInTheDocument();
+  });
+
+  it('AC-002.5 adds a follow-up to the open conversation and sends its earlier turns', async () => {
+    const sent = recordQuestions();
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+
+    await ask(user, box, 'And on a Mac?');
+
+    expect(sent[1]?.history.map((turn) => turn.question)).toEqual([VPN_QUESTION]);
+    expect(listTitles()).toEqual([VPN_QUESTION]);
+    expect(within(thread()).getByText('And on a Mac?')).toBeInTheDocument();
+  });
+
+  it('AC-002.5 sends only the last 10 turns, oldest first, after 12 turns (edge 18)', async () => {
+    const sent = recordQuestions();
+    const { user, box } = await openChatbot();
+    for (let n = 1; n <= 12; n++) await ask(user, box, `Question ${n}`);
+
+    await ask(user, box, 'Question 13');
+
+    const questions = sent[12]?.history.map((turn) => turn.question);
+    expect(questions).toEqual(Array.from({ length: 10 }, (_, i) => `Question ${i + 3}`));
+  }, 60_000);
+
+  it('AC-002.6 opens an empty conversation at the top, and keeps one when it is already empty', async () => {
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+
+    await user.click(newConversationButton());
+    expect(listTitles()).toEqual(['New conversation', VPN_QUESTION]);
+    expect(within(thread()).queryByText(VPN_QUESTION)).not.toBeInTheDocument();
+
+    await user.click(newConversationButton());
+    expect(listTitles()).toEqual(['New conversation', VPN_QUESTION]);
+  });
+
+  it('AC-002.7 brings the conversations back after a page reload, with the empty one open (edge 15)', async () => {
+    const first = await openChatbot();
+    await ask(first.user, first.box, VPN_QUESTION);
+    first.unmount();
+
+    await openChatbot();
+
+    expect(listTitles()).toEqual(['New conversation', VPN_QUESTION]);
+    expect(within(thread()).queryByText(VPN_QUESTION)).not.toBeInTheDocument();
+  });
+
+  it('AC-002.8 starts empty when the stored conversations belong to another user (edge 12)', async () => {
+    sessionStorage.setItem(
+      STORED_KEY,
+      JSON.stringify({
+        version: 1,
+        userId: 999_999,
+        conversations: [{ id: 'x', startedAt: 1, turns: [] }],
+      }),
+    );
+
+    await openChatbot();
+
+    expect(listTitles()).toEqual(['New conversation']);
+  });
+
+  it('AC-002.11 still answers and keeps the conversations of the open page when storage is blocked (edge 14)', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError');
+    });
+    const { user, box } = await openChatbot();
+
+    await ask(user, box, VPN_QUESTION);
+    await user.click(newConversationButton());
+    await ask(user, box, LEAVE_QUESTION);
+
+    expect(listTitles()).toEqual([LEAVE_QUESTION, VPN_QUESTION]);
+  });
+
+  it('shows the newest turn after each answer (PR #51 finding 2)', async () => {
+    const { user, box } = await openChatbot();
+    scrollIntoView.mockClear();
+
+    await ask(user, box, VPN_QUESTION);
+
+    expect(scrollIntoView).toHaveBeenCalled();
   });
 });
