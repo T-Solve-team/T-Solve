@@ -12,6 +12,7 @@ owner: BA
 |------|-------|--------|--------|
 | 2026-10-23 | STORY-001..STORY-004 | Initial spec from Report3 (UC-51–53, GBR-36), SRS §III.12.1 and Figma 12.1 | Plan the Knowledge Chatbot (KAN-69, KAN-48); the backend is mocked for now |
 | 2026-10-23 | STORY-001 | AC-001.13: a 401 signs the user out (MSG07) with no MSG06; a field error on another field than the question shows MSG06 | Review of KAN-71 (findings 1 and 3) |
+| 2026-10-23 | STORY-001 | AC-001.7: the box is emptied only if it still holds the sent question | Review of PR #51 (finding 1): a follow-up typed while waiting was erased |
 
 ## Requirements
 
@@ -58,7 +59,7 @@ owner: BA
     disable Send until the answer arrives.
   - AC-001.7: WHEN the answer arrives with `outcome` `ANSWERED`, THE web app SHALL show its text under the question,
     with the numbered markers (`[1]`, `[2]` …) as written, followed by the list of its citations in number order, and
-    SHALL empty the question box.
+    SHALL empty the question box if it still holds the question that was sent (text typed while waiting is kept).
   - AC-001.8: THE web app SHALL show the answer text and every citation field as plain text, never as HTML.
   - AC-001.9: WHEN a citation is a Wiki document, THE web app SHALL show "[n]", the document title and "· Wiki document"
     as a link that opens 11.2 Wiki Document of that document in the same tab.

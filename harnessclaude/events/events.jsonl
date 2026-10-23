@@ -125,3 +125,7 @@
 {"ts":"2026-10-23T13:45:23.480Z","type":"feature-status","module":"fe-foundation","feature":"placeholder-rule","from":"evaluating","to":"passing"}
 {"ts":"2026-10-23T13:45:23.652Z","type":"module-status","module":"fe-foundation","from":"implementing","to":"evaluating"}
 {"ts":"2026-10-23T13:45:23.821Z","type":"module-status","module":"fe-foundation","from":"evaluating","to":"completed"}
+{"ts":"2026-10-23T14:04:26.696Z","type":"feature-status","module":"chatbot","feature":"citations","from":"pending","to":"in-progress"}
+{"ts":"2026-10-23T14:05:14.000Z","type":"spec-approved","module":"chatbot","specHash":"3c134168da3d1bd738c011d02a668cf8f85427cc2b7db8ee9d08b04fff71c939"}
+{"ts":"2026-10-23T14:18:23.624Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"b64f80460c52168c86f438271c0ee2d51d701691"}
+{"ts":"2026-10-23T14:18:23.833Z","type":"feature-status","module":"chatbot","feature":"citations","from":"in-progress","to":"evaluating"}
