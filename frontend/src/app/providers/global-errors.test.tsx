@@ -4,15 +4,16 @@ import { http as mock } from 'msw';
 import { server } from '@/mocks/server';
 import { approveTickets, getReviewQueue } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
-import { setDevRole } from '@/shared/auth';
+import { setDevUser } from '@/shared/auth';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 
 describe('global error handling', () => {
-  it('shows a failed mutation as a toast with its MSG code', async () => {
+  it('shows a failed mutation as a toast with its MSG code (BUG-003)', async () => {
     server.use(mock.post('*/api/v1/reviews/approve', () => problem(403)));
     const { queryClient } = renderApp('/review-queue');
-    await screen.findByRole('heading', { level: 1, name: 'Review Queue' });
+    // The first findBy also loads the lazy page module: give it more time (guideline 10 §6).
+    await screen.findByRole('heading', { level: 1, name: 'Review Queue' }, { timeout: 5000 });
 
     await queryClient
       .getMutationCache()
@@ -24,7 +25,7 @@ describe('global error handling', () => {
   });
 
   it('stays quiet for a mutation that shows its own error', async () => {
-    server.use(mock.post('*/api/v1/reviews/approve', () => problem(409, 'MSG47')));
+    server.use(mock.post('*/api/v1/reviews/approve', () => problem(409, 'MSG49')));
     const { queryClient } = renderApp('/review-queue');
     await screen.findByRole('heading', { level: 1, name: 'Review Queue' });
 
@@ -37,7 +38,7 @@ describe('global error handling', () => {
       .execute(undefined)
       .catch(() => undefined);
 
-    expect(screen.queryByText(msg('MSG47'))).not.toBeInTheDocument();
+    expect(screen.queryByText(msg('MSG49'))).not.toBeInTheDocument();
   });
 
   it('on 401 shows MSG07, then sends the user to Login with returnTo', async () => {
@@ -46,7 +47,7 @@ describe('global error handling', () => {
     await screen.findByRole('heading', { level: 1, name: 'Review Queue' });
 
     // The session expires on the server: every request now answers 401.
-    setDevRole(null);
+    setDevUser(null);
     server.use(mock.get('*/api/v1/review-queue', () => problem(401)));
     await queryClient
       .fetchQuery({ queryKey: ['expired'], queryFn: () => getReviewQueue() })

@@ -107,7 +107,7 @@ export function KitPage() {
       <SectionCard title="Web/Empty & Loading (EmptyState, LoadingState, ErrorState)">
         <Flex gap="large">
           <EmptyState />
-          <EmptyState code="MSG16" />
+          <EmptyState code="MSG13" />
           <LoadingState />
           <ErrorState onRetry={() => undefined} />
         </Flex>
@@ -140,8 +140,8 @@ export function KitPage() {
 
       <SectionCard title="Web/Modal (ConfirmDialog, FormModal)">
         <Flex wrap gap="middle">
-          <Button onClick={() => setDialog('confirm')}>Confirm (MSG90)</Button>
-          <Button onClick={() => setDialog('danger')}>Danger confirm (MSG29)</Button>
+          <Button onClick={() => setDialog('confirm')}>Confirm (MSG19)</Button>
+          <Button onClick={() => setDialog('danger')}>Danger confirm (MSG21)</Button>
           <Button onClick={() => setDialog('form')}>Form popup</Button>
           <Button onClick={() => setDialog('formDanger')}>Danger form popup</Button>
         </Flex>
@@ -149,14 +149,14 @@ export function KitPage() {
 
       <ConfirmDialog
         isOpen={dialog === 'confirm'}
-        code="MSG90"
+        code="MSG19"
         params={{ count: 2 }}
         onConfirm={close}
         onCancel={close}
       />
       <ConfirmDialog
         isOpen={dialog === 'danger'}
-        code="MSG29"
+        code="MSG21"
         isDanger
         okText="Unpublish"
         onConfirm={close}

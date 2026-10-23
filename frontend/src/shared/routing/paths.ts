@@ -1,8 +1,8 @@
 /**
- * Every web screen path (guideline 08 §1): all 19 routed screens of the 25 — features never add paths elsewhere.
+ * Every web screen path (guideline 08 §1): all 26 routed screens of the 35 — features never add paths elsewhere.
  * Detail builders return the route pattern when called without an id, e.g. `paths.ticketDetail()` →
  * '/tickets/:ticketId', and a real link with one: `paths.ticketDetail(42)` → '/tickets/42'.
- * Popups (2.3, 5.3, 7.2, 7.3, 8.1, 9.3) have no path.
+ * Popups (1.3.3, 2.4, 5.3, 7.2, 7.3, 8.1, 9.3, 10.2, 11.5) have no path.
  */
 type Id = string | number;
 
@@ -13,9 +13,10 @@ export const paths = {
   userList: '/users', // 1.3.1
   userNew: '/users/new', // 1.3.2 (add mode)
   userDetail: (userId: Id = ':userId') => `/users/${userId}`, // 1.3.2
-  workspaceSettings: '/workspace-settings', // 2.1
+  workspaceSetup: '/workspace-setup', // 2.1
+  workspaceSettings: '/workspace-settings', // 2.2
   departmentDetail: (departmentId: Id = ':departmentId') =>
-    `/workspace-settings/departments/${departmentId}`, // 2.2
+    `/workspace-settings/departments/${departmentId}`, // 2.3
   jiraIntegration: '/jira-integration', // 3.1
   projectDetail: (projectId: Id = ':projectId') => `/jira-integration/projects/${projectId}`, // 3.2
   importTickets: '/import', // 5.1 (?tab=jira|csv|manual)
@@ -29,4 +30,10 @@ export const paths = {
   expiredTickets: '/expired-tickets', // 7.5
   knowledgeDashboard: '/dashboard', // 9.1
   auditLog: '/audit-log', // 9.2
+  triageHistory: '/triage-history', // 10.1
+  wikiHome: '/wiki', // 11.1 (?space=&folder=)
+  wikiDocument: (documentId: Id = ':documentId') => `/wiki/documents/${documentId}`, // 11.2
+  wikiUpload: '/wiki/upload', // 11.4
+  spaceSettings: (spaceId: Id = ':spaceId') => `/wiki/spaces/${spaceId}/settings`, // 11.7
+  chatbot: '/chatbot', // 12.1
 } as const;

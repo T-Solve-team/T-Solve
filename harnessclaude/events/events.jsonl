@@ -148,3 +148,77 @@
 {"ts":"2026-10-22T14:52:00.797Z","type":"feature-status","module":"fe-foundation","feature":"route-map","from":null,"to":"pending"}
 {"ts":"2026-10-22T14:52:01.008Z","type":"feature-status","module":"fe-foundation","feature":"catalog-tags","from":null,"to":"pending"}
 {"ts":"2026-10-22T14:52:01.208Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":null,"to":"pending"}
+{"ts":"2026-10-22T14:54:47.549Z","type":"module-status","module":"fe-foundation","from":"planned","to":"implementing"}
+{"ts":"2026-10-22T14:54:47.939Z","type":"feature-status","module":"fe-foundation","feature":"roles-session","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T15:12:33.741Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"d9bfc7bdf8d246f66b160d9214ffe19a9351a9b5"}
+{"ts":"2026-10-22T15:12:33.942Z","type":"feature-status","module":"fe-foundation","feature":"roles-session","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-22T15:22:55.780Z","type":"feature-status","module":"fe-foundation","feature":"roles-session","from":"evaluating","to":"passing"}
+{"ts":"2026-10-22T15:31:23.646Z","type":"feature-status","module":"fe-foundation","feature":"route-map","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T15:41:54.589Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"02e9fc35aa5fa2689b852018934bc7f804af19b6"}
+{"ts":"2026-10-22T15:41:54.785Z","type":"feature-status","module":"fe-foundation","feature":"route-map","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-22T15:46:42.619Z","type":"feature-status","module":"fe-foundation","feature":"route-map","from":"evaluating","to":"passing"}
+{"ts":"2026-10-22T15:47:39.095Z","type":"quick-opened","what":"BUG-003: the global error test times out in the full frontend suite","files":["docs/bug-log.md","frontend/src/app/providers/global-errors.test.tsx"]}
+{"ts":"2026-10-22T15:53:41.240Z","type":"quick-closed","what":"BUG-003: the global error test times out in the full frontend suite","files":["docs/bug-log.md","frontend/src/app/providers/global-errors.test.tsx"]}
+{"ts":"2026-10-22T15:59:18.078Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T16:07:48.237Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"03f8f8c3a2ebcece920d9d667e619442534148d0"}
+{"ts":"2026-10-22T16:07:48.441Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-22T16:15:12.790Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":"evaluating","to":"fixing"}
+{"ts":"2026-10-22T16:28:17.942Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"2381c5f5a82a662cd1563dc47d50096fd4d88ead"}
+{"ts":"2026-10-22T16:28:18.157Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":"fixing","to":"evaluating"}
+{"ts":"2026-10-22T16:33:53.298Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":"evaluating","to":"passing"}
+{"ts":"2026-10-22T16:36:53.737Z","type":"feature-status","module":"fe-foundation","feature":"catalog-tags","from":"pending","to":"in-progress"}
+{"ts":"2026-10-23T02:55:14.291Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"f67ead76438074f7e2335b5ebd62c6dd1bc871b2"}
+{"ts":"2026-10-23T02:55:14.459Z","type":"feature-status","module":"fe-foundation","feature":"catalog-tags","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-23T03:03:13.147Z","type":"feature-status","module":"fe-foundation","feature":"catalog-tags","from":"evaluating","to":"passing"}
+{"ts":"2026-10-23T03:20:33.322Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"pending","to":"in-progress"}
+{"ts":"2026-10-23T03:47:02.301Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"02f8b86b1b58c69d5e34052b9f679bae92360673"}
+{"ts":"2026-10-23T03:47:02.482Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-23T03:54:38.421Z","type":"quick-opened","what":"Update .claude/tsolve-project.md to Report3: source order, five roles, several per user, features","files":[".claude/tsolve-project.md"]}
+{"ts":"2026-10-23T03:56:25.876Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"evaluating","to":"fixing"}
+{"ts":"2026-10-23T03:59:29.265Z","type":"quick-closed","what":"Update .claude/tsolve-project.md to Report3: source order, five roles, several per user, features","files":[".claude/tsolve-project.md"]}
+{"ts":"2026-10-23T04:24:24.609Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"03f9137bc723d7b770560c9ad3d2d377c8813f5e"}
+{"ts":"2026-10-23T04:24:24.800Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"fixing","to":"evaluating"}
+{"ts":"2026-10-23T04:30:28.550Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"evaluating","to":"passing"}
+{"ts":"2026-10-23T06:20:50.022Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"77ad80cc9cf9c45a124f42b9ee6581d4844cc839"}
+{"ts":"2026-10-23T06:20:56.701Z","type":"module-status","module":"fe-foundation","from":"implementing","to":"evaluating"}
+{"ts":"2026-10-23T06:20:56.879Z","type":"module-status","module":"fe-foundation","from":"evaluating","to":"completed"}
+{"ts":"2026-10-23T06:55:14.868Z","type":"quick-opened","what":"KAN-66: close the logout and session test gaps (Task 1 review findings 1-3)","files":["frontend/src/shared/auth/sign-out.test.tsx","frontend/src/shared/auth/session.ts","frontend/src/shared/auth/session.test.ts"]}
+{"ts":"2026-10-23T07:02:02.111Z","type":"quick-closed","what":"KAN-66: close the logout and session test gaps (Task 1 review findings 1-3)","files":["frontend/src/shared/auth/sign-out.test.tsx","frontend/src/shared/auth/session.ts","frontend/src/shared/auth/session.test.ts"]}
+{"ts":"2026-10-23T07:08:25.866Z","type":"quick-opened","what":"KAN-67: message catalog and StatusTag test nits (Task 4 review findings 1-4)","files":["frontend/src/shared/messages/catalog.test.ts","frontend/src/shared/messages/msg.ts","frontend/src/features/review/hooks/useReviewDecisions.ts","frontend/src/shared/ui/StatusTag/StatusTag.test.tsx"]}
+{"ts":"2026-10-23T07:11:48.857Z","type":"quick-closed","what":"KAN-67: message catalog and StatusTag test nits (Task 4 review findings 1-4)","files":["frontend/src/shared/messages/catalog.test.ts","frontend/src/shared/messages/msg.ts","frontend/src/features/review/hooks/useReviewDecisions.ts","frontend/src/shared/ui/StatusTag/StatusTag.test.tsx"]}
+{"ts":"2026-10-23T07:12:11.085Z","type":"quick-opened","what":"KAN-67: route table test checks the new feature mocks by reference (Task 3 review findings 1-2)","files":["frontend/src/app/router/route-table.test.tsx","frontend/src/mocks/handlers.ts"]}
+{"ts":"2026-10-23T07:14:46.927Z","type":"quick-closed","what":"KAN-67: route table test checks the new feature mocks by reference (Task 3 review findings 1-2)","files":["frontend/src/app/router/route-table.test.tsx","frontend/src/mocks/handlers.ts"]}
+{"ts":"2026-10-23T07:14:56.319Z","type":"quick-opened","what":"KAN-67: check the new feature mocks by reference in a src/mocks test (Task 3 review findings 1-2)","files":["frontend/src/app/router/route-table.test.tsx","frontend/src/mocks/handlers.ts","frontend/src/mocks/handlers.test.ts"]}
+{"ts":"2026-10-23T07:35:29.608Z","type":"quick-closed","what":"KAN-67: check the new feature mocks by reference in a src/mocks test (Task 3 review findings 1-2)","files":["frontend/src/app/router/route-table.test.tsx","frontend/src/mocks/handlers.ts","frontend/src/mocks/handlers.test.ts"]}
+{"ts":"2026-10-23T11:31:20.176Z","type":"spec-approved","module":"be-foundation","specHash":"4d03249e43937c1e707752c7bcc3d7a3eeaf48ba6ba831d880aa2b9b1ba3c51d"}
+{"ts":"2026-10-23T11:39:11.405Z","type":"module-status","module":"be-foundation","from":"decomposed","to":"planned"}
+{"ts":"2026-10-23T11:39:11.822Z","type":"feature-status","module":"be-foundation","feature":"problem-errors","from":null,"to":"pending"}
+{"ts":"2026-10-23T11:39:12.232Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":null,"to":"pending"}
+{"ts":"2026-10-23T11:39:12.709Z","type":"feature-status","module":"be-foundation","feature":"me-session","from":null,"to":"pending"}
+{"ts":"2026-10-23T11:39:13.267Z","type":"feature-status","module":"be-foundation","feature":"audit-writer","from":null,"to":"pending"}
+{"ts":"2026-10-23T12:03:13.481Z","type":"spec-approved","module":"be-foundation","specHash":"264285350f051113182822d7baddd60498e4b7f7f44fee4edeb39fbcff11c799"}
+{"ts":"2026-10-23T12:37:04.769Z","type":"spec-approved","module":"chatbot","specHash":"d047c4d18fd628c7f9e59756d509526b98b0f63e4bd5698dc53d636300041034"}
+{"ts":"2026-10-23T12:37:08.342Z","type":"module-status","module":"chatbot","from":"decomposed","to":"planned"}
+{"ts":"2026-10-23T12:37:08.495Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":null,"to":"pending"}
+{"ts":"2026-10-23T12:37:08.666Z","type":"feature-status","module":"chatbot","feature":"citations","from":null,"to":"pending"}
+{"ts":"2026-10-23T12:37:08.833Z","type":"feature-status","module":"chatbot","feature":"session-conversations","from":null,"to":"pending"}
+{"ts":"2026-10-23T12:57:37.413Z","type":"module-status","module":"chatbot","from":"planned","to":"implementing"}
+{"ts":"2026-10-23T12:57:37.580Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"pending","to":"in-progress"}
+{"ts":"2026-10-23T13:19:15.273Z","type":"spec-approved","module":"fe-foundation","specHash":"d9126208393a38924e7cd920c61c3f1e2490105dfa8c4179310c8d602174155c"}
+{"ts":"2026-10-23T13:19:15.453Z","type":"module-status","module":"fe-foundation","from":"completed","to":"planned"}
+{"ts":"2026-10-23T13:19:15.628Z","type":"feature-status","module":"fe-foundation","feature":"placeholder-rule","from":null,"to":"pending"}
+{"ts":"2026-10-23T13:19:15.801Z","type":"module-status","module":"fe-foundation","from":"planned","to":"implementing"}
+{"ts":"2026-10-23T13:19:15.979Z","type":"feature-status","module":"fe-foundation","feature":"placeholder-rule","from":"pending","to":"in-progress"}
+{"ts":"2026-10-23T13:24:14.059Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"507955c893cd293983fbf2d04714bf4a921324f7"}
+{"ts":"2026-10-23T13:24:14.349Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"507955c893cd293983fbf2d04714bf4a921324f7"}
+{"ts":"2026-10-23T13:24:38.935Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-23T13:24:39.109Z","type":"feature-status","module":"fe-foundation","feature":"placeholder-rule","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-23T13:34:57.806Z","type":"spec-approved","module":"chatbot","specHash":"3528bf93b2a4c74c3a3116629a782c288defa5622f78fcc308b44835374fb307"}
+{"ts":"2026-10-23T13:37:06.985Z","type":"spec-approved","module":"chatbot","specHash":"256c1f93a8b296f48a0d2ef7af91e2534ac9917a251a7d0467075f35ca90c463"}
+{"ts":"2026-10-23T13:37:14.331Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"evaluating","to":"fixing"}
+{"ts":"2026-10-23T13:45:22.974Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"dcc6b5246aec0efb4a7b1bf3b1ebb72da285c132"}
+{"ts":"2026-10-23T13:45:23.137Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"fixing","to":"evaluating"}
+{"ts":"2026-10-23T13:45:23.316Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"evaluating","to":"passing"}
+{"ts":"2026-10-23T13:45:23.480Z","type":"feature-status","module":"fe-foundation","feature":"placeholder-rule","from":"evaluating","to":"passing"}
+{"ts":"2026-10-23T13:45:23.652Z","type":"module-status","module":"fe-foundation","from":"implementing","to":"evaluating"}
+{"ts":"2026-10-23T13:45:23.821Z","type":"module-status","module":"fe-foundation","from":"evaluating","to":"completed"}

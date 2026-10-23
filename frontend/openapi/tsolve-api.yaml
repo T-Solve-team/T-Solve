@@ -14,12 +14,14 @@ tags:
     description: Review Queue and review decisions (SRS III.7).
   - name: import
     description: Import tickets from CSV (SRS UC-21) — Import Preview and Confirm.
+  - name: chatbot
+    description: Knowledge Chatbot questions and answers (Report3 UC-51, GBR-36; SRS III.12.1).
 paths:
   /api/v1/me:
     get:
       tags: [session]
       operationId: getMe
-      summary: The signed-in user, their role, Projects and Departments.
+      summary: The signed-in user with all their roles, Department(s), Projects and managed Spaces.
       responses:
         '200':
           description: Signed in.
@@ -89,7 +91,7 @@ paths:
     post:
       tags: [review]
       operationId: approveTickets
-      summary: Approves and publishes the tickets (MSG18).
+      summary: Approves and publishes the tickets (MSG14).
       requestBody:
         required: true
         content:
@@ -115,7 +117,7 @@ paths:
     post:
       tags: [review]
       operationId: rejectTickets
-      summary: Rejects the tickets with one reason (MSG19 confirm, MSG20 result).
+      summary: Rejects the tickets with one reason (MSG15 confirm, MSG16 result).
       requestBody:
         required: true
         content:
@@ -141,7 +143,7 @@ paths:
     post:
       tags: [review]
       operationId: requestTicketChanges
-      summary: Sends the tickets back to their authors with one comment (MSG21).
+      summary: Sends the tickets back to their authors with one comment (MSG17).
       requestBody:
         required: true
         content:
@@ -324,6 +326,36 @@ paths:
           $ref: '#/components/responses/Problem'
         '500':
           $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/answers:
+    post:
+      tags: [chatbot]
+      operationId: askChatbot
+      summary: Answers a question from the knowledge the user may see, with numbered citations (GBR-36).
+      description: >
+        Sources are the Solutions of all Published tickets and the Wiki documents the user can view (GBR-31), checked
+        on every question. No source → outcome NO_SOURCE (the web app shows MSG109). The AI module unavailable → 503
+        with code MSG06.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatbotQuestion'
+      responses:
+        '200':
+          description: The answer, or NO_SOURCE.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotAnswer'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
 components:
   parameters:
     Page:
@@ -368,7 +400,8 @@ components:
   schemas:
     Role:
       type: string
-      enum: [ADMIN, DEPARTMENT_MANAGER, PROJECT_MANAGER, STAFF]
+      description: A role of a user (Report3 4.1, GBR-28). A user can hold several; every user has EMPLOYEE.
+      enum: [EMPLOYEE, TICKET_RESOLVER, PROJECT_MANAGER, KNOWLEDGE_MANAGER, ADMIN]
     ProjectRole:
       type: string
       description: The user's role inside one Project.
@@ -413,26 +446,50 @@ components:
           format: int64
         name:
           type: string
+    SpaceRef:
+      type: object
+      required: [spaceId, name]
+      properties:
+        spaceId:
+          type: integer
+          format: int64
+        name:
+          type: string
     CurrentUser:
       type: object
       description: >
-        The signed-in user (SRS 1.2.1). projects = Projects the user belongs to with their role in each (empty for
-        Admin and Department Manager); departments = the user's Departments (from their Projects, or the ones a
-        Department Manager manages).
-      required: [user, role, projects, departments]
+        The signed-in user (Report3 UC-01, UC-03; GBR-02, GBR-16, GBR-28). roles = all of the user's roles, EMPLOYEE
+        included. department = the Department of a Project Manager (exactly one), null for everyone else.
+        departments = the Project Manager's Department, or the Departments of a Ticket Resolver's Projects; empty
+        for others. projects = the Projects the user belongs to with their role in each. managedSpaces = the
+        Spaces a Knowledge Manager manages. workspaceReady = false until the Admin has entered the company
+        information (2.1 Workspace Setup).
+      required: [user, roles, department, departments, projects, managedSpaces, workspaceReady]
       properties:
         user:
           $ref: '#/components/schemas/UserSummary'
-        role:
-          $ref: '#/components/schemas/Role'
-        projects:
+        roles:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectMembership'
+            $ref: '#/components/schemas/Role'
+        department:
+          anyOf:
+            - $ref: '#/components/schemas/DepartmentRef'
+            - type: 'null'
         departments:
           type: array
           items:
             $ref: '#/components/schemas/DepartmentRef'
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMembership'
+        managedSpaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpaceRef'
+        workspaceReady:
+          type: boolean
     ProjectRef:
       type: object
       required: [projectId, name]
@@ -540,14 +597,14 @@ components:
           type: string
           minLength: 1
           maxLength: 1000
-          description: Shown to each author in Jira (MSG53).
+          description: Shown to each author in Jira (MSG64).
     ReviewDecisionResult:
       type: object
       required: [count]
       properties:
         count:
           type: integer
-          description: Number of tickets the decision was applied to (the {count} of MSG18 / MSG20 / MSG21).
+          description: Number of tickets the decision was applied to (the {count} of MSG14 / MSG16 / MSG17).
     MessageRef:
       type: object
       description: An SRS message to show, by code; the web app fills the template from params.
@@ -705,6 +762,99 @@ components:
           description: Error rows plus Removed rows.
         message:
           $ref: '#/components/schemas/MessageRef'
+    ChatbotQuestion:
+      type: object
+      required: [question, history]
+      properties:
+        question:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        history:
+          type: array
+          maxItems: 10
+          description: The earlier turns of the conversation, oldest first (at most the last 10).
+          items:
+            $ref: '#/components/schemas/ChatbotTurn'
+    ChatbotTurn:
+      type: object
+      required: [question, answer]
+      properties:
+        question:
+          type: string
+        answer:
+          type: string
+          description: The answer text; empty for a NO_SOURCE turn.
+    ChatbotAnswerOutcome:
+      type: string
+      enum: [ANSWERED, NO_SOURCE]
+    ChatbotAnswer:
+      type: object
+      required: [answerId, outcome, text, citations]
+      properties:
+        answerId:
+          type: string
+          format: uuid
+          description: Identifies the answer for its rating (UC-53).
+        outcome:
+          $ref: '#/components/schemas/ChatbotAnswerOutcome'
+        text:
+          type: string
+          description: Plain text with numbered markers [1], [2] …; empty when NO_SOURCE.
+        citations:
+          type: array
+          description: In number order; empty when NO_SOURCE.
+          items:
+            $ref: '#/components/schemas/ChatbotCitation'
+    ChatbotCitation:
+      description: A source of an answer. A ticket source carries only its Solution, never the ticket's details (GBR-36).
+      oneOf:
+        - $ref: '#/components/schemas/WikiDocumentCitation'
+        - $ref: '#/components/schemas/TicketSolutionCitation'
+      discriminator:
+        propertyName: type
+        mapping:
+          WIKI_DOCUMENT: '#/components/schemas/WikiDocumentCitation'
+          TICKET_SOLUTION: '#/components/schemas/TicketSolutionCitation'
+    WikiDocumentCitation:
+      type: object
+      required: [number, type, wikiDocumentId, title]
+      properties:
+        number:
+          type: integer
+        type:
+          type: string
+          enum: [WIKI_DOCUMENT]
+        wikiDocumentId:
+          type: integer
+          format: int64
+        title:
+          type: string
+    TicketSolutionCitation:
+      type: object
+      required: [number, type, solution]
+      properties:
+        number:
+          type: integer
+        type:
+          type: string
+          enum: [TICKET_SOLUTION]
+        solution:
+          $ref: '#/components/schemas/CitedSolution'
+    CitedSolution:
+      type: object
+      required: [symptoms, rootCause, resolutionSteps, workaround, scopeOfApplicability]
+      properties:
+        symptoms:
+          type: string
+        rootCause:
+          type: string
+        resolutionSteps:
+          type: string
+        workaround:
+          type: [string, 'null']
+        scopeOfApplicability:
+          type: string
     FieldError:
       type: object
       required: [field, code]
@@ -713,7 +863,7 @@ components:
           type: string
         code:
           type: string
-          description: SRS message code, e.g. MSG47.
+          description: SRS message code, e.g. MSG49.
         params:
           type: object
           additionalProperties:
@@ -735,7 +885,7 @@ components:
           type: string
         code:
           type: string
-          description: SRS message code, e.g. MSG47. Missing or unknown = the web app shows MSG06.
+          description: SRS message code, e.g. MSG49. Missing or unknown = the web app shows MSG06.
         params:
           type: object
           description: Values for the message template, e.g. {"department_name":"IT"}.

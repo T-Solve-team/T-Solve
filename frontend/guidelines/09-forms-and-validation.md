@@ -4,7 +4,7 @@
 > `src/shared/forms/`, `src/shared/ui/AppForm` (`AppForm`, `FormField`), `FormModal`, `ConfirmDialog`, uploads).
 > **Why it matters:** the NFR asks for required fields marked `*`, checks when leaving a field, errors next
 > to the field, no lost input on failure, and a confirm before hard-to-undo actions. One pattern makes all
-> 25 screens behave that way.
+> 35 screens behave that way.
 
 ## 1. The pattern
 
@@ -34,7 +34,7 @@ the field's label.
 | `rules.maxLength('Reason', 1000)` | MSG02 "Reason must not exceed 1000 characters." | every text field with a limit |
 | `rules.email()` | MSG03 | Email |
 | `rules.wholeNumberMin(1)` | MSG44 | Review range |
-| `rules.dateRangeNotFuture()` | MSG94 | Resolved from / Resolved to — *not built yet (with the first date-range filter)* |
+| `rules.dateRangeNotFuture()` | MSG39 | Resolved from / Resolved to — *not built yet (with the first date-range filter)* |
 
 ```tsx
 // ✅ Do
@@ -53,8 +53,8 @@ the field's label.
   comment 500 · Project key 20 · Jira site 200).
 - **Don't use the input's native `maxLength`.** It silently cuts pasted text, so the user never sees MSG02.
   Use `count={{ show: true, max }}` (shows "12 / 1000" without cutting) + `rules.maxLength`.
-- Server-only checks (duplicate name MSG43, duplicate email MSG41, Jira project already linked MSG47,
-  existing ticket ID MSG66) come back as `fieldErrors` — don't try to pre-check them in the browser.
+- Server-only checks (duplicate name MSG43, duplicate email MSG11, Jira project already linked MSG49,
+  existing ticket ID MSG31) come back as `fieldErrors` — don't try to pre-check them in the browser.
 
 ## 3. Submitting
 
@@ -65,7 +65,7 @@ function handleFinish(values: RejectTicketsRequest) {
   reject.mutate(
     { data: { ...values, ticketIds } },
     {
-      onSuccess: () => { form.resetFields(); onClose(); },   // MSG20 is shown by the hook
+      onSuccess: () => { form.resetFields(); onClose(); },   // MSG16 is shown by the hook
       onError: (error) => applyApiErrors(form, error),        // field errors under fields
     },
   );
@@ -97,16 +97,25 @@ danger variant (Figma "Danger confirm") is used when the action is destructive o
 
 | Action | MSG | Danger |
 |---|---|---|
-| Approve 2+ tickets | MSG90 | no |
-| Reject ticket(s) (popup with reason) | MSG19 | yes |
-| Unpublish · Re-publish | MSG29 · MSG63 | yes · no |
-| Fill solution over existing ones (Import Preview) | MSG91 | no |
-| Leave Import Preview | MSG92 | yes |
-| Delete Department · Restore Department | MSG67 · MSG83 | yes · no |
-| Remove Project · Remove member | MSG85 · MSG87 | yes · yes |
+| Approve 2+ tickets | MSG19 | no |
+| Reject ticket(s) (popup with reason) | MSG15 | yes |
+| Unpublish · Re-publish | MSG21 · MSG23 | yes · no |
+| Fill solution over existing ones (Import Preview) | MSG36 | no |
+| Leave Import Preview | MSG37 | yes |
+| Delete Department · Restore Department | MSG45 · MSG51 | yes · no |
+| Remove Project · Remove member | MSG53 · MSG55 | yes · yes |
+| Delete a Draft | MSG42 | yes |
+| Deactivate an account (it manages no Active Project and no Space) | MSG57 | yes |
+| Remove the Ticket Resolver role from a Project member | MSG78 | yes |
+| Move a Wiki document to the trash · Delete it permanently | MSG100 · MSG103 | yes · yes |
+| Remove a Space access | MSG106 | yes |
 | Session expired | MSG07 | no (info) |
 
-Single-ticket Approve, Request changes and Send back to queue have no extra confirm (SRS UC-38, UC-40, UC-35).
+Deactivating the Project Manager of Active Projects, or deactivating a Knowledge Manager (or removing their
+role) while they manage Spaces, opens the Hand Over Responsibilities popup (1.3.3, MSG_NEW_2) instead of a
+confirm dialog (decision D3).
+
+Single-ticket Approve, Request changes and Send back to queue have no extra confirm (Report3 UC-30).
 
 ## 6. Other inputs
 
@@ -116,8 +125,8 @@ Single-ticket Approve, Request changes and Send back to queue have no extra conf
   hard-code business lists except the fixed enums (roles, statuses, sources).
 - **Search boxes:** antd `Input.Search`; the value goes to the URL (`?q=`) on Enter, not on every keystroke.
 - **Uploads** (*not built yet — FE-36; the FE Lead adds them before the first screen that needs them*):
-  `EvidenceUpload` (≤ 5 files, ≤ 10 MB each, PNG/JPG/PDF/DOCX/XLSX/TXT/LOG → MSG40, MSG62)
-  and `CsvUpload` (.csv, ≤ 10 MB → MSG33, MSG34). Files are checked when added and sent with the form —
+  `EvidenceUpload` (≤ 5 files, ≤ 10 MB each, PNG/JPG/PDF/DOCX/XLSX/TXT/LOG → MSG34, MSG72)
+  and `CsvUpload` (.csv, ≤ 10 MB → MSG27, MSG28). Files are checked when added and sent with the form —
   no automatic upload. Existing Evidence is read-only (never removable).
 
 ## 7. Labels and focus
@@ -134,4 +143,4 @@ this); the first invalid field gets focus on submit (`scrollToFirstError`).
 - [ ] Confirm dialogs exactly where the table above says.
 
 ---
-*Last verified against code: 2026-10-10, step 5.5 — every path, name, rule and ✅ example checked against the scaffold.*
+*Last verified against code: 2026-10-23, KAN-63 — screens, roles, paths and MSG codes checked against the Report3 foundation (`src/test/guidelines.test.ts`).*

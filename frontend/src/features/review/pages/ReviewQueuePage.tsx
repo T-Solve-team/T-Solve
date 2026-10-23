@@ -54,7 +54,7 @@ export function ReviewQueuePage() {
     approve.mutate({ data: { ticketIds: selectedIds } }, { onSuccess: finishDecision });
   }
 
-  // SRS 7.1: approving two or more tickets asks first (MSG90); one ticket is approved at once.
+  // SRS 7.1: approving two or more tickets asks first (MSG19); one ticket is approved at once.
   function handleApprove() {
     if (selectedIds.length >= 2) setOpenDialog('confirmApprove');
     else runApprove();
@@ -90,7 +90,7 @@ export function ReviewQueuePage() {
 
       <ConfirmDialog
         isOpen={openDialog === 'confirmApprove'}
-        code="MSG90"
+        code="MSG19"
         params={{ count: selectedIds.length }}
         isConfirming={approve.isPending}
         onConfirm={runApprove}

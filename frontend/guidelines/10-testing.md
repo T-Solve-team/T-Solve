@@ -13,7 +13,7 @@
 | **React Testing Library** + **user-event** | render components and act like a user (click, type, Tab) |
 | **jsdom** | browser-like DOM in Node |
 | **MSW 3** | intercepts `fetch` and answers with the same handlers used in mock mode — tests go through the real `http.ts`, generated hooks and TanStack Query |
-| `src/test/render.tsx` | `renderApp(path, { role })` — the whole app (real routes, guards, AppShell) at a URL · `renderWithProviders(ui, { role })` — one component with theme, antd and a fresh QueryClient. Both use the app's real QueryClient (global error handling included) without retries, return it as `queryClient`, and set who the `/me` mock returns (`role: null` = signed out). |
+| `src/test/render.tsx` | `renderApp(path, { role })` — the whole app (real routes, guards, AppShell) at a URL · `renderWithProviders(ui, { role })` — one component with theme, antd and a fresh QueryClient. Both use the app's real QueryClient (global error handling included) without retries, return it as `queryClient`, and set who the `/me` mock returns: `{ role }` = the fixture user with exactly that role (plus Employee; default Project Manager), `{ user: 'pm-km' }` = a fixture user with several roles (`DEV_USERS`), `role: null` = signed out. |
 | `src/test/setup.ts` | starts the MSW server for every test file; a request with **no** handler fails the test (`onUnhandledFrame: 'error'`); handlers are reset after each test |
 
 Not adopted (on purpose): E2E (Playwright/Cypress), snapshot tests, coverage thresholds, component
@@ -24,7 +24,7 @@ cover end-to-end flows on staging.
 
 | Write tests for | Typically |
 |---|---|
-| **Kit components** (`shared/ui`) | each variant renders the right text/role; StatusTag label per status; DataTable empty/loading/error; upload limits → MSG40/MSG62 (once the upload components exist) |
+| **Kit components** (`shared/ui`) | each variant renders the right text/role; StatusTag label per status; DataTable empty/loading/error; upload limits → MSG34/MSG72 (once the upload components exist) |
 | **Logic** in `shared/` (`date.ts`, `rules`, `msg()` templating, `applyApiErrors`, landing page per role) | plain unit tests, many cases, fast |
 | **One page test per feature** (minimum) | happy path + empty state + error state, through MSW |
 | **Every mutation flow you build** | confirm → request sent with the right body → MSG toast → list refreshed |
@@ -64,14 +64,14 @@ server.use(
   }),
 );
 // ✅ Do — an error in the agreed format (Problem Details + MSG code)
-server.use(http.post('*/api/v1/reviews/reject', () => problem(409, 'MSG47')));
+server.use(http.post('*/api/v1/reviews/reject', () => problem(409, 'MSG49')));
 
 // ❌ Don't
 vi.mock('@/shared/api', () => ({ useGetReviewQueue: () => ({ data: [] }) }));
 ```
 
 ### T3 — Use the SRS texts in assertions, through the catalog.
-`expect(await screen.findByText(msg('MSG16'))).toBeInTheDocument()` — the test breaks if someone types
+`expect(await screen.findByText(msg('MSG13'))).toBeInTheDocument()` — the test breaks if someone types
 the text by hand differently.
 
 ### T4 — Every test is independent.
@@ -84,10 +84,10 @@ hook option (`refetchInterval`), not real waiting.
 
 ### T6 — File and name conventions.
 Test file sits next to its subject: `ReviewQueuePage.test.tsx`. `describe` = the unit
-(`'ReviewQueuePage'`); `it` = the behaviour in plain English (`'shows MSG16 when no tickets are waiting'`).
+(`'ReviewQueuePage'`); `it` = the behaviour in plain English (`'shows MSG13 when no tickets are waiting'`).
 When the work has a HarnessClaude spec, the `it` starts with the id of the acceptance criterion it proves:
 `it('AC-002.1 lists the pending tickets of my Projects')` — `bun harnessclaude/hooks/sdd.ts trace <module>`
-looks for that id. A bug fix ends with the bug id from `docs/bug-log.md`:
+looks for that id, in the test files under the module's `paths`. A bug fix ends with the bug id from `docs/bug-log.md`:
 `it('keeps the selection after Approve (BUG-004)')`.
 `vi.mock`/`vi.hoisted`, if ever needed, go at the top level of the file (Vitest 5 requirement).
 
@@ -111,7 +111,7 @@ describe('ReviewQueuePage', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows MSG16 when no tickets are waiting', async () => {
+  it('shows MSG13 when no tickets are waiting', async () => {
     server.use(
       getGetReviewQueueMockHandler({
         content: [],
@@ -119,17 +119,17 @@ describe('ReviewQueuePage', () => {
       }),
     );
     renderApp('/review-queue', { role: 'PROJECT_MANAGER' });
-    expect(await screen.findByText(msg('MSG16'))).toBeInTheDocument();
+    expect(await screen.findByText(msg('MSG13'))).toBeInTheDocument();
   });
 
-  it('asks MSG90 before approving two tickets, then shows MSG18', async () => {
+  it('asks MSG19 before approving two tickets, then shows MSG14', async () => {
     const user = userEvent.setup();
     renderApp('/review-queue', { role: 'PROJECT_MANAGER' });
     await user.click(await screen.findByRole('checkbox', { name: /ITSUP-1031/ }));
     await user.click(screen.getByRole('checkbox', { name: /ITSUP-1102/ }));
     await user.click(screen.getByRole('button', { name: 'Approve' }));
-    await user.click(await screen.findByRole('button', { name: 'OK' }));  // MSG90 dialog
-    expect(await screen.findByText(msg('MSG18', { count: 2 }))).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'OK' }));  // MSG19 dialog
+    expect(await screen.findByText(msg('MSG14', { count: 2 }))).toBeInTheDocument();
   });
 });
 ```
@@ -170,8 +170,9 @@ src/mocks/handlers.ts — every handler, first match wins:
   The full version (filter and sort too) is `features/review/mocks/handlers.ts`.
 - Errors: `problem(status, code?, { params, fieldErrors })` from `@/shared/api/mocks` builds the agreed error
   body. Latency: `await delay(MOCK_DELAY_MS)` (`delay` from `msw`) — 400 ms in the browser, 0 in tests.
-- Who is signed in: the dev role switcher (browser) or the `role` option of `renderApp` (tests) choose which
-  fixture user `/me` returns (`shared/auth/dev-role.ts`). Fixture users live in `src/mocks/session.ts`.
+- Who is signed in: the dev user switcher (browser) or the `role` / `user` option of `renderApp` (tests)
+  choose which fixture user `/me` returns (`shared/auth/dev-user.ts`). Fixture users — one per role and some
+  with several roles — live in `src/mocks/session.ts`.
 - 🔒 `msw`, `@faker-js/faker` and `@/shared/api/mocks` may be imported only in `mocks/` folders and tests, and
   the generated `*.msw` files only there — app code never ships mock code. `src/mocks` is imported only by
   tests and `main.tsx` (mock mode, dev builds only).
@@ -198,4 +199,4 @@ more is doing too much; split it.
 - [ ] `npm run test` passes locally.
 
 ---
-*Last verified against code: 2026-10-10, step 5.5 — every path, name, rule and ✅ example checked against the scaffold.*
+*Last verified against code: 2026-10-23, KAN-63 — screens, roles, paths and MSG codes checked against the Report3 foundation (`src/test/guidelines.test.ts`).*

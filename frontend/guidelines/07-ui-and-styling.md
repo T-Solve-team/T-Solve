@@ -61,8 +61,8 @@ Each "Web/…" component maps to exactly one thing in code. Props mirror the Fig
 | Web/Card (Kind=Section / Stat) | `SectionCard` (`title`, `children`) · `StatCard` (`label`, `value`) | |
 | Web/Modal Kind=Confirm / Danger confirm | `ConfirmDialog` (`isOpen`, `code`, `params`, `isDanger`, `okText`, `isConfirming`, `onConfirm`, `onCancel`) | centred, 520 wide |
 | Web/Modal Header (Form / Danger) + content + Web/Modal Footer | `FormModal` (`isOpen`, `title`, `kind`, `width`, `form`, `okText`, `isOkDanger`, `isSubmitting`, `onSubmit`, `onCancel`) | centred; form cleared when closed |
-| Web/Upload (Idle/Dragging/File listed/File error) | `EvidenceUpload` · `CsvUpload` — **not built yet** (FE Lead, before the first screen that needs them) | limits and MSG40/MSG62/MSG33/MSG34 built in |
-| Web/App Shell (Role=4) + Web/Menu Item | `app/layout/AppShell` + `SideMenu` | §5 |
+| Web/Upload (Idle/Dragging/File listed/File error) | `EvidenceUpload` · `CsvUpload` — **not built yet** (FE Lead, before the first screen that needs them) | limits and MSG34/MSG72/MSG27/MSG28 built in |
+| Web/App Shell (role variants) + Web/Menu Item | `app/layout/AppShell` + `SideMenu` | §5 |
 | Icons (Ant Design Icons) | `@ant-design/icons`, same names (`Icon/Inbox` → `InboxOutlined`) | |
 | *(part of every form, no own component)* | `AppForm` | antd `Form` with our defaults ([09](09-forms-and-validation.md)) |
 
@@ -141,19 +141,23 @@ horizontally, the menu may not collapse below that.
 `AppShell` (Figma "Web/App Shell") = left side menu (252 px: logo + product name, then 220 px
 "Web/Menu Item" entries) + top bar (page title as H1, user menu with **My Profile** and **Log out**) +
 content area. One shell for all roles; the menu items come
-from `app/layout/menu-config.ts`, pre-filled with the approved menus (landing page first):
+from `app/layout/menu-config.ts`, pre-filled with the menu of each role (UI design v3 decisions, D4):
 
 | Role | Menu |
 |---|---|
-| Staff | Search · Ticket List |
-| Project Manager | Review Queue · Review History · Expired Tickets · Search · Ticket List · Import Tickets · Import History · Knowledge Dashboard · Jira Integration |
-| Department Manager | Knowledge Dashboard · Search · Ticket List · Jira Integration |
-| Admin | User List · Workspace Settings · Jira Integration · Audit Log · Knowledge Dashboard |
+| Employee | Knowledge Chatbot · Wiki |
+| Ticket Resolver | Search · Ticket List |
+| Project Manager | Review Queue · Expired Tickets · Review History · Search · Ticket List · Import Tickets · Import History · Triage History · Knowledge Dashboard · Jira Integration |
+| Knowledge Manager | Wiki · Knowledge Chatbot |
+| Admin | User List · Workspace Settings · Jira Integration · Knowledge Dashboard · Audit Log |
+
+A user with several roles gets one menu, `menuFor(roles)`: the menus in the order Admin, Project Manager,
+Knowledge Manager, Ticket Resolver, Employee, each item only once (its first place).
 
 The selected item follows the current route: the longest menu path the URL starts with, so detail screens
 highlight their list (Ticket Detail → Ticket List); My Profile highlights nothing. In dev builds running on
-mocks (`VITE_API_MOCKING=true`) a small **role switcher** (bottom right) signs you in as any role or signs you
-out; it is not in production builds. Menu changes need a UI-decision change first — they are not a feature's choice.
+mocks (`VITE_API_MOCKING=true`) a small **user switcher** (bottom right) signs you in as any mock user — one
+role or several — or signs you out; it is not in production builds. Menu changes need a UI-decision change first — they are not a feature's choice.
 
 ## 6. Checklist
 
@@ -163,4 +167,4 @@ out; it is not in production builds. Menu changes need a UI-decision change firs
 - [ ] Looks right at 1366 × 768.
 
 ---
-*Last verified against code: 2026-10-10, step 5.5 — every path, name, rule and ✅ example checked against the scaffold.*
+*Last verified against code: 2026-10-23, KAN-63 — screens, roles, paths and MSG codes checked against the Report3 foundation (`src/test/guidelines.test.ts`).*

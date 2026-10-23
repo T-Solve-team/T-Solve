@@ -10,7 +10,7 @@ import type { FieldErrorParams } from './fieldErrorParams';
 
 export interface FieldError {
   field: string;
-  /** SRS message code, e.g. MSG47. */
+  /** SRS message code, e.g. MSG49. */
   code: string;
   params?: FieldErrorParams;
 }

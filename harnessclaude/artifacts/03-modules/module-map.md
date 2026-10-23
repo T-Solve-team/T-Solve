@@ -89,7 +89,7 @@ not exist yet are marked *proposed*; the backend lead confirms them when the mod
 
 | Module | Backend | Web app |
 |--------|---------|---------|
-| `be-foundation` | `common/**`, `TSolveApplication.java`, `resources/application*.yml` | — |
+| `be-foundation` | `common/**`, `TSolveApplication.java`, `resources/application*.yml`; also `backend/pom.xml`, `backend/AGENTS.md` and the imports of `knowledge/Solution.java`, `knowledge/SolutionService.java`, `ticket/TicketService.java` (planned 23/10) | — |
 | `fe-foundation` | — | `src/app/**`, `src/shared/**`, `src/mocks/**`, `src/test/**`, `features/*/routes.ts`, `features/*/index.ts`, `features/*/mocks/handlers.ts`, root config files, `AGENTS.md`, `guidelines/**` |
 | `identity` | `identity/**` | `features/auth/**`, `features/my-profile/**`, `features/users/**` |
 | `workspace` | `workspace/**` | `features/workspace/**` |
@@ -104,9 +104,9 @@ not exist yet are marked *proposed*; the backend lead confirms them when the mod
 | `dashboard-audit` | `analytics/**` | `features/knowledge-dashboard/**`, `features/audit-log/**` |
 
 Backend paths are under `backend/src/main/java/vn/tsolve/` and `backend/src/test/java/vn/tsolve/`; web app paths
-under `frontend/`. Until `triage`, `wiki` and `chatbot` are planned, `fe-foundation` also owns their placeholder
-folders, and until `ticket-review` is on `main` it also owns `features/review/**`; each module's planning (or
-arrival) removes its folder from `fe-foundation`.
+under `frontend/`. Until `triage` and `wiki` are planned, `fe-foundation` also owns their placeholder
+folders (`chatbot` took its folder with its plan, KAN-69), and until `ticket-review` is on `main` it also owns
+`features/review/**`; each module's planning (or arrival) removes its folder from `fe-foundation`.
 
 ## Cross-module interface contracts
 - **Session and roles** (`be-foundation` → all): `GET /api/v1/me` with all roles, Department, Departments,

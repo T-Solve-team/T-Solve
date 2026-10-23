@@ -23,7 +23,7 @@ async function handleUnauthorized(client: QueryClient): Promise<void> {
   } finally {
     sessionExpiredDialogOpen = false;
   }
-  await resetSession(client);
+  await resetSession(client, { signedOut: true });
 }
 
 function handleMutationError(error: ApiError): void {

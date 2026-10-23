@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "generate:api": "orval --config orval.config.ts",
-    "api:pull": "node scripts/pull-api.mjs"
+    "api:pull": "node scripts/pull-api.mjs",
+    "messages:report3": "node scripts/report3-messages.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.3.4",

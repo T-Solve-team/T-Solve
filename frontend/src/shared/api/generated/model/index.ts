@@ -8,6 +8,12 @@
  */
 
 export * from './approveTicketsRequest';
+export * from './chatbotAnswer';
+export * from './chatbotAnswerOutcome';
+export * from './chatbotCitation';
+export * from './chatbotQuestion';
+export * from './chatbotTurn';
+export * from './citedSolution';
 export * from './currentUser';
 export * from './departmentRef';
 export * from './fieldError';
@@ -42,7 +48,12 @@ export * from './rowError';
 export * from './rowErrorParams';
 export * from './sizeParameter';
 export * from './sortParameter';
+export * from './spaceRef';
 export * from './ticketIdList';
+export * from './ticketSolutionCitation';
+export * from './ticketSolutionCitationType';
 export * from './ticketSource';
 export * from './uploadCsvImportBody';
 export * from './userSummary';
+export * from './wikiDocumentCitation';
+export * from './wikiDocumentCitationType';

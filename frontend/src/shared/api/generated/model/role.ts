@@ -7,11 +7,15 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 
+/**
+ * A role of a user (Report3 4.1, GBR-28). A user can hold several; every user has EMPLOYEE.
+ */
 export type Role = (typeof Role)[keyof typeof Role];
 
 export const Role = {
-  ADMIN: 'ADMIN',
-  DEPARTMENT_MANAGER: 'DEPARTMENT_MANAGER',
+  EMPLOYEE: 'EMPLOYEE',
+  TICKET_RESOLVER: 'TICKET_RESOLVER',
   PROJECT_MANAGER: 'PROJECT_MANAGER',
-  STAFF: 'STAFF',
+  KNOWLEDGE_MANAGER: 'KNOWLEDGE_MANAGER',
+  ADMIN: 'ADMIN',
 } as const;

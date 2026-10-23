@@ -10,6 +10,7 @@ paths:
   - backend/src/main/resources/db/changelog/**
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
+  - frontend/src/features/chatbot/**
   - docs/bug-log.md
 ---
 
@@ -18,7 +19,7 @@ paths:
 **Owner:** Trần Trung Hiếu
 
 ## Description
-Knowledge Chatbot (UC-51–53, KAN-48): answers with citations from the Solutions of all Published tickets (without ticket details) and the Wiki documents the user may see; history for the session only; ratings (GBR-36). The backend package `chatbot` is proposed. The web folder `frontend/src/features/chatbot/` moves from `fe-foundation` into these paths when the module is planned.
+Knowledge Chatbot (UC-51–53, KAN-48): answers with citations from the Solutions of all Published tickets (without ticket details) and the Wiki documents the user may see; history for the session only; ratings (GBR-36). The backend package `chatbot` is proposed and built later; until then MSW mocks serve the contract (KAN-48). The web folder `frontend/src/features/chatbot/` moved from `fe-foundation` into these paths with the plan (KAN-69).
 
 ## Responsibilities
 - Questions and answers with citations; MSG109 when no source is found.
@@ -43,5 +44,6 @@ Knowledge Chatbot (UC-51–53, KAN-48): answers with citations from the Solution
 - default: backend/ (`chatbot`, proposed), frontend/ (`chatbot`).
 
 ## Related Artifacts
-- Spec: `artifacts/03-modules/chatbot/spec.md` (written when the module is planned)
+- Spec: `artifacts/03-modules/chatbot/spec.md`
+- Design: `artifacts/04-plans/chatbot/design.md` · Tasks: `artifacts/04-plans/chatbot/iteration-1/tasks.md`
 - Map: `artifacts/03-modules/module-map.md`
