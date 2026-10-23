@@ -15,6 +15,15 @@ const CONVERSATION: Conversation = {
   turns: [{ question: 'VPN?', answer: ANSWER }],
 };
 
+const stored = (conversations: unknown[]) =>
+  JSON.stringify({ version: 1, userId: 7, conversations });
+
+/** The conversation with the given (possibly malformed) citations on its answer. */
+const withCitations = (citations: unknown[]) => ({
+  ...CONVERSATION,
+  turns: [{ question: 'VPN?', answer: { ...ANSWER, citations } }],
+});
+
 describe('chatbot-storage', () => {
   beforeEach(() => sessionStorage.clear());
   afterEach(() => vi.restoreAllMocks());
@@ -42,6 +51,12 @@ describe('chatbot-storage', () => {
     ['broken JSON', '{not json'],
     ['an older version', JSON.stringify({ version: 0, userId: 7, conversations: [] })],
     ['a wrong shape', JSON.stringify({ version: 1, userId: 7, conversations: [{ id: 1 }] })],
+    ['a conversation without turns', stored([{ ...CONVERSATION, turns: [] }])],
+    [
+      'a citation of a wrong shape',
+      stored([withCitations([{ number: 1, type: 'WIKI_DOCUMENT' }])]),
+    ],
+    ['a citation of an unknown type', stored([withCitations([{ number: 1, type: 'OTHER' }])])],
   ])('AC-002.8 drops %s (edge 13)', (_what, stored) => {
     sessionStorage.setItem(CONVERSATIONS_KEY, stored);
 

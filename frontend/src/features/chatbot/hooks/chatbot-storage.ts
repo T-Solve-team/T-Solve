@@ -1,10 +1,20 @@
-import type { ChatbotAnswer } from '@/shared/api';
+import type { ChatbotAnswer, ChatbotCitation } from '@/shared/api';
 import type { Conversation } from '../model';
 
 /** Spec AC-002.7: under the `tsolve.session.` prefix, so logout and a global 401 remove it (fe-foundation). */
 export const CONVERSATIONS_KEY = 'tsolve.session.chatbot.conversations';
 
 const VERSION = 1;
+
+/** The fields the citation list renders; a stored citation without them would crash it. */
+function isCitation(value: unknown): value is ChatbotCitation {
+  const c = value as Record<string, unknown> | null;
+  if (typeof c !== 'object' || c === null || typeof c.number !== 'number') return false;
+  if (c.type === 'WIKI_DOCUMENT') {
+    return typeof c.wikiDocumentId === 'number' && typeof c.title === 'string';
+  }
+  return c.type === 'TICKET_SOLUTION' && typeof c.solution === 'object' && c.solution !== null;
+}
 
 function isAnswer(value: unknown): value is ChatbotAnswer {
   const answer = value as Partial<ChatbotAnswer> | null;
@@ -14,7 +24,8 @@ function isAnswer(value: unknown): value is ChatbotAnswer {
     typeof answer.answerId === 'string' &&
     typeof answer.text === 'string' &&
     (answer.outcome === 'ANSWERED' || answer.outcome === 'NO_SOURCE') &&
-    Array.isArray(answer.citations)
+    Array.isArray(answer.citations) &&
+    answer.citations.every(isCitation)
   );
 }
 
@@ -26,6 +37,7 @@ function isConversation(value: unknown): value is Conversation {
     typeof c.id === 'string' &&
     typeof c.startedAt === 'number' &&
     Array.isArray(c.turns) &&
+    c.turns.length > 0 &&
     c.turns.every(
       (turn) =>
         typeof turn === 'object' &&
