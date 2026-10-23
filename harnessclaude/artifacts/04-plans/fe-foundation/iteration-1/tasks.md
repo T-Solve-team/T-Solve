@@ -1,7 +1,7 @@
 ---
 module: fe-foundation
 date: 2026-10-22
-total_tasks: 5
+total_tasks: 6
 owner: Dev
 ---
 
@@ -129,3 +129,18 @@ role and Jira key, the `tsolve.session.` prefix in 06 §7, decision-log entries)
 **Covers:** AC-010.1–AC-010.4
 **Dependencies:** Task 4
 **Estimated size:** medium
+
+---
+
+## Task 6: Placeholders only while a screen is not built
+
+**Story:** STORY-005
+**Feature:** placeholder-rule
+**Jira:** KAN-71 · branch `feature/KAN-71-chatbot-ask-answer` (change request, inside the chatbot PR)
+**Description:** AC-005.3 now holds only while a screen is not built by its module. Remove the 12.1 row of the
+placeholder test, since `chatbot` builds 12.1 in the same PR. Later modules remove their own row with a quick change.
+**Files:**
+- Test: `frontend/src/app/router/route-table.test.tsx`
+**Covers:** AC-005.3
+**Dependencies:** Task 3
+**Estimated size:** small

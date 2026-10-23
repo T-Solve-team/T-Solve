@@ -11,6 +11,7 @@ owner: BA
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
 | 2026-10-22 | STORY-001..STORY-010 | Initial spec from Report3 and decisions D1–D6 | Bring the web app base in line with Report3 (KAN-57, KAN-58) |
+| 2026-10-23 | STORY-005 | AC-005.3: a placeholder only while its module has not built the screen | 12.1 is built by `chatbot` (KAN-71); later modules remove their test row with a quick change (FE Lead, 23/10) |
 
 ## Requirements
 
@@ -137,8 +138,9 @@ owner: BA
   - AC-005.2: THE web app SHALL give these popups no path and SHALL name each in the `routes.ts` of its feature:
     1.3.3 Hand Over Responsibilities, 2.4 Delete Department, 5.3 Import Ticket Preview, 7.2 Request Changes, 7.3
     Reject Ticket, 8.1 Give Feedback, 9.3 Audit Entry Detail, 10.2 Triage Result Detail, 11.5 Folder.
-  - AC-005.3: WHEN a user who may open 2.1, 10.1, 11.1, 11.2, 11.4, 11.7 or 12.1 opens it, THE web app SHALL show a
-    placeholder with the screen's number and title.
+  - AC-005.3: WHILE a placeholder screen is not built by its module, THE web app SHALL show a placeholder with the
+    screen's number and title to a user who may open it. The placeholder screens are 2.1, 10.1, 11.1, 11.2, 11.4, 11.7
+    and 12.1.
   - AC-005.4: THE features `triage`, `wiki` and `chatbot` SHALL be registered like every other feature (routes,
     public `index.ts`, mock handlers in `src/mocks/handlers.ts`).
   - AC-005.5: IF a user opens a path that no screen has, THEN THE web app SHALL show the 404 page.

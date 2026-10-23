@@ -32,6 +32,12 @@ Master registry of all artifacts in this workspace.
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/design.md |
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/iteration-1/design.md |
 | — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-1/tasks.md |
+| — | session-log | chatbot | passing | artifacts/05-implementation/chatbot/task-1-ask-answer.md |
+| — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-6-placeholder-rule.md |
+| — | review | chatbot | pass | artifacts/06-evaluation/chatbot/task-1-ask-answer-review.md |
+| — | test-report | chatbot | pass | artifacts/06-evaluation/chatbot/task-1-ask-answer-test-report.md |
+| — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-6-placeholder-rule-review.md |
+| — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-6-placeholder-rule-test-report.md |
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-1-roles-session.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-1-roles-session-review.md |
 | — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-1-roles-session-test-report.md |
