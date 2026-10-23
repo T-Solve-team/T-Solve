@@ -129,3 +129,8 @@
 {"ts":"2026-10-23T14:05:14.000Z","type":"spec-approved","module":"chatbot","specHash":"3c134168da3d1bd738c011d02a668cf8f85427cc2b7db8ee9d08b04fff71c939"}
 {"ts":"2026-10-23T14:18:23.624Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"b64f80460c52168c86f438271c0ee2d51d701691"}
 {"ts":"2026-10-23T14:18:23.833Z","type":"feature-status","module":"chatbot","feature":"citations","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-23T14:25:28.854Z","type":"feature-status","module":"chatbot","feature":"citations","from":"evaluating","to":"fixing"}
+{"ts":"2026-10-23T14:32:55.416Z","type":"quick-opened","what":"Guideline 09: note that the 12.1 question box checks on change, not on blur (BUG-007)","files":["frontend/guidelines/09-forms-and-validation.md"]}
+{"ts":"2026-10-23T14:37:49.573Z","type":"quick-closed","what":"Guideline 09: note that the 12.1 question box checks on change, not on blur (BUG-007)","files":["frontend/guidelines/09-forms-and-validation.md"]}
+{"ts":"2026-10-23T14:37:50.561Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"a5fe25b7f4f6bf98ee54b183be0325675e7c4a72"}
+{"ts":"2026-10-23T14:37:50.734Z","type":"feature-status","module":"chatbot","feature":"citations","from":"fixing","to":"evaluating"}

@@ -40,3 +40,23 @@ none
 
 ### Next up
 Review by `harnessclaude-reviewer`; then Task 3 (KAN-72, session conversations).
+
+## Session 2026-10-23 22:30
+
+### Working on: citations — review attempt 1 FAIL, fixing (attempt 2)
+- Finding 1 (critical): the AC-002.10 test now waits until the availability query for [9003] is in `error` before
+  asserting the links and that no message shows.
+- Finding 2: `useUnavailableDocuments` keeps the previous result (`placeholderData: keepPreviousData`) while a
+  follow-up's documents are checked; new test "checks the Wiki documents of every turn and keeps MSG110 while it
+  checks again" failed before the fix (MSG110 disappeared).
+- Finding 3: test for citations that arrive out of order.
+- Finding 5: AC-002.9 tests assert the ids sent ([9003], then [9001, 9003]).
+- Finding 4 (the BUG-007 test waits 500 ms for a message that must not come): kept, a negative check needs a wait.
+- Guideline 09 (FE Lead's call): one line on the question box's `validateTrigger="onChange"` (BUG-007), as a quick
+  change on that file only.
+- Commits: default@4c9f297 (fixes), default@a5fe25b (guideline 09)
+- Verify: format, lint, typecheck clean; `npm run test` 25 files, 437 passed; build OK; `generate:api` no diff.
+
+### Next up
+Review attempt 2.
+
