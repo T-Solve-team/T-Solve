@@ -43,9 +43,6 @@ describe('session roles', () => {
   it('AC-001.7 leaves out a role the web app does not know and keeps the others', () => {
     // A newer backend could send a role this build does not know yet.
     const withUnknownRole = { ...fromServer, roles: ['EMPLOYEE', 'AUDITOR', 'ADMIN'] };
-    expect(toSession(withUnknownRole as unknown as CurrentUser).roles).toEqual([
-      'EMPLOYEE',
-      'ADMIN',
-    ]);
+    expect(toSession(withUnknownRole).roles).toEqual(['EMPLOYEE', 'ADMIN']);
   });
 });
