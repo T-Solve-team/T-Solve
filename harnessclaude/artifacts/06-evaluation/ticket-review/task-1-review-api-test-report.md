@@ -16,7 +16,7 @@
 No code-coverage command or numerical coverage threshold is configured in the backend. Coverage percentage was not measured. Assertions cover authorization, validation, state changes, persistent side effects, rollback, lock contention and API serialization.
 
 ## Acceptance Criteria → Tests
-- Official `bun harnessclaude/hooks/sdd.ts trace ticket-review`: **failed, 0/30**. BUG-010 excludes `*Test.java` and does not normalize the Java naming required by backend conventions. Neither hooks nor statuses were changed to conceal the result.
+- Official `bun harnessclaude/hooks/sdd.ts trace ticket-review`: **failed, 0/30**. BUG-013 excludes `*Test.java` and does not normalize the Java naming required by backend conventions. Neither hooks nor statuses were changed to conceal the result.
 - Supporting manual Java-name inventory: **24/30 IDs mentioned**. This is diagnostic evidence only. Several mentioned criteria combine backend and frontend behavior; their full satisfaction is not claimed.
 - No Java-name mention: AC-001.4, AC-002.2, AC-002.3, AC-003.1, AC-006.5, AC-006.6. UI assertions and delivery documentation validation remain for Task 2/module evaluation.
 - Module/feature has not been marked passing or completed. Implementation remains at its user commit checkpoint.
@@ -24,13 +24,13 @@ No code-coverage command or numerical coverage threshold is configured in the ba
 ## Failures found and disposition
 | ID | Reproduction / root cause | Disposition |
 |----|----------------------------|-------------|
-| BUG-006 | Mockito/Byte Buddy cannot instrument Java 25 classes | Fixed local test toolchain to Java 21; no dependency suppression or test weakening |
-| BUG-007 | Stubbing a transactional audit proxy triggers MANDATORY outside a transaction | Fixed test injection to target the underlying spy while retaining the production transaction proxy |
-| BUG-008 | JSON ID 1.5 accepted as 1; expected 400 versus actual 200 | Fixed strict integer deserialization; regression covers bulk and single-ticket IDs |
-| BUG-009 | All-null sections create zero secondary Solution rows; expected 1 versus actual 0 | Fixed mandatory secondary row; PostgreSQL regression passes |
-| BUG-010 | Framework trace reports zero despite executing JUnit tests | Open; outside approved review-module code paths; recorded in FEEDBACK.md |
+| BUG-009 | Mockito/Byte Buddy cannot instrument Java 25 classes | Fixed local test toolchain to Java 21; no dependency suppression or test weakening |
+| BUG-010 | Stubbing a transactional audit proxy triggers MANDATORY outside a transaction | Fixed test injection to target the underlying spy while retaining the production transaction proxy |
+| BUG-011 | JSON ID 1.5 accepted as 1; expected 400 versus actual 200 | Fixed strict integer deserialization; regression covers bulk and single-ticket IDs |
+| BUG-012 | All-null sections create zero secondary Solution rows; expected 1 versus actual 0 | Fixed mandatory secondary row; PostgreSQL regression passes |
+| BUG-013 | Framework trace reports zero despite executing JUnit tests | Open; outside approved review-module code paths; recorded in FEEDBACK.md |
 
-The ledger `docs/bug-log.md` retains all defects, including fixed ones. Frontend BUG-003–BUG-005 remain open. Initial expected-red TDD assertions and a temporary missing test database/configuration incident are retained in local run logs and the session notes; they are not represented as product regressions.
+The ledger `docs/bug-log.md` retains all defects, including fixed ones. Frontend BUG-006–BUG-008 remain open. Initial expected-red TDD assertions and a temporary missing test database/configuration incident are retained in local run logs and the session notes; they are not represented as product regressions.
 
 ## Notes
 - No tests were skipped or deleted to obtain the successful Maven result.
