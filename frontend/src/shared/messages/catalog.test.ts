@@ -62,6 +62,19 @@ describe('message catalog', () => {
     },
   );
 
+  it('gives a toast the error level when the action failed and the success level otherwise', () => {
+    // design.md "Toast level": no Report3 toast is info today; a new info toast is added here.
+    const levels = Object.entries(MESSAGES as Record<string, { type: string; level?: string }>)
+      .filter(([, { type }]) => type === 'toast')
+      .map(([code, { level }]) => [code, level]);
+    expect(levels.filter(([, level]) => level === 'error').map(([code]) => code)).toEqual([
+      'MSG06',
+      'MSG33',
+      'MSG69',
+    ]);
+    expect(levels.filter(([, level]) => level !== 'error' && level !== 'success')).toEqual([]);
+  });
+
   it('AC-006.3 holds MSG_NEW_2, the Hand Over popup intro, until System_Messages numbers it', () => {
     expect(MESSAGES.MSG_NEW_2).toEqual({
       type: 'inline',

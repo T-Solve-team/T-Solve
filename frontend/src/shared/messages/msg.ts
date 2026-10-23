@@ -17,6 +17,6 @@ export function isMsgCode(value: string): value is MsgCode {
 export function msg(code: MsgCode, params: MsgParams = {}): string {
   const values: MsgParams = { tracker_name: TRACKER_NAME, ...params };
   return MESSAGES[code].text.replace(/\{(\w+)\}/g, (placeholder, name: string) =>
-    name in values ? String(values[name]) : placeholder,
+    Object.hasOwn(values, name) ? String(values[name]) : placeholder,
   );
 }

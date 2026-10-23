@@ -49,8 +49,8 @@ export function useRequestChangesForTickets() {
   return useRequestTicketChanges({
     mutation: {
       meta: { handlesOwnErrors: true },
-      onSuccess: (result) => {
-        showMessage('MSG17', { count: result.count });
+      onSuccess: () => {
+        showMessage('MSG17');
         return refreshQueue(queryClient);
       },
     },
