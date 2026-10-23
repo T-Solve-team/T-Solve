@@ -29,7 +29,7 @@ const generatedHandlers: HttpHandler[] = Object.values(generated).flatMap((tagHa
 );
 
 /** Every feature's mocks, in the order their handlers are tried. */
-const FEATURE_MOCKS = [
+export const FEATURE_MOCKS = [
   auth,
   myProfile,
   users,
