@@ -39,3 +39,10 @@ trace chatbot (STORY-002): 11/11 acceptance criteria have a test
 
 ### Next up
 Commit (user agrees) → review → PR on "push".
+
+### Hand-off (2026-10-24)
+- done: session-conversations coded, Figma 12.1 matched, reviewed (PASS with notes, both fixed), module `completed`
+- open: nothing in the chatbot module
+- next: the next module in the manifest (`decomposed → plan`)
+- branch: `feature/KAN-72-chatbot-session-history` (merged, deleted locally)
+- PR: #53 merged as `4ac01af`; KAN-72 is Done
