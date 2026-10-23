@@ -98,7 +98,7 @@ export function toHistory(turns: ChatTurn[]): ChatbotTurn[];  // NO_SOURCE answe
 | Ratings in KAN-48 | Buttons left out until UC-53 | Disabled buttons | No half-feature (user, 23/10) |
 | Mock answers | Keyword answers; others `NO_SOURCE` | One fixed answer | Demos every Figma state (user, 23/10) |
 | AI provider | Ollama for answers, OpenRouter for embeddings, key in backend `.env` only (GBR-12); the model is chosen in the backend change | — | Report3 decides it (user, 23/10) |
-| Split | Three vertical slices, one PR each: KAN-71 ask and answer (with the contract and mocks), KAN-73 citations, KAN-72 session conversations | One PR for KAN-48 (~1,250 lines); four PRs with the contract alone (KAN-70, closed) | Each PR is one behaviour a user can try and near 400 changed lines; a contract ships with its first screen (guideline 06 "one feature = one PR"); KAN-71 is ~550 lines because the contract cannot leave its first user (user, 23/10) |
+| Split | Three vertical slices, one PR each, each with the contract and mocks its behaviour needs: KAN-71 ask and answer (ask path), KAN-73 citations (availability path), KAN-72 session conversations | One PR for KAN-48 (~1,250 lines); four PRs with the contract alone (KAN-70, closed) | Each PR is one behaviour a user can try and near 400 changed lines; a contract ships with its first screen (guideline 06 "one feature = one PR"); behaviour comes before the line count: KAN-71 is ~850 lines with tests and is not split further (user, 23/10) |
 | Errors of the ask | `handlesOwnErrors`: field errors under the box, every other error MSG06 | The global handler | The global handler would show a 503's code; AC-001.13 wants MSG06 always and the box kept |
 | History sent | Decided in planning: the last 10 turns, question and answer text only, no citations | Every turn | Bounded request size; citations add nothing to the model's context |
 | Newest first | Decided in planning: by the time the conversation was started (its first answer); continuing one does not move it | By last activity | Report3 "newest first" names conversations; Figma (i) puts a new one on top |
@@ -114,13 +114,13 @@ export function toHistory(turns: ChatTurn[]): ChatbotTurn[];  // NO_SOURCE answe
 
 ```
 frontend/
-├── openapi/tsolve-api.yaml                         Modify: tag chatbot, 2 paths, schemas (Task 1)
-├── src/shared/api/generated/**                     Regenerate (npm run generate:api) (Task 1)
+├── openapi/tsolve-api.yaml                         Modify: tag chatbot, ask path and schemas (Task 1); availability path (Task 2)
+├── src/shared/api/generated/**                     Regenerate (npm run generate:api) (Tasks 1, 2)
 └── src/features/chatbot/
     ├── model.ts                                    Create: types, limits, toHistory (Task 1)
-    ├── mocks/data.ts                               Create: keyword answers, unavailable ids, resetMockData (Task 1)
-    ├── mocks/handlers.ts                           Modify: askChatbot, listUnavailableCitedDocuments (Task 1)
-    ├── mocks/handlers.test.ts                      Create: AC-004.x (Task 1)
+    ├── mocks/data.ts                               Create: keyword answers, resetMockData (Task 1); unavailable ids (Task 2)
+    ├── mocks/handlers.ts                           Modify: askChatbot (Task 1); listUnavailableCitedDocuments (Task 2)
+    ├── mocks/handlers.test.ts                      Create: AC-004.x (Task 1); AC-004.4 (Task 2)
     ├── hooks/useAskQuestion.ts                     Create: mutation + error handling (Task 1)
     ├── hooks/useConversations.ts                   Create: conversations state (Task 1: one conversation in memory; Task 3: list + storage)
     ├── hooks/chatbot-storage.ts (+ .test.ts)       Create: read/write sessionStorage (Task 3)

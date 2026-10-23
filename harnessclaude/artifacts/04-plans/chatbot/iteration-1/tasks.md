@@ -22,9 +22,10 @@ Every test's `it` name starts with the AC id it proves (guideline 10 T6). Each t
 **Jira:** KAN-71 · branch `feature/KAN-71-chatbot-ask-answer`
 **Description:** The first slice, with the contract and the mocks it needs (guideline 06: an endpoint and its first
 screen in one PR).
-- Contract: the `chatbot` tag, `POST /api/v1/chatbot/answers` and `GET /api/v1/chatbot/unavailable-documents` with
-  their schemas (spec Interface Contracts; not the rating path); regenerate the client.
-- Mocks: the mock data of the design and the two MSW handlers, typed with the generated types; `resetMockData()`.
+- Contract: the `chatbot` tag and `POST /api/v1/chatbot/answers` with its schemas (spec Interface Contracts);
+  regenerate the client. The availability path is Task 2's (its first user), the rating path STORY-003's.
+- Mocks: the answers of the mock data of the design and the ask handler, typed with the generated types;
+  `resetMockData()`.
 - Screen: replace the placeholder with the 12.1 layout (list card on the left, empty for now; thread card with the
   question box). `QuestionBox`: `TextArea` with count 1,000, `rules.required` / `rules.maxLength` with the label
   "Question", Enter sends, Shift+Enter new line. `useAskQuestion`: generated mutation, `handlesOwnErrors`, field
@@ -36,7 +37,8 @@ screen in one PR).
   placeholder …" (Changelog row), the FE Lead approves fe-foundation again, fe-foundation is reopened
   (`completed → planned`) for one task, and the 12.1 row leaves `app/router/route-table.test.tsx`. Later modules
   then remove their row with a quick change.
-The PR is about 550 changed lines without generated code; its description says why it is not split further.
+The PR is about 850 changed lines without generated code (~550 code, ~300 tests); it is one behaviour, so it is not
+split further, and its description says so.
 **Files:**
 - Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (regenerated)
 - Create: `frontend/src/features/chatbot/mocks/data.ts` · Modify: `frontend/src/features/chatbot/mocks/handlers.ts`
@@ -48,7 +50,7 @@ The PR is about 550 changed lines without generated code; its description says w
   `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx`
 - Modify (change request): `frontend/src/app/router/route-table.test.tsx`,
   `harnessclaude/artifacts/03-modules/fe-foundation/spec.md`
-**Covers:** AC-001.1–AC-001.8, AC-001.12–AC-001.14, AC-004.1–AC-004.5; edge cases 1–8, 11, 21; risk "ticket details
+**Covers:** AC-001.1–AC-001.8, AC-001.12–AC-001.14, AC-004.1–AC-004.3, AC-004.5; edge cases 1–8, 11, 21; risk "ticket details
 leak" (no ticket fields in the contract)
 **Dependencies:** the plan PR (KAN-69) merged
 **Estimated size:** medium
@@ -57,20 +59,23 @@ leak" (no ticket fields in the contract)
 
 ## Task 2: Citations of an answer
 
-**Story:** STORY-001, STORY-002
+**Story:** STORY-001, STORY-002, STORY-004
 **Feature:** citations
 **Jira:** KAN-73 · branch `feature/KAN-73-chatbot-citations`
 **Description:** `CitationList` under each answer in number order: a Wiki citation as a link to
 `paths.wikiDocument(id)` showing "[n]", the title and "· Wiki document"; a ticket citation as "[n] Solution from a
-ticket" with Show / Hide and `TicketSolution` (five sections, Workaround only when not null). `useUnavailableDocuments`:
-the generated query for the Wiki ids of the shown conversation; MSG110 in place of an unavailable link; links kept
-when the query fails.
+ticket" with Show / Hide and `TicketSolution` (five sections, Workaround only when not null). With its first user,
+the contract and mock of `GET /api/v1/chatbot/unavailable-documents` (the unavailable ids of the mock data).
+`useUnavailableDocuments`: the generated query for the Wiki ids of the shown conversation; MSG110 in place of an
+unavailable link; links kept when the query fails.
 **Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (regenerated)
+- Modify: `frontend/src/features/chatbot/mocks/data.ts`, `mocks/handlers.ts`, `mocks/handlers.test.ts`
 - Create: `frontend/src/features/chatbot/components/CitationList.tsx`, `TicketSolution.tsx`, `*.module.css`
 - Create: `frontend/src/features/chatbot/hooks/useUnavailableDocuments.ts`
 - Modify: `frontend/src/features/chatbot/components/ChatAnswer.tsx`, `ConversationThread.tsx`
 - Test: `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx`
-**Covers:** AC-001.9–AC-001.11, AC-002.9, AC-002.10; edge cases 9, 10, 19, 20
+**Covers:** AC-001.9–AC-001.11, AC-002.9, AC-002.10, AC-004.4; edge cases 9, 10, 19, 20
 **Dependencies:** Task 1
 **Estimated size:** medium
 
