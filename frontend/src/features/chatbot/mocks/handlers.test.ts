@@ -1,4 +1,10 @@
-import { askChatbot, isApiError, type ChatbotAnswer } from '@/shared/api';
+import {
+  askChatbot,
+  isApiError,
+  listUnavailableCitedDocuments,
+  type ChatbotAnswer,
+} from '@/shared/api';
+import { resetMockData } from './handlers';
 
 function ask(question: string): Promise<ChatbotAnswer> {
   return askChatbot({ question, history: [] });
@@ -52,5 +58,21 @@ describe('chatbot mock handlers', () => {
     expect(error.fieldErrors).toEqual([
       { field: 'question', code: 'MSG02', params: { field_name: 'Question', max_length: 1000 } },
     ]);
+  });
+
+  it('AC-004.4 lists only the asked Wiki documents that are marked unavailable', async () => {
+    const result = await listUnavailableCitedDocuments({ wikiDocumentIds: [9001, 9003, 42] });
+
+    expect(result.wikiDocumentIds).toEqual([9003]);
+  });
+
+  it('AC-004.5 answers its initial data after resetMockData()', async () => {
+    resetMockData();
+
+    expect(await ask('VPN')).toMatchObject({ outcome: 'ANSWERED' });
+    expect(
+      (await listUnavailableCitedDocuments({ wikiDocumentIds: [9001, 9002, 9003] }))
+        .wikiDocumentIds,
+    ).toEqual([9003]);
   });
 });

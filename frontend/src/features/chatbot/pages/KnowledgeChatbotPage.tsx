@@ -25,8 +25,9 @@ export function KnowledgeChatbotPage() {
       {
         onSuccess: (answer) => {
           addTurn({ question, answer });
-          // Not resetFields(): it re-mounts the field, and the box would lose focus after every answer.
-          form.setFieldValue('question', '');
+          // Only the sent question: text typed while waiting stays (AC-001.7). Not resetFields(): it re-mounts the
+          // field, and the box would lose focus after every answer.
+          if (form.getFieldValue('question') === question) form.setFieldValue('question', '');
         },
         onError: (error) => {
           if (error.status === 401) return; // the global handler signs the user out (MSG07)
