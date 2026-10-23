@@ -31,8 +31,11 @@ screen in one PR).
   errors under the box, otherwise MSG06; the box is cleared only on success. `ConversationThread`: turns of one
   conversation kept in memory, the pending question with a loading answer, Send disabled while pending.
   `ChatAnswer`: answer text as plain text, or MSG109. `model.ts` with `toHistory`.
-- fe-foundation change request (agreed with the FE Lead, 23/10): drop 12.1 from AC-005.3 (Changelog row) and its
-  row in `app/router/route-table.test.tsx`; the FE Lead approves the fe-foundation spec again.
+- fe-foundation change request (agreed with the FE Lead, 23/10), done once for every placeholder: reword AC-005.3 to
+  "WHILE a screen of 2.1, 10.1, 11.1, 11.2, 11.4, 11.7 or 12.1 is not built by its module, THE web app SHALL show a
+  placeholder …" (Changelog row), the FE Lead approves fe-foundation again, fe-foundation is reopened
+  (`completed → planned`) for one task, and the 12.1 row leaves `app/router/route-table.test.tsx`. Later modules
+  then remove their row with a quick change.
 The PR is about 550 changed lines without generated code; its description says why it is not split further.
 **Files:**
 - Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (regenerated)

@@ -108,7 +108,7 @@ export function toHistory(turns: ChatTurn[]): ChatbotTurn[];  // NO_SOURCE answe
 | Components | Decided in planning: in `features/chatbot/components/`, not `shared/ui` | A kit chat component | Rule of two; only one screen uses them |
 | Accessible states | Decided in planning (builder check): the pending answer is an answer block with `aria-busy="true"` and an antd `Spin`; the open conversation's list button has `aria-current="true"`; the thread is a `<section>` labelled by the open conversation's title; the title "Knowledge Chatbot" is the shell's h1 (route title), the page adds none | — | Tests find them by role; no new visible text |
 | Citation union | Decided in planning (builder check): `oneOf` with `discriminator: type`; if orval's output is not a usable TS union, Task 1 uses one `ChatbotCitation` object with `type` and the fields of both as optional, and the spec contract is updated through Change Mode | — | Keeps the generated client usable; the shape on the wire is the same |
-| Placeholder test of 12.1 | A fe-foundation change request in the KAN-71 PR: drop 12.1 from AC-005.3 (Changelog row) and its row in `app/router/route-table.test.tsx`; the FE Lead approves fe-foundation again | A quick change of the test only | It changes a criterion, so it is a change request, not a quick change (user, 23/10) |
+| Placeholder test of 12.1 | A one-time fe-foundation change request in the KAN-71 PR: AC-005.3 becomes "WHILE a screen of … is not built by its module, … SHALL show a placeholder" (Changelog row); the 12.1 row leaves `app/router/route-table.test.tsx` | Drop only 12.1 from AC-005.3 (a change request again for Wiki, Triage, Workspace Setup); a separate PR first; a quick change of the test only | It changes a criterion, so it is a change request; worded once, later modules remove their row with a quick change (user, 23/10) |
 
 ## File Structure
 
@@ -185,5 +185,5 @@ The module touches personal data (questions may hold PII) and a contract shared 
 | Answer text rendered as HTML | Critical | Plain text only; test with `<script>` | Task 1 |
 | Search returns one `solutionText`, not sections | High | Raised with Hải Anh on PR #30 before the backend change; the frontend contract stays | — |
 | Mocks drift from the real backend | Medium | MSW handlers typed with the generated types; backend change reuses the contract | Task 1 |
-| The 12.1 placeholder test fails when the page is built | High | fe-foundation change request in the KAN-71 PR: drop 12.1 from AC-005.3 and its row in `route-table.test.tsx` (agreed with the FE Lead, 23/10) | Task 1 |
+| The 12.1 placeholder test fails when the page is built | High | One-time fe-foundation change request in the KAN-71 PR: AC-005.3 reworded to "while not built", the 12.1 row removed from `route-table.test.tsx` (agreed with the FE Lead, 23/10) | Task 1 |
 | PII in questions sent to the AI | High | Backend masks before the AI module (GBR-36); recorded for the backend change | — |
