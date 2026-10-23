@@ -17,10 +17,10 @@
         "roles-session": "passing",
         "guards-menus": "passing",
         "route-map": "passing",
-        "catalog-tags": "evaluating",
+        "catalog-tags": "passing",
         "guidelines": "pending"
       },
-      "lastUpdated": "2026-10-23T02:55:14.458Z",
+      "lastUpdated": "2026-10-23T03:03:13.146Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"

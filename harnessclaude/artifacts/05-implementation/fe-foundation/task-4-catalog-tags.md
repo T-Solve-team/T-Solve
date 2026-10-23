@@ -2,7 +2,7 @@
 
 **Module:** fe-foundation
 **Assignee:** Trần Trung Hiếu
-**Status:** evaluating
+**Status:** passing
 **Iteration:** 1
 
 ---
@@ -43,3 +43,18 @@ none
 
 ### Next up
 Evaluate catalog-tags; then Task 5 guidelines (KAN-63).
+
+## Session 2026-10-23 08:20
+
+### Working on: catalog-tags — evaluation
+- Independent review (harnessclaude-reviewer, attempt 1): **pass** — `06-evaluation/fe-foundation/task-4-catalog-tags-review.md`.
+  Minor findings left as they are: no test checks the toast levels; `msg()` uses `name in values`
+  (`Object.hasOwn` is safer); `useReviewDecisions.ts` passes an unused `count` to MSG17; the StatusTag test name
+  still says "17 statuses of the Figma kit"; design.md names the `_context` copy as the catalog test source, the
+  script reads `TSOLVE_DOCS`.
+- The guidelines and `frontend/AGENTS.md` still name SRS v2 codes (e.g. rule 5 `MSG18`) until Task 5.
+- The review said "92 web codes"; corrected to 91 plus `MSG_NEW_2` (92 entries).
+- Status: passing.
+
+### Next up
+Task 5 guidelines (KAN-63).
