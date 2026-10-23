@@ -2,7 +2,7 @@
 
 **Module:** ticket-review
 **Assignee:** OpenAI Codex
-**Status:** in-progress — backend implementation verified; user commit agreement pending; official trace remains blocked by BUG-013
+**Status:** in-progress — backend implementation verified; user commit agreement pending; official trace remains blocked by BUG-014
 **Iteration:** 1
 
 ---
@@ -16,7 +16,7 @@
 - All batch tickets are validated before mutation; ascending-ID row locks, optimistic versions and one transaction protect decision/history/audit/notification consistency.
 - Review Solution uses a mandatory secondary row. Review enums are exposed from `dto/` so other modules consume only service interfaces and DTO types.
 - Scoped controller advice emits Problem Details without changing the legacy global error handler. Method authorization is enabled; authentication/session/CSRF setup stays with the identity integration. No permissive auth adapter or pretend sender was added.
-- Discovered BUG-009–BUG-012 during verification and retained their reproductions and fixes in `docs/bug-log.md`. BUG-013 is open; frontend BUG-006–BUG-008 remain open for Task 2.
+- Discovered BUG-010–BUG-013 during verification and retained their reproductions and fixes in `docs/bug-log.md`. BUG-014 is open; frontend BUG-007–BUG-009 remain open for Task 2.
 
 ### Files created/modified
 Paths below are repository-relative; none of the existing legacy Java scaffold classes was changed.
@@ -37,8 +37,8 @@ Paths below are repository-relative; none of the existing legacy Java scaffold c
 
 ### Verification
 - Expected initial red: ReviewTicketTest, four assertion failures before the decision implementation; ReviewServiceTest, two assertion failures before the queue/identity implementation.
-- BUG-011 reproduced as expected HTTP 400 versus actual 200 before adding strict integer deserialization.
-- BUG-012 reproduced on PostgreSQL as expected one Solution row versus actual zero before mandatory secondary mapping.
+- BUG-012 reproduced as expected HTTP 400 versus actual 200 before adding strict integer deserialization.
+- BUG-013 reproduced on PostgreSQL as expected one Solution row versus actual zero before mandatory secondary mapping.
 - Final command: `mvn spotless:apply`, `mvn verify`, then `mvn spotless:check`, using JDK 21.0.12.1 and Maven 3.9.9.
 - Final result: **33 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS; standalone spotless:check exit 0**.
 - Breakdown: entity 4, service 13, controller 8, PostgreSQL/HTTP integration 8.
@@ -47,7 +47,7 @@ Paths below are repository-relative; none of the existing legacy Java scaffold c
 - HTTP integration exercises actual controller → service → PostgreSQL, including Project denial, detail serialization, paging metadata and Request changes. Auth/session inputs are supplied through Spring test facilities and the mocked integration port; this is not a live OIDC/browser/email test.
 - Full local logs: ignored `backend/target/review-verify.log` and `backend/target/surefire-reports/`. Their availability is local and temporary; the durable summary is here and in the test report.
 - `git diff --check`: exit 0. `sdd.ts check ticket-review` and workspace audit pass.
-- Official `sdd.ts trace ticket-review`: **0/30, failed**, due to BUG-013's Java discovery/ID-format limitations. No hook or tracking gate was bypassed. Supporting manual Java-name inventory finds mentions of 24/30 AC IDs; mentions alone do not establish complete criteria coverage. Frontend confirmations, URL/message/loading behavior and integration-documentation delivery assertions remain for Task 2/module evaluation.
+- Official `sdd.ts trace ticket-review`: **0/30, failed**, due to BUG-014's Java discovery/ID-format limitations. No hook or tracking gate was bypassed. Supporting manual Java-name inventory finds mentions of 24/30 AC IDs; mentions alone do not establish complete criteria coverage. Frontend confirmations, URL/message/loading behavior and integration-documentation delivery assertions remain for Task 2/module evaluation.
 - Graphify refreshed after the final test addition to 1,500 nodes / 3,527 edges; the review write path was also queried during verification. SQL extraction remains unavailable because tree_sitter_sql is missing; schema was verified directly through Liquibase/PostgreSQL.
 - The disposable PostgreSQL test container was stopped and removed after successful verification. Re-running the database tests requires starting a fresh isolated PostgreSQL instance with the documented environment.
 
@@ -66,7 +66,7 @@ Use JDK 21, Maven 3.9.9 and an isolated PostgreSQL 16 database. Supply `DB_HOST`
 
 ### Blockers
 - User agreement is required before committing this feature and starting review-ui, under the repository's per-feature commit rule.
-- BUG-013 prevents official Java trace evidence; a separate authorized framework fix is required. This does not invalidate the successful Maven/PostgreSQL execution, and it is not represented as an official trace pass.
+- BUG-014 prevents official Java trace evidence; a separate authorized framework fix is required. This does not invalidate the successful Maven/PostgreSQL execution, and it is not represented as an official trace pass.
 
 ### Next up
 Present the backend files, checks and proposed commit message to the user. After agreement, commit this feature and its harness records separately; do not start review-ui before that checkpoint. Proposed code message: `feat(ticket-review): implement review API and transactional decisions (STORY-001..006)`.
@@ -81,43 +81,43 @@ Present the backend files, checks and proposed commit message to the user. After
 - Added `src/test/java/vn/tsolve/review/manual/ManualReviewApplication`, `ManualReviewConfiguration`, `ManualReviewToolsController` and `manual-smoke.ps1`. The explicit manual-review test profile supplies local HTTP Basic test users, a trusted test Project adapter, fresh fixtures and DB inspection. It is absent from the packaged production jar and binds to loopback only. No production auth implementation/fallback was added.
 - Frontend is running at loopback port 5173 with the existing mocks and compatible Node 24.19.0. Browser confirmed the Project Manager queue with 58 mock rows. No frontend feature implementation or generated-client regeneration was started.
 - Backend is running at loopback port 8080 with its own `review_manual` database in `tsolve-review-manual-20261020` at loopback port 55432. This container is intentionally left running for the user's manual tests. Verify ran against a separate `review_verification` database.
-- Found and fixed BUG-014–BUG-017, retaining each in the ledger. A manual PowerShell check initially misparsed Problem Details bytes as JSON numbers even though the API correctly returned 409/MSG20; the reusable smoke runner now decodes both body forms.
-- BUG-016 regression reproduced the incorrect Swagger pageable object before the ParameterObject fix. New final Maven verify: **34 tests, 0 failures/errors/skipped, BUILD SUCCESS**, including Spotless.
+- Found and fixed BUG-015–BUG-018, retaining each in the ledger. A manual PowerShell check initially misparsed Problem Details bytes as JSON numbers even though the API correctly returned 409/MSG20; the reusable smoke runner now decodes both body forms.
+- BUG-017 regression reproduced the incorrect Swagger pageable object before the ParameterObject fix. New final Maven verify: **34 tests, 0 failures/errors/skipped, BUILD SUCCESS**, including Spotless.
 - Live server smoke: **18 assertions passed**. Direct Swagger browser execution also verified Authorize, GET CSRF and POST fixtures with the automatically attached CSRF header and HTTP 200. Fresh user batch 467d29c5 has IDs 43/44/45/46/47/48; GET fixtures remains authoritative.
 - Manual checklist, test accounts, JSON bodies, expected statuses, DB-side verification, fresh-batch creation and restart commands are recorded in `task-1-review-api-manual-test.md`.
-- No commit, push, merge or PR was requested or performed. review-api remains in-progress at its commit checkpoint; BUG-013 and frontend work remain pending.
+- No commit, push, merge or PR was requested or performed. review-api remains in-progress at its commit checkpoint; BUG-014 and frontend work remain pending.
 
 ## Commit checkpoint — KAN-24
 
 - User explicitly authorized commit and reported the staged secret scan passed.
 - Code commit: default@4d36a48 (`feat(ticket-review): implement transactional review API (KAN-24)`). Includes review backend, migration, OpenAPI contract, regression tests, local manual harness and permanent bug ledger.
 - Verification evidence remains 34 passing backend tests (including Spotless) and 18 passing live HTTP checks; staged whitespace check passed before commit.
-- No push, merge or PR. Frontend integration is pending. The commit checkpoint for starting Task 2 is satisfied; the official trace limitation BUG-013 remains open, so feature/module status has not been advanced past its evidence gate.
+- No push, merge or PR. Frontend integration is pending. The commit checkpoint for starting Task 2 is satisfied; the official trace limitation BUG-014 remains open, so feature/module status has not been advanced past its evidence gate.
 
-## Debug — CI generated API drift (BUG-018, KAN-24)
+## Debug — CI generated API drift (BUG-019, KAN-24)
 
 - Root cause: backend commit changed frontend/openapi/tsolve-api.yaml but deferred generation. CI correctly detected drift. Regenerating also exposed five consumer type errors; the new contract uses projectId and single-ticket changes.
 - Fix: ran npm run generate:api, updated queue Project filtering and select-all params/mocks, removed Request Changes from the queue, and changed the reusable modal to a single ticketId. Generated files were never hand edited; the CI check is unchanged.
-- Regressions: two BUG-018 page tests first failed on the old bulk button and missing Project filter; both pass after the fix. Added a single-ticket modal network payload test instead of retaining the obsolete bulk-mutation expectation.
+- Regressions: two BUG-019 page tests first failed on the old bulk button and missing Project filter; both pass after the fix. Added a single-ticket modal network payload test instead of retaining the obsolete bulk-mutation expectation.
 - Verification: format:check, lint, typecheck, build all exit 0. Full suite: 11 files, 65 tests passed. A second generation has identical SHA-256 hashes for every generated file, including newly created files. git diff --check passes.
-- BUG-019: initial full suite had nine pre-test ENOENT failures under sandbox AC/Temp. Retried with TEMP/TMP pointing at ignored frontend/node_modules/.cache/vitest-temp; all suites passed. Exact underlying OS cause remains unconfirmed; no repository test settings changed.
+- BUG-020: initial full suite had nine pre-test ENOENT failures under sandbox AC/Temp. Retried with TEMP/TMP pointing at ignored frontend/node_modules/.cache/vitest-temp; all suites passed. Exact underlying OS cause remains unconfirmed; no repository test settings changed.
 - Graphify refreshed to 1,591 nodes / 3,698 edges; missing SQL parser remains the known limitation.
 - Commit pending user agreement. Proposed: fix(review): sync generated client with API contract (KAN-24).
 - Scope: this repairs CI and its directly broken consumers. Report 3 MSG migration, actual Ticket Detail actions and live session/CSRF integration remain Task 2; no complete FE/BE manual flow is claimed.
 
-### BUG-018 commit
+### BUG-019 commit
 - User approved the proposed fix commit.
 - Code commit: default@b6098c5 (`fix(review): sync generated client with API contract (KAN-24)`).
 - Staged secret scan and whitespace check passed. No push requested for this fix.
 
 ## Debug — Form timer teardown and PR title (2026-10-21)
 
-- BUG-020: user supplied CI evidence of 65 passing tests plus an unhandled useDelayState timeout after jsdom disposal. Ant Design useDebounce schedules empty error/warning lists after 10 ms; installed useDelayState has no unmount cleanup.
+- BUG-021: user supplied CI evidence of 65 passing tests plus an unhandled useDelayState timeout after jsdom disposal. Ant Design useDebounce schedules empty error/warning lists after 10 ms; installed useDelayState has no unmount cleanup.
 - User approved a quick change scoped to frontend/src/shared/forms/forms.test.tsx and docs/bug-log.md. No production or shared infrastructure changes.
-- Red regression: rendering and unmounting Form leaves three pending timers. Test leaves no delayed Form updates after teardown (BUG-020) failed expected 0, actual 3.
+- Red regression: rendering and unmounting Form leaves three pending timers. Test leaves no delayed Form updates after teardown (BUG-021) failed expected 0, actual 3.
 - Fix: fake only setTimeout/clearTimeout for this suite, cleanup React then execute pending callbacks inside act while jsdom still exists, assert zero pending timers and restore real timers in finally. Existing field assertions use vi.waitFor so fake time progresses. Initial direct findBy waits stalled under the fake clock; switching to Vitest clock-aware waits resolved that test-harness issue without changing validation assertions.
 - Focused suite passes all five tests. No catch-all exception handler, disabled tests, ignored errors, changed dependency or production behavior.
-- BUG-021: PR #26 initially had invalid title Feat/ticket review. Connector metadata write was denied 403; user changed it. Readback confirmed feat(review): add transactional ticket review API (KAN-24), matching the repository type/scope/Jira rules.
+- BUG-022: PR #26 initially had invalid title Feat/ticket review. Connector metadata write was denied 403; user changed it. Readback confirmed feat(review): add transactional ticket review API (KAN-24), matching the repository type/scope/Jira rules.
 - Format, lint, typecheck and build pass. First full-suite run: 65 passed, one unrelated ADMIN lazy route heading timeout, no unhandled errors. Logged BUG-002, kept route source unchanged because it is outside the approved quick change. Full-suite rerun in progress without competing verification commands.
 - Graphify refreshed: 1,595 nodes / 3,699 edges; known missing SQL parser remains.
 - Final standalone full-suite rerun: **11 files, 66 tests passed, exit 0, no unhandled errors**. Non-fatal jsdom pseudo-element getComputedStyle warnings remain visible. BUG-002 remains open as an intermittent route-test timing issue; the successful rerun is not represented as a route fix.

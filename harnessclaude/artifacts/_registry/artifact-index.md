@@ -68,3 +68,4 @@ Master registry of all artifacts in this workspace.
 | — | pr-description | ticket-review | draft | artifacts/05-implementation/ticket-review/task-5-pr-description.md |
 | — | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-6-main-setup-sync.md |
 | — | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-7-lead-review.md |
+| — | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-8-chatbot-main-sync.md |

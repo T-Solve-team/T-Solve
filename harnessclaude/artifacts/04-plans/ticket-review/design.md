@@ -110,7 +110,7 @@ Re-read spec/module/architecture as implementation inputs. All requested actions
 
 ## FE Lead amendments (2026-10-22)
 
-Chosen: D1 batch Request changes shares one comment across all selected tickets, including all-page selection. D2 excludes empty-Solution state and removes MSG20 and empty flags. Alternatives: the superseded single-ticket contract and approval-time empty check. Rationale: explicit FE Lead decisions take precedence until the Report3 documents are corrected. Submission integrations guarantee populated Solutions. Keep other catalog codes unchanged. Restore main bug identities, then use consecutive branch IDs from BUG-008; human attribution is Phạm Tùng Dương.
+Chosen: D1 batch Request changes shares one comment across all selected tickets, including all-page selection. D2 excludes empty-Solution state and removes MSG20 and empty flags. Alternatives: the superseded single-ticket contract and approval-time empty check. Rationale: explicit FE Lead decisions take precedence until the Report3 documents are corrected. Submission integrations guarantee populated Solutions. Keep other catalog codes unchanged. Restore main bug identities, then use consecutive branch IDs from BUG-009; human attribution is Phạm Tùng Dương.
 
 ## FE/BE review amendments — 23 October 2026
 

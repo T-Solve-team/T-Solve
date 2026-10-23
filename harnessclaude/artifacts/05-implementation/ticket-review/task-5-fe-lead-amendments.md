@@ -12,10 +12,10 @@ Date: 2026-10-22. Human owner: Phạm Tùng Dương. Work performed sequentially
 ## Bug reconciliation
 
 - Restored main BUG-001 and BUG-002 rows byte-for-byte, including original people, statuses and #34. Route test is BUG-002 again. Main BUG-001 remains Open exactly as requested, although this branch includes shared-handler regression evidence.
-- Branch-only bugs now run consecutively from BUG-006, with simultaneous remapping in tests, source comments and harness references. Canonical main history retained; branch event references reconciled by provenance. Added five defects previously recorded only in Task 2 (now BUG-022..023).
-- BUG-006 is Won't fix under D1 / FE-34. Review message/project-filter defects BUG-007/005 are Fixed with named test evidence. Review Found by/Owner are Phạm Tùng Dương as supplied by the user; main records retain their original names.
-- Known BUG-013 (Java trace), BUG-025 (privacy hook) and BUG-027 (default-suite timing) remain Open. The latest passing run does not pretend to fix those defects.
-- Newly observed BUG-028 records Ticket Detail date wrapping in a narrow browser viewport. Existing responsive layout was not changed; no fix claimed.
+- Branch-only bugs now run consecutively from BUG-007, with simultaneous remapping in tests, source comments and harness references. Canonical main history retained; branch event references reconciled by provenance. Added five defects previously recorded only in Task 2 (now BUG-023..024).
+- BUG-007 is Won't fix under D1 / FE-34. Review message/project-filter defects BUG-008/005 are Fixed with named test evidence. Review Found by/Owner are Phạm Tùng Dương as supplied by the user; main records retain their original names.
+- Known BUG-014 (Java trace), BUG-026 (privacy hook) and BUG-028 (default-suite timing) remain Open. The latest passing run does not pretend to fix those defects.
+- Newly observed BUG-029 records Ticket Detail date wrapping in a narrow browser viewport. Existing responsive layout was not changed; no fix claimed.
 
 ## Implementation
 
@@ -33,7 +33,7 @@ Date: 2026-10-22. Human owner: Phạm Tùng Dương. Work performed sequentially
 - Repeated orval generation yields an identical SHA-256 for every generated file/path. No hand-edited generated code.
 - Real localhost HTTP harness: 19 checks pass, including two-ticket Request changes with count 2, same comment and separate records. Test-only harness uses isolated review_manual database; production auth/mail implementations are not simulated.
 - Browser on real FE/API: selected tickets 21/22, opened one form and submitted one comment. Both disappeared from queue, selection reset; detail shows Changes requested and saved comment. Database confirmed both IDs with identical comment and exactly one decision, one audit and one pending notification each. Form screenshot: backend/target/d1-batch-form.png; result screenshot: backend/target/d1-batch-result.png.
-- Framework trace: 17/29; known Java discovery/naming limitation remains BUG-013. No trace gate bypass or completed-module claim. Harness audit passes.
+- Framework trace: 17/29; known Java discovery/naming limitation remains BUG-014. No trace gate bypass or completed-module claim. Harness audit passes.
 - Verification helper corrections: initial Prettier pathspec was relative to the wrong directory; corrected without application changes. A catalog-inspection helper initially used the regex capture list incorrectly; corrected and the scope assertion passed. These command mistakes are not treated as product fixes.
 
 ## PR description and checkpoint

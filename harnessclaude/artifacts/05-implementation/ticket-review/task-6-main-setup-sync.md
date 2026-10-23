@@ -7,9 +7,9 @@ Integrated main `9fbc7dc` into `feat/ticket-review`, based on branch `3d3c26e`. 
 - Imported main's frontend foundation: five roles, multi-role session, Project memberships, workspace readiness, managed Spaces, guards, menus, route map, logout and full Report3 catalog with its committed reference and generator.
 - Kept the approved review Project filter, transactional API, one-comment batch Request Changes (D1), and no empty-Solution handling (D2). Regenerated the merged OpenAPI contract using orval; preserved review detail invalidation after decisions.
 - Adapted the test-only manual session endpoint to the new CurrentUser shape. This does not implement production identity, Project provisioning or email delivery. Main's backend foundation is a plan, not a delivered implementation.
-- Removed retired STAFF/DEPARTMENT_MANAGER reader authorities (BUG-029). Red test returned 200 instead of 403; the named regression now passes.
-- Corrected the Project filter regression to select managed ITNET, assert unmanaged HRHELP is absent, and check the URL, filtered row and all-selected count (BUG-030). Red full suite: 413 passed, 1 failed; green: 414 passed.
-- Preserved all five main bug rows exactly. Per the user's explicit collision-resolution instruction, shifted every branch review bug from old BUG-003…025 to BUG-006…028 and updated references; new findings are BUG-029/030. Main BUG-004 and historical branch BUG-027 describe the same suite stability issue; imported main #42 remediation and verified it with default workers.
+- Removed retired STAFF/DEPARTMENT_MANAGER reader authorities (BUG-030). Red test returned 200 instead of 403; the named regression now passes.
+- Corrected the Project filter regression to select managed ITNET, assert unmanaged HRHELP is absent, and check the URL, filtered row and all-selected count (BUG-031). Red full suite: 413 passed, 1 failed; green: 414 passed.
+- Preserved all five main bug rows exactly. Per the user's explicit collision-resolution instruction, shifted every branch review bug from old BUG-003…026 to BUG-007…029 and updated references; new findings are BUG-030/030. Main BUG-004 and historical branch BUG-028 describe the same suite stability issue; imported main #42 remediation and verified it with default workers.
 - Merged framework registries, existing approval records, chronological event history and module states without inventing approvals or resetting active review work.
 
 ## Setup implications
@@ -27,6 +27,6 @@ Use Node 24 / Java 21. Vitest now uses main's `maxWorkers: '50%'`; the queue tes
 - `sdd.ts audit`: OK. Both staged and unstaged `git diff --check`: clean. Review spec unchanged.
 - Refreshed local Graphify: 1,877 nodes, 4,124 edges. Two SQL files could not be indexed because tree_sitter_sql is unavailable; SQL source remains directly inspectable. Graph output stays local/untracked.
 
-No new live browser/HTTP smoke run was performed for this integration; the prior 19-check result remains historical. Current session adapter behavior is covered by two new JUnit tests. Existing open framework trace/privacy issues and narrow Ticket Detail layout remain in BUG-013, BUG-025 and BUG-028.
+No new live browser/HTTP smoke run was performed for this integration; the prior 19-check result remains historical. Current session adapter behavior is covered by two new JUnit tests. Existing open framework trace/privacy issues and narrow Ticket Detail layout remain in BUG-014, BUG-026 and BUG-029.
 
 Local commit tooling: installed the locked root dev tools and enabled the existing Husky hooks; installed required Gitleaks. Secret scan, lint-staged and commitlint passed for code commit 02393e1. Initial commit message body exceeded 100 characters; wrapped it and committed through the same hooks without bypass.

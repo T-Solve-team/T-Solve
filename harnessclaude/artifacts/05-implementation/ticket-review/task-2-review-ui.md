@@ -34,13 +34,13 @@ Evidence retrieval, Jira submission/resubmission/panel delivery, email delivery/
 
 ## Defects and outstanding bookkeeping
 
-- BUG-006: queue bulk changes removed and detail single-ticket action tested. BUG-007: current review messages migrated and tested. BUG-008: Project filtering, URL state and filtered select-all tested. Their original ledger rows still need status updates.
-- BUG-022: missing CSRF transport, fixed with named regression and verified by real browser decisions.
-- BUG-023: initial rejection MSW fixture incorrectly exposed its reason as reviewComment; aligned fixture/tests with actual backend semantics (reason is saved in history).
-- BUG-024: test login hostname inconsistency; standardized localhost and verified browser session end to end.
-- BUG-025: privacy hook false-positive on a PowerShell map-property name in optional comment cleanup. That command was not retried or worked around. A subsequent attempt to append the defect ledger was also blocked because its diagnostic text repeated that expression. Formal bug-log additions/status updates remain pending user-side execution; this report does not claim the ledger was updated.
-- BUG-026: Select all API failure previously escaped as an unhandled rejection without UI feedback. Named regression first failed with missing MSG06 and an unhandled ApiError; fixed error reporting while preserving the existing selection. Final 78-test run passes without unhandled errors.
-- BUG-013 remains open: Harness trace does not discover Java tests/canonical IDs. Do not mark module/feature evaluating or passing by bypassing the trace gate.
+- BUG-007: queue bulk changes removed and detail single-ticket action tested. BUG-008: current review messages migrated and tested. BUG-009: Project filtering, URL state and filtered select-all tested. Their original ledger rows still need status updates.
+- BUG-023: missing CSRF transport, fixed with named regression and verified by real browser decisions.
+- BUG-024: initial rejection MSW fixture incorrectly exposed its reason as reviewComment; aligned fixture/tests with actual backend semantics (reason is saved in history).
+- BUG-025: test login hostname inconsistency; standardized localhost and verified browser session end to end.
+- BUG-026: privacy hook false-positive on a PowerShell map-property name in optional comment cleanup. That command was not retried or worked around. A subsequent attempt to append the defect ledger was also blocked because its diagnostic text repeated that expression. Formal bug-log additions/status updates remain pending user-side execution; this report does not claim the ledger was updated.
+- BUG-027: Select all API failure previously escaped as an unhandled rejection without UI feedback. Named regression first failed with missing MSG06 and an unhandled ApiError; fixed error reporting while preserving the existing selection. Final 78-test run passes without unhandled errors.
+- BUG-014 remains open: Harness trace does not discover Java tests/canonical IDs. Do not mark module/feature evaluating or passing by bypassing the trace gate.
 - Final `sdd.ts check` and audit pass. Trace reports 18/30 after assigning AC IDs to the existing queue behavior tests; backend Java discovery and documentation evidence remain outside the tool's coverage. Feature/module statuses remain implementing/in-progress.
 - Some historical feature comments still cite old message codes; optional comment cleanup was abandoned after the hook rejection. Runtime message calls and regression expectations use current review codes.
 - Browser bulk confirmation additionally verified MSG19 for tickets 7 and 8, then both disappeared from the queue and selection reset to zero. Screenshot: backend/target/review-live-bulk-confirm.png.

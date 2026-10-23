@@ -156,3 +156,4 @@
 {"ts":"2026-10-23T13:54:35.111Z","type":"quick-opened","what":"Preserve the validation MSG code in shared ProblemDetail (BUG-038)","files":["backend/src/main/java/vn/tsolve/common/exception/GlobalExceptionHandler.java","backend/src/test/java/vn/tsolve/common/exception/ValidationProblemDetailTest.java"]}
 {"ts":"2026-10-23T14:06:42.674Z","type":"quick-closed","what":"Preserve the validation MSG code in shared ProblemDetail (BUG-038)","files":["backend/src/main/java/vn/tsolve/common/exception/GlobalExceptionHandler.java","backend/src/test/java/vn/tsolve/common/exception/ValidationProblemDetailTest.java"]}
 {"ts":"2026-10-23T14:06:44.014Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"19485d9fe31010ae8ad468715f66c8a400883287"}
+{"ts":"2026-10-23T14:21:42.783Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"cb073ef7ccbe2f891d068716786543f8fb7f57fa"}
