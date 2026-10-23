@@ -31,6 +31,6 @@ public class TicketService {
 
     @Transactional(readOnly = true)
     public ResolvedTicketSnapshot get(Long id) {
-        return repository.findById(id).orElseThrow(() -> new NotFoundException("MSG06"));
+        return repository.findById(id).orElseThrow(() -> new NotFoundException("MSG04"));
     }
 }

@@ -10,6 +10,7 @@
 export interface ApproveTicketsRequest {
   /**
    * @minItems 1
+   * @maxItems 500
    * @items.minimum 1
    */
   ticketIds: number[];

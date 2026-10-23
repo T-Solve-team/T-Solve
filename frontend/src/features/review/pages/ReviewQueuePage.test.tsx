@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { getGetReviewQueueMockHandler } from '@/shared/api/generated/review/review.msw';
 import { problem } from '@/shared/api/mocks';
@@ -20,6 +20,33 @@ describe('ReviewQueuePage', () => {
   // BUG-004: preload the lazy module so first-render waits cover the UI, not module loading.
   beforeAll(async () => {
     await import('./ReviewQueuePage');
+  });
+
+  it('AC-005.8 keeps all 501 selected and blocks every decision (BUG-032)', async () => {
+    const decisions = vi.fn();
+    server.use(
+      http.get('*/api/v1/review-queue/ticket-ids', () =>
+        HttpResponse.json({ ticketIds: Array.from({ length: 501 }, (_, index) => index + 1) }),
+      ),
+      http.post('*/api/v1/reviews/:action', () => {
+        decisions();
+        return HttpResponse.json({ count: 501 });
+      }),
+    );
+    const { user } = await openQueue();
+    await user.click(screen.getByRole('checkbox', { name: 'Select all' }));
+    expect(await screen.findByText('501 selected')).toBeInTheDocument();
+    expect(screen.getByText('Select up to 500 tickets per decision.')).toBeInTheDocument();
+    for (const name of ['Approve', 'Reject', 'Request Changes']) {
+      const action = screen.getByRole('button', { name });
+      expect(action).toBeDisabled();
+      await user.click(action);
+    }
+    expect(decisions).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
+    expect(screen.getByText('500 selected')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeEnabled();
   });
 
   it('AC-001.1 lists the pending tickets of my Projects, earliest review due date first, 20 per page (BUG-004, BUG-027)', async () => {

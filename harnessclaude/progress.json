@@ -77,10 +77,14 @@
       "lastUpdated": "2026-10-22T14:21:23.605Z"
     },
     "chatbot": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:23.819Z"
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "ask-answer": "pending",
+        "citations": "pending",
+        "session-conversations": "pending"
+      },
+      "lastUpdated": "2026-10-23T12:37:08.832Z"
     },
     "jira-app": {
       "status": "decomposed",
@@ -93,23 +97,6 @@
       "currentPhase": "decompose",
       "features": {},
       "lastUpdated": "2026-10-22T14:21:24.227Z"
-    },
-    "ticket-review": {
-      "status": "implementing",
-      "currentPhase": "implement",
-      "features": {
-        "review-api": "in-progress",
-        "review-ui": "in-progress",
-        "review-lead-amendments": "in-progress"
-      },
-      "lastUpdated": "2026-10-23T13:09:49.578Z",
-      "branch": "feat/ticket-review",
-      "repos": [
-        "default"
-      ],
-      "lastCommit": {
-        "default": "02393e1b604e1063d5b14a6118da4dc7927cd6b9"
-      }
     }
   },
   "dependencies": {},

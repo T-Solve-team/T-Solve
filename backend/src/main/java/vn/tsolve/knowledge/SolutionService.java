@@ -43,6 +43,6 @@ public class SolutionService {
 
     @Transactional(readOnly = true)
     public Solution get(Long id) {
-        return repository.findById(id).orElseThrow(() -> new NotFoundException("MSG06"));
+        return repository.findById(id).orElseThrow(() -> new NotFoundException("MSG04"));
     }
 }

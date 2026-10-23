@@ -3,6 +3,7 @@ import { Descriptions, Flex, List, Typography } from 'antd';
 import { Link, useParams } from 'react-router';
 import { TicketDecisionActions } from '@/features/review';
 import { ApiError, useGetReviewTicket, type SolutionSections } from '@/shared/api';
+import { useSession } from '@/shared/auth';
 import { formatDateTime } from '@/shared/lib';
 import { paths } from '@/shared/routing';
 import { ErrorState, LoadingState, SectionCard, StatusTag } from '@/shared/ui';
@@ -18,6 +19,7 @@ const SECTIONS: [keyof SolutionSections, string][] = [
 
 export function TicketDetailPage() {
   const { ticketId } = useParams();
+  const { hasRole } = useSession();
   const id = Number(ticketId);
   const isValid = Number.isSafeInteger(id) && id > 0;
   const query = useGetReviewTicket(id, { query: { enabled: isValid } });
@@ -27,7 +29,7 @@ export function TicketDetailPage() {
   const ticket = query.data;
   return (
     <Flex vertical gap="large">
-      <Link to={paths.reviewQueue}>Back to Review Queue</Link>
+      {hasRole('PROJECT_MANAGER') && <Link to={paths.reviewQueue}>Back to Review Queue</Link>}
       <SectionCard title={ticket.sourceTicketId}>
         <Flex vertical gap="middle">
           <Typography.Title level={2}>{ticket.title}</Typography.Title>

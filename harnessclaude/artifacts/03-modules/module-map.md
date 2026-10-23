@@ -101,9 +101,9 @@ not exist yet are marked *proposed*; the backend lead confirms them when the mod
 | `dashboard-audit` | `analytics/**` | `features/knowledge-dashboard/**`, `features/audit-log/**` |
 
 Backend paths are under `backend/src/main/java/vn/tsolve/` and `backend/src/test/java/vn/tsolve/`; web app paths
-under `frontend/`. Until `triage`, `wiki` and `chatbot` are planned, `fe-foundation` also owns their placeholder
-folders, and until `ticket-review` is on `main` it also owns `features/review/**`; each module's planning (or
-arrival) removes its folder from `fe-foundation`.
+under `frontend/`. Until `triage` and `wiki` are planned, `fe-foundation` also owns their placeholder
+folders (`chatbot` took its folder with its plan, KAN-69), and until `ticket-review` is on `main` it also owns
+`features/review/**`; each module's planning (or arrival) removes its folder from `fe-foundation`.
 
 ## Cross-module interface contracts
 - **Session and roles** (`be-foundation` → all): `GET /api/v1/me` with all roles, Department, Departments,
@@ -114,7 +114,3 @@ arrival) removes its folder from `fe-foundation`.
   Solution Form submission endpoint used by the Jira App.
 - **Projects and Spaces** (`project-integration`, `wiki` → others): Project membership and roles; Space access.
 - **Web app base** (`fe-foundation` → every screen): routes, guards, menus, kit components, MSG catalog, mocks.
-
-## Ongoing ticket-review work
-
-The approved ticket-review implementation remains in-progress on its existing PR branch. Its spec, module paths, review API/UI, D1/D2 amendments and test evidence are retained; the workspace foundation planning does not reset that work. See artifacts/03-modules/ticket-review/spec.md and artifacts/05-implementation/ticket-review/task-5-fe-lead-amendments.md.

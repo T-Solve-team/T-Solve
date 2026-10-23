@@ -28,7 +28,7 @@ export function ReviewQueueToolbar({
   onReject,
   onApprove,
 }: ReviewQueueToolbarProps) {
-  const hasSelection = selectedCount > 0;
+  const hasSelection = selectedCount > 0 && selectedCount <= 500;
   return (
     <Flex justify="space-between" align="end" gap="middle" wrap>
       <Flex align="end" gap="middle">
@@ -51,6 +51,9 @@ export function ReviewQueueToolbar({
         <Typography.Text type="secondary" className={styles.count}>
           {selectedCount} selected
         </Typography.Text>
+        {selectedCount > 500 && (
+          <Typography.Text type="secondary">Select up to 500 tickets per decision.</Typography.Text>
+        )}
       </Flex>
       <Flex gap="middle">
         <Button disabled={!hasSelection || isBusy} onClick={onRequestChanges}>

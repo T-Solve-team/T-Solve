@@ -33,12 +33,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail invalid(MethodArgumentNotValidException error) {
-        ProblemDetail detail = problem(HttpStatus.BAD_REQUEST, "MSG01");
-        detail.setProperty(
-                "fieldErrors",
-                error.getBindingResult().getFieldErrors().stream()
-                        .map(this::fieldError)
-                        .toList());
+        List<ApiFieldError> fields = error.getBindingResult().getFieldErrors().stream()
+                .map(this::fieldError)
+                .toList();
+        ProblemDetail detail = problem(
+                HttpStatus.BAD_REQUEST,
+                fields.isEmpty() ? "MSG06" : fields.get(0).code());
+        if (!fields.isEmpty()) detail.setProperty("params", fields.get(0).params());
+        detail.setProperty("fieldErrors", fields);
         return detail;
     }
 
