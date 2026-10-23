@@ -96,5 +96,47 @@
       "AC-004.7": "THE  table SHALL have , , ,  and ,",
       "AC-004.8": "THE tests of AC-004.5, AC-004.6 and AC-004.7 SHALL run against a real PostgreSQL started by"
     }
+  },
+  "chatbot": {
+    "specHash": "d047c4d18fd628c7f9e59756d509526b98b0f63e4bd5698dc53d636300041034",
+    "approvedAt": "2026-10-23T12:37:04.768Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
+      "AC-001.2": "WHEN the user presses Enter in the question box, THE web app SHALL send the question; Shift+Enter SHALL",
+      "AC-001.3": "WHEN the user clicks Send, THE web app SHALL send the question.",
+      "AC-001.4": "IF the question is empty or only white space, THEN THE web app SHALL show MSG01 under the box",
+      "AC-001.5": "THE question box SHALL show a character count with the maximum 1,000; IF the question is longer than",
+      "AC-001.6": "WHEN a question is sent, THE web app SHALL call  with the question and",
+      "AC-001.7": "WHEN the answer arrives with  , THE web app SHALL show its text under the question,",
+      "AC-001.8": "THE web app SHALL show the answer text and every citation field as plain text, never as HTML.",
+      "AC-001.9": "WHEN a citation is a Wiki document, THE web app SHALL show \"[n]\", the document title and \"· Wiki document\"",
+      "AC-001.10": "WHEN a citation is a ticket Solution, THE web app SHALL show \"[n] Solution from a ticket\" with a Show",
+      "AC-001.11": "WHEN the user clicks Show on a ticket Solution citation, THE web app SHALL expand the Solution inline",
+      "AC-001.12": "WHEN the answer arrives with  , THE web app SHALL show MSG109 as the answer, with",
+      "AC-001.13": "IF the answer request fails for any reason other than field errors, THEN THE web app SHALL show MSG06",
+      "AC-001.14": "IF the answer request fails with field errors (400), THEN THE web app SHALL show the field's MSG under",
+      "AC-002.1": "WHILE the session has no conversation, THE web app SHALL show an empty conversation, titled \"New",
+      "AC-002.2": "WHEN the first answer of a conversation arrives, THE web app SHALL save the conversation with its",
+      "AC-002.3": "THE conversation list SHALL show the conversations of the session newest first, by the time each was",
+      "AC-002.4": "WHEN the user opens a conversation in the list, THE web app SHALL show its questions and answers in",
+      "AC-002.5": "WHEN the user asks a follow-up question in an open conversation, THE web app SHALL send the earlier",
+      "AC-002.6": "WHEN the user clicks New conversation, THE web app SHALL open an empty conversation at the top of the",
+      "AC-002.7": "THE web app SHALL keep the conversations in  under a key that starts with",
+      "AC-002.8": "IF the stored conversations belong to another user or cannot be read, THEN THE web app SHALL drop them",
+      "AC-002.9": "WHEN a conversation with Wiki document citations is shown, THE web app SHALL ask",
+      "AC-002.10": "IF that availability request fails, THEN THE web app SHALL show the Wiki citations as links.",
+      "AC-002.11": "IF storage is blocked, THEN THE web app SHALL still answer questions and keep the conversations",
+      "AC-003.1": "THE web app SHALL show Helpful and Not helpful buttons under every answer, the MSG109 answer included.",
+      "AC-003.2": "WHEN the user clicks Helpful or Not helpful, THE web app SHALL call",
+      "AC-003.3": "WHEN the user rates an answer again, THE web app SHALL send the new rating, which replaces the previous",
+      "AC-003.4": "WHEN a rated answer is shown again in the session (STORY-002), THE web app SHALL highlight its rating.",
+      "AC-003.5": "IF the rating request fails, THEN THE web app SHALL show MSG06 and keep the previous highlight.",
+      "AC-004.1": "WHEN a question contains a keyword of a mock answer, THE mock SHALL answer  with text that",
+      "AC-004.2": "IF a question matches no mock answer, THEN THE mock SHALL answer  with no citations.",
+      "AC-004.3": "IF a question is empty or longer than 1,000 characters, THEN THE mock SHALL answer 400 with a field",
+      "AC-004.4": "WHEN the mock is asked which Wiki documents are unavailable, THE mock SHALL list the ids of its",
+      "AC-004.5": "WHEN  runs, THE mock SHALL return to its initial data."
+    }
   }
 }

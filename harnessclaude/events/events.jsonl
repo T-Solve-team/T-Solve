@@ -100,3 +100,8 @@
 {"ts":"2026-10-23T11:39:12.709Z","type":"feature-status","module":"be-foundation","feature":"me-session","from":null,"to":"pending"}
 {"ts":"2026-10-23T11:39:13.267Z","type":"feature-status","module":"be-foundation","feature":"audit-writer","from":null,"to":"pending"}
 {"ts":"2026-10-23T12:03:13.481Z","type":"spec-approved","module":"be-foundation","specHash":"264285350f051113182822d7baddd60498e4b7f7f44fee4edeb39fbcff11c799"}
+{"ts":"2026-10-23T12:37:04.769Z","type":"spec-approved","module":"chatbot","specHash":"d047c4d18fd628c7f9e59756d509526b98b0f63e4bd5698dc53d636300041034"}
+{"ts":"2026-10-23T12:37:08.342Z","type":"module-status","module":"chatbot","from":"decomposed","to":"planned"}
+{"ts":"2026-10-23T12:37:08.495Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":null,"to":"pending"}
+{"ts":"2026-10-23T12:37:08.666Z","type":"feature-status","module":"chatbot","feature":"citations","from":null,"to":"pending"}
+{"ts":"2026-10-23T12:37:08.833Z","type":"feature-status","module":"chatbot","feature":"session-conversations","from":null,"to":"pending"}
