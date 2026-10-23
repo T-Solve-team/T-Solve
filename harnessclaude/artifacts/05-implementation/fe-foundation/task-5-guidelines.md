@@ -88,3 +88,17 @@ Review attempt 2.
 
 ### Next up
 The FE Lead decides on the open minor findings; fe-foundation module status.
+
+## Session 2026-10-23 13:00
+
+### Working on: guidelines — review attempt 2 minor findings
+- FE Lead (23/10): fix both in this PR. 09 §5: confirm rows for MSG42, MSG57, MSG78, MSG100 · MSG103, MSG106, and
+  the Hand Over Responsibilities popup case (D3) · 01: `shared/auth` names `roles.ts` and `session.ts`.
+- Commit: default@77ad80c
+
+### Verify
+- `npm run format:check`, `lint`, `typecheck`, `build`: exit 0; `generate:api`: no change.
+- `npm run test`: 397/397 (22 files).
+
+### Next up
+fe-foundation module completed (FE Lead, 23/10: in this PR).
