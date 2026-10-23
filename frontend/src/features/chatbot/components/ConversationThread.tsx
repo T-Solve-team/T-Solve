@@ -1,4 +1,5 @@
 import { Flex, Spin } from 'antd';
+import { useUnavailableDocuments } from '../hooks/useUnavailableDocuments';
 import type { ChatTurn } from '../model';
 import { ChatAnswer } from './ChatAnswer';
 import styles from './Conversation.module.css';
@@ -11,13 +12,14 @@ type ConversationThreadProps = {
 
 /** 12.1 conversation thread: each question on the right, its answer below it; a loading answer while waiting. */
 export function ConversationThread({ turns, pendingQuestion }: ConversationThreadProps) {
+  const unavailableIds = useUnavailableDocuments(citedWikiDocumentIds(turns));
   return (
     <section aria-label="Conversation" className={styles.thread}>
       <Flex vertical gap="large">
         {turns.map((turn, index) => (
           <Flex key={`${index}-${turn.answer.answerId}`} vertical gap="middle">
             <p className={styles.question}>{turn.question}</p>
-            <ChatAnswer answer={turn.answer} />
+            <ChatAnswer answer={turn.answer} unavailableIds={unavailableIds} />
           </Flex>
         ))}
         {pendingQuestion !== undefined && (
@@ -31,4 +33,12 @@ export function ConversationThread({ turns, pendingQuestion }: ConversationThrea
       </Flex>
     </section>
   );
+}
+
+/** The Wiki documents cited in the conversation, each once and sorted, so the availability query key is stable. */
+function citedWikiDocumentIds(turns: readonly ChatTurn[]): number[] {
+  const ids = turns.flatMap(({ answer }) =>
+    answer.citations.flatMap((c) => (c.type === 'WIKI_DOCUMENT' ? [c.wikiDocumentId] : [])),
+  );
+  return [...new Set(ids)].sort((a, b) => a - b);
 }

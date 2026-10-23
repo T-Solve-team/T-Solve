@@ -18,7 +18,9 @@ AppForm (antd Form: vertical layout, validate on blur, scroll to first error)
 - **Ant Form only.** No react-hook-form, Formik or zod. *Why:* antd inputs are built for `Form`; a second
   form library means two sets of rules and adapters for every input.
 - `AppForm` (kit) is antd `Form` with our defaults: `layout="vertical"`, `validateTrigger="onBlur"`,
-  `scrollToFirstError`, `requiredMark`. Use it instead of `Form` directly.
+  `scrollToFirstError`, `requiredMark`. Use it instead of `Form` directly. One exception: the 12.1 chat question
+  box sets `validateTrigger="onChange"` on its field, because it is empty most of the time and leaving it must not
+  show MSG01 (BUG-007).
 - Field `name`s are **the API property names** (`reason`, `jiraProjectKey`). *Why:* server `fieldErrors`
   then map onto fields with no translation table, and `onFinish` values go straight into the request.
 - Type the form: `const [form] = Form.useForm<RejectTicketsRequest>()` using the **generated** request type.

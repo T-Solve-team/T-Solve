@@ -82,16 +82,16 @@
       "currentPhase": "implement",
       "features": {
         "ask-answer": "passing",
-        "citations": "pending",
+        "citations": "passing",
         "session-conversations": "pending"
       },
-      "lastUpdated": "2026-10-23T13:45:23.315Z",
+      "lastUpdated": "2026-10-23T14:50:24.950Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "dcc6b5246aec0efb4a7b1bf3b1ebb72da285c132"
+        "default": "eb9a9c16aa3933f2f2a9a71f8576484a643091fe"
       }
     },
     "jira-app": {
