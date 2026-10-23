@@ -103,16 +103,16 @@ describe('route map', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: title }, { timeout: 5000 }),
     ).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(`^${number} ${title} — not built yet`))).toBeInTheDocument();
+    const escapedNumber = number.replaceAll('.', '\\.');
+    expect(
+      screen.getByText(new RegExp(`^${escapedNumber} ${title} — not built yet`)),
+    ).toBeInTheDocument();
   });
 
-  it('AC-005.4 registers the triage, wiki and chatbot features like every other feature', async () => {
+  // Their mocks are checked in src/mocks/handlers.test.ts (app/ may not import a feature's mocks).
+  it('AC-005.4 registers the triage, wiki and chatbot routes like every other feature', () => {
     for (const routes of [triageRoutes, wikiRoutes, chatbotRoutes]) {
       for (const route of routes) expect(featureRoutes).toContain(route);
-    }
-    const mocks = await import('@/mocks/handlers?raw');
-    for (const feature of ['triage', 'wiki', 'chatbot']) {
-      expect(mocks.default).toContain(`@/features/${feature}/mocks/handlers`);
     }
   });
 });
