@@ -33,3 +33,6 @@ Master registry of all artifacts in this workspace.
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-2-guards-menus.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-2-guards-menus-review.md |
 | — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-2-guards-menus-test-report.md |
+| — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-4-catalog-tags.md |
+| — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-4-catalog-tags-review.md |
+| — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-4-catalog-tags-test-report.md |

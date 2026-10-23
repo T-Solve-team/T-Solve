@@ -25,7 +25,7 @@ function withHost(action: (app: AppApi) => void): void {
 /**
  * Shows a system message as a toast. Toast codes use their catalog level (success / error / info);
  * any other code shown as a toast is an error.
- * `showMessage('MSG18', { count: 3 })`
+ * `showMessage('MSG14', { count: 3 })`
  */
 export function showMessage(code: MsgCode, params: MsgParams = {}): void {
   const definition = MESSAGES[code];

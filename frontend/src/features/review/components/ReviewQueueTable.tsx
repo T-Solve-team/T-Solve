@@ -98,7 +98,7 @@ export function ReviewQueueTable({
       loading={isLoading}
       error={error}
       onRetry={onRetry}
-      emptyCode="MSG16"
+      emptyCode="MSG13"
       pagination={{ page, total, onChange: onPageChange }}
       sort={sort}
       onSortChange={onSortChange}

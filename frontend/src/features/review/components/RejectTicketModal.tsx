@@ -12,13 +12,13 @@ type RejectTicketModalProps = {
   ticketIds: number[];
   isOpen: boolean;
   onClose: () => void;
-  /** After a successful rejection (MSG20 is already shown). */
+  /** After a successful rejection (MSG16 is already shown). */
   onRejected: () => void;
 };
 
 /**
  * 7.3 Reject Ticket (popup) — SRS III.7.3, Figma "7.3 Reject Ticket (popup)".
- * MSG19 (callout 1) · Reason * (2) · Reject (3) · Cancel (4). One reason for all selected tickets.
+ * MSG15 (callout 1) · Reason * (2) · Reject (3) · Cancel (4). One reason for all selected tickets.
  */
 export function RejectTicketModal({
   ticketIds,
@@ -55,7 +55,7 @@ export function RejectTicketModal({
       onCancel={onClose}
     >
       <Flex vertical gap="middle">
-        <Alert type="warning" showIcon title={msg('MSG19', { count: ticketIds.length })} />
+        <Alert type="warning" showIcon title={msg('MSG15', { count: ticketIds.length })} />
         <FormField<RejectFormValues>
           name="reason"
           label="Reason"

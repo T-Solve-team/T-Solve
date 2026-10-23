@@ -12,12 +12,12 @@ type RequestChangesModalProps = {
   ticketIds: number[];
   isOpen: boolean;
   onClose: () => void;
-  /** After the tickets were sent back (MSG21 is already shown). */
+  /** After the tickets were sent back (MSG17 is already shown). */
   onSent: () => void;
 };
 
 /**
- * 7.2 Request Changes (popup) — SRS III.7.2. Comment * (shown to each author in Jira, MSG53) · Send ·
+ * 7.2 Request Changes (popup) — SRS III.7.2. Comment * (shown to each author in Jira, MSG64) · Send ·
  * Cancel. From the Review Queue it takes every selected ticket with one comment (decision FE-34).
  */
 export function RequestChangesModal({
