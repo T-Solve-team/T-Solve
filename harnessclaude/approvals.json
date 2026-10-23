@@ -98,8 +98,8 @@
     }
   },
   "chatbot": {
-    "specHash": "d047c4d18fd628c7f9e59756d509526b98b0f63e4bd5698dc53d636300041034",
-    "approvedAt": "2026-10-23T12:37:04.768Z",
+    "specHash": "256c1f93a8b296f48a0d2ef7af91e2534ac9917a251a7d0467075f35ca90c463",
+    "approvedAt": "2026-10-23T13:37:06.984Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -114,7 +114,7 @@
       "AC-001.10": "WHEN a citation is a ticket Solution, THE web app SHALL show \"[n] Solution from a ticket\" with a Show",
       "AC-001.11": "WHEN the user clicks Show on a ticket Solution citation, THE web app SHALL expand the Solution inline",
       "AC-001.12": "WHEN the answer arrives with  , THE web app SHALL show MSG109 as the answer, with",
-      "AC-001.13": "IF the answer request fails for any reason other than field errors, THEN THE web app SHALL show MSG06",
+      "AC-001.13": "IF the request fails, not with a 401 or a field error on the question, THEN THE web app SHALL show",
       "AC-001.14": "IF the answer request fails with field errors (400), THEN THE web app SHALL show the field's MSG under",
       "AC-002.1": "WHILE the session has no conversation, THE web app SHALL show an empty conversation, titled \"New",
       "AC-002.2": "WHEN the first answer of a conversation arrives, THE web app SHALL save the conversation with its",

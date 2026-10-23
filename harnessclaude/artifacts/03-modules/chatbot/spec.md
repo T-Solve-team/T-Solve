@@ -11,6 +11,7 @@ owner: BA
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
 | 2026-10-23 | STORY-001..STORY-004 | Initial spec from Report3 (UC-51–53, GBR-36), SRS §III.12.1 and Figma 12.1 | Plan the Knowledge Chatbot (KAN-69, KAN-48); the backend is mocked for now |
+| 2026-10-23 | STORY-001 | AC-001.13: a 401 signs the user out (MSG07) with no MSG06; a field error on another field than the question shows MSG06 | Review of KAN-71 (findings 1 and 3) |
 
 ## Requirements
 
@@ -68,10 +69,10 @@ owner: BA
     applicability — and the button SHALL become Hide; Hide SHALL collapse it again.
   - AC-001.12: WHEN the answer arrives with `outcome` `NO_SOURCE`, THE web app SHALL show MSG109 as the answer, with
     `{tracker_name}` filled as "Jira", and no citations.
-  - AC-001.13: IF the answer request fails for any reason other than field errors, THEN THE web app SHALL show MSG06
-    as a toast, remove the pending question from the thread, keep the question in the box so the user can send it
-    again, and add nothing to the conversation. This covers the AI module being unavailable (503) and network
-    errors.
+  - AC-001.13: IF the request fails, not with a 401 or a field error on the question, THEN THE web app SHALL show
+    MSG06 as a toast, remove the pending question from the thread, keep the question in the box so the user can send
+    it again, and add nothing to the conversation. This covers the AI module being unavailable (503), network errors
+    and field errors on other fields; a 401 signs the user out with MSG07 (fe-foundation), with no MSG06.
   - AC-001.14: IF the answer request fails with field errors (400), THEN THE web app SHALL show the field's MSG under
     the question box and keep the question in the box.
 

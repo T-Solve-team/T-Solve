@@ -2,7 +2,7 @@
 
 **Module:** chatbot
 **Assignee:** Trần Trung Hiếu
-**Status:** evaluating
+**Status:** passing
 **Iteration:** 1
 
 ---
@@ -51,3 +51,16 @@ none
 
 ### Next up
 Review by `harnessclaude-reviewer`; then Task 2 (KAN-73, citations).
+
+## Session 2026-10-23 21:30
+
+### Working on: ask-answer — review findings (attempt 1 passed with findings)
+- AC-001.13 reworded (a 401 is the sign-out, MSG07); FE Lead approved the spec again (256c1f93); test added.
+- BUG-006 (field error not on the question showed nothing) fixed test-first; row in `docs/bug-log.md`.
+- Mock imports `QUESTION_MAX_LENGTH`; form values typed from `ChatbotQuestion`.
+- `tasks.md`: Task 2 also covers the citation halves of AC-001.7 and AC-001.8.
+- Commit: default@dcc6b52
+- Verify: format, lint, typecheck clean; `npm run test` 25 files, 423 passed; build OK; `generate:api` no diff.
+
+### Next up
+Task 2 (KAN-73, citations), after the KAN-71 PR is merged.

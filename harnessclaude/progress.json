@@ -16,17 +16,17 @@
       "lastUpdated": "2026-10-23T11:39:13.265Z"
     },
     "fe-foundation": {
-      "status": "implementing",
-      "currentPhase": "implement",
+      "status": "completed",
+      "currentPhase": "evaluate",
       "features": {
         "roles-session": "passing",
         "guards-menus": "passing",
         "route-map": "passing",
         "catalog-tags": "passing",
         "guidelines": "passing",
-        "placeholder-rule": "evaluating"
+        "placeholder-rule": "passing"
       },
-      "lastUpdated": "2026-10-23T13:24:39.108Z",
+      "lastUpdated": "2026-10-23T13:45:23.820Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
@@ -81,17 +81,17 @@
       "status": "implementing",
       "currentPhase": "implement",
       "features": {
-        "ask-answer": "evaluating",
+        "ask-answer": "passing",
         "citations": "pending",
         "session-conversations": "pending"
       },
-      "lastUpdated": "2026-10-23T13:24:38.934Z",
+      "lastUpdated": "2026-10-23T13:45:23.315Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "507955c893cd293983fbf2d04714bf4a921324f7"
+        "default": "dcc6b5246aec0efb4a7b1bf3b1ebb72da285c132"
       }
     },
     "jira-app": {

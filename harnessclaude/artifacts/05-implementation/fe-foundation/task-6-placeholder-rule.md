@@ -2,7 +2,7 @@
 
 **Module:** fe-foundation
 **Assignee:** Trần Trung Hiếu
-**Status:** evaluating
+**Status:** passing
 **Iteration:** 1
 
 ---
