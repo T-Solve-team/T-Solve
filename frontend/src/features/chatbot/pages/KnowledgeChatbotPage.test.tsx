@@ -127,6 +127,19 @@ describe('KnowledgeChatbotPage', () => {
     expect(sent).toHaveLength(0);
   });
 
+  it('AC-001.4 shows no message when the user leaves the empty box (BUG-007)', async () => {
+    const { user, box } = await openChatbot();
+
+    await user.click(box);
+    await user.tab();
+
+    expect(box).not.toHaveFocus();
+    // antd shows a field message only after its check has run: wait for it, expecting it never comes.
+    await expect(
+      screen.findByText(msg('MSG01', { field_name: 'Question' }), {}, { timeout: 500 }),
+    ).rejects.toThrow();
+  });
+
   it('AC-001.5 counts up to 1,000 characters and shows MSG02, sending nothing, above it', async () => {
     const sent = recordQuestions();
     const { user, box } = await openChatbot();
