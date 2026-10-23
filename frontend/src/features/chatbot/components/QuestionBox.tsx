@@ -44,13 +44,7 @@ export function QuestionBox({ form, isSending, onAsk }: QuestionBoxProps) {
             onKeyDown={handleKeyDown}
           />
         </FormField>
-        <Button
-          type="primary"
-          htmlType="submit"
-          loading={isSending}
-          disabled={isSending}
-          className={styles.send}
-        >
+        <Button type="primary" htmlType="submit" loading={isSending} disabled={isSending}>
           Send
         </Button>
       </Flex>
