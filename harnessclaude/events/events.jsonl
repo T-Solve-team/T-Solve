@@ -73,3 +73,6 @@
 {"ts":"2026-10-23T02:55:14.291Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"f67ead76438074f7e2335b5ebd62c6dd1bc871b2"}
 {"ts":"2026-10-23T02:55:14.459Z","type":"feature-status","module":"fe-foundation","feature":"catalog-tags","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-23T03:03:13.147Z","type":"feature-status","module":"fe-foundation","feature":"catalog-tags","from":"evaluating","to":"passing"}
+{"ts":"2026-10-23T03:20:33.322Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"pending","to":"in-progress"}
+{"ts":"2026-10-23T03:47:02.301Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"02f8b86b1b58c69d5e34052b9f679bae92360673"}
+{"ts":"2026-10-23T03:47:02.482Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"in-progress","to":"evaluating"}
