@@ -1,0 +1,9 @@
+/* Figma 12.1 callout 2: the box fills the row, Send sits at its bottom right. */
+.field {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.send {
+  margin-bottom: var(--ant-margin-lg);
+}

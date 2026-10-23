@@ -1,0 +1,266 @@
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { server } from '@/mocks/server';
+import type { ChatbotAnswer, ChatbotQuestion } from '@/shared/api';
+import { problem } from '@/shared/api/mocks';
+import { msg } from '@/shared/messages';
+import { renderApp } from '@/test/render';
+
+const VPN_QUESTION = 'How do I connect to the VPN from home?';
+
+type RenderOptions = NonNullable<Parameters<typeof renderApp>[1]>;
+
+/** 12.1 Knowledge Chatbot; resolves once the question box is shown. */
+async function openChatbot(options: RenderOptions = { role: 'EMPLOYEE' }) {
+  const user = userEvent.setup();
+  const view = renderApp('/chatbot', options);
+  // The first findBy also loads the lazy page module: give it more time (guideline 10 §6).
+  const box = await screen.findByRole('textbox', { name: 'Question' }, { timeout: 5000 });
+  return { user, box, ...view };
+}
+
+/** Records the body of every question the page sends, still answered by the feature's mock. */
+function recordQuestions(): ChatbotQuestion[] {
+  const sent: ChatbotQuestion[] = [];
+  server.events.on('request:start', async ({ request }) => {
+    if (request.method === 'POST' && request.url.endsWith('/api/v1/chatbot/answers')) {
+      sent.push((await request.clone().json()) as ChatbotQuestion);
+    }
+  });
+  return sent;
+}
+
+function answerWith(answer: Partial<ChatbotAnswer>) {
+  server.use(
+    http.post('*/api/v1/chatbot/answers', () =>
+      HttpResponse.json<ChatbotAnswer>({
+        answerId: '00000000-0000-4000-8000-000000000001',
+        outcome: 'ANSWERED',
+        text: '',
+        citations: [],
+        ...answer,
+      }),
+    ),
+  );
+}
+
+function thread() {
+  return screen.getByRole('region', { name: 'Conversation' });
+}
+
+describe('KnowledgeChatbotPage', () => {
+  beforeAll(async () => {
+    await import('./KnowledgeChatbotPage');
+  });
+
+  afterEach(() => {
+    server.events.removeAllListeners();
+  });
+
+  it.each([
+    ['an Employee', { role: 'EMPLOYEE' }],
+    ['a Project Manager who is also a Knowledge Manager', { user: 'pm-km' }],
+  ] as const)(
+    'AC-001.1 shows the thread, the question box and Send to %s',
+    async (_who, options) => {
+      await openChatbot(options);
+      expect(thread()).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
+    },
+  );
+
+  it('AC-001.2 sends the question when Enter is pressed, and adds a line with Shift+Enter', async () => {
+    const sent = recordQuestions();
+    const { user, box } = await openChatbot();
+
+    await user.type(box, 'VPN{Shift>}{Enter}{/Shift}from home');
+    expect(box).toHaveValue('VPN\nfrom home');
+    expect(sent).toHaveLength(0);
+
+    await user.keyboard('{Enter}');
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]?.question).toBe('VPN\nfrom home');
+  });
+
+  it('AC-001.3 sends the question when Send is clicked', async () => {
+    const sent = recordQuestions();
+    const { user, box } = await openChatbot();
+
+    await user.type(box, VPN_QUESTION);
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({ question: VPN_QUESTION, history: [] });
+  });
+
+  it('AC-001.4 shows MSG01 and sends nothing when the question is only white space', async () => {
+    const sent = recordQuestions();
+    const { user, box } = await openChatbot();
+
+    await user.type(box, '   ');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByText(msg('MSG01', { field_name: 'Question' }))).toBeInTheDocument();
+    expect(sent).toHaveLength(0);
+  });
+
+  it('AC-001.5 counts up to 1,000 characters and shows MSG02, sending nothing, above it', async () => {
+    const sent = recordQuestions();
+    const { user, box } = await openChatbot();
+    expect(screen.getByText('0 / 1000')).toBeInTheDocument();
+
+    await user.click(box);
+    await user.paste('a'.repeat(1001));
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(
+      await screen.findByText(msg('MSG02', { field_name: 'Question', max_length: 1000 })),
+    ).toBeInTheDocument();
+    expect(sent).toHaveLength(0);
+  });
+
+  it('AC-001.5 sends a question of exactly 1,000 characters', async () => {
+    const sent = recordQuestions();
+    const { user, box } = await openChatbot();
+
+    await user.click(box);
+    await user.paste('a'.repeat(1000));
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]?.question).toHaveLength(1000);
+  });
+
+  it('AC-001.6 sends one question when Enter is pressed twice quickly', async () => {
+    const sent = recordQuestions();
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}{Enter}`);
+
+    await within(thread()).findByText(/Install GlobalProtect/);
+    expect(sent).toHaveLength(1);
+  });
+
+  it('AC-001.6 shows the question with a loading answer and disables Send until the answer arrives', async () => {
+    let release = () => {};
+    const answered = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post('*/api/v1/chatbot/answers', async () => {
+        await answered;
+        return HttpResponse.json<ChatbotAnswer>({
+          answerId: '00000000-0000-4000-8000-000000000002',
+          outcome: 'ANSWERED',
+          text: 'Use GlobalProtect [1].',
+          citations: [],
+        });
+      }),
+    );
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+
+    expect(await within(thread()).findByText(VPN_QUESTION)).toBeInTheDocument();
+    expect(within(thread()).getByTestId('pending-answer')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: /Send/ })).toBeDisabled();
+
+    release();
+    expect(await within(thread()).findByText('Use GlobalProtect [1].')).toBeInTheDocument();
+    expect(within(thread()).queryByTestId('pending-answer')).not.toBeInTheDocument();
+    // jsdom never ends antd's fade-out of the loading icon, so its "loading" label stays in the button's name.
+    expect(screen.getByRole('button', { name: /Send/ })).toBeEnabled();
+  });
+
+  it('AC-001.6 sends the earlier turns of the conversation with a follow-up question', async () => {
+    const sent = recordQuestions();
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByText(/Install GlobalProtect/);
+    await user.type(box, 'And on a Mac?{Enter}');
+
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1]?.question).toBe('And on a Mac?');
+    expect(sent[1]?.history).toHaveLength(1);
+    expect(sent[1]?.history[0]?.question).toBe(VPN_QUESTION);
+    expect(sent[1]?.history[0]?.answer).toMatch(/^Install GlobalProtect/);
+  });
+
+  it('AC-001.7 shows the answer text with its numbered markers and empties the question box', async () => {
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+
+    const answer = await within(thread()).findByText(/Install GlobalProtect/);
+    expect(answer).toHaveTextContent('with your company account [1].');
+    expect(answer).toHaveTextContent('Power Options [2].');
+    expect(box).toHaveValue('');
+  });
+
+  it('AC-001.8 shows HTML in an answer as plain text', async () => {
+    answerWith({ text: '<b>Bold</b> <script>window.hacked = true</script> [1]' });
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+
+    expect(
+      await within(thread()).findByText('<b>Bold</b> <script>window.hacked = true</script> [1]'),
+    ).toBeInTheDocument();
+    expect(thread().querySelector('b, script')).toBeNull();
+  });
+
+  it('AC-001.12 shows MSG109 with "Jira" and no citations when no source is found', async () => {
+    const { user, box } = await openChatbot();
+
+    await user.type(box, 'Who won the football match yesterday?{Enter}');
+
+    const answer = await within(thread()).findByText(msg('MSG109'));
+    expect(answer).toHaveTextContent('create an issue in Jira');
+    expect(within(thread()).queryByRole('list', { name: 'Citations' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['the AI module is unavailable (503)', () => problem(503, 'MSG06')],
+    ['the network fails', () => HttpResponse.error()],
+  ])(
+    'AC-001.13 shows MSG06, keeps the question in the box and adds nothing when %s',
+    async (_why, failure) => {
+      server.use(http.post('*/api/v1/chatbot/answers', failure));
+      const { user, box } = await openChatbot();
+
+      await user.type(box, `${VPN_QUESTION}{Enter}`);
+
+      expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+      expect(box).toHaveValue(VPN_QUESTION);
+      expect(within(thread()).queryByText(VPN_QUESTION)).not.toBeInTheDocument();
+      expect(within(thread()).queryByTestId('pending-answer')).not.toBeInTheDocument();
+    },
+  );
+
+  it('AC-001.14 shows a field error from the server under the box and keeps the question', async () => {
+    server.use(
+      http.post('*/api/v1/chatbot/answers', () =>
+        problem(400, 'MSG02', {
+          fieldErrors: [
+            {
+              field: 'question',
+              code: 'MSG02',
+              params: { field_name: 'Question', max_length: 1000 },
+            },
+          ],
+        }),
+      ),
+    );
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+
+    expect(
+      await screen.findByText(msg('MSG02', { field_name: 'Question', max_length: 1000 })),
+    ).toBeInTheDocument();
+    expect(box).toHaveValue(VPN_QUESTION);
+    expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+  });
+});

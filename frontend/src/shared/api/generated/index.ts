@@ -1,2 +1,3 @@
+export * from './chatbot/chatbot';
 export * from './review/review';
 export * from './session/session';

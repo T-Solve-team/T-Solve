@@ -1,0 +1,26 @@
+/* Figma 12.1: the thread scrolls above the question box; question bubbles on the right, answers in a tinted block. */
+.thread {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.question {
+  align-self: flex-end;
+  max-width: 70%;
+  margin: 0;
+  padding: var(--ant-padding-sm) var(--ant-padding);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-primary-bg);
+  white-space: pre-wrap;
+}
+
+.answer {
+  padding: var(--ant-padding);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-fill-quaternary);
+}
+
+.text {
+  margin-bottom: 0;
+  white-space: pre-wrap;
+}
