@@ -2,7 +2,7 @@
 module: chatbot
 feature: citations
 task: 2
-attempt: 1
+attempt: 2
 date: 2026-10-23
 ---
 
@@ -41,3 +41,42 @@ memory), so I did not run them. The session log reports format:check clean, 435/
 ## Failures
 None. One test passes without proving its criterion. `AC-002.10 keeps the Wiki links …` makes its assertions
 before the failed availability response has arrived. See the review, Issue 1.
+
+---
+
+# Test Report: chatbot — Task 2: citations (attempt 2)
+
+**Date:** 2026-10-23
+**Code:** `default: b64f804..a5fe25b`: `4c9f297` (hook + tests) and `a5fe25b` (guideline 09). The checks were run at
+HEAD `77e259b`, which adds only harness files. The working tree was clean.
+**Commands (run by the reviewer, one after another):** in `frontend/`: `npm run lint` · `npm run typecheck` ·
+`npx vitest run src/features/chatbot`. From the repo root: `bun harnessclaude/hooks/sdd.ts trace chatbot STORY-001
+STORY-004`, `… trace chatbot STORY-002`, `bun harnessclaude/hooks/sdd.ts diff chatbot`. The full suite, `build`,
+`format:check` and `generate:api` were not run (dispatcher). The session log reports 437/437, build OK and no
+`generate:api` diff, and I did not check them.
+
+## Results
+- Feature tests: 2 files, 38 tests. Passed: 38 · Failed: 0 · Skipped: 0 · Duration: 52.8 s (exit 0).
+  The two new tests are AC-001.7 "out of order" and AC-002.9 "every turn / keeps MSG110 while it checks again".
+  AC-002.9 and AC-002.10 were changed. jsdom printed its usual getComputedStyle pseudo-element notice, which is
+  not a failure.
+- Lint: pass (`eslint .`, exit 0).
+- Typecheck: pass (`tsc -b --noEmit`, exit 0).
+- Coverage: there is no coverage script.
+
+## Mutation runs (a scratch copy of `frontend/`, not the repo)
+Each mutant was run against the tests that should catch it (`vitest run … -t`).
+- M1, no `keepPreviousData`: the AC-002.9 re-check test failed (caught).
+- M2, MSG110 for every document on error: the AC-002.10 test failed (caught).
+- M3, an MSG06 toast on error: the AC-002.10 test **passed (not caught)**. A probe confirmed that the toast does
+  show later. See review A1.
+- M4, no sort: the AC-001.7 out-of-order test failed (caught).
+- M5, only the last turn ids: the AC-002.9 every-turn test failed (caught).
+
+## Traceability
+- `trace chatbot STORY-001 STORY-004`: 19/19, exit 0.
+- `trace chatbot STORY-002`: AC-002.9 and AC-002.10 have a test (2/11; the rest belong to Task 3).
+- `diff chatbot`: the spec is unchanged since it was approved (2026-10-23T14:05:13Z).
+
+## Failures
+None.

@@ -134,3 +134,5 @@
 {"ts":"2026-10-23T14:37:49.573Z","type":"quick-closed","what":"Guideline 09: note that the 12.1 question box checks on change, not on blur (BUG-007)","files":["frontend/guidelines/09-forms-and-validation.md"]}
 {"ts":"2026-10-23T14:37:50.561Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"a5fe25b7f4f6bf98ee54b183be0325675e7c4a72"}
 {"ts":"2026-10-23T14:37:50.734Z","type":"feature-status","module":"chatbot","feature":"citations","from":"fixing","to":"evaluating"}
+{"ts":"2026-10-23T14:50:24.783Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"eb9a9c16aa3933f2f2a9a71f8576484a643091fe"}
+{"ts":"2026-10-23T14:50:24.951Z","type":"feature-status","module":"chatbot","feature":"citations","from":"evaluating","to":"passing"}

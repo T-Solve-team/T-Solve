@@ -2,7 +2,7 @@
 
 **Module:** chatbot
 **Assignee:** Trần Trung Hiếu
-**Status:** evaluating
+**Status:** passing
 **Iteration:** 1
 
 ---
@@ -59,4 +59,14 @@ Review by `harnessclaude-reviewer`; then Task 3 (KAN-72, session conversations).
 
 ### Next up
 Review attempt 2.
+
+## Session 2026-10-23 23:00
+
+### Working on: citations — review attempt 2 PASS
+- A1: the AC-002.10 test now waits for a possible MSG06 toast, expecting none (commit default@eb9a9c1).
+- A2 needed no change: `afterEach` already removes the `server.events` listeners.
+- `npx vitest run src/features/chatbot`: 38 passed; lint and typecheck clean.
+
+### Next up
+PR for KAN-73; then Task 3 (KAN-72, session conversations).
 

@@ -2,8 +2,8 @@
 module: chatbot
 feature: citations
 task: 2
-verdict: fail
-attempt: 1
+verdict: pass
+attempt: 2
 date: 2026-10-23
 reviewer: harnessclaude-reviewer
 iteration: 1
@@ -167,3 +167,130 @@ See `task-2-citations-test-report.md`. In summary: `npm run lint` exit 0; `npm r
 `npx vitest run src/features/chatbot` gives 2 files and 36/36 passed in 39.5 s; `sdd.ts trace chatbot STORY-001
 STORY-004` gives 19/19 (exit 0); `sdd.ts diff chatbot` says the spec is unchanged since it was approved. No
 coverage script exists.
+
+---
+
+# Attempt 2 — 2026-10-23
+
+**Verdict: PASS.** (Attempt 1 above was FAIL. The frontmatter now holds attempt 2.)
+
+## Summary
+Reviewed `git diff b64f804..a5fe25b` outside `harnessclaude/`: `4c9f297` (hook + tests) and `a5fe25b` (guideline
+09 note, a quick change). The checks were run at HEAD `77e259b`, which adds only harness files. The working tree
+was clean. Lint and typecheck are clean. All 38 chatbot tests pass. `trace` gives 19/19 for STORY-001 and STORY-004,
+and AC-002.9 and AC-002.10 have tests. The spec has not changed since it was approved.
+
+The critical finding is fixed. The AC-002.10 test now waits until the availability query for `[9003]` is in `error`
+and only then asserts. Findings 2, 3 and 5 are fixed, and each new test fails when its behaviour is broken (mutation
+runs below). The reason for keeping finding 4 is sound. One gap is left, and it does not block: the "no toast" half of
+the AC-002.10 test still does not prove anything (new Issue A1). That half comes from design edge case 19. It is not
+in the spec criterion, which says only "SHALL show the Wiki citations as links", and that part is now proven.
+
+## Attempt 1 findings
+
+| # | Sev. | Status | Evidence |
+|---|------|--------|----------|
+| 1 | CRITICAL | **Resolved** | `KnowledgeChatbotPage.test.tsx:420-435` waits on `queryClient.getQueryState(getListUnavailableCitedDocumentsQueryKey({ wikiDocumentIds: [9003] }))?.status === 'error'` and then uses `getByRole` for the link. Mutant M2 (on error, every cited document shown as MSG110) makes this test **fail**. |
+| 2 | IMPORTANT | **Resolved** | `useUnavailableDocuments.ts:12` has `placeholderData: keepPreviousData`. Test `:392-418` holds the follow-up check, waits until `[9001, 9003]` has been requested, and asserts MSG110 is still shown and the expense link is not. Mutant M1 (without `keepPreviousData`) makes it **fail**. |
+| 3 | MINOR | **Resolved** | Test `:263-288` sends citation 2 before citation 1. Mutant M4 (the sort removed, `CitationList.tsx:22`) makes it **fail**. |
+| 4 | MINOR | **Kept, the reason is sound** | `:146-157`. A check that a message never shows needs some wait, and the test explains this in a comment (`:153`). The alternative I suggested in attempt 1 (send the empty box, expect MSG01 once) would not catch a regression: antd shows one message per field, so a blur-time MSG01 would still show "once". I withdraw it. |
+| 5 | MINOR | **Resolved** | `recordAvailabilityChecks` (`:54-63`) records the `wikiDocumentIds` params. `:389` expects `[[9003]]`, and `:411` expects `[[9003], [9001, 9003]]`, so the ids of every turn are sent. Mutant M5 (only the last turn's ids) makes it **fail**. |
+
+Assumption 5 of attempt 1 (BUG-007 and guideline 09): `a5fe25b` adds the exception to
+`frontend/guidelines/09-forms-and-validation.md:20-23`. That settles it.
+
+## `keepPreviousData` against AC-002.9 and AC-002.10
+I read `@tanstack/query-core` 5.104.1, `queryObserver.ts:611-649`. Placeholder data is used only while
+`status === 'pending'` and `data === undefined`.
+- **A failed check (AC-002.10):** when the request fails, `status` becomes `error` and the placeholder is dropped.
+  `data` is `undefined`, the set is empty, and every Wiki citation is a link. This also holds for a follow-up check
+  that fails after an earlier check succeeded: a document shown as MSG110 then becomes a link, which is what
+  AC-002.10 says. With `retry` (the app default) the query stays `pending` between tries, so MSG110 stays until the
+  last try fails.
+- **A stale MSG110:** a document that became available keeps its MSG110 only while the new check is pending. The new
+  data then replaces the old, so MSG110 does not stay after the answer. A document cited for the first time is never
+  marked from old data, because the earlier list could not contain it. This is the safe direction for AC-002.9.
+- **Task 3 note:** after KAN-72 lets the user switch conversations, the hook will carry the last list over from the
+  previous conversation for one round trip. Only ids found in both lists are affected, and the effect is the same
+  one-round-trip MSG110 as above. Nothing to do now.
+
+## Mutation runs (scratch copy only; the repo was not touched)
+I copied `frontend/` (without `node_modules`, which was linked) to the session scratchpad. I applied one mutant at a
+time and ran only the relevant tests of `KnowledgeChatbotPage.test.tsx` (`-t`).
+
+| Mutant | Change | Expected to fail | Result |
+|--------|--------|------------------|--------|
+| M1 | remove `placeholderData: keepPreviousData` | AC-002.9 "keeps MSG110 while it checks again" | failed (caught) |
+| M2 | `query.isError ? wikiDocumentIds : data` (MSG110 for every document on error) | AC-002.10 | failed (caught) |
+| M3 | `useEffect(() => { if (query.isError) showMessage('MSG06') })` in the hook | AC-002.10 | **passed (not caught)** |
+| M4 | `const ordered = citations` (no sort) | AC-001.7 out of order | failed (caught) |
+| M5 | `turns.slice(-1)` in `citedWikiDocumentIds` | AC-002.9 every turn | failed (caught) |
+
+For M3, I then added a probe in the copy that waits for MSG06 after the test's own assertions. The probe found
+MSG06. So the mutant did show the toast, and the test's synchronous `queryByText(msg('MSG06'))` ran before the
+toast was drawn.
+
+## Re-check of the whole feature
+Stage 1 rows 1–7, 9 and 10 of attempt 1 are unchanged by `4c9f297`, which touches only the hook and the test file.
+Their tests pass again. Row 8 (AC-002.10) is now **PASS**. Stage 2 still holds for the hook. The new import is
+`@tanstack/react-query`, which is already a dependency. There is no `any`, `!` or `@ts-ignore`, and the comment gives
+the reason. Lint is clean, so import boundaries and banned components are fine.
+
+| Criterion | Result | Detail |
+|-----------|--------|--------|
+| Functionality | pass | Every criterion of the task works as the spec says. |
+| Completeness | pass | 19/19 plus AC-002.9 and AC-002.10. Each of this task's tests now checks its criterion. Edge cases 9, 10 and 20 are tested. For edge case 19, "links shown" is tested and "no toast" is not (A1). |
+| Correctness | pass | 38/38 chatbot tests, lint and typecheck are clean. No code defect was found. |
+| Integration | pass | No change to the contract or `generated/`. The hook still uses only the generated client and the query client's error handling. |
+
+## Traceability (attempt 2)
+```
+  ✓ AC-001.1 … AC-001.14   frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx
+  ✓ AC-004.1 … AC-004.5    frontend/src/features/chatbot/mocks/handlers.test.ts
+trace chatbot (STORY-001, STORY-004): 19/19 acceptance criteria have a test
+
+  ✓ AC-002.9   frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx
+  ✓ AC-002.10  frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx
+trace chatbot (STORY-002): 2/11 — the other 9 are Task 3's (KAN-72)
+```
+
+## Issues (attempt 2)
+
+**CRITICAL**: none.
+
+**IMPORTANT**: none.
+
+**MINOR**
+
+A1. `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx:433`. The test name says "shows no message".
+    But `expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument()` runs before an antd toast could be drawn,
+    so a version that toasts on the error still passes (M3). The code shows no toast: `useUnavailableDocuments` and
+    `createAppQueryClient` set no query `onError`. So this is only a weak guard against a regression of design edge
+    case 19, not a spec gap.
+    Fix (optional): use the same absence wait as the BUG-007 test (`:154-156`):
+    `await expect(screen.findByText(msg('MSG06'), {}, { timeout: 500 })).rejects.toThrow()`. Or drop "no message"
+    from the test name.
+A2. `KnowledgeChatbotPage.test.tsx:54-63`. `recordAvailabilityChecks` adds a `server.events` listener that is never
+    removed (`src/test/setup.ts` only calls `resetHandlers`). The listener stays alive for every later test in the
+    file. It has no effect today.
+    Fix (optional): `afterEach(() => server.events.removeAllListeners())` in the test file.
+
+## Assumptions made (attempt 2)
+1. **"No toast" is not part of AC-002.10 (open judgment call).** I passed AC-002.10 on its spec text ("SHALL show the
+   Wiki citations as links"), which the test now proves. "No toast" comes only from design edge case 19. Under the
+   rule "check against the spec", I rated A1 MINOR. If the user wants every edge case of the design proven, A1
+   becomes a blocker. Its fix is one line in the test.
+2. **A short stale MSG110 is accepted.** With `keepPreviousData`, a document that became available keeps its MSG110
+   until the follow-up check answers. I read this as consistent with AC-002.9. It shows the last known result, and it
+   leans to the safe side.
+3. **Finding 4 withdrawn.** See the table above.
+4. As in attempt 1, I did not run the full suite, `build`, `format:check` or `generate:api` (the dispatcher said not
+   to). The session log reports format and lint clean, 437/437 tests, the build passing and no `generate:api` diff.
+   I did not check those myself.
+5. I did not run `sdd.ts feature chatbot citations passing`, because I may write only the review files. The main
+   session must make that status change.
+
+## Test Report (attempt 2)
+See `task-2-citations-test-report.md`, attempt 2. `npm run lint` exit 0 · `npm run typecheck` exit 0 ·
+`npx vitest run src/features/chatbot`: 2 files, 38/38 passed in 52.8 s · `sdd.ts trace chatbot STORY-001 STORY-004`
+19/19 exit 0 · `trace … STORY-002` AC-002.9 and AC-002.10 covered · `sdd.ts diff chatbot`: unchanged since approval.
