@@ -17,7 +17,7 @@ async function failureOf(promise: Promise<unknown>): Promise<ApiError> {
 }
 
 describe('http (fetch wrapper)', () => {
-  it('sends the CSRF cookie on unsafe requests only (BUG-019, AC-006.5)', async () => {
+  it('sends the CSRF cookie on unsafe requests only (BUG-022, AC-006.5)', async () => {
     document.cookie = 'XSRF-TOKEN=review%2Bcsrf; Path=/';
     const received: (string | null)[] = [];
     server.use(
@@ -47,17 +47,17 @@ describe('http (fetch wrapper)', () => {
   it('turns a Problem Details response into an ApiError with the MSG code', async () => {
     server.use(
       mock.post(`*${URL}`, () =>
-        problem(409, 'MSG47', {
+        problem(409, 'MSG49', {
           params: { department_name: 'IT' },
-          fieldErrors: [{ field: 'jiraProjectKey', code: 'MSG47' }],
+          fieldErrors: [{ field: 'jiraProjectKey', code: 'MSG49' }],
         }),
       ),
     );
     const error = await failureOf(http(URL, { method: 'POST' }));
     expect(error.status).toBe(409);
-    expect(error.code).toBe('MSG47');
+    expect(error.code).toBe('MSG49');
     expect(error.params).toEqual({ department_name: 'IT' });
-    expect(error.fieldErrors).toEqual([{ field: 'jiraProjectKey', code: 'MSG47', params: {} }]);
+    expect(error.fieldErrors).toEqual([{ field: 'jiraProjectKey', code: 'MSG49', params: {} }]);
   });
 
   it.each([

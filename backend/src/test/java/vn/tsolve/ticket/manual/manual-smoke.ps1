@@ -14,7 +14,7 @@ function Assert-Manual($condition, [string]$label) {
 }
 
 function Read-ManualJson($response) {
-    # PowerShell can return application/problem+json as bytes instead of text (BUG-014).
+    # PowerShell can return application/problem+json as bytes instead of text (BUG-017).
     $body = if ($response.Content -is [byte[]]) {
         [System.Text.Encoding]::UTF8.GetString($response.Content)
     } else {
@@ -41,24 +41,24 @@ function Request-Manual([string]$path, [string]$method = 'Get', $body = $null, [
     Invoke-WebRequest @arguments
 }
 
-function testManualSwaggerCsrf_BUG_011 {
+function testManualSwaggerCsrf_BUG_014 {
     $headers = @{Authorization = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('pm:' + $Password))}
     $response = Invoke-WebRequest ($BaseUrl.TrimEnd('/') + '/manual-review/csrf') -Headers $headers -SessionVariable script:manualSession
     $script:manualCsrf = Read-ManualJson $response
-    Assert-Manual ($response.StatusCode -eq 200 -and $manualSession.Cookies.Count -gt 0) 'BUG-011: backend starts and supplies CSRF cookie'
+    Assert-Manual ($response.StatusCode -eq 200 -and $manualSession.Cookies.Count -gt 0) 'BUG-014: backend starts and supplies CSRF cookie'
 }
 
-testManualSwaggerCsrf_BUG_011
+testManualSwaggerCsrf_BUG_014
 $schema = Invoke-RestMethod ($BaseUrl.TrimEnd('/') + '/v3/api-docs')
 
-function testManualCsrfSchema_BUG_012 {
+function testManualCsrfSchema_BUG_015 {
     $parameters = @($schema.paths.'/manual-review/csrf'.get.parameters).Where({$null -ne $_})
-    Assert-Manual ($parameters.Count -eq 0) 'BUG-012: Swagger CSRF has no required query input'
+    Assert-Manual ($parameters.Count -eq 0) 'BUG-015: Swagger CSRF has no required query input'
 }
 
-testManualCsrfSchema_BUG_012
+testManualCsrfSchema_BUG_015
 $paging = @($schema.paths.'/api/v1/review-queue'.get.parameters | ForEach-Object name)
-Assert-Manual ('page' -in $paging -and 'size' -in $paging -and 'sort' -in $paging -and 'pageable' -notin $paging) 'BUG-013: Swagger paging parameters'
+Assert-Manual ('page' -in $paging -and 'size' -in $paging -and 'sort' -in $paging -and 'pageable' -notin $paging) 'BUG-016: Swagger paging parameters'
 
 $response = Request-Manual '/manual-review/fixtures' 'Post'
 Assert-Manual ($response.StatusCode -eq 200) 'CSRF-protected fixture creation'
@@ -84,19 +84,19 @@ Assert-Manual ($after.ticket.status -eq 'CHANGES_REQUESTED' -and $before.ticket.
 $second = Read-ManualJson (Request-Manual ('/manual-review/state/' + $fixture.secondChangesId))
 Assert-Manual ($second.ticket.status -eq 'CHANGES_REQUESTED' -and $second.ticket.review_comment -eq 'Add exact reproduction steps' -and $second.decisions.Count -eq 1 -and $second.audit.Count -eq 1 -and $second.notifications.Count -eq 1) 'Second selected ticket gets the same comment and its own decision/audit/notification'
 
-function testManualProblemBody_BUG_014 {
+function testManualProblemBody_BUG_017 {
     $response = Request-Manual '/api/v1/reviews/approve' 'Post' @{ticketIds = @($fixture.foreignTicketId)}
     $problem = Read-ManualJson $response
-    Assert-Manual ($response.StatusCode -eq 403 -and $problem.code -eq 'MSG08') 'BUG-014: decode Problem Details; forbidden Project returns MSG08'
+    Assert-Manual ($response.StatusCode -eq 403 -and $problem.code -eq 'MSG08') 'BUG-017: decode Problem Details; forbidden Project returns MSG08'
 }
 
-testManualProblemBody_BUG_014
+testManualProblemBody_BUG_017
 $response = Request-Manual '/api/v1/reviews/approve' 'Post' @{ticketIds = @($fixture.foreignTicketId)}
 Assert-Manual ($response.StatusCode -eq 403) 'Foreign Project ticket returns 403'
 $response = Request-Manual '/api/v1/reviews/approve' 'Post' @{ticketIds = @($fixture.rejectId)}
 Assert-Manual ($response.StatusCode -eq 409) 'Rejected remains final'
 $response = Request-Manual '/api/v1/reviews/approve' 'Post' @{ticketIds = @(1.5)}
-Assert-Manual ($response.StatusCode -eq 400) 'BUG-008: fractional ticket ID rejected'
+Assert-Manual ($response.StatusCode -eq 400) 'BUG-011: fractional ticket ID rejected'
 $response = Request-Manual '/api/v1/review-queue' 'Get' $null 'employee'
 Assert-Manual ($response.StatusCode -eq 403) 'Employee cannot review'
 $response = Request-Manual '/api/v1/review-queue?projectId=20' 'Get' $null 'otherpm'

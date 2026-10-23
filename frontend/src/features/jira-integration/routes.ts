@@ -5,7 +5,7 @@ export const jiraIntegrationRoutes: FeatureRoute[] = [
   {
     path: paths.jiraIntegration,
     title: 'Jira Integration', // 3.1
-    roles: ['ADMIN', 'DEPARTMENT_MANAGER', 'PROJECT_MANAGER'],
+    roles: ['ADMIN', 'PROJECT_MANAGER'],
     lazy: () => import('./pages/JiraIntegrationPage'),
   },
   {

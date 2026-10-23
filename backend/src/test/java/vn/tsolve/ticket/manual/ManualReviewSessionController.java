@@ -1,6 +1,7 @@
 package vn.tsolve.ticket.manual;
 
 import io.swagger.v3.oas.annotations.Hidden;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.context.annotation.Profile;
@@ -30,21 +31,30 @@ public class ManualReviewSessionController {
         boolean manager = !actor.managedProjects().isEmpty();
         long projectId = actor.readableProjects().iterator().next();
         String projectName = projectId == 10L ? "Manual IT" : "Manual HR";
-        return Map.of(
-                "user", Map.of("id", projectId, "fullName", actor.name(), "email", actor.id() + "@manual.example"),
-                "role", manager ? "PROJECT_MANAGER" : "STAFF",
+        Map<String, Object> result = new LinkedHashMap<>(Map.of(
+                "user",
+                Map.of("id", projectId, "fullName", actor.name(), "email", actor.id() + "@manual.example"),
+                "roles",
+                manager ? List.of("EMPLOYEE", "PROJECT_MANAGER") : List.of("EMPLOYEE"),
+                "managedSpaces",
+                List.of(),
+                "workspaceReady",
+                true,
                 "projects",
-                        List.of(Map.of(
-                                "projectId",
-                                projectId,
-                                "jiraProjectKey",
-                                projectName,
-                                "departmentId",
-                                projectId,
-                                "departmentName",
-                                projectName,
-                                "roleInProject",
-                                manager ? "PROJECT_MANAGER" : "MEMBER")),
-                "departments", List.of(Map.of("departmentId", projectId, "name", projectName)));
+                List.of(Map.of(
+                        "projectId",
+                        projectId,
+                        "jiraProjectKey",
+                        projectName,
+                        "departmentId",
+                        projectId,
+                        "departmentName",
+                        projectName,
+                        "roleInProject",
+                        manager ? "PROJECT_MANAGER" : "MEMBER")),
+                "departments",
+                manager ? List.of(Map.of("departmentId", projectId, "name", projectName)) : List.of()));
+        result.put("department", manager ? Map.of("departmentId", projectId, "name", projectName) : null);
+        return result;
     }
 }

@@ -18,7 +18,7 @@ type RejectTicketModalProps = {
 
 /**
  * 7.3 Reject Ticket (popup) — SRS III.7.3, Figma "7.3 Reject Ticket (popup)".
- * MSG19 (callout 1) · Reason * (2) · Reject (3) · Cancel (4). One reason for all selected tickets.
+ * MSG15 (callout 1) · Reason * (2) · Reject (3) · Cancel (4). One reason for all selected tickets.
  */
 export function RejectTicketModal({
   ticketIds,

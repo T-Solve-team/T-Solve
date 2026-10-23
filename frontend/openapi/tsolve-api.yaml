@@ -3,7 +3,7 @@ info:
   title: T-Solve API
   version: 0.2.0-review
   description: >
-    Review endpoints implement Report 3 v3460 (UC-29, UC-30). Session endpoints remain integration
+    Review endpoints follow Report3 UC-29/UC-30 and FE Lead D1/D2. Session endpoints remain integration
     contracts awaiting the identity module. Errors use Problem Details with an MSG code; paging uses
     Spring Page metadata. Real authentication, session/CSRF transport, Project authorization and email
     delivery require their documented integration adapters.
@@ -17,7 +17,7 @@ paths:
     get:
       tags: [session]
       operationId: getMe
-      summary: The signed-in user, their role, Projects and Departments.
+      summary: The signed-in user with all their roles, Department(s), Projects and managed Spaces.
       responses:
         '200':
           description: Signed in.
@@ -232,7 +232,8 @@ components:
   schemas:
     Role:
       type: string
-      enum: [ADMIN, DEPARTMENT_MANAGER, PROJECT_MANAGER, STAFF]
+      description: A role of a user (Report3 4.1, GBR-28). A user can hold several; every user has EMPLOYEE.
+      enum: [EMPLOYEE, TICKET_RESOLVER, PROJECT_MANAGER, KNOWLEDGE_MANAGER, ADMIN]
     ProjectRole:
       type: string
       description: The user's role inside one Project.
@@ -277,26 +278,50 @@ components:
           format: int64
         name:
           type: string
+    SpaceRef:
+      type: object
+      required: [spaceId, name]
+      properties:
+        spaceId:
+          type: integer
+          format: int64
+        name:
+          type: string
     CurrentUser:
       type: object
       description: >
-        The signed-in user (SRS 1.2.1). projects = Projects the user belongs to with their role in each (empty for
-        Admin and Department Manager); departments = the user's Departments (from their Projects, or the ones a
-        Department Manager manages).
-      required: [user, role, projects, departments]
+        The signed-in user (Report3 UC-01, UC-03; GBR-02, GBR-16, GBR-28). roles = all of the user's roles, EMPLOYEE
+        included. department = the Department of a Project Manager (exactly one), null for everyone else.
+        departments = the Project Manager's Department, or the Departments of a Ticket Resolver's Projects; empty
+        for others. projects = the Projects the user belongs to with their role in each. managedSpaces = the
+        Spaces a Knowledge Manager manages. workspaceReady = false until the Admin has entered the company
+        information (2.1 Workspace Setup).
+      required: [user, roles, department, departments, projects, managedSpaces, workspaceReady]
       properties:
         user:
           $ref: '#/components/schemas/UserSummary'
-        role:
-          $ref: '#/components/schemas/Role'
-        projects:
+        roles:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectMembership'
+            $ref: '#/components/schemas/Role'
+        department:
+          anyOf:
+            - $ref: '#/components/schemas/DepartmentRef'
+            - type: 'null'
         departments:
           type: array
           items:
             $ref: '#/components/schemas/DepartmentRef'
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMembership'
+        managedSpaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpaceRef'
+        workspaceReady:
+          type: boolean
     ProjectRef:
       type: object
       required: [projectId, name]

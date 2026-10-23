@@ -111,12 +111,12 @@ Handle user actions in event handlers, not in effects. (React docs: "You Might N
 ```tsx
 if (query.isPending) return <LoadingState />;
 if (query.isError) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
-if (query.data.content.length === 0) return <EmptyState code="MSG16" />; // Review Queue's empty text
+if (query.data.content.length === 0) return <EmptyState code="MSG13" />; // Review Queue's empty text
 return <TicketCards tickets={query.data.content} />;
 ```
 
 Use the kit's `LoadingState`, `ErrorState` and `EmptyState` (Figma "Web/Empty & Loading"). The default
-empty message is MSG04; use the screen-specific code where the SRS names one (MSG16 for Review Queue).
+empty message is MSG04; use the screen-specific code where the SRS names one (MSG13 for Review Queue).
 `DataTable` handles these states for you when you pass `loading`, `error`, `onRetry` and `rows`
 (see `features/review/components/ReviewQueueTable.tsx`).
 
@@ -130,7 +130,7 @@ Pull non-trivial conditions into a named variable or a small function so they ca
 
 ```tsx
 // ✅ Do
-const canRequestChanges = ticket.source === 'SOLUTION_FORM'; // MSG22 otherwise
+const canRequestChanges = ticket.source === 'SOLUTION_FORM'; // MSG18 otherwise
 ```
 
 ## 3. Semantic HTML basics
@@ -153,4 +153,4 @@ tests find elements by role and label ([10](10-testing.md) T1):
 - [ ] No business condition buried inline in JSX.
 
 ---
-*Last verified against code: 2026-10-10, step 5.5 — every path, name, rule and ✅ example checked against the scaffold.*
+*Last verified against code: 2026-10-23, KAN-63 — screens, roles, paths and MSG codes checked against the Report3 foundation (`src/test/guidelines.test.ts`).*

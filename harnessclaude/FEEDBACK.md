@@ -20,3 +20,9 @@ The backend tests and PostgreSQL evidence are retained. The official trace resul
 **Type:** friction
 **Context:** T-Solve uses one branch per Jira issue (`<type>/KAN-<n>-<module>-<desc>`) and a trailer for AI help. The harness assumes one branch per module: `sdd.ts status <module> implementing` records `feat/<module>` (`hooks/sdd.ts:230`), the commit skill commits on `feat/{module}` and says to add no AI attribution, and `audit` warns when the recorded branch is gone. The project rules in CLAUDE.md / AGENTS.md now override this in words only (KAN-55).
 **Suggestion:** Let `manifest.yaml` set the branch pattern (or `sdd.ts status … implementing --branch <name>`), and use it in the commit skill and in `audit`; let the commit skill follow the project's commit-message rules (header, trailer).
+
+## 2026-10-22 — discover / decompose (`progress.json` `phase`)
+
+**Type:** gap
+**Context:** The discover skill says to set `phase` in `progress.json` to `decompose`, but no `sdd.ts` command changes `phase` and the rules forbid editing `progress.json` by hand, so T-Solve stays at `phase: init` after discover and decompose (KAN-64). Also: `frontmatterList` splits an inline `[a, b]` list on commas, so a brace glob like `src/{a,b}/**` in `paths` breaks silently.
+**Suggestion:** Add `sdd.ts phase <phase>` (or set it from `sdd.ts status … decomposed`); document that `paths` must use `- item` lists or glob without braces.

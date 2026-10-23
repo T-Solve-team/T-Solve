@@ -31,8 +31,8 @@
 {"ts":"2026-10-20T16:14:09.647Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"b6098c58e59d47302526e42bb1229d78a519f22f"}
 {"ts":"2026-10-21T12:50:30.391Z","type":"quick-opened","what":"AGENTS.md: add exception/client folders, common layout, test layout; log ProblemDetail mismatch bug","files":["backend/AGENTS.md","docs/bug-log.md"]}
 {"ts":"2026-10-21T12:52:43.722Z","type":"quick-closed","what":"AGENTS.md: add exception/client folders, common layout, test layout; log ProblemDetail mismatch bug","files":["backend/AGENTS.md","docs/bug-log.md"]}
-{"ts":"2026-10-21T13:28:12.777Z","type":"quick-opened","what":"Fix delayed Form validation teardown BUG-017","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-21T13:35:49.855Z","type":"quick-closed","what":"Fix delayed Form validation teardown BUG-017","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-21T13:28:12.777Z","type":"quick-opened","what":"Fix delayed Form validation teardown BUG-020","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-21T13:35:49.855Z","type":"quick-closed","what":"Fix delayed Form validation teardown BUG-020","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-10-21T13:47:30.072Z","type":"feature-status","module":"ticket-review","feature":"review-ui","from":"pending","to":"in-progress"}
 {"ts":"2026-10-21T14:30:54.157Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"6021e9c024f9d2aa59c0c74a591dbd13fb115c0b"}
 {"ts":"2026-10-21T18:10:39.312Z","type":"quick-opened","what":"project rules: frontend verify commands and where the frontend conventions are","files":["CLAUDE.md","AGENTS.md"]}
@@ -52,3 +52,71 @@
 {"ts":"2026-10-22T13:48:53.476Z","type":"feature-status","module":"ticket-review","feature":"review-lead-amendments","from":null,"to":"pending"}
 {"ts":"2026-10-22T13:48:53.554Z","type":"feature-status","module":"ticket-review","feature":"review-lead-amendments","from":"pending","to":"in-progress"}
 {"ts":"2026-10-22T14:11:53.130Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"61ca98e7bfba62914521f47c99751ea4acbd033a"}
+{"ts":"2026-10-22T14:21:21.970Z","type":"module-status","module":"be-foundation","from":null,"to":"decomposed"}
+{"ts":"2026-10-22T14:21:22.168Z","type":"module-status","module":"fe-foundation","from":null,"to":"decomposed"}
+{"ts":"2026-10-22T14:21:22.380Z","type":"module-status","module":"identity","from":null,"to":"decomposed"}
+{"ts":"2026-10-22T14:21:22.577Z","type":"module-status","module":"workspace","from":null,"to":"decomposed"}
+{"ts":"2026-10-22T14:21:22.779Z","type":"module-status","module":"project-integration","from":null,"to":"decomposed"}
+{"ts":"2026-10-22T14:21:22.981Z","type":"module-status","module":"wiki","from":null,"to":"decomposed"}
+{"ts":"2026-10-22T14:21:23.188Z","type":"module-status","module":"ticket-repository","from":null,"to":"decomposed"}
+{"ts":"2026-10-22T14:21:23.393Z","type":"module-status","module":"search","from":null,"to":"decomposed"}
+{"ts":"2026-10-22T14:21:23.606Z","type":"module-status","module":"triage","from":null,"to":"decomposed"}
+{"ts":"2026-10-22T14:21:23.820Z","type":"module-status","module":"chatbot","from":null,"to":"decomposed"}
+{"ts":"2026-10-22T14:21:24.029Z","type":"module-status","module":"jira-app","from":null,"to":"decomposed"}
+{"ts":"2026-10-22T14:21:24.228Z","type":"module-status","module":"dashboard-audit","from":null,"to":"decomposed"}
+{"ts":"2026-10-22T14:51:55.135Z","type":"spec-approved","module":"fe-foundation","specHash":"03ad0a31fbf0ad5f0666883afbbe8076ea242e49bde705b7e2b23ae36473e53b"}
+{"ts":"2026-10-22T14:52:00.229Z","type":"module-status","module":"fe-foundation","from":"decomposed","to":"planned"}
+{"ts":"2026-10-22T14:52:00.419Z","type":"feature-status","module":"fe-foundation","feature":"roles-session","from":null,"to":"pending"}
+{"ts":"2026-10-22T14:52:00.609Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":null,"to":"pending"}
+{"ts":"2026-10-22T14:52:00.797Z","type":"feature-status","module":"fe-foundation","feature":"route-map","from":null,"to":"pending"}
+{"ts":"2026-10-22T14:52:01.008Z","type":"feature-status","module":"fe-foundation","feature":"catalog-tags","from":null,"to":"pending"}
+{"ts":"2026-10-22T14:52:01.208Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":null,"to":"pending"}
+{"ts":"2026-10-22T14:54:47.549Z","type":"module-status","module":"fe-foundation","from":"planned","to":"implementing"}
+{"ts":"2026-10-22T14:54:47.939Z","type":"feature-status","module":"fe-foundation","feature":"roles-session","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T15:12:33.741Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"d9bfc7bdf8d246f66b160d9214ffe19a9351a9b5"}
+{"ts":"2026-10-22T15:12:33.942Z","type":"feature-status","module":"fe-foundation","feature":"roles-session","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-22T15:22:55.780Z","type":"feature-status","module":"fe-foundation","feature":"roles-session","from":"evaluating","to":"passing"}
+{"ts":"2026-10-22T15:31:23.646Z","type":"feature-status","module":"fe-foundation","feature":"route-map","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T15:41:54.589Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"02e9fc35aa5fa2689b852018934bc7f804af19b6"}
+{"ts":"2026-10-22T15:41:54.785Z","type":"feature-status","module":"fe-foundation","feature":"route-map","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-22T15:46:42.619Z","type":"feature-status","module":"fe-foundation","feature":"route-map","from":"evaluating","to":"passing"}
+{"ts":"2026-10-22T15:47:39.095Z","type":"quick-opened","what":"BUG-003: the global error test times out in the full frontend suite","files":["docs/bug-log.md","frontend/src/app/providers/global-errors.test.tsx"]}
+{"ts":"2026-10-22T15:53:41.240Z","type":"quick-closed","what":"BUG-003: the global error test times out in the full frontend suite","files":["docs/bug-log.md","frontend/src/app/providers/global-errors.test.tsx"]}
+{"ts":"2026-10-22T15:59:18.078Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T16:07:48.237Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"03f8f8c3a2ebcece920d9d667e619442534148d0"}
+{"ts":"2026-10-22T16:07:48.441Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-22T16:15:12.790Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":"evaluating","to":"fixing"}
+{"ts":"2026-10-22T16:28:17.942Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"2381c5f5a82a662cd1563dc47d50096fd4d88ead"}
+{"ts":"2026-10-22T16:28:18.157Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":"fixing","to":"evaluating"}
+{"ts":"2026-10-22T16:33:53.298Z","type":"feature-status","module":"fe-foundation","feature":"guards-menus","from":"evaluating","to":"passing"}
+{"ts":"2026-10-22T16:36:53.737Z","type":"feature-status","module":"fe-foundation","feature":"catalog-tags","from":"pending","to":"in-progress"}
+{"ts":"2026-10-23T02:55:14.291Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"f67ead76438074f7e2335b5ebd62c6dd1bc871b2"}
+{"ts":"2026-10-23T02:55:14.459Z","type":"feature-status","module":"fe-foundation","feature":"catalog-tags","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-23T03:03:13.147Z","type":"feature-status","module":"fe-foundation","feature":"catalog-tags","from":"evaluating","to":"passing"}
+{"ts":"2026-10-23T03:20:33.322Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"pending","to":"in-progress"}
+{"ts":"2026-10-23T03:47:02.301Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"02f8b86b1b58c69d5e34052b9f679bae92360673"}
+{"ts":"2026-10-23T03:47:02.482Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-23T03:54:38.421Z","type":"quick-opened","what":"Update .claude/tsolve-project.md to Report3: source order, five roles, several per user, features","files":[".claude/tsolve-project.md"]}
+{"ts":"2026-10-23T03:56:25.876Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"evaluating","to":"fixing"}
+{"ts":"2026-10-23T03:59:29.265Z","type":"quick-closed","what":"Update .claude/tsolve-project.md to Report3: source order, five roles, several per user, features","files":[".claude/tsolve-project.md"]}
+{"ts":"2026-10-23T04:24:24.609Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"03f9137bc723d7b770560c9ad3d2d377c8813f5e"}
+{"ts":"2026-10-23T04:24:24.800Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"fixing","to":"evaluating"}
+{"ts":"2026-10-23T04:30:28.550Z","type":"feature-status","module":"fe-foundation","feature":"guidelines","from":"evaluating","to":"passing"}
+{"ts":"2026-10-23T06:20:50.022Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"77ad80cc9cf9c45a124f42b9ee6581d4844cc839"}
+{"ts":"2026-10-23T06:20:56.701Z","type":"module-status","module":"fe-foundation","from":"implementing","to":"evaluating"}
+{"ts":"2026-10-23T06:20:56.879Z","type":"module-status","module":"fe-foundation","from":"evaluating","to":"completed"}
+{"ts":"2026-10-23T06:55:14.868Z","type":"quick-opened","what":"KAN-66: close the logout and session test gaps (Task 1 review findings 1-3)","files":["frontend/src/shared/auth/sign-out.test.tsx","frontend/src/shared/auth/session.ts","frontend/src/shared/auth/session.test.ts"]}
+{"ts":"2026-10-23T07:02:02.111Z","type":"quick-closed","what":"KAN-66: close the logout and session test gaps (Task 1 review findings 1-3)","files":["frontend/src/shared/auth/sign-out.test.tsx","frontend/src/shared/auth/session.ts","frontend/src/shared/auth/session.test.ts"]}
+{"ts":"2026-10-23T07:08:25.866Z","type":"quick-opened","what":"KAN-67: message catalog and StatusTag test nits (Task 4 review findings 1-4)","files":["frontend/src/shared/messages/catalog.test.ts","frontend/src/shared/messages/msg.ts","frontend/src/features/review/hooks/useReviewDecisions.ts","frontend/src/shared/ui/StatusTag/StatusTag.test.tsx"]}
+{"ts":"2026-10-23T07:11:48.857Z","type":"quick-closed","what":"KAN-67: message catalog and StatusTag test nits (Task 4 review findings 1-4)","files":["frontend/src/shared/messages/catalog.test.ts","frontend/src/shared/messages/msg.ts","frontend/src/features/review/hooks/useReviewDecisions.ts","frontend/src/shared/ui/StatusTag/StatusTag.test.tsx"]}
+{"ts":"2026-10-23T07:12:11.085Z","type":"quick-opened","what":"KAN-67: route table test checks the new feature mocks by reference (Task 3 review findings 1-2)","files":["frontend/src/app/router/route-table.test.tsx","frontend/src/mocks/handlers.ts"]}
+{"ts":"2026-10-23T07:14:46.927Z","type":"quick-closed","what":"KAN-67: route table test checks the new feature mocks by reference (Task 3 review findings 1-2)","files":["frontend/src/app/router/route-table.test.tsx","frontend/src/mocks/handlers.ts"]}
+{"ts":"2026-10-23T07:14:56.319Z","type":"quick-opened","what":"KAN-67: check the new feature mocks by reference in a src/mocks test (Task 3 review findings 1-2)","files":["frontend/src/app/router/route-table.test.tsx","frontend/src/mocks/handlers.ts","frontend/src/mocks/handlers.test.ts"]}
+{"ts":"2026-10-23T07:35:29.608Z","type":"quick-closed","what":"KAN-67: check the new feature mocks by reference in a src/mocks test (Task 3 review findings 1-2)","files":["frontend/src/app/router/route-table.test.tsx","frontend/src/mocks/handlers.ts","frontend/src/mocks/handlers.test.ts"]}
+{"ts":"2026-10-23T11:31:20.176Z","type":"spec-approved","module":"be-foundation","specHash":"4d03249e43937c1e707752c7bcc3d7a3eeaf48ba6ba831d880aa2b9b1ba3c51d"}
+{"ts":"2026-10-23T11:39:11.405Z","type":"module-status","module":"be-foundation","from":"decomposed","to":"planned"}
+{"ts":"2026-10-23T11:39:11.822Z","type":"feature-status","module":"be-foundation","feature":"problem-errors","from":null,"to":"pending"}
+{"ts":"2026-10-23T11:39:12.232Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":null,"to":"pending"}
+{"ts":"2026-10-23T11:39:12.709Z","type":"feature-status","module":"be-foundation","feature":"me-session","from":null,"to":"pending"}
+{"ts":"2026-10-23T11:39:13.267Z","type":"feature-status","module":"be-foundation","feature":"audit-writer","from":null,"to":"pending"}
+{"ts":"2026-10-23T12:03:13.481Z","type":"spec-approved","module":"be-foundation","specHash":"264285350f051113182822d7baddd60498e4b7f7f44fee4edeb39fbcff11c799"}

@@ -48,6 +48,12 @@ class ReviewControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = {"STAFF", "DEPARTMENT_MANAGER"})
+    void refusesRetiredRoles_AC_001_5_BUG_029() throws Exception {
+        mvc.perform(get("/api/v1/tickets/1")).andExpect(status().isForbidden());
+    }
+
+    @Test
     @WithMockUser(roles = "PROJECT_MANAGER")
     void requiresReasonAndComment_AC_003_3_AC_004_3() throws Exception {
         mvc.perform(post("/api/v1/reviews/reject")
@@ -115,7 +121,7 @@ class ReviewControllerTest {
 
     @Test
     @WithMockUser(roles = "PROJECT_MANAGER")
-    void refusesFractionalTicketIds_AC_005_5_BUG_008() throws Exception {
+    void refusesFractionalTicketIds_AC_005_5_BUG_011() throws Exception {
         when(review.decide(any(), eq(ReviewAction.APPROVE), any())).thenReturn(new ReviewDecisionResult(1));
         mvc.perform(post("/api/v1/reviews/approve")
                         .with(csrf())

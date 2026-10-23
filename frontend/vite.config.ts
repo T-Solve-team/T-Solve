@@ -50,5 +50,8 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     // Page tests render antd tables in jsdom and take 2–5 s each; 5 s (the default) fails on a busy laptop.
     testTimeout: 15_000,
+    // Half the CPU cores run test files at once (default: all). With every core busy, a page's first render could
+    // pass its 5 s findBy wait (BUG-004); fewer parallel files keep each render fast without longer timeouts.
+    maxWorkers: '50%',
   },
 });

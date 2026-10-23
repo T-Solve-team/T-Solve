@@ -3,7 +3,7 @@
  * Keys are the API values; one key per Figma variant (Deferred, Running and Succeeded are retired).
  */
 export const STATUS_TAGS = {
-  // Ticket (SRS v2: six statuses)
+  // Ticket (Report3 GBR-07: six statuses)
   PENDING_REVIEW: { label: 'Pending review', color: 'blue' },
   CHANGES_REQUESTED: { label: 'Changes requested', color: 'orange' },
   PUBLISHED: { label: 'Published', color: 'green' },
@@ -22,6 +22,9 @@ export const STATUS_TAGS = {
   FAILED: { label: 'Failed', color: 'red' },
   VALID: { label: 'Valid', color: 'green' },
   ERROR: { label: 'Error', color: 'red' },
+  // AI Ticket Triage class (GBR-35). Colours are placeholders until the Figma kit sets them (design).
+  SIMPLE: { label: 'Simple', color: 'green' },
+  COMPLEX: { label: 'Complex', color: 'orange' },
 } as const;
 
 export type StatusTagStatus = keyof typeof STATUS_TAGS;

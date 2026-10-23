@@ -4,6 +4,96 @@
   "phase": "init",
   "status": "active",
   "modules": {
+    "be-foundation": {
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "problem-errors": "pending",
+        "roles-security": "pending",
+        "me-session": "pending",
+        "audit-writer": "pending"
+      },
+      "lastUpdated": "2026-10-23T11:39:13.265Z"
+    },
+    "fe-foundation": {
+      "status": "completed",
+      "currentPhase": "evaluate",
+      "features": {
+        "roles-session": "passing",
+        "guards-menus": "passing",
+        "route-map": "passing",
+        "catalog-tags": "passing",
+        "guidelines": "passing"
+      },
+      "lastUpdated": "2026-10-23T06:20:56.878Z",
+      "branch": "feat/fe-foundation",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "77ad80cc9cf9c45a124f42b9ee6581d4844cc839"
+      }
+    },
+    "identity": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.379Z"
+    },
+    "workspace": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.576Z"
+    },
+    "project-integration": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.778Z"
+    },
+    "wiki": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.980Z"
+    },
+    "ticket-repository": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.187Z"
+    },
+    "search": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.392Z"
+    },
+    "triage": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.605Z"
+    },
+    "chatbot": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.819Z"
+    },
+    "jira-app": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:24.029Z"
+    },
+    "dashboard-audit": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:24.227Z"
+    },
     "ticket-review": {
       "status": "implementing",
       "currentPhase": "implement",

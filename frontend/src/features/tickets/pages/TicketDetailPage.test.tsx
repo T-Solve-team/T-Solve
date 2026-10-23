@@ -70,7 +70,7 @@ describe('Ticket Detail review', () => {
     ['Reject', 'Reason', 'Incorrect steps', 'Reject', 'Rejected'],
     ['Request Changes', 'Comment', 'Add error details', 'Send', 'Changes requested'],
   ])(
-    'AC-003.3, AC-004.2 submits %s, validates required input and refreshes detail (BUG-020)',
+    'AC-003.3, AC-004.2 submits %s, validates required input and refreshes detail (BUG-023)',
     async (action, field, comment, confirm, status) => {
       const { user } = await openDetail();
       const due = ticket.reviewDueDate;

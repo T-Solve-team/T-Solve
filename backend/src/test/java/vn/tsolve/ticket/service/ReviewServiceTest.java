@@ -58,7 +58,7 @@ class ReviewServiceTest {
 
     @Test
     @org.junit.jupiter.api.DisplayName(
-            "AC-006.2 denies access without an auth adapter; Mockito executes on JDK 21 (BUG-006)")
+            "AC-006.2 denies access without an auth adapter; Mockito executes on JDK 21 (BUG-009)")
     void deniesWhenIdentityIntegrationIsAbsent_AC_006_2() {
         assertThatThrownBy(() -> service.queue(null, PageRequest.of(0, 20)))
                 .isInstanceOfSatisfying(ReviewException.class, error -> assertThat(error.getCode())

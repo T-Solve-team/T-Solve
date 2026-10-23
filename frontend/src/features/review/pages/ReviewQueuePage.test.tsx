@@ -17,7 +17,12 @@ async function openQueue(path = '/review-queue') {
 }
 
 describe('ReviewQueuePage', () => {
-  it('AC-001.1 lists the pending tickets of my Projects, earliest review due date first, 20 per page', async () => {
+  // BUG-004: preload the lazy module so first-render waits cover the UI, not module loading.
+  beforeAll(async () => {
+    await import('./ReviewQueuePage');
+  });
+
+  it('AC-001.1 lists the pending tickets of my Projects, earliest review due date first, 20 per page (BUG-004, BUG-027)', async () => {
     await openQueue();
     const table = screen.getByRole('table');
     const rows = within(table).getAllByRole('row').slice(1); // without the header row
@@ -35,13 +40,13 @@ describe('ReviewQueuePage', () => {
       }),
     );
     renderApp('/review-queue');
-    expect(await screen.findByText(msg('MSG13'))).toBeInTheDocument();
+    expect(await screen.findByText(msg('MSG13'), {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it('AC-001.4 shows the error in place, with Try again, when the queue cannot be loaded', async () => {
     server.use(http.get('*/api/v1/review-queue', () => problem(500)));
     renderApp('/review-queue');
-    expect(await screen.findByRole('alert')).toHaveTextContent(msg('MSG06'));
+    expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(msg('MSG06'));
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
@@ -118,10 +123,10 @@ describe('ReviewQueuePage', () => {
     await user.type(within(dialog).getByLabelText('Comment'), 'Clarify the resolution');
     await user.click(within(dialog).getByRole('button', { name: 'Send' }));
     expect(await screen.findByText(msg('MSG17'))).toBeInTheDocument();
-    expect(await screen.findByText(msg('MSG13'))).toBeInTheDocument();
+    expect(await screen.findByText(msg('MSG13'), {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
-  it('AC-006.5 reports a failed Select all request and preserves selection (BUG-023)', async () => {
+  it('AC-006.5 reports a failed Select all request and preserves selection (BUG-026)', async () => {
     server.use(http.get('*/api/v1/review-queue/ticket-ids', () => problem(500)));
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
@@ -130,17 +135,18 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('1 selected')).toBeInTheDocument();
   });
 
-  it('AC-001.2 filters by Project and keeps the filter in the URL (BUG-005, BUG-015)', async () => {
+  it('AC-001.2 filters by Project and keeps the filter in the URL (BUG-008, BUG-018, BUG-030)', async () => {
     const { user, router } = await openQueue();
     await user.click(screen.getByRole('combobox', { name: 'Project' }));
-    await user.click(await screen.findByTitle('HRHELP'));
+    expect(screen.queryByTitle('HRHELP')).not.toBeInTheDocument();
+    await user.click(await screen.findByTitle('ITNET'));
 
-    await waitFor(() => expect(router.state.location.search).toBe('?projectId=201'));
+    await waitFor(() => expect(router.state.location.search).toBe('?projectId=102'));
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: 'ITSUP-1031' })).not.toBeInTheDocument(),
     );
-    expect(screen.getByRole('link', { name: 'HRHELP-0318' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'ITNET-0415' })).toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: 'Select all' }));
-    expect(await screen.findByText('18 selected')).toBeInTheDocument();
+    expect(await screen.findByText('19 selected')).toBeInTheDocument();
   });
 });

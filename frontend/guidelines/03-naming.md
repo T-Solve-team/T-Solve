@@ -73,7 +73,7 @@ so invalidation after a mutation cannot silently miss. Details in [06](06-data-l
 
 ## 5. Business vocabulary (from the glossary — use exactly)
 
-Code names follow the API (generated); UI text follows the SRS. `Role`, `ProjectRole` and `TicketSource` come
+Code names follow the API (generated); UI text follows the SRS (Report3). `Role`, `ProjectRole` and `TicketSource` come
 from our committed OpenAPI stub; the other API values are the agreed spellings (also the `StatusTag` keys)
 until the backend publishes them. If the backend publishes different spellings, the generated code wins
 and this table is updated.
@@ -85,7 +85,7 @@ and this table is updated.
 | Project | `project`, `projectId` | status `ACTIVE`, `REMOVED` | Project · Active / Removed |
 | Jira project | `jiraProjectKey` | — | Jira project key |
 | Project member | `projectMember`, `members` | — | Members |
-| Role | `Role` | `ADMIN`, `DEPARTMENT_MANAGER`, `PROJECT_MANAGER`, `STAFF` | Admin · Department Manager · Project Manager · Staff |
+| Role | `Role`, `roles` (a user holds several) | `EMPLOYEE`, `TICKET_RESOLVER`, `PROJECT_MANAGER`, `KNOWLEDGE_MANAGER`, `ADMIN` | Employee · Ticket Resolver · Project Manager · Knowledge Manager · Admin |
 | Role in a Project | `ProjectRole` (`roleInProject`) | `PROJECT_MANAGER`, `MEMBER` | — (labels come with Project Detail, from the SRS) |
 | User account status | `userStatus` | `ACTIVE`, `DEACTIVATED` | Active / Deactivated |
 | Ticket | `ticket`, `ticketId` | — | ticket / Ticket |
@@ -104,6 +104,38 @@ and this table is updated.
 | Search | `search`, `searchQuery` | — | Search |
 | Audit log entry | `auditEntry` | — | Audit Log |
 | Connection status | `connectionStatus` | `CONNECTED`, `NOT_CONNECTED` | Connected / Not connected |
+| Space | `space`, `spaceId`, `managedSpaces` | — | Space |
+| Wiki document | `wikiDocument`, `documentId` | — | Wiki document · document |
+| Folder | `folder`, `folderId` | — | Folder |
+| Company-wide | `visibility` (set with the Wiki API) | — | Department · Company-wide |
+| Owner (of a Wiki document) | `owner` | — | Owner |
+| Triage class | `triageClass` | `SIMPLE`, `COMPLEX` (also `StatusTag` keys) | Simple · Complex |
+| Knowledge Chatbot | `chatbot` | — | Knowledge Chatbot |
+| Citation | `citation`, `citations` | — | (the source list under an answer) |
+
+**Roles** (Report3 4.1, GBR-28). Every signed-in user has Employee; the Admin adds the others, and the
+permissions of several roles add up. The session gives all of them (`useSession().roles`, `hasRole`,
+`hasAnyRole`); a route lists the roles that may open it.
+
+| Role | Who |
+|---|---|
+| Employee | every account. Signs in, views My Profile, reads the Wiki documents they may see, asks the Knowledge Chatbot. |
+| Ticket Resolver | a Project member who resolves Jira issues and writes Solutions; has no Department of their own — belongs to the Departments of their Projects. Searches and views tickets. |
+| Project Manager | manages Projects in exactly one Department; reviews Solutions, imports tickets, sees review, import and triage history. |
+| Knowledge Manager | manages the Space of one or more Departments: access, folders, Wiki documents, trash. A Space has at most one. |
+| Admin | manages the Workspace, users, roles, Departments and the audit log; hands over Projects and Spaces. |
+
+**Wiki, triage and chatbot words** (GBR-29…36):
+
+| Term | Meaning |
+|---|---|
+| Space | the Wiki area of one Department — exactly one per Department, never deleted. |
+| Wiki document | an uploaded file in a Space; Published at once, without review. |
+| Folder | groups Wiki documents in a Space; at most three levels, unique names within a parent. |
+| Company-wide | a Wiki document visibility: readable by every user. The other visibility is Department. |
+| Triage class | AI Ticket Triage's result for a new Jira issue: Simple (gets a suggested solution) or Complex. |
+| Knowledge Chatbot | answers questions from Published Solutions and the Wiki documents the user may see. |
+| Citation | a source listed under a Chatbot answer; a Wiki document opens, a ticket shows only its Solution text. |
 
 Status labels shown in the UI come from one place — `StatusTag`'s label map — never typed again in a page.
 
@@ -123,6 +155,9 @@ Status labels shown in the UI come from one place — `StatusTag`'s label map �
 | Approved solution / Published solution | Published ticket |
 | Hidden, archived (for Unpublished) | Unpublished |
 | Jira statuses (Open, In Progress, Resolved) as ticket statuses | the six T-Solve statuses above |
+| the old roles staff, department manager | Employee, Ticket Resolver, Project Manager, Knowledge Manager, Admin |
+| the old triage words sensitive, escalation handler, route to handler, correct class | Simple · Complex (triage class) |
+| migrate (Department data), wiki review, wiki versions, wiki editor, transfer owner | (removed in Report3) |
 
 Also never add a **Project filter** to any screen — only a sortable Project column (UI decisions 04/10).
 
@@ -131,9 +166,11 @@ concept removes a whole class of "is this the same thing?" questions.
 
 ## 6. MSG codes
 
-MSG codes are written as string literals typed `MsgCode` (`'MSG18'`), always with the `MSG` prefix and
-two digits. Retired codes (MSG09, MSG11–15, MSG17, MSG23–28, MSG37, MSG48, MSG49, MSG69) do not exist
-in the catalog, so TypeScript rejects them.
+MSG codes are written as string literals typed `MsgCode` (`'MSG14'`), exactly as Report3 System_Messages
+writes them (`MSG01`…`MSG118`, not every number is used), plus `MSG_NEW_2` until System_Messages numbers
+it. The Jira App messages and the codes dropped by decisions D2 and D3 are not in the catalog
+(`catalog.test.ts` lists them), so TypeScript rejects them. A guideline names only catalog codes
+(`src/test/guidelines.test.ts`).
 
 ---
-*Last verified against code: 2026-10-10, step 5.5 — every path, name, rule and ✅ example checked against the scaffold.*
+*Last verified against code: 2026-10-23, KAN-63 — screens, roles, paths and MSG codes checked against the Report3 foundation (`src/test/guidelines.test.ts`).*

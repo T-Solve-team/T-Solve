@@ -1,6 +1,9 @@
 import type { ReviewQueueItem } from '@/shared/api';
 
-/** Projects of the mock Project Manager (src/mocks/session.ts) and their Departments. */
+/**
+ * Projects in the review queue mock and their Departments. The mock Project Manager (src/mocks/session.ts) manages
+ * ITSUP and ITNET; HRHELP tickets stay in the data until ticket-review scopes the queue to the user's Projects.
+ */
 export const MOCK_PROJECTS = [
   { projectId: 101, name: 'IT Support', key: 'ITSUP', departmentId: 1 },
   { projectId: 102, name: 'IT Network', key: 'ITNET', departmentId: 1 },

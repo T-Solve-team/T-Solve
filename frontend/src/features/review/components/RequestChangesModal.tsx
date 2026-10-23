@@ -17,7 +17,7 @@ type RequestChangesModalProps = {
 };
 
 /**
- * 7.2 Request Changes (popup) — SRS III.7.2. Comment * (shown to each author in Jira, MSG53) · Send ·
+ * 7.2 Request Changes (popup) — SRS III.7.2. Comment * (shown to each author in Jira, MSG64) · Send ·
  * Cancel. FE Lead D1 / FE-34: one shared comment for every selected ticket.
  */
 export function RequestChangesModal({

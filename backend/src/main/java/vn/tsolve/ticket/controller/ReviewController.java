@@ -34,8 +34,8 @@ import vn.tsolve.ticket.service.ReviewService;
 @ApiResponse(responseCode = "409", description = "Review state conflict")
 public class ReviewController {
     private static final String MANAGER = "hasRole('PROJECT_MANAGER')";
-    private static final String READER = "hasAnyRole('PROJECT_MANAGER','TICKET_RESOLVER','EMPLOYEE',"
-            + "'ADMIN','KNOWLEDGE_MANAGER','STAFF','DEPARTMENT_MANAGER')";
+    private static final String READER =
+            "hasAnyRole('PROJECT_MANAGER','TICKET_RESOLVER','EMPLOYEE'," + "'ADMIN','KNOWLEDGE_MANAGER')";
     private final ReviewService service;
 
     public ReviewController(ReviewService service) {
