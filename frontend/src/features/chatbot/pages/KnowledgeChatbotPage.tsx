@@ -3,6 +3,7 @@ import { Form } from 'antd';
 import { useRef } from 'react';
 import { applyApiErrors } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
+import { ConversationList } from '../components/ConversationList';
 import { ConversationThread } from '../components/ConversationThread';
 import { QuestionBox, type QuestionFormValues } from '../components/QuestionBox';
 import { useAskQuestion } from '../hooks/useAskQuestion';
@@ -12,7 +13,7 @@ import styles from './KnowledgeChatbotPage.module.css';
 
 export function KnowledgeChatbotPage() {
   const [form] = Form.useForm<QuestionFormValues>();
-  const { turns, addTurn } = useConversations();
+  const { conversations, openId, turns, open, startNew, addTurn } = useConversations();
   const ask = useAskQuestion();
   // Set at once, unlike ask.isPending: a second Enter before the next render must not send the question again.
   const isAsking = useRef(false);
@@ -20,11 +21,12 @@ export function KnowledgeChatbotPage() {
   function handleAsk(question: string) {
     if (isAsking.current) return;
     isAsking.current = true;
+    const conversationId = openId ?? crypto.randomUUID();
     ask.mutate(
       { data: { question, history: toHistory(turns) } },
       {
         onSuccess: (answer) => {
-          addTurn({ question, answer });
+          addTurn(conversationId, { question, answer });
           // Only the sent question: text typed while waiting stays (AC-001.7). Not resetFields(): it re-mounts the
           // field, and the box would lose focus after every answer.
           if (form.getFieldValue('question') === question) form.setFieldValue('question', '');
@@ -45,12 +47,21 @@ export function KnowledgeChatbotPage() {
   }
 
   return (
-    <div className={styles.chat}>
-      <ConversationThread
-        turns={turns}
-        pendingQuestion={ask.isPending ? ask.variables.data.question : undefined}
+    <div className={styles.page}>
+      <ConversationList
+        conversations={conversations}
+        openId={openId}
+        disabled={ask.isPending}
+        onOpen={open}
+        onNew={startNew}
       />
-      <QuestionBox form={form} isSending={ask.isPending} onAsk={handleAsk} />
+      <div className={styles.chat}>
+        <ConversationThread
+          turns={turns}
+          pendingQuestion={ask.isPending ? ask.variables.data.question : undefined}
+        />
+        <QuestionBox form={form} isSending={ask.isPending} onAsk={handleAsk} />
+      </div>
     </div>
   );
 }

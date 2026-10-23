@@ -16,3 +16,6 @@ export function toHistory(turns: readonly ChatTurn[]): ChatbotTurn[] {
     answer: answer.outcome === 'ANSWERED' ? answer.text : '',
   }));
 }
+
+/** A conversation of the session; `startedAt` (ms) orders the list newest first (AC-002.3). */
+export type Conversation = { id: string; startedAt: number; turns: ChatTurn[] };
