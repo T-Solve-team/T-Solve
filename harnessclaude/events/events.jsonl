@@ -93,3 +93,10 @@
 {"ts":"2026-10-23T07:14:46.927Z","type":"quick-closed","what":"KAN-67: route table test checks the new feature mocks by reference (Task 3 review findings 1-2)","files":["frontend/src/app/router/route-table.test.tsx","frontend/src/mocks/handlers.ts"]}
 {"ts":"2026-10-23T07:14:56.319Z","type":"quick-opened","what":"KAN-67: check the new feature mocks by reference in a src/mocks test (Task 3 review findings 1-2)","files":["frontend/src/app/router/route-table.test.tsx","frontend/src/mocks/handlers.ts","frontend/src/mocks/handlers.test.ts"]}
 {"ts":"2026-10-23T07:35:29.608Z","type":"quick-closed","what":"KAN-67: check the new feature mocks by reference in a src/mocks test (Task 3 review findings 1-2)","files":["frontend/src/app/router/route-table.test.tsx","frontend/src/mocks/handlers.ts","frontend/src/mocks/handlers.test.ts"]}
+{"ts":"2026-10-23T11:31:20.176Z","type":"spec-approved","module":"be-foundation","specHash":"4d03249e43937c1e707752c7bcc3d7a3eeaf48ba6ba831d880aa2b9b1ba3c51d"}
+{"ts":"2026-10-23T11:39:11.405Z","type":"module-status","module":"be-foundation","from":"decomposed","to":"planned"}
+{"ts":"2026-10-23T11:39:11.822Z","type":"feature-status","module":"be-foundation","feature":"problem-errors","from":null,"to":"pending"}
+{"ts":"2026-10-23T11:39:12.232Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":null,"to":"pending"}
+{"ts":"2026-10-23T11:39:12.709Z","type":"feature-status","module":"be-foundation","feature":"me-session","from":null,"to":"pending"}
+{"ts":"2026-10-23T11:39:13.267Z","type":"feature-status","module":"be-foundation","feature":"audit-writer","from":null,"to":"pending"}
+{"ts":"2026-10-23T12:03:13.481Z","type":"spec-approved","module":"be-foundation","specHash":"264285350f051113182822d7baddd60498e4b7f7f44fee4edeb39fbcff11c799"}

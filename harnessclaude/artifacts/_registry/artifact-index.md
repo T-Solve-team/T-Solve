@@ -20,6 +20,10 @@ Master registry of all artifacts in this workspace.
 | — | module | chatbot | draft | artifacts/03-modules/chatbot/module.md |
 | — | module | jira-app | draft | artifacts/03-modules/jira-app/module.md |
 | — | module | dashboard-audit | draft | artifacts/03-modules/dashboard-audit/module.md |
+| — | spec | be-foundation | draft | artifacts/03-modules/be-foundation/spec.md |
+| — | design | be-foundation | draft | artifacts/04-plans/be-foundation/design.md |
+| — | design | be-foundation | draft | artifacts/04-plans/be-foundation/iteration-1/design.md |
+| — | tasks | be-foundation | draft | artifacts/04-plans/be-foundation/iteration-1/tasks.md |
 | — | spec | fe-foundation | draft | artifacts/03-modules/fe-foundation/spec.md |
 | — | design | fe-foundation | draft | artifacts/04-plans/fe-foundation/design.md |
 | — | design | fe-foundation | draft | artifacts/04-plans/fe-foundation/iteration-1/design.md |

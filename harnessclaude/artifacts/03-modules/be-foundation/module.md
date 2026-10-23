@@ -10,6 +10,11 @@ paths:
   - backend/src/main/java/vn/tsolve/TSolveApplication.java
   - backend/src/main/resources/application*.yml
   - backend/src/main/resources/db/changelog/**
+  - backend/pom.xml
+  - backend/AGENTS.md
+  - backend/src/main/java/vn/tsolve/knowledge/Solution.java
+  - backend/src/main/java/vn/tsolve/knowledge/SolutionService.java
+  - backend/src/main/java/vn/tsolve/ticket/TicketService.java
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
   - docs/bug-log.md

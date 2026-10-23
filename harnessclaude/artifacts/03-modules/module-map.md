@@ -86,7 +86,7 @@ not exist yet are marked *proposed*; the backend lead confirms them when the mod
 
 | Module | Backend | Web app |
 |--------|---------|---------|
-| `be-foundation` | `common/**`, `TSolveApplication.java`, `resources/application*.yml` | — |
+| `be-foundation` | `common/**`, `TSolveApplication.java`, `resources/application*.yml`; also `backend/pom.xml`, `backend/AGENTS.md` and the imports of `knowledge/Solution.java`, `knowledge/SolutionService.java`, `ticket/TicketService.java` (planned 23/10) | — |
 | `fe-foundation` | — | `src/app/**`, `src/shared/**`, `src/mocks/**`, `src/test/**`, `features/*/routes.ts`, `features/*/index.ts`, `features/*/mocks/handlers.ts`, root config files, `AGENTS.md`, `guidelines/**` |
 | `identity` | `identity/**` | `features/auth/**`, `features/my-profile/**`, `features/users/**` |
 | `workspace` | `workspace/**` | `features/workspace/**` |
