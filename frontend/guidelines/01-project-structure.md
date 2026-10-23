@@ -31,7 +31,7 @@ frontend/
 │   │   ├── api/                     # http.ts (fetch wrapper), errors.ts (ApiError), query-client.ts
 │   │   │   ├── generated/           # orval output — NEVER EDIT
 │   │   │   └── mocks/               # problem() helper for mock handlers (mocks and tests only)
-│   │   ├── auth/                    # useSession (GET /me, all roles), ROLES, landing.ts, sign-out, dev-user.ts
+│   │   ├── auth/                    # useSession.ts (GET /me, all roles, useSignOut), ROLES, landing.ts, dev-user.ts
 │   │   ├── messages/                # MSG catalog (Report3) + report3-messages.json + msg / showMessage / showAcknowledgement
 │   │   ├── forms/                   # rules (MSG01/02/03/44) + applyApiErrors
 │   │   ├── routing/                 # paths.ts (every screen path), useListSearchParams

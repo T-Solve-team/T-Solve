@@ -80,6 +80,7 @@ Each rule is enforced by a tool where possible (marked 🔒). Details and exampl
 | `npm run test` / `test:watch` | Vitest, once / in watch mode. |
 | `npm run generate:api` | Regenerates the API client from `openapi/tsolve-api.yaml`. |
 | `npm run api:pull` | Downloads the spec from a locally running backend into `openapi/tsolve-api.yaml`. |
+| `npm run messages:report3` | Rebuilds `src/shared/messages/report3-messages.json` from Report3 System_Messages (`TSOLVE_DOCS`). |
 
 ## Guidelines — reading order
 

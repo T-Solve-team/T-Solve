@@ -214,7 +214,7 @@ Spring paging (`page` from 0, `size`, `sort=field,dir`; response `{ content, pag
 totalElements, totalPages } }` = Spring Data `PagedModel`); `GET /api/v1/review-queue/ticket-ids` so
 "Select all" can take every ticket in the queue, not only the page shown (SRS 7.1);
 `POST /api/v1/reviews/{approve|reject|request-changes}` with `{ ticketIds, reason | comment }` returning
-`{ count }` (the `{count}` of MSG14 / MSG16 / MSG17); enum spellings as in guideline 03 §5. *Why:* each shape
+`{ count }` (the `{count}` of MSG14 / MSG16; MSG17 has none); enum spellings as in guideline 03 §5. *Why:* each shape
 is what Spring produces with the least custom code, and the frontend can be built and tested before the
 backend exists. When the backend's spec differs, `npm run api:pull` + `generate:api` wins.
 

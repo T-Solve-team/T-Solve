@@ -62,7 +62,7 @@ Each "Web/…" component maps to exactly one thing in code. Props mirror the Fig
 | Web/Modal Kind=Confirm / Danger confirm | `ConfirmDialog` (`isOpen`, `code`, `params`, `isDanger`, `okText`, `isConfirming`, `onConfirm`, `onCancel`) | centred, 520 wide |
 | Web/Modal Header (Form / Danger) + content + Web/Modal Footer | `FormModal` (`isOpen`, `title`, `kind`, `width`, `form`, `okText`, `isOkDanger`, `isSubmitting`, `onSubmit`, `onCancel`) | centred; form cleared when closed |
 | Web/Upload (Idle/Dragging/File listed/File error) | `EvidenceUpload` · `CsvUpload` — **not built yet** (FE Lead, before the first screen that needs them) | limits and MSG34/MSG72/MSG27/MSG28 built in |
-| Web/App Shell (Role=4) + Web/Menu Item | `app/layout/AppShell` + `SideMenu` | §5 |
+| Web/App Shell (role variants) + Web/Menu Item | `app/layout/AppShell` + `SideMenu` | §5 |
 | Icons (Ant Design Icons) | `@ant-design/icons`, same names (`Icon/Inbox` → `InboxOutlined`) | |
 | *(part of every form, no own component)* | `AppForm` | antd `Form` with our defaults ([09](09-forms-and-validation.md)) |
 
@@ -141,7 +141,7 @@ horizontally, the menu may not collapse below that.
 `AppShell` (Figma "Web/App Shell") = left side menu (252 px: logo + product name, then 220 px
 "Web/Menu Item" entries) + top bar (page title as H1, user menu with **My Profile** and **Log out**) +
 content area. One shell for all roles; the menu items come
-from `app/layout/menu-config.ts`, pre-filled with the menu of each role (Report3 v3 design, D4):
+from `app/layout/menu-config.ts`, pre-filled with the menu of each role (UI design v3 decisions, D4):
 
 | Role | Menu |
 |---|---|

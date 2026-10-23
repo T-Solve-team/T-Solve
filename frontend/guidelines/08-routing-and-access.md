@@ -148,10 +148,10 @@ Feedback, Audit Entry Detail, Triage Result Detail and Folder are modals opened 
 
 ## 7. Leaving a screen with unsaved work
 
-- **Import Preview** (5.2): leaving before Finish/Confirm asks **MSG37**; confirming discards everything
-  (an import is never saved as a draft). Use React Router's `useBlocker` with `ConfirmDialog`, plus
-  `beforeunload` for reload/close. The import data lives only in that page's memory — opening
-  `/import/preview` directly (no data) redirects to `/import`.
+- **Import Preview** (5.2): leaving before Finish/Confirm asks **MSG37**; confirming drops the unsaved
+  changes, while a Draft saved with **Save as draft** is kept (GBR-26, UC-20, UC-21). Use React Router's
+  `useBlocker` with `ConfirmDialog`, plus `beforeunload` for reload/close. Opening `/import/preview` with
+  nothing to preview redirects to `/import`.
 - Other forms: no leave-confirmation unless the SRS asks for one.
 
 ## 8. Sign-in and session expiry
