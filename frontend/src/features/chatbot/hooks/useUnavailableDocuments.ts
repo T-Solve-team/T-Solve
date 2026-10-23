@@ -1,3 +1,4 @@
+import { keepPreviousData } from '@tanstack/react-query';
 import { useListUnavailableCitedDocuments } from '@/shared/api';
 
 /**
@@ -7,7 +8,8 @@ import { useListUnavailableCitedDocuments } from '@/shared/api';
 export function useUnavailableDocuments(wikiDocumentIds: number[]): ReadonlySet<number> {
   const query = useListUnavailableCitedDocuments(
     { wikiDocumentIds },
-    { query: { enabled: wikiDocumentIds.length > 0 } },
+    // keepPreviousData: while a follow-up's documents are checked, an MSG110 already shown must not turn into a link.
+    { query: { enabled: wikiDocumentIds.length > 0, placeholderData: keepPreviousData } },
   );
   return new Set(query.data?.wikiDocumentIds ?? []);
 }

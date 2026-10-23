@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { setDevUser } from '@/shared/auth';
-import type { ChatbotAnswer, ChatbotQuestion } from '@/shared/api';
+import {
+  getListUnavailableCitedDocumentsQueryKey,
+  type ChatbotAnswer,
+  type ChatbotQuestion,
+} from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
@@ -44,6 +48,18 @@ function answerWith(answer: Partial<ChatbotAnswer>) {
       }),
     ),
   );
+}
+
+/** Records the Wiki document ids of every availability check the page makes. */
+function recordAvailabilityChecks(): number[][] {
+  const checked: number[][] = [];
+  server.events.on('request:start', ({ request }) => {
+    const url = new URL(request.url);
+    if (url.pathname.endsWith('/api/v1/chatbot/unavailable-documents')) {
+      checked.push(url.searchParams.getAll('wikiDocumentIds').map(Number));
+    }
+  });
+  return checked;
 }
 
 /** Answers the next question only when `release()` is called. */
@@ -244,6 +260,33 @@ describe('KnowledgeChatbotPage', () => {
     expect(items.map((item) => item.textContent?.slice(0, 3))).toEqual(['[1]', '[2]']);
   });
 
+  it('AC-001.7 lists the citations in number order even when they arrive out of order', async () => {
+    answerWith({
+      text: 'See [1] and [2].',
+      citations: [
+        {
+          number: 2,
+          type: 'TICKET_SOLUTION',
+          solution: {
+            symptoms: 'Symptoms text',
+            rootCause: 'Cause',
+            resolutionSteps: 'Steps',
+            workaround: null,
+            scopeOfApplicability: 'Scope',
+          },
+        },
+        { number: 1, type: 'WIKI_DOCUMENT', wikiDocumentId: 9001, title: 'VPN guide' },
+      ],
+    });
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+
+    const citations = await within(thread()).findByRole('list', { name: 'Citations' });
+    const items = within(citations).getAllByRole('listitem');
+    expect(items.map((item) => item.textContent?.slice(0, 3))).toEqual(['[1]', '[2]']);
+  });
+
   it('AC-001.8 shows HTML in a citation as plain text', async () => {
     answerWith({
       text: 'See [1] and [2].',
@@ -334,6 +377,7 @@ describe('KnowledgeChatbotPage', () => {
   });
 
   it('AC-002.9 shows MSG110 in place of the link of a Wiki document that is no longer available', async () => {
+    const checked = recordAvailabilityChecks();
     const { user, box } = await openChatbot();
 
     await user.type(box, 'How do I file an expense claim?{Enter}');
@@ -342,16 +386,48 @@ describe('KnowledgeChatbotPage', () => {
     expect(
       within(thread()).queryByRole('link', { name: /Expense claim guide/ }),
     ).not.toBeInTheDocument();
+    expect(checked).toEqual([[9003]]);
+  });
+
+  it('AC-002.9 checks the Wiki documents of every turn and keeps MSG110 while it checks again', async () => {
+    const checked = recordAvailabilityChecks();
+    const { user, box } = await openChatbot();
+    await user.type(box, 'How do I file an expense claim?{Enter}');
+    await within(thread()).findByText(msg('MSG110'));
+
+    // The check for the follow-up waits until released.
+    let release = () => {};
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get('*/api/v1/chatbot/unavailable-documents', async () => {
+        await released;
+        return HttpResponse.json({ wikiDocumentIds: [9003] });
+      }),
+    );
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByRole('link', { name: 'VPN setup on Windows 11 · Wiki document' });
+
+    await waitFor(() => expect(checked).toEqual([[9003], [9001, 9003]]));
+    expect(within(thread()).getByText(msg('MSG110'))).toBeInTheDocument();
+    expect(
+      within(thread()).queryByRole('link', { name: /Expense claim guide/ }),
+    ).not.toBeInTheDocument();
+    release();
   });
 
   it('AC-002.10 keeps the Wiki links and shows no message when the availability check fails', async () => {
     server.use(http.get('*/api/v1/chatbot/unavailable-documents', () => problem(500)));
-    const { user, box } = await openChatbot();
+    const { user, box, queryClient } = await openChatbot();
 
     await user.type(box, 'How do I file an expense claim?{Enter}');
 
+    // Assert only once the check has really failed, not while it is still running.
+    const checkKey = getListUnavailableCitedDocumentsQueryKey({ wikiDocumentIds: [9003] });
+    await waitFor(() => expect(queryClient.getQueryState(checkKey)?.status).toBe('error'));
     expect(
-      await within(thread()).findByRole('link', { name: 'Expense claim guide · Wiki document' }),
+      within(thread()).getByRole('link', { name: 'Expense claim guide · Wiki document' }),
     ).toBeInTheDocument();
     expect(screen.queryByText(msg('MSG110'))).not.toBeInTheDocument();
     expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
