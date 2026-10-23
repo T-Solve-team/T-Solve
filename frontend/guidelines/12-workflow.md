@@ -7,7 +7,7 @@
 
 ## 1. Starting a feature — walkthrough
 
-The example is Jira issue `TS-57` "6.2 Ticket List" in feature `tickets`; swap in your own screen. Every
+The example is Jira issue `KAN-123` "6.2 Ticket List" in feature `tickets`; swap in your own screen. Every
 command and snippet below was run against the template (step 6). The API names (`getTickets`,
 `TicketSummary`) are examples — use what you agree with the backend owner.
 
@@ -21,15 +21,15 @@ cp .env.example .env.local    # Windows PowerShell: Copy-Item .env.example .env.
 npm run dev                   # http://localhost:5173
 ```
 
-Mock mode is on by default (`VITE_API_MOCKING=true`): use the **role switcher** (bottom right) to sign in
-as a role and open your screen — it shows a placeholder card with its number and name. Then run
-`npm run format:check && npm run lint && npm run typecheck && npm run test` once: all green means your
-machine is set up.
+Mock mode is on by default (`VITE_API_MOCKING=true`): use the **user switcher** (bottom right) to sign in
+as a mock user (one role or several) and open your screen — it shows a placeholder card with its number
+and name. Then run `npm run format:check && npm run lint && npm run typecheck && npm run test` once: all
+green means your machine is set up.
 VS Code: install **ESLint** and **Prettier**, turn on *Format On Save*.
 
 ### 1.1 Branch and read
 
-1. Branch from the latest `main` (git rules: DevOps design §1): `feature/TS-57-tickets-ticket-list`.
+1. Branch from the latest `main` (git rules: README "Branching and conventions"): `feature/KAN-123-tickets-ticket-list`.
    `npm ci` again if `package-lock.json` changed.
 2. Read the three sources for your screen: the SRS section (III.6.2: fields, columns, filters, buttons,
    MSG codes), the Figma frame (`6.2 Ticket List - Hiếu` on page `01 Web App`), and the guidelines you need
@@ -167,7 +167,7 @@ export default TicketListPage;
 
 As the page grows, move parts into `components/` (toolbar, table, popups); forms and popups follow
 [09](09-forms-and-validation.md). Copy from `features/review` when in doubt — but only what your screen
-needs: polling, `emptyCode="MSG16"` and row selection belong to the Review Queue.
+needs: polling, `emptyCode="MSG13"` and row selection belong to the Review Queue.
 
 | You need | Copy from `features/review/` |
 |---|---|
@@ -205,13 +205,13 @@ describe('TicketListPage', () => {
         page: { size: 20, number: 0, totalElements: 0, totalPages: 0 },
       }),
     );
-    renderApp('/tickets', { role: 'STAFF' });
+    renderApp('/tickets', { role: 'TICKET_RESOLVER' });
     expect(await screen.findByText(msg('MSG04'), {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it('shows the error in place, with Try again, when the tickets cannot be loaded', async () => {
     server.use(http.get('*/api/v1/tickets', () => problem(500)));
-    renderApp('/tickets', { role: 'STAFF' });
+    renderApp('/tickets', { role: 'TICKET_RESOLVER' });
     expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(msg('MSG06'));
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
@@ -223,7 +223,7 @@ full suite takes about a minute; jsdom's "Not implemented: getComputedStyle" lin
 
 ### 1.5 Check and hand in
 
-1. `npm run dev`, click through the screen as **every role that can open it** (role switcher), and compare
+1. `npm run dev`, click through the screen as **every role that can open it** (user switcher), and compare
    it with the Figma frame at 1366 × 768.
 2. `npm run format:check && npm run lint && npm run typecheck && npm run test` (`npm run format` fixes
    formatting).
@@ -284,4 +284,4 @@ The PR is merged, CI is green, the screen works on staging for every role that c
 has verified it (DevOps §1.4 step 8), and the Jira issue is moved to Done.
 
 ---
-*Last verified against code: 2026-10-10, step 6 — the §1 walkthrough was run end to end (new API tag → generated hook → page → mocks → test).*
+*Last verified against code: 2026-10-10, step 6 — the §1 walkthrough was run end to end (new API tag → generated hook → page → mocks → test). Role, Jira key and MSG codes updated to Report3 on 2026-10-23 (KAN-63); the walkthrough was not re-run.*

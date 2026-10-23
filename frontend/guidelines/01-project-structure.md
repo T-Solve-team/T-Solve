@@ -11,16 +11,16 @@ frontend/
 ├── AGENTS.md · CLAUDE.md · README.md
 ├── guidelines/                      # these files
 ├── openapi/tsolve-api.yaml          # API spec, committed (input of orval)
-├── scripts/pull-api.mjs             # npm run api:pull
+├── scripts/                         # pull-api.mjs (npm run api:pull), report3-messages.mjs (npm run messages:report3)
 ├── public/                          # static files copied as-is (favicon). MSW's worker is served by Vite, not committed
 ├── src/
 │   ├── main.tsx                     # starts mocks (if enabled) and renders <App />
-│   ├── app/                         # WIRING ONLY — owner: FE Lead (dev/: role switcher, /dev/kit page)
+│   ├── app/                         # WIRING ONLY — owner: FE Lead (dev/: user switcher, /dev/kit page)
 │   │   ├── App.tsx
 │   │   ├── providers/               # AppProviders (antd + query cache), global-errors.ts (401/403/MSG06)
 │   │   ├── router/                  # routes.tsx (route tree), feature-routes.ts, guards.tsx, router.ts,
 │   │   │                            #   RootLayout, FullPageLoading, usePageTitle
-│   │   ├── dev/                     # DevRoleSwitcher, KitPage (/dev/kit) — dev builds only
+│   │   ├── dev/                     # DevUserSwitcher (mock users), KitPage (/dev/kit) — dev builds only
 │   │   ├── layout/                  # AppShell, SideMenu, UserMenu, menu-config.ts
 │   │   ├── theme/                   # theme.ts (antd tokens from Figma STYLES)
 │   │   └── pages/                   # ForbiddenPage (403), NotFoundPage (404), RouteErrorPage, SessionErrorPage
@@ -31,14 +31,14 @@ frontend/
 │   │   ├── api/                     # http.ts (fetch wrapper), errors.ts (ApiError), query-client.ts
 │   │   │   ├── generated/           # orval output — NEVER EDIT
 │   │   │   └── mocks/               # problem() helper for mock handlers (mocks and tests only)
-│   │   ├── auth/                    # useSession (GET /me), Role, landing page per role, dev-role.ts
-│   │   ├── messages/                # MSG catalog (SRS V.2) + msg / showMessage / showAcknowledgement
+│   │   ├── auth/                    # useSession (GET /me, all roles), ROLES, landing.ts, sign-out, dev-user.ts
+│   │   ├── messages/                # MSG catalog (Report3) + report3-messages.json + msg / showMessage / showAcknowledgement
 │   │   ├── forms/                   # rules (MSG01/02/03/44) + applyApiErrors
 │   │   ├── routing/                 # paths.ts (every screen path), useListSearchParams
 │   │   ├── lib/                     # tiny pure helpers: date.ts, labels.ts (source labels), paging.ts
-│   │   └── config/env.ts            # typed access to import.meta.env
+│   │   └── config/                  # env.ts (typed import.meta.env), tracker.ts (TRACKER_NAME = 'Jira')
 │   ├── mocks/                       # MSW: handlers.ts (all), session.ts (/me users), browser.ts, server.ts
-│   └── test/                        # test setup, renderApp and renderWithProviders
+│   └── test/                        # test setup, renderApp and renderWithProviders, guidelines.test.ts
 ├── .env.example · .nvmrc · .prettierrc.json · .prettierignore · .gitignore · eslint.config.js · orval.config.ts
 ├── index.html · tsconfig*.json · vite.config.ts · package.json · package-lock.json
 └── Dockerfile · .dockerignore · Caddyfile
@@ -144,22 +144,29 @@ enforced by the same lint config:
 `app/router/feature-routes.ts` imports `routes` from each `index.ts` (normal), and `src/mocks/handlers.ts`
 imports each feature's `mocks/handlers.ts` directly so mock code never ships in the production bundle.
 
-## 5. The 12 features
+## 5. The 15 features
+
+35 web screens: 26 with a path, 9 popups. Roles are Report3's Permission Matrix; "Employee" means every
+signed-in user (every user has the Employee role).
 
 | Feature folder | Screens (SRS III) | Roles | May import (via index) |
 |---|---|---|---|
-| `auth` | 1.1.1 Login | Guest | — |
-| `my-profile` | 1.2.1 My Profile | all signed-in | — |
-| `users` | 1.3.1 User List · 1.3.2 User Detail | Admin | — |
-| `workspace` | 2.1 Workspace Settings · 2.2 Department Detail · 2.3 Delete Department (popup) | Admin | — |
-| `jira-integration` | 3.1 Jira Integration · 3.2 Project Detail | Admin, Department Manager, Project Manager (3.1) · Project Manager (3.2) | — |
+| `auth` | 1.1.1 Login | signed out | — |
+| `my-profile` | 1.2.1 My Profile | Employee | — |
+| `users` | 1.3.1 User List · 1.3.2 User Detail · 1.3.3 Hand Over Responsibilities (popup) | Admin | — |
+| `workspace` | 2.1 Workspace Setup · 2.2 Workspace Settings · 2.3 Department Detail · 2.4 Delete Department (popup) | Admin | — |
+| `jira-integration` | 3.1 Jira Integration · 3.2 Project Detail | Admin, Project Manager (3.1) · Project Manager (3.2) | — |
 | `ticket-import` | 5.1 Import Tickets · 5.2 Import Preview · 5.3 Import Ticket Preview (popup) · 5.4 Import History | Project Manager | — |
-| `tickets` | 5.5 Ticket Detail · 6.2 Ticket List | Staff, Project Manager, Department Manager | `review`, `feedback` |
-| `search` | 6.1 Search | Staff, Project Manager, Department Manager | — |
+| `tickets` | 5.5 Ticket Detail · 6.2 Ticket List | Ticket Resolver, Project Manager | `review`, `feedback` |
+| `search` | 6.1 Search | Ticket Resolver, Project Manager | — |
 | `review` | 7.1 Review Queue · 7.2 Request Changes (popup) · 7.3 Reject Ticket (popup) · 7.4 Review History · 7.5 Expired Tickets | Project Manager | — |
-| `feedback` | 8.1 Give Feedback (popup) [Web] | Staff, Project Manager, Department Manager | — |
-| `knowledge-dashboard` | 9.1 Knowledge Dashboard | Department Manager, Project Manager, Admin | — |
+| `feedback` | 8.1 Give Feedback (popup) [Web] | Ticket Resolver, Project Manager | — |
+| `knowledge-dashboard` | 9.1 Knowledge Dashboard | Project Manager, Admin | — |
 | `audit-log` | 9.2 Audit Log · 9.3 Audit Entry Detail (popup) | Admin | — |
+| `triage` | 10.1 Triage History · 10.2 Triage Result Detail (popup) | Project Manager | — |
+| `wiki` | 11.1 Wiki Home · 11.2 Wiki Document | Employee | — |
+| | 11.4 Upload Documents · 11.5 Folder (popup) · 11.7 Space Settings | Knowledge Manager | |
+| `chatbot` | 12.1 Knowledge Chatbot | Employee | — |
 
 Paths per screen are in [08](08-routing-and-access.md).
 
@@ -171,7 +178,8 @@ Ownership notes that are easy to get wrong:
   Ticket Detail).
 - **Links between features use URLs, not imports.** `review` opens Ticket Detail with
   `paths.ticketDetail(id)` from `shared/routing/paths.ts`; it never imports `tickets`. *Why:* keeps the
-  dependency graph one-way and free of cycles.
+  dependency graph one-way and free of cycles. The same goes for a Knowledge Chatbot citation that opens a
+  Wiki Document (`paths.wikiDocument(id)`).
 - Need a new cross-feature dependency? Ask the FE Lead; it is added to the table above and to the lint config.
 
 ## 6. Folders that must not appear
@@ -181,4 +189,4 @@ Ownership notes that are easy to get wrong:
 files everyone ends up editing at once.
 
 ---
-*Last verified against code: 2026-10-10, step 5.5 — every path, name, rule and ✅ example checked against the scaffold.*
+*Last verified against code: 2026-10-23, KAN-63 — screens, roles, paths and MSG codes checked against the Report3 foundation (`src/test/guidelines.test.ts`).*
