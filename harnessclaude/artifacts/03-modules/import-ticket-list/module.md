@@ -3,10 +3,15 @@ name: import-ticket-list
 repos: [default]
 dependencies: []
 complexity: large
-paths: [backend/src/main/java/vn/tsolve/ticket/**, backend/src/test/java/vn/tsolve/ticket/**, backend/src/main/resources/db/changelog/changes/*-ticket-import*.sql, backend/src/main/resources/db/changelog/db.changelog-master.xml, backend/src/main/resources/application.yml, backend/pom.xml, backend/AGENTS.md, backend/src/main/java/vn/tsolve/common/error/**, backend/src/test/java/vn/tsolve/common/error/**, backend/src/main/java/vn/tsolve/common/config/MethodSecurityConfig.java, .env.example, frontend/openapi/tsolve-api.yaml, frontend/src/shared/api/generated/**, frontend/src/features/ticket-import/**]
+paths: [backend/src/main/java/vn/tsolve/ticket/**, backend/src/test/java/vn/tsolve/ticket/**, backend/src/main/resources/db/changelog/changes/*-ticket-import*.sql, backend/src/main/resources/db/changelog/db.changelog-master.xml, frontend/openapi/tsolve-api.yaml, frontend/src/shared/api/generated/**, frontend/src/features/ticket-import/**]
 ---
 
 # Module: import-ticket-list
+
+> **Part of `ticket-repository`.** This module was planned and completed before the module map
+> (`module-map.md`) existed. It is kept as the record of KAN-31; new ticket work (UC-20, UC-22–25) belongs to
+> `ticket-repository`, not here. Its paths stay inside `ticket-repository`'s: shared files (`common/`, `pom.xml`,
+> `application.yml`, `AGENTS.md`, `.env.example`) change only with their owner's approval (PR review, 24/10).
 
 ## Description
 Jira epic KAN-29. A Project Manager brings in tickets that were resolved before T-Solve existed, or outside Jira. There are three ways: Jira import (UC-20), CSV import (UC-21, Jira task KAN-31) and manual entry (UC-22). Every import goes through a preview that can be saved as a Draft. Imported tickets are saved directly as **Published** with the PM's approve decision (GBR-23). Each import, Completed or Failed, is recorded once in the Import History (UC-23).
