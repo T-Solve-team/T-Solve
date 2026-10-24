@@ -78,15 +78,15 @@
       "lastUpdated": "2026-10-22T14:21:23.605Z"
     },
     "chatbot": {
-      "status": "implementing",
-      "currentPhase": "implement",
+      "status": "completed",
+      "currentPhase": "evaluate",
       "features": {
         "ask-answer": "passing",
         "citations": "passing",
         "session-conversations": "passing",
-        "ratings": "evaluating"
+        "ratings": "passing"
       },
-      "lastUpdated": "2026-10-24T02:55:31.734Z",
+      "lastUpdated": "2026-10-24T02:58:23.539Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
