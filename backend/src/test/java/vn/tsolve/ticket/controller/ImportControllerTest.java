@@ -47,7 +47,7 @@ import vn.tsolve.ticket.service.ImportPreviewService;
 
 @WebMvcTest(ImportController.class)
 @Import(MethodSecurityConfig.class)
-@TestPropertySource(properties = "tsolve.cors.allowed-origins=http://localhost:5173")
+@TestPropertySource(properties = {"tsolve.cors.allowed-origins=http://localhost:5173", "server.port=0"})
 class ImportControllerTest {
 
     private static final String HEADER =

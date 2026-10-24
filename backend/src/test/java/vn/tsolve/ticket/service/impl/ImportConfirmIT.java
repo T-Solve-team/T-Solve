@@ -30,8 +30,6 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.error.MessageCodeException;
 import vn.tsolve.common.error.NotFoundException;
@@ -42,7 +40,6 @@ import vn.tsolve.ticket.service.ImportConfirmService;
 
 /** Confirm against a real PostgreSQL: what mocks cannot prove (rollback, after-commit, unique constraint). */
 @SpringBootTest
-@Testcontainers
 @TestPropertySource(
         properties = {
             "tsolve.stub.projects=pm-a:1;pm-b:1;boom-pm:1",
@@ -56,10 +53,14 @@ import vn.tsolve.ticket.service.ImportConfirmService;
         })
 class ImportConfirmIT {
 
-    @Container
+    // started once for the class and stopped by Testcontainers' Ryuk; no org.testcontainers:junit-jupiter needed
     @ServiceConnection
     static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
             DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+
+    static {
+        DB.start();
+    }
 
     private static final String HEADER = "ticket_id,title,symptoms,root_cause,resolution_steps,scope\n";
 
