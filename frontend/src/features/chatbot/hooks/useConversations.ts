@@ -33,6 +33,22 @@ export function useConversations() {
     setOpenId(conversationId);
   }
 
+  /** Sets or, with `undefined`, removes the rating of one answer; a conversation or answer that is gone is ignored. */
+  function setRating(conversationId: string, answerId: string, rating: ChatTurn['rating']) {
+    setStored((current) =>
+      current.map((c) =>
+        c.id === conversationId
+          ? {
+              ...c,
+              turns: c.turns.map((turn) =>
+                turn.answer.answerId === answerId ? { ...turn, rating } : turn,
+              ),
+            }
+          : c,
+      ),
+    );
+  }
+
   return {
     conversations,
     openId,
@@ -40,5 +56,6 @@ export function useConversations() {
     open: setOpenId,
     startNew: () => setOpenId(null),
     addTurn,
+    setRating,
   };
 }

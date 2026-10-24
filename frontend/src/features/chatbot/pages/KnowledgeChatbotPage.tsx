@@ -8,13 +8,15 @@ import { ConversationThread } from '../components/ConversationThread';
 import { QuestionBox, type QuestionFormValues } from '../components/QuestionBox';
 import { useAskQuestion } from '../hooks/useAskQuestion';
 import { useConversations } from '../hooks/useConversations';
+import { useRateAnswer } from '../hooks/useRateAnswer';
 import { toHistory } from '../model';
 import styles from './KnowledgeChatbotPage.module.css';
 
 export function KnowledgeChatbotPage() {
   const [form] = Form.useForm<QuestionFormValues>();
-  const { conversations, openId, turns, open, startNew, addTurn } = useConversations();
+  const { conversations, openId, turns, open, startNew, addTurn, setRating } = useConversations();
   const ask = useAskQuestion();
+  const rating = useRateAnswer(setRating);
   // Set at once, unlike ask.isPending: a second Enter before the next render must not send the question again.
   const isAsking = useRef(false);
 
@@ -59,6 +61,11 @@ export function KnowledgeChatbotPage() {
         <ConversationThread
           turns={turns}
           pendingQuestion={ask.isPending ? ask.variables.data.question : undefined}
+          isRating={rating.isPending}
+          onRate={(answerId, next) => {
+            // A thread with turns always belongs to an open conversation.
+            if (openId !== null) rating.rate(openId, answerId, next);
+          }}
         />
         <QuestionBox form={form} isSending={ask.isPending} onAsk={handleAsk} />
       </div>

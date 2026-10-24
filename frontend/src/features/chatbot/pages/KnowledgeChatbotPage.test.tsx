@@ -725,3 +725,244 @@ describe('KnowledgeChatbotPage session conversations', () => {
     expect(scrollIntoView).toHaveBeenCalled();
   });
 });
+
+const RATING_PATH = '*/api/v1/chatbot/answers/:answerId/rating';
+
+type RatingRequest = { method: string; answerId: string; body: unknown };
+
+/** Records every rating request the page sends, still answered by the feature's mock. */
+function recordRatings(): RatingRequest[] {
+  const sent: RatingRequest[] = [];
+  server.events.on('request:start', async ({ request }) => {
+    const match = /\/chatbot\/answers\/([^/]+)\/rating$/.exec(new URL(request.url).pathname);
+    if (match) {
+      const text = await request.clone().text();
+      sent.push({
+        method: request.method,
+        answerId: match[1] ?? '',
+        body: text === '' ? null : (JSON.parse(text) as unknown),
+      });
+    }
+  });
+  return sent;
+}
+
+/** Answers the next rating request (PUT or DELETE) only when `release()` is called. */
+function holdRating() {
+  let release = () => {};
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const hold = async () => {
+    await released;
+    return new HttpResponse(null, { status: 204 });
+  };
+  server.use(http.put(RATING_PATH, hold), http.delete(RATING_PATH, hold));
+  return release;
+}
+
+const helpful = (pressed?: boolean) =>
+  within(thread()).getByRole('button', { name: 'Helpful', pressed });
+const notHelpful = (pressed?: boolean) =>
+  within(thread()).getByRole('button', { name: 'Not helpful', pressed });
+
+describe('KnowledgeChatbotPage ratings', () => {
+  beforeAll(async () => {
+    await import('./KnowledgeChatbotPage');
+  });
+
+  beforeEach(() => sessionStorage.clear());
+
+  afterEach(() => {
+    server.events.removeAllListeners();
+    vi.restoreAllMocks();
+  });
+
+  it('AC-003.1 shows Helpful and Not helpful under an answer, the MSG109 answer included', async () => {
+    const { user, box } = await openChatbot();
+
+    await ask(user, box, VPN_QUESTION);
+    expect(helpful(false)).toBeEnabled();
+    expect(notHelpful(false)).toBeEnabled();
+
+    await ask(user, box, 'Who won the football match yesterday?');
+    expect(within(thread()).getAllByRole('button', { name: 'Helpful' })).toHaveLength(2);
+    expect(within(thread()).getAllByRole('button', { name: 'Not helpful' })).toHaveLength(2);
+  });
+
+  it('AC-003.1 shows no rating buttons after a failed ask (edge 24)', async () => {
+    server.use(http.post('*/api/v1/chatbot/answers', () => problem(503, 'MSG06')));
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    await screen.findByText(msg('MSG06'));
+
+    expect(screen.queryByRole('button', { name: 'Helpful' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Not helpful' })).not.toBeInTheDocument();
+  });
+
+  it('AC-003.1 shows no rating buttons while the answer is pending (edge 24)', async () => {
+    const release = holdAnswer({ text: 'Use GlobalProtect [1].' });
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByTestId('pending-answer');
+    expect(screen.queryByRole('button', { name: 'Helpful' })).not.toBeInTheDocument();
+
+    release();
+    await within(thread()).findByText('Use GlobalProtect [1].');
+    expect(helpful(false)).toBeInTheDocument();
+  });
+
+  it('AC-003.2 sends PUT with the rating, disables both buttons until the response, then highlights it', async () => {
+    const sent = recordRatings();
+    const release = holdRating();
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+
+    await user.click(helpful());
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({ method: 'PUT', body: { rating: 'HELPFUL' } });
+    expect(helpful()).toBeDisabled();
+    expect(notHelpful()).toBeDisabled();
+    expect(helpful()).toHaveAttribute('aria-pressed', 'false');
+
+    release();
+    await waitFor(() => expect(helpful(true)).toBeEnabled());
+    expect(notHelpful(false)).toBeEnabled();
+  });
+
+  it('AC-003.2 sends one request when a button is clicked twice quickly (edge 22)', async () => {
+    const sent = recordRatings();
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+
+    await user.dblClick(helpful());
+
+    await waitFor(() => expect(helpful(true)).toBeEnabled());
+    expect(sent).toHaveLength(1);
+  });
+
+  it('AC-003.3 sends the new rating when the other button is clicked and highlights only that one', async () => {
+    const sent = recordRatings();
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+    await user.click(helpful());
+    await waitFor(() => expect(helpful(true)).toBeEnabled());
+
+    await user.click(notHelpful());
+
+    await waitFor(() => expect(notHelpful(true)).toBeEnabled());
+    expect(helpful(false)).toBeInTheDocument();
+    expect(sent.map((r) => [r.method, r.body])).toEqual([
+      ['PUT', { rating: 'HELPFUL' }],
+      ['PUT', { rating: 'NOT_HELPFUL' }],
+    ]);
+  });
+
+  it('AC-003.4 highlights the rating again when its conversation is opened again', async () => {
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+    await user.click(helpful());
+    await waitFor(() => expect(helpful(true)).toBeEnabled());
+
+    await user.click(newConversationButton());
+    await user.click(screen.getByRole('button', { name: VPN_QUESTION }));
+
+    expect(helpful(true)).toBeInTheDocument();
+    expect(notHelpful(false)).toBeInTheDocument();
+  });
+
+  it('AC-003.4 highlights the rating after a page reload', async () => {
+    const first = await openChatbot();
+    await ask(first.user, first.box, VPN_QUESTION);
+    await first.user.click(helpful());
+    await waitFor(() => expect(helpful(true)).toBeEnabled());
+    first.unmount();
+
+    const { user } = await openChatbot();
+    await user.click(screen.getByRole('button', { name: VPN_QUESTION }));
+
+    expect(helpful(true)).toBeInTheDocument();
+  });
+
+  it('AC-003.4 keeps the rating in memory when storage is blocked (edge 25)', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError');
+    });
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+    await user.click(notHelpful());
+    await waitFor(() => expect(notHelpful(true)).toBeEnabled());
+
+    await user.click(newConversationButton());
+    await user.click(screen.getByRole('button', { name: VPN_QUESTION }));
+
+    expect(notHelpful(true)).toBeInTheDocument();
+  });
+
+  it('AC-003.5 shows MSG06 and keeps the previous highlight when saving a rating fails', async () => {
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+    await user.click(helpful());
+    await waitFor(() => expect(helpful(true)).toBeEnabled());
+    server.use(http.put(RATING_PATH, () => problem(500)));
+
+    await user.click(notHelpful());
+
+    expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+    await waitFor(() => expect(notHelpful()).toBeEnabled());
+    expect(helpful(true)).toBeInTheDocument();
+    expect(notHelpful(false)).toBeInTheDocument();
+  });
+
+  it('AC-003.5 shows MSG06 and keeps the highlight when removing a rating fails (edge 27)', async () => {
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+    await user.click(helpful());
+    await waitFor(() => expect(helpful(true)).toBeEnabled());
+    server.use(http.delete(RATING_PATH, () => problem(500)));
+
+    await user.click(helpful());
+
+    expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+    await waitFor(() => expect(helpful()).toBeEnabled());
+    expect(helpful(true)).toBeInTheDocument();
+  });
+
+  it('AC-003.6 sends DELETE when the highlighted button is clicked and removes the highlight once it succeeds', async () => {
+    const sent = recordRatings();
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+    await user.click(notHelpful());
+    await waitFor(() => expect(notHelpful(true)).toBeEnabled());
+    const release = holdRating();
+
+    await user.click(notHelpful());
+
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1]).toMatchObject({ method: 'DELETE', body: null });
+    expect(notHelpful()).toHaveAttribute('aria-pressed', 'true');
+    release();
+    await waitFor(() => expect(notHelpful(false)).toBeEnabled());
+    expect(helpful(false)).toBeInTheDocument();
+  });
+
+  it('AC-003.2 puts the rating on its own turn when another conversation is opened while it saves (edge 23)', async () => {
+    const release = holdRating();
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+    await user.click(helpful());
+
+    await user.click(newConversationButton());
+    await ask(user, box, LEAVE_QUESTION);
+    expect(helpful(false)).toBeInTheDocument();
+    release();
+    await user.click(screen.getByRole('button', { name: VPN_QUESTION }));
+
+    await waitFor(() => expect(helpful(true)).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: LEAVE_QUESTION }));
+    expect(helpful(false)).toBeInTheDocument();
+  });
+});
