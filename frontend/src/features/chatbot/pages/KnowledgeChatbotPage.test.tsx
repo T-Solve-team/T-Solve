@@ -887,6 +887,22 @@ describe('KnowledgeChatbotPage ratings', () => {
     expect(helpful(true)).toBeInTheDocument();
   });
 
+  it('AC-003.4 keeps a rating whose save finishes after the user left the page (BUG-008)', async () => {
+    const release = holdRating();
+    const first = await openChatbot();
+    await ask(first.user, first.box, VPN_QUESTION);
+    await first.user.click(helpful());
+    first.unmount();
+
+    release();
+    const key = 'tsolve.session.chatbot.conversations';
+    await waitFor(() => expect(sessionStorage.getItem(key)).toContain('"rating":"HELPFUL"'));
+    const { user } = await openChatbot();
+    await user.click(screen.getByRole('button', { name: VPN_QUESTION }));
+
+    expect(helpful(true)).toBeInTheDocument();
+  });
+
   it('AC-003.4 keeps the rating in memory when storage is blocked (edge 25)', async () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('blocked', 'SecurityError');
