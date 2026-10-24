@@ -140,5 +140,27 @@
       "AC-004.5": "WHEN  runs, THE mock SHALL return to its initial data.",
       "AC-004.6": "WHEN the mock is asked to save a rating, or to remove one, THE mock SHALL answer 204."
     }
+  },
+  "search": {
+    "specHash": "e08551eaa9b8bd75183c8d4c2df44ba444029f22e53ce4b0c98be70f5cbee277",
+    "approvedAt": "2026-10-23T20:34:09.429Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List with",
+      "AC-001.2": "WHEN the list is opened, THE web app SHALL call  with page 0, size 20 and sort",
+      "AC-001.3": "THE web app SHALL show each row's Ticket ID as a link to 5.5 Ticket Detail of that ticket, the Project",
+      "AC-001.4": "WHEN the user presses Enter in the Keyword box, THE web app SHALL reload the list from page 1 with the",
+      "AC-001.5": "THE Department filter SHALL offer \"All Departments\" (the default) and the user's own Departments;",
+      "AC-001.6": "THE Source filter SHALL offer \"All\" (the default) and the four source labels; THE Status filter SHALL",
+      "AC-001.7": "THE columns Ticket ID, Title, Project, Review due date and Updated SHALL be sortable; WHEN the user",
+      "AC-001.8": "THE table SHALL show \"Total N items\" and pagination of 20 rows per page; WHEN the user picks a page,",
+      "AC-001.9": "THE keyword, Department, Source, Status, page and sort SHALL be kept in the URL, so that a reload or a",
+      "AC-001.10": "WHILE the first page is loading, THE web app SHALL show the loading state of the table (Figma 6.2 (c)).",
+      "AC-001.11": "WHEN the API returns no ticket, THE web app SHALL show MSG04 (\"No results found.\") in the table",
+      "AC-001.12": "IF the request fails with an error other than 401, THEN THE web app SHALL show the error state of the",
+      "AC-001.13": "THE web app SHALL show the title and every text field as plain text, never as HTML.",
+      "AC-002.1": "WHILE mock mode is on, THE MSW handler of  SHALL return at least 25 tickets that",
+      "AC-002.2": "THE mock SHALL apply  (case-insensitive, on ticket ID, title and Solution text),"
+    }
   }
 }

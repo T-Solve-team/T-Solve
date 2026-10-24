@@ -144,3 +144,8 @@
 {"ts":"2026-10-23T18:53:11.956Z","type":"spec-approved","module":"chatbot","specHash":"5de57dfce54657e05edfd0d3c63d1644b2c10c6bdf6b88e40c5f6614fbf813c6"}
 {"ts":"2026-10-23T18:54:47.031Z","type":"feature-status","module":"chatbot","feature":"ratings","from":null,"to":"pending"}
 {"ts":"2026-10-23T18:54:47.220Z","type":"module-status","module":"chatbot","from":"completed","to":"planned"}
+{"ts":"2026-10-23T20:34:09.438Z","type":"spec-approved","module":"search","specHash":"e08551eaa9b8bd75183c8d4c2df44ba444029f22e53ce4b0c98be70f5cbee277"}
+{"ts":"2026-10-23T20:35:08.244Z","type":"module-status","module":"search","from":"decomposed","to":"planned"}
+{"ts":"2026-10-23T20:35:08.593Z","type":"feature-status","module":"search","feature":"ticket-list","from":null,"to":"pending"}
+{"ts":"2026-10-23T20:35:19.030Z","type":"module-status","module":"search","from":"planned","to":"implementing"}
+{"ts":"2026-10-23T20:35:19.325Z","type":"feature-status","module":"search","feature":"ticket-list","from":"pending","to":"in-progress"}

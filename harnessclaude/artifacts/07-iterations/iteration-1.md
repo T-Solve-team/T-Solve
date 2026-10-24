@@ -12,7 +12,7 @@ status: planned
 
 The Report3 base: the module map, the web app foundation (`fe-foundation`), the backend foundation
 (`be-foundation`) and the review flow (`ticket-review`), so feature modules start on the right model; the
-Knowledge Chatbot screen on mocks (`chatbot`, KAN-48).
+Knowledge Chatbot screen on mocks (`chatbot`, KAN-48); the Ticket List on mocks (`search`, KAN-77).
 
 ## Planned Deliverables
 
@@ -44,6 +44,12 @@ Knowledge Chatbot screen on mocks (`chatbot`, KAN-48).
 | 2 · Citations of an answer (KAN-73) | Trần Trung Hiếu | pending |
 | 3 · Session conversations (KAN-72) | Trần Trung Hiếu | pending |
 
+### search
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · Ticket List with filters, on mocks (KAN-77) | Trần Hải Anh | pending |
+
 ## Demo Script
 
 ### fe-foundation
@@ -66,6 +72,12 @@ Knowledge Chatbot screen on mocks (`chatbot`, KAN-48).
 3. Ask "Who won the match?" → MSG109. Ask an expense question → its Wiki citation shows MSG110.
 4. New conversation, ask about leave; the list shows both, newest first; reopen the VPN one and ask a follow-up.
 5. Reload → the conversations are still there. Log out and sign in again → none.
+
+### search
+1. Mock mode, "Project Manager": open Ticket List → 20 tickets, newest Updated first, "Total 26 items".
+2. Type "vpn" and press Enter → only VPN tickets; pick Status "Pending review" → narrowed further.
+3. Sort by Review due date; reload → same filters, sort and page.
+4. Filter to a Department with no match → MSG04.
 
 ## Actual Outcomes
 <!-- filled at end of iteration, split by module -->
