@@ -78,21 +78,21 @@
       "lastUpdated": "2026-10-22T14:21:23.605Z"
     },
     "chatbot": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "ask-answer": "passing",
         "citations": "passing",
         "session-conversations": "passing",
-        "ratings": "pending"
+        "ratings": "evaluating"
       },
-      "lastUpdated": "2026-10-23T18:54:47.217Z",
+      "lastUpdated": "2026-10-24T02:55:31.734Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "eb9a9c16aa3933f2f2a9a71f8576484a643091fe"
+        "default": "3d3c827c8b735482e0f3e8baf0bd182d1ad40166"
       }
     },
     "jira-app": {
