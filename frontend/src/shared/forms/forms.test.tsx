@@ -56,7 +56,7 @@ describe('form rules and server errors', () => {
     }
   });
 
-  it('leaves no delayed Form updates after teardown (BUG-022)', async () => {
+  it('leaves no delayed Form updates after teardown (BUG-024)', async () => {
     setup();
     await cleanupFormTimers();
     expect(vi.getTimerCount()).toBe(0);

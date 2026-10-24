@@ -55,7 +55,7 @@ async function openDetail() {
 
 describe('TicketDecisionActions in Ticket Detail', () => {
   it.each(['Approve', 'Reject', 'Request Changes'])(
-    'AC-005.1, AC-005.3 refreshes detail when %s conflicts (BUG-043)',
+    'AC-005.1, AC-005.3 refreshes detail when %s conflicts (BUG-045)',
     async (action) => {
       const path =
         action === 'Approve' ? 'approve' : action === 'Reject' ? 'reject' : 'request-changes';
@@ -82,7 +82,7 @@ describe('TicketDecisionActions in Ticket Detail', () => {
     },
   );
 
-  it('AC-005.1 removes stale actions after a 404 decision (BUG-043)', async () => {
+  it('AC-005.1 removes stale actions after a 404 decision (BUG-045)', async () => {
     let missing = false;
     server.use(
       http.get('*/api/v1/tickets/1', () =>
@@ -102,7 +102,7 @@ describe('TicketDecisionActions in Ticket Detail', () => {
     expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
   });
 
-  it('AC-006.7 hides Review Queue navigation from non-PMs (BUG-036)', async () => {
+  it('AC-006.7 hides Review Queue navigation from non-PMs (BUG-038)', async () => {
     ticket = { ...ticket, status: 'PUBLISHED' };
     renderApp('/tickets/1', { role: 'TICKET_RESOLVER' });
     await screen.findByRole('heading', { name: 'VPN repair' }, { timeout: 5000 });
@@ -124,7 +124,7 @@ describe('TicketDecisionActions in Ticket Detail', () => {
     ['Reject', 'Reason', 'Incorrect steps', 'Reject', 'Rejected'],
     ['Request Changes', 'Comment', 'Add error details', 'Send', 'Changes requested'],
   ])(
-    'AC-003.3, AC-004.2 submits %s, validates required input and refreshes detail (BUG-025)',
+    'AC-003.3, AC-004.2 submits %s, validates required input and refreshes detail (BUG-027)',
     async (action, field, comment, confirm, status) => {
       const { user } = await openDetail();
       await user.click(screen.getByRole('button', { name: action }));

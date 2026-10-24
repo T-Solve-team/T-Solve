@@ -29,8 +29,16 @@ trace chatbot (STORY-003): 6/6 acceptance criteria have a test
 
 ### Hand-off (2026-10-24)
 - done: ratings coded and reviewed (PASS, no critical findings), module `completed`
-- open: reviewer note, not fixed — `useRateAnswer` passes `onSuccess` to `mutate()`, so a save in flight when the page
-  unmounts is stored on the server but the local highlight is not set (not covered by the spec)
-- next: merge PR #56, then KAN-76 → Done and delete the local branch
-- branch: `feature/KAN-76-chatbot-ratings`
-- PR: #56 open
+- open: nothing — the reviewer note (a save in flight when the page unmounts) was logged as BUG-008 and fixed by a
+  quick change (`useRateAnswer` writes the rating to the session storage when the screen is gone), PR #57
+  (`0c6c5ac`, branch `fix/KAN-76-chatbot-rating-after-unmount`, merged, no reviewer run: FE Lead accepted it as merged)
+- next: the next module in the manifest (`decomposed → plan`)
+- branch: `feature/KAN-76-chatbot-ratings` (merged, deleted locally)
+- PR: #56 merged as `c73c0c1`; KAN-76 is Done
+
+### Feature hand-off — KAN-75 (2026-10-24, orchestrator)
+- done: UC-53 ratings, frontend only with MSW mocks: plan PR #55, KAN-76 PR #56, BUG-008 PR #57; `trace chatbot STORY-003 STORY-004` 12/12, `audit` OK, CI green; KAN-75 and KAN-76 Done
+- open: BUG-009 (fe-foundation, Low): one MSG07 dialog per test file, logged, not fixed
+- next: later — backend rating storage and the retention rule (chatbot spec change, needs JDK 21 + Maven); counting ratings on the Knowledge Dashboard (UC-34, `dashboard-audit`)
+- branch: `chore/KAN-75-chatbot-wrap-up` (this log and BUG-009)
+- PR: #55, #56, #57 merged; this wrap-up PR

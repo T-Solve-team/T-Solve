@@ -25,7 +25,7 @@ describe('msg', () => {
     expect(msg('MSG14')).toBe('{count} ticket(s) approved and published.');
   });
 
-  it('AC-002.2 uses Report3 review message types (BUG-009)', () => {
+  it('AC-002.2 uses Report3 review message types (BUG-011)', () => {
     expect(MESSAGES).toMatchObject({
       MSG13: { type: 'inline' },
       MSG14: { type: 'toast' },
