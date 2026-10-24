@@ -2,6 +2,8 @@ import {
   askChatbot,
   isApiError,
   listUnavailableCitedDocuments,
+  rateChatbotAnswer,
+  removeChatbotAnswerRating,
   type ChatbotAnswer,
 } from '@/shared/api';
 import { resetMockData } from './handlers';
@@ -64,6 +66,18 @@ describe('chatbot mock handlers', () => {
     const result = await listUnavailableCitedDocuments({ wikiDocumentIds: [9001, 9003, 42] });
 
     expect(result.wikiDocumentIds).toEqual([9003]);
+  });
+
+  it('AC-004.6 answers 204 when asked to save a rating', async () => {
+    await expect(
+      rateChatbotAnswer('00000000-0000-4000-8000-000000000001', { rating: 'HELPFUL' }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('AC-004.6 answers 204 when asked to remove a rating', async () => {
+    await expect(
+      removeChatbotAnswerRating('00000000-0000-4000-8000-000000000001'),
+    ).resolves.toBeUndefined();
   });
 
   it('AC-004.5 answers its initial data after resetMockData()', async () => {

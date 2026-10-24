@@ -44,6 +44,17 @@ export const handlers: HttpHandler[] = [
       wikiDocumentIds: asked.filter((id) => UNAVAILABLE_DOCUMENT_IDS.includes(id)),
     });
   }),
+
+  // Stateless (spec AC-004.6): the page keeps the rating, the mock only confirms it.
+  http.put('*/api/v1/chatbot/answers/:answerId/rating', async () => {
+    await delay(MOCK_DELAY_MS);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.delete('*/api/v1/chatbot/answers/:answerId/rating', async () => {
+    await delay(MOCK_DELAY_MS);
+    return new HttpResponse(null, { status: 204 });
+  }),
 ];
 
 /** Restores this feature's mock data to its starting state — called after every test (src/test/setup.ts). */

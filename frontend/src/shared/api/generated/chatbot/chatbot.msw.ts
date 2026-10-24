@@ -124,7 +124,45 @@ export const getListUnavailableCitedDocumentsMockHandler = (
     options,
   );
 };
+
+export const getRateChatbotAnswerMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    '*/api/v1/chatbot/answers/:answerId/rating',
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getRemoveChatbotAnswerRatingMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    '*/api/v1/chatbot/answers/:answerId/rating',
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
 export const getChatbotMock = () => [
   getAskChatbotMockHandler(),
   getListUnavailableCitedDocumentsMockHandler(),
+  getRateChatbotAnswerMockHandler(),
+  getRemoveChatbotAnswerRatingMockHandler(),
 ];
