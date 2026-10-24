@@ -42,3 +42,33 @@ Record the current feature's commit agreement, obtain spec approval, then implem
 - Human explicitly authorized the verified conflict/FE recovery commit. Created **default@3d9f65b** through Gitleaks, lint-staged and commitlint. Incoming main harness files belong to the merge; branch-owned spec/design/log/approval changes are recorded in the companion harness commit. No push.
 - `sdd.ts commit ticket-review default` records 3d9f65b. `sdd.ts trace ticket-review STORY-001 STORY-005 STORY-006` exits 1: **10/23** criteria traced. Existing Java detection limitation is BUG-015; new canonical/audit/clean-test criteria and external documentation/delivery obligations also remain incomplete. Do not promote the module or call the full acceptance gate green.
 - A fresh fetch finds main has advanced to eccb9c9 (chatbot ratings plan, KAN-75). The committed code/FE verification above is against e681f9a. No backend foundation implementation branch exists in the fetched refs; KAN-31 still exposes only import services/ProjectAccess, with no canonical review queue/batch-lock/status/history service. TicketReviewDecision currently only exposes an approve factory. Task 10 requires these dependency contracts; approval alone does not supply them.
+
+## Main conflict resolution after push — 2026-10-24
+
+- User requested pulling main and resolving conflicts. Base HEAD is 02cd224; incoming main is c73c0c1 (KAN-75 ratings plan and KAN-76 chatbot Helpful/Not helpful). These commits change chatbot/OpenAPI/generated contracts and its harness artifacts, with no AGENTS/setup/backend rule changes.
+- Merged main with `--no-commit` on feat/ticket-review. Only `harnessclaude/events/events.jsonl` conflicted. Retained main's exact event lines plus branch-only events since common base e681f9a, deduplicated exact lines and retained chronological order. OpenAPI/generated client, approvals and progress merged automatically.
+- Programmatic checks confirm every main tracking/approval entry remains exact, every incoming handwritten chatbot file equals main, review/backend implementation files equal HEAD, and main's bug rows are intact. Review's approved spec remains unchanged. No bug renumbering, manual progress/approval edits or business logic changes in this merge.
+- Regenerated the client from the combined contract using orval; preserve chatbot rating endpoint/ChatbotRating as well as UnavailableDocuments, root chatbot tag and review maxItems 500. Two new generated model headers reflect the combined contract version; no generated file edited by hand.
+- Verification is in progress. No backend verification is claimed because no backend file changed. Existing backend dependency/migration blockers remain open. Merge is uncommitted; no push authorized by this request.
+
+### Debug: queue test timeouts in the expanded suite (BUG-051)
+
+- First full run reported existing 15-second timeouts in Project Back/Forward and the 501-selected test. It was interrupted after the failures; no complete-suite pass/count is claimed for that run. Logged BUG-051 even though this is test-fixture performance rather than a product behavior change.
+- Restricted the history fixture to three tickets across two Projects and the 501 test to one visible ticket, preserving the full 501-ID selection. Retained URL/history, disabled actions, no mutation, retained selection and 501-to-500 assertions. Focused two tests pass.
+- Next full run with two workers confirmed different timeouts in Reject and shared Request changes. Interrupted after these failures. Replaced character-by-character entry in those two scenarios with real user-event click/paste of identical text; empty validation and all submit/result assertions remain. Focused **four BUG-051 regressions pass**, 9 unrelated tests skipped only in that diagnostic run.
+- Final full verification is running with `npm test -- --maxWorkers=2`; no test is skipped in the full run. Worker count is a command-line resource setting only; no timeout, CI/Vitest configuration, production code, assertion or test scope is weakened. Full output is retained in ignored `backend/target/main-rating-merge-fe.log`.
+
+### Final result of the main merge
+
+- Full suite with two workers: **30 files, 29 passed / 1 failed; 502 tests, 496 passed / 6 failed**, duration 369.85 seconds. All 13 ReviewQueuePage tests pass, including the four BUG-051 regressions. This is not a green full test gate.
+- All six failures occur in incoming `KnowledgeChatbotPage.test.tsx`: five 15-second timeouts (lines 601, 631, 706, 781, 952), and multiple MSG06 text matches in the failed-ask rating scenario (line 793). Logged BUG-052/053 with chatbot owner Trần Trung Hiếu. Handwritten chatbot implementation/test files still equal main exactly; no main-only baseline was run, so causality is not proven.
+- User explicitly chose **only resolve conflicts and preserve chatbot**, declining a separate chatbot quick change. Do not alter those files, suppress warnings, skip tests or raise timeouts to make this merge appear green.
+- Format, lint, typecheck and build pass. Repeated `generate:api` leaves the generated file set and SHA-256 hashes unchanged. No backend source changed, so no fresh backend execution is claimed. Review's approved spec and main tracking/approval entries remain intact.
+- Conflicts are resolved locally; merge and branch-owned report/test-fixture changes remain uncommitted. No push. The remote PR continues to show the old state until the user authorizes committing/pushing this local resolution.
+
+### Authorized commit and push — 2026-10-24
+
+- User explicitly requested committing and pushing this resolution after seeing the 496/502 result and choosing to preserve chatbot unchanged. Committed **default@91ff572** through Gitleaks, lint-staged and commitlint, without skipping hooks or changing the six failing chatbot tests.
+- `sdd.ts commit ticket-review default` records 91ff572. Feature/module remain in progress; no complete test-gate, backend integration or production-readiness claim.
+- This companion harness commit records the merge, BUG-051 fix and open BUG-052/053. An independently opened BUG-037 shared-validation quick-change event was observed after the merge and is deliberately left unstaged; only this module's new commit-recorded event is selected for this commit. No working event data is removed.
+- Push target is only the current feat/ticket-review branch. No main merge, force-push or backend dependency implementation is included.
