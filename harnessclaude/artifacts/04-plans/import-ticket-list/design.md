@@ -44,7 +44,7 @@ POST /imports/previews/{id}/confirm ──► ImportConfirmService
 
 ## Data Model
 
-New changeset `002-ticket-import-schema.sql`:
+New changeset `003-ticket-import-schema.sql`:
 
 ```sql
 CREATE TABLE import_batch (               -- never updated or deleted
@@ -61,7 +61,7 @@ CREATE TABLE import_batch (               -- never updated or deleted
     created_at       TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_import_batch_project ON import_batch (project_id, created_at DESC);
--- ticket and ticket_review_decision: ALTER SEQUENCE … INCREMENT BY 50 (batching, see Key Decisions)
+-- ticket and ticket_import_decision: ALTER SEQUENCE … INCREMENT BY 50 (batching, see Key Decisions)
 
 CREATE TABLE ticket (
     id                BIGSERIAL PRIMARY KEY,
@@ -84,7 +84,7 @@ CREATE TABLE ticket (
 );
 CREATE INDEX idx_ticket_project_status ON ticket (project_id, status);
 
-CREATE TABLE ticket_review_decision (
+CREATE TABLE ticket_import_decision (
     id           BIGSERIAL PRIMARY KEY,
     ticket_id    BIGINT       NOT NULL REFERENCES ticket (id),
     reviewer     VARCHAR(150) NOT NULL,
@@ -138,9 +138,9 @@ The preview rows keep raw text without length limits, so an Error row can still 
 | Search hand-off | `ApplicationEventPublisher` + `TicketsPublishedEvent`; listeners use `@TransactionalEventListener(AFTER_COMMIT)` | Direct call to the search module | Search is not built yet; this keeps Confirm independent of indexing |
 | Error format | `ProblemDetail` + `code`, refactoring the existing `GlobalExceptionHandler` | Keep the `Map` body | `backend/AGENTS.md` §5 already requires it |
 | Stub safety (risk review) | `StubProjectAccess` is always a bean (`@ConditionalOnMissingBean(ProjectAccess.class)`; the real implementation replaces it). It reads `tsolve.stub.projects: ${TSOLVE_STUB_PROJECTS:}` in the form `alice:1,2;bob:3`. When the value is empty or the user is not listed, the user manages no Project → 403 (fails closed) | A stub that lets every PM use every Project | Otherwise any PM could import into any Project, which is an authorization bypass |
-| Insert batching (risk review) | `spring.jpa.properties.hibernate.jdbc.batch_size=100` + `order_inserts=true`. Preview rows (composite key) batch fully. `ticket` and `ticket_review_decision` ids use `@SequenceGenerator(allocationSize = 50)` on sequences altered to `INCREMENT BY 50` in 002 | Plain IDENTITY | IDENTITY turns off JDBC batching; 10,000 single inserts on Confirm would be slow |
+| Insert batching (risk review) | `spring.jpa.properties.hibernate.jdbc.batch_size=100` + `order_inserts=true`. Preview rows (composite key) batch fully. `ticket` and `ticket_import_decision` ids use `@SequenceGenerator(allocationSize = 50)` on sequences altered to `INCREMENT BY 50` in 003 | Plain IDENTITY | IDENTITY turns off JDBC batching; 10,000 single inserts on Confirm would be slow |
 | Who is the PM | `Authentication.getName()` stored as text (`performed_by`, `owner`, `reviewer`); role check `@PreAuthorize("hasRole('PROJECT_MANAGER')")` | User FK | No user table yet (identity deferred, architecture.md) |
-| Decided in planning: approve decision table (builder check) | `ticket_review_decision`, created here; the review module takes it over | Reuse `solution_approval` | `solution_approval` points at `solution`, not `ticket` |
+| Decided in planning: approve decision table (builder check) | `ticket_import_decision`, created here (not `ticket_review_decision`, which `feat/ticket-review` creates; changeset 003 because both branches used 002 — PR review 24/10); the review module takes it over | Reuse `solution_approval` | `solution_approval` points at `solution`, not `ticket` |
 | Decided in planning: audit event (builder check) | Not recorded in KAN-31; `AuditService` does not exist yet. Added when the audit module lands | Build a minimal AuditService here | Not in the approved spec. `backend/AGENTS.md` §5 lists import as audited, so this is a known gap |
 
 ## Builder-check decisions (2026-10-21)
@@ -175,7 +175,7 @@ backend/
 ├── pom.xml                                                     (+ commons-csv 1.12.0)
 ├── src/main/resources/application.yml                          (+ multipart limits, tsolve.stub.projects)
 ├── src/main/resources/db/changelog/db.changelog-master.xml     (+ include 002)
-├── src/main/resources/db/changelog/changes/002-ticket-import-schema.sql
+├── src/main/resources/db/changelog/changes/003-ticket-import-schema.sql
 ├── src/main/java/vn/tsolve/common/error/
 │   ├── GlobalExceptionHandler.java      (ProblemDetail + code; MaxUploadSizeExceeded → MSG28)
 │   └── MessageCodeException.java        (code + params)

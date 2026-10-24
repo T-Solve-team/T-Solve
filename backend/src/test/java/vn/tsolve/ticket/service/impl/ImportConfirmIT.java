@@ -112,11 +112,11 @@ class ImportConfirmIT {
 
     @BeforeEach
     void cleanDatabase() {
-        jdbc.execute("delete from ticket_review_decision");
+        jdbc.execute("delete from ticket_import_decision");
         jdbc.execute("delete from ticket");
         jdbc.execute("delete from import_batch");
         jdbc.execute("delete from import_preview");
-        jdbc.execute("drop trigger if exists fail_for_boom on ticket_review_decision");
+        jdbc.execute("drop trigger if exists fail_for_boom on ticket_import_decision");
         published.seen.clear();
         published.failNext = false;
     }
@@ -140,7 +140,7 @@ class ImportConfirmIT {
         // the third insert of the import (the review decisions) fails inside the database
         jdbc.execute("create or replace function fail_for_boom() returns trigger language plpgsql as "
                 + "$$ begin raise exception 'forced failure'; end $$");
-        jdbc.execute("create trigger fail_for_boom before insert on ticket_review_decision "
+        jdbc.execute("create trigger fail_for_boom before insert on ticket_import_decision "
                 + "for each row when (new.reviewer = 'boom-pm') execute function fail_for_boom()");
         long preview = upload("boom-pm", "T-1", "T-2");
 
@@ -149,7 +149,7 @@ class ImportConfirmIT {
 
         assertThat(e.getCode()).isEqualTo("MSG33");
         assertThat(count("ticket")).isZero();
-        assertThat(count("ticket_review_decision")).isZero();
+        assertThat(count("ticket_import_decision")).isZero();
         assertThat(jdbc.queryForList("select status, published_count from import_batch"))
                 .singleElement()
                 .satisfies(row -> {
@@ -168,7 +168,7 @@ class ImportConfirmIT {
 
         assertThat(published.seen).containsExactly("ids=3 visible=3");
         assertThat(count("ticket")).isEqualTo(3);
-        assertThat(count("ticket_review_decision")).isEqualTo(3);
+        assertThat(count("ticket_import_decision")).isEqualTo(3);
         assertThat(count("import_preview")).isZero();
     }
 

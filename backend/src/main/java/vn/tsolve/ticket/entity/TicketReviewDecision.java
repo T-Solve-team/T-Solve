@@ -13,14 +13,14 @@ import java.time.Instant;
 
 /** A review decision on a ticket; review history is permanent, so it is never updated. */
 @Entity
-@Table(name = "ticket_review_decision")
+@Table(name = "ticket_import_decision")
 public class TicketReviewDecision {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "ticket_review_decision_seq")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "ticket_import_decision_seq")
     @SequenceGenerator(
-            name = "ticket_review_decision_seq",
-            sequenceName = "ticket_review_decision_id_seq",
+            name = "ticket_import_decision_seq",
+            sequenceName = "ticket_import_decision_id_seq",
             allocationSize = 50)
     private Long id;
 

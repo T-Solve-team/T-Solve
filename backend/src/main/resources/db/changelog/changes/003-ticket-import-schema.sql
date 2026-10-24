@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset ticket:002-ticket-import-schema
+--changeset ticket:003-ticket-import-schema
 
 -- Tickets with their Solution, Import Batches and the Import Preview (KAN-31, UC-21).
 -- project_id has no FK yet: the project table belongs to the workspace module.
@@ -41,7 +41,7 @@ CREATE TABLE ticket (
 );
 CREATE INDEX idx_ticket_project_status ON ticket (project_id, status);
 
-CREATE TABLE ticket_review_decision (
+CREATE TABLE ticket_import_decision (
     id          BIGSERIAL PRIMARY KEY,
     ticket_id   BIGINT       NOT NULL REFERENCES ticket (id),
     reviewer    VARCHAR(150) NOT NULL,
@@ -49,11 +49,11 @@ CREATE TABLE ticket_review_decision (
     reason      TEXT,
     decided_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
-CREATE INDEX idx_ticket_review_decision_ticket ON ticket_review_decision (ticket_id);
+CREATE INDEX idx_ticket_import_decision_ticket ON ticket_import_decision (ticket_id);
 
 -- Hibernate allocates ids 50 at a time so inserts can be batched (design: Insert batching).
 ALTER SEQUENCE ticket_id_seq INCREMENT BY 50;
-ALTER SEQUENCE ticket_review_decision_id_seq INCREMENT BY 50;
+ALTER SEQUENCE ticket_import_decision_id_seq INCREMENT BY 50;
 
 CREATE TABLE import_preview (
     id          BIGSERIAL PRIMARY KEY,
