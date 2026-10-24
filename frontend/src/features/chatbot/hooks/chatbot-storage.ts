@@ -43,7 +43,8 @@ function isConversation(value: unknown): value is Conversation {
         typeof turn === 'object' &&
         turn !== null &&
         typeof turn.question === 'string' &&
-        isAnswer(turn.answer),
+        isAnswer(turn.answer) &&
+        (turn.rating === undefined || turn.rating === 'HELPFUL' || turn.rating === 'NOT_HELPFUL'),
     )
   );
 }

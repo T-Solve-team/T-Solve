@@ -61,12 +61,24 @@ describe('ReviewQueuePage', () => {
     expect(requests).toEqual([{ ticketIds: [1, 2] }, { ticketIds: [2] }]);
   });
 
-  it('AC-001.2 clears selection on Project Back/Forward navigation (BUG-044)', async () => {
+  it('AC-001.2 clears selection on Project Back/Forward navigation (BUG-044, BUG-051)', async () => {
+    server.use(
+      http.get('*/api/v1/review-queue', ({ request }) => {
+        const projectId = new URL(request.url).searchParams.get('projectId');
+        const rows = seedReviewQueue()
+          .slice(0, 3)
+          .filter((row) => projectId === null || row.project.projectId === Number(projectId));
+        return HttpResponse.json({
+          content: rows,
+          page: { size: 20, number: 0, totalElements: rows.length, totalPages: 1 },
+        });
+      }),
+    );
     const { user, router } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('combobox', { name: 'Project' }));
     await user.click(await screen.findByTitle('ITNET'));
-    await screen.findByText('Total 19 items');
+    await screen.findByText('Total 1 items');
     await user.click(screen.getByRole('checkbox', { name: 'Select ITNET-0415' }));
     expect(screen.getByText('1 selected')).toBeInTheDocument();
     expect(router.state.location.search).toBe('?projectId=102');
@@ -82,9 +94,13 @@ describe('ReviewQueuePage', () => {
     expect(await screen.findByText('0 selected', {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
-  it('AC-005.8 keeps all 501 selected and blocks every decision (BUG-034)', async () => {
+  it('AC-005.8 keeps all 501 selected and blocks every decision (BUG-034, BUG-051)', async () => {
     const decisions = vi.fn();
     server.use(
+      getGetReviewQueueMockHandler({
+        content: seedReviewQueue().slice(0, 1),
+        page: { size: 20, number: 0, totalElements: REVIEW_BATCH_LIMIT + 1, totalPages: 26 },
+      }),
       http.get('*/api/v1/review-queue/ticket-ids', () =>
         HttpResponse.json({
           ticketIds: Array.from({ length: REVIEW_BATCH_LIMIT + 1 }, (_, index) => index + 1),
@@ -165,7 +181,7 @@ describe('ReviewQueuePage', () => {
     expect(await screen.findByText('Total 56 items')).toBeInTheDocument();
   });
 
-  it('AC-003.1, AC-003.2, AC-003.3 rejects with a reason: MSG15 in the popup, MSG01 when empty, MSG16 when done', async () => {
+  it('AC-003.1, AC-003.2, AC-003.3 rejects with a reason: MSG15 in the popup, MSG01 when empty, MSG16 when done (BUG-051)', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('button', { name: 'Reject' }));
@@ -179,7 +195,8 @@ describe('ReviewQueuePage', () => {
       await within(dialog).findByText(msg('MSG01', { field_name: 'Reason' })),
     ).toBeInTheDocument();
 
-    await user.type(within(dialog).getByLabelText('Reason'), 'Does not fix the certificate error.');
+    await user.click(within(dialog).getByLabelText('Reason'));
+    await user.paste('Does not fix the certificate error.');
     await user.click(within(dialog).getByRole('button', { name: 'Reject' }));
     expect(await screen.findByText(msg('MSG16', { count: 1 }))).toBeInTheDocument();
     await waitFor(() =>
@@ -187,13 +204,14 @@ describe('ReviewQueuePage', () => {
     );
   });
 
-  it('AC-004.1, AC-004.2 applies one change comment to several selected tickets', async () => {
+  it('AC-004.1, AC-004.2 applies one change comment to several selected tickets (BUG-051)', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('checkbox', { name: 'Select ITNET-0415' }));
     await user.click(screen.getByRole('button', { name: 'Request Changes' }));
     const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByLabelText('Comment'), 'Add reproduction steps');
+    await user.click(within(dialog).getByLabelText('Comment'));
+    await user.paste('Add reproduction steps');
     await user.click(within(dialog).getByRole('button', { name: 'Send' }));
     expect(await screen.findByText(msg('MSG17'))).toBeInTheDocument();
     await waitFor(() => {

@@ -9,10 +9,18 @@ type ConversationThreadProps = {
   turns: readonly ChatTurn[];
   /** The question waiting for its answer, if any. */
   pendingQuestion?: string;
+  /** A rating request is running (AC-003.2). */
+  isRating: boolean;
+  onRate: (answerId: string, rating: ChatTurn['rating']) => void;
 };
 
 /** 12.1 conversation thread: each question on the right, its answer below it; a loading answer while waiting. */
-export function ConversationThread({ turns, pendingQuestion }: ConversationThreadProps) {
+export function ConversationThread({
+  turns,
+  pendingQuestion,
+  isRating,
+  onRate,
+}: ConversationThreadProps) {
   const end = useRef<HTMLDivElement>(null);
   // The thread scrolls inside its card: bring the newest question or answer into view.
   useEffect(() => {
@@ -25,7 +33,13 @@ export function ConversationThread({ turns, pendingQuestion }: ConversationThrea
         {turns.map((turn, index) => (
           <Flex key={`${index}-${turn.answer.answerId}`} vertical gap="middle">
             <p className={styles.question}>{turn.question}</p>
-            <ChatAnswer answer={turn.answer} unavailableIds={unavailableIds} />
+            <ChatAnswer
+              answer={turn.answer}
+              unavailableIds={unavailableIds}
+              rating={turn.rating}
+              isRating={isRating}
+              onRate={(rating) => onRate(turn.answer.answerId, rating)}
+            />
           </Flex>
         ))}
         {pendingQuestion !== undefined && (

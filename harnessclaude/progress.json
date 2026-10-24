@@ -83,15 +83,16 @@
       "features": {
         "ask-answer": "passing",
         "citations": "passing",
-        "session-conversations": "passing"
+        "session-conversations": "passing",
+        "ratings": "passing"
       },
-      "lastUpdated": "2026-10-23T18:04:59.666Z",
+      "lastUpdated": "2026-10-24T02:58:23.539Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "eb9a9c16aa3933f2f2a9a71f8576484a643091fe"
+        "default": "3d3c827c8b735482e0f3e8baf0bd182d1ad40166"
       }
     },
     "jira-app": {
