@@ -3,7 +3,7 @@ package vn.tsolve.knowledge;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vn.tsolve.common.error.NotFoundException;
+import vn.tsolve.common.exception.NotFoundException;
 
 @Service
 public class SolutionService {
@@ -43,6 +43,6 @@ public class SolutionService {
 
     @Transactional(readOnly = true)
     public Solution get(Long id) {
-        return repository.findById(id).orElseThrow(() -> new NotFoundException("Solution " + id + " not found"));
+        return repository.findById(id).orElseThrow(() -> new NotFoundException("MSG04"));
     }
 }

@@ -106,6 +106,21 @@
       "currentPhase": "decompose",
       "features": {},
       "lastUpdated": "2026-10-22T14:21:24.227Z"
+    },
+    "ticket-review": {
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "lead-review-fixes": "in-progress"
+      },
+      "lastUpdated": "2026-10-24T05:44:38.876Z",
+      "branch": "feat/ticket-review",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "9ab8d2d3ac0708ae198933daca6526126e4d0bd8"
+      }
     }
   },
   "dependencies": {},

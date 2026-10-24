@@ -72,3 +72,7 @@ Knowledge Chatbot screen on mocks (`chatbot`, KAN-48).
 
 ## Retro Notes
 <!-- what went well, what to improve -->
+
+## Ongoing ticket-review work
+
+The approved ticket-review implementation remains in-progress on its existing PR branch. Its spec, module paths, review API/UI, D1/D2 amendments and test evidence are retained; the workspace foundation planning does not reset that work. See artifacts/03-modules/ticket-review/spec.md and artifacts/05-implementation/ticket-review/task-5-fe-lead-amendments.md.

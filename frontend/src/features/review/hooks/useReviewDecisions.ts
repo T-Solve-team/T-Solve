@@ -2,6 +2,7 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   getGetReviewQueueQueryKey,
   getGetReviewQueueTicketIdsQueryKey,
+  getGetReviewTicketQueryKey,
   useApproveTickets,
   useRejectTickets,
   useRequestTicketChanges,
@@ -9,10 +10,13 @@ import {
 import { showMessage } from '@/shared/messages';
 
 /** Every decision changes the queue: refetch all its pages and the ids used by "Select all". */
-function refreshQueue(queryClient: QueryClient) {
+function refreshQueue(queryClient: QueryClient, ticketIds: number[]) {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: getGetReviewQueueQueryKey() }),
     queryClient.invalidateQueries({ queryKey: getGetReviewQueueTicketIdsQueryKey() }),
+    ...ticketIds.map((id) =>
+      queryClient.invalidateQueries({ queryKey: getGetReviewTicketQueryKey(id) }),
+    ),
   ]);
 }
 
@@ -21,9 +25,9 @@ export function useApproveSelectedTickets() {
   const queryClient = useQueryClient();
   return useApproveTickets({
     mutation: {
+      onSettled: (_data, _error, variables) => refreshQueue(queryClient, variables.data.ticketIds),
       onSuccess: (result) => {
         showMessage('MSG14', { count: result.count });
-        return refreshQueue(queryClient);
       },
     },
   });
@@ -34,10 +38,10 @@ export function useRejectSelectedTickets() {
   const queryClient = useQueryClient();
   return useRejectTickets({
     mutation: {
+      onSettled: (_data, _error, variables) => refreshQueue(queryClient, variables.data.ticketIds),
       meta: { handlesOwnErrors: true },
       onSuccess: (result) => {
         showMessage('MSG16', { count: result.count });
-        return refreshQueue(queryClient);
       },
     },
   });
@@ -48,10 +52,10 @@ export function useRequestChangesForTickets() {
   const queryClient = useQueryClient();
   return useRequestTicketChanges({
     mutation: {
+      onSettled: (_data, _error, variables) => refreshQueue(queryClient, variables.data.ticketIds),
       meta: { handlesOwnErrors: true },
       onSuccess: () => {
         showMessage('MSG17');
-        return refreshQueue(queryClient);
       },
     },
   });

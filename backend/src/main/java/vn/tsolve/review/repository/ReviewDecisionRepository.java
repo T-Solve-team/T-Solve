@@ -1,0 +1,9 @@
+package vn.tsolve.review.repository;
+
+import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+import vn.tsolve.review.entity.ReviewDecision;
+
+public interface ReviewDecisionRepository extends JpaRepository<ReviewDecision, Long> {
+    List<ReviewDecision> findByTicketIdOrderByDecidedAtDescIdDesc(long ticketId);
+}

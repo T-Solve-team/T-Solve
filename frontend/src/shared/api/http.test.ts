@@ -17,6 +17,23 @@ async function failureOf(promise: Promise<unknown>): Promise<ApiError> {
 }
 
 describe('http (fetch wrapper)', () => {
+  it('sends the CSRF cookie on unsafe requests only (BUG-026, AC-006.5)', async () => {
+    document.cookie = 'XSRF-TOKEN=review%2Bcsrf; Path=/';
+    const received: (string | null)[] = [];
+    server.use(
+      mock.all(`*${URL}`, ({ request }) => {
+        received.push(request.headers.get('X-XSRF-TOKEN'));
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    try {
+      await http(URL);
+      await http(URL, { method: 'POST' });
+      expect(received).toEqual([null, 'review+csrf']);
+    } finally {
+      document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/';
+    }
+  });
   it('returns the JSON body of a 2xx response', async () => {
     server.use(mock.get(`*${URL}`, () => HttpResponse.json({ count: 3 })));
     await expect(http<{ count: number }>(URL)).resolves.toEqual({ count: 3 });

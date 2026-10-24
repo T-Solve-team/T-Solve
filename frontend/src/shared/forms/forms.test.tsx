@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react';
+import { act, cleanup, screen } from '@testing-library/react';
 import { Form, Input } from 'antd';
 import { ApiError } from '@/shared/api';
 import { msg } from '@/shared/messages';
@@ -8,6 +8,19 @@ import { applyApiErrors } from './apply-api-errors';
 import { rules } from './rules';
 
 type Values = { reason: string };
+
+async function settleFormTimers() {
+  await act(async () => {
+    await vi.runAllTimersAsync();
+  });
+}
+
+async function cleanupFormTimers() {
+  cleanup();
+  // Ant Design's useDelayState leaves debounce callbacks alive after unmount.
+  // Execute them while jsdom still exists; do not suppress unhandled errors.
+  await settleFormTimers();
+}
 
 function setup() {
   let formRef: ReturnType<typeof Form.useForm<Values>>[0] | undefined;
@@ -32,13 +45,33 @@ function setup() {
 }
 
 describe('form rules and server errors', () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+
+  afterEach(async () => {
+    try {
+      await cleanupFormTimers();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('leaves no delayed Form updates after teardown (BUG-024)', async () => {
+    setup();
+    await cleanupFormTimers();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('treats whitespace-only input as empty (MSG01)', async () => {
     const form = setup();
     await act(async () => {
       form.setFieldsValue({ reason: '   ' });
       await form.validateFields().catch(() => undefined);
     });
-    expect(await screen.findByText(msg('MSG01', { field_name: 'Reason' }))).toBeInTheDocument();
+    await settleFormTimers();
+    await vi.waitFor(() =>
+      expect(screen.getByText(msg('MSG01', { field_name: 'Reason' }))).toBeInTheDocument(),
+    );
   });
 
   it('rejects text over the limit (MSG02)', async () => {
@@ -47,9 +80,12 @@ describe('form rules and server errors', () => {
       form.setFieldsValue({ reason: 'too long' });
       await form.validateFields().catch(() => undefined);
     });
-    expect(
-      await screen.findByText(msg('MSG02', { field_name: 'Reason', max_length: 5 })),
-    ).toBeInTheDocument();
+    await settleFormTimers();
+    await vi.waitFor(() =>
+      expect(
+        screen.getByText(msg('MSG02', { field_name: 'Reason', max_length: 5 })),
+      ).toBeInTheDocument(),
+    );
   });
 
   it('puts server field errors under their field', async () => {
@@ -63,8 +99,11 @@ describe('form rules and server errors', () => {
     act(() => {
       applied = applyApiErrors(form, error);
     });
+    await settleFormTimers();
     expect(applied).toBe(true);
-    expect(await screen.findByText(msg('MSG01', { field_name: 'Reason' }))).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.getByText(msg('MSG01', { field_name: 'Reason' }))).toBeInTheDocument(),
+    );
   });
 
   it('returns false when the error has no field errors', () => {

@@ -1,3 +1,4 @@
+import { MESSAGES } from './catalog';
 import { TRACKER_NAME } from '@/shared/config/tracker';
 import { msg } from './msg';
 
@@ -22,5 +23,17 @@ describe('msg', () => {
 
   it('AC-006.6 keeps a placeholder whose value is missing', () => {
     expect(msg('MSG14')).toBe('{count} ticket(s) approved and published.');
+  });
+
+  it('AC-002.2 uses Report3 review message types (BUG-011)', () => {
+    expect(MESSAGES).toMatchObject({
+      MSG13: { type: 'inline' },
+      MSG14: { type: 'toast' },
+      MSG15: { type: 'confirm' },
+      MSG16: { type: 'toast' },
+      MSG17: { type: 'toast' },
+      MSG18: { type: 'tooltip' },
+      MSG19: { type: 'confirm', text: 'Approve and publish {count} ticket(s)?' },
+    });
   });
 });

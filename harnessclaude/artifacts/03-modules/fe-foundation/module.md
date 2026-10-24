@@ -17,7 +17,6 @@ paths:
   - frontend/src/features/workspace/pages/WorkspaceSetupPage.tsx
   - frontend/src/features/workspace/pages/WorkspaceSettingsPage.tsx
   - frontend/src/features/workspace/pages/DepartmentDetailPage.tsx
-  - frontend/src/features/review/**
   - frontend/scripts/**
   - frontend/*
   - frontend/openapi/**
@@ -30,7 +29,7 @@ paths:
 **Owner:** Trần Trung Hiếu
 
 ## Description
-The shared base of the web app that every screen builds on, brought in line with Report3 and decisions D1–D6 (KAN-57): roles and the multi-role session, guards, landing page, menus, the 35-screen route map with placeholders for the new features, the Report3 MSG catalog, kit status tags, mock users and test helpers, and the frontend guidelines. The Review Queue's behaviour and Ticket Detail are not part of it (`ticket-review`, `ticket-repository`); until the `ticket-review` module is on `main`, this module also owns `features/review/` so it can keep the review feature on `main` green (renumbered codes, roles, one-Department mock data).
+The shared base of the web app that every screen builds on, brought in line with Report3 and decisions D1–D6 (KAN-57): roles and the multi-role session, guards, landing page, menus, the 35-screen route map with placeholders for the new features, the Report3 MSG catalog, kit status tags, mock users and test helpers, and the frontend guidelines. The Review Queue's behaviour and Ticket Detail are not part of it (`ticket-review`, `ticket-repository`). Ownership of `features/review/` passes to the approved `ticket-review` module with PR #26.
 
 ## Responsibilities
 - Five roles, several per user; `useSession` with all roles, Department, Departments, Projects, managed Spaces.

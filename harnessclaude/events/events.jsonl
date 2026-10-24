@@ -20,18 +20,38 @@
 {"ts":"2026-10-19T14:40:32.577Z","type":"quick-closed","what":"README: point to backend/AGENTS.md and docs/bug-log.md","files":["README.md"]}
 {"ts":"2026-10-19T14:43:29.072Z","type":"quick-opened","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}
 {"ts":"2026-10-19T14:43:48.790Z","type":"quick-closed","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}
+{"ts":"2026-10-20T14:34:26.139Z","type":"module-status","module":"ticket-review","from":null,"to":"decomposed"}
+{"ts":"2026-10-20T14:59:10.465Z","type":"spec-approved","module":"ticket-review","specHash":"9dd13a5fbaab750dc0017b3816b9c04035c5acf1337e3dc86c83484a6cb0a2f6"}
+{"ts":"2026-10-20T14:59:38.945Z","type":"module-status","module":"ticket-review","from":"decomposed","to":"planned"}
+{"ts":"2026-10-20T14:59:38.982Z","type":"feature-status","module":"ticket-review","feature":"review-api","from":null,"to":"pending"}
+{"ts":"2026-10-20T14:59:39.017Z","type":"feature-status","module":"ticket-review","feature":"review-ui","from":null,"to":"pending"}
+{"ts":"2026-10-20T14:59:39.053Z","type":"module-status","module":"ticket-review","from":"planned","to":"implementing"}
+{"ts":"2026-10-20T14:59:39.175Z","type":"feature-status","module":"ticket-review","feature":"review-api","from":"pending","to":"in-progress"}
+{"ts":"2026-10-20T16:03:56.840Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"4d36a48347e73c80edbf737a9fe6499e23783733"}
+{"ts":"2026-10-20T16:14:09.647Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"b6098c58e59d47302526e42bb1229d78a519f22f"}
 {"ts":"2026-10-21T12:50:30.391Z","type":"quick-opened","what":"AGENTS.md: add exception/client folders, common layout, test layout; log ProblemDetail mismatch bug","files":["backend/AGENTS.md","docs/bug-log.md"]}
 {"ts":"2026-10-21T12:52:43.722Z","type":"quick-closed","what":"AGENTS.md: add exception/client folders, common layout, test layout; log ProblemDetail mismatch bug","files":["backend/AGENTS.md","docs/bug-log.md"]}
+{"ts":"2026-10-21T13:28:12.777Z","type":"quick-opened","what":"Fix delayed Form validation teardown BUG-024","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-21T13:35:49.855Z","type":"quick-closed","what":"Fix delayed Form validation teardown BUG-024","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-21T13:47:30.072Z","type":"feature-status","module":"ticket-review","feature":"review-ui","from":"pending","to":"in-progress"}
+{"ts":"2026-10-21T14:30:54.157Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"6021e9c024f9d2aa59c0c74a591dbd13fb115c0b"}
 {"ts":"2026-10-21T18:10:39.312Z","type":"quick-opened","what":"project rules: frontend verify commands and where the frontend conventions are","files":["CLAUDE.md","AGENTS.md"]}
 {"ts":"2026-10-21T18:13:14.967Z","type":"quick-closed","what":"project rules: frontend verify commands and where the frontend conventions are","files":["CLAUDE.md","AGENTS.md"]}
 {"ts":"2026-10-21T18:14:30.059Z","type":"quick-opened","what":"frontend docs: tests cite the AC id; AI work goes through the harness","files":["frontend/AGENTS.md","frontend/guidelines/10-testing.md","frontend/guidelines/12-workflow.md"]}
 {"ts":"2026-10-21T18:26:26.570Z","type":"quick-closed","what":"frontend docs: tests cite the AC id; AI work goes through the harness","files":["frontend/AGENTS.md","frontend/guidelines/10-testing.md","frontend/guidelines/12-workflow.md"]}
 {"ts":"2026-10-21T18:27:04.941Z","type":"quick-opened","what":"BUG-002: the landing page route test times out in the full suite","files":["docs/bug-log.md","frontend/src/app/router/routes.test.tsx"]}
 {"ts":"2026-10-21T18:31:15.774Z","type":"quick-closed","what":"BUG-002: the landing page route test times out in the full suite","files":["docs/bug-log.md","frontend/src/app/router/routes.test.tsx"]}
+{"ts":"2026-10-22T11:47:40.525Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"b6370ac10d395246fcb7b31e8f2445831f155211"}
 {"ts":"2026-10-22T12:32:58.630Z","type":"quick-opened","what":"reviewer findings: frontend done includes build and generate:api, bug-log rule, AC checklist line","files":["frontend/AGENTS.md","frontend/guidelines/12-workflow.md"]}
 {"ts":"2026-10-22T12:37:45.134Z","type":"quick-closed","what":"reviewer findings: frontend done includes build and generate:api, bug-log rule, AC checklist line","files":["frontend/AGENTS.md","frontend/guidelines/12-workflow.md"]}
 {"ts":"2026-10-22T12:49:56.896Z","type":"quick-opened","what":"project rules: the team git rules win over the harness branch and commit defaults","files":["CLAUDE.md","AGENTS.md"]}
 {"ts":"2026-10-22T12:51:49.090Z","type":"quick-closed","what":"project rules: the team git rules win over the harness branch and commit defaults","files":["CLAUDE.md","AGENTS.md"]}
+{"ts":"2026-10-22T13:04:01.953Z","type":"quick-opened","what":"Normalize review frontend test names to AC prefix and BUG suffix","files":["frontend/src/features/review/components/RequestChangesModal.test.tsx","frontend/src/features/review/pages/ReviewQueuePage.test.tsx","frontend/src/features/tickets/pages/TicketDetailPage.test.tsx"]}
+{"ts":"2026-10-22T13:14:30.108Z","type":"quick-closed","what":"Normalize review frontend test names to AC prefix and BUG suffix","files":["frontend/src/features/review/components/RequestChangesModal.test.tsx","frontend/src/features/review/pages/ReviewQueuePage.test.tsx","frontend/src/features/tickets/pages/TicketDetailPage.test.tsx"]}
+{"ts":"2026-10-22T13:47:03.383Z","type":"spec-approved","module":"ticket-review","specHash":"5d4de2285469e55a8ceef828fb6913b2d2fb514c0144575e6154ce9eaffd5c79"}
+{"ts":"2026-10-22T13:48:53.476Z","type":"feature-status","module":"ticket-review","feature":"review-lead-amendments","from":null,"to":"pending"}
+{"ts":"2026-10-22T13:48:53.554Z","type":"feature-status","module":"ticket-review","feature":"review-lead-amendments","from":"pending","to":"in-progress"}
+{"ts":"2026-10-22T14:11:53.130Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"61ca98e7bfba62914521f47c99751ea4acbd033a"}
 {"ts":"2026-10-22T14:21:21.970Z","type":"module-status","module":"be-foundation","from":null,"to":"decomposed"}
 {"ts":"2026-10-22T14:21:22.168Z","type":"module-status","module":"fe-foundation","from":null,"to":"decomposed"}
 {"ts":"2026-10-22T14:21:22.380Z","type":"module-status","module":"identity","from":null,"to":"decomposed"}
@@ -107,6 +127,7 @@
 {"ts":"2026-10-23T12:37:08.833Z","type":"feature-status","module":"chatbot","feature":"session-conversations","from":null,"to":"pending"}
 {"ts":"2026-10-23T12:57:37.413Z","type":"module-status","module":"chatbot","from":"planned","to":"implementing"}
 {"ts":"2026-10-23T12:57:37.580Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"pending","to":"in-progress"}
+{"ts":"2026-10-23T13:09:49.582Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"02393e1b604e1063d5b14a6118da4dc7927cd6b9"}
 {"ts":"2026-10-23T13:19:15.273Z","type":"spec-approved","module":"fe-foundation","specHash":"d9126208393a38924e7cd920c61c3f1e2490105dfa8c4179310c8d602174155c"}
 {"ts":"2026-10-23T13:19:15.453Z","type":"module-status","module":"fe-foundation","from":"completed","to":"planned"}
 {"ts":"2026-10-23T13:19:15.628Z","type":"feature-status","module":"fe-foundation","feature":"placeholder-rule","from":null,"to":"pending"}
@@ -116,19 +137,30 @@
 {"ts":"2026-10-23T13:24:14.349Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"507955c893cd293983fbf2d04714bf4a921324f7"}
 {"ts":"2026-10-23T13:24:38.935Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-23T13:24:39.109Z","type":"feature-status","module":"fe-foundation","feature":"placeholder-rule","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-23T13:29:37.421Z","type":"module-status","module":"ticket-review","from":null,"to":"decomposed"}
 {"ts":"2026-10-23T13:34:57.806Z","type":"spec-approved","module":"chatbot","specHash":"3528bf93b2a4c74c3a3116629a782c288defa5622f78fcc308b44835374fb307"}
 {"ts":"2026-10-23T13:37:06.985Z","type":"spec-approved","module":"chatbot","specHash":"256c1f93a8b296f48a0d2ef7af91e2534ac9917a251a7d0467075f35ca90c463"}
 {"ts":"2026-10-23T13:37:14.331Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"evaluating","to":"fixing"}
+{"ts":"2026-10-23T13:39:22.584Z","type":"spec-approved","module":"ticket-review","specHash":"1231e5d25367f088678f31991ce572cd7df75ba3c776fb9305d99ab1e4b9e777"}
+{"ts":"2026-10-23T13:39:40.918Z","type":"module-status","module":"ticket-review","from":"decomposed","to":"planned"}
+{"ts":"2026-10-23T13:39:40.957Z","type":"module-status","module":"ticket-review","from":"planned","to":"implementing"}
+{"ts":"2026-10-23T13:39:40.993Z","type":"feature-status","module":"ticket-review","feature":"lead-review-fixes","from":null,"to":"pending"}
+{"ts":"2026-10-23T13:39:41.033Z","type":"feature-status","module":"ticket-review","feature":"lead-review-fixes","from":"pending","to":"in-progress"}
+{"ts":"2026-10-23T13:42:59.994Z","type":"quick-opened","what":"Fix legacy not-found codes and scope Ticket Detail navigation/tests for FE BE review","files":["backend/src/main/java/vn/tsolve/ticket/TicketService.java","backend/src/main/java/vn/tsolve/knowledge/SolutionService.java","backend/src/test/java/vn/tsolve/common/exception/LegacyNotFoundTest.java","frontend/src/features/tickets/pages/TicketDetailPage.tsx","frontend/src/features/tickets/pages/TicketDetailPage.test.tsx"]}
 {"ts":"2026-10-23T13:45:22.974Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"dcc6b5246aec0efb4a7b1bf3b1ebb72da285c132"}
 {"ts":"2026-10-23T13:45:23.137Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"fixing","to":"evaluating"}
 {"ts":"2026-10-23T13:45:23.316Z","type":"feature-status","module":"chatbot","feature":"ask-answer","from":"evaluating","to":"passing"}
 {"ts":"2026-10-23T13:45:23.480Z","type":"feature-status","module":"fe-foundation","feature":"placeholder-rule","from":"evaluating","to":"passing"}
 {"ts":"2026-10-23T13:45:23.652Z","type":"module-status","module":"fe-foundation","from":"implementing","to":"evaluating"}
 {"ts":"2026-10-23T13:45:23.821Z","type":"module-status","module":"fe-foundation","from":"evaluating","to":"completed"}
+{"ts":"2026-10-23T13:54:35.111Z","type":"quick-opened","what":"Preserve the validation MSG code in shared ProblemDetail (BUG-041)","files":["backend/src/main/java/vn/tsolve/common/exception/GlobalExceptionHandler.java","backend/src/test/java/vn/tsolve/common/exception/ValidationProblemDetailTest.java"]}
 {"ts":"2026-10-23T14:04:26.696Z","type":"feature-status","module":"chatbot","feature":"citations","from":"pending","to":"in-progress"}
 {"ts":"2026-10-23T14:05:14.000Z","type":"spec-approved","module":"chatbot","specHash":"3c134168da3d1bd738c011d02a668cf8f85427cc2b7db8ee9d08b04fff71c939"}
+{"ts":"2026-10-23T14:06:42.674Z","type":"quick-closed","what":"Preserve the validation MSG code in shared ProblemDetail (BUG-041)","files":["backend/src/main/java/vn/tsolve/common/exception/GlobalExceptionHandler.java","backend/src/test/java/vn/tsolve/common/exception/ValidationProblemDetailTest.java"]}
+{"ts":"2026-10-23T14:06:44.014Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"19485d9fe31010ae8ad468715f66c8a400883287"}
 {"ts":"2026-10-23T14:18:23.624Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"b64f80460c52168c86f438271c0ee2d51d701691"}
 {"ts":"2026-10-23T14:18:23.833Z","type":"feature-status","module":"chatbot","feature":"citations","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-23T14:21:42.783Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"cb073ef7ccbe2f891d068716786543f8fb7f57fa"}
 {"ts":"2026-10-23T14:25:28.854Z","type":"feature-status","module":"chatbot","feature":"citations","from":"evaluating","to":"fixing"}
 {"ts":"2026-10-23T14:32:55.416Z","type":"quick-opened","what":"Guideline 09: note that the 12.1 question box checks on change, not on blur (BUG-007)","files":["frontend/guidelines/09-forms-and-validation.md"]}
 {"ts":"2026-10-23T14:37:49.573Z","type":"quick-closed","what":"Guideline 09: note that the 12.1 question box checks on change, not on blur (BUG-007)","files":["frontend/guidelines/09-forms-and-validation.md"]}
@@ -144,6 +176,7 @@
 {"ts":"2026-10-23T18:53:11.956Z","type":"spec-approved","module":"chatbot","specHash":"5de57dfce54657e05edfd0d3c63d1644b2c10c6bdf6b88e40c5f6614fbf813c6"}
 {"ts":"2026-10-23T18:54:47.031Z","type":"feature-status","module":"chatbot","feature":"ratings","from":null,"to":"pending"}
 {"ts":"2026-10-23T18:54:47.220Z","type":"module-status","module":"chatbot","from":"completed","to":"planned"}
+{"ts":"2026-10-23T18:58:06.778Z","type":"spec-approved","module":"ticket-review","specHash":"05f4a31cf2f492fbb290cb796a9fe16e7af7d1a39ad7dfdfb4f2b2becccfadf0"}
 {"ts":"2026-10-23T19:04:39.166Z","type":"module-status","module":"chatbot","from":"planned","to":"implementing"}
 {"ts":"2026-10-23T19:04:39.356Z","type":"feature-status","module":"chatbot","feature":"ratings","from":"pending","to":"in-progress"}
 {"ts":"2026-10-24T02:55:31.550Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"3d3c827c8b735482e0f3e8baf0bd182d1ad40166"}
@@ -151,5 +184,8 @@
 {"ts":"2026-10-24T02:58:23.161Z","type":"feature-status","module":"chatbot","feature":"ratings","from":"evaluating","to":"passing"}
 {"ts":"2026-10-24T02:58:23.354Z","type":"module-status","module":"chatbot","from":"implementing","to":"evaluating"}
 {"ts":"2026-10-24T02:58:23.540Z","type":"module-status","module":"chatbot","from":"evaluating","to":"completed"}
+{"ts":"2026-10-24T03:06:42.878Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"3d9f65bb51147b39f1cc07ef2694fe4c54778ff2"}
 {"ts":"2026-10-24T03:16:51.746Z","type":"quick-opened","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
 {"ts":"2026-10-24T03:35:06.720Z","type":"quick-closed","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
+{"ts":"2026-10-24T05:24:33.766Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"91ff572f4fa056cfced8bab2667ceb81066a086c"}
+{"ts":"2026-10-24T05:44:38.877Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"9ab8d2d3ac0708ae198933daca6526126e4d0bd8"}

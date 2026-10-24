@@ -19,6 +19,7 @@ repos:
 
 sources:
   # Mode-specific inputs
+  docs: ./artifacts/00-baseline/Report3
   # docs: ./artifacts/00-baseline/requirements.pdf
 
 iterations:

@@ -2,7 +2,7 @@ package vn.tsolve.knowledge;
 
 import jakarta.persistence.*;
 import java.time.Instant;
-import vn.tsolve.common.error.BusinessRuleException;
+import vn.tsolve.common.exception.BusinessRuleException;
 
 @Entity
 @Table(name = "solution")
@@ -18,11 +18,20 @@ public class Solution {
     @Column(nullable = false)
     private String title;
 
-    @Column(columnDefinition = "text") private String symptoms;
-    @Column(name = "root_cause", columnDefinition = "text") private String rootCause;
-    @Column(columnDefinition = "text") private String steps;
-    @Column(columnDefinition = "text") private String workaround;
-    @Column(columnDefinition = "text") private String applicability;
+    @Column(columnDefinition = "text")
+    private String symptoms;
+
+    @Column(name = "root_cause", columnDefinition = "text")
+    private String rootCause;
+
+    @Column(columnDefinition = "text")
+    private String steps;
+
+    @Column(columnDefinition = "text")
+    private String workaround;
+
+    @Column(columnDefinition = "text")
+    private String applicability;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -46,7 +55,7 @@ public class Solution {
 
     public void edit(SolutionRequest r) {
         if (status != SolutionStatus.DRAFT) {
-            throw new BusinessRuleException("Only DRAFT solutions can be edited; current status is " + status);
+            throw new BusinessRuleException("MSG06");
         }
         this.title = r.title();
         this.symptoms = r.symptoms();
@@ -60,22 +69,57 @@ public class Solution {
 
     public void transitionTo(SolutionStatus next) {
         if (!status.canMoveTo(next)) {
-            throw new BusinessRuleException("Cannot move solution from " + status + " to " + next);
+            throw new BusinessRuleException("MSG06");
         }
         this.status = next;
         this.updatedAt = Instant.now();
     }
 
-    public Long getId() { return id; }
-    public Long getWorkspaceId() { return workspaceId; }
-    public String getTitle() { return title; }
-    public String getSymptoms() { return symptoms; }
-    public String getRootCause() { return rootCause; }
-    public String getSteps() { return steps; }
-    public String getWorkaround() { return workaround; }
-    public String getApplicability() { return applicability; }
-    public SolutionStatus getStatus() { return status; }
-    public Instant getReviewDueAt() { return reviewDueAt; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
+    public Long getId() {
+        return id;
+    }
+
+    public Long getWorkspaceId() {
+        return workspaceId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getSymptoms() {
+        return symptoms;
+    }
+
+    public String getRootCause() {
+        return rootCause;
+    }
+
+    public String getSteps() {
+        return steps;
+    }
+
+    public String getWorkaround() {
+        return workaround;
+    }
+
+    public String getApplicability() {
+        return applicability;
+    }
+
+    public SolutionStatus getStatus() {
+        return status;
+    }
+
+    public Instant getReviewDueAt() {
+        return reviewDueAt;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
 }
