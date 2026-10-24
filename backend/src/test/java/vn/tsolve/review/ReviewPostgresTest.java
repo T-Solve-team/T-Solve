@@ -148,7 +148,7 @@ class ReviewPostgresTest {
     @org.junit.jupiter.params.provider.EnumSource(
             value = ReviewAction.class,
             names = {"REJECT", "REQUEST_CHANGES"})
-    void rollsBackEntireBatchWhenSecondAuditFails_AC_005_1_AC_005_2_AC_005_3_BUG_011(ReviewAction action) {
+    void rollsBackEntireBatchWhenSecondAuditFails_AC_005_1_AC_005_2_AC_005_3_BUG_012(ReviewAction action) {
         ReviewTicketResponse first = submit();
         ReviewTicketResponse second = submit();
         doThrow(new DataIntegrityViolationException("forced test failure"))
@@ -207,7 +207,7 @@ class ReviewPostgresTest {
     }
 
     @Test
-    void storesExactlyOnePopulatedSolution_AC_005_4_BUG_013() {
+    void storesExactlyOnePopulatedSolution_AC_005_4_BUG_014() {
         ReviewTicketResponse ticket = submit();
         assertThat(jdbc.queryForObject(
                         "select count(*) from ticket_review_solution where ticket_id=?",
@@ -277,7 +277,7 @@ class ReviewPostgresTest {
     }
 
     @Test
-    void swaggerDocumentsIndividualPagingParameters_BUG_017() throws Exception {
+    void swaggerDocumentsIndividualPagingParameters_BUG_018() throws Exception {
         String schema = mvc.perform(get("/v3/api-docs").with(user("pm").roles("PROJECT_MANAGER")))
                 .andExpect(status().isOk())
                 .andReturn()
@@ -289,7 +289,7 @@ class ReviewPostgresTest {
     }
 
     @Test
-    void declaredAndServedBatchLimitsAgree_AC_005_8_BUG_039() throws Exception {
+    void declaredAndServedBatchLimitsAgree_AC_005_8_BUG_040() throws Exception {
         String schema = mvc.perform(get("/v3/api-docs").with(user("pm").roles("PROJECT_MANAGER")))
                 .andExpect(status().isOk())
                 .andReturn()

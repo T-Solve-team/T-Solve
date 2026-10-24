@@ -76,7 +76,8 @@ unavailable link; links kept when the query fails.
 - Modify: `frontend/src/features/chatbot/components/ChatAnswer.tsx`, `ConversationThread.tsx`
 - Test: `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx`
 **Covers:** AC-001.9–AC-001.11, AC-002.9, AC-002.10, AC-004.4, AC-004.5, and the citation halves of AC-001.7 (the
-list in number order) and AC-001.8 (HTML in a Wiki title or Solution section shown as text); edge cases 9, 10, 19, 20
+list in number order) and AC-001.8 (HTML in a Wiki title or Solution section shown as text), and the reworded
+AC-001.7 (the box is emptied only if it still holds the sent question; review of PR #51, finding 1); edge cases 9, 10, 19, 20
 **Dependencies:** Task 1
 **Estimated size:** medium
 

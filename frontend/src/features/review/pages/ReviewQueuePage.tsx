@@ -1,7 +1,7 @@
 /** 7.1 Review Queue — SRS III.7.1, Figma "7.1 Review Queue" (decisions FE-10, FE-34). */
 import { Flex } from 'antd';
 import { useState } from 'react';
-import { isApiError } from '@/shared/api';
+import { isApiError, useGetReviewQueueTicketIds } from '@/shared/api';
 import { useSession } from '@/shared/auth';
 import { showMessage } from '@/shared/messages';
 import { useListSearchParams } from '@/shared/routing';
@@ -12,7 +12,7 @@ import { ReviewQueueTable } from '../components/ReviewQueueTable';
 import { ReviewQueueToolbar } from '../components/ReviewQueueToolbar';
 import { useQueueTicketIds } from '../hooks/useQueueTicketIds';
 import { useApproveSelectedTickets } from '../hooks/useReviewDecisions';
-import { useReviewQueue } from '../hooks/useReviewQueue';
+import { REVIEW_QUEUE_POLL_MS, useReviewQueue } from '../hooks/useReviewQueue';
 import styles from './ReviewQueuePage.module.css';
 
 type OpenDialog = 'confirmApprove' | 'reject' | 'changes' | null;
@@ -24,9 +24,19 @@ function toProjectId(value: string | null): number | undefined {
 }
 
 export function ReviewQueuePage() {
-  const { session } = useSession();
-  const list = useListSearchParams({ field: 'reviewDueDate', order: 'asc' }); // SRS: earliest due first
+  const list = useListSearchParams({ field: 'reviewDueDate', order: 'asc' });
   const projectId = toProjectId(list.getFilter('projectId'));
+  return <ProjectReviewQueue key={projectId ?? 'all'} projectId={projectId} list={list} />;
+}
+
+function ProjectReviewQueue({
+  projectId,
+  list,
+}: {
+  projectId: number | undefined;
+  list: ReturnType<typeof useListSearchParams>;
+}) {
+  const { session } = useSession();
   const queue = useReviewQueue({ projectId, ...list.apiPaging });
   const loadAllTicketIds = useQueueTicketIds(projectId);
   const approve = useApproveSelectedTickets();
@@ -34,6 +44,25 @@ export function ReviewQueuePage() {
   // Selected tickets, across pages. Local state: it belongs to this screen only (guideline 05 C8).
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [openDialog, setOpenDialog] = useState<OpenDialog>(null);
+  const [validatedAt, setValidatedAt] = useState(0);
+  const eligibility = useGetReviewQueueTicketIds(
+    projectId === undefined ? undefined : { projectId },
+    {
+      query: { enabled: selectedIds.length > 0, refetchInterval: REVIEW_QUEUE_POLL_MS },
+    },
+  );
+
+  // Reconcile user selection against the complete queue, never just this page. Updating guarded
+  // state during render prevents a stale selection being committed between a refetch and an effect.
+  if (eligibility.data && eligibility.dataUpdatedAt !== validatedAt) {
+    const available = new Set(eligibility.data.ticketIds);
+    const remaining = selectedIds.filter((id) => available.has(id));
+    setValidatedAt(eligibility.dataUpdatedAt);
+    if (remaining.length !== selectedIds.length) {
+      setSelectedIds(remaining);
+      if (remaining.length === 0 || openDialog === 'confirmApprove') setOpenDialog(null);
+    }
+  }
 
   function finishDecision() {
     setOpenDialog(null);

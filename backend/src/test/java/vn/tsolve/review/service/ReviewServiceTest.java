@@ -58,7 +58,7 @@ class ReviewServiceTest {
 
     @Test
     @org.junit.jupiter.api.DisplayName(
-            "AC-006.2 denies access without an auth adapter; Mockito executes on JDK 21 (BUG-010)")
+            "AC-006.2 denies access without an auth adapter; Mockito executes on JDK 21 (BUG-011)")
     void deniesWhenIdentityIntegrationIsAbsent_AC_006_2() {
         assertThatThrownBy(() -> service.queue(null, PageRequest.of(0, 20)))
                 .isInstanceOfSatisfying(ReviewException.class, error -> assertThat(error.getCode())
@@ -234,7 +234,7 @@ class ReviewServiceTest {
     @org.junit.jupiter.params.provider.EnumSource(
             value = ReviewStatus.class,
             names = {"PENDING_REVIEW", "REJECTED", "CHANGES_REQUESTED"})
-    void hidesUnpublishedContentFromOtherReaders_AC_005_7_BUG_032(ReviewStatus status) {
+    void hidesUnpublishedContentFromOtherReaders_AC_005_7_BUG_033(ReviewStatus status) {
         manager();
         ReviewTicket item = ticket(1L, 10L);
         ReflectionTestUtils.setField(item, "status", status);
@@ -252,7 +252,7 @@ class ReviewServiceTest {
     }
 
     @Test
-    void allowsPublishedReadersButStillChecksProject_AC_005_7_BUG_032() {
+    void allowsPublishedReadersButStillChecksProject_AC_005_7_BUG_033() {
         manager();
         ReviewTicket item = ticket(1L, 10L);
         item.decide(ReviewAction.APPROVE, null, Instant.now());
@@ -267,7 +267,7 @@ class ReviewServiceTest {
 
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.EnumSource(ReviewAction.class)
-    void rejectsOversizedBatchBeforeLocks_AC_005_8_BUG_033(ReviewAction action) {
+    void rejectsOversizedBatchBeforeLocks_AC_005_8_BUG_034(ReviewAction action) {
         manager();
         List<Long> ids = java.util.stream.LongStream.rangeClosed(1, 501).boxed().toList();
         assertThatThrownBy(() -> service.decide(ids, action, "Valid comment"))
@@ -279,7 +279,7 @@ class ReviewServiceTest {
     }
 
     @Test
-    void acceptsExactly500Tickets_AC_005_8_BUG_033() {
+    void acceptsExactly500Tickets_AC_005_8_BUG_034() {
         manager();
         List<Long> ids = java.util.stream.LongStream.rangeClosed(1, 500).boxed().toList();
         for (long id : ids) when(tickets.lockById(id)).thenReturn(Optional.of(ticket(id, 10L)));

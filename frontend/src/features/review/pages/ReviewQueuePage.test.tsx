@@ -1,7 +1,9 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
+import { REVIEW_BATCH_LIMIT } from '../constants';
+import { seedReviewQueue } from '../mocks/data';
 import { getGetReviewQueueMockHandler } from '@/shared/api/generated/review/review.msw';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
@@ -22,11 +24,71 @@ describe('ReviewQueuePage', () => {
     await import('./ReviewQueuePage');
   });
 
-  it('AC-005.8 keeps all 501 selected and blocks every decision (BUG-033)', async () => {
+  it('AC-005.1, AC-005.3 drops stale selected IDs after 409 and retries the remaining selection (BUG-043, BUG-050)', async () => {
+    let rows = seedReviewQueue().slice(0, 2);
+    const requests: unknown[] = [];
+    server.use(
+      getGetReviewQueueMockHandler(() => ({
+        content: rows.slice(0, 20),
+        page: { size: 20, number: 0, totalElements: rows.length, totalPages: 1 },
+      })),
+      http.get('*/api/v1/review-queue/ticket-ids', () =>
+        HttpResponse.json({ ticketIds: rows.map((row) => row.ticketId) }),
+      ),
+      http.post('*/api/v1/reviews/approve', async ({ request }) => {
+        requests.push(await request.json());
+        if (requests.length === 1) {
+          rows = rows.filter((row) => row.ticketId !== 1);
+          return problem(409);
+        }
+        rows = rows.filter((row) => row.ticketId !== 2);
+        return HttpResponse.json({ count: 1 });
+      }),
+    );
+    const { user } = await openQueue();
+    await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1102' }));
+    await user.click(screen.getByRole('button', { name: 'Approve' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'OK' }));
+    expect(await screen.findByText('1 selected')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: 'ITSUP-1031' })).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Approve' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: 'Approve' }));
+    expect(await screen.findByText(msg('MSG14', { count: 1 }))).toBeInTheDocument();
+    expect(requests).toEqual([{ ticketIds: [1, 2] }, { ticketIds: [2] }]);
+  });
+
+  it('AC-001.2 clears selection on Project Back/Forward navigation (BUG-044)', async () => {
+    const { user, router } = await openQueue();
+    await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
+    await user.click(screen.getByRole('combobox', { name: 'Project' }));
+    await user.click(await screen.findByTitle('ITNET'));
+    await screen.findByText('Total 19 items');
+    await user.click(screen.getByRole('checkbox', { name: 'Select ITNET-0415' }));
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?projectId=102');
+    await act(async () => {
+      await router.navigate(-1);
+    });
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+    expect(await screen.findByText('0 selected', {}, { timeout: 5000 })).toBeInTheDocument();
+    await act(async () => {
+      await router.navigate(1);
+    });
+    await waitFor(() => expect(router.state.location.search).toBe('?projectId=102'));
+    expect(await screen.findByText('0 selected', {}, { timeout: 5000 })).toBeInTheDocument();
+  });
+
+  it('AC-005.8 keeps all 501 selected and blocks every decision (BUG-034)', async () => {
     const decisions = vi.fn();
     server.use(
       http.get('*/api/v1/review-queue/ticket-ids', () =>
-        HttpResponse.json({ ticketIds: Array.from({ length: 501 }, (_, index) => index + 1) }),
+        HttpResponse.json({
+          ticketIds: Array.from({ length: REVIEW_BATCH_LIMIT + 1 }, (_, index) => index + 1),
+        }),
       ),
       http.post('*/api/v1/reviews/:action', () => {
         decisions();
@@ -49,7 +111,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByRole('button', { name: 'Approve' })).toBeEnabled();
   });
 
-  it('AC-001.1 lists the pending tickets of my Projects, earliest review due date first, 20 per page (BUG-004, BUG-028)', async () => {
+  it('AC-001.1 lists the pending tickets of my Projects, earliest review due date first, 20 per page (BUG-004, BUG-029)', async () => {
     await openQueue();
     const table = screen.getByRole('table');
     const rows = within(table).getAllByRole('row').slice(1); // without the header row
@@ -153,7 +215,7 @@ describe('ReviewQueuePage', () => {
     expect(await screen.findByText(msg('MSG13'), {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
-  it('AC-006.5 reports a failed Select all request and preserves selection (BUG-027)', async () => {
+  it('AC-006.5 reports a failed Select all request and preserves selection (BUG-028)', async () => {
     server.use(http.get('*/api/v1/review-queue/ticket-ids', () => problem(500)));
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
@@ -162,7 +224,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('1 selected')).toBeInTheDocument();
   });
 
-  it('AC-001.2 filters by Project and keeps the filter in the URL (BUG-009, BUG-019, BUG-031)', async () => {
+  it('AC-001.2 filters by Project and keeps the filter in the URL (BUG-010, BUG-020, BUG-032)', async () => {
     const { user, router } = await openQueue();
     await user.click(screen.getByRole('combobox', { name: 'Project' }));
     expect(screen.queryByTitle('HRHELP')).not.toBeInTheDocument();

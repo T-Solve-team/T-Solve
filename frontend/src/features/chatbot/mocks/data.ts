@@ -74,6 +74,9 @@ export const MOCK_ANSWERS: readonly MockAnswer[] = [
   },
 ];
 
+/** Cited Wiki documents the user can no longer view (MSG110): the expense answer's guide. */
+export const UNAVAILABLE_DOCUMENT_IDS: readonly number[] = [9003];
+
 /** The mock answer whose keyword the question contains (case-insensitive), if any. */
 export function findMockAnswer(question: string): MockAnswer | undefined {
   const lower = question.toLowerCase();

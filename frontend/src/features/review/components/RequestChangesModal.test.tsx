@@ -27,7 +27,7 @@ describe('RequestChangesModal', () => {
     ).toBeInTheDocument();
     expect(onSent).not.toHaveBeenCalled();
   });
-  it('AC-004.1 submits every selected ticketId with one comment (BUG-019)', async () => {
+  it('AC-004.1 submits every selected ticketId with one comment (BUG-020)', async () => {
     let submitted: unknown;
     server.use(
       http.post('*/api/v1/reviews/request-changes', async ({ request }) => {

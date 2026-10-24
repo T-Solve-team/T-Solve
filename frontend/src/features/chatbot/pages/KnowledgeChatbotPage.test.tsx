@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { setDevUser } from '@/shared/auth';
-import type { ChatbotAnswer, ChatbotQuestion } from '@/shared/api';
+import {
+  getListUnavailableCitedDocumentsQueryKey,
+  type ChatbotAnswer,
+  type ChatbotQuestion,
+} from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
@@ -46,6 +50,39 @@ function answerWith(answer: Partial<ChatbotAnswer>) {
   );
 }
 
+/** Records the Wiki document ids of every availability check the page makes. */
+function recordAvailabilityChecks(): number[][] {
+  const checked: number[][] = [];
+  server.events.on('request:start', ({ request }) => {
+    const url = new URL(request.url);
+    if (url.pathname.endsWith('/api/v1/chatbot/unavailable-documents')) {
+      checked.push(url.searchParams.getAll('wikiDocumentIds').map(Number));
+    }
+  });
+  return checked;
+}
+
+/** Answers the next question only when `release()` is called. */
+function holdAnswer(answer: Partial<ChatbotAnswer>) {
+  let release = () => {};
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  server.use(
+    http.post('*/api/v1/chatbot/answers', async () => {
+      await released;
+      return HttpResponse.json<ChatbotAnswer>({
+        answerId: '00000000-0000-4000-8000-000000000002',
+        outcome: 'ANSWERED',
+        text: '',
+        citations: [],
+        ...answer,
+      });
+    }),
+  );
+  return release;
+}
+
 function thread() {
   return screen.getByRole('region', { name: 'Conversation' });
 }
@@ -54,6 +91,8 @@ describe('KnowledgeChatbotPage', () => {
   beforeAll(async () => {
     await import('./KnowledgeChatbotPage');
   });
+
+  beforeEach(() => sessionStorage.clear());
 
   afterEach(() => {
     server.events.removeAllListeners();
@@ -106,6 +145,19 @@ describe('KnowledgeChatbotPage', () => {
     expect(sent).toHaveLength(0);
   });
 
+  it('AC-001.4 shows no message when the user leaves the empty box (BUG-007)', async () => {
+    const { user, box } = await openChatbot();
+
+    await user.click(box);
+    await user.tab();
+
+    expect(box).not.toHaveFocus();
+    // antd shows a field message only after its check has run: wait for it, expecting it never comes.
+    await expect(
+      screen.findByText(msg('MSG01', { field_name: 'Question' }), {}, { timeout: 500 }),
+    ).rejects.toThrow();
+  });
+
   it('AC-001.5 counts up to 1,000 characters and shows MSG02, sending nothing, above it', async () => {
     const sent = recordQuestions();
     const { user, box } = await openChatbot();
@@ -144,21 +196,7 @@ describe('KnowledgeChatbotPage', () => {
   });
 
   it('AC-001.6 shows the question with a loading answer and disables Send until the answer arrives', async () => {
-    let release = () => {};
-    const answered = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    server.use(
-      http.post('*/api/v1/chatbot/answers', async () => {
-        await answered;
-        return HttpResponse.json<ChatbotAnswer>({
-          answerId: '00000000-0000-4000-8000-000000000002',
-          outcome: 'ANSWERED',
-          text: 'Use GlobalProtect [1].',
-          citations: [],
-        });
-      }),
-    );
+    const release = holdAnswer({ text: 'Use GlobalProtect [1].' });
     const { user, box } = await openChatbot();
 
     await user.type(box, `${VPN_QUESTION}{Enter}`);
@@ -198,6 +236,204 @@ describe('KnowledgeChatbotPage', () => {
     expect(answer).toHaveTextContent('with your company account [1].');
     expect(answer).toHaveTextContent('Power Options [2].');
     expect(box).toHaveValue('');
+  });
+
+  it('AC-001.7 keeps a question typed while the answer was written', async () => {
+    const release = holdAnswer({ text: 'Use GlobalProtect [1].' });
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByTestId('pending-answer');
+    await user.clear(box);
+    await user.type(box, 'And on a Mac?');
+    release();
+
+    expect(await within(thread()).findByText('Use GlobalProtect [1].')).toBeInTheDocument();
+    expect(box).toHaveValue('And on a Mac?');
+  });
+
+  it('AC-001.7 lists the citations under the answer in number order', async () => {
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+
+    const citations = await within(thread()).findByRole('list', { name: 'Citations' });
+    const items = within(citations).getAllByRole('listitem');
+    expect(items.map((item) => item.textContent?.slice(0, 3))).toEqual(['[1]', '[2]']);
+  });
+
+  it('AC-001.7 lists the citations in number order even when they arrive out of order', async () => {
+    answerWith({
+      text: 'See [1] and [2].',
+      citations: [
+        {
+          number: 2,
+          type: 'TICKET_SOLUTION',
+          solution: {
+            symptoms: 'Symptoms text',
+            rootCause: 'Cause',
+            resolutionSteps: 'Steps',
+            workaround: null,
+            scopeOfApplicability: 'Scope',
+          },
+        },
+        { number: 1, type: 'WIKI_DOCUMENT', wikiDocumentId: 9001, title: 'VPN guide' },
+      ],
+    });
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+
+    const citations = await within(thread()).findByRole('list', { name: 'Citations' });
+    const items = within(citations).getAllByRole('listitem');
+    expect(items.map((item) => item.textContent?.slice(0, 3))).toEqual(['[1]', '[2]']);
+  });
+
+  it('AC-001.8 shows HTML in a citation as plain text', async () => {
+    answerWith({
+      text: 'See [1] and [2].',
+      citations: [
+        { number: 1, type: 'WIKI_DOCUMENT', wikiDocumentId: 9001, title: '<b>VPN</b> guide' },
+        {
+          number: 2,
+          type: 'TICKET_SOLUTION',
+          solution: {
+            symptoms: '<script>window.hacked = true</script>',
+            rootCause: 'Cause',
+            resolutionSteps: 'Steps',
+            workaround: null,
+            scopeOfApplicability: 'Scope',
+          },
+        },
+      ],
+    });
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    await user.click(await within(thread()).findByRole('button', { name: 'Show' }));
+
+    expect(within(thread()).getByRole('link', { name: /<b>VPN<\/b> guide/ })).toBeInTheDocument();
+    expect(within(thread()).getByText('<script>window.hacked = true</script>')).toBeInTheDocument();
+    expect(thread().querySelector('b, script')).toBeNull();
+  });
+
+  it('AC-001.9 shows a Wiki citation as a link that opens the Wiki Document in the same tab', async () => {
+    const { user, box, router } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    const link = await within(thread()).findByRole('link', {
+      name: 'VPN setup on Windows 11 · Wiki document',
+    });
+    expect(link).toHaveAttribute('href', '/wiki/documents/9001');
+    expect(link).not.toHaveAttribute('target');
+
+    await user.click(link);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/wiki/documents/9001'));
+  });
+
+  it('AC-001.10 shows a ticket citation as "Solution from a ticket" with no ticket details', async () => {
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+
+    const citations = await within(thread()).findByRole('list', { name: 'Citations' });
+    const [, ticket] = within(citations).getAllByRole('listitem');
+    expect(ticket).toHaveTextContent(/^\[2\]\s*Solution from a ticket\s*Show$/);
+    expect(ticket?.querySelector('a')).toBeNull();
+  });
+
+  it('AC-001.11 expands the Solution inline with Show and collapses it with Hide', async () => {
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    await user.click(await within(thread()).findByRole('button', { name: 'Show' }));
+
+    for (const section of [
+      'Symptoms',
+      'Root cause',
+      'Resolution steps',
+      'Scope of applicability',
+    ]) {
+      expect(within(thread()).getByText(section)).toBeInTheDocument();
+    }
+    expect(
+      within(thread()).getByText('USB selective suspend turns off the network adapter.'),
+    ).toBeInTheDocument();
+    expect(within(thread()).queryByText('Workaround')).not.toBeInTheDocument();
+
+    await user.click(within(thread()).getByRole('button', { name: 'Hide' }));
+    expect(within(thread()).queryByText('Symptoms')).not.toBeInTheDocument();
+    expect(within(thread()).getByRole('button', { name: 'Show' })).toBeInTheDocument();
+  });
+
+  it('AC-001.11 shows the Workaround section when the Solution has one', async () => {
+    const { user, box } = await openChatbot();
+
+    await user.type(box, 'Leave policy for public holidays{Enter}');
+    await user.click(await within(thread()).findByRole('button', { name: 'Show' }));
+
+    expect(within(thread()).getByText('Workaround')).toBeInTheDocument();
+    expect(
+      within(thread()).getByText('HR adds the day back to the balance by hand.'),
+    ).toBeInTheDocument();
+  });
+
+  it('AC-002.9 shows MSG110 in place of the link of a Wiki document that is no longer available', async () => {
+    const checked = recordAvailabilityChecks();
+    const { user, box } = await openChatbot();
+
+    await user.type(box, 'How do I file an expense claim?{Enter}');
+
+    expect(await within(thread()).findByText(msg('MSG110'))).toBeInTheDocument();
+    expect(
+      within(thread()).queryByRole('link', { name: /Expense claim guide/ }),
+    ).not.toBeInTheDocument();
+    expect(checked).toEqual([[9003]]);
+  });
+
+  it('AC-002.9 checks the Wiki documents of every turn and keeps MSG110 while it checks again', async () => {
+    const checked = recordAvailabilityChecks();
+    const { user, box } = await openChatbot();
+    await user.type(box, 'How do I file an expense claim?{Enter}');
+    await within(thread()).findByText(msg('MSG110'));
+
+    // The check for the follow-up waits until released.
+    let release = () => {};
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get('*/api/v1/chatbot/unavailable-documents', async () => {
+        await released;
+        return HttpResponse.json({ wikiDocumentIds: [9003] });
+      }),
+    );
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByRole('link', { name: 'VPN setup on Windows 11 · Wiki document' });
+
+    await waitFor(() => expect(checked).toEqual([[9003], [9001, 9003]]));
+    expect(within(thread()).getByText(msg('MSG110'))).toBeInTheDocument();
+    expect(
+      within(thread()).queryByRole('link', { name: /Expense claim guide/ }),
+    ).not.toBeInTheDocument();
+    release();
+  });
+
+  it('AC-002.10 keeps the Wiki links and shows no message when the availability check fails', async () => {
+    server.use(http.get('*/api/v1/chatbot/unavailable-documents', () => problem(500)));
+    const { user, box, queryClient } = await openChatbot();
+
+    await user.type(box, 'How do I file an expense claim?{Enter}');
+
+    // Assert only once the check has really failed, not while it is still running.
+    const checkKey = getListUnavailableCitedDocumentsQueryKey({ wikiDocumentIds: [9003] });
+    await waitFor(() => expect(queryClient.getQueryState(checkKey)?.status).toBe('error'));
+    expect(
+      within(thread()).getByRole('link', { name: 'Expense claim guide · Wiki document' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(msg('MSG110'))).not.toBeInTheDocument();
+    // antd shows a toast a moment after the error: wait for it, expecting it never comes.
+    await expect(screen.findByText(msg('MSG06'), {}, { timeout: 500 })).rejects.toThrow();
   });
 
   it('AC-001.8 shows HTML in an answer as plain text', async () => {
@@ -293,5 +529,199 @@ describe('KnowledgeChatbotPage', () => {
     ).toBeInTheDocument();
     expect(box).toHaveValue(VPN_QUESTION);
     expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+  });
+});
+
+const LEAVE_QUESTION = 'How is annual leave counted?';
+let scrollIntoView = vi.fn();
+const STORED_KEY = 'tsolve.session.chatbot.conversations';
+
+function conversationList() {
+  return screen.getByRole('list', { name: 'Conversations' });
+}
+
+/** The titles in the list, top to bottom. */
+function listTitles() {
+  return within(conversationList())
+    .getAllByRole('listitem')
+    .map((item) => item.textContent);
+}
+
+/** The New conversation button; the empty entry in the list is the open one, so it is always `current`. */
+function newConversationButton() {
+  return screen.getByRole('button', { name: 'New conversation', current: false });
+}
+
+async function ask(user: ReturnType<typeof userEvent.setup>, box: HTMLElement, question: string) {
+  await user.type(box, `${question}{Enter}`);
+  await waitFor(() => expect(box).toHaveValue(''));
+  await waitFor(() => expect(screen.getByRole('button', { name: /Send/ })).toBeEnabled());
+}
+
+describe('KnowledgeChatbotPage session conversations', () => {
+  beforeAll(async () => {
+    await import('./KnowledgeChatbotPage');
+  });
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+  });
+
+  afterEach(() => {
+    server.events.removeAllListeners();
+    vi.restoreAllMocks();
+  });
+
+  it('AC-002.1 shows an empty "New conversation", selected, and stores nothing', async () => {
+    await openChatbot();
+
+    expect(listTitles()).toEqual(['New conversation']);
+    expect(
+      within(conversationList()).getByRole('button', { name: 'New conversation' }),
+    ).toHaveAttribute('aria-current', 'true');
+    expect(sessionStorage.getItem(STORED_KEY)).toBeNull();
+  });
+
+  it('AC-002.2 saves the conversation, titled with its first question, when the first answer arrives', async () => {
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByText(/Install GlobalProtect/);
+
+    expect(listTitles()).toEqual([VPN_QUESTION]);
+    const stored = JSON.parse(sessionStorage.getItem(STORED_KEY) ?? '{}') as {
+      conversations: { turns: { question: string }[] }[];
+    };
+    expect(stored.conversations).toHaveLength(1);
+    expect(stored.conversations[0]?.turns[0]?.question).toBe(VPN_QUESTION);
+  });
+
+  it('AC-002.3 lists the conversations newest first by start time and highlights the open one', async () => {
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+    await user.click(newConversationButton());
+    await ask(user, box, LEAVE_QUESTION);
+
+    expect(listTitles()).toEqual([LEAVE_QUESTION, VPN_QUESTION]);
+    expect(screen.getByRole('button', { name: LEAVE_QUESTION })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: VPN_QUESTION })).not.toHaveAttribute('aria-current');
+  });
+
+  it('AC-002.3 disables the list while an answer is pending and files the answer in its own conversation (edge 17)', async () => {
+    const release = holdAnswer({ text: 'Held answer [1].' });
+    const { user, box } = await openChatbot();
+
+    await user.type(box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByTestId('pending-answer');
+    expect(newConversationButton()).toBeDisabled();
+    expect(
+      within(conversationList()).getByRole('button', { name: 'New conversation' }),
+    ).toBeDisabled();
+    release();
+
+    expect(await within(thread()).findByText('Held answer [1].')).toBeInTheDocument();
+    expect(listTitles()).toEqual([VPN_QUESTION]);
+  });
+
+  it('AC-002.4 shows the questions, answers and citations of the conversation that is opened', async () => {
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+    await user.click(newConversationButton());
+    await ask(user, box, LEAVE_QUESTION);
+
+    await user.click(screen.getByRole('button', { name: VPN_QUESTION }));
+
+    expect(within(thread()).getByText(VPN_QUESTION)).toBeInTheDocument();
+    expect(within(thread()).getByText(/Install GlobalProtect/)).toBeInTheDocument();
+    expect(within(thread()).getByText('Solution from a ticket', { exact: false })).toBeVisible();
+    expect(within(thread()).queryByText(LEAVE_QUESTION)).not.toBeInTheDocument();
+  });
+
+  it('AC-002.5 adds a follow-up to the open conversation and sends its earlier turns', async () => {
+    const sent = recordQuestions();
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+
+    await ask(user, box, 'And on a Mac?');
+
+    expect(sent[1]?.history.map((turn) => turn.question)).toEqual([VPN_QUESTION]);
+    expect(listTitles()).toEqual([VPN_QUESTION]);
+    expect(within(thread()).getByText('And on a Mac?')).toBeInTheDocument();
+  });
+
+  it('AC-002.5 sends only the last 10 turns, oldest first, after 12 turns (edge 18)', async () => {
+    const sent = recordQuestions();
+    const { user, box } = await openChatbot();
+    for (let n = 1; n <= 12; n++) await ask(user, box, `Question ${n}`);
+
+    await ask(user, box, 'Question 13');
+
+    const questions = sent[12]?.history.map((turn) => turn.question);
+    expect(questions).toEqual(Array.from({ length: 10 }, (_, i) => `Question ${i + 3}`));
+  }, 60_000);
+
+  it('AC-002.6 opens an empty conversation at the top, and keeps one when it is already empty', async () => {
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+
+    await user.click(newConversationButton());
+    expect(listTitles()).toEqual(['New conversation', VPN_QUESTION]);
+    expect(within(thread()).queryByText(VPN_QUESTION)).not.toBeInTheDocument();
+
+    await user.click(newConversationButton());
+    expect(listTitles()).toEqual(['New conversation', VPN_QUESTION]);
+  });
+
+  it('AC-002.7 brings the conversations back after a page reload, with the empty one open (edge 15)', async () => {
+    const first = await openChatbot();
+    await ask(first.user, first.box, VPN_QUESTION);
+    first.unmount();
+
+    await openChatbot();
+
+    expect(listTitles()).toEqual(['New conversation', VPN_QUESTION]);
+    expect(within(thread()).queryByText(VPN_QUESTION)).not.toBeInTheDocument();
+  });
+
+  it('AC-002.8 starts empty when the stored conversations belong to another user (edge 12)', async () => {
+    sessionStorage.setItem(
+      STORED_KEY,
+      JSON.stringify({
+        version: 1,
+        userId: 999_999,
+        conversations: [{ id: 'x', startedAt: 1, turns: [] }],
+      }),
+    );
+
+    await openChatbot();
+
+    expect(listTitles()).toEqual(['New conversation']);
+  });
+
+  it('AC-002.11 still answers and keeps the conversations of the open page when storage is blocked (edge 14)', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError');
+    });
+    const { user, box } = await openChatbot();
+
+    await ask(user, box, VPN_QUESTION);
+    await user.click(newConversationButton());
+    await ask(user, box, LEAVE_QUESTION);
+
+    expect(listTitles()).toEqual([LEAVE_QUESTION, VPN_QUESTION]);
+  });
+
+  it('shows the newest turn after each answer (PR #51 finding 2)', async () => {
+    const { user, box } = await openChatbot();
+    scrollIntoView.mockClear();
+
+    await ask(user, box, VPN_QUESTION);
+
+    expect(scrollIntoView).toHaveBeenCalled();
   });
 });

@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import java.io.IOException;
 
-/** Jackson's default float-to-long coercion could silently decide a different ticket (BUG-012). */
+/** Jackson's default float-to-long coercion could silently decide a different ticket (BUG-013). */
 public class IntegralTicketIdDeserializer extends JsonDeserializer<Long> {
     @Override
     public Long deserialize(JsonParser parser, DeserializationContext context) throws IOException {

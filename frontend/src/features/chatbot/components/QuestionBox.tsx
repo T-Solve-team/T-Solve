@@ -35,6 +35,8 @@ export function QuestionBox({ form, isSending, onAsk }: QuestionBoxProps) {
         <FormField<QuestionFormValues>
           name="question"
           className={styles.field}
+          // BUG-007: the box is empty most of the time, so leaving it must not show MSG01; only typing or sending does.
+          validateTrigger="onChange"
           rules={[rules.required('Question'), rules.maxLength('Question', QUESTION_MAX_LENGTH)]}
         >
           <Input.TextArea

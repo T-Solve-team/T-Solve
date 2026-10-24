@@ -1,5 +1,6 @@
 import { Button, Flex, Select, Typography } from 'antd';
 import type { ProjectMembership } from '@/shared/api';
+import { REVIEW_BATCH_LIMIT } from '../constants';
 import styles from './ReviewQueueToolbar.module.css';
 
 type ReviewQueueToolbarProps = {
@@ -28,7 +29,7 @@ export function ReviewQueueToolbar({
   onReject,
   onApprove,
 }: ReviewQueueToolbarProps) {
-  const hasSelection = selectedCount > 0 && selectedCount <= 500;
+  const hasSelection = selectedCount > 0 && selectedCount <= REVIEW_BATCH_LIMIT;
   return (
     <Flex justify="space-between" align="end" gap="middle" wrap>
       <Flex align="end" gap="middle">
@@ -51,8 +52,10 @@ export function ReviewQueueToolbar({
         <Typography.Text type="secondary" className={styles.count}>
           {selectedCount} selected
         </Typography.Text>
-        {selectedCount > 500 && (
-          <Typography.Text type="secondary">Select up to 500 tickets per decision.</Typography.Text>
+        {selectedCount > REVIEW_BATCH_LIMIT && (
+          <Typography.Text type="secondary">
+            Select up to {REVIEW_BATCH_LIMIT} tickets per decision.
+          </Typography.Text>
         )}
       </Flex>
       <Flex gap="middle">

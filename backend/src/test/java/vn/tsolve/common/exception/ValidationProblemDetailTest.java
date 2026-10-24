@@ -15,7 +15,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 class ValidationProblemDetailTest {
     @ParameterizedTest
     @ValueSource(strings = {"MSG01", "MSG02", "MSG06", "unknown"})
-    void preservesValidatedCodeAndParams_BUG_038(String code) throws Exception {
+    void preservesValidatedCodeAndParams_BUG_039(String code) throws Exception {
         var binding = new BeanPropertyBindingResult(new Object(), "request");
         binding.addError(new FieldError("request", "reason", code));
         var detail = new GlobalExceptionHandler().invalid(error(binding));
@@ -32,7 +32,7 @@ class ValidationProblemDetailTest {
     }
 
     @Test
-    void fallsBackSafelyWhenNoFieldErrorsExist_BUG_038() throws Exception {
+    void fallsBackSafelyWhenNoFieldErrorsExist_BUG_039() throws Exception {
         var detail =
                 new GlobalExceptionHandler().invalid(error(new BeanPropertyBindingResult(new Object(), "request")));
         assertThat(detail.getProperties()).containsEntry("code", "MSG06").containsEntry("fieldErrors", List.of());

@@ -1,0 +1,38 @@
+/* Figma 12.1 callout 4 and (b): small numbered rows under the answer; the Solution opens in a white block below. */
+.list {
+  margin: var(--ant-margin-sm) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--ant-font-size-sm);
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+  padding: var(--ant-padding-xxs) 0;
+}
+
+.number,
+.icon {
+  color: var(--ant-color-text-tertiary);
+}
+
+.solution {
+  flex-basis: 100%;
+  margin: var(--ant-margin-xs) 0 0;
+  padding: var(--ant-padding-sm);
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-bg-container);
+}
+
+.sectionLabel {
+  font-weight: 600;
+}
+
+.sectionText {
+  margin: 0 0 var(--ant-margin-xs);
+  color: var(--ant-color-text-secondary);
+  white-space: pre-wrap;
+}

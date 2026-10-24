@@ -12,7 +12,7 @@ import vn.tsolve.ticket.TicketService;
 
 class LegacyNotFoundTest {
     @Test
-    void usesNoDataCodeForBothLegacyResources_BUG_036() {
+    void usesNoDataCodeForBothLegacyResources_BUG_037() {
         var tickets = new TicketService(mock(ResolvedTicketRepository.class));
         var solutions = new SolutionService(mock(SolutionRepository.class));
         assertThatThrownBy(() -> tickets.get(123L))

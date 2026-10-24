@@ -17,7 +17,7 @@ async function failureOf(promise: Promise<unknown>): Promise<ApiError> {
 }
 
 describe('http (fetch wrapper)', () => {
-  it('sends the CSRF cookie on unsafe requests only (BUG-023, AC-006.5)', async () => {
+  it('sends the CSRF cookie on unsafe requests only (BUG-024, AC-006.5)', async () => {
     document.cookie = 'XSRF-TOKEN=review%2Bcsrf; Path=/';
     const received: (string | null)[] = [];
     server.use(

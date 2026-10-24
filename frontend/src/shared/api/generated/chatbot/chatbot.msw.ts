@@ -12,7 +12,12 @@ import { HttpResponse, http } from 'msw';
 import type { RequestHandlerOptions } from 'msw';
 
 import { ChatbotAnswerOutcome } from '../model';
-import type { ChatbotAnswer, TicketSolutionCitation, WikiDocumentCitation } from '../model';
+import type {
+  ChatbotAnswer,
+  TicketSolutionCitation,
+  UnavailableDocuments,
+  WikiDocumentCitation,
+} from '../model';
 
 export const getAskChatbotResponseWikiDocumentCitationMock = (
   overrideResponse: Partial<WikiDocumentCitation> = {},
@@ -62,6 +67,16 @@ export const getAskChatbotResponseMock = (
   ...overrideResponse,
 });
 
+export const getListUnavailableCitedDocumentsResponseMock = (
+  overrideResponse: Partial<Extract<UnavailableDocuments, object>> = {},
+): UnavailableDocuments => ({
+  wikiDocumentIds: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.number.int()),
+  ...overrideResponse,
+});
+
 export const getAskChatbotMockHandler = (
   overrideResponse?:
     | ChatbotAnswer
@@ -85,4 +100,31 @@ export const getAskChatbotMockHandler = (
     options,
   );
 };
-export const getChatbotMock = () => [getAskChatbotMockHandler()];
+
+export const getListUnavailableCitedDocumentsMockHandler = (
+  overrideResponse?:
+    | UnavailableDocuments
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<UnavailableDocuments> | UnavailableDocuments),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/chatbot/unavailable-documents',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListUnavailableCitedDocumentsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+export const getChatbotMock = () => [
+  getAskChatbotMockHandler(),
+  getListUnavailableCitedDocumentsMockHandler(),
+];

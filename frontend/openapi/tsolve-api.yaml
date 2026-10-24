@@ -12,6 +12,8 @@ tags:
     description: Who is signed in.
   - name: review
     description: Review Queue and review decisions (SRS III.7).
+  - name: chatbot
+    description: Knowledge Chatbot questions, citations and unavailable documents.
 paths:
   /api/v1/me:
     get:
@@ -224,6 +226,35 @@ paths:
         '403':
           $ref: '#/components/responses/Problem'
         '503':
+          $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/unavailable-documents:
+    get:
+      tags: [chatbot]
+      operationId: listUnavailableCitedDocuments
+      summary: Which of the cited Wiki documents the user can no longer view (MSG110, UC-52).
+      parameters:
+        - name: wikiDocumentIds
+          in: query
+          required: true
+          description: The Wiki document ids cited in the conversation on screen.
+          schema:
+            type: array
+            minItems: 1
+            items:
+              type: integer
+              format: int64
+      responses:
+        '200':
+          description: The given ids that are no longer available to the user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnavailableDocuments'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
           $ref: '#/components/responses/Problem'
 components:
   parameters:
@@ -677,3 +708,12 @@ components:
           type: [string, 'null']
         scopeOfApplicability:
           type: string
+    UnavailableDocuments:
+      type: object
+      required: [wikiDocumentIds]
+      properties:
+        wikiDocumentIds:
+          type: array
+          items:
+            type: integer
+            format: int64

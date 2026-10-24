@@ -25,9 +25,9 @@ export function useApproveSelectedTickets() {
   const queryClient = useQueryClient();
   return useApproveTickets({
     mutation: {
-      onSuccess: (result, variables) => {
+      onSettled: (_data, _error, variables) => refreshQueue(queryClient, variables.data.ticketIds),
+      onSuccess: (result) => {
         showMessage('MSG14', { count: result.count });
-        return refreshQueue(queryClient, variables.data.ticketIds);
       },
     },
   });
@@ -38,10 +38,10 @@ export function useRejectSelectedTickets() {
   const queryClient = useQueryClient();
   return useRejectTickets({
     mutation: {
+      onSettled: (_data, _error, variables) => refreshQueue(queryClient, variables.data.ticketIds),
       meta: { handlesOwnErrors: true },
-      onSuccess: (result, variables) => {
+      onSuccess: (result) => {
         showMessage('MSG16', { count: result.count });
-        return refreshQueue(queryClient, variables.data.ticketIds);
       },
     },
   });
@@ -52,10 +52,10 @@ export function useRequestChangesForTickets() {
   const queryClient = useQueryClient();
   return useRequestTicketChanges({
     mutation: {
+      onSettled: (_data, _error, variables) => refreshQueue(queryClient, variables.data.ticketIds),
       meta: { handlesOwnErrors: true },
-      onSuccess: (result, variables) => {
-        showMessage('MSG17', { count: result.count });
-        return refreshQueue(queryClient, variables.data.ticketIds);
+      onSuccess: () => {
+        showMessage('MSG17');
       },
     },
   });
