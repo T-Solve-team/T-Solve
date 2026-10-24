@@ -14,6 +14,8 @@ tags:
     description: Review Queue and review decisions (SRS III.7).
   - name: chatbot
     description: Knowledge Chatbot questions and answers (Report3 UC-51, GBR-36; SRS III.12.1).
+  - name: tickets
+    description: Ticket List (Report3 UC-27; SRS III.6.2).
 paths:
   /api/v1/me:
     get:
@@ -222,6 +224,47 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/tickets:
+    get:
+      tags: [tickets]
+      operationId: getTickets
+      summary: One page of the tickets the user may see (SRS 6.2, Permission Matrix note 5).
+      parameters:
+        - name: keyword
+          in: query
+          description: Matches the ticket ID, title or Solution text.
+          schema:
+            type: string
+        - name: departmentId
+          in: query
+          description: One Department; omitted = every Department the user may see.
+          schema:
+            type: integer
+            format: int64
+        - name: source
+          in: query
+          schema:
+            $ref: '#/components/schemas/TicketSource'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TicketStatus'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: >
+            One page of tickets. Default sort updatedAt,desc; sort keys sourceTicketId, title, project,
+            reviewDueDate, updatedAt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketSummaryPage'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
 components:
   parameters:
     Page:
@@ -406,6 +449,46 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReviewQueueItem'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+    TicketStatus:
+      type: string
+      enum: [PENDING_REVIEW, CHANGES_REQUESTED, PUBLISHED, REJECTED, UNPUBLISHED, EXPIRED]
+    TicketSummary:
+      type: object
+      required: [ticketId, sourceTicketId, title, project, department, source, status, reviewDueDate, updatedAt]
+      properties:
+        ticketId:
+          type: integer
+          format: int64
+        sourceTicketId:
+          type: string
+          description: The Jira issue key, e.g. ITSUP-1031.
+        title:
+          type: string
+        project:
+          $ref: '#/components/schemas/ProjectRef'
+        department:
+          $ref: '#/components/schemas/DepartmentRef'
+        source:
+          $ref: '#/components/schemas/TicketSource'
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+        reviewDueDate:
+          type: [string, 'null']
+          format: date-time
+          description: Only while Pending review or Changes requested.
+        updatedAt:
+          type: string
+          format: date-time
+    TicketSummaryPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketSummary'
         page:
           $ref: '#/components/schemas/PageMetadata'
     TicketIdList:
