@@ -11,7 +11,7 @@
 - Frontend: http://127.0.0.1:5173/review-queue — mock hiện có, mặc định Project Manager, khoảng 58 ticket mẫu.
 - Backend Swagger: http://127.0.0.1:8080/swagger-ui/index.html — API review thật, PostgreSQL riêng và adapter đăng nhập chỉ trong test classpath.
 
-Frontend chưa được cập nhật để gọi backend mới. Khi thao tác FE, bạn đang thử hành vi mock cũ, gồm các bug đã ghi BUG-008–BUG-010. Để kiểm tra phần backend vừa triển khai, dùng Swagger theo hướng dẫn dưới đây. Không coi việc bấm FE mock là bằng chứng backend đã lưu dữ liệu.
+Frontend chưa được cập nhật để gọi backend mới. Khi thao tác FE, bạn đang thử hành vi mock cũ, gồm các bug đã ghi BUG-010–BUG-012. Để kiểm tra phần backend vừa triển khai, dùng Swagger theo hướng dẫn dưới đây. Không coi việc bấm FE mock là bằng chứng backend đã lưu dữ liệu.
 
 Auth manual và công cụ tạo dữ liệu nằm trong `backend/src/test/java/vn/tsolve/review/manual/`, chỉ nạp qua main test với profile `manual-review`. Chúng không có trong jar production. Backend chỉ lắng nghe loopback. Email dừng ở bản ghi pending; OIDC, SMTP và Jira chưa được tích hợp trong scope đã chốt.
 
@@ -116,7 +116,7 @@ Ba tài khoản manual **pm**, **otherpm**, **employee** cùng dùng password ma
 - HTTP smoke trên server đang chạy: **18 checks passed**, gồm ba quyết định, record DB, CSRF, quyền Project, input lỗi và bulk atomicity.
 - Đã thao tác trực tiếp **Authorize → GET CSRF → POST fixtures** trên Swagger và nhận **200**, header X-XSRF-TOKEN được gửi tự động.
 - Frontend đã kiểm tra bằng trình duyệt: Review Queue hiển thị 58 ticket mock. Chưa kiểm tra FE nối BE vì feature đó còn pending.
-- Bug mới trong lần chuẩn bị manual: BUG-016–BUG-019 được giữ trong `docs/bug-log.md`, kể cả đã sửa. BUG-015 của trace vẫn mở.
+- Bug mới trong lần chuẩn bị manual: BUG-018–BUG-021 được giữ trong `docs/bug-log.md`, kể cả đã sửa. BUG-017 của trace vẫn mở.
 - Script kiểm tra lại HTTP, dùng PowerShell 7 khi cả hai server còn chạy:
 
 ```powershell
@@ -154,7 +154,7 @@ $env:MANUAL_REVIEW_PASSWORD = 'Review-Local-2026'
   '-Dspring-boot.run.arguments=--springdoc.swagger-ui.csrf.enabled=true'
 ```
 
-JDK trong target là công cụ local tạm; Maven clean sẽ xóa nó. Khi đó dùng JDK 21 đã cài của bạn và đổi JAVA_HOME. Không dùng biến môi trường SPRINGDOC_SWAGGER_UI_CSRF_ENABLED; BUG-016 đã ghi lý do truyền canonical property qua argument.
+JDK trong target là công cụ local tạm; Maven clean sẽ xóa nó. Khi đó dùng JDK 21 đã cài của bạn và đổi JAVA_HOME. Không dùng biến môi trường SPRINGDOC_SWAGGER_UI_CSRF_ENABLED; BUG-018 đã ghi lý do truyền canonical property qua argument.
 
 Frontend, trong terminal khác tại `D:/T-Solve/frontend`:
 
