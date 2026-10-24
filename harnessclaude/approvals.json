@@ -140,8 +140,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "1231e5d25367f088678f31991ce572cd7df75ba3c776fb9305d99ab1e4b9e777",
-    "approvedAt": "2026-10-23T13:39:22.582Z",
+    "specHash": "05f4a31cf2f492fbb290cb796a9fe16e7af7d1a39ad7dfdfb4f2b2becccfadf0",
+    "approvedAt": "2026-10-23T18:58:06.770Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN an authorized Project Manager loads the Review Queue, THE system SHALL return only Pending review Solution Form tickets in Projects they currently manage, ordered by earliest review due date by default.",
@@ -160,22 +160,25 @@
       "AC-004.1": "WHEN the Project Manager selects one, several or all eligible Pending review Solution Form tickets in the Review Queue or opens one eligible ticket in Ticket Detail, THE frontend SHALL offer one Request changes form whose comment applies to every selected ticket and SHALL show Solution and saved Evidence references read-only in Ticket Detail.",
       "AC-004.2": "WHEN a valid change comment is submitted for selected eligible tickets, THE system SHALL atomically set every selected ticket to Changes requested, save the same comment and one decision per ticket, preserve each stored review due date, remove those tickets from the queue and show MSG17.",
       "AC-004.3": "IF the comment is missing or whitespace-only or exceeds 1,000 characters, THEN THE system SHALL return MSG01 or MSG02 and preserve ticket state and the popup.",
-      "AC-004.4": "IF a change request includes any ticket that did not come from the Solution Form, THEN THE backend SHALL reject the entire request without changes and THE frontend SHALL use MSG18 to explain the source restriction where applicable.",
-      "AC-005.1": "IF any selected ticket is missing, outside the reviewer's managed Projects, or no longer Pending review, THEN THE backend SHALL reject the entire decision request without partial writes.",
+      "AC-004.4": "IF an authorized change request includes any accessible ticket that did not come from the Solution Form, THEN THE backend SHALL reject the entire request with MSG18 before checking its Pending review status and without changes, and THE frontend SHALL use MSG18 to explain the source restriction where applicable; an imported Published ticket SHALL exercise this path without constructing an impossible Pending review import.",
+      "AC-005.1": "IF any selected ticket is missing, outside the reviewer's managed Projects, or no longer Pending review, THEN THE backend SHALL reject the entire decision request without partial writes; WHEN a decision settles with success or an error, THE frontend SHALL refresh the queue and affected detail queries and remove selected IDs absent from the complete eligible queue while retaining eligible off-page selections.",
       "AC-005.2": "WHEN any decision succeeds, THE system SHALL persist the actor, action, ticket resource, decision time, writer and reason/comment as applicable, with one append-only history record and one AuditService.record call per ticket in the same transaction.",
-      "AC-005.3": "IF persistence fails or concurrent requests attempt to decide the same ticket, THEN THE system SHALL allow at most one successful decision per Pending review state and SHALL roll back failed requests completely.",
+      "AC-005.3": "IF persistence fails or concurrent requests attempt to decide the same ticket, THEN THE system SHALL allow at most one successful decision per Pending review state and SHALL roll back failed requests completely; WHEN a concurrent decision causes 409 or a missing ticket causes 404, THE frontend SHALL refresh stale detail/actions and allow retrying the remaining eligible queue selection.",
       "AC-005.4": "WHEN a decision succeeds, THE system SHALL preserve the saved Solution, Evidence, Jira issue status and stored review due date.",
       "AC-005.5": "IF a decision payload is empty or contains invalid or repeated ticket IDs, THEN THE backend SHALL reject it before writing any decision records.",
       "AC-005.6": "WHEN a Published-ticket consumer queries the review service, THE system SHALL expose only Published tickets within the authorization scope supplied by the trusted integration.",
       "AC-005.7": "WHEN an actor reads a ticket within their trusted Project access scope, THE backend SHALL return an unpublished ticket only to its author or a Project Manager managing that Project, and SHALL return only Published tickets to other readers; IF a reader requests an unpublished ticket they neither manage nor authored, THEN THE backend SHALL return 404 MSG04 without its content or review comment.",
       "AC-005.8": "IF any review decision contains more than 500 ticket IDs, THEN THE backend SHALL return 400 MSG06 before acquiring ticket locks or writing records, and THE frontend SHALL disable all decision actions and show guidance to select at most 500 tickets; WHEN Select all exceeds that limit, THE frontend SHALL retain the complete selection until the user narrows it, without splitting it into partially committed requests.",
+      "AC-005.9": "WHEN review reads or decides a ticket, THE system SHALL use the ticket-repository's canonical ticket identity, Solution/status and history through its service contract, without a second authoritative ticket/Solution store or incompatible ownership of ticket_review_decision; WHEN Project URL scope changes through filters or browser history, THE frontend SHALL clear the old scope's selection.",
+      "AC-005.10": "WHEN a decision is committed, THE system SHALL call be-foundation's shared AuditService.record(AuditAction, resourceType, resourceId) in the same transaction and SHALL leave audit schema ownership and legacy message-only exception compatibility to be-foundation, without review mappings to removed resource/result columns or assigning new codes to legacy module callers.",
       "AC-006.1": "WHEN the backend determines reviewer identity or Project rights, THE system SHALL obtain them exclusively from a trusted server-side auth/Project interface and SHALL ignore client-supplied actor or management claims.",
       "AC-006.2": "IF the auth/Project integration is absent or cannot verify access, THEN THE module SHALL deny review access without a default reviewer or permissive fallback.",
       "AC-006.3": "WHEN a ticket is rejected or changes are requested, THE system SHALL save one pending email handoff per ticket containing recipient identity, decision, reason/comment and decision reference in the same transaction, without sending network email inside the transaction.",
       "AC-006.4": "IF the external email integration is unavailable, THEN THE system SHALL retain the committed decision and its pending notification without claiming delivery; the integration contract SHALL require the sender to log errors and retry at most three times within one hour under GBR-27.",
       "AC-006.5": "WHEN the frontend operates with mocking disabled, THE review UI SHALL use the generated real review endpoints and SHALL handle loading, empty, error and mutation-pending states.",
       "AC-006.6": "WHEN implementation is delivered, THE integration documentation SHALL identify auth, Project rights, ticket submission, Evidence retrieval, mail delivery/retry and downstream search/triage/chatbot integration as external prerequisites and distinguish automated contract tests from a complete live test.",
-      "AC-006.7": "WHEN a user without the Project Manager role reads Ticket Detail, THE frontend SHALL hide navigation to the Review Queue."
+      "AC-006.7": "WHEN a user without the Project Manager role reads Ticket Detail, THE frontend SHALL hide navigation to the Review Queue.",
+      "AC-006.8": "WHEN Maven verification runs on a clean checkout with Java 21 and Docker, THE backend tests SHALL obtain isolated PostgreSQL with Liquibase through Testcontainers and non-secret test configuration without host SERVER_PORT/database credentials, SHALL clean up their database lifecycle, and SHALL run in backend CI."
     }
   }
 }

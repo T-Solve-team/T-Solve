@@ -12,6 +12,7 @@ owner: BA
 | 2026-10-20 | STORY-001 to STORY-006 | Initial review contract (originally based on SRS v3460 layout template); auth/email implementations excluded by user choice | Requested Approve / Reject / Request changes across backend and frontend |
 | 2026-10-22 | STORY-002, STORY-004 | D1: Request changes supports selected/all eligible tickets with one comment; D2: remove AC-002.4 and empty-Solution handling; correct authoritative sources | FE Lead decisions D1/D2 (21/10), reaffirmed in PR review; Report3 documents will be corrected |
 | 2026-10-23 | STORY-005, STORY-006 | Limit decision batches to 500; restrict unpublished detail to the managing PM or author; hide Review Queue navigation for non-PMs; clarify module ownership and integration prerequisites | FE/BE review of KAN-24 and explicit user decisions |
+| 2026-10-24 | STORY-004, STORY-005, STORY-006 | Integrate canonical KAN-31 tickets/history and be-foundation audit; require trusted author IDs, refresh rejected decisions, reachable source validation and clean-machine verification | FE/BE rejection review; user chose dependency integration before merge and forbade deriving author rights from free-text writer names |
 
 ## Sources and precedence
 
@@ -67,19 +68,21 @@ owner: BA
   - AC-004.1: WHEN the Project Manager selects one, several or all eligible Pending review Solution Form tickets in the Review Queue or opens one eligible ticket in Ticket Detail, THE frontend SHALL offer one Request changes form whose comment applies to every selected ticket and SHALL show Solution and saved Evidence references read-only in Ticket Detail.
   - AC-004.2: WHEN a valid change comment is submitted for selected eligible tickets, THE system SHALL atomically set every selected ticket to Changes requested, save the same comment and one decision per ticket, preserve each stored review due date, remove those tickets from the queue and show MSG17.
   - AC-004.3: IF the comment is missing or whitespace-only or exceeds 1,000 characters, THEN THE system SHALL return MSG01 or MSG02 and preserve ticket state and the popup.
-  - AC-004.4: IF a change request includes any ticket that did not come from the Solution Form, THEN THE backend SHALL reject the entire request without changes and THE frontend SHALL use MSG18 to explain the source restriction where applicable.
+  - AC-004.4: IF an authorized change request includes any accessible ticket that did not come from the Solution Form, THEN THE backend SHALL reject the entire request with MSG18 before checking its Pending review status and without changes, and THE frontend SHALL use MSG18 to explain the source restriction where applicable; an imported Published ticket SHALL exercise this path without constructing an impossible Pending review import.
 
 ### STORY-005: Enforce safe decisions and retain evidence
 - As the team, I want decisions to be authorized, atomic and auditable so that retries and failures cannot corrupt review results.
 - Acceptance:
-  - AC-005.1: IF any selected ticket is missing, outside the reviewer's managed Projects, or no longer Pending review, THEN THE backend SHALL reject the entire decision request without partial writes.
+  - AC-005.1: IF any selected ticket is missing, outside the reviewer's managed Projects, or no longer Pending review, THEN THE backend SHALL reject the entire decision request without partial writes; WHEN a decision settles with success or an error, THE frontend SHALL refresh the queue and affected detail queries and remove selected IDs absent from the complete eligible queue while retaining eligible off-page selections.
   - AC-005.2: WHEN any decision succeeds, THE system SHALL persist the actor, action, ticket resource, decision time, writer and reason/comment as applicable, with one append-only history record and one AuditService.record call per ticket in the same transaction.
-  - AC-005.3: IF persistence fails or concurrent requests attempt to decide the same ticket, THEN THE system SHALL allow at most one successful decision per Pending review state and SHALL roll back failed requests completely.
+  - AC-005.3: IF persistence fails or concurrent requests attempt to decide the same ticket, THEN THE system SHALL allow at most one successful decision per Pending review state and SHALL roll back failed requests completely; WHEN a concurrent decision causes 409 or a missing ticket causes 404, THE frontend SHALL refresh stale detail/actions and allow retrying the remaining eligible queue selection.
   - AC-005.4: WHEN a decision succeeds, THE system SHALL preserve the saved Solution, Evidence, Jira issue status and stored review due date.
   - AC-005.5: IF a decision payload is empty or contains invalid or repeated ticket IDs, THEN THE backend SHALL reject it before writing any decision records.
   - AC-005.6: WHEN a Published-ticket consumer queries the review service, THE system SHALL expose only Published tickets within the authorization scope supplied by the trusted integration.
   - AC-005.7: WHEN an actor reads a ticket within their trusted Project access scope, THE backend SHALL return an unpublished ticket only to its author or a Project Manager managing that Project, and SHALL return only Published tickets to other readers; IF a reader requests an unpublished ticket they neither manage nor authored, THEN THE backend SHALL return 404 MSG04 without its content or review comment.
   - AC-005.8: IF any review decision contains more than 500 ticket IDs, THEN THE backend SHALL return 400 MSG06 before acquiring ticket locks or writing records, and THE frontend SHALL disable all decision actions and show guidance to select at most 500 tickets; WHEN Select all exceeds that limit, THE frontend SHALL retain the complete selection until the user narrows it, without splitting it into partially committed requests.
+  - AC-005.9: WHEN review reads or decides a ticket, THE system SHALL use the ticket-repository's canonical ticket identity, Solution/status and history through its service contract, without a second authoritative ticket/Solution store or incompatible ownership of ticket_review_decision; WHEN Project URL scope changes through filters or browser history, THE frontend SHALL clear the old scope's selection.
+  - AC-005.10: WHEN a decision is committed, THE system SHALL call be-foundation's shared AuditService.record(AuditAction, resourceType, resourceId) in the same transaction and SHALL leave audit schema ownership and legacy message-only exception compatibility to be-foundation, without review mappings to removed resource/result columns or assigning new codes to legacy module callers.
 
 ### STORY-006: Integrate auth and notifications explicitly
 - As the integration developer, I want clear seams so that real authentication and delivery can be connected without rewriting decision logic.
@@ -91,13 +94,14 @@ owner: BA
   - AC-006.5: WHEN the frontend operates with mocking disabled, THE review UI SHALL use the generated real review endpoints and SHALL handle loading, empty, error and mutation-pending states.
   - AC-006.6: WHEN implementation is delivered, THE integration documentation SHALL identify auth, Project rights, ticket submission, Evidence retrieval, mail delivery/retry and downstream search/triage/chatbot integration as external prerequisites and distinguish automated contract tests from a complete live test.
   - AC-006.7: WHEN a user without the Project Manager role reads Ticket Detail, THE frontend SHALL hide navigation to the Review Queue.
+  - AC-006.8: WHEN Maven verification runs on a clean checkout with Java 21 and Docker, THE backend tests SHALL obtain isolated PostgreSQL with Liquibase through Testcontainers and non-secret test configuration without host SERVER_PORT/database credentials, SHALL clean up their database lifecycle, and SHALL run in backend CI.
 
 ## Out of Scope
 - Implementing Google OIDC, account administration, /me session provisioning or Project administration/assignments. The existing frontend session guard still requires its real upstream /me implementation.
 - Implementing SMTP transport, email delivery worker or retries; this module persists handoffs and defines that integration's obligations.
 - Jira submission/resubmission, issue-panel rendering, Evidence upload/download storage and AI drafting. Expose review data/comment for their integrations; never fabricate evidence URLs or Jira delivery.
 - Search engine, triage, chatbot, full Review History screen, expiry scheduler, send back, unpublish and re-publish.
-- Changing legacy Solution lifecycle endpoints or migrating historical data into review automatically.
+- Changing legacy Solution lifecycle endpoints or assigning their error codes from review. Existing review data conversion requires an explicit canonical identity mapping; no destructive or inferred migration is authorized.
 - Production deployment, commits without agreement, pushing, merging or opening a PR.
 
 ## Interface Contracts
@@ -107,17 +111,20 @@ owner: BA
 - `GET /api/v1/review-queue/ticket-ids?projectId=` returns `{ticketIds}` for the same authorization/filter scope.
 - `POST /api/v1/reviews/approve`: `{ticketIds: number[]}`; `POST /api/v1/reviews/reject`: `{ticketIds: number[], reason: string}`; `POST /api/v1/reviews/request-changes`: `{ticketIds: number[], comment: string}`. Success returns `{count}`. IDs are positive integers, with at most 500 IDs per request; reasons/comments are required and limited to 1,000 characters.
 - Ticket Detail read API returns review ticket identity, Project, writer, source, status, review dates, Solution sections, Evidence metadata and current review comment; server-side access is mandatory.
-- `GET /api/v1/tickets/{id}` identifies a review record, while legacy `/api/tickets/{id}` identifies an import snapshot. Their IDs are separate namespaces. The ticket-repository integration must define a source-ticket mapping before consolidation; no URL alias or identity equivalence is assumed in this module.
-- Java service interfaces use DTO records for ticket registration, Published ticket retrieval, audit recording and pending notification consumption. Entities do not leave the service layer.
+- `GET /api/v1/tickets/{id}` uses canonical ticket-repository IDs after dependency integration. No equality with IDs from the old review store is inferred. Preserve the frontend route and generated contract; ticket-repository owns the eventual tickets tag/controller consolidation.
+- Java module interfaces exchange DTO records, never entities or repositories. Ticket-repository owns canonical tickets, saved Solutions, imports and decision history; review owns decision orchestration and notification handoffs. Required queue/locking/history operations must be exposed by the canonical service contract before merge.
 - Failure responses are RFC 9457 Problem Details with SRS `code` and structured validation fields: 400 invalid input, 401 unauthenticated, 403 unauthorized, 404 missing resource, 409 state conflict, 500 persistence failure.
-- A new forward-only Liquibase migration is required for review persistence and notification handoffs. Existing changesets are not edited. No existing-data migration or destructive operation is included.
+- Liquibase ownership must be reconciled with KAN-31 before merge. A numeric file prefix alone is not a changeset identity: author/id/path differ, but both current branches create incompatible ticket_review_decision tables. Preserve applied changesets; design and verify an ordered forward migration against fresh and existing schemas. Retain existing rows until an explicit canonical ID mapping and history preservation are verified; no drop/reset workaround is permitted.
 - Shared frontend MSG catalog and generated API files need scoped updates to implement the Report3 decisions. Generated files are produced only by `npm run generate:api`; this shared-file work must receive the team's normal FE Lead review before merge.
 
 ### Required from other modules
 - Auth/Project port: active authenticated actor and current managed Project/access scope; missing adapter denies access. Identity/rights never come from request JSON or query parameters.
-- Submission port input: ticket/source identity, Project reference, writer, Solution sections, Evidence metadata and already determined queue/review due dates. The submitting integration owns membership checks and initial date calculation under GBR-10.
+- Canonical ticket-repository service (KAN-31): canonical IDs, locked batch read/update, source, status, populated Solution, saved Evidence and decision history in the caller's transaction. Import publication under GBR-23 belongs to that module; review does not manufacture Pending review imports to test MSG18.
+- Submission integration supplies canonical ticket identity, trusted immutable writer user ID and already determined queue/review due dates. Author access compares trusted IDs only. KAN-31's free-text writer name never grants author rights; absent trusted author identity fails closed for author access. Managing PM access remains separately authorized. The submitting integration owns membership checks and initial date calculation under GBR-10.
+- be-foundation: shared AuditService/AuditAction, role constants/current principal and compatible common exceptions; no independent review audit writer or second method-security configuration after integration.
 - Email sender: consumes pending records and implements actual delivery/retry under GBR-27. A pending record is not delivery evidence.
 - Existing /me endpoint supplies frontend session and managed Project references. This module does not replace it with mock data.
+- Dependency state: KAN-31 is currently an unmerged branch and be-foundation is planned. This spec defines the required integration, not an assertion that either dependency already provides every service operation. The PR cannot merge until their contracts, migration order and combined verification are available. Mail worker/retries remain excluded as stated in AC-006.4; pending outbox records do not prove delivery or retry execution.
 
 ## Definition of Done
 - [ ] Spec approved and design/tasks reviewed before code; module and feature transitions use sdd.ts.

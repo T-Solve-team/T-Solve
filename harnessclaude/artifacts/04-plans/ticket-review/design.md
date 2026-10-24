@@ -110,7 +110,7 @@ Re-read spec/module/architecture as implementation inputs. All requested actions
 
 ## FE Lead amendments (2026-10-22)
 
-Chosen: D1 batch Request changes shares one comment across all selected tickets, including all-page selection. D2 excludes empty-Solution state and removes MSG20 and empty flags. Alternatives: the superseded single-ticket contract and approval-time empty check. Rationale: explicit FE Lead decisions take precedence until the Report3 documents are corrected. Submission integrations guarantee populated Solutions. Keep other catalog codes unchanged. Restore main bug identities, then use consecutive branch IDs from BUG-009; human attribution is Phạm Tùng Dương.
+Chosen: D1 batch Request changes shares one comment across all selected tickets, including all-page selection. D2 excludes empty-Solution state and removes MSG20 and empty flags. Alternatives: the superseded single-ticket contract and approval-time empty check. Rationale: explicit FE Lead decisions take precedence until the Report3 documents are corrected. Submission integrations guarantee populated Solutions. Keep other catalog codes unchanged. Restore main bug identities, then use consecutive branch IDs from BUG-010; human attribution is Phạm Tùng Dương.
 
 ## FE/BE review amendments — 23 October 2026
 
@@ -122,3 +122,41 @@ Chosen: D1 batch Request changes shares one comment across all selected tickets,
 - Keep `/api/v1/tickets/{id}` as the review read contract for this PR. Legacy snapshot IDs at `/api/tickets/{id}` are distinct; ticket-repository owns eventual mapping/consolidation.
 - Production auth/Project adapter and notification consumer remain excluded by the original scope. They must be connected by be-foundation roles-security/me-session, identity and workspace/Project integration, then email delivery/retry. Upstream task Jira keys are not assigned in the current plan; do not invent KAN numbers.
 - Preserve main context/map and base tracking; replay this module's status/approval commands through sdd.ts.
+
+## Rejection review amendments — 24 October 2026
+
+This section supersedes the separate review ticket/Solution store, legacy-code changes and independent audit writer described in the original design. User decisions: integrate KAN-31 canonical tickets/history and be-foundation audit before merge; use trusted writer user IDs, never free-text names for authorization. No subagents were used.
+
+### Dependency contract and ownership
+
+- Review depends on ticket-repository service interfaces/DTOs and be-foundation common services. It must not import another module's entity/repository, copy its implementation into review, or introduce a reverse call from ticket-repository to review.
+- KAN-31 currently has canonical `ticket`, inline Solution fields and `ticket_review_decision`; its history differs from review's current table. The numeric `002` prefix is not itself a Liquibase identity clash. The duplicate table creation and incompatible FK/columns are the actual blocker.
+- Required canonical operations: scoped queue/detail snapshots, one ordered batch lock operation, source/status validation, canonical status updates and append-only history writes, all participating in the caller's transaction. The existing KAN-31 branch does not yet supply the complete review service contract. Do not invent a working adapter or bypass the service boundary while this is missing.
+- Solution Form integration must supply a trusted immutable writer user ID. Free-text `writer` is display data only. Missing trusted author identity denies author access; separately verified managing PM rights remain valid. Imports remain Published under the owning module's GBR-23 implementation.
+- Review may retain review-specific metadata and notification handoffs keyed to canonical ticket IDs; it must not retain a competing authoritative ticket status or Solution. Exact metadata/history mapping must be agreed against the dependency implementation before code/migration execution.
+- Use `vn.tsolve.common.audit.AuditService.record(AuditAction, String resourceType, String resourceId)` in the decision transaction. Foundation owns actor resolution, JDBC INSERT and audit schema. Remove the review JPA audit writer after the dependency is available; no mapping to `resource`/`result` survives. Reuse foundation role constants and its single security configuration.
+- Restore legacy message-only exception compatibility under foundation Q3. Review must not assign MSG codes to Solution/Ticket callers owned by other modules. Use specific review exceptions extending foundation bases rather than one catch-all review error.
+
+### Ordered implementation and migration gate
+
+1. Finish and commit the current main-conflict/FE recovery fix with user agreement before starting the backend integration feature.
+2. Obtain updated spec approval and dependency-owner service/migration contracts. Foundation is planned; KAN-31 remains an unmerged branch. No dependency code has been merged by this amendment.
+3. Integrate the reviewed dependency commits without force-push. Reconcile schema ownership before attempting a fresh combined boot. Never edit an applied changeset, mark it executed, reset a shared DB or delete historical rows to hide the collision.
+4. Define a forward migration with an explicit old-review-to-canonical identity/history mapping. Test both fresh installation and upgrade with existing review history. Preserve rows while mapping is unverified; reject ambiguous mappings rather than matching by writer names or assuming equal numeric IDs. Deployment/data conversion is not authorized here.
+5. Implement canonical service orchestration, shared audit and legacy exception compatibility. Lock an ascending batch once rather than per-ticket repeated reads; verify bounded statement counts instead of asserting the reviewer's unmeasured 2,500-query estimate.
+6. Add foundation-aligned Testcontainers (`pgvector/pgvector:pg16`, Spring `@ServiceConnection`) and non-secret test-only SERVER_PORT/CORS values. Database lifecycle belongs to containers, never a configured host DB. Use dependency-compatible Testcontainers version; KAN-31's Docker API compatibility must be retained.
+7. Run `mvn verify` with no host SERVER_PORT/database credentials and add backend CI with Docker. Verify combined migrations, rollback, audit/history/notification atomicity, concurrent PM decisions and cleanup. Shared POM/test config/CI changes require the project's scoped gate/owner review.
+
+### Error ordering and frontend recovery
+
+- Check trusted actor/Project access before exposing source. For an accessible imported Published ticket, Request changes returns MSG18 before checking Pending review, making AC-004.4 reachable through a legitimate fixture. Tests must not mutate source/status via reflection into an impossible import state.
+- Refresh queue, complete eligible-ID query and affected details on every settled mutation. Keep the refresh promise pending through refetch. Reconcile user selection with the complete eligible-ID set, preserving off-page choices. Key the queue selection/dialog state by Project URL scope so Back/Forward clears it too.
+- The batch constant mirrors OpenAPI `maxItems: 500`. Keep all IDs selected above the limit and disable every decision; never truncate or auto-split atomic requests.
+- Tests cover 409 retry payloads, all three detail decision errors, 404 detail removal, Project history and the existing all-page flow. Keep read-only page rendering/error tests in Ticket Detail and decision tests in review; remove duplicate and self-mock assertions.
+- A sender/consumer/retry worker remains excluded by the user's original scope. AC-006.4 states the external sender obligation (three attempts within an hour), not a currently running retry service. AC-006.6 is evaluated by reviewing the integration documentation and live prerequisites; it must not be claimed as an executable delivery test.
+
+### Inline risk review and builder check
+
+Verdict: **CAUTION / merge blocked** until dependencies, canonical author identity, migration mapping and clean-machine backend verification are complete. Security: fail closed on missing trusted identity, and do not expose foreign Project content/source. Data: preserve applied migrations and history; no production conversion now. Product: FE error recovery can be verified independently using mocks. Performance: one ordered batch lock with measured query behavior. Operations: isolated Docker tests and backend CI are required, not a prior successful run against host PostgreSQL.
+
+Unresolved implementation prerequisites are dependency-owned service signatures and exact existing-data mapping. They are integration blockers, not permission to construct a parallel store or silently lower acceptance criteria. Re-read the actual dependency implementations before drafting the migration; record any changed behavior in the spec first.

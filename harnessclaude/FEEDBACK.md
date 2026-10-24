@@ -4,7 +4,7 @@ Append-only log of framework friction captured during usage.
 
 ---
 
-## 2026-10-20 — BUG-014: trace does not discover or recognize Java tests
+## 2026-10-20 — BUG-015: trace does not discover or recognize Java tests
 
 In the approved ticket-review module, `mvn verify` ran 32 JUnit tests successfully, but `bun harnessclaude/hooks/sdd.ts trace ticket-review` reported 0/30 criteria with tests. `sdd.ts`'s TEST_GLOBS only discovers `*.test.*`, `*.spec.*`, `test_*.py` and `*_test.*`; it excludes conventional `*Test.java`. The spec library also recognizes canonical AC-001.1 mentions, while backend/AGENTS.md prescribes Java method names such as `behavior_AC_001_1`.
 

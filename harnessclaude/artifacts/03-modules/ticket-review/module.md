@@ -2,7 +2,7 @@
 name: ticket-review
 owner: Phạm Tùng Dương
 repos: [default]
-dependencies: []
+dependencies: [be-foundation, ticket-repository]
 complexity: large
 paths:
   - backend/src/main/java/vn/tsolve/review/**
@@ -21,7 +21,7 @@ paths:
 Ticket-level Approve, Reject and Request changes, implemented sequentially against Report3 with FE Lead D1/D2. External identity, Project administration and mail delivery remain integration responsibilities as selected by the user.
 
 ## Responsibilities
-- Own queue queries, ticket-level review state and three review decisions.
+- Own queue queries and three review decisions using ticket-repository's canonical ticket/state/history contract.
 - Persist decisions, audit records and pending notification handoffs atomically.
 - Implement the real API contract and review actions in the existing web frontend.
 - Document integration limitations and verify acceptance criteria and logged regressions.
@@ -40,6 +40,8 @@ Ticket-level Approve, Reject and Request changes, implemented sequentially again
 | Dependency | Interface | Description |
 |------------|-----------|-------------|
 | Identity / Project integration | Trusted server-side auth and authorization port | Current user, account status, Project management and Department access; missing access fails closed |
+| ticket-repository / KAN-31 | Canonical ticket service / DTOs | One ticket/Solution identity and decision history; shared transaction and canonical author identity mapping |
+| be-foundation | Shared audit, roles and exception services | record(AuditAction, resourceType, resourceId); preserve legacy message-only callers |
 | Existing database | PostgreSQL / Liquibase | Forward migration for review state and records; existing changesets are immutable |
 
 ## Target Repos
