@@ -22,8 +22,8 @@
 - Trace: `sdd.ts trace search STORY-001 STORY-002` → 15/15 acceptance criteria have a test.
 - Verify (`frontend/`): `format:check` ✓, `lint` ✓, `typecheck` ✓, `build` ✓, `generate:api` no further diff ✓;
   `vitest run src/features/tickets` 24/24 ✓. Full `npm run test`: 11 review/chatbot tests time out at ~15 s, a different
-  set each run; two of them fail alone on `main` with the KAN-77 changes stashed → logged as BUG-008 (not caused by
-  this task).
+  set each run; two of them fail alone on `main` with the KAN-77 changes stashed (not caused by this task, not logged
+  in this PR — Ticket List only, Hải Anh 24/10).
 - Commit: default@bd1f914 (plan: bb8c3b7).
 
 ### Next up

@@ -12,6 +12,8 @@ export * from './chatbotAnswer';
 export * from './chatbotAnswerOutcome';
 export * from './chatbotCitation';
 export * from './chatbotQuestion';
+export * from './chatbotRating';
+export * from './chatbotRatingRating';
 export * from './chatbotTurn';
 export * from './citedSolution';
 export * from './currentUser';

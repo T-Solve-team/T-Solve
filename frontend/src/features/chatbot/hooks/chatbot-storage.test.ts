@@ -63,6 +63,32 @@ describe('chatbot-storage', () => {
     expect(readConversations(7)).toEqual([]);
   });
 
+  it('AC-003.4 keeps a rating with its turn and reads it back', () => {
+    const rated: Conversation = {
+      ...CONVERSATION,
+      turns: [{ question: 'VPN?', answer: ANSWER, rating: 'NOT_HELPFUL' }],
+    };
+    writeConversations(7, [rated]);
+
+    expect(readConversations(7)).toEqual([rated]);
+  });
+
+  it('AC-003.4 reads a turn that has no rating', () => {
+    sessionStorage.setItem(CONVERSATIONS_KEY, stored([CONVERSATION]));
+
+    expect(readConversations(7)).toEqual([CONVERSATION]);
+  });
+
+  it.each(['GREAT', 1, null])(
+    'AC-003.4 drops a stored turn with the unknown rating %j (edge 26)',
+    (rating) => {
+      const turn = { question: 'VPN?', answer: ANSWER, rating };
+      sessionStorage.setItem(CONVERSATIONS_KEY, stored([{ ...CONVERSATION, turns: [turn] }]));
+
+      expect(readConversations(7)).toEqual([]);
+    },
+  );
+
   it('AC-002.11 does not throw when storage is blocked (edge 14)', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new DOMException('blocked', 'SecurityError');

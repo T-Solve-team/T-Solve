@@ -25,6 +25,7 @@ import type {
 import type {
   ChatbotAnswer,
   ChatbotQuestion,
+  ChatbotRating,
   ListUnavailableCitedDocumentsParams,
   ProblemResponse,
   UnavailableDocuments,
@@ -308,3 +309,197 @@ export function useListUnavailableCitedDocuments<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getRateChatbotAnswerUrl = (answerId: string) => {
+  return `/api/v1/chatbot/answers/${answerId}/rating`;
+};
+
+/**
+ * @summary Rates an answer Helpful or Not helpful; replaces any earlier rating of this user (UC-53).
+ */
+export const rateChatbotAnswer = async (
+  answerId: string,
+  chatbotRating: ChatbotRating,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getRateChatbotAnswerUrl(answerId), {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(chatbotRating),
+  });
+};
+
+export const getRateChatbotAnswerMutationKey = () => ['rateChatbotAnswer'] as const;
+
+export const getRateChatbotAnswerMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rateChatbotAnswer>>,
+    TError,
+    RateChatbotAnswerMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rateChatbotAnswer>>,
+  TError,
+  RateChatbotAnswerMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRateChatbotAnswerMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rateChatbotAnswer>>,
+    RateChatbotAnswerMutationVariables
+  > = (props) => {
+    const { answerId, data } = props ?? {};
+
+    return rateChatbotAnswer(answerId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RateChatbotAnswerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rateChatbotAnswer>>
+>;
+export type RateChatbotAnswerMutationBody = ChatbotRating;
+export type RateChatbotAnswerMutationError = ErrorType<ProblemResponse>;
+export type RateChatbotAnswerMutationVariables = { answerId: string; data: ChatbotRating };
+
+/**
+ * @summary Rates an answer Helpful or Not helpful; replaces any earlier rating of this user (UC-53).
+ */
+export const useRateChatbotAnswer = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rateChatbotAnswer>>,
+      TError,
+      RateChatbotAnswerMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rateChatbotAnswer>>,
+  TError,
+  RateChatbotAnswerMutationVariables,
+  TContext
+> => {
+  return useMutation(getRateChatbotAnswerMutationOptions(options), queryClient);
+};
+export const getRemoveChatbotAnswerRatingUrl = (answerId: string) => {
+  return `/api/v1/chatbot/answers/${answerId}/rating`;
+};
+
+/**
+ * @summary Removes this user's rating of an answer (UC-53).
+ */
+export const removeChatbotAnswerRating = async (
+  answerId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getRemoveChatbotAnswerRatingUrl(answerId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getRemoveChatbotAnswerRatingMutationKey = () => ['removeChatbotAnswerRating'] as const;
+
+export const getRemoveChatbotAnswerRatingMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeChatbotAnswerRating>>,
+    TError,
+    RemoveChatbotAnswerRatingMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeChatbotAnswerRating>>,
+  TError,
+  RemoveChatbotAnswerRatingMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRemoveChatbotAnswerRatingMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeChatbotAnswerRating>>,
+    RemoveChatbotAnswerRatingMutationVariables
+  > = (props) => {
+    const { answerId } = props ?? {};
+
+    return removeChatbotAnswerRating(answerId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveChatbotAnswerRatingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeChatbotAnswerRating>>
+>;
+
+export type RemoveChatbotAnswerRatingMutationError = ErrorType<ProblemResponse>;
+export type RemoveChatbotAnswerRatingMutationVariables = { answerId: string };
+
+/**
+ * @summary Removes this user's rating of an answer (UC-53).
+ */
+export const useRemoveChatbotAnswerRating = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof removeChatbotAnswerRating>>,
+      TError,
+      RemoveChatbotAnswerRatingMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof removeChatbotAnswerRating>>,
+  TError,
+  RemoveChatbotAnswerRatingMutationVariables,
+  TContext
+> => {
+  return useMutation(getRemoveChatbotAnswerRatingMutationOptions(options), queryClient);
+};

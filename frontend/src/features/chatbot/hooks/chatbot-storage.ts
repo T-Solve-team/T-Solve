@@ -1,5 +1,5 @@
 import type { ChatbotAnswer, ChatbotCitation } from '@/shared/api';
-import type { Conversation } from '../model';
+import type { ChatTurn, Conversation } from '../model';
 
 /** Spec AC-002.7: under the `tsolve.session.` prefix, so logout and a global 401 remove it (fe-foundation). */
 export const CONVERSATIONS_KEY = 'tsolve.session.chatbot.conversations';
@@ -43,7 +43,8 @@ function isConversation(value: unknown): value is Conversation {
         typeof turn === 'object' &&
         turn !== null &&
         typeof turn.question === 'string' &&
-        isAnswer(turn.answer),
+        isAnswer(turn.answer) &&
+        (turn.rating === undefined || turn.rating === 'HELPFUL' || turn.rating === 'NOT_HELPFUL'),
     )
   );
 }
@@ -68,6 +69,28 @@ export function readConversations(userId: number): Conversation[] {
     // Storage blocked or JSON broken: start empty.
   }
   return [];
+}
+
+/** Sets or removes one stored rating, for a save that ends after the screen has gone (BUG-008). */
+export function writeRating(
+  userId: number,
+  conversationId: string,
+  answerId: string,
+  rating: ChatTurn['rating'],
+): void {
+  writeConversations(
+    userId,
+    readConversations(userId).map((c) =>
+      c.id === conversationId
+        ? {
+            ...c,
+            turns: c.turns.map((turn) =>
+              turn.answer.answerId === answerId ? { ...turn, rating } : turn,
+            ),
+          }
+        : c,
+    ),
+  );
 }
 
 /** Keeps the conversations; when storage is blocked they stay in memory only (AC-002.11). */
