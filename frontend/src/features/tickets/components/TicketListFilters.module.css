@@ -1,0 +1,16 @@
+/* Figma 6.2 filter widths. */
+.keyword {
+  width: 340px;
+}
+
+.department {
+  width: 200px;
+}
+
+.source {
+  width: 180px;
+}
+
+.status {
+  width: 200px;
+}

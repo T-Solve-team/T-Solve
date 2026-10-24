@@ -9,6 +9,10 @@ paths:
   - backend/src/test/java/vn/tsolve/search/**
   - frontend/src/features/search/**
   - frontend/src/features/feedback/**
+  - frontend/src/features/tickets/pages/TicketListPage*
+  - frontend/src/features/tickets/components/TicketList*
+  - frontend/src/features/tickets/hooks/useTicketList*
+  - frontend/src/features/tickets/mocks/**
   - backend/src/main/resources/db/changelog/**
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
@@ -43,7 +47,7 @@ Intelligent Retrieval and Reuse & Feedback (UC-26–28): semantic search of Publ
 | wiki | Wiki documents | Documents for retrieval |
 
 ## Target Repos
-- default: backend/ (`search`), frontend/ (`search`, `feedback`).
+- default: backend/ (`search`), frontend/ (`search`, `feedback`, and 6.2 Ticket List in `tickets`).
 
 ## Related Artifacts
 - Spec: `artifacts/03-modules/search/spec.md` (written when the module is planned)
