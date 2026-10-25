@@ -158,3 +158,4 @@
 {"ts":"2026-10-24T23:56:42.970Z","type":"module-status","module":"worker","from":null,"to":"decomposed"}
 {"ts":"2026-10-24T23:56:43.158Z","type":"module-status","module":"ai","from":null,"to":"decomposed"}
 {"ts":"2026-10-24T23:57:45.099Z","type":"quick-opened","what":"Update tsolve-project.md to the multi-tenant baseline (KAN-195): Workspace per company, Platform Operator, Ollama on the AI VPS, CONTEXT.md and SRS_Delta as sources, owners per Jira","files":[".claude/tsolve-project.md"]}
+{"ts":"2026-10-25T09:05:21.403Z","type":"quick-closed","what":"Update tsolve-project.md to the multi-tenant baseline (KAN-195): Workspace per company, Platform Operator, Ollama on the AI VPS, CONTEXT.md and SRS_Delta as sources, owners per Jira","files":[".claude/tsolve-project.md"]}
