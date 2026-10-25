@@ -41,6 +41,53 @@ src/mocks/session.ts (fixture users) ◄── shared/auth/dev-user (mock mode) 
 - **Mocks and tests:** fixture users live in `src/mocks/session.ts`, keyed by a user id (`'pm'`, `'pm-km'`, …);
   `dev-user.ts` stores the chosen id; `renderApp(path, { role })` maps a role to its single-role fixture user.
 
+### Workspace site, central sign-in and the route tree by host (change request KAN-198, Tasks 7–9)
+
+```
+browser at <site name>.tsolve.io.vn ──► /api/v1/** same origin (Host kept by Caddy) ──► platform: host → Workspace
+   │ Login "Sign in" ── startSignIn(returnTo) ──► GET /api/v1/auth/sign-in?returnTo=… ── 302 ──► login.tsolve.io.vn
+   │                                                                      (state value made by the server, D9)
+   ◄── 302 back to /<returnTo> or /login?error=MSGxx[&google_domain=…] ◄── identity callback on login.
+browser at admin.tsolve.io.vn ──► same bundle, buildRoutes(host) → platformConsoleRoutes only
+```
+
+- **Same origin only:** `http()` calls relative `/api/v1/…` paths; `VITE_API_BASE_URL` and its Docker build arg
+  are removed, so no build can send requests to another host (AC-011.1, AC-011.2).
+- **Site state:** a module-level `siteState` store in `shared/api` (`'ok' | 'unknown' | 'suspended'`, React reads it
+  with `useSyncExternalStore`) is set by `http()` whenever a response carries MSG119 or MSG120, from `/me` or any
+  later request. `RootLayout` renders `SiteUnavailablePage` (MSG119 or MSG120, no shell, no Try again) instead of
+  the `<Outlet />` while it is not `'ok'`. The global error handlers skip both codes (no toast, no MSG07) and call
+  `resetSession(client, { signedOut: true })` once (AC-011.3–AC-011.5). `useSession` does not report those codes
+  as an error, so the session error page (AC-001.6) never shows for them.
+- **Sign-in:** `startSignIn(returnTo?)` does `window.location.assign('/api/v1/auth/sign-in' + query)`; a
+  `returnTo` that is not a same-site path is dropped (it must match `^/(?!/)` and hold no `:` before its first
+  `/`). `useSignInMessage()` reads `error` and `google_domain` from the Login URL and returns `{ code, params }`
+  only for MSG06, MSG09, MSG10, MSG122, MSG123, MSG141, with MSG122 only when the lower-cased `google_domain`
+  matches `^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$`. The Login screen of `identity`
+  renders it inline (AC-012.1–AC-012.4).
+- **MSG123:** in `global-errors.ts`, a 401 whose code is MSG123 skips the MSG07 dialog, calls
+  `resetSession(client, { signedOut: true })` (cache, mutations, `tsolve.session.*`) and navigates to
+  `/login?error=MSG123` (AC-012.5). Any other 401 keeps the MSG07 behaviour.
+- **Background header:** orval's `override.query.queryOptions` mutator (`shared/api/query-options.ts`) wraps every
+  generated `queryFn`. When `context.client.getQueryState(context.queryKey)?.data !== undefined` (a refetch:
+  interval, window focus, reconnect, invalidation), it adds `context.signal` to a `WeakSet` in
+  `shared/api/background.ts`; `http()` adds `X-TSolve-Background: 1` when `init.signal` is in that set. A first
+  load, every mutation, sign-in (a page navigation) and logout never carry it (AC-012.6, AC-012.7). A hand-written
+  query calls `markBackground(signal)` the same way.
+- **Route tree by host:** `isPlatformConsoleHost(hostname)` is true when the first label is `admin` (lower-cased,
+  trailing dot removed). `buildRoutes(host)` then returns `platformConsoleRoutes` (from
+  `@/features/platform-console`) plus the 404 page; otherwise the Workspace tree of STORY-002 to STORY-005 and
+  STORY-011, which never includes a Console route (AC-013.1–AC-013.4). The Console's own guards and session belong
+  to `platform-console`.
+- **Local development:** the app is opened at `<site name>.localhost:5173` (browsers resolve `*.localhost` to the
+  loopback address); `server.allowedHosts: ['.localhost']`, and the `/api` proxy keeps `changeOrigin: false`, so
+  the backend sees `<site name>.localhost` and resolves the Workspace with the development base domain `localhost`
+  (`platform`). `admin.localhost:5173` opens the Platform Console tree. Mock mode needs no site name: plain
+  `localhost:5173` is a Workspace site for the mocks.
+- **Mocks:** the dev user switcher gains "Unknown site" and "Suspended Workspace" (stored like a fixture user id);
+  the `/me` mock and a catch-all mock handler then answer MSG119 (404) or MSG120 (403). `renderApp` and
+  `renderWithProviders` accept `{ site: 'unknown' | 'suspended' }` and `{ host }` (default `localhost`).
+
 ## Data Model
 
 ```ts
@@ -97,6 +144,19 @@ type MessageDefinition = { type: 'field' | 'inline' | 'toast' | 'confirm' | 'too
 | Logout when the request fails | Session set to `null` locally (no refetch); `useSignOut` never throws; `UserMenu` always navigates to Login | Refetch `/me` | A refetch after a failed logout would sign the user back in (builder check) |
 | Names | Decided in planning (builder check): `paths` keys `workspaceSetup`, `triageHistory`, `wikiHome`, `wikiDocument`, `wikiUpload`, `spaceSettings`, `chatbot`; menu icons `ReadOutlined` (Wiki), `MessageOutlined` (Knowledge Chatbot), `BranchesOutlined` (Triage History) — the kit v4 icons of UI decision 5; dev storage key `tsolve.dev.user`; `hasRole(role)`, `hasAnyRole(roles)`; `{ role }` default `'PROJECT_MANAGER'`; `{ role }` and `{ user }` are a union type, never both; Status tag colours Simple = green, Complex = orange until the Figma kit says otherwise | — | Calls any builder could make; the FE Lead can change them in review |
 | Edge rules | Decided in planning (builder check): while not set up, an unknown path still shows 404 and `/dev/kit` is not redirected; `/workspace-setup` opens normally after setup; every user's menu ends with the Employee items (D4); a global 401 also clears `tsolve.session.*` | — | Follow the spec's wording; no new behaviour |
+| Login screen boundary (KAN-198) | fe-foundation gives `startSignIn` and `useSignInMessage`; the 1.1.1 Login page stays with `identity` | fe-foundation builds a minimal Login; all sign-in in `identity` | One owner per screen while KAN-197 writes the identity spec (Hiếu, 25/10, Q1) |
+| Sign-in start | Full-page `GET /api/v1/auth/sign-in?returnTo=` on the Workspace site; the server makes the state value and redirects to `login.` | `POST` that returns the `login.` URL | The state value never passes through the web app (D9) (Hiếu, 25/10, Q2) |
+| Sign-in errors | Back on `/login?error=MSGxx` (plus `google_domain` for MSG122), allow-listed codes only; MSG141 without a known Workspace site is shown on `login.` by the backend | The server keeps the result for one read; `login.` shows every error | Matches FE-09 and guideline 08 §8; the allow-list and the domain check stop crafted messages (Hiếu, 25/10, Q3) |
+| MSG119 / MSG120 | Any `/api/**` response carries the code (before sign-in checks); the web app reads only the code and shows a full page with no shell and no retry | A public `GET /api/v1/site` at load; a static Caddy page for MSG119 | No extra request; works the same mid-session (Hiếu, 25/10, Q4) |
+| MSG123 | Treated as signed out: drop the session, go to `/login?error=MSG123`, no MSG07 | A dialog with MSG123's text | Report3 types MSG123 Inline (Hiếu, 25/10, Q5) |
+| Catalog exclusions | Also leave out Retired codes and the Platform Console codes MSG125–MSG133, MSG135–MSG140; MSG134 stays (UC-05) | Only add the five codes; also hold the Console codes | The reference file can be refreshed from Report3 as a whole (Hiếu, 25/10, Q6) |
+| 9.3 Audit Entry Detail | Removed in this change request (D18): 34 web screens | A separate change request | Small, same re-approval (Hiếu, 25/10, Q7) |
+| API base URL | `VITE_API_BASE_URL` removed; the API is always same origin | Dev-only setting; keep it | A set value would send requests to another host and lose the Workspace (Hiếu, 25/10, Q8) |
+| Local dev host | `<site name>.localhost:5173`, Host kept by the Vite proxy; backend dev base domain `localhost` | A backend default site for `localhost`; leave it to `platform` | Same host rule in dev and production (Hiếu, 25/10, Q9) |
+| Site states in mock mode | "Unknown site" and "Suspended Workspace" in the dev user switcher; `{ site }` in the test helpers | Tests only with `server.use` | The pages can be demoed without a backend (Hiếu, 25/10, Q10) |
+| Background header | `X-TSolve-Background: 1` on every refetch of a query that already holds data, marked through orval's `queryOptions` mutator and a `WeakSet` of abort signals read by `http()` | A `meta.background` flag per hook; the header only on `refetchInterval` queries | Covers polling, focus, reconnect and invalidation in one place with no change to feature hooks; `context.client` exists in TanStack Query 5.104 (identity Q6 = B, Hiếu, 25/10) |
+| Route tree by host | `buildRoutes(host)`: first label `admin` → `platformConsoleRoutes` only; any other host → the Workspace tree | Two bundles; a path prefix `/console` | One React app (module-map Q4 = A, Hiếu, 25/10); a Workspace path can never open on `admin.` |
+| Tasks of KAN-198 | Task 7 `catalog-sync`, Task 8 `site-sign-in`, Task 9 `host-routes`; Jira Subtasks created by Hiếu under KAN-103 / KAN-104 | One task; three split by site state / sign-in / catalog | Small PRs, each green; Task 9 holds the host rule (Hiếu, 25/10, Q11) |
 
 ## File Structure
 
@@ -133,6 +193,34 @@ frontend/
 `features/workspace/pages/WorkspaceSetupPage.tsx` belongs to `workspace`; the plan PR adds that one file to this
 module's `paths` too, so the gate opens it for the placeholder (it has no test, so trace is not affected).
 
+Change request KAN-198 (Tasks 7–9):
+
+```
+frontend/
+├── src/shared/messages/report3-messages.json, catalog.ts   Modify: 25/10 System_Messages, new exclusions (Task 7)
+├── src/features/audit-log/routes.ts, src/shared/routing/paths.ts   Modify: 9.3 removed (Task 7)
+├── openapi/tsolve-api.yaml, src/shared/api/generated/**    Modify: GET /api/v1/auth/sign-in (302) (Task 8)
+├── orval.config.ts                                         Modify: query.queryOptions mutator (Task 8)
+├── src/shared/api/query-options.ts, background.ts          Create: refetch marking, siteState store (Task 8)
+├── src/shared/api/http.ts, src/shared/config/env.ts        Modify: same origin only, background header, site state (Task 8)
+├── src/shared/auth/sign-in.ts                              Create: startSignIn, useSignInMessage (Task 8)
+├── src/app/pages/SiteUnavailablePage.tsx                   Create: MSG119 / MSG120 full page (Task 8)
+├── src/app/router/RootLayout.tsx, guards.tsx               Modify: site state before every screen (Task 8)
+├── src/app/providers/global-errors.ts                      Modify: MSG119, MSG120, MSG123 (Task 8)
+├── src/mocks/session.ts, src/shared/auth/dev-user.ts, src/app/dev/DevUserSwitcher.tsx, src/test/render.tsx
+│                                                           Modify: site states; { site }, { host } (Tasks 8, 9)
+├── vite.config.ts, .env.example, Dockerfile, Caddyfile, README.md   Modify: *.localhost, no VITE_API_BASE_URL (Task 8)
+├── src/app/router/host.ts                                  Create: isPlatformConsoleHost (Task 9)
+├── src/app/router/routes.tsx, router.ts, feature-routes.ts Modify: buildRoutes(host) (Task 9)
+├── src/features/platform-console/ routes.ts, index.ts, mocks/handlers.ts, pages/PlatformConsolePage.tsx
+│                                                           Create: registration + placeholder (Task 9)
+└── AGENTS.md, guidelines/01, 02, 06, 08, 11, 12, 13        Modify: 34 screens, sign-in, dev host, host rule (Tasks 7–9)
+```
+
+`features/platform-console/**` belongs to `platform-console`; like the Workspace Setup placeholder, this plan adds
+`pages/PlatformConsolePage.tsx` to this module's `paths` (the registration files are already covered by
+`features/*/routes.ts`, `index.ts` and `mocks/handlers.ts`).
+
 ## External Dependencies
 - None new. `/me` is served by `be-foundation` (Anh Tran Hai); until then MSW serves the fixture users.
 
@@ -164,6 +252,17 @@ quotas).
 | 17 | STORY-001 | Integration | Existing tests call `renderApp(path, { role: 'PROJECT_MANAGER' })` | High | Same meaning: the one-role PM fixture (NFR 4) | Task 1 |
 | 18 | STORY-008 | Error cascades | Logout request fails while the server session is still valid | Critical | Signed out in the app (session `null`, no refetch); Login shown | Task 1 |
 | 19 | STORY-006 | Integration | Review screens on `main` use SRS v2 codes | High | Task 4 remaps them; review tests pass with Report3 texts | Task 4 |
+| 20 | STORY-006 | Data integrity | Report3 retires a code the catalog still holds (MSG61, MSG73) | Medium | Catalog test fails until the code is removed (AC-006.7) | Task 7 |
+| 21 | STORY-012 | Authorization | `returnTo=//evil.example` or `https://evil.example` (open redirect) | Critical | `returnTo` left out; the backend checks it again | Task 8 |
+| 22 | STORY-012 | Data integrity | Crafted link `/login?error=MSG122&google_domain=<script>` or an unknown code | High | No message (AC-012.4); text only through `msg()`, never HTML | Task 8 |
+| 23 | STORY-011 | State transitions | Workspace suspended while a user works (a mutation answers MSG120) | High | Suspended page, cache dropped, no toast (AC-011.5) | Task 8 |
+| 24 | STORY-011 | Error cascades | Several requests answer MSG119 / MSG120 at once | Medium | One page, `resetSession` once | Task 8 |
+| 25 | STORY-012 | Error cascades | A 401 with MSG123 and other 401s at once | High | The MSG123 path wins; no MSG07 dialog | Task 8 |
+| 26 | STORY-001 | Error cascades | `/me` answers MSG119 or MSG120 on the first load | High | Site page, not the session error page (AC-001.6) | Task 8 |
+| 27 | STORY-012 | Timing | The Review Queue polls every 5 s for an hour with no user action | High | Every poll carries `X-TSolve-Background: 1`; the session ends after 60 min idle (MSG07) | Task 8 |
+| 28 | STORY-012 | Timing | A user only browses cached pages (refetches with data) | Low | Those refetches carry the header; accepted: the first load of a new page and every mutation extend the session | Task 8 |
+| 29 | STORY-013 | Authorization | `admin.tsolve.io.vn/users` (a Workspace path on the Console host) | High | 404 page; no Workspace route is registered there | Task 9 |
+| 30 | STORY-013 | Environment | `ADMIN.localhost` or a trailing dot in the host | Low | Host compared lower-cased, trailing dot removed | Task 9 |
 
 Open questions for the spec owner: none.
 

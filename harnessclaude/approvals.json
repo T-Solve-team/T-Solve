@@ -1,7 +1,7 @@
 {
   "fe-foundation": {
-    "specHash": "d9126208393a38924e7cd920c61c3f1e2490105dfa8c4179310c8d602174155c",
-    "approvedAt": "2026-10-23T13:19:15.272Z",
+    "specHash": "3fdbea8e2f58bba5d624e8792aa365cb0b9c5f512dedd8f5cced4700460a4b2f",
+    "approvedAt": "2026-10-25T09:05:06.353Z",
     "by": "user",
     "acs": {
       "AC-001.1": "THE web app SHALL know exactly five roles — , , ,",
@@ -36,6 +36,7 @@
       "AC-006.5": "WHEN a message is shown with parameters, THE web app SHALL replace each  placeholder with its",
       "AC-006.6": "IF a placeholder has no value, THEN THE web app SHALL leave the placeholder text as it is.",
       "AC-006.7": "THE catalog SHALL hold no code other than the Report3 codes of AC-006.1 and , so every code",
+      "AC-006.8": "THE catalog SHALL hold the multi-tenant web codes with their exact Report3 text: MSG119, MSG120,",
       "AC-007.1": "THE Status Tag SHALL have the values Simple and Complex for the triage class (GBR-35), next to the six",
       "AC-007.2": "WHEN the Status Tag gets the value Simple or Complex, THE Status Tag SHALL show the label \"Simple\" or",
       "AC-007.3": "IF the Status Tag gets a value it does not know, THEN THE type checker SHALL reject it.",
@@ -48,10 +49,27 @@
       "AC-009.4": "WHEN a test renders with  naming a fixture user, THE helper SHALL sign in that user.",
       "AC-009.5": "IF the stored dev user is unknown or storage is blocked, THEN THE  mock SHALL answer the default",
       "AC-009.6": "WHERE mock mode is off (a production build or ), THE web app SHALL not show the",
-      "AC-010.1": "THE files  and  SHALL name 35 web screens and the five",
+      "AC-010.1": "THE files  and  SHALL name 34 web screens and the five",
       "AC-010.2": "THE glossary (guideline 03) SHALL define Employee, Ticket Resolver, Knowledge Manager, Space, Wiki",
-      "AC-010.3": "THE decision log (guideline 13) SHALL record the role model (several roles per user) and the Report3",
-      "AC-010.4": "IF a guideline uses a role value, a  key or a MSG code, THEN THE value SHALL exist in"
+      "AC-010.3": "THE decision log (guideline 13) SHALL record the role model (several roles per user), the Report3",
+      "AC-010.4": "IF a guideline uses a role value, a  key or a MSG code, THEN THE value SHALL exist in",
+      "AC-011.1": "THE web app SHALL send every API request to its own origin as a relative  path, so that",
+      "AC-011.2": "THE web app SHALL send no Workspace id, site name or Google domain in any API path, query, header or",
+      "AC-011.3": "IF any API response has the code MSG119, THEN THE web app SHALL show a full page with MSG119 in",
+      "AC-011.4": "IF any API response has the code MSG120, THEN THE web app SHALL show a full page with MSG120 in",
+      "AC-011.5": "WHEN MSG119 or MSG120 arrives while a user is signed in, THE web app SHALL drop every cached query",
+      "AC-011.6": "WHERE mock mode is on, THE dev user switcher SHALL offer \"Unknown site\" and \"Suspended Workspace\",",
+      "AC-012.1": "WHEN a signed-out user starts sign-in, THE web app SHALL navigate the whole page to",
+      "AC-012.2": "IF  is not a same-site path, THEN THE web app SHALL leave it out of the sign-in request",
+      "AC-012.3": "WHEN Login opens with  = MSG06, MSG09, MSG10, MSG122, MSG123 or MSG141, THE web app SHALL",
+      "AC-012.4": "IF  holds another value, or MSG122 has no valid , THEN THE web app SHALL give",
+      "AC-012.5": "IF any API request answers 401 with the code MSG123, THEN THE web app SHALL drop the session, every",
+      "AC-012.6": "WHEN the web app refetches a query that already holds data, THE request SHALL carry the header",
+      "AC-012.7": "THE web app SHALL send the first load of a query, every mutation, sign-in and logout without the",
+      "AC-013.1": "WHEN the web app opens on the Platform Console host, THE web app SHALL use only the routes of",
+      "AC-013.2": "WHEN the web app opens on any other host, THE web app SHALL use only the Workspace routes and SHALL",
+      "AC-013.3": "WHILE  has built no screen, THE web app SHALL show a placeholder titled",
+      "AC-013.4": "IF a path on the Platform Console host matches no Platform Console route, THEN THE web app SHALL show"
     }
   },
   "be-foundation": {

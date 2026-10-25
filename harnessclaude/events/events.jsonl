@@ -153,3 +153,4 @@
 {"ts":"2026-10-24T02:58:23.540Z","type":"module-status","module":"chatbot","from":"evaluating","to":"completed"}
 {"ts":"2026-10-24T03:16:51.746Z","type":"quick-opened","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
 {"ts":"2026-10-24T03:35:06.720Z","type":"quick-closed","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
+{"ts":"2026-10-25T09:05:06.354Z","type":"spec-approved","module":"fe-foundation","specHash":"3fdbea8e2f58bba5d624e8792aa365cb0b9c5f512dedd8f5cced4700460a4b2f"}
