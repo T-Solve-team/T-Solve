@@ -140,7 +140,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByRole('link', { name: 'ITSUP-1031' })).toBeInTheDocument();
   });
 
-  it('BUG-010 ignores a departmentId that is not a UUID', async () => {
+  it('BUG-017 ignores a departmentId that is not a UUID', async () => {
     const queueUrls: URL[] = [];
     const onRequest = ({ request }: { request: Request }) => {
       const url = new URL(request.url);
