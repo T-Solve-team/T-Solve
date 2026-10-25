@@ -19,7 +19,7 @@ export const getGetUsersResponseMock = (
 ): UserAccountPage => ({
   content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
-      id: faker.number.int(),
+      id: faker.string.uuid(),
       fullName: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,

@@ -46,6 +46,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/UserAccountPage' }
+        '400':
+          $ref: '#/components/responses/Problem'
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -356,7 +358,7 @@ components:
       type: object
       required: [id, fullName, email, roles, department, status, lastSignInAt]
       properties:
-        id: { type: integer, format: int64 }
+        id: { type: string, format: uuid }
         fullName: { type: [string, 'null'] }
         email: { type: string, format: email }
         roles:

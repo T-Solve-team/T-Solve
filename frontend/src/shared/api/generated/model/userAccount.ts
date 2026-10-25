@@ -11,7 +11,7 @@ import type { Role } from './role';
 import type { UserAccountStatus } from './userAccountStatus';
 
 export interface UserAccount {
-  id: number;
+  id: string;
   /** @nullable */
   fullName: string | null;
   email: string;

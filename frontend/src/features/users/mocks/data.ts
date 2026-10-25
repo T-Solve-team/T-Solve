@@ -37,7 +37,7 @@ const NAMES = [
 export function seedUsers(): (UserAccount & { workspaceId: number })[] {
   return [
     ...NAMES.map((fullName, index): UserAccount & { workspaceId: number } => ({
-      id: index + 1,
+      id: `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
       workspaceId: WORKSPACE_ID,
       fullName,
       email: `user${index + 1}@company.example`,
@@ -57,7 +57,7 @@ export function seedUsers(): (UserAccount & { workspaceId: number })[] {
         index % 6 === 0 ? null : `2026-10-${String(index + 1).padStart(2, '0')}T08:00:00Z`,
     })),
     {
-      id: 99,
+      id: '20000000-0000-4000-8000-000000000099',
       workspaceId: 2,
       fullName: 'Other Workspace',
       email: 'foreign@other.example',

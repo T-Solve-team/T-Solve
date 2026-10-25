@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
-import type { UserAccount, UserAccountPage } from '@/shared/api';
+import type { DepartmentRef, UserAccount, UserAccountPage } from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { getDevUser } from '@/shared/auth';
 import { parseSort } from '@/shared/lib';
@@ -24,7 +24,7 @@ const SORT_VALUE: Record<string, (user: UserAccount) => string> = {
   lastSignInAt: (user) => user.lastSignInAt ?? '',
 };
 
-function positiveInteger(value: string | null, fallback: number): number {
+function nonNegativeInteger(value: string | null, fallback: number): number {
   const parsed = Number(value);
   return value !== null && Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : fallback;
 }
@@ -32,7 +32,7 @@ function positiveInteger(value: string | null, fallback: number): number {
 export const handlers: HttpHandler[] = [
   http.get('*/api/v1/users/departments', async () => {
     await delay(MOCK_DELAY_MS);
-    return accessError() ?? HttpResponse.json(DEPARTMENTS);
+    return accessError() ?? HttpResponse.json<DepartmentRef[]>(DEPARTMENTS);
   }),
   http.get('*/api/v1/users', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
@@ -64,10 +64,12 @@ export const handlers: HttpHandler[] = [
           (!departmentId || String(user.department?.departmentId) === departmentId),
       )
       .sort(
-        (a, b) => (value ? value(a).localeCompare(value(b), 'vi') : 0) * direction || a.id - b.id,
+        (a, b) =>
+          (value ? value(a).localeCompare(value(b), 'vi') : 0) * direction ||
+          a.id.localeCompare(b.id),
       );
-    const size = Math.min(100, Math.max(1, positiveInteger(params.get('size'), 20)));
-    const page = positiveInteger(params.get('page'), 0);
+    const size = Math.min(100, Math.max(1, nonNegativeInteger(params.get('size'), 20)));
+    const page = nonNegativeInteger(params.get('page'), 0);
     return HttpResponse.json<UserAccountPage>({
       content: matching
         .slice(page * size, (page + 1) * size)

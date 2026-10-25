@@ -1,11 +1,3 @@
-.search {
-  width: 16rem;
-}
-
-.filter {
-  width: 11rem;
-}
-
 .table {
   padding: var(--ant-padding-lg);
   border-radius: var(--ant-border-radius-lg);

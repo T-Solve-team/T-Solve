@@ -1,11 +1,7 @@
 /** 1.3.1 User List — SRS III.1.3.1, field table 98. */
-import { PlusOutlined } from '@ant-design/icons';
-import { Button, Flex, Input, Select, Typography } from 'antd';
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { useGetUserDepartments, type UserAccount } from '@/shared/api';
-import { isRole, ROLE_LABELS, ROLES } from '@/shared/auth';
-import { msg } from '@/shared/messages';
+import { Flex } from 'antd';
+import { useGetUserDepartments, UserAccountStatus, type UserAccount } from '@/shared/api';
+import { isRole, ROLE_LABELS } from '@/shared/auth';
 import { paths, useListSearchParams } from '@/shared/routing';
 import {
   cells,
@@ -15,6 +11,7 @@ import {
   StatusTag,
   type DataTableColumn,
 } from '@/shared/ui';
+import { UserListToolbar } from '../components/UserListToolbar';
 import { useUsers } from '../hooks/useUsers';
 import styles from './UserListPage.module.css';
 
@@ -62,111 +59,39 @@ const COLUMNS: DataTableColumn<UserAccount>[] = [
 ];
 
 export function UserListPage() {
-  const navigate = useNavigate();
   const list = useListSearchParams({ field: 'fullName', order: 'asc' });
   const q = list.getFilter('q') ?? '';
-  const role = list.getFilter('role');
-  const status = list.getFilter('status');
+  const rawRole = list.getFilter('role');
+  const role = rawRole && isRole(rawRole) ? rawRole : undefined;
+  const rawStatus = list.getFilter('status');
+  const status =
+    rawStatus === UserAccountStatus.ACTIVE || rawStatus === UserAccountStatus.DEACTIVATED
+      ? rawStatus
+      : undefined;
   const department = Number(list.getFilter('departmentId'));
-  const [searchError, setSearchError] = useState(false);
+  const departmentId = Number.isSafeInteger(department) && department > 0 ? department : undefined;
   const departments = useGetUserDepartments();
   const users = useUsers({
     q: q || undefined,
-    role: role && isRole(role) ? role : undefined,
-    status: status === 'ACTIVE' || status === 'DEACTIVATED' ? status : undefined,
-    departmentId: Number.isSafeInteger(department) && department > 0 ? department : undefined,
+    role,
+    status,
+    departmentId,
     ...list.apiPaging,
   });
 
-  function search(value: string) {
-    if (value.trim().length > 100) {
-      setSearchError(true);
-      return;
-    }
-    setSearchError(false);
-    list.setFilter('q', value.trim());
-  }
-
   return (
     <Flex vertical gap="large">
-      <Flex justify="space-between" align="end" gap="middle" wrap>
-        <Flex align="end" gap="middle" wrap>
-          <Flex vertical gap="small" className={styles.search}>
-            <label htmlFor="users-search">Search</label>
-            <Input.Search
-              key={q}
-              id="users-search"
-              defaultValue={q}
-              allowClear
-              onSearch={search}
-              status={searchError ? 'error' : undefined}
-              aria-invalid={searchError}
-              aria-describedby={searchError ? 'users-search-error' : undefined}
-            />
-            {searchError && (
-              <Typography.Text type="danger" id="users-search-error" role="alert">
-                {msg('MSG02', { field_name: 'Search', max_length: 100 })}
-              </Typography.Text>
-            )}
-          </Flex>
-          <Flex vertical gap="small">
-            <label htmlFor="users-role">Role</label>
-            <Select
-              id="users-role"
-              className={styles.filter}
-              value={role ?? ''}
-              onChange={(value) => list.setFilter('role', value)}
-              options={[
-                { value: '', label: 'All roles' },
-                ...ROLES.map((value) => ({
-                  value,
-                  label: value === 'EMPLOYEE' ? 'Employee only' : ROLE_LABELS[value],
-                })),
-              ]}
-            />
-          </Flex>
-          <Flex vertical gap="small">
-            <label htmlFor="users-department">Department</label>
-            <Select
-              id="users-department"
-              virtual={false}
-              className={styles.filter}
-              value={list.getFilter('departmentId') ?? ''}
-              loading={departments.isPending}
-              disabled={departments.isPending || departments.isError}
-              onChange={(value) => list.setFilter('departmentId', value)}
-              options={[
-                { value: '', label: 'All Departments' },
-                ...(departments.data ?? []).map((item) => ({
-                  value: String(item.departmentId),
-                  label: item.name,
-                })),
-              ]}
-            />
-          </Flex>
-          <Flex vertical gap="small">
-            <label htmlFor="users-status">Status</label>
-            <Select
-              id="users-status"
-              className={styles.filter}
-              value={status ?? ''}
-              onChange={(value) => list.setFilter('status', value)}
-              options={[
-                { value: '', label: 'All' },
-                { value: 'ACTIVE', label: 'Active' },
-                { value: 'DEACTIVATED', label: 'Deactivated' },
-              ]}
-            />
-          </Flex>
-        </Flex>
-        <Button
-          type="primary"
-          icon={<PlusOutlined aria-hidden />}
-          onClick={() => void navigate(paths.userNew)}
-        >
-          Add user
-        </Button>
-      </Flex>
+      <UserListToolbar
+        key={q}
+        list={list}
+        q={q}
+        role={role}
+        status={status}
+        departmentId={departmentId}
+        departments={departments.data}
+        departmentsPending={departments.isPending}
+        departmentsError={departments.isError}
+      />
       {departments.isError && (
         <ErrorState error={departments.error} onRetry={() => void departments.refetch()} />
       )}
@@ -178,6 +103,7 @@ export function UserListPage() {
             label="Workspace users"
             columns={COLUMNS}
             rows={users.data?.content}
+            loading={users.isFetching}
             rowKey={(user) => user.id}
             error={users.isError ? users.error : null}
             onRetry={() => void users.refetch()}
