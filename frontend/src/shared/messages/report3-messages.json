@@ -41,7 +41,7 @@
   },
   "MSG09": {
     "type": "Inline",
-    "context": "The company account has no T-Solve account",
+    "context": "The Google account has no Account in the Workspace [CR-17]",
     "text": "This account is not registered in T-Solve. Please contact your Admin."
   },
   "MSG10": {
@@ -51,12 +51,12 @@
   },
   "MSG11": {
     "type": "Red text below the field",
-    "context": "The email is already used when adding a user",
+    "context": "The email is already used by another account when adding a user (an email belongs to at most one Workspace, GBR-37; the message never says which Workspace uses it) [CR-01]",
     "text": "This email is already used by another account."
   },
   "MSG12": {
     "type": "Toast",
-    "context": "A user account is created successfully",
+    "context": "An Account is created successfully [CR-17]",
     "text": "User account created successfully."
   },
   "MSG13": {
@@ -71,8 +71,8 @@
   },
   "MSG15": {
     "type": "Confirmation dialog",
-    "context": "The Project Manager clicks Reject on one or more tickets (a reason is required)",
-    "text": "Reject {count} ticket(s)? Rejected tickets are final: they will not be published and will not return to the review queue. The author will receive the reason by email."
+    "context": "The Project Manager clicks Reject on one or more tickets (a reason is required) [CR-16]",
+    "text": "Reject {count} ticket(s)? Rejected tickets are final: they will not be published and will not return to the review queue. The author will receive the reason by email if their Account is Active."
   },
   "MSG16": {
     "type": "Toast",
@@ -81,8 +81,8 @@
   },
   "MSG17": {
     "type": "Toast",
-    "context": "Changes have been requested successfully",
-    "text": "Changes requested. The author will see your comment in {tracker_name} and receive it by email."
+    "context": "Changes have been requested successfully [CR-16]",
+    "text": "Changes requested. The author will see your comment in {tracker_name} and receive it by email if their Account is Active."
   },
   "MSG18": {
     "type": "Tooltip",
@@ -151,7 +151,7 @@
   },
   "MSG31": {
     "type": "Inline (error row in the preview)",
-    "context": "The imported Ticket ID already exists",
+    "context": "The imported Ticket ID already exists in the Workspace [CR-01]",
     "text": "Ticket ID {ticket_id} already exists. Use a new ID."
   },
   "MSG32": {
@@ -211,7 +211,7 @@
   },
   "MSG43": {
     "type": "Red text below the field",
-    "context": "The Department name already exists (including deleted Departments)",
+    "context": "The Department name already exists in the Workspace (including deleted Departments) [CR-01]",
     "text": "A Department with this name already exists."
   },
   "MSG44": {
@@ -241,7 +241,7 @@
   },
   "MSG49": {
     "type": "Red text below the field",
-    "context": "The ticket tracker project is already linked to a Project",
+    "context": "The ticket tracker project (the same project of the same ticket tracker site) is already linked to a Project [CR-06] [CR-17]",
     "text": "This {tracker_name} project already belongs to {department_name}."
   },
   "MSG50": {
@@ -299,14 +299,9 @@
     "context": "The Admin signs in while the Workspace has no information (Workspace Setup)",
     "text": "Welcome to T-Solve. Enter your company information to finish setting up the Workspace."
   },
-  "MSG61": {
-    "type": "Red text below the field",
-    "context": "The ticket tracker site address is not a valid URL",
-    "text": "Please enter a valid site address, e.g. https://company.atlassian.net."
-  },
   "MSG62": {
     "type": "Inline",
-    "context": "A user opens the panel without having linked their ticket tracker account",
+    "context": "A user opens the panel without having linked their ticket tracker account in the Workspace of the ticket tracker site (GBR-19) [CR-05]",
     "text": "Sign in to T-Solve to use the T-Solve panel."
   },
   "MSG64": {
@@ -354,11 +349,6 @@
     "context": "Adding a 6th Evidence file",
     "text": "A ticket can have at most 5 Evidence files."
   },
-  "MSG73": {
-    "type": "Inline",
-    "context": "The sign-in link from the ticket tracker has expired or has already been used",
-    "text": "This sign-in link has expired or has already been used. Go back to {tracker_name} and click Sign in again."
-  },
   "MSG74": {
     "type": "Inline (tracker panel)",
     "context": "Waiting for the user to finish signing in in the new tab",
@@ -371,8 +361,8 @@
   },
   "MSG76": {
     "type": "Inline (tracker panel)",
-    "context": "A user who is not a member of any Project in the issue’s Department opens the search box",
-    "text": "Search is not available: you are not a member of any Project in this Department."
+    "context": "A user opens the search box and the issue’s Department is not one of the Account’s own Departments [CR-16]",
+    "text": "Search is not available: this issue belongs to a Department you do not work in."
   },
   "MSG77": {
     "type": "Banner (tracker panel)",
@@ -446,8 +436,8 @@
   },
   "MSG89": {
     "type": "Red text below the upload area",
-    "context": "A file type or size is not allowed",
-    "text": "{file_name} cannot be uploaded. Allowed types: PDF, DOCX, MD, TXT; maximum size: 10 MB."
+    "context": "A file type or size is not allowed [CR-09]",
+    "text": "{file_name} cannot be uploaded. Allowed types: PDF, DOCX; maximum size: 10 MB."
   },
   "MSG90": {
     "type": "Inline (row)",
@@ -501,7 +491,7 @@
   },
   "MSG111": {
     "type": "Red text below the field",
-    "context": "The email belongs to a Deactivated account when adding a user",
+    "context": "The email belongs to a Deactivated account of the Workspace when adding a user [CR-01]",
     "text": "This email belongs to a deactivated account. Reactivate it instead of adding a new one."
   },
   "MSG112": {
@@ -513,5 +503,205 @@
     "type": "Tooltip",
     "context": "The Admin edits the roles of their own account",
     "text": "You cannot remove your own Admin role."
+  },
+  "MSG119": {
+    "type": "Inline",
+    "context": "A web request comes to a site name that belongs to no Workspace [CR-01]",
+    "text": "This T-Solve site does not exist. Please check the address."
+  },
+  "MSG120": {
+    "type": "Inline",
+    "context": "A user opens the Workspace site of a Suspended Workspace, or signs in to it (web app) [CR-03] [CR-17]",
+    "text": "This Workspace has been suspended. T-Solve cannot be used on this site for now."
+  },
+  "MSG121": {
+    "type": "Inline (tracker panel)",
+    "context": "The T-Solve app, or its sign-in link, is used in a ticket tracker site whose Workspace is Suspended [CR-03]",
+    "text": "T-Solve has been suspended for your company. The T-Solve panel cannot be used for now."
+  },
+  "MSG122": {
+    "type": "Inline",
+    "context": "The hosted domain (`hd` claim) of the Google account does not match the Google domain of the Workspace [CR-02]",
+    "text": "This Google account does not belong to your company ({google_domain}). Sign in with your company account."
+  },
+  "MSG123": {
+    "type": "Inline",
+    "context": "A session created on the Workspace site of one Workspace is used on the Workspace site of another Workspace; the request is refused [CR-02] [CR-17]",
+    "text": "Your session is not valid on this site. Please log in again."
+  },
+  "MSG124": {
+    "type": "Inline (tracker panel)",
+    "context": "A call comes from a ticket tracker site whose `cloudId` is not registered to any Workspace (the site URL of the app's install event matched no Workspace, GBR-14) [CR-06]",
+    "text": "This {tracker_name} site is not connected to T-Solve. Please contact your {tracker_name} administrator."
+  },
+  "MSG141": {
+    "type": "Inline",
+    "context": "The central sign-in callback has a missing, invalid or expired state value (GBR-03) [CR-02]",
+    "text": "This sign-in request is not valid or has expired. Please start the sign-in again."
+  },
+  "MSG125": {
+    "type": "Red text below the field",
+    "context": "The site name is already used by another Workspace [CR-04]",
+    "text": "This site name is already used. Choose another one."
+  },
+  "MSG126": {
+    "type": "Red text below the field",
+    "context": "The site name is not a valid subdomain (RFC 1123 label, GBR-24) [CR-04]",
+    "text": "Site name can only contain lowercase letters, digits and hyphens, must start and end with a letter or a digit, and must not exceed 63 characters."
+  },
+  "MSG127": {
+    "type": "Red text below the field",
+    "context": "The Google domain is not a valid domain name [CR-04]",
+    "text": "Please enter a valid domain, e.g. company.com."
+  },
+  "MSG128": {
+    "type": "Toast",
+    "context": "A Workspace is created successfully [CR-04]",
+    "text": "Workspace created. Its site is https://{site_name}.tsolve.io.vn."
+  },
+  "MSG129": {
+    "type": "Confirmation dialog",
+    "context": "The Platform Operator clicks Suspend on an Active Workspace [CR-04]",
+    "text": "Suspend {company_name}? Its users will no longer be able to use its site or the T-Solve app in their ticket tracker. Its data is kept."
+  },
+  "MSG130": {
+    "type": "Toast",
+    "context": "The Workspace has been suspended [CR-04]",
+    "text": "Workspace suspended."
+  },
+  "MSG131": {
+    "type": "Confirmation dialog",
+    "context": "The Platform Operator clicks Reactivate on a Suspended Workspace [CR-04]",
+    "text": "Reactivate {company_name}? Its users will be able to use T-Solve again."
+  },
+  "MSG132": {
+    "type": "Toast",
+    "context": "The Workspace has been reactivated [CR-04]",
+    "text": "Workspace reactivated."
+  },
+  "MSG133": {
+    "type": "Toast",
+    "context": "The first Admin has been invited [CR-04]",
+    "text": "Invitation sent to {email}."
+  },
+  "MSG134": {
+    "type": "Red text below the field",
+    "context": "The email does not belong to the Google domain of the Workspace when adding a user (UC-05) or inviting the first Admin (UC-56) [CR-03] [CR-04]",
+    "text": "The email must belong to {google_domain}."
+  },
+  "MSG135": {
+    "type": "Inline",
+    "context": "A user who is not a Platform Operator (email not in the Platform Operator allow-list of the deployment configuration) opens or signs in to the Platform Console [CR-04]",
+    "text": "You do not have permission to access the Platform Console."
+  },
+  "MSG136": {
+    "type": "Red text below the field",
+    "context": "A ticket tracker site URL entered when creating a Workspace (UC-55) is not a valid site address [CR-06]",
+    "text": "Please enter a valid site address, e.g. https://company.atlassian.net."
+  },
+  "MSG137": {
+    "type": "Red text below the field",
+    "context": "The ticket tracker site URL is already registered to a Workspace (UC-55); the message never says which Workspace [CR-06]",
+    "text": "This site is already connected to a Workspace."
+  },
+  "MSG138": {
+    "type": "Red text below the field",
+    "context": "The Google domain is already used by another Workspace (UC-55) [CR-04]",
+    "text": "This Google domain is already used by another Workspace."
+  },
+  "MSG139": {
+    "type": "Red text below the field",
+    "context": "The site name is reserved for the platform (`admin`, `login`, `api`, `www`, `staging`) [CR-04] [D44]",
+    "text": "This site name is reserved. Choose another one."
+  },
+  "MSG140": {
+    "type": "Inline",
+    "context": "The Platform Operator tries to invite the first Admin again (UC-56) after an Admin of the Workspace has signed in [CR-04]",
+    "text": "An Admin of this Workspace has already signed in. New users are added by the Workspace's Admin."
+  },
+  "MSG61": {
+    "type": "Red text below the field",
+    "context": "Retired [CR-06]",
+    "text": "Please enter a valid site address, e.g. https://company.atlassian.net."
+  },
+  "MSG63": {
+    "type": "Inline",
+    "context": "Retired [CR-12]",
+    "text": "No similar published tickets found for this issue."
+  },
+  "MSG73": {
+    "type": "Inline",
+    "context": "Retired [CR-05]",
+    "text": "This sign-in link has expired or has already been used. Go back to {tracker_name} and click Sign in again."
+  },
+  "MSG91": {
+    "type": "Toast",
+    "context": "Retired [CR-09]",
+    "text": "Submitted for review. A Knowledge Manager of {space_name} will review it."
+  },
+  "MSG92": {
+    "type": "Inline",
+    "context": "Retired [CR-09]",
+    "text": "No other Knowledge Manager can review this in {space_name}. It will wait until a reviewer is assigned."
+  },
+  "MSG93": {
+    "type": "Inline",
+    "context": "Retired [CR-09]",
+    "text": "An update of this document is waiting for review. You can edit it again after the review."
+  },
+  "MSG94": {
+    "type": "Inline",
+    "context": "Retired [CR-09]",
+    "text": "Nothing has changed in this document."
+  },
+  "MSG96": {
+    "type": "Toast",
+    "context": "Retired [CR-09]",
+    "text": "Changes requested. The author will receive your comment by email."
+  },
+  "MSG97": {
+    "type": "Confirmation dialog",
+    "context": "Retired [CR-09]",
+    "text": "Reject this document? It will not be published. The author will receive the reason by email."
+  },
+  "MSG98": {
+    "type": "Toast",
+    "context": "Retired [CR-09]",
+    "text": "Document rejected."
+  },
+  "MSG99": {
+    "type": "Inline",
+    "context": "Retired [CR-09]",
+    "text": "The published version has changed since this update was written. You can only request changes or reject it."
+  },
+  "MSG104": {
+    "type": "Confirmation dialog",
+    "context": "Retired [CR-09]",
+    "text": "Make {user_name} the owner of {title}?"
+  },
+  "MSG105": {
+    "type": "Red text below the field",
+    "context": "Retired [CR-09]",
+    "text": "{user_name} cannot create documents in this Space."
+  },
+  "MSG108": {
+    "type": "Confirmation dialog",
+    "context": "Retired [CR-09]",
+    "text": "Leave the editor? Unsaved changes will be lost."
+  },
+  "MSG114": {
+    "type": "Confirmation dialog",
+    "context": "Retired [CR-11]",
+    "text": "Migrate {project_count} Project(s) with {ticket_count} ticket(s) and {document_count} Wiki document(s) from {department_name} to {target_name}? This cannot be undone."
+  },
+  "MSG115": {
+    "type": "Toast",
+    "context": "Retired [CR-11]",
+    "text": "The data of {department_name} has been migrated to {target_name}."
+  },
+  "MSG116": {
+    "type": "Tooltip",
+    "context": "Retired [CR-11]",
+    "text": "There is no other active Department to migrate the data to."
   }
 }

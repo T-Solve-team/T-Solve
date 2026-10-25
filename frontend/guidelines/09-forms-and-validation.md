@@ -4,7 +4,7 @@
 > `src/shared/forms/`, `src/shared/ui/AppForm` (`AppForm`, `FormField`), `FormModal`, `ConfirmDialog`, uploads).
 > **Why it matters:** the NFR asks for required fields marked `*`, checks when leaving a field, errors next
 > to the field, no lost input on failure, and a confirm before hard-to-undo actions. One pattern makes all
-> 35 screens behave that way.
+> 34 screens behave that way.
 
 ## 1. The pattern
 

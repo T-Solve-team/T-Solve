@@ -1,8 +1,8 @@
 /**
- * Every web screen path (guideline 08 §1): all 26 routed screens of the 35 — features never add paths elsewhere.
+ * Every web screen path (guideline 08 §1): all 26 routed screens of the 34 — features never add paths elsewhere.
  * Detail builders return the route pattern when called without an id, e.g. `paths.ticketDetail()` →
  * '/tickets/:ticketId', and a real link with one: `paths.ticketDetail(42)` → '/tickets/42'.
- * Popups (1.3.3, 2.4, 5.3, 7.2, 7.3, 8.1, 9.3, 10.2, 11.5) have no path.
+ * Popups (1.3.3, 2.4, 5.3, 7.2, 7.3, 8.1, 10.2, 11.5) have no path.
  */
 type Id = string | number;
 

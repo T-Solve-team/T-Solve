@@ -16,17 +16,21 @@
       "lastUpdated": "2026-10-23T11:39:13.265Z"
     },
     "fe-foundation": {
-      "status": "completed",
-      "currentPhase": "evaluate",
+      "status": "planned",
+      "currentPhase": "plan",
       "features": {
         "roles-session": "passing",
         "guards-menus": "passing",
         "route-map": "passing",
         "catalog-tags": "passing",
         "guidelines": "passing",
-        "placeholder-rule": "passing"
+        "placeholder-rule": "passing",
+        "catalog-sync": "passing",
+        "site-sign-in": "pending",
+        "host-routes": "pending",
+        "uuid-ids": "pending"
       },
-      "lastUpdated": "2026-10-23T13:45:23.820Z",
+      "lastUpdated": "2026-10-25T16:29:14.498Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
@@ -42,9 +46,10 @@
         "user-list": "passing",
         "add-user": "pending",
         "account-status": "pending",
-        "user-roles": "pending"
+        "user-roles": "pending",
+        "user-list-review": "in-progress"
       },
-      "lastUpdated": "2026-10-25T12:38:41.563Z",
+      "lastUpdated": "2026-10-25T17:11:38.197Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -90,15 +95,16 @@
       "lastUpdated": "2026-10-22T14:21:23.605Z"
     },
     "chatbot": {
-      "status": "completed",
-      "currentPhase": "evaluate",
+      "status": "planned",
+      "currentPhase": "plan",
       "features": {
         "ask-answer": "passing",
         "citations": "passing",
         "session-conversations": "passing",
-        "ratings": "passing"
+        "ratings": "passing",
+        "uuid-ids": "pending"
       },
-      "lastUpdated": "2026-10-24T02:58:23.539Z",
+      "lastUpdated": "2026-10-25T13:16:13.655Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
@@ -118,6 +124,43 @@
       "currentPhase": "decompose",
       "features": {},
       "lastUpdated": "2026-10-22T14:21:24.227Z"
+    },
+    "platform": {
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "tenant-context": "pending",
+        "tenant-schema": "pending",
+        "row-level-security": "pending",
+        "workspace-registry": "pending",
+        "web-tenant-resolver": "pending",
+        "file-storage": "pending",
+        "local-compose": "pending",
+        "ci-images": "pending",
+        "staging-servers": "pending",
+        "edge-caddy": "pending",
+        "staging-cd": "pending",
+        "demo-seed-workspaces": "pending"
+      },
+      "lastUpdated": "2026-10-25T13:16:09.802Z"
+    },
+    "platform-console": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-24T23:56:42.775Z"
+    },
+    "worker": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-24T23:56:42.970Z"
+    },
+    "ai": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-24T23:56:43.157Z"
     }
   },
   "dependencies": {},

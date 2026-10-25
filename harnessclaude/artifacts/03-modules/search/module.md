@@ -2,7 +2,7 @@
 name: search
 owner: Trần Hải Anh
 repos: [default]
-dependencies: [ticket-repository]
+dependencies: [ticket-repository, ai, worker]
 complexity: large
 paths:
   - backend/src/main/java/vn/tsolve/search/**

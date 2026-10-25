@@ -20,7 +20,7 @@ request ──► CorsFilter ──► CsrfFilter ──► AuthorizationFilter 
 common/security   roles, the signed-in user, the filter chain, @WithTSolveUser (tests)     │
 common/exception  base exceptions, GlobalExceptionHandler, ProblemDetails                  │
 common/session    GET /api/v1/me ── SessionService ──► 4 lookups (implemented by later modules, optional)
-common/audit      AuditService.record(…) ── JdbcTemplate INSERT in the caller's transaction ──► audit_event
+common/audit      AuditService.record(…) ── JdbcTemplate INSERT in the caller's transaction ──► audit_events
 ```
 
 - **Errors.** `GlobalExceptionHandler extends ResponseEntityExceptionHandler`, so every Spring MVC error is already
@@ -33,7 +33,7 @@ common/audit      AuditService.record(…) ── JdbcTemplate INSERT in the cal
   `@PreAuthorize`. No form login, no HTTP Basic, no `UserDetailsService`. CORS uses the existing `WebConfig`
   mapping (`http.cors(withDefaults())`). CSRF: cookie `XSRF-TOKEN` (not HTTP-only) and header `X-XSRF-TOKEN`,
   the Spring Security SPA setup. Session policy, OIDC and logout are left to `identity`.
-- **Signed-in user.** `TSolveUser` (id, email, fullName, roles) is the authentication principal. `identity` puts an
+- **Signed-in user.** `TSolveUser` (`UUID id`, email, fullName, roles) is the authentication principal. `identity` puts an
   `Authentication` with this principal in the security context at sign-in; until then only `@WithTSolveUser` does.
   `TSolveUser.authorities()` always holds `ROLE_EMPLOYEE` plus one `ROLE_<role>` per role (GBR-28).
 - **Session.** `SessionController` → `SessionService` builds `CurrentUserResponse` from the principal and four
@@ -41,39 +41,54 @@ common/audit      AuditService.record(…) ── JdbcTemplate INSERT in the cal
 - **Audit.** `AuditServiceImpl` inserts with `JdbcTemplate`. Under the JPA transaction manager, JDBC uses the
   transaction's connection, so the row commits or rolls back with the caller's action (AC-004.5). It first checks
   `TransactionSynchronizationManager.isActualTransactionActive()` and the signed-in user, and throws
-  `IllegalStateException` otherwise (AC-004.3, AC-004.4). The database refuses UPDATE, DELETE and TRUNCATE through
-  a trigger (AC-004.6).
+  `IllegalStateException` otherwise (AC-004.3, AC-004.4). It takes `workspace_id` from platform
+  `TenantContext.requireWorkspaceId()`, which throws when no Workspace is bound (AC-004.9, AC-004.10); row-level
+  security refuses the insert as the last guard (platform AC-003.3). The database refuses UPDATE, DELETE and
+  TRUNCATE through a trigger (AC-004.6).
 
 ## Data Model
 
-New Liquibase changeset `NNN-audit-event-append-only.sql`, author `be-foundation`. `NNN` is the next free number
+New Liquibase changeset `NNN-audit-events.sql`, author `be-foundation`. `NNN` is the next free number
 when the branch merges: `002` is already used by `feat/KAN-31-import-ticket-csv` and `feat/ticket-review`, and two
-changesets must not share a number on `main`.
+changesets must not share a number on `main`. It runs after the changeset that gives `workspaces` its UUID id
+(platform AC-001.1, owner of changeset 001) and after the platform changeset that sets up row-level security.
+It follows the platform tenant-table convention for an append-only table (platform AC-001.8, KAN-196 Q2):
 
 ```sql
---changeset be-foundation:NNN-audit-event-columns
-ALTER TABLE audit_event RENAME COLUMN resource TO resource_id;
-ALTER TABLE audit_event ADD COLUMN resource_type VARCHAR(50);
-UPDATE audit_event SET resource_type = 'UNKNOWN' WHERE resource_type IS NULL;   -- rows written before this change
-ALTER TABLE audit_event ALTER COLUMN resource_type SET NOT NULL;
-ALTER TABLE audit_event DROP COLUMN result;
+--changeset be-foundation:NNN-audit-events
+DROP TABLE audit_event;                     -- dev rows only, with no Workspace to give them (AC-004.7)
+CREATE TABLE audit_events (                 -- append-only: no updated_at
+    id            UUID         NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id  UUID         NOT NULL REFERENCES workspaces (id),
+    actor         VARCHAR(150) NOT NULL,
+    action        VARCHAR(100) NOT NULL,
+    resource_type VARCHAR(50)  NOT NULL,
+    resource_id   VARCHAR(200) NOT NULL,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+CREATE INDEX audit_events_workspace_id_created_at_idx ON audit_events (workspace_id, created_at);
+ALTER TABLE audit_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_events FORCE ROW LEVEL SECURITY;
+-- + the tenant policy of platform AC-003.1 and the grants to the application user, written exactly as the
+--   platform changeset writes them for every tenant table (copied from it, not reinvented here)
 
---changeset be-foundation:NNN-audit-event-append-only splitStatements:false
-CREATE FUNCTION audit_event_append_only() RETURNS trigger AS $$
+--changeset be-foundation:NNN-audit-events-append-only splitStatements:false
+CREATE FUNCTION audit_events_append_only() RETURNS trigger AS $$
 BEGIN
-    RAISE EXCEPTION 'audit_event is append-only';
+    RAISE EXCEPTION 'audit_events is append-only';
 END;
 $$ LANGUAGE plpgsql;
-CREATE TRIGGER audit_event_no_update_delete BEFORE UPDATE OR DELETE ON audit_event
-    FOR EACH ROW EXECUTE FUNCTION audit_event_append_only();
-CREATE TRIGGER audit_event_no_truncate BEFORE TRUNCATE ON audit_event
-    FOR EACH STATEMENT EXECUTE FUNCTION audit_event_append_only();
+CREATE TRIGGER audit_events_no_update_delete BEFORE UPDATE OR DELETE ON audit_events
+    FOR EACH ROW EXECUTE FUNCTION audit_events_append_only();
+CREATE TRIGGER audit_events_no_truncate BEFORE TRUNCATE ON audit_events
+    FOR EACH STATEMENT EXECUTE FUNCTION audit_events_append_only();
 ```
 
-Result: `audit_event(id BIGSERIAL, actor VARCHAR(150), action VARCHAR(100), resource_id VARCHAR(200),
-resource_type VARCHAR(50), created_at TIMESTAMPTZ DEFAULT now())`, all NOT NULL. `created_at` is the database
-default: PostgreSQL's `now()` is the start time of the transaction, the moment of the action. No index yet:
-`dashboard-audit` adds the ones its UC-35 filters need.
+`created_at` is the database default: PostgreSQL's `now()` is the start time of the transaction, the moment of the
+action. The index on `(workspace_id, created_at)` is the one the convention requires (first column
+`workspace_id`); `dashboard-audit` adds the others its UC-35 filters need. The INSERT names `workspace_id` from
+`TenantContext` and leaves `id` and `created_at` to the defaults. `audit_event` leaves the platform legacy
+allow-list in the same PR (platform AC-001.11), or the convention guard test fails.
 
 Response records (`common/session/dto`), named in the OpenAPI output as the contract names them
 (`@Schema(name = …)`), so `npm run api:pull` keeps `CurrentUser`, `UserSummary`, `DepartmentRef`,
@@ -84,10 +99,13 @@ them springdoc marks no field required and Orval would generate every field of `
 | Record | Fields |
 |--------|--------|
 | `CurrentUserResponse` | `UserSummaryResponse user`, `List<Role> roles`, `DepartmentRef department` (nullable), `List<DepartmentRef> departments`, `List<ProjectMembership> projects`, `List<SpaceRef> managedSpaces`, `boolean workspaceReady` |
-| `UserSummaryResponse` | `Long id`, `String fullName`, `String email` |
-| `DepartmentRef` | `Long departmentId`, `String name` |
-| `ProjectMembership` | `Long projectId`, `String jiraProjectKey`, `Long departmentId`, `String departmentName`, `ProjectRole roleInProject` |
-| `SpaceRef` | `Long spaceId`, `String name` |
+| `UserSummaryResponse` | `UUID id`, `String fullName`, `String email` |
+| `DepartmentRef` | `UUID departmentId`, `String name` |
+| `ProjectMembership` | `UUID projectId`, `String jiraProjectKey`, `UUID departmentId`, `String departmentName`, `ProjectRole roleInProject` |
+| `SpaceRef` | `UUID spaceId`, `String name` |
+
+springdoc writes a `UUID` component as `type: string, format: uuid`, the type the contract gives every id
+(AC-003.6, fe-foundation Interface Contracts). The lookups take the user id as a `UUID`.
 
 `Role`: `EMPLOYEE, TICKET_RESOLVER, PROJECT_MANAGER, KNOWLEDGE_MANAGER, ADMIN`. `ProjectRole`: `PROJECT_MANAGER, MEMBER`.
 `AuditAction`: the ten values of AC-004.1.
@@ -99,11 +117,13 @@ them springdoc marks no field required and Orval would generate every field of `
 | Q1 Where `/me` gets the data of later modules | Lookup interfaces in `common/session/lookup`, implemented by `identity`, `project-integration`, `wiki`, `workspace`; injected as optional | `/me` in `identity`; be-foundation owns user/role tables | The data sits in modules above be-foundation; calling them would make cycles. Matches the module map (user, 23/10) |
 | Q2 Sign-in before OIDC | None in production code; tests use `@WithTSolveUser` | Dev login under a `dev` profile; Google OIDC now | No auth hole can reach the VPS; OIDC is `identity`'s UC-01 (user, 23/10) |
 | Q3 Package and existing callers | `common/error` → `common/exception`; only the imports of `knowledge/Solution.java`, `knowledge/SolutionService.java`, `ticket/TicketService.java` change; message-only constructors kept | Also give them MSG codes; keep `common/error` | Matches AGENTS.md §1 without guessing another module's codes (user, 23/10) |
-| Q4 Audit schema and API | Changeset above; `record(AuditAction, String resourceType, String resourceId)`; actor = signed-in email | Add `actor_id` + `details JSONB`; keep the table | Report3 defines no audit fields; email works before `identity` and stays readable after a user leaves; a later overload adds details without breaking callers (user, 23/10) |
+| Q4 Audit schema and API | Changeset above (since 25/10 the `audit_events` table of row "Audit table (KAN-196 Q2)"); `record(AuditAction, String resourceType, String resourceId)`; actor = signed-in email | Add `actor_id` + `details JSONB`; keep the table | Report3 defines no audit fields; email works before `identity` and stays readable after a user leaves; a later overload adds details without breaking callers (user, 23/10) |
 | Q5 Forge Invocation Token | Out of scope; the Jira App API module adds its own `SecurityFilterChain` | FIT check now; a placeholder deny chain | No path, app id or user mapping exists yet; deny-by-default already covers it (user, 23/10) |
 | Q6 CSRF | Spring CSRF token on: cookie `XSRF-TOKEN`, header `X-XSRF-TOKEN`; CSRF failure → 403 MSG07 | `SameSite=Lax` only; leave to `identity` | Spring's safe default; the web app change is three lines (user, 23/10) |
 | Q7 Tests that need a database | Testcontainers, image `pgvector/pgvector:pg16`, Liquibase applied; AGENTS.md §8 changed | Manual `psql` check; a Maven profile | An automated check of the append-only guarantee and of every changeset; Docker is already needed to run the app (user, 23/10) |
 | Audit write | `JdbcTemplate` INSERT, no entity or repository | JPA entity `AuditEvent` + Spring Data repository in `common` | AGENTS.md §1 allows no entities in `common`; JDBC joins the caller's JPA transaction. `dashboard-audit` maps its own read model in `analytics` |
+| Audit table (KAN-196 Q2) | Drop `audit_event` and create `audit_events` under the platform convention for an append-only table: UUID `id` (`gen_random_uuid()`), `workspace_id` with its foreign key and index, row-level security, `created_at`, no `updated_at`; `workspace_id` from `TenantContext.requireWorkspaceId()` in the INSERT; `audit_event` leaves the legacy allow-list | Rename and switch to UUID only, no `workspace_id` yet (the legacy list only shrinks, platform AC-001.13); keep `audit_event` on the legacy list until later; copy the old rows into a placeholder Workspace | The user, 25/10 (SPEC-P1-7 U1 = A, U2 = A): UUID ids and plural tables in every module, and a legacy table is converted when its owning module is built (platform AC-001.11); the old rows are dev data with no Workspace, and no Workspace exists after the changelog runs (platform AC-001.3) |
+| Ids in `/me` and the principal (KAN-196 Q2) | `UUID` in `TSolveUser`, the four response records and the lookups' user id; springdoc writes `string` / `uuid` | Keep `Long` | The contract types every id as a UUID string (fe-foundation Interface Contracts; AC-003.6) |
 | Role names in `@PreAuthorize` | `Roles` with `String` constants (`Roles.ADMIN = "ADMIN"`), used as `@PreAuthorize("hasRole('" + Roles.ADMIN + "')")`; `Role` enum for the principal and `/me` | Enum only (not usable in annotations); plain strings | Annotation values must be compile-time constants; a test keeps `Roles` and `Role` the same five names |
 | OpenAPI schema of `/me` | `@Schema(requiredMode = REQUIRED)` on every component of the five records, `nullable = true` on `department`; a unit test reads the schemas with swagger-core's `ModelConverters` (no Spring context) and checks names, `required` lists and the nullable `department` against the contract | `@NotNull` on response records (cannot say "required but null" for `department`); no check, trust `api:pull` | AC-003.6: the generated types must stay as the contract says; springdoc's default OpenAPI 3.0 output writes `nullable: true`, which Orval turns into `DepartmentRef \| null` like the contract's `anyOf` |
 | Optional lookups | `ObjectProvider<XxxLookup>.getIfAvailable()` | Default no-op beans with `@ConditionalOnMissingBean` | No extra classes; a module adds its bean and `/me` uses it |
@@ -158,7 +178,7 @@ backend/
     │           └── impl/AuditServiceImpl.java
     ├── main/resources/
     │   ├── application.yml                         + springdoc.swagger-ui.csrf.enabled
-    │   └── db/changelog/db.changelog-master.xml  changes/NNN-audit-event-append-only.sql
+    │   └── db/changelog/db.changelog-master.xml  changes/NNN-audit-events.sql
     └── test/
         ├── resources/config/application.yml
         └── java/vn/tsolve/common/
@@ -203,13 +223,15 @@ quotas or workflow here).
 | 16 | STORY-003 | Error cascades | A lookup throws | Medium | 500 MSG06 (no partial answer) | Task 3 |
 | 17 | STORY-003 | Integration | `npm run api:pull` after this module | Medium | Schemas named `CurrentUser`, `UserSummary`, `DepartmentRef`, `ProjectMembership`, `SpaceRef`, with the contract's `required` lists and `department` nullable | Task 3 |
 | 18 | STORY-004 | State transitions | Caller's transaction rolls back after `record` | Critical | No audit row | Task 4 |
-| 19 | STORY-004 | Data integrity | `UPDATE`, `DELETE` or `TRUNCATE` on `audit_event` | Critical | Database error; rows unchanged | Task 4 |
+| 19 | STORY-004 | Data integrity | `UPDATE`, `DELETE` or `TRUNCATE` on `audit_events` | Critical | Database error; rows unchanged | Task 4 |
 | 20 | STORY-004 | State transitions | `record` with no transaction | High | `IllegalStateException`, no row | Task 4 |
 | 21 | STORY-004 | User types | `record` with no signed-in user (a job, a test) | High | `IllegalStateException`, no row | Task 4 |
-| 22 | STORY-004 | Data integrity | Rows already in `audit_event` when the changeset runs | High | Kept: `resource` → `resource_id`, `resource_type` `UNKNOWN` | Task 4 |
+| 22 | STORY-004 | Data integrity | Rows already in `audit_event` when the changeset runs | High | Dropped with the table: dev data with no Workspace (AC-004.7; was "kept" before KAN-196 Q2) | Task 4 |
 | 23 | STORY-004 | Input extremes | `resourceId` longer than 200 characters | Medium | Database error rolls back the action with it (no action without its audit) | Task 4 |
 | 24 | STORY-004 | Timing | Two actions audited at the same time | Low | Two independent rows | — (plain inserts) |
 | 25 | STORY-004 | Compliance | Actor email in the audit row | Low | Stored for UC-35; never written to the log | Task 4 (review) |
+| 26 | STORY-004 | User types | `record` in a transaction with a signed-in user but no Workspace bound (a thread started without `runIn`) | High | Throws, no row (AC-004.10); row-level security would refuse it anyway | Task 4 |
+| 27 | STORY-004 | Authorization | An action audited while Workspace A is bound, then rows read while Workspace B is bound | Critical | The row carries A's id (`record` takes no Workspace argument); the read in B sees none of A's rows (AC-004.9, platform AC-003.1) | Task 4 |
 
 Open questions for the spec owner: none.
 
@@ -235,4 +257,4 @@ free of module dependencies.
 | Audit row survives a rolled-back action, or is edited | Critical | Same transaction + trigger + database tests (rows 18, 19) | Task 4 |
 | 403 from method security turns into 500 | High | Explicit `AccessDeniedException` handler (row 3) | Task 1 |
 | `identity` cannot use `TSolveUser` as is | High | One accessor; agree with the `identity` owner before they plan; a change goes through this spec | Task 2 (notify) |
-| Migration loses audit rows | High | Rename + backfill, tested on a database with a row (row 22) | Task 4 |
+| The new audit table breaks the platform convention or its guard test | High | `audit_events` written to platform AC-001.8, policy and grants copied from the platform changeset, `audit_event` off the legacy list in the same PR; the guard test runs in `mvn verify` (row 22 and KAN-196 Q2; replaces the 23/10 risk "Migration loses audit rows") | Task 4 |

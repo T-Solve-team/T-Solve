@@ -2,7 +2,7 @@
 name: jira-app
 owner: Đặng Tấn Bình
 repos: [default]
-dependencies: [project-integration, ticket-repository, search, triage]
+dependencies: [project-integration, ticket-repository, search, triage, ai]
 complexity: large
 paths:
   - jira-app/**

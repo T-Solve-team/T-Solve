@@ -46,9 +46,27 @@ function roleValues(text: string): string[] {
 }
 
 describe('frontend guidelines', () => {
-  it('AC-010.1 AGENTS.md names the 35 web screens and the five roles', () => {
-    expect(agentsRaw).toMatch(/\b35 (web )?screens\b/);
+  it('AC-010.1 AGENTS.md names the 34 web screens and the five roles', () => {
+    expect(agentsRaw).toMatch(/\b34 (web )?screens\b/);
     for (const label of Object.values(ROLE_LABELS)) expect(agentsRaw).toContain(label);
+  });
+
+  it('AC-010.1 AGENTS.md and guidelines 01, 02, 08 name 34 web screens, never 35', () => {
+    for (const [file, text] of [
+      ['AGENTS.md', agentsRaw],
+      ['01', guideline('01')],
+      ['02', guideline('02')],
+      ['08', guideline('08')],
+    ] as const) {
+      expect(text, file).not.toMatch(/\b35 (web )?screens\b/);
+      expect(text, file).toMatch(/\b34 (web )?screens\b/);
+    }
+    expect(guideline('09')).not.toMatch(/\b35 screens\b/);
+    expect(guideline('01')).toMatch(/26 with a path, 8 popups/);
+  });
+
+  it('AC-010.1 no doc lists 9.3 Audit Entry Detail', () => {
+    for (const [file, text] of docs) expect(text, file).not.toContain('Audit Entry Detail');
   });
 
   it.each(docs)('AC-010.1 %s uses no retired word', (_file, text) => {

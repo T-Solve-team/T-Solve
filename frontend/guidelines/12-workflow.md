@@ -75,7 +75,7 @@ stay a stub until the backend lands). Add to the **existing** lists — don't pa
       type: object
       required: [ticketId, sourceTicketId, title]
       properties:
-        ticketId: { type: integer, format: int64 }
+        ticketId: { type: string, format: uuid } # every id is a UUID string (backend/AGENTS.md §2)
         sourceTicketId: { type: string, description: The Jira issue key, e.g. ITSUP-1031. }
         title: { type: string }
     TicketSummaryPage: # same paging shape as ReviewQueuePage
