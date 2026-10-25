@@ -50,7 +50,7 @@
 | FE-39 | Docker image: pinned Node build + non-root Caddy on 8080, CSP | Approved (step 5.5) |
 | FE-40 | Five roles, several roles per user: landing page, menus, Workspace Setup | Approved (2026-10-22) — supersedes the one-role session of FE-09 |
 | FE-41 | Report3 message catalog | Approved (2026-10-22) — supersedes the SRS V.2 catalog of FE-08 |
-| FE-42 | Route map for the 35 Report3 screens, 15 features | Approved (2026-10-22) — supersedes the feature list of FE-22 |
+| FE-42 | Route map for the 35 Report3 screens, 15 features | Approved (2026-10-22) — supersedes the feature list of FE-22; screen counts superseded by D18 (25/10): 34 screens, 8 popups |
 
 ---
 
@@ -292,6 +292,8 @@ popups, in 15 features: the 12 of FE-22 plus `triage` (10.x), `wiki` (11.x) and 
 Workspace Setup and the Workspace screens are renumbered 2.2–2.4. New screens start as placeholders.
 *Why:* Report3 adds AI Ticket Triage, the Wiki and the Knowledge Chatbot; registering every screen once
 keeps feature PRs out of the shared route, menu and mock files (guideline 02).
+*Superseded (2026-10-25):* the screen counts above are replaced by D18 (Report3, 25/10) — 34 web screens, 8 popups
+(popup 9.3 is removed).
 
 ## Working conventions (not code decisions)
 
