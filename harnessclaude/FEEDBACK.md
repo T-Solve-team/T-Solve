@@ -27,3 +27,9 @@ Append-only log of framework friction captured during usage.
 **Type:** gap
 **Context:** `TEST_GLOBS` in `hooks/sdd.ts` (`**/*.{test,spec}.*`, `**/test_*.py`, `**/*_test.*`) does not match Java's JUnit names (`FooTest.java`, `FooIT.java`), so `sdd.ts trace` finds no backend test of T-Solve. Also, `parseSpec` keeps only the first line of a list-item criterion: a criterion wrapped over several lines must have `SHALL` on its first line, and `sdd.ts diff` does not see changes in its sub-bullets (found while planning `platform`, KAN-196).
 **Suggestion:** Add `**/*Test.java`, `**/*IT.java` (or make the globs configurable in `manifest.yaml`); join a criterion's continuation lines and sub-bullets before linting and diffing.
+
+## 2026-10-25 — diff (`sdd.ts diff`)
+
+**Type:** gap
+**Context:** `sdd.ts diff` drops the text inside backticks from the criteria it prints (e.g. "with `code` `MSG119`" prints as "with  "), so changed criteria are hard to read at re-approval. Found while re-approving five modules (KAN-196).
+**Suggestion:** Print the criterion text verbatim, backticks included.
