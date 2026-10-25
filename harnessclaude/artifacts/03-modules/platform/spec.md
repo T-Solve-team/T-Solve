@@ -11,6 +11,9 @@ owner: BA
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
 | 2026-10-25 | STORY-001..STORY-012 | Initial spec from Report3 (GBR-03, GBR-12, GBR-14, GBR-19, GBR-24, GBR-37; MSG119–MSG124, MSG125–MSG139; D6, D9, D11, D12, D20, D29, D41, D42, D43; ADR-0001), Stories TS-001…TS-005, TS-010…TS-013, TS-022, the Jira descriptions of KAN-94…KAN-101, KAN-105, KAN-200 (subtasks KAN-6, KAN-8…KAN-14), KAN-203, Phan_cong v6 §1 and the planning decisions Q1–Q15 of 25/10 | Plan the `platform` module (KAN-196): the tenant layer of the pool model and the infrastructure every module runs on |
+| 2026-10-25 | STORY-001 | AC-001.8: a join table keeps a composite primary key of its two `<entity>_id` columns plus `workspace_id`, with no `id`; an append-only table has `created_at` and no `updated_at`. AC-001.11: the legacy list names "at most" its tables, a table leaves it once its module brings it to AC-001.8, and `audit_event` leaves now. AC-001.13 refers to the tables of AC-001.11. New AC-001.14: UUID ids are generated both by JPA and by the database. The "Owner of changeset 001" line now also covers `audit_events` | Decisions X2 and U3 of the review of the UUID-convention change requests (`be-foundation` converts `audit_event` to `audit_events`) |
+| 2026-10-25 | STORY-002, STORY-004, STORY-010, STORY-012 | New AC-002.19 (health and API-docs paths pass on any host) and AC-002.6 points to it; AC-004.3, AC-004.4: a missing or blank site name or Google domain → MSG01; AC-004.5: user info or a port → MSG136; AC-004.13: lookups return empty, only suspend / reactivate throw; AC-010.3, AC-010.5: the seed step in the deploy; AC-012.4 names what "the production configuration" is; two open questions at AC-010.6 and AC-012.5 | Builder check of the platform plan (KAN-196): contradictions with be-foundation AC-002.8, with the registry contract and with design decision P7 |
+| 2026-10-25 | STORY-002, STORY-004, STORY-010, STORY-012 | Open questions answered. AC-010.6: `staging` is a reserved site name; AC-002.6 answers `staging.` + base domain with MSG119 without a lookup; AC-004.3 gives MSG139 for `staging`. AC-012.5 keeps its rule and points to the reset; new AC-012.8 (`run-seed.sh --reset` empties the dev or staging database and file storage, re-applies the changelog, re-seeds) and AC-012.9 (refused unless `dev` or `staging`) | User, 25/10: AC-010.6 = A (D44 (25/10), added to the baseline in parallel); AC-012.5 = B |
 
 ## Requirements
 
@@ -70,28 +73,34 @@ owner: BA
   - AC-001.7: IF an entity that extends `TenantEntity` is saved while no Workspace is bound, THEN THE backend SHALL throw and store nothing.
   - AC-001.8: THE tenant-table convention SHALL be, for every table that is not on the platform allow-list:
     - a plural snake_case name;
-    - `id` UUID primary key;
+    - `id` UUID primary key, generated as AC-001.14 says; a join table instead has a composite primary key of
+      its two `<entity>_id` columns plus `workspace_id`, and no separate `id` (decision X2);
     - `workspace_id UUID NOT NULL REFERENCES workspaces (id)`;
     - an index whose first column is `workspace_id`;
     - every uniqueness rule that holds within a Workspace declared as a unique constraint that includes
       `workspace_id`;
-    - `created_at` and `updated_at` as `TIMESTAMPTZ NOT NULL`;
+    - `created_at` and `updated_at` as `TIMESTAMPTZ NOT NULL`; an append-only table (rows never updated, for
+      example `audit_events`) has `created_at` and no `updated_at` (decision U3);
     - row-level security enabled and forced, with the policy of AC-003.1 (decision Q2; Phan_cong v6 §1).
   - AC-001.9: THE changesets SHALL keep the existing naming of `backend/AGENTS.md` §2: file `db/changelog/changes/NNN-<slug>.sql`, id `NNN-<slug>`, author = the module.
   - AC-001.10: THE platform allow-list SHALL name each table that has no tenant row-level security, each with its reason:
     - `workspaces` and `jira_sites`: platform data, read before a Workspace is known;
     - `databasechangelog` and `databasechangeloglock`: Liquibase;
     - the JobRunr tables of `worker`: a job's Workspace is in the job itself (D43).
-  - AC-001.11: THE legacy allow-list SHALL name, each with its owning module, the tables that existed before this spec and do not yet meet AC-001.8:
+  - AC-001.11: THE legacy allow-list SHALL name, each with its owning module, at most these tables, which existed before this spec and do not yet meet AC-001.8:
     - `resolved_ticket_snapshot` and `solution` → `ticket-repository`;
     - `solution_source` → `ticket-repository`;
     - `solution_approval` → `ticket-review`;
-    - `reuse_record` → `search`;
-    - `audit_event` → `be-foundation`.
+    - `reuse_record` → `search`.
 
-    Each owning module adds `workspace_id` and row-level security to its tables when it is built (decision Q4).
+    Each owning module brings its tables to AC-001.8 when it is built (decision Q4). A table leaves the list as
+    soon as its module has done so, and the list only shrinks. `audit_event` is not on the list: `be-foundation`
+    converts it to `audit_events`, which meets AC-001.8 (decisions X2, U3).
   - AC-001.12: WHEN the convention guard test runs against the applied changelog, THE test SHALL fail for every table in the schema that is on neither allow-list and breaks any part of AC-001.8, and name the table and the missing part.
-  - AC-001.13: IF a table on the legacy allow-list meets AC-001.8, or a table that was not on the legacy allow-list when this spec was approved is added to it, THEN THE convention guard test SHALL fail and say that the allow-list only shrinks.
+  - AC-001.13: IF a table on the legacy allow-list meets AC-001.8, or a table that is not among those named in AC-001.11 is added to it, THEN THE convention guard test SHALL fail and say that the allow-list only shrinks.
+  - AC-001.14: THE primary key `id` of a tenant table SHALL be generated both ways, so that application inserts and raw SQL inserts both get an id (decision X2):
+    - by JPA, with `@GeneratedValue(strategy = GenerationType.UUID)` on the entity;
+    - by the database, with `DEFAULT gen_random_uuid()` on the column.
 
 ### STORY-002: TenantContext and the Tenant Resolver of the web app (KAN-99)
 - Owner: Trần Trung Hiếu. Sprint S1.
@@ -106,7 +115,7 @@ owner: BA
   - AC-002.3: THE Tenant Resolver SHALL read the Workspace site from the `Host` header only, compared without case and without the port. It SHALL ignore `X-Forwarded-Host`, `Forwarded` and any Workspace id in a header, a parameter, a cookie or the body (GBR-37).
   - AC-002.4: IF the label is not an RFC 1123 label (lowercase letters, digits and hyphens, starting and ending with a letter or a digit, at most 63 characters), THEN THE Tenant Resolver SHALL answer 404 with a `ProblemDetail` with `code` `MSG119` without looking up the registry (D11).
   - AC-002.5: IF the label is the site name of no Workspace, THEN THE Tenant Resolver SHALL answer 404 with `code` `MSG119`.
-  - AC-002.6: IF the host is the bare base domain, `www.` followed by the base domain, has more than one label before the base domain, or is not under the base domain, THEN THE backend SHALL answer 404 with `code` `MSG119` (decision Q15).
+  - AC-002.6: IF the host is the bare base domain, `www.` or `staging.` followed by the base domain, has more than one label before the base domain, or is not under the base domain, THEN THE backend SHALL answer 404 with `code` `MSG119` without looking up the registry (decision Q15; `staging`: D44 (25/10)), except for the paths of AC-002.19.
   - AC-002.7: IF the Workspace of the host is Suspended, THEN THE Tenant Resolver SHALL answer 403 with `code` `MSG120` and run no handler, whatever session the request carries (GBR-24, D16).
   - AC-002.8: THE Tenant Resolver SHALL run before every Spring Security check, so that MSG119 and MSG120 are answered before any 401 or 403 of sign-in or roles (agreed with `fe-foundation`, KAN-198).
   - AC-002.9: THE answers of AC-002.4 to AC-002.7 SHALL have content type `application/problem+json` and follow the contract's `ProblemDetail` (`status`, `code`), with no detail that names a Workspace.
@@ -119,6 +128,7 @@ owner: BA
   - AC-002.16: IF code calls `requireWorkspaceId()` while no Workspace is bound, THEN THE backend SHALL throw an exception that the global handler answers with 500 and `code` `MSG06` (be-foundation AC-001.7), and it SHALL log the call site.
   - AC-002.17: WHILE the development base domain is `localhost`, THE Tenant Resolver SHALL resolve `<site name>.localhost` with any port the same way as a production Workspace site (fe-foundation design Q9).
   - AC-002.18: THE tenant-isolation test SHALL create two Workspaces A and B with rows in a table that follows AC-001.8. It SHALL show, through the web resolver, that a request on A's Workspace site reads only A's rows with a JPA query and with a native SQL query, and never a row of B (TS-011, ADR-0001).
+  - AC-002.19: THE Tenant Resolver SHALL let `/actuator/health`, `/v3/api-docs`, `/v3/api-docs/**`, `/v3/api-docs.yaml` and the Swagger UI through on any host without binding a Workspace, so that Docker health checks and `npm run api:pull` on `localhost:8080` work (be-foundation AC-002.8; builder check).
 
 ### STORY-003: PostgreSQL row-level security (KAN-100)
 - Owner: Trần Hải Anh. Sprint S1.
@@ -141,9 +151,9 @@ owner: BA
 - Acceptance:
   - AC-004.1: WHEN `WorkspaceRegistryService.create` is called with a company name, a site name, a Google domain and one or more Jira site URLs that pass AC-004.2 to AC-004.7, THE registry SHALL store an Active Workspace with its Jira sites, no `cloud_id` yet, and return it (GBR-24, D6).
   - AC-004.2: IF the company name is empty or blank, THEN THE registry SHALL refuse with `code` `MSG01` on field `companyName` and store nothing.
-  - AC-004.3: IF the site name is not an RFC 1123 label (AC-002.4), THEN THE registry SHALL refuse with `code` `MSG126` on field `siteName`. IF it is `admin`, `login`, `api` or `www`, THEN `MSG139`. IF it is the site name of another Workspace, THEN `MSG125`. These are checked in that order and nothing is stored (GBR-24, D11).
-  - AC-004.4: IF the Google domain is not a valid domain name, THEN THE registry SHALL refuse with `code` `MSG127` on field `googleDomain`. IF another Workspace has it (compared without case), THEN `MSG138`. Nothing is stored (D7, D22).
-  - AC-004.5: IF no Jira site URL is given, THEN THE registry SHALL refuse with `code` `MSG01` on field `jiraSiteUrls`. IF a URL is not an `https` address with a host and no path other than `/`, no query and no fragment, THEN it SHALL refuse with `MSG136` on field `jiraSiteUrls[<index>]`. Nothing is stored (GBR-14).
+  - AC-004.3: IF the site name is missing or blank, THEN THE registry SHALL refuse with `code` `MSG01` on field `siteName`. IF it is not an RFC 1123 label (AC-002.4), THEN `MSG126`. IF it is `admin`, `login`, `api`, `www` or `staging`, THEN `MSG139`. IF it is the site name of another Workspace, THEN `MSG125`. These are checked in that order and nothing is stored (GBR-24, D11, D44 (25/10)).
+  - AC-004.4: IF the Google domain is missing or blank, THEN THE registry SHALL refuse with `code` `MSG01` on field `googleDomain`. IF it is not a valid domain name, THEN `MSG127`. IF another Workspace has it (compared without case), THEN `MSG138`. Nothing is stored (D7, D22).
+  - AC-004.5: IF no Jira site URL is given, THEN THE registry SHALL refuse with `code` `MSG01` on field `jiraSiteUrls`. IF a URL is not an `https` address with a host and no user info, no port, no path other than `/`, no query and no fragment, THEN it SHALL refuse with `MSG136` on field `jiraSiteUrls[<index>]`. Nothing is stored (GBR-14).
   - AC-004.6: IF a Jira site URL, after it is normalised to `https://<host>` in lower case, is already registered to any Workspace or appears twice in the same request, THEN THE registry SHALL refuse with `code` `MSG137` on that field. It SHALL not say which Workspace has it and SHALL store nothing (GBR-14, D6).
   - AC-004.7: IF several rules of AC-004.2 to AC-004.6 fail, THEN THE registry SHALL report the first one, in the order company name, site name, Google domain, Jira site URLs.
   - AC-004.8: IF two creations race for the same site name, Google domain or Jira site URL, THEN THE registry SHALL store only one of them and refuse the other with the same code as AC-004.3, AC-004.4 or AC-004.6, never with a 500.
@@ -151,7 +161,7 @@ owner: BA
   - AC-004.10: WHEN `suspend` is called on an Active Workspace, THE registry SHALL make it Suspended. After the commit it SHALL publish the application event `WorkspaceSuspended` with its id, and the next request to its Workspace site or from its Jira sites SHALL be refused (MSG120, MSG121).
   - AC-004.11: WHEN `reactivate` is called on a Suspended Workspace, THE registry SHALL make it Active. After the commit it SHALL publish `WorkspaceReactivated` with its id, and the next request SHALL be served.
   - AC-004.12: IF `suspend` is called on a Suspended Workspace or `reactivate` on an Active one, THEN THE registry SHALL change nothing, publish no event and return the Workspace as it is.
-  - AC-004.13: IF `suspend`, `reactivate` or a lookup by id is called with an id of no Workspace, THEN THE registry SHALL throw `NotFoundException` with `code` `MSG06`.
+  - AC-004.13: IF `suspend` or `reactivate` is called with an id of no Workspace, THEN THE registry SHALL throw `NotFoundException` with `code` `MSG06`; a lookup (`findById`, `findBySiteName`, `findByCloudId`) that finds nothing SHALL return empty.
   - AC-004.14: THE registry SHALL offer no way to delete a Workspace or to change its site name, Google domain or Jira sites after creation (GBR-24, D20).
   - AC-004.15: THE registry SHALL find a Workspace by id, by site name (without case) and by the `cloud_id` of one of its Jira sites, and SHALL list Workspaces page by page with their company name, site name, status and Jira sites.
   - AC-004.16: THE registry SHALL read and write only platform tables and SHALL never bind a Workspace itself (GBR-37).
@@ -253,10 +263,11 @@ owner: BA
     2. apply the Liquibase changelog as the owner user;
     3. start the stack;
     4. wait for every health check;
-    5. run the smoke test.
+    5. run the demo seed (STORY-012; staging only, design decision P7);
+    6. run the smoke test.
   - AC-010.4: THE smoke test SHALL call `https://api.` plus the staging base domain plus `/actuator/health` and expect UP. It SHALL load one staging Workspace site's page (200) and call its `/api/v1/me` expecting 401 with `code` `MSG07`, which proves the resolver found the Workspace.
-  - AC-010.5: IF a build, the migration, a health check or the smoke test fails, THEN THE CD workflow SHALL fail with the failing step in its log.
-  - AC-010.6: THE staging environment SHALL use the hosts `*.staging.tsolve.io.vn`, `api.staging.tsolve.io.vn`, `login.staging.tsolve.io.vn` and `admin.staging.tsolve.io.vn`, through `TSOLVE_BASE_DOMAIN` = `staging.tsolve.io.vn` (decision Q11).
+  - AC-010.5: IF a build, the migration, a health check, the seed or the smoke test fails, THEN THE CD workflow SHALL fail with the failing step in its log.
+  - AC-010.6: THE staging environment SHALL use the hosts `*.staging.tsolve.io.vn`, `api.staging.tsolve.io.vn`, `login.staging.tsolve.io.vn` and `admin.staging.tsolve.io.vn`, through `TSOLVE_BASE_DOMAIN` = `staging.tsolve.io.vn` (decision Q11). The site name `staging` is reserved (D44 (25/10); AC-002.6, AC-004.3), so no production Workspace can own `staging.tsolve.io.vn`.
   - AC-010.7: THE staging secrets SHALL live only in the server's `.env` (mode 600, owned by the deploy user) and in GitHub secrets, never in the repository.
   - AC-010.8: THE staging stack SHALL have a memory and CPU limit and a health check on every container, and restart `unless-stopped` (KAN-12).
   - AC-010.9: THE application VPS SHALL refuse password login over SSH and allow key login only. Only ports 22, 80 and 443 SHALL be open to the internet (KAN-10).
@@ -281,10 +292,12 @@ owner: BA
   - AC-012.1: WHEN the backend runs with the `seed` profile on dev or staging, THE seed SHALL read the demo data from `infra/seed/` and create two Workspaces through `WorkspaceRegistryService.create`, with all the rules of STORY-004, as UC-55 does (D42).
   - AC-012.2: WHEN a seed Workspace is created, THE seed SHALL call every `DemoSeedContributor` in its declared order, each inside `TenantContext.runIn` of that Workspace. Each contributor writes its own module's data (decision Q14).
   - AC-012.3: IF `TSOLVE_ENVIRONMENT` is `production` or not set, THEN THE seed SHALL write nothing and exit with a non-zero status (GBR-24, D42).
-  - AC-012.4: THE production configuration SHALL contain no seed profile, seed command or seed data reference.
-  - AC-012.5: IF a seed Workspace's site name already exists, THEN THE seed SHALL leave that Workspace unchanged, run no contributor for it, and say so in its output.
+  - AC-012.4: THE production configuration (the production compose file, its environment file template and the production deploy workflow) SHALL contain no seed profile, seed command or seed data reference. The `seed` profile shipped inside the backend image stays inert there, because AC-012.3 refuses to run in production.
+  - AC-012.5: IF a seed Workspace's site name already exists, THEN THE seed SHALL leave that Workspace unchanged, run no contributor for it, and say so in its output. Before the S3 seed, staging is reset once with AC-012.8, so the contributors run on freshly created Workspaces (user, 25/10).
   - AC-012.6: IF a registry rule or a contributor fails, THEN THE seed SHALL stop, exit with a non-zero status and name the Workspace and the contributor that failed.
   - AC-012.7: THE demo data in `infra/seed/` SHALL describe, for each of the two Workspaces, the data of TS-005:
+  - AC-012.8: WHEN `infra/seed/run-seed.sh --reset` runs on dev or staging, THE script SHALL empty that environment's database and file storage, apply the Liquibase changelog again and then run the seed, so that every seed Workspace is created anew and all contributors run for it (user, 25/10).
+  - AC-012.9: IF `run-seed.sh --reset` runs while `TSOLVE_ENVIRONMENT` is `production`, not set, or anything other than `dev` or `staging`, THEN THE script SHALL change nothing and exit with a non-zero status (GBR-24, D42).
     - a company name, a site name, a Google domain and Jira site URLs;
     - Accounts that hold all five Roles;
     - Departments;
@@ -412,7 +425,8 @@ AC-001.11) and the guard test.
   - the Liquibase master changelog as the one entry point;
   - its session security chain and its CSRF rule (AC-002.11) must not apply to `api.`, which uses this module's
     chain (AC-005.6).
-- Owner of changeset 001 (`be-foundation`): the reshaped `workspaces` table of AC-001.1 and AC-001.3.
+- Owner of changeset 001 (`be-foundation`): the reshaped `workspaces` table of AC-001.1 and AC-001.3, and
+  `audit_events` (converted from `audit_event`) meeting AC-001.8 as an append-only table.
 - `identity` (KAN-197):
   - calls `TenantContext.runIn` with the Workspace of the checked state value on the `login.` callback;
   - takes the ticket tracker account only from `ForgeCallContext`;

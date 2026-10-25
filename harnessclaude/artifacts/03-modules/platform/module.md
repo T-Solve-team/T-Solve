@@ -10,7 +10,10 @@ paths:
   - backend/src/main/java/vn/tsolve/common/tenant/**
   - backend/src/test/java/vn/tsolve/common/tenant/**
   - backend/src/main/resources/db/changelog/**
+  - backend/src/main/resources/application*.yml
+  - backend/pom.xml
   - backend/Dockerfile
+  - backend/.dockerignore
   - frontend/Dockerfile
   - frontend/Caddyfile
   - docker-compose*.yml
@@ -80,6 +83,11 @@ routing by host, CI/CD, the application VPS and the AI VPS (D41), and the demo s
 ## Target Repos
 - default: backend/ (`platform`, `common/tenant`, proposed), the repo root (`docker-compose*.yml`, `infra/`,
   `.github/workflows/`, `.env.example`), the web app image files.
+- Shared files that `be-foundation` owns and `platform` also changes (25/10, KAN-196 plan decision P2):
+  `backend/pom.xml` (the `spring-security-oauth2-jose` dependency and Testcontainers),
+  `backend/src/main/resources/application*.yml` (the tenant, Forge, storage and migration settings) and the
+  Liquibase changelog; `backend/.dockerignore` comes with the backend image (KAN-9).
+- Design and tasks: `artifacts/04-plans/platform/design.md`, `iteration-1/` and `iteration-2/`.
 
 ## Related Artifacts
 - Spec: `artifacts/03-modules/platform/spec.md` (written when the module is planned, KAN-196)

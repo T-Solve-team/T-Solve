@@ -164,3 +164,17 @@
 {"ts":"2026-10-25T10:21:51.750Z","type":"quick-opened","what":"UUID ids and plural tables for every module (KAN-196 Q2): backend/AGENTS.md §2 and §7, numeric-id examples in frontend guidelines 04, 05, 12","files":["backend/AGENTS.md","frontend/guidelines/12-workflow.md","frontend/guidelines/04-typescript.md","frontend/guidelines/05-react-components.md"]}
 {"ts":"2026-10-25T13:04:40.125Z","type":"spec-approved","module":"be-foundation","specHash":"b2f2142d14871bdf748672afe988b83f955a1f53946fd60d923fed28e04f62bf"}
 {"ts":"2026-10-25T13:17:12.440Z","type":"quick-closed","what":"UUID ids and plural tables for every module (KAN-196 Q2): backend/AGENTS.md §2 and §7, numeric-id examples in frontend guidelines 04, 05, 12","files":["backend/AGENTS.md","frontend/guidelines/12-workflow.md","frontend/guidelines/04-typescript.md","frontend/guidelines/05-react-components.md"]}
+{"ts":"2026-10-25T10:23:32.400Z","type":"feature-status","module":"platform","feature":"tenant-context","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.456Z","type":"feature-status","module":"platform","feature":"tenant-schema","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.509Z","type":"feature-status","module":"platform","feature":"row-level-security","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.556Z","type":"feature-status","module":"platform","feature":"workspace-registry","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.600Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.645Z","type":"feature-status","module":"platform","feature":"file-storage","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.692Z","type":"feature-status","module":"platform","feature":"local-compose","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.745Z","type":"feature-status","module":"platform","feature":"ci-images","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.795Z","type":"feature-status","module":"platform","feature":"staging-servers","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.844Z","type":"feature-status","module":"platform","feature":"edge-caddy","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.906Z","type":"feature-status","module":"platform","feature":"staging-cd","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.956Z","type":"feature-status","module":"platform","feature":"demo-seed-workspaces","from":null,"to":"pending"}
+{"ts":"2026-10-25T13:03:20.576Z","type":"spec-approved","module":"platform","specHash":"a73026ef706cae1ca938544c538d176f7d958db0729871bb68b07df5adf898fa"}
+{"ts":"2026-10-25T13:16:09.818Z","type":"module-status","module":"platform","from":"decomposed","to":"planned"}
