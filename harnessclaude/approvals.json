@@ -55,8 +55,8 @@
     }
   },
   "be-foundation": {
-    "specHash": "264285350f051113182822d7baddd60498e4b7f7f44fee4edeb39fbcff11c799",
-    "approvedAt": "2026-10-23T12:03:13.479Z",
+    "specHash": "b2f2142d14871bdf748672afe988b83f955a1f53946fd60d923fed28e04f62bf",
+    "approvedAt": "2026-10-25T13:04:40.119Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a request fails with a , THE backend SHALL answer 404 with content type",
@@ -93,8 +93,10 @@
       "AC-004.4": "IF  is called with no signed-in user, THEN THE backend SHALL throw and store nothing.",
       "AC-004.5": "WHEN the caller's transaction rolls back, THE backend SHALL keep no audit event of it.",
       "AC-004.6": "IF anything tries to update or delete a row of , THEN THE database SHALL reject it.",
-      "AC-004.7": "THE  table SHALL have , , ,  and ,",
-      "AC-004.8": "THE tests of AC-004.5, AC-004.6 and AC-004.7 SHALL run against a real PostgreSQL started by"
+      "AC-004.7": "THE  table SHALL follow the platform tenant-table convention (platform AC-001.8) as an",
+      "AC-004.8": "THE tests of AC-004.5, AC-004.6, AC-004.7, AC-004.9 and AC-004.10 SHALL run against a real PostgreSQL",
+      "AC-004.9": "WHEN  stores an audit event, THE backend SHALL store the id of the Workspace bound to the",
+      "AC-004.10": "IF  is called while no Workspace is bound, THEN THE backend SHALL throw and store nothing."
     }
   },
   "chatbot": {
