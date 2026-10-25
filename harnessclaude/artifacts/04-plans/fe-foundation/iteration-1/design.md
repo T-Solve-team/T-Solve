@@ -15,4 +15,5 @@ is deferred to a later iteration.
 The change requests of this iteration also land here: Task 6 (KAN-71, placeholder rule) and Tasks 7–9 (KAN-198:
 catalog sync and 9.3 removed; Workspace site, central sign-in, MSG123 and the background header; route tree by
 host). Their design is the master section "Workspace site, central sign-in and the route tree by host" and the
-key-decision and edge-case rows marked KAN-198 / Tasks 7–9.
+key-decision and edge-case rows marked KAN-198 / Tasks 7–9. Task 10 (KAN-196 Q2: ids are UUID strings) follows the
+master key-decision row "Ids (KAN-196 Q2)".

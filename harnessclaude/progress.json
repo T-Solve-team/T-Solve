@@ -16,17 +16,21 @@
       "lastUpdated": "2026-10-23T11:39:13.265Z"
     },
     "fe-foundation": {
-      "status": "completed",
-      "currentPhase": "evaluate",
+      "status": "planned",
+      "currentPhase": "plan",
       "features": {
         "roles-session": "passing",
         "guards-menus": "passing",
         "route-map": "passing",
         "catalog-tags": "passing",
         "guidelines": "passing",
-        "placeholder-rule": "passing"
+        "placeholder-rule": "passing",
+        "catalog-sync": "pending",
+        "site-sign-in": "pending",
+        "host-routes": "pending",
+        "uuid-ids": "pending"
       },
-      "lastUpdated": "2026-10-23T13:45:23.820Z",
+      "lastUpdated": "2026-10-25T13:16:12.987Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"

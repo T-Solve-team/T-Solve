@@ -1,7 +1,7 @@
 ---
 module: fe-foundation
 date: 2026-10-22
-total_tasks: 9
+total_tasks: 10
 owner: Dev
 ---
 
@@ -245,4 +245,28 @@ files and the placeholder page, which `platform-console` replaces.
 - Test: `frontend/src/app/router/host-routes.test.tsx`; update `frontend/src/test/guidelines.test.ts`
 **Covers:** AC-013.1–AC-013.4, AC-010.3 (route tree by host); design edge cases 29–30
 **Dependencies:** Task 8 (both change `routes.tsx` and `render.tsx`); the route export agreed with `platform-console`
+**Estimated size:** small
+
+## Task 10: Ids are UUID strings in the `/me` contract
+
+**Story:** STORY-001, STORY-009
+**Feature:** uuid-ids
+**Jira:** new Subtask (Hiếu creates it) · branch `feature/KAN-…-fe-foundation-uuid-ids` · change request KAN-196 Q2
+(SPEC-P1-7)
+**Description:** In the contract, every id of `UserSummary` (`id`), `DepartmentRef` (`departmentId`),
+`ProjectMembership` (`projectId`, `departmentId`) and `SpaceRef` (`spaceId`) becomes `{ type: string, format: uuid }`;
+regenerate the client. `isProjectManagerOf` and `isMemberOf` take `projectId: string`. The fixture users use fixed
+UUID literals, one constant per Department, Project and Space, reused wherever the record appears. Tests that build
+a `CurrentUser` by hand use UUID strings. Counts (`totalElements`, `count`) stay integers. The review screen's ids
+(`ProjectRef`, `ReviewQueueItem.ticketId`, `ticketIds`, `departmentId` of the review paths, `features/review/**`)
+are not part of this task: they belong to `ticket-review` (Phạm Tùng Dương). The chatbot's ids are `chatbot` Task 5.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (regenerated)
+- Modify: `frontend/src/shared/auth/useSession.ts`, `frontend/src/mocks/session.ts`
+- Test: `frontend/src/shared/auth/session.test.ts`, `frontend/src/shared/auth/useSession.test.tsx`,
+  `frontend/src/mocks/session.test.ts`
+**Covers:** AC-001.8, AC-009.7
+**Dependencies:** ships in one PR with `chatbot` Task 5: the regenerated client makes `session.user.id` a `string`,
+which `features/chatbot` reads, so neither is green alone; before `be-foundation`
+Task 3 serves `/me` (its records use `UUID`)
 **Estimated size:** small

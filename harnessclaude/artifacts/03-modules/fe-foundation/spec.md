@@ -15,6 +15,7 @@ owner: BA
 | 2026-10-25 | STORY-011, STORY-012, STORY-013 | New: the Workspace comes from the Workspace site (AC-011.1–AC-011.6), sign-in through the central sign-in, MSG123 and the background-request header (AC-012.1–AC-012.7), the route tree chosen by host (AC-013.1–AC-013.4) | Multi-tenant pool model: GBR-03, GBR-37, ADR-0001, D9, CR-01, CR-02 (KAN-198; Stories KAN-103, KAN-104); identity decision on the idle time (KAN-197, Q6 = B); module-map decision "Platform Console in the same web app" (KAN-195, Q4 = A) (Hiếu, 25/10) |
 | 2026-10-25 | STORY-001, STORY-006 | AC-001.6 reworded (MSG119, MSG120, MSG123 are not the session error page); AC-006.1 reworded (also leaves out Retired codes and the Platform Console codes); new AC-006.8 (MSG119, MSG120, MSG122, MSG123, MSG134, MSG141) | Report3 System_Messages of 25/10 (MSG119–MSG141 new; MSG15, MSG17, MSG89 reworded, D35, CR-09; MSG61, MSG73 retired, CR-05, CR-06) (KAN-198, Hiếu, 25/10) |
 | 2026-10-25 | STORY-005, STORY-010 | AC-005.2 drops 9.3 Audit Entry Detail; AC-010.1 counts 34 web screens; AC-010.3 also records the Workspace site, the central sign-in and the route tree by host | Screen 9.3 deleted (D18, CR-15) (KAN-198, Hiếu, 25/10) |
+| 2026-10-25 | STORY-001, STORY-009 | New AC-001.8 (the session keeps every `/me` id as a UUID string; `isProjectManagerOf` / `isMemberOf` take a UUID string) and AC-009.7 (fixture users carry UUID ids); Interface Contracts: the ids of `UserSummary`, `DepartmentRef`, `ProjectMembership` and `SpaceRef` are `string` with `format: uuid` | Change request KAN-196 Q2 (the user, 25/10): UUID primary keys in every module, so ids are UUID strings in the contract (Phan_cong v6 §1); SPEC-P1-7 |
 
 ## Requirements
 
@@ -66,6 +67,9 @@ owner: BA
     AC-012.5).
   - AC-001.7: IF `GET /api/v1/me` lists a role the web app does not know, THEN THE session SHALL leave it out and keep
     the known roles.
+  - AC-001.8: WHEN `GET /api/v1/me` answers 200, THE session SHALL keep the ids of the user, the Departments, the
+    Projects and the Spaces as the UUID strings the response gives, and `isProjectManagerOf` and `isMemberOf` SHALL
+    take a Project id as a UUID string and compare it as a string, never as a number.
 
 ### STORY-002: Screens open by role
 - As the team, we want each screen to open only for the roles the Permission Matrix allows so that users see only
@@ -217,6 +221,8 @@ owner: BA
     fixture user (Project Manager).
   - AC-009.6: WHERE mock mode is off (a production build or `VITE_API_MOCKING=false`), THE web app SHALL not show the
     dev user switcher and SHALL not start the mock server.
+  - AC-009.7: THE fixture users SHALL carry UUID strings as the ids of the user, the Departments, the Projects and
+    the Spaces, each id the same wherever the same record appears.
 
 ### STORY-010: Guidelines match Report3
 - As a person or an AI agent reading `frontend/`, I want the guidelines to describe the Report3 app so that I build
@@ -329,11 +335,16 @@ owner: BA
       roles:          Role[]                 # contains EMPLOYEE for every user
       department:     DepartmentRef | null   # anyOf [$ref, {type: 'null'}]; only a Project Manager has one
       departments:    DepartmentRef[]        # PM: [department]; Ticket Resolver: Departments of their Projects; others: []
-      projects:       ProjectMembership[]    # unchanged
+      projects:       ProjectMembership[]    # fields unchanged; ids are UUID strings
       managedSpaces:  SpaceRef[]             # Knowledge Manager's Spaces; others: []
       workspaceReady: boolean
   Role:     enum [EMPLOYEE, TICKET_RESOLVER, PROJECT_MANAGER, KNOWLEDGE_MANAGER, ADMIN]
-  SpaceRef: { spaceId: int64, name: string }   # both required
+  # every id below: { type: string, format: uuid }; all fields required (AC-001.8)
+  UserSummary:       { id: uuid, fullName: string, email: string (email) }
+  DepartmentRef:     { departmentId: uuid, name: string }
+  ProjectMembership: { projectId: uuid, jiraProjectKey: string, departmentId: uuid, departmentName: string,
+                       roleInProject: ProjectRole }
+  SpaceRef:          { spaceId: uuid, name: string }
   ```
   401 = signed out. `POST /api/v1/auth/logout` → 204 (unchanged).
 - **`@/shared/auth`**: `ROLES`, `ROLE_LABELS`, `useSession()` (`session`, `roles`, `hasRole`, `hasAnyRole`,

@@ -1,7 +1,7 @@
 {
   "fe-foundation": {
-    "specHash": "3fdbea8e2f58bba5d624e8792aa365cb0b9c5f512dedd8f5cced4700460a4b2f",
-    "approvedAt": "2026-10-25T09:05:06.353Z",
+    "specHash": "ce8e67bcffd22f87795409fd93fa5971ec816b9228a831133eafd6f6b8a0c709",
+    "approvedAt": "2026-10-25T13:11:00.723Z",
     "by": "user",
     "acs": {
       "AC-001.1": "THE web app SHALL know exactly five roles — , , ,",
@@ -11,6 +11,7 @@
       "AC-001.5": "IF  answers 401, THEN THE session SHALL be \"signed out\" (no user, no roles), not an error.",
       "AC-001.6": "IF  fails for another reason, THEN THE web app SHALL show the session error page with",
       "AC-001.7": "IF  lists a role the web app does not know, THEN THE session SHALL leave it out and keep",
+      "AC-001.8": "WHEN  answers 200, THE session SHALL keep the ids of the user, the Departments, the",
       "AC-002.1": "WHEN a signed-in user opens a screen, THE web app SHALL show it if the user has at least one of the",
       "AC-002.2": "IF the user has none of the screen's roles, THEN THE web app SHALL show the 403 page with MSG08 in place",
       "AC-002.3": "IF nobody is signed in, THEN THE web app SHALL send the user to Login with a  link to the page",
@@ -49,6 +50,7 @@
       "AC-009.4": "WHEN a test renders with  naming a fixture user, THE helper SHALL sign in that user.",
       "AC-009.5": "IF the stored dev user is unknown or storage is blocked, THEN THE  mock SHALL answer the default",
       "AC-009.6": "WHERE mock mode is off (a production build or ), THE web app SHALL not show the",
+      "AC-009.7": "THE fixture users SHALL carry UUID strings as the ids of the user, the Departments, the Projects and",
       "AC-010.1": "THE files  and  SHALL name 34 web screens and the five",
       "AC-010.2": "THE glossary (guideline 03) SHALL define Employee, Ticket Resolver, Knowledge Manager, Space, Wiki",
       "AC-010.3": "THE decision log (guideline 13) SHALL record the role model (several roles per user), the Report3",
