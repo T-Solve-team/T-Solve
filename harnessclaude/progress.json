@@ -25,12 +25,12 @@
         "catalog-tags": "passing",
         "guidelines": "passing",
         "placeholder-rule": "passing",
-        "catalog-sync": "pending",
+        "catalog-sync": "passing",
         "site-sign-in": "pending",
         "host-routes": "pending",
         "uuid-ids": "pending"
       },
-      "lastUpdated": "2026-10-25T13:16:12.987Z",
+      "lastUpdated": "2026-10-25T16:29:14.498Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"

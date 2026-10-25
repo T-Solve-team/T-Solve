@@ -191,3 +191,6 @@
 {"ts":"2026-10-25T10:23:32.956Z","type":"feature-status","module":"platform","feature":"demo-seed-workspaces","from":null,"to":"pending"}
 {"ts":"2026-10-25T13:03:20.576Z","type":"spec-approved","module":"platform","specHash":"a73026ef706cae1ca938544c538d176f7d958db0729871bb68b07df5adf898fa"}
 {"ts":"2026-10-25T13:16:09.818Z","type":"module-status","module":"platform","from":"decomposed","to":"planned"}
+{"ts":"2026-10-25T14:38:39.047Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":"pending","to":"in-progress"}
+{"ts":"2026-10-25T16:29:14.295Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-25T16:29:14.499Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":"evaluating","to":"passing"}

@@ -48,7 +48,6 @@ const POPUPS = [
   ['review', '7.2 Request Changes'],
   ['review', '7.3 Reject Ticket'],
   ['feedback', '8.1 Give Feedback'],
-  ['audit-log', '9.3 Audit Entry Detail'],
   ['triage', '10.2 Triage Result Detail'],
   ['wiki', '11.5 Folder'],
 ] as const;
@@ -88,6 +87,19 @@ describe('route map', () => {
       expect(featureRoutes.some((route) => route.title === name)).toBe(false);
     },
   );
+
+  it('AC-005.2 does not name 9.3 Audit Entry Detail in audit-log/routes.ts', () => {
+    expect(routesSource['/src/features/audit-log/routes.ts']).not.toContain('Audit Entry Detail');
+  });
+
+  it('AC-005.2 names exactly 8 popups in the routes.ts files', () => {
+    const named = Object.values(routesSource).flatMap((source) =>
+      (source.match(/^\/\/ Popups of this feature.*$/gm) ?? []).flatMap(
+        (line) => line.match(/\d+(?:\.\d+)+ [A-Z][A-Za-z ]+?(?= \(popup\)|,|\.|$)/g) ?? [],
+      ),
+    );
+    expect(named).toHaveLength(8);
+  });
 
   // The placeholder screens not built yet: a module that builds its screen removes its row (12.1: chatbot, KAN-71).
   it.each([

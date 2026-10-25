@@ -151,8 +151,8 @@ placeholder test, since `chatbot` builds 12.1 in the same PR. Later modules remo
 
 **Story:** STORY-006, STORY-005, STORY-010
 **Feature:** catalog-sync
-**Jira:** new Subtask of KAN-103 (Hiếu creates it; the key goes here and in the branch name) · branch
-`feature/KAN-…-fe-foundation-catalog-sync` · change request KAN-198
+**Jira:** KAN-204 (Subtask of KAN-103) · branch
+`feature/KAN-204-fe-foundation-catalog-sync` · change request KAN-198
 **Description:** Refresh `report3-messages.json` from the System_Messages of 25/10 (`npm run messages:report3`,
 141 codes). The catalog test leaves out the Retired codes (Context "Retired") and the Platform Console codes
 MSG125–MSG133 and MSG135–MSG140 next to the existing exclusions (AC-006.1). Add MSG119, MSG120, MSG122, MSG123,
