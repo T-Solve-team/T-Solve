@@ -98,10 +98,11 @@ backend/src/test/java/vn/tsolve/   mirrors main: a test sits in the same package
 | Method / field | camelCase; methods start with a verb | `createDraft`, `reviewDueAt` |
 | Constant | `static final` UPPER_SNAKE_CASE | `MAX_IMPORT_SIZE` |
 | Boolean | `is` / `has` / `can` prefix | `isPublished()` |
-| Table / column | snake_case, singular table | `solution`, `review_due_at` |
+| Table / column | snake_case, plural table | `solutions`, `review_due_at` |
+| Key column | primary key `id` (UUID); a reference is `<entity>_id` (UUID); Java type `UUID`. A join table keeps the composite key of its two references and has no `id` | `id`, `solution_id`, `workspace_id` |
 | REST path | `/api/v1/<plural-kebab-case>`; actions as sub-resources | `/api/v1/solutions/{id}/transition` |
 | operationId | camelCase verb + noun, the same as in the contract | `listReviewQueue` |
-| JSON field | camelCase | `externalId` |
+| JSON field | camelCase; an id is a UUID string (`type: string`, `format: uuid`) | `externalId`, `ticketId` |
 | Changeset | file `NNN-<kebab-slug>.sql`, id `NNN-<slug>`, author = module | `002-add-wiki-page.sql` |
 | Test | `<Class>Test`; the method names the behavior and the AC or bug id | `rejectsEditWhenPublished_AC_003_2`, `keepsFirstImport_BUG_004` |
 
@@ -184,6 +185,15 @@ change updates the contract first, then the code. On the controller, keep annota
 - Every schema change is a new changeset; never edit an applied one. One logical change per changeset. A mistake
   is fixed forward with a new changeset; a dev database can be reset.
 - Foreign keys and the indexes queries need are declared in the changeset.
+- Every table follows the tenant-table convention of the `platform` spec (AC-001.8): a plural name;
+  `id UUID PRIMARY KEY DEFAULT gen_random_uuid()` (a join table: the composite key of its two references, no `id`);
+  `workspace_id UUID NOT NULL REFERENCES workspaces (id)` with an index whose first column is `workspace_id`;
+  every uniqueness rule that holds within a Workspace as a unique constraint that includes `workspace_id`;
+  `created_at` and `updated_at` as `TIMESTAMPTZ NOT NULL` (an append-only table has no `updated_at`); row-level
+  security enabled and forced, with the platform's tenant policy. Only the tables on the platform's allow-lists
+  are exempt, and the legacy list only shrinks: the convention guard test fails `mvn verify` otherwise.
+- Entities of tenant tables extend `TenantEntity` (`vn.tsolve.common.tenant`) and map the key as
+  `@Id @GeneratedValue(strategy = GenerationType.UUID) private UUID id;`.
 
 ## 8. Tests
 

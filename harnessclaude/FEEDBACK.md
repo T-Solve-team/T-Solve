@@ -21,3 +21,15 @@ Append-only log of framework friction captured during usage.
 **Type:** gap
 **Context:** The discover skill says to set `phase` in `progress.json` to `decompose`, but no `sdd.ts` command changes `phase` and the rules forbid editing `progress.json` by hand, so T-Solve stays at `phase: init` after discover and decompose (KAN-64). Also: `frontmatterList` splits an inline `[a, b]` list on commas, so a brace glob like `src/{a,b}/**` in `paths` breaks silently.
 **Suggestion:** Add `sdd.ts phase <phase>` (or set it from `sdd.ts status … decomposed`); document that `paths` must use `- item` lists or glob without braces.
+
+## 2026-10-25 — trace / check (`sdd.ts trace`, `lib/spec.ts`)
+
+**Type:** gap
+**Context:** `TEST_GLOBS` in `hooks/sdd.ts` (`**/*.{test,spec}.*`, `**/test_*.py`, `**/*_test.*`) does not match Java's JUnit names (`FooTest.java`, `FooIT.java`), so `sdd.ts trace` finds no backend test of T-Solve. Also, `parseSpec` keeps only the first line of a list-item criterion: a criterion wrapped over several lines must have `SHALL` on its first line, and `sdd.ts diff` does not see changes in its sub-bullets (found while planning `platform`, KAN-196).
+**Suggestion:** Add `**/*Test.java`, `**/*IT.java` (or make the globs configurable in `manifest.yaml`); join a criterion's continuation lines and sub-bullets before linting and diffing.
+
+## 2026-10-25 — diff (`sdd.ts diff`)
+
+**Type:** gap
+**Context:** `sdd.ts diff` drops the text inside backticks from the criteria it prints (e.g. "with `code` `MSG119`" prints as "with  "), so changed criteria are hard to read at re-approval. Found while re-approving five modules (KAN-196).
+**Suggestion:** Print the criterion text verbatim, backticks included.

@@ -113,10 +113,23 @@
       "lastUpdated": "2026-10-22T14:21:24.227Z"
     },
     "platform": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-24T23:56:42.594Z"
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "tenant-context": "pending",
+        "tenant-schema": "pending",
+        "row-level-security": "pending",
+        "workspace-registry": "pending",
+        "web-tenant-resolver": "pending",
+        "file-storage": "pending",
+        "local-compose": "pending",
+        "ci-images": "pending",
+        "staging-servers": "pending",
+        "edge-caddy": "pending",
+        "staging-cd": "pending",
+        "demo-seed-workspaces": "pending"
+      },
+      "lastUpdated": "2026-10-25T13:16:09.802Z"
     },
     "platform-console": {
       "status": "decomposed",
