@@ -2,7 +2,7 @@
 name: triage
 owner: Trần Hải Anh
 repos: [default]
-dependencies: [search, wiki]
+dependencies: [search, wiki, ai, worker]
 complexity: medium
 paths:
   - backend/src/main/java/vn/tsolve/triage/**
