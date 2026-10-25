@@ -215,3 +215,4 @@
 {"ts":"2026-10-25T18:06:39.644Z","type":"feature-status","module":"identity","feature":"add-user","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-25T18:07:33.892Z","type":"commit-recorded","module":"identity","repo":"default","sha":"6350ccd23e01e425984e8b6d05fd4c65814e729e"}
 {"ts":"2026-10-25T18:11:26.102Z","type":"commit-recorded","module":"identity","repo":"default","sha":"169712170a416fe976ac3e3591c21df2a58eb479"}
+{"ts":"2026-10-25T18:21:04.230Z","type":"feature-status","module":"identity","feature":"add-user","from":"evaluating","to":"passing"}

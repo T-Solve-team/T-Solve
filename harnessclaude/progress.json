@@ -44,12 +44,12 @@
       "currentPhase": "implement",
       "features": {
         "user-list": "passing",
-        "add-user": "evaluating",
+        "add-user": "passing",
         "account-status": "pending",
         "user-roles": "pending",
         "user-list-review": "passing"
       },
-      "lastUpdated": "2026-10-25T18:11:26.101Z",
+      "lastUpdated": "2026-10-25T18:21:04.230Z",
       "branch": "feat/identity",
       "repos": [
         "default"

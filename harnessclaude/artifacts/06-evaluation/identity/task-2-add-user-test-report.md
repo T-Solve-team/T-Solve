@@ -40,3 +40,10 @@ No numeric coverage script/threshold is configured. Acceptance tracing is8/8 for
 - Browser: Admin,1366×768 viewport, rejected outside-domain email with form retained; created a PM with IT Department and UUID detail link; total changes24→25. See registered add-user and created-user screenshots.
 - A stale dynamic-import log occurred during branch/HMR switching; the actual creation flow succeeds. Fresh acceptance-page console will be checked separately.
 - New user management behavior is frontend/MSW only; real backend integration remains outside this delivery.
+
+## Full Linux CI result
+- Exact verified head84d31e728a5533a06a6934e9c88de683af631445, run40220379992, frontend job121250495984 completed successfully.
+- Total543 · Passed543 · Failed0 · Skipped0;30/30 files; duration107.79s.
+- Format, lint, typecheck, build and generate:api with a clean generated Git diff all pass under the original workflow/test settings.
+- Evidence:https://github.com/T-Solve-team/T-Solve/actions/runs/40220379992/job/121250495984
+- Fresh stable acceptance page loads creation mode with no console errors. Earlier HMR import error is absent after the branch settled.

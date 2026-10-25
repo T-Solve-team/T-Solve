@@ -2,7 +2,7 @@
 
 **Module:** identity
 **Assignee:** Phạm Tùng Dương
-**Status:** evaluating
+**Status:** passing
 **Iteration:** 1
 
 ---
@@ -23,7 +23,14 @@
 - Local full-suite limitation BUG-016 was established during KAN-107 and reproduced on main. Its Linux CI run passed516 tests. KAN-108 full Linux CI will use the existing workflow_dispatch on this branch without creating a PR or changing workflow/test settings.
 
 ### Blockers
-Full branch CI result pending; no source-specific blocker.
+None. Full branch Linux CI passed.
 
 ### Next up
-Push this issue branch, run existing CI workflow for its exact head, then record the full outcome before starting KAN-109.
+Task complete. Continue KAN-109 on its separate issue branch.
+
+### Full CI completed
+- After reviewer merged PR#60, main fce9618 had exactly the same tree as published107 de19ed9. Synced it into108 by merge84d31e7; verified the entire merge index exactly matched pre-merge108 content. This adds ancestry without changing verified code.
+- Existing workflow_dispatch was run on exact head84d31e728a5533a06a6934e9c88de683af631445, without changing workflow settings or creating a PR.
+- CI run40220379992, frontend job121250495984:all gates pass,30 test files and543 tests,107.79s. https://github.com/T-Solve-team/T-Solve/actions/runs/40220379992/job/121250495984
+- Fresh stable browser page shows the form and an empty console error list. Earlier stale import log belonged to branch/HMR switching.
+- Original commit1697121 contains BUG-013/014/017 and named regressions; the metadata commit records its SHA in each row. Tracking moved evaluating→passing through sdd.ts after the full CI evidence.
