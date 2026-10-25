@@ -11,7 +11,8 @@ type ReviewQueueToolbarProps = {
   onApprove: () => void;
 };
 
-const ALL = 'ALL';
+const ALL = 'ALL' as const;
+type DepartmentFilterValue = typeof ALL | (string & {});
 
 /**
  * Figma 7.1 toolbar: Department filter (callout 1) and the selection count on the left; Request Changes (6),
@@ -32,7 +33,7 @@ export function ReviewQueueToolbar({
       <Flex align="end" gap="middle">
         <Flex vertical gap="small">
           <label htmlFor="review-queue-department">Department</label>
-          <Select<string>
+          <Select<DepartmentFilterValue>
             id="review-queue-department"
             className={styles.department}
             value={departmentId ?? ALL}
