@@ -14,3 +14,6 @@ Iteration 1 builds KAN-48 (STORY-001, STORY-002, STORY-004) in three tasks (KAN-
 - STORY-003 has no comment (Figma 12.1 (c); user, 24/10).
 - The backend `chatbot` package (prompt, Ollama, PII masking, search adapter, knowledge gap) is deferred to a change
   of the spec once JDK 21 and Maven are set up.
+
+Task 5 (change request KAN-196 Q2, AC-002.12) makes the ids UUID strings, as the master key-decision row
+"Ids (KAN-196 Q2)" says; it ships in one PR with fe-foundation Task 10.

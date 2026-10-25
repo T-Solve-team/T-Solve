@@ -153,6 +153,10 @@
 {"ts":"2026-10-24T02:58:23.540Z","type":"module-status","module":"chatbot","from":"evaluating","to":"completed"}
 {"ts":"2026-10-24T03:16:51.746Z","type":"quick-opened","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
 {"ts":"2026-10-24T03:35:06.720Z","type":"quick-closed","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
+{"ts":"2026-10-25T09:05:06.884Z","type":"spec-approved","module":"chatbot","specHash":"78085cd47969b017234ab92e16b7dccab7a64f39778684dee28ba6c85c5e4e43"}
+{"ts":"2026-10-25T13:11:41.275Z","type":"spec-approved","module":"chatbot","specHash":"d946d850ae59cb11fc9a264efba1f324436041acb8c7076b87cca332033499ca"}
+{"ts":"2026-10-25T13:16:13.262Z","type":"module-status","module":"chatbot","from":"completed","to":"planned"}
+{"ts":"2026-10-25T13:16:13.659Z","type":"feature-status","module":"chatbot","feature":"uuid-ids","from":null,"to":"pending"}
 {"ts":"2026-10-25T09:05:06.354Z","type":"spec-approved","module":"fe-foundation","specHash":"3fdbea8e2f58bba5d624e8792aa365cb0b9c5f512dedd8f5cced4700460a4b2f"}
 {"ts":"2026-10-25T13:11:00.726Z","type":"spec-approved","module":"fe-foundation","specHash":"ce8e67bcffd22f87795409fd93fa5971ec816b9228a831133eafd6f6b8a0c709"}
 {"ts":"2026-10-25T13:16:10.653Z","type":"module-status","module":"fe-foundation","from":"completed","to":"planned"}

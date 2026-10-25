@@ -82,15 +82,16 @@
       "lastUpdated": "2026-10-22T14:21:23.605Z"
     },
     "chatbot": {
-      "status": "completed",
-      "currentPhase": "evaluate",
+      "status": "planned",
+      "currentPhase": "plan",
       "features": {
         "ask-answer": "passing",
         "citations": "passing",
         "session-conversations": "passing",
-        "ratings": "passing"
+        "ratings": "passing",
+        "uuid-ids": "pending"
       },
-      "lastUpdated": "2026-10-24T02:58:23.539Z",
+      "lastUpdated": "2026-10-25T13:16:13.655Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
