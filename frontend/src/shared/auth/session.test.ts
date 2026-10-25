@@ -1,8 +1,14 @@
 import type { CurrentUser } from '@/shared/api';
 import { ROLE_LABELS, ROLES, toSession } from '@/shared/auth';
 
+const USER_ID = '00000000-0000-4000-8000-000000000001';
+const DEPARTMENT_ID = '00000000-0000-4000-8000-0000000000d1';
+const OTHER_DEPARTMENT_ID = '00000000-0000-4000-8000-0000000000d2';
+const PROJECT_ID = '00000000-0000-4000-8000-000000000101';
+const SPACE_ID = '00000000-0000-4000-8000-0000000000a1';
+
 const fromServer: CurrentUser = {
-  user: { id: 1, fullName: 'Nguyễn Văn An', email: 'an.nguyen@company.example' },
+  user: { id: USER_ID, fullName: 'Nguyễn Văn An', email: 'an.nguyen@company.example' },
   roles: ['ADMIN'],
   department: null,
   departments: [],
@@ -44,5 +50,36 @@ describe('session roles', () => {
     // A newer backend could send a role this build does not know yet.
     const withUnknownRole = { ...fromServer, roles: ['EMPLOYEE', 'AUDITOR', 'ADMIN'] };
     expect(toSession(withUnknownRole).roles).toEqual(['EMPLOYEE', 'ADMIN']);
+  });
+
+  it('AC-001.8 keeps every /me id as the UUID string the response gives', () => {
+    const session = toSession({
+      ...fromServer,
+      department: { departmentId: DEPARTMENT_ID, name: 'IT' },
+      departments: [
+        { departmentId: DEPARTMENT_ID, name: 'IT' },
+        { departmentId: OTHER_DEPARTMENT_ID, name: 'HR' },
+      ],
+      projects: [
+        {
+          projectId: PROJECT_ID,
+          jiraProjectKey: 'ITSUP',
+          departmentId: DEPARTMENT_ID,
+          departmentName: 'IT',
+          roleInProject: 'MEMBER',
+        },
+      ],
+      managedSpaces: [{ spaceId: SPACE_ID, name: 'IT Space' }],
+    });
+
+    expect(session.user.id).toBe(USER_ID);
+    expect(session.department?.departmentId).toBe(DEPARTMENT_ID);
+    expect(session.departments.map((d) => d.departmentId)).toEqual([
+      DEPARTMENT_ID,
+      OTHER_DEPARTMENT_ID,
+    ]);
+    expect(session.projects[0]?.projectId).toBe(PROJECT_ID);
+    expect(session.projects[0]?.departmentId).toBe(DEPARTMENT_ID);
+    expect(session.managedSpaces[0]?.spaceId).toBe(SPACE_ID);
   });
 });

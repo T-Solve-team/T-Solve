@@ -8,6 +8,6 @@
  */
 
 export interface DepartmentRef {
-  departmentId: number;
+  departmentId: string;
   name: string;
 }

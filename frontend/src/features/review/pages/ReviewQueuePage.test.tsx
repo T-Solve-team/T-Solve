@@ -129,7 +129,11 @@ describe('ReviewQueuePage', () => {
     // The mock Project Manager has exactly one Department, IT (GBR-16).
     await user.click(await screen.findByTitle('IT'));
 
-    await waitFor(() => expect(router.state.location.search).toBe('?departmentId=1'));
+    await waitFor(() =>
+      expect(router.state.location.search).toBe(
+        '?departmentId=00000000-0000-4000-8000-0000000000d1',
+      ),
+    );
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: 'HRHELP-0318' })).not.toBeInTheDocument(),
     );

@@ -2,9 +2,9 @@ import { Button, Flex, Select, Typography } from 'antd';
 import styles from './ReviewQueueToolbar.module.css';
 
 type ReviewQueueToolbarProps = {
-  departments: { departmentId: number; name: string }[];
-  departmentId: number | undefined;
-  onDepartmentChange: (departmentId: number | undefined) => void;
+  departments: { departmentId: string; name: string }[];
+  departmentId: string | undefined;
+  onDepartmentChange: (departmentId: string | undefined) => void;
   selectedCount: number;
   onRequestChanges: () => void;
   onReject: () => void;
@@ -32,7 +32,7 @@ export function ReviewQueueToolbar({
       <Flex align="end" gap="middle">
         <Flex vertical gap="small">
           <label htmlFor="review-queue-department">Department</label>
-          <Select<number | typeof ALL>
+          <Select<string>
             id="review-queue-department"
             className={styles.department}
             value={departmentId ?? ALL}

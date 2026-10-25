@@ -11,7 +11,7 @@ import { TicketSolution } from './TicketSolution';
 type CitationListProps = {
   citations: readonly ChatbotCitation[];
   /** Cited Wiki documents the user can no longer view: MSG110 in place of their link. */
-  unavailableIds: ReadonlySet<number>;
+  unavailableIds: ReadonlySet<string>;
 };
 
 /**

@@ -21,7 +21,7 @@ export function resetMockData(): void {
 
 function inDepartment(url: URL): ReviewQueueItem[] {
   const departmentId = url.searchParams.get('departmentId');
-  return departmentId ? queue.filter((t) => String(departmentOf(t)) === departmentId) : queue;
+  return departmentId ? queue.filter((t) => departmentOf(t) === departmentId) : queue;
 }
 
 const SORT_VALUE: Record<string, (t: ReviewQueueItem) => string> = {

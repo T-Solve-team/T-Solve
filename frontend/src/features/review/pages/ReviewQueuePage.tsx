@@ -15,10 +15,9 @@ import styles from './ReviewQueuePage.module.css';
 
 type OpenDialog = 'confirmApprove' | 'reject' | 'requestChanges' | null;
 
-/** "?departmentId=2" → 2; missing or invalid → all Departments. */
-function toDepartmentId(value: string | null): number | undefined {
-  const id = Number(value);
-  return value && Number.isInteger(id) ? id : undefined;
+/** "?departmentId=<uuid>" → the id; missing → all Departments. */
+function toDepartmentId(value: string | null): string | undefined {
+  return value || undefined;
 }
 
 export function ReviewQueuePage() {
@@ -38,11 +37,8 @@ export function ReviewQueuePage() {
     setSelectedIds([]);
   }
 
-  function handleDepartmentChange(nextDepartmentId: number | undefined) {
-    list.setFilter(
-      'departmentId',
-      nextDepartmentId === undefined ? null : String(nextDepartmentId),
-    );
+  function handleDepartmentChange(nextDepartmentId: string | undefined) {
+    list.setFilter('departmentId', nextDepartmentId ?? null);
     setSelectedIds([]); // a selection belongs to the filter it was made in
   }
 

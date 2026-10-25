@@ -14,7 +14,7 @@ export type GetReviewQueueParams = {
   /**
    * One Department; omitted = all Departments of the Project Manager.
    */
-  departmentId?: number;
+  departmentId?: string;
   /**
    * Page number, starting at 0.
    * @minimum 0

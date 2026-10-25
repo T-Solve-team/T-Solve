@@ -25,7 +25,7 @@ export const getAskChatbotResponseWikiDocumentCitationMock = (
   ...{
     number: faker.number.int(),
     type: faker.helpers.arrayElement(['WIKI_DOCUMENT'] as const),
-    wikiDocumentId: faker.number.int(),
+    wikiDocumentId: faker.string.uuid(),
     title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
@@ -73,7 +73,7 @@ export const getListUnavailableCitedDocumentsResponseMock = (
   wikiDocumentIds: Array.from(
     { length: faker.number.int({ min: 1, max: 10 }) },
     (_, i) => i + 1,
-  ).map(() => faker.number.int()),
+  ).map(() => faker.string.uuid()),
   ...overrideResponse,
 });
 
