@@ -139,4 +139,20 @@ describe('ReviewQueuePage', () => {
     );
     expect(screen.getByRole('link', { name: 'ITSUP-1031' })).toBeInTheDocument();
   });
+
+  it('BUG-010 ignores a departmentId that is not a UUID', async () => {
+    const queueUrls: URL[] = [];
+    const onRequest = ({ request }: { request: Request }) => {
+      const url = new URL(request.url);
+      if (url.pathname.endsWith('/review-queue')) queueUrls.push(url);
+    };
+    server.events.on('request:start', onRequest);
+    try {
+      renderApp('/review-queue?departmentId=abc', { role: 'PROJECT_MANAGER' });
+      await waitFor(() => expect(queueUrls.length).toBeGreaterThan(0), { timeout: 5000 });
+    } finally {
+      server.events.removeListener('request:start', onRequest);
+    }
+    expect(queueUrls.some((url) => url.searchParams.has('departmentId'))).toBe(false);
+  });
 });

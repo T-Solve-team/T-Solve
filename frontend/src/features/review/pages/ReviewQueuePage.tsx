@@ -15,9 +15,11 @@ import styles from './ReviewQueuePage.module.css';
 
 type OpenDialog = 'confirmApprove' | 'reject' | 'requestChanges' | null;
 
-/** "?departmentId=<uuid>" → the id; missing → all Departments. */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** "?departmentId=<uuid>" → the id; missing or not a UUID → all Departments. */
 function toDepartmentId(value: string | null): string | undefined {
-  return value || undefined;
+  return value && UUID_PATTERN.test(value) ? value : undefined;
 }
 
 export function ReviewQueuePage() {
