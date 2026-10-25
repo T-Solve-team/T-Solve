@@ -1,9 +1,13 @@
 import type { DepartmentRef, UserAccount } from '@/shared/api';
 
-export const WORKSPACE_ID = 1;
+export const WORKSPACE_ID = '00000000-0000-4000-8000-0000000000c1';
+const FOREIGN_WORKSPACE_ID = '00000000-0000-4000-8000-0000000000c2';
+/** Same Department ids as mocks/session.ts. */
+export const IT_DEPARTMENT_ID = '00000000-0000-4000-8000-0000000000d1';
+export const HR_DEPARTMENT_ID = '00000000-0000-4000-8000-0000000000d2';
 export const DEPARTMENTS: DepartmentRef[] = [
-  { departmentId: 1, name: 'IT' },
-  { departmentId: 2, name: 'HR' },
+  { departmentId: IT_DEPARTMENT_ID, name: 'IT' },
+  { departmentId: HR_DEPARTMENT_ID, name: 'HR' },
 ];
 
 const NAMES = [
@@ -34,9 +38,9 @@ const NAMES = [
 ];
 
 /** Synthetic records; the foreign Workspace record exercises isolation before paging. */
-export function seedUsers(): (UserAccount & { workspaceId: number })[] {
+export function seedUsers(): (UserAccount & { workspaceId: string })[] {
   return [
-    ...NAMES.map((fullName, index): UserAccount & { workspaceId: number } => ({
+    ...NAMES.map((fullName, index): UserAccount & { workspaceId: string } => ({
       id: `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
       workspaceId: WORKSPACE_ID,
       fullName,
@@ -58,7 +62,7 @@ export function seedUsers(): (UserAccount & { workspaceId: number })[] {
     })),
     {
       id: '20000000-0000-4000-8000-000000000099',
-      workspaceId: 2,
+      workspaceId: FOREIGN_WORKSPACE_ID,
       fullName: 'Other Workspace',
       email: 'foreign@other.example',
       roles: ['EMPLOYEE'],

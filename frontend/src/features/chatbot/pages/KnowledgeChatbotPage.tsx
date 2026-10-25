@@ -1,6 +1,7 @@
 /** 12.1 Knowledge Chatbot — SRS III.12.1, Report3 UC-51, GBR-36, Figma "12.1 Knowledge Chatbot". */
 import { Form } from 'antd';
 import { useRef } from 'react';
+import { useSession } from '@/shared/auth';
 import { applyApiErrors } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
 import { ConversationList } from '../components/ConversationList';
@@ -12,11 +13,18 @@ import { useRateAnswer } from '../hooks/useRateAnswer';
 import { toHistory } from '../model';
 import styles from './KnowledgeChatbotPage.module.css';
 
+/** The route is behind the sign-in guard, so the session has a user whenever this renders (nothing shows otherwise). */
 export function KnowledgeChatbotPage() {
+  const { session } = useSession();
+  return session ? <KnowledgeChatbot userId={session.user.id} /> : null;
+}
+
+function KnowledgeChatbot({ userId }: { userId: string }) {
   const [form] = Form.useForm<QuestionFormValues>();
-  const { conversations, openId, turns, open, startNew, addTurn, setRating } = useConversations();
+  const { conversations, openId, turns, open, startNew, addTurn, setRating } =
+    useConversations(userId);
   const ask = useAskQuestion();
-  const rating = useRateAnswer(setRating);
+  const rating = useRateAnswer(userId, setRating);
   // Set at once, unlike ask.isPending: a second Enter before the next render must not send the question again.
   const isAsking = useRef(false);
 

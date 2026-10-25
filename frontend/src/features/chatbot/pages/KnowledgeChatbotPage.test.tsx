@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { MOCK_USERS } from '@/mocks/session';
 import { server } from '@/mocks/server';
 import { setDevUser } from '@/shared/auth';
 import {
@@ -11,6 +12,12 @@ import {
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
+
+/** Wiki document ids of the mock answers (mocks/data.ts) and the signed-in Employee of `openChatbot`. */
+const DOC_9001 = '00000000-0000-4000-8000-000000009001';
+const DOC_9003 = '00000000-0000-4000-8000-000000009003';
+const EMPLOYEE_ID = MOCK_USERS.employee.user.id;
+const OTHER_USER_ID = '00000000-0000-4000-8000-0000000fffff';
 
 const VPN_QUESTION = 'How do I connect to the VPN from home?';
 
@@ -51,12 +58,12 @@ function answerWith(answer: Partial<ChatbotAnswer>) {
 }
 
 /** Records the Wiki document ids of every availability check the page makes. */
-function recordAvailabilityChecks(): number[][] {
-  const checked: number[][] = [];
+function recordAvailabilityChecks(): string[][] {
+  const checked: string[][] = [];
   server.events.on('request:start', ({ request }) => {
     const url = new URL(request.url);
     if (url.pathname.endsWith('/api/v1/chatbot/unavailable-documents')) {
-      checked.push(url.searchParams.getAll('wikiDocumentIds').map(Number));
+      checked.push(url.searchParams.getAll('wikiDocumentIds'));
     }
   });
   return checked;
@@ -277,7 +284,7 @@ describe('KnowledgeChatbotPage', () => {
             scopeOfApplicability: 'Scope',
           },
         },
-        { number: 1, type: 'WIKI_DOCUMENT', wikiDocumentId: 9001, title: 'VPN guide' },
+        { number: 1, type: 'WIKI_DOCUMENT', wikiDocumentId: DOC_9001, title: 'VPN guide' },
       ],
     });
     const { user, box } = await openChatbot();
@@ -293,7 +300,7 @@ describe('KnowledgeChatbotPage', () => {
     answerWith({
       text: 'See [1] and [2].',
       citations: [
-        { number: 1, type: 'WIKI_DOCUMENT', wikiDocumentId: 9001, title: '<b>VPN</b> guide' },
+        { number: 1, type: 'WIKI_DOCUMENT', wikiDocumentId: DOC_9001, title: '<b>VPN</b> guide' },
         {
           number: 2,
           type: 'TICKET_SOLUTION',
@@ -324,11 +331,11 @@ describe('KnowledgeChatbotPage', () => {
     const link = await within(thread()).findByRole('link', {
       name: 'VPN setup on Windows 11 · Wiki document',
     });
-    expect(link).toHaveAttribute('href', '/wiki/documents/9001');
+    expect(link).toHaveAttribute('href', `/wiki/documents/${DOC_9001}`);
     expect(link).not.toHaveAttribute('target');
 
     await user.click(link);
-    await waitFor(() => expect(router.state.location.pathname).toBe('/wiki/documents/9001'));
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/wiki/documents/${DOC_9001}`));
   });
 
   it('AC-001.10 shows a ticket citation as "Solution from a ticket" with no ticket details', async () => {
@@ -388,7 +395,7 @@ describe('KnowledgeChatbotPage', () => {
     expect(
       within(thread()).queryByRole('link', { name: /Expense claim guide/ }),
     ).not.toBeInTheDocument();
-    expect(checked).toEqual([[9003]]);
+    expect(checked).toEqual([[DOC_9003]]);
   });
 
   it('AC-002.9 checks the Wiki documents of every turn and keeps MSG110 while it checks again', async () => {
@@ -405,13 +412,13 @@ describe('KnowledgeChatbotPage', () => {
     server.use(
       http.get('*/api/v1/chatbot/unavailable-documents', async () => {
         await released;
-        return HttpResponse.json({ wikiDocumentIds: [9003] });
+        return HttpResponse.json({ wikiDocumentIds: [DOC_9003] });
       }),
     );
     await user.type(box, `${VPN_QUESTION}{Enter}`);
     await within(thread()).findByRole('link', { name: 'VPN setup on Windows 11 · Wiki document' });
 
-    await waitFor(() => expect(checked).toEqual([[9003], [9001, 9003]]));
+    await waitFor(() => expect(checked).toEqual([[DOC_9003], [DOC_9001, DOC_9003]]));
     expect(within(thread()).getByText(msg('MSG110'))).toBeInTheDocument();
     expect(
       within(thread()).queryByRole('link', { name: /Expense claim guide/ }),
@@ -426,7 +433,7 @@ describe('KnowledgeChatbotPage', () => {
     await user.type(box, 'How do I file an expense claim?{Enter}');
 
     // Assert only once the check has really failed, not while it is still running.
-    const checkKey = getListUnavailableCitedDocumentsQueryKey({ wikiDocumentIds: [9003] });
+    const checkKey = getListUnavailableCitedDocumentsQueryKey({ wikiDocumentIds: [DOC_9003] });
     await waitFor(() => expect(queryClient.getQueryState(checkKey)?.status).toBe('error'));
     expect(
       within(thread()).getByRole('link', { name: 'Expense claim guide · Wiki document' }),
@@ -535,6 +542,19 @@ describe('KnowledgeChatbotPage', () => {
 const LEAVE_QUESTION = 'How is annual leave counted?';
 let scrollIntoView = vi.fn();
 const STORED_KEY = 'tsolve.session.chatbot.conversations';
+
+/** A stored turn in the shape of the version 2 value, with the given (possibly malformed) citations. */
+function validTurn(citations: unknown[] = []) {
+  return {
+    question: 'VPN?',
+    answer: {
+      answerId: '00000000-0000-4000-8000-000000000001',
+      outcome: 'ANSWERED',
+      text: 'Use the VPN client.',
+      citations,
+    },
+  };
+}
 
 function conversationList() {
   return screen.getByRole('list', { name: 'Conversations' });
@@ -692,15 +712,67 @@ describe('KnowledgeChatbotPage session conversations', () => {
     sessionStorage.setItem(
       STORED_KEY,
       JSON.stringify({
-        version: 1,
-        userId: 999_999,
-        conversations: [{ id: 'x', startedAt: 1, turns: [] }],
+        version: 2,
+        userId: OTHER_USER_ID,
+        conversations: [{ id: 'x', startedAt: 1, turns: [validTurn()] }],
       }),
     );
 
     await openChatbot();
 
     expect(listTitles()).toEqual(['New conversation']);
+  });
+
+  it.each([
+    ['a numeric user id', { version: 2, userId: 2 }],
+    ['version 1', { version: 1, userId: EMPLOYEE_ID }],
+  ])('AC-002.12 starts empty when the stored conversations carry %s', async (_what, head) => {
+    sessionStorage.setItem(
+      STORED_KEY,
+      JSON.stringify({ ...head, conversations: [{ id: 'x', startedAt: 1, turns: [validTurn()] }] }),
+    );
+
+    await openChatbot();
+
+    expect(listTitles()).toEqual(['New conversation']);
+  });
+
+  it('AC-002.12 starts empty when a stored citation has a numeric Wiki document id', async () => {
+    const citation = { number: 1, type: 'WIKI_DOCUMENT', wikiDocumentId: 9001, title: 'VPN' };
+    sessionStorage.setItem(
+      STORED_KEY,
+      JSON.stringify({
+        version: 2,
+        userId: EMPLOYEE_ID,
+        conversations: [{ id: 'x', startedAt: 1, turns: [validTurn([citation])] }],
+      }),
+    );
+
+    await openChatbot();
+
+    expect(listTitles()).toEqual(['New conversation']);
+  });
+
+  it("AC-002.12 stores the conversations under the signed-in user's UUID", async () => {
+    const { user, box } = await openChatbot();
+
+    await ask(user, box, VPN_QUESTION);
+
+    const stored = JSON.parse(sessionStorage.getItem(STORED_KEY) ?? '{}') as {
+      version: number;
+      userId: string;
+    };
+    expect(stored.version).toBe(2);
+    expect(stored.userId).toBe(EMPLOYEE_ID);
+  });
+
+  it('AC-002.12 sends the Wiki document ids of the citations as UUID strings in the availability request', async () => {
+    const checked = recordAvailabilityChecks();
+    const { user, box } = await openChatbot();
+
+    await ask(user, box, VPN_QUESTION);
+
+    await waitFor(() => expect(checked).toEqual([[DOC_9001]]));
   });
 
   it('AC-002.11 still answers and keeps the conversations of the open page when storage is blocked (edge 14)', async () => {

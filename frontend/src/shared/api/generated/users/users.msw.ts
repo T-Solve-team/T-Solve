@@ -28,7 +28,7 @@ export const getGetUsersResponseMock = (
       roles: faker.helpers.arrayElements(Object.values(Role)),
       department: faker.helpers.arrayElement([
         {
-          departmentId: faker.number.int(),
+          departmentId: faker.string.uuid(),
           name: faker.string.alpha({ length: { min: 10, max: 20 } }),
         },
         null,
@@ -51,7 +51,7 @@ export const getGetUsersResponseMock = (
 
 export const getGetUserDepartmentsResponseMock = (): DepartmentRef[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    departmentId: faker.number.int(),
+    departmentId: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   }));
 

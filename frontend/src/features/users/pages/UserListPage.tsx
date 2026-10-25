@@ -68,8 +68,7 @@ export function UserListPage() {
     rawStatus === UserAccountStatus.ACTIVE || rawStatus === UserAccountStatus.DEACTIVATED
       ? rawStatus
       : undefined;
-  const department = Number(list.getFilter('departmentId'));
-  const departmentId = Number.isSafeInteger(department) && department > 0 ? department : undefined;
+  const departmentId = list.getFilter('departmentId') || undefined;
   const departments = useGetUserDepartments();
   const users = useUsers({
     q: q || undefined,

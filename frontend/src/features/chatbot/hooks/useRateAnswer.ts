@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { useRateChatbotAnswer, useRemoveChatbotAnswerRating } from '@/shared/api';
-import { useSession } from '@/shared/auth';
 import { showMessage } from '@/shared/messages';
 import type { ChatTurn } from '../model';
 import { writeRating } from './chatbot-storage';
@@ -12,10 +11,9 @@ type Rating = ChatTurn['rating'];
  * any error but a 401 (the global handler signs the user out, MSG07) shows MSG06 and changes nothing (AC-003.5).
  */
 export function useRateAnswer(
+  userId: string,
   setRating: (conversationId: string, answerId: string, rating: Rating) => void,
 ) {
-  // The route guard has a session before this screen renders; 0 only keeps the types honest.
-  const userId = useSession().session?.user.id ?? 0;
   // Set at once, unlike isPending: a second click before the next render must not send again (edge 22).
   const busy = useRef(false);
   const target = useRef<{ conversationId: string; answerId: string; rating: Rating }>(null);

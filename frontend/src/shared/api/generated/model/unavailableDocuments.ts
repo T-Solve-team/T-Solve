@@ -8,5 +8,5 @@
  */
 
 export interface UnavailableDocuments {
-  wikiDocumentIds: number[];
+  wikiDocumentIds: string[];
 }

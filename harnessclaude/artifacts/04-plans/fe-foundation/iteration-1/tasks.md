@@ -251,7 +251,7 @@ files and the placeholder page, which `platform-console` replaces.
 
 **Story:** STORY-001, STORY-009
 **Feature:** uuid-ids
-**Jira:** new Subtask (Hiếu creates it) · branch `feature/KAN-…-fe-foundation-uuid-ids` · change request KAN-196 Q2
+**Jira:** KAN-205 (Subtask of KAN-103) · branch `feature/KAN-205-fe-foundation-uuid-ids` · change request KAN-196 Q2
 (SPEC-P1-7)
 **Description:** In the contract, every id of `UserSummary` (`id`), `DepartmentRef` (`departmentId`),
 `ProjectMembership` (`projectId`, `departmentId`) and `SpaceRef` (`spaceId`) becomes `{ type: string, format: uuid }`;

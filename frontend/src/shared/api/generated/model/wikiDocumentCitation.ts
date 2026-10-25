@@ -11,6 +11,6 @@ import type { WikiDocumentCitationType } from './wikiDocumentCitationType';
 export interface WikiDocumentCitation {
   number: number;
   type: WikiDocumentCitationType;
-  wikiDocumentId: number;
+  wikiDocumentId: string;
   title: string;
 }

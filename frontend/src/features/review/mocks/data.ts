@@ -1,13 +1,17 @@
 import type { ReviewQueueItem } from '@/shared/api';
 
+/** Department ids equal the ones of the mock session (src/mocks/session.ts). */
+const IT_DEPARTMENT_ID = '00000000-0000-4000-8000-0000000000d1';
+const HR_DEPARTMENT_ID = '00000000-0000-4000-8000-0000000000d2';
+
 /**
  * Projects in the review queue mock and their Departments. The mock Project Manager (src/mocks/session.ts) manages
  * ITSUP and ITNET; HRHELP tickets stay in the data until ticket-review scopes the queue to the user's Projects.
  */
 export const MOCK_PROJECTS = [
-  { projectId: 101, name: 'IT Support', key: 'ITSUP', departmentId: 1 },
-  { projectId: 102, name: 'IT Network', key: 'ITNET', departmentId: 1 },
-  { projectId: 201, name: 'HR Helpdesk', key: 'HRHELP', departmentId: 2 },
+  { projectId: 101, name: 'IT Support', key: 'ITSUP', departmentId: IT_DEPARTMENT_ID },
+  { projectId: 102, name: 'IT Network', key: 'ITNET', departmentId: IT_DEPARTMENT_ID },
+  { projectId: 201, name: 'HR Helpdesk', key: 'HRHELP', departmentId: HR_DEPARTMENT_ID },
 ] as const;
 
 /** The eight tickets of the Figma frame "7.1 Review Queue", then generated ones up to 58 (Figma total). */
@@ -136,6 +140,6 @@ export function seedReviewQueue(): ReviewQueueItem[] {
 }
 
 /** Department of a ticket, through its Project (the API filters the queue by Department). */
-export function departmentOf(ticket: ReviewQueueItem): number | undefined {
+export function departmentOf(ticket: ReviewQueueItem): string | undefined {
   return MOCK_PROJECTS.find((p) => p.projectId === ticket.project.projectId)?.departmentId;
 }

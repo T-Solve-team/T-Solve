@@ -44,14 +44,14 @@ export function useSession() {
     [roles],
   );
   const isProjectManagerOf = useCallback(
-    (projectId: number) =>
+    (projectId: string) =>
       session?.projects.some(
         (p) => p.projectId === projectId && p.roleInProject === 'PROJECT_MANAGER',
       ) ?? false,
     [session],
   );
   const isMemberOf = useCallback(
-    (projectId: number) => session?.projects.some((p) => p.projectId === projectId) ?? false,
+    (projectId: string) => session?.projects.some((p) => p.projectId === projectId) ?? false,
     [session],
   );
 

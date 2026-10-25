@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useSession } from '@/shared/auth';
 import type { ChatTurn, Conversation } from '../model';
 import { readConversations, writeConversations } from './chatbot-storage';
 
@@ -7,9 +6,7 @@ import { readConversations, writeConversations } from './chatbot-storage';
  * The conversations of the session (spec STORY-002), kept in `sessionStorage` and in memory. Local state: it belongs
  * to this screen only (guideline 05 C8). The empty "New conversation" is `openId === null` and is never stored.
  */
-export function useConversations() {
-  // The route guard has a session before this screen renders; 0 only keeps the types honest.
-  const userId = useSession().session?.user.id ?? 0;
+export function useConversations(userId: string) {
   const [stored, setStored] = useState(() => readConversations(userId));
   const [openId, setOpenId] = useState<string | null>(null);
 
