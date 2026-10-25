@@ -44,7 +44,36 @@ Knowledge Chatbot screen on mocks (`chatbot`, KAN-48).
 | 2 · Citations of an answer (KAN-73) | Trần Trung Hiếu | pending |
 | 3 · Session conversations (KAN-72) | Trần Trung Hiếu | pending |
 
+### platform
+
+Waiting for the user to re-approve the changed spec (X2, U3). Tasks 2–5 also wait on Trần Hải Anh's answer about the
+`workspaces` reshape changeset (design decision P1).
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · TenantContext and `runIn` (KAN-99) | Trần Trung Hiếu | pending |
+| 2 · Tenant schema, base entity, convention guard (KAN-98) | Trần Trung Hiếu | pending |
+| 3 · Row-level security (KAN-100) | Trần Hải Anh | pending |
+| 4 · Workspace registry (KAN-98) | Trần Trung Hiếu | pending |
+| 5 · Tenant Resolver of the web app and the isolation test (KAN-99) | Trần Trung Hiếu | pending |
+| 8 · File storage per Workspace (KAN-96) | Đặng Nhật Minh | pending |
+| 9 · Local Docker Compose (KAN-94) | Trần Trung Hiếu | pending |
+| 10 · Backend CI and images on GHCR (KAN-6, KAN-8, KAN-9) | Trần Trung Hiếu | pending |
+| 11 · Application VPS and the staging stack (KAN-10, KAN-11, KAN-12) | Trần Trung Hiếu | pending |
+| 12 · Main Caddy, Cloudflare DNS, wildcard certificates (KAN-13, KAN-95) | Trần Trung Hiếu | pending |
+| 13 · Deploy staging on merge with the smoke test (KAN-14) | Trần Trung Hiếu | pending |
+| 15 · Demo seed: the two Workspaces (KAN-97, moved forward) | Trần Trung Hiếu | pending |
+
 ## Demo Script
+
+### platform
+1. `mvn verify`: the tenant tests pass on Testcontainers as the application user — a native `SELECT` in Workspace A
+   returns no row of B, and `ALTER TABLE … DISABLE ROW LEVEL SECURITY` is refused.
+2. `docker compose up`: `curl -H 'Host: nosuch.localhost' localhost/api/v1/me` → 404 MSG119; on a seeded site
+   `<site>.localhost` → 401 MSG07.
+3. Merge to `main`: the `cd-staging` run shows pull, migrate, up, seed and the smoke test green;
+   `https://<site>.staging.tsolve.io.vn` opens with a valid certificate (after basic auth); `https://www.staging…` → 404.
+4. `infra-checks` workflow from a hosted runner: only 22/80/443 are open on the application VPS.
 
 ### fe-foundation
 1. Mock mode: pick "Project Manager + Knowledge Manager" in the dev user switcher → lands on Review Queue; the menu
