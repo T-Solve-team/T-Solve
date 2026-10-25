@@ -5,7 +5,7 @@ describe('msg', () => {
   it('AC-006.4 fills {tracker_name} with the configured tracker "Jira"', () => {
     expect(TRACKER_NAME).toBe('Jira');
     expect(msg('MSG17')).toBe(
-      'Changes requested. The author will see your comment in Jira and receive it by email.',
+      'Changes requested. The author will see your comment in Jira and receive it by email if their Account is Active.',
     );
   });
 

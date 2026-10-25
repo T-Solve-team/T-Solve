@@ -5,7 +5,7 @@
 > **Why it matters:** each role must land on its own screen, never see another role's screens, and get a
 > clear 403/404 instead of a broken page. Declaring access in one place per route keeps that consistent.
 
-## 1. Route map (all 35 web screens)
+## 1. Route map (all 34 web screens)
 
 Paths live in `shared/routing/paths.ts` (pre-filled). Always use `paths.*`, never type a path string.
 Roles follow Report3's Permission Matrix; "Employee" = every signed-in user (each user has the Employee role).
@@ -38,7 +38,6 @@ Roles follow Report3's Permission Matrix; "Employee" = every signed-in user (eac
 | 8.1 | Give Feedback (popup) | — | `feedback/GiveFeedbackModal` | Ticket Resolver, Project Manager |
 | 9.1 | Knowledge Dashboard | `/dashboard` | `knowledge-dashboard/KnowledgeDashboardPage` | Project Manager, Admin |
 | 9.2 | Audit Log | `/audit-log` | `audit-log/AuditLogPage` | Admin |
-| 9.3 | Audit Entry Detail (popup) | — | `audit-log/AuditEntryDetailModal` | Admin |
 | 10.1 | Triage History | `/triage-history` | `triage/TriageHistoryPage` | Project Manager |
 | 10.2 | Triage Result Detail (popup) | — | `triage/TriageResultDetailModal` | Project Manager |
 | 11.1 | Wiki Home | `/wiki` (`?space=&folder=`) | `wiki/WikiHomePage` | Employee |
@@ -143,7 +142,7 @@ Data you are not allowed to see is never sent by the backend; a 403 on a page's 
 ## 6. Popups have no route
 
 Hand Over Responsibilities, Delete Department, Import Ticket Preview, Request Changes, Reject Ticket, Give
-Feedback, Audit Entry Detail, Triage Result Detail and Folder are modals opened by their parent screen with local state (`const [isRejectOpen, setRejectOpen] = useState(false)`).
+Feedback, Triage Result Detail and Folder are modals opened by their parent screen with local state (`const [isRejectOpen, setRejectOpen] = useState(false)`).
 *Why:* the SRS defines them as popups of a screen; a URL for each adds routes nobody bookmarks.
 
 ## 7. Leaving a screen with unsaved work
@@ -161,7 +160,7 @@ Feedback, Audit Entry Detail, Triage Result Detail and Folder are modals opened 
   shown in the Login message area (MSG09, MSG10, MSG06). *(Backend contract — decision log.)*
 - **Session expired** (any 401 after sign-in): the global handler shows the **MSG07** dialog, then goes to
   `/login`. Never redirect silently.
-- Open point (UI decisions 04/10): whether Login also shows MSG73/MSG75 (the sign-in link from Jira). Not
+- Open point (UI decisions 04/10): whether Login also shows MSG75 (the account link from Jira). Not
   built until the FE Lead decides.
 
 ## 9. Checklist
