@@ -2,11 +2,23 @@
 name: be-foundation
 owner: Anh Tran Hai
 repos: [default]
-dependencies: []
+dependencies: [platform]
 complexity: medium
 paths:
-  - backend/src/main/java/vn/tsolve/common/**
-  - backend/src/test/java/vn/tsolve/common/**
+  - backend/src/main/java/vn/tsolve/common/config/**
+  - backend/src/main/java/vn/tsolve/common/error/**
+  - backend/src/main/java/vn/tsolve/common/exception/**
+  - backend/src/main/java/vn/tsolve/common/security/**
+  - backend/src/main/java/vn/tsolve/common/session/**
+  - backend/src/main/java/vn/tsolve/common/audit/**
+  - backend/src/main/java/vn/tsolve/common/util/**
+  - backend/src/test/java/vn/tsolve/common/config/**
+  - backend/src/test/java/vn/tsolve/common/error/**
+  - backend/src/test/java/vn/tsolve/common/exception/**
+  - backend/src/test/java/vn/tsolve/common/security/**
+  - backend/src/test/java/vn/tsolve/common/session/**
+  - backend/src/test/java/vn/tsolve/common/audit/**
+  - backend/src/test/java/vn/tsolve/common/util/**
   - backend/src/main/java/vn/tsolve/TSolveApplication.java
   - backend/src/main/resources/application*.yml
   - backend/src/main/resources/db/changelog/**
@@ -48,9 +60,11 @@ The backend base every module uses: the five Report3 roles and several roles per
 | Dependency | Interface | Description |
 |------------|-----------|-------------|
 | identity | User and role data | The roles the session reports |
+| platform | TenantContext (`common/tenant`) | The Workspace of the request; audit events and `/me` belong to it |
 
 ## Target Repos
-- default: backend/ (`common/`, configuration, the changelog master).
+- default: backend/ (`common/` except `common/tenant/`, which `platform` owns since 25/10, KAN-195; configuration,
+  the changelog master).
 
 ## Related Artifacts
 - Spec: `artifacts/03-modules/be-foundation/spec.md` (written when the module is planned)
