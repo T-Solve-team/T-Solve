@@ -1,7 +1,7 @@
 ---
 module: chatbot
 date: 2026-10-23
-total_tasks: 4
+total_tasks: 5
 owner: Dev
 ---
 
@@ -133,3 +133,29 @@ the list newest first by start time, open one highlighted, disabled while an ans
 **Covers:** AC-003.1–AC-003.6, AC-004.6; edge cases 22–28
 **Dependencies:** Task 3 (merged)
 **Estimated size:** small (~350 changed lines without generated code)
+
+---
+
+## Task 5: Ids are UUID strings
+
+**Story:** STORY-002
+**Feature:** uuid-ids
+**Jira:** new Subtask (Hiếu creates it) · ships in the PR of fe-foundation Task 10 · change request KAN-196 Q2
+(SPEC-P1-7)
+**Description:** In the contract, `WikiDocumentCitation.wikiDocumentId`, the `wikiDocumentIds` query parameter of
+`listUnavailableCitedDocuments` and `UnavailableDocuments.wikiDocumentIds` become `{ type: string, format: uuid }`;
+regenerate the client (with fe-foundation Task 10, which makes `session.user.id` a `string`). `model.ts`:
+`StoredConversations` is `{ version: 2; userId: string; … }`. `chatbot-storage.ts`: write version 2; drop version 1,
+a numeric `userId` and a citation whose `wikiDocumentId` is not a string. `useConversations` and `useRateAnswer`:
+no `?? 0` number fallback for the user id. `useUnavailableDocuments`, `ConversationThread`, `CitationList`,
+`ChatAnswer`: `string` ids and `ReadonlySet<string>`. Mock data and tests use UUID literals.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (regenerated)
+- Modify: `frontend/src/features/chatbot/model.ts`, `hooks/chatbot-storage.ts`, `hooks/useConversations.ts`,
+  `hooks/useRateAnswer.ts`, `hooks/useUnavailableDocuments.ts`, `components/ConversationThread.tsx`,
+  `components/CitationList.tsx`, `components/ChatAnswer.tsx`, `mocks/data.ts`, `mocks/handlers.ts`
+- Test: `frontend/src/features/chatbot/hooks/chatbot-storage.test.ts`, `mocks/handlers.test.ts`,
+  `pages/KnowledgeChatbotPage.test.tsx`
+**Covers:** AC-002.12
+**Dependencies:** fe-foundation Task 10 (same PR)
+**Estimated size:** small

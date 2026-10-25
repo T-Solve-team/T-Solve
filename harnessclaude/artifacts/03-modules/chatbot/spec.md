@@ -15,6 +15,7 @@ owner: BA
 | 2026-10-23 | STORY-001 | AC-001.7: the box is emptied only if it still holds the sent question | Review of PR #51 (finding 1): a follow-up typed while waiting was erased |
 | 2026-10-24 | STORY-003, STORY-004 | STORY-003: highlight after the save, remove a rating, ratings kept with the conversation, no comment; retention rule; AC-004.6 rating mocks; contract gains `DELETE` | Plan KAN-75 (UC-53, GBR-36); FE Lead 24/10: the two buttons of Figma 12.1 (c) only, no comment box |
 | 2026-10-25 | — (Requirements) | Requirements 2, 4 and 7 reworded and Requirement 8 added: Workspace scope decided by the server, knowledge gap, stored records carry their Workspace, Ollama on the T-Solve AI server with graceful failure; Out of Scope and Definition of Done point to the backend change; Interface Contracts: no endpoint takes a Workspace, `platform` and `ai` required. No acceptance criterion added, reworded or removed | Change request KAN-199 (GBR-12, GBR-36, GBR-37, D3, D28, D41); the user, 25/10: the server-side criteria are written by Hải Anh in her backend change (KAN-179…183) |
+| 2026-10-25 | STORY-002 | New AC-002.12: Wiki document ids and the user id are UUID strings; conversations stored with numeric ids are dropped. Interface Contracts: `wikiDocumentId` and `wikiDocumentIds` are `string` with `format: uuid` | Change request KAN-196 Q2 (the user, 25/10): UUID primary keys in every module, so ids are UUID strings in the contract (Phan_cong v6 §1); SPEC-P1-7 |
 
 ## Requirements
 
@@ -122,6 +123,9 @@ owner: BA
   - AC-002.10: IF that availability request fails, THEN THE web app SHALL show the Wiki citations as links.
   - AC-002.11: IF storage is blocked, THEN THE web app SHALL still answer questions and keep the conversations
     of the open page in memory.
+  - AC-002.12: THE web app SHALL keep the user id and every Wiki document id as UUID strings, in memory, in
+    storage and in the availability request; IF the stored conversations carry a numeric user id or Wiki document
+    id, THEN THE web app SHALL drop them as in AC-002.8.
 
 ### STORY-003: Rate an answer
 - As an Employee, I want to say whether an answer helped me so that weak answers and missing knowledge can be
@@ -181,7 +185,8 @@ POST /api/v1/chatbot/answers            # operationId askChatbot
   401, 403: ProblemDetail
   503:      ProblemDetail code MSG06       # AI module unavailable
 
-GET /api/v1/chatbot/unavailable-documents?wikiDocumentIds=1&wikiDocumentIds=2   # operationId listUnavailableCitedDocuments
+GET /api/v1/chatbot/unavailable-documents?wikiDocumentIds=<uuid>&wikiDocumentIds=<uuid>   # operationId listUnavailableCitedDocuments
+  wikiDocumentIds: string (uuid)[], at least 1      # AC-002.12
   200:      UnavailableDocuments          # the given ids the user can no longer view
 
 PUT /api/v1/chatbot/answers/{answerId}/rating      # operationId rateChatbotAnswer — STORY-003 (KAN-75)
@@ -208,7 +213,7 @@ ChatbotAnswer:
   text:      string                        # plain text with [n] markers; '' when NO_SOURCE
   citations: ChatbotCitation[]             # number order; [] when NO_SOURCE
 ChatbotCitation: oneOf, discriminator type
-  WikiDocumentCitation:   { number: int, type: WIKI_DOCUMENT, wikiDocumentId: int64, title: string }
+  WikiDocumentCitation:   { number: int, type: WIKI_DOCUMENT, wikiDocumentId: string (uuid), title: string }
   TicketSolutionCitation: { number: int, type: TICKET_SOLUTION, solution: CitedSolution }
 CitedSolution:
   required: [symptoms, rootCause, resolutionSteps, workaround, scopeOfApplicability]
@@ -218,7 +223,7 @@ ChatbotRating:
   rating:  HELPFUL | NOT_HELPFUL
 UnavailableDocuments:
   required: [wikiDocumentIds]
-  wikiDocumentIds: int64[]
+  wikiDocumentIds: string (uuid)[]
 ```
 
 A ticket citation carries no ticket id, title, link, Project, writer, snapshot or Evidence (GBR-36).

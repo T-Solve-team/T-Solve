@@ -40,9 +40,10 @@ QuestionBox ──submit──► useAskQuestion (generated askChatbot mutation,
   is the empty "New conversation", which is never stored. When the first answer of the empty conversation arrives,
   a conversation is created (`crypto.randomUUID()`, title = first question, `startedAt` = now) and opened. Every
   change is written to `sessionStorage`; on mount the stored value is read once.
-- **Storage:** `chatbot-storage.ts` reads and writes `{ version: 1, userId, conversations }` under
+- **Storage:** `chatbot-storage.ts` reads and writes `{ version: 2, userId, conversations }` under
   `tsolve.session.chatbot.conversations`, inside `try/catch`. A value of another user, another version or that
-  does not parse is dropped (AC-002.8); a blocked storage leaves the state in memory only (AC-002.11). Logout and
+  does not parse is dropped (AC-002.8); version 1 held numeric ids, so it is dropped too, and a stored citation is
+  valid only with a string `wikiDocumentId` (AC-002.12, Task 5); a blocked storage leaves the state in memory only (AC-002.11). Logout and
   a global 401 already remove the key (fe-foundation `resetSession`).
 - **Citations:** `CitationList` renders the citations in number order. A Wiki citation is a `Link` to
   `paths.wikiDocument(id)`, or MSG110 in secondary text when the id is in the unavailable list. A ticket citation is
@@ -64,7 +65,7 @@ WikiDocumentCitation, TicketSolutionCitation, CitedSolution, UnavailableDocument
 // features/chatbot/model.ts
 export type ChatTurn = { question: string; answer: ChatbotAnswer; rating?: ChatbotRating['rating'] };  // rating: Task 4
 export type Conversation = { id: string; title: string; startedAt: string; turns: ChatTurn[] };
-export type StoredConversations = { version: 1; userId: number; conversations: Conversation[] };
+export type StoredConversations = { version: 2; userId: string; conversations: Conversation[] };  // UUID ids (AC-002.12)
 export const HISTORY_LIMIT = 10;                      // turns sent with a follow-up (AC-002.5)
 export const QUESTION_MAX_LENGTH = 1000;              // SRS 12.1
 
@@ -117,6 +118,7 @@ export function toHistory(turns: ChatTurn[]): ChatbotTurn[];  // NO_SOURCE answe
 | Accessible states | Decided in planning (builder check): the pending answer is an answer block with `aria-busy="true"` and an antd `Spin`; the open conversation's list button has `aria-current="true"`; the thread is a `<section>` labelled by the open conversation's title; the title "Knowledge Chatbot" is the shell's h1 (route title), the page adds none | — | Tests find them by role; no new visible text |
 | Citation union | Decided in planning (builder check): `oneOf` with `discriminator: type`; if orval's output is not a usable TS union, Task 1 uses one `ChatbotCitation` object with `type` and the fields of both as optional, and the spec contract is updated through Change Mode | — | Keeps the generated client usable; the shape on the wire is the same |
 | Placeholder test of 12.1 | A one-time fe-foundation change request in the KAN-71 PR: AC-005.3 becomes "WHILE a screen of … is not built by its module, … SHALL show a placeholder" (Changelog row); the 12.1 row leaves `app/router/route-table.test.tsx` | Drop only 12.1 from AC-005.3 (a change request again for Wiki, Triage, Workspace Setup); a separate PR first; a quick change of the test only | It changes a criterion, so it is a change request; worded once, later modules remove their row with a quick change (user, 23/10) |
+| Ids (KAN-196 Q2) | `wikiDocumentId`, `wikiDocumentIds` and the session's `user.id` are UUID strings (generated as `string`); `ReadonlySet<string>` for the unavailable ids; storage `version: 2` with `userId: string`, so a version-1 value (numeric ids) is dropped (AC-002.12); Task 5 `uuid-ids`, in one PR with fe-foundation Task 10 | Keep int64; migrate version-1 values | UUID primary keys in every module (the user, 25/10; `backend/AGENTS.md` §2); stored conversations live one session only, so dropping them loses nothing that matters (SPEC-P1-7) |
 
 ## Backend defaults agreed 25/10
 
@@ -133,7 +135,8 @@ criteria yet (change request KAN-199, user 25/10). Spec Requirements 2, 4, 7 and
 | When there is no source | `NO_SOURCE` when retrieval has no hit at or above a configured minimum score (the chat LLM is not called), or when the model's answer cites none of the sources it was given | Only the retrieval check | GBR-36: every answer cites its sources, never an answer without a source |
 | The knowledge gap record | The stored `NO_SOURCE` answer itself (PII-masked question, Workspace, Account, time), kept by spec Requirement 7; a failed ask, a 400 and a Not helpful rating record none | A separate knowledge-gap record | One record; the Knowledge Dashboard counts `NO_SOURCE` answers per Workspace (D28) |
 | Dependencies named | `platform` (TenantContext) and `ai` (LLM and embedding clients, PII masking) in the spec's "Required from"; `module.md` is left to the KAN-195 owner | Also update `module.md`; describe capabilities only | Points the backend change at the right seams within this change request's scope |
-| Frontend | No change: the contract takes no Workspace, and `sessionStorage` is per origin, so per Workspace site; AC-002.8 stays as it is | Reword AC-002.8 to "another Account or another Workspace" | The browser already keeps the Workspace sites apart |
+| Frontend | No change for the Workspace: the contract takes no Workspace, and `sessionStorage` is per origin, so per Workspace site; AC-002.8 stays as it is (the UUID ids of KAN-196 Q2 are Task 5) | Reword AC-002.8 to "another Account or another Workspace" | The browser already keeps the Workspace sites apart |
+| Tables | `chatbot_answers` and `chatbot_ratings`, each under the platform tenant-table convention (platform AC-001.8, AC-001.11; `backend/AGENTS.md` §2 and §7): plural names, UUID `id` and `<entity>_id` columns, `workspace_id` and row-level security; `answerId` in the contract is the `chatbot_answers.id` UUID | `chatbot_answer` / `chatbot_rating` (singular, BIGSERIAL) | KAN-196 Q2 (the user, 25/10); SPEC-P1-7 |
 | Tracing backend tests | Backend tests are named per `backend/AGENTS.md` (`…_AC_nnn_n`); `sdd.ts trace` cannot see them yet (its globs miss `*Test.java`, its id pattern misses `AC_nnn_n`), to be fixed by a separate harness quick change | Require trace for backend stories now | Trace would fail for every backend criterion until sdd.ts is fixed |
 
 ## File Structure

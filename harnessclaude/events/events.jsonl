@@ -154,3 +154,6 @@
 {"ts":"2026-10-24T03:16:51.746Z","type":"quick-opened","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
 {"ts":"2026-10-24T03:35:06.720Z","type":"quick-closed","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
 {"ts":"2026-10-25T09:05:06.884Z","type":"spec-approved","module":"chatbot","specHash":"78085cd47969b017234ab92e16b7dccab7a64f39778684dee28ba6c85c5e4e43"}
+{"ts":"2026-10-25T13:11:41.275Z","type":"spec-approved","module":"chatbot","specHash":"d946d850ae59cb11fc9a264efba1f324436041acb8c7076b87cca332033499ca"}
+{"ts":"2026-10-25T13:16:13.262Z","type":"module-status","module":"chatbot","from":"completed","to":"planned"}
+{"ts":"2026-10-25T13:16:13.659Z","type":"feature-status","module":"chatbot","feature":"uuid-ids","from":null,"to":"pending"}
