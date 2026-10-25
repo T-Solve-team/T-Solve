@@ -1,6 +1,6 @@
 ---
 name: dashboard-audit
-owner: Trần Hải Anh (UC-34) · Đặng Nhật Minh (UC-35)
+owner: Trần Hải Anh (UC-34) · Phạm Tùng Dương (UC-35)
 repos: [default]
 dependencies: [ticket-review, search, triage, chatbot]
 complexity: medium
@@ -17,7 +17,7 @@ paths:
 
 # Module: dashboard-audit
 
-**Owner:** Trần Hải Anh (UC-34) · Đặng Nhật Minh (UC-35)
+**Owner:** Trần Hải Anh (UC-34) · Phạm Tùng Dương (UC-35)
 
 ## Description
 Dashboard & Audit (UC-34–35): the knowledge dashboard for a Project Manager's Department or the whole Workspace (last 30 days by default; triage Simple / Complex; knowledge gaps) and the audit log for the Admin.

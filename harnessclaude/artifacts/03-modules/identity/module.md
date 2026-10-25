@@ -1,8 +1,8 @@
 ---
 name: identity
-owner: Trần Trung Hiếu (UC-01–03) · Đặng Tấn Bình (UC-04–09) · Phạm Tùng Dương (RBAC rules)
+owner: Trần Trung Hiếu (UC-01–03) · Phạm Tùng Dương (UC-04–09, RBAC rules)
 repos: [default]
-dependencies: [be-foundation, fe-foundation]
+dependencies: [platform, be-foundation, fe-foundation]
 complexity: large
 paths:
   - backend/src/main/java/vn/tsolve/identity/**
@@ -18,7 +18,7 @@ paths:
 
 # Module: identity
 
-**Owner:** Trần Trung Hiếu (UC-01–03) · Đặng Tấn Bình (UC-04–09) · Phạm Tùng Dương (RBAC rules)
+**Owner:** Trần Trung Hiếu (UC-01–03) · Phạm Tùng Dương (UC-04–09, RBAC rules)
 
 ## Description
 Role-Based Access Control (UC-01–09): sign in with the company account through the OIDC Provider and log out, my profile, the user list, adding users, account status, roles and Department, and handing over Projects and Spaces.

@@ -160,3 +160,11 @@
 {"ts":"2026-10-25T13:16:11.910Z","type":"feature-status","module":"fe-foundation","feature":"site-sign-in","from":null,"to":"pending"}
 {"ts":"2026-10-25T13:16:12.518Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":null,"to":"pending"}
 {"ts":"2026-10-25T13:16:12.989Z","type":"feature-status","module":"fe-foundation","feature":"uuid-ids","from":null,"to":"pending"}
+{"ts":"2026-10-25T09:05:05.789Z","type":"spec-approved","module":"identity","specHash":"213e2182359181de330a50a2f49eb1848e78492b69ffd183707cbd5d9ba810a5"}
+{"ts":"2026-10-25T13:06:59.482Z","type":"spec-approved","module":"identity","specHash":"c208874d8621ec55883df21ecbea0eb8d7bea69282d7c1286d00e31453d0915f"}
+{"ts":"2026-10-24T23:56:42.604Z","type":"module-status","module":"platform","from":null,"to":"decomposed"}
+{"ts":"2026-10-24T23:56:42.775Z","type":"module-status","module":"platform-console","from":null,"to":"decomposed"}
+{"ts":"2026-10-24T23:56:42.970Z","type":"module-status","module":"worker","from":null,"to":"decomposed"}
+{"ts":"2026-10-24T23:56:43.158Z","type":"module-status","module":"ai","from":null,"to":"decomposed"}
+{"ts":"2026-10-24T23:57:45.099Z","type":"quick-opened","what":"Update tsolve-project.md to the multi-tenant baseline (KAN-195): Workspace per company, Platform Operator, Ollama on the AI VPS, CONTEXT.md and SRS_Delta as sources, owners per Jira","files":[".claude/tsolve-project.md"]}
+{"ts":"2026-10-25T09:05:21.403Z","type":"quick-closed","what":"Update tsolve-project.md to the multi-tenant baseline (KAN-195): Workspace per company, Platform Operator, Ollama on the AI VPS, CONTEXT.md and SRS_Delta as sources, owners per Jira","files":[".claude/tsolve-project.md"]}
