@@ -29,6 +29,7 @@ Master registry of all artifacts in this workspace.
 | — | design | fe-foundation | draft | artifacts/04-plans/fe-foundation/iteration-1/design.md |
 | — | tasks | fe-foundation | draft | artifacts/04-plans/fe-foundation/iteration-1/tasks.md |
 | — | spec | chatbot | draft | artifacts/03-modules/chatbot/spec.md |
+| — | spec | identity | draft | artifacts/03-modules/identity/spec.md |
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/design.md |
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/iteration-1/design.md |
 | — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-1/tasks.md |
