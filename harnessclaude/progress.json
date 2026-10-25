@@ -106,6 +106,30 @@
       "currentPhase": "decompose",
       "features": {},
       "lastUpdated": "2026-10-22T14:21:24.227Z"
+    },
+    "platform": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-24T23:56:42.594Z"
+    },
+    "platform-console": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-24T23:56:42.775Z"
+    },
+    "worker": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-24T23:56:42.970Z"
+    },
+    "ai": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-24T23:56:43.157Z"
     }
   },
   "dependencies": {},

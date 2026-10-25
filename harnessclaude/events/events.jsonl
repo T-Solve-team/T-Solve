@@ -153,3 +153,9 @@
 {"ts":"2026-10-24T02:58:23.540Z","type":"module-status","module":"chatbot","from":"evaluating","to":"completed"}
 {"ts":"2026-10-24T03:16:51.746Z","type":"quick-opened","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
 {"ts":"2026-10-24T03:35:06.720Z","type":"quick-closed","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
+{"ts":"2026-10-24T23:56:42.604Z","type":"module-status","module":"platform","from":null,"to":"decomposed"}
+{"ts":"2026-10-24T23:56:42.775Z","type":"module-status","module":"platform-console","from":null,"to":"decomposed"}
+{"ts":"2026-10-24T23:56:42.970Z","type":"module-status","module":"worker","from":null,"to":"decomposed"}
+{"ts":"2026-10-24T23:56:43.158Z","type":"module-status","module":"ai","from":null,"to":"decomposed"}
+{"ts":"2026-10-24T23:57:45.099Z","type":"quick-opened","what":"Update tsolve-project.md to the multi-tenant baseline (KAN-195): Workspace per company, Platform Operator, Ollama on the AI VPS, CONTEXT.md and SRS_Delta as sources, owners per Jira","files":[".claude/tsolve-project.md"]}
+{"ts":"2026-10-25T09:05:21.403Z","type":"quick-closed","what":"Update tsolve-project.md to the multi-tenant baseline (KAN-195): Workspace per company, Platform Operator, Ollama on the AI VPS, CONTEXT.md and SRS_Delta as sources, owners per Jira","files":[".claude/tsolve-project.md"]}

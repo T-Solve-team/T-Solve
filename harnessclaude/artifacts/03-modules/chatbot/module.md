@@ -1,8 +1,8 @@
 ---
 name: chatbot
-owner: Trần Trung Hiếu
+owner: Trần Trung Hiếu (web app, done) · Trần Hải Anh (backend)
 repos: [default]
-dependencies: [search, wiki]
+dependencies: [search, wiki, ai]
 complexity: medium
 paths:
   - backend/src/main/java/vn/tsolve/chatbot/**
@@ -16,7 +16,7 @@ paths:
 
 # Module: chatbot
 
-**Owner:** Trần Trung Hiếu
+**Owner:** Trần Trung Hiếu (web app, done) · Trần Hải Anh (backend)
 
 ## Description
 Knowledge Chatbot (UC-51–53, KAN-48): answers with citations from the Solutions of all Published tickets (without ticket details) and the Wiki documents the user may see; history for the session only; ratings (GBR-36). The backend package `chatbot` is proposed and built later; until then MSW mocks serve the contract (KAN-48). The web folder `frontend/src/features/chatbot/` moved from `fe-foundation` into these paths with the plan (KAN-69).
