@@ -211,3 +211,7 @@
 {"ts":"2026-10-25T17:45:00.496Z","type":"commit-recorded","module":"identity","repo":"default","sha":"bcae127fb14f03dee592fa6209ff86fb349eb435"}
 {"ts":"2026-10-25T17:45:00.769Z","type":"feature-status","module":"identity","feature":"user-list-review","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-25T17:49:51.777Z","type":"feature-status","module":"identity","feature":"user-list-review","from":"evaluating","to":"passing"}
+{"ts":"2026-10-25T17:51:25.983Z","type":"feature-status","module":"identity","feature":"add-user","from":"pending","to":"in-progress"}
+{"ts":"2026-10-25T18:06:39.644Z","type":"feature-status","module":"identity","feature":"add-user","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-25T18:07:33.892Z","type":"commit-recorded","module":"identity","repo":"default","sha":"6350ccd23e01e425984e8b6d05fd4c65814e729e"}
+{"ts":"2026-10-25T18:11:26.102Z","type":"commit-recorded","module":"identity","repo":"default","sha":"169712170a416fe976ac3e3591c21df2a58eb479"}
