@@ -12,6 +12,7 @@ owner: BA
 |------|-------|--------|--------|
 | 2026-10-23 | STORY-001..STORY-004 | Initial spec from Report3 (GBR-28, System_Messages, UC-35, Architecture diagram) and the planning decisions Q1–Q7 | The backend base every module builds on (KAN-68); fixes BUG-001 |
 | 2026-10-23 | STORY-002 | AC-002.7 and AC-002.8 also name `/v3/api-docs.yaml`; AC-002.13 covers a signed-in user only (no signed-in user → AC-002.4) | Plan review: `npm run api:pull` downloads `/v3/api-docs.yaml`, which `/v3/api-docs/**` does not match; AC-002.13 contradicted AC-002.4 for a request with no user and no token |
+| 2026-10-25 | STORY-003, STORY-004 | AC-003.6 reworded (ids are UUID strings, as the fe-foundation contract says); AC-004.6 and AC-004.7 reworded (`audit_events` under the platform tenant-table convention replaces `audit_event`, whose dev rows are dropped); AC-004.8 reworded (also AC-004.9 and AC-004.10); new AC-004.9 (the bound Workspace is stored) and AC-004.10 (no Workspace bound: throw, store nothing); Interface Contracts: the principal's `id` is a `UUID`, `platform` required | Change request KAN-196 Q2 (the user, 25/10): UUID primary keys and plural table names in every module (Phan_cong v6 §1); `audit_event` leaves the platform legacy allow-list now that be-foundation is built (platform AC-001.8, AC-001.11); SPEC-P1-7 (U1 = A, U2 = A) |
 
 ## Requirements
 
@@ -118,7 +119,8 @@ owner: BA
     `department` null, an empty list, or `workspaceReady` false for that part, and still answer 200.
   - AC-003.5: IF nobody is signed in, THEN THE backend SHALL answer `/me` with 401 and `code` `MSG07`.
   - AC-003.6: THE response of `/me` SHALL match the `CurrentUser` schema of `frontend/openapi/tsolve-api.yaml`
-    (field names, nullability, `Role` and `ProjectRole` values); the contract is not changed.
+    (field names, nullability, `Role` and `ProjectRole` values), with every id (`user.id`, `departmentId`,
+    `projectId`, `spaceId`) a UUID string as the fe-foundation Interface Contracts give it (KAN-196 Q2).
 
 ### STORY-004: Audit events
 - As an Admin, I want every listed action recorded once, with who did it to what and when, and never changed, so
@@ -133,12 +135,18 @@ owner: BA
   - AC-004.3: IF `record` is called outside a transaction, THEN THE backend SHALL throw and store nothing.
   - AC-004.4: IF `record` is called with no signed-in user, THEN THE backend SHALL throw and store nothing.
   - AC-004.5: WHEN the caller's transaction rolls back, THE backend SHALL keep no audit event of it.
-  - AC-004.6: IF anything tries to update or delete a row of `audit_event`, THEN THE database SHALL reject it.
-  - AC-004.7: THE `audit_event` table SHALL have `actor`, `action`, `resource_type`, `resource_id` and `created_at`,
-    and no `result` column, through a new Liquibase changeset that keeps the rows already there (decision Q4).
-  - AC-004.8: THE tests of AC-004.5, AC-004.6 and AC-004.7 SHALL run against a real PostgreSQL started by
-    Testcontainers from the image `pgvector/pgvector:pg16`, with the Liquibase changelog applied as in production
-    (decision Q7).
+  - AC-004.6: IF anything tries to update or delete a row of `audit_events`, THEN THE database SHALL reject it.
+  - AC-004.7: THE `audit_events` table SHALL follow the platform tenant-table convention (platform AC-001.8) as an
+    append-only table, with `id` (UUID), `workspace_id`, `actor`, `action`, `resource_type`, `resource_id` and
+    `created_at`, and no `result` or `updated_at` column. A new Liquibase changeset SHALL create it and drop the
+    table `audit_event` with its rows, so that `audit_event` is no longer in the schema or on the platform legacy
+    allow-list (platform AC-001.11) (decision Q4; KAN-196 Q2).
+  - AC-004.8: THE tests of AC-004.5, AC-004.6, AC-004.7, AC-004.9 and AC-004.10 SHALL run against a real PostgreSQL
+    started by Testcontainers from the image `pgvector/pgvector:pg16`, with the Liquibase changelog applied as in
+    production (decision Q7).
+  - AC-004.9: WHEN `record` stores an audit event, THE backend SHALL store the id of the Workspace bound to the
+    request or job (platform `TenantContext`) as its `workspace_id`.
+  - AC-004.10: IF `record` is called while no Workspace is bound, THEN THE backend SHALL throw and store nothing.
 
 ## Out of Scope
 - Signing in and out (OIDC, the session cookie, `POST /api/v1/auth/logout`), user accounts and roles data, MSG09 and
@@ -162,15 +170,19 @@ owner: BA
 - **Errors** (`vn.tsolve.common.exception`): `NotFoundException` (404), `BusinessRuleException` (409), each built
   with a message code, optional `params` and, for `BusinessRuleException`, an optional field; plus the message-only
   constructors kept for existing callers. Every error body follows the contract's `ProblemDetail` and `FieldError`.
-- **Roles** (`vn.tsolve.common.security`): the five role constants; the signed-in user principal (`id`, `email`,
-  `fullName`, roles) that `identity` puts in the security context at sign-in; `@WithTSolveUser` for tests.
+- **Roles** (`vn.tsolve.common.security`): the five role constants; the signed-in user principal (`id` as a `UUID`,
+  `email`, `fullName`, roles) that `identity` puts in the security context at sign-in; `@WithTSolveUser` for tests.
 - **Audit** (`vn.tsolve.common.audit`): `AuditService.record(AuditAction action, String resourceType,
-  String resourceId)`.
-- **Database**: the `audit_event` changeset; the Liquibase master changelog stays the one entry point.
+  String resourceId)`; `resourceId` stays a string (a UUID or another key of the resource).
+- **Database**: the `audit_events` changeset (AC-004.7); the Liquibase master changelog stays the one entry point.
 
 ### Required from other modules
+- `platform` (KAN-196, Trần Trung Hiếu): `TenantContext.requireWorkspaceId()` (AC-004.9, AC-004.10), the
+  `workspaces` table that `audit_events.workspace_id` references (its changeset runs before the `audit_events` one),
+  the tenant-table convention and the legacy allow-list (platform AC-001.8, AC-001.11) and its convention guard test.
+
 Interfaces in `common`, each implemented by the module named; until then `/me` uses the empty answer (AC-003.4):
-- Department lookup (`identity`): the Department of a Project Manager by user id, or none.
+- Department lookup (`identity`): the Department of a Project Manager by user id (a `UUID`), or none.
 - Project membership lookup (`project-integration`): the user's Projects with Jira project key, Department and their
   role in each.
 - Managed Space lookup (`wiki`): the Spaces the user manages as Knowledge Manager.

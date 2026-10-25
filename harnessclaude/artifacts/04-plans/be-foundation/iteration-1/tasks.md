@@ -44,12 +44,12 @@ of the three existing callers. BUG-001's row → `Fixed` with the PR and the tes
 **Story:** STORY-002
 **Feature:** roles-security
 **Jira:** KAN-? (to create) · branch `feat/KAN-<n>-be-foundation-roles-security`
-**Description:** `Role` enum and `Roles` constants; `TSolveUser` principal with `authorities()` (always
+**Description:** `Role` enum and `Roles` constants; `TSolveUser` principal (`UUID id`, KAN-196 Q2) with `authorities()` (always
 `ROLE_EMPLOYEE`, no duplicates) and `TSolveUser.current()`; `SecurityConfig`: public paths, `/api/**` authenticated,
 everything else denied, `@EnableMethodSecurity`, CORS from `WebConfig`, CSRF SPA setup, entry point 401 MSG07,
 access-denied handler 403 MSG07 for a CSRF failure and MSG08 otherwise, through `ProblemDetails`; exclude
 `UserDetailsServiceAutoConfiguration`; `springdoc.swagger-ui.csrf.enabled`; `@WithTSolveUser` for tests; test
-`config/application.yml`. Tell the `identity` owner how sign-in must fill the security context, and the
+`config/application.yml`; `@WithTSolveUser` gives a fixed UUID id by default. Tell the `identity` owner how sign-in must fill the security context, and the
 `ticket-repository` / `ticket-review` owners that their endpoints now need `@PreAuthorize`.
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/common/security/Role.java`, `Roles.java`, `TSolveUser.java`,
@@ -75,7 +75,9 @@ access-denied handler 403 MSG07 for a CSRF failure and MSG08 otherwise, through 
 `@Schema(requiredMode = REQUIRED)` and `department` also `nullable = true`; `SessionService` /
 `SessionServiceImpl` (user and roles from `TSolveUser.current()`, optional lookups through `ObjectProvider`,
 `departments` = `department` then each Project's Department, once each); `SessionController` `GET /api/v1/me`
-(`operationId` `getMe`, `@PreAuthorize` EMPLOYEE). No contract change.
+(`operationId` `getMe`, `@PreAuthorize` EMPLOYEE). Every id component is a `UUID` (design "Ids in `/me` and the
+principal"), so the generated schema matches the contract once fe-foundation Task 10 has made its ids UUID strings
+(AC-003.6); the lookups take the user id as a `UUID`.
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/common/session/controller/SessionController.java`,
   `service/SessionService.java`, `service/impl/SessionServiceImpl.java`, `lookup/DepartmentLookup.java`,
@@ -85,9 +87,9 @@ access-denied handler 403 MSG07 for a CSRF failure and MSG08 otherwise, through 
 - Test: `backend/src/test/java/vn/tsolve/common/session/SessionServiceImplTest.java` (Mockito, lookups present and
   missing), `SessionControllerTest.java` (`@WebMvcTest`: 200 with every contract field incl. `department: null`, 401),
   `CurrentUserSchemaTest.java` (swagger-core `ModelConverters`: schema names, `required` lists, nullable
-  `department`, as in the contract)
+  `department`, ids `string` / `uuid`, as in the contract)
 **Covers:** AC-003.1–AC-003.6; edge cases 14, 15, 16, 17
-**Dependencies:** Task 2 (`TSolveUser`, `@WithTSolveUser`, security)
+**Dependencies:** Task 2 (`TSolveUser`, `@WithTSolveUser`, security); fe-foundation Task 10 (the contract's UUID ids)
 **Estimated size:** small
 
 ---
@@ -97,8 +99,11 @@ access-denied handler 403 MSG07 for a CSRF failure and MSG08 otherwise, through 
 **Story:** STORY-004
 **Feature:** audit-writer
 **Jira:** KAN-? (to create) · branch `feat/KAN-<n>-be-foundation-audit-writer`
-**Description:** `AuditAction`; `AuditService` / `AuditServiceImpl` (`JdbcTemplate` INSERT; throws without a
-transaction or a signed-in user; non-null arguments); the changeset (next free number at merge) included in the
+**Description:** `AuditAction`; `AuditService` / `AuditServiceImpl` (`JdbcTemplate` INSERT with `workspace_id` from
+`TenantContext.requireWorkspaceId()`; throws without a transaction, a signed-in user or a bound Workspace; non-null
+arguments); the changeset that drops `audit_event` and creates `audit_events` under the platform convention (design
+Data Model; KAN-196 Q2), and `audit_event` taken off the platform legacy allow-list of the convention guard test
+(platform AC-001.11); the changeset (next free number at merge) included in the
 master changelog; the two Testcontainers test dependencies (`spring-boot-testcontainers`,
 `org.testcontainers:postgresql`; no `junit-jupiter`) and `TestcontainersConfiguration` (a `@ServiceConnection`
 `PostgreSQLContainer` bean, image `pgvector/pgvector:pg16` marked `asCompatibleSubstituteFor("postgres")`); `backend/AGENTS.md` §8 allows
@@ -106,11 +111,13 @@ database tests with Testcontainers; tell the `dashboard-audit` owner the table a
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/common/audit/AuditAction.java`, `AuditService.java`,
   `impl/AuditServiceImpl.java`
-- Create: `backend/src/main/resources/db/changelog/changes/NNN-audit-event-append-only.sql`
+- Create: `backend/src/main/resources/db/changelog/changes/NNN-audit-events.sql`
 - Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `backend/pom.xml`, `backend/AGENTS.md`
 - Test: `backend/src/test/java/vn/tsolve/common/audit/AuditServiceImplTest.java` (unit: no transaction, no user,
-  values written), `AuditEventDatabaseTest.java` (Testcontainers: row stored, rollback leaves none, UPDATE / DELETE /
-  TRUNCATE refused, old rows kept, columns), `backend/src/test/java/vn/tsolve/common/TestcontainersConfiguration.java`
-**Covers:** AC-004.1–AC-004.8; edge cases 18, 19, 20, 21, 22, 23, 25
-**Dependencies:** Task 2 (`TSolveUser.current()`)
+  values written), `AuditEventDatabaseTest.java` (Testcontainers, as the application user with a Workspace bound through
+  `TenantContext.runIn`: row stored with that Workspace, rollback leaves none, UPDATE / DELETE / TRUNCATE refused,
+  columns, `audit_event` gone, no Workspace bound refused), `backend/src/test/java/vn/tsolve/common/TestcontainersConfiguration.java`
+**Covers:** AC-004.1–AC-004.10; edge cases 18, 19, 20, 21, 22, 23, 25, 26, 27
+**Dependencies:** Task 2 (`TSolveUser.current()`); `platform` STORY-001…STORY-003 merged (`workspaces` with UUID
+ids, `TenantContext`, row-level security setup, the guard test and its allow-lists)
 **Estimated size:** medium
