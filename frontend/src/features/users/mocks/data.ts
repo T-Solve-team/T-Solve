@@ -1,6 +1,12 @@
-import type { DepartmentRef, UserAccount } from '@/shared/api';
+import type { DepartmentRef, SpaceRef, UserAccount } from '@/shared/api';
 
 export const WORKSPACE_ID = 1;
+export const COMPANY_DOMAIN = 'company.example';
+export const SPACES: SpaceRef[] = [
+  { spaceId: 1, name: 'IT Knowledge' },
+  { spaceId: 2, name: 'HR Knowledge' },
+  { spaceId: 3, name: 'Engineering Handbook' },
+];
 export const DEPARTMENTS: DepartmentRef[] = [
   { departmentId: 1, name: 'IT' },
   { departmentId: 2, name: 'HR' },
@@ -34,11 +40,12 @@ const NAMES = [
 ];
 
 /** Synthetic records; the foreign Workspace record exercises isolation before paging. */
-export function seedUsers(): (UserAccount & { workspaceId: number })[] {
+export function seedUsers(): (UserAccount & { workspaceId: number; spaceIds: number[] })[] {
   return [
-    ...NAMES.map((fullName, index): UserAccount & { workspaceId: number } => ({
+    ...NAMES.map((fullName, index): UserAccount & { workspaceId: number; spaceIds: number[] } => ({
       id: `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
       workspaceId: WORKSPACE_ID,
+      spaceIds: index === 2 ? [1] : index === 6 ? [2] : [],
       fullName,
       email: `user${index + 1}@company.example`,
       roles:
@@ -59,6 +66,7 @@ export function seedUsers(): (UserAccount & { workspaceId: number })[] {
     {
       id: '20000000-0000-4000-8000-000000000099',
       workspaceId: 2,
+      spaceIds: [],
       fullName: 'Other Workspace',
       email: 'foreign@other.example',
       roles: ['EMPLOYEE'],

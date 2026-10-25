@@ -18,6 +18,29 @@ tags:
     description: Knowledge Chatbot questions and answers (Report3 UC-51, GBR-36; SRS III.12.1).
 paths:
   /api/v1/users:
+    post:
+      tags: [users]
+      operationId: createUser
+      summary: Create a Workspace account (frontend mock proposal); Employee is always retained.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateUserRequest' }
+      responses:
+        '201':
+          description: Account created; full name is populated on first company sign-in.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserAccount' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
     get:
       tags: [users]
       operationId: getUsers
@@ -48,6 +71,21 @@ paths:
               schema: { $ref: '#/components/schemas/UserAccountPage' }
         '400':
           $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/users/creation-options:
+    get:
+      tags: [users]
+      operationId: getUserCreationOptions
+      summary: Workspace company domain and Spaces for adding an account (frontend mock proposal).
+      responses:
+        '200':
+          description: Options in the current Workspace, including occupied Spaces so conflicts remain explicit.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserCreationOptions' }
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -351,6 +389,29 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    CreateUserRequest:
+      type: object
+      required: [email, roles]
+      properties:
+        email: { type: string, format: email, minLength: 1, maxLength: 100 }
+        roles:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/Role' }
+        departmentId: { type: [integer, 'null'], format: int64 }
+        spaceIds:
+          type: array
+          uniqueItems: true
+          description: At least one Space when KNOWLEDGE_MANAGER is selected; each Space has one manager.
+          items: { type: integer, format: int64 }
+    UserCreationOptions:
+      type: object
+      required: [companyDomain, spaces]
+      properties:
+        companyDomain: { type: string }
+        spaces:
+          type: array
+          items: { $ref: '#/components/schemas/SpaceRef' }
     UserAccountStatus:
       type: string
       enum: [ACTIVE, DEACTIVATED]
