@@ -105,7 +105,7 @@ export function toHistory(turns: ChatTurn[]): ChatbotTurn[];  // NO_SOURCE answe
 | Rating errors | `handlesOwnErrors`: every error but a 401 shows MSG06 (a 401 stays with the global handler: sign out, MSG07) | The global handler | Same pattern as the ask (AC-001.13) |
 | Split (KAN-75) | One task, one PR: contract, mocks, buttons, storage (~350 lines) | Two PRs | One behaviour a user can try (user, 24/10) |
 | Mock answers | Keyword answers; others `NO_SOURCE` | One fixed answer | Demos every Figma state (user, 23/10) |
-| AI provider | Ollama for answers, OpenRouter for embeddings, key in backend `.env` only (GBR-12); the model is chosen in the backend change | — | Report3 decides it (user, 23/10) |
+| AI provider | Ollama on the T-Solve AI server (the dedicated AI VPS operated by the T-Solve team) for both the chat LLM and the bge-m3 embeddings (1024 dimensions), reached only from the application server over a private, encrypted link; its address in backend `.env`; no third-party AI service; the chat model is chosen in the backend change (KAN-199) | OpenRouter for embeddings (dropped: D3, CR-07, no content leaves the T-Solve servers); Ollama on the application VPS (rejected: D41, the models need their own CPU and RAM) | D3, D41, GBR-12 (user, 25/10; replaces the 23/10 row "Ollama for answers, OpenRouter for embeddings") |
 | Split | Three vertical slices, one PR each, each with the contract and mocks its behaviour needs: KAN-71 ask and answer (ask path), KAN-73 citations (availability path), KAN-72 session conversations | One PR for KAN-48 (~1,250 lines); four PRs with the contract alone (KAN-70, closed) | Each PR is one behaviour a user can try and near 400 changed lines; a contract ships with its first screen (guideline 06 "one feature = one PR"); behaviour comes before the line count: KAN-71 is ~850 lines with tests and is not split further (user, 23/10) |
 | Errors of the ask | `handlesOwnErrors`: field errors under the box, every other error MSG06 | The global handler | The global handler would show a 503's code; AC-001.13 wants MSG06 always and the box kept |
 | History sent | Decided in planning: the last 10 turns, question and answer text only, no citations | Every turn | Bounded request size; citations add nothing to the model's context |
@@ -117,6 +117,24 @@ export function toHistory(turns: ChatTurn[]): ChatbotTurn[];  // NO_SOURCE answe
 | Accessible states | Decided in planning (builder check): the pending answer is an answer block with `aria-busy="true"` and an antd `Spin`; the open conversation's list button has `aria-current="true"`; the thread is a `<section>` labelled by the open conversation's title; the title "Knowledge Chatbot" is the shell's h1 (route title), the page adds none | — | Tests find them by role; no new visible text |
 | Citation union | Decided in planning (builder check): `oneOf` with `discriminator: type`; if orval's output is not a usable TS union, Task 1 uses one `ChatbotCitation` object with `type` and the fields of both as optional, and the spec contract is updated through Change Mode | — | Keeps the generated client usable; the shape on the wire is the same |
 | Placeholder test of 12.1 | A one-time fe-foundation change request in the KAN-71 PR: AC-005.3 becomes "WHILE a screen of … is not built by its module, … SHALL show a placeholder" (Changelog row); the 12.1 row leaves `app/router/route-table.test.tsx` | Drop only 12.1 from AC-005.3 (a change request again for Wiki, Triage, Workspace Setup); a separate PR first; a quick change of the test only | It changes a criterion, so it is a change request; worded once, later modules remove their row with a quick change (user, 23/10) |
+
+## Backend defaults agreed 25/10
+
+For Hải Anh's backend change (KAN-179…183), which turns them into acceptance criteria of the spec; they are not
+criteria yet (change request KAN-199, user 25/10). Spec Requirements 2, 4, 7 and 8 state the rules.
+
+| Topic | Default | Alternatives Considered | Rationale |
+|-------|---------|------------------------|-----------|
+| Scope of KAN-199 | Data scope only: Workspace, knowledge gap, AI server and its failure | Also PII-masking rules, retention jobs, rating storage, the prompt | Those are the backend owner's design (KAN-179…183) |
+| An id of another Workspace | Rating `PUT` / `DELETE` with an `answerId` of another Workspace → 404, nothing changes; a `wikiDocumentIds` id the user cannot view, unknown or of another Workspace → listed in `UnavailableDocuments` (MSG110) | 403; ignore silently (204 no-op, id left out) | Looks the same as a record that does not exist; leaving an id out would show a link the user cannot open (GBR-37) |
+| Who rates an answer | Only the Account that asked it; any other `answerId` → 404 | Any Account of the Workspace | The `answerId` only reaches the asker; ratings are kept with the rater (spec Requirement 7) |
+| The `history` turns | Context only: never retrieved as a source, never cited; PII-masked before Ollama like the question; the Workspace and source check runs on the new question | Not specified | The client can forge the text; GBR-36 masks questions, so the earlier turns are masked too |
+| Slow or down AI server | One time limit of 60 s for the whole ask (embedding and chat), set in backend `.env`; when it runs out or Ollama answers with an error → 503 `MSG06`, no answer stored, no knowledge gap, no retry; rating and availability need no AI and keep working | 120 s; the number left to the backend design | GBR-12; a measurable limit; the frontend already maps 503 to MSG06 (AC-001.13); tunable after the benchmark (KAN-140) |
+| When there is no source | `NO_SOURCE` when retrieval has no hit at or above a configured minimum score (the chat LLM is not called), or when the model's answer cites none of the sources it was given | Only the retrieval check | GBR-36: every answer cites its sources, never an answer without a source |
+| The knowledge gap record | The stored `NO_SOURCE` answer itself (PII-masked question, Workspace, Account, time), kept by spec Requirement 7; a failed ask, a 400 and a Not helpful rating record none | A separate knowledge-gap record | One record; the Knowledge Dashboard counts `NO_SOURCE` answers per Workspace (D28) |
+| Dependencies named | `platform` (TenantContext) and `ai` (LLM and embedding clients, PII masking) in the spec's "Required from"; `module.md` is left to the KAN-195 owner | Also update `module.md`; describe capabilities only | Points the backend change at the right seams within this change request's scope |
+| Frontend | No change: the contract takes no Workspace, and `sessionStorage` is per origin, so per Workspace site; AC-002.8 stays as it is | Reword AC-002.8 to "another Account or another Workspace" | The browser already keeps the Workspace sites apart |
+| Tracing backend tests | Backend tests are named per `backend/AGENTS.md` (`…_AC_nnn_n`); `sdd.ts trace` cannot see them yet (its globs miss `*Test.java`, its id pattern misses `AC_nnn_n`), to be fixed by a separate harness quick change | Require trace for backend stories now | Trace would fail for every backend criterion until sdd.ts is fixed |
 
 ## File Structure
 
@@ -151,6 +169,7 @@ frontend/
 ## External Dependencies
 - None new. MSW serves the contract until the backend `chatbot` package exists.
 - PR #30 (`search`, Hải Anh): `SearchHit` must carry the Solution by section for the backend change.
+- The backend change (later): Ollama on the T-Solve AI server (D3, D41), reached through the `ai` module; no other AI service.
 
 ## Edge Cases & Risks
 
