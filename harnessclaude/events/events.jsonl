@@ -172,3 +172,18 @@
 {"ts":"2026-10-24T23:56:43.158Z","type":"module-status","module":"ai","from":null,"to":"decomposed"}
 {"ts":"2026-10-24T23:57:45.099Z","type":"quick-opened","what":"Update tsolve-project.md to the multi-tenant baseline (KAN-195): Workspace per company, Platform Operator, Ollama on the AI VPS, CONTEXT.md and SRS_Delta as sources, owners per Jira","files":[".claude/tsolve-project.md"]}
 {"ts":"2026-10-25T09:05:21.403Z","type":"quick-closed","what":"Update tsolve-project.md to the multi-tenant baseline (KAN-195): Workspace per company, Platform Operator, Ollama on the AI VPS, CONTEXT.md and SRS_Delta as sources, owners per Jira","files":[".claude/tsolve-project.md"]}
+{"ts":"2026-10-25T09:58:54.132Z","type":"spec-approved","module":"platform","specHash":"99bf1d6c89a7b50b593744146a307fd5f6e8edcfffc64b8c93467fdfc9cb41fc"}
+{"ts":"2026-10-25T10:23:32.400Z","type":"feature-status","module":"platform","feature":"tenant-context","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.456Z","type":"feature-status","module":"platform","feature":"tenant-schema","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.509Z","type":"feature-status","module":"platform","feature":"row-level-security","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.556Z","type":"feature-status","module":"platform","feature":"workspace-registry","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.600Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.645Z","type":"feature-status","module":"platform","feature":"file-storage","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.692Z","type":"feature-status","module":"platform","feature":"local-compose","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.745Z","type":"feature-status","module":"platform","feature":"ci-images","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.795Z","type":"feature-status","module":"platform","feature":"staging-servers","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.844Z","type":"feature-status","module":"platform","feature":"edge-caddy","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.906Z","type":"feature-status","module":"platform","feature":"staging-cd","from":null,"to":"pending"}
+{"ts":"2026-10-25T10:23:32.956Z","type":"feature-status","module":"platform","feature":"demo-seed-workspaces","from":null,"to":"pending"}
+{"ts":"2026-10-25T13:03:20.576Z","type":"spec-approved","module":"platform","specHash":"a73026ef706cae1ca938544c538d176f7d958db0729871bb68b07df5adf898fa"}
+{"ts":"2026-10-25T13:16:09.818Z","type":"module-status","module":"platform","from":"decomposed","to":"planned"}

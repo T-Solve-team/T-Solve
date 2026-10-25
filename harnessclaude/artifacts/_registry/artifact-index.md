@@ -5,6 +5,7 @@ Master registry of all artifacts in this workspace.
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
 | ITER-1 | iteration | — | planned | artifacts/07-iterations/iteration-1.md |
+| ITER-2 | iteration | — | planned | artifacts/07-iterations/iteration-2.md |
 | — | architecture | — | draft | artifacts/03-modules/architecture.md |
 | — | context-brief | — | draft | artifacts/02-discovery/context-brief.md |
 | — | module-map | — | draft | artifacts/03-modules/module-map.md |
@@ -37,6 +38,12 @@ Master registry of all artifacts in this workspace.
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/design.md |
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/iteration-1/design.md |
 | — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-1/tasks.md |
+| — | spec | platform | draft | artifacts/03-modules/platform/spec.md |
+| — | design | platform | draft | artifacts/04-plans/platform/design.md |
+| — | design | platform | draft | artifacts/04-plans/platform/iteration-1/design.md |
+| — | tasks | platform | draft | artifacts/04-plans/platform/iteration-1/tasks.md |
+| — | design | platform | draft | artifacts/04-plans/platform/iteration-2/design.md |
+| — | tasks | platform | draft | artifacts/04-plans/platform/iteration-2/tasks.md |
 | — | session-log | chatbot | passing | artifacts/05-implementation/chatbot/task-1-ask-answer.md |
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-6-placeholder-rule.md |
 | — | review | chatbot | pass | artifacts/06-evaluation/chatbot/task-1-ask-answer-review.md |
