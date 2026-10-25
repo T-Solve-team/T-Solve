@@ -142,8 +142,8 @@
     }
   },
   "identity": {
-    "specHash": "213e2182359181de330a50a2f49eb1848e78492b69ffd183707cbd5d9ba810a5",
-    "approvedAt": "2026-10-25T09:05:05.780Z",
+    "specHash": "c208874d8621ec55883df21ecbea0eb8d7bea69282d7c1286d00e31453d0915f",
+    "approvedAt": "2026-10-25T13:06:59.479Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site, THE backend SHALL create a state value for the Workspace that the platform resolved from the host and answer 302 to , without a signed-in user.",

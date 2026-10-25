@@ -154,3 +154,4 @@
 {"ts":"2026-10-24T03:16:51.746Z","type":"quick-opened","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
 {"ts":"2026-10-24T03:35:06.720Z","type":"quick-closed","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
 {"ts":"2026-10-25T09:05:05.789Z","type":"spec-approved","module":"identity","specHash":"213e2182359181de330a50a2f49eb1848e78492b69ffd183707cbd5d9ba810a5"}
+{"ts":"2026-10-25T13:06:59.482Z","type":"spec-approved","module":"identity","specHash":"c208874d8621ec55883df21ecbea0eb8d7bea69282d7c1286d00e31453d0915f"}

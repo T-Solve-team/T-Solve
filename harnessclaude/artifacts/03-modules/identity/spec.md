@@ -15,6 +15,7 @@ spec by their owner (Changelog).
 |------|-------|--------|--------|
 | 2026-10-25 | STORY-001..STORY-003 | Initial spec of the UC-01…03 slice: central sign-in through `login.` with Google OIDC, the session per Workspace site, the Platform Operator and Jira-link sign-ins, log out, My Profile with solution history. Written from Report3 (GBR-03, GBR-19, GBR-28, GBR-37, D1, D9, D13, D14, D22, D23, D36), Stories TS-020, TS-021, TS-023, TS-127 and the planning decisions Q1–Q16 of 25/10 | KAN-197 (Phase 1, multi-tenant baseline) |
 | 2026-10-25 | — | UC-04…09 (View user list, Add Account, Update Account status, Update roles and Department, Hand over Projects, Hand over Spaces) will be added as STORY-004 onwards by their owner Phạm Tùng Dương (KAN-107…112) | One module, two owners (D40: the Jira assignee owns the Story) |
+| 2026-10-25 | STORY-001, STORY-003 | Interface Contracts only: `MySolution.ticketId` is a UUID string (`format: uuid`); the Account table is `accounts` and the Roles table `account_roles`, each with a UUID `id` under the platform convention (platform AC-001.8); `jira_account_links` keeps its D1 name. No acceptance criterion added, reworded or removed (`SpaceRef` follows the fe-foundation contract) | Change request KAN-196 Q2 (the user, 25/10): UUID primary keys and plural table names in every module (Phan_cong v6 §1); SPEC-P1-7 |
 
 ## Requirements
 
@@ -209,7 +210,7 @@ spec by their owner (Changelog).
   MySolutionPage: { content: MySolution[], page: PageMetadata }   # both required, as ReviewQueuePage
   MySolution:
     required: [ticketId, ticketKey, title, projectName, status, updatedAt, canOpen]
-    ticketId:    int64      # path id of Ticket Detail
+    ticketId:    string (uuid)   # path id of Ticket Detail
     ticketKey:   string     # the Ticket ID
     title:       string
     projectName: string
@@ -242,17 +243,19 @@ spec by their owner (Changelog).
 - `AccountDirectory`:
   - for `platform-console`: the number of Active and Deactivated Accounts of a Workspace (UC-54), and whether
     any Admin of a Workspace has signed in (D14, UC-56);
-  - for every module: an Account by id, in the caller's Workspace.
+  - for every module: an Account by id (a `UUID`), in the caller's Workspace.
 - The Department lookup of be-foundation (`common`): the Department of a Project Manager.
 - `SessionEnded` (Spring application event): Account id, Workspace id, session id, reason `LOGOUT` /
   `EXPIRED` / `DEACTIVATED`.
 
-**Database.** One Liquibase changeset with `workspace_id` on every table (the platform convention):
-- `account`: email unique on the whole platform and stored lower-case (GBR-37, D7); full name, empty until the
+**Database.** One Liquibase changeset. Every table follows the platform tenant-table convention (platform AC-001.8):
+a plural name, UUID ids (`id` and every `<entity>_id`), `workspace_id` and row-level security.
+- `accounts`: email unique on the whole platform and stored lower-case (GBR-37, D7); full name, empty until the
   first sign-in; status `ACTIVE` / `DEACTIVATED`; the Department of a Project Manager; first and last sign-in
   time.
-- The Account's Roles: the four Roles besides Employee, since Employee is implied (be-foundation AC-002.2).
-- `jira_account_links`.
+- `account_roles`: the Account's Roles, the four Roles besides Employee, since Employee is implied (be-foundation
+  AC-002.2).
+- `jira_account_links` (the D1 name).
 
 **Header.** `X-TSolve-Background: 1` marks a request that is not user activity (AC-001.25).
 
