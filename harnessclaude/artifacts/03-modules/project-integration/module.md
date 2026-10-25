@@ -2,7 +2,7 @@
 name: project-integration
 owner: Đặng Tấn Bình
 repos: [default]
-dependencies: [workspace]
+dependencies: [workspace, worker]
 complexity: medium
 paths:
   - backend/src/main/java/vn/tsolve/project/**

@@ -2,7 +2,7 @@
 name: wiki
 owner: Đặng Nhật Minh
 repos: [default]
-dependencies: [workspace]
+dependencies: [workspace, ai]
 complexity: large
 paths:
   - backend/src/main/java/vn/tsolve/wiki/**
