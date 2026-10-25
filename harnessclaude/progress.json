@@ -47,9 +47,9 @@
         "add-user": "pending",
         "account-status": "pending",
         "user-roles": "pending",
-        "user-list-review": "evaluating"
+        "user-list-review": "passing"
       },
-      "lastUpdated": "2026-10-25T17:45:00.766Z",
+      "lastUpdated": "2026-10-25T17:49:51.774Z",
       "branch": "feat/identity",
       "repos": [
         "default"

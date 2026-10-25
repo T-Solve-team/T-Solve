@@ -37,3 +37,6 @@ The UC-04 list story is now STORY-004 (AC-004.1–8), following main's preserved
 ## Review repair source review — 2026-10-26
 
 Independent read-only reviewer found no blockers. AC-004.1–8 have meaningful tests; UUID contract/generated models agree; toolbar extraction retains URL behavior and clears validation on navigation; parsed filters avoid raw labels; refetch pending state is visible. Main's STORY-001–003 are preserved and merged spec hash matches the user approval. Browser minimum viewport verification now completed; screenshot and fresh command results are in the test report. Final full-suite result is recorded there separately.
+
+## Final review-repair verdict
+Pass: CI on ae12a25 verifies29 files/516 tests plus all frontend gates and clean API generation. User List tracing8/8 and independent source review pass. GitHub confirms mergeable=true. BUG-016 is separately documented as a local-workstation test timeout reproduced on main; no global passing claim is based on the interrupted local runs.

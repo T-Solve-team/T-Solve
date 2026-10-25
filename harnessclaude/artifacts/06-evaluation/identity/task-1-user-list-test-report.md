@@ -61,3 +61,10 @@ The UC-04 list story is now STORY-004 (AC-004.1–8), following main's preserved
 - Fresh isolated comparison: the same two selected tests (AC-002.9 Wiki availability and AC-002.4 conversation opening) fail with15000ms timeouts on both this branch and an unmodified origin/main f22515d frontend snapshot. Each comparison:2 failed,54 unselected. This diagnostic subset is not reported as a full run.
 - BUG-016 remains Open; chatbot code/tests and timeout settings are unchanged. CI must supply the full-suite outcome before the review-repair task is marked passing.
 - Code repair commit: bcae127. Main integration commit:756adde. Original hooks completed successfully for both. New screenshot is under artifacts/assets/identity/.
+
+### Final CI evidence — review repair passed
+- Published source/report head: ae12a2591d8d034df798b04b8d65373939492a0f. GitHub frontend check121243262939 completed successfully.
+- Full unmodified CI command `npm run test`:29/29 files and516/516 tests pass (130.76s); no skipped suite or relaxed timeout. The two local chatbot timeouts pass on the Ubuntu/Node24 runner. BUG-016 remains a workstation-specific stability report.
+- CI format:check, lint, typecheck, generate:api with clean Git diff, and build all pass. pr-title, changes and gitleaks checks succeed too.
+- Evidence: https://github.com/T-Solve-team/T-Solve/actions/runs/40218000055/job/121243262939
+- GitHub PR metadata confirms mergeable=true against main f22515d; this branch includes main as an ancestor. PR description now contains issue, AC mapping, run steps, size explanation, screenshot and accurate local/CI evidence. Connector metadata write returned403; the authorized description update succeeded through the signed-in browser.
