@@ -8,6 +8,8 @@ info:
     backend must agree to (frontend guideline 06 §6 and the decision log): Problem Details errors with an MSG
     `code`, Spring-style paging (`page` from 0, `size`, `sort`), and the `/me` session shape.
 tags:
+  - name: users
+    description: Workspace User List (frontend mock proposal, SRS III.1.3.1).
   - name: session
     description: Who is signed in.
   - name: review
@@ -15,6 +17,56 @@ tags:
   - name: chatbot
     description: Knowledge Chatbot questions and answers (Report3 UC-51, GBR-36; SRS III.12.1).
 paths:
+  /api/v1/users:
+    get:
+      tags: [users]
+      operationId: getUsers
+      summary: Workspace users; default sort fullName,asc with id as a stable tie-breaker.
+      parameters:
+        - name: q
+          in: query
+          description: Case-insensitive substring of full name or email.
+          schema: { type: string, maxLength: 100 }
+        - name: role
+          in: query
+          description: EMPLOYEE means Employee only; other values mean role membership.
+          schema: { $ref: '#/components/schemas/Role' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/UserAccountStatus' }
+        - name: departmentId
+          in: query
+          schema: { type: integer, format: int64 }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: One page of users in the signed-in Admin's Workspace.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserAccountPage' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/users/departments:
+    get:
+      tags: [users]
+      operationId: getUserDepartments
+      summary: Departments available for filtering the Workspace User List.
+      responses:
+        '200':
+          description: Departments in the current Workspace.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DepartmentRef' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/me:
     get:
       tags: [session]
@@ -297,6 +349,33 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    UserAccountStatus:
+      type: string
+      enum: [ACTIVE, DEACTIVATED]
+    UserAccount:
+      type: object
+      required: [id, fullName, email, roles, department, status, lastSignInAt]
+      properties:
+        id: { type: integer, format: int64 }
+        fullName: { type: [string, 'null'] }
+        email: { type: string, format: email }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/Role' }
+        department:
+          anyOf:
+            - { $ref: '#/components/schemas/DepartmentRef' }
+            - { type: 'null' }
+        status: { $ref: '#/components/schemas/UserAccountStatus' }
+        lastSignInAt: { type: [string, 'null'], format: date-time }
+    UserAccountPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/UserAccount' }
+        page: { $ref: '#/components/schemas/PageMetadata' }
     Role:
       type: string
       description: A role of a user (Report3 4.1, GBR-28). A user can hold several; every user has EMPLOYEE.
