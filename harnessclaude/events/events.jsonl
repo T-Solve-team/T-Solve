@@ -153,30 +153,18 @@
 {"ts":"2026-10-24T02:58:23.540Z","type":"module-status","module":"chatbot","from":"evaluating","to":"completed"}
 {"ts":"2026-10-24T03:16:51.746Z","type":"quick-opened","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
 {"ts":"2026-10-24T03:35:06.720Z","type":"quick-closed","what":"BUG-008: keep a rating whose save finishes after the user left 12.1","files":["frontend/src/features/chatbot/hooks/useRateAnswer.ts","frontend/src/features/chatbot/hooks/chatbot-storage.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx"]}
-{"ts":"2026-10-25T09:05:06.884Z","type":"spec-approved","module":"chatbot","specHash":"78085cd47969b017234ab92e16b7dccab7a64f39778684dee28ba6c85c5e4e43"}
-{"ts":"2026-10-25T13:11:41.275Z","type":"spec-approved","module":"chatbot","specHash":"d946d850ae59cb11fc9a264efba1f324436041acb8c7076b87cca332033499ca"}
-{"ts":"2026-10-25T13:16:13.262Z","type":"module-status","module":"chatbot","from":"completed","to":"planned"}
-{"ts":"2026-10-25T13:16:13.659Z","type":"feature-status","module":"chatbot","feature":"uuid-ids","from":null,"to":"pending"}
-{"ts":"2026-10-25T09:05:06.354Z","type":"spec-approved","module":"fe-foundation","specHash":"3fdbea8e2f58bba5d624e8792aa365cb0b9c5f512dedd8f5cced4700460a4b2f"}
-{"ts":"2026-10-25T13:11:00.726Z","type":"spec-approved","module":"fe-foundation","specHash":"ce8e67bcffd22f87795409fd93fa5971ec816b9228a831133eafd6f6b8a0c709"}
-{"ts":"2026-10-25T13:16:10.653Z","type":"module-status","module":"fe-foundation","from":"completed","to":"planned"}
-{"ts":"2026-10-25T13:16:11.288Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":null,"to":"pending"}
-{"ts":"2026-10-25T13:16:11.910Z","type":"feature-status","module":"fe-foundation","feature":"site-sign-in","from":null,"to":"pending"}
-{"ts":"2026-10-25T13:16:12.518Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":null,"to":"pending"}
-{"ts":"2026-10-25T13:16:12.989Z","type":"feature-status","module":"fe-foundation","feature":"uuid-ids","from":null,"to":"pending"}
-{"ts":"2026-10-25T09:05:05.789Z","type":"spec-approved","module":"identity","specHash":"213e2182359181de330a50a2f49eb1848e78492b69ffd183707cbd5d9ba810a5"}
-{"ts":"2026-10-25T13:06:59.482Z","type":"spec-approved","module":"identity","specHash":"c208874d8621ec55883df21ecbea0eb8d7bea69282d7c1286d00e31453d0915f"}
 {"ts":"2026-10-24T23:56:42.604Z","type":"module-status","module":"platform","from":null,"to":"decomposed"}
 {"ts":"2026-10-24T23:56:42.775Z","type":"module-status","module":"platform-console","from":null,"to":"decomposed"}
 {"ts":"2026-10-24T23:56:42.970Z","type":"module-status","module":"worker","from":null,"to":"decomposed"}
 {"ts":"2026-10-24T23:56:43.158Z","type":"module-status","module":"ai","from":null,"to":"decomposed"}
 {"ts":"2026-10-24T23:57:45.099Z","type":"quick-opened","what":"Update tsolve-project.md to the multi-tenant baseline (KAN-195): Workspace per company, Platform Operator, Ollama on the AI VPS, CONTEXT.md and SRS_Delta as sources, owners per Jira","files":[".claude/tsolve-project.md"]}
+{"ts":"2026-10-25T09:05:05.789Z","type":"spec-approved","module":"identity","specHash":"213e2182359181de330a50a2f49eb1848e78492b69ffd183707cbd5d9ba810a5"}
+{"ts":"2026-10-25T09:05:06.354Z","type":"spec-approved","module":"fe-foundation","specHash":"3fdbea8e2f58bba5d624e8792aa365cb0b9c5f512dedd8f5cced4700460a4b2f"}
+{"ts":"2026-10-25T09:05:06.884Z","type":"spec-approved","module":"chatbot","specHash":"78085cd47969b017234ab92e16b7dccab7a64f39778684dee28ba6c85c5e4e43"}
 {"ts":"2026-10-25T09:05:21.403Z","type":"quick-closed","what":"Update tsolve-project.md to the multi-tenant baseline (KAN-195): Workspace per company, Platform Operator, Ollama on the AI VPS, CONTEXT.md and SRS_Delta as sources, owners per Jira","files":[".claude/tsolve-project.md"]}
 {"ts":"2026-10-25T09:58:54.132Z","type":"spec-approved","module":"platform","specHash":"99bf1d6c89a7b50b593744146a307fd5f6e8edcfffc64b8c93467fdfc9cb41fc"}
 {"ts":"2026-10-25T10:13:36.099Z","type":"quick-opened","what":"UUID ids and plural tables for every module (KAN-196 Q2): backend/AGENTS.md §2 and §7, int64 example in 12-workflow.md","files":["backend/AGENTS.md","frontend/guidelines/12-workflow.md"]}
 {"ts":"2026-10-25T10:21:51.750Z","type":"quick-opened","what":"UUID ids and plural tables for every module (KAN-196 Q2): backend/AGENTS.md §2 and §7, numeric-id examples in frontend guidelines 04, 05, 12","files":["backend/AGENTS.md","frontend/guidelines/12-workflow.md","frontend/guidelines/04-typescript.md","frontend/guidelines/05-react-components.md"]}
-{"ts":"2026-10-25T13:04:40.125Z","type":"spec-approved","module":"be-foundation","specHash":"b2f2142d14871bdf748672afe988b83f955a1f53946fd60d923fed28e04f62bf"}
-{"ts":"2026-10-25T13:17:12.440Z","type":"quick-closed","what":"UUID ids and plural tables for every module (KAN-196 Q2): backend/AGENTS.md §2 and §7, numeric-id examples in frontend guidelines 04, 05, 12","files":["backend/AGENTS.md","frontend/guidelines/12-workflow.md","frontend/guidelines/04-typescript.md","frontend/guidelines/05-react-components.md"]}
 {"ts":"2026-10-25T10:23:32.400Z","type":"feature-status","module":"platform","feature":"tenant-context","from":null,"to":"pending"}
 {"ts":"2026-10-25T10:23:32.456Z","type":"feature-status","module":"platform","feature":"tenant-schema","from":null,"to":"pending"}
 {"ts":"2026-10-25T10:23:32.509Z","type":"feature-status","module":"platform","feature":"row-level-security","from":null,"to":"pending"}
@@ -189,8 +177,37 @@
 {"ts":"2026-10-25T10:23:32.844Z","type":"feature-status","module":"platform","feature":"edge-caddy","from":null,"to":"pending"}
 {"ts":"2026-10-25T10:23:32.906Z","type":"feature-status","module":"platform","feature":"staging-cd","from":null,"to":"pending"}
 {"ts":"2026-10-25T10:23:32.956Z","type":"feature-status","module":"platform","feature":"demo-seed-workspaces","from":null,"to":"pending"}
+{"ts":"2026-10-25T12:04:31.574Z","type":"spec-approved","module":"identity","specHash":"d5831e031da656ae39d2907b63047c7f854552fa983866044171296bea6e350b"}
+{"ts":"2026-10-25T12:05:39.112Z","type":"module-status","module":"identity","from":"decomposed","to":"planned"}
+{"ts":"2026-10-25T12:05:39.150Z","type":"feature-status","module":"identity","feature":"user-list","from":null,"to":"pending"}
+{"ts":"2026-10-25T12:05:39.178Z","type":"feature-status","module":"identity","feature":"add-user","from":null,"to":"pending"}
+{"ts":"2026-10-25T12:05:39.209Z","type":"feature-status","module":"identity","feature":"account-status","from":null,"to":"pending"}
+{"ts":"2026-10-25T12:05:39.237Z","type":"feature-status","module":"identity","feature":"user-roles","from":null,"to":"pending"}
+{"ts":"2026-10-25T12:05:39.265Z","type":"module-status","module":"identity","from":"planned","to":"implementing"}
+{"ts":"2026-10-25T12:05:39.293Z","type":"feature-status","module":"identity","feature":"user-list","from":"pending","to":"in-progress"}
+{"ts":"2026-10-25T12:38:36.092Z","type":"commit-recorded","module":"identity","repo":"default","sha":"3b53167fc8014fe70e07972030745633347305b0"}
+{"ts":"2026-10-25T12:38:36.124Z","type":"feature-status","module":"identity","feature":"user-list","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-25T12:38:41.564Z","type":"feature-status","module":"identity","feature":"user-list","from":"evaluating","to":"passing"}
 {"ts":"2026-10-25T13:03:20.576Z","type":"spec-approved","module":"platform","specHash":"a73026ef706cae1ca938544c538d176f7d958db0729871bb68b07df5adf898fa"}
+{"ts":"2026-10-25T13:04:40.125Z","type":"spec-approved","module":"be-foundation","specHash":"b2f2142d14871bdf748672afe988b83f955a1f53946fd60d923fed28e04f62bf"}
+{"ts":"2026-10-25T13:06:59.482Z","type":"spec-approved","module":"identity","specHash":"c208874d8621ec55883df21ecbea0eb8d7bea69282d7c1286d00e31453d0915f"}
+{"ts":"2026-10-25T13:11:00.726Z","type":"spec-approved","module":"fe-foundation","specHash":"ce8e67bcffd22f87795409fd93fa5971ec816b9228a831133eafd6f6b8a0c709"}
+{"ts":"2026-10-25T13:11:41.275Z","type":"spec-approved","module":"chatbot","specHash":"d946d850ae59cb11fc9a264efba1f324436041acb8c7076b87cca332033499ca"}
 {"ts":"2026-10-25T13:16:09.818Z","type":"module-status","module":"platform","from":"decomposed","to":"planned"}
+{"ts":"2026-10-25T13:16:10.653Z","type":"module-status","module":"fe-foundation","from":"completed","to":"planned"}
+{"ts":"2026-10-25T13:16:11.288Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":null,"to":"pending"}
+{"ts":"2026-10-25T13:16:11.910Z","type":"feature-status","module":"fe-foundation","feature":"site-sign-in","from":null,"to":"pending"}
+{"ts":"2026-10-25T13:16:12.518Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":null,"to":"pending"}
+{"ts":"2026-10-25T13:16:12.989Z","type":"feature-status","module":"fe-foundation","feature":"uuid-ids","from":null,"to":"pending"}
+{"ts":"2026-10-25T13:16:13.262Z","type":"module-status","module":"chatbot","from":"completed","to":"planned"}
+{"ts":"2026-10-25T13:16:13.659Z","type":"feature-status","module":"chatbot","feature":"uuid-ids","from":null,"to":"pending"}
+{"ts":"2026-10-25T13:17:12.440Z","type":"quick-closed","what":"UUID ids and plural tables for every module (KAN-196 Q2): backend/AGENTS.md §2 and §7, numeric-id examples in frontend guidelines 04, 05, 12","files":["backend/AGENTS.md","frontend/guidelines/12-workflow.md","frontend/guidelines/04-typescript.md","frontend/guidelines/05-react-components.md"]}
 {"ts":"2026-10-25T14:38:39.047Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":"pending","to":"in-progress"}
 {"ts":"2026-10-25T16:29:14.295Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-25T16:29:14.499Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":"evaluating","to":"passing"}
+{"ts":"2026-10-25T17:10:00.646Z","type":"spec-approved","module":"identity","specHash":"2c74ea27ec24615797be57bb12cdda4f16aaa34b182c1267405502888f7c8299"}
+{"ts":"2026-10-25T17:11:38.064Z","type":"feature-status","module":"identity","feature":"user-list-review","from":null,"to":"pending"}
+{"ts":"2026-10-25T17:11:38.198Z","type":"feature-status","module":"identity","feature":"user-list-review","from":"pending","to":"in-progress"}
+{"ts":"2026-10-25T17:45:00.496Z","type":"commit-recorded","module":"identity","repo":"default","sha":"bcae127fb14f03dee592fa6209ff86fb349eb435"}
+{"ts":"2026-10-25T17:45:00.769Z","type":"feature-status","module":"identity","feature":"user-list-review","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-25T17:49:51.777Z","type":"feature-status","module":"identity","feature":"user-list-review","from":"evaluating","to":"passing"}
