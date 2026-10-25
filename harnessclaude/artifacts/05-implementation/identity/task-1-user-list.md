@@ -16,11 +16,11 @@
 - Added the minimal list/Department OpenAPI stub, generated its models/hooks, a feature query wrapper, synthetic Workspace-scoped mock records, and Admin authorization in mock resolvers. No backend, dependency, shell or shared component changes.
 - New tests: `pages/UserListPage.test.tsx` and `mocks/handlers.test.ts`. The initial table test failed on the placeholder before implementation. Review regressions for BUG-011 and BUG-012 failed before their fixes. BUG-010 protects the Add user accessible name.
 - Changed feature paths: `frontend/src/features/users/pages/UserListPage.tsx`, its CSS module and test; `hooks/useUsers.ts`; `mocks/data.ts`, `mocks/handlers.ts` and its test. Contract: `frontend/openapi/tsolve-api.yaml` and generated files under `frontend/src/shared/api/generated/`. Bug records: `docs/bug-log.md`.
-- Commit: none; awaiting the user's feature commit approval. Proposed header: `feat(identity): add workspace user list (KAN-107)`; body: `STORY-001`; include the required Co-Authored-By trailer and commit through hooks.
+- Commit: none; awaiting the user's feature commit approval. Proposed header: `feat(identity): add workspace user list (KAN-107)`; body: `STORY-004`; include the required Co-Authored-By trailer and commit through hooks.
 
 ### Verification
 - `bun harnessclaude/hooks/sdd.ts check identity`: 4 stories, 30 acceptance criteria — OK.
-- `bun harnessclaude/hooks/sdd.ts trace identity STORY-001`: 7/7 acceptance criteria have a test.
+- `bun harnessclaude/hooks/sdd.ts trace identity STORY-004`: 7/7 acceptance criteria have a test.
 - `bun harnessclaude/hooks/sdd.ts audit`: OK.
 - The environment exposes Node but not npm/npx. Ran the exact underlying binaries from the installed package scripts through RTK; no packages or scripts were changed.
 - `node node_modules/prettier/bin/prettier.cjs --check .`: pass.
@@ -43,3 +43,15 @@ User review and commit approval for KAN-107, then KAN-108, KAN-109 and KAN-110 s
 - The user approved the KAN-107 commit and explicitly requested commit/push on each task's own branch for all four tasks. This authorizes subsequent per-task commits and pushes after verification; no merge or PR is requested.
 - Code commit: default@3b53167, created through all original Git hooks. npm was installed only in temporary tooling so hooks could run their normal npx commands; no repo dependency was added.
 - Continue with KAN-108 after the KAN-107 harness commit and push. New task branches preserve the preceding task as an explicit dependency; origin/main was fetched and remains 5197837.
+
+## Review repair — 2026-10-26
+The UC-04 list story is now STORY-004 (AC-004.1–8), following main's preserved STORY-001–003. The verification results above are historical evidence from the original seven-criterion run, with references mapped to the merged spec; they do not establish a fresh pass for the newly explicit AC-004.8 or the UUID contract repair. Rerun the checks and tracing after the review repairs.
+
+### Review repair: PR #60 — 2026-10-26
+- User chose merging main into the existing issue branch rather than rewriting its published history. Base incorporated: origin/main f22515d; conflict resolution keeps current main approvals, unions event history, preserves auth STORY-001–003 and renumbers users to STORY-004–007. User personally approved the merged spec through the harness CLI.
+- Root cause BUG-015: searchError was page-local and survived URL q navigation. Extracted UserListToolbar is keyed by q so the input and validation share the same lifetime.
+- Changed UserAccount.id to UUID in YAML and generated output; synthetic local/foreign user IDs and sorting tie-break/test expectations follow it. Existing shared DepartmentRef contract is reused.
+- Added OpenAPI400, refetch loading, parsed option values, enum constants, role option queries, and direct required row lookup. Repaired BUG-010/011/012 log ownership, PR and exact canonical/original regression names.
+- Focused21/21, format/lint/typecheck/build and deterministic regeneration pass; trace8/8. Browser1366×768 and Back/limit flow verified. Full-suite/environment details in the updated test report. No extra dependency or handwritten generated edit.
+- Tracking uses a new user-list-review task because harness passing features are terminal; the failed attempt to reopen passing user-list made no state change.
+- Review repair code commit: default@bcae127; main integration:756adde. Full local verification remains red due pre-existing chatbot timeouts confirmed on unmodified origin/main f22515d. Two selected baseline tests fail identically; BUG-016 remains Open. Source-specific21/21 and other frontend gates pass. Tracking stays evaluating until full CI result is available.

@@ -208,3 +208,5 @@
 {"ts":"2026-10-25T17:10:00.646Z","type":"spec-approved","module":"identity","specHash":"2c74ea27ec24615797be57bb12cdda4f16aaa34b182c1267405502888f7c8299"}
 {"ts":"2026-10-25T17:11:38.064Z","type":"feature-status","module":"identity","feature":"user-list-review","from":null,"to":"pending"}
 {"ts":"2026-10-25T17:11:38.198Z","type":"feature-status","module":"identity","feature":"user-list-review","from":"pending","to":"in-progress"}
+{"ts":"2026-10-25T17:45:00.496Z","type":"commit-recorded","module":"identity","repo":"default","sha":"bcae127fb14f03dee592fa6209ff86fb349eb435"}
+{"ts":"2026-10-25T17:45:00.769Z","type":"feature-status","module":"identity","feature":"user-list-review","from":"in-progress","to":"evaluating"}

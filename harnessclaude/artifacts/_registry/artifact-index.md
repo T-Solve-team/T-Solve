@@ -75,3 +75,4 @@ Master registry of all artifacts in this workspace.
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-5-guidelines.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-5-guidelines-review.md |
 | — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-5-guidelines-test-report.md |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-107-user-list-1366x768.jpg |
