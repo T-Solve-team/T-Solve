@@ -36,7 +36,7 @@ paths:
           schema: { $ref: '#/components/schemas/UserAccountStatus' }
         - name: departmentId
           in: query
-          schema: { type: integer, format: int64 }
+          schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
         - $ref: '#/components/parameters/Sort'

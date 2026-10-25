@@ -17,12 +17,12 @@ describe('Workspace user mock contracts', () => {
       q: 'USER',
       role: 'PROJECT_MANAGER',
       status: 'ACTIVE',
-      departmentId: 1,
+      departmentId: '00000000-0000-4000-8000-0000000000d1',
     });
     expect(page.content.length).toBeGreaterThan(0);
     for (const user of page.content) {
       expect(user.roles).toContain('PROJECT_MANAGER');
-      expect(user.department?.departmentId).toBe(1);
+      expect(user.department?.departmentId).toBe('00000000-0000-4000-8000-0000000000d1');
       expect(user.status).toBe('ACTIVE');
     }
     const employees = await getUsers({ role: 'EMPLOYEE' });

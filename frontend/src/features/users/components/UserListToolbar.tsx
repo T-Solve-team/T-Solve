@@ -13,7 +13,7 @@ type Props = {
   q: string;
   role: Role | undefined;
   status: UserAccountStatus | undefined;
-  departmentId: number | undefined;
+  departmentId: string | undefined;
   departments: DepartmentRef[] | undefined;
   departmentsPending: boolean;
   departmentsError: boolean;

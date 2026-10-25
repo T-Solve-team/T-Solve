@@ -23,7 +23,7 @@ export type GetUsersParams = {
    */
   role?: Role;
   status?: UserAccountStatus;
-  departmentId?: number;
+  departmentId?: string;
   /**
    * Page number, starting at 0.
    * @minimum 0
