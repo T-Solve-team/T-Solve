@@ -28,9 +28,9 @@
         "catalog-sync": "passing",
         "site-sign-in": "pending",
         "host-routes": "pending",
-        "uuid-ids": "pending"
+        "uuid-ids": "in-progress"
       },
-      "lastUpdated": "2026-10-25T16:29:14.498Z",
+      "lastUpdated": "2026-10-25T16:52:18.782Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
@@ -89,9 +89,9 @@
         "citations": "passing",
         "session-conversations": "passing",
         "ratings": "passing",
-        "uuid-ids": "pending"
+        "uuid-ids": "in-progress"
       },
-      "lastUpdated": "2026-10-25T13:16:13.655Z",
+      "lastUpdated": "2026-10-25T16:52:19.056Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
