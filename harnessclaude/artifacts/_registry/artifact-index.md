@@ -11,6 +11,13 @@ Master registry of all artifacts in this workspace.
 | — | module | be-foundation | draft | artifacts/03-modules/be-foundation/module.md |
 | — | module | fe-foundation | draft | artifacts/03-modules/fe-foundation/module.md |
 | — | module | identity | draft | artifacts/03-modules/identity/module.md |
+| — | spec | identity | draft | artifacts/03-modules/identity/spec.md |
+| — | design | identity | draft | artifacts/04-plans/identity/design.md |
+| — | design | identity | draft | artifacts/04-plans/identity/iteration-1/design.md |
+| — | tasks | identity | draft | artifacts/04-plans/identity/iteration-1/tasks.md |
+| — | session-log | identity | in-progress | artifacts/05-implementation/identity/task-1-user-list.md |
+| — | test-report | identity | draft | artifacts/06-evaluation/identity/task-1-user-list-test-report.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-1-user-list-review.md |
 | — | module | workspace | draft | artifacts/03-modules/workspace/module.md |
 | — | module | project-integration | draft | artifacts/03-modules/project-integration/module.md |
 | — | module | wiki | draft | artifacts/03-modules/wiki/module.md |

@@ -36,10 +36,22 @@
       }
     },
     "identity": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:22.379Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "user-list": "passing",
+        "add-user": "pending",
+        "account-status": "pending",
+        "user-roles": "pending"
+      },
+      "lastUpdated": "2026-10-25T12:38:41.563Z",
+      "branch": "feat/identity",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "3b53167fc8014fe70e07972030745633347305b0"
+      }
     },
     "workspace": {
       "status": "decomposed",
