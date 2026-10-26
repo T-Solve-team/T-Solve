@@ -29,9 +29,15 @@ features/<f>/pages/…         calls feature hooks only
   (`mode: 'tags-split'`), plus MSW mock handlers with fake data for every endpoint. Hooks return the
   response body (`includeHttpResponseReturnType: false`), and their error type is `ApiError` (`http.ts`
   exports `ErrorType`, which orval picks up).
-- `http.ts` is the only place that touches `fetch`. It adds the base URL (`VITE_API_BASE_URL`, empty = same
-  origin: the Vite proxy in dev, Caddy in production), sends the session cookie, parses JSON (204 → `undefined`)
-  and turns every non-2xx response — and network errors — into an `ApiError` (§6).
+- `http.ts` is the only place that touches `fetch`. It calls the relative `/api/v1/…` path on the **page's own
+  origin** (the Vite proxy in dev, Caddy in production) — there is no API base URL setting, and no Workspace,
+  site or domain header: the Host of the page decides the Workspace on the server. It sends the session cookie,
+  adds `X-TSolve-Background: 1` for a background request (§4), parses JSON (204 → `undefined`) and turns every
+  non-2xx response — and network errors — into an `ApiError` (§6).
+- `override.query.queryOptions` in `orval.config.ts` is our mutator `withBackgroundMarking`
+  (`src/shared/api/query-options.ts`): it wraps the `queryFn` of every generated query (§4). It is set
+  with `useHooks: false`, so the generated `get…QueryOptions` functions keep their names and can be used in
+  loaders and `prefetchQuery`.
 - Both the spec and the generated code are committed. *Why:* the app runs right after `npm ci` with no
   backend, and every API change is visible in the PR diff.
 
@@ -113,6 +119,12 @@ function), `useGetReviewQueue`, `getGetReviewQueueQueryKey`, `GetReviewQueuePara
 - **Defaults** (set once in `shared/api/query-client.ts`; don't override per hook without a reason):
   `staleTime` 30 s · `gcTime` 5 min · queries retry once, except 4xx (never retried) · mutations never
   retry · refetch on window focus on.
+- **Background header:** a refetch of a query that already holds data (interval, window focus, reconnect,
+  invalidation — also a Refresh or Try again the user starts) is sent with `X-TSolve-Background: 1`, so the
+  server does not count it as user activity and the session can still expire after 60 minutes idle. The
+  generated hooks do it through `withBackgroundMarking`; a first load, every mutation, sign-in and logout never
+  carry it. A **hand-written** query calls `markBackground(signal)` (from `@/shared/api`) with the `signal` of
+  its query function when it refetches data it already holds.
 - **No optimistic updates** in the MVP. Wait for the server, then invalidate. *Why:* simpler, and the
   NFR (confirmation within 2 s) does not need them.
 - **Server-side pagination, 20 rows per page** (SRS III default). Page, size and sort go to the API as
@@ -191,7 +203,9 @@ The global part lives in `app/providers/global-errors.ts` (wired into the QueryC
 | Error | Handled by | Behaviour |
 |---|---|---|
 | 401 on any request while signed in | global | MSG07 dialog (once, however many requests failed) → OK → cache dropped → the route guard sends the user to Login with `returnTo` |
-| 401 on `GET /me` | `useSession` | not an error: nobody is signed in |
+| 401 with **MSG123** (the cookie belongs to another Workspace site) | global | no MSG07: the session ends as at logout (cache, mutations, `tsolve.session.*`) and the route guard goes to `/login?error=MSG123`. Wins over any other 401; an open MSG07 dialog is closed. Also for `GET /me` on the first load |
+| **MSG119** (404, unknown site) / **MSG120** (403, Workspace suspended) on any request, `/me` included | global | no toast, no dialog: `RootLayout` shows `SiteUnavailablePage` (the text, no menu, no Try again) in place of every screen, Login too; the cache is dropped once, also when the first answer is for a mutation with `handlesOwnErrors` (`showMessage` never shows these two codes). `useSession` does not report them as an error. `http()` notes them in `shared/api/site-state.ts` |
+| 401 on `GET /me` (not MSG123) | `useSession` | not an error: nobody is signed in |
 | a **query** fails (403, 404, 5xx, network) | the screen | `ErrorState` in place with `msg(error.code)` — MSG08 for 403, MSG06 for 5xx. No toast. A role that may not open the screen at all gets the 403 page from the route guard first. |
 | a **mutation** fails | global | toast with `msg(error.code, error.params)` — MSG08 for 403, MSG06 for 5xx / network |
 | business error with a code (4xx) on a **form** | the feature | `meta: { handlesOwnErrors: true }` + map `fieldErrors` onto the fields ([09](09-forms-and-validation.md)) |
@@ -203,7 +217,7 @@ messages for one error. Retries: queries retry once, except 4xx (never); mutatio
 ## 7. Session
 
 `useSession()` (in `shared/auth`) runs the generated `GET /api/v1/me` request (`staleTime: Infinity`; 401 →
-`null`) and returns `{ session, roles, hasRole, hasAnyRole, isPending, isError, retry, isProjectManagerOf,
+`null`, except MSG123, which the global handler takes; MSG119 / MSG120 / MSG123 are never `isError`) and returns `{ session, roles, hasRole, hasAnyRole, isPending, isError, retry, isProjectManagerOf,
 isMemberOf }`. `session` is the generated `CurrentUser` with only known roles (`user`, `roles`, `department`,
 `departments`, `projects` with the role in each, `managedSpaces`, `workspaceReady`); `roles` always holds
 `EMPLOYEE` (GBR-28). It is the only source of "who am I" — never store the user elsewhere.

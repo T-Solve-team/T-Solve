@@ -25,6 +25,16 @@ export default defineConfig({
         mutator: { path: './src/shared/api/http.ts', name: 'http' },
         // Hooks return the response body, not { data, status, headers }.
         fetch: { includeHttpResponseReturnType: false },
+        // A refetch of a query that already holds data is marked as a background request (AC-012.6).
+        // `useHooks: false`: the mutator is a plain function, so orval keeps the `get…QueryOptions` names
+        // (loaders and `prefetchQuery` can use them); by default it renames them to `use…QueryOptions`.
+        query: {
+          queryOptions: {
+            path: './src/shared/api/query-options.ts',
+            name: 'withBackgroundMarking',
+            useHooks: false,
+          },
+        },
       },
     },
   },

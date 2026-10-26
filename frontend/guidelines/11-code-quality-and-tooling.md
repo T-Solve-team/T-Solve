@@ -137,10 +137,10 @@ docker run --rm -p 8081:8080 tsolve-frontend      # http://localhost:8081
   (nobody), listens on **8080**, `HEALTHCHECK` on `/healthz`.
 - Base images are pinned to exact versions; Dependabot (DevOps, `docker` ecosystem for `/frontend`) proposes
   the updates. Keep the Node major in line with `.nvmrc`.
-- `VITE_*` variables are build-time: pass them as build args (`--build-arg VITE_API_BASE_URL=…`); never
-  put secrets in them (they end up in the browser). Only `VITE_API_BASE_URL` is declared (`ARG`) in the
-  Dockerfile — a new `VITE_*` variable needs its own `ARG` line there. `VITE_API_MOCKING` has no effect in a
-  production build.
+- `VITE_*` variables are build-time: pass them as build args (`--build-arg VITE_…=…`); never put secrets in
+  them (they end up in the browser). The Dockerfile declares none: the app calls its own origin, so one image
+  serves every Workspace site — a new `VITE_*` variable needs its own `ARG` line there. `VITE_API_MOCKING` has
+  no effect in a production build.
 - **`.dockerignore`** keeps `node_modules`, `dist`, every `.env*` file and the docs out of the build
   context, so a local `.env.local` can never reach the image.
 
@@ -158,8 +158,8 @@ which sends every path except `/api/*` to this container on port 8080):
 Every response also gets `zstd`/`gzip` compression and these headers: `Content-Security-Policy`
 (only our own scripts, fonts and API; `style-src 'unsafe-inline'` because antd writes its CSS into
 `<style>` tags at run time), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
-`Referrer-Policy: strict-origin-when-cross-origin`. **If the API ever moves to another origin**
-(`VITE_API_BASE_URL`), add that origin to `connect-src`, or the browser blocks every call.
+`Referrer-Policy: strict-origin-when-cross-origin`. `connect-src` stays `'self'`: the app never calls another
+origin (the API is on the page's own origin, decided by its Host).
 
 Check a Caddyfile change with `caddy fmt --diff Caddyfile` and `caddy validate --config Caddyfile`, and
 a Dockerfile change with `hadolint Dockerfile`.

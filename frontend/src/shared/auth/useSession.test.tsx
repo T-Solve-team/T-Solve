@@ -82,6 +82,13 @@ function ProjectChecks({ projectIds }: { projectIds: string[] }) {
 
 const value = (term: string) => screen.getByText(term).nextElementSibling?.textContent;
 
+/** Prints whether useSession() reports a session error once /me has answered. */
+function SessionErrorProbe() {
+  const { isPending, isError } = useSession();
+  if (isPending) return <p>Loading session</p>;
+  return <p>{isError ? 'Session error' : 'No session error'}</p>;
+}
+
 describe('useSession', () => {
   it('AC-001.2 exposes the user, Department, Departments, Projects, Spaces and Workspace state of /me', async () => {
     renderWithProviders(<SessionProbe />, { user: 'pm-km' });
@@ -117,6 +124,23 @@ describe('useSession', () => {
     expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['MSG119', 404],
+    ['MSG120', 403],
+  ] as const)('AC-001.6 does not report %s from /me as a session error', async (code, status) => {
+    server.use(http.get('*/api/v1/me', () => problem(status, code)));
+    renderWithProviders(<SessionErrorProbe />);
+
+    expect(await screen.findByText(/session error/i)).toHaveTextContent('No session error');
+  });
+
+  it('AC-001.6 does not report a 401 MSG123 from /me as a session error', async () => {
+    server.use(http.get('*/api/v1/me', () => problem(401, 'MSG123')));
+    renderWithProviders(<SessionErrorProbe />);
+
+    expect(await screen.findByText(/session error/i)).toHaveTextContent('No session error');
   });
 
   it('AC-001.8 exposes the ids of /me as UUID strings', async () => {
