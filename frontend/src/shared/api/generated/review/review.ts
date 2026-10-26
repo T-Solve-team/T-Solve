@@ -36,6 +36,7 @@ import type {
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
+import { withBackgroundMarking } from '../../query-options';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -113,7 +114,9 @@ export const getGetReviewQueueQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewQueue>>> = ({ signal }) =>
     getReviewQueue(params, { signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
     Awaited<ReturnType<typeof getReviewQueue>>,
     TError,
     TData
@@ -249,7 +252,9 @@ export const getGetReviewQueueTicketIdsQueryOptions = <
     signal,
   }) => getReviewQueueTicketIds(params, { signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
     Awaited<ReturnType<typeof getReviewQueueTicketIds>>,
     TError,
     TData

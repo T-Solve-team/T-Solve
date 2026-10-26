@@ -15,15 +15,22 @@ export const SESSION_STORAGE_PREFIX = 'tsolve.session.';
 
 const NO_ROLES: readonly Role[] = [];
 
-/** `/me` answers 401 when nobody is signed in: that is "no session", not an error. */
+/**
+ * `/me` answers 401 when nobody is signed in: that is "no session", not an error. A 401 with MSG123 is not "nobody
+ * is signed in": the cookie belongs to another Workspace site, and the global handler takes the MSG123 path
+ * (AC-012.5), so it is thrown.
+ */
 async function fetchSession(signal: AbortSignal): Promise<Session | null> {
   try {
     return toSession(await getMe({ signal }));
   } catch (error) {
-    if (isApiError(error) && error.status === 401) return null;
+    if (isApiError(error) && error.status === 401 && error.code !== 'MSG123') return null;
     throw error;
   }
 }
+
+/** Answers that tell about the site or the cookie, not about a broken session service (AC-001.6). */
+const NOT_A_SESSION_ERROR: readonly string[] = ['MSG119', 'MSG120', 'MSG123'];
 
 /**
  * The only source of "who am I" (guideline 06 §7). Returns the session plus named access checks: roles
@@ -61,8 +68,12 @@ export function useSession() {
     hasRole,
     hasAnyRole,
     isPending: query.isPending,
-    /** `/me` failed for another reason than 401 (server down…): the app cannot tell who you are. */
-    isError: query.isError,
+    /**
+     * `/me` failed for another reason than 401 (server down…): the app cannot tell who you are. An unknown site,
+     * a Suspended Workspace (the site page shows) and a 401 MSG123 (Login shows) are not session errors.
+     */
+    isError:
+      query.isError && !(isApiError(query.error) && NOT_A_SESSION_ERROR.includes(query.error.code)),
     retry: query.refetch,
     isProjectManagerOf,
     isMemberOf,

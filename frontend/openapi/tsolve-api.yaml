@@ -83,6 +83,30 @@ paths:
                 $ref: '#/components/schemas/CurrentUser'
         '401':
           $ref: '#/components/responses/Problem'
+  /api/v1/auth/sign-in:
+    get:
+      tags: [session]
+      operationId: signIn
+      summary: Starts the central Google sign-in; the browser opens it as a page (never a fetch call).
+      description: >
+        The web app navigates the whole page here from the Login screen. The server makes the OAuth state value,
+        redirects (302) to the central sign-in site and, after the identity callback, redirects back to the
+        Workspace site: to `returnTo` on success, or to `/login?error=MSGxx` (MSG122 adds `google_domain`).
+        The Workspace is decided by the Host of the request, so there is no Workspace or site parameter.
+      parameters:
+        - name: returnTo
+          in: query
+          description: >
+            Same-site path (and query) to open after sign-in. Left out when the web app finds it unsafe; the server
+            checks it again and falls back to the landing page.
+          schema: { type: string, maxLength: 2000 }
+      responses:
+        '302':
+          description: Redirect to the central sign-in site.
+          headers:
+            Location:
+              description: The central sign-in URL.
+              schema: { type: string }
   /api/v1/auth/logout:
     post:
       tags: [session]

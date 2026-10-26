@@ -33,14 +33,17 @@ Manager, Project Manager or Staff — or signed out.
 ### Run against the real backend
 
 Set `VITE_API_MOCKING=false`. The dev server proxies `/api` to `http://localhost:8080`, so the session
-cookie works without CORS settings.
+cookie works without CORS settings. The Workspace is decided by the Host of the page, so open the app at
+`http://<site name>.localhost:5173` (browsers resolve `*.localhost` to your machine; the proxy keeps the Host
+header). `http://admin.localhost:5173` opens the Platform Console.
 
 ## Environment variables
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `VITE_API_MOCKING` | `true` | `true` = MSW mocks, `false` = real backend |
-| `VITE_API_BASE_URL` | *(empty)* | Base URL of the API; empty = same origin (`/api/v1/...`) |
+
+There is no API address setting: the app always calls `/api/v1/...` on the origin it was opened from.
 
 `VITE_*` values are built into the JavaScript the browser downloads — **never put secrets in them**.
 

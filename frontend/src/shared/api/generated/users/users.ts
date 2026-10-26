@@ -23,6 +23,7 @@ import type { DepartmentRef, GetUsersParams, ProblemResponse, UserAccountPage } 
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
+import { withBackgroundMarking } from '../../query-options';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -98,11 +99,11 @@ export const getGetUsersQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsers>>> = ({ signal }) =>
     getUsers(params, { signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getUsers>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetUsersQueryResult = NonNullable<Awaited<ReturnType<typeof getUsers>>>;
@@ -215,7 +216,9 @@ export const getGetUserDepartmentsQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserDepartments>>> = ({ signal }) =>
     getUserDepartments({ signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
     Awaited<ReturnType<typeof getUserDepartments>>,
     TError,
     TData

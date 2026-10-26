@@ -77,6 +77,24 @@ export const getGetMeMockHandler = (
   );
 };
 
+export const getSignInMockHandler = (
+  overrideResponse?:
+    unknown | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<unknown> | unknown),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/auth/sign-in',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 200 });
+    },
+    options,
+  );
+};
+
 export const getLogoutMockHandler = (
   overrideResponse?:
     void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
@@ -94,4 +112,8 @@ export const getLogoutMockHandler = (
     options,
   );
 };
-export const getSessionMock = () => [getGetMeMockHandler(), getLogoutMockHandler()];
+export const getSessionMock = () => [
+  getGetMeMockHandler(),
+  getSignInMockHandler(),
+  getLogoutMockHandler(),
+];

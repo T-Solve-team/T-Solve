@@ -155,11 +155,20 @@ Feedback, Triage Result Detail and Folder are modals opened by their parent scre
 
 ## 8. Sign-in and session expiry
 
-- **Login** has one button, "Sign in with Google". It does a full-page navigation to the backend's sign-in
-  URL; the backend runs OIDC and redirects back. Errors come back as a code (`/login?error=MSG09`) and are
-  shown in the Login message area (MSG09, MSG10, MSG06). *(Backend contract — decision log.)*
+- **Login** has one button, "Sign in with Google". It calls `startSignIn(returnTo?)` (`shared/auth`), a
+  full-page navigation to `GET /api/v1/auth/sign-in` **on the page's own origin** (never a fetch call, never a
+  central sign-in URL built in the app, no state value: the server makes it and answers with a 302). A
+  `returnTo` that is not a same-site path (one `/`, not `//`, no `\`, no control or whitespace character) is
+  left out. The backend runs OIDC and redirects back to `returnTo` or to `/login?error=MSGxx`.
+- **Login messages:** `useSignInMessage()` reads `?error=` (and `google_domain`) through `useSearchParams` and
+  returns `{ code, params }` for MSG06, MSG09, MSG10, MSG122, MSG123 and MSG141 — MSG122 only with a valid
+  `google_domain` (lower-cased) — otherwise `null` (show nothing). Render it with `msg(code, params)`, never as
+  HTML. *(Backend contract — decision log.)*
 - **Session expired** (any 401 after sign-in): the global handler shows the **MSG07** dialog, then goes to
-  `/login`. Never redirect silently.
+  `/login`. Never redirect silently. A 401 with **MSG123** (the cookie is from another Workspace site) skips the
+  dialog and goes to `/login?error=MSG123`.
+- **Unknown site / Suspended Workspace** (MSG119 / MSG120 from any request): `RootLayout` replaces the route
+  outlet with `SiteUnavailablePage` — no guard, menu or Login is rendered.
 - Open point (UI decisions 04/10): whether Login also shows MSG75 (the account link from Jira). Not
   built until the FE Lead decides.
 

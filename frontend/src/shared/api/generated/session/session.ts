@@ -22,10 +22,11 @@ import type {
   UseQueryResult,
 } from '@tanstack/react-query';
 
-import type { CurrentUser, ProblemResponse } from '../model';
+import type { CurrentUser, ProblemResponse, SignInParams } from '../model';
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
+import { withBackgroundMarking } from '../../query-options';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -76,11 +77,11 @@ export const getGetMeQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getMe>>> = ({ signal }) =>
     getMe({ signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getMe>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetMeQueryResult = NonNullable<Awaited<ReturnType<typeof getMe>>>;
@@ -147,6 +148,128 @@ export function useGetMe<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getGetMeQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSignInUrl = (params?: SignInParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/auth/sign-in?${stringifiedParams}`
+    : `/api/v1/auth/sign-in`;
+};
+
+/**
+ * The web app navigates the whole page here from the Login screen. The server makes the OAuth state value, redirects (302) to the central sign-in site and, after the identity callback, redirects back to the Workspace site: to `returnTo` on success, or to `/login?error=MSGxx` (MSG122 adds `google_domain`). The Workspace is decided by the Host of the request, so there is no Workspace or site parameter.
+ * @summary Starts the central Google sign-in; the browser opens it as a page (never a fetch call).
+ */
+export const signIn = async (
+  params?: SignInParams,
+  options?: Parameters<typeof http>[1],
+): Promise<unknown> => {
+  return http<unknown>(getSignInUrl(params), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getSignInQueryKey = (params?: SignInParams) => {
+  return [`/api/v1/auth/sign-in`, ...(params ? [params] : [])] as const;
+};
+
+export const getSignInQueryOptions = <
+  TData = Awaited<ReturnType<typeof signIn>>,
+  TError = ErrorType<void>,
+>(
+  params?: SignInParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof signIn>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSignInQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof signIn>>> = ({ signal }) =>
+    signIn(params, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<Awaited<ReturnType<typeof signIn>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type SignInQueryResult = NonNullable<Awaited<ReturnType<typeof signIn>>>;
+export type SignInQueryError = ErrorType<void>;
+
+export function useSignIn<TData = Awaited<ReturnType<typeof signIn>>, TError = ErrorType<void>>(
+  params: undefined | SignInParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof signIn>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof signIn>>,
+          TError,
+          Awaited<ReturnType<typeof signIn>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSignIn<TData = Awaited<ReturnType<typeof signIn>>, TError = ErrorType<void>>(
+  params?: SignInParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof signIn>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof signIn>>,
+          TError,
+          Awaited<ReturnType<typeof signIn>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSignIn<TData = Awaited<ReturnType<typeof signIn>>, TError = ErrorType<void>>(
+  params?: SignInParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof signIn>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Starts the central Google sign-in; the browser opens it as a page (never a fetch call).
+ */
+
+export function useSignIn<TData = Awaited<ReturnType<typeof signIn>>, TError = ErrorType<void>>(
+  params?: SignInParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof signIn>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSignInQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

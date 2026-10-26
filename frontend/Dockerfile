@@ -14,9 +14,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY . .
-# VITE_* values are written into the browser bundle at build time, so they are build args, never
-# secrets. Empty = the API is on the same origin (/api/v1/…), routed by the environment's main Caddy.
-ARG VITE_API_BASE_URL=""
+# No build args: the app calls /api/v1/… on the origin it is served from (routed by the environment's main
+# Caddy), so one image serves every Workspace site.
 RUN npm run build
 
 # ---- 2. Serve them ----------------------------------------------------------------------------

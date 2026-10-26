@@ -17,8 +17,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // The app is opened at <site name>.localhost:5173; the Host of the page decides the Workspace (AC-011.1).
+    allowedHosts: ['.localhost'],
     // Real-backend mode: /api is forwarded to the local Spring Boot app, so the session cookie is same-origin.
-    proxy: { '/api': 'http://localhost:8080' },
+    // changeOrigin stays false: the backend must see <site name>.localhost, not localhost:8080.
+    proxy: { '/api': { target: 'http://localhost:8080', changeOrigin: false } },
   },
   build: {
     // The antd chunk is ~800 kB (~260 kB gzipped) and cached as one file; see decision FE-29.

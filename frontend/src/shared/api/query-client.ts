@@ -17,6 +17,12 @@ export type GlobalErrorHandlers = {
   onMutationError?: (error: ApiError, client: QueryClient) => void;
   /** Any request answered 401: the session has expired. Called for queries and all mutations. */
   onUnauthorized?: (client: QueryClient) => void;
+  /**
+   * Any request answered MSG119 (unknown site) or MSG120 (Suspended Workspace). Called for queries and all
+   * mutations, also those with `handlesOwnErrors`: the whole app is replaced by the site page, so no screen may
+   * keep the error for itself.
+   */
+  onSiteUnavailable?: (client: QueryClient) => void;
 };
 
 /** 4xx means "the request is wrong" — retrying cannot help. Network errors and 5xx retry once. */
@@ -37,6 +43,10 @@ export function createQueryClient(handlers: GlobalErrorHandlers = {}): QueryClie
     const error = isApiError(thrown) ? thrown : new ApiError({ status: 0, code: 'MSG06' });
     if (error.status === 401) {
       handlers.onUnauthorized?.(client);
+      return;
+    }
+    if (error.code === 'MSG119' || error.code === 'MSG120') {
+      handlers.onSiteUnavailable?.(client);
       return;
     }
     if (kind === 'query') handlers.onQueryError?.(error, client);
