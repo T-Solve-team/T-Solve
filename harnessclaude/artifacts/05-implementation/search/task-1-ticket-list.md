@@ -31,7 +31,7 @@
 - `npx vitest run src/features/tickets`: 2 files, 28/28 pass.
 - `npm run test` (full): 496 pass, 11 fail (5 review, 4 chatbot, 2 tickets), mostly at the 15 s timeout while
   another heavy process ran; the three files alone: 7 of 87 fail, other tests; the tickets folder alone passes.
-  Logged as BUG-010 (owner to confirm: fe-foundation test setup).
+  Logged as BUG-019 (owner to confirm: fe-foundation test setup).
 - `bun harnessclaude/hooks/sdd.ts trace search STORY-001 STORY-004`:
   ```
   ✓ AC-001.1 … AC-001.14  frontend/src/features/tickets/pages/TicketListPage.test.tsx
@@ -59,7 +59,7 @@ Evaluation of ticket-list; then Task 2 (6.1 Search, KAN-145) on `feature/KAN-145
 - Independent review (harnessclaude-reviewer, attempt 1): verdict pass, no Critical finding
   (`artifacts/06-evaluation/search/task-1-ticket-list-review.md`).
 - Open judgment call of the review — the full suite had 5 timeouts (4 in files this commit does not touch), each
-  failing file passes alone: Anh Tran Hai accepted the pass on 26/10; the flakiness stays tracked as BUG-010.
+  failing file passes alone: Anh Tran Hai accepted the pass on 26/10; the flakiness stays tracked as BUG-019.
 - Informational findings left as they are (no criterion broken): the Keyword also reloads from the search icon and
   the clear icon; a Keyword from the URL is not trimmed or capped; mock Department and Project ids are numeric
   strings until fe-foundation Task 10.

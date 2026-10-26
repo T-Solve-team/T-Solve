@@ -12,6 +12,13 @@ Master registry of all artifacts in this workspace.
 | — | module | be-foundation | draft | artifacts/03-modules/be-foundation/module.md |
 | — | module | fe-foundation | draft | artifacts/03-modules/fe-foundation/module.md |
 | — | module | identity | draft | artifacts/03-modules/identity/module.md |
+| — | spec | identity | draft | artifacts/03-modules/identity/spec.md |
+| — | design | identity | draft | artifacts/04-plans/identity/design.md |
+| — | design | identity | draft | artifacts/04-plans/identity/iteration-1/design.md |
+| — | tasks | identity | draft | artifacts/04-plans/identity/iteration-1/tasks.md |
+| — | session-log | identity | in-progress | artifacts/05-implementation/identity/task-1-user-list.md |
+| — | test-report | identity | draft | artifacts/06-evaluation/identity/task-1-user-list-test-report.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-1-user-list-review.md |
 | — | module | workspace | draft | artifacts/03-modules/workspace/module.md |
 | — | module | project-integration | draft | artifacts/03-modules/project-integration/module.md |
 | — | module | wiki | draft | artifacts/03-modules/wiki/module.md |
@@ -51,6 +58,9 @@ Master registry of all artifacts in this workspace.
 | — | session-log | chatbot | passing | artifacts/05-implementation/chatbot/task-2-citations.md |
 | — | review | chatbot | pass | artifacts/06-evaluation/chatbot/task-2-citations-review.md |
 | — | test-report | chatbot | pass | artifacts/06-evaluation/chatbot/task-2-citations-test-report.md |
+| — | session-log | chatbot | passing | artifacts/05-implementation/chatbot/task-5-uuid-ids.md |
+| — | review | chatbot | pass | artifacts/06-evaluation/chatbot/task-5-uuid-ids-review.md |
+| — | test-report | chatbot | pass | artifacts/06-evaluation/chatbot/task-5-uuid-ids-test-report.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-6-placeholder-rule-review.md |
 | — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-6-placeholder-rule-test-report.md |
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-1-roles-session.md |
@@ -75,3 +85,7 @@ Master registry of all artifacts in this workspace.
 | — | session-log | search | passing | artifacts/05-implementation/search/task-1-ticket-list.md |
 | — | review | search | pass | artifacts/06-evaluation/search/task-1-ticket-list-review.md |
 | — | test-report | search | pass | artifacts/06-evaluation/search/task-1-ticket-list-test-report.md |
+| — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-10-uuid-ids.md |
+| — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-10-uuid-ids-review.md |
+| — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-10-uuid-ids-test-report.md |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-107-user-list-1366x768.jpg |

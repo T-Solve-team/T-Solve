@@ -3,12 +3,36 @@ import type { CurrentUser, ProjectMembership } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { getDevUser, setDevUser, type DevUserId } from '@/shared/auth';
 
-const IT = { departmentId: 1, name: 'IT' };
-const HR = { departmentId: 2, name: 'HR' };
+/** Fixed UUIDs, one per record, reused wherever the record appears (guideline: ids are UUID strings). */
+const IT_ID = '00000000-0000-4000-8000-0000000000d1';
+const HR_ID = '00000000-0000-4000-8000-0000000000d2';
+const ITSUP_ID = '00000000-0000-4000-8000-000000000101';
+const ITNET_ID = '00000000-0000-4000-8000-000000000102';
+const HRHELP_ID = '00000000-0000-4000-8000-000000000201';
+const IT_SPACE_ID = '00000000-0000-4000-8000-0000000000a1';
+const HR_SPACE_ID = '00000000-0000-4000-8000-0000000000a2';
 
-const ITSUP = { projectId: 101, jiraProjectKey: 'ITSUP', departmentId: 1, departmentName: 'IT' };
-const ITNET = { projectId: 102, jiraProjectKey: 'ITNET', departmentId: 1, departmentName: 'IT' };
-const HRHELP = { projectId: 201, jiraProjectKey: 'HRHELP', departmentId: 2, departmentName: 'HR' };
+const IT = { departmentId: IT_ID, name: 'IT' };
+const HR = { departmentId: HR_ID, name: 'HR' };
+
+const ITSUP = {
+  projectId: ITSUP_ID,
+  jiraProjectKey: 'ITSUP',
+  departmentId: IT_ID,
+  departmentName: 'IT',
+};
+const ITNET = {
+  projectId: ITNET_ID,
+  jiraProjectKey: 'ITNET',
+  departmentId: IT_ID,
+  departmentName: 'IT',
+};
+const HRHELP = {
+  projectId: HRHELP_ID,
+  jiraProjectKey: 'HRHELP',
+  departmentId: HR_ID,
+  departmentName: 'HR',
+};
 
 const managed = (project: typeof ITSUP): ProjectMembership => ({
   ...project,
@@ -28,13 +52,21 @@ const NOBODY_ELSE = { department: null, departments: [], projects: [], managedSp
  */
 export const MOCK_USERS: Record<DevUserId, CurrentUser> = {
   employee: {
-    user: { id: 2, fullName: 'Trần Thị Lan', email: 'lan.tran@company.example' },
+    user: {
+      id: '00000000-0000-4000-8000-000000000002',
+      fullName: 'Trần Thị Lan',
+      email: 'lan.tran@company.example',
+    },
     roles: ['EMPLOYEE'],
     ...NOBODY_ELSE,
     workspaceReady: true,
   },
   tr: {
-    user: { id: 4, fullName: 'Phạm Quốc Bảo', email: 'bao.pham@company.example' },
+    user: {
+      id: '00000000-0000-4000-8000-000000000004',
+      fullName: 'Phạm Quốc Bảo',
+      email: 'bao.pham@company.example',
+    },
     roles: ['EMPLOYEE', 'TICKET_RESOLVER'],
     ...NOBODY_ELSE,
     departments: [IT],
@@ -42,7 +74,11 @@ export const MOCK_USERS: Record<DevUserId, CurrentUser> = {
     workspaceReady: true,
   },
   'tr-two-departments': {
-    user: { id: 5, fullName: 'Ngô Thị Mai', email: 'mai.ngo@company.example' },
+    user: {
+      id: '00000000-0000-4000-8000-000000000005',
+      fullName: 'Ngô Thị Mai',
+      email: 'mai.ngo@company.example',
+    },
     roles: ['EMPLOYEE', 'TICKET_RESOLVER'],
     ...NOBODY_ELSE,
     departments: [IT, HR],
@@ -50,7 +86,11 @@ export const MOCK_USERS: Record<DevUserId, CurrentUser> = {
     workspaceReady: true,
   },
   pm: {
-    user: { id: 3, fullName: 'Đỗ Minh Quân', email: 'quan.do@company.example' },
+    user: {
+      id: '00000000-0000-4000-8000-000000000003',
+      fullName: 'Đỗ Minh Quân',
+      email: 'quan.do@company.example',
+    },
     roles: ['EMPLOYEE', 'PROJECT_MANAGER'],
     ...NOBODY_ELSE,
     department: IT,
@@ -59,30 +99,46 @@ export const MOCK_USERS: Record<DevUserId, CurrentUser> = {
     workspaceReady: true,
   },
   km: {
-    user: { id: 6, fullName: 'Lê Thu Hương', email: 'huong.le@company.example' },
+    user: {
+      id: '00000000-0000-4000-8000-000000000006',
+      fullName: 'Lê Thu Hương',
+      email: 'huong.le@company.example',
+    },
     roles: ['EMPLOYEE', 'KNOWLEDGE_MANAGER'],
     ...NOBODY_ELSE,
-    managedSpaces: [{ spaceId: 1, name: 'IT Space' }],
+    managedSpaces: [{ spaceId: IT_SPACE_ID, name: 'IT Space' }],
     workspaceReady: true,
   },
   admin: {
-    user: { id: 1, fullName: 'Nguyễn Văn An', email: 'an.nguyen@company.example' },
+    user: {
+      id: '00000000-0000-4000-8000-000000000001',
+      fullName: 'Nguyễn Văn An',
+      email: 'an.nguyen@company.example',
+    },
     roles: ['EMPLOYEE', 'ADMIN'],
     ...NOBODY_ELSE,
     workspaceReady: true,
   },
   'pm-km': {
-    user: { id: 7, fullName: 'Võ Thanh Tâm', email: 'tam.vo@company.example' },
+    user: {
+      id: '00000000-0000-4000-8000-000000000007',
+      fullName: 'Võ Thanh Tâm',
+      email: 'tam.vo@company.example',
+    },
     roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'KNOWLEDGE_MANAGER'],
     ...NOBODY_ELSE,
     department: HR,
     departments: [HR],
     projects: [managed(HRHELP)],
-    managedSpaces: [{ spaceId: 2, name: 'HR Space' }],
+    managedSpaces: [{ spaceId: HR_SPACE_ID, name: 'HR Space' }],
     workspaceReady: true,
   },
   'admin-tr': {
-    user: { id: 8, fullName: 'Hoàng Minh Đức', email: 'duc.hoang@company.example' },
+    user: {
+      id: '00000000-0000-4000-8000-000000000008',
+      fullName: 'Hoàng Minh Đức',
+      email: 'duc.hoang@company.example',
+    },
     roles: ['EMPLOYEE', 'ADMIN', 'TICKET_RESOLVER'],
     ...NOBODY_ELSE,
     departments: [IT],

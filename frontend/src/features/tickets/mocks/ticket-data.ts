@@ -4,15 +4,24 @@ import type { TicketSource, TicketStatus, TicketSummary } from '@/shared/api';
 export type MockTicket = TicketSummary & { solution: string };
 
 /**
- * Projects and Departments of the fixture users (src/mocks/session.ts), their ids as strings: feature code may not
- * import src/mocks, so keep these in step with it (design "Data Model"; fe-foundation Task 10 turns them into UUIDs).
+ * Projects and Departments of the fixture users, with the same UUIDs as src/mocks/session.ts: feature code may not
+ * import src/mocks, so keep these in step with it (design "Data Model").
  */
-const IT = { departmentId: '1', name: 'IT' };
-const HR = { departmentId: '2', name: 'HR' };
+const IT = { departmentId: '00000000-0000-4000-8000-0000000000d1', name: 'IT' };
+const HR = { departmentId: '00000000-0000-4000-8000-0000000000d2', name: 'HR' };
 const PROJECTS = {
-  ITSUP: { project: { projectId: '101', name: 'ITSUP' }, department: IT },
-  ITNET: { project: { projectId: '102', name: 'ITNET' }, department: IT },
-  HRHELP: { project: { projectId: '201', name: 'HRHELP' }, department: HR },
+  ITSUP: {
+    project: { projectId: '00000000-0000-4000-8000-000000000101', name: 'ITSUP' },
+    department: IT,
+  },
+  ITNET: {
+    project: { projectId: '00000000-0000-4000-8000-000000000102', name: 'ITNET' },
+    department: IT,
+  },
+  HRHELP: {
+    project: { projectId: '00000000-0000-4000-8000-000000000201', name: 'HRHELP' },
+    department: HR,
+  },
 } as const;
 
 type Row = [

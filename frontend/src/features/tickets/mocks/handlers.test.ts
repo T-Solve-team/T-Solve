@@ -1,6 +1,9 @@
 import { getTickets, TicketSource, TicketStatus, type GetTicketsParams } from '@/shared/api';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** The fixture users' Departments (src/mocks/session.ts). */
+const IT_ID = '00000000-0000-4000-8000-0000000000d1';
+const HR_ID = '00000000-0000-4000-8000-0000000000d2';
 
 async function ids(params: GetTicketsParams): Promise<string[]> {
   const page = await getTickets({ size: 100, ...params });
@@ -14,7 +17,7 @@ describe('tickets mock handlers', () => {
     expect(page.page.totalElements).toBeGreaterThanOrEqual(25);
     expect(new Set(tickets.map((t) => t.status))).toEqual(new Set(Object.values(TicketStatus)));
     expect(new Set(tickets.map((t) => t.source))).toEqual(new Set(Object.values(TicketSource)));
-    expect(new Set(tickets.map((t) => t.department.departmentId))).toEqual(new Set(['1', '2']));
+    expect(new Set(tickets.map((t) => t.department.departmentId))).toEqual(new Set([IT_ID, HR_ID]));
     for (const t of tickets) expect(t.ticketId).toMatch(UUID);
     expect(new Set(tickets.map((t) => t.ticketId)).size).toBe(tickets.length);
     expect(tickets[0]).not.toHaveProperty('solution');
@@ -27,9 +30,9 @@ describe('tickets mock handlers', () => {
   });
 
   it('AC-004.2 filters by Department, source and status together', async () => {
-    expect(await ids({ departmentId: '2', source: 'SOLUTION_FORM', status: 'PUBLISHED' })).toEqual([
-      'HRHELP-0232',
-    ]);
+    expect(
+      await ids({ departmentId: HR_ID, source: 'SOLUTION_FORM', status: 'PUBLISHED' }),
+    ).toEqual(['HRHELP-0232']);
   });
 
   it('AC-004.2 sorts by updatedAt newest first by default and by any sort key', async () => {

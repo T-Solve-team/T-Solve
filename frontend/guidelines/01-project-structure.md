@@ -146,7 +146,7 @@ imports each feature's `mocks/handlers.ts` directly so mock code never ships in 
 
 ## 5. The 15 features
 
-35 web screens: 26 with a path, 9 popups. Roles are Report3's Permission Matrix; "Employee" means every
+34 web screens: 26 with a path, 8 popups. Roles are Report3's Permission Matrix; "Employee" means every
 signed-in user (every user has the Employee role).
 
 | Feature folder | Screens (SRS III) | Roles | May import (via index) |
@@ -162,7 +162,7 @@ signed-in user (every user has the Employee role).
 | `review` | 7.1 Review Queue · 7.2 Request Changes (popup) · 7.3 Reject Ticket (popup) · 7.4 Review History · 7.5 Expired Tickets | Project Manager | — |
 | `feedback` | 8.1 Give Feedback (popup) [Web] | Ticket Resolver, Project Manager | — |
 | `knowledge-dashboard` | 9.1 Knowledge Dashboard | Project Manager, Admin | — |
-| `audit-log` | 9.2 Audit Log · 9.3 Audit Entry Detail (popup) | Admin | — |
+| `audit-log` | 9.2 Audit Log | Admin | — |
 | `triage` | 10.1 Triage History · 10.2 Triage Result Detail (popup) | Project Manager | — |
 | `wiki` | 11.1 Wiki Home · 11.2 Wiki Document | Employee | — |
 | | 11.4 Upload Documents · 11.5 Folder (popup) · 11.7 Space Settings | Knowledge Manager | |

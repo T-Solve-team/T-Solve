@@ -129,10 +129,30 @@ describe('ReviewQueuePage', () => {
     // The mock Project Manager has exactly one Department, IT (GBR-16).
     await user.click(await screen.findByTitle('IT'));
 
-    await waitFor(() => expect(router.state.location.search).toBe('?departmentId=1'));
+    await waitFor(() =>
+      expect(router.state.location.search).toBe(
+        '?departmentId=00000000-0000-4000-8000-0000000000d1',
+      ),
+    );
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: 'HRHELP-0318' })).not.toBeInTheDocument(),
     );
     expect(screen.getByRole('link', { name: 'ITSUP-1031' })).toBeInTheDocument();
+  });
+
+  it('BUG-017 ignores a departmentId that is not a UUID', async () => {
+    const queueUrls: URL[] = [];
+    const onRequest = ({ request }: { request: Request }) => {
+      const url = new URL(request.url);
+      if (url.pathname.endsWith('/review-queue')) queueUrls.push(url);
+    };
+    server.events.on('request:start', onRequest);
+    try {
+      renderApp('/review-queue?departmentId=abc', { role: 'PROJECT_MANAGER' });
+      await waitFor(() => expect(queueUrls.length).toBeGreaterThan(0), { timeout: 5000 });
+    } finally {
+      server.events.removeListener('request:start', onRequest);
+    }
+    expect(queueUrls.some((url) => url.searchParams.has('departmentId'))).toBe(false);
   });
 });

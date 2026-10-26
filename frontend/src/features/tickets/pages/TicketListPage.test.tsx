@@ -10,6 +10,10 @@ import { renderApp } from '@/test/render';
 
 type Options = Parameters<typeof renderApp>[1];
 
+/** The fixture users' Departments (src/mocks/session.ts). */
+const IT_ID = '00000000-0000-4000-8000-0000000000d1';
+const HR_ID = '00000000-0000-4000-8000-0000000000d2';
+
 /** The Ticket List; resolves once the first page is shown. */
 async function openList(path = '/tickets', options: Options = {}) {
   const user = userEvent.setup();
@@ -161,7 +165,7 @@ describe('TicketListPage', () => {
     expect(keyword).toHaveValue('x'.repeat(100));
   });
 
-  it('AC-001.6 filters by one of my Departments as a string id, and All Departments removes it', async () => {
+  it('AC-001.6 filters by one of my Departments by its id, and All Departments removes it', async () => {
     const requests = recordRequests();
     const { user, router } = await openList('/tickets', { user: 'tr-two-departments' });
     await user.click(screen.getByRole('combobox', { name: 'Department' }));
@@ -169,12 +173,12 @@ describe('TicketListPage', () => {
     expect(await findOption('IT')).toBeInTheDocument();
     await user.click(await findOption('HR'));
 
-    await waitFor(() => expect(router.state.location.search).toBe('?departmentId=2'));
+    await waitFor(() => expect(router.state.location.search).toBe(`?departmentId=${HR_ID}`));
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: 'ITSUP-1024' })).not.toBeInTheDocument(),
     );
     expect(screen.getByText('Total 10 items')).toBeInTheDocument();
-    expect(requests.at(-1)?.get('departmentId')).toBe('2');
+    expect(requests.at(-1)?.get('departmentId')).toBe(HR_ID);
 
     await pick(user, 'Department', 'All Departments');
     await waitFor(() => expect(router.state.location.search).toBe(''));
@@ -255,7 +259,9 @@ describe('TicketListPage', () => {
 
   it('AC-001.10 shows the list of a shared link, with its values in the filters', async () => {
     const requests = recordRequests();
-    renderApp('/tickets?keyword=vpn&departmentId=1&source=SOLUTION_FORM&status=PENDING_REVIEW');
+    renderApp(
+      `/tickets?keyword=vpn&departmentId=${IT_ID}&source=SOLUTION_FORM&status=PENDING_REVIEW`,
+    );
     expect(
       await screen.findByRole('link', { name: 'ITSUP-1102' }, { timeout: 5000 }),
     ).toBeInTheDocument();
@@ -264,7 +270,7 @@ describe('TicketListPage', () => {
     expect(selected('Department')).toBe('IT');
     expect(selected('Source')).toBe('Solution Form');
     expect(selected('Status')).toBe('Pending review');
-    expect(requests[0]?.get('departmentId')).toBe('1');
+    expect(requests[0]?.get('departmentId')).toBe(IT_ID);
   });
 
   it('AC-001.10 ignores a Source or Status that is not valid', async () => {
@@ -337,8 +343,8 @@ describe('TicketListPage', () => {
             ticketId: '7a1c0000-0000-4000-8000-000000000001',
             sourceTicketId: 'ITSUP-1024',
             title: html,
-            project: { projectId: '101', name: 'ITSUP' },
-            department: { departmentId: '1', name: 'IT' },
+            project: { projectId: '00000000-0000-4000-8000-000000000101', name: 'ITSUP' },
+            department: { departmentId: IT_ID, name: 'IT' },
             source: 'MANUAL',
             status: 'PUBLISHED',
             reviewDueDate: null,

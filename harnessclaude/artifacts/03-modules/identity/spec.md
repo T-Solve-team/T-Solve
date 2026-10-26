@@ -6,8 +6,8 @@ owner: BA
 
 # Spec: identity
 
-Slice UC-01…03 (owner Trần Trung Hiếu, Jira KAN-103, KAN-104, KAN-106, KAN-160). UC-04…09 are added to this
-spec by their owner (Changelog).
+UC-01…03 (owner Trần Trung Hiếu, Jira KAN-103, KAN-104, KAN-106, KAN-160) retain STORY-001…003.
+UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW delivery in STORY-004…007; standalone UC-08…09 remain outside that delivery.
 
 ## Changelog
 
@@ -16,6 +16,9 @@ spec by their owner (Changelog).
 | 2026-10-25 | STORY-001..STORY-003 | Initial spec of the UC-01…03 slice: central sign-in through `login.` with Google OIDC, the session per Workspace site, the Platform Operator and Jira-link sign-ins, log out, My Profile with solution history. Written from Report3 (GBR-03, GBR-19, GBR-28, GBR-37, D1, D9, D13, D14, D22, D23, D36), Stories TS-020, TS-021, TS-023, TS-127 and the planning decisions Q1–Q16 of 25/10 | KAN-197 (Phase 1, multi-tenant baseline) |
 | 2026-10-25 | — | UC-04…09 (View user list, Add Account, Update Account status, Update roles and Department, Hand over Projects, Hand over Spaces) will be added as STORY-004 onwards by their owner Phạm Tùng Dương (KAN-107…112) | One module, two owners (D40: the Jira assignee owns the Story) |
 | 2026-10-25 | STORY-001, STORY-003 | Interface Contracts only: `MySolution.ticketId` is a UUID string (`format: uuid`); the Account table is `accounts` and the Roles table `account_roles`, each with a UUID `id` under the platform convention (platform AC-001.8); `jira_account_links` keeps its D1 name. No acceptance criterion added, reworded or removed (`SpaceRef` follows the fe-foundation contract) | Change request KAN-196 Q2 (the user, 25/10): UUID primary keys and plural table names in every module (Phan_cong v6 §1); SPEC-P1-7 |
+
+| 2026-10-25 | STORY-004..007 | Initial frontend scope for KAN-107–110, with working MSW data | User requested frontend screens for their four In Progress Jira stories and selected MSW before backend integration |
+| 2026-10-26 | STORY-004..STORY-007 | Merge the UC-04–07 frontend/MSW slice after main's unchanged STORY-001–003; renumber its AC ids to AC-004–007; add AC-004.8 for the 100-character search limit and align UserAccount ids with the UUID convention | User-requested KAN-107 review repair: preserve the other owner's sign-in/logout/profile specification and align the account contract with main |
 
 ## Requirements
 
@@ -44,6 +47,11 @@ spec by their owner (Changelog).
    Project Manager, and the sign-in times. The UC-04…09 stories extend it (decision Q8). The full name comes from
    Google at every sign-in (decision Q7).
 
+9. Implement the Admin User List (1.3.1), User Detail (1.3.2, creation and editing), and required Hand Over Responsibilities popup (1.3.3).
+10. Follow KAN-107, KAN-108, KAN-109 and KAN-110 as read from the signed-in user's Jira board on 2026-10-25. These are the only stories in the frontend/MSW delivery; STORY-001–003 keep their separately specified backend and authentication scope.
+11. Use the existing English screen names, shared UI kit, message catalog, role guards, form validation and registered routes.
+12. Use generated API hooks with TanStack Query and realistic, mutable MSW handlers. Mock checks demonstrate business rules; they do not establish production security guarantees.
+
 ### Non-Functional
 1. Every acceptance criterion has a test whose name cites its id. Backend: JUnit `…_AC_001_1`. Web app: `it`
    names start with the id. `sdd.ts trace identity` passes for STORY-001…003.
@@ -60,6 +68,11 @@ spec by their owner (Changelog).
    uses two Workspaces with Accounts of the same Roles.
 6. Error bodies follow be-foundation (`ProblemDetail` with a Report3 `code`). Sign-in failures are redirects with
    a code, never backend text.
+
+7. THE frontend SHALL render these screens at the project's minimum desktop viewport of 1366 × 768 without inaccessible actions or clipped form controls.
+8. THE frontend SHALL provide keyboard-accessible controls, visible field labels, pending states, and disabled duplicate submission controls.
+9. THE frontend SHALL keep server data in TanStack Query and filters, sorting and pagination in URL search parameters.
+10. THE implementation SHALL add no npm dependencies and reuse existing feature, API generation, form and UI patterns.
 
 ## User Stories
 
@@ -159,10 +172,55 @@ spec by their owner (Changelog).
   - AC-003.13: WHILE My Solutions has no rows, THE My Profile screen SHALL show MSG04 in that section.
   - AC-003.14: IF loading My Solutions or "Spaces I can view" fails, THEN THE My Profile screen SHALL show MSG06 in that section and still show the account information of AC-003.1.
 
+### STORY-004: View Workspace users (KAN-107 / UC-04)
+- As an Admin, I want to search and filter the users of my Workspace so that I can manage their accounts.
+- Acceptance:
+  - AC-004.1: WHEN an Admin opens `/users`, THE frontend SHALL display a User List containing only accounts returned for the current Workspace.
+  - AC-004.2: WHEN an Admin submits a search or changes role, status or Department filters, THE frontend SHALL request and display the matching users using URL-backed filter state.
+  - AC-004.3: WHEN an Admin changes the page or sort order, THE frontend SHALL request the corresponding results with 20 rows per page by default and preserve that state in the URL.
+  - AC-004.4: WHEN the users request is pending, THE frontend SHALL display the existing loading state.
+  - AC-004.5: IF the users request fails, THEN THE frontend SHALL display the catalog error and a retry action.
+  - AC-004.6: IF no users match the request, THEN THE frontend SHALL display MSG04.
+  - AC-004.7: IF the signed-in user lacks the Admin role, THEN THE existing route guard SHALL prevent access to the User List and User Detail routes.
+  - AC-004.8: IF an Admin submits a search longer than 100 characters after trimming, THEN THE frontend SHALL display MSG02 for Search with a limit of 100 characters, preserve the entered text and leave the current query, URL and displayed results unchanged.
+
+### STORY-005: Add a user account (KAN-108 / UC-05)
+- As an Admin, I want to add an account using a company email so that the employee can sign in.
+- Acceptance:
+  - AC-005.1: WHEN an Admin chooses to add a user, THE frontend SHALL open the creation mode of User Detail at `/users/new`.
+  - AC-005.2: WHEN an Admin submits a new account, THE frontend SHALL validate required inputs, email format and the SRS email limit of 100 characters using catalog messages.
+  - AC-005.3: IF an email is outside the Workspace domain or already belongs to an account, THEN THE mock API SHALL reject creation and THE frontend SHALL display the corresponding catalog validation message without losing form input.
+  - AC-005.4: WHEN a new account is created, THE mock API SHALL include the Employee role and THE frontend SHALL prevent removing that baseline role.
+  - AC-005.5: IF the Project Manager role is selected without a Department, THEN THE frontend SHALL prevent submission and identify the missing field.
+  - AC-005.6: WHEN an Admin assigns Knowledge Manager Spaces, THE frontend SHALL use API-provided options and THE mock API SHALL enforce at most one Knowledge Manager per Space, returning MSG117 for conflicts.
+  - AC-005.7: WHEN creation succeeds, THE frontend SHALL invalidate affected user queries and display the catalog success feedback.
+  - AC-005.8: IF the email belongs to a Deactivated account, THEN THE mock API SHALL reject duplicate creation with MSG111 so the Admin can reactivate the existing account.
+
+### STORY-006: Change account status (KAN-109 / UC-06)
+- As an Admin, I want to deactivate departed employees while retaining their account history.
+- Acceptance:
+  - AC-006.1: WHEN an Admin activates a Deactivated account, THE frontend SHALL submit the change and refresh its detail and affected list queries after success.
+  - AC-006.2: WHEN an Admin deactivates an account with no Active Project or managed Space requiring handover, THE frontend SHALL request confirmation using MSG57 before submitting the change.
+  - AC-006.3: IF the target is the last Active Admin, THEN THE mock API SHALL reject deactivation and THE frontend SHALL display MSG56.
+  - AC-006.4: IF the target is the current Admin, THEN THE frontend SHALL disable self-deactivation with MSG112.
+  - AC-006.5: WHEN a Project Manager with Active Projects or a Knowledge Manager with managed Spaces is deactivated, THE frontend SHALL open Hand Over Responsibilities with MSG_NEW_2 and require eligible recipients for every responsibility before completion.
+  - AC-006.6: IF no eligible replacement exists, THEN THE frontend SHALL block completion and display MSG59 for Project Managers or MSG118 for Knowledge Managers.
+  - AC-006.7: WHEN deactivation succeeds, THE mock API SHALL retain the account and its responsibility/history references rather than delete the user.
+  - AC-006.8: IF a status update fails or is cancelled, THEN THE frontend SHALL retain the last confirmed status and allow retry without reporting success.
+
+### STORY-007: Update roles, Department and Spaces (KAN-110 / UC-07)
+- As an Admin, I want to update a user's roles and assignments so that their responsibilities match their work.
+- Acceptance:
+  - AC-007.1: WHEN an Admin opens an existing User Detail, THE frontend SHALL load the selected user's roles, status, Department and managed Spaces from the API.
+  - AC-007.2: WHEN an Admin saves role and assignment changes, THE mock API SHALL retain Employee, require a Department for Project Managers and enforce one Knowledge Manager per Space.
+  - AC-007.3: WHEN a role or assignment change removes managed responsibilities, THE frontend SHALL require the existing D3 handover flow before submitting the completed change.
+  - AC-007.4: IF an Admin attempts to remove their own Admin role, THEN THE frontend SHALL disable that action with MSG113.
+  - AC-007.5: WHEN removing a Ticket Resolver role affects Project membership, THE frontend SHALL request confirmation with MSG78 before submitting the change.
+  - AC-007.6: WHEN a role update succeeds, THE frontend SHALL invalidate affected list, detail and session queries so subsequent mock requests use the updated permissions.
+  - AC-007.7: IF updating roles or assignments fails, THEN THE frontend SHALL preserve the unsaved form and display the API's catalog error without committing partial changes.
+
 ## Out of Scope
-- UC-04…09: user list, adding Accounts, account status, Roles and Department, hand-overs. They are owned by Phạm
-  Tùng Dương (KAN-107…112) and added to this spec as STORY-004 onwards. This slice only creates the Account
-  store they extend.
+- Standalone UC-08…09 (KAN-111…112), beyond the handovers required by STORY-006–007, remain outside the UC-04–07 frontend delivery. STORY-001–003 create the real Account store; STORY-004–007 demonstrate the Admin screens against mutable MSW contracts.
 - The Workspace resolver, MSG119 and MSG120 on ordinary requests, the Forge Invocation Token check, RLS →
   `platform` (KAN-196). A Suspended Workspace's site is refused there; its sessions are not ended by this
   module.
@@ -187,6 +245,11 @@ spec by their owner (Changelog).
 - "My Wiki documents" and the review decision of each Solution (v3460 screen 1.2.1). They are not in UC-03 or
   TS-127, and the Solution list has no filters (decision Q12).
 - Managing the Platform Operator allow-list (D36: no use case manages it).
+
+### UC-04–07 frontend delivery exclusions
+- For STORY-004–007 only: real backend identity endpoints, authentication, session invalidation, audit persistence and production authorization remain unimplemented by this frontend/MSW delivery. The real guarantees belong to the separately specified backend/authentication slices; mock behavior is not evidence of production enforcement.
+- Workspace or Department administration, Jira integration, Wiki management, new shared components, dependency changes or redesigning the application shell.
+- Real user data or a browser-persistent mock database; the MSW dataset resets with the mock runtime.
 
 ## Interface Contracts
 
@@ -259,6 +322,14 @@ a plural name, UUID ids (`id` and every `<entity>_id`), `workspace_id` and row-l
 
 **Header.** `X-TSolve-Background: 1` marks a request that is not user activity (AC-001.25).
 
+### UC-04–07 frontend/MSW exposed contracts
+- Existing Admin routes: `/users`, `/users/new`, `/users/:userId` from `users/routes.ts`.
+- An API contract stub in `frontend/openapi/tsolve-api.yaml`, generated through orval, for user list/detail and mutations plus the lookup data required by these screens. Endpoint and schema details belong in the design and are frontend mock proposals until agreed with the backend owner.
+- Pagination and errors follow guideline 06: `{ content, page: { size, number, totalElements, totalPages } }`; RFC 9457 Problem Details with catalog `code`, `params` and optional `fieldErrors`.
+- Mutable MSW handlers live in `frontend/src/features/users/mocks/handlers.ts`, using synthetic Workspace-scoped fixtures and validating rejected operations before changing mock records.
+- `UserAccount.id` is a UUID string (`type: string`, `format: uuid`), consistent with the `accounts.id` convention; `/users/:userId` carries that UUID. DepartmentRef and SpaceRef follow the current shared contracts.
+- The user-list query `q` has a 100-character maximum after trimming; the mock rejects longer values with 400 MSG02 and parameters `field_name: Search`, `max_length: 100`.
+
 ### Required from other modules
 - `platform` (KAN-196):
   - `TenantResolver` and `TenantContext` for Workspace-site requests;
@@ -283,6 +354,11 @@ a plural name, UUID ids (`id` and every `<entity>_id`), `workspace_id` and row-l
   the returned URL in a new tab.
 - `chatbot` (Trần Hải Anh): listens to `SessionEnded` for its server-side retention (chatbot Requirement 7).
 
+### UC-04–07 frontend/MSW dependencies
+- `fe-foundation`: Admin route guards, `useSession`, shared UI kit, form rules, message catalog, generated API infrastructure and pre-registered feature mocks.
+- `workspace`: Workspace email domain, Department choices and Space references, supplied by mock contracts for this delivery.
+- `be-foundation`: real authorization and session/error enforcement for future backend integration.
+
 ## Definition of Done
 - [ ] Every acceptance criterion has a test whose name starts with or cites its AC id; `sdd.ts trace identity`
       passes for STORY-001…003
@@ -290,6 +366,20 @@ a plural name, UUID ids (`id` and every `<entity>_id`), `workspace_id` and row-l
 - [ ] The YAML contract has the endpoints and schemas above; `generate:api` leaves no diff
 - [ ] The owners of `platform`, `platform-console`, `jira-app`, `ticket-repository`, `wiki`, `chatbot` and
       `fe-foundation` have been told what they call or implement
+
+### UC-04–07 frontend delivery checks
+- [ ] Every acceptance criterion has a test whose name starts with its AC id; backend-only guarantees are identified as unverified in production.
+- [ ] Each Jira story is delivered on its own issue branch and reviewed with the user before its feature commit and before starting the next story.
+- [ ] UI verification covers the existing Admin shell at 1366 × 768, keyboard operation, loading, empty, failure and mutation feedback.
+- [ ] Frontend format, lint, typecheck, test and build checks pass.
+- [ ] API regeneration leaves no diff in generated files after the committed generation output.
+- [ ] Shared/API ownership review requirements are preserved; generated files are never hand-edited.
+
+## Sources and decisions — UC-04–07 frontend delivery
+- Jira: KAN-107, KAN-108, KAN-109, KAN-110, read from the current user's filtered board on 2026-10-25.
+- User decision on 2026-10-25: working frontend with MSW data, prepared for later API integration.
+- `frontend/AGENTS.md`; guidelines 01, 02, 06, 07, 08 and 09; existing message catalog including MSG56, MSG57, MSG59, MSG78, MSG111–113, MSG117–118 and MSG_NEW_2.
+- `module.md`, `../architecture.md` and `../../02-discovery/context-brief.md`.
 
 <!-- ACCEPTANCE CRITERIA: one testable statement per item, id AC-<story>.<n> (never reuse a
      removed id), in EARS form: THE <system> SHALL <response>, optionally led by

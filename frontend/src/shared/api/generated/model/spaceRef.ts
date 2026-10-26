@@ -8,6 +8,6 @@
  */
 
 export interface SpaceRef {
-  spaceId: number;
+  spaceId: string;
   name: string;
 }

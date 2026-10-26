@@ -25,7 +25,7 @@ the DevOps design §1.6.)
 ## 2. Registration without a central file
 
 The usual hot spots in a React app — the route table, the menu, the mock list, the path constants — are
-**pre-filled once for all 15 features and 35 screens**. You fill in your feature folder; you do not
+**pre-filled once for all 15 features and 34 screens**. You fill in your feature folder; you do not
 edit these files.
 
 | File | Pre-filled with | What you do instead |

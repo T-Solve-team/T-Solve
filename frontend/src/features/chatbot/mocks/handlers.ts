@@ -39,7 +39,7 @@ export const handlers: HttpHandler[] = [
 
   http.get('*/api/v1/chatbot/unavailable-documents', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
-    const asked = new URL(request.url).searchParams.getAll('wikiDocumentIds').map(Number);
+    const asked = new URL(request.url).searchParams.getAll('wikiDocumentIds');
     return HttpResponse.json<UnavailableDocuments>({
       wikiDocumentIds: asked.filter((id) => UNAVAILABLE_DOCUMENT_IDS.includes(id)),
     });

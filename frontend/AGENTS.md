@@ -12,8 +12,8 @@ in the **Review Queue**; **Published tickets** become searchable and are suggest
 Ticket Triage** suggests solutions on new Jira issues, the **Wiki** holds each Department's documents, and the
 **Knowledge Chatbot** answers from both.
 
-This folder is the **T-Solve web app**: a React single-page app with **35 web screens** (26 pages with a path,
-9 popups) for five roles — Employee, Ticket Resolver, Project Manager, Knowledge Manager, Admin. A user can
+This folder is the **T-Solve web app**: a React single-page app with **34 web screens** (26 pages with a path,
+8 popups) for five roles — Employee, Ticket Resolver, Project Manager, Knowledge Manager, Admin. A user can
 hold several roles, and every user is an Employee. The T-Solve Jira App (screens inside Jira) is a separate
 app and is **not** in this folder.
 

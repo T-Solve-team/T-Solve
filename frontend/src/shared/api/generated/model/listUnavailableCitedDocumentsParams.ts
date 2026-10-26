@@ -12,5 +12,5 @@ export type ListUnavailableCitedDocumentsParams = {
    * The Wiki document ids cited in the conversation on screen.
    * @minItems 1
    */
-  wikiDocumentIds: number[];
+  wikiDocumentIds: string[];
 };

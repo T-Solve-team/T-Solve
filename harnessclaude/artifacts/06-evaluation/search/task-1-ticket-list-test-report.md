@@ -65,8 +65,8 @@ reason only.
   `{ timeout: 5000 }`), test took 8770 ms.
 - Cause: the first test of the file renders the app cold (session, layout, antd table) and the first `findBy`
   ran past 5 s while 29 files competed for CPU. The same file passes 22/22 alone (45.6 s) and 28/28 with the
-  mock tests. Same pattern as BUG-002, BUG-004 and BUG-010; the code under test is not wrong.
-- Suggested fix: none in this feature (guideline 10 §6 forbids raising timeouts); BUG-010's owner decides the
+  mock tests. Same pattern as BUG-002, BUG-004 and BUG-019; the code under test is not wrong.
+- Suggested fix: none in this feature (guideline 10 §6 forbids raising timeouts); BUG-019's owner decides the
   test-setup fix (fe-foundation).
 
 ### `src/features/review/pages/ReviewQueuePage.test.tsx` — 3 tests
@@ -80,7 +80,7 @@ reason only.
 - Error: `Test timed out in 15000ms` (15.5 s). Not touched by this commit; 2/2 pass alone (8.9 s).
 
 ## Notes
-- Flaky under load: the failing set differs from BUG-010's run on the same day (11 failures there: review 5,
+- Flaky under load: the failing set differs from BUG-019's run on the same day (11 failures there: review 5,
   chatbot 4, tickets 2; 5 here: review 3, tickets 1, mock-mode 1). Four of the five failures are in files
   outside this commit. Recorded as a judgment call in the review.
 - The new page file adds 22 jsdom page tests to the suite, which lengthens the window in which the machine is

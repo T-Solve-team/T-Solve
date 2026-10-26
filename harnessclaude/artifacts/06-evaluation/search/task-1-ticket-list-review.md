@@ -16,7 +16,7 @@ Reviewed `default@3cb60af` (`5d962cd..3cb60af`, frontend only) against the spec.
 AC-004.1 and AC-004.2 are met in the code, and each has a test that names it and checks it. Format, lint, typecheck
 and build pass, `generate:api` leaves no diff, and the feature tests pass 28/28. The full suite had 5 timeouts under
 load (4 of them in files this commit does not touch). Each failing file passes when it runs alone, and the same
-pattern was already logged as BUG-002–004 and BUG-010. No CRITICAL findings. Verdict: PASS, with the full-suite
+pattern was already logged as BUG-002–004 and BUG-019. No CRITICAL findings. Verdict: PASS, with the full-suite
 flakiness recorded as an open judgment call (see Assumptions made).
 
 ## Criteria
@@ -83,7 +83,7 @@ Informational (does not block):
    shared `DataTable`/`ErrorState` behaviour, the same as in the Review Queue, and not part of this commit.
 7. [`frontend/src/features/tickets/pages/TicketListPage.test.tsx:69`] The file's first test (`AC-001.1 shows the
    filters…`) failed in the full suite (its first `findBy` took more than 5 s, 8.8 s in total) and passes alone.
-   This is the BUG-010 family. The fix belongs to BUG-010's owner (the test setup is fe-foundation's).
+   This is the BUG-019 family. The fix belongs to BUG-019's owner (the test setup is fe-foundation's).
 
 Edge cases in the design (rows 1–5 for STORY-001, row 16): all have tests. Spaces or 100+ characters in the
 Keyword box: AC-001.4 and AC-001.5. `page=99`: AC-001.10. HTML in a title: AC-001.14. No Department: AC-001.6.
@@ -99,10 +99,10 @@ so it is escaped. No security review is needed: no auth logic, uploads, user-sup
    5 failed / 503 passed. Four failures are in files this commit does not touch (`ReviewQueuePage.test.tsx` ×3,
    including the BUG-004 test; `mock-mode.test.tsx` ×1). One is this feature's first page test. All five are
    timeouts or slow first `findBy`s, and every failing file passes alone (22/22, 9/9, 2/2). The failing set
-   differs from BUG-010's run on the same day. The evaluate skill says "any failing test → fail". I judged these
-   to be environment flakiness that predates this change (BUG-002–004, BUG-010), not a defect of the change. The
+   differs from BUG-019's run on the same day. The evaluate skill says "any failing test → fail". I judged these
+   to be environment flakiness that predates this change (BUG-002–004, BUG-019), not a defect of the change. The
    user should confirm, or decide that the suite must be green before the commit, which would make this a fail
-   blocked on BUG-010.
+   blocked on BUG-019.
 2. **AC-004.3 and AC-004.4 are out of this task's scope.** The trace shows them ✗ because Task 2 (search mock) and
    Task 3 (feedback mock) own them, as the dispatch states. This is not a MISSING finding for Task 1.
 3. **Numeric-string Department and Project ids in the mock are acceptable** (Informational 4). AC-004.1 asks for
@@ -148,6 +148,6 @@ Full report: `harnessclaude/artifacts/06-evaluation/search/task-1-ticket-list-te
 - `npm run generate:api` then `git diff --exit-code -- src/shared/api/generated`: exit 0, no diff
 - `npx vitest run src/features/tickets`: `Tests 28 passed (28)`, 65.9 s
 - `npm run test`: `Tests 5 failed | 503 passed (508)`, 426.8 s. Re-run alone: TicketListPage 22/22,
-  ReviewQueuePage 9/9, mock-mode 2/2 (load flakiness, BUG-010 family)
+  ReviewQueuePage 9/9, mock-mode 2/2 (load flakiness, BUG-019 family)
 - `sdd.ts trace search STORY-001 STORY-004`: 16/18. The two ✗ belong to Tasks 2 and 3.
 - Coverage: no coverage script; the spec sets no threshold.

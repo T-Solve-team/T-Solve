@@ -57,9 +57,9 @@ export function ConversationThread({
 }
 
 /** The Wiki documents cited in the conversation, each once and sorted, so the availability query key is stable. */
-function citedWikiDocumentIds(turns: readonly ChatTurn[]): number[] {
+function citedWikiDocumentIds(turns: readonly ChatTurn[]): string[] {
   const ids = turns.flatMap(({ answer }) =>
     answer.citations.flatMap((c) => (c.type === 'WIKI_DOCUMENT' ? [c.wikiDocumentId] : [])),
   );
-  return [...new Set(ids)].sort((a, b) => a - b);
+  return [...new Set(ids)].sort();
 }
