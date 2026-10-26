@@ -32,7 +32,7 @@ No numeric coverage script/threshold is configured. Acceptance tracing is8/8 for
 ## Failures
 - BUG-013: rapid double Save sent two POSTs before isPending rendered. Test-first synchronous submission latch fixed it.
 - BUG-014: selected numeric Department failed the string required rule. Feature-local type:number rule fixed it.
-- BUG-017: restored creation used Math.max over UUID strings, producing an invalid id. UUID creation regression was red; crypto.randomUUID resolves it. The exact test now names BUG-017; the final19-handler rerun passes after this bookkeeping label update.
+- BUG-020: restored creation used Math.max over UUID strings, producing an invalid id. UUID creation regression was red; crypto.randomUUID resolves it. The exact test now names BUG-020; the final19-handler rerun passes after this bookkeeping label update.
 - Environment-only failed attempts lost transformed-client files under the execution environment's temporary directory (ENOENT before UI suites ran). Stable workspace TEMP/TMP permits all52 tests to execute. No test timeout changed.
 - Full local chatbot tests have existing15-second timeout failures (BUG-016), independently reproduced on main during KAN-107. That branch's original full Linux CI passes29 files/516 tests. This is not substituted for KAN-108's pending full run.
 

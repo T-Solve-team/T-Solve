@@ -47,15 +47,16 @@
         "add-user": "passing",
         "account-status": "pending",
         "user-roles": "pending",
-        "user-list-review": "passing"
+        "user-list-review": "passing",
+        "add-user-review": "passing"
       },
-      "lastUpdated": "2026-10-25T18:21:04.230Z",
+      "lastUpdated": "2026-10-26T14:07:00.987Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "169712170a416fe976ac3e3591c21df2a58eb479"
+        "default": "e1a6c2bf71c28fa1fba2d9f4ddf4cbd5d9b9de04"
       }
     },
     "workspace": {

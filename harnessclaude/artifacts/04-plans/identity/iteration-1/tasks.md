@@ -74,3 +74,11 @@ Master: artifacts/04-plans/identity/design.md
 **Files:** `frontend/src/features/users/**`, `frontend/openapi/tsolve-api.yaml`, generated API output, `docs/bug-log.md`, identity harness artifacts.
 **Dependencies:** Merged spec approved by user through harness CLI.
 **Verification:** AC-004.1–AC-004.8, BUG-015 red/green, full frontend verify and deterministic API regeneration. Commit and push to existing KAN-107 branch as authorized. No merge into main.
+
+## Task 6: Resolve PR #77 integration conflicts — KAN-108
+
+**Story:** STORY-005
+**Feature:** add-user-review
+**Description:** Merge latest main into the published KAN-108 branch, preserve incoming UUID and site/session updates, reconcile mutable creation fixtures and history, align creation Department/Space references and validation with UUID contracts, and regenerate API output. Preserve both bug histories with unique ids.
+**Files:** users feature, OpenAPI and generated output, docs/bug-log.md, identity tracking/reports and merged event stream.
+**Verification:** Reproduce incompatible UUID Department validation, then full frontend checks,8/8 STORY-005 trace, browser creation with Department and Space, independent review, pushed PR #77 mergeability and exact-head CI. User authorized merge/push; never merge into main or force-push.
