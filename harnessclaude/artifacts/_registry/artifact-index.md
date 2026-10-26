@@ -68,3 +68,10 @@ Master registry of all artifacts in this workspace.
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-5-guidelines.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-5-guidelines-review.md |
 | — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-5-guidelines-test-report.md |
+| — | spec | search | approved | artifacts/03-modules/search/spec.md |
+| — | design | search | draft | artifacts/04-plans/search/design.md |
+| — | design | search | draft | artifacts/04-plans/search/iteration-1/design.md |
+| — | tasks | search | draft | artifacts/04-plans/search/iteration-1/tasks.md |
+| — | session-log | search | passing | artifacts/05-implementation/search/task-1-ticket-list.md |
+| — | review | search | pass | artifacts/06-evaluation/search/task-1-ticket-list-review.md |
+| — | test-report | search | pass | artifacts/06-evaluation/search/task-1-ticket-list-test-report.md |
