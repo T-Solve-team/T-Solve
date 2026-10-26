@@ -26,8 +26,23 @@ export const DEV_USER_FOR_ROLE: Record<Role, DevUserId> = {
   ADMIN: 'admin',
 };
 
+/**
+ * DEV ONLY (mock mode). What the Workspace site answers instead of a user: every mock API request then answers
+ * MSG119 (unknown site, 404) or MSG120 (suspended Workspace, 403) — see src/mocks/session.ts. Stored under the
+ * same key as a fixture user id.
+ */
+export const DEV_SITES = {
+  'unknown-site': 'Unknown site',
+  'suspended-workspace': 'Suspended Workspace',
+} as const;
+export type DevSiteId = keyof typeof DEV_SITES;
+
 const STORAGE_KEY = 'tsolve.dev.user';
 const DEFAULT_DEV_USER: DevUserId = 'pm';
+
+function isDevSiteId(value: string | null): value is DevSiteId {
+  return value !== null && Object.hasOwn(DEV_SITES, value);
+}
 
 function isDevUserId(value: string | null): value is DevUserId {
   return value !== null && Object.hasOwn(DEV_USERS, value);
@@ -45,8 +60,26 @@ export function getDevUser(): DevUserId | null {
 }
 
 export function setDevUser(user: DevUserId | null): void {
+  store(user ?? '');
+}
+
+/** The "site" the dev user switcher picked ("Unknown site", "Suspended Workspace"), or null for a normal site. */
+export function getDevSite(): DevSiteId | null {
   try {
-    window.localStorage.setItem(STORAGE_KEY, user ?? '');
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return isDevSiteId(stored) ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setDevSite(site: DevSiteId): void {
+  store(site);
+}
+
+function store(value: string): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, value);
   } catch {
     // Storage blocked (private mode): the default user stays in use.
   }

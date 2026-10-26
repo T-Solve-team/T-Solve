@@ -45,8 +45,8 @@ function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function ids(value: unknown): value is number[] {
-  return Array.isArray(value) && value.every((id) => Number.isSafeInteger(id) && id > 0);
+function ids(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((id) => typeof id === 'string');
 }
 
 export const handlers: HttpHandler[] = [

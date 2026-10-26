@@ -6,7 +6,7 @@ import { getGetReviewQueueTicketIdsQueryKey, getReviewQueueTicketIds } from '@/s
  * "Select all" takes every ticket in the queue, not only the page shown (SRS 7.1). Returns a function that
  * loads all ticket ids for the current Department filter.
  */
-export function useQueueTicketIds(departmentId: number | undefined) {
+export function useQueueTicketIds(departmentId: string | undefined) {
   const queryClient = useQueryClient();
   return useCallback(async () => {
     const params = departmentId === undefined ? undefined : { departmentId };

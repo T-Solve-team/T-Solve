@@ -33,6 +33,7 @@ import type {
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
+import { withBackgroundMarking } from '../../query-options';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -217,7 +218,9 @@ export const getListUnavailableCitedDocumentsQueryOptions = <
     signal,
   }) => listUnavailableCitedDocuments(params, { signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
     Awaited<ReturnType<typeof listUnavailableCitedDocuments>>,
     TError,
     TData

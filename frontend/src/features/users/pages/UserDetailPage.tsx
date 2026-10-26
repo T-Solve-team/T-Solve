@@ -83,7 +83,7 @@ function CreateUserForm() {
         <FormField<CreateUserRequest>
           name="departmentId"
           label="Department"
-          rules={isProjectManager ? [{ ...rules.required('Department'), type: 'number' }] : []}
+          rules={isProjectManager ? [rules.required('Department')] : []}
         >
           <Select
             allowClear

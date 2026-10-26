@@ -78,7 +78,7 @@ describe('UserDetailPage creation', () => {
     expect(await screen.findByRole('option', { name: 'IT' })).toBeInTheDocument();
   });
 
-  it('AC-005.5 creates a Project Manager after selecting a numeric Department (BUG-014)', async () => {
+  it('AC-005.5 creates a Project Manager after selecting a UUID Department (BUG-014, BUG-021)', async () => {
     const user = userEvent.setup();
     const { router } = renderApp('/users/new', { role: 'ADMIN' });
     await user.type(

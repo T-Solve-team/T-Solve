@@ -4,14 +4,15 @@ import type { ChatTurn, Conversation } from '../model';
 /** Spec AC-002.7: under the `tsolve.session.` prefix, so logout and a global 401 remove it (fe-foundation). */
 export const CONVERSATIONS_KEY = 'tsolve.session.chatbot.conversations';
 
-const VERSION = 1;
+/** Version 2: ids are UUID strings (AC-002.12). A version 1 value, with numeric ids, is dropped. */
+const VERSION = 2;
 
 /** The fields the citation list renders; a stored citation without them would crash it. */
 function isCitation(value: unknown): value is ChatbotCitation {
   const c = value as Record<string, unknown> | null;
   if (typeof c !== 'object' || c === null || typeof c.number !== 'number') return false;
   if (c.type === 'WIKI_DOCUMENT') {
-    return typeof c.wikiDocumentId === 'number' && typeof c.title === 'string';
+    return typeof c.wikiDocumentId === 'string' && typeof c.title === 'string';
   }
   return c.type === 'TICKET_SOLUTION' && typeof c.solution === 'object' && c.solution !== null;
 }
@@ -50,7 +51,7 @@ function isConversation(value: unknown): value is Conversation {
 }
 
 /** The stored conversations of this user; another user's, broken, older or blocked data gives [] (AC-002.8). */
-export function readConversations(userId: number): Conversation[] {
+export function readConversations(userId: string): Conversation[] {
   try {
     const raw = sessionStorage.getItem(CONVERSATIONS_KEY);
     if (raw === null) return [];
@@ -58,6 +59,7 @@ export function readConversations(userId: number): Conversation[] {
     const data = stored as { version?: unknown; userId?: unknown; conversations?: unknown } | null;
     if (
       data?.version === VERSION &&
+      typeof data.userId === 'string' &&
       data.userId === userId &&
       Array.isArray(data.conversations) &&
       data.conversations.every(isConversation)
@@ -73,7 +75,7 @@ export function readConversations(userId: number): Conversation[] {
 
 /** Sets or removes one stored rating, for a save that ends after the screen has gone (BUG-008). */
 export function writeRating(
-  userId: number,
+  userId: string,
   conversationId: string,
   answerId: string,
   rating: ChatTurn['rating'],
@@ -94,7 +96,7 @@ export function writeRating(
 }
 
 /** Keeps the conversations; when storage is blocked they stay in memory only (AC-002.11). */
-export function writeConversations(userId: number, conversations: readonly Conversation[]): void {
+export function writeConversations(userId: string, conversations: readonly Conversation[]): void {
   try {
     sessionStorage.setItem(
       CONVERSATIONS_KEY,

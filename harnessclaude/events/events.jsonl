@@ -205,6 +205,8 @@
 {"ts":"2026-10-25T14:38:39.047Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":"pending","to":"in-progress"}
 {"ts":"2026-10-25T16:29:14.295Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-25T16:29:14.499Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":"evaluating","to":"passing"}
+{"ts":"2026-10-25T16:52:18.792Z","type":"feature-status","module":"fe-foundation","feature":"uuid-ids","from":"pending","to":"in-progress"}
+{"ts":"2026-10-25T16:52:19.058Z","type":"feature-status","module":"chatbot","feature":"uuid-ids","from":"pending","to":"in-progress"}
 {"ts":"2026-10-25T17:10:00.646Z","type":"spec-approved","module":"identity","specHash":"2c74ea27ec24615797be57bb12cdda4f16aaa34b182c1267405502888f7c8299"}
 {"ts":"2026-10-25T17:11:38.064Z","type":"feature-status","module":"identity","feature":"user-list-review","from":null,"to":"pending"}
 {"ts":"2026-10-25T17:11:38.198Z","type":"feature-status","module":"identity","feature":"user-list-review","from":"pending","to":"in-progress"}
@@ -216,3 +218,13 @@
 {"ts":"2026-10-25T18:07:33.892Z","type":"commit-recorded","module":"identity","repo":"default","sha":"6350ccd23e01e425984e8b6d05fd4c65814e729e"}
 {"ts":"2026-10-25T18:11:26.102Z","type":"commit-recorded","module":"identity","repo":"default","sha":"169712170a416fe976ac3e3591c21df2a58eb479"}
 {"ts":"2026-10-25T18:21:04.230Z","type":"feature-status","module":"identity","feature":"add-user","from":"evaluating","to":"passing"}
+{"ts":"2026-10-25T18:12:46.526Z","type":"feature-status","module":"fe-foundation","feature":"uuid-ids","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-25T18:12:47.478Z","type":"feature-status","module":"chatbot","feature":"uuid-ids","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-25T18:12:51.251Z","type":"feature-status","module":"fe-foundation","feature":"uuid-ids","from":"evaluating","to":"passing"}
+{"ts":"2026-10-25T18:12:52.133Z","type":"feature-status","module":"chatbot","feature":"uuid-ids","from":"evaluating","to":"passing"}
+{"ts":"2026-10-25T19:30:55.103Z","type":"spec-approved","module":"fe-foundation","specHash":"fbb0c7a2082744e86516a6d42a3011f068916c555a0537958f070d7a334176d6"}
+{"ts":"2026-10-25T19:58:14.649Z","type":"feature-status","module":"fe-foundation","feature":"site-sign-in","from":"pending","to":"in-progress"}
+{"ts":"2026-10-26T01:10:32.262Z","type":"feature-status","module":"fe-foundation","feature":"site-sign-in","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-26T01:10:32.475Z","type":"feature-status","module":"fe-foundation","feature":"site-sign-in","from":"evaluating","to":"passing"}
+{"ts":"2026-10-26T13:33:46.805Z","type":"feature-status","module":"identity","feature":"add-user-review","from":null,"to":"pending"}
+{"ts":"2026-10-26T13:34:05.210Z","type":"feature-status","module":"identity","feature":"add-user-review","from":"pending","to":"in-progress"}

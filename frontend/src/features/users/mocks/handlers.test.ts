@@ -1,5 +1,6 @@
 import { createUser, getUserCreationOptions, getUserDepartments, getUsers } from '@/shared/api';
 import { setDevUser } from '@/shared/auth';
+import { HANDBOOK_SPACE_ID, IT_SPACE_ID } from './data';
 
 describe('Workspace user mock contracts', () => {
   beforeEach(() => setDevUser('admin'));
@@ -26,7 +27,7 @@ describe('Workspace user mock contracts', () => {
     expect((await getUsers()).page.totalElements).toBe(24);
   });
 
-  it('AC-005.4 creates an Active account with Employee retained and a nullable full name (BUG-017)', async () => {
+  it('AC-005.4 creates an Active account with Employee retained and a nullable full name (BUG-020)', async () => {
     const created = await createUser({ email: 'new@company.example', roles: ['ADMIN'] });
     expect(created.id).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
@@ -57,7 +58,7 @@ describe('Workspace user mock contracts', () => {
   });
 
   it('AC-005.5 rejects missing or foreign Department for Project Managers', async () => {
-    for (const departmentId of [undefined, 999]) {
+    for (const departmentId of [undefined, '00000000-0000-4000-8000-000000000999']) {
       await expect(
         createUser({ email: 'pm@company.example', roles: ['PROJECT_MANAGER'], departmentId }),
       ).rejects.toMatchObject({ code: 'MSG01', fieldErrors: [{ field: 'departmentId' }] });
@@ -77,14 +78,30 @@ describe('Workspace user mock contracts', () => {
       createUser({ email: 'km@company.example', roles: ['KNOWLEDGE_MANAGER'], spaceIds: [] }),
     ).rejects.toMatchObject({ code: 'MSG01', fieldErrors: [{ field: 'spaceIds' }] });
     await expect(
-      createUser({ email: 'km@company.example', roles: ['KNOWLEDGE_MANAGER'], spaceIds: [1] }),
+      createUser({
+        email: 'km@company.example',
+        roles: ['KNOWLEDGE_MANAGER'],
+        spaceIds: [IT_SPACE_ID],
+      }),
     ).rejects.toMatchObject({ code: 'MSG117', params: { space_name: 'IT Knowledge' } });
     await expect(
-      createUser({ email: 'km@company.example', roles: ['KNOWLEDGE_MANAGER'], spaceIds: [999] }),
+      createUser({
+        email: 'km@company.example',
+        roles: ['KNOWLEDGE_MANAGER'],
+        spaceIds: ['00000000-0000-4000-8000-000000000999'],
+      }),
     ).rejects.toMatchObject({ code: 'MSG01' });
-    await createUser({ email: 'km@company.example', roles: ['KNOWLEDGE_MANAGER'], spaceIds: [3] });
+    await createUser({
+      email: 'km@company.example',
+      roles: ['KNOWLEDGE_MANAGER'],
+      spaceIds: [HANDBOOK_SPACE_ID],
+    });
     await expect(
-      createUser({ email: 'km2@company.example', roles: ['KNOWLEDGE_MANAGER'], spaceIds: [3] }),
+      createUser({
+        email: 'km2@company.example',
+        roles: ['KNOWLEDGE_MANAGER'],
+        spaceIds: [HANDBOOK_SPACE_ID],
+      }),
     ).rejects.toMatchObject({ code: 'MSG117' });
     expect((await getUsers()).page.totalElements).toBe(25);
   });
@@ -132,12 +149,12 @@ describe('Workspace user mock contracts', () => {
       q: 'USER',
       role: 'PROJECT_MANAGER',
       status: 'ACTIVE',
-      departmentId: 1,
+      departmentId: '00000000-0000-4000-8000-0000000000d1',
     });
     expect(page.content.length).toBeGreaterThan(0);
     for (const user of page.content) {
       expect(user.roles).toContain('PROJECT_MANAGER');
-      expect(user.department?.departmentId).toBe(1);
+      expect(user.department?.departmentId).toBe('00000000-0000-4000-8000-0000000000d1');
       expect(user.status).toBe('ACTIVE');
     }
     const employees = await getUsers({ role: 'EMPLOYEE' });

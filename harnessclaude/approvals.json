@@ -1,7 +1,7 @@
 {
   "fe-foundation": {
-    "specHash": "ce8e67bcffd22f87795409fd93fa5971ec816b9228a831133eafd6f6b8a0c709",
-    "approvedAt": "2026-10-25T13:11:00.723Z",
+    "specHash": "fbb0c7a2082744e86516a6d42a3011f068916c555a0537958f070d7a334176d6",
+    "approvedAt": "2026-10-25T19:30:55.081Z",
     "by": "user",
     "acs": {
       "AC-001.1": "THE web app SHALL know exactly five roles — , , ,",

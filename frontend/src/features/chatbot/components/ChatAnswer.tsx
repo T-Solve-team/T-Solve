@@ -9,7 +9,7 @@ import styles from './Conversation.module.css';
 type ChatAnswerProps = {
   answer: ChatbotAnswer;
   /** Cited Wiki documents the user can no longer view (MSG110). */
-  unavailableIds: ReadonlySet<number>;
+  unavailableIds: ReadonlySet<string>;
   rating: ChatTurn['rating'];
   /** A rating request is running (AC-003.2). */
   isRating: boolean;

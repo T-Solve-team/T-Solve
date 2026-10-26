@@ -8,5 +8,5 @@
  */
 
 export type GetReviewQueueTicketIdsParams = {
-  departmentId?: number;
+  departmentId?: string;
 };

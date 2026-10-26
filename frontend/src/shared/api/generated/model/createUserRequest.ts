@@ -16,7 +16,7 @@ export interface CreateUserRequest {
   email: string;
   roles: Role[];
   /** @nullable */
-  departmentId?: number | null;
+  departmentId?: string | null;
   /** At least one Space when KNOWLEDGE_MANAGER is selected; each Space has one manager. */
-  spaceIds?: number[];
+  spaceIds?: string[];
 }

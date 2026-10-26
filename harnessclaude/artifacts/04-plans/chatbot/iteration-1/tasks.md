@@ -140,7 +140,7 @@ the list newest first by start time, open one highlighted, disabled while an ans
 
 **Story:** STORY-002
 **Feature:** uuid-ids
-**Jira:** new Subtask (Hiếu creates it) · ships in the PR of fe-foundation Task 10 · change request KAN-196 Q2
+**Jira:** KAN-205 (Subtask of KAN-103) · branch `feature/KAN-205-fe-foundation-uuid-ids`, ships in the PR of fe-foundation Task 10 · change request KAN-196 Q2
 (SPEC-P1-7)
 **Description:** In the contract, `WikiDocumentCitation.wikiDocumentId`, the `wikiDocumentIds` query parameter of
 `listUnavailableCitedDocuments` and `UnavailableDocuments.wikiDocumentIds` become `{ type: string, format: uuid }`;

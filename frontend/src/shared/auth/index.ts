@@ -8,4 +8,15 @@ export {
   useSignOut,
 } from './useSession';
 export { landingPath } from './landing';
-export { DEV_USER_FOR_ROLE, DEV_USERS, getDevUser, setDevUser, type DevUserId } from './dev-user';
+export { startSignIn, useSignInMessage, type SignInMessage } from './sign-in';
+export {
+  DEV_SITES,
+  DEV_USER_FOR_ROLE,
+  DEV_USERS,
+  getDevSite,
+  getDevUser,
+  setDevSite,
+  setDevUser,
+  type DevSiteId,
+  type DevUserId,
+} from './dev-user';

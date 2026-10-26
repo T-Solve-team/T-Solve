@@ -5,17 +5,40 @@ import { RouterProvider } from 'react-router/dom';
 import { AppProviders } from '@/app/providers/AppProviders';
 import { createAppQueryClient } from '@/app/providers/global-errors';
 import { buildRoutes } from '@/app/router/routes';
-import { DEV_USER_FOR_ROLE, setDevUser, type DevUserId, type Role } from '@/shared/auth';
+import {
+  DEV_USER_FOR_ROLE,
+  setDevSite,
+  setDevUser,
+  type DevSiteId,
+  type DevUserId,
+  type Role,
+} from '@/shared/auth';
 
 /**
  * Who the `/me` mock says is signed in (src/mocks/session.ts): either `role` — the fixture user with exactly that
  * role (plus Employee); null = signed out; default Project Manager — or `user`, a fixture user by id
  * (e.g. 'pm-km'). Never both.
  */
-type RenderOptions =
-  { role?: Role | null; user?: never } | { user: DevUserId | null; role?: never };
+type RenderOptions = (
+  { role?: Role | null; user?: never } | { user: DevUserId | null; role?: never }
+) & {
+  /**
+   * `'unknown'` / `'suspended'`: every mock API request answers MSG119 (404) / MSG120 (403), like the dev user
+   * switcher's "Unknown site" / "Suspended Workspace". The site state is reset after each test (setup.ts).
+   */
+  site?: 'unknown' | 'suspended';
+};
+
+const DEV_SITE_FOR: Record<NonNullable<RenderOptions['site']>, DevSiteId> = {
+  unknown: 'unknown-site',
+  suspended: 'suspended-workspace',
+};
 
 function signIn(options: RenderOptions): void {
+  if (options.site !== undefined) {
+    setDevSite(DEV_SITE_FOR[options.site]);
+    return;
+  }
   if (options.user !== undefined) {
     setDevUser(options.user);
     return;

@@ -1,15 +1,22 @@
 import type { DepartmentRef, SpaceRef, UserAccount } from '@/shared/api';
 
-export const WORKSPACE_ID = 1;
+export const WORKSPACE_ID = '00000000-0000-4000-8000-0000000000c1';
+const FOREIGN_WORKSPACE_ID = '00000000-0000-4000-8000-0000000000c2';
+/** Same Department ids as mocks/session.ts. */
+export const IT_DEPARTMENT_ID = '00000000-0000-4000-8000-0000000000d1';
+export const HR_DEPARTMENT_ID = '00000000-0000-4000-8000-0000000000d2';
 export const COMPANY_DOMAIN = 'company.example';
+export const IT_SPACE_ID = '00000000-0000-4000-8000-0000000000a1';
+export const HR_SPACE_ID = '00000000-0000-4000-8000-0000000000a2';
+export const HANDBOOK_SPACE_ID = '00000000-0000-4000-8000-0000000000a3';
 export const SPACES: SpaceRef[] = [
-  { spaceId: 1, name: 'IT Knowledge' },
-  { spaceId: 2, name: 'HR Knowledge' },
-  { spaceId: 3, name: 'Engineering Handbook' },
+  { spaceId: IT_SPACE_ID, name: 'IT Knowledge' },
+  { spaceId: HR_SPACE_ID, name: 'HR Knowledge' },
+  { spaceId: HANDBOOK_SPACE_ID, name: 'Engineering Handbook' },
 ];
 export const DEPARTMENTS: DepartmentRef[] = [
-  { departmentId: 1, name: 'IT' },
-  { departmentId: 2, name: 'HR' },
+  { departmentId: IT_DEPARTMENT_ID, name: 'IT' },
+  { departmentId: HR_DEPARTMENT_ID, name: 'HR' },
 ];
 
 const NAMES = [
@@ -40,12 +47,12 @@ const NAMES = [
 ];
 
 /** Synthetic records; the foreign Workspace record exercises isolation before paging. */
-export function seedUsers(): (UserAccount & { workspaceId: number; spaceIds: number[] })[] {
+export function seedUsers(): (UserAccount & { workspaceId: string; spaceIds: string[] })[] {
   return [
-    ...NAMES.map((fullName, index): UserAccount & { workspaceId: number; spaceIds: number[] } => ({
+    ...NAMES.map((fullName, index): UserAccount & { workspaceId: string; spaceIds: string[] } => ({
       id: `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
       workspaceId: WORKSPACE_ID,
-      spaceIds: index === 2 ? [1] : index === 6 ? [2] : [],
+      spaceIds: index === 2 ? [IT_SPACE_ID] : index === 6 ? [HR_SPACE_ID] : [],
       fullName,
       email: `user${index + 1}@company.example`,
       roles:
@@ -65,7 +72,7 @@ export function seedUsers(): (UserAccount & { workspaceId: number; spaceIds: num
     })),
     {
       id: '20000000-0000-4000-8000-000000000099',
-      workspaceId: 2,
+      workspaceId: FOREIGN_WORKSPACE_ID,
       spaceIds: [],
       fullName: 'Other Workspace',
       email: 'foreign@other.example',

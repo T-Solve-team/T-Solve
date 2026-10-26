@@ -26,7 +26,7 @@ export const getCreateUserResponseMock = (
   roles: faker.helpers.arrayElements(Object.values(Role)),
   department: faker.helpers.arrayElement([
     {
-      departmentId: faker.number.int(),
+      departmentId: faker.string.uuid(),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     },
     null,
@@ -53,7 +53,7 @@ export const getGetUsersResponseMock = (
       roles: faker.helpers.arrayElements(Object.values(Role)),
       department: faker.helpers.arrayElement([
         {
-          departmentId: faker.number.int(),
+          departmentId: faker.string.uuid(),
           name: faker.string.alpha({ length: { min: 10, max: 20 } }),
         },
         null,
@@ -80,7 +80,7 @@ export const getGetUserCreationOptionsResponseMock = (
   companyDomain: faker.string.alpha({ length: { min: 10, max: 20 } }),
   spaces: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
-      spaceId: faker.number.int(),
+      spaceId: faker.string.uuid(),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     }),
   ),
@@ -89,7 +89,7 @@ export const getGetUserCreationOptionsResponseMock = (
 
 export const getGetUserDepartmentsResponseMock = (): DepartmentRef[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    departmentId: faker.number.int(),
+    departmentId: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   }));
 
