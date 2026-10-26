@@ -72,9 +72,14 @@ browser at admin.tsolve.io.vn ──► same bundle, buildRoutes(host) → platf
   MSG123, MSG141 (`params` is `{}` for a code without placeholders), with MSG122 only when the lower-cased
   `google_domain` (the returned `params.google_domain` is that lower-cased value) matches `^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$`. The Login screen of `identity`
   renders it inline (AC-012.1–AC-012.4).
-- **MSG123:** in `global-errors.ts`, a 401 whose code is MSG123 skips the MSG07 dialog, calls
-  `resetSession(client, { signedOut: true })` (cache, mutations, `tsolve.session.*`) and navigates to
-  `/login?error=MSG123` (AC-012.5) by in-app navigation (the router, not a full page load). This also holds for
+- **MSG123:** `http()` sets a `foreignSession` flag in the site-state store when a 401 carries MSG123. In
+  `global-errors.ts`, the 401 handler sees the flag, skips the MSG07 dialog and calls
+  `resetSession(client, { signedOut: true })` (cache, mutations, `tsolve.session.*`) once; it does not navigate.
+  The route guards read the flag: `RequireAuth`, and `GuestOnly` on `/login` when the URL does not already carry
+  `error=MSG123`, redirect with `<Navigate replace>` to `/login?error=MSG123` (AC-012.5), an in-app navigation
+  (the router, not a full page load). MSG119 / MSG120 are routed in `query-client.ts` to `onSiteUnavailable`
+  before the `handlesOwnErrors` check (BUG-019), so a mutation that handles its own errors still reaches the site
+  page, and `showMessage` ignores both codes. The MSG123 path also holds for
   `/me` on the first load: `fetchSession` does not turn a 401 MSG123 into "signed out". If MSG123 arrives while the
   MSG07 dialog is open, the dialog closes and the MSG123 path is taken. Any other 401 keeps the MSG07 behaviour.
 - **Background header:** orval's `override.query.queryOptions` mutator (`shared/api/query-options.ts`) wraps every
