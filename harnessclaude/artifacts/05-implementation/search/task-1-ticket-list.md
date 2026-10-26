@@ -1,0 +1,54 @@
+# Task 1: Ticket List
+
+**Module:** search
+**Assignee:** Anh Tran Hai
+**Status:** evaluating
+**Iteration:** 1
+
+---
+
+## Session 2026-10-26 14:35
+
+### Working on: ticket-list (6.2 Ticket List, KAN-147)
+- Contract: `GET /api/v1/tickets` (`getTickets`, tag `tickets`) with `TicketStatus`, `TicketProject`,
+  `TicketDepartment`, `TicketSummary`, `TicketSummaryPage`; every id a UUID string; client regenerated.
+- Mocks: `tickets/mocks/ticket-data.ts` — 28 tickets (every status and source), Departments `'1'` IT and `'2'` HR,
+  Projects `'101'`, `'102'`, `'201'` copied from `src/mocks/session.ts` (feature code may not import `src/mocks`),
+  fixed UUID `ticketId`s; the handler applies keyword, Department, source, status, sort and paging.
+- Screen: `TicketListPage` replaces the placeholder; `TicketListFilters` (Keyword on Enter, `maxLength` 100,
+  Department as `String(id)` from the session, Source, Status), `TicketListTable` (`DataTable`), `useTicketList`
+  (no `keepPreviousData`, design builder check).
+- Test-first: the mock test failed 6/6 and the page test 20/21 before the code (AC-001.11 passed early: the lazy
+  module load also shows the spinner); then 28/28.
+- Reused most of the KAN-77 Ticket List code (commit `bd1f914`, branch not merged), adapted to the new spec: UUID
+  ids, Keyword limit, AC numbers.
+- The longest page test (AC-001.7) was split in two (guideline 10 §6: split, never raise timeouts).
+- Commit: default@3cb60af (author Anh Tran Hai).
+
+### Verification
+- `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run build`: pass.
+- `npm run generate:api`: no diff (same hash before and after).
+- `npx vitest run src/features/tickets`: 2 files, 28/28 pass.
+- `npm run test` (full): 496 pass, 11 fail (5 review, 4 chatbot, 2 tickets), mostly at the 15 s timeout while
+  another heavy process ran; the three files alone: 7 of 87 fail, other tests; the tickets folder alone passes.
+  Logged as BUG-010 (owner to confirm: fe-foundation test setup).
+- `bun harnessclaude/hooks/sdd.ts trace search STORY-001 STORY-004`:
+  ```
+  ✓ AC-001.1 … AC-001.14  frontend/src/features/tickets/pages/TicketListPage.test.tsx
+  ✓ AC-004.1, AC-004.2    frontend/src/features/tickets/mocks/handlers.test.ts
+  ✗ AC-004.3  no test (Task 2, search mock)
+  ✗ AC-004.4  no test (Task 3, feedback mock)
+  trace search (STORY-001, STORY-004): 16/18 acceptance criteria have a test
+  ```
+  Every criterion of this task has a test; AC-004.3 and AC-004.4 belong to Tasks 2 and 3.
+
+### Deviations from the plan
+- Branch `feature/KAN-147-search-ticket-list` (team rule, README "Branching and conventions") instead of the
+  harness default `feat/search` that `sdd.ts status … implementing` recorded.
+- About 1,580 added lines (mostly the generated client and the mock data), over the README's ~400-line PR hint.
+
+### Blockers
+none
+
+### Next up
+Evaluation of ticket-list; then Task 2 (6.1 Search, KAN-145) on `feature/KAN-145-search-page` from `main`.
