@@ -191,3 +191,9 @@
 {"ts":"2026-10-25T10:23:32.956Z","type":"feature-status","module":"platform","feature":"demo-seed-workspaces","from":null,"to":"pending"}
 {"ts":"2026-10-25T13:03:20.576Z","type":"spec-approved","module":"platform","specHash":"a73026ef706cae1ca938544c538d176f7d958db0729871bb68b07df5adf898fa"}
 {"ts":"2026-10-25T13:16:09.818Z","type":"module-status","module":"platform","from":"decomposed","to":"planned"}
+{"ts":"2026-10-25T15:22:52.183Z","type":"spec-approved","module":"search","specHash":"f34135d02259168ef3a954dff3f3b211344f53500755f649a41b274a3dd22111"}
+{"ts":"2026-10-26T05:03:04.450Z","type":"spec-approved","module":"search","specHash":"ca43234b334badba1f84105082876252b17611f56b6bfc3299d528b883ba0eb6"}
+{"ts":"2026-10-26T05:03:11.932Z","type":"module-status","module":"search","from":"decomposed","to":"planned"}
+{"ts":"2026-10-26T05:03:12.452Z","type":"feature-status","module":"search","feature":"ticket-list","from":null,"to":"pending"}
+{"ts":"2026-10-26T05:03:13.027Z","type":"feature-status","module":"search","feature":"ticket-search","from":null,"to":"pending"}
+{"ts":"2026-10-26T05:03:13.574Z","type":"feature-status","module":"search","feature":"give-feedback","from":null,"to":"pending"}

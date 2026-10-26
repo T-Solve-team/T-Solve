@@ -70,10 +70,14 @@
       "lastUpdated": "2026-10-22T14:21:23.187Z"
     },
     "search": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:23.392Z"
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "ticket-list": "pending",
+        "ticket-search": "pending",
+        "give-feedback": "pending"
+      },
+      "lastUpdated": "2026-10-26T05:03:13.565Z"
     },
     "triage": {
       "status": "decomposed",

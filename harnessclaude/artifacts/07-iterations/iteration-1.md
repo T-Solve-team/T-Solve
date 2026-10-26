@@ -64,6 +64,17 @@ Waiting for the user to re-approve the changed spec (X2, U3). Tasks 2–5 also w
 | 13 · Deploy staging on merge with the smoke test (KAN-14) | Trần Trung Hiếu | pending |
 | 15 · Demo seed: the two Workspaces (KAN-97, moved forward) | Trần Trung Hiếu | pending |
 
+### search
+
+Frontend only, on MSW mocks. Spec: `artifacts/03-modules/search/spec.md` · Design:
+`artifacts/04-plans/search/iteration-1/design.md` (master: `artifacts/04-plans/search/design.md`).
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · Ticket List, 6.2 (KAN-147) | Trần Hải Anh | pending |
+| 2 · Search Published tickets, 6.1 (KAN-145) | Trần Hải Anh | pending |
+| 3 · Give Feedback popup, 8.1 (KAN-148) | Trần Hải Anh | pending |
+
 ## Demo Script
 
 ### platform
@@ -95,6 +106,14 @@ Waiting for the user to re-approve the changed spec (X2, U3). Tasks 2–5 also w
 3. Ask "Who won the match?" → MSG109. Ask an expense question → its Wiki citation shows MSG110.
 4. New conversation, ask about leave; the list shows both, newest first; reopen the VPN one and ask a follow-up.
 5. Reload → the conversations are still there. Log out and sign in again → none.
+
+### search
+1. Mock mode, "Ticket Resolver": open Ticket List → 20 tickets, Updated newest first; type "vpn" and press Enter,
+   pick Department IT and status Published → the list narrows; reload → same list; sort by Title.
+2. Open Search → empty results area; type "vpn" and press Enter → ranked cards with "N% helpful" (none on a ticket
+   without Feedback); pick Source "Jira import" and a Resolved date range → results update; "zzz" → MSG04.
+3. The popup has no screen until 5.5 Ticket Detail mounts it: `npm run test -- GiveFeedbackModal` runs its
+   tests — Send with nothing → MSG01; Helpful, a comment, Send → MSG26.
 
 ## Actual Outcomes
 <!-- filled at end of iteration, split by module -->
