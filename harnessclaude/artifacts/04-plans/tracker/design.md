@@ -38,8 +38,14 @@ workspace package ─► JiraSiteService.registerSite(workspaceId, siteUrl) → 
   with stub implementations in `service/port/stub/` active under the `stub-ports` profile until the owners
   provide real ones. Owners implement the port (or tracker adapts to their service interface when it exists).
 - **Panel calls carry a system token.** The panel/Solution Form remote endpoints enable `appSystemToken`; the token is used within that request only and never stored (risk review).
-- **Site check in the decoder.** After Nimbus validates signature, `exp`/`nbf`, the token validators check
-  `iss`, `aud` and that `context.cloudId` resolves through `JiraSiteRepository` to a Workspace.
+- **Site check in the converter (2026-10-27).** After Nimbus validates signature, `exp`/`nbf`, the token
+  validators check `iss`, `aud` and that `context.cloudId` is present (a failure is 401). The converter then
+  resolves the cloudId through `JiraSiteLookup` (run as `ROOT`); an unregistered site gets no `ROLE_JIRA_APP`,
+  so the chain answers 403 (AC-001.6) — a validator failure could only give 401. A JWKS fetch failure
+  (`AuthenticationServiceException`) answers 503 MSG06 through the filter's failure handler (AC-001.8).
+- **Fallback chain.** Adding the resource server removes Spring Boot's default chain, so
+  `common/security/DefaultSecurityConfig` keeps "any other request needs authentication" until `identity`
+  replaces it (flag for the identity owner).
 - **Workspace per transaction (multi-tenancy, 2026-10-27).** `jira_site` and `issue_event` are tenant tables:
   each entity's `workspaceId` is `@TenantId`, filled by Hibernate from `WorkspaceContext` (architecture,
   Multi-tenancy). Where the Workspace is set:
