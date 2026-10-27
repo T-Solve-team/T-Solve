@@ -17,12 +17,26 @@ và **chưa commit gì** (mọi thay đổi bên dưới đều chưa commit tr�
 
 | Bước | Nội dung | Trạng thái |
 |---|---|---|
-| 1 | Task 2 (phần nhận event) + multi-tenancy | Code xong, test xanh — còn: chạy app, `TrackerProperties` + `.env.example`, commit |
-| 2 | Task 3 — xác thực FIT | Chưa làm. Cần thêm `spring-boot-starter-oauth2-resource-server` vào `pom.xml` → phải được nhóm duyệt |
-| 3 | Task 5 `TokenCipher` + Task 6 DTO/controller/service nhận event | Chưa làm |
-| 4 | Trigger `jira-app/manifest.yml` → backend, deploy, thử ticket thật + kiểm tra Task 1 | Chưa làm. App Forge **chưa được tạo** (`jira-app/` chỉ có AGENTS.md, CLAUDE.md) |
+| 1 | Task 2 (phần nhận event) + multi-tenancy | ✅ Xong, commit `c890e22` (2026-10-27). App chạy với DB, `@TenantId` kiểm chứng trên DB thật |
+| 2 | Task 3 — xác thực FIT | ✅ Xong, commit `0613c07`. ⚠️ Dependency mới **chờ nhóm duyệt**; `DefaultSecurityConfig` cần người phụ trách identity xem |
+| 3 | Task 5 `TokenCipher` + Task 6 DTO/controller/service nhận event | ✅ Xong (`b739cad`, `84a1428`) — chỉ `issue-created`; `issue-updated` làm ở KAN-23 |
+| 4 | Trigger `jira-app/manifest.yml` → backend, deploy, thử ticket thật + kiểm tra Task 1 | Đang làm. Người dùng phải `forge login` + `forge create` trước (xem "Chạy demo") |
 | 5 | Task 7 `JiraClient` + Task 8 worker | Chưa làm |
 | 6 | Task 9 triage + MSG80 | Chưa làm. Cần thống nhất interface với người phụ trách module `triage` |
+
+## Chạy demo (2026-10-27)
+
+1. Người dùng: `forge login`, rồi `forge create -d jira-app tsolve-jira-app` (UI Kit → Jira → `jira-issue-panel`).
+2. Quick change `jira-app/manifest.yml` (module `jira-app` mới `decomposed`): thêm `trigger` `avi:jira:created:issue`
+   → `endpoint` (remote `tsolve-backend`, route `/api/v1/jira-app/events/issue-created`, `auth.appSystemToken.enabled: true`),
+   `remotes` với `baseUrl` = URL tunnel, scope `read:jira-work`.
+3. `.env`: `TSOLVE_JIRA_APP_ID` = `app.id` trong manifest (đang là placeholder).
+4. Chèn site bằng SQL: cloudId lấy từ `https://<site>.atlassian.net/_edge/tenant_info`;
+   `INSERT INTO jira_site (workspace_id, site_url, cloud_id) VALUES (1, 'https://<site>.atlassian.net', '<cloudId>')`.
+5. Chạy backend (`-Djdk.net.unixdomain.tmpdir=C:/tmp/uds` nếu lỗi loopback), mở tunnel `cloudflared tunnel --url http://localhost:8080`,
+   `forge deploy` + `forge install`, tạo ticket → `issue_event` có dòng `RECEIVED`.
+6. Ghi lại kết quả các mục "Kiểm tra ở bước 4" (header, claim FIT thật, `app.apiBaseUrl`, `timestamp`).
+- Chưa có cột `api_base_url` trong `issue_event` (design nói lưu `apiBaseUrl` từ FIT): quyết định ở Task 7/8.
 
 ## Quyết định đã chốt (đã ghi vào artifact)
 
