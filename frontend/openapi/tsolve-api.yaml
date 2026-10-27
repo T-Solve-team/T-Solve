@@ -12,6 +12,9 @@ tags:
     description: Who is signed in.
   - name: review
     description: Review Queue and review decisions (SRS III.7).
+  - name: jira-app
+    description: Calls from the T-Solve Jira App through Forge Remote (Forge Invocation Token).
+
 paths:
   /api/v1/me:
     get:
@@ -161,7 +164,35 @@ paths:
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/events/issue-created:
+    post:
+      tags: [jira-app]
+      operationId: receiveIssueCreated
+      summary: Forge trigger avi:jira:created:issue — recorded and processed later (STORY-003).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueEventPayload'
+      responses:
+        '202':
+          description: Accepted (also when already recorded).
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
 components:
+  securitySchemes:
+    forgeInvocationToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Forge Invocation Token (FIT) that Atlassian signs on every Forge Remote call.
   parameters:
     Page:
       name: page
@@ -196,6 +227,37 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    IssueEventPayload:
+      type: object
+      description: >
+        The part of a Forge Jira issue event (avi:jira:created:issue / avi:jira:updated:issue) that T-Solve reads.
+        Other fields Forge sends are ignored.
+      required: [issue, timestamp]
+      properties:
+        issue:
+          type: object
+          required: [id, key]
+          properties:
+            id:
+              type: string
+            key:
+              type: string
+              description: The Jira issue key, e.g. ITSUP-1031.
+        timestamp:
+          type: string
+          pattern: '^\d{1,19}$'
+          description: When the event occurred, in epoch milliseconds.
+        changelog:
+          type: object
+          description: Present on issue updated events.
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  fieldId:
+                    type: string
     Role:
       type: string
       enum: [ADMIN, DEPARTMENT_MANAGER, PROJECT_MANAGER, STAFF]
