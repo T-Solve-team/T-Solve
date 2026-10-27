@@ -1,4 +1,5 @@
-import { Navigate, Outlet, useLocation } from 'react-router';
+import { Navigate, Outlet, useLocation, useSearchParams } from 'react-router';
+import { useSiteStatus } from '@/shared/api';
 import { landingPath, useSession, type Role } from '@/shared/auth';
 import { paths } from '@/shared/routing';
 import { ForbiddenPage } from '../pages/ForbiddenPage';
@@ -9,9 +10,12 @@ import { FullPageLoading } from './FullPageLoading';
 export function RequireAuth() {
   const { session, isPending, isError, retry } = useSession();
   const location = useLocation();
+  const { foreignSession } = useSiteStatus();
   if (isPending) return <FullPageLoading />;
   if (isError) return <SessionErrorPage onRetry={() => void retry()} />;
   if (!session) {
+    // The cookie belongs to another Workspace site (401 MSG123): Login says so; there is nothing to return to.
+    if (foreignSession) return <Navigate to={`${paths.login}?error=MSG123`} replace />;
     const returnTo = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`${paths.login}?returnTo=${returnTo}`} replace />;
   }
@@ -28,9 +32,15 @@ export function RequireRole({ roles }: { roles: readonly Role[] }) {
 /** Login is for signed-out users; a signed-in user goes to their landing page. */
 export function GuestOnly() {
   const { session, isPending, isError, retry } = useSession();
+  const { foreignSession } = useSiteStatus();
+  const [searchParams] = useSearchParams();
   if (isPending) return <FullPageLoading />;
   if (isError) return <SessionErrorPage onRetry={() => void retry()} />;
   if (session) return <Navigate to={landingPath(session.roles)} replace />;
+  // The cookie belongs to another Workspace site (401 MSG123) and Login was opened without saying so (AC-012.5).
+  if (foreignSession && searchParams.get('error') !== 'MSG123') {
+    return <Navigate to={`${paths.login}?error=MSG123`} replace />;
+  }
   return <Outlet />;
 }
 

@@ -5,7 +5,7 @@ type MockAnswer = { keyword: string; text: string; citations: ChatbotCitation[] 
 
 /**
  * The mock answers (design "Mock data"). The VPN answer is the Figma frame "12.1 Knowledge Chatbot"; Wiki document
- * ids start at 9001 so they never clash with other features' mocks.
+ * ids are UUIDs ending in 9001, 9003… so they never clash with other features' mocks.
  */
 export const MOCK_ANSWERS: readonly MockAnswer[] = [
   {
@@ -15,7 +15,12 @@ export const MOCK_ANSWERS: readonly MockAnswer[] = [
       'with your company account [1]. If the connection drops every 30 minutes, turn off USB selective suspend in ' +
       'Power Options [2].',
     citations: [
-      { number: 1, type: 'WIKI_DOCUMENT', wikiDocumentId: 9001, title: 'VPN setup on Windows 11' },
+      {
+        number: 1,
+        type: 'WIKI_DOCUMENT',
+        wikiDocumentId: '00000000-0000-4000-8000-000000009001',
+        title: 'VPN setup on Windows 11',
+      },
       {
         number: 2,
         type: 'TICKET_SOLUTION',
@@ -36,7 +41,12 @@ export const MOCK_ANSWERS: readonly MockAnswer[] = [
       'Public holidays do not count as annual leave; a holiday that falls on a weekend moves to the next working ' +
       'day [1]. If a holiday is missing from your leave balance, ask HR to add it by hand [2].',
     citations: [
-      { number: 1, type: 'WIKI_DOCUMENT', wikiDocumentId: 9002, title: 'Leave policy 2026' },
+      {
+        number: 1,
+        type: 'WIKI_DOCUMENT',
+        wikiDocumentId: '00000000-0000-4000-8000-000000009002',
+        title: 'Leave policy 2026',
+      },
       {
         number: 2,
         type: 'TICKET_SOLUTION',
@@ -57,7 +67,12 @@ export const MOCK_ANSWERS: readonly MockAnswer[] = [
       'Submit a taxi expense claim in the finance portal within 30 days, with the e-receipt attached [1]. If the ' +
       'portal rejects the receipt, export it from the taxi app as PDF and upload it again [2].',
     citations: [
-      { number: 1, type: 'WIKI_DOCUMENT', wikiDocumentId: 9003, title: 'Expense claim guide' },
+      {
+        number: 1,
+        type: 'WIKI_DOCUMENT',
+        wikiDocumentId: '00000000-0000-4000-8000-000000009003',
+        title: 'Expense claim guide',
+      },
       {
         number: 2,
         type: 'TICKET_SOLUTION',
@@ -73,6 +88,9 @@ export const MOCK_ANSWERS: readonly MockAnswer[] = [
     ],
   },
 ];
+
+/** Cited Wiki documents the user can no longer view (MSG110): the expense answer's guide. */
+export const UNAVAILABLE_DOCUMENT_IDS: readonly string[] = ['00000000-0000-4000-8000-000000009003'];
 
 /** The mock answer whose keyword the question contains (case-insensitive), if any. */
 export function findMockAnswer(question: string): MockAnswer | undefined {

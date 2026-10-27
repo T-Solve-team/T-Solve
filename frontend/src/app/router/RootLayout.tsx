@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Outlet } from 'react-router';
+import { useSiteStatus } from '@/shared/api';
+import { SiteUnavailablePage } from '../pages/SiteUnavailablePage';
 import { usePageTitle } from './usePageTitle';
 
 // Dev builds in mock mode only (with a real backend the session cookie decides who you are).
@@ -12,6 +14,7 @@ const DevUserSwitcher =
 
 export function RootLayout() {
   const title = usePageTitle();
+  const { site } = useSiteStatus();
 
   // Browser tab: "<screen name> · T-Solve" (syncs with the document, an external system — guideline 05 C7).
   useEffect(() => {
@@ -20,7 +23,8 @@ export function RootLayout() {
 
   return (
     <>
-      <Outlet />
+      {/* An unknown site or a Suspended Workspace replaces every screen, Login included (STORY-011). */}
+      {site === 'ok' ? <Outlet /> : <SiteUnavailablePage site={site} />}
       {DevUserSwitcher && (
         <Suspense fallback={null}>
           <DevUserSwitcher />

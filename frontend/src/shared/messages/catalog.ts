@@ -14,7 +14,8 @@ type MessageDefinition = {
  *
  * type = how Report3 says it is shown: field (red text under the field or the upload area) · inline (in the
  * page, a table row, a preview row or a chat answer) · toast · confirm (confirm dialog) · tooltip.
- * Left out: the Jira App's messages (tracker panel, tracker comment); MSG20 and MSG70 (decision D2: a Solution is
+ * Left out: the Jira App's messages (tracker panel, tracker comment); the Retired codes (Context "Retired");
+ * the Platform Console codes MSG125-MSG133 and MSG135-MSG140 (their own module); MSG20 and MSG70 (decision D2: a Solution is
  * never empty); MSG58 and MSG79 (decision D3: the Hand Over popup with MSG_NEW_2 replaces them).
  * Toast level: error when the action failed (MSG06, MSG33, MSG69), success otherwise.
  */
@@ -41,13 +42,13 @@ export const MESSAGES = {
   MSG14: { type: 'toast', level: 'success', text: '{count} ticket(s) approved and published.' },
   MSG15: {
     type: 'confirm',
-    text: 'Reject {count} ticket(s)? Rejected tickets are final: they will not be published and will not return to the review queue. The author will receive the reason by email.',
+    text: 'Reject {count} ticket(s)? Rejected tickets are final: they will not be published and will not return to the review queue. The author will receive the reason by email if their Account is Active.',
   },
   MSG16: { type: 'toast', level: 'success', text: '{count} ticket(s) rejected.' },
   MSG17: {
     type: 'toast',
     level: 'success',
-    text: 'Changes requested. The author will see your comment in {tracker_name} and receive it by email.',
+    text: 'Changes requested. The author will see your comment in {tracker_name} and receive it by email if their Account is Active.',
   },
   MSG18: {
     type: 'tooltip',
@@ -162,10 +163,6 @@ export const MESSAGES = {
     type: 'inline',
     text: 'Welcome to T-Solve. Enter your company information to finish setting up the Workspace.',
   },
-  MSG61: {
-    type: 'field',
-    text: 'Please enter a valid site address, e.g. https://company.atlassian.net.',
-  },
   MSG62: { type: 'inline', text: 'Sign in to T-Solve to use the T-Solve panel.' },
   MSG65: { type: 'inline', text: 'Solution submitted – awaiting review.' },
   MSG66: {
@@ -188,10 +185,6 @@ export const MESSAGES = {
   },
   MSG71: { type: 'inline', text: 'Existing evidence cannot be removed. You can add new files.' },
   MSG72: { type: 'field', text: 'A ticket can have at most 5 Evidence files.' },
-  MSG73: {
-    type: 'inline',
-    text: 'This sign-in link has expired or has already been used. Go back to {tracker_name} and click Sign in again.',
-  },
   MSG75: {
     type: 'inline',
     text: 'Your {tracker_name} account is now linked to T-Solve. You can close this tab and return to {tracker_name}.',
@@ -215,7 +208,7 @@ export const MESSAGES = {
   MSG88: { type: 'field', text: 'You can upload at most 10 files at a time.' },
   MSG89: {
     type: 'field',
-    text: '{file_name} cannot be uploaded. Allowed types: PDF, DOCX, MD, TXT; maximum size: 10 MB.',
+    text: '{file_name} cannot be uploaded. Allowed types: PDF, DOCX; maximum size: 10 MB.',
   },
   MSG90: {
     type: 'inline',
@@ -248,6 +241,21 @@ export const MESSAGES = {
   },
   MSG112: { type: 'tooltip', text: 'You cannot deactivate your own account.' },
   MSG113: { type: 'tooltip', text: 'You cannot remove your own Admin role.' },
+  MSG119: { type: 'inline', text: 'This T-Solve site does not exist. Please check the address.' },
+  MSG120: {
+    type: 'inline',
+    text: 'This Workspace has been suspended. T-Solve cannot be used on this site for now.',
+  },
+  MSG122: {
+    type: 'inline',
+    text: 'This Google account does not belong to your company ({google_domain}). Sign in with your company account.',
+  },
+  MSG123: { type: 'inline', text: 'Your session is not valid on this site. Please log in again.' },
+  MSG134: { type: 'field', text: 'The email must belong to {google_domain}.' },
+  MSG141: {
+    type: 'inline',
+    text: 'This sign-in request is not valid or has expired. Please start the sign-in again.',
+  },
   /** Provisional key (decision D3) until System_Messages numbers it: the intro of 1.3.3 Hand Over Responsibilities. */
   MSG_NEW_2: {
     type: 'inline',

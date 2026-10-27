@@ -8,7 +8,7 @@
  */
 
 export interface UserSummary {
-  id: number;
+  id: string;
   fullName: string;
   email: string;
 }

@@ -17,6 +17,7 @@ paths:
   - frontend/src/features/workspace/pages/WorkspaceSetupPage.tsx
   - frontend/src/features/workspace/pages/WorkspaceSettingsPage.tsx
   - frontend/src/features/workspace/pages/DepartmentDetailPage.tsx
+  - frontend/src/features/platform-console/pages/PlatformConsolePage.tsx
   - frontend/src/features/review/**
   - frontend/scripts/**
   - frontend/*

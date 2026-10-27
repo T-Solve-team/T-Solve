@@ -35,6 +35,7 @@ import type {
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
+import { withBackgroundMarking } from '../../query-options';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -87,7 +88,9 @@ export const getDownloadCsvTemplateQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadCsvTemplate>>> = ({ signal }) =>
     downloadCsvTemplate({ signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
     Awaited<ReturnType<typeof downloadCsvTemplate>>,
     TError,
     TData
@@ -327,14 +330,18 @@ export const getGetImportPreviewRowsQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getImportPreviewRows>>> = ({ signal }) =>
     getImportPreviewRows(previewId, params, { signal, ...requestOptions });
 
-  return {
+  const customOptions = withBackgroundMarking({
     queryKey,
     queryFn,
     enabled: previewId !== null && previewId !== undefined,
     ...queryOptions,
-  } as UseQueryOptions<Awaited<ReturnType<typeof getImportPreviewRows>>, TError, TData> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getImportPreviewRows>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
 export type GetImportPreviewRowsQueryResult = NonNullable<
@@ -469,14 +476,18 @@ export const getGetImportPreviewRowQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getImportPreviewRow>>> = ({ signal }) =>
     getImportPreviewRow(previewId, rowNo, { signal, ...requestOptions });
 
-  return {
+  const customOptions = withBackgroundMarking({
     queryKey,
     queryFn,
     enabled: previewId !== null && previewId !== undefined && rowNo !== null && rowNo !== undefined,
     ...queryOptions,
-  } as UseQueryOptions<Awaited<ReturnType<typeof getImportPreviewRow>>, TError, TData> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getImportPreviewRow>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
 export type GetImportPreviewRowQueryResult = NonNullable<

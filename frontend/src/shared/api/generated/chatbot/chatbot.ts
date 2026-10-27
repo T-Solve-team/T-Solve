@@ -6,20 +6,51 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type {
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
   MutationFunction,
   QueryClient,
+  QueryFunction,
+  QueryKey,
+  UndefinedInitialDataOptions,
   UseMutationOptions,
   UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult,
 } from '@tanstack/react-query';
 
-import type { ChatbotAnswer, ChatbotQuestion, ProblemResponse } from '../model';
+import type {
+  ChatbotAnswer,
+  ChatbotQuestion,
+  ChatbotRating,
+  ListUnavailableCitedDocumentsParams,
+  ProblemResponse,
+  UnavailableDocuments,
+} from '../model';
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
+import { withBackgroundMarking } from '../../query-options';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === 'queryKey') continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key],
+    });
+  }
+  return result;
+};
 
 export const getAskChatbotUrl = () => {
   return `/api/v1/chatbot/answers`;
@@ -124,4 +155,354 @@ export const useAskChatbot = <TError = ErrorType<ProblemResponse>, TContext = un
   TContext
 > => {
   return useMutation(getAskChatbotMutationOptions(options), queryClient);
+};
+export const getListUnavailableCitedDocumentsUrl = (
+  params: ListUnavailableCitedDocumentsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ['wikiDocumentIds'];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/chatbot/unavailable-documents?${stringifiedParams}`
+    : `/api/v1/chatbot/unavailable-documents`;
+};
+
+/**
+ * @summary Which of the cited Wiki documents the user can no longer view (MSG110, UC-52).
+ */
+export const listUnavailableCitedDocuments = async (
+  params: ListUnavailableCitedDocumentsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<UnavailableDocuments> => {
+  return http<UnavailableDocuments>(getListUnavailableCitedDocumentsUrl(params), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getListUnavailableCitedDocumentsQueryKey = (
+  params?: ListUnavailableCitedDocumentsParams,
+) => {
+  return [`/api/v1/chatbot/unavailable-documents`, ...(params ? [params] : [])] as const;
+};
+
+export const getListUnavailableCitedDocumentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listUnavailableCitedDocuments>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params: ListUnavailableCitedDocumentsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listUnavailableCitedDocuments>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListUnavailableCitedDocumentsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listUnavailableCitedDocuments>>> = ({
+    signal,
+  }) => listUnavailableCitedDocuments(params, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof listUnavailableCitedDocuments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListUnavailableCitedDocumentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listUnavailableCitedDocuments>>
+>;
+export type ListUnavailableCitedDocumentsQueryError = ErrorType<ProblemResponse>;
+
+export function useListUnavailableCitedDocuments<
+  TData = Awaited<ReturnType<typeof listUnavailableCitedDocuments>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params: ListUnavailableCitedDocumentsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listUnavailableCitedDocuments>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUnavailableCitedDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listUnavailableCitedDocuments>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListUnavailableCitedDocuments<
+  TData = Awaited<ReturnType<typeof listUnavailableCitedDocuments>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params: ListUnavailableCitedDocumentsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listUnavailableCitedDocuments>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUnavailableCitedDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listUnavailableCitedDocuments>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListUnavailableCitedDocuments<
+  TData = Awaited<ReturnType<typeof listUnavailableCitedDocuments>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params: ListUnavailableCitedDocumentsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listUnavailableCitedDocuments>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Which of the cited Wiki documents the user can no longer view (MSG110, UC-52).
+ */
+
+export function useListUnavailableCitedDocuments<
+  TData = Awaited<ReturnType<typeof listUnavailableCitedDocuments>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params: ListUnavailableCitedDocumentsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listUnavailableCitedDocuments>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListUnavailableCitedDocumentsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRateChatbotAnswerUrl = (answerId: string) => {
+  return `/api/v1/chatbot/answers/${answerId}/rating`;
+};
+
+/**
+ * @summary Rates an answer Helpful or Not helpful; replaces any earlier rating of this user (UC-53).
+ */
+export const rateChatbotAnswer = async (
+  answerId: string,
+  chatbotRating: ChatbotRating,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getRateChatbotAnswerUrl(answerId), {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(chatbotRating),
+  });
+};
+
+export const getRateChatbotAnswerMutationKey = () => ['rateChatbotAnswer'] as const;
+
+export const getRateChatbotAnswerMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rateChatbotAnswer>>,
+    TError,
+    RateChatbotAnswerMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rateChatbotAnswer>>,
+  TError,
+  RateChatbotAnswerMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRateChatbotAnswerMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rateChatbotAnswer>>,
+    RateChatbotAnswerMutationVariables
+  > = (props) => {
+    const { answerId, data } = props ?? {};
+
+    return rateChatbotAnswer(answerId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RateChatbotAnswerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rateChatbotAnswer>>
+>;
+export type RateChatbotAnswerMutationBody = ChatbotRating;
+export type RateChatbotAnswerMutationError = ErrorType<ProblemResponse>;
+export type RateChatbotAnswerMutationVariables = { answerId: string; data: ChatbotRating };
+
+/**
+ * @summary Rates an answer Helpful or Not helpful; replaces any earlier rating of this user (UC-53).
+ */
+export const useRateChatbotAnswer = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rateChatbotAnswer>>,
+      TError,
+      RateChatbotAnswerMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rateChatbotAnswer>>,
+  TError,
+  RateChatbotAnswerMutationVariables,
+  TContext
+> => {
+  return useMutation(getRateChatbotAnswerMutationOptions(options), queryClient);
+};
+export const getRemoveChatbotAnswerRatingUrl = (answerId: string) => {
+  return `/api/v1/chatbot/answers/${answerId}/rating`;
+};
+
+/**
+ * @summary Removes this user's rating of an answer (UC-53).
+ */
+export const removeChatbotAnswerRating = async (
+  answerId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getRemoveChatbotAnswerRatingUrl(answerId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getRemoveChatbotAnswerRatingMutationKey = () => ['removeChatbotAnswerRating'] as const;
+
+export const getRemoveChatbotAnswerRatingMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeChatbotAnswerRating>>,
+    TError,
+    RemoveChatbotAnswerRatingMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeChatbotAnswerRating>>,
+  TError,
+  RemoveChatbotAnswerRatingMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRemoveChatbotAnswerRatingMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeChatbotAnswerRating>>,
+    RemoveChatbotAnswerRatingMutationVariables
+  > = (props) => {
+    const { answerId } = props ?? {};
+
+    return removeChatbotAnswerRating(answerId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveChatbotAnswerRatingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeChatbotAnswerRating>>
+>;
+
+export type RemoveChatbotAnswerRatingMutationError = ErrorType<ProblemResponse>;
+export type RemoveChatbotAnswerRatingMutationVariables = { answerId: string };
+
+/**
+ * @summary Removes this user's rating of an answer (UC-53).
+ */
+export const useRemoveChatbotAnswerRating = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof removeChatbotAnswerRating>>,
+      TError,
+      RemoveChatbotAnswerRatingMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof removeChatbotAnswerRating>>,
+  TError,
+  RemoveChatbotAnswerRatingMutationVariables,
+  TContext
+> => {
+  return useMutation(getRemoveChatbotAnswerRatingMutationOptions(options), queryClient);
 };

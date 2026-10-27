@@ -12,7 +12,12 @@ import { HttpResponse, http } from 'msw';
 import type { RequestHandlerOptions } from 'msw';
 
 import { ChatbotAnswerOutcome } from '../model';
-import type { ChatbotAnswer, TicketSolutionCitation, WikiDocumentCitation } from '../model';
+import type {
+  ChatbotAnswer,
+  TicketSolutionCitation,
+  UnavailableDocuments,
+  WikiDocumentCitation,
+} from '../model';
 
 export const getAskChatbotResponseWikiDocumentCitationMock = (
   overrideResponse: Partial<WikiDocumentCitation> = {},
@@ -20,7 +25,7 @@ export const getAskChatbotResponseWikiDocumentCitationMock = (
   ...{
     number: faker.number.int(),
     type: faker.helpers.arrayElement(['WIKI_DOCUMENT'] as const),
-    wikiDocumentId: faker.number.int(),
+    wikiDocumentId: faker.string.uuid(),
     title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
@@ -62,6 +67,16 @@ export const getAskChatbotResponseMock = (
   ...overrideResponse,
 });
 
+export const getListUnavailableCitedDocumentsResponseMock = (
+  overrideResponse: Partial<Extract<UnavailableDocuments, object>> = {},
+): UnavailableDocuments => ({
+  wikiDocumentIds: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.uuid()),
+  ...overrideResponse,
+});
+
 export const getAskChatbotMockHandler = (
   overrideResponse?:
     | ChatbotAnswer
@@ -85,4 +100,69 @@ export const getAskChatbotMockHandler = (
     options,
   );
 };
-export const getChatbotMock = () => [getAskChatbotMockHandler()];
+
+export const getListUnavailableCitedDocumentsMockHandler = (
+  overrideResponse?:
+    | UnavailableDocuments
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<UnavailableDocuments> | UnavailableDocuments),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/chatbot/unavailable-documents',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListUnavailableCitedDocumentsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRateChatbotAnswerMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    '*/api/v1/chatbot/answers/:answerId/rating',
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getRemoveChatbotAnswerRatingMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    '*/api/v1/chatbot/answers/:answerId/rating',
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+export const getChatbotMock = () => [
+  getAskChatbotMockHandler(),
+  getListUnavailableCitedDocumentsMockHandler(),
+  getRateChatbotAnswerMockHandler(),
+  getRemoveChatbotAnswerRatingMockHandler(),
+];

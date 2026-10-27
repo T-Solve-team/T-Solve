@@ -18,36 +18,36 @@ export const getGetMeResponseMock = (
   overrideResponse: Partial<Extract<CurrentUser, object>> = {},
 ): CurrentUser => ({
   user: {
-    id: faker.number.int(),
+    id: faker.string.uuid(),
     fullName: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.internet.email(),
   },
   roles: faker.helpers.arrayElements(Object.values(Role)),
   department: faker.helpers.arrayElement([
     {
-      departmentId: faker.number.int(),
+      departmentId: faker.string.uuid(),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     },
     null,
   ]),
   departments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
-      departmentId: faker.number.int(),
+      departmentId: faker.string.uuid(),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     }),
   ),
   projects: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
-      projectId: faker.number.int(),
+      projectId: faker.string.uuid(),
       jiraProjectKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      departmentId: faker.number.int(),
+      departmentId: faker.string.uuid(),
       departmentName: faker.string.alpha({ length: { min: 10, max: 20 } }),
       roleInProject: faker.helpers.arrayElement(Object.values(ProjectRole)),
     }),
   ),
   managedSpaces: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
-      spaceId: faker.number.int(),
+      spaceId: faker.string.uuid(),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     }),
   ),
@@ -77,6 +77,24 @@ export const getGetMeMockHandler = (
   );
 };
 
+export const getSignInMockHandler = (
+  overrideResponse?:
+    unknown | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<unknown> | unknown),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/auth/sign-in',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 200 });
+    },
+    options,
+  );
+};
+
 export const getLogoutMockHandler = (
   overrideResponse?:
     void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
@@ -94,4 +112,8 @@ export const getLogoutMockHandler = (
     options,
   );
 };
-export const getSessionMock = () => [getGetMeMockHandler(), getLogoutMockHandler()];
+export const getSessionMock = () => [
+  getGetMeMockHandler(),
+  getSignInMockHandler(),
+  getLogoutMockHandler(),
+];

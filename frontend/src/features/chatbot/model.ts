@@ -1,7 +1,11 @@
-import type { ChatbotAnswer, ChatbotTurn } from '@/shared/api';
+import type { ChatbotAnswer, ChatbotRating, ChatbotTurn } from '@/shared/api';
 
-/** One question of a conversation and the answer it got. */
-export type ChatTurn = { question: string; answer: ChatbotAnswer };
+/** One question of a conversation, the answer it got and the user's rating of it, if any (STORY-003). */
+export type ChatTurn = {
+  question: string;
+  answer: ChatbotAnswer;
+  rating?: ChatbotRating['rating'];
+};
 
 /** SRS 12.1: a question has at most 1,000 characters. */
 export const QUESTION_MAX_LENGTH = 1000;
@@ -16,3 +20,6 @@ export function toHistory(turns: readonly ChatTurn[]): ChatbotTurn[] {
     answer: answer.outcome === 'ANSWERED' ? answer.text : '',
   }));
 }
+
+/** A conversation of the session; `startedAt` (ms) orders the list newest first (AC-002.3). */
+export type Conversation = { id: string; startedAt: number; turns: ChatTurn[] };

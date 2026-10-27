@@ -9,9 +9,9 @@
 import type { ProjectRole } from './projectRole';
 
 export interface ProjectMembership {
-  projectId: number;
+  projectId: string;
   jiraProjectKey: string;
-  departmentId: number;
+  departmentId: string;
   departmentName: string;
   roleInProject: ProjectRole;
 }

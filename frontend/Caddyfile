@@ -13,8 +13,8 @@
 
 	header {
 		# What the app loads: its own scripts, fonts and API. antd writes its CSS at run time into
-		# <style> tags, hence 'unsafe-inline' for styles only. A different API origin
-		# (VITE_API_BASE_URL) must be added to connect-src.
+		# <style> tags, hence 'unsafe-inline' for styles only. The app calls its own
+		# origin only (AC-011.1), so connect-src stays 'self'.
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"

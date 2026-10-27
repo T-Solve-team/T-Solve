@@ -46,7 +46,7 @@ export default ReviewQueuePage; // used by the lazy import in routes.ts
 ```tsx
 // ✅ Do
 type RejectTicketModalProps = {
-  ticketIds: number[];
+  ticketIds: string[];
   isOpen: boolean;
   onClose: () => void;
 };

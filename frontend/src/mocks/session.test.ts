@@ -2,6 +2,8 @@ import { getMe, isApiError } from '@/shared/api';
 import { DEV_USERS, getDevUser, setDevUser } from '@/shared/auth';
 import { MOCK_USERS } from './session';
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
 describe('mock users', () => {
   it('AC-009.1 offers a user per role and the three role combinations', () => {
     const roles = Object.fromEntries(
@@ -40,6 +42,9 @@ describe('mock users', () => {
   it('AC-009.2 answers /me with the chosen user, and 401 when signed out', async () => {
     setDevUser('km');
     await expect(getMe()).resolves.toEqual(MOCK_USERS.km);
+    const body = await getMe();
+    expect(body.user.id).toBe(MOCK_USERS.km.user.id);
+    expect(body.user.id).toMatch(UUID);
 
     setDevUser(null);
     const error: unknown = await getMe().catch((e: unknown) => e);
@@ -58,5 +63,55 @@ describe('mock users', () => {
     });
     expect(getDevUser()).toBe('pm');
     blocked.mockRestore();
+  });
+
+  it('AC-009.7 gives every fixture id as a UUID string', () => {
+    for (const { user, department, departments, projects, managedSpaces } of Object.values(
+      MOCK_USERS,
+    )) {
+      const ids = [
+        user.id,
+        ...(department ? [department.departmentId] : []),
+        ...departments.map((d) => d.departmentId),
+        ...projects.flatMap((p) => [p.projectId, p.departmentId]),
+        ...managedSpaces.map((s) => s.spaceId),
+      ];
+      for (const id of ids) {
+        expect(typeof id).toBe('string');
+        expect(id).toMatch(UUID);
+      }
+    }
+  });
+
+  it('AC-009.7 uses the same id wherever the same record appears', () => {
+    const departments = new Map<string, string>();
+    const projects = new Map<string, string>();
+    const spaces = new Map<string, string>();
+    const note = (map: Map<string, string>, id: string, what: string) => {
+      expect(map.get(id) ?? what).toBe(what);
+      map.set(id, what);
+    };
+    for (const user of Object.values(MOCK_USERS)) {
+      if (user.department) note(departments, user.department.departmentId, user.department.name);
+      for (const d of user.departments) note(departments, d.departmentId, d.name);
+      for (const p of user.projects) {
+        note(departments, p.departmentId, p.departmentName);
+        note(projects, p.projectId, `${p.jiraProjectKey}/${p.departmentId}`);
+      }
+      for (const s of user.managedSpaces) note(spaces, s.spaceId, s.name);
+    }
+
+    // One id per name: IT is one UUID in department, departments and the Projects' departmentId.
+    expect(new Set(departments.values()).size).toBe(departments.size);
+    expect([...departments.values()].sort()).toEqual(['HR', 'IT']);
+    expect(new Set(projects.values()).size).toBe(projects.size);
+    expect(new Set(spaces.values()).size).toBe(spaces.size);
+  });
+
+  it('AC-009.7 gives each fixture user a different id', () => {
+    const ids = Object.values(MOCK_USERS).map((u) => u.user.id);
+
+    expect(ids).toHaveLength(8);
+    expect(new Set(ids).size).toBe(8);
   });
 });
