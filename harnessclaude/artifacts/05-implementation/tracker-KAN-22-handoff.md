@@ -26,6 +26,14 @@ và **chưa commit gì** (mọi thay đổi bên dưới đều chưa commit tr�
 
 ## Chạy demo (2026-10-27)
 
+**Thực tế đã làm:** dùng app Forge có sẵn của người dùng ở `C:/Users/Phong vu/T-Solve-Jira` (chưa nằm trong repo,
+không có git; app id `c7ed3485-…`, cài trên `bdang798.atlassian.net`, cloudId `d2ea2588-3855-4363-8876-4a9ce888ffc2`).
+`manifest.yml` đã sửa: trigger `tsolve-issue-created` → Forge Remote endpoint + `appSystemToken`, `remotes.tsolve-backend`
+(baseUrl = URL tunnel, đang là placeholder); gỡ `doneReminder` và workflow validator (lệch spec). Bản cũ:
+`manifest.before-remote.yml.bak` cạnh file. `.env` có app id thật; `jira_site` (Workspace 1) đã chèn bằng SQL.
+Việc sau demo: đưa app vào `jira-app/` của repo trên nhánh riêng, viết lại theo spec (module `jira-app` cần plan).
+
+
 1. Người dùng: `forge login`, rồi `forge create -d jira-app tsolve-jira-app` (UI Kit → Jira → `jira-issue-panel`).
 2. Quick change `jira-app/manifest.yml` (module `jira-app` mới `decomposed`): thêm `trigger` `avi:jira:created:issue`
    → `endpoint` (remote `tsolve-backend`, route `/api/v1/jira-app/events/issue-created`, `auth.appSystemToken.enabled: true`),
