@@ -51,3 +51,6 @@
 {"ts":"2026-10-22T12:37:45.134Z","type":"quick-closed","what":"reviewer findings: frontend done includes build and generate:api, bug-log rule, AC checklist line","files":["frontend/AGENTS.md","frontend/guidelines/12-workflow.md"]}
 {"ts":"2026-10-22T12:49:56.896Z","type":"quick-opened","what":"project rules: the team git rules win over the harness branch and commit defaults","files":["CLAUDE.md","AGENTS.md"]}
 {"ts":"2026-10-22T12:51:49.090Z","type":"quick-closed","what":"project rules: the team git rules win over the harness branch and commit defaults","files":["CLAUDE.md","AGENTS.md"]}
+{"ts":"2026-10-22T13:56:00.563Z","type":"module-status","module":"tracker","from":"planned","to":"implementing"}
+{"ts":"2026-10-22T13:56:00.887Z","type":"feature-status","module":"tracker","feature":"tracker-foundation","from":"pending","to":"in-progress"}
+{"ts":"2026-10-27T09:25:02.290Z","type":"spec-approved","module":"tracker","specHash":"b2abb6f0716b3f6591a91d43eb2d701209cd4a7a9bbc37e5e3050d8a7f8fb8f7"}

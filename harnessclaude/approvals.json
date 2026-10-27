@@ -1,7 +1,7 @@
 {
   "tracker": {
-    "specHash": "3d6e340178b268c5defe1b27ac43b38ff1624ddc888662d5b8b4e908bc3dae98",
-    "approvedAt": "2026-10-21T13:46:06.209Z",
+    "specHash": "b2abb6f0716b3f6591a91d43eb2d701209cd4a7a9bbc37e5e3050d8a7f8fb8f7",
+    "approvedAt": "2026-10-27T09:25:02.285Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a request to the Jira App API carries a FIT whose signature verifies against Atlassian's JWKS, whose issuer is , whose audience equals the configured app id, which is within its / window, and whose  is the cloudId of a Workspace's Jira site, THE tracker SHALL pass the request to its handler with the cloudId, the Workspace and the principal (if any).",
@@ -23,6 +23,7 @@
       "AC-003.4": "IF an event that is already recorded is delivered again, THEN THE tracker SHALL respond 202 without recording it a second time.",
       "AC-003.5": "IF an event arrives without the  header, THEN THE tracker SHALL respond 400 with MSG06 and not record it.",
       "AC-003.6": "IF the event body is not a valid issue event (no issue id or key), THEN THE tracker SHALL respond 400 with MSG06 and not record it.",
+      "AC-003.7": "WHEN the tracker records an event, THE tracker SHALL record it under the Workspace whose registered site has the event's cloudId.",
       "AC-004.1": "WHILE an event is RECEIVED and due, THE tracker SHALL claim it so that only one worker processes it at a time.",
       "AC-004.2": "WHEN the tracker processes an event, THE tracker SHALL read the issue from Jira with that event's system token: key, summary, description, issue type, priority, project key, status with its status category, resolution, created and resolution dates, reporter accountId, and assignee accountId and display name.",
       "AC-004.3": "IF the issue's project key does not belong to a T-Solve Project of the site's Workspace, THEN THE tracker SHALL mark the event IGNORED and do nothing else.",
@@ -31,6 +32,7 @@
       "AC-004.6": "IF processing fails with a non-retryable error (Jira 401, 403 or 404), THEN THE tracker SHALL mark the event FAILED with the error type at once.",
       "AC-004.7": "IF an event is still unfinished 2 hours after it was received, THEN THE tracker SHALL mark it FAILED with the error type  and delete its token.",
       "AC-004.8": "WHEN an event becomes PROCESSED, IGNORED or FAILED, THE tracker SHALL delete its stored system token.",
+      "AC-004.9": "WHILE the tracker processes an event, THE tracker SHALL read and change only data of that event's Workspace.",
       "AC-005.1": "WHEN a created ticket of a T-Solve Project is processed, THE tracker SHALL pass it to triage, ask search to compute and store suggestions for it, and record the triage decision for the panel.",
       "AC-005.2": "WHEN triage classifies the ticket as Simple with a suggested solution, THE tracker SHALL add one comment to the ticket with MSG80 filled with the suggested solution and the related Wiki document links, visible to the reporter and with no link to the tickets whose Solutions the suggestion was built from, then mark the event PROCESSED.",
       "AC-005.3": "WHEN triage classifies the ticket as Complex or Sensitive, or gives no suggested solution, THE tracker SHALL add no comment and mark the event PROCESSED.",

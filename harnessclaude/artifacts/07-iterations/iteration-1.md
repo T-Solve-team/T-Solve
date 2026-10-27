@@ -39,7 +39,7 @@ iteration 1. If it slips, Tasks 10–14 move to iteration 2 first (Tasks 1–9 g
 ## Demo Script
 
 1. Admin registers the Jira site (Task 4, via the workspace call or a test endpoint) — show the cloudId stored.
-2. Create a Simple ticket in Jira → `tracker_event` row RECEIVED → PROCESSED → MSG80 comment appears (stub triage).
+2. Create a Simple ticket in Jira → `issue_event` row RECEIVED → PROCESSED → MSG80 comment appears (stub triage).
 3. Edit a ticket's label → no row; send a forged request without a valid FIT → 401 MSG08.
 4. Move a ticket to Done → AI draft requested from the ticket port (stub); panel data shows the draft.
 5. Open the panel unlinked → MSG62; as reporter answer Yes → MSG82.

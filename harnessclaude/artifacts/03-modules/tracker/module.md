@@ -3,7 +3,7 @@ name: tracker
 repos: []
 dependencies: []
 complexity: medium
-paths: [backend/src/main/java/vn/tsolve/tracker/**, backend/src/test/java/vn/tsolve/tracker/**]
+paths: [backend/src/main/java/vn/tsolve/tracker/**, backend/src/test/java/vn/tsolve/tracker/**, backend/src/main/java/vn/tsolve/common/security/**, backend/src/test/java/vn/tsolve/common/security/**, backend/src/main/java/vn/tsolve/common/config/TrackerProperties.java, backend/src/main/resources/db/changelog/**, backend/src/main/resources/application.yml, backend/pom.xml, frontend/openapi/tsolve-api.yaml, .env.example]
 ---
 
 # Module: tracker

@@ -14,10 +14,10 @@ Conventions: `backend/AGENTS.md` (package-by-module then layer, service interfac
 Forge trigger ──POST + FIT + x-forge-oauth-system──►  [JiraAppSecurityConfig: FIT filter chain, /api/v1/jira-app/**]
 Issue Panel  ──invokeRemote + FIT──────────────────►          │ JiraAppPrincipal(cloudId, workspaceId, accountId)
                                                               ▼
-                                          JiraAppEventController ─► TrackerEventService.receive(...)  → tracker_event (RECEIVED) → 202
+                                          JiraAppEventController ─► IssueEventService.receive(...)  → issue_event (RECEIVED) → 202
                                           JiraAppIssueController ─► JiraPanelService (panel, refresh, draft, submit, answer)
                                                                          │ calls project / identity / search / ticket / triage ports
-TrackerEventWorker (@Scheduled 5 s) ─► TrackerEventService.claimDue() ─► TrackerEventProcessor.process(event)
+IssueEventWorker (@Scheduled 5 s) ─► IssueEventService.claimDue() ─► IssueEventProcessor.process(event)
                                                                          ├─ TicketTrackerClientFactory → JiraClient (RestClient, system token)
                                                                          ├─ CREATED: triage → search → MSG80 comment (once)
                                                                          └─ UPDATED + Done: comments → ticket.createOrUpdateAiDraft
@@ -40,11 +40,25 @@ workspace package ─► JiraSiteService.registerSite(workspaceId, siteUrl) → 
 - **Panel calls carry a system token.** The panel/Solution Form remote endpoints enable `appSystemToken`; the token is used within that request only and never stored (risk review).
 - **Site check in the decoder.** After Nimbus validates signature, `exp`/`nbf`, the token validators check
   `iss`, `aud` and that `context.cloudId` resolves through `JiraSiteRepository` to a Workspace.
+- **Workspace per transaction (multi-tenancy, 2026-10-27).** `jira_site` and `issue_event` are tenant tables:
+  each entity's `workspaceId` is `@TenantId`, filled by Hibernate from `WorkspaceContext` (architecture,
+  Multi-tenancy). Where the Workspace is set:
+  - **Receive:** the cloudId lookup runs as `WorkspaceContext.ROOT`; once the site is found, the controller
+    sets that Workspace and calls `IssueEventService.receive` (new transaction), so the event is inserted
+    under it (AC-003.7). An unknown cloudId never gets this far: the FIT validator rejects it (403 MSG08).
+  - **Worker:** the claim and stale-claim queries are native SQL across all Workspaces, run as `ROOT`. For each
+    claimed event the worker sets the event's `workspaceId` before processing and finishing it, so every
+    JPA read and write of that event stays in its Workspace (AC-004.9). Calls to other modules run in that
+    Workspace too.
+  - **Cleanup job:** native delete across all Workspaces, as `ROOT`.
+  - Entities take no `workspaceId` in their constructors: Hibernate sets it on insert.
 
 ## Data Model
 
-New Liquibase changeset `backend/src/main/resources/db/changelog/changes/002-tracker-tables.sql`
-(id `002-tracker-tables`, author `tracker`; the number is the next free one when written).
+New Liquibase changeset `backend/src/main/resources/db/changelog/changes/002-jira-issue-events.sql`
+(id `002-jira-issue-events`, author `tracker`; the number is the next free one when written). The table is
+`issue_event` (renamed from `tracker_event`, user 2026-10-22); its classes are named `IssueEvent*` (entity `IssueEvent`
+with `@Table(name = "issue_event")`, `IssueEventType`, `IssueEventStatus`, `IssueEventRepository`, …).
 
 ```sql
 CREATE TABLE jira_site (
@@ -55,8 +69,9 @@ CREATE TABLE jira_site (
     registered_at TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
-CREATE TABLE tracker_event (
+CREATE TABLE issue_event (
     id               BIGSERIAL PRIMARY KEY,
+    workspace_id     BIGINT       NOT NULL REFERENCES workspace (id),   -- tenant, @TenantId (AC-003.7)
     cloud_id         VARCHAR(64)  NOT NULL,
     issue_id         VARCHAR(32)  NOT NULL,
     issue_key        VARCHAR(64)  NOT NULL,
@@ -71,14 +86,18 @@ CREATE TABLE tracker_event (
     error_type       VARCHAR(50),
     received_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
     finished_at      TIMESTAMPTZ,
-    CONSTRAINT uq_tracker_event UNIQUE (cloud_id, issue_id, event_type, event_timestamp)   -- AC-003.4
+    CONSTRAINT uq_issue_event UNIQUE (cloud_id, issue_id, event_type, event_timestamp)   -- AC-003.4
 );
-CREATE INDEX idx_tracker_event_due ON tracker_event (status, next_attempt_at);
-CREATE INDEX idx_tracker_event_received ON tracker_event (received_at);
+CREATE INDEX idx_issue_event_due ON issue_event (status, next_attempt_at);
+CREATE INDEX idx_issue_event_received ON issue_event (received_at);
+CREATE INDEX idx_issue_event_workspace ON issue_event (workspace_id);
 ```
 
-Claim query (native, `TrackerEventRepository`):
-`SELECT … FROM tracker_event WHERE status = 'RECEIVED' AND next_attempt_at <= now() ORDER BY next_attempt_at
+The changeset was rewritten on 2026-10-27 to add `issue_event.workspace_id`; it had only run on one developer
+database (reset), never on a shared one.
+
+Claim query (native, `IssueEventRepository`):
+`SELECT … FROM issue_event WHERE status = 'RECEIVED' AND next_attempt_at <= now() ORDER BY next_attempt_at
 LIMIT :batch FOR UPDATE SKIP LOCKED`, then set `status = PROCESSING, claimed_at = now()` in the same transaction.
 A PROCESSING row whose `claimed_at` is older than 10 minutes (worker crashed) returns to RECEIVED.
 
@@ -91,7 +110,7 @@ duplicated in tracker.
 | Decision | Choice | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
 | Event delivery | Forge trigger → remote endpoint directly | Forge function relays with Async Events | Forge retries for free (4×); logic stays in testable Java; matches diagram (user, plan Q1) |
-| Background processing | DB table `tracker_event` + worker | In-memory `@Async` | Survives restarts, dedupe, inspectable failures (plan Q2) |
+| Background processing | DB table `issue_event` + worker | In-memory `@Async` | Survives restarts, dedupe, inspectable failures (plan Q2) |
 | System token while waiting | Encrypted in the event row, deleted when done or after 2 h | In memory only | Survives restarts within the token's 2-hour validity (plan Q3) |
 | Allowed sites | `jira_site` table filled from Workspace Setup (MSG61) | env var; auto-register + approve | SRS: Admin enters the site address (plan Q4/Q5 → SRS) |
 | Worker retry | 1, 5, 15 min then FAILED; 401/403/404 FAILED at once | none; until token expiry | Covers short outages within token validity (plan Q6) |
@@ -105,29 +124,43 @@ duplicated in tracker.
 | Status filter at receive | `changelog.items[].fieldId == "status"` or `associatedStatuses` present | read Jira on receive | No outbound call inside the 5-second window — Decided in planning |
 | Comment API | `POST {apiBaseUrl}/rest/api/3/issue/{id}/comment` with ADF body; MSG80 as public comment | JSM servicedesk API | Reporter must see MSG80 (AC-005.2) — Decided in planning |
 | Site → cloudId | `GET {siteUrl}/_edge/tenant_info` → `cloudId` | Admin types cloudId | Admin enters only the URL (MSG61); verify endpoint in task 1 |
+| Multi-tenancy | Workspace = tenant; Hibernate `@TenantId` on `workspaceId` of both entities, no base class | PostgreSQL RLS; `@TenantId` + RLS; a base `@MappedSuperclass` | Team request (2026-10-27); no DB user or compose change; AGENTS keeps entities out of `common/` (user) |
 | Jira base URL | `apiBaseUrl` from the FIT stored with the event | hard-coded `api.atlassian.com/ex/jira/{cloudId}` | Forge docs: route requests to the FIT's `apiBaseUrl` — Decided in planning |
 
 ## File Structure
+Follows `backend/AGENTS.md` §1 as updated on 2026-10-21: a module has only its layers; configuration and
+security config live in `common/`, which depends on no module.
 ```
+backend/src/main/java/vn/tsolve/common/
+├── config/        TrackerProperties (@ConfigurationProperties: app id, JWKS URI, token key, worker timings),
+│                  WorkspaceTenantResolver (CurrentTenantIdentifierResolver<Long> + HibernatePropertiesCustomizer)
+└── security/      WorkspaceContext (per-thread Workspace: set/clear, callAs, NONE = -1, ROOT = 0),
+                   JiraAppSecurityConfig (@Order(1) chain for /api/v1/jira-app/**), FitJwtDecoderConfig,
+                   FitValidators, FitAuthenticationConverter, JiraAppPrincipal,
+                   JiraSiteLookup (interface: cloudId → workspaceId, implemented by tracker)
 backend/src/main/java/vn/tsolve/tracker/
-├── config/        JiraAppSecurityConfig, FitJwtDecoderConfig, FitValidators, TrackerProperties (@ConfigurationProperties)
 ├── controller/    JiraAppEventController, JiraAppIssueController
-├── service/       TrackerEventService, JiraPanelService, JiraSiteService, TicketTrackerClient, TicketTrackerClientFactory
-│   ├── impl/      TrackerEventServiceImpl, TrackerEventProcessor, TrackerEventWorker, TrackerCleanupJob,
-│   │              JiraPanelServiceImpl, JiraSiteServiceImpl
-│   └── port/      TrackerProjectPort, TrackerIdentityPort, TrackerTriagePort, TrackerSearchPort, TrackerTicketPort
-│       └── stub/  Stub*Port (profile stub-ports)
-├── client/        JiraClient (implements TicketTrackerClient), AdfTextExtractor, JiraTenantInfoClient
-├── security/      JiraAppPrincipal, FitAuthenticationConverter, TokenCipher
-├── repository/    TrackerEventRepository, JiraSiteRepository
-├── entity/        TrackerEvent, TrackerEventStatus, TrackerEventType, JiraSite
+├── service/       IssueEventService, JiraPanelService, JiraSiteService, TicketTrackerClientFactory
+│   └── impl/      IssueEventServiceImpl, IssueEventProcessor, IssueEventWorker, TrackerCleanupJob,
+│                  JiraPanelServiceImpl, JiraSiteServiceImpl (also implements JiraSiteLookup), TokenCipher
+├── client/        TicketTrackerClient (interface), JiraClient, AdfTextExtractor, JiraTenantInfoClient
+├── exception/     TokenUnreadableException, TrackerClientException (retryable flag), InvalidSiteException
+├── repository/    IssueEventRepository, JiraSiteRepository
+├── entity/        IssueEvent, IssueEventStatus, IssueEventType, JiraSite
 └── dto/           IssueEventPayload, PanelResponse, SolutionDraftRequest, SubmitSolutionRequest,
                    SuggestionAnswerRequest, SuggestionAnswerResponse, TrackerIssue, TrackerComment
-backend/src/main/resources/db/changelog/changes/002-tracker-tables.sql
-backend/src/test/java/vn/tsolve/tracker/…  (one test class per production class; method names cite AC ids)
+backend/src/main/resources/db/changelog/changes/002-jira-issue-events.sql
+backend/src/test/java/vn/tsolve/{common/security,tracker}/…  (tests mirror main; method names cite AC ids)
 frontend/openapi/tsolve-api.yaml            (Jira App API paths + schemas)
 .env.example                                 (TSOLVE_JIRA_APP_ID, TSOLVE_TOKEN_KEY, FORGE_JWKS_URI)
 ```
+
+- The `common/` changes are flagged in the PR (AGENTS, Notes for AI agents); the identity owner reviews the
+  chain order.
+- Calls into `project`, `identity`, `triage`, `search`, `ticket` go through **their** `service/` interfaces
+  (AGENTS §1). This replaces the tracker-owned ports of the Architecture Overview: the interfaces are agreed
+  with each owner before Tasks 8–9, and until an owner delivers, a stub bean in that owner's package is added
+  by the owner or with the owner's agreement. Decided 2026-10-22 (new AGENTS layout).
 
 ## External Dependencies
 - `spring-boot-starter-oauth2-resource-server`: FIT verification (JWKS, JWT). **New dependency** — backend
@@ -206,7 +239,7 @@ Agreements (4+ personas):
 | Outbound URLs | — | SSRF: `apiBaseUrl` and the Admin-entered site URL decide where the server connects | — | — | Both come from trusted-ish sources | Site URL regex `^https://[a-z0-9-]+\.atlassian\.net/?$`; `apiBaseUrl` host must be `api.atlassian.com` or `*.atlassian.net`; RestClient follows no redirects |
 | Two filter chains | Needs `identity`'s chain to exist and order after `@Order(1)` | Missing chain = endpoints fall to default config | — | — | — | Agree order with the identity owner before Task 3 |
 | Dependencies on 5 packages | Coupling through ports, stubs keep slices demoable | — | — | Demo shows stub data until owners deliver | Could slip the whole flow | Ports + `stub-ports` profile; agree port signatures in Task 1 notes |
-| FAILED events invisible | — | — | — | Nobody notices lost triage | — | WARN log `tracker_event` id + error type; count FAILED in a log line per run |
+| FAILED events invisible | — | — | — | Nobody notices lost triage | — | WARN log `issue_event` id + error type; count FAILED in a log line per run |
 | FIT replay within `exp` | — | Low: TLS, minutes-long `exp`, idempotent receive | — | — | Not worth a jti store | Accepted |
 | New pom dependency | AGENTS says flag it | — | — | — | — | Team approves `spring-boot-starter-oauth2-resource-server` in the PR |
 

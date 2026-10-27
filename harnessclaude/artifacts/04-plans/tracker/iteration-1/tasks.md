@@ -12,6 +12,30 @@ Spec: `artifacts/03-modules/tracker/spec.md` · Design: `artifacts/04-plans/trac
 (below: `tracker/`), tests in `backend/src/test/java/vn/tsolve/tracker/`. Every test method name cites its AC id
 (e.g. `rejectsWrongAudience_AC_001_4`). Each task ends with `mvn spotless:apply` and `mvn verify` green.
 
+> **Update 2026-10-22 — read first.**
+> - **File locations:** the design's File Structure wins over the paths listed in the tasks below. Security
+>   config, FIT validators, `JiraAppPrincipal` → `common/security/`; `TrackerProperties` → `common/config/`;
+>   `TokenCipher` → `tracker/service/impl/`; tracker exceptions → `tracker/exception/`; `TicketTrackerClient`
+>   → `tracker/client/`. No `service/port/` package: other modules are called through their own `service/`
+>   interfaces, agreed with each owner before Tasks 8–9.
+> - **Branches and Jira:** one branch per Jira issue (`<type>/KAN-<n>-<module>-<desc>`). KAN-22 (ticket created):
+>   Tasks 2–9 (+ the Task 1 checks). KAN-23 (ticket Done): Tasks 10–14. Sub-tasks may split these further.
+> - **Task 1 spike is dropped as a separate step** (user, 2026-10-22). Its checks move into slice step 4 below:
+>   the first real Forge delivery to the receive endpoint confirms the header, FIT claims, retry and
+>   `timestamp`; a difference from the design is fixed in the spec/design before going on.
+> - **Create-ticket slice (KAN-22), in this order** — each step ends runnable:
+>   1. Task 2, only what receiving needs: the `issue-created` path in OpenAPI, the changeset (`jira_site`,
+>      `issue_event`), entities, repositories, `TrackerProperties`, `.env.example`. **Multi-tenancy (2026-10-27):**
+>      `WorkspaceContext` + `WorkspaceTenantResolver` in `common/`, `@TenantId workspaceId` on both entities,
+>      `issue_event.workspace_id`; tests prove inserts take the current Workspace and queries see only it
+>      (AC-003.7, AC-004.9) — design "Workspace per transaction".
+>   2. Task 3 (FIT). During development the site row is inserted by SQL; Task 4 comes later.
+>   3. Task 5 (`TokenCipher`) + Task 6 (receive events, `issue-created` only first).
+>   4. `jira-app/manifest.yml` trigger to the endpoint (quick change), deploy, create a ticket → `RECEIVED` row;
+>      run the Task 1 checks.
+>   5. Task 7 (`getIssue`, `addComment` first) + Task 8 (worker).
+>   6. Task 9 (triage + MSG80) once the triage interface is agreed.
+
 ## Task 1: Spike — verify Forge Remote behaviour
 
 **Story:** STORY-003
@@ -36,14 +60,14 @@ design, stop and change spec/design first (risk review). Agree the port signatur
 **Story:** STORY-003
 **Feature:** tracker-foundation
 **Description:** Add the seven Jira App API paths and their schemas to the OpenAPI contract (contract first,
-AGENTS rule 8). Liquibase changeset with `jira_site` and `tracker_event` (design Data Model). Entities
-`TrackerEvent` (intention methods: `claim`, `markProcessed`, `markIgnored`, `markFailed`, `scheduleRetry`,
+AGENTS rule 8). Liquibase changeset with `jira_site` and `issue_event` (design Data Model). Entities
+`IssueEvent` (intention methods: `claim`, `markProcessed`, `markIgnored`, `markFailed`, `scheduleRetry`,
 `markCommentPosted`), `JiraSite`, enums, repositories (incl. native claim query and stale-claim release),
 `TrackerProperties` record, port interfaces and `stub-ports` stubs, `.env.example` names.
 **Files:**
 - Modify: `frontend/openapi/tsolve-api.yaml`, `.env.example`, `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `backend/src/main/resources/application.yml`
-- Create: `backend/src/main/resources/db/changelog/changes/002-tracker-tables.sql`, `tracker/entity/*`, `tracker/repository/*`, `tracker/config/TrackerProperties.java`, `tracker/service/port/*`, `tracker/service/port/stub/*`
-- Test: `tracker/entity/TrackerEventTest.java` (state transitions used by AC-004.5–004.8)
+- Create: `backend/src/main/resources/db/changelog/changes/002-jira-issue-events.sql`, `tracker/entity/*`, `tracker/repository/*`, `tracker/config/TrackerProperties.java`, `tracker/service/port/*`, `tracker/service/port/stub/*`
+- Test: `tracker/entity/IssueEventTest.java` (state transitions used by AC-004.5–004.8)
 **Dependencies:** Task 1
 **Estimated size:** medium
 
@@ -102,12 +126,12 @@ no redirects) reads `cloudId`; unique cloudId across Workspaces → MSG61; repla
 **Story:** STORY-003
 **Feature:** receive-issue-events
 **Description:** `JiraAppEventController` (two POST endpoints, `@PreAuthorize("hasRole('JIRA_APP')")`) →
-`TrackerEventService.receive(principal, payload, systemToken)`: validate body (AC-003.6), require
+`IssueEventService.receive(principal, payload, systemToken)`: validate body (AC-003.6), require
 `x-forge-oauth-system` (AC-003.5), skip updated events without a status change (AC-003.3), encrypt token, insert;
 unique violation → 202 (AC-003.4). Store the FIT `apiBaseUrl`. Edge cases 7, 11–15.
 **Files:**
-- Create: `tracker/controller/JiraAppEventController.java`, `tracker/service/TrackerEventService.java`, `tracker/service/impl/TrackerEventServiceImpl.java`, `tracker/dto/IssueEventPayload.java`
-- Test: `tracker/service/impl/TrackerEventServiceImplTest.java`, `tracker/controller/JiraAppEventControllerTest.java`
+- Create: `tracker/controller/JiraAppEventController.java`, `tracker/service/IssueEventService.java`, `tracker/service/impl/IssueEventServiceImpl.java`, `tracker/dto/IssueEventPayload.java`
+- Test: `tracker/service/impl/IssueEventServiceImplTest.java`, `tracker/controller/JiraAppEventControllerTest.java`
 **Dependencies:** Tasks 3, 5
 **Estimated size:** medium
 
@@ -134,15 +158,15 @@ mentions as display text; media skipped; null → ""). Edge cases 25, 26, 36.
 
 **Story:** STORY-004
 **Feature:** event-worker
-**Description:** `TrackerEventWorker` (`@Scheduled(fixedDelay = 5 s)`): release stale PROCESSING claims (10 min),
-claim due batch (tx), for each: decrypt token, `TrackerEventProcessor.process` outside a transaction, finish (tx).
+**Description:** `IssueEventWorker` (`@Scheduled(fixedDelay = 5 s)`): release stale PROCESSING claims (10 min),
+claim due batch (tx), for each: decrypt token, `IssueEventProcessor.process` outside a transaction, finish (tx).
 Read issue (AC-004.2); no site/project → IGNORED (AC-004.3, edge case 10); updated + not Done → IGNORED
 (AC-004.4); retryable → 1/5/15 min then FAILED (AC-004.5); non-retryable → FAILED (AC-004.6); 2 h → FAILED
 `TOKEN_EXPIRED` (AC-004.7); delete token on finish (AC-004.8); WARN log id + error type on FAILED.
 Edge cases 16–21.
 **Files:**
-- Create: `tracker/service/impl/TrackerEventWorker.java`, `tracker/service/impl/TrackerEventProcessor.java`
-- Test: `tracker/service/impl/TrackerEventWorkerTest.java`, `tracker/service/impl/TrackerEventProcessorTest.java`
+- Create: `tracker/service/impl/IssueEventWorker.java`, `tracker/service/impl/IssueEventProcessor.java`
+- Test: `tracker/service/impl/IssueEventWorkerTest.java`, `tracker/service/impl/IssueEventProcessorTest.java`
 **Dependencies:** Tasks 6, 7
 **Estimated size:** medium
 
@@ -157,9 +181,9 @@ with a suggestion, post MSG80 (public) built as ADF nodes, without the "Related 
 are no links; set `comment_posted` in its own transaction right after posting; skip posting when already set.
 Edge cases 22, 24.
 **Files:**
-- Modify: `tracker/service/impl/TrackerEventProcessor.java`
+- Modify: `tracker/service/impl/IssueEventProcessor.java`
 - Create: `tracker/service/impl/SuggestionCommentBuilder.java`
-- Test: `tracker/service/impl/TrackerEventProcessorTriageTest.java`, `tracker/service/impl/SuggestionCommentBuilderTest.java`
+- Test: `tracker/service/impl/IssueEventProcessorTriageTest.java`, `tracker/service/impl/SuggestionCommentBuilderTest.java`
 **Dependencies:** Task 8
 **Estimated size:** medium
 
@@ -173,8 +197,8 @@ Edge cases 22, 24.
 `createOrUpdateAiDraft`; draft failure → PROCESSED with draft-unavailable state (AC-006.2); never comment
 (AC-006.3). Edge cases 25, 27.
 **Files:**
-- Modify: `tracker/service/impl/TrackerEventProcessor.java`
-- Test: `tracker/service/impl/TrackerEventProcessorDoneTest.java`
+- Modify: `tracker/service/impl/IssueEventProcessor.java`
+- Test: `tracker/service/impl/IssueEventProcessorDoneTest.java`
 **Dependencies:** Task 8
 **Estimated size:** small
 

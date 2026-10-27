@@ -22,6 +22,7 @@ Jira accountId in the FIT of a UI call.
 | 2026-10-21 | STORY-002, 005, 006, 007, 008, 010 | Aligned with SRS System Messages: site entered by the Admin in Workspace Setup (MSG61); MSG80 suggestion comment for Simple issues only; no reminder comment, Solution Form closes with an empty Solution (MSG70); panel needs sign-in (MSG62); reporter answers MSG81 without sign-in | SRS is the team's contract. The reporter rule interprets MSG62 vs MSG81 — to be confirmed with the SRS author / triage owner |
 | 2026-10-21 | STORY-005 | Add AC-005.5: MSG80 without the "Related documents" sentence when there are no links | Edge case found in planning; SRS silent — tell the SRS author |
 | 2026-10-21 | STORY-005 | AC-005.2/005.5 say "Wiki document links"; tickets used for the suggestion are never linked | Knowledge has Wiki documents and ticket Solutions; SRS MSG80 links only Wiki ("tickets used are not linked") |
+| 2026-10-27 | STORY-003, 004 | Add AC-003.7 (an event belongs to its site's Workspace) and AC-004.9 (processing stays in that Workspace); Non-Functional 8 | Multi-tenancy: Workspace = tenant, Hibernate `@TenantId` (architecture, Cross-Cutting Concerns) |
 
 ## Requirements
 
@@ -47,6 +48,8 @@ Jira accountId in the FIT of a UI call.
 6. Errors are RFC 9457 `ProblemDetail` responses carrying an SRS message code: 401/403 → MSG08,
    unexpected or unavailable → MSG06, unless a criterion names another code.
 7. UI calls (panel, Solution Form) answer within 20 seconds, below Forge's 25-second limit.
+8. Every `jira_site` and `issue_event` row belongs to one Workspace; tracker code reads and changes rows only of
+   the Workspace it acts for (architecture, Multi-tenancy).
 
 ## User Stories
 
@@ -80,6 +83,7 @@ Jira accountId in the FIT of a UI call.
   - AC-003.4: IF an event that is already recorded is delivered again, THEN THE tracker SHALL respond 202 without recording it a second time.
   - AC-003.5: IF an event arrives without the `x-forge-oauth-system` header, THEN THE tracker SHALL respond 400 with MSG06 and not record it.
   - AC-003.6: IF the event body is not a valid issue event (no issue id or key), THEN THE tracker SHALL respond 400 with MSG06 and not record it.
+  - AC-003.7: WHEN the tracker records an event, THE tracker SHALL record it under the Workspace whose registered site has the event's cloudId.
 
 ### STORY-004: Process recorded events
 - As the T-Solve server, I want recorded events processed reliably in the background so that slow Jira or AI calls never block Forge.
@@ -92,6 +96,7 @@ Jira accountId in the FIT of a UI call.
   - AC-004.6: IF processing fails with a non-retryable error (Jira 401, 403 or 404), THEN THE tracker SHALL mark the event FAILED with the error type at once.
   - AC-004.7: IF an event is still unfinished 2 hours after it was received, THEN THE tracker SHALL mark it FAILED with the error type `TOKEN_EXPIRED` and delete its token.
   - AC-004.8: WHEN an event becomes PROCESSED, IGNORED or FAILED, THE tracker SHALL delete its stored system token.
+  - AC-004.9: WHILE the tracker processes an event, THE tracker SHALL read and change only data of that event's Workspace.
 
 ### STORY-005: Triage a created ticket
 - As a reporter, I want a simple problem answered right away so that I may not need to wait for the team.
