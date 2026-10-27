@@ -231,3 +231,8 @@
 {"ts":"2026-10-26T14:05:15.988Z","type":"commit-recorded","module":"identity","repo":"default","sha":"e1a6c2bf71c28fa1fba2d9f4ddf4cbd5d9b9de04"}
 {"ts":"2026-10-26T14:05:16.044Z","type":"feature-status","module":"identity","feature":"add-user-review","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-26T14:07:00.988Z","type":"feature-status","module":"identity","feature":"add-user-review","from":"evaluating","to":"passing"}
+{"ts":"2026-10-25T18:23:01.542Z","type":"feature-status","module":"identity","feature":"account-status","from":"pending","to":"in-progress"}
+{"ts":"2026-10-27T12:59:37.971Z","type":"feature-status","module":"identity","feature":"account-status","from":"pending","to":"in-progress"}
+{"ts":"2026-10-27T13:24:41.393Z","type":"commit-recorded","module":"identity","repo":"default","sha":"27c2c4fe066252e23da520a623ef07da91b8daef"}
+{"ts":"2026-10-27T13:24:41.472Z","type":"feature-status","module":"identity","feature":"account-status","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-27T13:29:54.144Z","type":"feature-status","module":"identity","feature":"account-status","from":"evaluating","to":"passing"}
