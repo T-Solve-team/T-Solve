@@ -75,6 +75,61 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/users/{userId}:
+    get:
+      tags: [users]
+      operationId: getUserDetail
+      summary: Account detail and retained Project and Space references (frontend mock proposal).
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Workspace account detail.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserDetail' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/{userId}/handover-options:
+    get:
+      tags: [users]
+      operationId: getUserHandoverOptions
+      summary: Eligible active same-Workspace replacements for every managed responsibility.
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Active managed Projects (same Department Project Managers) and Spaces (Knowledge Managers).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserHandoverOptions' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/{userId}/status:
+    put:
+      tags: [users]
+      operationId: updateUserStatus
+      summary: Validate every replacement before atomically changing status and ownership; retain account/history.
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserStatusRequest' }
+      responses:
+        '200':
+          description: Updated detail.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserDetail' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /api/v1/users/creation-options:
     get:
       tags: [users]
@@ -413,6 +468,77 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    UserProject:
+      type: object
+      required: [projectId, name, department, isActive, managerId]
+      properties:
+        projectId: { type: string, format: uuid }
+        name: { type: string }
+        department: { $ref: '#/components/schemas/DepartmentRef' }
+        isActive: { type: boolean }
+        managerId: { type: string, format: uuid }
+    UserDetail:
+      allOf:
+        - { $ref: '#/components/schemas/UserAccount' }
+        - type: object
+          required: [isCurrentUser, projects, managedSpaces]
+          properties:
+            isCurrentUser: { type: boolean }
+            projects:
+              type: array
+              items: { $ref: '#/components/schemas/UserProject' }
+            managedSpaces:
+              type: array
+              items: { $ref: '#/components/schemas/SpaceRef' }
+    ProjectHandoverOption:
+      type: object
+      required: [project, recipients]
+      properties:
+        project: { $ref: '#/components/schemas/UserProject' }
+        recipients:
+          type: array
+          items: { $ref: '#/components/schemas/UserAccount' }
+    SpaceHandoverOption:
+      type: object
+      required: [space, recipients]
+      properties:
+        space: { $ref: '#/components/schemas/SpaceRef' }
+        recipients:
+          type: array
+          items: { $ref: '#/components/schemas/UserAccount' }
+    UserHandoverOptions:
+      type: object
+      required: [projects, spaces]
+      properties:
+        projects:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectHandoverOption' }
+        spaces:
+          type: array
+          items: { $ref: '#/components/schemas/SpaceHandoverOption' }
+    ProjectHandover:
+      type: object
+      required: [projectId, recipientId]
+      properties:
+        projectId: { type: string, format: uuid }
+        recipientId: { type: string, format: uuid }
+    SpaceHandover:
+      type: object
+      required: [spaceId, recipientId]
+      properties:
+        spaceId: { type: string, format: uuid }
+        recipientId: { type: string, format: uuid }
+    UpdateUserStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/UserAccountStatus' }
+        projectHandovers:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectHandover' }
+        spaceHandovers:
+          type: array
+          items: { $ref: '#/components/schemas/SpaceHandover' }
     CreateUserRequest:
       type: object
       required: [email, roles]
