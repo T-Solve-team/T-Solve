@@ -51,6 +51,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // Tests never depend on a developer's .env.local: mock mode is off unless a test switches it on (vi.stubEnv).
+    env: { VITE_API_MOCKING: 'false' },
     // Page tests render antd tables in jsdom and take 2–5 s each; 5 s (the default) fails on a busy laptop.
     testTimeout: 15_000,
     // Half the CPU cores run test files at once (default: all). With every core busy, a page's first render could

@@ -1,0 +1,9 @@
+.page {
+  min-height: 100vh;
+  padding: var(--ant-padding-lg, 24px);
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+}

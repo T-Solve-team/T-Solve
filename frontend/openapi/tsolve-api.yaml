@@ -145,6 +145,113 @@ paths:
             Location:
               description: The central sign-in URL.
               schema: { type: string }
+  /api/v1/auth/authorize:
+    servers:
+      - url: https://login.tsolve.io.vn
+        description: The central sign-in site (not the Workspace site).
+    get:
+      tags: [session]
+      operationId: authorize
+      summary: Central sign-in site step; the browser follows it as a page (never a fetch call).
+      description: >
+        The central sign-in site checks the signed state value and redirects (302) to Google. The web app never
+        calls it.
+      parameters:
+        - name: state
+          in: query
+          required: true
+          description: Signed state value made by the Workspace site.
+          schema: { type: string }
+      responses:
+        '302':
+          description: Redirect to Google.
+          headers:
+            Location:
+              description: The Google authorization URL.
+              schema: { type: string }
+        '400':
+          description: A minimal HTML page with MSG141 (the state value is missing, wrong or expired).
+          content:
+            text/html:
+              schema: { type: string }
+        '404':
+          description: Not the central sign-in host (wrong Host); no body.
+  /api/v1/auth/callback:
+    servers:
+      - url: https://login.tsolve.io.vn
+        description: The central sign-in site (not the Workspace site).
+    get:
+      tags: [session]
+      operationId: authCallback
+      summary: Google redirects here after sign-in; the browser follows it as a page (never a fetch call).
+      description: >
+        The central sign-in site reads the Google answer and redirects (302) to the Workspace site's complete step
+        with a one-time hand-off code. When Google or the check fails, it redirects to the Workspace site's
+        `/login?error=` with one of MSG06, MSG09, MSG10, MSG120, MSG122 (adds `google_domain`) or MSG141
+        (on the `admin.` site: MSG06 or MSG135).
+        When the browser has no usable state, it answers 400 with a minimal page. The web app never calls it.
+      parameters:
+        - name: code
+          in: query
+          description: The Google authorization code.
+          schema: { type: string }
+        - name: error
+          in: query
+          description: >
+            Set by Google when the user cancels or denies access (for example `access_denied`); the site then
+            redirects to `/login?error=MSG09` (AC-001.8).
+          schema: { type: string }
+        - name: state
+          in: query
+          required: true
+          description: The signed state value.
+          schema: { type: string }
+      responses:
+        '302':
+          description: Redirect to the Workspace site.
+          headers:
+            Location:
+              description: The Workspace site's complete URL.
+              schema: { type: string }
+        '200':
+          description: A minimal HTML page (no redirect possible).
+          content:
+            text/html:
+              schema: { type: string }
+        '400':
+          description: A minimal HTML page with MSG141 (the state value is missing, wrong or expired).
+          content:
+            text/html:
+              schema: { type: string }
+        '404':
+          description: Not the central sign-in host (wrong Host); no body.
+  /api/v1/auth/complete:
+    get:
+      tags: [session]
+      operationId: completeSignIn
+      summary: Ends the sign-in on the Workspace site; the browser follows it as a page (never a fetch call).
+      description: >
+        The Workspace site sets the session cookie and redirects (302) to `returnTo` or the landing page, or to
+        `/login?error=MSGxx` (MSG122 adds `google_domain`). The web app never calls it.
+      parameters:
+        - name: code
+          in: query
+          required: true
+          description: One-time hand-off code made by the central sign-in site (valid 60 seconds, single use).
+          schema: { type: string }
+      responses:
+        '302':
+          description: >
+            Success: sets the session cookie and redirects to `returnTo` or the landing page. Failure (code
+            unknown, expired or used): no cookie, redirects to `/login?error=MSG141`.
+          headers:
+            Location:
+              description: The page to open, or `/login?error=MSG141` on failure.
+              schema: { type: string }
+            Set-Cookie:
+              description: >
+                On success only: `__Host-TSOLVE_SESSION` (HttpOnly, Secure, SameSite=Lax, Path=/).
+              schema: { type: string }
   /api/v1/auth/logout:
     post:
       tags: [session]

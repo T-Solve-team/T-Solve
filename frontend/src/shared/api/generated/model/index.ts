@@ -8,6 +8,8 @@
  */
 
 export * from './approveTicketsRequest';
+export * from './authCallbackParams';
+export * from './authorizeParams';
 export * from './chatbotAnswer';
 export * from './chatbotAnswerOutcome';
 export * from './chatbotCitation';
@@ -16,6 +18,7 @@ export * from './chatbotRating';
 export * from './chatbotRatingRating';
 export * from './chatbotTurn';
 export * from './citedSolution';
+export * from './completeSignInParams';
 export * from './createUserRequest';
 export * from './currentUser';
 export * from './departmentRef';
