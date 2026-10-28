@@ -33,3 +33,9 @@ Append-only log of framework friction captured during usage.
 **Type:** gap
 **Context:** `sdd.ts diff` drops the text inside backticks from the criteria it prints (e.g. "with `code` `MSG119`" prints as "with  "), so changed criteria are hard to read at re-approval. Found while re-approving five modules (KAN-196).
 **Suggestion:** Print the criterion text verbatim, backticks included.
+
+## 2026-10-28 — trace for Java (`sdd.ts trace`, `lib/spec.ts`)
+
+**Type:** gap
+**Context:** Besides `TEST_GLOBS` (entry of 2026-10-25), `AC_MENTION` (`\bAC-\d{3}\.\d+\b`) only reads `AC-001.1`, while `backend/AGENTS.md` names Java test methods `…_AC_001_1` (a method name cannot hold `-` or `.`). So `sdd.ts trace be-foundation` reports 0/9 for a fully tested STORY-001 (be-foundation Task 1, KAN-25).
+**Suggestion:** Also match `AC_\d{3}_\d+` and normalise it to `AC-001.1`, together with the Java globs.
