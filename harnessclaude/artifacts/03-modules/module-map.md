@@ -39,6 +39,9 @@ owner (see "Stories → module"). Owners can change: edit the Owner column and t
 `ticket-review` comes with PR #26 (KAN-24): its `module.md`, spec and status join this map when that PR merges,
 with the paths below; its `module.md` then also lists `worker` (JOB-02, emails).
 
+`import-ticket-list` (KAN-31, CSV import, UC-21) was planned and completed before this map, as its own module. Its
+work is the first part of `ticket-repository` and uses the `ticket-repository` paths below.
+
 ## Dependency Graph
 
 ```mermaid

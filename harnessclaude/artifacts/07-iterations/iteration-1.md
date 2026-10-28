@@ -10,6 +10,8 @@ status: planned
 
 ## Goal
 
+KAN-31: a Project Manager can import resolved tickets from a CSV file. The backend API and the OpenAPI contract are complete (module import-ticket-list, STORY-001..006).
+
 The Report3 base: the module map, the web app foundation (`fe-foundation`), the backend foundation
 (`be-foundation`) and the review flow (`ticket-review`), so feature modules start on the right model; the
 Knowledge Chatbot screen on mocks (`chatbot`, KAN-48).
@@ -90,6 +92,9 @@ Spec re-approved after X2 and U3. Tasks 2–5 also wait on Trần Hải Anh's an
    local stack with the two demo Workspaces in a browser; after Task 13 the staging stack.
 10. Iteration 2: platform Tasks 6, 7, 14, 16.
 
+### import-ticket-list
+- import-ticket-list Tasks 1–12 (`artifacts/04-plans/import-ticket-list/iteration-1/tasks.md`): contract, schema, parser, validator, ProjectAccess stub + ProblemDetail errors, upload, preview rows, controller + template, confirm, cleanup job, performance check, retire the old snapshot import
+
 ## Demo Script
 
 ### platform
@@ -107,6 +112,13 @@ Spec re-approved after X2 and U3. Tasks 2–5 also wait on Trần Hải Anh's an
 2. Pick "Employee" → lands on the Knowledge Chatbot placeholder; opening `/review-queue` shows the 403 page (MSG08).
 3. Pick "Admin" with the Workspace not set up → sent to 2.1 Workspace Setup.
 4. Log out → Login; signing in as another user shows nothing of the first one.
+
+### import-ticket-list
+1. Swagger UI as a stub Project Manager: download the CSV template.
+2. Upload a file mixing valid rows, a duplicate ID, a missing Symptoms and a too-long title → preview counts + MSG30, error rows paged.
+3. Remove one valid row, then Confirm → MSG32 (created / skipped); the tickets are in `ticket` as PUBLISHED with APPROVE decisions; the Import Batch is COMPLETED.
+4. Upload the same file again → those IDs now fail with MSG31.
+5. Upload a Windows-1258 file → MSG27; an 11 MB file → MSG28.
 
 ### be-foundation
 1. `mvn verify` in `backend/`: every AC test passes, including the database tests on a Testcontainers PostgreSQL.
