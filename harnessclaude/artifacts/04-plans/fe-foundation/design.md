@@ -52,26 +52,42 @@ browser at admin.tsolve.io.vn ──► same bundle, buildRoutes(host) → platf
 ```
 
 - **Same origin only:** `http()` calls relative `/api/v1/…` paths; `VITE_API_BASE_URL` and its Docker build arg
-  are removed, so no build can send requests to another host (AC-011.1, AC-011.2).
+  are removed, so no build can send requests to another host (AC-011.1, AC-011.2). The AC-011.2 contract check
+  covers only paths outside the Platform Console's tag / prefix (the Console's API carries a site name and a
+  Google domain in its bodies).
 - **Site state:** a module-level `siteState` store in `shared/api` (`'ok' | 'unknown' | 'suspended'`, React reads it
   with `useSyncExternalStore`) is set by `http()` whenever a response carries MSG119 or MSG120, from `/me` or any
   later request. `RootLayout` renders `SiteUnavailablePage` (MSG119 or MSG120, no shell, no Try again) instead of
   the `<Outlet />` while it is not `'ok'`. The global error handlers skip both codes (no toast, no MSG07) and call
   `resetSession(client, { signedOut: true })` once (AC-011.3–AC-011.5). `useSession` does not report those codes
-  as an error, so the session error page (AC-001.6) never shows for them.
-- **Sign-in:** `startSignIn(returnTo?)` does `window.location.assign('/api/v1/auth/sign-in' + query)`; a
-  `returnTo` that is not a same-site path is dropped (it must match `^/(?!/)` and hold no `:` before its first
-  `/`). `useSignInMessage()` reads `error` and `google_domain` from the Login URL and returns `{ code, params }`
-  only for MSG06, MSG09, MSG10, MSG122, MSG123, MSG141, with MSG122 only when the lower-cased `google_domain`
-  matches `^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$`. The Login screen of `identity`
+  as an error, so the session error page (AC-001.6) never shows for them. `resetSiteState()` is exported from
+  `@/shared/api`; `frontend/src/test/setup.ts` calls it after each test and the dev user switcher calls it on every
+  pick.
+- **Sign-in:** `startSignIn(returnTo?)` navigates through `navigateTo(url)`, a one-line function in
+  `shared/lib/navigate.ts` that does `window.location.assign(url)` (tests mock it with `vi.mock`; jsdom cannot
+  redefine `location.assign`), to `'/api/v1/auth/sign-in' + query`; a `returnTo` that is not a same-site path is
+  dropped (it must match `^/(?!/)[^\\\x00-\x20\x7f]*$` and hold no `:` before its first `/`: so no `\`, no ASCII
+  control or whitespace character). `useSignInMessage()` reads `error` and `google_domain` from the Login URL
+  through react-router's `useSearchParams` and returns `{ code, params }` only for MSG06, MSG09, MSG10, MSG122,
+  MSG123, MSG141 (`params` is `{}` for a code without placeholders), with MSG122 only when the lower-cased
+  `google_domain` (the returned `params.google_domain` is that lower-cased value) matches `^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$`. The Login screen of `identity`
   renders it inline (AC-012.1–AC-012.4).
-- **MSG123:** in `global-errors.ts`, a 401 whose code is MSG123 skips the MSG07 dialog, calls
-  `resetSession(client, { signedOut: true })` (cache, mutations, `tsolve.session.*`) and navigates to
-  `/login?error=MSG123` (AC-012.5). Any other 401 keeps the MSG07 behaviour.
+- **MSG123:** `http()` sets a `foreignSession` flag in the site-state store when a 401 carries MSG123. In
+  `global-errors.ts`, the 401 handler sees the flag, skips the MSG07 dialog and calls
+  `resetSession(client, { signedOut: true })` (cache, mutations, `tsolve.session.*`) once; it does not navigate.
+  The route guards read the flag: `RequireAuth`, and `GuestOnly` on `/login` when the URL does not already carry
+  `error=MSG123`, redirect with `<Navigate replace>` to `/login?error=MSG123` (AC-012.5), an in-app navigation
+  (the router, not a full page load). MSG119 / MSG120 are routed in `query-client.ts` to `onSiteUnavailable`
+  before the `handlesOwnErrors` check (BUG-019), so a mutation that handles its own errors still reaches the site
+  page, and `showMessage` ignores both codes. The MSG123 path also holds for
+  `/me` on the first load: `fetchSession` does not turn a 401 MSG123 into "signed out". If MSG123 arrives while the
+  MSG07 dialog is open, the dialog closes and the MSG123 path is taken. Any other 401 keeps the MSG07 behaviour.
 - **Background header:** orval's `override.query.queryOptions` mutator (`shared/api/query-options.ts`) wraps every
   generated `queryFn`. When `context.client.getQueryState(context.queryKey)?.data !== undefined` (a refetch:
   interval, window focus, reconnect, invalidation), it adds `context.signal` to a `WeakSet` in
-  `shared/api/background.ts`; `http()` adds `X-TSolve-Background: 1` when `init.signal` is in that set. A first
+  `shared/api/background.ts`; `http()` adds `X-TSolve-Background: 1` when `init.signal` is in that set (a refetch the
+  user starts on a query that already holds data, such as Refresh or Try again, carries it too: accepted like edge
+  28; no screen in this module has a Refresh button). A first
   load, every mutation, sign-in (a page navigation) and logout never carry it (AC-012.6, AC-012.7). A hand-written
   query calls `markBackground(signal)` the same way.
 - **Route tree by host:** `isPlatformConsoleHost(hostname)` is true when the first label is `admin` (lower-cased,
@@ -254,14 +270,14 @@ quotas).
 | 18 | STORY-008 | Error cascades | Logout request fails while the server session is still valid | Critical | Signed out in the app (session `null`, no refetch); Login shown | Task 1 |
 | 19 | STORY-006 | Integration | Review screens on `main` use SRS v2 codes | High | Task 4 remaps them; review tests pass with Report3 texts | Task 4 |
 | 20 | STORY-006 | Data integrity | Report3 retires a code the catalog still holds (MSG61, MSG73) | Medium | Catalog test fails until the code is removed (AC-006.7) | Task 7 |
-| 21 | STORY-012 | Authorization | `returnTo=//evil.example` or `https://evil.example` (open redirect) | Critical | `returnTo` left out; the backend checks it again | Task 8 |
+| 21 | STORY-012 | Authorization | `returnTo=//evil.example`, `https://evil.example`, `/\evil.example` or a path with a tab / newline (open redirect) | Critical | `returnTo` left out (also when it holds `\` or an ASCII control or whitespace character); the backend checks it again | Task 8 |
 | 22 | STORY-012 | Data integrity | Crafted link `/login?error=MSG122&google_domain=<script>` or an unknown code | High | No message (AC-012.4); text only through `msg()`, never HTML | Task 8 |
 | 23 | STORY-011 | State transitions | Workspace suspended while a user works (a mutation answers MSG120) | High | Suspended page, cache dropped, no toast (AC-011.5) | Task 8 |
 | 24 | STORY-011 | Error cascades | Several requests answer MSG119 / MSG120 at once | Medium | One page, `resetSession` once | Task 8 |
-| 25 | STORY-012 | Error cascades | A 401 with MSG123 and other 401s at once | High | The MSG123 path wins; no MSG07 dialog | Task 8 |
+| 25 | STORY-012 | Error cascades | A 401 with MSG123 and other 401s at once, or MSG123 while the MSG07 dialog is open | High | The MSG123 path wins; no MSG07 dialog (an open one closes) | Task 8 |
 | 26 | STORY-001 | Error cascades | `/me` answers MSG119 or MSG120 on the first load | High | Site page, not the session error page (AC-001.6) | Task 8 |
 | 27 | STORY-012 | Timing | The Review Queue polls every 5 s for an hour with no user action | High | Every poll carries `X-TSolve-Background: 1`; the session ends after 60 min idle (MSG07) | Task 8 |
-| 28 | STORY-012 | Timing | A user only browses cached pages (refetches with data) | Low | Those refetches carry the header; accepted: the first load of a new page and every mutation extend the session | Task 8 |
+| 28 | STORY-012 | Timing | A user only browses cached pages (refetches with data) | Low | Those refetches carry the header, also one the user starts (Refresh, Try again); accepted: the first load of a new page and every mutation extend the session | Task 8 |
 | 29 | STORY-013 | Authorization | `admin.tsolve.io.vn/users` (a Workspace path on the Console host) | High | 404 page; no Workspace route is registered there | Task 9 |
 | 30 | STORY-013 | Environment | `ADMIN.localhost` or a trailing dot in the host | Low | Host compared lower-cased, trailing dot removed | Task 9 |
 

@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import type { CurrentUser, ProjectMembership } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
-import { getDevUser, setDevUser, type DevUserId } from '@/shared/auth';
+import { getDevSite, getDevUser, setDevUser, type DevUserId } from '@/shared/auth';
 
 /** Fixed UUIDs, one per record, reused wherever the record appears (guideline: ids are UUID strings). */
 const IT_ID = '00000000-0000-4000-8000-0000000000d1';
@@ -147,8 +147,20 @@ export const MOCK_USERS: Record<DevUserId, CurrentUser> = {
   },
 };
 
+/**
+ * "Unknown site" / "Suspended Workspace" (dev user switcher, test option `{ site }`): every API request answers
+ * like the tenant resolver does, whatever the endpoint — first in the list, so no other mock is reached.
+ */
+const siteHandler = http.all('*/api/v1/*', () => {
+  const site = getDevSite();
+  if (site === 'unknown-site') return problem(404, 'MSG119');
+  if (site === 'suspended-workspace') return problem(403, 'MSG120');
+  return undefined; // a normal site: the next handler answers
+});
+
 /** `/me` and logout, driven by the dev user (shared/auth/dev-user.ts). */
 export const sessionHandlers = [
+  siteHandler,
   http.get('*/api/v1/me', () => {
     const user = getDevUser();
     return user ? HttpResponse.json(MOCK_USERS[user]) : problem(401);

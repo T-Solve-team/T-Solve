@@ -39,6 +39,7 @@ export * from './reviewDecisionResult';
 export * from './reviewQueueItem';
 export * from './reviewQueuePage';
 export * from './role';
+export * from './signInParams';
 export * from './sizeParameter';
 export * from './sortParameter';
 export * from './spaceRef';

@@ -16,6 +16,7 @@ owner: BA
 | 2026-10-25 | STORY-001, STORY-006 | AC-001.6 reworded (MSG119, MSG120, MSG123 are not the session error page); AC-006.1 reworded (also leaves out Retired codes and the Platform Console codes); new AC-006.8 (MSG119, MSG120, MSG122, MSG123, MSG134, MSG141) | Report3 System_Messages of 25/10 (MSG119–MSG141 new; MSG15, MSG17, MSG89 reworded, D35, CR-09; MSG61, MSG73 retired, CR-05, CR-06) (KAN-198, Hiếu, 25/10) |
 | 2026-10-25 | STORY-005, STORY-010 | AC-005.2 drops 9.3 Audit Entry Detail; AC-010.1 counts 34 web screens; AC-010.3 also records the Workspace site, the central sign-in and the route tree by host | Screen 9.3 deleted (D18, CR-15) (KAN-198, Hiếu, 25/10) |
 | 2026-10-25 | STORY-001, STORY-009 | New AC-001.8 (the session keeps every `/me` id as a UUID string; `isProjectManagerOf` / `isMemberOf` take a UUID string) and AC-009.7 (fixture users carry UUID ids); Interface Contracts: the ids of `UserSummary`, `DepartmentRef`, `ProjectMembership` and `SpaceRef` are `string` with `format: uuid` | Change request KAN-196 Q2 (the user, 25/10): UUID primary keys in every module, so ids are UUID strings in the contract (Phan_cong v6 §1); SPEC-P1-7 |
+| 2026-10-26 | STORY-012 | returnTo backslash/control chars; google_domain two labels: AC-012.2 also rejects `\` and ASCII control or whitespace characters in `returnTo`; AC-012.4 needs two or more labels, the last one letters only | QA of Task 8 step 1 (KAN-206, Hiếu, 26/10): browsers read `/\evil.example` and a tab inside a path as `//evil.example`; Google Workspace domains always have a TLD |
 
 ## Requirements
 
@@ -268,12 +269,14 @@ owner: BA
     `GET /api/v1/auth/sign-in?returnTo=<path>` on its own origin, and SHALL never build a `login.` URL or a
     sign-in state value itself (D9).
   - AC-012.2: IF `returnTo` is not a same-site path, THEN THE web app SHALL leave it out of the sign-in request
-    (a same-site path starts with exactly one `/` and holds no scheme and no host).
+    (a same-site path starts with exactly one `/`, holds no scheme and no host, and holds no `\` and no ASCII
+    control or whitespace character; the backend checks it again).
   - AC-012.3: WHEN Login opens with `error` = MSG06, MSG09, MSG10, MSG122, MSG123 or MSG141, THE web app SHALL
     give the Login screen that code and its text to show inline, with `{google_domain}` of MSG122 filled from the
     parameter `google_domain`.
   - AC-012.4: IF `error` holds another value, or MSG122 has no valid `google_domain`, THEN THE web app SHALL give
-    the Login screen no message (a valid domain name is one or more dot-separated labels, e.g. `company.com`).
+    the Login screen no message (a valid domain name is two or more dot-separated labels,
+    the last one two or more letters only, e.g. `company.com`).
   - AC-012.5: IF any API request answers 401 with the code MSG123, THEN THE web app SHALL drop the session, every
     cached query and mutation and the `tsolve.session.` entries as at logout (AC-008.1), SHALL not show the MSG07
     dialog, and SHALL send the user to Login with `error=MSG123`.

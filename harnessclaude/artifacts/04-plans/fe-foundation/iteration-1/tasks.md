@@ -200,12 +200,13 @@ request KAN-198
   `frontend/orval.config.ts`
 - Create: `frontend/src/shared/api/query-options.ts`, `frontend/src/shared/api/background.ts`
 - Modify: `frontend/src/shared/api/http.ts`, `frontend/src/shared/api/index.ts`, `frontend/src/shared/config/env.ts`
-- Create: `frontend/src/shared/auth/sign-in.ts` · Modify: `frontend/src/shared/auth/index.ts`, `useSession.ts`
+- Create: `frontend/src/shared/auth/sign-in.ts`, `frontend/src/shared/lib/navigate.ts` (`navigateTo(url)`, one line,
+  mocked in tests) · Modify: `frontend/src/shared/lib/index.ts`, `frontend/src/shared/auth/index.ts`, `useSession.ts`
 - Create: `frontend/src/app/pages/SiteUnavailablePage.tsx`
 - Modify: `frontend/src/app/router/guards.tsx`, `frontend/src/app/router/RootLayout.tsx`,
   `frontend/src/app/providers/global-errors.ts`
 - Modify: `frontend/src/mocks/session.ts`, `frontend/src/shared/auth/dev-user.ts`, `frontend/src/app/dev/DevUserSwitcher.tsx`,
-  `frontend/src/test/render.tsx`
+  `frontend/src/test/render.tsx`, `frontend/src/test/setup.ts` (calls `resetSiteState()` after each test)
 - Modify: `frontend/vite.config.ts`, `frontend/.env.example`, `frontend/Dockerfile`, `frontend/Caddyfile`,
   `frontend/README.md`
 - Modify: `frontend/AGENTS.md`, `frontend/guidelines/06-data-layer.md`, `08-routing-and-access.md`,

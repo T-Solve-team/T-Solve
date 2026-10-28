@@ -23,7 +23,9 @@ npm run dev                   # http://localhost:5173
 
 Mock mode is on by default (`VITE_API_MOCKING=true`): use the **user switcher** (bottom right) to sign in
 as a mock user (one role or several) and open your screen — it shows a placeholder card with its number
-and name. Then run `npm run format:check && npm run lint && npm run typecheck && npm run test` once: all
+and name. The switcher also has "Unknown site" and "Suspended Workspace" (every request answers MSG119 /
+MSG120). With the real backend (`VITE_API_MOCKING=false`) open the app at `http://<site name>.localhost:5173`
+— the Host decides the Workspace — and `http://admin.localhost:5173` for the Platform Console. Then run `npm run format:check && npm run lint && npm run typecheck && npm run test` once: all
 green means your machine is set up.
 VS Code: install **ESLint** and **Prettier**, turn on *Format On Save*.
 

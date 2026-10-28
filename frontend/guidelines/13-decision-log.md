@@ -17,7 +17,7 @@
 | FE-06 | Styling: tokens + CSS Modules | Approved |
 | FE-07 | API client: orval, spec and output committed | Approved |
 | FE-08 | Error contract with MSG codes | Approved — needs backend agreement |
-| FE-09 | Session: backend OIDC + cookie + `/me` | Approved — needs backend agreement |
+| FE-09 | Session: backend OIDC + cookie + `/me` | Approved — needs backend agreement; sign-in and the MSG123 path updated by FE-43 |
 | FE-10 | "Real-time" Review Queue = 5 s polling | Approved |
 | FE-11 | Mocking: MSW | Approved |
 | FE-12 | Testing scope and tools | Approved — closes DevOps open item #3 |
@@ -51,6 +51,7 @@
 | FE-40 | Five roles, several roles per user: landing page, menus, Workspace Setup | Approved (2026-10-22) — supersedes the one-role session of FE-09 |
 | FE-41 | Report3 message catalog | Approved (2026-10-22) — supersedes the SRS V.2 catalog of FE-08 |
 | FE-42 | Route map for the 35 Report3 screens, 15 features | Approved (2026-10-22) — supersedes the feature list of FE-22; screen counts superseded by D18 (25/10): 34 screens, 8 popups |
+| FE-43 | Workspace site and central sign-in: same-origin API, `GET /api/v1/auth/sign-in`, MSG119 / MSG120 / MSG123, background header | Approved (2026-10-26, KAN-198) — updates FE-09 |
 
 ---
 
@@ -100,7 +101,8 @@ current backend returns `{status, message}`). Also assumed: server-side paginati
 **FE-09 — Session.** Backend runs OIDC (Google) and sets an HttpOnly session cookie; `GET /api/v1/me`
 returns user, role (*several roles: FE-40*), Projects (with role in each) and Departments; 401 → MSG07 → Login; sign-in errors
 come back as `/login?error=MSGxx`. *Options:* tokens in the browser (localStorage). *Why:* no token handling
-in JavaScript (XSS-safe); matches SRS API-05. **Needs backend agreement.**
+in JavaScript (XSS-safe); matches SRS API-05. **Needs backend agreement.** *Updated by FE-43:* the sign-in
+starts at `GET /api/v1/auth/sign-in`, and a 401 with MSG123 goes to `/login?error=MSG123` without MSG07.
 
 **FE-10 — Review Queue "real time".** TanStack Query polling every 5 s while the tab is visible.
 *Options:* WebSocket, Server-Sent Events. *Why:* meets the NFR (visible within 5 s) with no server work;
@@ -294,6 +296,22 @@ Workspace Setup and the Workspace screens are renumbered 2.2–2.4. New screens 
 keeps feature PRs out of the shared route, menu and mock files (guideline 02).
 *Superseded (2026-10-25):* the screen counts above are replaced by D18 (Report3, 25/10) — 34 web screens, 8 popups
 (popup 9.3 is removed).
+
+**FE-43 — Workspace site and central sign-in (Hiếu, 2026-10-26, change request KAN-198).** Every Workspace has
+its own site (`<site name>.tsolve.io.vn`); the Host of the page decides the Workspace, so the app sends API
+requests to its own origin only (`VITE_API_BASE_URL` and the Docker build arg are removed) and adds no
+Workspace, site or domain header or parameter. "Sign in with Google" navigates the whole page to
+`GET /api/v1/auth/sign-in?returnTo=…` (the server makes the state value and redirects to the central sign-in
+site); the web app never builds the central URL. `returnTo` must be a same-site path, otherwise it is left out
+(the backend checks it again). The Login screen shows MSG06, MSG09, MSG10, MSG122 (with a valid
+`google_domain`), MSG123 and MSG141 from `/login?error=…` and nothing for any other value. MSG119 (unknown
+site) and MSG120 (Workspace suspended) from any request replace every screen with one full page and drop the
+cache; a 401 with MSG123 ends the session as at logout and goes to Login without MSG07. Refetches of queries that
+already hold data carry `X-TSolve-Background: 1`, so the server does not count them as activity. Local
+development uses `<site name>.localhost:5173`; mock mode adds "Unknown site" and "Suspended Workspace" to the dev
+user switcher. *Options:* a Workspace id or site name in the URL path or a header; the app opening the central
+sign-in URL itself. *Why:* one origin per Workspace keeps the cookie and the CORS rules simple and the contract
+free of tenant fields; the server alone knows the central sign-in site and the state value.
 
 ## Working conventions (not code decisions)
 

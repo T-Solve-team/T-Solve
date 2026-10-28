@@ -1,7 +1,12 @@
 import agentsRaw from '../../AGENTS.md?raw';
+import caddyfileRaw from '../../Caddyfile?raw';
+import dockerfileRaw from '../../Dockerfile?raw';
+import readmeRaw from '../../README.md?raw';
+import viteEnvRaw from '../vite-env.d.ts?raw';
 import { ROLE_LABELS, ROLES } from '@/shared/auth/roles';
 import { MESSAGES } from '@/shared/messages/catalog';
 import { paths } from '@/shared/routing/paths';
+import { contractPaths, declaredNames, withReferencedComponents } from './openapi';
 
 const guidelines = import.meta.glob<string>('../../guidelines/*.md', {
   query: '?raw',
@@ -98,6 +103,48 @@ describe('frontend guidelines', () => {
     expect(index.some((line) => /several roles/i.test(line))).toBe(true);
     expect(index.some((line) => /Report3/.test(line) && /catalog/i.test(line))).toBe(true);
     expect(index.find((line) => line.startsWith('| FE-34 |'))).toMatch(/kept by D1/);
+  });
+
+  it('AC-010.3 the decision log records the Workspace site and the central sign-in', () => {
+    const index = guideline('13')
+      .split('\n')
+      .filter((line) => /^\| FE-\d+ \|/.test(line));
+    expect(
+      index.some((line) => /Workspace site/i.test(line) && /central sign-in/i.test(line)),
+    ).toBe(true);
+  });
+
+  // .env.example is checked in review: Vite refuses to import .env files (server.fs.deny).
+  it.each([
+    ['Dockerfile', dockerfileRaw],
+    ['README.md', readmeRaw],
+    ['Caddyfile', caddyfileRaw],
+    ['AGENTS.md', agentsRaw],
+    ['guidelines/06', guideline('06')],
+    ['guidelines/11', guideline('11')],
+    ['src/vite-env.d.ts', viteEnvRaw],
+  ])('AC-011.2 %s does not name VITE_API_BASE_URL', (_file, text) => {
+    expect(text).not.toBe('');
+    expect(text).not.toContain('VITE_API_BASE_URL');
+  });
+
+  it('AC-011.2 the API contract has no Workspace id, site name or Google domain parameter or field', () => {
+    // Q10: the Platform Console's own API (tag platform-console) creates Workspaces and is left out.
+    const workspacePaths = [...contractPaths()].filter(
+      ([path, block]) =>
+        !path.startsWith('/api/v1/platform-console') &&
+        !/\btags:\s*\[?[^\n]*\bplatform-console\b/.test(block),
+    );
+    expect(workspacePaths.map(([path]) => path)).toContain('/api/v1/me');
+    const names = withReferencedComponents(workspacePaths.map(([, block]) => block)).flatMap(
+      declaredNames,
+    );
+    // The reader sees the contract's fields and parameters (a guard against reading nothing).
+    expect(names).toEqual(expect.arrayContaining(['fullName', 'departmentId', 'page']));
+
+    const forbidden =
+      /^(workspace_?id|workspace|site_?name|site|google_?domain|domain|tenant\w*|x-workspace[\w-]*|x-tenant[\w-]*|x-site[\w-]*)$/i;
+    expect([...new Set(names.filter((name) => forbidden.test(name)))]).toEqual([]);
   });
 
   it.each(docs)('AC-010.4 %s uses only MSG codes of the catalog', (_file, text) => {
