@@ -39,4 +39,4 @@
 - open: Bình (`platform-console`) to confirm the name and type of `platformConsoleRoutes` on the PR
 - next: review, then the commits and the PR for KAN-207
 - branch: `feature/KAN-207-fe-foundation-host-routes`
-- PR: not opened yet
+- PR #81 ready to merge — https://github.com/T-Solve-team/T-Solve/pull/81
