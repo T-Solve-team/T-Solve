@@ -27,6 +27,11 @@ type RenderOptions = (
    * switcher's "Unknown site" / "Suspended Workspace". The site state is reset after each test (setup.ts).
    */
   site?: 'unknown' | 'suspended';
+  /**
+   * The host the app is opened on, a hostname without port (default `'localhost'`, a Workspace host). Only
+   * `renderApp` uses it: it chooses the route tree (STORY-013). It is not case-normalised here.
+   */
+  host?: string;
 };
 
 const DEV_SITE_FOR: Record<NonNullable<RenderOptions['site']>, DevSiteId> = {
@@ -57,7 +62,9 @@ export function createTestQueryClient() {
 /** Renders the whole app at `path` — real routes, guards, AppShell and MSW mocks (guideline 10). */
 export function renderApp(path: string, options: RenderOptions = {}) {
   signIn(options);
-  const router = createMemoryRouter(buildRoutes(), { initialEntries: [path] });
+  const router = createMemoryRouter(buildRoutes(options.host ?? 'localhost'), {
+    initialEntries: [path],
+  });
   const queryClient = createTestQueryClient();
   const result = render(
     <AppProviders queryClient={queryClient}>

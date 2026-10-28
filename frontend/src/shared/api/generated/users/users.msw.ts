@@ -12,7 +12,32 @@ import { HttpResponse, http } from 'msw';
 import type { RequestHandlerOptions } from 'msw';
 
 import { Role, UserAccountStatus } from '../model';
-import type { DepartmentRef, UserAccountPage } from '../model';
+import type { DepartmentRef, UserAccount, UserAccountPage, UserCreationOptions } from '../model';
+
+export const getCreateUserResponseMock = (
+  overrideResponse: Partial<Extract<UserAccount, object>> = {},
+): UserAccount => ({
+  id: faker.string.uuid(),
+  fullName: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  email: faker.internet.email(),
+  roles: faker.helpers.arrayElements(Object.values(Role)),
+  department: faker.helpers.arrayElement([
+    {
+      departmentId: faker.string.uuid(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    null,
+  ]),
+  status: faker.helpers.arrayElement(Object.values(UserAccountStatus)),
+  lastSignInAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    null,
+  ]),
+  ...overrideResponse,
+});
 
 export const getGetUsersResponseMock = (
   overrideResponse: Partial<Extract<UserAccountPage, object>> = {},
@@ -49,11 +74,48 @@ export const getGetUsersResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetUserCreationOptionsResponseMock = (
+  overrideResponse: Partial<Extract<UserCreationOptions, object>> = {},
+): UserCreationOptions => ({
+  companyDomain: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  spaces: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      spaceId: faker.string.uuid(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  ...overrideResponse,
+});
+
 export const getGetUserDepartmentsResponseMock = (): DepartmentRef[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     departmentId: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   }));
+
+export const getCreateUserMockHandler = (
+  overrideResponse?:
+    | UserAccount
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<UserAccount> | UserAccount),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    '*/api/v1/users',
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateUserResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
 
 export const getGetUsersMockHandler = (
   overrideResponse?:
@@ -72,6 +134,30 @@ export const getGetUsersMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getGetUsersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetUserCreationOptionsMockHandler = (
+  overrideResponse?:
+    | UserCreationOptions
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<UserCreationOptions> | UserCreationOptions),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/users/creation-options',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetUserCreationOptionsResponseMock(),
         { status: 200 },
       );
     },
@@ -102,4 +188,9 @@ export const getGetUserDepartmentsMockHandler = (
     options,
   );
 };
-export const getUsersMock = () => [getGetUsersMockHandler(), getGetUserDepartmentsMockHandler()];
+export const getUsersMock = () => [
+  getCreateUserMockHandler(),
+  getGetUsersMockHandler(),
+  getGetUserCreationOptionsMockHandler(),
+  getGetUserDepartmentsMockHandler(),
+];

@@ -59,4 +59,4 @@ Quick change against AC-011.5 / AC-012.5; no criterion changed. Bug: BUG-019 (`d
 - open: `signIn` / `useSignIn` exported but unused; no `returnTo` length limit; BUG-019 test uses a stand-in mutation; Platform Console prefix for the AC-011.2 contract test
 - next: fe-foundation Task 9 host-routes (KAN-207)
 - branch: `feature/KAN-206-fe-foundation-site-sign-in`
-- PR: not opened yet
+- PR #76 ready to merge (https://github.com/T-Solve-team/T-Solve/pull/76)
