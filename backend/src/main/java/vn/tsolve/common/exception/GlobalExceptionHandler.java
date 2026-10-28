@@ -1,4 +1,4 @@
-package vn.tsolve.common.error;
+package vn.tsolve.common.exception;
 
 import java.time.Instant;
 import java.util.Map;
@@ -25,14 +25,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> invalid(MethodArgumentNotValidException e) {
         String msg = e.getBindingResult().getFieldErrors().stream()
                 .map(f -> f.getField() + " " + f.getDefaultMessage())
-                .reduce((a, b) -> a + "; " + b).orElse("Validation failed");
+                .reduce((a, b) -> a + "; " + b)
+                .orElse("Validation failed");
         return body(HttpStatus.BAD_REQUEST, msg);
     }
 
     private ResponseEntity<Map<String, Object>> body(HttpStatus status, String message) {
-        return ResponseEntity.status(status).body(Map.of(
-                "timestamp", Instant.now().toString(),
-                "status", status.value(),
-                "message", message));
+        return ResponseEntity.status(status)
+                .body(Map.of(
+                        "timestamp", Instant.now().toString(),
+                        "status", status.value(),
+                        "message", message));
     }
 }

@@ -1,4 +1,4 @@
-package vn.tsolve.common.error;
+package vn.tsolve.common.exception;
 
 public class NotFoundException extends RuntimeException {
     public NotFoundException(String message) {
