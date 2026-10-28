@@ -51,7 +51,9 @@ describe('route tree by host', () => {
 
   it('AC-013.2 uses the Workspace routes when no host is given (localhost)', async () => {
     renderApp('/login', { role: null });
-    expect(await screen.findByText(/1\.1\.1 Login/, {}, slow)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: /sign in with google/i }, slow),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('heading', CONSOLE)).not.toBeInTheDocument();
   });
 

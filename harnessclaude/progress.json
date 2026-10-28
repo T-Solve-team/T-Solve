@@ -77,14 +77,14 @@
         "user-roles": "pending",
         "user-list-review": "passing",
         "add-user-review": "passing",
-        "login-screen": "pending",
+        "login-screen": "passing",
         "sign-in-start": "pending",
         "sign-in-callback": "pending",
         "workspace-session": "pending",
         "operator-sign-in": "pending",
         "jira-link-sign-in": "pending"
       },
-      "lastUpdated": "2026-10-28T15:30:21.396Z",
+      "lastUpdated": "2026-10-28T17:30:38.994Z",
       "branch": "feat/identity",
       "repos": [
         "default"

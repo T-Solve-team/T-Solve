@@ -102,3 +102,5 @@ Master registry of all artifacts in this workspace.
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-6-add-user-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-6-add-user-review-test-report.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-6-add-user-review-review.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-7-login-screen.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-7-login-screen-test-report.md |

@@ -65,6 +65,17 @@ export function buildRoutes(
             children: [toPageRoute(route)],
           })),
         },
+        // Dev builds only: the mock sign-in page, reachable signed out and signed in (Q5).
+        ...(import.meta.env.DEV
+          ? [
+              {
+                path: '/dev/sign-in',
+                handle: { title: 'Mock sign-in (dev only)' },
+                lazy: () =>
+                  import('../dev/MockSignInPage').then((m) => ({ Component: m.MockSignInPage })),
+              },
+            ]
+          : []),
         {
           element: <RequireAuth />,
           children: [

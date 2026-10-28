@@ -8,7 +8,7 @@ export {
   useSignOut,
 } from './useSession';
 export { landingPath } from './landing';
-export { startSignIn, useSignInMessage, type SignInMessage } from './sign-in';
+export { isSameSitePath, startSignIn, useSignInMessage, type SignInMessage } from './sign-in';
 export {
   DEV_SITES,
   DEV_USER_FOR_ROLE,

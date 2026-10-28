@@ -90,7 +90,7 @@ Workspace site"). Every AC-001.1–AC-001.43 is in exactly one task. One PR per 
 `<type>/KAN-<n>-identity-<desc>` from an up-to-date `main`; several branches per Jira key are fine (Q12). Before
 each commit: the full verify of the side the task touches (CLAUDE.md project rules).
 
-## Task 7: Login screen, sign-in contract and mock sign-in — KAN-104
+## Task 7: Login screen, sign-in contract and mock sign-in — KAN-229
 
 **Story:** STORY-001
 **Feature:** login-screen
@@ -103,7 +103,7 @@ each commit: the full verify of the side the task touches (CLAUDE.md project rul
 - Generate only: `frontend/src/shared/api/generated/**`
 - Test: `frontend/src/features/auth/pages/LoginPage.test.tsx`, `frontend/src/app/dev/MockSignInPage.test.tsx`, `frontend/src/shared/auth/sign-in.test.ts`
 **Dependencies:** user approval of the reworded spec (AC-001.42); the FE Lead's agreement to the `shared/auth/sign-in.ts` and `app/dev` edits (given 28/10, Q5).
-**PR / Jira:** PR 1, branch `feat/KAN-104-identity-login-screen`, Jira KAN-104.
+**PR / Jira:** PR 1, branch `feat/KAN-229-identity-login-screen`, Jira KAN-229.
 **Estimated size:** small–medium (~250 lines)
 **Verification:** Tests name AC-001.40–.43; design risk rows 39 and 40. Targeted: `cd frontend && npm run test -- src/features/auth src/app/dev/MockSignInPage.test.tsx src/shared/auth/sign-in.test.ts`, then `npm run generate:api` with no diff. Browser check at 1366 × 768 in mock mode.
 
