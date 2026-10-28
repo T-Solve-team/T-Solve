@@ -14,6 +14,8 @@ tags:
     description: Who is signed in.
   - name: review
     description: Review Queue and review decisions (SRS III.7).
+  - name: import
+    description: Import tickets from CSV (SRS UC-21) — Import Preview and Confirm.
   - name: chatbot
     description: Knowledge Chatbot questions and answers (Report3 UC-51, GBR-36; SRS III.12.1).
 paths:
@@ -279,6 +281,167 @@ paths:
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
+  /api/v1/imports/csv/template:
+    get:
+      tags: [import]
+      operationId: downloadCsvTemplate
+      summary: The CSV template — header row only, UTF-8.
+      responses:
+        '200':
+          description: The template file.
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/csv:
+    post:
+      tags: [import]
+      operationId: uploadCsvImport
+      summary: >
+        Uploads one CSV file for one Project and returns its Import Preview (counts and the first page of rows).
+        Replaces the caller's previous unconfirmed preview. File rejected = MSG27, MSG29 or MSG04 (400), MSG28 (413).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, projectId]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: One .csv file, UTF-8, at most 10 MB.
+                projectId:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: Preview created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/rows:
+    get:
+      tags: [import]
+      operationId: getImportPreviewRows
+      summary: One page of the preview rows, ordered by row number; Solution sections cut to 200 characters.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+        - name: status
+          in: query
+          description: Only rows with this result; omitted = all rows.
+          schema:
+            $ref: '#/components/schemas/ImportPreviewRowStatus'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of rows.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewRowPage'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/rows/{rowNo}:
+    get:
+      tags: [import]
+      operationId: getImportPreviewRow
+      summary: One preview row with every Solution section in full (read-only, Import Ticket Preview popup).
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+        - name: rowNo
+          in: path
+          required: true
+          description: Data row number in the file, from 1.
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: The row.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewRowResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/remove-rows:
+    post:
+      tags: [import]
+      operationId: removeImportPreviewRows
+      summary: Marks rows Removed (Valid or Error) so Confirm skips them. Unknown row numbers are ignored.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoveRowsRequest'
+      responses:
+        '200':
+          description: The updated preview (counts and the first page of rows).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/confirm:
+    post:
+      tags: [import]
+      operationId: confirmImport
+      summary: >
+        Imports the remaining Valid rows as Published tickets (MSG32). No Valid row left = MSG30 (409); Project no
+        longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '200':
+          description: Imported.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResultResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
   /api/v1/chatbot/answers:
     post:
       tags: [chatbot]
@@ -405,6 +568,13 @@ components:
         type: array
         items:
           type: string
+    PreviewId:
+      name: previewId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
   responses:
     Problem:
       description: Error (RFC 9457 Problem Details with an SRS MSG code).
@@ -670,6 +840,163 @@ components:
         count:
           type: integer
           description: Number of tickets the decision was applied to (the {count} of MSG14 / MSG16 / MSG17).
+    MessageRef:
+      type: object
+      description: An SRS message to show, by code; the web app fills the template from params.
+      required: [code, params]
+      properties:
+        code:
+          type: string
+          description: SRS message code, e.g. MSG32.
+        params:
+          type: object
+          additionalProperties:
+            type: [string, number]
+    ImportPreviewRowStatus:
+      type: string
+      enum: [VALID, ERROR, REMOVED]
+    RowError:
+      type: object
+      description: One failed rule of a row (MSG01, MSG02, MSG31, MSG39 or MSG78).
+      required: [code, params]
+      properties:
+        code:
+          type: string
+        field:
+          type: [string, 'null']
+          description: CSV column the error is about; null for the whole Solution (MSG02 total length).
+        params:
+          type: object
+          additionalProperties:
+            type: [string, number]
+    ImportPreviewRowSummary:
+      type: object
+      description: >
+        One preview row as read from the file (values may be missing or too long when the row is an Error).
+        Solution sections are cut to their first 200 characters.
+      required: [rowNo, status, errors]
+      properties:
+        rowNo:
+          type: integer
+          description: Data row number in the file, from 1.
+        ticketId:
+          type: [string, 'null']
+        title:
+          type: [string, 'null']
+        author:
+          type: [string, 'null']
+        resolvedDate:
+          type: [string, 'null']
+          description: As written in the file (yyyy-MM-dd when valid).
+        symptoms:
+          type: [string, 'null']
+        rootCause:
+          type: [string, 'null']
+        resolutionSteps:
+          type: [string, 'null']
+        workaround:
+          type: [string, 'null']
+        scope:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/ImportPreviewRowStatus'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RowError'
+    ImportPreviewRowResponse:
+      type: object
+      description: One preview row in full, read-only.
+      required: [rowNo, status, errors]
+      properties:
+        rowNo:
+          type: integer
+        ticketId:
+          type: [string, 'null']
+        title:
+          type: [string, 'null']
+        description:
+          type: [string, 'null']
+        author:
+          type: [string, 'null']
+        resolvedDate:
+          type: [string, 'null']
+        symptoms:
+          type: [string, 'null']
+        rootCause:
+          type: [string, 'null']
+        resolutionSteps:
+          type: [string, 'null']
+        workaround:
+          type: [string, 'null']
+        scope:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/ImportPreviewRowStatus'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RowError'
+    ImportPreviewRowPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportPreviewRowSummary'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+    ImportPreviewResponse:
+      type: object
+      required: [previewId, projectId, fileName, validCount, errorCount, removedCount, rows]
+      properties:
+        previewId:
+          type: integer
+          format: int64
+        projectId:
+          type: integer
+          format: int64
+        fileName:
+          type: string
+        validCount:
+          type: integer
+        errorCount:
+          type: integer
+        removedCount:
+          type: integer
+        message:
+          description: MSG30 with {count} when at least one row is an Error; otherwise null.
+          oneOf:
+            - $ref: '#/components/schemas/MessageRef'
+            - type: 'null'
+        rows:
+          $ref: '#/components/schemas/ImportPreviewRowPage'
+    RemoveRowsRequest:
+      type: object
+      required: [rowNumbers]
+      properties:
+        rowNumbers:
+          type: array
+          minItems: 1
+          items:
+            type: integer
+            minimum: 1
+    ImportResultResponse:
+      type: object
+      required: [importBatchId, created, skipped, message]
+      properties:
+        importBatchId:
+          type: integer
+          format: int64
+        created:
+          type: integer
+          description: Tickets published.
+        skipped:
+          type: integer
+          description: Error rows plus Removed rows.
+        message:
+          $ref: '#/components/schemas/MessageRef'
     ChatbotQuestion:
       type: object
       required: [question, history]

@@ -16,6 +16,13 @@ Append-only log of framework friction captured during usage.
 **Context:** T-Solve uses one branch per Jira issue (`<type>/KAN-<n>-<module>-<desc>`) and a trailer for AI help. The harness assumes one branch per module: `sdd.ts status <module> implementing` records `feat/<module>` (`hooks/sdd.ts:230`), the commit skill commits on `feat/{module}` and says to add no AI attribution, and `audit` warns when the recorded branch is gone. The project rules in CLAUDE.md / AGENTS.md now override this in words only (KAN-55).
 **Suggestion:** Let `manifest.yaml` set the branch pattern (or `sdd.ts status … implementing --branch <name>`), and use it in the commit skill and in `audit`; let the commit skill follow the project's commit-message rules (header, trailer).
 
+## 2026-10-22 — `sdd.ts trace` cannot see JUnit tests (import-ticket-list, task 3)
+
+- The trace test globs are `**/*.{test,spec}.*`, `**/test_*.py` and `**/*_test.*`. Java tests named `*Test.java` / `*IT.java` (the Maven Surefire/Failsafe defaults) are never scanned.
+- The AC mention pattern is `/\bAC-\d{3}\.\d+\b/`. `backend/AGENTS.md` §2 makes test methods cite ids as `…_AC_001_3`, which is a legal Java identifier, while `AC-001.3` is not, so the pattern never matches.
+- Effect: `trace` reports 0/N for a Java module even when every AC has a passing test, so the "trace must exit 0 before evaluating" gate cannot be met.
+- Suggested fix: add `**/*Test.java` and `**/*IT.java` to the test globs, and accept `AC_\d{3}_\d+` as a spelling of `AC-\d{3}.\d+` (normalise before matching).
+
 ## 2026-10-22 — discover / decompose (`progress.json` `phase`)
 
 **Type:** gap
