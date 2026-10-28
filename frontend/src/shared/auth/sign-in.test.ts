@@ -22,6 +22,13 @@ function navigatedUrl(): URL {
   return new URL(String(target), window.location.href);
 }
 
+const REDIRECT_ENDPOINTS = [
+  '/api/v1/auth/sign-in',
+  '/api/v1/auth/authorize',
+  '/api/v1/auth/callback',
+  '/api/v1/auth/complete',
+];
+
 const TICKET = '/tickets/00000000-0000-4000-8000-000000000042?tab=history';
 
 /** useSignInMessage() on the Login page opened with `search` (Q11: read through react-router). */
@@ -42,6 +49,7 @@ const DOMAIN_254 = `${LONG_LABEL}.${LONG_LABEL}.${LONG_LABEL}.${'d'.repeat(58)}.
 afterEach(() => {
   navigateTo.mockReset();
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe('startSignIn', () => {
@@ -136,6 +144,138 @@ describe('startSignIn', () => {
       expect(String(target)).not.toContain('evil.example');
     },
   );
+});
+
+describe('startSignIn in mock mode (Q5)', () => {
+  it('AC-012.1 in mock mode opens /dev/sign-in with returnTo instead of the sign-in endpoint', () => {
+    vi.stubEnv('VITE_API_MOCKING', 'true');
+
+    startSignIn('/review-queue?status=open');
+
+    const url = navigatedUrl();
+    expect(url.origin).toBe(window.location.origin);
+    expect(url.pathname).toBe('/dev/sign-in');
+    expect(url.searchParams.get('returnTo')).toBe('/review-queue?status=open');
+    expect(url.href).not.toContain('/api/v1/auth/sign-in');
+  });
+
+  it('AC-012.1 in mock mode leaves returnTo out when none is given', () => {
+    vi.stubEnv('VITE_API_MOCKING', 'true');
+
+    startSignIn();
+
+    const url = navigatedUrl();
+    expect(url.pathname).toBe('/dev/sign-in');
+    expect(url.search).toBe('');
+  });
+
+  it.each(['//evil.example', '/\\evil.example', '/a\tb', 'https://evil.example'])(
+    'AC-012.1 in mock mode applies the same returnTo filter: %j',
+    (returnTo) => {
+      vi.stubEnv('VITE_API_MOCKING', 'true');
+
+      startSignIn(returnTo);
+
+      const url = navigatedUrl();
+      expect(url.pathname).toBe('/dev/sign-in');
+      expect(url.searchParams.has('returnTo')).toBe(false);
+    },
+  );
+
+  it('AC-012.1 with VITE_API_MOCKING=false still loads /api/v1/auth/sign-in', () => {
+    vi.stubEnv('VITE_API_MOCKING', 'false');
+    startSignIn('/search');
+    expect(navigatedUrl().pathname).toBe('/api/v1/auth/sign-in');
+
+    navigateTo.mockReset();
+    vi.stubEnv('VITE_API_MOCKING', '');
+    startSignIn('/search');
+    expect(navigatedUrl().pathname).toBe('/api/v1/auth/sign-in');
+  });
+});
+
+describe('sign-in redirect endpoints in the contract', () => {
+  it('AC-012.1 contract lists the four redirect endpoints under tag session', () => {
+    const paths = contractPaths();
+    for (const endpoint of REDIRECT_ENDPOINTS) {
+      const block = paths.get(endpoint);
+      expect(block, `path ${endpoint}`).toBeDefined();
+      expect(block ?? '', `${endpoint} tag`).toMatch(
+        /tags:\s*(?:\[[^\]]*\bsession\b|\n\s*-\s*session\b)/,
+      );
+    }
+  });
+
+  it('AC-012.1 contract gives authorize and callback a login. servers entry', () => {
+    const paths = contractPaths();
+    for (const endpoint of ['/api/v1/auth/authorize', '/api/v1/auth/callback']) {
+      const block = paths.get(endpoint);
+      expect(block, `path ${endpoint}`).toBeDefined();
+      expect(block ?? '', `${endpoint} servers`).toMatch(/^\s+servers:/m);
+      expect(block ?? '', `${endpoint} 302`).toMatch(/^\s+['"]?302['"]?:/m);
+    }
+    for (const endpoint of ['/api/v1/auth/sign-in', '/api/v1/auth/complete']) {
+      const block = paths.get(endpoint);
+      expect(block, `path ${endpoint}`).toBeDefined();
+      expect(block ?? '', `${endpoint} servers`).not.toMatch(/^\s+servers:/m);
+    }
+  });
+});
+
+describe('redirect contract shape (design Q6; backend ACs AC-001.8, AC-001.16, AC-001.19 are built in Tasks 8-10)', () => {
+  const statusKey = (code: string) => new RegExp(`^\\s+['"]?${code}['"]?:`, 'm');
+
+  it('AC-012.1 contract: complete takes a query parameter code and no ticket (AC-001.16/.19)', () => {
+    const block = contractPaths().get('/api/v1/auth/complete') ?? '';
+    const code = parameterNamed(block, 'code');
+    expect(code, 'complete parameter code (AC-001.19)').toBeDefined();
+    expect(code ?? '').toMatch(/\bin:\s*['"]?query\b/);
+    expect(parameterNamed(block, 'ticket'), 'complete has no ticket (AC-001.16)').toBeUndefined();
+  });
+
+  it('AC-012.1 contract: callback takes a query parameter error (AC-001.8)', () => {
+    const block = contractPaths().get('/api/v1/auth/callback') ?? '';
+    const error = parameterNamed(block, 'error');
+    expect(error, 'callback parameter error (AC-001.8)').toBeDefined();
+    expect(error ?? '').toMatch(/\bin:\s*['"]?query\b/);
+  });
+
+  it('AC-012.1 contract: authorize and callback declare 400 text/html and 404 (AC-001.5/.6)', () => {
+    for (const endpoint of ['/api/v1/auth/authorize', '/api/v1/auth/callback']) {
+      const block = contractPaths().get(endpoint) ?? '';
+      expect(block, `${endpoint} 400`).toMatch(statusKey('400'));
+      expect(block, `${endpoint} text/html`).toMatch(/text\/html/);
+      expect(block, `${endpoint} 404`).toMatch(statusKey('404'));
+    }
+  });
+
+  it('AC-012.1 contract: callback lists its error values with MSG120 and MSG135, not MSG123 (AC-001.10)', () => {
+    const block = contractPaths().get('/api/v1/auth/callback') ?? '';
+    expect(block, 'callback names MSG120').toContain('MSG120');
+    expect(block, 'callback names MSG135').toContain('MSG135');
+    expect(block, 'callback never sends MSG123').not.toContain('MSG123');
+  });
+
+  it('AC-012.1 contract: callback declares a 200 page (AC-001.36/.37)', () => {
+    const block = contractPaths().get('/api/v1/auth/callback') ?? '';
+    expect(block, 'callback 200').toMatch(statusKey('200'));
+  });
+
+  it('AC-012.1 contract: complete sets the __Host-TSOLVE_SESSION cookie and fails to /login?error=MSG141 (AC-001.18/.19)', () => {
+    const block = contractPaths().get('/api/v1/auth/complete') ?? '';
+    expect(block, 'Set-Cookie header (AC-001.18)').toMatch(/Set-Cookie/i);
+    expect(block, 'cookie name (AC-001.18)').toContain('__Host-TSOLVE_SESSION');
+    expect(block, 'failure redirect (AC-001.19)').toContain('/login?error=MSG141');
+  });
+
+  it('AC-012.1 contract: authorize and callback servers URL is https://login.tsolve.io.vn (AC-001.1/.4/.5)', () => {
+    for (const endpoint of ['/api/v1/auth/authorize', '/api/v1/auth/callback']) {
+      const block = contractPaths().get(endpoint) ?? '';
+      expect(block, `${endpoint} servers url`).toMatch(
+        /url:\s*['"]?https:\/\/login\.tsolve\.io\.vn\/?['"]?\s*$/m,
+      );
+    }
+  });
 });
 
 describe('useSignInMessage', () => {
