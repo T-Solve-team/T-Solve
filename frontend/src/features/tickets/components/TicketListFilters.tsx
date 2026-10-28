@@ -69,8 +69,7 @@ export function TicketListFilters({
           onChange={(value) => onChange('departmentId', fromOption(value))}
           options={[
             { value: ALL, label: 'All Departments' },
-            // String ids: numbers today, UUIDs after fe-foundation Task 10 (design, decision Q2).
-            ...departments.map((d) => ({ value: String(d.departmentId), label: d.name })),
+            ...departments.map((d) => ({ value: d.departmentId, label: d.name })),
           ]}
         />
       </Flex>

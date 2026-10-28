@@ -157,6 +157,13 @@ describe('TicketListPage', () => {
     expect(await screen.findByText('Total 28 items')).toBeInTheDocument();
   });
 
+  it('AC-001.4 removes the keyword when the clear icon is clicked', async () => {
+    const { user, router } = await openList('/tickets?keyword=vpn');
+    await user.click(screen.getByRole('button', { name: 'close-circle' }));
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+    expect(screen.getByLabelText('Keyword')).toHaveValue('');
+  });
+
   it('AC-001.5 accepts at most 100 characters in the Keyword box', async () => {
     const { user } = await openList();
     const keyword = screen.getByLabelText('Keyword');

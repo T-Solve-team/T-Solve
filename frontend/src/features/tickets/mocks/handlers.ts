@@ -5,13 +5,15 @@ import { MOCK_DELAY_MS } from '@/shared/api/mocks';
 import { parseSort } from '@/shared/lib';
 import { MOCK_TICKETS, type MockTicket } from './ticket-data';
 
+const byUpdatedAt = (t: MockTicket) => t.updatedAt;
+
 /** Sort keys of the Ticket List (spec AC-001.8); missing values sort first. */
 const SORT_VALUE: Record<string, (t: MockTicket) => string> = {
   sourceTicketId: (t) => t.sourceTicketId,
   title: (t) => t.title,
   project: (t) => t.project.name,
   reviewDueDate: (t) => t.reviewDueDate ?? '',
-  updatedAt: (t) => t.updatedAt,
+  updatedAt: byUpdatedAt,
 };
 
 /** Keyword (Ticket ID, title or Solution, any case), Department, source and status (spec AC-004.2). */
@@ -35,12 +37,10 @@ function filtered(url: URL): MockTicket[] {
 
 function sorted(tickets: MockTicket[], url: URL): MockTicket[] {
   const sort = parseSort(url.searchParams.get('sort')) ?? { field: 'updatedAt', order: 'desc' };
-  const value = SORT_VALUE[sort.field] ?? SORT_VALUE.updatedAt;
+  const value = SORT_VALUE[sort.field] ?? byUpdatedAt;
   const direction = sort.order === 'asc' ? 1 : -1;
   return [...tickets].sort(
-    (a, b) =>
-      (value ? value(a).localeCompare(value(b)) : 0) * direction ||
-      a.ticketId.localeCompare(b.ticketId),
+    (a, b) => value(a).localeCompare(value(b)) * direction || a.ticketId.localeCompare(b.ticketId),
   );
 }
 
