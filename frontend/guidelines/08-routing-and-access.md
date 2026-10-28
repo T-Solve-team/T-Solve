@@ -105,6 +105,18 @@ export const reviewRoutes: FeatureRoute[] = [
 - `/login` when already signed in → redirect to the landing page.
 - After sign-in the backend returns the user to `returnTo` if present, otherwise `/`.
 
+## 3a. The route tree is chosen by host
+
+`buildRoutes(host)` (`app/router/routes.tsx`) picks one of two trees by the hostname of the page; `router.ts` passes
+`window.location.hostname`, and `renderApp(path, { host })` passes the test's host (default `localhost`).
+
+- `isPlatformConsoleHost(hostname)` (`app/router/host.ts`) is true when the first label is `admin`
+  (`admin.tsolve.io.vn`, `admin.localhost`, a bare `admin`), compared lower-cased with one trailing dot removed.
+- **Platform Console host:** `RootLayout` > `platformConsoleRoutes` (from `@/features/platform-console`) + `*` → 404
+  page. No Workspace guard, no AppShell, no menu: the Console owns its own guards and layout. Every Workspace path
+  (`/login`, `/users`, …) is a 404 there, for any role or none.
+- **Any other host:** only the Workspace tree of §3 (`featureRoutes`); there is no Console route.
+
 ## 4. Access inside a screen (beyond the role)
 
 The role decides **which screens** you can open. Inside a screen, some actions also depend on the

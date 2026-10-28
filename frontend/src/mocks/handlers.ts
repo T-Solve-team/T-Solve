@@ -6,6 +6,7 @@ import * as feedback from '@/features/feedback/mocks/handlers';
 import * as jiraIntegration from '@/features/jira-integration/mocks/handlers';
 import * as knowledgeDashboard from '@/features/knowledge-dashboard/mocks/handlers';
 import * as myProfile from '@/features/my-profile/mocks/handlers';
+import * as platformConsole from '@/features/platform-console/mocks/handlers';
 import * as review from '@/features/review/mocks/handlers';
 import * as search from '@/features/search/mocks/handlers';
 import * as ticketImport from '@/features/ticket-import/mocks/handlers';
@@ -45,6 +46,7 @@ export const FEATURE_MOCKS = [
   triage,
   wiki,
   chatbot,
+  platformConsole,
 ];
 
 export const handlers: HttpHandler[] = [

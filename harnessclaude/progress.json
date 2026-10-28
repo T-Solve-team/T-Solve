@@ -27,10 +27,10 @@
         "placeholder-rule": "passing",
         "catalog-sync": "passing",
         "site-sign-in": "passing",
-        "host-routes": "pending",
+        "host-routes": "passing",
         "uuid-ids": "passing"
       },
-      "lastUpdated": "2026-10-26T01:10:32.474Z",
+      "lastUpdated": "2026-10-28T14:17:22.890Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"

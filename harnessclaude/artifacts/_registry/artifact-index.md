@@ -91,6 +91,9 @@ Master registry of all artifacts in this workspace.
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-8-site-sign-in.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-8-site-sign-in-review.md |
 | — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-8-site-sign-in-test-report.md |
+| — | session-log | fe-foundation | in-progress | artifacts/05-implementation/fe-foundation/task-9-host-routes.md |
+| — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-9-host-routes-review.md |
+| — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-9-host-routes-test-report.md |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-107-user-list-1366x768.jpg |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-2-add-user.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-2-add-user-review.md |

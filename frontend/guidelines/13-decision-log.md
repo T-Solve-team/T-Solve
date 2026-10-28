@@ -52,6 +52,7 @@
 | FE-41 | Report3 message catalog | Approved (2026-10-22) — supersedes the SRS V.2 catalog of FE-08 |
 | FE-42 | Route map for the 35 Report3 screens, 15 features | Approved (2026-10-22) — supersedes the feature list of FE-22; screen counts superseded by D18 (25/10): 34 screens, 8 popups |
 | FE-43 | Workspace site and central sign-in: same-origin API, `GET /api/v1/auth/sign-in`, MSG119 / MSG120 / MSG123, background header | Approved (2026-10-26, KAN-198) — updates FE-09 |
+| FE-44 | Route tree chosen by host: `admin.<domain>` gets only the Platform Console routes, every other host only the Workspace routes | Approved (2026-10-28, KAN-198); `platformConsoleRoutes` name and type to be confirmed by `platform-console` |
 
 ---
 
@@ -312,6 +313,16 @@ development uses `<site name>.localhost:5173`; mock mode adds "Unknown site" and
 user switcher. *Options:* a Workspace id or site name in the URL path or a header; the app opening the central
 sign-in URL itself. *Why:* one origin per Workspace keeps the cookie and the CORS rules simple and the contract
 free of tenant fields; the server alone knows the central sign-in site and the state value.
+
+**FE-44 — Route tree chosen by host (Hiếu, 2026-10-28, change request KAN-198, STORY-013).** The Platform Console
+lives on `admin.<domain>` (`admin.tsolve.io.vn`, `admin.localhost`). `buildRoutes(host)` gives that host only
+`platformConsoleRoutes` (a plain react-router `RouteObject[]` exported by `@/features/platform-console`; the Console
+owns its guards and layout) plus the 404 page for any other path, with no Workspace guard and no AppShell; every
+other host gets only the Workspace routes. A host is the Console when its first label is `admin`, compared
+lower-cased with one trailing dot removed. `featureRoutes` stays Workspace-only. *Options:* one tree with the
+Console routes behind a guard; a path prefix such as `/platform-console`. *Why:* a Workspace screen must not exist
+on the Console host (and the reverse), so the 404 is the same for every role; the Console team can change its tree
+without touching the Workspace guards.
 
 ## Working conventions (not code decisions)
 
