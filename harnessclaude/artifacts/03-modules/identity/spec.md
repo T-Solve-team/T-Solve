@@ -19,12 +19,13 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
 
 | 2026-10-25 | STORY-004..007 | Initial frontend scope for KAN-107–110, with working MSW data | User requested frontend screens for their four In Progress Jira stories and selected MSW before backend integration |
 | 2026-10-26 | STORY-004..STORY-007 | Merge the UC-04–07 frontend/MSW slice after main's unchanged STORY-001–003; renumber its AC ids to AC-004–007; add AC-004.8 for the 100-character search limit and align UserAccount ids with the UUID convention | User-requested KAN-107 review repair: preserve the other owner's sign-in/logout/profile specification and align the account contract with main |
+| 2026-10-28 | STORY-001 | Reword Functional req. 1, AC-001.1, AC-001.4, AC-001.5, AC-001.29 and AC-001.35: the central sign-in origin comes from `TSOLVE_LOGIN_ORIGIN` and the Platform Console origin from `TSOLVE_ADMIN_ORIGIN` (the production URLs stay as examples). Reword AC-001.18: the session cookie is `__Host-TSOLVE_SESSION`. Reword AC-001.21, AC-001.28, AC-001.30 and AC-001.31 to name the configured Platform Console origin the same way, and AC-002.1 and the Interface Contracts row for `GET /api/v1/auth/complete` to use `__Host-TSOLVE_SESSION` (wording only); NFR 4 names `TSOLVE_LOGIN_ORIGIN`, `TSOLVE_ADMIN_ORIGIN` and `TSOLVE_SIGNING_KEY`. Reword AC-001.42: the Login codes are fe-foundation's list (MSG06, MSG09, MSG10, MSG122, MSG123, MSG141, without MSG07 and MSG120); MSG122 needs a valid `google_domain`; `error=MSG120` leaves the message area empty and the MSG120 full page shows instead | KAN-103 plan (Hiếu, 28/10): Q7 = A (NFR 4: hosts come from the environment; local dev and tests use other origins); Q2 = B (KAN-104: the session cookie is valid only on the company's own site, enforced by the browser); Q4 = A (agree with fe-foundation AC-012.3, AC-012.4 and AC-011.4) |
 
 ## Requirements
 
 ### Functional
-1. People sign in only with a Google account of their company's Google domain, through the central sign-in site
-   `login.tsolve.io.vn`. `login.` has no Workspace of its own. It learns the target only from a signed,
+1. People sign in only with a Google account of their company's Google domain, through the configured central sign-in origin
+   (`https://login.tsolve.io.vn` in production). That site has no Workspace of its own. It learns the target only from a signed,
    short-lived, single-use state value that the server creates (GBR-03, GBR-37, D9). The OIDC redirect URI is
    on `login.` only (TS-020).
 2. Sign-in has three targets, all through the same callback:
@@ -62,7 +63,9 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
 4. Secrets and hosts come only from the environment, with no default (architecture: Configuration):
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`
-   - the key that signs state values and hand-off codes
+   - `TSOLVE_SIGNING_KEY` (the key that signs state values and hand-off codes)
+   - `TSOLVE_LOGIN_ORIGIN` (the central sign-in origin; `https://login.tsolve.io.vn` in production)
+   - `TSOLVE_ADMIN_ORIGIN` (the Platform Console origin; `https://admin.tsolve.io.vn` in production)
    - `PLATFORM_OPERATOR_EMAILS` (the allow-list, a comma-separated list)
 5. Two-Workspace tests cover the session rules: AC-001.7, AC-001.15, AC-001.17, AC-001.20 and AC-001.32. Each
    uses two Workspaces with Accounts of the same Roles.
@@ -81,14 +84,14 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
   page of my Roles, so that I use T-Solve without a separate password and only in my own Workspace. (KAN-103
   central sign-in, KAN-104 session per Workspace site and Login screen.)
 - Acceptance:
-  - AC-001.1: WHEN a browser opens `GET /api/v1/auth/sign-in` on a Workspace site, THE backend SHALL create a state value for the Workspace that the platform resolved from the host and answer 302 to `https://login.tsolve.io.vn/api/v1/auth/authorize?state=…`, without a signed-in user.
+  - AC-001.1: WHEN a browser opens `GET /api/v1/auth/sign-in` on a Workspace site, THE backend SHALL create a state value for the Workspace that the platform resolved from the host and answer 302 to `/api/v1/auth/authorize?state=…` on the central sign-in origin configured in `TSOLVE_LOGIN_ORIGIN` (`https://login.tsolve.io.vn` in production), without a signed-in user.
   - AC-001.2: THE backend SHALL create every state value on the server only, signed with its key, valid for 10 minutes and usable once. The state SHALL carry exactly one target (a Workspace, the Platform Console, or a Workspace plus a ticket tracker account) and the kept `returnTo`. The OIDC nonce and PKCE code verifier SHALL stay on the server (D9).
   - AC-001.3: WHERE `returnTo` is given to the sign-in start, THE backend SHALL keep it only if it is a relative path of the same site (one leading `/`, not `//`, no scheme, no host) and SHALL use `/` otherwise.
   - AC-001.4: WHEN `GET /api/v1/auth/authorize` on `login.` gets a valid state value, THE backend SHALL answer 302 to Google's authorization endpoint with:
     - `scope` `openid email profile`, the state value, the OIDC nonce and a PKCE `S256` code challenge;
-    - the redirect URI `https://login.tsolve.io.vn/api/v1/auth/callback`;
+    - the redirect URI `/api/v1/auth/callback` on the configured central sign-in origin (`https://login.tsolve.io.vn/api/v1/auth/callback` in production);
     - for a Workspace or Jira-link target, `hd` set to the Workspace's Google domain.
-  - AC-001.5: THE backend SHALL register and accept only `https://login.tsolve.io.vn/api/v1/auth/callback` as the OIDC redirect URI. A request to the authorize or callback path on any other host SHALL be answered 404.
+  - AC-001.5: THE backend SHALL register and accept only `/api/v1/auth/callback` on the configured central sign-in origin (`https://login.tsolve.io.vn/api/v1/auth/callback` in production) as the OIDC redirect URI. A request to the authorize or callback path on any other host SHALL be answered 404.
   - AC-001.6: IF `authorize` or the callback gets a state value that is missing, not signed by the server, expired or already used, THEN THE backend SHALL answer 400 with the minimal `login.` page showing MSG141 and create no session (GBR-03).
   - AC-001.7: THE callback SHALL take the target Workspace only from the verified state value and SHALL ignore every other parameter, header or cookie that names a Workspace or a site (GBR-03, GBR-37).
   - AC-001.8: IF Google returns an error or the user cancels, with a valid state value for a Workspace, THEN THE backend SHALL redirect to `/login?error=MSG06` on that Workspace site and create no session.
@@ -106,25 +109,25 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
   - AC-001.17: THE backend SHALL sign every hand-off code. A code SHALL be valid for 60 seconds, usable once, and redeemable only on the site of the target it names (a Workspace site, or `admin.` for an Operator).
   - AC-001.18: WHEN a valid hand-off code is redeemed on its site, THE backend SHALL:
     - create a new session with a new session id for that Account and Workspace (or for that Operator);
-    - set the cookie `TSOLVE_SESSION` (HttpOnly, Secure, SameSite=Lax, Path `/`, no Domain attribute, so it is sent only to that host);
+    - set the cookie `__Host-TSOLVE_SESSION` (HttpOnly, Secure, SameSite=Lax, Path `/`, no Domain attribute; with the `__Host-` prefix the browser refuses the cookie otherwise, so it is sent only to that host);
     - redirect to the kept `returnTo`, or to `/` when there is none.
   - AC-001.19: IF a hand-off code is missing, invalid, expired, already used or presented on another site, THEN THE backend SHALL redirect to `/login?error=MSG141` on the site where it was presented and create no session.
   - AC-001.20: IF a request to a Workspace site carries a session created on the Workspace site of another Workspace, THEN THE backend SHALL answer 401 with `code` `MSG123`, not run the endpoint, and not end that session (GBR-03).
-  - AC-001.21: IF a request to `admin.tsolve.io.vn` carries a Workspace session, THEN THE backend SHALL answer 401 with `code` `MSG123` and not run the endpoint (D13).
+  - AC-001.21: IF a request to the configured Platform Console origin (`https://admin.tsolve.io.vn` in production) carries a Workspace session, THEN THE backend SHALL answer 401 with `code` `MSG123` and not run the endpoint (D13).
   - AC-001.22: THE backend SHALL treat a request to `login.` or `api.` as having no session, whatever session cookie it carries.
   - AC-001.23: IF a request carries a session created more than 8 hours ago, or whose last activity was more than 60 minutes ago, THEN THE backend SHALL end the session and answer 401 with `code` `MSG07` (GBR-03).
   - AC-001.24: WHEN a request with a valid session comes without the header `X-TSolve-Background: 1`, THE backend SHALL count it as activity and restart the 60-minute limit.
   - AC-001.25: WHEN a request with a valid session carries the header `X-TSolve-Background: 1`, THE backend SHALL answer it as usual but SHALL not count it as activity. The 8-hour limit applies to it as well (decision Q6: polling and real-time updates do not keep a session alive).
   - AC-001.26: WHEN a request carries a valid Workspace session, THE backend SHALL re-read the Account at that request and put a `TSolveUser` with its current id, email, full name and Roles in the security context (be-foundation AC-002.2), so a Role change applies from the next request.
   - AC-001.27: IF the Account of a Workspace session is Deactivated, THEN THE backend SHALL end the session at its next request and answer 401 with `code` `MSG10` (GBR-03).
-  - AC-001.28: WHEN a browser opens `GET /api/v1/auth/sign-in` on `admin.tsolve.io.vn`, THE backend SHALL create a state value naming the Platform Console and answer 302 to `authorize` on `login.` (as AC-001.1, without `hd` at Google, D13).
-  - AC-001.29: WHEN every check of AC-001.6 and AC-001.9 passes for a Platform Console target and the verified email is in `PLATFORM_OPERATOR_EMAILS` (compared ignoring case), THE backend SHALL redirect to `https://admin.tsolve.io.vn/api/v1/auth/complete?code=…`. The session made there SHALL be an Operator session with no Account, no Workspace and none of the five Roles.
-  - AC-001.30: IF the verified email of a Platform Console sign-in is not in the allow-list, THEN THE backend SHALL redirect to `https://admin.tsolve.io.vn/login?error=MSG135` and create no session (GBR-03).
-  - AC-001.31: IF a Google error, a failed code exchange or a failed ID token check happens for a Platform Console target, THEN THE backend SHALL redirect to `https://admin.tsolve.io.vn/login?error=MSG06` and create no session.
+  - AC-001.28: WHEN a browser opens `GET /api/v1/auth/sign-in` on the configured Platform Console origin (`https://admin.tsolve.io.vn` in production), THE backend SHALL create a state value naming the Platform Console and answer 302 to `authorize` on the configured central sign-in origin (as AC-001.1, without `hd` at Google, D13).
+  - AC-001.29: WHEN every check of AC-001.6 and AC-001.9 passes for a Platform Console target and the verified email is in `PLATFORM_OPERATOR_EMAILS` (compared ignoring case), THE backend SHALL redirect to `/api/v1/auth/complete?code=…` on the Platform Console origin configured in `TSOLVE_ADMIN_ORIGIN` (`https://admin.tsolve.io.vn` in production). The session made there SHALL be an Operator session with no Account, no Workspace and none of the five Roles.
+  - AC-001.30: IF the verified email of a Platform Console sign-in is not in the allow-list, THEN THE backend SHALL redirect to `/login?error=MSG135` on the configured Platform Console origin (`https://admin.tsolve.io.vn` in production) and create no session (GBR-03).
+  - AC-001.31: IF a Google error, a failed code exchange or a failed ID token check happens for a Platform Console target, THEN THE backend SHALL redirect to `/login?error=MSG06` on the configured Platform Console origin (`https://admin.tsolve.io.vn` in production) and create no session.
   - AC-001.32: IF a request to a Workspace site carries an Operator session, THEN THE backend SHALL answer 401 with `code` `MSG123` and not run the endpoint (D13).
   - AC-001.33: IF a request carries an Operator session whose email is no longer in the allow-list, THEN THE backend SHALL end the session and answer 401 with `code` `MSG135`.
   - AC-001.34: THE backend SHALL apply the limits of AC-001.23 to AC-001.25 to Operator sessions as well.
-  - AC-001.35: WHEN `jira-app` asks `SignInStateService` for a sign-in link with a Workspace and a ticket tracker account taken from a verified Forge Invocation Token, THE backend SHALL return `https://login.tsolve.io.vn/api/v1/auth/authorize?state=…` with a state value that carries both (GBR-19, D1).
+  - AC-001.35: WHEN `jira-app` asks `SignInStateService` for a sign-in link with a Workspace and a ticket tracker account taken from a verified Forge Invocation Token, THE backend SHALL return `/api/v1/auth/authorize?state=…` on the configured central sign-in origin (`https://login.tsolve.io.vn` in production) with a state value that carries both (GBR-19, D1).
   - AC-001.36: WHEN every check of AC-001.14 passes for a Jira-link state value, THE backend SHALL:
     - record in that Workspace the Jira account link between the state value's ticket tracker account and the Account, replacing any earlier link of that ticket tracker account in the Workspace;
     - show the minimal `login.` page with MSG75 (`{tracker_name}` = Jira);
@@ -134,14 +137,14 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
   - AC-001.39: THE minimal `login.` page SHALL show only the message's exact Report3 text, with no link to any Workspace site, and SHALL not load the web app.
   - AC-001.40: THE Login screen (1.1.1) SHALL show one button "Sign in with Google" and a message area, and no email, password or sign-up field.
   - AC-001.41: WHEN the user clicks "Sign in with Google", THE Login screen SHALL start the sign-in through fe-foundation's `startSignIn` with the `returnTo` of the Login URL.
-  - AC-001.42: WHEN the Login URL has `error` set to MSG06, MSG07, MSG09, MSG10, MSG120, MSG122, MSG123 or MSG141, THE Login screen SHALL show that message's catalog text in its message area, as given by fe-foundation's `useSignInMessage`, with `{google_domain}` filled in from `google_domain` for MSG122.
+  - AC-001.42: WHEN the Login URL has `error` set to MSG06, MSG09, MSG10, MSG122, MSG123 or MSG141, THE Login screen SHALL show that message's catalog text in its message area, as given by fe-foundation's `useSignInMessage` (AC-012.3), with `{google_domain}` filled in from `google_domain` for MSG122. MSG122 SHALL be shown only with a valid `google_domain` (fe-foundation AC-012.4). `error=MSG120` SHALL leave the message area empty; on a suspended Workspace the web app shows the MSG120 full page instead (fe-foundation AC-011.4).
   - AC-001.43: IF the Login URL has an `error` value that is not one of the codes of AC-001.42, THEN THE Login screen SHALL show an empty message area.
 
 ### STORY-002: Log out
 - As an Employee, I want to log out so that my session ends and the next person at this computer sees nothing of
   mine. (KAN-106)
 - Acceptance:
-  - AC-002.1: WHEN a signed-in user sends `POST /api/v1/auth/logout` with a valid CSRF token, on a Workspace site or on `admin.`, THE backend SHALL end the session, expire the cookie `TSOLVE_SESSION` (`Max-Age=0`) and answer 204.
+  - AC-002.1: WHEN a signed-in user sends `POST /api/v1/auth/logout` with a valid CSRF token, on a Workspace site or on `admin.`, THE backend SHALL end the session, expire the cookie `__Host-TSOLVE_SESSION` (`Max-Age=0`, with `Secure` and `Path=/` and no `Domain`) and answer 204.
   - AC-002.2: WHEN a session has been ended by logout, THE backend SHALL answer every later request that carries its cookie with 401 and `code` `MSG07`.
   - AC-002.3: WHEN a Workspace session ends, THE backend SHALL publish exactly one `SessionEnded` event with the Account id, the Workspace id, the session id and the reason, after the session is gone. The reason SHALL be `LOGOUT` (AC-002.1), `EXPIRED` (AC-001.23) or `DEACTIVATED` (AC-001.27).
   - AC-002.4: WHILE a Workspace session is past a limit of AC-001.23 and no request uses it, THE backend SHALL still end it and publish `SessionEnded` with `EXPIRED` at most 15 minutes after the limit passed.
@@ -262,7 +265,7 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
 | Workspace site, `admin.` | `GET /api/v1/auth/sign-in?returnTo=<path>` (full-page navigation, no session needed) | 302 to `login.` `authorize` |
 | `login.` | `GET /api/v1/auth/authorize?state=…` | 302 to Google, or 400 MSG141 page |
 | `login.` | `GET /api/v1/auth/callback?code=…&state=…` | 302 to `complete` / `login?error=…`, or the minimal page (MSG141, MSG75, Jira-link failures) |
-| Workspace site, `admin.` | `GET /api/v1/auth/complete?code=…` | sets `TSOLVE_SESSION`, 302 to `returnTo` or `/`; failure 302 `/login?error=MSG141` |
+| Workspace site, `admin.` | `GET /api/v1/auth/complete?code=…` | sets `__Host-TSOLVE_SESSION`, 302 to `returnTo` or `/`; failure 302 `/login?error=MSG141` |
 | Workspace site, `admin.` | `POST /api/v1/auth/logout` (CSRF) | 204 (unchanged contract) |
 | Workspace site | `GET /api/v1/me/solutions?page&size` (`operationId` `getMySolutions`) | `MySolutionPage` |
 | Workspace site | `GET /api/v1/me/spaces` (`operationId` `getMyViewableSpaces`) | `SpaceRef[]` |
