@@ -1,9 +1,17 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
-import type { DepartmentRef, UserAccount, UserAccountPage } from '@/shared/api';
+import {
+  Role,
+  UserAccountStatus,
+  type DepartmentRef,
+  type UserAccount,
+  type UserAccountPage,
+  type UserCreationOptions,
+} from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
-import { getDevUser } from '@/shared/auth';
+import { getDevUser, isRole } from '@/shared/auth';
 import { parseSort } from '@/shared/lib';
-import { DEPARTMENTS, seedUsers, WORKSPACE_ID } from './data';
+import type { MsgCode, MsgParams } from '@/shared/messages';
+import { COMPANY_DOMAIN, DEPARTMENTS, seedUsers, SPACES, WORKSPACE_ID } from './data';
 
 let users = seedUsers();
 
@@ -29,7 +37,95 @@ function nonNegativeInteger(value: string | null, fallback: number): number {
   return value !== null && Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
+function fieldError(field: string, code: MsgCode, params?: MsgParams, status = 400) {
+  return problem(status, code, { params, fieldErrors: [{ field, code, params }] });
+}
+
+function record(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function ids(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((id) => typeof id === 'string');
+}
+
 export const handlers: HttpHandler[] = [
+  http.get('*/api/v1/users/creation-options', async () => {
+    await delay(MOCK_DELAY_MS);
+    return (
+      accessError() ??
+      HttpResponse.json<UserCreationOptions>({ companyDomain: COMPANY_DOMAIN, spaces: SPACES })
+    );
+  }),
+  http.post('*/api/v1/users', async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    const denied = accessError();
+    if (denied) return denied;
+    let input: unknown;
+    try {
+      input = await request.json();
+    } catch {
+      return problem(400, 'MSG03');
+    }
+    if (!record(input)) return problem(400, 'MSG03');
+    if (typeof input.email !== 'string' || !input.email.trim())
+      return fieldError('email', 'MSG01', { field_name: 'Email' });
+    const email = input.email.trim().toLowerCase();
+    if (input.email.length > 100)
+      return fieldError('email', 'MSG02', { field_name: 'Email', max_length: 100 });
+    // MSG03 is the catalog's email validation message, including Workspace-domain mismatches.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.split('@')[1] !== COMPANY_DOMAIN)
+      return fieldError('email', 'MSG03');
+    const duplicate = users.find(
+      (user) => user.workspaceId === WORKSPACE_ID && user.email.toLowerCase() === email,
+    );
+    if (duplicate)
+      return fieldError(
+        'email',
+        duplicate.status === UserAccountStatus.DEACTIVATED ? 'MSG111' : 'MSG11',
+        undefined,
+        409,
+      );
+    if (
+      !Array.isArray(input.roles) ||
+      !input.roles.every((role: unknown) => typeof role === 'string' && isRole(role))
+    )
+      return fieldError('roles', 'MSG01', { field_name: 'Roles' });
+    const roles = [...new Set([Role.EMPLOYEE, ...input.roles.filter(isRole)])];
+    const department = DEPARTMENTS.find((item) => item.departmentId === input.departmentId) ?? null;
+    if (
+      (input.departmentId !== undefined && input.departmentId !== null && !department) ||
+      (roles.includes(Role.PROJECT_MANAGER) && !department)
+    )
+      return fieldError('departmentId', 'MSG01', { field_name: 'Department' });
+    const spaceIds: unknown = input.spaceIds ?? [];
+    if (
+      !ids(spaceIds) ||
+      spaceIds.some((id) => !SPACES.some((space) => space.spaceId === id)) ||
+      (roles.includes(Role.KNOWLEDGE_MANAGER) && spaceIds.length === 0) ||
+      (!roles.includes(Role.KNOWLEDGE_MANAGER) && spaceIds.length > 0)
+    )
+      return fieldError('spaceIds', 'MSG01', { field_name: 'Spaces' });
+    const occupied = SPACES.find(
+      (space) =>
+        spaceIds.includes(space.spaceId) &&
+        users.some(
+          (user) => user.workspaceId === WORKSPACE_ID && user.spaceIds.includes(space.spaceId),
+        ),
+    );
+    if (occupied) return fieldError('spaceIds', 'MSG117', { space_name: occupied.name }, 409);
+    const user: UserAccount = {
+      id: crypto.randomUUID(),
+      fullName: null,
+      email,
+      roles,
+      department,
+      status: UserAccountStatus.ACTIVE,
+      lastSignInAt: null,
+    };
+    users.push({ ...user, workspaceId: WORKSPACE_ID, spaceIds: [...new Set(spaceIds)] });
+    return HttpResponse.json<UserAccount>(user, { status: 201 });
+  }),
   http.get('*/api/v1/users/departments', async () => {
     await delay(MOCK_DELAY_MS);
     return accessError() ?? HttpResponse.json<DepartmentRef[]>(DEPARTMENTS);
@@ -57,8 +153,8 @@ export const handlers: HttpHandler[] = [
           (!q ||
             [user.fullName, user.email].some((text) => text?.toLocaleLowerCase().includes(q))) &&
           (!role ||
-            (role === 'EMPLOYEE'
-              ? user.roles.length === 1 && user.roles[0] === 'EMPLOYEE'
+            (role === Role.EMPLOYEE
+              ? user.roles.length === 1 && user.roles[0] === Role.EMPLOYEE
               : user.roles.some((held) => held === role))) &&
           (!status || user.status === status) &&
           (!departmentId || String(user.department?.departmentId) === departmentId),
@@ -73,7 +169,7 @@ export const handlers: HttpHandler[] = [
     return HttpResponse.json<UserAccountPage>({
       content: matching
         .slice(page * size, (page + 1) * size)
-        .map(({ workspaceId: _workspaceId, ...user }) => user),
+        .map(({ workspaceId: _workspaceId, spaceIds: _spaceIds, ...user }) => user),
       page: {
         number: page,
         size,
