@@ -235,3 +235,9 @@
 {"ts":"2026-10-28T14:17:22.683Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-28T14:17:22.891Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":"evaluating","to":"passing"}
 {"ts":"2026-10-28T15:26:17.229Z","type":"spec-approved","module":"identity","specHash":"75285d61b38137489b81ce431ce43ddf47e958e67fdb84b602ccea1eeb10f90c"}
+{"ts":"2026-10-28T15:30:11.558Z","type":"feature-status","module":"identity","feature":"login-screen","from":null,"to":"pending"}
+{"ts":"2026-10-28T15:30:12.559Z","type":"feature-status","module":"identity","feature":"sign-in-start","from":null,"to":"pending"}
+{"ts":"2026-10-28T15:30:15.930Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":null,"to":"pending"}
+{"ts":"2026-10-28T15:30:16.941Z","type":"feature-status","module":"identity","feature":"workspace-session","from":null,"to":"pending"}
+{"ts":"2026-10-28T15:30:20.401Z","type":"feature-status","module":"identity","feature":"operator-sign-in","from":null,"to":"pending"}
+{"ts":"2026-10-28T15:30:21.397Z","type":"feature-status","module":"identity","feature":"jira-link-sign-in","from":null,"to":"pending"}
