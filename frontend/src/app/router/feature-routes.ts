@@ -17,7 +17,8 @@ import type { FeatureRoute } from '@/shared/routing';
 
 /**
  * Every feature's screens. PRE-FILLED for all 15 features — features add screens in their own
- * routes.ts, never here (guideline 02 §2).
+ * routes.ts, never here (guideline 02 §2). Workspace routes only: the Platform Console's routes
+ * (`platformConsoleRoutes`) are not listed here; `buildRoutes` picks them by host.
  */
 export const featureRoutes: readonly FeatureRoute[] = [
   ...authRoutes,
