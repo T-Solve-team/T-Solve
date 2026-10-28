@@ -234,3 +234,4 @@
 {"ts":"2026-10-28T13:51:03.599Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":"pending","to":"in-progress"}
 {"ts":"2026-10-28T14:17:22.683Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-28T14:17:22.891Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":"evaluating","to":"passing"}
+{"ts":"2026-10-28T15:26:17.229Z","type":"spec-approved","module":"identity","specHash":"75285d61b38137489b81ce431ce43ddf47e958e67fdb84b602ccea1eeb10f90c"}
