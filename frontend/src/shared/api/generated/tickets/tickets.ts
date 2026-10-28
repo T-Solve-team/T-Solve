@@ -23,6 +23,7 @@ import type { GetTicketsParams, ProblemResponse, TicketSummaryPage } from '../mo
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
+import { withBackgroundMarking } from '../../query-options';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -98,11 +99,11 @@ export const getGetTicketsQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getTickets>>> = ({ signal }) =>
     getTickets(params, { signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getTickets>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<Awaited<ReturnType<typeof getTickets>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetTicketsQueryResult = NonNullable<Awaited<ReturnType<typeof getTickets>>>;
