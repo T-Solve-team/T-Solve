@@ -1,0 +1,24 @@
+.page {
+  min-height: 100vh;
+  padding: var(--ant-padding-lg, 24px);
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+}
+
+.title.title {
+  margin: 0;
+  font-size: var(--ant-font-size-heading-3, 24px);
+}
+
+.message {
+  min-height: var(--ant-line-height-lg, 22px);
+  text-align: center;
+}

@@ -40,6 +40,12 @@ Master registry of all artifacts in this workspace.
 | — | design | fe-foundation | draft | artifacts/04-plans/fe-foundation/design.md |
 | — | design | fe-foundation | draft | artifacts/04-plans/fe-foundation/iteration-1/design.md |
 | — | tasks | fe-foundation | draft | artifacts/04-plans/fe-foundation/iteration-1/tasks.md |
+| RESEARCH-001 | research | — | complete | artifacts/01-research/RESEARCH-001-import-ticket-csv.md |
+| — | module | import-ticket-list | complete | artifacts/03-modules/import-ticket-list/module.md |
+| — | spec | import-ticket-list | approved | artifacts/03-modules/import-ticket-list/spec.md |
+| — | design | import-ticket-list | draft | artifacts/04-plans/import-ticket-list/design.md |
+| — | design | import-ticket-list | draft | artifacts/04-plans/import-ticket-list/iteration-1/design.md |
+| — | tasks | import-ticket-list | draft | artifacts/04-plans/import-ticket-list/iteration-1/tasks.md |
 | — | spec | chatbot | draft | artifacts/03-modules/chatbot/spec.md |
 | — | spec | identity | draft | artifacts/03-modules/identity/spec.md |
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/design.md |
@@ -103,3 +109,5 @@ Master registry of all artifacts in this workspace.
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-6-add-user-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-6-add-user-review-test-report.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-6-add-user-review-review.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-7-login-screen.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-7-login-screen-test-report.md |

@@ -1,16 +1,19 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router';
+import { env } from '@/shared/config/env';
 import { navigateTo } from '@/shared/lib';
 import type { MsgCode, MsgParams } from '@/shared/messages';
 
 const SIGN_IN_PATH = '/api/v1/auth/sign-in';
+/** Mock mode only (Q5): the dev-only page that stands in for the central Google sign-in. */
+const MOCK_SIGN_IN_PATH = '/dev/sign-in';
 
 /**
  * A same-site path: starts with one `/` (not `//`), and holds no backslash, ASCII control or whitespace
  * character. Browsers read `/\host` and `/<tab>/host` as another site, so those never pass (edge case 21).
  * The backend checks the value again.
  */
-function isSameSitePath(value: string): boolean {
+export function isSameSitePath(value: string): boolean {
   if (!value.startsWith('/') || value.startsWith('//')) return false;
   for (const char of value) {
     const code = char.codePointAt(0) ?? 0;
@@ -23,14 +26,19 @@ function isSameSitePath(value: string): boolean {
  * Starts the central Google sign-in (AC-012.1): loads `GET /api/v1/auth/sign-in` on this page's own origin as a
  * whole page — the server answers with a redirect to the central sign-in site and makes the state value itself.
  * A `returnTo` that is not a same-site path is left out (AC-012.2). Not a fetch call, so it is never a
- * background request (AC-012.7).
+ * background request (AC-012.7). In mock mode (`VITE_API_MOCKING=true`) it opens the dev-only `/dev/sign-in` page
+ * with the same `returnTo` filter instead (Q5).
  */
 export function startSignIn(returnTo?: string): void {
   const query =
     returnTo !== undefined && isSameSitePath(returnTo)
       ? `?${new URLSearchParams({ returnTo }).toString()}`
       : '';
-  navigateTo(`${SIGN_IN_PATH}${query}`);
+  // `env` reads the variables at call time (tests stub them). `import.meta.env.DEV` is written out because the build
+  // folds that constant to false and drops the mock branch; `env.isDev` is a getter and would not be folded.
+  const mocked = import.meta.env.DEV && env.apiMocking;
+  const path = mocked ? MOCK_SIGN_IN_PATH : SIGN_IN_PATH;
+  navigateTo(`${path}${query}`);
 }
 
 /** The codes the identity callback puts in `/login?error=…` (AC-012.3). Any other value shows nothing. */

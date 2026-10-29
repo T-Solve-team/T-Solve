@@ -64,7 +64,7 @@ describe('log out', () => {
     await logOut(MOCK_USERS.tr.user.fullName);
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
 
-    // Sign-in is not built yet: sign the Knowledge Manager in as the dev user switcher does.
+    // Sign in the Knowledge Manager as the dev user switcher does (a test shortcut; the Login page itself is built).
     await act(async () => {
       setDevUser('km');
       await resetSession(queryClient);
@@ -117,7 +117,7 @@ describe('log out', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(
-      await screen.findByText(/^1\.1\.1 Login — not built yet/, undefined, { timeout: 5000 }),
+      await screen.findByRole('button', { name: /sign in with google/i }, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(queryClient.getQueryData(SESSION_QUERY_KEY)).toBeNull();
     expect(window.sessionStorage.getItem(`${SESSION_STORAGE_PREFIX}chatbot.history`)).toBeNull();
