@@ -114,7 +114,7 @@ describe('User Detail roles and assignments', () => {
     expect(after.projects.map((project) => project.name)).toContain('IT Support');
   });
 
-  it('AC-007.6 refreshes session and invalidates cached lists after saving', async () => {
+  it('AC-007.6 refreshes session and invalidates cached lists after saving (BUG-033)', async () => {
     let sessionReads = 0;
     server.use(
       http.get('*/api/v1/me', () => {
@@ -134,6 +134,8 @@ describe('User Detail roles and assignments', () => {
     );
     expect(sessionReads).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole('checkbox', { name: 'Admin' })).toBeChecked();
+    // Saving remounts the form and refetches its assignment options after the success toast.
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
   });
 
   it('AC-007.7 displays assignment field errors in handover without hiding the error or choices (BUG-026)', async () => {
