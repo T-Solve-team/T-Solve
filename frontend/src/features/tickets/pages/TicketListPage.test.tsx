@@ -23,6 +23,18 @@ async function openList(path = '/tickets', options: Options = {}) {
   return { user, ...view };
 }
 
+/**
+ * MSG04 once the list has loaded. MSG04 is the table's empty text, so it shows under the spinner while the first
+ * page loads; a test that stopped there checked nothing and left its request running into the next test (BUG-057).
+ */
+async function findLoadedEmptyList() {
+  await screen.findByText(msg('MSG04'), {}, { timeout: 5000 });
+  await waitFor(() => expect(document.querySelector('.ant-spin-spinning')).toBeNull(), {
+    timeout: 5000,
+  });
+  expect(screen.getByText(msg('MSG04'))).toBeInTheDocument();
+}
+
 function dataRows(): HTMLElement[] {
   return within(screen.getByRole('table')).getAllByRole('row').slice(1); // without the header row
 }
@@ -290,21 +302,18 @@ describe('TicketListPage', () => {
     expect(selected('Status')).toBe('All statuses');
   });
 
-  it('AC-001.10 shows an empty page with the filters when a shared link is past the last page', async () => {
+  it('AC-001.10 shows an empty page with the filters when a shared link is past the last page (BUG-057)', async () => {
     renderApp('/tickets?status=REJECTED&page=99');
-    expect(await screen.findByText(msg('MSG04'), {}, { timeout: 5000 })).toBeInTheDocument();
+    await findLoadedEmptyList();
     expect(selected('Status')).toBe('Rejected');
   });
 
-  it('AC-001.10 resets the Keyword box when going back in history (BUG-057)', async () => {
-    // Starts on a filtered list: a 20-row first render passed its 5 s wait on a busy CI runner (BUG-057).
-    const { user, router } = await openList('/tickets?keyword=vpn');
-    const keyword = screen.getByLabelText('Keyword');
-    await user.clear(keyword);
-    await user.type(keyword, 'payslip{Enter}');
+  it('AC-001.10 resets the Keyword box when going back in history', async () => {
+    const { user, router } = await openList();
+    await user.type(screen.getByLabelText('Keyword'), 'payslip{Enter}');
     await waitFor(() => expect(router.state.location.search).toBe('?keyword=payslip'));
     await router.navigate(-1);
-    await waitFor(() => expect(screen.getByLabelText('Keyword')).toHaveValue('vpn'));
+    await waitFor(() => expect(screen.getByLabelText('Keyword')).toHaveValue(''));
   });
 
   it('AC-001.11 shows the loading state while the list loads', async () => {
@@ -319,7 +328,7 @@ describe('TicketListPage', () => {
     });
   });
 
-  it('AC-001.12 shows MSG04 when no ticket is found', async () => {
+  it('AC-001.12 shows MSG04 when no ticket is found (BUG-057)', async () => {
     server.use(
       getGetTicketsMockHandler({
         content: [],
@@ -327,7 +336,7 @@ describe('TicketListPage', () => {
       }),
     );
     renderApp('/tickets');
-    expect(await screen.findByText(msg('MSG04'), {}, { timeout: 5000 })).toBeInTheDocument();
+    await findLoadedEmptyList();
   });
 
   it('AC-001.13 shows the error with Try again, which loads the list again', async () => {
