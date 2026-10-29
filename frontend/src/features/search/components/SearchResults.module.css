@@ -1,0 +1,39 @@
+/* Figma 6.1 filters and result cards. */
+.query {
+  max-width: 720px;
+}
+
+.department {
+  width: 200px;
+}
+
+.source {
+  width: 180px;
+}
+
+.resolved {
+  width: 280px;
+}
+
+/* A result: white, radius 8, padding 24, shadow/card (same as the 6.2 table card). */
+.card {
+  padding: var(--ant-padding-lg);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow-tertiary);
+}
+
+.title {
+  font-size: var(--ant-font-size-lg);
+  font-weight: 600;
+}
+
+/* The excerpt is clamped to two lines by CSS, never cut or rendered as HTML (spec AC-002.14). */
+.excerpt {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}

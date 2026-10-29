@@ -20,6 +20,8 @@ tags:
     description: Knowledge Chatbot questions and answers (Report3 UC-51, GBR-36; SRS III.12.1).
   - name: tickets
     description: Ticket List (Report3 UC-27; SRS III.6.2).
+  - name: search
+    description: Search of the Published tickets (Report3 UC-26; SRS III.6.1).
 paths:
   /api/v1/users:
     post:
@@ -747,6 +749,57 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/search/tickets:
+    get:
+      tags: [search]
+      operationId: searchTickets
+      summary: One page of the Published tickets of the user's Departments that match a query, ranked by relevance (UC-26).
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: The query, matched by meaning and keywords on the title and Solution.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - name: departmentId
+          in: query
+          description: One Department; omitted = every Department of the user.
+          schema:
+            type: string
+            format: uuid
+        - name: source
+          in: query
+          schema:
+            $ref: '#/components/schemas/TicketSource'
+        - name: resolvedFrom
+          in: query
+          description: First resolved day, included.
+          schema:
+            type: string
+            format: date
+        - name: resolvedTo
+          in: query
+          description: Last resolved day, included.
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of results, most relevant first (no sort parameter).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketSearchResultPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
 components:
   parameters:
     Page:
@@ -1117,6 +1170,40 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TicketSummary'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+    TicketSearchResult:
+      type: object
+      required: [ticketId, title, project, department, excerpt, helpfulRate, resolvedAt]
+      properties:
+        ticketId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        project:
+          $ref: '#/components/schemas/TicketProject'
+        department:
+          $ref: '#/components/schemas/TicketDepartment'
+        excerpt:
+          type: string
+          description: Short excerpt of the Symptoms and Resolution steps, plain text.
+        helpfulRate:
+          type: [integer, 'null']
+          minimum: 0
+          maximum: 100
+          description: Rounded percent of Helpful Feedback; null = no Feedback yet.
+        resolvedAt:
+          type: string
+          format: date-time
+    TicketSearchResultPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketSearchResult'
         page:
           $ref: '#/components/schemas/PageMetadata'
     TicketIdList:
