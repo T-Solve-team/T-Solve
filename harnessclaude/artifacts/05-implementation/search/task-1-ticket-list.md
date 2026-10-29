@@ -95,3 +95,23 @@ Task 2 (6.1 Search, KAN-145) on `feature/KAN-145-search-page` from `main`.
 ### Next up
 CI of the new pull request; then Task 2 (6.1 Search, KAN-145). The backend of UC-27 (KAN-147) needs the search
 module's backend stories in the spec first (plan, Change Mode).
+
+## Session 2026-10-29 21:45
+
+### Working on: ticket-list — CI of #87
+- CI `frontend` of #87 failed on the same test again, though it now loaded a short list: the first diagnosis
+  (a slow 20-row render) was wrong. In both CI runs the test failed right after `AC-001.10 shows an empty page …
+  past the last page` (233 ms, other tests 0.4–0.9 s).
+- Root cause, checked locally: MSG04 is the table's empty text and shows under the spinner while the list still
+  loads (an added "no spinner" check at that point failed). That test and AC-001.12 passed before their request
+  answered, checked nothing, and left the request running into the next test.
+- Fix: `findLoadedEmptyList()` waits until the spinner stops, then checks MSG04; both tests are named BUG-057.
+  The history test is back as it was. BUG-057's row now gives this cause.
+- Commit: default@bec9a71 (author Anh Tran Hai).
+
+### Verification
+- `npx vitest run src/features/tickets`: 2 files, 29/29 pass; `prettier --check`, `eslint` on the test file and
+  `tsc --noEmit`: pass. CI of #87 is the check for the CI-only failure.
+
+### Next up
+CI of #87; then Task 2 (6.1 Search, KAN-145).
