@@ -10,20 +10,13 @@ import {
   workspaceUser,
 } from './state';
 import { WORKSPACE_ID } from './data';
-
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function assignments(value: unknown, idKey: string): value is Record<string, string>[] {
-  return (
-    Array.isArray(value) &&
-    value.every(
-      (item: unknown) =>
-        record(item) && typeof item[idKey] === 'string' && typeof item.recipientId === 'string',
-    )
-  );
-}
+import {
+  applyHandover,
+  isRecord,
+  isProjectHandovers,
+  isSpaceHandovers,
+  validateHandover,
+} from './handover';
 
 export const statusHandlers: HttpHandler[] = [
   http.get('*/api/v1/users/:userId/handover-options', async ({ params }) => {
@@ -54,14 +47,14 @@ export const statusHandlers: HttpHandler[] = [
       return problem(400, 'MSG06');
     }
     if (
-      !record(body) ||
+      !isRecord(body) ||
       (body.status !== UserAccountStatus.ACTIVE && body.status !== UserAccountStatus.DEACTIVATED)
     )
       return problem(400, 'MSG06');
     const projectHandovers: unknown =
       body.projectHandovers === undefined ? [] : body.projectHandovers;
     const spaceHandovers: unknown = body.spaceHandovers === undefined ? [] : body.spaceHandovers;
-    if (!assignments(projectHandovers, 'projectId') || !assignments(spaceHandovers, 'spaceId'))
+    if (!isProjectHandovers(projectHandovers) || !isSpaceHandovers(spaceHandovers))
       return problem(400, 'MSG06');
     if (body.status === UserAccountStatus.DEACTIVATED) {
       if (
@@ -76,60 +69,9 @@ export const statusHandlers: HttpHandler[] = [
       )
         return problem(409, 'MSG56');
       if (id === actorAccountId()) return problem(409, 'MSG112');
-      const options = handoverOptions(id);
-      const unavailableProject = options.projects.find((item) => item.recipients.length === 0);
-      if (unavailableProject)
-        return problem(409, 'MSG59', {
-          params: { department_name: unavailableProject.project.department.name },
-        });
-      if (options.spaces.some((item) => item.recipients.length === 0))
-        return problem(409, 'MSG118');
-      if (
-        projectHandovers.length !== options.projects.length ||
-        spaceHandovers.length !== options.spaces.length ||
-        new Set(projectHandovers.map((item) => item.projectId)).size !== projectHandovers.length ||
-        new Set(spaceHandovers.map((item) => item.spaceId)).size !== spaceHandovers.length ||
-        options.projects.some(
-          (item) =>
-            !projectHandovers.some(
-              (choice) =>
-                choice.projectId === item.project.projectId &&
-                item.recipients.some((candidate) => candidate.id === choice.recipientId),
-            ),
-        ) ||
-        options.spaces.some(
-          (item) =>
-            !spaceHandovers.some(
-              (choice) =>
-                choice.spaceId === item.space.spaceId &&
-                item.recipients.some((candidate) => candidate.id === choice.recipientId),
-            ),
-        )
-      )
-        return problem(400, 'MSG01', { params: { field_name: 'Hand Over Responsibilities' } });
-      // Everything is validated above. No await occurs between validation and these writes.
-      for (const choice of projectHandovers) {
-        const project = store.projects.find((item) => item.projectId === choice.projectId);
-        if (project && choice.recipientId) {
-          project.managerId = choice.recipientId;
-          if (!project.memberIds.includes(choice.recipientId))
-            project.memberIds.push(choice.recipientId);
-          store.changed.add(choice.recipientId);
-        }
-      }
-      for (const choice of spaceHandovers) {
-        const recipient = workspaceUser(choice.recipientId ?? '');
-        if (recipient && choice.spaceId) {
-          recipient.spaceIds.push(choice.spaceId);
-          store.spaceHistory.push({
-            spaceId: choice.spaceId,
-            previousUserId: id,
-            recipientId: recipient.id,
-          });
-          store.changed.add(recipient.id);
-        }
-      }
-      target.spaceIds = [];
+      const invalid = validateHandover(handoverOptions(id), projectHandovers, spaceHandovers);
+      if (invalid) return invalid;
+      applyHandover(id, projectHandovers, spaceHandovers);
     } else if (projectHandovers.length > 0 || spaceHandovers.length > 0)
       return problem(400, 'MSG06');
     target.status = body.status;

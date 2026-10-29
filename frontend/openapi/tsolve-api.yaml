@@ -78,6 +78,28 @@ paths:
         '403':
           $ref: '#/components/responses/Problem'
   /api/v1/users/{userId}:
+    put:
+      tags: [users]
+      operationId: updateUserRoles
+      summary: Atomically update roles, Department and Spaces after required handover and membership confirmation.
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserRolesRequest' }
+      responses:
+        '200':
+          description: Updated Workspace account detail; Employee is retained.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserDetail' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
     get:
       tags: [users]
       operationId: getUserDetail
@@ -745,6 +767,28 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    UpdateUserRolesRequest:
+      type: object
+      required: [roles, departmentId, spaceIds]
+      properties:
+        roles:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/Role' }
+        departmentId: { type: [string, 'null'], format: uuid }
+        spaceIds:
+          type: array
+          uniqueItems: true
+          items: { type: string, format: uuid }
+        projectHandovers:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectHandover' }
+        spaceHandovers:
+          type: array
+          items: { $ref: '#/components/schemas/SpaceHandover' }
+        confirmTicketResolverRemoval:
+          type: boolean
+          description: Required true when removing Ticket Resolver removes current Project memberships (MSG78).
     UserProject:
       type: object
       required: [projectId, name, department, isActive, managerId]
@@ -758,9 +802,13 @@ components:
       allOf:
         - { $ref: '#/components/schemas/UserAccount' }
         - type: object
-          required: [isCurrentUser, projects, managedSpaces]
+          required: [isCurrentUser, projects, managedSpaces, ticketResolverProjectIds]
           properties:
             isCurrentUser: { type: boolean }
+            ticketResolverProjectIds:
+              type: array
+              description: Current Project memberships removed with Ticket Resolver; excludes retained Project Manager ownership and historical references.
+              items: { type: string, format: uuid }
             projects:
               type: array
               items: { $ref: '#/components/schemas/UserProject' }

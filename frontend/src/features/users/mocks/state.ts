@@ -24,7 +24,11 @@ const ACTORS: Record<DevUserId, string> = {
   km: accountId(6),
   'pm-km': accountId(7),
 };
-type MockProject = UserProject & { memberIds: string[]; jiraProjectKey: string };
+type MockProject = UserProject & {
+  memberIds: string[];
+  formerMemberIds: string[];
+  jiraProjectKey: string;
+};
 
 function seedProjects(): MockProject[] {
   const department = DEPARTMENTS[0];
@@ -44,6 +48,7 @@ function seedProjects(): MockProject[] {
     isActive: n !== 104,
     managerId: accountId(n === 103 ? 9 : 5),
     memberIds: [accountId(n === 103 ? 9 : 5), accountId(4)],
+    formerMemberIds: [],
   }));
 }
 
@@ -53,6 +58,7 @@ export const store = {
   projects: seedProjects(),
   changed: new Set<string>(),
   spaceHistory,
+  assignmentChanges: new Set<string>(),
 };
 const INITIAL_USERS = seedUsers();
 const INITIAL_PROJECTS = seedProjects();
@@ -66,6 +72,7 @@ export function resetUserState(): void {
   store.projects = seedProjects();
   store.changed.clear();
   store.spaceHistory.length = 0;
+  store.assignmentChanges.clear();
 }
 
 export function actorAccountId(): string | undefined {
@@ -99,11 +106,27 @@ export function userDetail(id: string): UserDetail | undefined {
   return {
     ...publicAccount(user),
     isCurrentUser: id === actorAccountId(),
+    ticketResolverProjectIds: ticketResolverProjectIds(id),
     projects: store.projects
-      .filter((project) => project.memberIds.includes(id) || project.managerId === id)
-      .map(({ memberIds: _members, jiraProjectKey: _key, ...project }) => project),
+      .filter(
+        (project) =>
+          project.memberIds.includes(id) ||
+          project.formerMemberIds.includes(id) ||
+          project.managerId === id,
+      )
+      .map(
+        ({ memberIds: _members, formerMemberIds: _former, jiraProjectKey: _key, ...project }) =>
+          project,
+      ),
     managedSpaces: SPACES.filter((space) => user.spaceIds.includes(space.spaceId)),
   };
+}
+
+export function ticketResolverProjectIds(id: string): string[] {
+  if (!workspaceUser(id)?.roles.includes(Role.TICKET_RESOLVER)) return [];
+  return store.projects
+    .filter((project) => project.memberIds.includes(id) && project.managerId !== id)
+    .map((project) => project.projectId);
 }
 
 export function handoverOptions(id: string): UserHandoverOptions {
@@ -117,16 +140,18 @@ export function handoverOptions(id: string): UserHandoverOptions {
   return {
     projects: store.projects
       .filter((project) => project.isActive && project.managerId === id)
-      .map(({ memberIds: _members, jiraProjectKey: _key, ...project }) => ({
-        project,
-        recipients: eligible
-          .filter(
-            (candidate) =>
-              candidate.roles.includes(Role.PROJECT_MANAGER) &&
-              candidate.department?.departmentId === project.department.departmentId,
-          )
-          .map(publicAccount),
-      })),
+      .map(
+        ({ memberIds: _members, formerMemberIds: _former, jiraProjectKey: _key, ...project }) => ({
+          project,
+          recipients: eligible
+            .filter(
+              (candidate) =>
+                candidate.roles.includes(Role.PROJECT_MANAGER) &&
+                candidate.department?.departmentId === project.department.departmentId,
+            )
+            .map(publicAccount),
+        }),
+      ),
     spaces: SPACES.filter((space) => user?.spaceIds.includes(space.spaceId)).map((space) => ({
       space,
       recipients: eligible
@@ -144,37 +169,66 @@ export function resolveMockSession(actor: DevUserId, baseline: CurrentUser): Cur
   if (!user || user.status === UserAccountStatus.DEACTIVATED) return null;
   const original = INITIAL_USERS.find((item) => item.id === id);
   if (!original) return baseline;
-  const departmentChanged = user.department?.departmentId !== original.department?.departmentId;
+  const assignmentsChanged = store.assignmentChanges.has(id);
   const related = store.projects.filter((project) => {
     const initial = INITIAL_PROJECTS.find((item) => item.projectId === project.projectId);
     return (
-      initial?.managerId !== project.managerId &&
-      (project.memberIds.includes(id) || project.managerId === id || initial?.managerId === id)
+      (initial?.managerId !== project.managerId ||
+        initial?.memberIds.includes(id) !== project.memberIds.includes(id)) &&
+      (project.memberIds.includes(id) ||
+        initial?.memberIds.includes(id) ||
+        project.managerId === id ||
+        initial?.managerId === id)
     );
   });
-  return {
-    ...baseline,
-    roles: sameValues(user.roles, original.roles) ? baseline.roles : user.roles,
-    department: departmentChanged ? user.department : baseline.department,
-    departments: departmentChanged
-      ? user.department
-        ? [user.department]
-        : []
-      : baseline.departments,
-    managedSpaces: sameValues(user.spaceIds, original.spaceIds)
-      ? baseline.managedSpaces
-      : SPACES.filter((space) => user.spaceIds.includes(space.spaceId)),
-    projects: [
-      ...baseline.projects.filter(
-        (project) => !related.some((item) => item.projectId === project.projectId),
-      ),
-      ...related.map((project) => ({
+  const projects: CurrentUser['projects'] = [
+    ...baseline.projects.filter(
+      (project) => !related.some((item) => item.projectId === project.projectId),
+    ),
+    ...related
+      .filter((project) => project.memberIds.includes(id) || project.managerId === id)
+      .map((project) => ({
         projectId: project.projectId,
         jiraProjectKey: project.jiraProjectKey,
         departmentId: project.department.departmentId,
         departmentName: project.department.name,
         roleInProject: project.managerId === id ? ProjectRole.PROJECT_MANAGER : ProjectRole.MEMBER,
       })),
-    ],
+  ].filter(
+    (project) =>
+      !assignmentsChanged ||
+      (project.roleInProject === ProjectRole.PROJECT_MANAGER
+        ? user.roles.includes(Role.PROJECT_MANAGER) &&
+          project.departmentId === user.department?.departmentId &&
+          store.projects.some(
+            (item) =>
+              item.projectId === project.projectId && item.managerId === id && item.isActive,
+          )
+        : user.roles.includes(Role.TICKET_RESOLVER)),
+  );
+  const department = user.roles.includes(Role.PROJECT_MANAGER) ? user.department : null;
+  const departments = department
+    ? [department]
+    : user.roles.includes(Role.TICKET_RESOLVER)
+      ? Array.from(
+          new Map(
+            projects.map((project) => [
+              project.departmentId,
+              { departmentId: project.departmentId, name: project.departmentName },
+            ]),
+          ).values(),
+        )
+      : [];
+  return {
+    ...baseline,
+    roles:
+      !assignmentsChanged && sameValues(user.roles, original.roles) ? baseline.roles : user.roles,
+    department: assignmentsChanged ? department : baseline.department,
+    departments: assignmentsChanged ? departments : baseline.departments,
+    managedSpaces:
+      !assignmentsChanged && sameValues(user.spaceIds, original.spaceIds)
+        ? baseline.managedSpaces
+        : SPACES.filter((space) => user.spaceIds.includes(space.spaceId)),
+    projects,
   };
 }

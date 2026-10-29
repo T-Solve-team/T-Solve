@@ -67,6 +67,7 @@ export * from './ticketSolutionCitation';
 export * from './ticketSolutionCitationType';
 export * from './ticketSource';
 export * from './unavailableDocuments';
+export * from './updateUserRolesRequest';
 export * from './updateUserStatusRequest';
 export * from './uploadCsvImportBody';
 export * from './userAccount';

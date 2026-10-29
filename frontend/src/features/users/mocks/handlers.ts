@@ -14,6 +14,7 @@ import type { MsgCode, MsgParams } from '@/shared/messages';
 import { COMPANY_DOMAIN, DEPARTMENTS, SPACES, WORKSPACE_ID } from './data';
 import { accountAccessError as accessError, resetUserState, store } from './state';
 import { statusHandlers } from './status-handlers';
+import { rolesHandler } from './roles-handler';
 
 export function resetMockData(): void {
   resetUserState();
@@ -172,4 +173,5 @@ export const handlers: HttpHandler[] = [
     });
   }),
   ...statusHandlers,
+  rolesHandler,
 ];
