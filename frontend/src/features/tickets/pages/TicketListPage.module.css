@@ -1,0 +1,7 @@
+/* Figma 6.2 "Card · Ticket table": white, radius 8, padding 24, shadow/card (same as 7.1). */
+.card {
+  padding: var(--ant-padding-lg);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow-tertiary);
+}
