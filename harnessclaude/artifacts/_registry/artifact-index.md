@@ -109,5 +109,10 @@ Master registry of all artifacts in this workspace.
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-6-add-user-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-6-add-user-review-test-report.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-6-add-user-review-review.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-3-account-status.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-3-account-status-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-3-account-status-test-report.md |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-109-handover-1366x768.jpg |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-109-deactivated-1366x768.jpg |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-7-login-screen.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-7-login-screen-test-report.md |
