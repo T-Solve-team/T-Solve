@@ -14,6 +14,8 @@ tags:
     description: Who is signed in.
   - name: review
     description: Review Queue and review decisions (SRS III.7).
+  - name: import
+    description: Import tickets from CSV (SRS UC-21) — Import Preview and Confirm.
   - name: chatbot
     description: Knowledge Chatbot questions and answers (Report3 UC-51, GBR-36; SRS III.12.1).
 paths:
@@ -75,6 +77,61 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/users/{userId}:
+    get:
+      tags: [users]
+      operationId: getUserDetail
+      summary: Account detail and retained Project and Space references (frontend mock proposal).
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Workspace account detail.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserDetail' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/{userId}/handover-options:
+    get:
+      tags: [users]
+      operationId: getUserHandoverOptions
+      summary: Eligible active same-Workspace replacements for every managed responsibility.
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Active managed Projects (same Department Project Managers) and Spaces (Knowledge Managers).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserHandoverOptions' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/{userId}/status:
+    put:
+      tags: [users]
+      operationId: updateUserStatus
+      summary: Validate every replacement before atomically changing status and ownership; retain account/history.
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserStatusRequest' }
+      responses:
+        '200':
+          description: Updated detail.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserDetail' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /api/v1/users/creation-options:
     get:
       tags: [users]
@@ -144,6 +201,113 @@ paths:
           headers:
             Location:
               description: The central sign-in URL.
+              schema: { type: string }
+  /api/v1/auth/authorize:
+    servers:
+      - url: https://login.tsolve.io.vn
+        description: The central sign-in site (not the Workspace site).
+    get:
+      tags: [session]
+      operationId: authorize
+      summary: Central sign-in site step; the browser follows it as a page (never a fetch call).
+      description: >
+        The central sign-in site checks the signed state value and redirects (302) to Google. The web app never
+        calls it.
+      parameters:
+        - name: state
+          in: query
+          required: true
+          description: Signed state value made by the Workspace site.
+          schema: { type: string }
+      responses:
+        '302':
+          description: Redirect to Google.
+          headers:
+            Location:
+              description: The Google authorization URL.
+              schema: { type: string }
+        '400':
+          description: A minimal HTML page with MSG141 (the state value is missing, wrong or expired).
+          content:
+            text/html:
+              schema: { type: string }
+        '404':
+          description: Not the central sign-in host (wrong Host); no body.
+  /api/v1/auth/callback:
+    servers:
+      - url: https://login.tsolve.io.vn
+        description: The central sign-in site (not the Workspace site).
+    get:
+      tags: [session]
+      operationId: authCallback
+      summary: Google redirects here after sign-in; the browser follows it as a page (never a fetch call).
+      description: >
+        The central sign-in site reads the Google answer and redirects (302) to the Workspace site's complete step
+        with a one-time hand-off code. When Google or the check fails, it redirects to the Workspace site's
+        `/login?error=` with one of MSG06, MSG09, MSG10, MSG120, MSG122 (adds `google_domain`) or MSG141
+        (on the `admin.` site: MSG06 or MSG135).
+        When the browser has no usable state, it answers 400 with a minimal page. The web app never calls it.
+      parameters:
+        - name: code
+          in: query
+          description: The Google authorization code.
+          schema: { type: string }
+        - name: error
+          in: query
+          description: >
+            Set by Google when the user cancels or denies access (for example `access_denied`); the site then
+            redirects to `/login?error=MSG09` (AC-001.8).
+          schema: { type: string }
+        - name: state
+          in: query
+          required: true
+          description: The signed state value.
+          schema: { type: string }
+      responses:
+        '302':
+          description: Redirect to the Workspace site.
+          headers:
+            Location:
+              description: The Workspace site's complete URL.
+              schema: { type: string }
+        '200':
+          description: A minimal HTML page (no redirect possible).
+          content:
+            text/html:
+              schema: { type: string }
+        '400':
+          description: A minimal HTML page with MSG141 (the state value is missing, wrong or expired).
+          content:
+            text/html:
+              schema: { type: string }
+        '404':
+          description: Not the central sign-in host (wrong Host); no body.
+  /api/v1/auth/complete:
+    get:
+      tags: [session]
+      operationId: completeSignIn
+      summary: Ends the sign-in on the Workspace site; the browser follows it as a page (never a fetch call).
+      description: >
+        The Workspace site sets the session cookie and redirects (302) to `returnTo` or the landing page, or to
+        `/login?error=MSGxx` (MSG122 adds `google_domain`). The web app never calls it.
+      parameters:
+        - name: code
+          in: query
+          required: true
+          description: One-time hand-off code made by the central sign-in site (valid 60 seconds, single use).
+          schema: { type: string }
+      responses:
+        '302':
+          description: >
+            Success: sets the session cookie and redirects to `returnTo` or the landing page. Failure (code
+            unknown, expired or used): no cookie, redirects to `/login?error=MSG141`.
+          headers:
+            Location:
+              description: The page to open, or `/login?error=MSG141` on failure.
+              schema: { type: string }
+            Set-Cookie:
+              description: >
+                On success only: `__Host-TSOLVE_SESSION` (HttpOnly, Secure, SameSite=Lax, Path=/).
               schema: { type: string }
   /api/v1/auth/logout:
     post:
@@ -279,6 +443,167 @@ paths:
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
+  /api/v1/imports/csv/template:
+    get:
+      tags: [import]
+      operationId: downloadCsvTemplate
+      summary: The CSV template — header row only, UTF-8.
+      responses:
+        '200':
+          description: The template file.
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/csv:
+    post:
+      tags: [import]
+      operationId: uploadCsvImport
+      summary: >
+        Uploads one CSV file for one Project and returns its Import Preview (counts and the first page of rows).
+        Replaces the caller's previous unconfirmed preview. File rejected = MSG27, MSG29 or MSG04 (400), MSG28 (413).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, projectId]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: One .csv file, UTF-8, at most 10 MB.
+                projectId:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: Preview created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/rows:
+    get:
+      tags: [import]
+      operationId: getImportPreviewRows
+      summary: One page of the preview rows, ordered by row number; Solution sections cut to 200 characters.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+        - name: status
+          in: query
+          description: Only rows with this result; omitted = all rows.
+          schema:
+            $ref: '#/components/schemas/ImportPreviewRowStatus'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of rows.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewRowPage'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/rows/{rowNo}:
+    get:
+      tags: [import]
+      operationId: getImportPreviewRow
+      summary: One preview row with every Solution section in full (read-only, Import Ticket Preview popup).
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+        - name: rowNo
+          in: path
+          required: true
+          description: Data row number in the file, from 1.
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: The row.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewRowResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/remove-rows:
+    post:
+      tags: [import]
+      operationId: removeImportPreviewRows
+      summary: Marks rows Removed (Valid or Error) so Confirm skips them. Unknown row numbers are ignored.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoveRowsRequest'
+      responses:
+        '200':
+          description: The updated preview (counts and the first page of rows).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/confirm:
+    post:
+      tags: [import]
+      operationId: confirmImport
+      summary: >
+        Imports the remaining Valid rows as Published tickets (MSG32). No Valid row left = MSG30 (409); Project no
+        longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '200':
+          description: Imported.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResultResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
   /api/v1/chatbot/answers:
     post:
       tags: [chatbot]
@@ -405,6 +730,13 @@ components:
         type: array
         items:
           type: string
+    PreviewId:
+      name: previewId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
   responses:
     Problem:
       description: Error (RFC 9457 Problem Details with an SRS MSG code).
@@ -413,6 +745,77 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    UserProject:
+      type: object
+      required: [projectId, name, department, isActive, managerId]
+      properties:
+        projectId: { type: string, format: uuid }
+        name: { type: string }
+        department: { $ref: '#/components/schemas/DepartmentRef' }
+        isActive: { type: boolean }
+        managerId: { type: string, format: uuid }
+    UserDetail:
+      allOf:
+        - { $ref: '#/components/schemas/UserAccount' }
+        - type: object
+          required: [isCurrentUser, projects, managedSpaces]
+          properties:
+            isCurrentUser: { type: boolean }
+            projects:
+              type: array
+              items: { $ref: '#/components/schemas/UserProject' }
+            managedSpaces:
+              type: array
+              items: { $ref: '#/components/schemas/SpaceRef' }
+    ProjectHandoverOption:
+      type: object
+      required: [project, recipients]
+      properties:
+        project: { $ref: '#/components/schemas/UserProject' }
+        recipients:
+          type: array
+          items: { $ref: '#/components/schemas/UserAccount' }
+    SpaceHandoverOption:
+      type: object
+      required: [space, recipients]
+      properties:
+        space: { $ref: '#/components/schemas/SpaceRef' }
+        recipients:
+          type: array
+          items: { $ref: '#/components/schemas/UserAccount' }
+    UserHandoverOptions:
+      type: object
+      required: [projects, spaces]
+      properties:
+        projects:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectHandoverOption' }
+        spaces:
+          type: array
+          items: { $ref: '#/components/schemas/SpaceHandoverOption' }
+    ProjectHandover:
+      type: object
+      required: [projectId, recipientId]
+      properties:
+        projectId: { type: string, format: uuid }
+        recipientId: { type: string, format: uuid }
+    SpaceHandover:
+      type: object
+      required: [spaceId, recipientId]
+      properties:
+        spaceId: { type: string, format: uuid }
+        recipientId: { type: string, format: uuid }
+    UpdateUserStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/UserAccountStatus' }
+        projectHandovers:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectHandover' }
+        spaceHandovers:
+          type: array
+          items: { $ref: '#/components/schemas/SpaceHandover' }
     CreateUserRequest:
       type: object
       required: [email, roles]
@@ -670,6 +1073,163 @@ components:
         count:
           type: integer
           description: Number of tickets the decision was applied to (the {count} of MSG14 / MSG16 / MSG17).
+    MessageRef:
+      type: object
+      description: An SRS message to show, by code; the web app fills the template from params.
+      required: [code, params]
+      properties:
+        code:
+          type: string
+          description: SRS message code, e.g. MSG32.
+        params:
+          type: object
+          additionalProperties:
+            type: [string, number]
+    ImportPreviewRowStatus:
+      type: string
+      enum: [VALID, ERROR, REMOVED]
+    RowError:
+      type: object
+      description: One failed rule of a row (MSG01, MSG02, MSG31, MSG39 or MSG78).
+      required: [code, params]
+      properties:
+        code:
+          type: string
+        field:
+          type: [string, 'null']
+          description: CSV column the error is about; null for the whole Solution (MSG02 total length).
+        params:
+          type: object
+          additionalProperties:
+            type: [string, number]
+    ImportPreviewRowSummary:
+      type: object
+      description: >
+        One preview row as read from the file (values may be missing or too long when the row is an Error).
+        Solution sections are cut to their first 200 characters.
+      required: [rowNo, status, errors]
+      properties:
+        rowNo:
+          type: integer
+          description: Data row number in the file, from 1.
+        ticketId:
+          type: [string, 'null']
+        title:
+          type: [string, 'null']
+        author:
+          type: [string, 'null']
+        resolvedDate:
+          type: [string, 'null']
+          description: As written in the file (yyyy-MM-dd when valid).
+        symptoms:
+          type: [string, 'null']
+        rootCause:
+          type: [string, 'null']
+        resolutionSteps:
+          type: [string, 'null']
+        workaround:
+          type: [string, 'null']
+        scope:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/ImportPreviewRowStatus'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RowError'
+    ImportPreviewRowResponse:
+      type: object
+      description: One preview row in full, read-only.
+      required: [rowNo, status, errors]
+      properties:
+        rowNo:
+          type: integer
+        ticketId:
+          type: [string, 'null']
+        title:
+          type: [string, 'null']
+        description:
+          type: [string, 'null']
+        author:
+          type: [string, 'null']
+        resolvedDate:
+          type: [string, 'null']
+        symptoms:
+          type: [string, 'null']
+        rootCause:
+          type: [string, 'null']
+        resolutionSteps:
+          type: [string, 'null']
+        workaround:
+          type: [string, 'null']
+        scope:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/ImportPreviewRowStatus'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RowError'
+    ImportPreviewRowPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportPreviewRowSummary'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+    ImportPreviewResponse:
+      type: object
+      required: [previewId, projectId, fileName, validCount, errorCount, removedCount, rows]
+      properties:
+        previewId:
+          type: integer
+          format: int64
+        projectId:
+          type: integer
+          format: int64
+        fileName:
+          type: string
+        validCount:
+          type: integer
+        errorCount:
+          type: integer
+        removedCount:
+          type: integer
+        message:
+          description: MSG30 with {count} when at least one row is an Error; otherwise null.
+          oneOf:
+            - $ref: '#/components/schemas/MessageRef'
+            - type: 'null'
+        rows:
+          $ref: '#/components/schemas/ImportPreviewRowPage'
+    RemoveRowsRequest:
+      type: object
+      required: [rowNumbers]
+      properties:
+        rowNumbers:
+          type: array
+          minItems: 1
+          items:
+            type: integer
+            minimum: 1
+    ImportResultResponse:
+      type: object
+      required: [importBatchId, created, skipped, message]
+      properties:
+        importBatchId:
+          type: integer
+          format: int64
+        created:
+          type: integer
+          description: Tickets published.
+        skipped:
+          type: integer
+          description: Error rows plus Removed rows.
+        message:
+          $ref: '#/components/schemas/MessageRef'
     ChatbotQuestion:
       type: object
       required: [question, history]

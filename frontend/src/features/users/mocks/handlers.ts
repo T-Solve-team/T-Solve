@@ -8,22 +8,15 @@ import {
   type UserCreationOptions,
 } from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
-import { getDevUser, isRole } from '@/shared/auth';
+import { isRole } from '@/shared/auth';
 import { parseSort } from '@/shared/lib';
 import type { MsgCode, MsgParams } from '@/shared/messages';
-import { COMPANY_DOMAIN, DEPARTMENTS, seedUsers, SPACES, WORKSPACE_ID } from './data';
-
-let users = seedUsers();
+import { COMPANY_DOMAIN, DEPARTMENTS, SPACES, WORKSPACE_ID } from './data';
+import { accountAccessError as accessError, resetUserState, store } from './state';
+import { statusHandlers } from './status-handlers';
 
 export function resetMockData(): void {
-  users = seedUsers();
-}
-
-function accessError() {
-  const actor = getDevUser();
-  if (!actor) return problem(401, 'MSG07');
-  if (actor !== 'admin' && actor !== 'admin-tr') return problem(403, 'MSG08');
-  return null;
+  resetUserState();
 }
 
 const SORT_VALUE: Record<string, (user: UserAccount) => string> = {
@@ -76,7 +69,7 @@ export const handlers: HttpHandler[] = [
     // MSG03 is the catalog's email validation message, including Workspace-domain mismatches.
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.split('@')[1] !== COMPANY_DOMAIN)
       return fieldError('email', 'MSG03');
-    const duplicate = users.find(
+    const duplicate = store.users.find(
       (user) => user.workspaceId === WORKSPACE_ID && user.email.toLowerCase() === email,
     );
     if (duplicate)
@@ -109,7 +102,7 @@ export const handlers: HttpHandler[] = [
     const occupied = SPACES.find(
       (space) =>
         spaceIds.includes(space.spaceId) &&
-        users.some(
+        store.users.some(
           (user) => user.workspaceId === WORKSPACE_ID && user.spaceIds.includes(space.spaceId),
         ),
     );
@@ -123,7 +116,7 @@ export const handlers: HttpHandler[] = [
       status: UserAccountStatus.ACTIVE,
       lastSignInAt: null,
     };
-    users.push({ ...user, workspaceId: WORKSPACE_ID, spaceIds: [...new Set(spaceIds)] });
+    store.users.push({ ...user, workspaceId: WORKSPACE_ID, spaceIds: [...new Set(spaceIds)] });
     return HttpResponse.json<UserAccount>(user, { status: 201 });
   }),
   http.get('*/api/v1/users/departments', async () => {
@@ -146,7 +139,7 @@ export const handlers: HttpHandler[] = [
       ? SORT_VALUE[sort.field]
       : SORT_VALUE.fullName;
     const direction = sort.order === 'asc' ? 1 : -1;
-    const matching = users
+    const matching = store.users
       .filter(
         (user) =>
           user.workspaceId === WORKSPACE_ID &&
@@ -178,4 +171,5 @@ export const handlers: HttpHandler[] = [
       },
     });
   }),
+  ...statusHandlers,
 ];

@@ -27,9 +27,12 @@ import type {
   DepartmentRef,
   GetUsersParams,
   ProblemResponse,
+  UpdateUserStatusRequest,
   UserAccount,
   UserAccountPage,
   UserCreationOptions,
+  UserDetail,
+  UserHandoverOptions,
 } from '../model';
 
 import { http } from '../../http';
@@ -296,6 +299,380 @@ export function useGetUsers<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getGetUserDetailUrl = (userId: string) => {
+  return `/api/v1/users/${userId}`;
+};
+
+/**
+ * @summary Account detail and retained Project and Space references (frontend mock proposal).
+ */
+export const getUserDetail = async (
+  userId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<UserDetail> => {
+  return http<UserDetail>(getGetUserDetailUrl(userId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetUserDetailQueryKey = (userId: string) => {
+  return [`/api/v1/users/${userId}`] as const;
+};
+
+export const getGetUserDetailQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUserDetail>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  userId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserDetail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetUserDetailQueryKey(userId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserDetail>>> = ({ signal }) =>
+    getUserDetail(userId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: userId !== null && userId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getUserDetail>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetUserDetailQueryResult = NonNullable<Awaited<ReturnType<typeof getUserDetail>>>;
+export type GetUserDetailQueryError = ErrorType<ProblemResponse>;
+
+export function useGetUserDetail<
+  TData = Awaited<ReturnType<typeof getUserDetail>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  userId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserDetail>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserDetail>>,
+          TError,
+          Awaited<ReturnType<typeof getUserDetail>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetUserDetail<
+  TData = Awaited<ReturnType<typeof getUserDetail>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  userId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserDetail>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserDetail>>,
+          TError,
+          Awaited<ReturnType<typeof getUserDetail>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetUserDetail<
+  TData = Awaited<ReturnType<typeof getUserDetail>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  userId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserDetail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Account detail and retained Project and Space references (frontend mock proposal).
+ */
+
+export function useGetUserDetail<
+  TData = Awaited<ReturnType<typeof getUserDetail>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  userId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserDetail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetUserDetailQueryOptions(userId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetUserHandoverOptionsUrl = (userId: string) => {
+  return `/api/v1/users/${userId}/handover-options`;
+};
+
+/**
+ * @summary Eligible active same-Workspace replacements for every managed responsibility.
+ */
+export const getUserHandoverOptions = async (
+  userId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<UserHandoverOptions> => {
+  return http<UserHandoverOptions>(getGetUserHandoverOptionsUrl(userId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetUserHandoverOptionsQueryKey = (userId: string) => {
+  return [`/api/v1/users/${userId}/handover-options`] as const;
+};
+
+export const getGetUserHandoverOptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUserHandoverOptions>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  userId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getUserHandoverOptions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetUserHandoverOptionsQueryKey(userId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserHandoverOptions>>> = ({ signal }) =>
+    getUserHandoverOptions(userId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: userId !== null && userId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getUserHandoverOptions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetUserHandoverOptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getUserHandoverOptions>>
+>;
+export type GetUserHandoverOptionsQueryError = ErrorType<ProblemResponse>;
+
+export function useGetUserHandoverOptions<
+  TData = Awaited<ReturnType<typeof getUserHandoverOptions>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  userId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getUserHandoverOptions>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserHandoverOptions>>,
+          TError,
+          Awaited<ReturnType<typeof getUserHandoverOptions>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetUserHandoverOptions<
+  TData = Awaited<ReturnType<typeof getUserHandoverOptions>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  userId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getUserHandoverOptions>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserHandoverOptions>>,
+          TError,
+          Awaited<ReturnType<typeof getUserHandoverOptions>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetUserHandoverOptions<
+  TData = Awaited<ReturnType<typeof getUserHandoverOptions>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  userId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getUserHandoverOptions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Eligible active same-Workspace replacements for every managed responsibility.
+ */
+
+export function useGetUserHandoverOptions<
+  TData = Awaited<ReturnType<typeof getUserHandoverOptions>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  userId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getUserHandoverOptions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetUserHandoverOptionsQueryOptions(userId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateUserStatusUrl = (userId: string) => {
+  return `/api/v1/users/${userId}/status`;
+};
+
+/**
+ * @summary Validate every replacement before atomically changing status and ownership; retain account/history.
+ */
+export const updateUserStatus = async (
+  userId: string,
+  updateUserStatusRequest: UpdateUserStatusRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<UserDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<UserDetail>(getUpdateUserStatusUrl(userId), {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateUserStatusRequest),
+  });
+};
+
+export const getUpdateUserStatusMutationKey = () => ['updateUserStatus'] as const;
+
+export const getUpdateUserStatusMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateUserStatus>>,
+    TError,
+    UpdateUserStatusMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateUserStatus>>,
+  TError,
+  UpdateUserStatusMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateUserStatusMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateUserStatus>>,
+    UpdateUserStatusMutationVariables
+  > = (props) => {
+    const { userId, data } = props ?? {};
+
+    return updateUserStatus(userId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateUserStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateUserStatus>>
+>;
+export type UpdateUserStatusMutationBody = UpdateUserStatusRequest;
+export type UpdateUserStatusMutationError = ErrorType<ProblemResponse>;
+export type UpdateUserStatusMutationVariables = { userId: string; data: UpdateUserStatusRequest };
+
+/**
+ * @summary Validate every replacement before atomically changing status and ownership; retain account/history.
+ */
+export const useUpdateUserStatus = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateUserStatus>>,
+      TError,
+      UpdateUserStatusMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateUserStatus>>,
+  TError,
+  UpdateUserStatusMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateUserStatusMutationOptions(options), queryClient);
+};
 export const getGetUserCreationOptionsUrl = () => {
   return `/api/v1/users/creation-options`;
 };

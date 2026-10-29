@@ -22,6 +22,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
@@ -36,7 +37,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static final String REQUIRED = "MSG01";
     private static final String TOO_LONG = "MSG02";
     private static final String INVALID_EMAIL = "MSG03";
+    private static final String NO_RESULTS = "MSG04";
     private static final String NO_PERMISSION = "MSG08";
+    private static final String UPLOAD_TOO_LARGE = "MSG28";
 
     /** When one field fails several rules, the earliest code here is the one shown. */
     private static final List<String> FIELD_CODE_PRECEDENCE =
@@ -44,7 +47,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(NotFoundException.class)
     ProblemDetail handleNotFound(NotFoundException e) {
+        if (e.getCode() == null) {
+            return ProblemDetails.withCode(
+                    ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage()), NO_RESULTS, Map.of());
+        }
         return coded(HttpStatus.NOT_FOUND, e);
+    }
+
+    @ExceptionHandler(MessageCodeException.class)
+    ProblemDetail handleMessageCode(MessageCodeException e) {
+        return ProblemDetails.of(e.getStatus(), e.getCode(), e.getParams());
     }
 
     @ExceptionHandler(BusinessRuleException.class)
@@ -83,6 +95,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                     body, fieldErrors.get(0).code(), fieldErrors.get(0).params());
         }
         ProblemDetails.withFieldErrors(body, fieldErrors);
+        return handleExceptionInternal(ex, body, headers, status, request);
+    }
+
+    // The servlet's multipart limit rejects the file before any controller can check its size.
+    @Override
+    protected ResponseEntity<Object> handleMaxUploadSizeExceededException(
+            MaxUploadSizeExceededException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        ProblemDetail body = ProblemDetails.withCode(ex.getBody(), UPLOAD_TOO_LARGE, Map.of());
         return handleExceptionInternal(ex, body, headers, status, request);
     }
 

@@ -1,9 +1,37 @@
 {
   "project": "T-Solve",
   "version": 2,
-  "phase": "init",
+  "phase": "decompose",
   "status": "active",
   "modules": {
+    "import-ticket-list": {
+      "status": "completed",
+      "currentPhase": "evaluate",
+      "features": {
+        "csv-import-contract": "passing",
+        "csv-import-schema": "passing",
+        "csv-parser": "passing",
+        "csv-row-validation": "passing",
+        "project-access-errors": "passing",
+        "csv-upload": "passing",
+        "preview-rows": "passing",
+        "import-endpoints": "passing",
+        "csv-confirm": "passing",
+        "preview-cleanup": "passing",
+        "csv-import-performance": "passing",
+        "retire-snapshot-import": "passing",
+        "csv-confirm-db-tests": "passing",
+        "preview-rows-access": "passing"
+      },
+      "lastUpdated": "2026-10-22T13:51:10.073Z",
+      "branch": "feat/import-ticket-list",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "58e0a0674251e929d2c38e31b8eacb78f861e984"
+      }
+    },
     "be-foundation": {
       "status": "implementing",
       "currentPhase": "implement",
@@ -52,24 +80,24 @@
       "features": {
         "user-list": "passing",
         "add-user": "passing",
-        "account-status": "pending",
+        "account-status": "passing",
         "user-roles": "pending",
         "user-list-review": "passing",
         "add-user-review": "passing",
-        "login-screen": "pending",
+        "login-screen": "passing",
         "sign-in-start": "pending",
         "sign-in-callback": "pending",
         "workspace-session": "pending",
         "operator-sign-in": "pending",
         "jira-link-sign-in": "pending"
       },
-      "lastUpdated": "2026-10-28T15:30:21.396Z",
+      "lastUpdated": "2026-10-28T17:30:38.994Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "e1a6c2bf71c28fa1fba2d9f4ddf4cbd5d9b9de04"
+        "default": "27c2c4fe066252e23da520a623ef07da91b8daef"
       }
     },
     "workspace": {

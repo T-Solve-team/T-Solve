@@ -16,12 +16,14 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.servlet.MockMvc;
@@ -32,6 +34,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @ExtendWith(OutputCaptureExtension.class)
 class GlobalExceptionHandlerTest {
@@ -54,7 +57,7 @@ class GlobalExceptionHandlerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.code").value("MSG110"))
-                .andExpect(jsonPath("$.params").isMap());
+                .andExpect(jsonPath("$.params.ticket_id").value("KAN-7"));
     }
 
     @Test
@@ -129,12 +132,40 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void answersAnExceptionWithoutCodeWithItsMessageInDetailOnly_AC_001_6() throws Exception {
+    void answersABusinessRuleWithoutCodeWithItsMessageInDetailOnly_AC_001_6() throws Exception {
+        mvc.perform(get("/test/legacy-rule"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$", not(hasKey("code"))))
+                .andExpect(jsonPath("$.detail").value("Cannot move solution"));
+    }
+
+    @Test
+    void answersANotFoundWithoutCodeWithMsg04AndItsMessageInDetail_AC_001_10() throws Exception {
         mvc.perform(get("/test/legacy"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$", not(hasKey("code"))))
+                .andExpect(jsonPath("$.code").value("MSG04"))
+                .andExpect(jsonPath("$.params").isEmpty())
                 .andExpect(jsonPath("$.detail").value("Solution 7 not found"));
+    }
+
+    @Test
+    void answersAMessageCodeExceptionWithItsOwnStatusCodeAndParams_AC_001_11() throws Exception {
+        mvc.perform(get("/test/message-code"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.code").value("MSG30"))
+                .andExpect(jsonPath("$.params.count").value(3));
+    }
+
+    @Test
+    void answersAnUploadOverTheSizeLimitWith413Msg28_AC_001_12() throws Exception {
+        mvc.perform(get("/test/too-large"))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("MSG28"));
     }
 
     @Test
@@ -190,12 +221,16 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void keepsTheBaseExceptionsInCommonExceptionWithTheirMessageOnlyConstructors_AC_001_9() {
-        assertThat(NotFoundException.class.getPackageName()).isEqualTo("vn.tsolve.common.exception");
-        assertThat(BusinessRuleException.class.getPackageName()).isEqualTo("vn.tsolve.common.exception");
+        assertThat(List.of(NotFoundException.class, BusinessRuleException.class, MessageCodeException.class))
+                .extracting(Class::getPackageName)
+                .containsOnly("vn.tsolve.common.exception");
         assertThat(new BusinessRuleException("Cannot move solution").getMessage())
                 .isEqualTo("Cannot move solution");
-        assertThatThrownBy(() -> Class.forName("vn.tsolve.common.error.NotFoundException"))
-                .isInstanceOf(ClassNotFoundException.class);
+        for (String name : List.of(
+                "NotFoundException", "BusinessRuleException", "MessageCodeException", "GlobalExceptionHandler")) {
+            assertThatThrownBy(() -> Class.forName("vn.tsolve.common.error." + name))
+                    .isInstanceOf(ClassNotFoundException.class);
+        }
     }
 
     @Test
@@ -219,7 +254,7 @@ class GlobalExceptionHandlerTest {
 
         @GetMapping("/test/not-found")
         void notFound() {
-            throw new NotFoundException("MSG110", Map.of());
+            throw new NotFoundException("MSG110", Map.of("ticket_id", "KAN-7"));
         }
 
         @GetMapping("/test/rule")
@@ -238,6 +273,21 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/test/legacy")
         void legacy() {
             throw new NotFoundException("Solution 7 not found");
+        }
+
+        @GetMapping("/test/legacy-rule")
+        void legacyRule() {
+            throw new BusinessRuleException("Cannot move solution");
+        }
+
+        @GetMapping("/test/message-code")
+        void messageCode() {
+            throw new MessageCodeException(HttpStatus.CONFLICT, "MSG30", Map.of("count", 3)) {};
+        }
+
+        @GetMapping("/test/too-large")
+        void tooLarge() {
+            throw new MaxUploadSizeExceededException(10L * 1024 * 1024);
         }
 
         @GetMapping("/test/boom")

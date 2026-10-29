@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw';
+import { resolveMockSession } from '@/features/users/mocks/state';
 import type { CurrentUser, ProjectMembership } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { getDevSite, getDevUser, setDevUser, type DevUserId } from '@/shared/auth';
@@ -163,7 +164,8 @@ export const sessionHandlers = [
   siteHandler,
   http.get('*/api/v1/me', () => {
     const user = getDevUser();
-    return user ? HttpResponse.json(MOCK_USERS[user]) : problem(401);
+    const session = user ? resolveMockSession(user, MOCK_USERS[user]) : null;
+    return session ? HttpResponse.json(session) : problem(401);
   }),
   http.post('*/api/v1/auth/logout', () => {
     setDevUser(null);
