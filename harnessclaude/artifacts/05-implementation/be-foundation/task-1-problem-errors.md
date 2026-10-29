@@ -51,3 +51,46 @@ none
 
 ### Next up
 Push and the PR for KAN-25 (user's go-ahead), then the review of Task 1; then Task 2 (roles-security).
+
+---
+
+## Session 2026-10-29
+
+### Working on: merging `main` (19e7c51) into KAN-25 — PR #82 had conflicts
+- `main` brought KAN-31 (import-ticket-list), which refactored the old `common/error/GlobalExceptionHandler` to
+  `ProblemDetail` in parallel and added `common/error/MessageCodeException` (status, code, params), extended by the six
+  `ticket/exception/*` classes. Two `@RestControllerAdvice` beans named `globalExceptionHandler` cannot both stay.
+- Two of its behaviours broke the approved spec: a message-only `NotFoundException` answered 404 MSG04 (AC-001.6 said
+  no code) and `MaxUploadSizeExceededException` answered 413 MSG28. The servlet's 10 MB limit fires before the
+  service's own size check, so MSG28 for a too-large CSV comes only from that mapping.
+- The user chose option A (29/10): keep both behaviours through a spec change. Spec: AC-001.6, AC-001.8, AC-001.9
+  reworded; new AC-001.10 (NotFound without code → MSG04), AC-001.11 (`MessageCodeException`), AC-001.12 (413 MSG28);
+  design decision row and file tree; tasks.md Task 1. `sdd.ts check` OK; re-approved (spec version ac914d1f).
+- Code: `MessageCodeException` moved to `common/exception` unchanged; `GlobalExceptionHandler` gains
+  `handleMessageCode`, MSG04 for a code-less `NotFoundException`, and `handleMaxUploadSizeExceededException` → MSG28;
+  `common/error` deleted (handler and its test; their cases are covered by AC-001.6/10/11/12 and AC-002.5 tests).
+  The twelve `ticket/` files that imported `common.error` change their import line only (AC-001.9).
+- Other conflicts: `docs/bug-log.md` takes main's padded table with every row (BUG-025, -029…-031 kept) and BUG-001
+  → Fixed, Jira KAN-25, Fixed in #82; `artifact-index.md` keeps both sides' rows; `ticket/TicketService.java`
+  deleted (main retired it).
+- Spotless cannot run in a linked worktree (JGit). Workaround with the same effect as `ratchetFrom origin/main`: a
+  temporary copy of `pom.xml` without `ratchetFrom`, run with `-DspotlessFiles=` listing exactly the Java files changed
+  since `origin/main` (dot-separated regexes; `mvn.cmd` eats backslashes). Checked that it catches a misformatted file.
+
+### Verify
+- `mvn -f .pom-noratchet.xml clean verify "-DspotlessFiles=…" "-DargLine=-Dapi.version=1.44"` in `backend/`:
+  BUILD SUCCESS, 107 Surefire + 6 Failsafe tests, 0 failures; `Spotless.Java is keeping 21 files clean`. Without the
+  `argLine`, `ImportConfirmIT` cannot reach Docker Engine 29 (BUG-058, logged Open; Testcontainers 1.19.8).
+- `sdd.ts trace be-foundation STORY-001`: 0/12 (the known gap); manual trace 12/12.
+- Independent review (attempt 1): **pass** — `artifacts/06-evaluation/be-foundation/task-1-problem-errors-review.md`.
+  Informational 2 fixed after the review: the AC-001.1 test now throws with a non-empty `params` and asserts it
+  (`GlobalExceptionHandlerTest` 20/20, Spotless clean). Informational 1 (400 from parameter-level method validation
+  has no `fieldErrors`) is outside STORY-001 as written; left for the user to decide.
+- Feature `problem-errors` → passing. Merge commit: `default@70d72a9` (parents b6ad936, main 19e7c51).
+
+### Blockers
+none
+
+### Next up
+Commit (user's go-ahead), push to the KAN-25 branch when asked, so PR #82 merges cleanly; tell Minh (KAN-31) that
+twelve `ticket/` files changed their import only. Then Task 2 (roles-security).

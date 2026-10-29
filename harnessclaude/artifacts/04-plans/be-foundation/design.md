@@ -117,6 +117,7 @@ springdoc writes a `UUID` component as `type: string, format: uuid`, the type th
 | Q1 Where `/me` gets the data of later modules | Lookup interfaces in `common/session/lookup`, implemented by `identity`, `project-integration`, `wiki`, `workspace`; injected as optional | `/me` in `identity`; be-foundation owns user/role tables | The data sits in modules above be-foundation; calling them would make cycles. Matches the module map (user, 23/10) |
 | Q2 Sign-in before OIDC | None in production code; tests use `@WithTSolveUser` | Dev login under a `dev` profile; Google OIDC now | No auth hole can reach the VPS; OIDC is `identity`'s UC-01 (user, 23/10) |
 | Q3 Package and existing callers | `common/error` → `common/exception`; only the imports of `knowledge/Solution.java`, `knowledge/SolutionService.java`, `ticket/TicketService.java` change; message-only constructors kept | Also give them MSG codes; keep `common/error` | Matches AGENTS.md §1 without guessing another module's codes (user, 23/10) |
+| Merge with import-ticket-list's handler (29/10) | One `GlobalExceptionHandler` in `common/exception`; `MessageCodeException` (status, code, params) moves there unchanged and gets its own handler; a `NotFoundException` without code answers MSG04; `handleMaxUploadSizeExceededException` adds MSG28; `common/error` is deleted and the `ticket/` callers change their imports only | Keep both advices (same bean name: the app does not start); keep the approved AC-001.6 (import 404s lose MSG04) | KAN-31 refactored the old `common/error` handler in parallel; its contract (404 MSG04, 413 MSG28) keeps working (the user, 29/10: option A; AC-001.9–AC-001.12) |
 | Q4 Audit schema and API | Changeset above (since 25/10 the `audit_events` table of row "Audit table (KAN-196 Q2)"); `record(AuditAction, String resourceType, String resourceId)`; actor = signed-in email | Add `actor_id` + `details JSONB`; keep the table | Report3 defines no audit fields; email works before `identity` and stays readable after a user leaves; a later overload adds details without breaking callers (user, 23/10) |
 | Q5 Forge Invocation Token | Out of scope; the Jira App API module adds its own `SecurityFilterChain` | FIT check now; a placeholder deny chain | No path, app id or user mapping exists yet; deny-by-default already covers it (user, 23/10) |
 | Q6 CSRF | Spring CSRF token on: cookie `XSRF-TOKEN`, header `X-XSRF-TOKEN`; CSRF failure → 403 MSG07 | `SameSite=Lax` only; leave to `identity` | Spring's safe default; the web app change is three lines (user, 23/10) |
@@ -155,11 +156,12 @@ backend/
     ├── main/java/vn/tsolve/
     │   ├── TSolveApplication.java                  exclude UserDetailsServiceAutoConfiguration
     │   ├── knowledge/Solution.java, SolutionService.java    import vn.tsolve.common.exception.* only
-    │   ├── ticket/TicketService.java                         import only
+    │   ├── ticket/exception/*, ticket/service/impl/Import*ServiceImpl.java   import only
     │   └── common/
     │       ├── config/WebConfig.java               (unchanged)
-    │       ├── exception/                          (moved from common/error)
+    │       ├── exception/                          (moved from common/error; common/error deleted)
     │       │   ├── CodedException.java             abstract: code, params, field
+    │       │   ├── MessageCodeException.java       abstract: status, code, params (from import-ticket-list)
     │       │   ├── NotFoundException.java          404
     │       │   ├── BusinessRuleException.java      409, optional field
     │       │   ├── ProblemDetails.java             builds ProblemDetail + writes it to a servlet response

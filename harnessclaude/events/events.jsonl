@@ -354,3 +354,6 @@
 {"ts":"2026-10-28T17:30:32.711Z","type":"feature-status","module":"identity","feature":"login-screen","from":"pending","to":"in-progress"}
 {"ts":"2026-10-28T17:30:38.784Z","type":"feature-status","module":"identity","feature":"login-screen","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-28T17:30:38.995Z","type":"feature-status","module":"identity","feature":"login-screen","from":"evaluating","to":"passing"}
+{"ts":"2026-10-29T14:04:09.506Z","type":"spec-approved","module":"be-foundation","specHash":"ac914d1fcad0cef12226d4f78a470afc1e97831ccda964dbb465fe15efce8b16"}
+{"ts":"2026-10-29T14:27:29.888Z","type":"feature-status","module":"be-foundation","feature":"problem-errors","from":"evaluating","to":"passing"}
+{"ts":"2026-10-29T14:30:52.590Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"70d72a96eefb41469ea3190cf717ac8ad797a235"}

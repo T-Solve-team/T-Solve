@@ -126,8 +126,8 @@
     }
   },
   "be-foundation": {
-    "specHash": "b2f2142d14871bdf748672afe988b83f955a1f53946fd60d923fed28e04f62bf",
-    "approvedAt": "2026-10-25T13:04:40.119Z",
+    "specHash": "ac914d1fcad0cef12226d4f78a470afc1e97831ccda964dbb465fe15efce8b16",
+    "approvedAt": "2026-10-29T14:04:09.499Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a request fails with a , THE backend SHALL answer 404 with content type",
@@ -135,10 +135,13 @@
       "AC-001.3": "WHERE a  names a field, THE backend SHALL answer 409 with that field in",
       "AC-001.4": "WHEN request validation fails, THE backend SHALL answer 400 with one  entry per failed",
       "AC-001.5": "IF a field fails a validation rule other than those in AC-001.4, THEN THE backend SHALL put that field",
-      "AC-001.6": "IF a base exception carries no message code, THEN THE backend SHALL answer with its status and a",
+      "AC-001.6": "IF a  carries no message code, THEN THE backend SHALL answer 409 and a",
       "AC-001.7": "IF a request fails with an exception the handler does not know, THEN THE backend SHALL answer 500 with",
       "AC-001.8": "IF Spring MVC rejects a request itself, THEN THE backend SHALL answer with Spring's status and a",
-      "AC-001.9": "THE base exceptions SHALL live in , and the existing callers in",
+      "AC-001.9": "THE base exceptions (, , ) SHALL live",
+      "AC-001.10": "IF a  carries no message code, THEN THE backend SHALL answer 404 with",
+      "AC-001.11": "WHEN a request fails with a , THE backend SHALL answer with the exception's own",
+      "AC-001.12": "IF an uploaded file is over the multipart size limit, THEN THE backend SHALL answer 413 with a",
       "AC-002.1": "THE backend SHALL define exactly five roles — , , ,",
       "AC-002.2": "WHEN a signed-in user is turned into a Spring Security authentication, THE backend SHALL grant",
       "AC-002.3": "WHEN an endpoint allows several roles, THE backend SHALL let in a user who holds at least one of them.",

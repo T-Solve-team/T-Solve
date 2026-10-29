@@ -24,16 +24,25 @@ constructors; `ProblemDetails` helper; `GlobalExceptionHandler extends ResponseE
 `params` on every body, validation → `fieldErrors` with MSG01/02/03/06 (precedence in the design), Spring MVC errors
 → MSG06, `AccessDeniedException` → 403 MSG08, anything else → 500 MSG06 without `detail`, logged. Update the imports
 of the three existing callers. BUG-001's row → `Fixed` with the PR and the test.
+After `main` brought import-ticket-list's handler (29/10): move `common/error/MessageCodeException` to
+`common/exception` and handle it (its status, code, params); `NotFoundException` without code → 404 MSG04;
+`MaxUploadSizeExceededException` → 413 MSG28; delete `common/error` (handler and test, their cases ported); the
+`ticket/` callers change their imports only (AC-001.9–AC-001.12).
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/common/exception/CodedException.java`, `ProblemDetails.java`
 - Move + modify: `common/error/NotFoundException.java`, `BusinessRuleException.java`, `GlobalExceptionHandler.java`
   → `common/exception/`
 - Modify (imports only): `backend/src/main/java/vn/tsolve/knowledge/Solution.java`, `knowledge/SolutionService.java`,
-  `ticket/TicketService.java`
+  `ticket/TicketService.java` (deleted on `main` since)
+- Move: `common/error/MessageCodeException.java` → `common/exception/`; delete `common/error/GlobalExceptionHandler.java`
+  and `backend/src/test/java/vn/tsolve/common/error/GlobalExceptionHandlerTest.java`
+- Modify (imports only): `backend/src/main/java/vn/tsolve/ticket/exception/*.java` (6),
+  `ticket/service/impl/ImportConfirmServiceImpl.java`, `ImportPreviewServiceImpl.java`, and the tests
+  `CsvImportServiceImplTest`, `ImportConfirmIT`, `ImportConfirmServiceImplTest`, `ImportPreviewServiceImplTest`
 - Modify: `docs/bug-log.md`
 - Test: `backend/src/test/java/vn/tsolve/common/exception/GlobalExceptionHandlerTest.java` (standalone MockMvc with a
   test-only controller; no Spring context); one test also named `…_BUG_001`
-**Covers:** AC-001.1–AC-001.9; edge cases 3, 9, 10, 11, 12, 13
+**Covers:** AC-001.1–AC-001.12; edge cases 3, 9, 10, 11, 12, 13
 **Dependencies:** none
 **Estimated size:** medium
 

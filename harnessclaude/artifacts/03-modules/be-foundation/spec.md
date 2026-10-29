@@ -13,6 +13,7 @@ owner: BA
 | 2026-10-23 | STORY-001..STORY-004 | Initial spec from Report3 (GBR-28, System_Messages, UC-35, Architecture diagram) and the planning decisions Q1–Q7 | The backend base every module builds on (KAN-68); fixes BUG-001 |
 | 2026-10-23 | STORY-002 | AC-002.7 and AC-002.8 also name `/v3/api-docs.yaml`; AC-002.13 covers a signed-in user only (no signed-in user → AC-002.4) | Plan review: `npm run api:pull` downloads `/v3/api-docs.yaml`, which `/v3/api-docs/**` does not match; AC-002.13 contradicted AC-002.4 for a request with no user and no token |
 | 2026-10-25 | STORY-003, STORY-004 | AC-003.6 reworded (ids are UUID strings, as the fe-foundation contract says); AC-004.6 and AC-004.7 reworded (`audit_events` under the platform tenant-table convention replaces `audit_event`, whose dev rows are dropped); AC-004.8 reworded (also AC-004.9 and AC-004.10); new AC-004.9 (the bound Workspace is stored) and AC-004.10 (no Workspace bound: throw, store nothing); Interface Contracts: the principal's `id` is a `UUID`, `platform` required | Change request KAN-196 Q2 (the user, 25/10): UUID primary keys and plural table names in every module (Phan_cong v6 §1); `audit_event` leaves the platform legacy allow-list now that be-foundation is built (platform AC-001.8, AC-001.11); SPEC-P1-7 (U1 = A, U2 = A) |
+| 2026-10-29 | STORY-001 | AC-001.6 reworded (`BusinessRuleException` only); AC-001.8 reworded (points to AC-001.12); AC-001.9 reworded (`MessageCodeException` too, no `common/error` left); new AC-001.10 (`NotFoundException` without code → 404 MSG04), AC-001.11 (`MessageCodeException` → its status, code, params), AC-001.12 (upload over the size limit → 413 MSG28); Interface Contracts: `MessageCodeException` | Merging `main` into KAN-25: import-ticket-list (KAN-31) built its own handler in `common/error` with these behaviours (its contract: preview or row not found → 404 MSG04, file over 10 MB → 413 MSG28). One handler stays, in `common/exception`, keeping them (the user, 29/10: option A) |
 
 ## Requirements
 
@@ -59,16 +60,24 @@ owner: BA
     `field_name` and `max_length`; an invalid email → `MSG03`.
   - AC-001.5: IF a field fails a validation rule other than those in AC-001.4, THEN THE backend SHALL put that field
     in `fieldErrors` with `code` `MSG06`.
-  - AC-001.6: IF a base exception carries no message code, THEN THE backend SHALL answer with its status and a
+  - AC-001.6: IF a `BusinessRuleException` carries no message code, THEN THE backend SHALL answer 409 and a
     `ProblemDetail` without `code`, with its message only in `detail` (the message-only constructor kept for
     existing callers, decision Q3).
   - AC-001.7: IF a request fails with an exception the handler does not know, THEN THE backend SHALL answer 500 with
     `code` `MSG06`, no `detail`, and log the exception.
   - AC-001.8: IF Spring MVC rejects a request itself, THEN THE backend SHALL answer with Spring's status and a
     `ProblemDetail` with `code` `MSG06` (unreadable body, wrong method, unsupported media type, missing parameter,
-    unknown path).
-  - AC-001.9: THE base exceptions SHALL live in `vn.tsolve.common.exception`, and the existing callers in
+    unknown path; an upload over the size limit is AC-001.12).
+  - AC-001.9: THE base exceptions (`NotFoundException`, `BusinessRuleException`, `MessageCodeException`) SHALL live
+    in `vn.tsolve.common.exception`, no `vn.tsolve.common.error` package SHALL remain, and the existing callers in
     `knowledge/` and `ticket/` SHALL compile against them unchanged except for their imports (BUG-001, decision Q3).
+  - AC-001.10: IF a `NotFoundException` carries no message code, THEN THE backend SHALL answer 404 with `code`
+    `MSG04` and empty `params`, with its message only in `detail` (the message-only constructor kept for existing
+    callers; import-ticket-list answers a missing preview or row with 404 MSG04).
+  - AC-001.11: WHEN a request fails with a `MessageCodeException`, THE backend SHALL answer with the exception's own
+    status and a `ProblemDetail` with its message code and parameters as `code` and `params`.
+  - AC-001.12: IF an uploaded file is over the multipart size limit, THEN THE backend SHALL answer 413 with a
+    `ProblemDetail` with `code` `MSG28` (import-ticket-list AC-001.4).
 
 ### STORY-002: Five roles and deny-by-default security
 - As the team, we want the five Report3 roles in Spring Security with permissions that add up so that every
@@ -169,7 +178,8 @@ owner: BA
 - **REST** `GET /api/v1/me` → `CurrentUser` (contract `frontend/openapi/tsolve-api.yaml`, `operationId` `getMe`).
 - **Errors** (`vn.tsolve.common.exception`): `NotFoundException` (404), `BusinessRuleException` (409), each built
   with a message code, optional `params` and, for `BusinessRuleException`, an optional field; plus the message-only
-  constructors kept for existing callers. Every error body follows the contract's `ProblemDetail` and `FieldError`.
+  constructors kept for existing callers; `MessageCodeException` (abstract: status, code, params) for a module
+  exception that needs its own status. Every error body follows the contract's `ProblemDetail` and `FieldError`.
 - **Roles** (`vn.tsolve.common.security`): the five role constants; the signed-in user principal (`id` as a `UUID`,
   `email`, `fullName`, roles) that `identity` puts in the security context at sign-in; `@WithTSolveUser` for tests.
 - **Audit** (`vn.tsolve.common.audit`): `AuditService.record(AuditAction action, String resourceType,

@@ -36,18 +36,18 @@
       "status": "implementing",
       "currentPhase": "implement",
       "features": {
-        "problem-errors": "evaluating",
+        "problem-errors": "passing",
         "roles-security": "pending",
         "me-session": "pending",
         "audit-writer": "pending"
       },
-      "lastUpdated": "2026-10-28T15:13:17.825Z",
+      "lastUpdated": "2026-10-29T14:30:52.584Z",
       "branch": "feat/be-foundation",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "43d150636db3b7c030e1ebebf99ae7c32d20a28a"
+        "default": "70d72a96eefb41469ea3190cf717ac8ad797a235"
       }
     },
     "fe-foundation": {
