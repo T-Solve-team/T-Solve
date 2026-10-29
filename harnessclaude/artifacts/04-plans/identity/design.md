@@ -377,3 +377,7 @@ authorization, data integrity, integration, compliance. Skipped: business logic 
 
 Open questions for the spec owner: none. Row 42 is accepted (C3, Hiếu, 2026-10-28): a database failure during a
 sign-in redirect keeps be-foundation's generic 500.
+## Task 4 contract proposal — KAN-110
+`PUT /api/v1/users/{userId}` (`updateUserRoles`) accepts generated UpdateUserRolesRequest: roles, nullable UUID Department, UUID Space ids, optional Project/Space handovers and `confirmTicketResolverRemoval`. It returns confirmed UserDetail or400/401/403/404/409 Problem. UserDetail adds `ticketResolverProjectIds` (UUID[]) for the memberships that MSG78 actually removes; preserve historical references separately from current membership and management.
+
+Reuse D3 for only removed obligations: managed Active Projects when PM is removed or Department changes; managed Spaces omitted from the requested set or when KM is removed. Project replacement eligibility uses the Project's original Department. Validate Employee retention, PM Department, required KM Spaces, occupied Spaces, actor/Workspace, self Admin removal MSG113 and last Admin MSG56 before committing any role, assignment, handover or membership change. Removing actual TR memberships requires MSG78 confirmation. Retained Project management is not removed by dropping TR. Failed requests preserve user edits and all server state; success invalidates users and session queries. No new shared UI, dependency or production backend code.
