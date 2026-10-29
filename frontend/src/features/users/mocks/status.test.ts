@@ -14,7 +14,7 @@ const id = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, '0')
 describe('Workspace account status contract', () => {
   beforeEach(() => setDevUser('admin'));
 
-  it('AC-006.7 retains former-user Space and recipient references only after a successful handover (BUG-023)', async () => {
+  it('AC-006.7 retains former-user Space and recipient references only after a successful handover (BUG-030)', async () => {
     const spaceId = '00000000-0000-4000-8000-0000000000a1';
     await expect(
       updateUserStatus(id(3), {
@@ -38,7 +38,7 @@ describe('Workspace account status contract', () => {
     expect((await getUserDetail(id(3))).id).toBe(id(3));
   });
 
-  it('AC-006.5 retains the Project tracker key when assigning a new manager (BUG-024)', async () => {
+  it('AC-006.5 retains the Project tracker key when assigning a new manager (BUG-031)', async () => {
     // The dev pm's central fixture is a PM; align this test's list fixture before assigning it Projects.
     const recipient = store.users.find((user) => user.id === id(3));
     expect(recipient).toBeDefined();
@@ -133,7 +133,7 @@ describe('Workspace account status contract', () => {
     ]);
   });
 
-  it('AC-006.5 preserves a recipient session role and Department during a status-only handover (BUG-022)', async () => {
+  it('AC-006.5 preserves a recipient session role and Department during a status-only handover (BUG-029)', async () => {
     setDevUser('pm-km');
     const before = await getMe();
     setDevUser('admin');

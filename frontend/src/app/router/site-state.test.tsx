@@ -77,7 +77,7 @@ describe('site state (unknown site, Suspended Workspace)', () => {
     renderApp('/login', { role: null, site: 'unknown' });
 
     expect(await screen.findByText(msg('MSG119'), {}, { timeout: 5000 })).toBeInTheDocument();
-    // The Login screen (a placeholder until identity builds 1.1.1) is not shown.
+    // The Login screen (1.1.1) is not shown on an unknown site.
     expect(screen.queryByText(/1\.1\.1 Login/)).not.toBeInTheDocument();
     expectNoShell();
   });

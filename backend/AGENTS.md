@@ -202,6 +202,9 @@ change updates the contract first, then the code. On the controller, keep annota
 - `@WebMvcTest` only where it adds something: access denied (403), validation (400), error mapping — one or two
   cases per resource.
 - No `@DataJpaTest` for now (there is no in-memory database; pgvector needs a real PostgreSQL).
+- Behaviour only a real database can show (a rollback, an after-commit event, a constraint) is tested in a
+  `*IT` class with Testcontainers (`pgvector/pgvector:pg16`, `@ServiceConnection`). `mvn verify` runs them through
+  Failsafe, so **Docker must be running**.
 - Every acceptance criterion has at least one test whose name cites its id; every fixed bug has one that cites
   the bug id (§10).
 - `mvn verify` passes before a task is done.

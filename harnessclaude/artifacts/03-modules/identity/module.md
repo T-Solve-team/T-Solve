@@ -15,6 +15,9 @@ paths:
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
   - docs/bug-log.md
+  - frontend/src/app/dev/**
+  - frontend/src/shared/auth/sign-in.ts
+  - frontend/src/app/router/routes.tsx
 ---
 
 # Module: identity

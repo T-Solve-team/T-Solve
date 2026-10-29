@@ -27,7 +27,7 @@ Source/spec re-review passes AC-006.1–8. First review requested preservation o
 STORY-006 trace8/8; exact tests in task-3-account-status-test-report.md.
 
 ## Issues
-No remaining source blocker. BUG-023 history is private fixture state, written only after all validation; BUG-024 tracker keys remain immutable and are not exposed as extra public detail fields. Tiny central mock-session change still requires FE Lead review as the user requested. Mock tests do not establish production authorization or persistence.
+No remaining source blocker. BUG-030 history is private fixture state, written only after all validation; BUG-031 tracker keys remain immutable and are not exposed as extra public detail fields. Tiny central mock-session change still requires FE Lead review as the user requested. Mock tests do not establish production authorization or persistence.
 
 ## Test Report
 See task-3-account-status-test-report.md. No test timeout, assertion, requirement, dependency or shared UI contract was relaxed. This issue is one end-to-end status/handover slice, including generated contract, atomic mock behavior, UI, and named acceptance/negative tests; its size exceeds the guideline suggestion for that reason.

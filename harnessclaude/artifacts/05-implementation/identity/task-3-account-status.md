@@ -14,7 +14,7 @@
 - Extracted the existing creation form without changing its behavior so the route page remains small. Existing creation/list regression suite remains part of full verification.
 - Mock validates Workspace, actor status/roles, self/last-Admin and complete current handover eligibility before mutation. Retains accounts and Project memberships/history; adds private Space transfer history after validated success.
 - Tiny central mock-session bridge was explicitly authorized by user for FE Lead review. Baseline MOCK_USERS and site/logout handlers stay intact. Only changed fields override fixture sessions; all runtime state remains feature-local.
-- Test-first BUG-022 preserves unrelated recipient session roles/Department; BUG-023 retains Space transfer history; BUG-024 preserves immutable Jira Project keys after transfer. Exact regressions are in docs/bug-log.md.
+- Test-first BUG-029 preserves unrelated recipient session roles/Department; BUG-030 retains Space transfer history; BUG-031 preserves immutable Jira Project keys after transfer. Exact regressions are in docs/bug-log.md.
 - Parent UI suite10/10 passes, including required choices, failed-submit input retention/retry, unavailable recipients, load retry and cancellation. Independent API/session slice initially43/43, expanded after review findings. First full test attempt was stopped before completing to incorporate review fixes; it is not a passing result.
 - Browser1366×768: opened PM detail, selected both Project replacements by keyboard, completed handover/deactivation, retained old Project/history list and saw no console errors. Screenshots in artifacts/assets/identity/kan-109-*.jpg.
 

@@ -170,6 +170,12 @@ signed-in user (every user has the Employee role).
 
 Paths per screen are in [08](08-routing-and-access.md).
 
+**A 16th folder, `platform-console`, is not a Workspace feature.** It holds the screens of the Platform Console host
+(`admin.<domain>`, [08](08-routing-and-access.md) §3a), owned by the `platform-console` module. It has `routes.ts`
+(exports `platformConsoleRoutes`, a plain react-router `RouteObject[]`), `index.ts`, `mocks/handlers.ts` and its pages.
+Its routes are not in `featureRoutes` and it has no row in the table above. Today it only has a "Platform Console"
+placeholder page at `/`.
+
 Ownership notes that are easy to get wrong:
 
 - **All review decisions live in `review`**: Approve, Reject, Request changes, Unpublish, Re-publish,

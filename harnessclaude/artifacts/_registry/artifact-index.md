@@ -40,6 +40,12 @@ Master registry of all artifacts in this workspace.
 | — | design | fe-foundation | draft | artifacts/04-plans/fe-foundation/design.md |
 | — | design | fe-foundation | draft | artifacts/04-plans/fe-foundation/iteration-1/design.md |
 | — | tasks | fe-foundation | draft | artifacts/04-plans/fe-foundation/iteration-1/tasks.md |
+| RESEARCH-001 | research | — | complete | artifacts/01-research/RESEARCH-001-import-ticket-csv.md |
+| — | module | import-ticket-list | complete | artifacts/03-modules/import-ticket-list/module.md |
+| — | spec | import-ticket-list | approved | artifacts/03-modules/import-ticket-list/spec.md |
+| — | design | import-ticket-list | draft | artifacts/04-plans/import-ticket-list/design.md |
+| — | design | import-ticket-list | draft | artifacts/04-plans/import-ticket-list/iteration-1/design.md |
+| — | tasks | import-ticket-list | draft | artifacts/04-plans/import-ticket-list/iteration-1/tasks.md |
 | — | spec | chatbot | draft | artifacts/03-modules/chatbot/spec.md |
 | — | spec | identity | draft | artifacts/03-modules/identity/spec.md |
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/design.md |
@@ -84,6 +90,9 @@ Master registry of all artifacts in this workspace.
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-8-site-sign-in.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-8-site-sign-in-review.md |
 | — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-8-site-sign-in-test-report.md |
+| — | session-log | fe-foundation | in-progress | artifacts/05-implementation/fe-foundation/task-9-host-routes.md |
+| — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-9-host-routes-review.md |
+| — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-9-host-routes-test-report.md |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-107-user-list-1366x768.jpg |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-2-add-user.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-2-add-user-review.md |
@@ -98,3 +107,5 @@ Master registry of all artifacts in this workspace.
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-3-account-status-test-report.md |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-109-handover-1366x768.jpg |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-109-deactivated-1366x768.jpg |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-7-login-screen.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-7-login-screen-test-report.md |

@@ -114,6 +114,13 @@ describe('frontend guidelines', () => {
     ).toBe(true);
   });
 
+  it('AC-010.3 the decision log records the route tree chosen by host', () => {
+    const index = guideline('13')
+      .split('\n')
+      .filter((line) => /^\| FE-\d+ \|/.test(line));
+    expect(index.some((line) => /route tree/i.test(line) && /host/i.test(line))).toBe(true);
+  });
+
   // .env.example is checked in review: Vite refuses to import .env files (server.fs.deny).
   it.each([
     ['Dockerfile', dockerfileRaw],
