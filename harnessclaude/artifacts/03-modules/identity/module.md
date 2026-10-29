@@ -10,6 +10,7 @@ paths:
   - frontend/src/features/auth/**
   - frontend/src/features/my-profile/**
   - frontend/src/features/users/**
+  - frontend/src/mocks/session.ts
   - backend/src/main/resources/db/changelog/**
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
