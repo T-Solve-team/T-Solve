@@ -2,7 +2,7 @@
 
 **Module:** identity
 **Iteration:** 1
-**Status:** evaluating
+**Status:** passing
 
 ## Evidence
 - API/status/session focused:74/74 tests passed.
@@ -21,3 +21,6 @@ PR78 now includes main7296269 via5895f6e, mergeable, all original Linux CI gates
 Full unchanged Windows suite:844/851 pass,7 failures (timeout or late initial/detail renders in chatbot rating401, Review Queue and users). No assertion/time limit/config changed. Source will be pushed while feature remains evaluating for original Linux CI; only full CI success permits passing. Earlier isolated PR78 recheck was stopped after branch switching and is not acceptance evidence. Graphify refreshed:4720nodes9025edges336communities;2 SQL files skipped because tree_sitter_sql is missing, frontend TypeScript indexed.
 
 Source f1a5b412d5df51d504834cd8e007c53e0e0bf416 pushed. Full Linux CI not yet triggered: PR creation is unconfirmed after connector403 and browser policy stop. Feature stays evaluating; no full-pass claim. Final local UI19/19 and API/session74/74 are supporting evidence only.
+
+## Final PR verification — 2026-10-29
+PR86 targets main. Original CI40870288080 on ec472d7:44/44 files,851/851 tests,128.01s, all frontend gates passed (format/lint/types/tests/generated-client drift/build). Evidence: https://github.com/T-Solve-team/T-Solve/actions/runs/40870288080/job/123435358184 . PR-title and gitleaks checks40870639932 also passed after the title trailing whitespace was removed. Earlier PR creation limitation is resolved by existing PR86. Feature may pass; module remains implementing for unrelated identity sign-in/backend work. BUG-025 stays open as a workstation load issue.
