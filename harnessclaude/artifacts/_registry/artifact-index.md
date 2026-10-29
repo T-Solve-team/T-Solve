@@ -14,3 +14,4 @@ Master registry of all artifacts in this workspace.
 | — | design | tracker | draft | artifacts/04-plans/tracker/design.md |
 | — | design | tracker | draft | artifacts/04-plans/tracker/iteration-1/design.md |
 | — | tasks | tracker | draft | artifacts/04-plans/tracker/iteration-1/tasks.md |
+| RESEARCH-002 | research | tracker | in-progress | artifacts/01-research/RESEARCH-002-servicenow-and-zendesk-trackers.md |
