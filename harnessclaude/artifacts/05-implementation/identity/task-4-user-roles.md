@@ -28,3 +28,9 @@ User explicitly requested PRs to main. KAN109 already has PR78 (mergeable, all c
 
 ## Final PR verification — 2026-10-29
 PR86 targets main. Original CI40870288080 on ec472d7:44/44 files,851/851 tests,128.01s, all frontend gates passed (format/lint/types/tests/generated-client drift/build). Evidence: https://github.com/T-Solve-team/T-Solve/actions/runs/40870288080/job/123435358184 . PR-title and gitleaks checks40870639932 also passed after the title trailing whitespace was removed. Earlier PR creation limitation is resolved by existing PR86. Feature may pass; module remains implementing for unrelated identity sign-in/backend work. BUG-025 stays open as a workstation load issue.
+
+### Debug: PR86 BUG026 CI failure — 2026-10-29
+- Root cause: AC007.6 ended with2 assignment-option queries still fetching after saved roles remounted the form. Immediate isFetching===0 failed; next BUG026 detail request rejected status0 and showed MSG06 before Save appeared. BUG026 alone passed; the pair reproduced reliably. This corrects the earlier load-only hypothesis.
+- Fix: waitFor queryClient.isFetching()===0 at the end of the session-refresh test. Existing assertions/timeouts unchanged; no application or shared code/dependency change.
+- Guard: named BUG033 test, bug-log row#86; red pair1/2, direct unsettled-query assertion red(expected2to0), green pair2/2, fresh entirefile9/9. Independent review PASS. Format/lint/types/build and clean API regeneration pass.
+- Source default@2e6b48307c825496d0ecbd56ce796497e846be59. Full unchanged CI follows on PR86; passing source tests are not a claim of full CI until complete.
