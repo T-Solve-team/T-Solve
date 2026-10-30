@@ -57,16 +57,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(NotFoundException.class)
     ProblemDetail handleNotFound(NotFoundException e) {
-        if (e.getCode() == null) {
-            return ProblemDetails.withCode(
-                    ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage()), NO_RESULTS, Map.of());
-        }
-        return coded(HttpStatus.NOT_FOUND, e);
+        ProblemDetail problem = coded(HttpStatus.NOT_FOUND, e);
+        return e.getCode() == null ? ProblemDetails.withCode(problem, NO_RESULTS, Map.of()) : problem;
     }
 
     @ExceptionHandler(MessageCodeException.class)
     ProblemDetail handleMessageCode(MessageCodeException e) {
-        return ProblemDetails.of(e.getStatus(), e.getCode(), e.getParams());
+        return coded(e.getStatus(), e);
     }
 
     @ExceptionHandler(BusinessRuleException.class)
