@@ -17,6 +17,10 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationTrustResolver;
+import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -45,6 +49,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static final List<String> FIELD_CODE_PRECEDENCE =
             List.of(REQUIRED, TOO_LONG, INVALID_EMAIL, ProblemDetails.UNEXPECTED_ERROR);
 
+    private static final AuthenticationTrustResolver TRUST_RESOLVER = new AuthenticationTrustResolverImpl();
+
     @ExceptionHandler(NotFoundException.class)
     ProblemDetail handleNotFound(NotFoundException e) {
         if (e.getCode() == null) {
@@ -65,10 +71,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     // Method security throws inside the DispatcherServlet, before Spring Security's own handler could see it,
-    // so without this the catch-all below would turn a denial into a 500.
+    // so without this the catch-all below would turn a denial into a 500. An anonymous user's denial is rethrown:
+    // ExceptionTranslationFilter sends it to the entry point (401 MSG07), as it would without this advice.
     @ExceptionHandler(AccessDeniedException.class)
     ProblemDetail handleAccessDenied(AccessDeniedException e) {
+        if (TRUST_RESOLVER.isAnonymous(SecurityContextHolder.getContext().getAuthentication())) {
+            throw e;
+        }
         return ProblemDetails.of(HttpStatus.FORBIDDEN, NO_PERMISSION, Map.of());
+    }
+
+    // Rethrown so the catch-all does not make it a 500: ExceptionTranslationFilter answers it through the entry point.
+    @ExceptionHandler(AuthenticationException.class)
+    void rethrowAuthentication(AuthenticationException e) {
+        throw e;
     }
 
     // No detail: the exception's message may hold personal data or internals; it goes to the log only.

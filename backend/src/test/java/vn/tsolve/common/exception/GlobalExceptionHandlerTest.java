@@ -18,6 +18,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +27,13 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.access.ExceptionTranslationFilter;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -48,6 +56,11 @@ class GlobalExceptionHandlerTest {
         mvc = MockMvcBuilders.standaloneSetup(new FailingController())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -241,6 +254,41 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.code").value("MSG08"));
     }
 
+    @Test
+    void letsAMissingAuthenticationReachTheEntryPoint_AC_002_4_BUG_061() throws Exception {
+        securedMvc().perform(get("/test/no-authentication")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void letsAnAnonymousUsersDenialReachTheEntryPoint_AC_002_4_BUG_062() throws Exception {
+        SecurityContextHolder.getContext()
+                .setAuthentication(new AnonymousAuthenticationToken(
+                        "key", "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS")));
+
+        securedMvc().perform(get("/test/denied")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void answersASignedInUsersDenialWith403Msg08ThroughTheFilterChain_AC_002_5() throws Exception {
+        SecurityContextHolder.getContext()
+                .setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                        "jane", null, AuthorityUtils.createAuthorityList("ROLE_EMPLOYEE")));
+
+        securedMvc()
+                .perform(get("/test/denied"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MSG08"));
+    }
+
+    // Spring Security's ExceptionTranslationFilter in front, as in the application, so the advice's interplay with it
+    // is tested: what the filter would send to sign-in must get past the advice.
+    private MockMvc securedMvc() {
+        return MockMvcBuilders.standaloneSetup(new FailingController())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .addFilters(new ExceptionTranslationFilter(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                .build();
+    }
+
     private ResultActions postForm(String json) throws Exception {
         return mvc.perform(
                 post("/test/form").contentType(MediaType.APPLICATION_JSON).content(json));
@@ -301,6 +349,12 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/test/denied")
         void denied() {
             throw new AccessDeniedException("Access Denied");
+        }
+
+        // What method security throws when the security context holds no Authentication at all.
+        @GetMapping("/test/no-authentication")
+        void noAuthentication() {
+            throw new AuthenticationCredentialsNotFoundException("No Authentication");
         }
     }
 }
