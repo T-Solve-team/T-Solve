@@ -139,6 +139,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void takesTheTopLevelCodeFromTheMostImportantFieldError_AC_001_4_BUG_064() throws Exception {
+        // "email" (MSG03) sorts first by name, but the blank "name" (MSG01) is what the user must fix first.
+        postForm("{\"name\":\"\",\"email\":\"x\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("email"))
+                .andExpect(jsonPath("$.code").value("MSG01"))
+                .andExpect(jsonPath("$.params.field_name").value("name"));
+    }
+
+    @Test
     void measuresAnArrayOverItsSizeLimitForMsg02_AC_001_4_BUG_063() throws Exception {
         postForm("{\"name\":\"Jane\",\"tags\":[\"a\",\"b\",\"c\"]}")
                 .andExpect(status().isBadRequest())

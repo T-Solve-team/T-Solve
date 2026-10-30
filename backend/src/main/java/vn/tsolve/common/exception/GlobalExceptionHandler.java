@@ -50,6 +50,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static final List<String> FIELD_CODE_PRECEDENCE =
             List.of(REQUIRED, TOO_LONG, INVALID_EMAIL, ProblemDetails.UNEXPECTED_ERROR);
 
+    private static final Comparator<ProblemDetails.FieldError> BY_PRECEDENCE =
+            Comparator.comparingInt(error -> FIELD_CODE_PRECEDENCE.indexOf(error.code()));
+
     private static final AuthenticationTrustResolver TRUST_RESOLVER = new AuthenticationTrustResolverImpl();
 
     @ExceptionHandler(NotFoundException.class)
@@ -105,12 +108,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .map(entry -> shownError(entry.getKey(), entry.getValue()))
                 .toList();
         ProblemDetail body = ex.getBody();
-        if (fieldErrors.isEmpty()) {
-            ProblemDetails.withCode(body, ProblemDetails.UNEXPECTED_ERROR, Map.of());
-        } else {
-            ProblemDetails.withCode(
-                    body, fieldErrors.get(0).code(), fieldErrors.get(0).params());
-        }
+        // The list stays sorted by field name; the top-level code is the most important one, not the first.
+        fieldErrors.stream()
+                .min(BY_PRECEDENCE)
+                .ifPresentOrElse(
+                        shown -> ProblemDetails.withCode(body, shown.code(), shown.params()),
+                        () -> ProblemDetails.withCode(body, ProblemDetails.UNEXPECTED_ERROR, Map.of()));
         ProblemDetails.withFieldErrors(body, fieldErrors);
         return handleExceptionInternal(ex, body, headers, status, request);
     }
@@ -147,7 +150,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static ProblemDetails.FieldError shownError(String field, List<FieldError> errors) {
         return errors.stream()
                 .map(error -> toFieldError(field, error))
-                .min(Comparator.comparingInt(error -> FIELD_CODE_PRECEDENCE.indexOf(error.code())))
+                .min(BY_PRECEDENCE)
                 .orElseThrow();
     }
 
