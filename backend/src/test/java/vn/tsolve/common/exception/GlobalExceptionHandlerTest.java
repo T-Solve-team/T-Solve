@@ -3,6 +3,7 @@ package vn.tsolve.common.exception;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -11,6 +12,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import com.jayway.jsonpath.JsonPath;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -21,9 +27,7 @@ import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
@@ -47,10 +51,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-@ExtendWith(OutputCaptureExtension.class)
 class GlobalExceptionHandlerTest {
 
     private static final String PERSONAL_DATA = "jane.doe@example.com";
+
+    private final Logger handlerLogger = (Logger) LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private final ListAppender<ILoggingEvent> handlerLog = new ListAppender<>();
 
     private MockMvc mvc;
 
@@ -59,11 +65,16 @@ class GlobalExceptionHandlerTest {
         mvc = MockMvcBuilders.standaloneSetup(new FailingController())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
+        handlerLog.start();
+        handlerLogger.addAppender(handlerLog);
+        handlerLogger.setLevel(Level.DEBUG);
     }
 
     @AfterEach
-    void clearSecurityContext() {
+    void tearDown() {
         SecurityContextHolder.clearContext();
+        handlerLogger.detachAppender(handlerLog);
+        handlerLogger.setLevel(null);
     }
 
     @Test
@@ -216,18 +227,35 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void answersAnUnknownExceptionWith500Msg06NoDetailAndLogsIt_AC_001_7(CapturedOutput output) throws Exception {
+    void answersAnUnknownExceptionWith500Msg06AnIdAndLogsNoPersonalDataAtError_AC_001_7() throws Exception {
         String body = mvc.perform(get("/test/boom"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("MSG06"))
                 .andExpect(jsonPath("$", not(hasKey("detail"))))
+                .andExpect(jsonPath("$.instance").value(matchesPattern("urn:uuid:[0-9a-f-]{36}")))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
+        String id = JsonPath.<String>read(body, "$.instance").substring("urn:uuid:".length());
 
         assertThat(body).doesNotContain(PERSONAL_DATA).doesNotContain("IllegalStateException");
-        assertThat(output).contains("Unhandled exception").contains(PERSONAL_DATA);
+        ILoggingEvent error = handlerLog(Level.ERROR);
+        assertThat(error.getFormattedMessage())
+                .contains(IllegalStateException.class.getName())
+                .contains(id)
+                .doesNotContain(PERSONAL_DATA);
+        assertThat(error.getThrowableProxy()).isNull();
+        ILoggingEvent debug = handlerLog(Level.DEBUG);
+        assertThat(debug.getFormattedMessage()).contains(id);
+        assertThat(debug.getThrowableProxy().getMessage()).contains(PERSONAL_DATA);
+    }
+
+    private ILoggingEvent handlerLog(Level level) {
+        return handlerLog.list.stream()
+                .filter(event -> event.getLevel() == level)
+                .findFirst()
+                .orElseThrow();
     }
 
     @Test

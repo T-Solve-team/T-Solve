@@ -5,11 +5,13 @@ import static java.util.stream.Collectors.toList;
 
 import jakarta.validation.ConstraintViolation;
 import java.lang.reflect.Array;
+import java.net.URI;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -88,11 +90,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         throw e;
     }
 
-    // No detail: the exception's message may hold personal data or internals; it goes to the log only.
+    // The exception's message may hold personal data (backend/AGENTS.md §9): the body has no detail and the ERROR
+    // line names only the class; the full exception is logged at DEBUG. The instance id ties a report to the log.
     @ExceptionHandler(Exception.class)
     ProblemDetail handleUnexpected(Exception e) {
-        log.error("Unhandled exception", e);
-        return ProblemDetails.of(HttpStatus.INTERNAL_SERVER_ERROR, ProblemDetails.UNEXPECTED_ERROR, Map.of());
+        String id = UUID.randomUUID().toString();
+        log.error("Unhandled exception {} id={}", e.getClass().getName(), id);
+        log.debug("Unhandled exception id={}", id, e);
+        ProblemDetail problem =
+                ProblemDetails.of(HttpStatus.INTERNAL_SERVER_ERROR, ProblemDetails.UNEXPECTED_ERROR, Map.of());
+        problem.setInstance(URI.create("urn:uuid:" + id));
+        return problem;
     }
 
     @Override
