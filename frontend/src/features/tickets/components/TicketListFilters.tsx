@@ -18,8 +18,8 @@ type TicketListFiltersProps = {
 };
 
 const ALL = 'ALL';
-/** Report3 §III 6.2: the Keyword is free text of at most 100 characters (spec AC-001.5). */
-const KEYWORD_MAX = 100;
+/** Report3 §III 6.2: the Keyword is free text of at most 100 characters (spec AC-001.5), also from a link. */
+export const KEYWORD_MAX = 100;
 
 const SOURCE_OPTIONS = [
   { value: ALL, label: 'All' },

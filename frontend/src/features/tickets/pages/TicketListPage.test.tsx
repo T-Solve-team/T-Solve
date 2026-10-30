@@ -302,6 +302,34 @@ describe('TicketListPage', () => {
     expect(selected('Status')).toBe('All statuses');
   });
 
+  it('AC-001.10 trims a keyword from a link (BUG-061)', async () => {
+    const requests = recordRequests();
+    await openList('/tickets?keyword=%20%20vpn%20%20');
+    expect(requests[0]?.get('keyword')).toBe('vpn');
+    expect(screen.getByLabelText('Keyword')).toHaveValue('vpn');
+  });
+
+  it('AC-001.10 ignores a blank keyword in a link (BUG-061)', async () => {
+    const requests = recordRequests();
+    await openList('/tickets?keyword=%20%20');
+    expect(requests[0]?.has('keyword')).toBe(false);
+  });
+
+  it('AC-001.10 keeps at most 100 characters of a keyword from a link (BUG-061)', async () => {
+    const requests = recordRequests();
+    renderApp(`/tickets?keyword=${'x'.repeat(120)}`);
+    await findLoadedEmptyList();
+    expect(requests.at(-1)?.get('keyword')).toBe('x'.repeat(100));
+    expect(screen.getByLabelText('Keyword')).toHaveValue('x'.repeat(100));
+  });
+
+  it('AC-001.10 ignores an empty Department in a link (BUG-061)', async () => {
+    const requests = recordRequests();
+    await openList('/tickets?departmentId=');
+    expect(requests[0]?.has('departmentId')).toBe(false);
+    expect(selected('Department')).toBe('All Departments');
+  });
+
   it('AC-001.10 shows an empty page with the filters when a shared link is past the last page (BUG-057)', async () => {
     renderApp('/tickets?status=REJECTED&page=99');
     await findLoadedEmptyList();

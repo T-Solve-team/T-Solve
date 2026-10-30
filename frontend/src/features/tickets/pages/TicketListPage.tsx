@@ -3,7 +3,7 @@ import { Flex } from 'antd';
 import { TicketSource, TicketStatus } from '@/shared/api';
 import { useSession } from '@/shared/auth';
 import { useListSearchParams } from '@/shared/routing';
-import { TicketListFilters } from '../components/TicketListFilters';
+import { KEYWORD_MAX, TicketListFilters } from '../components/TicketListFilters';
 import { TicketListTable } from '../components/TicketListTable';
 import { useTicketList } from '../hooks/useTicketList';
 import styles from './TicketListPage.module.css';
@@ -16,9 +16,10 @@ function oneOf<T extends string>(allowed: Record<string, T>, value: string | nul
 export function TicketListPage() {
   const { session } = useSession();
   const list = useListSearchParams({ field: 'updatedAt', order: 'desc' }); // newest first
-  const keyword = list.getFilter('keyword') ?? '';
-  // A Department id is a string (UUID): sent as it is; the backend refuses one the user may not see.
-  const departmentId = list.getFilter('departmentId') ?? undefined;
+  // A hand-edited link must not make every request a 400: trim and cap the keyword, drop an empty Department
+  // (BUG-061). A Department id is a string (UUID); the backend refuses one the user may not see.
+  const keyword = list.getFilter('keyword')?.trim().slice(0, KEYWORD_MAX) ?? '';
+  const departmentId = list.getFilter('departmentId') || undefined;
   const source = oneOf(TicketSource, list.getFilter('source'));
   const status = oneOf(TicketStatus, list.getFilter('status'));
   const tickets = useTicketList({
