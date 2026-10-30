@@ -1,4 +1,6 @@
-import { Button, Checkbox, Flex, Form, Select, Tooltip } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
+import { Button, Checkbox, Flex, Form, Select, Typography } from 'antd';
+import { useId } from 'react';
 import {
   Role,
   useGetUserCreationOptions,
@@ -24,6 +26,7 @@ import { HandOverResponsibilitiesModal } from './HandOverResponsibilitiesModal';
 type UserRolesFormProps = { user: UserDetail };
 
 export function UserRolesForm({ user }: UserRolesFormProps) {
+  const adminHelpId = useId();
   const [form] = Form.useForm<UpdateUserRolesRequest>();
   const roles: UpdateUserRolesRequest['roles'] = Form.useWatch('roles', form) ?? user.roles;
   const departments = useGetUserDepartments();
@@ -74,22 +77,26 @@ export function UserRolesForm({ user }: UserRolesFormProps) {
           name="roles"
           label="Roles"
           rules={[{ ...rules.required('Roles'), type: 'array' }]}
+          extra={
+            protectsAdmin ? (
+              <Typography.Text id={adminHelpId}>{msg('MSG113')}</Typography.Text>
+            ) : undefined
+          }
         >
-          <Checkbox.Group
-            options={ROLES.map((value) => ({
-              value,
-              disabled:
-                isBusy || value === Role.EMPLOYEE || (value === Role.ADMIN && protectsAdmin),
-              label:
-                value === Role.ADMIN && protectsAdmin ? (
-                  <Tooltip title={msg('MSG113')}>
-                    <span>{ROLE_LABELS[value]}</span>
-                  </Tooltip>
-                ) : (
-                  ROLE_LABELS[value]
-                ),
-            }))}
-          />
+          <Checkbox.Group>
+            {ROLES.map((value) => (
+              <Checkbox
+                key={value}
+                value={value}
+                disabled={
+                  isBusy || value === Role.EMPLOYEE || (value === Role.ADMIN && protectsAdmin)
+                }
+                aria-describedby={value === Role.ADMIN && protectsAdmin ? adminHelpId : undefined}
+              >
+                {ROLE_LABELS[value]}
+              </Checkbox>
+            ))}
+          </Checkbox.Group>
         </FormField>
         {isKnowledgeManager && (
           <FormField<UpdateUserRolesRequest>
@@ -113,10 +120,10 @@ export function UserRolesForm({ user }: UserRolesFormProps) {
             Cancel
           </Button>
           <Button
-            aria-label="Save"
             type="primary"
             htmlType="submit"
-            loading={flow.isPending}
+            icon={flow.isPending ? <LoadingOutlined aria-hidden /> : undefined}
+            aria-busy={flow.isPending}
             disabled={isBusy}
           >
             Save
