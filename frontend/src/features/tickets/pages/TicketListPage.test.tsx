@@ -176,6 +176,13 @@ describe('TicketListPage', () => {
     expect(screen.getByLabelText('Keyword')).toHaveValue('');
   });
 
+  it('AC-001.4 keeps the focus in the Keyword box after a search (BUG-059)', async () => {
+    const { user } = await openList();
+    await user.type(screen.getByLabelText('Keyword'), 'payslip{Enter}');
+    await waitFor(() => expect(dataRows()).toHaveLength(1));
+    expect(screen.getByLabelText('Keyword')).toHaveFocus();
+  });
+
   it('AC-001.5 accepts at most 100 characters in the Keyword box', async () => {
     const { user } = await openList();
     const keyword = screen.getByLabelText('Keyword');

@@ -1,4 +1,5 @@
 import { Flex, Input, Select } from 'antd';
+import { useState } from 'react';
 import { TicketSource, TicketStatus, type DepartmentRef } from '@/shared/api';
 import { TICKET_SOURCE_LABELS } from '@/shared/lib';
 import { STATUS_TAGS } from '@/shared/ui';
@@ -44,16 +45,24 @@ export function TicketListFilters({
   status,
   onChange,
 }: TicketListFiltersProps) {
+  // What is typed; a new applied keyword (search, back/forward) replaces it. Reset during render, not by a `key`
+  // remount, so the box keeps the focus after Enter (BUG-059).
+  const [text, setText] = useState(keyword);
+  const [shownKeyword, setShownKeyword] = useState(keyword);
+  if (keyword !== shownKeyword) {
+    setShownKeyword(keyword);
+    setText(keyword);
+  }
+
   return (
     <Flex align="end" gap="middle" wrap>
       <Flex vertical gap="small">
         <label htmlFor="ticket-list-keyword">Keyword</label>
         <Input.Search
-          // A new applied keyword (search, back/forward) resets what is typed; typing alone changes nothing.
-          key={keyword}
           id="ticket-list-keyword"
           className={styles.keyword}
-          defaultValue={keyword}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
           maxLength={KEYWORD_MAX}
           placeholder="Search by ticket ID, title or solution"
           allowClear
