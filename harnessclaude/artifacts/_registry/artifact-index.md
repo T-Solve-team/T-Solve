@@ -116,3 +116,4 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-110-handover.jpg |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-110-roles-saved.jpg |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-110-accessible-guards.jpg |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-110-confirmation-error-recovery.png |

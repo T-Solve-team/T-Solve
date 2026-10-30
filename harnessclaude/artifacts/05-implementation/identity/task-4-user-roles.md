@@ -41,3 +41,13 @@ PR86 targets main. Original CI40870288080 on ec472d7:44/44 files,851/851 tests,1
 - default@67af2b4: visible accessible self-account explanations, duplicate labels removed with decorative pending spinner hidden, Space and combined MSG78 flow tests, current Cancel regression and status-test client cleanup.
 - Final users115/115; format/lint/types/build and clean API regeneration pass. No test/settings weakened. Browser screenshot and self-review evidence recorded; full original PR CI follows push.
 - BUG037 Cancel is not reproduced on existing keyed form; no production change. BUG018/022 remain Open/flaky. KAN111 WIP retained in stash and restored after verification.
+
+### PR86 inline comments — 2026-10-31
+- Three human-approved quick changes; source default@f306bf5 (MSG78 recovery), default@18ceab8 (combined PM/TR membership removal), default@cbae7f5 (nested handover field errors and shared guard reuse).
+- BUG039/040: form errors become visible/editable after confirmation; stale membership detail now accepts server MSG78 parameters and confirmed retry. Red tests fail with the fix removed; roles page14/14 passes.
+- BUG041: count the same handed-over memberships that will be removed before committing any change. Both mock and UI tests reproduce skipped confirmation; roles mock/page45/45, final simplified mock30/30 pass. Retained management stays excluded.
+- BUG042: nested Project/Space recipient paths map to actual registered fields, including bracket/dot notation. Both regressions fail before the fix and pass in users runs. Unmapped role-assignment errors remain visible (BUG026).
+- Normalize null Department comparison and reuse isRecord in account creation. Refetch remount note reviewed: latest confirmed assignments still win; document this existing behavior instead of changing refresh policy.
+- Independent read-only review found no actionable correctness/spec issue; parent verified diff and checks. Format/lint/types/build/generation pass; clean generated diff. Initial type/build invocation overlapped generator cleanup and was rerun successfully in order.
+- Windows users verification118/121 under concurrent load, then120/121; isolated status13/14. Remaining AC006.2 fails awaiting Reactivate; no timeout/assertion weakened and no full-pass claim. Original Linux CI follows push. BUG018/022/025 remain open as previously documented.
+- Browser: real MSW occupied-Space error after MSG78 closes confirmation, keeps editable unsaved choices, then correcting Space and confirming again saves successfully; no error logs. Screenshot registered. Preserve and restore the separate KAN111 diagrams WIP.

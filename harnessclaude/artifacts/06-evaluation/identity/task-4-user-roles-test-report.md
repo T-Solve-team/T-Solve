@@ -37,3 +37,11 @@ Commit2e6b483 fixes the session-refresh test lifecycle:2 refetches survived the 
 - Browser: own-account MSG112/MSG113 visible without hover, associated with disabled controls; no error logs. Screenshot registered as kan-110-accessible-guards.jpg.
 - Graphify refreshed:4725nodes9033edges337communities. Two unrelated SQL files lack tree_sitter_sql; TypeScript indexed.
 - Original full PR CI follows the push; this local users result is not a full frontend-suite claim. BUG018/022 remain Open/flaky, BUG025 remains open.
+
+## Inline comment regression checks — 2026-10-31
+- f306bf5: BUG039/040 red verifies an obscuring dialog and absent server confirmation respectively; final roles page14/14 passes. Tests include retry after correcting the rejected assignment and server-provided membership count.
+- 18ceab8: BUG041 mock initially accepted an unconfirmed destructive request; UI initially showed handover without MSG78. After fix mock/page45/45, simplified final mock30/30 pass. Rejected request leaves roles, membership and ownership unchanged.
+- cbae7f5: BUG042 Project bracket path and Space dotted path initially produce no field error in popup. Both now pass, with invalid Select state and retained choices. Existing BUG026 assignment-error visibility remains covered.
+- Final Windows users run120/121: only existing AC006.2 ordinary deactivation fails awaiting Reactivate; isolated status13/14 reproduces it. Earlier concurrent run118/121 also hit two15-second test limits. Do not infer full correctness from this; original Linux PR CI remains the full-suite gate. No timeout/config/assertion weakened.
+- Full format/lint/types/build pass; API regeneration leaves no generated diff. First types/build invocation overlapped generator cleanup; rerun after completed generation passes. No dependency or contract changes.
+- Browser real mock flow verifies visible editable MSG117 after MSG78, followed by successful corrected save and retained Project history; no console errors. Graphify refreshed5292nodes10005edges407communities; unrelated SQL parser missing for2 files.
