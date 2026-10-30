@@ -118,6 +118,66 @@ describe('User Detail roles and assignments', () => {
     expect(after.projects.map((project) => project.name)).toContain('IT Support');
   });
 
+  it('AC-007.7 exposes assignment errors and restores editing after MSG78 confirmation (BUG-039)', async () => {
+    server.use(
+      http.put('*/api/v1/users/:userId', () =>
+        problem(409, 'MSG117', {
+          params: { space_name: 'Engineering Handbook' },
+          fieldErrors: [
+            { field: 'spaceIds', code: 'MSG117', params: { space_name: 'Engineering Handbook' } },
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    const { queryClient } = renderApp(`/users/${account(4)}`, { role: 'ADMIN' });
+    await screen.findByRole('button', { name: 'Save' }, { timeout: 5000 });
+    await user.click(screen.getByRole('checkbox', { name: 'Ticket Resolver' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Knowledge Manager' }));
+    await user.click(screen.getByRole('combobox', { name: 'Spaces' }));
+    await user.click(await screen.findByRole('option', { name: 'Engineering Handbook' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'OK' }));
+    await waitFor(() =>
+      expect(screen.getByText(msg('MSG117', { space_name: 'Engineering Handbook' }))).toBeVisible(),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('checkbox', { name: 'Knowledge Manager' })).toBeEnabled();
+    expect(screen.getByRole('checkbox', { name: 'Knowledge Manager' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Ticket Resolver' })).not.toBeChecked();
+    expect((await getUserDetail(account(4))).roles).toContain('TICKET_RESOLVER');
+    server.resetHandlers();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'OK' }));
+    expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
+    expect((await getUserDetail(account(4))).roles).not.toContain('TICKET_RESOLVER');
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+  });
+
+  it('AC-007.5 confirms server MSG78 with the current membership count after stale detail (BUG-040)', async () => {
+    setDevUser('admin');
+    const current = await getUserDetail(account(4));
+    server.use(
+      http.get(
+        `*/api/v1/users/${account(4)}`,
+        () => HttpResponse.json<UserDetail>({ ...current, ticketResolverProjectIds: [] }),
+        { once: true },
+      ),
+    );
+    const user = userEvent.setup();
+    const { queryClient } = renderApp(`/users/${account(4)}`, { role: 'ADMIN' });
+    await screen.findByRole('button', { name: 'Save' }, { timeout: 5000 });
+    await user.click(screen.getByRole('checkbox', { name: 'Ticket Resolver' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent(msg('MSG78', { user_name: 'Phạm Quốc Bảo', count: 4 }));
+    expect((await getUserDetail(account(4))).roles).toContain('TICKET_RESOLVER');
+    await user.click(within(dialog).getByRole('button', { name: 'OK' }));
+    expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
+    expect((await getUserDetail(account(4))).roles).not.toContain('TICKET_RESOLVER');
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+  });
+
   it('AC-007.6 refreshes session and invalidates cached lists after saving (BUG-033)', async () => {
     let sessionReads = 0;
     server.use(

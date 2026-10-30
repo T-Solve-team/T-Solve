@@ -7,6 +7,7 @@ import {
   type UserDetail,
 } from '@/shared/api';
 import { useChangeUserRoles } from './useUserMutations';
+import type { MsgParams } from '@/shared/messages';
 
 type Handovers = Pick<UpdateUserStatusRequest, 'projectHandovers' | 'spaceHandovers'>;
 
@@ -14,12 +15,13 @@ export function useRoleUpdateFlow(user: UserDetail, onError: (error: ApiError) =
   const change = useChangeUserRoles();
   const [step, setStep] = useState<'confirm-tr' | 'handover' | null>(null);
   const [requested, setRequested] = useState<UpdateUserRolesRequest | null>(null);
+  const [confirmationParams, setConfirmationParams] = useState<MsgParams>({});
   const submitting = useRef(false);
 
   function scope(data: UpdateUserRolesRequest) {
     const removesManagement =
       !data.roles.includes(Role.PROJECT_MANAGER) ||
-      data.departmentId !== user.department?.departmentId;
+      data.departmentId !== (user.department?.departmentId ?? null);
     return {
       projectIds: user.projects
         .filter((project) => project.isActive && project.managerId === user.id && removesManagement)
@@ -33,7 +35,7 @@ export function useRoleUpdateFlow(user: UserDetail, onError: (error: ApiError) =
     };
   }
 
-  function perform(data: UpdateUserRolesRequest, reportError = onError) {
+  function perform(data: UpdateUserRolesRequest, reportError?: (error: ApiError) => void) {
     if (submitting.current) return;
     submitting.current = true;
     change.mutate(
@@ -43,7 +45,16 @@ export function useRoleUpdateFlow(user: UserDetail, onError: (error: ApiError) =
           setStep(null);
           setRequested(null);
         },
-        onError: reportError,
+        onError: (error) => {
+          if (error.code === 'MSG78') {
+            setRequested(data);
+            setConfirmationParams(error.params);
+            setStep('confirm-tr');
+          } else {
+            if (!reportError) setStep(null);
+            (reportError ?? onError)(error);
+          }
+        },
         onSettled: () => {
           submitting.current = false;
         },
@@ -59,6 +70,7 @@ export function useRoleUpdateFlow(user: UserDetail, onError: (error: ApiError) =
   }
 
   function submit(values: UpdateUserRolesRequest) {
+    setConfirmationParams({});
     const data = {
       ...values,
       roles: [...new Set([Role.EMPLOYEE, ...values.roles])],
@@ -83,6 +95,11 @@ export function useRoleUpdateFlow(user: UserDetail, onError: (error: ApiError) =
 
   return {
     step,
+    confirmationParams: {
+      user_name: user.fullName ?? user.email,
+      count: user.ticketResolverProjectIds.length,
+      ...confirmationParams,
+    },
     isPending: change.isPending,
     submit,
     cancelStep,

@@ -135,10 +135,7 @@ export function UserRolesForm({ user }: UserRolesFormProps) {
           isOpen
           code="MSG78"
           isDanger
-          params={{
-            user_name: user.fullName ?? user.email,
-            count: user.ticketResolverProjectIds.length,
-          }}
+          params={flow.confirmationParams}
           isConfirming={flow.isPending}
           onConfirm={flow.confirmRemoval}
           onCancel={flow.cancelStep}
