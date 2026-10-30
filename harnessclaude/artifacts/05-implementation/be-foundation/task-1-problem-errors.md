@@ -94,3 +94,42 @@ none
 ### Next up
 Commit (user's go-ahead), push to the KAN-25 branch when asked, so PR #82 merges cleanly; tell Minh (KAN-31) that
 twelve `ticket/` files changed their import only. Then Task 2 (roles-security).
+
+---
+
+## Session 2026-10-30
+
+### Working on: PR #82 review by bluebearccc (10 findings, Auto-fix)
+- Fixed, each test-first and logged in `docs/bug-log.md`:
+  - [1] BUG-061: the catch-all made an `AuthenticationException` a 500. The advice now rethrows it, so
+    `ExceptionTranslationFilter` answers it through the entry point.
+  - [2] BUG-062: an anonymous user's `AccessDeniedException` answered 403 MSG08. It is rethrown when the Authentication
+    is anonymous (the same test `ExceptionTranslationFilter` makes); a signed-in user still gets 403 MSG08.
+  - [10] The tests of [1] and [2] put `ExceptionTranslationFilter` (entry point 401) in front of the advice in
+    standalone MockMvc; Task 2 adds the real filter chain and its entry point body (MSG07).
+  - [5] BUG-063: `@Size` from a Spring `Validator` (no constraint behind it) made the handler throw; now MSG06.
+    Arrays are measured with `Array.getLength`.
+  - [6] BUG-064: the top-level `code` of a 400 is the most important field error (MSG01 > MSG02 > MSG03 > MSG06), no
+    longer the alphabetically first; `fieldErrors` stays sorted by field name. This replaces the 28/10 decision
+    "first `fieldErrors` entry".
+  - [8] `MessageCodeException extends CodedException` (adds `status` only); `handleMessageCode` uses `coded()`. Its
+    message is now the code alone (was "code params"); nothing reads it. [9] `handleNotFound` reuses `coded()`.
+- Left for the user (they change approved decisions): [3] the 500 log line logs the whole exception (design
+  "Decided in planning", AC-001.7 "log the exception") vs `backend/AGENTS.md` §9 "never log personal data";
+  [4] `HandlerMethodValidationException` (400 without `fieldErrors`) and `ConstraintViolationException` (500) — the
+  same point as the 29/10 review's Informational 1; [7] a message-only `BusinessRuleException` answers 409 without
+  `code` (AC-001.6, approved 29/10) vs `backend/AGENTS.md` §5 "with a `code` property".
+- The reviewer is recorded as "bluebearccc (PR #82 review)" in the bug log: their full name is not known here.
+
+### Verify
+- `mvn -f .pom-noratchet.xml clean verify -DskipITs "-DspotlessFiles=…"` in `backend/` (the worktree workaround of
+  29/10): 113 unit tests, 0 failures (`GlobalExceptionHandlerTest` 26/26); Spotless keeps 21 files clean. The
+  Failsafe ITs were not run: Docker Desktop is not running (and BUG-058 needs `-DargLine=-Dapi.version=1.44`).
+- The worktree's `core.hooksPath` points at `.husky`, whose pre-commit cannot start here ("Exec format error") and
+  needs gitleaks. The user allowed (30/10) committing with `core.hooksPath` set to an empty folder, as in the main
+  checkout where no hook runs; commitlint did not run, so the headers were checked by hand.
+- Commits, each verified on its own (unit tests + Spotless): `default@3e4c169` ([1], [2], [10]), `default@092c0b6`
+  ([5]), `default@8327ee0` ([6]), `default@fd5d5cd` ([8], [9]).
+
+### Next up
+The user's choice on [3], [4], [7]; push, a one-line reply per fixed thread, resolve them.
