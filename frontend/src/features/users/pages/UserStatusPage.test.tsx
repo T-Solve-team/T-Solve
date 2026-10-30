@@ -98,11 +98,11 @@ describe('User Detail account status', () => {
     expect(screen.queryByText(msg('MSG05'))).not.toBeInTheDocument();
   });
 
-  it('AC-006.5 requires all Project recipients, keeps choices after failure and retries atomically (BUG-034)', async () => {
+  it('AC-006.5 / AC-008.1 / AC-008.6 / AC-008.7 requires all Project recipients, keeps choices after failure and retries atomically (BUG-034)', async () => {
     let fails = true;
     server.use(http.put('*/api/v1/users/:userId/status', () => (fails ? problem(500) : undefined)));
     const user = userEvent.setup();
-    renderUser(5);
+    const { queryClient } = renderUser(5);
     await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent(
@@ -130,10 +130,16 @@ describe('User Detail account status', () => {
     const retryDialog = screen.getByRole('dialog', { name: 'Hand Over Responsibilities' });
     const retry = await within(retryDialog).findByRole('button', { name: 'Deactivate' });
     await waitFor(() => expect(retry).toBeEnabled());
+    const cachedList = getGetUsersQueryKey({ q: 'handover-cache' });
+    const cachedRecipient = getGetUserDetailQueryKey(account(9));
+    queryClient.setQueryData(cachedList, { content: [] });
+    queryClient.setQueryData(cachedRecipient, {});
     await user.click(retry);
     expect(await screen.findByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
     expect(screen.getByText('Archived Support')).toBeInTheDocument();
+    expect(queryClient.getQueryState(cachedList)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(cachedRecipient)?.isInvalidated).toBe(true);
   });
 
   it('AC-006.5 hands over a managed Space before deactivating a Knowledge Manager', async () => {
@@ -148,37 +154,42 @@ describe('User Detail account status', () => {
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
   });
 
-  it.each([5, 3])('AC-006.6 blocks account %s when no eligible replacement exists', async (n) => {
-    setDevUser('admin');
-    const options = await getUserHandoverOptions(account(n));
-    let submissions = 0;
-    server.use(
-      http.get('*/api/v1/users/:userId/handover-options', () =>
-        HttpResponse.json({
-          projects: options.projects.map((item) => ({ ...item, recipients: [] })),
-          spaces: options.spaces.map((item) => ({ ...item, recipients: [] })),
+  it.each([5, 3])(
+    'AC-006.6 / AC-008.5 blocks account %s when no eligible replacement exists',
+    async (n) => {
+      setDevUser('admin');
+      const options = await getUserHandoverOptions(account(n));
+      let submissions = 0;
+      server.use(
+        http.get('*/api/v1/users/:userId/handover-options', () =>
+          HttpResponse.json({
+            projects: options.projects.map((item) => ({ ...item, recipients: [] })),
+            spaces: options.spaces.map((item) => ({ ...item, recipients: [] })),
+          }),
+        ),
+        http.put('*/api/v1/users/:userId/status', () => {
+          submissions++;
+          return problem(500);
         }),
-      ),
-      http.put('*/api/v1/users/:userId/status', () => {
-        submissions++;
-        return problem(500);
-      }),
-    );
-    const user = userEvent.setup();
-    renderUser(n);
-    await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
-    const dialog = await screen.findByRole('dialog');
-    const error = n === 5 ? msg('MSG59', { department_name: 'IT' }) : msg('MSG118');
-    expect((await within(dialog).findAllByText(error)).length).toBeGreaterThan(0);
-    expect(
-      within(dialog)
-        .getAllByRole('combobox')
-        .every((field) => field.hasAttribute('disabled')),
-    ).toBe(true);
-    await user.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
-    expect(submissions).toBe(0);
-    expect(screen.getByText('Active')).toBeInTheDocument();
-  });
+      );
+      const user = userEvent.setup();
+      renderUser(n);
+      await user.click(
+        await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }),
+      );
+      const dialog = await screen.findByRole('dialog');
+      const error = n === 5 ? msg('MSG59', { department_name: 'IT' }) : msg('MSG118');
+      expect((await within(dialog).findAllByText(error)).length).toBeGreaterThan(0);
+      expect(
+        within(dialog)
+          .getAllByRole('combobox')
+          .every((field) => field.hasAttribute('disabled')),
+      ).toBe(true);
+      await user.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+      expect(submissions).toBe(0);
+      expect(screen.getByText('Active')).toBeInTheDocument();
+    },
+  );
 
   it('AC-006.8 disables handover confirmation until options finish loading (BUG-035)', async () => {
     setDevUser('admin');

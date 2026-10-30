@@ -58,7 +58,8 @@ export function HandOverResponsibilitiesModal({
       error: recipients.length ? undefined : msg('MSG118'),
     })),
   ];
-  const unavailable = !options.isSuccess || fields.some((field) => !field.recipients.length);
+  const unavailable =
+    !options.isSuccess || options.isFetching || fields.some((field) => !field.recipients.length);
 
   function submit(values: Handovers) {
     if (!options.data || unavailable || isSubmitting) return;
@@ -116,7 +117,12 @@ export function HandOverResponsibilitiesModal({
             >
               <Select
                 virtual={false}
-                disabled={isSubmitting || !options.isSuccess || !field.recipients.length}
+                disabled={
+                  isSubmitting ||
+                  !options.isSuccess ||
+                  options.isFetching ||
+                  !field.recipients.length
+                }
                 options={field.recipients.map((recipient) => ({
                   value: recipient.id,
                   label: `${recipient.fullName ?? recipient.email} (${recipient.email})`,

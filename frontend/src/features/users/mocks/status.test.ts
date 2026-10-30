@@ -38,7 +38,7 @@ describe('Workspace account status contract', () => {
     expect((await getUserDetail(id(3))).id).toBe(id(3));
   });
 
-  it('AC-006.5 retains the Project tracker key when assigning a new manager (BUG-031)', async () => {
+  it('AC-006.5 / AC-008.7 retains the Project tracker key when assigning a new manager (BUG-031)', async () => {
     // The dev pm's central fixture is a PM; align this test's list fixture before assigning it Projects.
     const recipient = store.users.find((user) => user.id === id(3));
     expect(recipient).toBeDefined();
@@ -88,7 +88,7 @@ describe('Workspace account status contract', () => {
     ]);
   });
 
-  it('AC-006.5 transfers every Active Project atomically to an eligible same-Department manager', async () => {
+  it('AC-006.5 / AC-008.3 transfers every Active Project atomically to an eligible same-Department manager', async () => {
     const options = await getUserHandoverOptions(id(5));
     expect(options.projects).toHaveLength(2);
     for (const item of options.projects) {
@@ -191,7 +191,7 @@ describe('Workspace account status contract', () => {
     });
   });
 
-  it('AC-006.7 retains account, memberships and inactive Project history after handover', async () => {
+  it('AC-006.7 / AC-008.4 retains account, memberships and inactive Project history after handover', async () => {
     const before = await getUserDetail(id(5));
     const options = await getUserHandoverOptions(id(5));
     await updateUserStatus(id(5), {
@@ -211,6 +211,32 @@ describe('Workspace account status contract', () => {
       before.projects.filter((project) => !project.isActive),
     );
     expect((await getUsers()).page.totalElements).toBe(24);
+  });
+
+  it('AC-008.9 reactivation keeps all Project handovers and unrelated Projects unchanged', async () => {
+    const before = structuredClone(store.projects);
+    const options = await getUserHandoverOptions(id(5));
+    const choices = options.projects.map((item, index) => ({
+      projectId: item.project.projectId,
+      recipientId: id(index === 0 ? 9 : 13),
+    }));
+    expect(choices).toHaveLength(2);
+    await updateUserStatus(id(5), { status: 'DEACTIVATED', projectHandovers: choices });
+    await updateUserStatus(id(5), { status: 'ACTIVE' });
+    expect((await getUserDetail(id(5))).status).toBe('ACTIVE');
+    expect((await getUserHandoverOptions(id(5))).projects).toEqual([]);
+    for (const project of store.projects) {
+      const choice = choices.find((item) => item.projectId === project.projectId);
+      if (choice) {
+        expect(project.managerId).toBe(choice.recipientId);
+        expect(project.memberIds).toContain(choice.recipientId);
+        expect(project.jiraProjectKey).toBe(
+          before.find((item) => item.projectId === project.projectId)?.jiraProjectKey,
+        );
+      } else {
+        expect(project).toEqual(before.find((item) => item.projectId === project.projectId));
+      }
+    }
   });
 
   it('AC-006.8 rejects an invalid second recipient without partial ownership or status changes', async () => {
