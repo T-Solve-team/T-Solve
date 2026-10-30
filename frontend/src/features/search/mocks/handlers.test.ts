@@ -65,4 +65,10 @@ describe('search mock handlers', () => {
     expect(second.content).toHaveLength(4);
     expect(second.page).toEqual({ size: 10, number: 1, totalElements: 14, totalPages: 2 });
   });
+
+  it('AC-004.3 reads a negative page or size as the first page of 20 (BUG-062)', async () => {
+    const first = await searchTickets({ q: 'e', page: -1, size: -5 });
+    expect(first.content).toHaveLength(14);
+    expect(first.page).toEqual({ size: 20, number: 0, totalElements: 14, totalPages: 1 });
+  });
 });

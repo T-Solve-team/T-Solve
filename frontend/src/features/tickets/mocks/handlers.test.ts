@@ -49,6 +49,12 @@ describe('tickets mock handlers', () => {
     expect(second.page).toEqual({ size: 20, number: 1, totalElements: 28, totalPages: 2 });
   });
 
+  it('AC-004.2 reads a negative page or size as the first page of 20 (BUG-062)', async () => {
+    const first = await getTickets({ page: -1, size: -5 });
+    expect(first.content).toHaveLength(20);
+    expect(first.page).toEqual({ size: 20, number: 0, totalElements: 28, totalPages: 2 });
+  });
+
   it('AC-004.2 returns a review due date only for Pending review and Changes requested tickets', async () => {
     const page = await getTickets({ size: 100 });
     for (const t of page.content) {

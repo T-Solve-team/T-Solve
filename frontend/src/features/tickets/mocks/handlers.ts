@@ -58,8 +58,9 @@ export const handlers: HttpHandler[] = [
   getGetTicketsMockHandler(async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const url = new URL(request.url);
-    const size = Number(url.searchParams.get('size')) || 20;
-    const page = Number(url.searchParams.get('page')) || 0;
+    // Like the real API: a negative page or size is the first page of 20 (BUG-062).
+    const size = Math.max(0, Number(url.searchParams.get('size'))) || 20;
+    const page = Math.max(0, Number(url.searchParams.get('page'))) || 0;
     const all = sorted(filtered(url), url);
     return {
       content: all.slice(page * size, page * size + size).map(toSummary),
