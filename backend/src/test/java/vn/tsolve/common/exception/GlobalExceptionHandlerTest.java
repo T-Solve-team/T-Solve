@@ -178,11 +178,12 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void answersABusinessRuleWithoutCodeWithItsMessageInDetailOnly_AC_001_6() throws Exception {
+    void answersABusinessRuleWithoutCodeWithMsg06AndItsMessageInDetail_AC_001_6() throws Exception {
         mvc.perform(get("/test/legacy-rule"))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$", not(hasKey("code"))))
+                .andExpect(jsonPath("$.code").value("MSG06"))
+                .andExpect(jsonPath("$.params").isEmpty())
                 .andExpect(jsonPath("$.detail").value("Cannot move solution"));
     }
 

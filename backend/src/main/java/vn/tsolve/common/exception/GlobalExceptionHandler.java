@@ -132,9 +132,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return super.createResponseEntity(body, headers, statusCode, request);
     }
 
+    // A message-only exception still gets a code (MSG06) so every error body has one; its message stays in detail.
     private static ProblemDetail coded(HttpStatus status, CodedException e) {
         if (e.getCode() == null) {
-            return ProblemDetail.forStatusAndDetail(status, e.getMessage());
+            return ProblemDetails.withCode(
+                    ProblemDetail.forStatusAndDetail(status, e.getMessage()),
+                    ProblemDetails.UNEXPECTED_ERROR,
+                    Map.of());
         }
         ProblemDetail problem = ProblemDetails.of(status, e.getCode(), e.getParams());
         if (e.getField() != null) {
