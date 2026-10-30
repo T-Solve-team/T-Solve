@@ -115,3 +115,4 @@ Master registry of all artifacts in this workspace.
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-4-user-roles-test-report.md |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-110-handover.jpg |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-110-roles-saved.jpg |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-110-accessible-guards.jpg |

@@ -34,3 +34,10 @@ PR86 targets main. Original CI40870288080 on ec472d7:44/44 files,851/851 tests,1
 - Fix: waitFor queryClient.isFetching()===0 at the end of the session-refresh test. Existing assertions/timeouts unchanged; no application or shared code/dependency change.
 - Guard: named BUG033 test, bug-log row#86; red pair1/2, direct unsettled-query assertion red(expected2to0), green pair2/2, fresh entirefile9/9. Independent review PASS. Format/lint/types/build and clean API regeneration pass.
 - Source default@2e6b48307c825496d0ecbd56ce796497e846be59. Full unchanged CI follows on PR86; passing source tests are not a claim of full CI until complete.
+
+### FE Lead review follow-up — 2026-10-30
+- User authorized fixing review and pushing PR86; two human-approved quick changes cover exact files. No spec/approval changes.
+- default@c46c690: current-dialog retry; handover confirmation disabled until options succeed and while submitting; loading/error/retry tests. Small shared FormModal prop requires FE Lead review.
+- default@67af2b4: visible accessible self-account explanations, duplicate labels removed with decorative pending spinner hidden, Space and combined MSG78 flow tests, current Cancel regression and status-test client cleanup.
+- Final users115/115; format/lint/types/build and clean API regeneration pass. No test/settings weakened. Browser screenshot and self-review evidence recorded; full original PR CI follows push.
+- BUG037 Cancel is not reproduced on existing keyed form; no production change. BUG018/022 remain Open/flaky. KAN111 WIP retained in stash and restored after verification.
