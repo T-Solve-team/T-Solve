@@ -58,7 +58,7 @@ export function HandOverResponsibilitiesModal({
       error: recipients.length ? undefined : msg('MSG118'),
     })),
   ];
-  const unavailable = fields.some((field) => !field.recipients.length);
+  const unavailable = !options.isSuccess || fields.some((field) => !field.recipients.length);
 
   function submit(values: Handovers) {
     if (!options.data || unavailable || isSubmitting) return;
@@ -87,6 +87,7 @@ export function HandOverResponsibilitiesModal({
       form={form}
       okText={scope ? 'Save' : 'Deactivate'}
       isOkDanger={!scope}
+      isOkDisabled={unavailable}
       isSubmitting={isSubmitting}
       onSubmit={submit}
       onCancel={onCancel}
@@ -115,7 +116,7 @@ export function HandOverResponsibilitiesModal({
             >
               <Select
                 virtual={false}
-                disabled={isSubmitting || !field.recipients.length}
+                disabled={isSubmitting || !options.isSuccess || !field.recipients.length}
                 options={field.recipients.map((recipient) => ({
                   value: recipient.id,
                   label: `${recipient.fullName ?? recipient.email} (${recipient.email})`,

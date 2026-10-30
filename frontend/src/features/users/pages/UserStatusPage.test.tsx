@@ -79,7 +79,7 @@ describe('User Detail account status', () => {
     expect(screen.queryByText(msg('MSG05'))).not.toBeInTheDocument();
   });
 
-  it('AC-006.5 requires all Project recipients, keeps choices after failure and retries atomically', async () => {
+  it('AC-006.5 requires all Project recipients, keeps choices after failure and retries atomically (BUG-034)', async () => {
     let fails = true;
     server.use(http.put('*/api/v1/users/:userId/status', () => (fails ? problem(500) : undefined)));
     const user = userEvent.setup();
@@ -108,7 +108,10 @@ describe('User Detail account status', () => {
     expect(screen.getByText('Active')).toBeInTheDocument();
     fails = false;
     server.resetHandlers();
-    await user.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+    const retryDialog = screen.getByRole('dialog', { name: 'Hand Over Responsibilities' });
+    const retry = await within(retryDialog).findByRole('button', { name: 'Deactivate' });
+    await waitFor(() => expect(retry).toBeEnabled());
+    await user.click(retry);
     expect(await screen.findByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
     expect(screen.getByText('Archived Support')).toBeInTheDocument();
@@ -156,6 +159,48 @@ describe('User Detail account status', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
     expect(submissions).toBe(0);
     expect(screen.getByText('Active')).toBeInTheDocument();
+  });
+
+  it('AC-006.8 disables handover confirmation until options finish loading (BUG-035)', async () => {
+    setDevUser('admin');
+    const options = await getUserHandoverOptions(account(5));
+    let finish: (() => void) | undefined;
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    server.use(
+      http.get('*/api/v1/users/:userId/handover-options', async () => {
+        await pending;
+        return HttpResponse.json(options);
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp(`/users/${account(5)}`, { role: 'ADMIN' });
+    await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
+    const dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
+    try {
+      expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeDisabled();
+    } finally {
+      finish?.();
+    }
+    await within(dialog).findByRole('combobox', { name: 'IT Support' });
+    expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeEnabled();
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+  });
+
+  it('AC-006.8 disables handover confirmation when options fail and enables it after retry (BUG-035)', async () => {
+    server.use(http.get('*/api/v1/users/:userId/handover-options', () => problem(500)));
+    const user = userEvent.setup();
+    renderApp(`/users/${account(5)}`, { role: 'ADMIN' });
+    await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
+    const dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
+    expect(await within(dialog).findByText(msg('MSG06'))).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeDisabled();
+    server.resetHandlers();
+    await user.click(within(dialog).getByRole('button', { name: 'Try again' }));
+    await within(dialog).findByRole('combobox', { name: 'IT Support' });
+    expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeEnabled();
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
   });
 
   it('AC-006.8 retries a failed detail load and retains status after cancelling handover', async () => {
