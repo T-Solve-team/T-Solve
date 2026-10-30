@@ -17,8 +17,11 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.jayway.jsonpath.JsonPath;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Valid;
+import jakarta.validation.Validation;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -45,6 +48,7 @@ import org.springframework.validation.Validator;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -177,6 +181,36 @@ class GlobalExceptionHandlerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
                 .andExpect(jsonPath("$.fieldErrors[0].code").value("MSG06"));
+    }
+
+    @Test
+    void mapsARequestParameterOverItsLengthLimitToMsg02_AC_001_13() throws Exception {
+        mvc.perform(get("/test/search").param("q", "toolong"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("MSG02"))
+                .andExpect(jsonPath("$.fieldErrors.length()").value(1))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("q"))
+                .andExpect(jsonPath("$.fieldErrors[0].code").value("MSG02"))
+                .andExpect(jsonPath("$.fieldErrors[0].params.max_length").value(3));
+    }
+
+    @Test
+    void mapsAPathVariableUnderItsMinimumToMsg06_AC_001_13() throws Exception {
+        mvc.perform(get("/test/items/0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("id"))
+                .andExpect(jsonPath("$.fieldErrors[0].code").value("MSG06"));
+    }
+
+    @Test
+    void answersAServiceConstraintViolationWith400AndFieldErrors_AC_001_13() throws Exception {
+        mvc.perform(get("/test/service-rule"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("MSG01"))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("title"))
+                .andExpect(jsonPath("$.fieldErrors[0].params.field_name").value("title"));
     }
 
     @Test
@@ -364,8 +398,25 @@ class GlobalExceptionHandlerTest {
 
     record HandCheckedForm(String name) {}
 
+    record ServiceInput(@NotBlank String title) {}
+
     @RestController
     static class FailingController {
+
+        private static final jakarta.validation.Validator BEAN_VALIDATOR =
+                Validation.buildDefaultValidatorFactory().getValidator();
+
+        @GetMapping("/test/search")
+        void search(@RequestParam @Size(max = 3) String q) {}
+
+        @GetMapping("/test/items/{id}")
+        void item(@PathVariable @Min(1) long id) {}
+
+        // What a @Validated service throws when its argument fails a constraint.
+        @GetMapping("/test/service-rule")
+        void serviceRule() {
+            throw new ConstraintViolationException(BEAN_VALIDATOR.validate(new ServiceInput("")));
+        }
 
         // A Spring Validator, not Bean Validation, rejects "name" with the code "Size" and no constraint behind it.
         @InitBinder("handCheckedForm")

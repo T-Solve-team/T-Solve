@@ -1,19 +1,27 @@
 package vn.tsolve.common.exception;
 
 import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.minBy;
 
 import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Path;
+import jakarta.validation.metadata.ConstraintDescriptor;
 import java.lang.reflect.Array;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -25,10 +33,13 @@ import org.springframework.security.authentication.AuthenticationTrustResolverIm
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.method.ParameterErrors;
+import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
@@ -103,24 +114,42 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem;
     }
 
+    // A @Validated service (or Hibernate at flush) rejects a value: the same 400 as a rejected request.
+    @ExceptionHandler(ConstraintViolationException.class)
+    ProblemDetail handleConstraintViolation(ConstraintViolationException e) {
+        Set<ConstraintViolation<?>> violations =
+                e.getConstraintViolations() == null ? Set.of() : e.getConstraintViolations();
+        List<ProblemDetails.FieldError> errors = violations.stream()
+                .map(violation -> fromViolation(lastNode(violation.getPropertyPath()), violation))
+                .toList();
+        return withValidationErrors(ProblemDetail.forStatus(HttpStatus.BAD_REQUEST), errors);
+    }
+
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        List<ProblemDetails.FieldError> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
-                .collect(groupingBy(FieldError::getField, TreeMap::new, toList()))
-                .entrySet()
-                .stream()
-                .map(entry -> shownError(entry.getKey(), entry.getValue()))
+        List<ProblemDetails.FieldError> errors = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> toFieldError(error.getField(), error))
                 .toList();
-        ProblemDetail body = ex.getBody();
-        // The list stays sorted by field name; the top-level code is the most important one, not the first.
-        fieldErrors.stream()
-                .min(BY_PRECEDENCE)
-                .ifPresentOrElse(
-                        shown -> ProblemDetails.withCode(body, shown.code(), shown.params()),
-                        () -> ProblemDetails.withCode(body, ProblemDetails.UNEXPECTED_ERROR, Map.of()));
-        ProblemDetails.withFieldErrors(body, fieldErrors);
-        return handleExceptionInternal(ex, body, headers, status, request);
+        return handleExceptionInternal(ex, withValidationErrors(ex.getBody(), errors), headers, status, request);
+    }
+
+    // Constraints on @RequestParam / @PathVariable (Spring's built-in method validation); a @Valid argument among
+    // them comes as ParameterErrors with its own field errors.
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(
+            HandlerMethodValidationException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        List<ProblemDetails.FieldError> errors = new ArrayList<>();
+        for (ParameterValidationResult result : ex.getAllValidationResults()) {
+            if (result instanceof ParameterErrors beanErrors) {
+                beanErrors.getFieldErrors().forEach(error -> errors.add(toFieldError(error.getField(), error)));
+            } else {
+                String field = Objects.toString(result.getMethodParameter().getParameterName(), "");
+                result.getResolvableErrors()
+                        .forEach(error -> errors.add(toFieldError(field, error, result.getArgument())));
+            }
+        }
+        return handleExceptionInternal(ex, withValidationErrors(ex.getBody(), errors), headers, status, request);
     }
 
     // The servlet's multipart limit rejects the file before any controller can check its size.
@@ -156,36 +185,77 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem;
     }
 
-    private static ProblemDetails.FieldError shownError(String field, List<FieldError> errors) {
-        return errors.stream()
-                .map(error -> toFieldError(field, error))
+    // One entry per field, sorted by field name. On a field that fails several rules, and for the top-level code and
+    // params, the code earliest in FIELD_CODE_PRECEDENCE wins.
+    private static ProblemDetail withValidationErrors(ProblemDetail body, List<ProblemDetails.FieldError> errors) {
+        List<ProblemDetails.FieldError> shown = errors.stream()
+                .collect(groupingBy(ProblemDetails.FieldError::field, TreeMap::new, minBy(BY_PRECEDENCE)))
+                .values()
+                .stream()
+                .map(Optional::orElseThrow)
+                .toList();
+        shown.stream()
                 .min(BY_PRECEDENCE)
-                .orElseThrow();
+                .ifPresentOrElse(
+                        top -> ProblemDetails.withCode(body, top.code(), top.params()),
+                        () -> ProblemDetails.withCode(body, ProblemDetails.UNEXPECTED_ERROR, Map.of()));
+        return ProblemDetails.withFieldErrors(body, shown);
     }
 
-    // The constraint's simple name is the error code; a binding failure ("typeMismatch") is not a constraint.
+    // Bean Validation behind the error gives the constraint and its attributes; a Spring Validator or a binding
+    // failure ("typeMismatch") gives only a code.
     private static ProblemDetails.FieldError toFieldError(String field, FieldError error) {
-        String constraint = error.getCode() == null ? "" : error.getCode();
-        return switch (constraint) {
+        return error.contains(ConstraintViolation.class)
+                ? fromViolation(field, error.unwrap(ConstraintViolation.class))
+                : fromConstraint(field, error.getCode(), null, error.getRejectedValue());
+    }
+
+    // Spring's method validation names the constraint in the last code and, for @Size, passes the arguments
+    // [field name, max, min] (attributes sorted by name).
+    private static ProblemDetails.FieldError toFieldError(String field, MessageSourceResolvable error, Object value) {
+        String[] codes = error.getCodes();
+        String constraint = codes == null || codes.length == 0 ? null : codes[codes.length - 1];
+        Object[] arguments = error.getArguments();
+        Integer max = "Size".equals(constraint) && arguments != null && arguments.length > 1
+                ? (arguments[1] instanceof Integer limit ? limit : null)
+                : null;
+        return fromConstraint(field, constraint, max, value);
+    }
+
+    private static ProblemDetails.FieldError fromViolation(String field, ConstraintViolation<?> violation) {
+        ConstraintDescriptor<?> descriptor = violation.getConstraintDescriptor();
+        Object max = descriptor.getAttributes().get("max");
+        return fromConstraint(
+                field,
+                descriptor.getAnnotation().annotationType().getSimpleName(),
+                max instanceof Integer limit ? limit : null,
+                violation.getInvalidValue());
+    }
+
+    private static ProblemDetails.FieldError fromConstraint(
+            String field, String constraint, Integer max, Object value) {
+        return switch (constraint == null ? "" : constraint) {
             case "NotBlank", "NotNull", "NotEmpty" -> new ProblemDetails.FieldError(
                     field, REQUIRED, Map.of("field_name", field));
-                // A Spring Validator may reject with "Size" too; only Bean Validation says what max is.
-            case "Size" -> {
-                if (!error.contains(ConstraintViolation.class)) {
-                    yield new ProblemDetails.FieldError(field, ProblemDetails.UNEXPECTED_ERROR, Map.of());
-                }
-                int max = (int) error.unwrap(ConstraintViolation.class)
-                        .getConstraintDescriptor()
-                        .getAttributes()
-                        .get("max");
-                // Only "longer than max" is MSG02; a value under @Size(min) is another rule.
-                yield lengthOf(error.getRejectedValue()) > max
-                        ? new ProblemDetails.FieldError(field, TOO_LONG, Map.of("field_name", field, "max_length", max))
-                        : new ProblemDetails.FieldError(field, ProblemDetails.UNEXPECTED_ERROR, Map.of());
-            }
+                // Only "longer than max" is MSG02; a value under @Size(min), or a "Size" with no max known, is another
+                // rule.
+            case "Size" -> max != null && lengthOf(value) > max
+                    ? new ProblemDetails.FieldError(field, TOO_LONG, Map.of("field_name", field, "max_length", max))
+                    : new ProblemDetails.FieldError(field, ProblemDetails.UNEXPECTED_ERROR, Map.of());
             case "Email" -> new ProblemDetails.FieldError(field, INVALID_EMAIL, Map.of());
             default -> new ProblemDetails.FieldError(field, ProblemDetails.UNEXPECTED_ERROR, Map.of());
         };
+    }
+
+    // The field of a service's violation: the last named node of its path ("create.arg0.title" → "title").
+    private static String lastNode(Path path) {
+        String name = null;
+        for (Path.Node node : path) {
+            if (node.getName() != null) {
+                name = node.getName();
+            }
+        }
+        return name == null ? path.toString() : name;
     }
 
     private static int lengthOf(Object value) {
