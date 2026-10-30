@@ -178,6 +178,39 @@ describe('User Detail roles and assignments', () => {
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
   });
 
+  it('AC-007.5 confirms the handed-over membership count before removing PM and TR (BUG-041)', async () => {
+    setDevUser('admin');
+    await updateUserRoles(account(5), {
+      roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'TICKET_RESOLVER'],
+      departmentId: '00000000-0000-4000-8000-0000000000d1',
+      spaceIds: [],
+    });
+    const user = userEvent.setup();
+    const { queryClient } = renderApp(`/users/${account(5)}`, { role: 'ADMIN' });
+    await screen.findByRole('button', { name: 'Save' }, { timeout: 5000 });
+    await user.click(screen.getByRole('checkbox', { name: 'Project Manager' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Ticket Resolver' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const confirmation = await screen.findByRole('dialog');
+    expect(confirmation).toHaveTextContent(msg('MSG78', { user_name: 'Ngô Thị Mai', count: 2 }));
+    expect((await getUserDetail(account(5))).roles).toContain('TICKET_RESOLVER');
+    await user.click(within(confirmation).getByRole('button', { name: 'OK' }));
+    const handover = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
+    for (const name of ['IT Support', 'IT Network']) {
+      await user.click(await within(handover).findByRole('combobox', { name }));
+      await user.click(
+        await screen.findByRole('option', { name: /Bùi Anh Tuấn/, selected: false }),
+      );
+    }
+    await user.click(within(handover).getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
+    expect((await getUserDetail(account(5))).roles).toEqual(['EMPLOYEE']);
+    expect((await getUserDetail(account(5))).projects.map((project) => project.name)).toContain(
+      'IT Support',
+    );
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+  });
+
   it('AC-007.6 refreshes session and invalidates cached lists after saving (BUG-033)', async () => {
     let sessionReads = 0;
     server.use(

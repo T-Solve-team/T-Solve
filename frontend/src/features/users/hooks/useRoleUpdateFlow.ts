@@ -77,11 +77,16 @@ export function useRoleUpdateFlow(user: UserDetail, onError: (error: ApiError) =
       departmentId: values.departmentId ?? null,
       spaceIds: values.roles.includes(Role.KNOWLEDGE_MANAGER) ? (values.spaceIds ?? []) : [],
     };
+    const removedMembershipCount = new Set([
+      ...user.ticketResolverProjectIds,
+      ...scope(data).projectIds,
+    ]).size;
     const removesMembership =
       user.roles.includes(Role.TICKET_RESOLVER) &&
       !data.roles.includes(Role.TICKET_RESOLVER) &&
-      user.ticketResolverProjectIds.length > 0;
+      removedMembershipCount > 0;
     if (removesMembership) {
+      setConfirmationParams({ count: removedMembershipCount });
       setRequested(data);
       setStep('confirm-tr');
     } else proceed(data);

@@ -191,6 +191,38 @@ describe('Workspace role and assignment contract', () => {
     expect(session.projects).toEqual([]);
   });
 
+  it('AC-007.5 requires confirmation for memberships in handed-over Projects when removing PM and TR (BUG-041)', async () => {
+    await updateUserRoles(id(5), {
+      roles: ['PROJECT_MANAGER', 'TICKET_RESOLVER'],
+      departmentId: IT,
+      spaceIds: [],
+    });
+    const before = await getUserDetail(id(5));
+    const options = await getUserHandoverOptions(id(5));
+    const body: UpdateUserRolesRequest = {
+      ...EMPLOYEE,
+      projectHandovers: options.projects.map((item) => ({
+        projectId: item.project.projectId,
+        recipientId: id(9),
+      })),
+    };
+    await expect(updateUserRoles(id(5), body)).rejects.toMatchObject({
+      code: 'MSG78',
+      params: { user_name: 'Ngô Thị Mai', count: 2 },
+    });
+    expect(await getUserDetail(id(5))).toEqual(before);
+    await updateUserRoles(id(5), { ...body, confirmTicketResolverRemoval: true });
+    expect((await getUserDetail(id(5))).roles).toEqual(['EMPLOYEE']);
+    for (const item of options.projects) {
+      const project = store.projects.find(
+        (project) => project.projectId === item.project.projectId,
+      );
+      expect(project?.managerId).toBe(id(9));
+      expect(project?.memberIds).not.toContain(id(5));
+      expect(project?.formerMemberIds).toContain(id(5));
+    }
+  });
+
   it('AC-007.5 excludes retained PM ownership from the removal confirmation and preserves management', async () => {
     await updateUserRoles(id(5), {
       roles: ['PROJECT_MANAGER', 'TICKET_RESOLVER'],
