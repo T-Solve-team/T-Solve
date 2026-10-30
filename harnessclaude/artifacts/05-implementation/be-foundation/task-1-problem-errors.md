@@ -133,3 +133,30 @@ twelve `ticket/` files changed their import only. Then Task 2 (roles-security).
 
 ### Next up
 The user's choice on [3], [4], [7]; push, a one-line reply per fixed thread, resolve them.
+
+## Session 2026-10-30 (later)
+
+### Working on: review findings [3], [4], [7] — Change Mode
+- The user chose the proposals (30/10). Spec first: AC-001.6 and AC-001.7 reworded, new AC-001.13; design rows "Other
+  validation sources", "500 body and log", "Message-only `BusinessRuleException`"; tasks.md Task 1. `sdd.ts check` OK;
+  re-approved (spec version 0879bacf). `sdd.ts diff` does not show the AC-001.7 change (only first lines are compared,
+  FEEDBACK 2026-10-25), so it was named to the user before the approval.
+- Decided while planning: the 500's id travels in RFC 9457 `instance` (`urn:uuid:<id>`), already in the contract, so
+  no contract change; a parameter's `field` is its name, a service violation's the last named node of its path.
+- [7] `coded()` gives a message-only exception MSG06 (a `NotFoundException` then still gets MSG04).
+- [3] ERROR: `Unhandled exception <class> id=<id>`, no stack trace; DEBUG: the same id with the exception. The test
+  reads the handler logger's events through a logback `ListAppender` (no console capture any more).
+- [4] `handleHandlerMethodValidationException` (Spring 6.1.14 has no `ParameterValidationResult.unwrap`: the
+  constraint is the last code and `@Size`'s max the second argument, attributes sorted by name; `ParameterErrors`
+  keep their field errors) and a `ConstraintViolationException` handler (400, no detail). The three sources share
+  `withValidationErrors` (one entry per field, precedence) and `fromConstraint`.
+- Commits: `0c1f652` (spec, design, tasks, approval), `default@76bb33e` ([7]), `default@acc9a95` ([3]),
+  `default@b7b546d` ([4]); hooks bypassed as allowed above.
+
+### Verify
+- Each code commit: `mvn -f .pom-noratchet.xml clean verify -DskipITs "-DspotlessFiles=…"` BUILD SUCCESS; at b7b546d
+  116 unit tests (`GlobalExceptionHandlerTest` 29), Spotless keeps 21 files clean. ITs not run (Docker Desktop off).
+- `sdd.ts trace`: still the known Java gap; by hand every AC-001.1–AC-001.13 has a test named `…_AC_001_<n>`.
+
+### Next up
+Push; a one-line reply on threads [3], [4], [7] and resolve them; a CODEOWNER's review; then Task 2 (roles-security).
