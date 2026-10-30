@@ -381,3 +381,47 @@ sign-in redirect keeps be-foundation's generic 500.
 `PUT /api/v1/users/{userId}` (`updateUserRoles`) accepts generated UpdateUserRolesRequest: roles, nullable UUID Department, UUID Space ids, optional Project/Space handovers and `confirmTicketResolverRemoval`. It returns confirmed UserDetail or400/401/403/404/409 Problem. UserDetail adds `ticketResolverProjectIds` (UUID[]) for the memberships that MSG78 actually removes; preserve historical references separately from current membership and management.
 
 Reuse D3 for only removed obligations: managed Active Projects when PM is removed or Department changes; managed Spaces omitted from the requested set or when KM is removed. Project replacement eligibility uses the Project's original Department. Validate Employee retention, PM Department, required KM Spaces, occupied Spaces, actor/Workspace, self Admin removal MSG113 and last Admin MSG56 before committing any role, assignment, handover or membership change. Removing actual TR memberships requires MSG78 confirmation. Retained Project management is not removed by dropping TR. Failed requests preserve user edits and all server state; success invalidates users and session queries. No new shared UI, dependency or production backend code.
+
+## KAN-111 preparation — 2026-10-29 (draft; no code authorized)
+
+Spec: `artifacts/03-modules/identity/spec.md`, STORY-008 / AC-008.1–008.9.
+
+### Decisions and scope
+
+- Chosen: included Project handover from KAN-109 and KAN-110, with their existing popup and mutations. Alternative: a standalone page or endpoint. Rationale: Jira KAN-111 explicitly names the two including use cases; the separate workflow previously suggested in chat is not a requirement.
+- Chosen by the user: wait until both issues merge into main, then update `feat/KAN-111-identity-project-handover` from main. Alternative: import their branch now. No dependency branch is imported. On 2026-10-30, KAN-109 is on main at 19e7c51; the user requested continuing now. Work on its caller first; KAN-110 caller verification and final completion wait for its merge.
+- Chosen: existing generated hooks, mutable MSW and shared UI. No new libraries, routes, API schemas, production authorization, audit persistence or Review Queue integration.
+- Keep KAN-112 separate. Existing Space handover required by the including flows remains unchanged.
+
+### Dependency evidence and smallest implementation
+
+The inspected main base is `7296269`. Historical source inspected on `feat/KAN-110-identity-user-roles` includes `HandOverResponsibilitiesModal.tsx`, `UserStatusActions.tsx`, `useRoleUpdateFlow.ts`, `mocks/state.ts` and `mocks/handover.ts`, under `frontend/src/features/users/`. These files already contain the popup, caller flows, eligibility filtering and atomic mock transfer. Its tests cover same-Department recipients, transfers, cancellation and reactivation. These are reuse candidates, not evidence that the files exist on main or that STORY-008 has passed.
+
+After both dependencies merge, read the actual merged code and map each AC-008 criterion to evidence. Add focused tests or fixes only for uncovered behavior. If merged behavior already meets all criteria, deliver verification and traceability without adding another implementation. Existing AC-006/007 test names remain intact; new focused tests name the AC-008 criteria they prove.
+
+### Contract and files
+
+Reuse the merged user-detail and handover-options contracts, `projectHandovers` payload and status/role mutation contracts. No new endpoint or manual edit to generated code. Expected inspection/edit scope after the dependency gate:
+
+- `frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx`
+- `frontend/src/features/users/components/UserStatusActions.tsx`
+- `frontend/src/features/users/hooks/useRoleUpdateFlow.ts`
+- `frontend/src/features/users/hooks/useUserMutations.ts`
+- `frontend/src/features/users/mocks/{state,handover,status-handlers,roles-handler}.ts`
+- Existing tests under `frontend/src/features/users/pages/` and `mocks/`; a focused `components/HandOverResponsibilitiesModal.test.tsx` only if necessary.
+- `docs/bug-log.md` only for defects established during implementation; each fix gets a bug-id regression test.
+
+### Edge cases and verification
+
+| Risk | Criteria | Evidence required after dependencies merge |
+|------|----------|-------------------------------------------|
+| Cross-Department, inactive, self or other-Workspace recipient | AC-008.3–008.5 | Lookup and mock rejection tests; an ineligible choice changes nothing |
+| Department changed before handover eligibility is calculated | AC-008.2 | Recipients come from the Project's existing Department |
+| Multiple Active Projects, Removed Projects, Projects owned by someone else | AC-008.4, AC-008.7 | Every affected Project transfers once; other records and tracker ids remain unchanged |
+| Cancel or failed mutation | AC-008.6 | No partial transfer/account update; failed request preserves selections for retry |
+| Failed/pending lookup and double click | AC-008.8 | Disabled completion, visible loading/error and retry; one mutation only |
+| Reactivation | AC-008.9 | Recipient keeps the transferred Projects |
+
+Builder check (Light UI scope): no new technology, screen text or contract is selected. Existing caller, lookup, payload, failure and cache conventions are reused. Production enforcement is explicitly excluded. Implementation eligibility remains dependent on main and spec approval.
+
+Validation after implementation: `sdd.ts trace identity STORY-008`, targeted tests, all frontend verification commands, deterministic API generation, and browser inspection at 1366 × 768. Until then these are planned checks, not passing results. Commit only after the user reviews the feature results; do not start KAN-112 before that checkpoint.

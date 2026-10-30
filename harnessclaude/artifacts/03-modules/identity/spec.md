@@ -7,12 +7,13 @@ owner: BA
 # Spec: identity
 
 UC-01…03 (owner Trần Trung Hiếu, Jira KAN-103, KAN-104, KAN-106, KAN-160) retain STORY-001…003.
-UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW delivery in STORY-004…007; standalone UC-08…09 remain outside that delivery.
+UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW delivery in STORY-004…007. STORY-008 specifies the included Project handover of KAN-111 (Jira UC-08); it adds no standalone screen. KAN-112 remains outside this change.
 
 ## Changelog
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-10-29 | STORY-008 | Draft KAN-111 frontend/MSW Project handover criteria AC-008.1–008.9; extend requirement 10 and delivery exclusions, clarify that there is no standalone handover screen | User requested one branch per task from main, then selected waiting for KAN-109/110 to merge while preparing scope and spec; reuse their existing handover instead of duplicating it |
 | 2026-10-25 | STORY-001..STORY-003 | Initial spec of the UC-01…03 slice: central sign-in through `login.` with Google OIDC, the session per Workspace site, the Platform Operator and Jira-link sign-ins, log out, My Profile with solution history. Written from Report3 (GBR-03, GBR-19, GBR-28, GBR-37, D1, D9, D13, D14, D22, D23, D36), Stories TS-020, TS-021, TS-023, TS-127 and the planning decisions Q1–Q16 of 25/10 | KAN-197 (Phase 1, multi-tenant baseline) |
 | 2026-10-25 | — | UC-04…09 (View user list, Add Account, Update Account status, Update roles and Department, Hand over Projects, Hand over Spaces) will be added as STORY-004 onwards by their owner Phạm Tùng Dương (KAN-107…112) | One module, two owners (D40: the Jira assignee owns the Story) |
 | 2026-10-25 | STORY-001, STORY-003 | Interface Contracts only: `MySolution.ticketId` is a UUID string (`format: uuid`); the Account table is `accounts` and the Roles table `account_roles`, each with a UUID `id` under the platform convention (platform AC-001.8); `jira_account_links` keeps its D1 name. No acceptance criterion added, reworded or removed (`SpaceRef` follows the fe-foundation contract) | Change request KAN-196 Q2 (the user, 25/10): UUID primary keys and plural table names in every module (Phan_cong v6 §1); SPEC-P1-7 |
@@ -22,6 +23,8 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
 | 2026-10-28 | STORY-001 | Reword Functional req. 1, AC-001.1, AC-001.4, AC-001.5, AC-001.29 and AC-001.35: the central sign-in origin comes from `TSOLVE_LOGIN_ORIGIN` and the Platform Console origin from `TSOLVE_ADMIN_ORIGIN` (the production URLs stay as examples). Reword AC-001.18: the session cookie is `__Host-TSOLVE_SESSION`. Reword AC-001.21, AC-001.28, AC-001.30 and AC-001.31 to name the configured Platform Console origin the same way, and AC-002.1 and the Interface Contracts row for `GET /api/v1/auth/complete` to use `__Host-TSOLVE_SESSION` (wording only); NFR 4 names `TSOLVE_LOGIN_ORIGIN`, `TSOLVE_ADMIN_ORIGIN` and `TSOLVE_SIGNING_KEY`. Reword AC-001.42: the Login codes are fe-foundation's list (MSG06, MSG09, MSG10, MSG122, MSG123, MSG141, without MSG07 and MSG120); MSG122 needs a valid `google_domain`; `error=MSG120` leaves the message area empty and the MSG120 full page shows instead | KAN-103 plan (Hiếu, 28/10): Q7 = A (NFR 4: hosts come from the environment; local dev and tests use other origins); Q2 = B (KAN-104: the session cookie is valid only on the company's own site, enforced by the browser); Q4 = A (agree with fe-foundation AC-012.3, AC-012.4 and AC-011.4) |
 
 ## Requirements
+
+Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to merge into `main`, while preparing KAN-111 scope and spec now. STORY-008 requires approval of this version. On 2026-10-30 the user requested continuing KAN-111 while KAN-110 approaches main: verify the KAN-109 caller first on merged main; the KAN-110 caller and final completion still require KAN-110 on main. It does not authorize backend work or advancing KAN-112.
 
 ### Functional
 1. People sign in only with a Google account of their company's Google domain, through the configured central sign-in origin
@@ -49,7 +52,7 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
    Google at every sign-in (decision Q7).
 
 9. Implement the Admin User List (1.3.1), User Detail (1.3.2, creation and editing), and required Hand Over Responsibilities popup (1.3.3).
-10. Follow KAN-107, KAN-108, KAN-109 and KAN-110 as read from the signed-in user's Jira board on 2026-10-25. These are the only stories in the frontend/MSW delivery; STORY-001–003 keep their separately specified backend and authentication scope.
+10. Follow KAN-107, KAN-108, KAN-109 and KAN-110 as read from the signed-in user's Jira board on 2026-10-25. KAN-111, inspected in Jira on 2026-10-29, extends that frontend/MSW delivery with explicit Project-handover criteria in STORY-008; STORY-001–003 keep their separately specified backend and authentication scope.
 11. Use the existing English screen names, shared UI kit, message catalog, role guards, form validation and registered routes.
 12. Use generated API hooks with TanStack Query and realistic, mutable MSW handlers. Mock checks demonstrate business rules; they do not establish production security guarantees.
 
@@ -222,8 +225,22 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
   - AC-007.6: WHEN a role update succeeds, THE frontend SHALL invalidate affected list, detail and session queries so subsequent mock requests use the updated permissions.
   - AC-007.7: IF updating roles or assignments fails, THEN THE frontend SHALL preserve the unsaved form and display the API's catalog error without committing partial changes.
 
+### STORY-008: Hand over Active Projects (KAN-111 / Jira UC-08)
+- As an Admin, I want to assign every Active Project managed by a departing or reassigned Project Manager to an eligible replacement so that the including account change leaves no Active Project without its manager.
+- Sources: Jira KAN-111 inspected on 2026-10-29 (same-Department Project Managers; called from KAN-109/UC-06 and KAN-110/UC-07); existing AC-006.5–006.8 and AC-007.3, AC-007.6–007.7. Report3 v3460 calls this included use case UC-65; its numbering is not substituted for Jira's UC ids and its unrelated changes are not adopted here.
+- Acceptance:
+  - AC-008.1: WHEN an Admin deactivates a user who manages Active Projects, THE frontend SHALL open the existing Hand Over Responsibilities popup for those Projects before submitting the deactivation, through the KAN-109 flow.
+  - AC-008.2: WHEN an Admin removes the Project Manager role or changes the Department of a user who manages Active Projects, THE frontend SHALL require handover of those Projects in their existing Departments before submitting the role or Department change, through the KAN-110 flow.
+  - AC-008.3: WHEN Project handover choices are loaded, THE frontend and mock API SHALL offer only other Active accounts of the current Workspace that hold Project Manager and belong to the respective Project's Department, excluding the outgoing manager.
+  - AC-008.4: WHEN an Admin confirms Project handover, THE frontend and mock API SHALL require exactly one eligible recipient for every affected Active Project and SHALL leave Removed Projects and Projects managed by other users unchanged.
+  - AC-008.5: IF a Project has no eligible recipient, THEN THE frontend SHALL display MSG59 with that Project's Department name and prevent completion of the including change without altering account data or Project assignments.
+  - AC-008.6: IF the Admin cancels the popup or the including mutation fails, THEN THE frontend and mock API SHALL leave the last confirmed account and Project assignments unchanged; a failed mutation SHALL show its catalog error and keep the entered handover selections available for retry.
+  - AC-008.7: WHEN the including mutation succeeds, THE mock API SHALL transfer all affected Projects to their selected recipients and include those recipients in their Project memberships, retaining Project ids and tracker references; THE frontend SHALL refresh affected account list, detail and session queries using the existing mutation hooks.
+  - AC-008.8: WHILE the recipient lookup is pending or failed, THE frontend SHALL show the existing loading or error-with-retry state and prevent submission of the including change; WHILE the mutation is pending, THE frontend SHALL prevent duplicate submission.
+  - AC-008.9: WHEN a previously deactivated account is reactivated, THE mock API SHALL retain the confirmed Project handovers rather than return the Projects to the former manager.
+
 ## Out of Scope
-- Standalone UC-08…09 (KAN-111…112), beyond the handovers required by STORY-006–007, remain outside the UC-04–07 frontend delivery. STORY-001–003 create the real Account store; STORY-004–007 demonstrate the Admin screens against mutable MSW contracts.
+- A standalone Project handover page, route, menu action or mutation endpoint is outside KAN-111. KAN-112 / Jira UC-09 (Space handover) remains a separate issue; preserve the existing combined popup behavior required by STORY-006–007.
 - The Workspace resolver, MSG119 and MSG120 on ordinary requests, the Forge Invocation Token check, RLS →
   `platform` (KAN-196). A Suspended Workspace's site is refused there; its sessions are not ended by this
   module.
@@ -249,8 +266,8 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
   TS-127, and the Solution list has no filters (decision Q12).
 - Managing the Platform Operator allow-list (D36: no use case manages it).
 
-### UC-04–07 frontend delivery exclusions
-- For STORY-004–007 only: real backend identity endpoints, authentication, session invalidation, audit persistence and production authorization remain unimplemented by this frontend/MSW delivery. The real guarantees belong to the separately specified backend/authentication slices; mock behavior is not evidence of production enforcement.
+### UC-04–08 frontend delivery exclusions
+- For STORY-004–008 only: real backend identity endpoints, authentication, session invalidation, audit persistence and production authorization remain unimplemented by this frontend/MSW delivery. The real guarantees belong to the separately specified backend/authentication slices; mock behavior is not evidence of production enforcement.
 - Workspace or Department administration, Jira integration, Wiki management, new shared components, dependency changes or redesigning the application shell.
 - Real user data or a browser-persistent mock database; the MSW dataset resets with the mock runtime.
 

@@ -360,3 +360,9 @@
 {"ts":"2026-10-30T11:33:52.243Z","type":"quick-closed","what":"Fix PR86 handover retry and unavailable options","files":["frontend/src/shared/ui/FormModal/FormModal.tsx","frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-10-30T11:36:54.489Z","type":"quick-opened","what":"Fix PR86 accessible guards and role regression coverage","files":["frontend/src/features/users/components/UserRolesForm.tsx","frontend/src/features/users/components/UserStatusActions.tsx","frontend/src/features/users/pages/UserRolesPage.test.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-10-30T12:15:29.278Z","type":"quick-closed","what":"Fix PR86 accessible guards and role regression coverage","files":["frontend/src/features/users/components/UserRolesForm.tsx","frontend/src/features/users/components/UserStatusActions.tsx","frontend/src/features/users/pages/UserRolesPage.test.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-30T13:55:55.291Z","type":"spec-approved","module":"identity","specHash":"b08119ba91a4ab5bea367703ac5bb32b79bc5c3ae81d71ff6c34d02473911464"}
+{"ts":"2026-10-30T13:56:43.910Z","type":"feature-status","module":"identity","feature":"project-handover","from":null,"to":"pending"}
+{"ts":"2026-10-30T13:56:43.955Z","type":"feature-status","module":"identity","feature":"project-handover","from":"pending","to":"in-progress"}
+{"ts":"2026-10-30T14:24:23.066Z","type":"commit-recorded","module":"identity","repo":"default","sha":"64d147ab569091152ff0f6a32991ae20bf65eddd"}
+{"ts":"2026-10-30T14:24:23.108Z","type":"feature-status","module":"identity","feature":"project-handover","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-30T14:24:23.149Z","type":"feature-status","module":"identity","feature":"project-handover","from":"evaluating","to":"passing"}
