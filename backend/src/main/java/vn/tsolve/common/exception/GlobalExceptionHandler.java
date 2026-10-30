@@ -4,6 +4,7 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
 import jakarta.validation.ConstraintViolation;
+import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -156,7 +157,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return switch (constraint) {
             case "NotBlank", "NotNull", "NotEmpty" -> new ProblemDetails.FieldError(
                     field, REQUIRED, Map.of("field_name", field));
+                // A Spring Validator may reject with "Size" too; only Bean Validation says what max is.
             case "Size" -> {
+                if (!error.contains(ConstraintViolation.class)) {
+                    yield new ProblemDetails.FieldError(field, ProblemDetails.UNEXPECTED_ERROR, Map.of());
+                }
                 int max = (int) error.unwrap(ConstraintViolation.class)
                         .getConstraintDescriptor()
                         .getAttributes()
@@ -177,6 +182,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         }
         if (value instanceof Collection<?> items) {
             return items.size();
+        }
+        if (value != null && value.getClass().isArray()) {
+            return Array.getLength(value);
         }
         return value instanceof Map<?, ?> entries ? entries.size() : 0;
     }

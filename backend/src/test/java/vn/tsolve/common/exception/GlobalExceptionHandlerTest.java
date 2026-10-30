@@ -37,7 +37,10 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.Validator;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -133,6 +136,26 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.fieldErrors.length()").value(2))
                 .andExpect(jsonPath("$.fieldErrors[?(@.field == 'name')].code").value("MSG01"))
                 .andExpect(jsonPath("$.fieldErrors[?(@.field == 'email')].code").value("MSG03"));
+    }
+
+    @Test
+    void measuresAnArrayOverItsSizeLimitForMsg02_AC_001_4_BUG_063() throws Exception {
+        postForm("{\"name\":\"Jane\",\"tags\":[\"a\",\"b\",\"c\"]}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("tags"))
+                .andExpect(jsonPath("$.fieldErrors[0].code").value("MSG02"))
+                .andExpect(jsonPath("$.fieldErrors[0].params.max_length").value(2));
+    }
+
+    @Test
+    void mapsASizeErrorFromASpringValidatorToMsg06_AC_001_5_BUG_063() throws Exception {
+        mvc.perform(post("/test/hand-checked")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Jane\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
+                .andExpect(jsonPath("$.fieldErrors[0].code").value("MSG06"));
     }
 
     @Test
@@ -295,10 +318,25 @@ class GlobalExceptionHandlerTest {
     }
 
     record TestForm(
-            @NotBlank @Size(max = 150) String name, @Email String email, @Pattern(regexp = "[A-Z]+") String key) {}
+            @NotBlank @Size(max = 150) String name,
+            @Email String email,
+            @Pattern(regexp = "[A-Z]+") String key,
+            @Size(max = 2) String[] tags) {}
+
+    record HandCheckedForm(String name) {}
 
     @RestController
     static class FailingController {
+
+        // A Spring Validator, not Bean Validation, rejects "name" with the code "Size" and no constraint behind it.
+        @InitBinder("handCheckedForm")
+        void checkByHand(WebDataBinder binder) {
+            binder.addValidators(Validator.forInstanceOf(
+                    HandCheckedForm.class, (form, errors) -> errors.rejectValue("name", "Size")));
+        }
+
+        @PostMapping("/test/hand-checked")
+        void handChecked(@Valid @RequestBody HandCheckedForm form) {}
 
         @GetMapping("/test/not-found")
         void notFound() {
