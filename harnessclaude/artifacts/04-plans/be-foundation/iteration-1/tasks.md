@@ -28,6 +28,9 @@ After `main` brought import-ticket-list's handler (29/10): move `common/error/Me
 `common/exception` and handle it (its status, code, params); `NotFoundException` without code → 404 MSG04;
 `MaxUploadSizeExceededException` → 413 MSG28; delete `common/error` (handler and test, their cases ported); the
 `ticket/` callers change their imports only (AC-001.9–AC-001.12).
+After the PR #82 review (30/10): a message-only `BusinessRuleException` → 409 MSG06 (AC-001.6); the 500 gets an
+`instance` id and logs only the class and the id at ERROR, the full exception at DEBUG (AC-001.7);
+`HandlerMethodValidationException` and `ConstraintViolationException` → 400 with `fieldErrors` (AC-001.13).
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/common/exception/CodedException.java`, `ProblemDetails.java`
 - Move + modify: `common/error/NotFoundException.java`, `BusinessRuleException.java`, `GlobalExceptionHandler.java`
@@ -42,7 +45,7 @@ After `main` brought import-ticket-list's handler (29/10): move `common/error/Me
 - Modify: `docs/bug-log.md`
 - Test: `backend/src/test/java/vn/tsolve/common/exception/GlobalExceptionHandlerTest.java` (standalone MockMvc with a
   test-only controller; no Spring context); one test also named `…_BUG_001`
-**Covers:** AC-001.1–AC-001.12; edge cases 3, 9, 10, 11, 12, 13
+**Covers:** AC-001.1–AC-001.13; edge cases 3, 9, 10, 11, 12, 13
 **Dependencies:** none
 **Estimated size:** medium
 
