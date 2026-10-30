@@ -15,6 +15,7 @@ import { COMPANY_DOMAIN, DEPARTMENTS, SPACES, WORKSPACE_ID } from './data';
 import { accountAccessError as accessError, resetUserState, store } from './state';
 import { statusHandlers } from './status-handlers';
 import { rolesHandler } from './roles-handler';
+import { isRecord } from './handover';
 
 export function resetMockData(): void {
   resetUserState();
@@ -33,10 +34,6 @@ function nonNegativeInteger(value: string | null, fallback: number): number {
 
 function fieldError(field: string, code: MsgCode, params?: MsgParams, status = 400) {
   return problem(status, code, { params, fieldErrors: [{ field, code, params }] });
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function ids(value: unknown): value is string[] {
@@ -61,7 +58,7 @@ export const handlers: HttpHandler[] = [
     } catch {
       return problem(400, 'MSG03');
     }
-    if (!record(input)) return problem(400, 'MSG03');
+    if (!isRecord(input)) return problem(400, 'MSG03');
     if (typeof input.email !== 'string' || !input.email.trim())
       return fieldError('email', 'MSG01', { field_name: 'Email' });
     const email = input.email.trim().toLowerCase();

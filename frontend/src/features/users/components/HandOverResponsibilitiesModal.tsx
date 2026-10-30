@@ -74,8 +74,16 @@ export function HandOverResponsibilitiesModal({
         })),
       },
       (error) => {
-        // Assignment errors can target fields on the underlying edit form, not this popup.
-        showMessage(error.code, error.params);
+        const recipientErrors = error.fieldErrors.flatMap((item) => {
+          const field = fields.find(
+            (field) => field.name.join('.') === item.field.replace(/\[(\d+)\]/g, '.$1'),
+          );
+          return field ? [{ name: field.name, errors: [msg(item.code, item.params)] }] : [];
+        });
+        form.setFields(recipientErrors);
+        // Role assignment errors can target fields outside this popup; keep those visible too.
+        if (!recipientErrors.length || recipientErrors.length < error.fieldErrors.length)
+          showMessage(error.code, error.params);
       },
     );
   }
