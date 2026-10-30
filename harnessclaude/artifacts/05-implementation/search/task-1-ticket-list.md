@@ -115,3 +115,27 @@ module's backend stories in the spec first (plan, Change Mode).
 
 ### Next up
 CI of #87; then Task 2 (6.1 Search, KAN-145).
+
+## Session 2026-10-30 22:30
+
+### Working on: ticket-list — review of #87 (bluebearccc)
+- #88 (KAN-145, 6.1 Search) was merged into this branch, so #87 now carries both screens.
+- CI of 9669faa: 874/874 tests passed but Vitest caught 2 unhandled errors from the fe-foundation forms tests
+  (antd's delayed `Form.Item` error state firing after the file ended). Logged as BUG-060 for Trần Trung Hiếu;
+  not fixed here (`src/shared/`).
+- Review fixes, one commit each, test first (each new test failed before its fix):
+  - BUG-061 (8d6e4d6): the page trims the keyword from a link and cuts it to 100 characters, and drops a blank
+    keyword and an empty Department, as `useTicketSearch` does.
+  - BUG-059 (a11b6cb): the Keyword box is controlled and reset during render when the applied keyword changes,
+    as the Search box; no more `key` remount, so the focus stays after Enter.
+  - BUG-062 (cfdf2de): the Ticket List and Search mocks clamp a negative page or size.
+- Not done, answered on the PR: the shared filter options and `oneOf` helper (`src/shared/`, FE Lead review,
+  AGENTS.md rule 10), dropping `useTicketList` (the design names it; no behavior gain), and splitting KAN-145
+  out of the branch (the user's call; the PR description now covers both screens).
+
+### Verification
+- `npm run format:check`, `lint`, `typecheck`, `build`: pass. `npm run generate:api`: no diff.
+- `npx vitest run src/features/tickets src/features/search`: 4 files, 68/68 pass. The full suite is left to CI.
+
+### Next up
+CI and review of #87.
