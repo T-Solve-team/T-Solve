@@ -55,3 +55,5 @@
 {"ts":"2026-10-22T13:56:00.887Z","type":"feature-status","module":"tracker","feature":"tracker-foundation","from":"pending","to":"in-progress"}
 {"ts":"2026-10-27T09:25:02.290Z","type":"spec-approved","module":"tracker","specHash":"b2abb6f0716b3f6591a91d43eb2d701209cd4a7a9bbc37e5e3050d8a7f8fb8f7"}
 {"ts":"2026-10-30T06:15:49.015Z","type":"feature-status","module":"tracker","feature":"jira-client","from":"pending","to":"in-progress"}
+{"ts":"2026-10-31T06:56:23.894Z","type":"quick-opened","what":"jira-app manifest: issue-created trigger to the T-Solve backend via Forge Remote (KAN-22 step 4)","files":["jira-app/TSolve_JiraApp/manifest.yml"]}
+{"ts":"2026-10-31T19:32:53.710Z","type":"spec-approved","module":"tracker","specHash":"e3bcc7736b76775e1621ed216babdd92b58a28833c913f2c672832a35df211f6"}
