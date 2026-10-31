@@ -817,14 +817,14 @@ Dimensions analyzed: user types, input extremes, timing, scale, state transition
 
 | # | Dimensions | Scenario | Severity | Expected behavior / criteria | Test task |
 |---|------------|----------|----------|------------------------------|-----------|
-| S1 | User types, authorization | Lookup includes self, inactive, wrong-role or foreign-Workspace candidates; a different-Department KM exists | High | Exclude the first four; allow the other-Department KM; reject forged choices on both mutations (AC-009.3–.4) | Task 14 |
-| S2 | Input extremes, scale, business logic | Zero, one or several affected Spaces; incomplete, repeated or unrelated Space ids; one recipient receives several Spaces | High | Require exactly the affected set; allow one eligible recipient for multiple Spaces; preserve unrelated assignments (AC-009.1–.4, .7) | Task 14 |
-| S3 | Timing, error cascades | Recipient loses KM or becomes inactive after options load; one of several choices becomes invalid | High | Revalidate on submit; reject without partial account, Space or Project writes (AC-009.4, .6–.7) | Task 14 |
-| S4 | State transitions, data integrity | Remove KM, remove only some Spaces, cancel, then retry after failure | High | Transfer only removed obligations; cancellation preserves confirmed data and failure preserves choices (AC-009.2, .6) | Task 14 |
-| S5 | Timing, environment | Pending/refetching/failed lookup, offline response, rapid double submission | High | Disable choices/completion while lookup is unusable; retry state and a single pending mutation (AC-009.8) | Task 14 |
-| S6 | Business logic, error cascades | No eligible recipient for one Space | High | MSG118; neither caller can complete; mock writes nothing (AC-009.5) | Task 14 |
-| S7 | Data integrity, compliance | Success followed by reactivation or restoring KM with other valid Spaces | High | Preserve ids/history; transferred Spaces stay with recipients; session/detail show confirmed assignments (AC-009.7–.9) | Task 14 |
-| S8 | Integration, environment | API generated code drifts; popup keyboard use or long Space labels | Medium | Deterministic generation; shared accessible form labels and browser inspection at 1366 × 768 (AC-009.1–.2, .8) | Task 14 |
+| S1 | User types, authorization | Lookup includes self, inactive, wrong-role or foreign-Workspace candidates; a different-Department KM exists | High | Exclude the first four; allow the other-Department KM; reject forged choices on both mutations (AC-009.3–.4) | Task 20 |
+| S2 | Input extremes, scale, business logic | Zero, one or several affected Spaces; incomplete, repeated or unrelated Space ids; one recipient receives several Spaces | High | Require exactly the affected set; allow one eligible recipient for multiple Spaces; preserve unrelated assignments (AC-009.1–.4, .7) | Task 20 |
+| S3 | Timing, error cascades | Recipient loses KM or becomes inactive after options load; one of several choices becomes invalid | High | Revalidate on submit; reject without partial account, Space or Project writes (AC-009.4, .6–.7) | Task 20 |
+| S4 | State transitions, data integrity | Remove KM, remove only some Spaces, cancel, then retry after failure | High | Transfer only removed obligations; cancellation preserves confirmed data and failure preserves choices (AC-009.2, .6) | Task 20 |
+| S5 | Timing, environment | Pending/refetching/failed lookup, offline response, rapid double submission | High | Disable choices/completion while lookup is unusable; retry state and a single pending mutation (AC-009.8) | Task 20 |
+| S6 | Business logic, error cascades | No eligible recipient for one Space | High | MSG118; neither caller can complete; mock writes nothing (AC-009.5) | Task 20 |
+| S7 | Data integrity, compliance | Success followed by reactivation or restoring KM with other valid Spaces | High | Preserve ids/history; transferred Spaces stay with recipients; session/detail show confirmed assignments (AC-009.7–.9) | Task 20 |
+| S8 | Integration, environment | API generated code drifts; popup keyboard use or long Space labels | Medium | Deterministic generation; shared accessible form labels and browser inspection at 1366 × 768 (AC-009.1–.2, .8) | Task 20 |
 
 Open questions for the spec owner: none.
 
