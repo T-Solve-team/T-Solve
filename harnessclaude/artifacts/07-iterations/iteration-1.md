@@ -10,42 +10,157 @@ status: planned
 
 ## Goal
 
-Jira integration, server side: T-Solve receives Jira issue events from the Forge app securely, processes them in
-the background, answers Simple tickets with an MSG80 suggestion, drafts Solutions for Done tickets, and serves
-the Issue Panel and Solution Form API (module `tracker`, all stories).
+KAN-31: a Project Manager can import resolved tickets from a CSV file. The backend API and the OpenAPI contract are complete (module import-ticket-list, STORY-001..006).
+
+The Report3 base: the module map, the web app foundation (`fe-foundation`), the backend foundation
+(`be-foundation`) and the review flow (`ticket-review`), so feature modules start on the right model; the
+Knowledge Chatbot screen on mocks (`chatbot`, KAN-48).
 
 ## Planned Deliverables
 
-| Module | Task | Feature | Story |
-|--------|------|---------|-------|
-| tracker | 1 | forge-remote-spike | STORY-003 |
-| tracker | 2 | tracker-foundation | STORY-003 |
-| tracker | 3 | fit-verification | STORY-001 |
-| tracker | 4 | jira-site-registration | STORY-002 |
-| tracker | 5 | token-cipher | STORY-004 |
-| tracker | 6 | receive-issue-events | STORY-003 |
-| tracker | 7 | jira-client | STORY-004 |
-| tracker | 8 | event-worker | STORY-004 |
-| tracker | 9 | triage-on-create | STORY-005 |
-| tracker | 10 | draft-on-done | STORY-006 |
-| tracker | 11 | issue-panel | STORY-007 |
-| tracker | 12 | solution-form | STORY-008 |
-| tracker | 13 | suggestion-answer | STORY-010 |
-| tracker | 14 | event-cleanup | STORY-009 |
+### fe-foundation
 
-Risk: 14 tasks in the 9 days left, plus the Forge setup for `jira-app` — the user chose to keep all in
-iteration 1. If it slips, Tasks 10–14 move to iteration 2 first (Tasks 1–9 give a complete demo).
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · Five roles, multi-role session, logout, mock users, test helpers (KAN-59) | Trần Trung Hiếu | pending |
+| 2 · Guards, landing page, Workspace Setup redirect, menus (KAN-60) | Trần Trung Hiếu | pending |
+| 3 · Route map with the new screens as placeholders (KAN-61) | Trần Trung Hiếu | pending |
+| 4 · Report3 message catalog and triage status tags (KAN-62) | Trần Trung Hiếu | pending |
+| 5 · Frontend guidelines for Report3 (KAN-63) | Trần Trung Hiếu | pending |
+| 6 · Placeholders only while a screen is not built (change request, KAN-71) | Trần Trung Hiếu | pending |
+| 7 · Catalog synced to the System_Messages of 25/10; 9.3 Audit Entry Detail removed (KAN-204) | Trần Trung Hiếu | pending |
+| 8 · Workspace from the Workspace site, central sign-in, MSG123, background header (KAN-206) | Trần Trung Hiếu | pending |
+| 9 · Route tree chosen by host (Platform Console host) (KAN-207) | Trần Trung Hiếu | pending |
+| 10 · Ids are UUID strings in the /me contract (KAN-205) | Trần Trung Hiếu | pending |
+
+### be-foundation
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · Errors as ProblemDetail with a message code (fixes BUG-001) | Anh Tran Hai | pending |
+| 2 · Five roles, deny-by-default security and CSRF | Anh Tran Hai | pending |
+| 3 · The session endpoint `/me` | Anh Tran Hai | pending |
+| 4 · Audit events (append-only, Testcontainers) | Anh Tran Hai | pending |
+
+### chatbot
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · Ask a question and show the answer, with the API contract and mocks (KAN-71) | Trần Trung Hiếu | pending |
+| 2 · Citations of an answer (KAN-73) | Trần Trung Hiếu | pending |
+| 3 · Session conversations (KAN-72) | Trần Trung Hiếu | pending |
+| 5 · Ids are UUID strings (KAN-205) | Trần Trung Hiếu | pending |
+
+### platform
+
+Spec re-approved after X2 and U3. Tasks 2–5 also wait on Trần Hải Anh's answer about the
+`workspaces` reshape changeset (design decision P1).
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · TenantContext and `runIn` (KAN-99) | Trần Trung Hiếu | pending |
+| 2 · Tenant schema, base entity, convention guard (KAN-98) | Trần Trung Hiếu | pending |
+| 3 · Row-level security (KAN-100) | Trần Hải Anh | pending |
+| 4 · Workspace registry (KAN-98) | Trần Trung Hiếu | pending |
+| 5 · Tenant Resolver of the web app and the isolation test (KAN-99) | Trần Trung Hiếu | pending |
+| 8 · File storage per Workspace (KAN-96) | Đặng Nhật Minh | pending |
+| 9 · Local Docker Compose (KAN-94) | Trần Trung Hiếu | pending |
+| 10 · Backend CI and images on GHCR (KAN-6, KAN-8, KAN-9) | Trần Trung Hiếu | pending |
+| 11 · Application VPS and the staging stack (KAN-10, KAN-11, KAN-12) | Trần Trung Hiếu | pending |
+| 12 · Main Caddy, Cloudflare DNS, wildcard certificates (KAN-13, KAN-95) | Trần Trung Hiếu | pending |
+| 13 · Deploy staging on merge with the smoke test (KAN-14) | Trần Trung Hiếu | pending |
+| 15 · Demo seed: the two Workspaces (KAN-97, moved forward) | Trần Trung Hiếu | pending |
+
+### search
+
+Frontend only, on MSW mocks. Spec: `artifacts/03-modules/search/spec.md` · Design:
+`artifacts/04-plans/search/iteration-1/design.md` (master: `artifacts/04-plans/search/design.md`).
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · Ticket List, 6.2 (KAN-227) | Trần Hải Anh | passing |
+| 2 · Search Published tickets, 6.1 (KAN-145) | Trần Hải Anh | pending |
+| 3 · Give Feedback popup, 8.1 (KAN-148) | Trần Hải Anh | pending |
+## Order — feedback first
+
+1. fe-foundation Task 7 (KAN-204): catalog synced to System_Messages of 25/10; 9.3 Audit Entry Detail removed.
+   You see: the screens on mocks show the 25/10 message texts; the Audit Entry Detail route is gone.
+2. fe-foundation Task 10 + chatbot Task 5 (KAN-205), one PR: ids are UUID strings. You see: the same screens on
+   mocks, with UUID ids in `/me` and the chatbot data.
+3. fe-foundation Task 8 (KAN-206): workspace from the Workspace site, central sign-in, MSG123, background header.
+   You see: sign-in from a Workspace site in the browser, on mocks.
+4. fe-foundation Task 9 (KAN-207): route tree chosen by host. You see: the Platform Console host opens its own
+   routes.
+5. identity plan (design + tasks for STORY-001..003; each slice contract + mocks + screen first). You see: the
+   plan, for review.
+6. identity slices: My Profile (KAN-160) → Log out (KAN-106) → Login / landing (KAN-103, KAN-104); the backend
+   after each screen. You see: each screen on mocks first, then on the real API.
+7. platform Task 1 TenantContext and `runIn` (KAN-99); unblocks Đặng Nhật Minh's Task 8. You see: its tests.
+8. platform Task 10 backend CI and images on GHCR (KAN-6, KAN-8, KAN-9). You see: CI checks on PRs and images on
+   GHCR.
+9. After Phase 1 (about 2026-10-28): platform Tasks 2 → 4 → 15 → 9 → 5 → 11 → 12 → 13. You see: after Task 9 the
+   local stack with the two demo Workspaces in a browser; after Task 13 the staging stack.
+10. Iteration 2: platform Tasks 6, 7, 14, 16.
+
+### import-ticket-list
+- import-ticket-list Tasks 1–12 (`artifacts/04-plans/import-ticket-list/iteration-1/tasks.md`): contract, schema, parser, validator, ProjectAccess stub + ProblemDetail errors, upload, preview rows, controller + template, confirm, cleanup job, performance check, retire the old snapshot import
 
 ## Demo Script
 
-1. Admin registers the Jira site (Task 4, via the workspace call or a test endpoint) — show the cloudId stored.
-2. Create a Simple ticket in Jira → `issue_event` row RECEIVED → PROCESSED → MSG80 comment appears (stub triage).
-3. Edit a ticket's label → no row; send a forged request without a valid FIT → 401 MSG08.
-4. Move a ticket to Done → AI draft requested from the ticket port (stub); panel data shows the draft.
-5. Open the panel unlinked → MSG62; as reporter answer Yes → MSG82.
+### platform
+1. `mvn verify`: the tenant tests pass on Testcontainers as the application user — a native `SELECT` in Workspace A
+   returns no row of B, and `ALTER TABLE … DISABLE ROW LEVEL SECURITY` is refused.
+2. `docker compose up`: `curl -H 'Host: nosuch.localhost' localhost/api/v1/me` → 404 MSG119; on a seeded site
+   `<site>.localhost` → 401 MSG07.
+3. Merge to `main`: the `cd-staging` run shows pull, migrate, up, seed and the smoke test green;
+   `https://<site>.staging.tsolve.io.vn` opens with a valid certificate (after basic auth); `https://www.staging…` → 404.
+4. `infra-checks` workflow from a hosted runner: only 22/80/443 are open on the application VPS.
+
+### fe-foundation
+1. Mock mode: pick "Project Manager + Knowledge Manager" in the dev user switcher → lands on Review Queue; the menu
+   shows the PM items, then Wiki and Knowledge Chatbot.
+2. Pick "Employee" → lands on the Knowledge Chatbot placeholder; opening `/review-queue` shows the 403 page (MSG08).
+3. Pick "Admin" with the Workspace not set up → sent to 2.1 Workspace Setup.
+4. Log out → Login; signing in as another user shows nothing of the first one.
+
+### import-ticket-list
+1. Swagger UI as a stub Project Manager: download the CSV template.
+2. Upload a file mixing valid rows, a duplicate ID, a missing Symptoms and a too-long title → preview counts + MSG30, error rows paged.
+3. Remove one valid row, then Confirm → MSG32 (created / skipped); the tickets are in `ticket` as PUBLISHED with APPROVE decisions; the Import Batch is COMPLETED.
+4. Upload the same file again → those IDs now fail with MSG31.
+5. Upload a Windows-1258 file → MSG27; an 11 MB file → MSG28.
+
+### be-foundation
+1. `mvn verify` in `backend/`: every AC test passes, including the database tests on a Testcontainers PostgreSQL.
+2. Run the backend; `curl /api/v1/me` with no session → 401 `application/problem+json` with `code` MSG07;
+   `curl /actuator/health` → UP.
+3. In `psql`, `UPDATE audit_event …` and `DELETE FROM audit_event` → refused (append-only).
+
+### chatbot
+1. Mock mode, "Employee": lands on Knowledge Chatbot with an empty "New conversation".
+2. Ask "How do I connect to the VPN from home?" → answer with [1] a Wiki document link and [2] "Solution from a
+   ticket"; Show expands the Solution.
+3. Ask "Who won the match?" → MSG109. Ask an expense question → its Wiki citation shows MSG110.
+4. New conversation, ask about leave; the list shows both, newest first; reopen the VPN one and ask a follow-up.
+5. Reload → the conversations are still there. Log out and sign in again → none.
+
+### search
+1. Mock mode, "Ticket Resolver": open Ticket List → 20 tickets, Updated newest first; type "vpn" and press Enter,
+   pick Department IT and status Published → the list narrows; reload → same list; sort by Title.
+2. Open Search → empty results area; type "vpn" and press Enter → ranked cards with "N% helpful" (none on a ticket
+   without Feedback); pick Source "Jira import" and a Resolved date range → results update; "zzz" → MSG04.
+3. The popup has no screen until 5.5 Ticket Detail mounts it: `npm run test -- GiveFeedbackModal` runs its
+   tests — Send with nothing → MSG01; Helpful, a comment, Send → MSG26.
 
 ## Actual Outcomes
 <!-- filled at end of iteration, split by module -->
 
 ## Retro Notes
 <!-- what went well, what to improve -->
+
+## KAN-153 audit log addition — approved 2026-10-31
+
+One feature, `audit-log`, implements the frontend-only Audit Log (STORY-001) with MSW and the proposed
+OpenAPI contract. Plan: artifacts/04-plans/dashboard-audit/iteration-1/tasks.md. Demo: sign in as Admin,
+open Audit Log, search Actor email, combine action/date filters, paginate and retry a failed query.
+Backend recording and production tenant isolation are not part of this deliverable.

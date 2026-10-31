@@ -25,14 +25,14 @@ the DevOps design §1.6.)
 ## 2. Registration without a central file
 
 The usual hot spots in a React app — the route table, the menu, the mock list, the path constants — are
-**pre-filled once for all 12 features and 25 screens**. You fill in your feature folder; you do not
+**pre-filled once for all 15 features and 34 screens**. You fill in your feature folder; you do not
 edit these files.
 
 | File | Pre-filled with | What you do instead |
 |---|---|---|
 | `app/router/feature-routes.ts` | one line per feature: `...reviewRoutes,` | export `<feature>Routes` from your `index.ts` |
-| `app/layout/menu-config.ts` | the approved menu per role (UI decisions 04/10) | nothing — menus are fixed by design |
-| `shared/routing/paths.ts` | paths and builders for the 19 routed screens (popups have none) | use `paths.reviewQueue`, `paths.ticketDetail(id)` |
+| `app/layout/menu-config.ts` | the menu of each role and `menuFor(roles)` for a user with several roles (D4) | nothing — menus are fixed by design |
+| `shared/routing/paths.ts` | paths and builders for the 26 routed screens (popups have none) | use `paths.reviewQueue`, `paths.ticketDetail(id)` |
 | `mocks/handlers.ts` | one line per feature's `mocks/handlers.ts` | write handlers in your feature's `mocks/handlers.ts` |
 
 Every feature folder already exists with its `index.ts`, its `routes.ts` (all its screens) and a placeholder
@@ -46,7 +46,7 @@ export const searchRoutes: FeatureRoute[] = [
   {
     path: paths.search,
     title: 'Search', // 6.1
-    roles: ['STAFF', 'PROJECT_MANAGER', 'DEPARTMENT_MANAGER'],
+    roles: ['TICKET_RESOLVER', 'PROJECT_MANAGER'],
     lazy: () => import('./pages/SearchPage'),
   },
 ];
@@ -63,7 +63,7 @@ The Figma kit decides what is shared UI. Most kit components already exist in `s
 1. Check `shared/ui/index.ts` and the `/dev/kit` page (dev builds only) — it may already exist.
 2. If your screen needs something that is **not** a "Web/…" kit component, build it inside your feature.
 3. If a second feature needs the same thing, or the FE Lead adds it to the Figma kit, it moves to
-   `shared/ui/` in a **separate, small PR** (`feat(ui): add <Component> (TS-…)`) reviewed by the FE Lead.
+   `shared/ui/` in a **separate, small PR** (`feat(ui): add <Component> (KAN-…)`) reviewed by the FE Lead.
    Your feature PR then uses it.
 4. Changing an existing shared component's props is a breaking change: search for all users first and
    update them in the same PR.
@@ -78,7 +78,7 @@ so features never block each other.
 | `package-lock.json` | Add dependencies only in a dedicated PR approved by the FE Lead. If it conflicts while syncing with `main`: take `main`'s version, then run `npm install` and commit the result. **Never hand-edit or hand-merge the lock file.** |
 | `src/shared/api/generated/**` | Never hand-merge. Resolve the conflict in `openapi/tsolve-api.yaml` only, then run `npm run generate:api` and commit the output. |
 | `openapi/tsolve-api.yaml` | Change only the paths/schemas of your endpoint. Keep the spec sorted as the backend emits it; don't reformat the file. |
-| `shared/messages/catalog.ts` | Pre-filled from SRS V.2. Changes only when the SRS changes (FE Lead). |
+| `shared/messages/catalog.ts` | Pre-filled from Report3 System_Messages (`npm run messages:report3` refreshes the reference copy). Changes only when Report3 changes (FE Lead). |
 
 ## 5. CODEOWNERS (snippet for DevOps)
 
@@ -100,6 +100,9 @@ Later lines win, so feature lines come after the general ones.
 /frontend/src/features/feedback/             @owner-feedback
 /frontend/src/features/knowledge-dashboard/  @owner-knowledge-dashboard
 /frontend/src/features/audit-log/            @owner-audit-log
+/frontend/src/features/triage/               @owner-triage
+/frontend/src/features/wiki/                 @owner-wiki
+/frontend/src/features/chatbot/              @owner-chatbot
 /frontend/openapi/                           @fe-lead @backend-lead
 ```
 
@@ -116,4 +119,4 @@ guidelines) falls back to `@fe-lead`.
 - **Don't rename or move shared files in a feature PR.**
 
 ---
-*Last verified against code: 2026-10-10, step 5.5 — every path, name, rule and ✅ example checked against the scaffold.*
+*Last verified against code: 2026-10-23, KAN-63 — screens, roles, paths and MSG codes checked against the Report3 foundation (`src/test/guidelines.test.ts`).*

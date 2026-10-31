@@ -5,6 +5,7 @@
 > (Trần Trung Hiếu) on **2026-10-09** unless a date says otherwise. To change one, propose it, get the FE
 > Lead's approval, then add a new entry that supersedes the old one (never rewrite history).
 > Where an entry overrides the DevOps design, it says so; DevOps should update their file to match.
+> MSG codes in older entries were renumbered to Report3 on 2026-10-23 (FE-41); no entry's meaning changed.
 
 | ID | Topic | Status |
 |---|---|---|
@@ -16,7 +17,7 @@
 | FE-06 | Styling: tokens + CSS Modules | Approved |
 | FE-07 | API client: orval, spec and output committed | Approved |
 | FE-08 | Error contract with MSG codes | Approved — needs backend agreement |
-| FE-09 | Session: backend OIDC + cookie + `/me` | Approved — needs backend agreement |
+| FE-09 | Session: backend OIDC + cookie + `/me` | Approved — needs backend agreement; sign-in and the MSG123 path updated by FE-43 |
 | FE-10 | "Real-time" Review Queue = 5 s polling | Approved |
 | FE-11 | Mocking: MSW | Approved |
 | FE-12 | Testing scope and tools | Approved — closes DevOps open item #3 |
@@ -41,12 +42,17 @@
 | FE-31 | npm override for Vitest's optional msw peer | Approved (step 5.3) |
 | FE-32 | API shapes proposed by the OpenAPI stub | Approved (step 5.3) — needs backend agreement |
 | FE-33 | Where errors are shown: queries in place, mutations as toasts | Approved (step 5.3) — refines FE-08 |
-| FE-34 | Review Queue keeps Request changes, for all selected tickets | Approved (2026-10-10) — SRS 7.1/7.2 to be updated |
+| FE-34 | Review Queue keeps Request changes, for all selected tickets | Approved (2026-10-10) — kept by D1 (2026-10-21); Report3 GBR-09 and UC-30 to be updated |
 | FE-35 | Screen sizes win over kit sizes | Approved (2026-10-10) |
 | FE-36 | Kit built in step 5.4; uploads and date-range rule deferred | Approved (step 5.4) |
 | FE-37 | List state in the URL with `useListSearchParams` | Approved (step 5.4) |
 | FE-38 | Mock data is reset after every test | Approved (step 5.4) |
 | FE-39 | Docker image: pinned Node build + non-root Caddy on 8080, CSP | Approved (step 5.5) |
+| FE-40 | Five roles, several roles per user: landing page, menus, Workspace Setup | Approved (2026-10-22) — supersedes the one-role session of FE-09 |
+| FE-41 | Report3 message catalog | Approved (2026-10-22) — supersedes the SRS V.2 catalog of FE-08 |
+| FE-42 | Route map for the 35 Report3 screens, 15 features | Approved (2026-10-22) — supersedes the feature list of FE-22; screen counts superseded by D18 (25/10): 34 screens, 8 popups |
+| FE-43 | Workspace site and central sign-in: same-origin API, `GET /api/v1/auth/sign-in`, MSG119 / MSG120 / MSG123, background header | Approved (2026-10-26, KAN-198) — updates FE-09 |
+| FE-44 | Route tree chosen by host: `admin.<domain>` gets only the Platform Console routes, every other host only the Workspace routes | Approved (2026-10-28, KAN-198); `platformConsoleRoutes` name and type to be confirmed by `platform-console` |
 
 ---
 
@@ -69,7 +75,7 @@ fights the Figma App Shell. *Overrides* DevOps design §0/§10 "ProComponents ad
 **FE-03 — Routing.** React Router 8, data mode (`createBrowserRouter`); each feature exports `FeatureRoute[]`
 with required `roles` and lazy pages; no route loaders for data.
 *Options:* TanStack Router; React Router declarative mode. *Why:* widely known, data mode gives lazy routes
-and `useBlocker` (MSG92); TanStack Router's type safety costs code generation and learning time.
+and `useBlocker` (MSG37); TanStack Router's type safety costs code generation and learning time.
 
 **FE-04 — No client-state library.** Session via TanStack Query (`/me`), filters in URL search params,
 local state otherwise. *Options:* Zustand, Redux Toolkit. *Why:* almost all state is server data or URL
@@ -89,21 +95,22 @@ and excluded from SonarQube. *Options:* generate in CI only; hand-written client
 after `npm ci` without a backend; API changes visible in PR diffs; no hand-written duplicate types.
 
 **FE-08 — Error contract.** RFC 9457 Problem Details + `code` (MSGxx) + `params` + `fieldErrors[]`; the
-frontend holds the MSG catalog (SRS V.2); unknown → MSG06. *Options:* backend sends final text; HTTP status
+frontend holds the MSG catalog (SRS V.2; *source superseded by FE-41*); unknown → MSG06. *Options:* backend sends final text; HTTP status
 only. *Why:* the SRS fixes MSG texts by code; one catalog keeps them exact. **Needs backend agreement** (the
 current backend returns `{status, message}`). Also assumed: server-side pagination `page`/`size`/`sort`, 20 rows.
 
 **FE-09 — Session.** Backend runs OIDC (Google) and sets an HttpOnly session cookie; `GET /api/v1/me`
-returns user, role, Projects (with role in each) and Departments; 401 → MSG07 → Login; sign-in errors
+returns user, role (*several roles: FE-40*), Projects (with role in each) and Departments; 401 → MSG07 → Login; sign-in errors
 come back as `/login?error=MSGxx`. *Options:* tokens in the browser (localStorage). *Why:* no token handling
-in JavaScript (XSS-safe); matches SRS API-05. **Needs backend agreement.**
+in JavaScript (XSS-safe); matches SRS API-05. **Needs backend agreement.** *Updated by FE-43:* the sign-in
+starts at `GET /api/v1/auth/sign-in`, and a 401 with MSG123 goes to `/login?error=MSG123` without MSG07.
 
 **FE-10 — Review Queue "real time".** TanStack Query polling every 5 s while the tab is visible.
 *Options:* WebSocket, Server-Sent Events. *Why:* meets the NFR (visible within 5 s) with no server work;
 upgrade later only if needed.
 
 **FE-11 — Mocking.** MSW 3: orval-generated fake-data handlers as a base, hand-written per-feature handlers
-for realistic data; `VITE_API_MOCKING=true`; same handlers in tests; dev-only role switcher.
+for realistic data; `VITE_API_MOCKING=true`; same handlers in tests; dev-only role switcher (*a user switcher since FE-40*).
 *Options:* json-server, hand-mocked hooks. *Why:* intercepts real `fetch`, so mock mode and tests exercise the
 real data layer.
 
@@ -144,7 +151,7 @@ and replaced; `*.tsbuildinfo` is ignored. *Why:* it contradicts the glossary and
 (non-strict)". *Why:* the compiler catches the bugs juniors most often ship; TS 6 is strict by default anyway.
 
 **FE-22 — Structure and features.** `src/app` (FE Lead), `src/features/<feature>` (owner), `src/shared`
-(FE Lead); 12 features covering the 25 web screens; four registration files pre-filled once. All review
+(FE Lead); 12 features covering the 25 web screens (*superseded by FE-42*); four registration files pre-filled once. All review
 decisions live in `review`. *Why:* see [01](01-project-structure.md) and [02](02-conflict-avoidance.md).
 
 **FE-23 — Reference feature.** Review Queue (7.1) + Reject Ticket popup (7.3), built end to end in the
@@ -210,7 +217,7 @@ Spring paging (`page` from 0, `size`, `sort=field,dir`; response `{ content, pag
 totalElements, totalPages } }` = Spring Data `PagedModel`); `GET /api/v1/review-queue/ticket-ids` so
 "Select all" can take every ticket in the queue, not only the page shown (SRS 7.1);
 `POST /api/v1/reviews/{approve|reject|request-changes}` with `{ ticketIds, reason | comment }` returning
-`{ count }` (the `{count}` of MSG18 / MSG20 / MSG21); enum spellings as in guideline 03 §5. *Why:* each shape
+`{ count }` (the `{count}` of MSG14 / MSG16; MSG17 has none); enum spellings as in guideline 03 §5. *Why:* each shape
 is what Spring produces with the least custom code, and the frontend can be built and tested before the
 backend exists. When the backend's spec differs, `npm run api:pull` + `generate:api` wins.
 
@@ -224,9 +231,10 @@ page, and a toast as well would be two messages for one error. Refines FE-08 and
 **FE-34 — Review Queue keeps Request changes (Hiếu, 2026-10-10).** The Review Queue (7.1) has a Request
 changes button next to Reject and Approve (Figma callout 6). It opens the Request Changes popup (7.2) for
 **all selected tickets with one comment**, like Reject; each author sees the same comment in Jira. Every
-queue ticket comes from the Solution Form, so MSG22 cannot apply on the queue (it still applies on Ticket
+queue ticket comes from the Solution Form, so MSG18 cannot apply on the queue (it still applies on Ticket
 Detail). SRS v2 7.1 / 7.2 still describe the older behaviour — Hiếu updates them, including a count form of
-MSG21 for several tickets.
+MSG17 for several tickets. **Kept by D1 (Hiếu, 2026-10-21):** Report3 GBR-09 and UC-30 still say one ticket
+at a time; Report3 is to be updated, the frontend keeps this behaviour.
 
 **FE-35 — Screen sizes win over kit sizes (Hiếu, 2026-10-10).** When a Figma screen and the kit disagree on a
 size or spacing, the screen wins (screens were designed after the kit); colours and fonts always come from
@@ -236,7 +244,7 @@ the styles. Examples: Reject Ticket popup 600 px wide (kit pattern 520); Review 
 **FE-36 — Kit scope in step 5.4 (2026-10-10).** Built: `StatusTag`, `DataTable` + `cells`, `EmptyState`,
 `LoadingState`, `ErrorState`, `ConfirmDialog`, `FormModal`, `AppForm`, `FormField`, `SectionCard`,
 `StatCard`, `shared/forms` (`rules`, `applyApiErrors`) and the `/dev/kit` page. Deferred to the first screen
-that needs them: `EvidenceUpload`, `CsvUpload`, `rules.dateRangeNotFuture` (MSG94). Kit boolean props follow
+that needs them: `EvidenceUpload`, `CsvUpload`, `rules.dateRangeNotFuture` (MSG39). Kit boolean props follow
 guideline 05 C4 (`isOpen`, `isDanger`, not `open`, `danger`). Table look from Figma as `Table` tokens in
 `theme.ts` (padding 12 × 8, Body Strong headers). *Why:* the example feature uses everything built; uploads
 need their own design check against the Figma Upload variants and the Evidence rules.
@@ -262,6 +270,59 @@ frontend cache and CSP rules would live in a DevOps file, and deploy/rollback wo
 swapping image tags) — rejected by Hiếu: keep the image self-contained. *Why:* a non-root process on an unprivileged port is the default every scanner (Sonar, hadolint) asks
 for; pinned images make two builds of one commit identical; the CSP belongs here because it depends on what
 the frontend loads, and it was checked in Chromium (no violations on the Review Queue and its popups).
+
+**FE-40 — Five roles, several per user (Hiếu, 2026-10-22, KAN-58…61).** The web app knows the five Report3
+roles (Employee, Ticket Resolver, Project Manager, Knowledge Manager, Admin). `/me` returns all of a user's
+roles; the session always adds Employee (GBR-28) and drops unknown values. A route opens for any of its roles
+(`hasAnyRole`). Landing page: the first match of Admin → User List, Project Manager → Review Queue, Knowledge
+Manager → Wiki Home, Ticket Resolver → Search, otherwise Knowledge Chatbot. One menu for all roles,
+`menuFor(roles)`: the role menus in the order Admin, Project Manager, Knowledge Manager, Ticket Resolver,
+Employee, each item once. While `workspaceReady` is false an Admin is sent to 2.1 Workspace Setup. Mock mode
+has fixture users with one role and with several (dev user switcher). *Options:* one role per user, as in
+SRS v2. *Why:* Report3 GBR-28 lets a user hold several roles; decision D4 settled the landing order, the
+menus and the Workspace Setup trigger.
+
+**FE-41 — Report3 message catalog (Hiếu, 2026-10-22, KAN-62).** `catalog.ts` holds the web codes of Report3
+System_Messages with their exact texts and types, plus `MSG_NEW_2` (D3). Left out: the Jira App messages and
+the codes dropped by D2 and D3. `{tracker_name}` is filled with `TRACKER_NAME` ("Jira", D4). A committed copy
+(`report3-messages.json`, built by `npm run messages:report3`) lets `catalog.test.ts` check every text.
+Every code used in the app and in these guidelines was renumbered by meaning. *Options:* keep the SRS V.2
+codes and map them at the API edge. *Why:* Report3 renumbered every code; one catalog with Report3's numbers
+means the code, the docs and the backend use the same code for the same message.
+
+**FE-42 — Route map for the 35 Report3 screens (Hiếu, 2026-10-22, KAN-61).** 26 screens with a path and 9
+popups, in 15 features: the 12 of FE-22 plus `triage` (10.x), `wiki` (11.x) and `chatbot` (12.1); 2.1 is now
+Workspace Setup and the Workspace screens are renumbered 2.2–2.4. New screens start as placeholders.
+*Why:* Report3 adds AI Ticket Triage, the Wiki and the Knowledge Chatbot; registering every screen once
+keeps feature PRs out of the shared route, menu and mock files (guideline 02).
+*Superseded (2026-10-25):* the screen counts above are replaced by D18 (Report3, 25/10) — 34 web screens, 8 popups
+(popup 9.3 is removed).
+
+**FE-43 — Workspace site and central sign-in (Hiếu, 2026-10-26, change request KAN-198).** Every Workspace has
+its own site (`<site name>.tsolve.io.vn`); the Host of the page decides the Workspace, so the app sends API
+requests to its own origin only (`VITE_API_BASE_URL` and the Docker build arg are removed) and adds no
+Workspace, site or domain header or parameter. "Sign in with Google" navigates the whole page to
+`GET /api/v1/auth/sign-in?returnTo=…` (the server makes the state value and redirects to the central sign-in
+site); the web app never builds the central URL. `returnTo` must be a same-site path, otherwise it is left out
+(the backend checks it again). The Login screen shows MSG06, MSG09, MSG10, MSG122 (with a valid
+`google_domain`), MSG123 and MSG141 from `/login?error=…` and nothing for any other value. MSG119 (unknown
+site) and MSG120 (Workspace suspended) from any request replace every screen with one full page and drop the
+cache; a 401 with MSG123 ends the session as at logout and goes to Login without MSG07. Refetches of queries that
+already hold data carry `X-TSolve-Background: 1`, so the server does not count them as activity. Local
+development uses `<site name>.localhost:5173`; mock mode adds "Unknown site" and "Suspended Workspace" to the dev
+user switcher. *Options:* a Workspace id or site name in the URL path or a header; the app opening the central
+sign-in URL itself. *Why:* one origin per Workspace keeps the cookie and the CORS rules simple and the contract
+free of tenant fields; the server alone knows the central sign-in site and the state value.
+
+**FE-44 — Route tree chosen by host (Hiếu, 2026-10-28, change request KAN-198, STORY-013).** The Platform Console
+lives on `admin.<domain>` (`admin.tsolve.io.vn`, `admin.localhost`). `buildRoutes(host)` gives that host only
+`platformConsoleRoutes` (a plain react-router `RouteObject[]` exported by `@/features/platform-console`; the Console
+owns its guards and layout) plus the 404 page for any other path, with no Workspace guard and no AppShell; every
+other host gets only the Workspace routes. A host is the Console when its first label is `admin`, compared
+lower-cased with one trailing dot removed. `featureRoutes` stays Workspace-only. *Options:* one tree with the
+Console routes behind a guard; a path prefix such as `/platform-console`. *Why:* a Workspace screen must not exist
+on the Console host (and the reverse), so the 404 is the same for every role; the Console team can change its tree
+without touching the Workspace guards.
 
 ## Working conventions (not code decisions)
 

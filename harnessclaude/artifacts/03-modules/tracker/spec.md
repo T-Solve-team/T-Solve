@@ -27,6 +27,7 @@ the request belongs to; **discovery** = finding that database from the request (
 | 2026-11-01 | STORY-001, 003 | Rewrite for one database per tenant. AC-001.1 no longer checks the cloudId; remove AC-001.6. STORY-003 handles only "issue created": store a `suggestion_result` row (Project + issue key) and respond 202; remove AC-003.2, 003.3, 003.5, 003.7; add AC-003.8 (issue of no T-Solve Project). Non-Functional 3 and 8 replaced | New DB design (31/10): tenant DB per Workspace, no `jira_site` / `issue_event` tables; finding the tenant and refusing unknown sites belong to discovery (user, 2026-11-01) |
 | 2026-11-01 | STORY-002, 004, 005, 006, 009 | Removed; moved to Out of Scope | No background job in tracker: the system token is not stored, events are not processed later (user, 2026-11-01). Site → cloudId is in the catalog (discovery / workspace) |
 | 2026-11-01 | STORY-007, 010 | AC-007.1 drops "the triage decision" (triage_result removed 29/10); AC-010.1/010.2/010.4 read and record the answer in the issue's `suggestion_result` | DB design 31/10: `suggestion_result` keeps the MSG80 text and the reporter's YES / NO |
+| 2026-11-01 | STORY-003 | AC-003.6 answers 400 with the field codes of the team's `GlobalExceptionHandler` (MSG01 / MSG02 / MSG06) instead of always MSG06 | `main` (KAN-25) renders validation errors per field; modules may not add their own handler (backend AGENTS §5) |
 
 ## Requirements
 
@@ -70,7 +71,7 @@ the request belongs to; **discovery** = finding that database from the request (
 - Acceptance:
   - AC-003.1: WHEN an "issue created" event arrives whose `issue.fields.project.key` is the Jira project key of an ACTIVE T-Solve Project, THE tracker SHALL store a suggestion result with that Project, the issue key, no sources, no suggested solution and no reporter answer, and respond 202.
   - AC-003.4: IF a suggestion result for the event's issue key already exists (Forge delivered the event again), THEN THE tracker SHALL respond 202 without storing a second one or changing the existing one.
-  - AC-003.6: IF the event body is not a valid "issue created" event (no issue key, or no `issue.fields.project.key`), THEN THE tracker SHALL respond 400 with MSG06 and store nothing.
+  - AC-003.6: IF the event body is not a valid "issue created" event (no issue key, an issue key longer than 50 characters, or no `issue.fields.project.key`), THEN THE tracker SHALL respond 400 with the team's validation message code (missing field MSG01, too long MSG02, unreadable body MSG06) and store nothing.
   - AC-003.8: IF the event's project key is not the Jira project key of an ACTIVE T-Solve Project, THEN THE tracker SHALL respond 202 and store nothing.
 
 ### STORY-007: Serve the Issue Panel

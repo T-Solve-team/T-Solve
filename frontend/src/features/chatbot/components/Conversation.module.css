@@ -1,0 +1,59 @@
+/* Figma 12.1: the thread scrolls above the question box; question bubbles on the right, answers in a tinted block. */
+.thread {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.question {
+  align-self: flex-end;
+  max-width: 70%;
+  margin: 0;
+  padding: var(--ant-padding-sm) var(--ant-padding);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-primary-bg);
+  white-space: pre-wrap;
+}
+
+.answer {
+  padding: var(--ant-padding);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-fill-quaternary);
+}
+
+.text {
+  margin-bottom: 0;
+  white-space: pre-wrap;
+}
+
+/* Figma 12.1 "Card · Conversations": the list on the left; the card ends after its last entry, a long title wraps. */
+.list {
+  align-self: start;
+  max-height: 100%;
+  min-height: 0;
+  padding: var(--ant-padding-lg);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow-tertiary);
+}
+
+.entries {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.entry {
+  justify-content: flex-start;
+  height: auto;
+  padding-block: var(--ant-padding-xs);
+  text-align: left;
+  white-space: normal;
+}
+
+.entry[aria-current='true'] {
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary);
+}

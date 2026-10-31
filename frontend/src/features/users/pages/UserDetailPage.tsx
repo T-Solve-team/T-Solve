@@ -1,8 +1,11 @@
 /** 1.3.2 User Detail — SRS III.1.3.2 */
-import { ScreenPlaceholder } from '@/shared/ui';
+import { useParams } from 'react-router';
+import { CreateUserForm } from '../components/CreateUserForm';
+import { UserAccountDetail } from '../components/UserAccountDetail';
 
 export function UserDetailPage() {
-  return <ScreenPlaceholder number="1.3.2" name="User Detail" />;
+  const { userId } = useParams();
+  return userId ? <UserAccountDetail key={userId} userId={userId} /> : <CreateUserForm />;
 }
 
 export default UserDetailPage;

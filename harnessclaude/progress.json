@@ -4,6 +4,234 @@
   "phase": "decompose",
   "status": "active",
   "modules": {
+    "import-ticket-list": {
+      "status": "completed",
+      "currentPhase": "evaluate",
+      "features": {
+        "csv-import-contract": "passing",
+        "csv-import-schema": "passing",
+        "csv-parser": "passing",
+        "csv-row-validation": "passing",
+        "project-access-errors": "passing",
+        "csv-upload": "passing",
+        "preview-rows": "passing",
+        "import-endpoints": "passing",
+        "csv-confirm": "passing",
+        "preview-cleanup": "passing",
+        "csv-import-performance": "passing",
+        "retire-snapshot-import": "passing",
+        "csv-confirm-db-tests": "passing",
+        "preview-rows-access": "passing"
+      },
+      "lastUpdated": "2026-10-22T13:51:10.073Z",
+      "branch": "feat/import-ticket-list",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "58e0a0674251e929d2c38e31b8eacb78f861e984"
+      }
+    },
+    "be-foundation": {
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "problem-errors": "passing",
+        "roles-security": "pending",
+        "me-session": "pending",
+        "audit-writer": "pending"
+      },
+      "lastUpdated": "2026-10-30T16:13:59.159Z",
+      "branch": "feat/be-foundation",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "b7b546d51536c8fb05b9361f175a5925118bb04a"
+      }
+    },
+    "fe-foundation": {
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "roles-session": "passing",
+        "guards-menus": "passing",
+        "route-map": "passing",
+        "catalog-tags": "passing",
+        "guidelines": "passing",
+        "placeholder-rule": "passing",
+        "catalog-sync": "passing",
+        "site-sign-in": "passing",
+        "host-routes": "passing",
+        "uuid-ids": "passing"
+      },
+      "lastUpdated": "2026-10-28T14:17:22.890Z",
+      "branch": "feat/fe-foundation",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "507955c893cd293983fbf2d04714bf4a921324f7"
+      }
+    },
+    "identity": {
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "user-list": "passing",
+        "add-user": "passing",
+        "account-status": "passing",
+        "user-roles": "passing",
+        "user-list-review": "passing",
+        "add-user-review": "passing",
+        "login-screen": "passing",
+        "sign-in-start": "passing",
+        "sign-in-callback": "pending",
+        "workspace-session": "pending",
+        "operator-sign-in": "pending",
+        "jira-link-sign-in": "pending",
+        "project-handover": "passing",
+        "space-handover": "passing",
+        "account-checks": "pending",
+        "platform-adapters": "pending",
+        "profile-account": "pending",
+        "profile-viewable-spaces": "pending",
+        "my-solutions-contract": "pending",
+        "my-solutions-table": "pending"
+      },
+      "lastUpdated": "2026-10-31T14:01:28.179Z",
+      "branch": "feat/identity",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "5310e2b10093f244440daabf3f3ca7ad14b1d613"
+      }
+    },
+    "workspace": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.576Z"
+    },
+    "project-integration": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.778Z"
+    },
+    "wiki": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:22.980Z"
+    },
+    "ticket-repository": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.187Z"
+    },
+    "search": {
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "ticket-list": "passing",
+        "ticket-search": "passing",
+        "give-feedback": "pending"
+      },
+      "lastUpdated": "2026-10-30T15:41:22.397Z",
+      "branch": "feat/search",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "cfdf2de2a8ce09f475abb826f9806268206032c0"
+      }
+    },
+    "triage": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:23.605Z"
+    },
+    "chatbot": {
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "ask-answer": "passing",
+        "citations": "passing",
+        "session-conversations": "passing",
+        "ratings": "passing",
+        "uuid-ids": "passing"
+      },
+      "lastUpdated": "2026-10-25T18:12:52.131Z",
+      "branch": "feat/chatbot",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "3d3c827c8b735482e0f3e8baf0bd182d1ad40166"
+      }
+    },
+    "jira-app": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-22T14:21:24.029Z"
+    },
+    "dashboard-audit": {
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "audit-log": "passing"
+      },
+      "lastUpdated": "2026-10-31T10:34:30.638Z",
+      "branch": "feat/dashboard-audit",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "85a8aeb11008532979199decd64b362284748a0c"
+      }
+    },
+    "platform": {
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "tenant-context": "pending",
+        "tenant-schema": "pending",
+        "row-level-security": "pending",
+        "workspace-registry": "pending",
+        "web-tenant-resolver": "pending",
+        "file-storage": "pending",
+        "local-compose": "pending",
+        "ci-images": "pending",
+        "staging-servers": "pending",
+        "edge-caddy": "pending",
+        "staging-cd": "pending",
+        "demo-seed-workspaces": "pending"
+      },
+      "lastUpdated": "2026-10-25T13:16:09.802Z"
+    },
+    "platform-console": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-24T23:56:42.775Z"
+    },
+    "worker": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-24T23:56:42.970Z"
+    },
+    "ai": {
+      "status": "decomposed",
+      "currentPhase": "decompose",
+      "features": {},
+      "lastUpdated": "2026-10-24T23:56:43.157Z"
+    },
     "tracker": {
       "status": "implementing",
       "currentPhase": "implement",
@@ -29,12 +257,6 @@
         "default"
       ],
       "lastCommit": {}
-    },
-    "jira-app": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-21T12:45:05.405Z"
     }
   },
   "dependencies": {},

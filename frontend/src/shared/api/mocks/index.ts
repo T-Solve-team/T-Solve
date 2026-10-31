@@ -9,7 +9,7 @@ type ProblemOptions = {
 
 /**
  * An error response in the agreed backend format (RFC 9457 Problem Details + MSG code, guideline 06 §6).
- * `return problem(409, 'MSG47', { params: { department_name: 'IT' } })`
+ * `return problem(409, 'MSG49', { params: { department_name: 'IT' } })`
  */
 export function problem(status: number, code?: MsgCode, options: ProblemOptions = {}) {
   return HttpResponse.json(

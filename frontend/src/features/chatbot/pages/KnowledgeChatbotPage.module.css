@@ -1,0 +1,22 @@
+/* Figma 12.1: list card on the left, conversation card on the right. The cards have a fixed height, so the thread
+   scrolls inside its card and the page does not grow with the chat (PR #51 review, finding 2). */
+.page {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: var(--ant-margin-lg);
+  /* App shell: header 64 + content bottom padding 24 (app/layout/AppShell.module.css). */
+  height: calc(100vh - 88px);
+  min-height: 480px;
+}
+
+/* Figma 12.1 "Card · Conversation": white, radius 8, padding 24, shadow/card; the box stays at the bottom. */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ant-margin-lg);
+  min-height: 0;
+  padding: var(--ant-padding-lg);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow-tertiary);
+}

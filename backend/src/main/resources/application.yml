@@ -13,11 +13,27 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate      # schema is owned by Liquibase
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 100     # imports insert thousands of rows at once
+        order_inserts: true
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
+  servlet:
+    multipart:
+      max-file-size: 10MB     # SRS UC-21: one CSV of at most 10 MB (MSG28)
+      max-request-size: 11MB
 
 server:
   port: ${SERVER_PORT}
+
+logging:
+  level:
+    # their messages carry the values of a failed insert, i.e. ticket content (AGENTS.md §9); the services log
+    # their own line with the exception type and SQLState instead
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
+    org.hibernate.orm.jdbc.batch: OFF
 
 management:
   endpoints:
@@ -31,3 +47,19 @@ tsolve:
   tracker:
     jira-app-id: ${TSOLVE_JIRA_APP_ID}
     forge-jwks-uri: ${FORGE_JWKS_URI}
+  # Central sign-in (identity). All from the environment with no default: startup fails while one is missing.
+  auth:
+    login-origin: ${TSOLVE_LOGIN_ORIGIN}
+    admin-origin: ${TSOLVE_ADMIN_ORIGIN}
+    signing-key: ${TSOLVE_SIGNING_KEY}
+    google-client-id: ${GOOGLE_CLIENT_ID}
+    google-client-secret: ${GOOGLE_CLIENT_SECRET}
+    operator-emails: ${PLATFORM_OPERATOR_EMAILS}
+  # Google's published endpoints: not our hosts and not secrets, so they carry values (tests can point them elsewhere)
+  oidc:
+    google:
+      authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+  # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId". Empty = nobody can import.
+  stub:
+    projects: ${TSOLVE_STUB_PROJECTS:}
+    inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}

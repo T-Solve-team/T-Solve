@@ -8,19 +8,238 @@ info:
     backend must agree to (frontend guideline 06 §6 and the decision log): Problem Details errors with an MSG
     `code`, Spring-style paging (`page` from 0, `size`, `sort`), and the `/me` session shape.
 tags:
+  - name: users
+    description: Workspace User List (frontend mock proposal, SRS III.1.3.1).
   - name: session
     description: Who is signed in.
   - name: review
     description: Review Queue and review decisions (SRS III.7).
+  - name: import
+    description: Import tickets from CSV (SRS UC-21) — Import Preview and Confirm.
+  - name: chatbot
+    description: Knowledge Chatbot questions and answers (Report3 UC-51, GBR-36; SRS III.12.1).
+  - name: tickets
+    description: Ticket List (Report3 UC-27; SRS III.6.2).
+  - name: search
+    description: Search of the Published tickets (Report3 UC-26; SRS III.6.1).
   - name: jira-app
     description: Calls from the T-Solve Jira App through Forge Remote (Forge Invocation Token).
-
 paths:
+  /api/v1/audit-events:
+    get:
+      tags: [audit-log]
+      operationId: getAuditEvents
+      summary: Frontend proposal — Admin audit log within the host-resolved Workspace (KAN-153).
+      description: >
+        Implemented in MSW only until backend integration. Filters combine with AND. The real backend must
+        enforce Admin access and Workspace isolation; no Workspace parameter or header is accepted.
+        Default order is createdAt descending with id ascending as a stable tie-breaker.
+      parameters:
+        - name: actor
+          in: query
+          description: Trimmed, case-insensitive substring of actor email; empty means all actors.
+          schema: { type: string }
+        - name: action
+          in: query
+          schema: { $ref: '#/components/schemas/AuditAction' }
+        - name: from
+          in: query
+          description: First included calendar day in Asia/Ho_Chi_Minh; paired with to, not in the future.
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: Last included calendar day in Asia/Ho_Chi_Minh; paired with from, not before from or in the future.
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Matching entries; default page size 20. No dates means no date restriction.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditEntryPage' }
+        '400':
+          description: Invalid date pair (MSG39) or query parameters (MSG06).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/users:
+    post:
+      tags: [users]
+      operationId: createUser
+      summary: Create a Workspace account (frontend mock proposal); Employee is always retained.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateUserRequest' }
+      responses:
+        '201':
+          description: Account created; full name is populated on first company sign-in.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserAccount' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+    get:
+      tags: [users]
+      operationId: getUsers
+      summary: Workspace users; default sort fullName,asc with id as a stable tie-breaker.
+      parameters:
+        - name: q
+          in: query
+          description: Case-insensitive substring of full name or email.
+          schema: { type: string, maxLength: 100 }
+        - name: role
+          in: query
+          description: EMPLOYEE means Employee only; other values mean role membership.
+          schema: { $ref: '#/components/schemas/Role' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/UserAccountStatus' }
+        - name: departmentId
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: One page of users in the signed-in Admin's Workspace.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserAccountPage' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/users/{userId}:
+    put:
+      tags: [users]
+      operationId: updateUserRoles
+      summary: Atomically update roles, Department and Spaces after required handover and membership confirmation.
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserRolesRequest' }
+      responses:
+        '200':
+          description: Updated Workspace account detail; Employee is retained.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserDetail' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    get:
+      tags: [users]
+      operationId: getUserDetail
+      summary: Account detail and retained Project and Space references (frontend mock proposal).
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Workspace account detail.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserDetail' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/{userId}/handover-options:
+    get:
+      tags: [users]
+      operationId: getUserHandoverOptions
+      summary: Eligible active same-Workspace replacements for every managed responsibility.
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Active managed Projects (same Department Project Managers) and Spaces (Knowledge Managers).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserHandoverOptions' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/{userId}/status:
+    put:
+      tags: [users]
+      operationId: updateUserStatus
+      summary: Validate every replacement before atomically changing status and ownership; retain account/history.
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserStatusRequest' }
+      responses:
+        '200':
+          description: Updated detail.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserDetail' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/creation-options:
+    get:
+      tags: [users]
+      operationId: getUserCreationOptions
+      summary: Workspace company domain and Spaces for adding an account (frontend mock proposal).
+      responses:
+        '200':
+          description: Options in the current Workspace, including occupied Spaces so conflicts remain explicit.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserCreationOptions' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/users/departments:
+    get:
+      tags: [users]
+      operationId: getUserDepartments
+      summary: Departments available for filtering the Workspace User List.
+      responses:
+        '200':
+          description: Departments in the current Workspace.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DepartmentRef' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/me:
     get:
       tags: [session]
       operationId: getMe
-      summary: The signed-in user, their role, Projects and Departments.
+      summary: The signed-in user with all their roles, Department(s), Projects and managed Spaces.
       responses:
         '200':
           description: Signed in.
@@ -30,6 +249,137 @@ paths:
                 $ref: '#/components/schemas/CurrentUser'
         '401':
           $ref: '#/components/responses/Problem'
+  /api/v1/auth/sign-in:
+    get:
+      tags: [session]
+      operationId: signIn
+      summary: Starts the central Google sign-in; the browser opens it as a page (never a fetch call).
+      description: >
+        The web app navigates the whole page here from the Login screen. The server makes the OAuth state value,
+        redirects (302) to the central sign-in site and, after the identity callback, redirects back to the
+        Workspace site: to `returnTo` on success, or to `/login?error=MSGxx` (MSG122 adds `google_domain`).
+        The Workspace is decided by the Host of the request, so there is no Workspace or site parameter.
+      parameters:
+        - name: returnTo
+          in: query
+          description: >
+            Same-site path (and query) to open after sign-in. Left out when the web app finds it unsafe; the server
+            checks it again and falls back to the landing page.
+          schema: { type: string, maxLength: 2000 }
+      responses:
+        '302':
+          description: Redirect to the central sign-in site.
+          headers:
+            Location:
+              description: The central sign-in URL.
+              schema: { type: string }
+  /api/v1/auth/authorize:
+    servers:
+      - url: https://login.tsolve.io.vn
+        description: The central sign-in site (not the Workspace site).
+    get:
+      tags: [session]
+      operationId: authorize
+      summary: Central sign-in site step; the browser follows it as a page (never a fetch call).
+      description: >
+        The central sign-in site checks the signed state value and redirects (302) to Google. The web app never
+        calls it.
+      parameters:
+        - name: state
+          in: query
+          required: true
+          description: Signed state value made by the Workspace site.
+          schema: { type: string }
+      responses:
+        '302':
+          description: Redirect to Google.
+          headers:
+            Location:
+              description: The Google authorization URL.
+              schema: { type: string }
+        '400':
+          description: A minimal HTML page with MSG141 (the state value is missing, wrong or expired).
+          content:
+            text/html:
+              schema: { type: string }
+        '404':
+          description: Not the central sign-in host (wrong Host); no body.
+  /api/v1/auth/callback:
+    servers:
+      - url: https://login.tsolve.io.vn
+        description: The central sign-in site (not the Workspace site).
+    get:
+      tags: [session]
+      operationId: authCallback
+      summary: Google redirects here after sign-in; the browser follows it as a page (never a fetch call).
+      description: >
+        The central sign-in site reads the Google answer and redirects (302) to the Workspace site's complete step
+        with a one-time hand-off code. When Google or the check fails, it redirects to the Workspace site's
+        `/login?error=` with one of MSG06, MSG09, MSG10, MSG120, MSG122 (adds `google_domain`) or MSG141
+        (on the `admin.` site: MSG06 or MSG135).
+        When the browser has no usable state, it answers 400 with a minimal page. The web app never calls it.
+      parameters:
+        - name: code
+          in: query
+          description: The Google authorization code.
+          schema: { type: string }
+        - name: error
+          in: query
+          description: >
+            Set by Google when the user cancels or denies access (for example `access_denied`); the site then
+            redirects to `/login?error=MSG09` (AC-001.8).
+          schema: { type: string }
+        - name: state
+          in: query
+          required: true
+          description: The signed state value.
+          schema: { type: string }
+      responses:
+        '302':
+          description: Redirect to the Workspace site.
+          headers:
+            Location:
+              description: The Workspace site's complete URL.
+              schema: { type: string }
+        '200':
+          description: A minimal HTML page (no redirect possible).
+          content:
+            text/html:
+              schema: { type: string }
+        '400':
+          description: A minimal HTML page with MSG141 (the state value is missing, wrong or expired).
+          content:
+            text/html:
+              schema: { type: string }
+        '404':
+          description: Not the central sign-in host (wrong Host); no body.
+  /api/v1/auth/complete:
+    get:
+      tags: [session]
+      operationId: completeSignIn
+      summary: Ends the sign-in on the Workspace site; the browser follows it as a page (never a fetch call).
+      description: >
+        The Workspace site sets the session cookie and redirects (302) to `returnTo` or the landing page, or to
+        `/login?error=MSGxx` (MSG122 adds `google_domain`). The web app never calls it.
+      parameters:
+        - name: code
+          in: query
+          required: true
+          description: One-time hand-off code made by the central sign-in site (valid 60 seconds, single use).
+          schema: { type: string }
+      responses:
+        '302':
+          description: >
+            Success: sets the session cookie and redirects to `returnTo` or the landing page. Failure (code
+            unknown, expired or used): no cookie, redirects to `/login?error=MSG141`.
+          headers:
+            Location:
+              description: The page to open, or `/login?error=MSG141` on failure.
+              schema: { type: string }
+            Set-Cookie:
+              description: >
+                On success only: `__Host-TSOLVE_SESSION` (HttpOnly, Secure, SameSite=Lax, Path=/).
+              schema: { type: string }
   /api/v1/auth/logout:
     post:
       tags: [session]
@@ -48,8 +398,8 @@ paths:
           in: query
           description: One Department; omitted = all Departments of the Project Manager.
           schema:
-            type: integer
-            format: int64
+            type: string
+            format: uuid
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
         - $ref: '#/components/parameters/Sort'
@@ -73,8 +423,8 @@ paths:
         - name: departmentId
           in: query
           schema:
-            type: integer
-            format: int64
+            type: string
+            format: uuid
       responses:
         '200':
           description: All ticket ids in the queue for the filter.
@@ -90,7 +440,7 @@ paths:
     post:
       tags: [review]
       operationId: approveTickets
-      summary: Approves and publishes the tickets (MSG18).
+      summary: Approves and publishes the tickets (MSG14).
       requestBody:
         required: true
         content:
@@ -116,7 +466,7 @@ paths:
     post:
       tags: [review]
       operationId: rejectTickets
-      summary: Rejects the tickets with one reason (MSG19 confirm, MSG20 result).
+      summary: Rejects the tickets with one reason (MSG15 confirm, MSG16 result).
       requestBody:
         required: true
         content:
@@ -142,7 +492,7 @@ paths:
     post:
       tags: [review]
       operationId: requestTicketChanges
-      summary: Sends the tickets back to their authors with one comment (MSG21).
+      summary: Sends the tickets back to their authors with one comment (MSG17).
       requestBody:
         required: true
         content:
@@ -186,6 +536,359 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/imports/csv/template:
+    get:
+      tags: [import]
+      operationId: downloadCsvTemplate
+      summary: The CSV template — header row only, UTF-8.
+      responses:
+        '200':
+          description: The template file.
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/csv:
+    post:
+      tags: [import]
+      operationId: uploadCsvImport
+      summary: >
+        Uploads one CSV file for one Project and returns its Import Preview (counts and the first page of rows).
+        Replaces the caller's previous unconfirmed preview. File rejected = MSG27, MSG29 or MSG04 (400), MSG28 (413).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, projectId]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: One .csv file, UTF-8, at most 10 MB.
+                projectId:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: Preview created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/rows:
+    get:
+      tags: [import]
+      operationId: getImportPreviewRows
+      summary: One page of the preview rows, ordered by row number; Solution sections cut to 200 characters.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+        - name: status
+          in: query
+          description: Only rows with this result; omitted = all rows.
+          schema:
+            $ref: '#/components/schemas/ImportPreviewRowStatus'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of rows.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewRowPage'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/rows/{rowNo}:
+    get:
+      tags: [import]
+      operationId: getImportPreviewRow
+      summary: One preview row with every Solution section in full (read-only, Import Ticket Preview popup).
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+        - name: rowNo
+          in: path
+          required: true
+          description: Data row number in the file, from 1.
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: The row.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewRowResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/remove-rows:
+    post:
+      tags: [import]
+      operationId: removeImportPreviewRows
+      summary: Marks rows Removed (Valid or Error) so Confirm skips them. Unknown row numbers are ignored.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoveRowsRequest'
+      responses:
+        '200':
+          description: The updated preview (counts and the first page of rows).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/confirm:
+    post:
+      tags: [import]
+      operationId: confirmImport
+      summary: >
+        Imports the remaining Valid rows as Published tickets (MSG32). No Valid row left = MSG30 (409); Project no
+        longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '200':
+          description: Imported.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResultResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/answers:
+    post:
+      tags: [chatbot]
+      operationId: askChatbot
+      summary: Answers a question from the knowledge the user may see, with numbered citations (GBR-36).
+      description: >
+        Sources are the Solutions of all Published tickets and the Wiki documents the user can view (GBR-31), checked
+        on every question. No source → outcome NO_SOURCE (the web app shows MSG109). The AI module unavailable → 503
+        with code MSG06.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatbotQuestion'
+      responses:
+        '200':
+          description: The answer, or NO_SOURCE.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotAnswer'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/unavailable-documents:
+    get:
+      tags: [chatbot]
+      operationId: listUnavailableCitedDocuments
+      summary: Which of the cited Wiki documents the user can no longer view (MSG110, UC-52).
+      parameters:
+        - name: wikiDocumentIds
+          in: query
+          required: true
+          description: The Wiki document ids cited in the conversation on screen.
+          schema:
+            type: array
+            minItems: 1
+            items:
+              type: string
+              format: uuid
+      responses:
+        '200':
+          description: The given ids that are no longer available to the user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnavailableDocuments'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/answers/{answerId}/rating:
+    parameters:
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [chatbot]
+      operationId: rateChatbotAnswer
+      summary: Rates an answer Helpful or Not helpful; replaces any earlier rating of this user (UC-53).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatbotRating'
+      responses:
+        '204':
+          description: Rating saved.
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [chatbot]
+      operationId: removeChatbotAnswerRating
+      summary: Removes this user's rating of an answer (UC-53).
+      responses:
+        '204':
+          description: Rating removed, also when the answer had none.
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/tickets:
+    get:
+      tags: [tickets]
+      operationId: getTickets
+      summary: One page of the tickets the user may see (UC-27; Published tickets of own Departments plus own tickets).
+      parameters:
+        - name: keyword
+          in: query
+          description: Matches the Ticket ID, title or Solution text.
+          schema:
+            type: string
+            maxLength: 100
+        - name: departmentId
+          in: query
+          description: One Department; omitted = every Department the user may see.
+          schema:
+            type: string
+            format: uuid
+        - name: source
+          in: query
+          schema:
+            $ref: '#/components/schemas/TicketSource'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TicketStatus'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: >
+            One page of tickets. Default sort updatedAt,desc; sort keys sourceTicketId, title, project,
+            reviewDueDate, updatedAt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketSummaryPage'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/search/tickets:
+    get:
+      tags: [search]
+      operationId: searchTickets
+      summary: One page of the Published tickets of the user's Departments that match a query, ranked by relevance (UC-26).
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: The query, matched by meaning and keywords on the title and Solution.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - name: departmentId
+          in: query
+          description: One Department; omitted = every Department of the user.
+          schema:
+            type: string
+            format: uuid
+        - name: source
+          in: query
+          schema:
+            $ref: '#/components/schemas/TicketSource'
+        - name: resolvedFrom
+          in: query
+          description: First resolved day, included.
+          schema:
+            type: string
+            format: date
+        - name: resolvedTo
+          in: query
+          description: Last resolved day, included.
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of results, most relevant first (no sort parameter).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketSearchResultPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     forgeInvocationToken:
@@ -219,6 +922,13 @@ components:
         type: array
         items:
           type: string
+    PreviewId:
+      name: previewId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
   responses:
     Problem:
       description: Error (RFC 9457 Problem Details with an SRS MSG code).
@@ -252,9 +962,202 @@ components:
                     key:
                       type: string
                       description: The Jira project key, e.g. ITSUP.
+    AuditAction:
+      type: string
+      enum: [APPROVE, REJECT, REQUEST_CHANGES, PUBLISH, UNPUBLISH, IMPORT, DELETE, ROLE_CHANGE, PERMISSION_CHANGE, TRACKER_CONFIGURATION_CHANGE]
+    AuditEntry:
+      type: object
+      required: [id, createdAt, actor, action, resourceType, resourceId, summary]
+      properties:
+        id: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        actor: { type: string, format: email }
+        action: { $ref: '#/components/schemas/AuditAction' }
+        resourceType: { type: string }
+        resourceId: { type: string, format: uuid }
+        summary:
+          type: [string, 'null']
+          description: Optional read-model summary; no database change is proposed by this frontend work.
+    AuditEntryPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/AuditEntry' }
+        page: { $ref: '#/components/schemas/PageMetadata' }
+    UpdateUserRolesRequest:
+      type: object
+      description: >-
+        Frontend/MSW contract proposal pending backend integration. Hand over each removed
+        managed Space exactly once before removing Knowledge Manager or its assignment;
+        retained spaceIds remain with the user. Revalidate all recipients and commit roles,
+        assignments, Project handovers and Space handovers atomically. Reject the entire
+        operation on any invalid choice; never commit a partial handover.
+      required: [roles, departmentId, spaceIds]
+      properties:
+        roles:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/Role' }
+        departmentId: { type: [string, 'null'], format: uuid }
+        spaceIds:
+          type: array
+          uniqueItems: true
+          items: { type: string, format: uuid }
+        projectHandovers:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectHandover' }
+        spaceHandovers:
+          type: array
+          items: { $ref: '#/components/schemas/SpaceHandover' }
+        confirmTicketResolverRemoval:
+          type: boolean
+          description: Required true when removing Ticket Resolver removes current Project memberships (MSG78).
+    UserProject:
+      type: object
+      required: [projectId, name, department, isActive, managerId]
+      properties:
+        projectId: { type: string, format: uuid }
+        name: { type: string }
+        department: { $ref: '#/components/schemas/DepartmentRef' }
+        isActive: { type: boolean }
+        managerId: { type: string, format: uuid }
+    UserDetail:
+      allOf:
+        - { $ref: '#/components/schemas/UserAccount' }
+        - type: object
+          required: [isCurrentUser, projects, managedSpaces, ticketResolverProjectIds]
+          properties:
+            isCurrentUser: { type: boolean }
+            ticketResolverProjectIds:
+              type: array
+              description: Current Project memberships removed with Ticket Resolver; excludes retained Project Manager ownership and historical references.
+              items: { type: string, format: uuid }
+            projects:
+              type: array
+              items: { $ref: '#/components/schemas/UserProject' }
+            managedSpaces:
+              type: array
+              items: { $ref: '#/components/schemas/SpaceRef' }
+    ProjectHandoverOption:
+      type: object
+      required: [project, recipients]
+      properties:
+        project: { $ref: '#/components/schemas/UserProject' }
+        recipients:
+          type: array
+          items: { $ref: '#/components/schemas/UserAccount' }
+    SpaceHandoverOption:
+      type: object
+      description: >-
+        A managed Space and its eligible replacements: other Active Knowledge Managers
+        in the current Workspace, regardless of Department. Exclude the outgoing manager.
+        An empty recipient list blocks completion with MSG118.
+      required: [space, recipients]
+      properties:
+        space: { $ref: '#/components/schemas/SpaceRef' }
+        recipients:
+          type: array
+          items: { $ref: '#/components/schemas/UserAccount' }
+    UserHandoverOptions:
+      type: object
+      required: [projects, spaces]
+      properties:
+        projects:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectHandoverOption' }
+        spaces:
+          type: array
+          items: { $ref: '#/components/schemas/SpaceHandoverOption' }
+    ProjectHandover:
+      type: object
+      required: [projectId, recipientId]
+      properties:
+        projectId: { type: string, format: uuid }
+        recipientId: { type: string, format: uuid }
+    SpaceHandover:
+      type: object
+      description: >-
+        One recipient for one affected Space. Every affected Space must occur exactly once;
+        reject missing, duplicate, unrelated or currently ineligible choices with MSG01.
+        A recipient may receive multiple Spaces. Retain the Space id and former-manager
+        history after transfer; reactivation or restoring a role does not reverse it.
+      required: [spaceId, recipientId]
+      properties:
+        spaceId: { type: string, format: uuid }
+        recipientId: { type: string, format: uuid }
+    UpdateUserStatusRequest:
+      type: object
+      description: >-
+        Frontend/MSW contract proposal pending backend integration. Deactivation requires
+        handover of every managed Space and Active Project. Revalidate current recipient
+        eligibility on submission, then commit account status and all handovers atomically.
+        Reject the entire operation if any choice is invalid; MSG118 means no eligible
+        Space recipient exists. Activation does not accept or reverse handovers.
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/UserAccountStatus' }
+        projectHandovers:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectHandover' }
+        spaceHandovers:
+          type: array
+          items: { $ref: '#/components/schemas/SpaceHandover' }
+    CreateUserRequest:
+      type: object
+      required: [email, roles]
+      properties:
+        email: { type: string, format: email, minLength: 1, maxLength: 100 }
+        roles:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/Role' }
+        departmentId: { type: [string, 'null'], format: uuid }
+        spaceIds:
+          type: array
+          uniqueItems: true
+          description: At least one Space when KNOWLEDGE_MANAGER is selected; each Space has one manager.
+          items: { type: string, format: uuid }
+    UserCreationOptions:
+      type: object
+      required: [companyDomain, spaces]
+      properties:
+        companyDomain: { type: string }
+        spaces:
+          type: array
+          items: { $ref: '#/components/schemas/SpaceRef' }
+    UserAccountStatus:
+      type: string
+      enum: [ACTIVE, DEACTIVATED]
+    UserAccount:
+      type: object
+      required: [id, fullName, email, roles, department, status, lastSignInAt]
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: [string, 'null'] }
+        email: { type: string, format: email }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/Role' }
+        department:
+          anyOf:
+            - { $ref: '#/components/schemas/DepartmentRef' }
+            - { type: 'null' }
+        status: { $ref: '#/components/schemas/UserAccountStatus' }
+        lastSignInAt: { type: [string, 'null'], format: date-time }
+    UserAccountPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/UserAccount' }
+        page: { $ref: '#/components/schemas/PageMetadata' }
     Role:
       type: string
-      enum: [ADMIN, DEPARTMENT_MANAGER, PROJECT_MANAGER, STAFF]
+      description: A role of a user (Report3 4.1, GBR-28). A user can hold several; every user has EMPLOYEE.
+      enum: [EMPLOYEE, TICKET_RESOLVER, PROJECT_MANAGER, KNOWLEDGE_MANAGER, ADMIN]
     ProjectRole:
       type: string
       description: The user's role inside one Project.
@@ -267,8 +1170,8 @@ components:
       required: [id, fullName, email]
       properties:
         id:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
         fullName:
           type: string
         email:
@@ -279,13 +1182,13 @@ components:
       required: [projectId, jiraProjectKey, departmentId, departmentName, roleInProject]
       properties:
         projectId:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
         jiraProjectKey:
           type: string
         departmentId:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
         departmentName:
           type: string
         roleInProject:
@@ -295,30 +1198,54 @@ components:
       required: [departmentId, name]
       properties:
         departmentId:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
+        name:
+          type: string
+    SpaceRef:
+      type: object
+      required: [spaceId, name]
+      properties:
+        spaceId:
+          type: string
+          format: uuid
         name:
           type: string
     CurrentUser:
       type: object
       description: >
-        The signed-in user (SRS 1.2.1). projects = Projects the user belongs to with their role in each (empty for
-        Admin and Department Manager); departments = the user's Departments (from their Projects, or the ones a
-        Department Manager manages).
-      required: [user, role, projects, departments]
+        The signed-in user (Report3 UC-01, UC-03; GBR-02, GBR-16, GBR-28). roles = all of the user's roles, EMPLOYEE
+        included. department = the Department of a Project Manager (exactly one), null for everyone else.
+        departments = the Project Manager's Department, or the Departments of a Ticket Resolver's Projects; empty
+        for others. projects = the Projects the user belongs to with their role in each. managedSpaces = the
+        Spaces a Knowledge Manager manages. workspaceReady = false until the Admin has entered the company
+        information (2.1 Workspace Setup).
+      required: [user, roles, department, departments, projects, managedSpaces, workspaceReady]
       properties:
         user:
           $ref: '#/components/schemas/UserSummary'
-        role:
-          $ref: '#/components/schemas/Role'
-        projects:
+        roles:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectMembership'
+            $ref: '#/components/schemas/Role'
+        department:
+          anyOf:
+            - $ref: '#/components/schemas/DepartmentRef'
+            - type: 'null'
         departments:
           type: array
           items:
             $ref: '#/components/schemas/DepartmentRef'
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMembership'
+        managedSpaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpaceRef'
+        workspaceReady:
+          type: boolean
     ProjectRef:
       type: object
       required: [projectId, name]
@@ -378,6 +1305,98 @@ components:
             $ref: '#/components/schemas/ReviewQueueItem'
         page:
           $ref: '#/components/schemas/PageMetadata'
+    TicketStatus:
+      type: string
+      enum: [PENDING_REVIEW, CHANGES_REQUESTED, PUBLISHED, REJECTED, UNPUBLISHED, EXPIRED]
+    TicketProject:
+      type: object
+      required: [projectId, name]
+      properties:
+        projectId:
+          type: string
+          format: uuid
+        name:
+          type: string
+    TicketDepartment:
+      type: object
+      required: [departmentId, name]
+      properties:
+        departmentId:
+          type: string
+          format: uuid
+        name:
+          type: string
+    TicketSummary:
+      type: object
+      required: [ticketId, sourceTicketId, title, project, department, source, status, reviewDueDate, updatedAt]
+      properties:
+        ticketId:
+          type: string
+          format: uuid
+        sourceTicketId:
+          type: string
+          description: The Ticket ID shown, e.g. ITSUP-1031.
+        title:
+          type: string
+        project:
+          $ref: '#/components/schemas/TicketProject'
+        department:
+          $ref: '#/components/schemas/TicketDepartment'
+        source:
+          $ref: '#/components/schemas/TicketSource'
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+        reviewDueDate:
+          type: [string, 'null']
+          format: date-time
+          description: Only while Pending review or Changes requested.
+        updatedAt:
+          type: string
+          format: date-time
+    TicketSummaryPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketSummary'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+    TicketSearchResult:
+      type: object
+      required: [ticketId, title, project, department, excerpt, helpfulRate, resolvedAt]
+      properties:
+        ticketId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        project:
+          $ref: '#/components/schemas/TicketProject'
+        department:
+          $ref: '#/components/schemas/TicketDepartment'
+        excerpt:
+          type: string
+          description: Short excerpt of the Symptoms and Resolution steps, plain text.
+        helpfulRate:
+          type: [integer, 'null']
+          minimum: 0
+          maximum: 100
+          description: Rounded percent of Helpful Feedback; null = no Feedback yet.
+        resolvedAt:
+          type: string
+          format: date-time
+    TicketSearchResultPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketSearchResult'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
     TicketIdList:
       type: object
       required: [ticketIds]
@@ -426,14 +1445,280 @@ components:
           type: string
           minLength: 1
           maxLength: 1000
-          description: Shown to each author in Jira (MSG53).
+          description: Shown to each author in Jira (MSG64).
     ReviewDecisionResult:
       type: object
       required: [count]
       properties:
         count:
           type: integer
-          description: Number of tickets the decision was applied to (the {count} of MSG18 / MSG20 / MSG21).
+          description: Number of tickets the decision was applied to (the {count} of MSG14 / MSG16 / MSG17).
+    MessageRef:
+      type: object
+      description: An SRS message to show, by code; the web app fills the template from params.
+      required: [code, params]
+      properties:
+        code:
+          type: string
+          description: SRS message code, e.g. MSG32.
+        params:
+          type: object
+          additionalProperties:
+            type: [string, number]
+    ImportPreviewRowStatus:
+      type: string
+      enum: [VALID, ERROR, REMOVED]
+    RowError:
+      type: object
+      description: One failed rule of a row (MSG01, MSG02, MSG31, MSG39 or MSG78).
+      required: [code, params]
+      properties:
+        code:
+          type: string
+        field:
+          type: [string, 'null']
+          description: CSV column the error is about; null for the whole Solution (MSG02 total length).
+        params:
+          type: object
+          additionalProperties:
+            type: [string, number]
+    ImportPreviewRowSummary:
+      type: object
+      description: >
+        One preview row as read from the file (values may be missing or too long when the row is an Error).
+        Solution sections are cut to their first 200 characters.
+      required: [rowNo, status, errors]
+      properties:
+        rowNo:
+          type: integer
+          description: Data row number in the file, from 1.
+        ticketId:
+          type: [string, 'null']
+        title:
+          type: [string, 'null']
+        author:
+          type: [string, 'null']
+        resolvedDate:
+          type: [string, 'null']
+          description: As written in the file (yyyy-MM-dd when valid).
+        symptoms:
+          type: [string, 'null']
+        rootCause:
+          type: [string, 'null']
+        resolutionSteps:
+          type: [string, 'null']
+        workaround:
+          type: [string, 'null']
+        scope:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/ImportPreviewRowStatus'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RowError'
+    ImportPreviewRowResponse:
+      type: object
+      description: One preview row in full, read-only.
+      required: [rowNo, status, errors]
+      properties:
+        rowNo:
+          type: integer
+        ticketId:
+          type: [string, 'null']
+        title:
+          type: [string, 'null']
+        description:
+          type: [string, 'null']
+        author:
+          type: [string, 'null']
+        resolvedDate:
+          type: [string, 'null']
+        symptoms:
+          type: [string, 'null']
+        rootCause:
+          type: [string, 'null']
+        resolutionSteps:
+          type: [string, 'null']
+        workaround:
+          type: [string, 'null']
+        scope:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/ImportPreviewRowStatus'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RowError'
+    ImportPreviewRowPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportPreviewRowSummary'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+    ImportPreviewResponse:
+      type: object
+      required: [previewId, projectId, fileName, validCount, errorCount, removedCount, rows]
+      properties:
+        previewId:
+          type: integer
+          format: int64
+        projectId:
+          type: integer
+          format: int64
+        fileName:
+          type: string
+        validCount:
+          type: integer
+        errorCount:
+          type: integer
+        removedCount:
+          type: integer
+        message:
+          description: MSG30 with {count} when at least one row is an Error; otherwise null.
+          oneOf:
+            - $ref: '#/components/schemas/MessageRef'
+            - type: 'null'
+        rows:
+          $ref: '#/components/schemas/ImportPreviewRowPage'
+    RemoveRowsRequest:
+      type: object
+      required: [rowNumbers]
+      properties:
+        rowNumbers:
+          type: array
+          minItems: 1
+          items:
+            type: integer
+            minimum: 1
+    ImportResultResponse:
+      type: object
+      required: [importBatchId, created, skipped, message]
+      properties:
+        importBatchId:
+          type: integer
+          format: int64
+        created:
+          type: integer
+          description: Tickets published.
+        skipped:
+          type: integer
+          description: Error rows plus Removed rows.
+        message:
+          $ref: '#/components/schemas/MessageRef'
+    ChatbotQuestion:
+      type: object
+      required: [question, history]
+      properties:
+        question:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        history:
+          type: array
+          maxItems: 10
+          description: The earlier turns of the conversation, oldest first (at most the last 10).
+          items:
+            $ref: '#/components/schemas/ChatbotTurn'
+    ChatbotTurn:
+      type: object
+      required: [question, answer]
+      properties:
+        question:
+          type: string
+        answer:
+          type: string
+          description: The answer text; empty for a NO_SOURCE turn.
+    ChatbotAnswerOutcome:
+      type: string
+      enum: [ANSWERED, NO_SOURCE]
+    ChatbotAnswer:
+      type: object
+      required: [answerId, outcome, text, citations]
+      properties:
+        answerId:
+          type: string
+          format: uuid
+          description: Identifies the answer for its rating (UC-53).
+        outcome:
+          $ref: '#/components/schemas/ChatbotAnswerOutcome'
+        text:
+          type: string
+          description: Plain text with numbered markers [1], [2] …; empty when NO_SOURCE.
+        citations:
+          type: array
+          description: In number order; empty when NO_SOURCE.
+          items:
+            $ref: '#/components/schemas/ChatbotCitation'
+    ChatbotCitation:
+      description: A source of an answer. A ticket source carries only its Solution, never the ticket's details (GBR-36).
+      oneOf:
+        - $ref: '#/components/schemas/WikiDocumentCitation'
+        - $ref: '#/components/schemas/TicketSolutionCitation'
+      discriminator:
+        propertyName: type
+        mapping:
+          WIKI_DOCUMENT: '#/components/schemas/WikiDocumentCitation'
+          TICKET_SOLUTION: '#/components/schemas/TicketSolutionCitation'
+    WikiDocumentCitation:
+      type: object
+      required: [number, type, wikiDocumentId, title]
+      properties:
+        number:
+          type: integer
+        type:
+          type: string
+          enum: [WIKI_DOCUMENT]
+        wikiDocumentId:
+          type: string
+          format: uuid
+        title:
+          type: string
+    TicketSolutionCitation:
+      type: object
+      required: [number, type, solution]
+      properties:
+        number:
+          type: integer
+        type:
+          type: string
+          enum: [TICKET_SOLUTION]
+        solution:
+          $ref: '#/components/schemas/CitedSolution'
+    CitedSolution:
+      type: object
+      required: [symptoms, rootCause, resolutionSteps, workaround, scopeOfApplicability]
+      properties:
+        symptoms:
+          type: string
+        rootCause:
+          type: string
+        resolutionSteps:
+          type: string
+        workaround:
+          type: [string, 'null']
+        scopeOfApplicability:
+          type: string
+    ChatbotRating:
+      type: object
+      required: [rating]
+      properties:
+        rating:
+          type: string
+          enum: [HELPFUL, NOT_HELPFUL]
+    UnavailableDocuments:
+      type: object
+      required: [wikiDocumentIds]
+      properties:
+        wikiDocumentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
     FieldError:
       type: object
       required: [field, code]
@@ -442,7 +1727,7 @@ components:
           type: string
         code:
           type: string
-          description: SRS message code, e.g. MSG47.
+          description: SRS message code, e.g. MSG49.
         params:
           type: object
           additionalProperties:
@@ -464,7 +1749,7 @@ components:
           type: string
         code:
           type: string
-          description: SRS message code, e.g. MSG47. Missing or unknown = the web app shows MSG06.
+          description: SRS message code, e.g. MSG49. Missing or unknown = the web app shows MSG06.
         params:
           type: object
           description: Values for the message template, e.g. {"department_name":"IT"}.

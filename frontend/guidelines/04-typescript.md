@@ -126,7 +126,7 @@ import type { ReviewQueueItem } from '@/shared/api';
 type QueueRow = Pick<ReviewQueueItem, 'ticketId' | 'sourceTicketId' | 'title' | 'reviewDueDate'>;
 
 // ❌ Don't — a copy that silently drifts
-type QueueRow = { ticketId: number; sourceTicketId: string; title: string; reviewDueDate: string };
+type QueueRow = { ticketId: string; sourceTicketId: string; title: string; reviewDueDate: string };
 ```
 
 - Value lists in the spec (today `Role`, `ProjectRole`, `TicketSource`; statuses once the backend adds them)

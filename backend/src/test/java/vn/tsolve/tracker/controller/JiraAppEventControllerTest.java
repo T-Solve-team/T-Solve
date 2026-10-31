@@ -65,7 +65,7 @@ class JiraAppEventControllerTest {
     void rejectsBodyWithoutProjectKey_AC_003_6() throws Exception {
         mvc.perform(fromSite().content("{\"issue\": {\"key\": \"ITSUP-1\", \"fields\": {\"summary\": \"x\"}}}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("MSG06"));
+                .andExpect(jsonPath("$.code").value("MSG01"));
         verifyNoInteractions(issueCreatedService);
     }
 
@@ -73,7 +73,7 @@ class JiraAppEventControllerTest {
     void rejectsBodyWithoutIssueKey_AC_003_6() throws Exception {
         mvc.perform(fromSite().content("{\"issue\": {\"fields\": {\"project\": {\"key\": \"ITSUP\"}}}}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("MSG06"));
+                .andExpect(jsonPath("$.code").value("MSG01"));
         verifyNoInteractions(issueCreatedService);
     }
 
@@ -84,7 +84,7 @@ class JiraAppEventControllerTest {
                         .content(
                                 "{\"issue\": {\"key\": \"" + key + "\", \"fields\": {\"project\": {\"key\": \"A\"}}}}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("MSG06"));
+                .andExpect(jsonPath("$.code").value("MSG02"));
         verifyNoInteractions(issueCreatedService);
     }
 

@@ -14,6 +14,8 @@ type FormModalProps<T> = {
   form: FormInstance<T>;
   okText: string;
   isOkDanger?: boolean;
+  /** Required data is unavailable or the action cannot be submitted yet. */
+  isOkDisabled?: boolean;
   /** The request is running: OK shows a spinner and cannot be clicked twice. */
   isSubmitting?: boolean;
   /** Called with valid values only. Keep the popup open on failure — the user's input stays. */
@@ -34,6 +36,7 @@ export function FormModal<T>({
   form,
   okText,
   isOkDanger = false,
+  isOkDisabled = false,
   isSubmitting = false,
   onSubmit,
   onCancel,
@@ -48,7 +51,11 @@ export function FormModal<T>({
       closable={kind === 'form'}
       okText={okText}
       cancelText="Cancel"
-      okButtonProps={{ htmlType: 'submit', danger: isOkDanger }}
+      okButtonProps={{
+        htmlType: 'submit',
+        danger: isOkDanger,
+        disabled: isOkDisabled || isSubmitting,
+      }}
       confirmLoading={isSubmitting}
       onCancel={onCancel}
       destroyOnHidden

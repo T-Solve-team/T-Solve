@@ -36,6 +36,7 @@ import type {
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
+import { withBackgroundMarking } from '../../query-options';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -113,7 +114,9 @@ export const getGetReviewQueueQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewQueue>>> = ({ signal }) =>
     getReviewQueue(params, { signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
     Awaited<ReturnType<typeof getReviewQueue>>,
     TError,
     TData
@@ -249,7 +252,9 @@ export const getGetReviewQueueTicketIdsQueryOptions = <
     signal,
   }) => getReviewQueueTicketIds(params, { signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
     Awaited<ReturnType<typeof getReviewQueueTicketIds>>,
     TError,
     TData
@@ -347,7 +352,7 @@ export const getApproveTicketsUrl = () => {
 };
 
 /**
- * @summary Approves and publishes the tickets (MSG18).
+ * @summary Approves and publishes the tickets (MSG14).
  */
 export const approveTickets = async (
   approveTicketsRequest: ApproveTicketsRequest,
@@ -424,7 +429,7 @@ export type ApproveTicketsMutationError = ErrorType<ProblemResponse>;
 export type ApproveTicketsMutationVariables = { data: ApproveTicketsRequest };
 
 /**
- * @summary Approves and publishes the tickets (MSG18).
+ * @summary Approves and publishes the tickets (MSG14).
  */
 export const useApproveTickets = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
   options?: {
@@ -450,7 +455,7 @@ export const getRejectTicketsUrl = () => {
 };
 
 /**
- * @summary Rejects the tickets with one reason (MSG19 confirm, MSG20 result).
+ * @summary Rejects the tickets with one reason (MSG15 confirm, MSG16 result).
  */
 export const rejectTickets = async (
   rejectTicketsRequest: RejectTicketsRequest,
@@ -527,7 +532,7 @@ export type RejectTicketsMutationError = ErrorType<ProblemResponse>;
 export type RejectTicketsMutationVariables = { data: RejectTicketsRequest };
 
 /**
- * @summary Rejects the tickets with one reason (MSG19 confirm, MSG20 result).
+ * @summary Rejects the tickets with one reason (MSG15 confirm, MSG16 result).
  */
 export const useRejectTickets = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
   options?: {
@@ -553,7 +558,7 @@ export const getRequestTicketChangesUrl = () => {
 };
 
 /**
- * @summary Sends the tickets back to their authors with one comment (MSG21).
+ * @summary Sends the tickets back to their authors with one comment (MSG17).
  */
 export const requestTicketChanges = async (
   requestChangesRequest: RequestChangesRequest,
@@ -632,7 +637,7 @@ export type RequestTicketChangesMutationError = ErrorType<ProblemResponse>;
 export type RequestTicketChangesMutationVariables = { data: RequestChangesRequest };
 
 /**
- * @summary Sends the tickets back to their authors with one comment (MSG21).
+ * @summary Sends the tickets back to their authors with one comment (MSG17).
  */
 export const useRequestTicketChanges = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
   options?: {

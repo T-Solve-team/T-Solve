@@ -10,15 +10,11 @@ export type FeatureRoute = {
   path: string;
   /** SRS screen name, shown in the AppShell header and the browser tab. */
   title: string;
-  /** Who may open it. 'GUEST' = signed-out users only (Login). Required, so no screen is unguarded. */
+  /**
+   * Who may open it: a user with any of these roles. ['EMPLOYEE'] = every signed-in user (each has Employee,
+   * GBR-28). 'GUEST' = signed-out users only (Login). Required, so no screen is unguarded.
+   */
   roles: readonly Role[] | 'GUEST';
   /** Loads the page module only when the screen is opened. */
   lazy: () => Promise<{ default: ComponentType }>;
 };
-
-export const ALL_SIGNED_IN_ROLES = [
-  'ADMIN',
-  'DEPARTMENT_MANAGER',
-  'PROJECT_MANAGER',
-  'STAFF',
-] as const;

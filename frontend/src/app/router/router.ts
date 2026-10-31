@@ -1,4 +1,4 @@
 import { createBrowserRouter } from 'react-router';
 import { buildRoutes } from './routes';
 
-export const router = createBrowserRouter(buildRoutes());
+export const router = createBrowserRouter(buildRoutes(window.location.hostname));

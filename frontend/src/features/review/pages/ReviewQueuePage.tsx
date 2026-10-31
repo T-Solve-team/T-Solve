@@ -15,10 +15,11 @@ import styles from './ReviewQueuePage.module.css';
 
 type OpenDialog = 'confirmApprove' | 'reject' | 'requestChanges' | null;
 
-/** "?departmentId=2" → 2; missing or invalid → all Departments. */
-function toDepartmentId(value: string | null): number | undefined {
-  const id = Number(value);
-  return value && Number.isInteger(id) ? id : undefined;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** "?departmentId=<uuid>" → the id; missing or not a UUID → all Departments. */
+function toDepartmentId(value: string | null): string | undefined {
+  return value && UUID_PATTERN.test(value) ? value : undefined;
 }
 
 export function ReviewQueuePage() {
@@ -38,11 +39,8 @@ export function ReviewQueuePage() {
     setSelectedIds([]);
   }
 
-  function handleDepartmentChange(nextDepartmentId: number | undefined) {
-    list.setFilter(
-      'departmentId',
-      nextDepartmentId === undefined ? null : String(nextDepartmentId),
-    );
+  function handleDepartmentChange(nextDepartmentId: string | undefined) {
+    list.setFilter('departmentId', nextDepartmentId ?? null);
     setSelectedIds([]); // a selection belongs to the filter it was made in
   }
 
@@ -54,7 +52,7 @@ export function ReviewQueuePage() {
     approve.mutate({ data: { ticketIds: selectedIds } }, { onSuccess: finishDecision });
   }
 
-  // SRS 7.1: approving two or more tickets asks first (MSG90); one ticket is approved at once.
+  // SRS 7.1: approving two or more tickets asks first (MSG19); one ticket is approved at once.
   function handleApprove() {
     if (selectedIds.length >= 2) setOpenDialog('confirmApprove');
     else runApprove();
@@ -90,7 +88,7 @@ export function ReviewQueuePage() {
 
       <ConfirmDialog
         isOpen={openDialog === 'confirmApprove'}
-        code="MSG90"
+        code="MSG19"
         params={{ count: selectedIds.length }}
         isConfirming={approve.isPending}
         onConfirm={runApprove}

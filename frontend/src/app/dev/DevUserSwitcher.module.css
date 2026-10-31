@@ -1,0 +1,11 @@
+.panel {
+  position: fixed;
+  inset-inline-end: var(--ant-margin);
+  inset-block-end: var(--ant-margin);
+  z-index: 1000;
+  box-shadow: var(--ant-box-shadow-secondary);
+}
+
+.select {
+  width: 280px;
+}

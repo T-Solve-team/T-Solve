@@ -1,5 +1,6 @@
 import {
   ApiOutlined,
+  BranchesOutlined,
   CheckSquareOutlined,
   ClockCircleOutlined,
   DashboardOutlined,
@@ -7,6 +8,8 @@ import {
   FileSearchOutlined,
   HistoryOutlined,
   ImportOutlined,
+  MessageOutlined,
+  ReadOutlined,
   SearchOutlined,
   SettingOutlined,
   TeamOutlined,
@@ -54,27 +57,57 @@ const WORKSPACE_SETTINGS = {
   icon: SettingOutlined,
 };
 const AUDIT_LOG = { label: 'Audit Log', path: paths.auditLog, icon: FileSearchOutlined };
+const TRIAGE_HISTORY = {
+  label: 'Triage History',
+  path: paths.triageHistory,
+  icon: BranchesOutlined,
+};
+const WIKI = { label: 'Wiki', path: paths.wikiHome, icon: ReadOutlined };
+const KNOWLEDGE_CHATBOT = {
+  label: 'Knowledge Chatbot',
+  path: paths.chatbot,
+  icon: MessageOutlined,
+};
 
 /**
- * Menus per role — UI design decisions of 04/10 (Figma "Web/App Shell"), landing page first.
+ * Menus per role — UI design v3 decisions (brief §3, Figma "Web/App Shell" kit v4), landing page first.
  * Pre-filled; changes need a UI-decision change first (guideline 07 §5).
  */
 export const MENUS: Record<Role, readonly MenuEntry[]> = {
-  STAFF: [SEARCH, TICKET_LIST],
+  EMPLOYEE: [KNOWLEDGE_CHATBOT, WIKI],
+  TICKET_RESOLVER: [SEARCH, TICKET_LIST],
   PROJECT_MANAGER: [
     REVIEW_QUEUE,
-    REVIEW_HISTORY,
     EXPIRED_TICKETS,
+    REVIEW_HISTORY,
     SEARCH,
     TICKET_LIST,
     IMPORT_TICKETS,
     IMPORT_HISTORY,
+    TRIAGE_HISTORY,
     DASHBOARD,
     JIRA_INTEGRATION,
   ],
-  DEPARTMENT_MANAGER: [DASHBOARD, SEARCH, TICKET_LIST, JIRA_INTEGRATION],
-  ADMIN: [USER_LIST, WORKSPACE_SETTINGS, JIRA_INTEGRATION, AUDIT_LOG, DASHBOARD],
+  KNOWLEDGE_MANAGER: [WIKI, KNOWLEDGE_CHATBOT],
+  ADMIN: [USER_LIST, WORKSPACE_SETTINGS, JIRA_INTEGRATION, DASHBOARD, AUDIT_LOG],
 };
+
+/** The order in which a user's role menus are joined (D4): the landing role first, Employee items last. */
+const MENU_ORDER: readonly Role[] = [
+  'ADMIN',
+  'PROJECT_MANAGER',
+  'KNOWLEDGE_MANAGER',
+  'TICKET_RESOLVER',
+  'EMPLOYEE',
+];
+
+/** One menu for all of a user's roles: their role menus in MENU_ORDER, each item once (AC-004.2). */
+export function menuFor(roles: readonly Role[]): readonly MenuEntry[] {
+  const entries = MENU_ORDER.filter((role) => roles.includes(role)).flatMap((role) => MENUS[role]);
+  return entries.filter(
+    (entry, index) => entries.findIndex((e) => e.path === entry.path) === index,
+  );
+}
 
 /**
  * The menu item to highlight: the longest menu path the current path starts with, so detail screens

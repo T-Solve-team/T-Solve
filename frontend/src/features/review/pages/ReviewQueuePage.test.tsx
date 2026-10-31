@@ -17,7 +17,13 @@ async function openQueue(path = '/review-queue') {
 }
 
 describe('ReviewQueuePage', () => {
-  it('lists the pending tickets of my Projects, earliest review due date first, 20 per page', async () => {
+  // BUG-004: load the lazy page module once before the tests, so the first test's 5 s wait covers only the
+  // render, not the module load as well (guideline 10 §6 forbids longer timeouts).
+  beforeAll(async () => {
+    await import('./ReviewQueuePage');
+  });
+
+  it('lists the pending tickets of my Projects, earliest review due date first, 20 per page (BUG-004)', async () => {
     await openQueue();
     const table = screen.getByRole('table');
     const rows = within(table).getAllByRole('row').slice(1); // without the header row
@@ -27,7 +33,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('Total 58 items')).toBeInTheDocument();
   });
 
-  it('shows MSG16 when no tickets are waiting', async () => {
+  it('shows MSG13 when no tickets are waiting', async () => {
     server.use(
       getGetReviewQueueMockHandler({
         content: [],
@@ -35,28 +41,29 @@ describe('ReviewQueuePage', () => {
       }),
     );
     renderApp('/review-queue');
-    expect(await screen.findByText(msg('MSG16'))).toBeInTheDocument();
+    // BUG-004: every test's first findBy after a render waits up to 5 s (guideline 10 §6), not only the file's first.
+    expect(await screen.findByText(msg('MSG13'), {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it('shows the error in place, with Try again, when the queue cannot be loaded', async () => {
     server.use(http.get('*/api/v1/review-queue', () => problem(500)));
     renderApp('/review-queue');
-    expect(await screen.findByRole('alert')).toHaveTextContent(msg('MSG06'));
+    expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(msg('MSG06'));
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
-  it('approves one ticket at once (no confirm) and shows MSG18', async () => {
+  it('approves one ticket at once (no confirm) and shows MSG14', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('button', { name: 'Approve' }));
-    expect(await screen.findByText(msg('MSG18', { count: 1 }))).toBeInTheDocument();
+    expect(await screen.findByText(msg('MSG14', { count: 1 }))).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: 'ITSUP-1031' })).not.toBeInTheDocument(),
     );
     expect(screen.getByText('0 selected')).toBeInTheDocument();
   });
 
-  it('asks MSG90 before approving two tickets, then shows MSG18', async () => {
+  it('asks MSG19 before approving two tickets, then shows MSG14', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1102' }));
@@ -64,21 +71,21 @@ describe('ReviewQueuePage', () => {
     await user.click(screen.getByRole('button', { name: 'Approve' }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent(msg('MSG90', { count: 2 }));
+    expect(dialog).toHaveTextContent(msg('MSG19', { count: 2 }));
     await user.click(within(dialog).getByRole('button', { name: 'OK' }));
 
-    expect(await screen.findByText(msg('MSG18', { count: 2 }))).toBeInTheDocument();
+    expect(await screen.findByText(msg('MSG14', { count: 2 }))).toBeInTheDocument();
     expect(await screen.findByText('Total 56 items')).toBeInTheDocument();
   });
 
-  it('rejects with a reason: MSG19 in the popup, MSG01 when empty, MSG20 when done', async () => {
+  it('rejects with a reason: MSG15 in the popup, MSG01 when empty, MSG16 when done', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('button', { name: 'Reject' }));
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Reject Ticket')).toBeInTheDocument();
-    expect(dialog).toHaveTextContent(msg('MSG19', { count: 1 }));
+    expect(dialog).toHaveTextContent(msg('MSG15', { count: 1 }));
 
     await user.click(within(dialog).getByRole('button', { name: 'Reject' }));
     expect(
@@ -87,13 +94,13 @@ describe('ReviewQueuePage', () => {
 
     await user.type(within(dialog).getByLabelText('Reason'), 'Does not fix the certificate error.');
     await user.click(within(dialog).getByRole('button', { name: 'Reject' }));
-    expect(await screen.findByText(msg('MSG20', { count: 1 }))).toBeInTheDocument();
+    expect(await screen.findByText(msg('MSG16', { count: 1 }))).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: 'ITSUP-1031' })).not.toBeInTheDocument(),
     );
   });
 
-  it('requests changes for every selected ticket with one comment (MSG21)', async () => {
+  it('requests changes for every selected ticket with one comment (MSG17)', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('checkbox', { name: 'Select ITNET-0415' }));
@@ -106,7 +113,7 @@ describe('ReviewQueuePage', () => {
     );
     await user.click(within(dialog).getByRole('button', { name: 'Send' }));
 
-    expect(await screen.findByText(msg('MSG21'))).toBeInTheDocument();
+    expect(await screen.findByText(msg('MSG17'))).toBeInTheDocument();
     expect(await screen.findByText('Total 56 items')).toBeInTheDocument();
   });
 
@@ -119,12 +126,33 @@ describe('ReviewQueuePage', () => {
   it('filters by Department and keeps the filter in the URL', async () => {
     const { user, router } = await openQueue();
     await user.click(screen.getByRole('combobox', { name: 'Department' }));
-    await user.click(await screen.findByTitle('HR'));
+    // The mock Project Manager has exactly one Department, IT (GBR-16).
+    await user.click(await screen.findByTitle('IT'));
 
-    await waitFor(() => expect(router.state.location.search).toBe('?departmentId=2'));
     await waitFor(() =>
-      expect(screen.queryByRole('link', { name: 'ITSUP-1031' })).not.toBeInTheDocument(),
+      expect(router.state.location.search).toBe(
+        '?departmentId=00000000-0000-4000-8000-0000000000d1',
+      ),
     );
-    expect(screen.getByRole('link', { name: 'HRHELP-0318' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: 'HRHELP-0318' })).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole('link', { name: 'ITSUP-1031' })).toBeInTheDocument();
+  });
+
+  it('BUG-017 ignores a departmentId that is not a UUID', async () => {
+    const queueUrls: URL[] = [];
+    const onRequest = ({ request }: { request: Request }) => {
+      const url = new URL(request.url);
+      if (url.pathname.endsWith('/review-queue')) queueUrls.push(url);
+    };
+    server.events.on('request:start', onRequest);
+    try {
+      renderApp('/review-queue?departmentId=abc', { role: 'PROJECT_MANAGER' });
+      await waitFor(() => expect(queueUrls.length).toBeGreaterThan(0), { timeout: 5000 });
+    } finally {
+      server.events.removeListener('request:start', onRequest);
+    }
+    expect(queueUrls.some((url) => url.searchParams.has('departmentId'))).toBe(false);
   });
 });

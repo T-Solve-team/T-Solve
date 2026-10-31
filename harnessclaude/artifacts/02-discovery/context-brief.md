@@ -1,115 +1,100 @@
 ---
 project: T-Solve
 mode: blueprint
-date: 2026-10-21
-scope: Jira integration — ticket created / ticket Done flows (Jira App + server-side Jira App API)
+date: 2026-10-22
 ---
 
-# Context Brief: T-Solve — Jira integration
+# Context Brief: T-Solve
 
 ## Project Overview
-T-Solve turns resolved Jira tickets into reusable Solutions and uses them to help with new tickets. This brief
-covers the two Jira flows: what happens when a ticket is **created** and when it **moves to Done**. It follows
-the team's architecture diagram (Report 4, I.1 Software Architecture): the **T-Solve Jira App** (Atlassian
-Forge, UI Kit — Issue Panel, Solution Form, T-Solve Sign-in) talks to the **T-Solve Server**, whose
-**Ticket Tracker Connector** (`tracker` package, `TicketTrackerClientFactory` → `JiraClient`) reads Jira and
-hands work to the business modules (`triage`, `search`, `ticket`, `review`, `ai`, `identity`).
+
+T-Solve (Ticket Solution Repository Application) is a knowledge layer next to a ticket tracker (Jira in the MVP);
+it does not replace it. A Ticket Resolver writes a Solution when they resolve an issue; the Project Manager of
+that Project reviews it; Published tickets are searched and reused, suggested back to new issues by AI Ticket
+Triage, and used by the Knowledge Chatbot together with the Wiki documents of each Department's Space.
+Capstone project SEP490_G89, FPT University, Fall 2026.
+
+Report3 is the current requirements baseline. It changed the product the code was started on (SRS v2): five
+roles, several per user; every message code renumbered; three new features (AI Ticket Triage, Wiki, Knowledge
+Chatbot). The code on `main` still follows SRS v2 in the web app's roles, catalog and routes, and in the backend
+skeleton.
 
 ## Goals
-- Every new ticket in a T-Solve project is triaged by AI and Staff see Solution suggestions in Jira.
-- Every ticket that reaches Done gets an AI-drafted Solution that the Staff member who solved it checks and
-  submits in one step, so knowledge is captured while the context is fresh.
-- Project Managers review only Solutions a person has confirmed; only approved Solutions are suggested.
+
+- Deliver the 13 Report3 features as working slices (API + screens) on the VPS for the demo, then the testing
+  phase.
+- Every member plans and builds their own module through HarnessClaude, on one shared module map, without
+  colliding with the others.
+- Shared bases first (roles, session, errors, message catalog), so feature modules build on them.
 
 ## Key Requirements
 
 ### Functional
-1. **Ticket created — event.** When a ticket is created, the Jira App sends the event (cloudId, issue id/key,
-   event type) to the server's Jira App API. The server (`tracker`, `JiraClient`) reads the ticket from the
-   Jira REST API itself; the Jira App does not send ticket content (Q4 revised, diagram point 4).
-2. **Project filtering on the server.** The app reports events for every project; the server ignores tickets
-   of projects not linked to a T-Solve Project (`jiraProjectKey`) (Q2).
-3. **Triage.** The server passes the new ticket to AI Ticket Triage (owned by another member). Only when the
-   ticket is Simple with a suggested solution does T-Solve comment MSG80 for the reporter; the reporter answers
-   MSG81 Yes/No in the panel without signing in (SRS System Messages; reporter rule to confirm with the team).
-4. **Suggestions.** Suggestions are computed when the ticket is created and stored; the Issue Panel shows them
-   to Staff and has a "search again" action that recomputes from the ticket's current content (Q8, Q9). Nothing
-   is posted to the reporter/customer.
-5. **Ticket Done — event.** When a ticket's status changes into the **Done status category**
-   (`statusCategory.key = done`, any name) (Q5), the Jira App reports the event; the server reads basic fields
-   (key, summary, description, issue type, priority, project, status, resolution, created/resolved dates), all
-   comments, and the assignee (accountId + display name) (Q10, Q11).
-6. **AI draft → Solution Form.** The server (`ticket` package, another member) creates an AI draft Solution from
-   that data. The Solution Form in the Issue Panel shows the draft; the Staff member edits and submits it, and
-   the submitted Solution enters the Review Queue for a Project Manager (diagram point 3).
-7. **Closing the form.** Per SRS MSG70, the Solution Form opens after the issue is resolved; closing it
-   submits an empty Solution for review (the PM then requests changes or rejects, MSG20). The earlier
-   "No Solution needed" idea was dropped for the SRS behaviour.
-8. **No reminder comments.** The SRS has no reminder message; the panel shows the Solution Form state
-   (MSG64, MSG65, MSG67, MSG77) instead.
-9. **Done again.** Every transition into Done is reported; the server updates the unsubmitted draft for that
-   issue, or starts a new draft if a Solution was already submitted/approved. The app keeps no "already sent"
-   state (Q12).
-10. **No workflow enforcement.** The app does not block, revert, or validate transitions (validators and
-    auto-revert were rejected: Jira Automation conflicts, per-workflow setup, admin-level scopes).
-11. **Identity.** The Solution Form needs the T-Solve user behind the Jira accountId; the account link and the
-    T-Solve Sign-in screen belong to the `identity` owner — this work only calls their interface.
+Report3 groups 53 use cases into 13 features:
+1. **Role-Based Access Control** (UC-01–09): sign in with the company account (OIDC, Google in the MVP), log out
+   (clears the session's chat history), my profile, user list, add user, account status, roles and Department,
+   hand over Projects and Spaces.
+2. **Workspace & Department Management** (UC-10–15): company information of the single Workspace; create,
+   update, delete and restore Departments.
+3. **Ticket tracker integration** (UC-16–18): add and configure a Project linked to a tracker project; add and
+   remove Ticket Resolvers.
+4. **Solution Authoring & Standardisation** (UC-19): submit a Solution from the tracker's Solution Form (five
+   sections, AI drafting and rewriting, drafts).
+5. **Ticket Import & Repository** (UC-20–25): import from the tracker, CSV or manual entry (Published at once,
+   GBR-23), import history, ticket detail, unpublish and re-publish.
+6. **Intelligent Retrieval** (UC-26–27): semantic search of Published tickets; ticket list.
+7. **Reuse & Feedback** (UC-28): Helpful / Not helpful feedback on Published tickets.
+8. **Review & Approval Workflow** (UC-29–33): review queue, approve / reject / request changes, expired tickets,
+   review history, JOB-02 expiry.
+9. **Dashboard & Audit** (UC-34–35): knowledge dashboard (Department or Workspace), audit log.
+10. **AI Ticket Triage** (UC-36–37): Simple / Complex classification of a new issue; a suggested solution posted
+    on Simple issues from Published tickets and Wiki documents; triage history.
+11. **Wiki Space Management** (UC-38–47): Space access, folders (≤ 3 levels), trash.
+12. **Wiki Document Management** (UC-48–50): upload, view, delete Wiki documents.
+13. **Knowledge Chatbot** (UC-51–53): answers with citations from Published Solutions and the Wiki documents the
+    user may see; session-only history; ratings.
+
+Roles (UC list 4.1, GBR-28): Employee (every account), Ticket Resolver, Project Manager, Knowledge Manager, Admin;
+a user can hold several and the permissions add up. Access per action: Permission Matrix 4.4 with footnotes ¹–⁹.
 
 ### Non-Functional
-1. **Authentication — Forge Invocation Token.** The Jira App calls the server through Forge Remote. The
-   security layer verifies every call: JWT signature against Atlassian's JWKS (cached), issuer = Forge,
-   audience = this app's id, not expired, and the token's cloudId belongs to a registered Workspace; otherwise
-   401/403. Tokens are never logged. No shared API key (Q14 revised, diagram).
-2. **Server access to Jira** uses the Forge Remote app system token, not stored Jira API tokens.
-3. **Delivery reliability:** event delivery to the server is retried a bounded number of times with back-off
-   (e.g. Forge Async Events, 3 attempts); after the last failure only issue id + error type are logged (Q13).
-4. **Privacy:** never log ticket content or personal data — ids, keys, status codes, error types only
-   (`jira-app/AGENTS.md` rule 4). Error messages never embed Jira response bodies. Text sent to the AI service
-   is PII-masked by the `ai` module (architecture.md).
-5. **Least privilege:** only the scopes the flows need — reading issues/comments and adding comments
-   (`read:jira-work`, `write:jira-work`) plus panel/remote needs; never `manage:jira-configuration`.
-6. **Internal comments:** on Jira Service Management projects, comments must be internal, never public.
-7. **One backend client** in the Jira App (base remote, errors); **UI Kit only**; glossary words exact.
+1. Personal data is PII-masked before any text goes to an AI model; ticket details never appear in Chatbot
+   answers or triage comments (GBR-35, GBR-36).
+2. AI is optional: an AI failure never breaks a flow (GBR-12).
+3. The backend re-checks every permission; the UI only hides what a user cannot do.
+4. Every acceptance criterion has a test that names its id; every bug is logged in `docs/bug-log.md`.
+5. One deployable backend (modular monolith) and one static web app, Docker Compose + Caddy on one VPS.
 
 ## Constraints & Assumptions
-- **Ownership:** the user builds `jira-app/` and the server-side `tracker` work (Jira App API endpoints, FIT
-  verification, `JiraClient`). `triage`, `search`, `ticket` (AI draft, Solution Form submission), `review`,
-  `ai` and `identity` are owned by other members; this work calls their service interfaces and uses stubs
-  until they exist.
-- The Forge app is not created yet; the one-time setup in `jira-app/AGENTS.md` is a prerequisite.
-- Users run both company-managed and team-managed projects; nothing here depends on project type.
-- The Jira App API endpoints are not in `frontend/openapi/tsolve-api.yaml` yet; they are added to the contract
-  before code. Server endpoints follow `backend/AGENTS.md`.
-- The user writes the code; Claude advises and reviews.
-- [NEEDS CLARIFICATION: SRS (SEP490_G89) not available — Jira App screens and MSG texts not checked.]
-- [NEEDS CLARIFICATION: interfaces of `triage`, `search`, `ticket`, `identity` — agree with their owners in plan.]
-- [NEEDS CLARIFICATION: how many suggestions the panel shows and its empty state — settle in spec.]
+- **Source of truth:** Report3 (`UC_list_and_Actors` 4.1, 4.2, 4.4; `Business_Rules` GBR-01…36; `System_Messages`).
+  The FE Lead's decisions D1–D6 (gap report, 21/10) win where they differ — Request changes keeps several tickets
+  with one comment (D1); a Solution is never empty, no MSG20 (D2); Hand Over messages (D3); catalog, upload types,
+  `{tracker_name}` "Jira", menu order and Workspace Setup (D4); every UC is settled (D5); Architecture.jpg stays
+  as it is (D6). Report3 will be corrected. SRS v3460 is a layout template only.
+- **Architecture:** `artifacts/03-modules/architecture.md` (modular monolith, REST under `/api/v1/**`, the
+  contract in `frontend/openapi/tsolve-api.yaml`, PostgreSQL + pgvector, Liquibase). Team rules: `backend/AGENTS.md`,
+  `frontend/AGENTS.md`.
+- **Team:** one owner per module (or per part of a module) from the team table; Trần Trung Hiếu acts as Team Lead
+  while Đặng Nhật Minh is away. Owners plan their own module; the Team Lead approves the specs.
+- **Timeline:** product by 15/11 (demo on the VPS), Report 4 on 07/11, testing after 15/11.
+- **Work in flight:** PR #26 (KAN-24) builds the review flow; its module joins this map.
 
 ## Risks
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|------------|------------|
-| Other members' packages not ready | High | High | Agree interfaces early; stub them; vertical slices still demoable |
-| FIT verification done wrong (no aud/cloudId check) | High | Medium | Explicit checks + tests per check; security review |
-| Server down → lost events | High | Medium | Bounded retry; "search again" in panel |
-| Staff forget to submit Solutions | Medium | Medium | Internal comment + panel warning; "No Solution needed" to clear noise; measure before adding auto-submit |
-| Ticket content leaks via logs | High | Medium | Log ids/codes only; review rule |
-| Public comment on JSM reaches customers | High | Low | Always internal comments; test on a JSM project |
-| Large tickets / many comments | Medium | Medium | Paginate comments; payload limits decided in design |
+| The code follows SRS v2 (roles, MSG codes, routes) | Features built on the wrong base | Confirmed | `be-foundation` and `fe-foundation` first; feature modules after them |
+| Report3 still differs from D1–D6 | Members follow Report3 and contradict the decisions | High | Specs cite the decisions; document owners correct Report3 |
+| Modules overlap in shared files | Gate and trace conflicts, merge conflicts | Medium | Test paths never overlap; shared contract files listed where needed; one owner per module |
+| AI quality and speed (local models, Vietnamese text) | Triage and Chatbot below expectations | Medium | AI optional (GBR-12); fallbacks per flow; benchmark before the demo |
+| Short time, part-time team, a member away | Modules late | High | Build order by dependency; parallel work against mocked interfaces |
 
 ## Suggested Module Boundaries
-- **jira-app** (`jira-app/`, owner: user): triggers for issue created / moved to Done, event delivery with retry,
-  Forge Remote client, Issue Panel (suggestions, search again, Done warning), Solution Form UI, internal
-  comments (triage decision, Done reminder).
-- **tracker** (`backend/` package `tracker`, owner: user): Jira App API endpoints, FIT verification in the
-  security layer, `TicketTrackerClientFactory` + `JiraClient` reading issues/comments, project filter, hand-off
-  to `triage` / `search` / `ticket`.
-- Depends on: `triage`, `search`, `ticket`, `review`, `ai`, `identity` (other owners), `project` (jiraProjectKey).
+Full-stack modules cut along the Report3 features, two foundations and the Jira App — see
+`artifacts/03-modules/module-map.md` for the list, owners, dependencies and order.
 
 ## Sources
-- Discovery conversation with the user, 2026-10-21 (Q1–Q14 and diagram points 1–4)
-- SRS `System_Messages.docx` (MSG01–MSG118), shared 2026-10-21 — overrides earlier choices where they differ:
-  Jira site entered by the Admin in Workspace Setup (MSG61), panel needs sign-in (MSG62)
-- Architecture diagram "T-Solve – Architecture Diagram (Report 4, I.1 Software Architecture)", shared in chat
-- User's prototype Forge code (panel resolver + `onIssueUpdated` trigger), pasted in chat
-- `jira-app/AGENTS.md`, `frontend/openapi/tsolve-api.yaml`, `harnessclaude/artifacts/03-modules/architecture.md`
-- Forge docs: Jira workflow validator module — https://developer.atlassian.com/platform/forge/manifest-reference/modules/jira-workflow-validator/
+- Report3 (team docs folder `Report3/`): `UC_list_and_Actors` (4.1 Actors, 4.2 UC-01…53, 4.4 Permission Matrix
+  and footnotes ¹–⁹), `Business_Rules` (GBR-01…36), `System_Messages` (103 codes), `Architecture.jpg`.
+- `Claude decisions/`: `T-Solve_FE_spec_gap_Report3.md` (decisions D1–D6), `T-Solve_UI_design_v3_decisions.md`,
+  `T-Solve_Jira_ticket_convention.md`.
+- The code on `main`, `backend/AGENTS.md`, `frontend/AGENTS.md`, `architecture.md`; PR #26 (KAN-24).
