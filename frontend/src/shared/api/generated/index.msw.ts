@@ -1,3 +1,4 @@
+export { getAuditLogMock } from './audit-log/audit-log.msw';
 export { getChatbotMock } from './chatbot/chatbot.msw';
 export { getImportMock } from './import/import.msw';
 export { getReviewMock } from './review/review.msw';

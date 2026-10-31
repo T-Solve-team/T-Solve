@@ -157,3 +157,10 @@ Frontend only, on MSW mocks. Spec: `artifacts/03-modules/search/spec.md` · Desi
 
 ## Retro Notes
 <!-- what went well, what to improve -->
+
+## KAN-153 audit log addition — approved 2026-10-31
+
+One feature, `audit-log`, implements the frontend-only Audit Log (STORY-001) with MSW and the proposed
+OpenAPI contract. Plan: artifacts/04-plans/dashboard-audit/iteration-1/tasks.md. Demo: sign in as Admin,
+open Audit Log, search Actor email, combine action/date filters, paginate and retry a failed query.
+Backend recording and production tenant isolation are not part of this deliverable.

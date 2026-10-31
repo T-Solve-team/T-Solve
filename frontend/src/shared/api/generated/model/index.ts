@@ -8,6 +8,9 @@
  */
 
 export * from './approveTicketsRequest';
+export * from './auditAction';
+export * from './auditEntry';
+export * from './auditEntryPage';
 export * from './authCallbackParams';
 export * from './authorizeParams';
 export * from './chatbotAnswer';
@@ -24,6 +27,7 @@ export * from './currentUser';
 export * from './departmentRef';
 export * from './fieldError';
 export * from './fieldErrorParams';
+export * from './getAuditEventsParams';
 export * from './getImportPreviewRowsParams';
 export * from './getReviewQueueParams';
 export * from './getReviewQueueTicketIdsParams';
