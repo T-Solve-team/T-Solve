@@ -1,12 +1,12 @@
 import { Descriptions, Flex, Typography } from 'antd';
 import { Link } from 'react-router';
-import { ROLE_LABELS } from '@/shared/auth';
 import { formatDateTime } from '@/shared/lib';
 import { msg } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { ErrorState, LoadingState, SectionCard, StatusTag } from '@/shared/ui';
 import { useUserDetail } from '../hooks/useUserDetail';
 import { UserStatusActions } from './UserStatusActions';
+import { UserRolesForm } from './UserRolesForm';
 
 type UserAccountDetailProps = { userId: string };
 
@@ -28,12 +28,6 @@ export function UserAccountDetail({ userId }: UserAccountDetailProps) {
           items={[
             { key: 'fullName', label: 'Full name', children: user.fullName ?? '' },
             { key: 'email', label: 'Email', children: user.email },
-            { key: 'department', label: 'Department', children: user.department?.name ?? '' },
-            {
-              key: 'roles',
-              label: 'Roles',
-              children: user.roles.map((role) => ROLE_LABELS[role]).join(', '),
-            },
             { key: 'status', label: 'Status', children: <StatusTag status={user.status} /> },
             {
               key: 'lastSignIn',
@@ -43,6 +37,15 @@ export function UserAccountDetail({ userId }: UserAccountDetailProps) {
           ]}
         />
       </SectionCard>
+      <UserRolesForm
+        key={[
+          user.id,
+          ...user.roles,
+          user.department?.departmentId,
+          ...user.managedSpaces.map((space) => space.spaceId),
+        ].join(':')}
+        user={user}
+      />
       <SectionCard title="Projects">
         {user.projects.length ? (
           <ul>

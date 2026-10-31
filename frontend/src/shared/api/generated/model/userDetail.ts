@@ -12,6 +12,8 @@ import type { UserProject } from './userProject';
 
 export type UserDetail = UserAccount & {
   isCurrentUser: boolean;
+  /** Current Project memberships removed with Ticket Resolver; excludes retained Project Manager ownership and historical references. */
+  ticketResolverProjectIds: string[];
   projects: UserProject[];
   managedSpaces: SpaceRef[];
 };

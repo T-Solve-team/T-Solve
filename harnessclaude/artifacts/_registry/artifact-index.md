@@ -119,3 +119,11 @@ Master registry of all artifacts in this workspace.
 | — | session-log | be-foundation | passing | artifacts/05-implementation/be-foundation/task-1-problem-errors.md |
 | — | test-report | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-1-problem-errors-test-report.md |
 | — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-1-problem-errors-review.md |
+
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-4-user-roles.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-4-user-roles-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-4-user-roles-test-report.md |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-110-handover.jpg |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-110-roles-saved.jpg |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-110-accessible-guards.jpg |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-110-confirmation-error-recovery.png |

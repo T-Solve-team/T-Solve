@@ -27,6 +27,7 @@ import type {
   DepartmentRef,
   GetUsersParams,
   ProblemResponse,
+  UpdateUserRolesRequest,
   UpdateUserStatusRequest,
   UserAccount,
   UserAccountPage,
@@ -299,6 +300,112 @@ export function useGetUsers<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getUpdateUserRolesUrl = (userId: string) => {
+  return `/api/v1/users/${userId}`;
+};
+
+/**
+ * @summary Atomically update roles, Department and Spaces after required handover and membership confirmation.
+ */
+export const updateUserRoles = async (
+  userId: string,
+  updateUserRolesRequest: UpdateUserRolesRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<UserDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<UserDetail>(getUpdateUserRolesUrl(userId), {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateUserRolesRequest),
+  });
+};
+
+export const getUpdateUserRolesMutationKey = () => ['updateUserRoles'] as const;
+
+export const getUpdateUserRolesMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateUserRoles>>,
+    TError,
+    UpdateUserRolesMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateUserRoles>>,
+  TError,
+  UpdateUserRolesMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateUserRolesMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateUserRoles>>,
+    UpdateUserRolesMutationVariables
+  > = (props) => {
+    const { userId, data } = props ?? {};
+
+    return updateUserRoles(userId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateUserRolesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateUserRoles>>
+>;
+export type UpdateUserRolesMutationBody = UpdateUserRolesRequest;
+export type UpdateUserRolesMutationError = ErrorType<ProblemResponse>;
+export type UpdateUserRolesMutationVariables = { userId: string; data: UpdateUserRolesRequest };
+
+/**
+ * @summary Atomically update roles, Department and Spaces after required handover and membership confirmation.
+ */
+export const useUpdateUserRoles = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateUserRoles>>,
+      TError,
+      UpdateUserRolesMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateUserRoles>>,
+  TError,
+  UpdateUserRolesMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateUserRolesMutationOptions(options), queryClient);
+};
 export const getGetUserDetailUrl = (userId: string) => {
   return `/api/v1/users/${userId}`;
 };

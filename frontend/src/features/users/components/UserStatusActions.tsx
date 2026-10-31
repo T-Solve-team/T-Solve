@@ -1,5 +1,6 @@
-import { Button, Tooltip } from 'antd';
-import { useRef, useState } from 'react';
+import { LoadingOutlined } from '@ant-design/icons';
+import { Button, Flex, Typography } from 'antd';
+import { useId, useRef, useState } from 'react';
 import {
   UserAccountStatus,
   type ApiError,
@@ -14,6 +15,7 @@ import { HandOverResponsibilitiesModal } from './HandOverResponsibilitiesModal';
 type UserStatusActionsProps = { user: UserDetail };
 
 export function UserStatusActions({ user }: UserStatusActionsProps) {
+  const selfHelpId = useId();
   const [dialog, setDialog] = useState<'confirm' | 'handover' | null>(null);
   const change = useChangeUserStatus();
   const submitting = useRef(false);
@@ -44,22 +46,22 @@ export function UserStatusActions({ user }: UserStatusActionsProps) {
 
   return (
     <>
-      <Tooltip title={isSelfDeactivation ? msg('MSG112') : undefined}>
-        <span>
-          <Button
-            aria-label={isActive ? 'Deactivate' : 'Reactivate'}
-            danger={isActive}
-            disabled={isSelfDeactivation || change.isPending}
-            loading={change.isPending}
-            onClick={() => {
-              if (isActive) setDialog(needsHandover ? 'handover' : 'confirm');
-              else save({ status: UserAccountStatus.ACTIVE });
-            }}
-          >
-            {isActive ? 'Deactivate' : 'Reactivate'}
-          </Button>
-        </span>
-      </Tooltip>
+      <Flex vertical align="end" gap="small">
+        <Button
+          aria-describedby={isSelfDeactivation ? selfHelpId : undefined}
+          danger={isActive}
+          disabled={isSelfDeactivation || change.isPending}
+          icon={change.isPending ? <LoadingOutlined aria-hidden /> : undefined}
+          aria-busy={change.isPending}
+          onClick={() => {
+            if (isActive) setDialog(needsHandover ? 'handover' : 'confirm');
+            else save({ status: UserAccountStatus.ACTIVE });
+          }}
+        >
+          {isActive ? 'Deactivate' : 'Reactivate'}
+        </Button>
+        {isSelfDeactivation && <Typography.Text id={selfHelpId}>{msg('MSG112')}</Typography.Text>}
+      </Flex>
       {dialog === 'confirm' && (
         <ConfirmDialog
           isOpen={dialog === 'confirm'}
