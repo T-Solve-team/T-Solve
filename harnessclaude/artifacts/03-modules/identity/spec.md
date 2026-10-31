@@ -7,12 +7,13 @@ owner: BA
 # Spec: identity
 
 UC-01…03 (owner Trần Trung Hiếu, Jira KAN-103, KAN-104, KAN-106, KAN-160) retain STORY-001…003.
-UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW delivery in STORY-004…007. STORY-008 specifies the included Project handover of KAN-111 (Jira UC-08); it adds no standalone screen. KAN-112 remains outside this change.
+UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW delivery in STORY-004…007. STORY-008 specifies the included Project handover of KAN-111 (Jira UC-08). STORY-009 specifies the included Space handover of KAN-112 (Jira UC-09); neither adds a standalone screen.
 
 ## Changelog
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-10-31 | STORY-009 | Draft KAN-112 Space handover criteria AC-009.1–009.9, reusing the UC-06/07 popup and atomic mutations | User selected frontend, MSW and an OpenAPI proposal pending backend integration; Jira requires every Space to be handed over before deactivation or role removal |
 | 2026-10-29 | STORY-008 | Draft KAN-111 frontend/MSW Project handover criteria AC-008.1–008.9; extend requirement 10 and delivery exclusions, clarify that there is no standalone handover screen | User requested one branch per task from main, then selected waiting for KAN-109/110 to merge while preparing scope and spec; reuse their existing handover instead of duplicating it |
 | 2026-10-25 | STORY-001..STORY-003 | Initial spec of the UC-01…03 slice: central sign-in through `login.` with Google OIDC, the session per Workspace site, the Platform Operator and Jira-link sign-ins, log out, My Profile with solution history. Written from Report3 (GBR-03, GBR-19, GBR-28, GBR-37, D1, D9, D13, D14, D22, D23, D36), Stories TS-020, TS-021, TS-023, TS-127 and the planning decisions Q1–Q16 of 25/10 | KAN-197 (Phase 1, multi-tenant baseline) |
 | 2026-10-25 | — | UC-04…09 (View user list, Add Account, Update Account status, Update roles and Department, Hand over Projects, Hand over Spaces) will be added as STORY-004 onwards by their owner Phạm Tùng Dương (KAN-107…112) | One module, two owners (D40: the Jira assignee owns the Story) |
@@ -52,7 +53,7 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
    Google at every sign-in (decision Q7).
 
 9. Implement the Admin User List (1.3.1), User Detail (1.3.2, creation and editing), and required Hand Over Responsibilities popup (1.3.3).
-10. Follow KAN-107, KAN-108, KAN-109 and KAN-110 as read from the signed-in user's Jira board on 2026-10-25. KAN-111, inspected in Jira on 2026-10-29, extends that frontend/MSW delivery with explicit Project-handover criteria in STORY-008; STORY-001–003 keep their separately specified backend and authentication scope.
+10. Follow KAN-107, KAN-108, KAN-109 and KAN-110 as read from the signed-in user's Jira board on 2026-10-25. KAN-111, inspected in Jira on 2026-10-29, extends that frontend/MSW delivery with explicit Project-handover criteria in STORY-008. KAN-112, inspected in Jira on 2026-10-31, adds Space handover in STORY-009 using MSW and the proposed OpenAPI contract pending backend integration; STORY-001–003 keep their separately specified backend and authentication scope.
 11. Use the existing English screen names, shared UI kit, message catalog, role guards, form validation and registered routes.
 12. Use generated API hooks with TanStack Query and realistic, mutable MSW handlers. Mock checks demonstrate business rules; they do not establish production security guarantees.
 
@@ -239,8 +240,22 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
   - AC-008.8: WHILE the recipient lookup is pending or failed, THE frontend SHALL show the existing loading or error-with-retry state and prevent submission of the including change; WHILE the mutation is pending, THE frontend SHALL prevent duplicate submission.
   - AC-008.9: WHEN a previously deactivated account is reactivated, THE mock API SHALL retain the confirmed Project handovers rather than return the Projects to the former manager.
 
+### STORY-009: Hand over Spaces (KAN-112 / Jira UC-09)
+- As an Admin, I want to transfer every Space managed by a departing or reassigned Knowledge Manager to eligible replacements before completing the including account change.
+- Sources: Jira KAN-112 inspected on 2026-10-31 (all Spaces before deactivation or role removal; called from UC-06 and UC-07); existing AC-006.5–006.8, AC-007.2–007.3 and AC-007.6–007.7. Delivery decision: frontend, mutable MSW and OpenAPI proposal, with backend integration deferred.
+- Acceptance:
+  - AC-009.1: WHEN an Admin deactivates a Knowledge Manager with managed Spaces through KAN-109 / UC-06, THE frontend SHALL open the existing Hand Over Responsibilities popup and require recipients for every managed Space before submitting deactivation.
+  - AC-009.2: WHEN an Admin removes Knowledge Manager or removes managed Spaces through KAN-110 / UC-07, THE frontend SHALL require handover of every removed Space before submitting that change and SHALL retain the selected Spaces that remain assigned to the user.
+  - AC-009.3: WHEN Space recipients are loaded, THE frontend and mock API SHALL offer only other Active Knowledge Managers in the current Workspace, without a Department restriction, excluding the outgoing manager.
+  - AC-009.4: WHEN the including change is submitted, THE mock API SHALL revalidate current eligibility and require exactly one eligible recipient for each affected Space, rejecting missing, duplicate, unrelated or ineligible assignments without changing any account or responsibility data.
+  - AC-009.5: IF any affected Space has no eligible recipient, THEN THE frontend SHALL display MSG118 and prevent completion, and THE mock API SHALL reject the including change without changing account or responsibility data.
+  - AC-009.6: IF the Admin cancels or the including mutation fails, THEN THE frontend and mock API SHALL retain the last confirmed account and responsibility data; a failed mutation SHALL show its catalog error and keep entered handover choices available for retry.
+  - AC-009.7: WHEN the including mutation succeeds, THE mock API SHALL transfer every affected Space exactly once, retain Space ids and former-manager history, and commit the account change and any accompanying Project handovers together; THE frontend SHALL invalidate affected user and session queries using the existing hooks.
+  - AC-009.8: WHILE recipient lookup is pending, refreshing or failed, THE frontend SHALL prevent submission and show the existing loading or error-with-retry state; WHILE the including mutation is pending, THE frontend SHALL prevent duplicate submission.
+  - AC-009.9: WHEN a former manager is reactivated or their Knowledge Manager role is restored, THE mock API SHALL retain confirmed Space handovers rather than return those Spaces automatically.
+
 ## Out of Scope
-- A standalone Project handover page, route, menu action or mutation endpoint is outside KAN-111. KAN-112 / Jira UC-09 (Space handover) remains a separate issue; preserve the existing combined popup behavior required by STORY-006–007.
+- Standalone Project or Space handover pages, routes, menu actions or mutation endpoints are outside KAN-111 and KAN-112. Reuse the combined popup required by STORY-006–007. KAN-112 does not implement production backend persistence or authorization.
 - The Workspace resolver, MSG119 and MSG120 on ordinary requests, the Forge Invocation Token check, RLS →
   `platform` (KAN-196). A Suspended Workspace's site is refused there; its sessions are not ended by this
   module.

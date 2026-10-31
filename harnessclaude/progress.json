@@ -90,15 +90,16 @@
         "workspace-session": "pending",
         "operator-sign-in": "pending",
         "jira-link-sign-in": "pending",
-        "project-handover": "passing"
+        "project-handover": "passing",
+        "space-handover": "passing"
       },
-      "lastUpdated": "2026-10-31T06:24:13.246Z",
+      "lastUpdated": "2026-10-31T11:36:32.927Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "d2c795e315631990c6b6b384a91c9df64977322a"
+        "default": "5310e2b10093f244440daabf3f3ca7ad14b1d613"
       }
     },
     "workspace": {
