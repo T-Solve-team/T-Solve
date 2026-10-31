@@ -90,9 +90,11 @@
         "workspace-session": "pending",
         "operator-sign-in": "pending",
         "jira-link-sign-in": "pending",
-        "project-handover": "passing"
+        "project-handover": "passing",
+        "account-checks": "pending",
+        "platform-adapters": "pending"
       },
-      "lastUpdated": "2026-10-31T06:24:13.246Z",
+      "lastUpdated": "2026-10-31T08:40:21.086Z",
       "branch": "feat/identity",
       "repos": [
         "default"
