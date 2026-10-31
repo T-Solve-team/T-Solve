@@ -4,6 +4,9 @@ Master registry of all artifacts in this workspace.
 
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
+| IMPL-IDENTITY-14 | session-log | identity | passing | artifacts/05-implementation/identity/task-14-space-handover.md |
+| TEST-IDENTITY-14 | test-report | identity | pass-with-open-dev-defect | artifacts/06-evaluation/identity/task-14-space-handover-test-report.md |
+| REVIEW-IDENTITY-14 | review | identity | pass | artifacts/06-evaluation/identity/task-14-space-handover-review.md |
 | ITER-1 | iteration | — | planned | artifacts/07-iterations/iteration-1.md |
 | ITER-2 | iteration | — | planned | artifacts/07-iterations/iteration-2.md |
 | — | architecture | — | draft | artifacts/03-modules/architecture.md |
@@ -134,3 +137,14 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-111-deactivated.png |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-111-reactivated.png |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-111-main-merge-validation.png |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-8-sign-in-start.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-8-sign-in-start-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-8-sign-in-start-test-report.md |
+| — | spec | dashboard-audit | approved | artifacts/03-modules/dashboard-audit/spec.md |
+| — | design | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/design.md |
+| — | design | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/iteration-1/design.md |
+| — | tasks | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/iteration-1/tasks.md |
+| — | session-log | dashboard-audit | passing | artifacts/05-implementation/dashboard-audit/task-1-audit-log.md |
+| — | screenshot | dashboard-audit | verified | artifacts/assets/dashboard-audit/kan-153-filtered.jpg |
+| — | review | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-review.md |
+| — | test-report | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-test-report.md |

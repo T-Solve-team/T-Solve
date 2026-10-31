@@ -12,4 +12,4 @@
 - open: the staging Google Workspace domain and OAuth client are not chosen; two local test failures logged (BUG-023, BUG-024)
 - next: Task 8 (KAN-230, backend on ports) and Task 10 (KAN-232)
 - branch: `feat/KAN-229-identity-login-screen`
-- PR: not opened yet
+- PR: #85 (merged 7296269)

@@ -220,8 +220,8 @@
     }
   },
   "identity": {
-    "specHash": "e367c991bee7511ad25fcfab87b6fcd92800c570def503141942f0a0008711b1",
-    "approvedAt": "2026-10-31T08:39:19.217Z",
+    "specHash": "194846f998b9c2f9acfc587de8fa6c7ce0da93ca5a92f8d5545739c41ac1fa9e",
+    "approvedAt": "2026-10-31T10:56:24.836Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace has a Google domain (AC-001.48), THE backend SHALL create a state value for the Workspace that the platform resolved from the host and answer 302 to  on the central sign-in origin configured in  ( in production), without a signed-in user.",
@@ -334,7 +334,16 @@
       "AC-008.6": "IF the Admin cancels the popup or the including mutation fails, THEN THE frontend and mock API SHALL leave the last confirmed account and Project assignments unchanged; a failed mutation SHALL show its catalog error and keep the entered handover selections available for retry.",
       "AC-008.7": "WHEN the including mutation succeeds, THE mock API SHALL transfer all affected Projects to their selected recipients and include those recipients in their Project memberships, retaining Project ids and tracker references; THE frontend SHALL refresh affected account list, detail and session queries using the existing mutation hooks.",
       "AC-008.8": "WHILE the recipient lookup is pending or failed, THE frontend SHALL show the existing loading or error-with-retry state and prevent submission of the including change; WHILE the mutation is pending, THE frontend SHALL prevent duplicate submission.",
-      "AC-008.9": "WHEN a previously deactivated account is reactivated, THE mock API SHALL retain the confirmed Project handovers rather than return the Projects to the former manager."
+      "AC-008.9": "WHEN a previously deactivated account is reactivated, THE mock API SHALL retain the confirmed Project handovers rather than return the Projects to the former manager.",
+      "AC-009.1": "WHEN an Admin deactivates a Knowledge Manager with managed Spaces through KAN-109 / UC-06, THE frontend SHALL open the existing Hand Over Responsibilities popup and require recipients for every managed Space before submitting deactivation.",
+      "AC-009.2": "WHEN an Admin removes Knowledge Manager or removes managed Spaces through KAN-110 / UC-07, THE frontend SHALL require handover of every removed Space before submitting that change and SHALL retain the selected Spaces that remain assigned to the user.",
+      "AC-009.3": "WHEN Space recipients are loaded, THE frontend and mock API SHALL offer only other Active Knowledge Managers in the current Workspace, without a Department restriction, excluding the outgoing manager.",
+      "AC-009.4": "WHEN the including change is submitted, THE mock API SHALL revalidate current eligibility and require exactly one eligible recipient for each affected Space, rejecting missing, duplicate, unrelated or ineligible assignments without changing any account or responsibility data.",
+      "AC-009.5": "IF any affected Space has no eligible recipient, THEN THE frontend SHALL display MSG118 and prevent completion, and THE mock API SHALL reject the including change without changing account or responsibility data.",
+      "AC-009.6": "IF the Admin cancels or the including mutation fails, THEN THE frontend and mock API SHALL retain the last confirmed account and responsibility data; a failed mutation SHALL show its catalog error and keep entered handover choices available for retry.",
+      "AC-009.7": "WHEN the including mutation succeeds, THE mock API SHALL transfer every affected Space exactly once, retain Space ids and former-manager history, and commit the account change and any accompanying Project handovers together; THE frontend SHALL invalidate affected user and session queries using the existing hooks.",
+      "AC-009.8": "WHILE recipient lookup is pending, refreshing or failed, THE frontend SHALL prevent submission and show the existing loading or error-with-retry state; WHILE the including mutation is pending, THE frontend SHALL prevent duplicate submission.",
+      "AC-009.9": "WHEN a former manager is reactivated or their Knowledge Manager role is restored, THE mock API SHALL retain confirmed Space handovers rather than return those Spaces automatically."
     }
   },
   "platform": {
@@ -524,6 +533,30 @@
       "AC-004.2": "THE Ticket List mock SHALL apply  (case-insensitive, on Ticket ID, title and Solution",
       "AC-004.3": "THE MSW handler of  SHALL return only the Published mock tickets whose",
       "AC-004.4": "THE MSW handler of  SHALL answer 204 for a valid body,"
+    }
+  },
+  "dashboard-audit": {
+    "specHash": "182bec63e1e5fdae398141a0e8afc5faafaf4003b6a1245c7033d541acc205c3",
+    "approvedAt": "2026-10-31T07:28:12.270Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN an Admin opens , THE frontend SHALL show screen 9.2 with the columns , , ,  and .",
+      "AC-001.2": "WHEN an entry has a timestamp, THE frontend SHALL display it using the existing  formatter in .",
+      "AC-001.3": "WHEN the Admin filters by Actor, action or date range, THE frontend SHALL send the selected filters together to the audit list query.",
+      "AC-001.4": "WHEN a filter changes, THE frontend SHALL return to page 1 and keep the filters in the URL across reload and browser Back navigation.",
+      "AC-001.5": "WHEN more than 20 entries match, THE frontend SHALL paginate the results in groups of 20 and retain the filters when changing pages.",
+      "AC-001.6": "WHILE the first audit query is pending, THE frontend SHALL show the existing LoadingState.",
+      "AC-001.7": "IF no entries match, THEN THE frontend SHALL show the existing EmptyState with MSG04.",
+      "AC-001.8": "IF the audit query fails, THEN THE frontend SHALL show the existing ErrorState with its catalog message and a retry action that retains the filters.",
+      "AC-001.9": "IF the signed-in user has no Admin role, THEN THE existing route guard SHALL show the forbidden screen with MSG08 without requesting audit entries.",
+      "AC-001.10": "WHEN the frontend requests audit entries, THE frontend SHALL use a relative same-origin API path without adding a Workspace parameter or header.",
+      "AC-001.11": "WHEN mock mode supplies audit data, THE MSW handler SHALL apply the combined filters, stable ordering and pagination to the current mock Workspace's entries before returning them.",
+      "AC-001.12": "WHEN the Admin views the audit log, THE frontend SHALL offer read-only viewing and filtering without audit edit, delete, export or entry-detail actions.",
+      "AC-001.13": "WHEN the Admin searches the Actor field, THE frontend SHALL send the entered email search text as the  query parameter instead of requesting a user-options list.",
+      "AC-001.14": "WHEN the Admin first opens the audit log without date filters, THE frontend SHALL request entries without a default date restriction.",
+      "AC-001.15": "WHEN the Admin selects a valid date range, THE frontend SHALL filter from the start of the first day through the end of the last day in , including both selected dates.",
+      "AC-001.16": "IF a supplied date range is incomplete, malformed, reversed or contains a future date in , THEN THE frontend SHALL show MSG39 beside the date filter and prevent an audit request using that invalid range.",
+      "AC-001.17": "WHEN the Admin searches by Actor and selects an action, THE MSW handler SHALL match the trimmed Actor text as a case-insensitive substring of the actor email and match the selected action exactly."
     }
   }
 }

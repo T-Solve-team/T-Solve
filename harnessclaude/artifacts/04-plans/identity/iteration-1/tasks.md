@@ -234,3 +234,14 @@ each commit: the full verify of the side the task touches (CLAUDE.md project rul
 **Dependencies:** User approval of STORY-008; KAN-109 merged into main for the first caller slice, KAN-110 merged before its caller and final completion; branch `feat/KAN-111-identity-project-handover` refreshed from that main. User decision 2026-10-29: wait, do not import dependency branches now. Do not mark the feature in-progress or approve the spec automatically during preparation.
 **Estimated size:** small verification/gap-filling slice, reassess after examining the merged dependencies.
 **Verification:** Map each AC-008 criterion to tests; run `bun harnessclaude/hooks/sdd.ts trace identity STORY-008`; run frontend `format:check`, `lint`, `typecheck`, `test`, `build`, and `generate:api` with no generated diff. Browser-check caller flows, errors, cancellation and recipients at 1366 × 768. These checks are pending. Report actual changed files and results; propose `feat(identity): complete project handover (KAN-111)` only if implementation changes are needed, or `test(identity): verify project handover (KAN-111)` for a tests-only result. Ask for commit approval before committing or starting KAN-112; never push or merge main without the user's instruction.
+
+## Task 14: Verify and complete included Space handover — KAN-112
+
+**Story:** STORY-009
+**Feature:** space-handover
+**Acceptance criteria:** AC-009.1–AC-009.9
+**Description:** Reuse the UC-06/07 popup, generated hooks and atomic MSW mutations. Add missing multi-Space, eligibility, invalid-set, stale-recipient, cancellation, retry, history and reactivation evidence. Clarify the existing OpenAPI proposal without new routes or models. Change runtime code only for a reproduced criterion gap; log every reproduced bug with its regression test.
+**Files:** `frontend/src/features/users/components/HandOverResponsibilitiesModal.test.tsx`, `frontend/src/features/users/pages/{UserStatusPage,UserRolesPage}.test.tsx`, focused tests under `frontend/src/features/users/mocks/`, existing implementation files only if a failing test establishes a gap; `frontend/openapi/tsolve-api.yaml` and generated output. `docs/bug-log.md` for established defects.
+**Dependencies:** STORY-009 approved; user approved master design and placement in iteration 1 on 2026-10-31; KAN-109/110/111 are on main. Branch `feat/KAN-112-identity-space-handover` from main `4cf0594`.
+**Estimated size:** one verification and contract-clarification slice.
+**Verification:** Cover master design risk rows S1–S8, trace all AC-009 criteria, run focused and full frontend tests, format/lint/typecheck/build, and generate the API twice without drift. Browser-check both callers at 1366 × 768, including errors, cancellation and eligible choices. Record actual results in task-14-space-handover session/test/review reports. Report the feature and propose a conventional commit for user agreement before committing; no push unless requested.

@@ -85,22 +85,21 @@
         "user-list-review": "passing",
         "add-user-review": "passing",
         "login-screen": "passing",
-        "sign-in-start": "pending",
+        "sign-in-start": "passing",
         "sign-in-callback": "pending",
         "workspace-session": "pending",
         "operator-sign-in": "pending",
         "jira-link-sign-in": "pending",
         "project-handover": "passing",
-        "account-checks": "pending",
-        "platform-adapters": "pending"
+        "space-handover": "passing"
       },
-      "lastUpdated": "2026-10-31T08:40:21.086Z",
+      "lastUpdated": "2026-10-31T11:36:32.927Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "d2c795e315631990c6b6b384a91c9df64977322a"
+        "default": "5310e2b10093f244440daabf3f3ca7ad14b1d613"
       }
     },
     "workspace": {
@@ -176,10 +175,19 @@
       "lastUpdated": "2026-10-22T14:21:24.029Z"
     },
     "dashboard-audit": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:24.227Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "audit-log": "passing"
+      },
+      "lastUpdated": "2026-10-31T10:34:30.638Z",
+      "branch": "feat/dashboard-audit",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "85a8aeb11008532979199decd64b362284748a0c"
+      }
     },
     "platform": {
       "status": "planned",
