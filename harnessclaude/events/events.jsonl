@@ -403,8 +403,24 @@
 {"ts":"2026-10-30T14:24:23.108Z","type":"feature-status","module":"identity","feature":"project-handover","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-30T14:24:23.149Z","type":"feature-status","module":"identity","feature":"project-handover","from":"evaluating","to":"passing"}
 {"ts":"2026-10-31T06:24:13.256Z","type":"commit-recorded","module":"identity","repo":"default","sha":"d2c795e315631990c6b6b384a91c9df64977322a"}
+{"ts":"2026-10-31T07:28:12.280Z","type":"spec-approved","module":"dashboard-audit","specHash":"182bec63e1e5fdae398141a0e8afc5faafaf4003b6a1245c7033d541acc205c3"}
+{"ts":"2026-10-31T07:31:16.543Z","type":"module-status","module":"dashboard-audit","from":"decomposed","to":"planned"}
+{"ts":"2026-10-31T07:31:16.574Z","type":"feature-status","module":"dashboard-audit","feature":"audit-log","from":null,"to":"pending"}
+{"ts":"2026-10-31T07:31:16.609Z","type":"module-status","module":"dashboard-audit","from":"planned","to":"implementing"}
+{"ts":"2026-10-31T07:31:16.640Z","type":"feature-status","module":"dashboard-audit","feature":"audit-log","from":"pending","to":"in-progress"}
+{"ts":"2026-10-31T10:34:30.527Z","type":"commit-recorded","module":"dashboard-audit","repo":"default","sha":"85a8aeb11008532979199decd64b362284748a0c"}
+{"ts":"2026-10-31T10:34:30.587Z","type":"feature-status","module":"dashboard-audit","feature":"audit-log","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-31T10:34:30.640Z","type":"feature-status","module":"dashboard-audit","feature":"audit-log","from":"evaluating","to":"passing"}
 {"ts":"2026-10-29T14:39:26.181Z","type":"quick-opened","what":"KAN-230 Q5: add the six sign-in env values to ImportConfirmIT test properties (test properties only)","files":["backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmIT.java","backend/src/test/java/vn/tsolve/ticket/controller/ImportControllerTest.java"]}
 {"ts":"2026-10-31T07:42:57.326Z","type":"quick-closed","what":"KAN-230 Q5: add the six sign-in env values to ImportConfirmIT test properties (test properties only)","files":["backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmIT.java","backend/src/test/java/vn/tsolve/ticket/controller/ImportControllerTest.java"]}
 {"ts":"2026-10-31T07:46:57.135Z","type":"feature-status","module":"identity","feature":"sign-in-start","from":"pending","to":"in-progress"}
 {"ts":"2026-10-31T07:46:58.451Z","type":"feature-status","module":"identity","feature":"sign-in-start","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-31T07:47:01.734Z","type":"feature-status","module":"identity","feature":"sign-in-start","from":"evaluating","to":"passing"}
+{"ts":"2026-10-31T10:56:24.840Z","type":"spec-approved","module":"identity","specHash":"194846f998b9c2f9acfc587de8fa6c7ce0da93ca5a92f8d5545739c41ac1fa9e"}
+{"ts":"2026-10-31T10:59:46.250Z","type":"feature-status","module":"identity","feature":"space-handover","from":null,"to":"pending"}
+{"ts":"2026-10-31T10:59:46.311Z","type":"feature-status","module":"identity","feature":"space-handover","from":"pending","to":"in-progress"}
+{"ts":"2026-10-31T11:36:32.846Z","type":"commit-recorded","module":"identity","repo":"default","sha":"5310e2b10093f244440daabf3f3ca7ad14b1d613"}
+{"ts":"2026-10-31T11:36:32.889Z","type":"feature-status","module":"identity","feature":"space-handover","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-31T11:36:32.928Z","type":"feature-status","module":"identity","feature":"space-handover","from":"evaluating","to":"passing"}
+{"ts":"2026-10-31T11:44:58.109Z","type":"quick-opened","what":"Fix KAN-112 CI form-test timers surviving jsdom teardown","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-31T11:56:58.582Z","type":"quick-closed","what":"Fix KAN-112 CI form-test timers surviving jsdom teardown","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
