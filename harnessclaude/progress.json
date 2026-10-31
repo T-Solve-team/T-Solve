@@ -85,14 +85,14 @@
         "user-list-review": "passing",
         "add-user-review": "passing",
         "login-screen": "passing",
-        "sign-in-start": "pending",
+        "sign-in-start": "passing",
         "sign-in-callback": "pending",
         "workspace-session": "pending",
         "operator-sign-in": "pending",
         "jira-link-sign-in": "pending",
         "project-handover": "passing"
       },
-      "lastUpdated": "2026-10-31T06:24:13.246Z",
+      "lastUpdated": "2026-10-31T07:47:01.732Z",
       "branch": "feat/identity",
       "repos": [
         "default"

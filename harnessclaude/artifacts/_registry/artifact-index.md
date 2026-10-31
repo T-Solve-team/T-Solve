@@ -134,3 +134,6 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-111-deactivated.png |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-111-reactivated.png |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-111-main-merge-validation.png |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-8-sign-in-start.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-8-sign-in-start-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-8-sign-in-start-test-report.md |
