@@ -91,9 +91,15 @@
         "operator-sign-in": "pending",
         "jira-link-sign-in": "pending",
         "project-handover": "passing",
-        "space-handover": "passing"
+        "space-handover": "passing",
+        "account-checks": "pending",
+        "platform-adapters": "pending",
+        "profile-account": "pending",
+        "profile-viewable-spaces": "pending",
+        "my-solutions-contract": "pending",
+        "my-solutions-table": "pending"
       },
-      "lastUpdated": "2026-10-31T11:36:32.927Z",
+      "lastUpdated": "2026-10-31T14:01:28.179Z",
       "branch": "feat/identity",
       "repos": [
         "default"

@@ -1,7 +1,7 @@
 ---
 module: identity
 date: 2026-10-25
-total_tasks: 12
+total_tasks: 21
 owner: Dev
 ---
 
@@ -245,3 +245,96 @@ each commit: the full verify of the side the task touches (CLAUDE.md project rul
 **Dependencies:** STORY-009 approved; user approved master design and placement in iteration 1 on 2026-10-31; KAN-109/110/111 are on main. Branch `feat/KAN-112-identity-space-handover` from main `4cf0594`.
 **Estimated size:** one verification and contract-clarification slice.
 **Verification:** Cover master design risk rows S1–S8, trace all AC-009 criteria, run focused and full frontend tests, format/lint/typecheck/build, and generate the API twice without drift. Browser-check both callers at 1366 × 768, including errors, cancellation and eligible choices. Record actual results in task-14-space-handover session/test/review reports. Report the feature and propose a conventional commit for user agreement before committing; no push unless requested.
+
+## STORY-003 tasks (KAN-160 plan, 2026-10-31; stacked on `chore/KAN-231-identity-plan`, PR #94)
+
+Tasks 15–18 build My Profile (STORY-003, KAN-160 "[UC-03] Xem profile của tôi", 2 points, sprint S3 08/11–15/11) on
+the web app with MSW mocks (D1), plus the "Log out" button of STORY-002's AC-002.7 (Q7). Design: "STORY-003: My
+Profile — KAN-160 plan, 2026-10-31". Every web-app criterion — AC-003.1, .2, .3, .11, .12, .13, .14 and AC-002.7 —
+is in exactly one task; the backend criteria AC-003.4–AC-003.10 are in Task 19 (stub, no feature yet, Q11).
+AC-002.1–AC-002.6 (logout on the backend) are not planned here; they wait for a KAN-106 plan. PRs, vertical slices
+first (D2, Q10): PR 1 = Task 15, PR 2 = Task 16, PR 3 = Tasks 17 + 18. Each PR on its own branch
+`feat/KAN-<n>-identity-<desc>` from an up-to-date `main`; the Jira issues (one per PR, under KAN-160) are created
+after this plan is final ("Jira: to create"). Before each commit: the full frontend verify (CLAUDE.md project rules).
+
+## Task 15: My Profile account, Projects and managed Spaces, with Log out — Jira: to create
+
+**Story:** STORY-003, STORY-002 (AC-002.7 only)
+**Feature:** profile-account
+**Acceptance criteria:** AC-003.1, AC-003.2, AC-002.7
+**Description:** Replace the 1.2.1 placeholder with the Figma layout (design "Figma layout per frame"), all from the session, no request. Account card: its own header row "Account" with a "Log out" button at the top right (`useSignOut()`, loading until it settles, one request); Full name, Email, Roles (`ROLE_LABELS` in `ROLES` order), Department (PM only), Departments. Projects card: a `DataTable` without paging — Jira project key, Department, Role in Project (`PROJECT_ROLE_LABELS`: "Project Manager" / "Ticket Resolver", Q3). Spaces card with "Spaces I manage" for a Knowledge Manager (`SpaceList`, folder icons). Every empty row, list or card is hidden (Q4). No contract change.
+**What Hiếu can see or try:** `/profile` in mock mode for each dev user: `tr-two-departments` shows Departments and its Projects with "Ticket Resolver"; `pm` shows the Department row and "Project Manager" rows and no Spaces card; `km` and `pm-km` show "Spaces I manage"; `employee` shows only the Account card. "Log out" opens Login, and the browser's back button shows no profile.
+**Files:**
+- Modify: `frontend/src/features/my-profile/pages/MyProfilePage.tsx`
+- Create: `frontend/src/features/my-profile/components/{AccountSection,ProjectsSection,SpacesSection,SpaceList}.tsx`, `frontend/src/features/my-profile/lib/labels.ts`
+- Test: `frontend/src/features/my-profile/pages/MyProfilePage.test.tsx`
+**Dependencies:** user approval of the identity spec (current); this plan merged, or the branch rebased onto `main` after PR #94.
+**PR / Jira:** PR 1, branch `feat/KAN-<n>-identity-profile-account`; Jira: to create.
+**Estimated size:** small–medium (~220 lines)
+**Verification:** Tests name AC-003.1, AC-003.2, AC-002.7; design risk rows 53–57, 72, 74, 80, 81. Targeted: `cd frontend && npm run test -- src/features/my-profile`. Browser check at 1366 × 768 in mock mode against frames (b) and (c).
+**Done when:** the three criteria's tests pass; the full frontend verify passes; the browser check matches the frames except the design's "Figma vs decisions" items.
+
+## Task 16: "Spaces I can view": contract, mock and list — Jira: to create
+
+**Story:** STORY-003
+**Feature:** profile-viewable-spaces
+**Acceptance criteria:** AC-003.3. Builds and tests the Spaces half of AC-003.14 (MSG06 in the Spaces card, account still shown); AC-003.14 is formally covered only in Task 18, where both sections exist. Contract mirror (not passed here) of AC-003.4, AC-003.5, AC-003.10.
+**Description:** Add `GET /api/v1/me/spaces` (`getMyViewableSpaces`, new tag `profile`, 200 `SpaceRef[]` sorted by name, 401 `Problem`) to the OpenAPI file and regenerate. Add the feature's viewable-Space fixtures per dev user (design "Mock data") and the handler: the user's Spaces sorted by name, 401 `MSG07` with no dev user, extra query parameters ignored. `useMyViewableSpaces` loads on page open; the Spaces card gets "Spaces I can view" below "Spaces I manage", with its own spinner, MSG06 on failure (no retry, Q9), and no list when empty (Q4); the card is not rendered when both lists are empty after a successful load.
+**What Hiếu can see or try:** `/profile` for `tr`, `km` (its managed Space in both lists) and `admin-tr` (a long name cut with "…"); `employee` has no Spaces card. The YAML shows `getMyViewableSpaces` under `profile`.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/features/my-profile/components/SpacesSection.tsx`, `frontend/src/features/my-profile/pages/MyProfilePage.tsx`, `frontend/src/features/my-profile/mocks/handlers.ts`
+- Create: `frontend/src/features/my-profile/hooks/useMyViewableSpaces.ts`, `frontend/src/features/my-profile/mocks/data.ts`
+- Generate only: `frontend/src/shared/api/generated/**`
+- Test: `frontend/src/features/my-profile/pages/MyProfilePage.test.tsx`, `frontend/src/features/my-profile/mocks/handlers.test.ts`
+**Dependencies:** Task 15.
+**PR / Jira:** PR 2, branch `feat/KAN-<n>-identity-profile-viewable-spaces`; Jira: to create.
+**Estimated size:** small–medium (~200 lines, generated code excluded)
+**Verification:** Tests name AC-003.3 and "AC-003.14 spaces"; handler tests "contract mirror of AC-003.4" (sorting) and "of AC-003.10" (401); design risk rows 58, 62, 66, 67, 76, 78, 79. Targeted: `cd frontend && npm run test -- src/features/my-profile`, then `npm run generate:api` with no diff. Browser check at 1366 × 768 in mock mode against frames (main) and (b).
+**Done when:** the AC-003.3 and Spaces error tests pass; `generate:api` leaves no diff; the full frontend verify passes.
+
+## Task 17: My Solutions contract and mock — Jira: to create
+
+**Story:** STORY-003
+**Feature:** my-solutions-contract
+**Acceptance criteria:** none passed in the web app. Contract mirror (not passed here) of AC-003.6, AC-003.7, AC-003.8, AC-003.9, AC-003.10.
+**Description:** Add `GET /api/v1/me/solutions` (`getMySolutions`, tag `profile`, the shared `Page` and `Size` parameters, no `Sort`; 200 `MySolutionPage`, 400 `Problem` with `fieldErrors`, 401 `Problem`) and the schemas `MySolutionPage` and `MySolution` exactly as the spec, reusing `PageMetadata` and `TicketStatus`; regenerate. Add the My Solutions fixtures per dev user (0 / 3 / 5 / 20 / 21 / 45 rows, all six statuses, Vietnamese and 200-character titles, `canOpen: false` rows, own UUIDs) and the handler: newest `updatedAt` first, defaults 0 / 20, 400 `MSG06` `fieldErrors` per wrong parameter, empty `content` past the end with the real totals, 401 `MSG07`, extra parameters ignored. No screen change (Task 18 uses it in the same PR).
+**What Hiếu can see or try:** the YAML shows `getMySolutions`, `MySolutionPage` and `MySolution`; the handler tests are green.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/features/my-profile/mocks/data.ts`, `frontend/src/features/my-profile/mocks/handlers.ts`
+- Generate only: `frontend/src/shared/api/generated/**`
+- Test: `frontend/src/features/my-profile/mocks/handlers.test.ts`
+**Dependencies:** Task 16 (the `profile` tag, `mocks/data.ts`).
+**PR / Jira:** PR 3 with Task 18, one branch `feat/KAN-<n>-identity-my-solutions`. About 450 lines with Task 18, over the ~400 guide: the contract, its mock and the table are one behaviour a user can try, so they stay one vertical slice (Q10). Jira: to create.
+**Estimated size:** small–medium (~200 lines, generated code excluded)
+**Verification:** Handler tests named "contract mirror of AC-003.6 / .7 / .9 / .10"; design risk rows 60, 61, 70, 71, 78. Targeted: `cd frontend && npm run test -- src/features/my-profile/mocks`, then `npm run generate:api` with no diff.
+**Done when:** the handler tests pass and `generate:api` leaves no diff; the full frontend verify passes (format:check, lint, typecheck, test, build, `generate:api` no diff) — Task 18's Done-when repeats it, since both are in PR 3.
+
+## Task 18: My Solutions table — Jira: to create
+
+**Story:** STORY-003
+**Feature:** my-solutions-table
+**Acceptance criteria:** AC-003.11, AC-003.12, AC-003.13, AC-003.14
+**Description:** Add the My Solutions card: `useMySolutions` (generated hook, `keepPreviousData`) with `{ page: urlPage - 1, size: 20 }` from `useListSearchParams({ field: 'updatedAt', order: 'desc' })` (the hook requires a default sort; it is passed only to satisfy the signature and its `sort` / `apiPaging` are ignored; the request has no `sort`); `DataTable` columns Ticket ID (`cells.link` to `paths.ticketDetail(ticketId)` when `canOpen`, plain text otherwise; the row is not clickable and the shared `DataTable` is not changed, R1 A), Title, Project, Status (`cells.tag`), Updated (`formatDate`), fixed widths for 1366 px (120 / 180 / 170 / 120, decided by Hiếu 31/10); pagination 20, no size changer; MSG04 when empty; MSG06 on failure with no retry; a page past the last goes to the last page (history replace, decided by Hiếu 31/10). The account and Spaces stay when My Solutions fails (AC-003.14, which closes with the Spaces half built in Task 16).
+**What Hiếu can see or try:** `/profile` for `tr`: 20 rows, three pages, `?page=2` in the URL, back from Ticket Detail keeps the page; clicking the Ticket ID of an openable row opens Ticket Detail; the `canOpen: false` rows are plain text and do nothing. `employee` and `km` show "No results found." (MSG04). `pm` shows exactly one page.
+**Files:**
+- Modify: `frontend/src/features/my-profile/pages/MyProfilePage.tsx`
+- Create: `frontend/src/features/my-profile/components/MySolutionsSection.tsx`, `frontend/src/features/my-profile/hooks/useMySolutions.ts`
+- Test: `frontend/src/features/my-profile/components/MySolutionsSection.test.tsx`, `frontend/src/features/my-profile/pages/MyProfilePage.test.tsx`
+**Dependencies:** Task 17.
+**PR / Jira:** PR 3 with Task 17, branch `feat/KAN-<n>-identity-my-solutions`; Jira: to create.
+**Estimated size:** medium (~250 lines)
+**Verification:** Tests name AC-003.11–.14; design risk rows 58, 59, 61, 63–69, 72–75, 77, 79, 81. Targeted: `cd frontend && npm run test -- src/features/my-profile`. Browser check at 1366 × 768 in mock mode against frames (main) and (d).
+**Done when:** the four criteria's tests pass; the full frontend verify passes with `generate:api` leaving no diff; `bun harnessclaude/hooks/sdd.ts trace identity STORY-003` shows AC-003.1–.3 and .11–.14 covered.
+
+## Task 19: My Profile backend endpoints — deferred (stub)
+
+**Story:** STORY-003
+**Feature:** none yet (no `progress.json` feature until the task has a Jira issue, Q11)
+**Acceptance criteria:** AC-003.4, AC-003.5, AC-003.6, AC-003.7, AC-003.8, AC-003.9, AC-003.10
+**Description:** Stub, planned in detail when its dependencies are ready. The backend side of `GET /api/v1/me/spaces` and `GET /api/v1/me/solutions`, exactly as the contract of Tasks 16 and 17: Spaces sorted by name from the `wiki` viewable Space lookup, empty while it is missing; the written-ticket lookup's page, newest `updatedAt` first, empty while it is missing; 400 `fieldErrors` `MSG06` for a bad `page` or `size`; 401 `MSG07` with no session; both lookups called only with the signed-in Account's id in its own Workspace, nothing taken from the request (GBR-37).
+**What Hiếu can see or try:** nothing now (record only); later the same screens on the real backend.
+**Files (to confirm when planned):** a `vn.tsolve.identity` controller for the two endpoints, and its tests (MockMvc; two Workspaces for AC-003.7).
+**Dependencies:** `ticket-repository` written-ticket lookup (KAN-132 ticket state machine, To Do); `wiki` viewable Space lookup; be-foundation (session, ProblemDetail errors). No Jira issue yet.
+**PR / Jira:** none now; no Jira issue yet.
+**Estimated size:** small–medium (to confirm when planned)
+**Verification:** to be set when planned; JUnit names end with the AC id; then the full `mvn verify`.

@@ -220,8 +220,8 @@
     }
   },
   "identity": {
-    "specHash": "194846f998b9c2f9acfc587de8fa6c7ce0da93ca5a92f8d5545739c41ac1fa9e",
-    "approvedAt": "2026-10-31T10:56:24.836Z",
+    "specHash": "f040f761b9e95dec48eaef6cba018ed075caeaac40f866a2764c966a2b296ec5",
+    "approvedAt": "2026-10-31T14:14:09.498Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace has a Google domain (AC-001.48), THE backend SHALL create a state value for the Workspace that the platform resolved from the host and answer 302 to  on the central sign-in origin configured in  ( in production), without a signed-in user.",
@@ -292,7 +292,7 @@
       "AC-003.9": "IF  is negative, or  is below 1 or above 100, THEN THE backend SHALL answer 400 with a  entry for that parameter with   (be-foundation AC-001.5).",
       "AC-003.10": "IF nobody is signed in, THEN THE backend SHALL answer  and  with 401 and  . Every signed-in user (Employee) SHALL be allowed to call them.",
       "AC-003.11": "WHEN My Solutions has rows, THE My Profile screen SHALL list them with Ticket ID, title, Project, status as a Status Tag (fe-foundation STORY-007) and date, with paging of 20 rows.",
-      "AC-003.12": "WHEN the user clicks a row whose  is true, THE web app SHALL open Ticket Detail at . A row whose  is false SHALL not be a link.",
+      "AC-003.12": "WHEN the user clicks the Ticket ID of a row whose  is true, THE web app SHALL open Ticket Detail at . The Ticket ID of a row whose  is false SHALL not be a link.",
       "AC-003.13": "WHILE My Solutions has no rows, THE My Profile screen SHALL show MSG04 in that section.",
       "AC-003.14": "IF loading My Solutions or \"Spaces I can view\" fails, THEN THE My Profile screen SHALL show MSG06 in that section and still show the account information of AC-003.1.",
       "AC-004.1": "WHEN an Admin opens , THE frontend SHALL display a User List containing only accounts returned for the current Workspace.",

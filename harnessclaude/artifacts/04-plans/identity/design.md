@@ -475,6 +475,273 @@ Workspace with no Google domain (AC-001.48/.49, Key decisions "No Google domain"
 
 Open questions for the spec owner: none for Task 9 / 9b once the 2026-10-31 spec change is approved (row 45 closed; row 46 waits for the Task 12 plan). Row 42 is accepted (C3, Hiếu, 2026-10-28): a database failure during a
 sign-in redirect keeps be-foundation's generic 500.
+
+## STORY-003: My Profile — KAN-160 plan, 2026-10-31
+
+**Scope.** identity STORY-003 (KAN-160, "[UC-03] Xem profile của tôi") on the web app only, on MSW mocks (D1,
+Hiếu, 2026-10-31), plus AC-002.7 (the "Log out" button, Q7): Tasks 15–18 of `iteration-1/tasks.md`. The backend
+criteria AC-003.4–AC-003.10 are not built here; they are Task 19 (a stub, no Jira issue yet, no `progress.json`
+feature, Q11), which waits for the `ticket-repository` written-ticket lookup (KAN-132, To Do), the `wiki` viewable
+Space lookup and be-foundation. The OpenAPI contract and the mock handlers follow AC-003.4–.10 exactly, so the
+backend can come later without changing the screen; mock tests cite them as "contract mirror of AC-003.x", never as
+passed. This plan is stacked on `chore/KAN-231-identity-plan` (PR #94, Q0). Layout: the four Figma frames of 1.2.1
+(Q1); where a frame and a decision disagree, the decision wins (listed under "Figma vs decisions").
+
+### Flow (STORY-003)
+
+```text
+/profile (existing route, EMPLOYEE guard; the app shell shows the title "My Profile")
+  MyProfilePage
+   ├─ AccountSection        ← useSession()            no request (AC-003.1)  + "Log out" → useSignOut() (AC-002.7)
+   ├─ ProjectsSection       ← useSession().projects    no request (AC-003.1); hidden when empty (Q4)
+   ├─ SpacesSection
+   │    ├─ "Spaces I manage"   ← useSession().managedSpaces, only for KNOWLEDGE_MANAGER (AC-003.2)
+   │    └─ "Spaces I can view" ← useMyViewableSpaces() → GET /api/v1/me/spaces (AC-003.3, .14)
+   └─ MySolutionsSection    ← useMySolutions({ page: urlPage - 1, size: 20 }) → GET /api/v1/me/solutions
+        (AC-003.11–.14) · Ticket ID of a canOpen row = router link to paths.ticketDetail(ticketId) (AC-003.12)
+```
+
+The two requests start in parallel when the page opens. Each data section has its own spinner, empty and error
+state, so one failure never hides the account information (AC-003.14). The account part needs no request: it is
+the session (fe-foundation AC-001.2), already loaded by the guard.
+
+### Components and files (STORY-003)
+
+All in `frontend/src/features/my-profile/` unless stated.
+
+| Where | What | Task |
+|-------|------|------|
+| `pages/MyProfilePage.tsx` | Replaces the placeholder; layout only: the sections in Figma order, stacked, gap from the theme | T15 (T16, T18 add sections) |
+| `components/AccountSection.tsx` | `SectionCard` from the kit with no `title`; its own header row: "Account" (left) and the "Log out" button (right, `Button` default). Rows as label / value pairs (antd `Descriptions`, one column, or the kit's equivalent): Full name, Email, Roles, Department, Departments (Q4: a row with no value is not rendered) | T15 |
+| `components/ProjectsSection.tsx` | `SectionCard` "Projects" with a `DataTable` (label "Projects", no paging): Jira project key, Department, Role in Project. Not rendered when `projects` is empty (Q4) | T15 |
+| `components/SpacesSection.tsx` | `SectionCard` "Spaces" with two titled lists: "Spaces I manage" (T15) and "Spaces I can view" (T16) | T15, T16 |
+| `components/SpaceList.tsx` | A list of `SpaceRef` names, each with the folder icon of the frame (`FolderOpenOutlined`, `aria-hidden`), one line, cut with "…" and the full name on hover | T15 |
+| `components/MySolutionsSection.tsx` | `SectionCard` "My Solutions" with the kit's `DataTable` (label "My Solutions", server paging, `emptyCode` MSG04, `error`, no `onRetry`, Q9); the Ticket ID of a `canOpen` row is `cells.link`; no change to the shared `DataTable` | T18 |
+| `hooks/useMyViewableSpaces.ts` | `useGetMyViewableSpaces()` (generated) | T16 |
+| `hooks/useMySolutions.ts` | `useGetMySolutions(params, { query: { placeholderData: keepPreviousData } })`, as `features/users/hooks/useUsers.ts` | T18 |
+| `lib/labels.ts` | `PROJECT_ROLE_LABELS: Record<ProjectRole, string>` = `PROJECT_MANAGER` → "Project Manager", `MEMBER` → "Ticket Resolver" (Q3) | T15 |
+| `mocks/data.ts` | Fixtures keyed by `DevUserId`, see "Mock data" | T16, T17 |
+| `mocks/handlers.ts` | `getMyViewableSpaces` (T16), `getMySolutions` (T17); `resetMockData()` restores the fixtures | T16, T17 |
+| `frontend/openapi/tsolve-api.yaml` | The two endpoints and two schemas, see "Contract" | T16, T17 |
+| `frontend/src/shared/api/generated/**` | `npm run generate:api` only, never edited by hand | T16, T17 |
+
+Reused, not changed: `useSession`, `useSignOut`, `ROLES` / `ROLE_LABELS` (`@/shared/auth`); `SectionCard`,
+`DataTable`, `cells.link`, `cells.text`, `cells.tag`, `LoadingState`, `ErrorState`, `EmptyState` (`@/shared/ui`);
+`formatDate`, `PAGE_SIZE` (`@/shared/lib`); `paths.ticketDetail`, `useListSearchParams` (`@/shared/routing`);
+`problem`, `MOCK_DELAY_MS` (`@/shared/api/mocks`); `getDevUser` (`@/shared/auth`). No edit to `app/`,
+`src/mocks/session.ts` or other features: the feature's handlers read the current dev user with `getDevUser()`
+(verified 2026-10-31; no adapter needed, unlike KAN-109/110).
+
+Values shown in AccountSection (AC-003.1):
+- Full name `user.fullName`, Email `user.email`.
+- Roles: `ROLE_LABELS` of `roles`, in the order of `ROLES` (Employee first), joined with ", " (fe-foundation
+  AC-001.1).
+- Department: `department.name`, only when the user holds `PROJECT_MANAGER` and `department` is not null.
+- Departments: the names of `departments`, joined with ", "; no row when empty.
+- Projects table: `jiraProjectKey` (Q2: `/me` has no Project name; no `/me` contract change), `departmentName`,
+  `PROJECT_ROLE_LABELS[roleInProject]`, in the order `/me` gives.
+
+### Figma layout per frame (1.2.1)
+
+| Frame | Sections, top to bottom | What each shows |
+|-------|-------------------------|-----------------|
+| 1.2.1 main (Ticket Resolver, two Departments) | Account · Projects · Spaces · My Solutions | Account: header "Account" with "Log out" at the top right; Full name, Email, Roles ("Employee, Ticket Resolver"), Departments ("IT, HR"). Projects: table. Spaces: "Spaces you can view" with three Spaces, folder icons. My Solutions: six status count cards, three filters, table Ticket ID (link) · Title · Project · Status (Status Tag) · Latest decision · Date (DD/MM/YYYY) |
+| (b) Project Manager + Knowledge Manager | Account · Projects · Spaces | Account: Roles "Employee, Project Manager, Knowledge Manager", Department "IT" (no Departments row). Projects: two rows, role "Project Manager". Spaces: "Spaces you manage" (two) above "Spaces you can view" (two). No My Solutions section |
+| (c) Employee only | Account · Projects · Spaces | Account: Full name, Email, Roles "Employee". Projects card with "Not a member of any Project.". Spaces: "Spaces you can view" with one Space. No My Solutions section |
+| (d) My Solutions, no results | as main | The table header with the empty state: inbox icon and "No results found." (MSG04), here under the "Expired" status filter |
+
+What this plan builds from the frames: the section order, cards and headings; the Account header with "Log out" at
+the top right; label / value rows; the Projects table; one "Spaces" card with the managed list above the viewable
+list and folder icons; the My Solutions table with the Ticket ID as a link, Status Tag, a date column and MSG04 with
+the inbox icon (the kit's `EmptyState`). The red numbered markers are annotations, not UI.
+
+#### Figma vs decisions (the decision wins; for Hiếu)
+
+1. Projects table: the frame has a "Project ID" column (PRJ-0001). `/me` has only the UUID `projectId` and no
+   display id, so the table has three columns: Jira project key, Department, Role in Project (Q2).
+2. Role in Project: the frame shows "Member"; Q3 shows `MEMBER` as "Ticket Resolver".
+3. Empty Projects: frame (c) shows the card with "Not a member of any Project."; Q4 hides the card.
+4. Employee-only Spaces: frame (c) lists "Sao Mai Corporation"; the Employee-only dev user has no viewable Spaces
+   (Q8), so with Q4 frame (c)'s user sees no Spaces card at all in mock mode (see State rules).
+5. My Solutions for a user who writes no Solutions: frames (b) and (c) have no My Solutions section; AC-003.13 and
+   Q4 keep the section for every user, with MSG04 when it has no rows.
+6. My Solutions extras in the main frame — the six status count cards, the status / Project / date-range filters and
+   the "Latest decision" column — are in neither STORY-003 nor `MySolution`; not built (R2 A). Later, and needs a
+   spec change (Change Mode: new criteria, `MySolution.latestDecision`, filter parameters, a counts endpoint).
+7. Date column header: the frame says "Date"; Q6 says "Updated".
+8. Date: Q6 said browser local time unless a shared format exists; it exists — `formatDate` in `@/shared/lib`,
+   (`frontend/src/shared/lib/date.ts`; `DD/MM/YYYY` in Vietnam time, `Asia/Ho_Chi_Minh`) — so the column uses it (same
+   text as the frame). Confirmed by Hiếu 31/10.
+9. Section wording: the frames say "Spaces you manage" / "Spaces you can view"; AC-003.2 and AC-003.3 name the lists
+   "Spaces I manage" / "Spaces I can view", and the spec wins (rewording it is a spec change).
+10. Project column of My Solutions: the frame shows the Jira key (ITSUP); the contract field is `projectName`, so the
+    column shows the Project name the backend sends (the mocks use names such as "IT Support").
+11. Row click: AC-003.12 (reworded 31/10, R1 A) makes only the Ticket ID of a `canOpen` row a link (`cells.link`, as
+    Review Queue and Ticket List). The row itself is not clickable and the shared `DataTable` is not changed. A
+    `canOpen: false` row shows the Ticket ID as plain text.
+
+### State rules (STORY-003)
+
+- Hide what is empty (Q4): no Department → no row; empty Departments → no row; empty Projects → no Projects card;
+  no `KNOWLEDGE_MANAGER` or no managed Spaces → no "Spaces I manage" list; "Spaces I can view" loaded and empty → no
+  list. The Spaces card is not rendered when both lists are hidden after a successful load (decided by Hiếu 31/10:
+  an empty card has nothing to show). While "Spaces I can view" loads, the card shows with its spinner; when it
+  fails, the card shows MSG06 in place of that list (and "Spaces I manage" still shows).
+- My Solutions is always rendered: spinner on the first load (`DataTable` `loading`), MSG04 when `content` is empty
+  on page 1 (AC-003.13), MSG06 on failure (AC-003.14, `ErrorState` without "Try again", Q9).
+- Paging (Q5): `useListSearchParams(defaultSort: TableSort)` (`shared/routing/useListSearchParams.ts`) requires a
+  default sort and the contract has none. The section passes `{ field: 'updatedAt', order: 'desc' }` (the backend's
+  order, newest first) only to satisfy the signature; the hook's `sort`, `setSort` and `apiPaging` are ignored and no
+  column is sortable. The hook gives the 1-based `page` from `?page=` (invalid or below 1 → 1); the request sends
+  `{ page: page - 1, size: PAGE_SIZE }` explicitly (no `sort`); `DataTable` pagination: 20 per page, no size changer, "Total N items". Changing page sets `?page=`; back
+  from Ticket Detail returns to the same page.
+- A page past the last (decided by Hiếu 31/10): when the answer has `totalPages > 0` and `page > totalPages`, the
+  section replaces the URL with the last page (`?page=<totalPages>`, history replace); when `totalPages` is 0 and
+  `page > 1`, it goes to page 1, which then shows MSG04.
+- Rows (AC-003.12, reworded 31/10, R1 A): only the Ticket ID cell of a `canOpen` row is `cells.link` to
+  `paths.ticketDetail(row.ticketId)` (keyboard and screen reader); the row itself is not clickable. A `canOpen: false`
+  row shows the Ticket ID as plain text: no link, no pointer, no click handler, nothing focusable. The shared
+  `DataTable` is not changed.
+- Columns (AC-003.11): Ticket ID (`ticketKey`), Title (`cells.text`, ellipsis and full text on hover), Project
+  (`projectName`, `cells.text`), Status (`cells.tag(status)`), Updated (`formatDate(updatedAt)`); fixed widths so
+  the table fits 1366 px without sideways scroll (decided by Hiếu 31/10: Ticket ID 120, Project 180, Status 170,
+  Updated 120, Title takes the rest).
+- Log out (AC-002.7): the button calls `useSignOut()`; it is `loading` and ignores further clicks until the
+  promise settles (one logout request); `useSignOut` clears the cache and opens Login (fe-foundation AC-008.1–.3).
+
+### Contract (STORY-003)
+
+Pattern as "Contract (Q6)" above. New tag `profile` ("My Profile: the signed-in user's Spaces and Solutions (SRS
+III.1.2.1)"); `getMe` stays under `session`.
+- `GET /api/v1/me/spaces`, `operationId: getMyViewableSpaces`, tag `profile`, no parameters: 200 `SpaceRef[]`
+  (description: sorted by name; empty while the `wiki` lookup is missing, AC-003.4/.5); 401 `Problem` (`MSG07`,
+  AC-003.10). Added in T16.
+- `GET /api/v1/me/solutions`, `operationId: getMySolutions`, tag `profile`, parameters the shared
+  `#/components/parameters/Page` and `#/components/parameters/Size` (min 0 / default 0; 1–100 / default 20 — exactly
+  AC-003.6), no `Sort`: 200 `MySolutionPage` (description: newest `updatedAt` first; empty while the
+  `ticket-repository` lookup is missing, AC-003.6/.8); 400 `Problem` with `fieldErrors` (`MSG06`, AC-003.9); 401
+  `Problem` (`MSG07`, AC-003.10). Added in T17.
+- Schemas (T17), exactly the spec's: `MySolutionPage` `{ content: MySolution[], page: PageMetadata }` (both
+  required, as `ReviewQueuePage`); `MySolution` with all seven fields required: `ticketId` (string, uuid),
+  `ticketKey`, `title`, `projectName` (strings), `status` (`$ref TicketStatus`), `updatedAt` (string, date-time),
+  `canOpen` (boolean). Reused as they are: `SpaceRef`, `PageMetadata`, `TicketStatus`, `ProblemDetail`.
+- No user id or Workspace in either request (AC-003.7): the contract has no such parameter, and a handler test
+  asserts the mock ignores any extra query parameter.
+- `npm run generate:api` regenerates; the PR's commit leaves no diff in `src/shared/api/generated`.
+
+### Mock data and scenarios (STORY-003)
+
+Fixtures in `mocks/data.ts`, keyed by `DevUserId`, fixed UUIDs (guideline: ids are UUID strings), Vietnamese titles:
+
+| Dev user | My Solutions | Spaces I can view |
+|----------|--------------|-------------------|
+| `employee` | 0 (MSG04, Q8) | none (no Spaces card, Q4/Q8) |
+| `tr` | 45 (3 pages), all six statuses, three Projects, 3 rows `canOpen: false` | 3 |
+| `tr-two-departments` | 21 (page 2 has one row) | 4, including both Departments' Spaces |
+| `pm` | 20 (exactly one page, no second page) | 2 |
+| `km` | 0 | 3, including its managed "IT Space" (a Space can be in both lists, footnote ⁸) |
+| `admin` | 0 | 1 |
+| `pm-km` | 3 | 2, including its managed "HR Space" |
+| `admin-tr` | 5, one 200-character title, 2 rows `canOpen: false` | 6 (a long name of 120 characters) |
+
+Handler rules (mirror of the contract; MSW, `delay(MOCK_DELAY_MS)`):
+- No dev user → 401 `MSG07` (both endpoints; the global 401 handling then opens Login).
+- `getMyViewableSpaces`: the user's Spaces sorted by name (`localeCompare`, `vi`), whatever the fixture order.
+- `getMySolutions`: sorted by `updatedAt` descending; `page` default 0, `size` default 20; a missing parameter takes
+  its default; `page` not an integer or below 0 → 400 with `fieldErrors: [{ field: 'page', code: 'MSG06' }]`;
+  `size` not an integer, below 1 or above 100 → 400 with the `size` entry (both entries when both are wrong); the
+  page is `slice(page * size, page * size + size)` with `PageMetadata` (`size`, `number`, `totalElements`,
+  `totalPages`); a page past the end → 200 with empty `content` and the real totals.
+- Any other query parameter (`userId`, `workspaceId`) is ignored.
+- Empty state from data (`employee`, `km`, `admin`); the error state only in tests with `server.use` (500), no mock
+  switch (Q8).
+- Mock ticket ids are this feature's own UUIDs (no import from the `tickets` feature's mocks); Ticket Detail (5.5) is
+  a placeholder today, so any id opens it.
+
+### Test approach (STORY-003)
+
+- Vitest + Testing Library + MSW, `renderApp('/profile', { user })` per dev user; during test-first work only
+  `npm run test -- src/features/my-profile`; the full frontend verify once per
+  commit. `it` names start with the AC id; mock-contract tests start with "contract mirror of AC-003.x".
+- T15: AC-003.1 for `employee`, `tr-two-departments`, `pm`, `km`, `pm-km`, `admin-tr` (rows present and hidden per
+  Q4, Role order, Department only for the PM, the Projects labels); AC-003.2 (list for `km` and `pm-km`, none for
+  `pm`); AC-002.7 (click → `POST /auth/logout` once, Login opens, the query cache is empty).
+- T16: AC-003.3 (names sorted, `employee` has no Spaces card); the Spaces half of AC-003.14 (`server.use` 500 on
+  `/me/spaces` → MSG06 in the Spaces card, account and "Spaces I manage" still shown); handler tests: sorting, 401.
+- T17 (handler tests only): order, defaults, page boundaries 0 / 1 / 20 / 21 / 45, page past the end, each 400 case
+  with its `fieldErrors`, 401, extra parameters ignored.
+- T18: AC-003.11 (columns, Status Tag text, `formatDate`, 20 rows, page 2 via the pager and via `?page=2`, size=20
+  in the request); AC-003.12 (a click on the Ticket ID of a `canOpen` row opens `/tickets/:ticketId`; a `canOpen: false` row has no
+  link and a click stays on `/profile`); AC-003.13 (MSG04 for `employee`); AC-003.14 (500 on `/me/solutions` →
+  MSG06 in My Solutions, account and Spaces still shown); row 63: `?page=9` for `pm` (one page) → page 1,
+  `?page=4` for `tr` (three pages) → page 3.
+- Browser check at 1366 × 768 in mock mode after each PR, against the frames (dev users `tr`, `pm-km`, `employee`).
+
+### Key decisions (STORY-003)
+
+| Decision | Choice | Alternatives considered | Rationale |
+|----------|--------|------------------------|-----------|
+| Scope (D1) | Web app on MSW mocks; backend AC-003.4–.10 deferred to Task 19 (stub, Q11) | Backend now | No backend dependency is ready (KAN-132 To Do, `wiki` not built); the contract fixes the shape now |
+| Stacking (Q0) | Branched from `chore/KAN-231-identity-plan` (PR #94) | Wait for PR #94 | The plan files are the same; rebase when #94 merges |
+| Layout (Q1) | The four Figma frames of 1.2.1; decisions win where they differ | SRS wording only | Frames exist; differences listed above |
+| Projects (Q2) | Shown by `jiraProjectKey`, with Department and role; no `/me` change | Add `projectName` to `/me` (fe- and be-foundation contract change) | All else is already in `/me` |
+| Project role label (Q3) | `PROJECT_MANAGER` "Project Manager", `MEMBER` "Ticket Resolver" | "Member" | Hiếu's choice; the label of the Role that makes a member |
+| Empty values (Q4) | Hide every empty row, list and section; My Solutions keeps MSG04 (AC-003.13) | "—" rows; MSG04 for Spaces (a new criterion) | No new criterion; the screen shows only what the user has |
+| Paging (Q5) | Kit `DataTable` pagination, 20 fixed, `size=20` sent, page in the URL (1-based; 0-based to the API) | Page in state only; "Load more" | AC-003.11; back from Ticket Detail keeps the page; like the User List |
+| Date (Q6) | Header "Updated", the shared `formatDate` (`DD/MM/YYYY`, Vietnam time, `shared/lib/date.ts`; confirmed by Hiếu 31/10) | `DD/MM/YYYY HH:mm`; relative dates | Q6 said "or the shared format if one exists" — it does |
+| Log out (Q7) | Button at the top right of the Account card, `useSignOut()`, in Task 15 | Bottom of the page; leave to a KAN-106 plan | One-button FE criterion on this screen; no backend |
+| Mock scenarios (Q8) | Empty from data; error only in tests | A `localStorage` switch; a `?mock=` parameter | No mock concern in product code |
+| Error state (Q9) | MSG06 text only, no "Try again" | A retry button (needs a criterion) | No spec change |
+| PRs (Q10) | PR 1 = T15, PR 2 = T16, PR 3 = T17 + T18 (~450 lines) | A contract-only PR; PR 3 split | Each endpoint's YAML in its screen's PR (spec rule); contract, mock and table are one behaviour |
+| Deferred backend (Q11) | Task 19 stub; no feature until it has a Jira issue | A `pending` feature now; a design note only | Visible to the evaluator without an idle feature |
+| OpenAPI tag (accepted minor) | `profile` | `session` | `/me` stays the session; the profile reads are their own group |
+| Row click (R1 A, Hiếu 31/10; AC-003.12 reworded) | Only the Ticket ID of a `canOpen` row is a link (`cells.link`); the row is not clickable; a `canOpen: false` row shows plain text | Whole row clickable via a new prop pair on the shared `DataTable` (a shared edit); antd `Table` directly in the feature (bypasses the kit) | Same as Review Queue and Ticket List; no shared edit, no FE Lead gate |
+| Page past the last (accepted minor) | Go to the last page (history replace) | MSG04 | The user asked for a page that moved, not for an empty list |
+| Loading (accepted minor) | A spinner per section | One page spinner | One slow request never hides the rest |
+| Log out header (decided in planning, builder check) | `SectionCard` without `title`, the card renders its own "Account" header row with the button | An `extra` prop on `SectionCard` (another shared edit) | No shared edit for one button |
+
+### Edge cases and risks (STORY-003)
+
+Dimensions analyzed: user types, input extremes, timing, scale, state transitions, environment, error cascades,
+authorization, data integrity, integration, compliance. Skipped: business logic (no amounts, quotas or counts —
+the Figma count cards are not built, Figma vs decisions item 6).
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 53 | STORY-003 | User types | Employee only: no Department, Departments, Projects, managed or viewable Spaces, no Solutions | High | Account card with Full name, Email, Roles "Employee"; no Projects or Spaces card; My Solutions with MSG04 (AC-003.1/.13, Q4) | Tasks 15, 16, 18 |
+| 54 | STORY-003 | User types | Project Manager with `department` set; a Ticket Resolver whose `department` is null; a user whose `department` is set but who is not a PM (bad data) | High | "Department" row only for the PM (AC-003.1); never for a non-PM | Task 15 |
+| 55 | STORY-003 | User types | A user with four Roles (`admin-tr` plus PM / KM in a test fixture) | Medium | All labels, Employee first, in `ROLES` order (fe-foundation AC-001.1) | Task 15 |
+| 56 | STORY-003 | User types | KM with no managed Spaces; PM + KM (`pm-km`); PM without KM | Medium | List only when KM and not empty; none for the PM alone (AC-003.2, Q4) | Task 15 |
+| 57 | STORY-002 | Timing | "Log out" clicked twice, or while the Spaces and Solutions requests are in flight | Medium | One logout request (button loading); cache cleared; Login opens; late answers do not repaint the profile (AC-002.7, fe-foundation AC-008.1–.3) | Task 15 |
+| 58 | STORY-003 | Input extremes | 200-character title, 120-character Space name, Vietnamese diacritics in titles, names and Project names | Low | One line, "…", full text on hover; no layout break at 1366 px | Tasks 16, 18 |
+| 59 | STORY-003 | Input extremes | `?page=abc`, `?page=0`, `?page=-3`, `?page=1.5` in the URL | Medium | Read as page 1 (`useListSearchParams`); the request sends `page=0` | Task 18 |
+| 60 | STORY-003 | Input extremes | API called with `page=-1`, `size=0`, `size=101`, `size=abc`, both wrong | High | 400 with a `fieldErrors` entry `MSG06` for each wrong parameter (contract mirror of AC-003.9) | Task 17 |
+| 61 | STORY-003 | Scale | 0, 1, 20, 21, 45 Solutions | High | MSG04 at 0; one page and no second page at 1 and 20; page 2 with one row at 21; three pages at 45 (AC-003.11/.13) | Tasks 17, 18 |
+| 62 | STORY-003 | Scale | Many viewable Spaces (a Workspace with dozens) | Low | Plain list, no paging (the contract has none); the page scrolls | Task 16 |
+| 63 | STORY-003 | State transitions | `?page=3` when only 2 pages exist (Solutions removed meanwhile); `?page=2` when there are now none | Medium | Last page (history replace); none → page 1 with MSG04 (decided by Hiếu 31/10) | Task 18 |
+| 64 | STORY-003 | State transitions | Back from Ticket Detail after opening a row on page 2 | Medium | `/profile?page=2` shows page 2 again (Q5) | Task 18 |
+| 65 | STORY-003 | Timing | Slow network; page clicked twice while the previous page loads | Medium | Section spinner on first load; previous rows kept while the next page loads (`keepPreviousData`); the last click wins | Task 18 |
+| 66 | STORY-003 | Error cascades | `/me/solutions` 500 while `/me/spaces` 200, and the reverse; both 500 | High | MSG06 only in the failing section; account (and "Spaces I manage") always shown (AC-003.14) | Tasks 16, 18 |
+| 67 | STORY-003 | Error cascades | `/me/spaces` or `/me/solutions` answers 401 (session ended meanwhile) | High | The global 401 handling opens Login (fe-foundation); not MSG06 in the section | Tasks 16, 18 |
+| 68 | STORY-003 | Error cascades | A 403 from either endpoint (not expected: every Employee may call them, AC-003.10) | Low | `ErrorState` shows MSG08 (kit rule for 403); accepted, no special case | Task 18 |
+| 69 | STORY-003 | Authorization | Row with `canOpen: false` | High | Ticket ID is plain text; no link, no pointer, no click handler, nothing focusable; a click stays on `/profile` (AC-003.12) | Task 18 |
+| 70 | STORY-003 | Authorization | Request carrying `userId` / `workspaceId` (someone edits the URL or the call) | Critical | Backend risk, Task 19. Mock ignores them and answers for the dev user (contract mirror of AC-003.7); the real guarantee is Task 19 | Tasks 17, 19 |
+| 71 | STORY-003 | Authorization | `canOpen: true` row for a user whose Roles cannot open Ticket Detail (route guard TR / PM) | Medium | Not produced by the mocks (only TR / PM users get `canOpen: true`); in production the guard's own page answers; `canOpen` is the backend's UC-24 decision | Task 17 |
+| 72 | STORY-003 | Environment | Keyboard and screen reader on the table and the lists | Medium | The Ticket ID link is reachable by Tab and opens with Enter; the table has the accessible name "My Solutions"; card titles are visible text; icons `aria-hidden` | Tasks 15, 18 |
+| 73 | STORY-003 | Environment | Browser in another time zone (UTC−5) looking at an `updatedAt` near midnight Vietnam time | Low | Date shown in Vietnam time by `formatDate`, the same for every viewer | Task 18 |
+| 74 | STORY-003 | Environment | Screen 1366 × 768 | Low | Table fits without sideways scroll; long values cut with "…" | Tasks 15, 18 |
+| 75 | STORY-003 | Data integrity | Rows shift between page requests (a new Solution arrives): a row repeats on page 2 or is skipped | Low | Accepted with offset paging (the contract's); `rowKey` = `ticketId` keeps React keys unique per page | Task 18 |
+| 76 | STORY-003 | Data integrity | A Space in both "Spaces I manage" and "Spaces I can view" | Low | Shown in both lists (viewable includes managed, Permission Matrix footnote ⁸) | Task 16 |
+| 77 | STORY-003 | Integration | A future backend sends an unknown `status` | Low | The type checker rejects it at build (fe-foundation AC-007.3); at runtime the Status Tag's own fallback | Task 18 |
+| 78 | STORY-003 | Integration | Contract drift: `generate:api` leaves a diff, or the YAML and the handlers disagree | High | The PR's verify runs `generate:api` with no diff; handlers typed with the generated types | Tasks 16, 17 |
+| 79 | STORY-003 | Integration | Real backend while the lookups are missing: `/me/spaces` `[]`, `/me/solutions` empty page | Medium | No "Spaces I can view" list (Q4); MSG04 in My Solutions — the same screens as the `employee` mock (AC-003.5/.8) | Tasks 16, 18 |
+| 80 | STORY-002 | Compliance | The next person at the same computer after "Log out" | High | No profile data left: the cache is cleared by `useSignOut` and Login opens (AC-002.7, fe-foundation AC-008.1) | Task 15 |
+| 81 | STORY-003 | Compliance | Personal data in the URL or in logs | Medium | The URL holds only `page`; nothing about the user is logged or stored by the feature | Tasks 15, 18 |
+
+Open questions for the spec owner: none blocking this plan. For Hiếu to decide later (not needed for Tasks 15–18):
+the Figma extras of item 6 (count cards, filters, "Latest decision"), which need a Change Mode spec change; the
+"you" / "I" wording of item 9.
+
 ## Task 4 contract proposal — KAN-110
 `PUT /api/v1/users/{userId}` (`updateUserRoles`) accepts generated UpdateUserRolesRequest: roles, nullable UUID Department, UUID Space ids, optional Project/Space handovers and `confirmTicketResolverRemoval`. It returns confirmed UserDetail or400/401/403/404/409 Problem. UserDetail adds `ticketResolverProjectIds` (UUID[]) for the memberships that MSG78 actually removes; preserve historical references separately from current membership and management.
 
