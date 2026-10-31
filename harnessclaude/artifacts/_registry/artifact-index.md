@@ -137,3 +137,11 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-111-deactivated.png |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-111-reactivated.png |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-111-main-merge-validation.png |
+| — | spec | dashboard-audit | approved | artifacts/03-modules/dashboard-audit/spec.md |
+| — | design | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/design.md |
+| — | design | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/iteration-1/design.md |
+| — | tasks | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/iteration-1/tasks.md |
+| — | session-log | dashboard-audit | passing | artifacts/05-implementation/dashboard-audit/task-1-audit-log.md |
+| — | screenshot | dashboard-audit | verified | artifacts/assets/dashboard-audit/kan-153-filtered.jpg |
+| — | review | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-review.md |
+| — | test-report | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-test-report.md |
