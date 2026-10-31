@@ -57,3 +57,4 @@
 {"ts":"2026-10-30T06:15:49.015Z","type":"feature-status","module":"tracker","feature":"jira-client","from":"pending","to":"in-progress"}
 {"ts":"2026-10-31T06:56:23.894Z","type":"quick-opened","what":"jira-app manifest: issue-created trigger to the T-Solve backend via Forge Remote (KAN-22 step 4)","files":["jira-app/TSolve_JiraApp/manifest.yml"]}
 {"ts":"2026-10-31T19:32:53.710Z","type":"spec-approved","module":"tracker","specHash":"e3bcc7736b76775e1621ed216babdd92b58a28833c913f2c672832a35df211f6"}
+{"ts":"2026-10-31T21:34:09.699Z","type":"quick-closed","what":"jira-app manifest: issue-created trigger to the T-Solve backend via Forge Remote (KAN-22 step 4)","files":["jira-app/TSolve_JiraApp/manifest.yml"]}
