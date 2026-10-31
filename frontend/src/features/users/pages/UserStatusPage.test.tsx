@@ -9,9 +9,12 @@ import {
   getGetUserDetailQueryKey,
   getGetUsersQueryKey,
   getUserHandoverOptions,
+  getUserDetail,
   type UserDetail,
 } from '@/shared/api';
 import { setDevUser } from '@/shared/auth';
+import { store } from '../mocks/state';
+import { HANDBOOK_SPACE_ID } from '../mocks/data';
 
 const account = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
@@ -142,7 +145,7 @@ describe('User Detail account status', () => {
     expect(queryClient.getQueryState(cachedRecipient)?.isInvalidated).toBe(true);
   });
 
-  it('AC-006.5 hands over a managed Space before deactivating a Knowledge Manager', async () => {
+  it('AC-006.5 / AC-009.1 hands over a managed Space before deactivating a Knowledge Manager', async () => {
     const user = userEvent.setup();
     renderUser(3);
     await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
@@ -154,8 +157,72 @@ describe('User Detail account status', () => {
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
   });
 
+  it('AC-009.1 / AC-009.6 / AC-009.7 / AC-009.8 requires every Space, preserves data and choices, and prevents duplicate retry submissions', async () => {
+    const target = store.users.find((item) => item.id === account(3));
+    if (!target) throw new Error('Missing Knowledge Manager fixture');
+    target.spaceIds.push(HANDBOOK_SPACE_ID);
+    const user = userEvent.setup();
+    const { queryClient } = renderUser(3);
+    await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
+    let dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
+    await within(dialog).findByRole('combobox', { name: 'IT Knowledge' });
+    await user.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+    expect(
+      await within(dialog).findByText(msg('MSG01', { field_name: 'Engineering Handbook' })),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(store.spaceHistory).toEqual([]);
+    expect(target.status).toBe('ACTIVE');
+    expect(target.spaceIds).toHaveLength(2);
+
+    let fails = true;
+    let calls = 0;
+    let finish: (() => void) | undefined;
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    server.use(
+      http.put('*/api/v1/users/:userId/status', async () => {
+        calls++;
+        if (fails) return problem(500);
+        await pending;
+        return undefined;
+      }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Deactivate' }));
+    dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
+    for (const name of ['IT Knowledge', 'Engineering Handbook']) {
+      await user.click(await within(dialog).findByRole('combobox', { name }));
+      await user.click(
+        await screen.findByRole('option', { name: /Võ Thanh Tâm/, selected: false }),
+      );
+    }
+    await user.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+    expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+    expect(within(dialog).getAllByText(/Võ Thanh Tâm/)).toHaveLength(2);
+    expect(target.status).toBe('ACTIVE');
+    expect(store.spaceHistory).toEqual([]);
+    const cachedRecipient = getGetUserDetailQueryKey(account(7));
+    queryClient.setQueryData(cachedRecipient, {});
+    fails = false;
+    try {
+      await user.dblClick(within(dialog).getByRole('button', { name: 'Deactivate' }));
+      await waitFor(() => expect(calls).toBe(2));
+      expect(within(dialog).getByRole('button', { name: /Deactivate/ })).toBeDisabled();
+      expect(within(dialog).getByRole('combobox', { name: 'IT Knowledge' })).toBeDisabled();
+      expect(store.spaceHistory).toEqual([]);
+    } finally {
+      finish?.();
+    }
+    expect(await screen.findByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
+    expect((await getUserDetail(account(3))).managedSpaces).toEqual([]);
+    expect(store.spaceHistory).toHaveLength(2);
+    expect(queryClient.getQueryState(cachedRecipient)?.isInvalidated).toBe(true);
+  });
+
   it.each([5, 3])(
-    'AC-006.6 / AC-008.5 blocks account %s when no eligible replacement exists',
+    'AC-006.6 / AC-008.5 / AC-009.5 blocks account %s when no eligible replacement exists',
     async (n) => {
       setDevUser('admin');
       const options = await getUserHandoverOptions(account(n));

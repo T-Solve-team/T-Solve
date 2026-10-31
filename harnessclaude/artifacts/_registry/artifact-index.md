@@ -4,6 +4,9 @@ Master registry of all artifacts in this workspace.
 
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
+| IMPL-IDENTITY-14 | session-log | identity | passing | artifacts/05-implementation/identity/task-14-space-handover.md |
+| TEST-IDENTITY-14 | test-report | identity | pass-with-open-dev-defect | artifacts/06-evaluation/identity/task-14-space-handover-test-report.md |
+| REVIEW-IDENTITY-14 | review | identity | pass | artifacts/06-evaluation/identity/task-14-space-handover-review.md |
 | ITER-1 | iteration | — | planned | artifacts/07-iterations/iteration-1.md |
 | ITER-2 | iteration | — | planned | artifacts/07-iterations/iteration-2.md |
 | — | architecture | — | draft | artifacts/03-modules/architecture.md |
