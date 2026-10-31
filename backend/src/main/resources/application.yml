@@ -44,6 +44,18 @@ management:
 tsolve:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  # Central sign-in (identity). All from the environment with no default: startup fails while one is missing.
+  auth:
+    login-origin: ${TSOLVE_LOGIN_ORIGIN}
+    admin-origin: ${TSOLVE_ADMIN_ORIGIN}
+    signing-key: ${TSOLVE_SIGNING_KEY}
+    google-client-id: ${GOOGLE_CLIENT_ID}
+    google-client-secret: ${GOOGLE_CLIENT_SECRET}
+    operator-emails: ${PLATFORM_OPERATOR_EMAILS}
+  # Google's published endpoints: not our hosts and not secrets, so they carry values (tests can point them elsewhere)
+  oidc:
+    google:
+      authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
   # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId". Empty = nobody can import.
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
