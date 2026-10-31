@@ -46,3 +46,9 @@ Append-only log of framework friction captured during usage.
 **Type:** gap
 **Context:** Besides `TEST_GLOBS` (entry of 2026-10-25), `AC_MENTION` (`\bAC-\d{3}\.\d+\b`) only reads `AC-001.1`, while `backend/AGENTS.md` names Java test methods `…_AC_001_1` (a method name cannot hold `-` or `.`). So `sdd.ts trace be-foundation` reports 0/9 for a fully tested STORY-001 (be-foundation Task 1, KAN-25).
 **Suggestion:** Also match `AC_\d{3}_\d+` and normalise it to `AC-001.1`, together with the Java globs.
+
+## 2026-10-31 — spec approval from Codex (KAN-153)
+
+**Type:** friction
+**Context:** The user approved the concrete 17-criterion spec in chat, but the PreToolUse hook blocked `sdd.ts approve dashboard-audit` because Codex cannot display the hook confirmation prompt. The hook required the user to run the command themselves. The user did so; `sdd.ts diff dashboard-audit` confirmed the current spec was approved at 2026-10-31T07:28:12.270Z. No retry or approval-file edit was used.
+**Suggestion:** Support a native, reviewable approval action for Codex while preserving the spec-hash gate.
