@@ -23,6 +23,49 @@ tags:
   - name: search
     description: Search of the Published tickets (Report3 UC-26; SRS III.6.1).
 paths:
+  /api/v1/audit-events:
+    get:
+      tags: [audit-log]
+      operationId: getAuditEvents
+      summary: Frontend proposal — Admin audit log within the host-resolved Workspace (KAN-153).
+      description: >
+        Implemented in MSW only until backend integration. Filters combine with AND. The real backend must
+        enforce Admin access and Workspace isolation; no Workspace parameter or header is accepted.
+        Default order is createdAt descending with id ascending as a stable tie-breaker.
+      parameters:
+        - name: actor
+          in: query
+          description: Trimmed, case-insensitive substring of actor email; empty means all actors.
+          schema: { type: string }
+        - name: action
+          in: query
+          schema: { $ref: '#/components/schemas/AuditAction' }
+        - name: from
+          in: query
+          description: First included calendar day in Asia/Ho_Chi_Minh; paired with to, not in the future.
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: Last included calendar day in Asia/Ho_Chi_Minh; paired with from, not before from or in the future.
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Matching entries; default page size 20. No dates means no date restriction.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditEntryPage' }
+        '400':
+          description: Invalid date pair (MSG39) or query parameters (MSG06).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/users:
     post:
       tags: [users]
@@ -864,6 +907,30 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    AuditAction:
+      type: string
+      enum: [APPROVE, REJECT, REQUEST_CHANGES, PUBLISH, UNPUBLISH, IMPORT, DELETE, ROLE_CHANGE, PERMISSION_CHANGE, TRACKER_CONFIGURATION_CHANGE]
+    AuditEntry:
+      type: object
+      required: [id, createdAt, actor, action, resourceType, resourceId, summary]
+      properties:
+        id: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        actor: { type: string, format: email }
+        action: { $ref: '#/components/schemas/AuditAction' }
+        resourceType: { type: string }
+        resourceId: { type: string, format: uuid }
+        summary:
+          type: [string, 'null']
+          description: Optional read-model summary; no database change is proposed by this frontend work.
+    AuditEntryPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/AuditEntry' }
+        page: { $ref: '#/components/schemas/PageMetadata' }
     UpdateUserRolesRequest:
       type: object
       required: [roles, departmentId, spaceIds]
