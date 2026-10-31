@@ -235,7 +235,7 @@ each commit: the full verify of the side the task touches (CLAUDE.md project rul
 **Estimated size:** small verification/gap-filling slice, reassess after examining the merged dependencies.
 **Verification:** Map each AC-008 criterion to tests; run `bun harnessclaude/hooks/sdd.ts trace identity STORY-008`; run frontend `format:check`, `lint`, `typecheck`, `test`, `build`, and `generate:api` with no generated diff. Browser-check caller flows, errors, cancellation and recipients at 1366 × 768. These checks are pending. Report actual changed files and results; propose `feat(identity): complete project handover (KAN-111)` only if implementation changes are needed, or `test(identity): verify project handover (KAN-111)` for a tests-only result. Ask for commit approval before committing or starting KAN-112; never push or merge main without the user's instruction.
 
-## Task 14: Verify and complete included Space handover — KAN-112
+## Task 20: Verify and complete included Space handover — KAN-112
 
 **Story:** STORY-009
 **Feature:** space-handover
@@ -257,7 +257,7 @@ first (D2, Q10): PR 1 = Task 15, PR 2 = Task 16, PR 3 = Tasks 17 + 18. Each PR o
 `feat/KAN-<n>-identity-<desc>` from an up-to-date `main`; the Jira issues (one per PR, under KAN-160) are created
 after this plan is final ("Jira: to create"). Before each commit: the full frontend verify (CLAUDE.md project rules).
 
-## Task 15: My Profile account, Projects and managed Spaces, with Log out — Jira: to create
+## Task 15: My Profile account, Projects and managed Spaces, with Log out — KAN-236
 
 **Story:** STORY-003, STORY-002 (AC-002.7 only)
 **Feature:** profile-account
@@ -269,12 +269,12 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 - Create: `frontend/src/features/my-profile/components/{AccountSection,ProjectsSection,SpacesSection,SpaceList}.tsx`, `frontend/src/features/my-profile/lib/labels.ts`
 - Test: `frontend/src/features/my-profile/pages/MyProfilePage.test.tsx`
 **Dependencies:** user approval of the identity spec (current); this plan merged, or the branch rebased onto `main` after PR #94.
-**PR / Jira:** PR 1, branch `feat/KAN-<n>-identity-profile-account`; Jira: to create.
+**PR / Jira:** PR 1, branch `feat/KAN-236-identity-profile-account`; Jira: KAN-236.
 **Estimated size:** small–medium (~220 lines)
 **Verification:** Tests name AC-003.1, AC-003.2, AC-002.7; design risk rows 53–57, 72, 74, 80, 81. Targeted: `cd frontend && npm run test -- src/features/my-profile`. Browser check at 1366 × 768 in mock mode against frames (b) and (c).
 **Done when:** the three criteria's tests pass; the full frontend verify passes; the browser check matches the frames except the design's "Figma vs decisions" items.
 
-## Task 16: "Spaces I can view": contract, mock and list — Jira: to create
+## Task 16: "Spaces I can view": contract, mock and list — KAN-237
 
 **Story:** STORY-003
 **Feature:** profile-viewable-spaces
@@ -287,12 +287,12 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 - Generate only: `frontend/src/shared/api/generated/**`
 - Test: `frontend/src/features/my-profile/pages/MyProfilePage.test.tsx`, `frontend/src/features/my-profile/mocks/handlers.test.ts`
 **Dependencies:** Task 15.
-**PR / Jira:** PR 2, branch `feat/KAN-<n>-identity-profile-viewable-spaces`; Jira: to create.
+**PR / Jira:** PR 2, branch `feat/KAN-237-identity-profile-viewable-spaces`; Jira: KAN-237.
 **Estimated size:** small–medium (~200 lines, generated code excluded)
 **Verification:** Tests name AC-003.3 and "AC-003.14 spaces"; handler tests "contract mirror of AC-003.4" (sorting) and "of AC-003.10" (401); design risk rows 58, 62, 66, 67, 76, 78, 79. Targeted: `cd frontend && npm run test -- src/features/my-profile`, then `npm run generate:api` with no diff. Browser check at 1366 × 768 in mock mode against frames (main) and (b).
 **Done when:** the AC-003.3 and Spaces error tests pass; `generate:api` leaves no diff; the full frontend verify passes.
 
-## Task 17: My Solutions contract and mock — Jira: to create
+## Task 17: My Solutions contract and mock — KAN-238
 
 **Story:** STORY-003
 **Feature:** my-solutions-contract
@@ -304,12 +304,12 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 - Generate only: `frontend/src/shared/api/generated/**`
 - Test: `frontend/src/features/my-profile/mocks/handlers.test.ts`
 **Dependencies:** Task 16 (the `profile` tag, `mocks/data.ts`).
-**PR / Jira:** PR 3 with Task 18, one branch `feat/KAN-<n>-identity-my-solutions`. About 450 lines with Task 18, over the ~400 guide: the contract, its mock and the table are one behaviour a user can try, so they stay one vertical slice (Q10). Jira: to create.
+**PR / Jira:** PR 3 with Task 18, one branch `feat/KAN-238-identity-my-solutions`. About 450 lines with Task 18, over the ~400 guide: the contract, its mock and the table are one behaviour a user can try, so they stay one vertical slice (Q10). Jira: KAN-238.
 **Estimated size:** small–medium (~200 lines, generated code excluded)
 **Verification:** Handler tests named "contract mirror of AC-003.6 / .7 / .9 / .10"; design risk rows 60, 61, 70, 71, 78. Targeted: `cd frontend && npm run test -- src/features/my-profile/mocks`, then `npm run generate:api` with no diff.
 **Done when:** the handler tests pass and `generate:api` leaves no diff; the full frontend verify passes (format:check, lint, typecheck, test, build, `generate:api` no diff) — Task 18's Done-when repeats it, since both are in PR 3.
 
-## Task 18: My Solutions table — Jira: to create
+## Task 18: My Solutions table — KAN-238
 
 **Story:** STORY-003
 **Feature:** my-solutions-table
@@ -321,7 +321,7 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 - Create: `frontend/src/features/my-profile/components/MySolutionsSection.tsx`, `frontend/src/features/my-profile/hooks/useMySolutions.ts`
 - Test: `frontend/src/features/my-profile/components/MySolutionsSection.test.tsx`, `frontend/src/features/my-profile/pages/MyProfilePage.test.tsx`
 **Dependencies:** Task 17.
-**PR / Jira:** PR 3 with Task 17, branch `feat/KAN-<n>-identity-my-solutions`; Jira: to create.
+**PR / Jira:** PR 3 with Task 17, branch `feat/KAN-238-identity-my-solutions`; Jira: KAN-238.
 **Estimated size:** medium (~250 lines)
 **Verification:** Tests name AC-003.11–.14; design risk rows 58, 59, 61, 63–69, 72–75, 77, 79, 81. Targeted: `cd frontend && npm run test -- src/features/my-profile`. Browser check at 1366 × 768 in mock mode against frames (main) and (d).
 **Done when:** the four criteria's tests pass; the full frontend verify passes with `generate:api` leaving no diff; `bun harnessclaude/hooks/sdd.ts trace identity STORY-003` shows AC-003.1–.3 and .11–.14 covered.
