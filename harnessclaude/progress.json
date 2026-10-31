@@ -89,15 +89,16 @@
         "sign-in-callback": "pending",
         "workspace-session": "pending",
         "operator-sign-in": "pending",
-        "jira-link-sign-in": "pending"
+        "jira-link-sign-in": "pending",
+        "project-handover": "passing"
       },
-      "lastUpdated": "2026-10-29T12:09:10.626Z",
+      "lastUpdated": "2026-10-31T06:24:13.246Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "f1a5b412d5df51d504834cd8e007c53e0e0bf416"
+        "default": "d2c795e315631990c6b6b384a91c9df64977322a"
       }
     },
     "workspace": {

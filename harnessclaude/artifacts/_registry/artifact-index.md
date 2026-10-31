@@ -127,3 +127,10 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-110-roles-saved.jpg |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-110-accessible-guards.jpg |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-110-confirmation-error-recovery.png |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-13-project-handover.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-13-project-handover-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-13-project-handover-test-report.md |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-111-project-handover.png |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-111-deactivated.png |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-111-reactivated.png |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-111-main-merge-validation.png |

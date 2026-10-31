@@ -186,3 +186,14 @@ each commit: the full verify of the side the task touches (CLAUDE.md project rul
 **PR / Jira:** PR 5 with Task 11 if both are small, else its own PR; branch `feat/KAN-103-identity-jira-link-sign-in`, Jira KAN-103.
 **Estimated size:** small–medium
 **Verification:** Tests name AC-001.35–.38; design risk row 37. Targeted: `cd backend && mvn -Dtest='JiraLinkSignInTest,JiraAccountLinkRepositoryTest' test`; full `mvn verify` before the commit.
+
+## Task 13: Verify and complete included Project handover — KAN-111 (draft)
+
+**Story:** STORY-008
+**Feature:** project-handover
+**Acceptance criteria:** AC-008.1–AC-008.9
+**Description:** After the current spec is approved, update the issue branch from main with merged KAN-109 and map the existing included handover to the nine criteria. Reuse its popup, generated hooks, eligibility lookup, status/role mutations and atomic MSW handling. Add only missing tests or fixes; if every behavior already exists, deliver verification and traceability rather than duplicate code. Preserve AC-006/007 tests and Space handover behavior.
+**Files:** Existing `frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx`, `UserStatusActions.tsx`, `hooks/useRoleUpdateFlow.ts`, `hooks/useUserMutations.ts`, `mocks/state.ts`, `mocks/handover.ts`, `mocks/status-handlers.ts`, `mocks/roles-handler.ts`, and relevant tests in `pages/`, `mocks/` or `components/`. `docs/bug-log.md` only for reproduced defects. No new endpoint, route, dependency or manual generated-code edit.
+**Dependencies:** User approval of STORY-008; KAN-109 merged into main for the first caller slice, KAN-110 merged before its caller and final completion; branch `feat/KAN-111-identity-project-handover` refreshed from that main. User decision 2026-10-29: wait, do not import dependency branches now. Do not mark the feature in-progress or approve the spec automatically during preparation.
+**Estimated size:** small verification/gap-filling slice, reassess after examining the merged dependencies.
+**Verification:** Map each AC-008 criterion to tests; run `bun harnessclaude/hooks/sdd.ts trace identity STORY-008`; run frontend `format:check`, `lint`, `typecheck`, `test`, `build`, and `generate:api` with no generated diff. Browser-check caller flows, errors, cancellation and recipients at 1366 × 768. These checks are pending. Report actual changed files and results; propose `feat(identity): complete project handover (KAN-111)` only if implementation changes are needed, or `test(identity): verify project handover (KAN-111)` for a tests-only result. Ask for commit approval before committing or starting KAN-112; never push or merge main without the user's instruction.

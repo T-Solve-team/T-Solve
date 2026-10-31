@@ -396,3 +396,10 @@
 {"ts":"2026-10-29T18:22:25.714Z","type":"feature-status","module":"search","feature":"ticket-search","from":"evaluating","to":"passing"}
 {"ts":"2026-10-29T18:30:45.691Z","type":"commit-recorded","module":"search","repo":"default","sha":"b3f0d6da058cc1178ffed3197b16893fb47fd2ca"}
 {"ts":"2026-10-30T15:41:22.402Z","type":"commit-recorded","module":"search","repo":"default","sha":"cfdf2de2a8ce09f475abb826f9806268206032c0"}
+{"ts":"2026-10-30T13:55:55.291Z","type":"spec-approved","module":"identity","specHash":"b08119ba91a4ab5bea367703ac5bb32b79bc5c3ae81d71ff6c34d02473911464"}
+{"ts":"2026-10-30T13:56:43.910Z","type":"feature-status","module":"identity","feature":"project-handover","from":null,"to":"pending"}
+{"ts":"2026-10-30T13:56:43.955Z","type":"feature-status","module":"identity","feature":"project-handover","from":"pending","to":"in-progress"}
+{"ts":"2026-10-30T14:24:23.066Z","type":"commit-recorded","module":"identity","repo":"default","sha":"64d147ab569091152ff0f6a32991ae20bf65eddd"}
+{"ts":"2026-10-30T14:24:23.108Z","type":"feature-status","module":"identity","feature":"project-handover","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-30T14:24:23.149Z","type":"feature-status","module":"identity","feature":"project-handover","from":"evaluating","to":"passing"}
+{"ts":"2026-10-31T06:24:13.256Z","type":"commit-recorded","module":"identity","repo":"default","sha":"d2c795e315631990c6b6b384a91c9df64977322a"}

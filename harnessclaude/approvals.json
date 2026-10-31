@@ -220,8 +220,8 @@
     }
   },
   "identity": {
-    "specHash": "75285d61b38137489b81ce431ce43ddf47e958e67fdb84b602ccea1eeb10f90c",
-    "approvedAt": "2026-10-28T15:26:17.220Z",
+    "specHash": "b08119ba91a4ab5bea367703ac5bb32b79bc5c3ae81d71ff6c34d02473911464",
+    "approvedAt": "2026-10-30T13:55:55.282Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site, THE backend SHALL create a state value for the Workspace that the platform resolved from the host and answer 302 to  on the central sign-in origin configured in  ( in production), without a signed-in user.",
@@ -318,7 +318,16 @@
       "AC-007.4": "IF an Admin attempts to remove their own Admin role, THEN THE frontend SHALL disable that action with MSG113.",
       "AC-007.5": "WHEN removing a Ticket Resolver role affects Project membership, THE frontend SHALL request confirmation with MSG78 before submitting the change.",
       "AC-007.6": "WHEN a role update succeeds, THE frontend SHALL invalidate affected list, detail and session queries so subsequent mock requests use the updated permissions.",
-      "AC-007.7": "IF updating roles or assignments fails, THEN THE frontend SHALL preserve the unsaved form and display the API's catalog error without committing partial changes."
+      "AC-007.7": "IF updating roles or assignments fails, THEN THE frontend SHALL preserve the unsaved form and display the API's catalog error without committing partial changes.",
+      "AC-008.1": "WHEN an Admin deactivates a user who manages Active Projects, THE frontend SHALL open the existing Hand Over Responsibilities popup for those Projects before submitting the deactivation, through the KAN-109 flow.",
+      "AC-008.2": "WHEN an Admin removes the Project Manager role or changes the Department of a user who manages Active Projects, THE frontend SHALL require handover of those Projects in their existing Departments before submitting the role or Department change, through the KAN-110 flow.",
+      "AC-008.3": "WHEN Project handover choices are loaded, THE frontend and mock API SHALL offer only other Active accounts of the current Workspace that hold Project Manager and belong to the respective Project's Department, excluding the outgoing manager.",
+      "AC-008.4": "WHEN an Admin confirms Project handover, THE frontend and mock API SHALL require exactly one eligible recipient for every affected Active Project and SHALL leave Removed Projects and Projects managed by other users unchanged.",
+      "AC-008.5": "IF a Project has no eligible recipient, THEN THE frontend SHALL display MSG59 with that Project's Department name and prevent completion of the including change without altering account data or Project assignments.",
+      "AC-008.6": "IF the Admin cancels the popup or the including mutation fails, THEN THE frontend and mock API SHALL leave the last confirmed account and Project assignments unchanged; a failed mutation SHALL show its catalog error and keep the entered handover selections available for retry.",
+      "AC-008.7": "WHEN the including mutation succeeds, THE mock API SHALL transfer all affected Projects to their selected recipients and include those recipients in their Project memberships, retaining Project ids and tracker references; THE frontend SHALL refresh affected account list, detail and session queries using the existing mutation hooks.",
+      "AC-008.8": "WHILE the recipient lookup is pending or failed, THE frontend SHALL show the existing loading or error-with-retry state and prevent submission of the including change; WHILE the mutation is pending, THE frontend SHALL prevent duplicate submission.",
+      "AC-008.9": "WHEN a previously deactivated account is reactivated, THE mock API SHALL retain the confirmed Project handovers rather than return the Projects to the former manager."
     }
   },
   "platform": {

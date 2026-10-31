@@ -56,7 +56,7 @@ describe('User Detail roles and assignments', () => {
     );
   });
 
-  it('AC-007.3 hands over old-Department Projects before a Department change', async () => {
+  it('AC-007.3 / AC-008.2 hands over old-Department Projects before a Department change', async () => {
     const user = userEvent.setup();
     renderApp(`/users/${account(5)}`, { role: 'ADMIN' });
     await screen.findByRole('button', { name: 'Save' }, { timeout: 5000 });
