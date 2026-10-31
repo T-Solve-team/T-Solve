@@ -16,6 +16,12 @@ paths:
 
 # Module: platform-console
 
+> **Cancelled (31/10).** The MVP has no Platform Console and no Platform Operator actor: the T-Solve team creates,
+> suspends and reactivates Workspaces and gives them their first Admin with an ops script outside the app
+> (KAN-240, GBR-24, GBR-38, in `platform`). KAN-113…116, KAN-184 and KAN-233 (Console sign-in) are cancelled;
+> KAN-244 removes the Console code from the web app. UC-54…56 are no longer in Report3 (numbers 54–57 stay unused).
+> This file is kept as a record; plan nothing here.
+
 **Owner:** Đặng Tấn Bình
 
 ## Description
