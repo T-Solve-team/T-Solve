@@ -41,3 +41,14 @@ Master: artifacts/04-plans/identity/design.md, "KAN-111 preparation — 2026-10-
 Spec: artifacts/03-modules/identity/spec.md, STORY-008 / AC-008.1–008.9.
 
 The user selected preparing the scope/spec now and waiting for KAN-109/110 to merge into main before code. This is preparation in the current plan folder, not a change to Jira sprint dates. Reuse the included Project handover and its existing popup/mutation contracts; no standalone screen or endpoint. Reconcile the merged code against the master's risk table, implement only gaps, and retain existing Space behavior. Approval of the new spec and merged KAN-109 permit the first caller slice (user continuation request, 2026-10-30); the KAN-110 caller and final completion wait for KAN-110 on main. Full frontend verification, browser inspection and a user commit checkpoint apply; KAN-112 remains separate.
+
+## STORY-003 My Profile — KAN-160 (2026-10-31)
+
+Master: artifacts/04-plans/identity/design.md, "STORY-003: My Profile — KAN-160 plan, 2026-10-31".
+Spec: artifacts/03-modules/identity/spec.md, STORY-003 / AC-003.1–003.14 and AC-002.7.
+
+Tasks 15–18: the web app on MSW mocks (D1), stacked on `chore/KAN-231-identity-plan` (PR #94). Two new endpoints
+under tag `profile` (`getMyViewableSpaces`, `getMySolutions`), each in its screen's PR; feature-local mocks read the
+dev user with `getDevUser()`. No shared edit: in My Solutions only the Ticket ID of a `canOpen` row is a link
+(`cells.link`, R1 A). Edge-case rows 53–81 of the master apply. Task 19 (backend
+AC-003.4–.10) is a stub with no feature until it has a Jira issue.
