@@ -116,21 +116,22 @@ export const rolesHandler = http.put('*/api/v1/users/:userId', async ({ params, 
     spaceHandovers,
   );
   if (invalid) return invalid;
-  const removedMemberships = roles.includes(Role.TICKET_RESOLVER)
-    ? []
-    : ticketResolverProjectIds(id);
-  if (removedMemberships.length > 0 && body.confirmTicketResolverRemoval !== true)
+  const removedProjectIds = new Set(
+    roles.includes(Role.TICKET_RESOLVER)
+      ? []
+      : [...ticketResolverProjectIds(id), ...projectHandovers.map((choice) => choice.projectId)],
+  );
+  const removedMembershipCount = target.roles.includes(Role.TICKET_RESOLVER)
+    ? store.projects.filter(
+        (project) => removedProjectIds.has(project.projectId) && project.memberIds.includes(id),
+      ).length
+    : 0;
+  if (removedMembershipCount > 0 && body.confirmTicketResolverRemoval !== true)
     return problem(409, 'MSG78', {
-      params: { user_name: target.fullName ?? target.email, count: removedMemberships.length },
+      params: { user_name: target.fullName ?? target.email, count: removedMembershipCount },
     });
   // Validate all changes above before committing responsibilities, memberships and assignments.
   applyHandover(id, projectHandovers, spaceHandovers);
-  const removedProjectIds = new Set([
-    ...removedMemberships,
-    ...(!roles.includes(Role.TICKET_RESOLVER)
-      ? projectHandovers.map((choice) => choice.projectId)
-      : []),
-  ]);
   for (const project of store.projects.filter((item) => removedProjectIds.has(item.projectId))) {
     project.memberIds = project.memberIds.filter((memberId) => memberId !== id);
     if (!project.formerMemberIds.includes(id)) project.formerMemberIds.push(id);

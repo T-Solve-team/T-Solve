@@ -11,7 +11,7 @@ import { HandOverResponsibilitiesModal } from './HandOverResponsibilitiesModal';
 const userId = '10000000-0000-4000-8000-000000000005';
 
 describe('Hand Over Responsibilities recipient refresh', () => {
-  it('AC-008.8 blocks cached recipient choices while refreshing and after a failed refresh (BUG-038)', async () => {
+  it('AC-008.8 blocks cached recipient choices while refreshing and after a failed refresh (BUG-067)', async () => {
     const onSubmit = vi.fn();
     const user = userEvent.setup();
     const { queryClient } = renderWithProviders(

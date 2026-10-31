@@ -33,15 +33,22 @@
       }
     },
     "be-foundation": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
-        "problem-errors": "pending",
+        "problem-errors": "passing",
         "roles-security": "pending",
         "me-session": "pending",
         "audit-writer": "pending"
       },
-      "lastUpdated": "2026-10-23T11:39:13.265Z"
+      "lastUpdated": "2026-10-30T16:13:59.159Z",
+      "branch": "feat/be-foundation",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "b7b546d51536c8fb05b9361f175a5925118bb04a"
+      }
     },
     "fe-foundation": {
       "status": "planned",
@@ -119,10 +126,21 @@
       "lastUpdated": "2026-10-22T14:21:23.187Z"
     },
     "search": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:23.392Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "ticket-list": "passing",
+        "ticket-search": "passing",
+        "give-feedback": "pending"
+      },
+      "lastUpdated": "2026-10-30T15:41:22.397Z",
+      "branch": "feat/search",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "cfdf2de2a8ce09f475abb826f9806268206032c0"
+      }
     },
     "triage": {
       "status": "decomposed",

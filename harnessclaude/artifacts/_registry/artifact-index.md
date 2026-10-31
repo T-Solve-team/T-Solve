@@ -84,6 +84,13 @@ Master registry of all artifacts in this workspace.
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-5-guidelines.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-5-guidelines-review.md |
 | — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-5-guidelines-test-report.md |
+| — | spec | search | approved | artifacts/03-modules/search/spec.md |
+| — | design | search | draft | artifacts/04-plans/search/design.md |
+| — | design | search | draft | artifacts/04-plans/search/iteration-1/design.md |
+| — | tasks | search | draft | artifacts/04-plans/search/iteration-1/tasks.md |
+| — | session-log | search | passing | artifacts/05-implementation/search/task-1-ticket-list.md |
+| — | review | search | pass | artifacts/06-evaluation/search/task-1-ticket-list-review.md |
+| — | test-report | search | pass | artifacts/06-evaluation/search/task-1-ticket-list-test-report.md |
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-10-uuid-ids.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-10-uuid-ids-review.md |
 | — | test-report | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-10-uuid-ids-test-report.md |
@@ -109,6 +116,9 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-109-deactivated-1366x768.jpg |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-7-login-screen.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-7-login-screen-test-report.md |
+| — | session-log | be-foundation | passing | artifacts/05-implementation/be-foundation/task-1-problem-errors.md |
+| — | test-report | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-1-problem-errors-test-report.md |
+| — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-1-problem-errors-review.md |
 
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-4-user-roles.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-4-user-roles-review.md |
@@ -116,9 +126,11 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-110-handover.jpg |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-110-roles-saved.jpg |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-110-accessible-guards.jpg |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-110-confirmation-error-recovery.png |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-13-project-handover.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-13-project-handover-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-13-project-handover-test-report.md |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-111-project-handover.png |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-111-deactivated.png |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-111-reactivated.png |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-111-main-merge-validation.png |

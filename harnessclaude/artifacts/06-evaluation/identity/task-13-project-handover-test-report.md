@@ -30,12 +30,24 @@ Commands used the installed Node executables for the package scripts because npm
 | AC-008.5 | UserStatusPage no-recipient case shows MSG59 and sends no mutation |
 | AC-008.6 | UserStatusPage failure retains choices and permits retry; existing cancel tests preserve confirmed state |
 | AC-008.7 | Status transfer preserves tracker key, recipient membership and references; status retry test verifies list/detail invalidation; existing hook also invalidates session |
-| AC-008.8 | New BUG-038 component regression: pending cached refresh disabled, failed refresh disabled, successful retry keeps choices and submits; existing pending-submit protections retained and observed in browser |
+| AC-008.8 | New BUG-067 component regression: pending cached refresh disabled, failed refresh disabled, successful retry keeps choices and submits; existing pending-submit protections retained and observed in browser |
 | AC-008.9 | New explicit deactivate/transfer/reactivate contract test; browser reactivation no longer requires the transferred Projects |
 
 ## Failures and limitations
 
 - The default run timed out in `KnowledgeChatbotPage.rating-401.test.tsx` (AC-003.5) and three ReviewQueuePage scenarios (approve, reject, request changes). Existing BUG-025 records this workstation-load pattern. The complete two-worker rerun passed; the default parallel timing problem is not claimed fixed.
-- Red/green BUG-038: before the fix, the confirm button remains enabled during recipient refetch with cached successful data; after adding `isFetching` guards, the same regression passes. The initial draft test's ambiguous recipient selector was corrected before measuring this red/green result.
+- Red/green BUG-067: before the fix, the confirm button remains enabled during recipient refetch with cached successful data; after adding `isFetching` guards, the same regression passes. The initial draft test's ambiguous recipient selector was corrected before measuring this red/green result.
 - jsdom warns about pseudo-element `getComputedStyle`; no warning suppression added.
 - No production authorization, SMTP, audit persistence, real backend or live Jira mutation was tested.
+
+## Main integration — 2026-10-31
+
+Main target: `3f3528d`; merge includes final KAN-110 changes beyond the earlier `6548ed0` baseline. Task 13's cached-recipient bug was renamed from historical BUG-038 to BUG-067 to avoid main's distinct BUG-038.
+
+- Preserved main's MSG78 recovery, old-Department handling, inline recipient validation, all newly added role/status test cases, and the complete Search/Ticket List/backend changes.
+- Protected source comparison against main: backend, Search, Ticket List and incoming role form/flow/mock files unchanged. API generation adds no uncommitted generated diff. Non-identity tracking and approvals match main.
+- TypeScript and production build pass. Format passes; lint passes with one existing Fast Refresh warning in TicketListFilters.
+- Full suite: PASS, 932/932 tests, zero failed (`vitest run --maxWorkers=2 --reporter=json`). JSON report: `frontend/node_modules/.cache/kan111-main-merge-vitest.json`. No assertions, timeouts, dependency or test configuration changed.
+- Browser: merged PM-removal caller opens required handover; pending confirmation disabled, both missing recipients validated, Cancel restores confirmed role. See `kan-111-main-merge-validation.png`. No production backend tests rerun: backend is byte-identical to main and no integration edits touch it.
+
+- Optional dev-session switch encountered a transient `/api/v1/me` proxy ECONNREFUSED after idle; reload restored the mock Review Queue and the subsequent switch back to Admin succeeded. Session-switch code is identical to main. This observation does not establish a product regression or production-backend verification.

@@ -27,3 +27,10 @@ Parent reviewed the follow-up diff against AC006.4–8 and AC007.3–7. This is 
 - BUG037: reported stale Cancel behavior not reproduced. UserAccountDetail key already includes all editable assignments; background-refetch regression proves current roles/Department restored without production changes.
 - Successful Space transfer, MSG78-to-handover sequence, Department-only roles unchanged now explicitly tested. Error paths keep choices and allow retry.
 - No new dependency, generated drift or acceptance change. Original full CI still required; BUG018/022 not claimed fixed.
+
+## Inline comments follow-up — 2026-10-31
+Independent read-only reviewer checked 6548ed0 through the current changes against AC007.3/.5/.7 and AC006.8: no actionable correctness or spec-compliance findings. Parent inspected the diff and fresh tests.
+
+BUG039/040 restore confirmation error recovery and server-count confirmation; BUG041 validates the precise membership removal set before atomic writes; BUG042 maps nested recipient paths without hiding unregistered assignment errors. Department null normalization and isRecord reuse address the two small comments. The background-refetch remount remains intentional: latest confirmed assignments win, as already covered by BUG037 regression; PR notes disclose unsaved-form/dialog reset on changed assignments.
+
+No acceptance, dependency, shared API or test-limit changes. Windows120/121 and isolated status13/14 leave AC006.2 unresolved locally; full original Linux CI must pass before claiming complete verification. Existing BUG018/022/025 remain open.

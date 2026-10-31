@@ -233,6 +233,46 @@ describe('User Detail account status', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
   });
 
+  it.each([
+    ['projectHandovers[0].recipientId', 5, 'IT Support', /Bùi Anh Tuấn/],
+    ['spaceHandovers.0.recipientId', 3, 'IT Knowledge', /Võ Thanh Tâm/],
+  ] satisfies [string, number, string, RegExp][])(
+    'AC-006.8 maps recipient error %s to its handover Select and keeps choices (BUG-042)',
+    async (field, n, label, recipient) => {
+      server.use(
+        http.put('*/api/v1/users/:userId/status', () =>
+          problem(400, 'MSG01', {
+            params: { field_name: label },
+            fieldErrors: [{ field, code: 'MSG01', params: { field_name: label } }],
+          }),
+        ),
+      );
+      const user = userEvent.setup();
+      renderUser(n);
+      await user.click(
+        await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }),
+      );
+      const dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
+      for (const name of n === 5 ? ['IT Support', 'IT Network'] : ['IT Knowledge']) {
+        await user.click(await within(dialog).findByRole('combobox', { name }));
+        await user.click(await screen.findByRole('option', { name: recipient, selected: false }));
+      }
+      await user.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+      expect(
+        await within(dialog).findByText(msg('MSG01', { field_name: label })),
+      ).toBeInTheDocument();
+      expect(within(dialog).getByRole('combobox', { name: label })).toHaveAttribute(
+        'aria-invalid',
+        'true',
+      );
+      expect(within(dialog).getAllByText(recipient).length).toBeGreaterThan(0);
+      await waitFor(() =>
+        expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeEnabled(),
+      );
+      expect(screen.getByText('Active')).toBeInTheDocument();
+    },
+  );
+
   it('AC-006.8 retries a failed detail load and retains status after cancelling handover', async () => {
     server.use(http.get('*/api/v1/users/:userId', () => problem(500)));
     const user = userEvent.setup();
