@@ -9,6 +9,10 @@ paths:
   - backend/src/test/java/vn/tsolve/search/**
   - frontend/src/features/search/**
   - frontend/src/features/feedback/**
+  - frontend/src/features/tickets/pages/TicketListPage*
+  - frontend/src/features/tickets/components/TicketList*
+  - frontend/src/features/tickets/hooks/useTicketList*
+  - frontend/src/features/tickets/mocks/**
   - backend/src/main/resources/db/changelog/**
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**

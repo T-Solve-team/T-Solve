@@ -295,6 +295,17 @@
 {"ts":"2026-10-25T13:11:00.726Z","type":"spec-approved","module":"fe-foundation","specHash":"ce8e67bcffd22f87795409fd93fa5971ec816b9228a831133eafd6f6b8a0c709"}
 {"ts":"2026-10-25T13:11:41.275Z","type":"spec-approved","module":"chatbot","specHash":"d946d850ae59cb11fc9a264efba1f324436041acb8c7076b87cca332033499ca"}
 {"ts":"2026-10-25T13:16:09.818Z","type":"module-status","module":"platform","from":"decomposed","to":"planned"}
+{"ts":"2026-10-25T15:22:52.183Z","type":"spec-approved","module":"search","specHash":"f34135d02259168ef3a954dff3f3b211344f53500755f649a41b274a3dd22111"}
+{"ts":"2026-10-26T05:03:04.450Z","type":"spec-approved","module":"search","specHash":"ca43234b334badba1f84105082876252b17611f56b6bfc3299d528b883ba0eb6"}
+{"ts":"2026-10-26T05:03:11.932Z","type":"module-status","module":"search","from":"decomposed","to":"planned"}
+{"ts":"2026-10-26T05:03:12.452Z","type":"feature-status","module":"search","feature":"ticket-list","from":null,"to":"pending"}
+{"ts":"2026-10-26T05:03:13.027Z","type":"feature-status","module":"search","feature":"ticket-search","from":null,"to":"pending"}
+{"ts":"2026-10-26T05:03:13.574Z","type":"feature-status","module":"search","feature":"give-feedback","from":null,"to":"pending"}
+{"ts":"2026-10-26T05:08:49.502Z","type":"module-status","module":"search","from":"planned","to":"implementing"}
+{"ts":"2026-10-26T05:08:49.786Z","type":"feature-status","module":"search","feature":"ticket-list","from":"pending","to":"in-progress"}
+{"ts":"2026-10-26T07:34:13.989Z","type":"commit-recorded","module":"search","repo":"default","sha":"3cb60af9693ccdf5f0717bb3a3c3e172473b8258"}
+{"ts":"2026-10-26T07:34:35.935Z","type":"feature-status","module":"search","feature":"ticket-list","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-26T07:59:30.860Z","type":"feature-status","module":"search","feature":"ticket-list","from":"evaluating","to":"passing"}
 {"ts":"2026-10-25T13:16:10.653Z","type":"module-status","module":"fe-foundation","from":"completed","to":"planned"}
 {"ts":"2026-10-25T13:16:11.288Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":null,"to":"pending"}
 {"ts":"2026-10-25T13:16:11.910Z","type":"feature-status","module":"fe-foundation","feature":"site-sign-in","from":null,"to":"pending"}
@@ -366,3 +377,12 @@
 {"ts":"2026-10-30T21:16:44.277Z","type":"quick-closed","what":"Fix PR86 combined PM and resolver removal","files":["frontend/src/features/users/hooks/useRoleUpdateFlow.ts","frontend/src/features/users/mocks/roles-handler.ts","frontend/src/features/users/mocks/roles.test.ts","frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-10-30T21:17:08.577Z","type":"quick-opened","what":"Fix PR86 handover recipient field errors","files":["frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","frontend/src/features/users/mocks/handlers.ts","docs/bug-log.md"]}
 {"ts":"2026-10-30T21:28:43.938Z","type":"quick-closed","what":"Fix PR86 handover recipient field errors","files":["frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","frontend/src/features/users/mocks/handlers.ts","docs/bug-log.md"]}
+{"ts":"2026-10-29T13:32:54.240Z","type":"commit-recorded","module":"search","repo":"default","sha":"d3e0831e63de93c7dc5b758d5e97e5d088b928e4"}
+{"ts":"2026-10-29T13:38:31.531Z","type":"commit-recorded","module":"search","repo":"default","sha":"419b5e85e927ff367e4ebf60ea97c405c4a75198"}
+{"ts":"2026-10-29T13:38:54.948Z","type":"commit-recorded","module":"search","repo":"default","sha":"2a0ac123f538891ce862d979ff8fbfe44c44c5c1"}
+{"ts":"2026-10-29T14:39:01.347Z","type":"commit-recorded","module":"search","repo":"default","sha":"bec9a71d8d9885d7fea4ff9f46335287353e2445"}
+{"ts":"2026-10-29T17:47:37.358Z","type":"feature-status","module":"search","feature":"ticket-search","from":"pending","to":"in-progress"}
+{"ts":"2026-10-29T17:58:38.880Z","type":"feature-status","module":"search","feature":"ticket-search","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-29T18:22:25.714Z","type":"feature-status","module":"search","feature":"ticket-search","from":"evaluating","to":"passing"}
+{"ts":"2026-10-29T18:30:45.691Z","type":"commit-recorded","module":"search","repo":"default","sha":"b3f0d6da058cc1178ffed3197b16893fb47fd2ca"}
+{"ts":"2026-10-30T15:41:22.402Z","type":"commit-recorded","module":"search","repo":"default","sha":"cfdf2de2a8ce09f475abb826f9806268206032c0"}
