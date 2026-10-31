@@ -790,3 +790,65 @@ Reuse the merged user-detail and handover-options contracts, `projectHandovers` 
 Builder check (Light UI scope): no new technology, screen text or contract is selected. Existing caller, lookup, payload, failure and cache conventions are reused. Production enforcement is explicitly excluded. Implementation eligibility remains dependent on main and spec approval.
 
 Validation after implementation: `sdd.ts trace identity STORY-008`, targeted tests, all frontend verification commands, deterministic API generation, and browser inspection at 1366 × 768. Until then these are planned checks, not passing results. Commit only after the user reviews the feature results; do not start KAN-112 before that checkpoint.
+
+## KAN-112 — Space handover — 2026-10-31
+
+Spec: `artifacts/03-modules/identity/spec.md`, STORY-009 / AC-009.1–AC-009.9. Approved version confirmed by `sdd.ts diff identity` on 2026-10-31. Branch: `feat/KAN-112-identity-space-handover`, based on main `4cf0594`; the existing KAN-109/110/111 implementation is present.
+
+### Decisions and implementation boundaries
+
+- Chosen by the user: frontend with mutable MSW and a proposed OpenAPI contract awaiting backend integration. Alternative: backend plus frontend. Rationale: the selected delivery scope; mock checks are not production security or persistence.
+- Chosen: reuse `HandOverResponsibilitiesModal`, `UserStatusActions`, `useRoleUpdateFlow`, existing generated hooks and atomic mock helpers. Alternative: a new Space page or endpoint. Rationale: UC-09 is included by UC-06 and UC-07, and both callers already support Spaces.
+- Chosen: eligibility is another Active Knowledge Manager in the current Workspace, regardless of Department; revalidate it when submitting. Alternative: reuse Project's same-Department restriction. Rationale: the approved Space criteria and existing lookup distinguish the two rules.
+- Chosen: retain the existing `SpaceRef`, `SpaceHandover` and `UserHandoverOptions` shapes. Expand OpenAPI descriptions to explain Space eligibility, full affected-set validation, failure atomicity, caller-specific scope and history retention. Alternative: add duplicate models or a mutation endpoint. Rationale: current payloads already express the required choices. Generate all API output with `npm run generate:api`; never edit generated files manually.
+- Chosen: test existing behavior first and change runtime code only for a reproduced gap against AC-009. Alternative: rewrite working code to create a larger feature diff. Rationale: existing helpers validate all choices before synchronous writes; meaningful evidence is the missing deliverable.
+
+### Data flow and contract proposal
+
+UC-06 gets every managed Space from `GET /api/v1/users/{userId}/handover-options`, then sends `spaceHandovers` alongside deactivation to `PUT /api/v1/users/{userId}/status`. UC-07 uses the same lookup but displays only removed Spaces, and sends their handovers together with requested roles, Department and retained Space ids to `PUT /api/v1/users/{userId}`. Unchanged Spaces stay assigned to the original user. Both mutations return confirmed UserDetail and use existing user/session query invalidation.
+
+Each `SpaceHandover` remains `{ spaceId: UUID, recipientId: UUID }`. Each affected Space must appear exactly once; the same eligible recipient may receive several Spaces. Missing, duplicate, unrelated or ineligible choices use the existing 400 MSG01 validation; unavailable recipients use 409 MSG118. Existing malformed-payload, authentication, permission and missing-user errors remain unchanged. The Workspace comes from the current session/mock context, never a caller-selected field.
+
+Mock validation runs before any account, Project or Space writes. `store.spaceHistory` retains the Space id, previous manager and recipient; account reactivation does not reverse ownership. Contract descriptions specify the required behavior for future backend integration, including a transaction spanning all accompanying changes, without claiming that backend transaction is implemented here.
+
+### Edge Cases & Risks — STORY-009
+
+Dimensions analyzed: user types, input extremes, timing, scale, state transitions, environment, error cascades, authorization, data integrity, integration, compliance and business logic. Compliance is limited to preserving existing mock references; production audit retention and deletion policies are outside this slice.
+
+| # | Dimensions | Scenario | Severity | Expected behavior / criteria | Test task |
+|---|------------|----------|----------|------------------------------|-----------|
+| S1 | User types, authorization | Lookup includes self, inactive, wrong-role or foreign-Workspace candidates; a different-Department KM exists | High | Exclude the first four; allow the other-Department KM; reject forged choices on both mutations (AC-009.3–.4) | Task 14 |
+| S2 | Input extremes, scale, business logic | Zero, one or several affected Spaces; incomplete, repeated or unrelated Space ids; one recipient receives several Spaces | High | Require exactly the affected set; allow one eligible recipient for multiple Spaces; preserve unrelated assignments (AC-009.1–.4, .7) | Task 14 |
+| S3 | Timing, error cascades | Recipient loses KM or becomes inactive after options load; one of several choices becomes invalid | High | Revalidate on submit; reject without partial account, Space or Project writes (AC-009.4, .6–.7) | Task 14 |
+| S4 | State transitions, data integrity | Remove KM, remove only some Spaces, cancel, then retry after failure | High | Transfer only removed obligations; cancellation preserves confirmed data and failure preserves choices (AC-009.2, .6) | Task 14 |
+| S5 | Timing, environment | Pending/refetching/failed lookup, offline response, rapid double submission | High | Disable choices/completion while lookup is unusable; retry state and a single pending mutation (AC-009.8) | Task 14 |
+| S6 | Business logic, error cascades | No eligible recipient for one Space | High | MSG118; neither caller can complete; mock writes nothing (AC-009.5) | Task 14 |
+| S7 | Data integrity, compliance | Success followed by reactivation or restoring KM with other valid Spaces | High | Preserve ids/history; transferred Spaces stay with recipients; session/detail show confirmed assignments (AC-009.7–.9) | Task 14 |
+| S8 | Integration, environment | API generated code drifts; popup keyboard use or long Space labels | Medium | Deterministic generation; shared accessible form labels and browser inspection at 1366 × 768 (AC-009.1–.2, .8) | Task 14 |
+
+Open questions for the spec owner: none.
+
+### Risk Review — 2026-10-31 — Verdict: CAUTION
+
+Independent persona findings:
+
+- Architect: the combined caller mutation fits D3 and the existing feature boundary; duplicate endpoints would add coupling without behavior.
+- Security: lookup filtering alone is insufficient; submit-time Workspace, role and status checks must be tested. MSW cannot establish production authorization.
+- Performance: reuse one options query and one mutation; no new dependency, polling, bundle subsystem or per-Space request is needed.
+- User: unavailable recipients need MSG118; cancellation and retry must preserve confirmed data and entered selections respectively. Verify both caller button labels and keyboard access.
+- Devil's advocate: runtime support already exists. Deliver contract clarity and missing evidence; only modify runtime behavior when a failing criterion demonstrates a gap.
+
+Agreements: reuse existing flow and payloads; test full affected-set validation and atomicity; keep production backend integration explicitly deferred. No conflict requires a new product decision. Correctness of mixed Project/Space writes takes priority over minimizing the test matrix.
+
+| Risk | Severity | Mitigation | Task |
+|------|----------|------------|------|
+| Stale or forged choices cause partial reassignment | High | Negative contract cases for each caller and mixed Project/Space state snapshots | Task 14 |
+| Mock success is mistaken for deployed security/persistence | High | Mark OpenAPI behavior as a proposal; report backend integration as pending | Task 14 |
+
+### Proposed Task 14 and iteration placement
+
+Add one feature, `space-handover`, to the existing identity iteration 1 after Task 13. Story: STORY-009; criteria: AC-009.1–AC-009.9. Reuse merged dependencies and add focused contract/UI cases for S1–S8, OpenAPI descriptions plus generated output, and only demonstrated runtime fixes. Candidate files are under `frontend/src/features/users/{components,pages,mocks}/`, `frontend/openapi/tsolve-api.yaml`, generated API output, and `docs/bug-log.md` for reproduced bugs. No dependency, route or production backend change.
+
+Verification: `sdd.ts trace identity STORY-009`; focused users tests; frontend format, lint, typecheck, full tests, build and deterministic API generation; browser-check UC-06 and UC-07 at 1366 × 768. Preserve all AC-006/007/008 behavior. Write the task session log and test/review reports with actual results. Propose one feature commit only after verification and obtain user agreement before committing; push only if requested.
+
+Builder check: proposed Task 14 supplies the callers, models, eligibility rule, payload scope, errors, state invariants, test targets and exclusions. There is no unresolved build decision. The user approved the design and iteration placement on 2026-10-31; Task 14 is appended to iteration 1. Implementation and verification are recorded in its session and evaluation reports.
