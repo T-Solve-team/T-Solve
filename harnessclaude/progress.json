@@ -85,7 +85,7 @@
         "user-list-review": "passing",
         "add-user-review": "passing",
         "login-screen": "passing",
-        "sign-in-start": "pending",
+        "sign-in-start": "passing",
         "sign-in-callback": "pending",
         "workspace-session": "pending",
         "operator-sign-in": "pending",
