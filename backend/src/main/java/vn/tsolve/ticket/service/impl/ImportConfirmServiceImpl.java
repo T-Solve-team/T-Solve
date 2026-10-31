@@ -13,7 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import vn.tsolve.common.error.NotFoundException;
+import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.csv.CsvRowValidator;
 import vn.tsolve.ticket.dto.ImportResultResponse;
 import vn.tsolve.ticket.dto.MessageRef;

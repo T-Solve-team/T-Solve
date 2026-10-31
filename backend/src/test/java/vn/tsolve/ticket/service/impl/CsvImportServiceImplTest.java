@@ -25,7 +25,7 @@ import org.mockito.InOrder;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
-import vn.tsolve.common.error.MessageCodeException;
+import vn.tsolve.common.exception.MessageCodeException;
 import vn.tsolve.ticket.csv.CsvRowValidator;
 import vn.tsolve.ticket.csv.CsvTicketParser;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;

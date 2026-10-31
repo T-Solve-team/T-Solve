@@ -351,6 +351,10 @@
 {"ts":"2026-10-28T13:51:03.599Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":"pending","to":"in-progress"}
 {"ts":"2026-10-28T14:17:22.683Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-28T14:17:22.891Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":"evaluating","to":"passing"}
+{"ts":"2026-10-28T15:12:58.003Z","type":"module-status","module":"be-foundation","from":"planned","to":"implementing"}
+{"ts":"2026-10-28T15:12:58.246Z","type":"feature-status","module":"be-foundation","feature":"problem-errors","from":"pending","to":"in-progress"}
+{"ts":"2026-10-28T15:12:58.727Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"43d150636db3b7c030e1ebebf99ae7c32d20a28a"}
+{"ts":"2026-10-28T15:13:17.826Z","type":"feature-status","module":"be-foundation","feature":"problem-errors","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-28T15:26:17.229Z","type":"spec-approved","module":"identity","specHash":"75285d61b38137489b81ce431ce43ddf47e958e67fdb84b602ccea1eeb10f90c"}
 {"ts":"2026-10-28T15:30:11.558Z","type":"feature-status","module":"identity","feature":"login-screen","from":null,"to":"pending"}
 {"ts":"2026-10-28T15:30:12.559Z","type":"feature-status","module":"identity","feature":"sign-in-start","from":null,"to":"pending"}
@@ -361,6 +365,12 @@
 {"ts":"2026-10-28T17:30:32.711Z","type":"feature-status","module":"identity","feature":"login-screen","from":"pending","to":"in-progress"}
 {"ts":"2026-10-28T17:30:38.784Z","type":"feature-status","module":"identity","feature":"login-screen","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-28T17:30:38.995Z","type":"feature-status","module":"identity","feature":"login-screen","from":"evaluating","to":"passing"}
+{"ts":"2026-10-29T14:04:09.506Z","type":"spec-approved","module":"be-foundation","specHash":"ac914d1fcad0cef12226d4f78a470afc1e97831ccda964dbb465fe15efce8b16"}
+{"ts":"2026-10-29T14:27:29.888Z","type":"feature-status","module":"be-foundation","feature":"problem-errors","from":"evaluating","to":"passing"}
+{"ts":"2026-10-29T14:30:52.590Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"70d72a96eefb41469ea3190cf717ac8ad797a235"}
+{"ts":"2026-10-30T15:55:42.036Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"fd5d5cd78312deb4ae8c37e6a86761fe52f956be"}
+{"ts":"2026-10-30T16:01:43.536Z","type":"spec-approved","module":"be-foundation","specHash":"0879bacf1c486e77afe58974f98abfa955bf1b9ea738174669a95daaa5ea0bb6"}
+{"ts":"2026-10-30T16:13:59.165Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"b7b546d51536c8fb05b9361f175a5925118bb04a"}
 {"ts":"2026-10-27T13:30:26.936Z","type":"feature-status","module":"identity","feature":"user-roles","from":"pending","to":"in-progress"}
 {"ts":"2026-10-29T12:00:19.379Z","type":"commit-recorded","module":"identity","repo":"default","sha":"f1a5b412d5df51d504834cd8e007c53e0e0bf416"}
 {"ts":"2026-10-29T12:00:19.413Z","type":"feature-status","module":"identity","feature":"user-roles","from":"in-progress","to":"evaluating"}

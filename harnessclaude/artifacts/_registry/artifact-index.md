@@ -116,6 +116,9 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-109-deactivated-1366x768.jpg |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-7-login-screen.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-7-login-screen-test-report.md |
+| — | session-log | be-foundation | passing | artifacts/05-implementation/be-foundation/task-1-problem-errors.md |
+| — | test-report | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-1-problem-errors-test-report.md |
+| — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-1-problem-errors-review.md |
 
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-4-user-roles.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-4-user-roles-review.md |
