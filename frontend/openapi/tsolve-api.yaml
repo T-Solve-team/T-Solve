@@ -866,6 +866,12 @@ components:
   schemas:
     UpdateUserRolesRequest:
       type: object
+      description: >-
+        Frontend/MSW contract proposal pending backend integration. Hand over each removed
+        managed Space exactly once before removing Knowledge Manager or its assignment;
+        retained spaceIds remain with the user. Revalidate all recipients and commit roles,
+        assignments, Project handovers and Space handovers atomically. Reject the entire
+        operation on any invalid choice; never commit a partial handover.
       required: [roles, departmentId, spaceIds]
       properties:
         roles:
@@ -922,6 +928,10 @@ components:
           items: { $ref: '#/components/schemas/UserAccount' }
     SpaceHandoverOption:
       type: object
+      description: >-
+        A managed Space and its eligible replacements: other Active Knowledge Managers
+        in the current Workspace, regardless of Department. Exclude the outgoing manager.
+        An empty recipient list blocks completion with MSG118.
       required: [space, recipients]
       properties:
         space: { $ref: '#/components/schemas/SpaceRef' }
@@ -946,12 +956,23 @@ components:
         recipientId: { type: string, format: uuid }
     SpaceHandover:
       type: object
+      description: >-
+        One recipient for one affected Space. Every affected Space must occur exactly once;
+        reject missing, duplicate, unrelated or currently ineligible choices with MSG01.
+        A recipient may receive multiple Spaces. Retain the Space id and former-manager
+        history after transfer; reactivation or restoring a role does not reverse it.
       required: [spaceId, recipientId]
       properties:
         spaceId: { type: string, format: uuid }
         recipientId: { type: string, format: uuid }
     UpdateUserStatusRequest:
       type: object
+      description: >-
+        Frontend/MSW contract proposal pending backend integration. Deactivation requires
+        handover of every managed Space and Active Project. Revalidate current recipient
+        eligibility on submission, then commit account status and all handovers atomically.
+        Reject the entire operation if any choice is invalid; MSG118 means no eligible
+        Space recipient exists. Activation does not accept or reverse handovers.
       required: [status]
       properties:
         status: { $ref: '#/components/schemas/UserAccountStatus' }

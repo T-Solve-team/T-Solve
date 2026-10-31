@@ -13,6 +13,7 @@ import {
 import { problem } from '@/shared/api/mocks';
 import { setDevUser } from '@/shared/auth';
 import { HANDBOOK_SPACE_ID } from '../mocks/data';
+import { store } from '../mocks/state';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 
@@ -259,7 +260,7 @@ describe('User Detail roles and assignments', () => {
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
   });
 
-  it('AC-007.3 hands over a Space successfully when removing Knowledge Manager', async () => {
+  it('AC-007.3 / AC-009.2 hands over a Space successfully when removing Knowledge Manager', async () => {
     const user = userEvent.setup();
     const { queryClient } = renderApp(`/users/${account(3)}`, { role: 'ADMIN' });
     await screen.findByRole('button', { name: 'Save' }, { timeout: 5000 });
@@ -276,6 +277,37 @@ describe('User Detail roles and assignments', () => {
     expect((await getUserDetail(account(7))).managedSpaces.map((space) => space.name)).toContain(
       'IT Knowledge',
     );
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+  });
+
+  it('AC-009.2 / AC-009.6 preserves roles and Space ownership on cancellation and retries failed handover', async () => {
+    const user = userEvent.setup();
+    const { queryClient } = renderApp(`/users/${account(3)}`, { role: 'ADMIN' });
+    await screen.findByRole('button', { name: 'Save' }, { timeout: 5000 });
+    await user.click(screen.getByRole('checkbox', { name: 'Knowledge Manager' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    let dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
+    await within(dialog).findByRole('combobox', { name: 'IT Knowledge' });
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect((await getUserDetail(account(3))).roles).toContain('KNOWLEDGE_MANAGER');
+    expect(store.spaceHistory).toEqual([]);
+    let fails = true;
+    server.use(http.put('*/api/v1/users/:userId', () => (fails ? problem(500) : undefined)));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
+    await user.click(await within(dialog).findByRole('combobox', { name: 'IT Knowledge' }));
+    await user.click(await screen.findByRole('option', { name: /Võ Thanh Tâm/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+    expect(within(dialog).getByText(/Võ Thanh Tâm/)).toBeInTheDocument();
+    expect(store.spaceHistory).toEqual([]);
+    expect((await getUserDetail(account(3))).roles).toContain('KNOWLEDGE_MANAGER');
+    fails = false;
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
+    expect((await getUserDetail(account(3))).roles).not.toContain('KNOWLEDGE_MANAGER');
+    expect(store.spaceHistory).toHaveLength(1);
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
   });
 

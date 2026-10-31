@@ -9,6 +9,9 @@
 import type { SpaceRef } from './spaceRef';
 import type { UserAccount } from './userAccount';
 
+/**
+ * A managed Space and its eligible replacements: other Active Knowledge Managers in the current Workspace, regardless of Department. Exclude the outgoing manager. An empty recipient list blocks completion with MSG118.
+ */
 export interface SpaceHandoverOption {
   space: SpaceRef;
   recipients: UserAccount[];
