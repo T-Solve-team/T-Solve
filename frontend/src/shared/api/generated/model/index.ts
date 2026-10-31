@@ -76,6 +76,7 @@ export * from './ticketStatus';
 export * from './ticketSummary';
 export * from './ticketSummaryPage';
 export * from './unavailableDocuments';
+export * from './updateUserRolesRequest';
 export * from './updateUserStatusRequest';
 export * from './uploadCsvImportBody';
 export * from './userAccount';

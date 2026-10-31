@@ -74,7 +74,7 @@
         "user-list": "passing",
         "add-user": "passing",
         "account-status": "passing",
-        "user-roles": "pending",
+        "user-roles": "passing",
         "user-list-review": "passing",
         "add-user-review": "passing",
         "login-screen": "passing",
@@ -84,13 +84,13 @@
         "operator-sign-in": "pending",
         "jira-link-sign-in": "pending"
       },
-      "lastUpdated": "2026-10-28T17:30:38.994Z",
+      "lastUpdated": "2026-10-29T12:09:10.626Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "27c2c4fe066252e23da520a623ef07da91b8daef"
+        "default": "f1a5b412d5df51d504834cd8e007c53e0e0bf416"
       }
     },
     "workspace": {

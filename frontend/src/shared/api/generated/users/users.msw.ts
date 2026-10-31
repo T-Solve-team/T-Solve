@@ -81,6 +81,56 @@ export const getGetUsersResponseMock = (
   ...overrideResponse,
 });
 
+export const getUpdateUserRolesResponseMock = (): UserDetail => ({
+  ...{
+    id: faker.string.uuid(),
+    fullName: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    email: faker.internet.email(),
+    roles: faker.helpers.arrayElements(Object.values(Role)),
+    department: faker.helpers.arrayElement([
+      {
+        departmentId: faker.string.uuid(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      null,
+    ]),
+    status: faker.helpers.arrayElement(Object.values(UserAccountStatus)),
+    lastSignInAt: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + 'Z',
+      null,
+    ]),
+  },
+  ...{
+    isCurrentUser: faker.datatype.boolean(),
+    ticketResolverProjectIds: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.uuid()),
+    projects: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        projectId: faker.string.uuid(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        department: {
+          departmentId: faker.string.uuid(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        isActive: faker.datatype.boolean(),
+        managerId: faker.string.uuid(),
+      }),
+    ),
+    managedSpaces: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      spaceId: faker.string.uuid(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+  },
+});
+
 export const getGetUserDetailResponseMock = (): UserDetail => ({
   ...{
     id: faker.string.uuid(),
@@ -105,6 +155,10 @@ export const getGetUserDetailResponseMock = (): UserDetail => ({
   },
   ...{
     isCurrentUser: faker.datatype.boolean(),
+    ticketResolverProjectIds: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.uuid()),
     projects: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         projectId: faker.string.uuid(),
@@ -227,6 +281,10 @@ export const getUpdateUserStatusResponseMock = (): UserDetail => ({
   },
   ...{
     isCurrentUser: faker.datatype.boolean(),
+    ticketResolverProjectIds: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.uuid()),
     projects: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         projectId: faker.string.uuid(),
@@ -309,6 +367,28 @@ export const getGetUsersMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getGetUsersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateUserRolesMockHandler = (
+  overrideResponse?:
+    | UserDetail
+    | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<UserDetail> | UserDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    '*/api/v1/users/:userId',
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateUserRolesResponseMock(),
         { status: 200 },
       );
     },
@@ -434,6 +514,7 @@ export const getGetUserDepartmentsMockHandler = (
 export const getUsersMock = () => [
   getCreateUserMockHandler(),
   getGetUsersMockHandler(),
+  getUpdateUserRolesMockHandler(),
   getGetUserDetailMockHandler(),
   getGetUserHandoverOptionsMockHandler(),
   getUpdateUserStatusMockHandler(),
