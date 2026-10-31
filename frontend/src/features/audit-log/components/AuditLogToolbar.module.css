@@ -1,0 +1,23 @@
+.actor {
+  width: 280px;
+  max-width: 100%;
+}
+
+.action {
+  width: 250px;
+}
+
+.dates {
+  width: 300px;
+  max-width: 100%;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
