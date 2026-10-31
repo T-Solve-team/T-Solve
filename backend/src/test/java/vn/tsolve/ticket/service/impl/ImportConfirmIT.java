@@ -45,6 +45,13 @@ import vn.tsolve.ticket.service.ImportConfirmService;
             "tsolve.stub.projects=pm-a:1;pm-b:1;boom-pm:1",
             "tsolve.cors.allowed-origins=http://localhost:5173",
             "server.port=0",
+            // the sign-in values the application needs to start (identity)
+            "TSOLVE_LOGIN_ORIGIN=http://login.localhost:8081",
+            "TSOLVE_ADMIN_ORIGIN=http://admin.localhost:8081",
+            "TSOLVE_SIGNING_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            "GOOGLE_CLIENT_ID=test-client-id",
+            "GOOGLE_CLIENT_SECRET=test-secret",
+            "PLATFORM_OPERATOR_EMAILS=ops@example.test",
             "DB_HOST=unused",
             "DB_PORT=0",
             "DB_NAME=unused",
