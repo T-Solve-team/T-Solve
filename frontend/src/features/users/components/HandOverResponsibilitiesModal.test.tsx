@@ -103,6 +103,8 @@ describe('Hand Over Responsibilities recipient refresh', () => {
         release?.();
         await refresh;
         cleanup();
+        // antd useDelayState leaves a 10 ms timer after unmount; let it fire before jsdom goes away
+        await new Promise((r) => setTimeout(r, 20));
         await queryClient.cancelQueries();
         queryClient.clear();
       }

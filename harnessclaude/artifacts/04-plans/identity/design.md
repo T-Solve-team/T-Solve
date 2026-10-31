@@ -817,14 +817,14 @@ Dimensions analyzed: user types, input extremes, timing, scale, state transition
 
 | # | Dimensions | Scenario | Severity | Expected behavior / criteria | Test task |
 |---|------------|----------|----------|------------------------------|-----------|
-| S1 | User types, authorization | Lookup includes self, inactive, wrong-role or foreign-Workspace candidates; a different-Department KM exists | High | Exclude the first four; allow the other-Department KM; reject forged choices on both mutations (AC-009.3–.4) | Task 14 |
-| S2 | Input extremes, scale, business logic | Zero, one or several affected Spaces; incomplete, repeated or unrelated Space ids; one recipient receives several Spaces | High | Require exactly the affected set; allow one eligible recipient for multiple Spaces; preserve unrelated assignments (AC-009.1–.4, .7) | Task 14 |
-| S3 | Timing, error cascades | Recipient loses KM or becomes inactive after options load; one of several choices becomes invalid | High | Revalidate on submit; reject without partial account, Space or Project writes (AC-009.4, .6–.7) | Task 14 |
-| S4 | State transitions, data integrity | Remove KM, remove only some Spaces, cancel, then retry after failure | High | Transfer only removed obligations; cancellation preserves confirmed data and failure preserves choices (AC-009.2, .6) | Task 14 |
-| S5 | Timing, environment | Pending/refetching/failed lookup, offline response, rapid double submission | High | Disable choices/completion while lookup is unusable; retry state and a single pending mutation (AC-009.8) | Task 14 |
-| S6 | Business logic, error cascades | No eligible recipient for one Space | High | MSG118; neither caller can complete; mock writes nothing (AC-009.5) | Task 14 |
-| S7 | Data integrity, compliance | Success followed by reactivation or restoring KM with other valid Spaces | High | Preserve ids/history; transferred Spaces stay with recipients; session/detail show confirmed assignments (AC-009.7–.9) | Task 14 |
-| S8 | Integration, environment | API generated code drifts; popup keyboard use or long Space labels | Medium | Deterministic generation; shared accessible form labels and browser inspection at 1366 × 768 (AC-009.1–.2, .8) | Task 14 |
+| S1 | User types, authorization | Lookup includes self, inactive, wrong-role or foreign-Workspace candidates; a different-Department KM exists | High | Exclude the first four; allow the other-Department KM; reject forged choices on both mutations (AC-009.3–.4) | Task 20 |
+| S2 | Input extremes, scale, business logic | Zero, one or several affected Spaces; incomplete, repeated or unrelated Space ids; one recipient receives several Spaces | High | Require exactly the affected set; allow one eligible recipient for multiple Spaces; preserve unrelated assignments (AC-009.1–.4, .7) | Task 20 |
+| S3 | Timing, error cascades | Recipient loses KM or becomes inactive after options load; one of several choices becomes invalid | High | Revalidate on submit; reject without partial account, Space or Project writes (AC-009.4, .6–.7) | Task 20 |
+| S4 | State transitions, data integrity | Remove KM, remove only some Spaces, cancel, then retry after failure | High | Transfer only removed obligations; cancellation preserves confirmed data and failure preserves choices (AC-009.2, .6) | Task 20 |
+| S5 | Timing, environment | Pending/refetching/failed lookup, offline response, rapid double submission | High | Disable choices/completion while lookup is unusable; retry state and a single pending mutation (AC-009.8) | Task 20 |
+| S6 | Business logic, error cascades | No eligible recipient for one Space | High | MSG118; neither caller can complete; mock writes nothing (AC-009.5) | Task 20 |
+| S7 | Data integrity, compliance | Success followed by reactivation or restoring KM with other valid Spaces | High | Preserve ids/history; transferred Spaces stay with recipients; session/detail show confirmed assignments (AC-009.7–.9) | Task 20 |
+| S8 | Integration, environment | API generated code drifts; popup keyboard use or long Space labels | Medium | Deterministic generation; shared accessible form labels and browser inspection at 1366 × 768 (AC-009.1–.2, .8) | Task 20 |
 
 Open questions for the spec owner: none.
 
@@ -842,13 +842,13 @@ Agreements: reuse existing flow and payloads; test full affected-set validation 
 
 | Risk | Severity | Mitigation | Task |
 |------|----------|------------|------|
-| Stale or forged choices cause partial reassignment | High | Negative contract cases for each caller and mixed Project/Space state snapshots | Task 14 |
-| Mock success is mistaken for deployed security/persistence | High | Mark OpenAPI behavior as a proposal; report backend integration as pending | Task 14 |
+| Stale or forged choices cause partial reassignment | High | Negative contract cases for each caller and mixed Project/Space state snapshots | Task 20 |
+| Mock success is mistaken for deployed security/persistence | High | Mark OpenAPI behavior as a proposal; report backend integration as pending | Task 20 |
 
-### Proposed Task 14 and iteration placement
+### Proposed Task 20 and iteration placement
 
 Add one feature, `space-handover`, to the existing identity iteration 1 after Task 13. Story: STORY-009; criteria: AC-009.1–AC-009.9. Reuse merged dependencies and add focused contract/UI cases for S1–S8, OpenAPI descriptions plus generated output, and only demonstrated runtime fixes. Candidate files are under `frontend/src/features/users/{components,pages,mocks}/`, `frontend/openapi/tsolve-api.yaml`, generated API output, and `docs/bug-log.md` for reproduced bugs. No dependency, route or production backend change.
 
 Verification: `sdd.ts trace identity STORY-009`; focused users tests; frontend format, lint, typecheck, full tests, build and deterministic API generation; browser-check UC-06 and UC-07 at 1366 × 768. Preserve all AC-006/007/008 behavior. Write the task session log and test/review reports with actual results. Propose one feature commit only after verification and obtain user agreement before committing; push only if requested.
 
-Builder check: proposed Task 14 supplies the callers, models, eligibility rule, payload scope, errors, state invariants, test targets and exclusions. There is no unresolved build decision. The user approved the design and iteration placement on 2026-10-31; Task 14 is appended to iteration 1. Implementation and verification are recorded in its session and evaluation reports.
+Builder check: proposed Task 20 supplies the callers, models, eligibility rule, payload scope, errors, state invariants, test targets and exclusions. There is no unresolved build decision. The user approved the design and iteration placement on 2026-10-31; Task 20 is appended to iteration 1. Implementation and verification are recorded in its session and evaluation reports.
