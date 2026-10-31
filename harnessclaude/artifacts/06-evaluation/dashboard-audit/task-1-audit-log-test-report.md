@@ -68,3 +68,11 @@ Mock preview at http://127.0.0.1:5174/audit-log:
 The test environment emits existing jsdom getComputedStyle pseudo-element warnings; the final suite has
 no failures. No backend tests were run because no backend source changed. Backend implementation and
 production tenant isolation are outside this approved slice. Package manifests/lockfile are unchanged.
+
+## PR #92 main integration — 2026-10-31
+
+Integrated main 4cf05949; the only manual resolution retains both parents in events.jsonl.
+All 414 lines parse as JSON; each parent's complete event set is present. Frontend files are unchanged
+from the previously verified db7d46c tree; backend files match origin/main exactly. Fresh Audit Log run:
+33/33 tests passed, 0 skipped. Fresh format, lint (same existing warning), typecheck, build and API
+regeneration pass; no generated-file drift. Spec approval is unchanged and 17/17 trace still passes.

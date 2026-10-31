@@ -342,6 +342,7 @@ own client.
 | PRs (Q12) | One PR per task (T11 + T12 together if small); Jira key per task in tasks.md | Three PRs; one PR per Jira key | Vertical slices first; reviews stay small |
 | Layout (Q13) | A centred antd card from the shared kit, SRS 1.1.1 wording | A Figma frame | No frame exists |
 | Signing key | `TSOLVE_SIGNING_KEY`, HMAC-SHA256, no default | Asymmetric keys; one key per use | Only the server makes and checks the values; one secret is enough |
+| Exception to backend AGENTS.md rules 1, 3, 4 (Hiếu, 2026-10-29) | `identity.signin` keeps the approved shape: a concrete `SignInStateService` (no interface), the `SignInState` entity used by the controllers, a flat `signin` package | Interface plus implementation, controller-facing DTOs, `controller/service/dto` sub-packages (the AGENTS.md rules) | The sign-in endpoints are redirects with no request or response DTOs, and the service has one implementation; the approved design and the QA tests already use this shape. Scope: `identity.signin` only |
 
 ### Edge cases and risks (STORY-001)
 
@@ -374,8 +375,22 @@ authorization, data integrity, integration, compliance. Skipped: business logic 
 | 40 | STORY-001 | Timing | A double click on "Sign in with Google" | Low | The button is pending after the first click; one navigation | Task 7 |
 | 41 | STORY-001 | Scale | Rows of old states, codes and ended sessions pile up | Medium | `SessionCleanup` removes them | Task 10 |
 | 42 | STORY-001 | Error cascades | The database is unavailable during the callback or `complete` | Medium | No session (one transaction); the browser gets be-foundation's 500 ProblemDetail (accepted: generic 500 (Hiếu, 2026-10-28)) | Tasks 9, 10 |
+| 43 | STORY-001 | Authorization | Q1: a path outside the four redirect paths (for example `/api/v1/anything`) | High | Anonymous: 401, no form login, no HTTP Basic; signed in: reaches it (the lowest-order chain `anyRequest().authenticated()`) | Task 8 |
+| 44 | STORY-001 | Input extremes | Q2: `GET /api/v1/auth/sign-in` on a host that is no Workspace site and not the Platform Console origin (an unknown host, `login.`, `api.`) | High | 404, status only, no state created (same rule as AC-001.5) | Task 8 |
+| 45 | STORY-001 | Authorization | Login CSRF: an attacker starts a sign-in and gets a callback URL (state + code) for the attacker's own Google account, then makes the victim's browser open it | High | Open item, spec change pending (owner Hiếu, before Task 9): a short-lived `__Host-` cookie bound to the state value is set at sign-in start and checked at the callback; a callback without the matching cookie is refused. Not yet an AC; `spec.md` is not edited here | Task 9 |
 
-Open questions for the spec owner: none. Row 42 is accepted (C3, Hiếu, 2026-10-28): a database failure during a
+Q1-Q5 (Hiếu, 2026-10-29): Q1 `AuthSecurityConfig` also adds a second, lowest-order `SecurityFilterChain`
+(`anyRequest().authenticated()`, 401, no form login, no HTTP Basic); be-foundation `roles-security` replaces it later.
+Q2 sign-in start on a non-Workspace, non-Console host answers 404 and creates no state. Q3 `SignInStateRepositoryIT`
+(Testcontainers, needs Docker) covers the check constraint and `markUsed`. Q4 a developer step adds empty skeletons
+of the Task 8 classes before the QA tests. Q5 the developer may edit ticket's `ImportConfirmIT` and
+`ImportControllerTest` test properties only.
+
+Task 8 review (Hiếu, 2026-10-29): the review is `06-evaluation/identity/task-8-sign-in-start-review.md`. The AGENTS.md
+exception is recorded in Key decisions above. Login CSRF is row 45: a Change Mode spec edit (owner Hiếu) must add the
+cookie criteria and be approved before Task 9. Task 9 also takes the two other review findings (see tasks.md Task 9).
+
+Open questions for the spec owner: login CSRF cookie (row 45), spec change pending before Task 9. Row 42 is accepted (C3, Hiếu, 2026-10-28): a database failure during a
 sign-in redirect keeps be-foundation's generic 500.
 ## Task 4 contract proposal — KAN-110
 `PUT /api/v1/users/{userId}` (`updateUserRoles`) accepts generated UpdateUserRolesRequest: roles, nullable UUID Department, UUID Space ids, optional Project/Space handovers and `confirmTicketResolverRemoval`. It returns confirmed UserDetail or400/401/403/404/409 Problem. UserDetail adds `ticketResolverProjectIds` (UUID[]) for the memberships that MSG78 actually removes; preserve historical references separately from current membership and management.

@@ -65,3 +65,16 @@ about the proposed KAN-153 commit. Do not begin another feature or push/merge/op
   performed the staged secret scan successfully.
 - Harness commit includes only this module's artifacts/tracking. Pre-existing research/proposal registry
   rows and untracked research/proposal/Graphify content are excluded.
+
+### PR #92 conflict resolution — 2026-10-31
+- User requested resolving PR #92 conflicts and filling its description.
+- Integrated origin/main at 4cf05949f71d7e69f95f1fbf263441cf38d2a3ec into the Jira feature branch.
+- Only conflict: harnessclaude/events/events.jsonl. Kept all eight dashboard-audit events and the
+  incoming KAN-230 quick-opened event; validated all 414 JSON lines and checked that neither parent's
+  event set lost a record.
+- Frontend tree is unchanged from db7d46c; imported backend tree matches origin/main exactly.
+- Fresh checks after resolution: Audit Log 33/33 tests (0 skipped), format, lint (existing warning only),
+  typecheck, build, API regeneration without differences, spec check and 17/17 trace all passed.
+- Earlier complete-suite evidence remains 965/965 on the identical frontend tree. No frontend source,
+  test assertion, timeout, dependency or approved spec changed during resolution.
+- Unrelated registry/research/proposal/Graphify work remains outside this merge commit.
