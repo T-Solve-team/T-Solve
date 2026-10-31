@@ -10,6 +10,9 @@ import type { ProjectHandover } from './projectHandover';
 import type { Role } from './role';
 import type { SpaceHandover } from './spaceHandover';
 
+/**
+ * Frontend/MSW contract proposal pending backend integration. Hand over each removed managed Space exactly once before removing Knowledge Manager or its assignment; retained spaceIds remain with the user. Revalidate all recipients and commit roles, assignments, Project handovers and Space handovers atomically. Reject the entire operation on any invalid choice; never commit a partial handover.
+ */
 export interface UpdateUserRolesRequest {
   roles: Role[];
   /** @nullable */

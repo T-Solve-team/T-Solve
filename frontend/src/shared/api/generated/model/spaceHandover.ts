@@ -7,6 +7,9 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 
+/**
+ * One recipient for one affected Space. Every affected Space must occur exactly once; reject missing, duplicate, unrelated or currently ineligible choices with MSG01. A recipient may receive multiple Spaces. Retain the Space id and former-manager history after transfer; reactivation or restoring a role does not reverse it.
+ */
 export interface SpaceHandover {
   spaceId: string;
   recipientId: string;
