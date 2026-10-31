@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react';
+import { act, cleanup, screen } from '@testing-library/react';
 import { Form, Input } from 'antd';
 import { ApiError } from '@/shared/api';
 import { msg } from '@/shared/messages';
@@ -32,6 +32,19 @@ function setup() {
 }
 
 describe('form rules and server errors', () => {
+  beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
+
+  afterEach(async () => {
+    cleanup();
+    try {
+      // Ant Design's delayed form state can outlive unmount; settle it before JSDOM closes.
+      await act(() => vi.runOnlyPendingTimersAsync());
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('treats whitespace-only input as empty (MSG01)', async () => {
     const form = setup();
     await act(async () => {
@@ -67,7 +80,7 @@ describe('form rules and server errors', () => {
     expect(await screen.findByText(msg('MSG01', { field_name: 'Reason' }))).toBeInTheDocument();
   });
 
-  it('returns false when the error has no field errors', () => {
+  it('returns false when the error has no field errors without leaking form timers (BUG-072)', () => {
     const form = setup();
     expect(applyApiErrors(form, new ApiError({ status: 409, code: 'MSG06' }))).toBe(false);
   });
