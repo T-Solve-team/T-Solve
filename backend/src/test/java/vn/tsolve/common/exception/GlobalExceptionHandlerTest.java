@@ -154,7 +154,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void takesTheTopLevelCodeFromTheMostImportantFieldError_AC_001_4_BUG_064() throws Exception {
+    void takesTheTopLevelCodeFromTheMostImportantFieldError_AC_001_4_BUG_066() throws Exception {
         // "email" (MSG03) sorts first by name, but the blank "name" (MSG01) is what the user must fix first.
         postForm("{\"name\":\"\",\"email\":\"x\"}")
                 .andExpect(status().isBadRequest())
@@ -164,7 +164,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void measuresAnArrayOverItsSizeLimitForMsg02_AC_001_4_BUG_063() throws Exception {
+    void measuresAnArrayOverItsSizeLimitForMsg02_AC_001_4_BUG_065() throws Exception {
         postForm("{\"name\":\"Jane\",\"tags\":[\"a\",\"b\",\"c\"]}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("tags"))
@@ -173,7 +173,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void mapsASizeErrorFromASpringValidatorToMsg06_AC_001_5_BUG_063() throws Exception {
+    void mapsASizeErrorFromASpringValidatorToMsg06_AC_001_5_BUG_065() throws Exception {
         mvc.perform(post("/test/hand-checked")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Jane\"}"))
@@ -351,12 +351,12 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void letsAMissingAuthenticationReachTheEntryPoint_AC_002_4_BUG_061() throws Exception {
+    void letsAMissingAuthenticationReachTheEntryPoint_AC_002_4_BUG_063() throws Exception {
         securedMvc().perform(get("/test/no-authentication")).andExpect(status().isUnauthorized());
     }
 
     @Test
-    void letsAnAnonymousUsersDenialReachTheEntryPoint_AC_002_4_BUG_062() throws Exception {
+    void letsAnAnonymousUsersDenialReachTheEntryPoint_AC_002_4_BUG_064() throws Exception {
         SecurityContextHolder.getContext()
                 .setAuthentication(new AnonymousAuthenticationToken(
                         "key", "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS")));

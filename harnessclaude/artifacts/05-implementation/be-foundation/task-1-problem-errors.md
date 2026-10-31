@@ -101,15 +101,15 @@ twelve `ticket/` files changed their import only. Then Task 2 (roles-security).
 
 ### Working on: PR #82 review by bluebearccc (10 findings, Auto-fix)
 - Fixed, each test-first and logged in `docs/bug-log.md`:
-  - [1] BUG-061: the catch-all made an `AuthenticationException` a 500. The advice now rethrows it, so
+  - [1] BUG-063: the catch-all made an `AuthenticationException` a 500. The advice now rethrows it, so
     `ExceptionTranslationFilter` answers it through the entry point.
-  - [2] BUG-062: an anonymous user's `AccessDeniedException` answered 403 MSG08. It is rethrown when the Authentication
+  - [2] BUG-064: an anonymous user's `AccessDeniedException` answered 403 MSG08. It is rethrown when the Authentication
     is anonymous (the same test `ExceptionTranslationFilter` makes); a signed-in user still gets 403 MSG08.
   - [10] The tests of [1] and [2] put `ExceptionTranslationFilter` (entry point 401) in front of the advice in
     standalone MockMvc; Task 2 adds the real filter chain and its entry point body (MSG07).
-  - [5] BUG-063: `@Size` from a Spring `Validator` (no constraint behind it) made the handler throw; now MSG06.
+  - [5] BUG-065: `@Size` from a Spring `Validator` (no constraint behind it) made the handler throw; now MSG06.
     Arrays are measured with `Array.getLength`.
-  - [6] BUG-064: the top-level `code` of a 400 is the most important field error (MSG01 > MSG02 > MSG03 > MSG06), no
+  - [6] BUG-066: the top-level `code` of a 400 is the most important field error (MSG01 > MSG02 > MSG03 > MSG06), no
     longer the alphabetically first; `fieldErrors` stays sorted by field name. This replaces the 28/10 decision
     "first `fieldErrors` entry".
   - [8] `MessageCodeException extends CodedException` (adds `status` only); `handleMessageCode` uses `coded()`. Its

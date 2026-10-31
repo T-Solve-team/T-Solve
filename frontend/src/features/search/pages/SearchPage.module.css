@@ -1,0 +1,4 @@
+/* Figma 6.1: the results area keeps its place under the filters, even when empty. */
+.results {
+  min-height: 200px;
+}

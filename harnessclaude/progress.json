@@ -125,10 +125,21 @@
       "lastUpdated": "2026-10-22T14:21:23.187Z"
     },
     "search": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:23.392Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "ticket-list": "passing",
+        "ticket-search": "passing",
+        "give-feedback": "pending"
+      },
+      "lastUpdated": "2026-10-30T15:41:22.397Z",
+      "branch": "feat/search",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "cfdf2de2a8ce09f475abb826f9806268206032c0"
+      }
     },
     "triage": {
       "status": "decomposed",
