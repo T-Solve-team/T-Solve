@@ -14,7 +14,7 @@
         "jira-site-registration": "pending",
         "token-cipher": "pending",
         "receive-issue-events": "pending",
-        "jira-client": "pending",
+        "jira-client": "in-progress",
         "event-worker": "pending",
         "triage-on-create": "pending",
         "draft-on-done": "pending",
@@ -23,7 +23,7 @@
         "suggestion-answer": "pending",
         "event-cleanup": "pending"
       },
-      "lastUpdated": "2026-10-22T13:56:00.886Z",
+      "lastUpdated": "2026-10-30T06:15:48.993Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
