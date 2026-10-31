@@ -1,9 +1,6 @@
 package vn.tsolve.tracker.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -12,8 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -27,12 +24,9 @@ import vn.tsolve.common.security.DefaultSecurityConfig;
 import vn.tsolve.common.security.JiraAppAuthentication;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.JiraAppSecurityConfig;
-import vn.tsolve.common.security.JiraSiteLookup;
 import vn.tsolve.common.security.Roles;
-import vn.tsolve.common.security.WorkspaceContext;
-import vn.tsolve.tracker.dto.IssueEventPayload;
-import vn.tsolve.tracker.entity.IssueEventType;
-import vn.tsolve.tracker.service.IssueEventService;
+import vn.tsolve.tracker.dto.IssueCreatedPayload;
+import vn.tsolve.tracker.service.IssueCreatedService;
 
 @WebMvcTest(JiraAppEventController.class)
 @Import({JiraAppSecurityConfig.class, DefaultSecurityConfig.class})
@@ -41,76 +35,57 @@ class JiraAppEventControllerTest {
     private static final String URL = "/api/v1/jira-app/events/issue-created";
     private static final String BODY =
             """
-            {"issue": {"id": "10001", "key": "ITSUP-1", "fields": {"summary": "ignored"}},
+            {"issue": {"id": "10001", "key": "ITSUP-1",
+                       "fields": {"summary": "ignored", "project": {"id": "10000", "key": "ITSUP"}}},
              "timestamp": "1730000000000", "atlassianId": "ignored"}
             """;
     private static final JiraAppPrincipal SITE =
-            new JiraAppPrincipal("cloud-1", 7L, null, "https://api.atlassian.com/ex/jira/cloud-1");
+            new JiraAppPrincipal("cloud-1", null, "https://api.atlassian.com/ex/jira/cloud-1");
 
     @Autowired
     private MockMvc mvc;
 
     @MockBean
-    private IssueEventService issueEventService;
+    private IssueCreatedService issueCreatedService;
 
     @MockBean
     private JwtDecoder fitJwtDecoder;
 
-    @MockBean
-    private JiraSiteLookup siteLookup;
-
     @Test
-    void acceptsCreatedEvent_AC_003_1() throws Exception {
+    void acceptsCreatedEventWithoutSystemToken_AC_003_1() throws Exception {
         mvc.perform(fromSite().content(BODY)).andExpect(status().isAccepted());
 
-        verify(issueEventService)
-                .receive(eq("cloud-1"), eq(IssueEventType.ISSUE_CREATED), any(IssueEventPayload.class), eq("token"));
+        ArgumentCaptor<IssueCreatedPayload> payload = ArgumentCaptor.forClass(IssueCreatedPayload.class);
+        verify(issueCreatedService).receive(payload.capture());
+        assertThat(payload.getValue().issueKey()).isEqualTo("ITSUP-1");
+        assertThat(payload.getValue().projectKey()).isEqualTo("ITSUP");
     }
 
     @Test
-    void recordsUnderTheSitesWorkspace_AC_003_7() throws Exception {
-        AtomicLong workspaceDuringReceive = new AtomicLong();
-        willAnswer(call -> {
-                    workspaceDuringReceive.set(WorkspaceContext.current());
-                    return null;
-                })
-                .given(issueEventService)
-                .receive(any(), any(), any(), any());
-
-        mvc.perform(fromSite().content(BODY)).andExpect(status().isAccepted());
-
-        assertThat(workspaceDuringReceive.get()).isEqualTo(7L);
-        assertThat(WorkspaceContext.current()).isEqualTo(WorkspaceContext.NONE);
-    }
-
-    @Test
-    void rejectsEventWithoutSystemToken_AC_003_5() throws Exception {
-        mvc.perform(post(URL)
-                        .with(authentication(siteAuthentication()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(BODY))
+    void rejectsBodyWithoutProjectKey_AC_003_6() throws Exception {
+        mvc.perform(fromSite().content("{\"issue\": {\"key\": \"ITSUP-1\", \"fields\": {\"summary\": \"x\"}}}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MSG06"));
-        verifyNoInteractions(issueEventService);
+        verifyNoInteractions(issueCreatedService);
     }
 
     @Test
-    void rejectsBodyWithoutIssueId_AC_003_6() throws Exception {
-        mvc.perform(fromSite().content("{\"issue\": {\"key\": \"ITSUP-1\"}, \"timestamp\": \"1\"}"))
+    void rejectsBodyWithoutIssueKey_AC_003_6() throws Exception {
+        mvc.perform(fromSite().content("{\"issue\": {\"fields\": {\"project\": {\"key\": \"ITSUP\"}}}}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MSG06"));
-        verifyNoInteractions(issueEventService);
+        verifyNoInteractions(issueCreatedService);
     }
 
     @Test
-    void rejectsTimestampBeyondLong_AC_003_6() throws Exception {
-        mvc.perform(
-                        fromSite()
-                                .content(
-                                        "{\"issue\": {\"id\": \"1\", \"key\": \"A-1\"}, \"timestamp\": \"9999999999999999999\"}"))
+    void rejectsIssueKeyLongerThanItsColumn_AC_003_6() throws Exception {
+        String key = "A".repeat(48) + "-12";
+        mvc.perform(fromSite()
+                        .content(
+                                "{\"issue\": {\"key\": \"" + key + "\", \"fields\": {\"project\": {\"key\": \"A\"}}}}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MSG06"));
-        verifyNoInteractions(issueEventService);
+        verifyNoInteractions(issueCreatedService);
     }
 
     @Test
@@ -118,20 +93,18 @@ class JiraAppEventControllerTest {
         mvc.perform(fromSite().content("not json"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MSG06"));
+        verifyNoInteractions(issueCreatedService);
     }
 
     @Test
     void rejectsCallWithoutFit_AC_001_2() throws Exception {
         mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isUnauthorized());
-        verifyNoInteractions(issueEventService);
+        verifyNoInteractions(issueCreatedService);
     }
 
     private static MockHttpServletRequestBuilder fromSite() {
-        return post(URL)
-                .with(authentication(siteAuthentication()))
-                .header(JiraAppEventController.SYSTEM_TOKEN_HEADER, "token")
-                .contentType(MediaType.APPLICATION_JSON);
+        return post(URL).with(authentication(siteAuthentication())).contentType(MediaType.APPLICATION_JSON);
     }
 
     private static JiraAppAuthentication siteAuthentication() {

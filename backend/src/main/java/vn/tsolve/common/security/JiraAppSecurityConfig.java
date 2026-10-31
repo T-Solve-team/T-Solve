@@ -33,13 +33,12 @@ public class JiraAppSecurityConfig {
     @Bean
     @Order(1)
     public SecurityFilterChain jiraAppSecurityChain(
-            HttpSecurity http, JwtDecoder fitJwtDecoder, JiraSiteLookup siteLookup, ObjectMapper objectMapper)
-            throws Exception {
+            HttpSecurity http, JwtDecoder fitJwtDecoder, ObjectMapper objectMapper) throws Exception {
         SecurityProblemWriter problems = new SecurityProblemWriter(objectMapper);
         // Missing, malformed, badly signed, expired or foreign FIT (AC-001.2 to AC-001.5).
         AuthenticationEntryPoint unauthorized = (request, response, e) ->
                 problems.write(response, HttpStatus.UNAUTHORIZED, SecurityProblemWriter.MSG08);
-        // A valid FIT from a site no Workspace registered (AC-001.6).
+        // An authenticated call an endpoint's @PreAuthorize refuses.
         AccessDeniedHandler forbidden =
                 (request, response, e) -> problems.write(response, HttpStatus.FORBIDDEN, SecurityProblemWriter.MSG08);
         // The JWKS could not be fetched: our failure, not the caller's (AC-001.8).
@@ -56,8 +55,8 @@ public class JiraAppSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a.anyRequest().hasRole(Roles.JIRA_APP))
-                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.decoder(fitJwtDecoder)
-                                .jwtAuthenticationConverter(new FitAuthenticationConverter(siteLookup)))
+                .oauth2ResourceServer(oauth -> oauth.jwt(jwt ->
+                                jwt.decoder(fitJwtDecoder).jwtAuthenticationConverter(new FitAuthenticationConverter()))
                         .authenticationEntryPoint(unauthorized)
                         .accessDeniedHandler(forbidden)
                         .withObjectPostProcessor(new ObjectPostProcessor<BearerTokenAuthenticationFilter>() {

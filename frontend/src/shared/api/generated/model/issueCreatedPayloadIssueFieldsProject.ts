@@ -6,11 +6,8 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
-import type { IssueEventPayloadChangelogItemsItem } from './issueEventPayloadChangelogItemsItem';
 
-/**
- * Present on issue updated events.
- */
-export type IssueEventPayloadChangelog = {
-  items?: IssueEventPayloadChangelogItemsItem[];
+export type IssueCreatedPayloadIssueFieldsProject = {
+  /** The Jira project key, e.g. ITSUP. */
+  key: string;
 };

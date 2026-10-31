@@ -19,7 +19,7 @@ import java.util.function.UnaryOperator;
 final class FitTokens {
 
     static final String APP_ID = "ari:cloud:ecosystem::app/test-app";
-    static final String CLOUD_ID = "cloud-registered";
+    static final String CLOUD_ID = "cloud-1";
 
     static final RSAKey KEY = generate("atlassian-key");
     static final RSAKey OTHER_KEY = generate("attacker-key");

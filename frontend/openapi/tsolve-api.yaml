@@ -168,7 +168,7 @@ paths:
     post:
       tags: [jira-app]
       operationId: receiveIssueCreated
-      summary: Forge trigger avi:jira:created:issue — recorded and processed later (STORY-003).
+      summary: Forge trigger avi:jira:created:issue — stored as a suggestion result of its Project (STORY-003).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -176,10 +176,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/IssueEventPayload'
+              $ref: '#/components/schemas/IssueCreatedPayload'
       responses:
         '202':
-          description: Accepted (also when already recorded).
+          description: Accepted — also when already stored or when the issue belongs to no T-Solve Project.
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -227,37 +227,31 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
-    IssueEventPayload:
+    IssueCreatedPayload:
       type: object
       description: >
-        The part of a Forge Jira issue event (avi:jira:created:issue / avi:jira:updated:issue) that T-Solve reads.
-        Other fields Forge sends are ignored.
-      required: [issue, timestamp]
+        The part of a Forge avi:jira:created:issue event that T-Solve reads. Other fields Forge sends are ignored.
+      required: [issue]
       properties:
         issue:
           type: object
-          required: [id, key]
+          required: [key, fields]
           properties:
-            id:
-              type: string
             key:
               type: string
+              maxLength: 50
               description: The Jira issue key, e.g. ITSUP-1031.
-        timestamp:
-          type: string
-          pattern: '^\d{1,19}$'
-          description: When the event occurred, in epoch milliseconds.
-        changelog:
-          type: object
-          description: Present on issue updated events.
-          properties:
-            items:
-              type: array
-              items:
-                type: object
-                properties:
-                  fieldId:
-                    type: string
+            fields:
+              type: object
+              required: [project]
+              properties:
+                project:
+                  type: object
+                  required: [key]
+                  properties:
+                    key:
+                      type: string
+                      description: The Jira project key, e.g. ITSUP.
     Role:
       type: string
       enum: [ADMIN, DEPARTMENT_MANAGER, PROJECT_MANAGER, STAFF]

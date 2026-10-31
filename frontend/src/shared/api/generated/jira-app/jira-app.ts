@@ -14,7 +14,7 @@ import type {
   UseMutationResult,
 } from '@tanstack/react-query';
 
-import type { IssueEventPayload, ProblemResponse } from '../model';
+import type { IssueCreatedPayload, ProblemResponse } from '../model';
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
@@ -26,10 +26,10 @@ export const getReceiveIssueCreatedUrl = () => {
 };
 
 /**
- * @summary Forge trigger avi:jira:created:issue — recorded and processed later (STORY-003).
+ * @summary Forge trigger avi:jira:created:issue — stored as a suggestion result of its Project (STORY-003).
  */
 export const receiveIssueCreated = async (
-  issueEventPayload: IssueEventPayload,
+  issueCreatedPayload: IssueCreatedPayload,
   options?: Parameters<typeof http>[1],
 ): Promise<void> => {
   const getHeaders = (
@@ -55,7 +55,7 @@ export const receiveIssueCreated = async (
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(issueEventPayload),
+    body: JSON.stringify(issueCreatedPayload),
   });
 };
 
@@ -100,12 +100,12 @@ export const getReceiveIssueCreatedMutationOptions = <
 export type ReceiveIssueCreatedMutationResult = NonNullable<
   Awaited<ReturnType<typeof receiveIssueCreated>>
 >;
-export type ReceiveIssueCreatedMutationBody = IssueEventPayload;
+export type ReceiveIssueCreatedMutationBody = IssueCreatedPayload;
 export type ReceiveIssueCreatedMutationError = ErrorType<ProblemResponse>;
-export type ReceiveIssueCreatedMutationVariables = { data: IssueEventPayload };
+export type ReceiveIssueCreatedMutationVariables = { data: IssueCreatedPayload };
 
 /**
- * @summary Forge trigger avi:jira:created:issue — recorded and processed later (STORY-003).
+ * @summary Forge trigger avi:jira:created:issue — stored as a suggestion result of its Project (STORY-003).
  */
 export const useReceiveIssueCreated = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
   options?: {

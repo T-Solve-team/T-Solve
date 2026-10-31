@@ -31,4 +31,3 @@ tsolve:
   tracker:
     jira-app-id: ${TSOLVE_JIRA_APP_ID}
     forge-jwks-uri: ${FORGE_JWKS_URI}
-    token-key: ${TSOLVE_TOKEN_KEY}

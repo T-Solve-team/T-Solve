@@ -8,28 +8,16 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 /**
- * Turns a verified FIT into a {@link JiraAppAuthentication}. Only a FIT from a registered Jira site gets
- * {@code ROLE_JIRA_APP}; any other is authenticated without it, so the chain answers 403 (AC-001.6).
+ * Turns a verified FIT into a {@link JiraAppAuthentication} with {@code ROLE_JIRA_APP} (AC-001.1). The cloudId is
+ * not looked up here: refusing a site of no Workspace belongs to discovery.
  */
 public class FitAuthenticationConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
-    private final JiraSiteLookup siteLookup;
-
-    public FitAuthenticationConverter(JiraSiteLookup siteLookup) {
-        this.siteLookup = siteLookup;
-    }
-
     @Override
     public AbstractAuthenticationToken convert(Jwt fit) {
-        String cloudId = FitValidators.cloudId(fit);
-        long workspaceId = siteLookup.findWorkspaceId(cloudId).orElse(WorkspaceContext.NONE);
         JiraAppPrincipal principal =
-                new JiraAppPrincipal(cloudId, workspaceId, fit.getClaimAsString("principal"), apiBaseUrl(fit));
-        return new JiraAppAuthentication(
-                principal,
-                principal.isRegisteredSite()
-                        ? List.of(new SimpleGrantedAuthority("ROLE_" + Roles.JIRA_APP))
-                        : List.of());
+                new JiraAppPrincipal(FitValidators.cloudId(fit), fit.getClaimAsString("principal"), apiBaseUrl(fit));
+        return new JiraAppAuthentication(principal, List.of(new SimpleGrantedAuthority("ROLE_" + Roles.JIRA_APP)));
     }
 
     private static String apiBaseUrl(Jwt fit) {

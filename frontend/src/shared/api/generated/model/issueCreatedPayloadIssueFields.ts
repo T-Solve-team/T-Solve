@@ -6,9 +6,8 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
+import type { IssueCreatedPayloadIssueFieldsProject } from './issueCreatedPayloadIssueFieldsProject';
 
-export type IssueEventPayloadIssue = {
-  id: string;
-  /** The Jira issue key, e.g. ITSUP-1031. */
-  key: string;
+export type IssueCreatedPayloadIssueFields = {
+  project: IssueCreatedPayloadIssueFieldsProject;
 };

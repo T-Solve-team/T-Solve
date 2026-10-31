@@ -59,7 +59,7 @@ class FitValidatorsTest {
     }
 
     @Test
-    void rejectsFitWithoutCloudId_AC_001_1() {
+    void rejectsFitWithoutCloudId_AC_001_5() {
         assertThat(validator.validate(fit(b -> b.claim("context", Map.of()))).hasErrors())
                 .isTrue();
     }

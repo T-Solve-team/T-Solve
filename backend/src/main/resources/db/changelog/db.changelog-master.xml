@@ -7,5 +7,5 @@
                             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <include file="changes/001-init-core-schema.sql" relativeToChangelogFile="true"/>
-    <include file="changes/002-jira-issue-events.sql" relativeToChangelogFile="true"/>
+    <include file="changes/002-tenant-project-suggestion.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>
