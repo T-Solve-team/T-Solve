@@ -149,10 +149,13 @@ or `/`) plus fe-foundation AC-003.1. The Jira line "Callback chỉ về `login.`
 Workspace site (acme.)              login. (TSOLVE_LOGIN_ORIGIN)                  Google
  Login "Sign in with Google"
   └ startSignIn(returnTo) ─► GET /api/v1/auth/sign-in ─ state row ─► 302 ─► GET /api/v1/auth/authorize?state
+                                         ├ mark authorized (once) · Set-Cookie __Host-TSOLVE_SIGNIN
                                          └ 302 (scope, state, nonce, PKCE S256, hd) ─► accounts.google.com
                                    GET /api/v1/auth/callback?code&state ◄──────────────────── 302
-                                    ├ consume state · code exchange (RestClient) · ID token (NimbusJwtDecoder)
+                                    ├ consume state · sign-in cookie hash · state's Workspace (exists, Google domain)
+                                    ├ code exchange (RestClient) · ID token (NimbusJwtDecoder)
                                     ├ checks in the AC-001.14 order, inside runIn(state.workspace)
+                                    ├ every answer: Set-Cookie __Host-TSOLVE_SIGNIN Max-Age=0
                                     └ hand-off code row ─► 302 acme./api/v1/auth/complete?code
  GET /api/v1/auth/complete?code ─ consume code · web_sessions row · Set-Cookie __Host-TSOLVE_SESSION ─► 302 returnTo or /
  every later request: WebSessionFilter ─ host/kind check · 8 h / 60 min · re-read Account ─► TSolveUser
@@ -170,9 +173,9 @@ page (MSG75 or the failure), never on a Workspace site.
 | `frontend/src/app/dev/MockSignInPage.tsx` | Dev-only mock sign-in (Q5), see below | T7 |
 | `frontend/src/shared/auth/sign-in.ts` | `startSignIn` goes to `/dev/sign-in?returnTo=…` in mock mode and to `/api/v1/auth/sign-in?returnTo=…` otherwise (the same `returnTo` filter) | T7 |
 | `frontend/openapi/tsolve-api.yaml` | The redirect contract (Q6), see "Contract" | T7 |
-| `vn.tsolve.identity.signin` | `SignInStateService` (create, check and consume state values; `createJiraLinkUrl` for `jira-app`), `SignInStartController` (`/sign-in` on a Workspace site or `admin.`), `AuthorizeController` and `CallbackController` (`login.` only), `GoogleOidcClient` (authorization URL, code exchange), `IdTokenVerifier`, `HandOffCodeService` (issue), `LoginPage` (the minimal `login.` HTML page), `AuthHosts` (which configured origin a request is on), `SignedToken` (HMAC-SHA256 sign and verify) | T8, T9 |
-| `vn.tsolve.identity.signin.port` | `WorkspaceLookup` and `TenantScope` (Q11), see "Ports" | T8 |
-| `vn.tsolve.identity.account` | `Account` (tenant entity), `AccountRole`, `AccountStatus`, `AccountRepository` (`findByEmailIgnoreCase` in the current tenant) | T9 |
+| `vn.tsolve.identity.signin` | `SignInStateService` (create, check and consume state values; `createJiraLinkUrl` for `jira-app`), `SignInStartController` (`/sign-in` on a Workspace site or `admin.`), `AuthorizeController` and `CallbackController` (`login.` only), `GoogleOidcClient` (authorization URL, code exchange), `IdTokenVerifier`, `HandOffCodeService` (issue), `LoginPage` (the minimal `login.` HTML page), `AuthHosts` (which configured origin a request is on), `SignedToken` (HMAC-SHA256 sign and verify), `SignInCookie` (makes, hashes and expires `__Host-TSOLVE_SIGNIN`), `IdentityClock` (identity's time, KAN-231 Q9) | T8, T9, T9b |
+| `vn.tsolve.identity.signin.port` | `WorkspaceLookup` and `TenantScope` (Q11), `LocalTenantScope` (interim production `TenantScope`, KAN-231 Q10), see "Ports" | T8, T9b |
+| `vn.tsolve.identity.account` | `Account` (own `workspace_id` column, no base entity yet, KAN-231 Q10), `AccountRole`, `AccountStatus`, `AccountRepository` (`findByWorkspaceIdAndEmailIgnoreCase`; every method takes the Workspace id) | T9b |
 | `vn.tsolve.identity.session` | `CompleteController` (`/complete`, redeems hand-off codes), `WebSession`, `WebSessionRepository`, `WebSessionFilter` (the per-request rules), `SessionCleanup` (scheduled), `OperatorAllowList` | T10, T11 |
 | `vn.tsolve.identity.jiralink` | `JiraAccountLink`, `JiraAccountLinkRepository` (one link per tracker account and Workspace) | T12 |
 | `vn.tsolve.identity.AuthSecurityConfig` | An `@Order(1)` `SecurityFilterChain` whose `securityMatcher` is the four redirect paths: `permitAll`, stateless, no CSRF (all four are GET). Logout and every other path stay under be-foundation's deny-by-default chain (`roles-security`) | T8 |
@@ -199,11 +202,12 @@ page (MSG75 or the failure), never on a Workspace site.
 
 All four redirect endpoints go into `frontend/openapi/tsolve-api.yaml`, tag `session`:
 - `GET /api/v1/auth/sign-in` (exists): the `returnTo` query value, 302 with `Location`;
-- `GET /api/v1/auth/authorize?state`, with a path-level `servers` entry for `login.`: 302; 400 (`text/html`, the
-  MSG141 page); 404;
-- `GET /api/v1/auth/callback?code&state&error`, with the same `servers` entry: 302 to `complete` or to
-  `/login?error=…&google_domain=…` (the `error` values MSG06, MSG09, MSG10, MSG120, MSG122, MSG135, MSG141 listed in
-  the description); 200 and 400 `text/html` (the minimal page); 404;
+- `GET /api/v1/auth/authorize?state`, with a path-level `servers` entry for `login.`: 302 with a `Set-Cookie`
+  header for `__Host-TSOLVE_SIGNIN` (AC-001.44); 400 (`text/html`, the MSG141 page); 404;
+- `GET /api/v1/auth/callback?code&state&error`, with the same `servers` entry and the `__Host-TSOLVE_SIGNIN` cookie
+  parameter (`in: cookie`): 302 to `complete` or to `/login?error=…&google_domain=…` (the `error` values MSG06, MSG09,
+  MSG10, MSG120, MSG122, MSG135, MSG141 listed in the description); 200 and 400 `text/html` (the minimal page); 404;
+  every answer carries the `Set-Cookie` header that expires the cookie (AC-001.47). Added in T9 (KAN-231 Q1–Q3);
 - `GET /api/v1/auth/complete?code`: 302 with `Set-Cookie: __Host-TSOLVE_SESSION`; failure 302
   `/login?error=MSG141`.
 
@@ -217,18 +221,25 @@ free number, listed in `db.changelog-master.xml`.
 
 | Table | Columns | Rules |
 |-------|---------|-------|
-| `sign_in_states` | `id`, `target` (`WORKSPACE`, `PLATFORM_CONSOLE`, `JIRA_LINK`), `workspace_id` (null for the Console), `tracker_account_id` (Jira link only), `return_to`, `nonce`, `pkce_verifier`, `created_at`, `expires_at` (+10 min), `used_at` | A check constraint allows exactly one target shape (AC-001.2). The browser gets `<id>.<HMAC>`; nonce and verifier never leave the server |
+| `sign_in_states` | `id`, `target` (`WORKSPACE`, `PLATFORM_CONSOLE`, `JIRA_LINK`), `workspace_id` (null for the Console), `tracker_account_id` (Jira link only), `return_to`, `nonce`, `pkce_verifier`, `created_at`, `expires_at` (+10 min), `used_at`, and from T9 `authorized_at` and `browser_binding_hash` (SHA-256 of the sign-in cookie value, 32 bytes; both null until `authorize`) | A check constraint allows exactly one target shape (AC-001.2), and a second one that `authorized_at` and `browser_binding_hash` are both null or both set. The browser gets `<id>.<HMAC>`; nonce and verifier never leave the server. `authorize` sets both new columns with `UPDATE … SET authorized_at = :now, browser_binding_hash = :hash WHERE id = :id AND authorized_at IS NULL AND used_at IS NULL AND expires_at > :now`, where `:now` is the `IdentityClock` time passed as a parameter, never the database `now()` (state times come from `IdentityClock`, so tests with `Clock.fixed` stay consistent; spec review, KAN-231): one row updated, or the MSG141 page (AC-001.44/.45). The two columns come in a new changeset (`<next>-identity-sign-in-state-binding.sql`); Task 8's `004-identity-sign-in-states.sql` is never edited (Decided in planning, KAN-231) |
 | `hand_off_codes` | `id`, `target` (`WORKSPACE`, `PLATFORM_CONSOLE`), `workspace_id`, `account_id`, `operator_email`, `site_host`, `return_to`, `created_at`, `expires_at` (+60 s), `used_at` | The code is `<id>.<HMAC>`. Redeemed by `UPDATE … SET used_at = now() WHERE id = ? AND used_at IS NULL AND expires_at > now()`: one row updated, or MSG141 (AC-001.17/.19) |
 | `web_sessions` | `id`, `token_hash` (SHA-256 of the cookie value, unique), `kind` (`WORKSPACE`, `OPERATOR`), `workspace_id`, `account_id`, `operator_email`, `site_host`, `created_at`, `last_activity_at`, `ended_at` | The cookie holds 32 random bytes (base64url); only the hash is stored. "End the session" sets `ended_at` |
 
 `SessionCleanup` (`@Scheduled`, every 15 minutes) deletes states and codes one hour after `expires_at`, and
 sessions one day after `ended_at` or after the 8-hour limit (Decided in planning).
 
-Tenant tables, under the platform convention (platform Task 2 base entity, Task 3 row-level security):
-- `accounts` (T9): `id`, `workspace_id`, `email` (stored lower-cased, unique per Workspace), `full_name`, `status`
+Tenant tables, under the platform convention (platform Task 2 base entity, Task 3 row-level security). Interim
+until the platform lands (KAN-231 Q10, Hiếu, 2026-10-31): `accounts` and `account_roles` get their own
+`workspace_id` column, with no base entity, no foreign key to the Workspace registry and no row-level security yet;
+every repository method takes the Workspace id explicitly. Task 14 (after platform KAN-98 / KAN-99 merge) moves
+`Account` onto the base entity and adds the foreign key, the row-level-security changeset and the adapters; this is
+an exception to backend AGENTS.md §7, recorded in Key decisions "Platform gap".
+- `accounts` (T9b): `id`, `workspace_id`, `email` (stored lower-cased, unique on the whole platform: a unique index on
+  `email` across all rows, GBR-37, D7, spec Interface Contracts; KAN-231 Q13), `full_name`, `status`
   (`ACTIVE`, `DEACTIVATED`), `first_sign_in_at`, `last_sign_in_at`, `created_at`. The Department column comes with
   the story that needs it (STORY-003 or STORY-007), not here (Decided in planning).
-- `account_roles` (T9): `id`, `account_id`, `role` (the five be-foundation Role constants), unique per pair.
+- `account_roles` (T9b): `id`, `workspace_id`, `account_id`, `role` (the five be-foundation Role constants), unique
+  per pair.
 - `jira_account_links` (T12): `id`, `workspace_id`, `tracker_account_id` (unique per Workspace), `account_id`,
   `linked_at`. A new link of the same tracker account replaces the row (AC-001.36).
 
@@ -242,8 +253,22 @@ doubles in the test sources:
   `runIn` (platform Task 1, KAN-99).
 
 The adapters (`PlatformWorkspaceLookup`, `PlatformTenantScope`) are written in the first identity task that starts
-after those platform tasks are on `main`; T9 at the latest, because `accounts` needs the base entity (Task 2,
-KAN-98). Until then T8's behaviour is shown by its tests, not on the local stack.
+after those platform tasks are on `main`. Until then T8's behaviour is shown by its tests, not on the local stack.
+
+Platform gap (KAN-231 Q10, Hiếu, 2026-10-31): KAN-98 and KAN-99 are still To Do, so T9 and T9b are built against the
+ports and test doubles too, like T8:
+- Production beans until the adapters exist: `NoWorkspaceLookup` (every lookup finds nothing, so every Workspace
+  site answers 404, as today) and, new in T9b, `LocalTenantScope` in `identity.signin.port`: a `ThreadLocal` holding
+  the Workspace id, set by `runIn(workspaceId, supplier)` and cleared in a `finally`; `currentWorkspaceId()` throws
+  when no scope is open. It keeps the `runIn` calls in place, so the platform adapter later replaces only the bean.
+- Isolation does not rest on the scope: every `AccountRepository` method takes the Workspace id explicitly (for
+  example `findByWorkspaceIdAndEmailIgnoreCase`), and the two-Workspace tests (AC-001.7, AC-001.15) prove it through
+  that filter.
+- The follow-up after the platform lands is Task 14 (tasks.md): `PlatformWorkspaceLookup`, `PlatformTenantScope`,
+  `Account` and `account_roles` on the platform base entity with the foreign key to `workspaces`, the
+  row-level-security changeset for `accounts` and `account_roles`, and demo Accounts for the seed Workspaces.
+  Platform Task 15's demo seed is not edited by T9 or T9b. identity cannot reach `completed` before Task 14.
+- While `NoWorkspaceLookup` answers 404, Hiếu sees T9 and T9b through their tests (fake issuer) only.
 
 T8 does not wait for be-foundation `problem-errors`: its failures are the minimal `login.` page (HTML) and
 redirects, and the 404 of AC-001.5 is the framework's 404, which becomes a ProblemDetail once `problem-errors`
@@ -288,15 +313,52 @@ configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`); the code builds thos
 - `returnTo` (AC-001.3): kept only if it starts with exactly one `/` and holds no `\`, no scheme, and no ASCII control
   or whitespace character (the rule of fe-foundation AC-012.2), and is at most 2,048 characters; else `/` (Decided
   in planning).
-- Callback order (AC-001.14): state → Google `error`, code exchange and ID token → Workspace Active → `hd` →
-  Account exists → Account Active. The state is consumed first (single use), whatever the outcome. The Account
-  lookup and update run inside `TenantScope.runIn(state.workspaceId)` (AC-001.15).
+- Sign-in cookie (login CSRF, AC-001.44–.47, KAN-231 Q1–Q5): `authorize` on `login.` makes 32 random bytes
+  (`SecureRandom`, base64url without padding), stores only their SHA-256 as `browser_binding_hash` and sets
+  `authorized_at` in one conditional update (see Data model), then answers 302 to Google with
+  `Set-Cookie: __Host-TSOLVE_SIGNIN=<value>; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=Lax` (no Domain) and
+  `Cache-Control: no-store` (AC-001.44; no cache or proxy keeps the answer that carries the cookie; spec review,
+  KAN-231). `SameSite=Lax` is required: Google's redirect back is a cross-site top-level GET, which sends a `Lax` cookie and not
+  a `Strict` one. The callback hashes the received cookie value and compares it with `browser_binding_hash` in
+  constant time (`MessageDigest.isEqual`); a missing cookie, a missing hash (never authorized) or a mismatch is
+  MSG141 (AC-001.46). Every callback answer on `login.`, of any outcome, sets
+  `__Host-TSOLVE_SIGNIN=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax` (AC-001.47). One rule for all three
+  targets (Workspace, Platform Console, Jira link; Q5).
+- Authorize once (AC-001.45): a state value already marked as authorized gets the 400 MSG141 page, no cookie and no
+  redirect. This is what stops the attack of row 45: the attacker's own trip to `authorize` (needed to reach Google
+  with the server's nonce and PKCE challenge) uses the state value up, so the victim's browser can never get the
+  matching cookie. Two `authorize` requests at once for one state: the conditional update lets exactly one through.
+  The update compares `expires_at` with the `IdentityClock` time passed as a parameter, not the database `now()`
+  (see Data model).
+- No Google domain (AC-001.48/.49, KAN-231 Q8): sign-in start on a Workspace site whose `WorkspaceRef.googleDomain`
+  is null or blank answers 302 `/login?error=MSG141` on that site, creates no state and logs
+  `WARN identity sign-in refused: workspace <id> has no Google domain` (the Workspace id only). `authorize` and the
+  callback answer the 400 MSG141 page for such a Workspace or Jira-link state (a domain cleared after the state was
+  made); the callback consumes the state first. Never sent to Google without `hd`.
+- Callback order (AC-001.14): state (missing, unsigned, expired, used → MSG141; the state is consumed first, single
+  use, whatever the outcome) → sign-in cookie (AC-001.46) → for a Workspace or Jira-link state, the state's
+  Workspace through `WorkspaceLookup.findById`: not found → MSG141 (AC-001.50), no Google domain → MSG141
+  (AC-001.49) → Google `error`, code exchange and ID token (MSG06) → Workspace Active → `hd` → Account exists →
+  Account Active. Every MSG141 in this first step is the 400 minimal page, because a target may not be known; the
+  Workspace must be found before the MSG06 step, whose redirect needs the Workspace site. The Account lookup and
+  update run inside `TenantScope.runIn(state.workspaceId)` and filter on that Workspace id explicitly (AC-001.15).
+- Decided in planning (KAN-231 step 1): a callback with neither `code` nor `error` counts as a failed code exchange
+  (MSG06, AC-001.9); an ID token with no `email` claim fails verification (MSG06).
+- Interim answers until the later tasks exist (KAN-231 Q12): a Platform Console state value runs the shared checks
+  (state, sign-in cookie, Google), then gets the 400 MSG141 page whatever their result, until T11 replaces it;
+  nothing is logged in. Decided in planning (builder check, same rule): in T9, a Workspace state value that passes
+  the Google step, and a Jira-link state value after the shared checks, get the same 400 MSG141 page until T9b
+  (Workspace and Account checks, hand-off) and T12 (link) replace it. No session, no Account change, no link.
 - Per request (`WebSessionFilter`, after the platform's Tenant Resolver): on `login.` or `api.` → no session
   (AC-001.22); then a host or kind mismatch → 401 MSG123 without ending the session (AC-001.20/.21/.32); then the
   8 h / 60 min limits → end + 401 MSG07 (AC-001.23); then the Account re-read → Deactivated: end + 401 MSG10
   (AC-001.27), else a `TSolveUser` with the current Roles (AC-001.26). A request without `X-TSolve-Background: 1`
   updates `last_activity_at` (AC-001.24/.25). The order follows from AC-001.20, which keeps a mismatched session
-  alive (Decided in planning). Time comes from an injected `Clock`, so tests move it.
+  alive (Decided in planning). Time comes from `IdentityClock` (KAN-231 Q9): a small identity type wrapping a
+  `java.time.Clock`, whose bean (`Clock.systemUTC()`) is defined in `SignInConfig`; every identity class that needs
+  time injects it (from T9, `SignInStateService` stops using the ticket module's `Clock`), and tests build it from
+  `Clock.fixed` (or the test `MutableClock`). identity defines no second `Clock` bean, so no other module's
+  unqualified `Clock` injection becomes ambiguous.
 - Operator sessions (T11): the principal is an `OperatorPrincipal(email)` with no authorities and none of the five
   Roles; if be-foundation `roles-security` defines an operator principal, T11 uses that one instead (Decided in
   planning). The allow-list is checked again at every request (AC-001.33); a change of the list takes effect after a
@@ -305,7 +367,8 @@ configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`); the code builds thos
   and no script, sent with `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'` and
   `Cache-Control: no-store`. The texts (MSG06, MSG09, MSG10, MSG75, MSG121, MSG122, MSG141) are copied from the
   Report3 catalog into `LoginPage`; its test asserts each exact text.
-- Nothing logs a state value, hand-off code, authorization code, ID token or cookie value (NFR 3).
+- Nothing logs a state value, hand-off code, authorization code, ID token or cookie value, including the
+  `__Host-TSOLVE_SIGNIN` value and its hash (NFR 3).
 
 ### Test approach (Q10)
 
@@ -314,8 +377,11 @@ configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`); the code builds thos
   every AC-001.9 failure, plus an unreachable token endpoint.
 - Controller tests use MockMvc with the `Host` set per site (`acme.localhost`, `beta.localhost`, `login.localhost`,
   `admin.localhost`). The two-Workspace tests (NFR 5) use two Workspaces with Accounts of the same Roles:
-  AC-001.7 and .15 (T9), AC-001.17 and .20 (T10), AC-001.32 (T11).
-- Repository and migration tests run against Postgres with the database test setup of platform Task 2.
+  AC-001.7 (T9), AC-001.15 (T9b), AC-001.17 and .20 (T10), AC-001.32 (T11). The AC-001.15 test: Workspace B's
+  Account email signing in on Workspace A gets MSG09, and B's Account is untouched (email is unique on the whole
+  platform, KAN-231 Q13).
+- Repository and migration tests run against Postgres with Testcontainers, the `SignInStateRepositoryIT` pattern
+  (needs Docker), until the database test setup of platform Task 2 is on `main` (KAN-231 Q10).
 - JUnit names end with the AC id (`…_AC_001_6`); Vitest `it` names start with it.
 - The real Google client is used on staging only.
 
@@ -343,6 +409,14 @@ own client.
 | Layout (Q13) | A centred antd card from the shared kit, SRS 1.1.1 wording | A Figma frame | No frame exists |
 | Signing key | `TSOLVE_SIGNING_KEY`, HMAC-SHA256, no default | Asymmetric keys; one key per use | Only the server makes and checks the values; one secret is enough |
 | Exception to backend AGENTS.md rules 1, 3, 4 (Hiếu, 2026-10-29) | `identity.signin` keeps the approved shape: a concrete `SignInStateService` (no interface), the `SignInState` entity used by the controllers, a flat `signin` package | Interface plus implementation, controller-facing DTOs, `controller/service/dto` sub-packages (the AGENTS.md rules) | The sign-in endpoints are redirects with no request or response DTOs, and the service has one implementation; the approved design and the QA tests already use this shape. Scope: `identity.signin` only |
+| Login CSRF cookie (KAN-231 Q1–Q5, Hiếu, 2026-10-31) | `authorize` on `login.` sets `__Host-TSOLVE_SIGNIN` (HttpOnly, Secure, Lax, Path `/`, no Domain, 600 s) holding 32 random bytes; only their SHA-256 is kept on the state (`browser_binding_hash`); `authorize` accepts each state once (`authorized_at`); the callback compares hashes in constant time, answers the 400 MSG141 page without a match, and expires the cookie in every answer; all three targets (AC-001.44–.47) | Set at sign-in start and checked at `complete` (the cookie of one host never reaches `login.`; the callback's side effects would still run; no Jira-link cover); a `Domain=` cookie (drops `__Host-`); the state value or its HMAC in the cookie (state in browser storage, against NFR 3; deterministic); one cookie per state; `SameSite=Strict`; a 302 to the Workspace Login instead of the page | One host, the check stays at the callback, the `web_sessions.token_hash` pattern, NFR 3 holds with a small rewording; authorize-once is what makes the cookie bind the browser that went to Google. Cost: two parallel sign-ins in one browser → one or both tabs get MSG141 and start again (row 47) |
+| No Google domain (KAN-231 Q8) | Refused at sign-in start (302 `/login?error=MSG141`, no state, `WARN` with the Workspace id), at `authorize` and at the callback (400 MSG141 page) (AC-001.48/.49) | Refuse at `authorize` only; 404 at sign-in start | Never sent to Google without `hd`; the user sees a known code on their own site. Hiếu accepts MSG141's text for this case |
+| Identity time (KAN-231 Q9) | `IdentityClock` wrapping a `java.time.Clock`, bean in `SignInConfig`; tests pass `Clock.fixed` | A second `Clock` bean `identityClock` with `@Qualifier`; one shared `Clock` bean in `common` | No second `Clock` bean, so no other module's wiring can break; identity owns its time; the shared bean would edit the ticket module |
+| Platform gap (KAN-231 Q10) | T9 and T9b against the ports and doubles; `accounts` and `account_roles` with their own `workspace_id` (no base entity, FK or RLS yet); explicit Workspace id in every repository method; interim production `LocalTenantScope`; Task 14 (after KAN-98 / KAN-99 are on `main`) moves `Account` and `account_roles` onto the platform base entity with the FK to `workspaces`, RLS and the adapters; no edit to platform Task 15's seed. Exception to backend AGENTS.md §7 (Database, the tenant-table convention of platform AC-001.8) (Hiếu, 2026-10-31): until Task 14, `accounts` and `account_roles` have an interim `workspace_id UUID NOT NULL` column with no `REFERENCES workspaces (id)` foreign key, no row-level security (neither enabled nor forced, no tenant policy), and `Account` does not extend `TenantEntity`. Scope: these two tables only; Task 14 ends the exception, and identity cannot reach `completed` before it | Wait for KAN-98 / KAN-99; a smaller T9 and the Account part after the platform | The pattern T8 proved; the rework is small and mechanical; isolation never relies on RLS alone. Cost: no local-stack demo while `NoWorkspaceLookup` answers 404 |
+| Task 9 PR split (KAN-231 Q11) | Two PRs: T9 (KAN-231, the callback refuses forged, replayed, cookie-less returns and Google failures: AC-001.7–.9, .44–.50) and T9b (KAN-235, Workspace and Account checks, `accounts`, hand-off: AC-001.10–.16) | One large PR; three PRs with the review follow-ups alone first | Each PR is a behaviour Hiếu can test from the callback URL; reviews stay small; one branch per Jira issue. Replaces "one PR per task" (Q12 above) for Task 9 only |
+| Console state before T11 (KAN-231 Q12) | Shared checks, then the 400 MSG141 page; nothing logged in | Bring AC-001.29–.31 forward; 501 | Safe and small; T11 stays as planned |
+| Account email uniqueness (KAN-231 Q13) | Unique lower-case email on the whole platform, as the spec says (GBR-37, D7) | Unique per Workspace (a spec change against D7) | The spec is the contract; this design said "per Workspace" by mistake (fixed here and in row 24) |
+| Workspace gone at the callback (KAN-231 Q14) | State consumed, 400 MSG141 page, no session (AC-001.50) | Treat as not Active (MSG120 page) | "MSG141 when no target is known" in Interface Contracts; there is no site to redirect to |
 
 ### Edge cases and risks (STORY-001)
 
@@ -356,9 +430,9 @@ authorization, data integrity, integration, compliance. Skipped: business logic 
 | 21 | STORY-001 | Authorization | Callback with `?workspace=beta`, a spoofed `Host` / `X-Forwarded-Host`, or another site's cookie | Critical | Ignored; the target comes only from the state (AC-001.7) | Task 9 |
 | 22 | STORY-001 | Integration | ID token with a wrong `aud` or `iss`, expired, a nonce mismatch, `email_verified` false, `alg: none`, a key not in the JWKS | Critical | MSG06, no session (AC-001.9) | Task 9 |
 | 23 | STORY-001 | Error cascades | Google's token endpoint or JWKS down or slow | High | MSG06 after the timeout, no 500 (AC-001.9) | Task 9 |
-| 24 | STORY-001 | Data integrity | The same email has an Account in both Workspaces | Critical | The callback for A finds and updates only A's Account (AC-001.15) | Task 9 |
-| 25 | STORY-001 | Input extremes | Email `Lan.Tran@Company.Example`, `hd` `ACME.com` | High | Matched ignoring case (AC-001.11/.12) | Task 9 |
-| 26 | STORY-001 | Timing | Two callbacks with the same state (back button, a repeated redirect) | High | One goes on; the other gets MSG141 (AC-001.2/.6) | Task 9 |
+| 24 | STORY-001 | Data integrity | Workspace B's Account email signs in on Workspace A (an email exists only once on the whole platform, GBR-37, D7) | Critical | MSG09 on A's site; B's Account is neither found nor changed (AC-001.12/.15) | Task 9b |
+| 25 | STORY-001 | Input extremes | Email `Lan.Tran@Company.Example`, `hd` `ACME.com` | High | Matched ignoring case (AC-001.11/.12) | Task 9b |
+| 26 | STORY-001 | Timing | Two callbacks with the same state (back button, a repeated redirect) | High | One goes on; the other gets MSG141 (AC-001.2/.6) | Tasks 9, 9b |
 | 27 | STORY-001 | Timing | A hand-off code redeemed twice (two tabs, a reload of `complete`) | Critical | One session; the second gets `/login?error=MSG141` (AC-001.17/.19) | Task 10 |
 | 28 | STORY-001 | Authorization | A hand-off code of Workspace A presented on site B or on `admin.` | Critical | MSG141 on that site, no session (AC-001.17/.19) | Task 10 |
 | 29 | STORY-001 | Authorization | A's cookie copied to B or to `admin.`; an Operator cookie on a Workspace site | Critical | 401 MSG123, endpoint not run, A's session not ended (AC-001.20/.21/.32) | Tasks 10, 11 |
@@ -366,7 +440,7 @@ authorization, data integrity, integration, compliance. Skipped: business logic 
 | 31 | STORY-001 | State transitions | Idle 59 vs 61 minutes; only background polling for 2 h; 8 h with activity | High | MSG07 just past each limit (AC-001.23–.25), with the injected `Clock` | Task 10 |
 | 32 | STORY-001 | State transitions | Account deactivated or its Roles changed during a session | High | Next request: MSG10, or the new Roles (AC-001.26/.27) | Task 10 |
 | 33 | STORY-001 | Compliance | A state value, code, ID token or cookie value in a log or in browser storage | High | Never; session ids stored only as hashes (NFR 3) | Task 10 |
-| 34 | STORY-001 | Environment | A `__Host-` + `Secure` cookie on `http://acme.localhost` in local dev | Medium | Check in T10's local run which browsers accept it; note the result in `.env.example` | Task 10 |
+| 34 | STORY-001 | Environment | A `__Host-` + `Secure` cookie on `http://acme.localhost` in local dev | Medium | Check in T10's local run which browsers accept it, for `__Host-TSOLVE_SESSION` and for the sign-in cookie `__Host-TSOLVE_SIGNIN` on `http://login.localhost` (KAN-231); note the result in `.env.example` | Tasks 9, 10 |
 | 35 | STORY-001 | User types | Allow-list entry ` Ops@X.com `, or an email removed from the list | High | Trimmed and compared ignoring case (AC-001.29/.30); removed → MSG135 at the next request (AC-001.33) | Task 11 |
 | 36 | STORY-001 | User types | An Operator who also has a Workspace Account | High | Each site gets only its own kind of session (AC-001.29/.32) | Task 11 |
 | 37 | STORY-001 | Authorization | Jira link: a tracker account in a callback parameter; a relink; a suspended Workspace | Critical | Parameter ignored (AC-001.38); link replaced (AC-001.36); MSG121 (AC-001.37) | Task 12 |
@@ -374,10 +448,17 @@ authorization, data integrity, integration, compliance. Skipped: business logic 
 | 39 | STORY-001 | Input extremes | `/login?error=MSG122&google_domain=<script>`; `error=MSG07`; `error=MSG120` | High | MSG122 dropped and text never rendered as HTML; empty message area (AC-001.42/.43) | Task 7 |
 | 40 | STORY-001 | Timing | A double click on "Sign in with Google" | Low | The button is pending after the first click; one navigation | Task 7 |
 | 41 | STORY-001 | Scale | Rows of old states, codes and ended sessions pile up | Medium | `SessionCleanup` removes them | Task 10 |
-| 42 | STORY-001 | Error cascades | The database is unavailable during the callback or `complete` | Medium | No session (one transaction); the browser gets be-foundation's 500 ProblemDetail (accepted: generic 500 (Hiếu, 2026-10-28)) | Tasks 9, 10 |
+| 42 | STORY-001 | Error cascades | The database is unavailable during the callback or `complete` | Medium | No session (one transaction); the browser gets be-foundation's 500 ProblemDetail (accepted: generic 500 (Hiếu, 2026-10-28)) | Tasks 9, 9b, 10 |
 | 43 | STORY-001 | Authorization | Q1: a path outside the four redirect paths (for example `/api/v1/anything`) | High | Anonymous: 401, no form login, no HTTP Basic; signed in: reaches it (the lowest-order chain `anyRequest().authenticated()`) | Task 8 |
 | 44 | STORY-001 | Input extremes | Q2: `GET /api/v1/auth/sign-in` on a host that is no Workspace site and not the Platform Console origin (an unknown host, `login.`, `api.`) | High | 404, status only, no state created (same rule as AC-001.5) | Task 8 |
-| 45 | STORY-001 | Authorization | Login CSRF: an attacker starts a sign-in and gets a callback URL (state + code) for the attacker's own Google account, then makes the victim's browser open it | High | Open item, spec change pending (owner Hiếu, before Task 9): a short-lived `__Host-` cookie bound to the state value is set at sign-in start and checked at the callback; a callback without the matching cookie is refused. Not yet an AC; `spec.md` is not edited here | Task 9 |
+| 45 | STORY-001 | Authorization | Login CSRF: an attacker starts a sign-in and gets a callback URL (state + code) for the attacker's own Google account, then makes the victim's browser open it | High | Closed by the 2026-10-31 spec change (KAN-231 Q1–Q7): `authorize` sets `__Host-TSOLVE_SIGNIN` and accepts each state once; the callback without the matching cookie consumes the state and answers the 400 MSG141 page; no session, no Account change, no link; every callback answer expires the cookie (AC-001.44–.47) | Task 9 |
+| 46 | STORY-001 | Authorization | Jira-link phishing: the attacker sends the victim the attacker's own link URL (`authorize?state=<Workspace + attacker's tracker account>`); the victim signs in, and the attacker's Jira account is linked to the victim's Account. The victim's own browser makes every request, so the sign-in cookie does not help | Critical | Open, for Task 12 (KAN-231 Q6): for example a confirm page on `login.` ("Link Jira account X to your account Y?") before the link is recorded; needs its own criterion when Task 12 is planned. Not in the 2026-10-31 spec change | Task 12 |
+| 47 | STORY-001 | Timing | Two sign-ins in two tabs of one browser: the later `authorize` overwrites `__Host-TSOLVE_SIGNIN` | Medium | One or both tabs get the 400 MSG141 page and start again (AC-001.46, KAN-231 Q3). Both `authorize` calls before either callback: if the later tab's callback comes first, it signs in and the earlier tab's callback finds no cookie; if the earlier tab's callback comes first, the cookie does not match it, and its answer expires the cookie (AC-001.47), so the later tab gets MSG141 too | Task 9 |
+| 48 | STORY-001 | Integration | A link preview or an email scanner opens an `authorize` URL first | Low | It uses the state value up; the person gets the MSG141 page and starts again (AC-001.45). Workspace and Console `authorize` URLs exist only as redirects; Jira-link URLs are shown by `jira-app` (Decided in planning, KAN-231) | Task 9 |
+| 49 | STORY-001 | State transitions | The state's Workspace is deleted, or no longer found by the lookup, before the callback | High | State consumed, 400 MSG141 page on `login.`, no session (AC-001.50) | Task 9 |
+| 50 | STORY-001 | Input extremes | A Workspace with no Google domain (never set, or cleared after a state was made) | High | Sign-in start: 302 `/login?error=MSG141`, no state, `WARN` with the Workspace id only; `authorize` and callback: 400 MSG141 page; never sent to Google without `hd` (AC-001.48/.49) | Task 9 |
+| 51 | STORY-001 | Timing | Two `authorize` requests for the same state at once (a double load), or a reload of `authorize` | High | The conditional update lets one through (cookie + 302 to Google); the other gets the 400 MSG141 page and no cookie (AC-001.44/.45) | Task 9 |
+| 52 | STORY-001 | Input extremes | Callback with neither `code` nor `error`; an ID token with no `email` claim | Medium | MSG06, no session (AC-001.9; Decided in planning, KAN-231) | Task 9 |
 
 Q1-Q5 (Hiếu, 2026-10-29): Q1 `AuthSecurityConfig` also adds a second, lowest-order `SecurityFilterChain`
 (`anyRequest().authenticated()`, 401, no form login, no HTTP Basic); be-foundation `roles-security` replaces it later.
@@ -387,10 +468,12 @@ of the Task 8 classes before the QA tests. Q5 the developer may edit ticket's `I
 `ImportControllerTest` test properties only.
 
 Task 8 review (Hiếu, 2026-10-29): the review is `06-evaluation/identity/task-8-sign-in-start-review.md`. The AGENTS.md
-exception is recorded in Key decisions above. Login CSRF is row 45: a Change Mode spec edit (owner Hiếu) must add the
-cookie criteria and be approved before Task 9. Task 9 also takes the two other review findings (see tasks.md Task 9).
+exception is recorded in Key decisions above. Login CSRF is row 45, closed by the Change Mode spec edit of 2026-10-31
+(AC-001.44–.47), which Hiếu approves before Task 9 code starts. The two other review findings are in Task 9: the
+Workspace with no Google domain (AC-001.48/.49, Key decisions "No Google domain") and `IdentityClock` (Key decisions
+"Identity time").
 
-Open questions for the spec owner: login CSRF cookie (row 45), spec change pending before Task 9. Row 42 is accepted (C3, Hiếu, 2026-10-28): a database failure during a
+Open questions for the spec owner: none for Task 9 / 9b once the 2026-10-31 spec change is approved (row 45 closed; row 46 waits for the Task 12 plan). Row 42 is accepted (C3, Hiếu, 2026-10-28): a database failure during a
 sign-in redirect keeps be-foundation's generic 500.
 ## Task 4 contract proposal — KAN-110
 `PUT /api/v1/users/{userId}` (`updateUserRoles`) accepts generated UpdateUserRolesRequest: roles, nullable UUID Department, UUID Space ids, optional Project/Space handovers and `confirmTicketResolverRemoval`. It returns confirmed UserDetail or400/401/403/404/409 Problem. UserDetail adds `ticketResolverProjectIds` (UUID[]) for the memberships that MSG78 actually removes; preserve historical references separately from current membership and management.
