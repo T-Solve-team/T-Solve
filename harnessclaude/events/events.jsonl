@@ -410,3 +410,5 @@
 {"ts":"2026-10-31T11:36:32.846Z","type":"commit-recorded","module":"identity","repo":"default","sha":"5310e2b10093f244440daabf3f3ca7ad14b1d613"}
 {"ts":"2026-10-31T11:36:32.889Z","type":"feature-status","module":"identity","feature":"space-handover","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-31T11:36:32.928Z","type":"feature-status","module":"identity","feature":"space-handover","from":"evaluating","to":"passing"}
+{"ts":"2026-10-31T11:44:58.109Z","type":"quick-opened","what":"Fix KAN-112 CI form-test timers surviving jsdom teardown","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-31T11:56:58.582Z","type":"quick-closed","what":"Fix KAN-112 CI form-test timers surviving jsdom teardown","files":["frontend/src/shared/forms/forms.test.tsx","docs/bug-log.md"]}

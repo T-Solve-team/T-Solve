@@ -31,3 +31,7 @@ Informational: open BUG-071 records later browser mock traffic bypassing interce
 - Format, lint, typecheck, build, deterministic generation and 9/9 trace passed. No existing test/timeout was disabled or weakened.
 - Browser verified UC-06 cancellation and two-Space deactivation, UC-07 role removal and transfer, keyboard selection; later navigation error is explicitly documented.
 - User approved commit/push and PR creation after this review. Code committed as `5310e2b`; feature marked passing through `sdd.ts`. The identity module remains implementing.
+
+## CI follow-up review — BUG-072
+
+The initial remote test process exited 1 despite all 963 assertions passing: Ant Design form timers fired after JSDOM teardown. User approved a two-file quick change. Review confirms the repair is scoped to form-test timer ownership and the bug log: explicit unmount, pending-timer execution inside act, a zero-timer invariant and real-timer restoration in finally. Existing assertions, timeouts and Vitest's error handling remain intact. The invariant failed with 3 pending timers before the fix; 4 form tests and a fresh full 963-test run pass afterward with exit 0. Format/lint/typecheck/build/generation also pass; generated files have no diff. Remote CI must be checked after push before calling the PR green.

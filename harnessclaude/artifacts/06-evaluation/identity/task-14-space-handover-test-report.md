@@ -41,3 +41,11 @@ At 1366 × 768, UC-07 removed KM after handing over IT Knowledge; the recipient'
 BUG-071 remains open: later mock User List/Department requests reached Vite's backend proxy and failed ECONNREFUSED. Reload restored the mock list; it resets in-memory fixtures. Root cause/reproducibility not established. Screenshot `kan-112-msw-network-error.jpg`. Production backend integration is not tested or implemented.
 
 One new draft-test assertion failed because it asserted a disabled Cancel button, which the approved criterion does not require. Replaced it with the required disabled recipient control and request-count assertion; final 15 status tests passed. Existing tests, product checks and timeouts were not weakened. JSDOM reports its existing pseudo-element getComputedStyle warning. Three chatbot tests exceed 5 seconds (longest ~13.3s); all passed. No coverage script/threshold is configured for this feature; no coverage percentage is claimed.
+
+## PR #93 CI follow-up — BUG-072
+
+CI run 41197684615 passed 963 assertions but exited 1 with two uncaught `window is not defined` errors. Stack traces pointed to Ant Design's delayed form state after `forms.test.tsx` JSDOM teardown; this is not equivalent to a green workflow. Format/lint/types had passed; build and generation were skipped in that failed CI run.
+
+User approved an exact-file quick change for the shared forms test and bug log. Added controlled timers and an after-cleanup zero-timer assertion: deterministic red was 3 passed / 1 failed, with the no-field-errors regression (BUG-072) reporting `expected 3 to be +0`. Draining only pending timers inside React act before restoring real timers makes all 4 form tests pass while retaining that assertion. No runtime implementation or unhandled-error suppression was added.
+
+Fresh full rerun: `npm run test -- --no-cache --maxWorkers=2 --reporter=json --outputFile=node_modules/.cache/kan112-ci-full.json` → 963 passed / 0 failed / 0 skipped, 50 files, success true and process exit 0; no uncaught timer exceptions. Format, lint, typecheck, build and API generation passed; `git diff --exit-code -- src/shared/api/generated` exited 0. Remote CI confirmation follows the repair push.
