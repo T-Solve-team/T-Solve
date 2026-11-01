@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { server } from '@/mocks/server';
@@ -17,11 +17,14 @@ async function openQueue(path = '/review-queue') {
   return { user, ...view };
 }
 
-/** Eligibility refreshes after selection; interact only when the real action becomes available. */
-async function clickDecision(user: ReturnType<typeof userEvent.setup>, name: string) {
+/** BUG-084: the 5 s poll can disable a button between userEvent's hover and click steps. */
+async function clickDecision(name: string) {
   const button = screen.getByRole('button', { name });
-  await waitFor(() => expect(button).toBeEnabled());
-  await user.click(button);
+  await waitFor(() => {
+    expect(button).toBeEnabled();
+    // Check and activate in one turn; no action is sent while eligibility is refreshing.
+    fireEvent.click(button);
+  });
 }
 
 describe('ReviewQueuePage', () => {
@@ -63,7 +66,7 @@ describe('ReviewQueuePage', () => {
   it('AC-002.1 / AC-002.3 approves one ticket at once (no confirm) and shows MSG14', async () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
-    await clickDecision(user, 'Approve');
+    await clickDecision('Approve');
     expect(await screen.findByText(msg('MSG14', { count: 1 }))).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: 'ITSUP-1031' })).not.toBeInTheDocument(),
@@ -76,14 +79,14 @@ describe('ReviewQueuePage', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1102' }));
     expect(screen.getByText('2 selected')).toBeInTheDocument();
-    await clickDecision(user, 'Approve');
+    await clickDecision('Approve');
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent(msg('MSG19', { count: 2 }));
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     expect(screen.getByText('2 selected')).toBeInTheDocument();
     expect(reviewStore.history).toEqual([]);
-    await clickDecision(user, 'Approve');
+    await clickDecision('Approve');
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'OK' }));
 
     expect(await screen.findByText(msg('MSG14', { count: 2 }))).toBeInTheDocument();
@@ -93,7 +96,7 @@ describe('ReviewQueuePage', () => {
   it('AC-003.1 / AC-003.2 / AC-003.3 rejects with MSG15, requires one reason and shows MSG16 (BUG-084)', async () => {
     const { user, queryClient } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
-    await clickDecision(user, 'Reject');
+    await clickDecision('Reject');
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Reject Ticket')).toBeInTheDocument();
@@ -117,7 +120,7 @@ describe('ReviewQueuePage', () => {
     const { user } = await openQueue();
     await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await user.click(screen.getByRole('checkbox', { name: 'Select ITNET-0415' }));
-    await clickDecision(user, 'Request Changes');
+    await clickDecision('Request Changes');
 
     const dialog = await screen.findByRole('dialog');
     await user.type(

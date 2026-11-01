@@ -1,0 +1,17 @@
+.content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.text {
+  white-space: pre-wrap;
+}
+
+.evidence {
+  margin: 0;
+  padding-inline-start: var(--ant-padding-lg);
+}
+
+.evidence li + li {
+  margin-top: var(--ant-margin-sm);
+}
