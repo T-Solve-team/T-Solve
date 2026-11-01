@@ -17,7 +17,11 @@ describe('Ticket Detail review', () => {
   it('AC-006.3 AC-005.5 keeps pending actions mounted and disabled during refetch (BUG-089)', async () => {
     const user = userEvent.setup();
     const { queryClient } = renderApp(detailPath());
-    const approve = await screen.findByRole('button', { name: 'Approve' });
+    // BUG-092: this is the file's first test, so its first wait also loads the lazy page module, which under load takes
+    // more than the default 1 s (guideline 10 §6: give the first findBy 5 s). Wait with a cheap text query, then look up
+    // the buttons once: findByRole('button') re-runs on every DOM change and blocks the render it waits for.
+    await screen.findByText('Pending review', {}, { timeout: 5000 });
+    const approve = screen.getByRole('button', { name: 'Approve' });
     const reject = screen.getByRole('button', { name: 'Reject' });
     const changes = screen.getByRole('button', { name: 'Request Changes' });
     approve.focus();
@@ -189,7 +193,7 @@ describe('Ticket Detail review', () => {
     expect(screen.queryByRole('button', { name: 'Request Changes' })).not.toBeInTheDocument();
   });
 
-  it('AC-006.5 renders filenames as text, readable sizes, and only safe references', async () => {
+  it('AC-006.5 renders filenames as text, readable sizes, and only safe references (BUG-091)', async () => {
     const record = reviewStore.tickets.find((ticket) => ticket.ticketId === firstId);
     if (!record) throw new Error('Missing fixture');
     record.evidence = [
@@ -205,7 +209,10 @@ describe('Ticket Detail review', () => {
       url,
     }));
     renderApp(detailPath());
-    expect(await screen.findByRole('link', { name: '<script>file0</script>' })).toHaveAttribute(
+    // BUG-091: wait with a cheap text query, then check the link once. findByRole('link') inside the wait re-runs on
+    // every DOM change (~200 ms each under load) and blocks the render it waits for, so it used up the whole 1 s.
+    expect(await screen.findByText('<script>file0</script>')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '<script>file0</script>' })).toHaveAttribute(
       'href',
       '/api/evidence/a',
     );
