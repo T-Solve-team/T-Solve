@@ -5,6 +5,7 @@ import { MOCK_USERS } from '@/mocks/session';
 import { server } from '@/mocks/server';
 import { problem } from '@/shared/api/mocks';
 import type { CurrentUser } from '@/shared/api';
+import { msg } from '@/shared/messages';
 import { SESSION_QUERY_KEY, type DevUserId } from '@/shared/auth';
 import { renderApp } from '@/test/render';
 
@@ -31,6 +32,52 @@ function signOutSpy(options: { delayMs?: number; fail?: boolean } = {}) {
 /** The Account card: a region named "Account" (the developer adds the accessible name). */
 async function findAccountCard() {
   return within(await screen.findByRole('region', { name: 'Account' }, { timeout: 5000 }));
+}
+
+/** The Spaces card: a region named "Spaces" (the developer adds the accessible name, Q2). */
+async function findSpacesCard() {
+  return within(await screen.findByRole('region', { name: 'Spaces' }, { timeout: 5000 }));
+}
+
+/** The Spaces card once its spinner is gone, i.e. after the list, MSG142 or MSG06 has taken its place. */
+async function findLoadedSpacesCard() {
+  const region = await screen.findByRole('region', { name: 'Spaces' }, { timeout: 5000 });
+  await waitFor(() => expect(within(region).queryByText(/Loading/)).not.toBeInTheDocument(), {
+    timeout: 5000,
+  });
+  return within(region);
+}
+
+/** The text of each item of the list with this accessible name. */
+function spaceNames(listName: string): string[] {
+  return within(screen.getByRole('list', { name: listName }))
+    .getAllByRole('listitem')
+    .map((item) => item.textContent?.trim() ?? '');
+}
+
+const SPACES_URL = /\/api\/v1\/me\/spaces$/;
+
+/** Counts `GET /me/spaces` requests while the real handler keeps answering. Call before `renderApp`. */
+function spacesRequests() {
+  const spy = { calls: 0 };
+  server.events.on('request:start', ({ request }) => {
+    if (request.method === 'GET' && SPACES_URL.test(new URL(request.url).pathname)) spy.calls += 1;
+  });
+  return spy;
+}
+
+/** Resolves when the mock has answered `GET /me/spaces`. Call before `renderApp`. */
+function spacesAnswered(): Promise<void> {
+  return new Promise((resolve) => {
+    server.events.on('response:mocked', ({ request }) => {
+      if (SPACES_URL.test(new URL(request.url).pathname)) resolve();
+    });
+  });
+}
+
+/** Makes `/me/spaces` answer this list for every user. */
+function spacesAre(spaces: { spaceId: string; name: string }[]) {
+  server.use(http.get('*/api/v1/me/spaces', () => HttpResponse.json(spaces)));
 }
 
 /** The text of a label/value row, without the label and a trailing colon; null when the label is absent. */
@@ -63,6 +110,10 @@ function projectRows() {
 describe('MyProfilePage', () => {
   beforeAll(async () => {
     await import('./MyProfilePage');
+  });
+
+  afterEach(() => {
+    server.events.removeAllListeners();
   });
 
   describe('AC-003.1 account, Roles, Department, Departments and Projects', () => {
@@ -117,9 +168,11 @@ describe('MyProfilePage', () => {
   });
 
   describe('edge rows for the account and Projects', () => {
-    it('edge 53 shows an Employee with only the Account card (no Departments, Projects or Spaces)', async () => {
+    it('edge 53 shows an Employee the Account card and a Spaces card with MSG142, but no Departments or Projects', async () => {
+      const answered = spacesAnswered();
       renderApp('/profile', { user: 'employee' });
       const card = await findAccountCard();
+      await answered;
       expect(card.getByText('Trần Thị Lan')).toBeInTheDocument();
       expect(card.getByText('lan.tran@company.example')).toBeInTheDocument();
       expect(fieldValue(card, 'Roles')).toBe('Employee');
@@ -127,7 +180,9 @@ describe('MyProfilePage', () => {
       expect(card.queryByText('Departments', { exact: true })).not.toBeInTheDocument();
       expect(screen.queryByRole('table', { name: 'Projects' })).not.toBeInTheDocument();
       expect(screen.queryByText('Projects', { exact: true })).not.toBeInTheDocument();
-      expect(screen.queryByText('Spaces', { exact: true })).not.toBeInTheDocument();
+      const spaces = await findLoadedSpacesCard();
+      expect(spaces.getByText(msg('MSG142'))).toBeInTheDocument();
+      expect(spaces.queryAllByRole('listitem')).toHaveLength(0);
       expect(screen.queryByText('Spaces I manage')).not.toBeInTheDocument();
     });
 
@@ -162,20 +217,26 @@ describe('MyProfilePage', () => {
     it('AC-003.2 lists "Spaces I manage" with the managed Space for a Knowledge Manager', async () => {
       renderApp('/profile', { user: 'km' });
       expect(await screen.findByText('Spaces I manage', {}, { timeout: 5000 })).toBeInTheDocument();
-      expect(screen.getByText('IT Space')).toBeInTheDocument();
+      expect(
+        within(screen.getByRole('list', { name: 'Spaces I manage' })).getByText('IT Space'),
+      ).toBeInTheDocument();
     });
 
     it('AC-003.2 lists "Spaces I manage" for a Project Manager who is also a Knowledge Manager', async () => {
       renderApp('/profile', { user: 'pm-km' });
       expect(await screen.findByText('Spaces I manage', {}, { timeout: 5000 })).toBeInTheDocument();
-      expect(screen.getByText('HR Space')).toBeInTheDocument();
+      expect(
+        within(screen.getByRole('list', { name: 'Spaces I manage' })).getByText('HR Space'),
+      ).toBeInTheDocument();
     });
 
-    it('AC-003.2 does not show "Spaces I manage" or a Spaces card for a Project Manager who is not a Knowledge Manager', async () => {
+    it('AC-003.2 does not show "Spaces I manage" for a Project Manager who is not a Knowledge Manager', async () => {
       renderApp('/profile', { user: 'pm' });
       await findAccountCard();
+      const spaces = await findLoadedSpacesCard();
+      expect(spaces.getByRole('list', { name: 'Spaces I can view' })).toBeInTheDocument();
+      expect(spaces.getAllByRole('listitem')).toHaveLength(2);
       expect(screen.queryByText('Spaces I manage')).not.toBeInTheDocument();
-      expect(screen.queryByText('Spaces', { exact: true })).not.toBeInTheDocument();
     });
 
     it.each(['tr', 'admin', 'employee'] as const)(
@@ -187,13 +248,18 @@ describe('MyProfilePage', () => {
       },
     );
 
-    it('edge 56 hides "Spaces I manage" and the Spaces card for a Knowledge Manager with no managed Spaces', async () => {
+    it('edge 56 hides "Spaces I manage" and shows the Spaces card with MSG142 for a Knowledge Manager with no managed and no viewable Spaces', async () => {
       meAs('km', { managedSpaces: [] });
+      spacesAre([]);
+      const answered = spacesAnswered();
       renderApp('/profile', { user: 'km' });
       const card = await findAccountCard();
+      await answered;
       expect(card.getByText('Lê Thu Hương')).toBeInTheDocument();
       expect(screen.queryByText('Spaces I manage')).not.toBeInTheDocument();
-      expect(screen.queryByText('Spaces', { exact: true })).not.toBeInTheDocument();
+      const spaces = await findLoadedSpacesCard();
+      expect(spaces.getByText(msg('MSG142'))).toBeInTheDocument();
+      expect(spaces.queryAllByRole('listitem')).toHaveLength(0);
     });
 
     it('edge 74 cuts a long managed Space name to one line with the full name as its title', async () => {
@@ -204,6 +270,161 @@ describe('MyProfilePage', () => {
       const item = screen.getByText(name);
       expect(item.closest('.ant-typography-ellipsis')).not.toBeNull();
       expect(item.closest('[title]')?.getAttribute('title')).toBe(name);
+    });
+  });
+
+  describe('AC-003.3 Spaces I can view', () => {
+    it('AC-003.3 loads /me/spaces once on open and lists "Spaces I can view" sorted by name for tr', async () => {
+      const spy = spacesRequests();
+      renderApp('/profile', { user: 'tr' });
+      await findLoadedSpacesCard();
+      const names = spaceNames('Spaces I can view');
+      expect(names).toHaveLength(3);
+      expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'vi')));
+      const list = screen.getByRole('list', { name: 'Spaces I can view' });
+      list.querySelectorAll('.anticon').forEach((icon) => {
+        expect(icon).toHaveAttribute('aria-hidden', 'true');
+      });
+      expect(list.querySelectorAll('.anticon-folder-open, .anticon-folder')).toHaveLength(3);
+      expect(screen.queryByRole('list', { name: 'Spaces I manage' })).not.toBeInTheDocument();
+      expect(spy.calls).toBe(1);
+    });
+
+    it('AC-003.3 shows the Spaces card with a spinner while /me/spaces loads', async () => {
+      server.use(http.get('*/api/v1/me/spaces', () => delay('infinite')));
+      renderApp('/profile', { user: 'employee' });
+      const card = await findSpacesCard();
+      expect(card.getByText(/Loading/)).toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: 'Spaces I can view' })).not.toBeInTheDocument();
+      expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+    });
+
+    it('AC-003.15 shows the Spaces card with a spinner while the viewable Spaces load', async () => {
+      server.use(
+        http.get('*/api/v1/me/spaces', async () => {
+          await delay(400);
+          return HttpResponse.json([
+            { spaceId: '00000000-0000-4000-8000-0000000000b1', name: 'Late Space' },
+          ]);
+        }),
+      );
+      renderApp('/profile', { user: 'tr' });
+      await findAccountCard();
+      const region = screen.getByRole('region', { name: 'Spaces' });
+      expect(within(region).getByText(/Loading/)).toBeInTheDocument();
+      expect(within(region).queryByRole('list', { name: 'Spaces I can view' })).toBeNull();
+      const list = await within(region).findByRole('list', { name: 'Spaces I can view' });
+      expect(within(list).getByText('Late Space')).toBeInTheDocument();
+      expect(within(region).queryByText(/Loading/)).not.toBeInTheDocument();
+    });
+
+    it.each(Object.keys(MOCK_USERS) as DevUserId[])(
+      'AC-003.15 renders the Spaces card for %s',
+      async (user) => {
+        renderApp('/profile', { user });
+        await findAccountCard();
+        const spaces = await findLoadedSpacesCard();
+        expect(spaces.getByText('Spaces I can view')).toBeInTheDocument();
+      },
+    );
+
+    it('AC-003.15 shows MSG142 "No Spaces found" under "Spaces I can view" for employee', async () => {
+      renderApp('/profile', { user: 'employee' });
+      await findAccountCard();
+      const spaces = await findLoadedSpacesCard();
+      expect(spaces.getByText('Spaces I can view')).toBeInTheDocument();
+      expect(spaces.getByText(msg('MSG142'))).toBeInTheDocument();
+      expect(spaces.queryAllByRole('listitem')).toHaveLength(0);
+      expect(screen.queryByRole('list', { name: 'Spaces I can view' })).not.toBeInTheDocument();
+      expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+    });
+
+    it('edge 76 shows km\'s "IT Space" in both "Spaces I manage" and "Spaces I can view", managed list first', async () => {
+      renderApp('/profile', { user: 'km' });
+      await findLoadedSpacesCard();
+      const managed = screen.getByRole('list', { name: 'Spaces I manage' });
+      const viewable = screen.getByRole('list', { name: 'Spaces I can view' });
+      expect(within(managed).getByText('IT Space')).toBeInTheDocument();
+      expect(within(viewable).getByText('IT Space')).toBeInTheDocument();
+      expect(spaceNames('Spaces I can view')).toHaveLength(3);
+      expect(managed.compareDocumentPosition(viewable) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+
+    it('edge 79 shows MSG142 under "Spaces I can view" when /me/spaces answers [] and keeps "Spaces I manage" for km', async () => {
+      spacesAre([]);
+      const answered = spacesAnswered();
+      renderApp('/profile', { user: 'km' });
+      await findSpacesCard();
+      await answered;
+      const card = await findLoadedSpacesCard();
+      expect(
+        within(screen.getByRole('list', { name: 'Spaces I manage' })).getByText('IT Space'),
+      ).toBeInTheDocument();
+      expect(card.getByText('Spaces I can view')).toBeInTheDocument();
+      expect(card.getByText(msg('MSG142'))).toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: 'Spaces I can view' })).not.toBeInTheDocument();
+      expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+    });
+
+    it('AC-003.14 spaces shows MSG06 in the Spaces card when /me/spaces fails and still shows the account', async () => {
+      server.use(http.get('*/api/v1/me/spaces', () => problem(500)));
+      renderApp('/profile', { user: 'employee' });
+      const card = await findSpacesCard();
+      expect(await card.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(msg('MSG06'));
+      const account = await findAccountCard();
+      expect(account.getByText('Trần Thị Lan')).toBeInTheDocument();
+      expect(account.getByText('lan.tran@company.example')).toBeInTheDocument();
+      expect(account.getByText('Roles')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Try again/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: 'Spaces I can view' })).not.toBeInTheDocument();
+    });
+
+    it('AC-003.14 spaces keeps "Spaces I manage" and shows MSG06 in place of "Spaces I can view" for km (edge 66)', async () => {
+      server.use(http.get('*/api/v1/me/spaces', () => problem(500)));
+      renderApp('/profile', { user: 'km' });
+      const card = await findSpacesCard();
+      expect(await card.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(msg('MSG06'));
+      expect(
+        within(screen.getByRole('list', { name: 'Spaces I manage' })).getByText('IT Space'),
+      ).toBeInTheDocument();
+      await findAccountCard();
+      expect(screen.getAllByText(msg('MSG06'))).toHaveLength(1);
+    });
+
+    it('edge 67 a 401 on /me/spaces opens the MSG07 dialog and shows no MSG06 in the Spaces card', async () => {
+      server.use(http.get('*/api/v1/me/spaces', () => problem(401)));
+      renderApp('/profile', { user: 'tr' });
+      expect(await screen.findByRole('dialog', {}, { timeout: 5000 })).toHaveTextContent(
+        msg('MSG07'),
+      );
+      expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+    });
+
+    it("edge 58 cuts admin-tr's 120-character viewable Space name to one line with the full name on hover", async () => {
+      renderApp('/profile', { user: 'admin-tr' });
+      await findLoadedSpacesCard();
+      const names = spaceNames('Spaces I can view');
+      expect(names).toHaveLength(6);
+      const long = names.find((name) => name.length === 120);
+      expect(long).toBeDefined();
+      const item = screen.getByText(long ?? '');
+      expect(item.closest('.ant-typography-ellipsis')).not.toBeNull();
+      expect(item.closest('[title]')?.getAttribute('title')).toBe(long);
+    });
+
+    it('edge 62 lists 40 viewable Spaces in a plain list without paging', async () => {
+      const spaces = Array.from({ length: 40 }, (_, index) => ({
+        spaceId: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+        name: `Space ${String(index + 1).padStart(2, '0')}`,
+      }));
+      spacesAre(spaces);
+      const { container } = renderApp('/profile', { user: 'tr' });
+      await findLoadedSpacesCard();
+      expect(spaceNames('Spaces I can view')).toHaveLength(40);
+      expect(container.querySelector('.ant-pagination')).toBeNull();
+      expect(screen.queryByRole('button', { name: /Load more|Next/ })).not.toBeInTheDocument();
     });
   });
 
