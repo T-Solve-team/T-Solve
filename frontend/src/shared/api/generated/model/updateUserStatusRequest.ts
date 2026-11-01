@@ -10,6 +10,9 @@ import type { ProjectHandover } from './projectHandover';
 import type { SpaceHandover } from './spaceHandover';
 import type { UserAccountStatus } from './userAccountStatus';
 
+/**
+ * Frontend/MSW contract proposal pending backend integration. Deactivation requires handover of every managed Space and Active Project. Revalidate current recipient eligibility on submission, then commit account status and all handovers atomically. Reject the entire operation if any choice is invalid; MSG118 means no eligible Space recipient exists. Activation does not accept or reverse handovers.
+ */
 export interface UpdateUserStatusRequest {
   status: UserAccountStatus;
   projectHandovers?: ProjectHandover[];

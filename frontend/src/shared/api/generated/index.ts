@@ -1,3 +1,4 @@
+export * from './audit-log/audit-log';
 export * from './chatbot/chatbot';
 export * from './feedback/feedback';
 export * from './import/import';
