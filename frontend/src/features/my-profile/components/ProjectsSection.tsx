@@ -1,4 +1,6 @@
+import { Typography } from 'antd';
 import type { ProjectMembership } from '@/shared/api';
+import { msg } from '@/shared/messages';
 import { cells, DataTable, SectionCard, type DataTableColumn } from '@/shared/ui';
 import { PROJECT_ROLE_LABELS } from '../lib/labels';
 
@@ -25,17 +27,20 @@ const COLUMNS: DataTableColumn<ProjectMembership>[] = [
 
 type ProjectsSectionProps = { projects: readonly ProjectMembership[] };
 
-/** The user's Projects by Jira key; nothing is shown when there are none. */
+/** The user's Projects by Jira key; the card is always shown, with MSG143 when there are none (AC-003.16). */
 export function ProjectsSection({ projects }: ProjectsSectionProps) {
-  if (!projects.length) return null;
   return (
     <SectionCard title="Projects">
-      <DataTable
-        label="Projects"
-        columns={COLUMNS}
-        rows={projects}
-        rowKey={(project) => project.projectId}
-      />
+      {projects.length ? (
+        <DataTable
+          label="Projects"
+          columns={COLUMNS}
+          rows={projects}
+          rowKey={(project) => project.projectId}
+        />
+      ) : (
+        <Typography.Text type="secondary">{msg('MSG143')}</Typography.Text>
+      )}
     </SectionCard>
   );
 }

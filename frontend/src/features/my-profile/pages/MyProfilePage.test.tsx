@@ -169,8 +169,29 @@ describe('MyProfilePage', () => {
     });
   });
 
+  describe('AC-003.16 Projects card empty state', () => {
+    it.each(['employee', 'km', 'admin'] as const)(
+      'AC-003.16 shows the Projects card with MSG143 and no table for %s',
+      async (user) => {
+        renderApp('/profile', { user });
+        await findAccountCard();
+        expect(await screen.findByText('Projects', { exact: true })).toBeInTheDocument();
+        expect(screen.getByText(msg('MSG143'))).toBeInTheDocument();
+        expect(screen.queryByRole('table', { name: 'Projects' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('columnheader', { name: 'Jira project key' })).toBeNull();
+      },
+    );
+
+    it('AC-003.16 keeps the table and shows no MSG143 for a user with Projects', async () => {
+      renderApp('/profile', { user: 'pm' });
+      await findAccountCard();
+      expect(await screen.findByRole('table', { name: 'Projects' })).toBeInTheDocument();
+      expect(screen.queryByText(msg('MSG143'))).not.toBeInTheDocument();
+    });
+  });
+
   describe('edge rows for the account and Projects', () => {
-    it('edge 53 shows an Employee the Account card and a Spaces card with MSG142, but no Departments or Projects', async () => {
+    it('edge 53 shows an Employee the Account card and a Spaces card with MSG142, but no Departments or Projects table', async () => {
       const answered = spacesAnswered();
       renderApp('/profile', { user: 'employee' });
       const card = await findAccountCard();
@@ -181,7 +202,7 @@ describe('MyProfilePage', () => {
       expect(card.queryByText('Department', { exact: true })).not.toBeInTheDocument();
       expect(card.queryByText('Departments', { exact: true })).not.toBeInTheDocument();
       expect(screen.queryByRole('table', { name: 'Projects' })).not.toBeInTheDocument();
-      expect(screen.queryByText('Projects', { exact: true })).not.toBeInTheDocument();
+      expect(screen.getByText('Projects', { exact: true })).toBeInTheDocument();
       const spaces = await findLoadedSpacesCard();
       expect(spaces.getByText(msg('MSG142'))).toBeInTheDocument();
       expect(spaces.queryAllByRole('listitem')).toHaveLength(0);
