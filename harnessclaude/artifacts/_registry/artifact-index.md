@@ -149,3 +149,9 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | dashboard-audit | verified | artifacts/assets/dashboard-audit/kan-153-filtered.jpg |
 | — | review | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-review.md |
 | — | test-report | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-test-report.md |
+| — | module | tracker | draft | artifacts/03-modules/tracker/module.md |
+| — | spec | tracker | draft | artifacts/03-modules/tracker/spec.md |
+| — | design | tracker | draft | artifacts/04-plans/tracker/design.md |
+| — | design | tracker | draft | artifacts/04-plans/tracker/iteration-1/design.md |
+| — | tasks | tracker | draft | artifacts/04-plans/tracker/iteration-1/tasks.md |
+| RESEARCH-002 | research | tracker | in-progress | artifacts/01-research/RESEARCH-002-servicenow-and-zendesk-trackers.md |

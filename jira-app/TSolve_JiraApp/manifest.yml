@@ -1,0 +1,39 @@
+modules:
+  jira:issuePanel:
+    - key: tsolve-jiraapp-hello-world-issue-panel
+      resource: main
+      resolver:
+        function: resolver
+      render: native
+      title: TSolve
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+  trigger:
+    - key: tsolve-issue-created-trigger
+      endpoint: tsolve-issue-created-endpoint
+      events:
+        - avi:jira:created:issue
+      filter:
+        ignoreSelf: true
+  endpoint:
+    - key: tsolve-issue-created-endpoint
+      remote: tsolve-backend
+      route:
+        path: /api/v1/jira-app/events/issue-created
+  function:
+    - key: resolver
+      handler: index.handler
+remotes:
+  - key: tsolve-backend
+    baseUrl: https://resigned-ladle-saggy.ngrok-free.dev
+resources:
+  - key: main
+    path: src/frontend/index.jsx
+permissions:
+  scopes:
+    - read:jira-work
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/0e9fd967-781d-473e-9b2c-9388d71eafbf
