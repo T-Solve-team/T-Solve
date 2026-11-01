@@ -22,6 +22,8 @@ tags:
     description: Ticket List (Report3 UC-27; SRS III.6.2).
   - name: search
     description: Search of the Published tickets (Report3 UC-26; SRS III.6.1).
+  - name: profile
+    description: My Profile — the signed-in user's own Spaces and Solutions (AC-003).
   - name: jira-app
     description: Calls from the T-Solve Jira App through Forge Remote (Forge Invocation Token).
 paths:
@@ -247,6 +249,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CurrentUser'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/me/spaces:
+    get:
+      tags: [profile]
+      operationId: getMyViewableSpaces
+      summary: The Spaces the signed-in user can view, sorted by name.
+      responses:
+        '200':
+          description: The viewable Spaces; an empty list when there are none.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SpaceRef' }
         '401':
           $ref: '#/components/responses/Problem'
   /api/v1/auth/sign-in:
