@@ -1,4 +1,5 @@
 export * from './chatbot/chatbot';
+export * from './feedback/feedback';
 export * from './import/import';
 export * from './review/review';
 export * from './search/search';

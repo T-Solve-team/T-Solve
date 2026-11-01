@@ -22,6 +22,8 @@ tags:
     description: Ticket List (Report3 UC-27; SRS III.6.2).
   - name: search
     description: Search of the Published tickets (Report3 UC-26; SRS III.6.1).
+  - name: feedback
+    description: Feedback on a Published ticket (Report3 UC-28; SRS III.8.1).
 paths:
   /api/v1/users:
     post:
@@ -822,6 +824,35 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/tickets/{ticketId}/feedback:
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [feedback]
+      operationId: giveFeedback
+      summary: Saves this user's Feedback on a Published ticket; replaces any earlier Feedback of this user (UC-28).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketFeedbackRequest'
+      responses:
+        '204':
+          description: Feedback saved.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
 components:
   parameters:
     Page:
@@ -1254,6 +1285,16 @@ components:
             $ref: '#/components/schemas/TicketSearchResult'
         page:
           $ref: '#/components/schemas/PageMetadata'
+    TicketFeedbackRequest:
+      type: object
+      required: [isHelpful]
+      properties:
+        isHelpful:
+          type: boolean
+          description: true = Helpful, false = Not helpful.
+        comment:
+          type: [string, 'null']
+          maxLength: 500
     TicketIdList:
       type: object
       required: [ticketIds]
