@@ -1,11 +1,13 @@
 import { Button, Flex, Select, Typography } from 'antd';
 import styles from './ReviewQueueToolbar.module.css';
+import { MAX_REVIEW_SELECTION } from '../review-limits';
 
 type ReviewQueueToolbarProps = {
   departments: { departmentId: string; name: string }[];
   departmentId: string | undefined;
   onDepartmentChange: (departmentId: string | undefined) => void;
   selectedCount: number;
+  isDisabled?: boolean;
   onRequestChanges: () => void;
   onReject: () => void;
   onApprove: () => void;
@@ -23,11 +25,12 @@ export function ReviewQueueToolbar({
   departmentId,
   onDepartmentChange,
   selectedCount,
+  isDisabled = false,
   onRequestChanges,
   onReject,
   onApprove,
 }: ReviewQueueToolbarProps) {
-  const hasSelection = selectedCount > 0;
+  const hasSelection = selectedCount > 0 && selectedCount <= MAX_REVIEW_SELECTION && !isDisabled;
   return (
     <Flex justify="space-between" align="end" gap="middle" wrap>
       <Flex align="end" gap="middle">
@@ -44,8 +47,9 @@ export function ReviewQueueToolbar({
             ]}
           />
         </Flex>
-        <Typography.Text type="secondary" className={styles.count}>
+        <Typography.Text role="status" aria-live="polite" type="secondary" className={styles.count}>
           {selectedCount} selected
+          {selectedCount > MAX_REVIEW_SELECTION ? ` / ${MAX_REVIEW_SELECTION} maximum` : ''}
         </Typography.Text>
       </Flex>
       <Flex gap="middle">

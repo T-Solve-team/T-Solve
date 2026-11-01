@@ -31,6 +31,7 @@ import type {
   RequestChangesRequest,
   ReviewDecisionResult,
   ReviewQueuePage,
+  ReviewTicketDetail,
   TicketIdList,
 } from '../model';
 
@@ -54,6 +55,146 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetReviewTicketDetailUrl = (ticketId: string) => {
+  return `/api/v1/tickets/${ticketId}`;
+};
+
+/**
+ * @summary Frontend proposal — read-only Ticket Detail with Workspace and unpublished-content access checks.
+ */
+export const getReviewTicketDetail = async (
+  ticketId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ReviewTicketDetail> => {
+  return http<ReviewTicketDetail>(getGetReviewTicketDetailUrl(ticketId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetReviewTicketDetailQueryKey = (ticketId: string) => {
+  return [`/api/v1/tickets/${ticketId}`] as const;
+};
+
+export const getGetReviewTicketDetailQueryOptions = <
+  TData = Awaited<ReturnType<typeof getReviewTicketDetail>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  ticketId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getReviewTicketDetail>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetReviewTicketDetailQueryKey(ticketId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewTicketDetail>>> = ({ signal }) =>
+    getReviewTicketDetail(ticketId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: ticketId !== null && ticketId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getReviewTicketDetail>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetReviewTicketDetailQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getReviewTicketDetail>>
+>;
+export type GetReviewTicketDetailQueryError = ErrorType<ProblemResponse>;
+
+export function useGetReviewTicketDetail<
+  TData = Awaited<ReturnType<typeof getReviewTicketDetail>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  ticketId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getReviewTicketDetail>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReviewTicketDetail>>,
+          TError,
+          Awaited<ReturnType<typeof getReviewTicketDetail>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetReviewTicketDetail<
+  TData = Awaited<ReturnType<typeof getReviewTicketDetail>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  ticketId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getReviewTicketDetail>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReviewTicketDetail>>,
+          TError,
+          Awaited<ReturnType<typeof getReviewTicketDetail>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetReviewTicketDetail<
+  TData = Awaited<ReturnType<typeof getReviewTicketDetail>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  ticketId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getReviewTicketDetail>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Frontend proposal — read-only Ticket Detail with Workspace and unpublished-content access checks.
+ */
+
+export function useGetReviewTicketDetail<
+  TData = Awaited<ReturnType<typeof getReviewTicketDetail>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  ticketId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getReviewTicketDetail>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetReviewTicketDetailQueryOptions(ticketId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getGetReviewQueueUrl = (params?: GetReviewQueueParams) => {
   const normalizedParams = new URLSearchParams();
@@ -352,6 +493,7 @@ export const getApproveTicketsUrl = () => {
 };
 
 /**
+ * Frontend proposal. Validate and authorize the entire unique 1–500 UUID batch before applying any decision; retain mock history and immutable Ticket content.
  * @summary Approves and publishes the tickets (MSG14).
  */
 export const approveTickets = async (
@@ -455,6 +597,7 @@ export const getRejectTicketsUrl = () => {
 };
 
 /**
+ * Frontend proposal. Reject the entire batch on any validation, authorization, missing or stale Ticket; retain the entered reason in mock history.
  * @summary Rejects the tickets with one reason (MSG15 confirm, MSG16 result).
  */
 export const rejectTickets = async (
@@ -558,6 +701,7 @@ export const getRequestTicketChangesUrl = () => {
 };
 
 /**
+ * Frontend proposal. Apply one comment atomically to pending Solution Form tickets. Imported sources return MSG18; this slice does not implement Jira delivery.
  * @summary Sends the tickets back to their authors with one comment (MSG17).
  */
 export const requestTicketChanges = async (

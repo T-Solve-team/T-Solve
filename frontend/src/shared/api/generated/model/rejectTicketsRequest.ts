@@ -8,12 +8,16 @@
  */
 
 export interface RejectTicketsRequest {
-  /** @minItems 1 */
-  ticketIds: number[];
+  /**
+   * @minItems 1
+   * @maxItems 500
+   */
+  ticketIds: string[];
   /**
    * Stored in Review History; not sent to the author.
    * @minLength 1
    * @maxLength 1000
+   * @pattern \S
    */
   reason: string;
 }

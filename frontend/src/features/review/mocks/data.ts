@@ -1,4 +1,4 @@
-import type { ReviewQueueItem } from '@/shared/api';
+import type { ReviewQueueItem, ReviewTicketDetail } from '@/shared/api';
 
 /** Department ids equal the ones of the mock session (src/mocks/session.ts). */
 const IT_DEPARTMENT_ID = '00000000-0000-4000-8000-0000000000d1';
@@ -6,12 +6,27 @@ const HR_DEPARTMENT_ID = '00000000-0000-4000-8000-0000000000d2';
 
 /**
  * Projects in the review queue mock and their Departments. The mock Project Manager (src/mocks/session.ts) manages
- * ITSUP and ITNET; HRHELP tickets stay in the data until ticket-review scopes the queue to the user's Projects.
+ * ITSUP and ITNET; the separate HRHELP fixture verifies unmanaged Project access.
  */
 export const MOCK_PROJECTS = [
-  { projectId: 101, name: 'IT Support', key: 'ITSUP', departmentId: IT_DEPARTMENT_ID },
-  { projectId: 102, name: 'IT Network', key: 'ITNET', departmentId: IT_DEPARTMENT_ID },
-  { projectId: 201, name: 'HR Helpdesk', key: 'HRHELP', departmentId: HR_DEPARTMENT_ID },
+  {
+    projectId: '00000000-0000-4000-8000-000000000101',
+    name: 'IT Support',
+    key: 'ITSUP',
+    departmentId: IT_DEPARTMENT_ID,
+  },
+  {
+    projectId: '00000000-0000-4000-8000-000000000102',
+    name: 'IT Network',
+    key: 'ITNET',
+    departmentId: IT_DEPARTMENT_ID,
+  },
+  {
+    projectId: '00000000-0000-4000-8000-000000000201',
+    name: 'HR Helpdesk',
+    key: 'HRHELP',
+    departmentId: HR_DEPARTMENT_ID,
+  },
 ] as const;
 
 /** The eight tickets of the Figma frame "7.1 Review Queue", then generated ones up to 58 (Figma total). */
@@ -97,16 +112,16 @@ const MORE_AUTHORS = [
 
 const REVIEW_RANGE_MS = 3 * 24 * 60 * 60 * 1000; // Review due date = entered queue + 3 days (review range)
 
-function projectRef(projectId: number) {
+function projectRef(projectId: string) {
   const project = MOCK_PROJECTS.find((p) => p.projectId === projectId) ?? MOCK_PROJECTS[0];
   return { projectId: project.projectId, name: project.name };
 }
 
 function item(
-  ticketId: number,
+  ticketId: string,
   sourceTicketId: string,
   title: string,
-  projectId: number,
+  projectId: string,
   authorName: string | null,
   enteredQueueAt: string,
 ): ReviewQueueItem {
@@ -123,19 +138,112 @@ function item(
 }
 
 /** A fresh copy of the 58 pending tickets. Deterministic: same data on every reload and in every test. */
+export function ticketUuid(n: number): string {
+  return `20000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+}
+
 export function seedReviewQueue(): ReviewQueueItem[] {
   const tickets = FIGMA_TICKETS.map(([key, title, projectId, author, entered], index) =>
-    item(index + 1, key, title, projectId, author, entered),
+    item(
+      ticketUuid(index + 1),
+      key.replace('HRHELP', 'ITSUP'),
+      title,
+      MOCK_PROJECTS[projectId === 102 ? 1 : 0].projectId,
+      author,
+      entered,
+    ),
   );
   const start = Date.parse('2026-10-04T05:00:00Z');
   for (let n = 0; n < 50; n++) {
-    const project = MOCK_PROJECTS[n % MOCK_PROJECTS.length] ?? MOCK_PROJECTS[0];
+    const project = MOCK_PROJECTS[n % 2] ?? MOCK_PROJECTS[0];
     const key = `${project.key}-${String(1200 + n).padStart(4, '0')}`;
     const title = MORE_TITLES[n % MORE_TITLES.length] ?? 'Untitled';
     const author = MORE_AUTHORS[n % MORE_AUTHORS.length] ?? null;
     const entered = new Date(start + n * 97 * 60 * 1000).toISOString();
-    tickets.push(item(9 + n, key, title, project.projectId, author, entered));
+    tickets.push(item(ticketUuid(9 + n), key, title, project.projectId, author, entered));
   }
+  return tickets;
+}
+
+export const REVIEW_WORKSPACE_ID = '00000000-0000-4000-8000-0000000000c1';
+export type MockReviewTicket = ReviewTicketDetail & {
+  workspaceId: string;
+  enteredQueueAt: string;
+  jiraStatus: string;
+};
+
+/** Extra records never inflate the 58 pending tickets of the default Project Manager. */
+export const DETAIL_TICKET_IDS = {
+  published: ticketUuid(101),
+  imported: ticketUuid(102),
+  rejected: ticketUuid(103),
+  authored: ticketUuid(104),
+  unmanaged: ticketUuid(105),
+  foreign: ticketUuid(106),
+  selfAuthored: ticketUuid(107),
+} as const;
+
+export function seedReviewTickets(): MockReviewTicket[] {
+  const tickets: MockReviewTicket[] = seedReviewQueue().map((ticket, index) => ({
+    ...ticket,
+    authorName: ticket.authorName ?? null,
+    authorId:
+      index === 1 ? '00000000-0000-4000-8000-000000000004' : '00000000-0000-4000-8000-000000000005',
+    description: `Reported issue: ${ticket.title}`,
+    status: 'PENDING_REVIEW',
+    workspaceId: REVIEW_WORKSPACE_ID,
+    jiraStatus: 'Resolved',
+    lastReviewComment: null,
+    solution: {
+      symptoms: ticket.title,
+      rootCause: 'The client configuration was out of date.',
+      resolutionSteps: 'Update the configuration, restart the client and verify access.',
+      workaround: null,
+      scope: 'Affected company workstations',
+    },
+    evidence: [
+      {
+        id: ticketUuid(1000 + index),
+        filename: 'resolution-check.txt',
+        sizeBytes: 128,
+        url: '/api/v1/evidence/resolution-check.txt',
+      },
+    ],
+  }));
+  const first = tickets[0];
+  if (!first) return tickets;
+  const extra = (ticketId: string, changes: Partial<MockReviewTicket>): MockReviewTicket => ({
+    ...structuredClone(first),
+    ticketId,
+    sourceTicketId: `ITSUP-${ticketId.slice(-3)}`,
+    ...changes,
+  });
+  tickets.push(
+    extra(DETAIL_TICKET_IDS.published, { status: 'PUBLISHED', reviewDueDate: null }),
+    extra(DETAIL_TICKET_IDS.imported, {
+      status: 'PUBLISHED',
+      source: 'CSV',
+      reviewDueDate: null,
+      authorId: null,
+      authorName: null,
+    }),
+    extra(DETAIL_TICKET_IDS.rejected, { status: 'REJECTED' }),
+    extra(DETAIL_TICKET_IDS.authored, {
+      status: 'CHANGES_REQUESTED',
+      authorId: '00000000-0000-4000-8000-000000000004',
+      authorName: 'Phạm Quốc Bảo',
+      lastReviewComment: 'Please clarify the validation steps.',
+    }),
+    extra(DETAIL_TICKET_IDS.unmanaged, {
+      project: projectRef(MOCK_PROJECTS[2].projectId),
+      sourceTicketId: 'HRHELP-0318',
+    }),
+    extra(DETAIL_TICKET_IDS.foreign, { workspaceId: 'ffffffff-ffff-4fff-8fff-ffffffffffff' }),
+    extra(DETAIL_TICKET_IDS.selfAuthored, {
+      status: 'REJECTED',
+      authorId: '00000000-0000-4000-8000-000000000003',
+    }),
+  );
   return tickets;
 }
 
