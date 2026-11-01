@@ -31,3 +31,13 @@
 - Commit the harness record and publish the requested Review Queue PR. Continue the approved Ticket Detail feature after this checkpoint.
 
 References: `artifacts/03-modules/ticket-review/spec.md`, `artifacts/04-plans/ticket-review/iteration-1/tasks.md`, `artifacts/06-evaluation/ticket-review/task-1-review-queue-decisions-test-report.md`.
+
+## Follow-up 2026-11-01: user action-name quick change
+
+- User requested root-cause fixes for six legacy users test cases (BUG-022 duplicates BUG-073; BUG-075–079) and opened the exact five-file quick change at 06:50:33Z. No acceptance criterion changed. User then authorized commit/push after checks.
+- Root cause: AntD's default loading icon contributes `loading` to the button's accessible name; its leave motion can remain in jsdom. The retry action becomes `loading Save` or `loading Deactivate` even though its visible action text is unchanged. Stable `aria-label` from `okText` in shared FormModal and on CreateUserForm Save fixes the common boundary; `aria-busy` announces pending state. Spinner, disabling and duplicate-submission protection remain.
+- Failing-first: new shared-modal pending Save/Deactivate checks and pending-create Save lookup fail before the fix. Red JSON has 12/16 passing, three direct name failures and one downstream fixture leak after the failed pending-create assertion. Its finally block now waits for the released mutation to settle even if an assertion fails. The creation error test also performs a real successful retry.
+- Green: users + shared modal + site-state 167/167; independent reviewer reran the modal/create tests and found no issues. Full frontend suite 1,066/1,066, zero failed/skipped. Format, lint, typecheck, build and API regeneration all exit 0; generation leaves no generated diff. No timeout, test skip, assertion removal or CI change.
+- Updated BUG-022/073/075–079 to Fixed with regression-test references in the same code commit. BUG-085 records the separate intermittent site-state CI failure (run 41265862298); it was not reproduced in the pre-fix local run, shuffled seed 42 or current full suite, and remains Open rather than being credited to the action-name fix.
+- PR #100 exists with the original queue slice; Ticket Detail remains pending. The current follow-up changes only the approved user-action quick scope; unrelated research/graph/scalability files are preserved.
+- Code commit `default@6c614b1` — `fix(users): preserve action names while loading (KAN-24)` — passed the normal secret/lint/format/commit-message hooks. Full suite: 137/137 suites, 1,066/1,066 tests in 294 seconds. Source graph refreshed to 6,456 nodes / 13,584 edges (same SQL extractor limitation). User authorized commit and push on 2026-11-01.

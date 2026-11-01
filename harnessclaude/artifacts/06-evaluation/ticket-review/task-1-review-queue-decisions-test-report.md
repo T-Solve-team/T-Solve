@@ -40,3 +40,14 @@ Browser checks do not simulate production authorization, durable audit or Jira/e
 - BUG-084 test synchronization: verified by queue 10/10 and final full suite 1,064/1,064. No business assertion or timeout was relaxed.
 - Existing jsdom pseudo-element `getComputedStyle` notices occur; no new ignore/filter was added.
 - Existing BUG-073–079 rows remain untouched; the passing full run did not reproduce them.
+
+## User-action quick-change verification — 2026-11-01
+
+Subsequent user request expanded PR #100 with a five-file quick fix for the users action-name regressions. This supersedes the previous note about leaving BUG-022/073/075–079 unchanged.
+
+- Red: `users-action-name-red.json`, 12/16 passed; exact Save/Deactivate lookups fail with the default spinner. A fourth failure exposed cleanup after the intentionally failing pending-create assertion; its released mutation is now awaited in finally.
+- Green: `users-action-name-green.json`, 167/167 for users + shared FormModal + site-state; independent modal/create rerun exits 0.
+- Full: `npm run test -- --no-cache --reporter=json --outputFile=node_modules/.cache/users-action-full-green.json`, 1,066/1,066 passed, zero failed/skipped, exit 0, using the project default worker setting.
+- Format/lint/typecheck/build: exit 0; lint retains the existing TicketListFilters fast-refresh warning. `npm run generate:api` plus `git diff --exit-code -- src/shared/api/generated`: exit 0.
+- Review found no blocking issues. Explicit accessible names remain stable through pending and spinner exit; busy/disabled state, entered values, successful retry and single-request protection are asserted. No timeout increase or weakened checks.
+- Original CI site-state failure remains BUG-085 Open: pre-fix local users/site run 165/165, shuffled site-state seed 42 11/11, current combined/full runs pass. A successful CI rerun is not treated as proof that this separate intermittent failure was fixed.
