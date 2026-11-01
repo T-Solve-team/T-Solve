@@ -1,6 +1,6 @@
 ---
 project: T-Solve
-date: 2026-10-25
+date: 2026-11-01
 ---
 
 # Architecture Overview
@@ -12,42 +12,48 @@ source for code structure, naming, layers, API, database, tests and bugs. Every 
 data layer, UI kit, routing, forms, tests and tooling. This file keeps only system-level decisions.
 
 Requirements baseline: `Report3/` (`CONTEXT.md` glossary, `UC_list_and_Actors.md`, `Business_Rules.md`,
-`System_Messages.md`, `SRS_Delta.md` decisions, `adr/0001-multi-tenant-pool-model.md`).
+`System_Messages.md`, `SRS_Delta.md` decisions) and the Report3 split files of 31/10 (`Report_3_BreakDown/`:
+UC list, GBR, MSG), which win where they differ. Tenancy: `docs/adr/0002-database-per-workspace.md`, which
+supersedes ADR-0001.
 
 ## Deployment Model
 
-**Chosen:** modular monolith (one Spring Boot 3 app, Java 21, Maven) in the **multi-tenant pool model**: one
-deployment and one database serve every Workspace (ADR-0001, GBR-37). The same jar runs as two processes: the web
-process (REST API for the Workspace sites, the Platform Console and the Jira App) and the background worker
-(profile `worker`, no web server, its own container; see Background Jobs).
+**Chosen:** modular monolith (one Spring Boot 3 app, Java 21, Maven), **multi-tenant with one database per
+Workspace**: one deployment serves every Workspace, each Workspace has its own PostgreSQL database, and a catalog
+database finds it (ADR-0002, GBR-37). The same jar runs as three processes: the web process (REST API for the
+Workspace sites and the Jira App), the background worker (profile `worker`, no web server, its own container; see
+Background Jobs) and the ops script (profile `ops`, run by hand by the operations team).
 **Rationale:** one team, one deployable; module boundaries live in packages, not services. A three-person ops
-budget (one application VPS plus one AI VPS) cannot run and upgrade one server per company (ADR-0001, 24/10/2026).
-This replaces the single-tenant "one Workspace per installation" model of Report 3 v3460 (CR-01…04).
+budget (one application VPS plus one AI VPS) cannot run one server per company, while a database per company keeps
+each company's data behind a database boundary and lets it be backed up and restored on its own (ADR-0002, 29/10).
+This replaces the pool model of ADR-0001 (24/10) and the single-tenant model of Report 3 v3460.
 
 ## Multi-Tenancy
 
-**Chosen:** pool model — shared tables, a Workspace on every record, isolation in three layers (ADR-0001).
+**Chosen:** database per Workspace plus a catalog database (ADR-0002).
 
 | Layer | Decision |
 |-------|----------|
-| Data | Every tenant table has `workspace_id` (not null). Entities extend the base entity in `common/tenant/`, whose `workspace_id` is a Hibernate `@TenantId`: Hibernate fills it on insert and adds it to every query from the current `TenantContext`. Platform tables (Workspaces with their site name, Google domain and status; their Jira sites and `cloudId`) have no `workspace_id`. |
-| Database | PostgreSQL row-level security on every tenant table: a policy compares `workspace_id` with a per-transaction setting written from `TenantContext`. The application connects with a role that does not own the tables and cannot bypass RLS. RLS is the last guard when a query forgets the Workspace (ADR-0001). |
-| Resolution | The Workspace of a request comes **only** from (GBR-37): the host name of a Workspace site `{site name}.tsolve.io.vn` (web request); the `cloudId` of the verified Forge Invocation Token (call from the T-Solve app in Jira, GBR-14, GBR-19); or the job's Workspace (background job). No request can choose or change its Workspace and **no API takes a Workspace from the request**. A site name that belongs to no Workspace → MSG119; a call from a Jira site registered to no Workspace → MSG124. |
-| Platform hosts | `login.`, `admin.` and `api.tsolve.io.vn` have no Workspace of their own. `login.` learns the Workspace only from a signed, short-lived state value created by the server and checked on the callback (D9, MSG141). `api.` takes it only from the verified `cloudId`. `admin.` (Platform Console) works only on platform data and never runs in a Workspace's context, except the user count of UC-54 and the first Admin account of UC-56 (GBR-37). |
-| Sessions | A Workspace session is valid only on its own Workspace site (MSG123) and never on `admin.`; a Platform Operator signs in through `login.` against an allow-list of Operator emails in the deployment configuration, and that session is valid only on `admin.` (D13, GBR-03). |
-| Suspended Workspace | Its Workspace site, sign-in and Jira App calls are refused (MSG120, MSG121); its data is kept; its jobs are postponed, not run, and JOB-02 skips it (D12); ticket tracker events received meanwhile are dropped and not replayed (D29, GBR-24). |
+| Data | Each Workspace has its own PostgreSQL database with the business tables of every module; tables have **no** `workspace_id`. The catalog database holds only `workspaces` (site name, status, database connection with an encrypted password, the Jira site and its `cloudId`) and `workspace_emails` (one email in one Workspace, GBR-16), plus JobRunr's tables. No business data is in the catalog (GBR-37). |
+| Database access | `TenantContext` binds a Workspace; one routing `DataSource` sends every JPA and JDBC query to the bound Workspace's database through a lazily opened, bounded pool per Workspace. With no Workspace bound, no tenant database can be reached. Each Workspace database has its own runtime user that can connect only to it; migrations use a separate owner user. |
+| Resolution | The Workspace of a request comes **only** from (GBR-37): the host name of a Workspace site `{site name}.tsolve.io.vn` (web request); the `cloudId` of the verified Forge Invocation Token (call from the T-Solve app in Jira, GBR-14, GBR-19); or the job's Workspace (background job). No request can choose or change its Workspace and **no API takes a Workspace from the request**. A site name that belongs to no Workspace → MSG151; a call from a Jira site linked to no Workspace → MSG152. |
+| Platform hosts | `login.` and `api.tsolve.io.vn` have no Workspace of their own. `login.` learns the Workspace only from a signed, short-lived state value created by the server and checked on the callback (D9). `api.` takes it only from the verified `cloudId`. There is no `admin.` host and no Platform Console (31/10). |
+| Provisioning | The T-Solve operations team creates a Workspace with the ops script `infra/ops/workspace.sh`: Workspace database and runtime user, migrations, catalog row, first Admin Account — all or nothing (GBR-24). The Admin then enters the company information, the Jira site and the service account at the first sign-in (UC-10); the Jira site's `cloudId` is recorded in the catalog then and cannot change (GBR-14, GBR-24). The same script suspends and reactivates a Workspace; nobody deletes one or reads its data (GBR-38). |
+| Sessions | A Workspace session is valid only on its own Workspace site (GBR-03). |
+| Suspended Workspace | Its Workspace site and sign-in are refused (MSG150), the Jira App's calls are refused; its database is kept; its jobs do not run and JOB-02 skips it; ticket tracker events received meanwhile are dropped and not replayed (D29, GBR-38). |
 | Files | Stored in one folder per Workspace, `/{workspaceId}/…`, taken from `TenantContext` (GBR-37). |
-| AI | Retrieval for Search, AI Ticket Triage and the Knowledge Chatbot only uses data of the Workspace of the request or job (GBR-12). |
+| AI | Retrieval for Search, AI Solution Suggestion and the Knowledge Chatbot only uses data of the Workspace of the request or job, filtered by what the user may see (GBR-12, GBR-37). |
 
 The tenant-isolation test (an Account of Workspace A cannot read Workspace B — web app, Jira App, Search,
-Chatbot) is mandatory before the demo (ADR-0001, TS-163). Code: `TenantContext`, the base entity and the RLS hook in
-`common/tenant/`; the resolvers and the Workspace registry in `platform/` (module `platform`, `module-map.md`).
+Chatbot) is mandatory before the demo (ADR-0002, TS-163). Code: `TenantContext` and the routing `DataSource` in
+`common/tenant/`; the resolvers, the catalog service and the ops script in `platform/` (module `platform`,
+`module-map.md`).
 
 ## Backend Code Structure
 
 **Chosen:** layered architecture, folders split by module (package-by-module, then by layer).
 Folder tree and dependency rules: `backend/AGENTS.md` §1. `common/tenant/` is shared infrastructure like the rest
-of `common/` (no business logic, no entities; the base entity is a `@MappedSuperclass`).
+of `common/` (no business logic, no entities).
 
 ## Frontend Code Structure
 
@@ -56,8 +62,7 @@ feature only through its `index.ts`; `src/app/` and `src/shared/` change only wi
 Folder tree and import rules: `frontend/guidelines/01-project-structure.md`; ownership: `02-conflict-avoidance.md`.
 A module that owns frontend code lists its `frontend/src/features/<feature>/**` folders in `paths` (module.md),
 so the gate opens them for it and `sdd.ts trace` counts their tests.
-The same app serves the Workspace sites and the Platform Console (`admin.`): the app chooses its route tree by
-host; the Platform Console screens live in `features/platform-console/`.
+The app serves the Workspace sites only; there is no Platform Console (31/10, KAN-244 removes its old code).
 
 ## Communication Patterns
 
@@ -68,16 +73,18 @@ event instead of calling up the dependency graph.
 The frontend client is generated from it (`npm run generate:api`) and never hand-written; a backend endpoint
 changes the YAML in the same PR (`frontend/guidelines/06-data-layer.md` §2). `/api/v1/**` keeps the original Host,
 from which the backend resolves the Workspace.
-**Between web process and worker:** jobs in the shared database (see Background Jobs).
+**Between web process and worker:** jobs in the catalog database (see Background Jobs); a job carries its
+Workspace id and record ids only.
 
 ## Background Jobs
 
-**Chosen:** JobRunr, open-source edition, with PostgreSQL storage (the application database), run by the
+**Chosen:** JobRunr, open-source edition, with PostgreSQL storage (in the catalog database), run by the
 `worker` process (decision of 25/10). It gives retries, recurring jobs (JOB-02 at 00:00 per Workspace) and a
 dashboard. T-Solve adds, in the `worker` module:
 - every job carries its `workspaceId`, taken from `TenantContext` when it is enqueued;
-- every job runs inside `runInTenant(workspaceId, …)`, so its queries, RLS and files are those of its Workspace;
-- a job of a Suspended Workspace is postponed, not run, and runs after reactivation (D12, GBR-24);
+- every job runs inside `runInTenant(workspaceId, …)`, so its queries go to its Workspace's database and its
+  files are those of its Workspace; JOB-02 runs once per Active Workspace (GBR-37);
+- a job of a Suspended Workspace does not run (GBR-38);
 - fairness between Workspaces: a configurable cap on the jobs of one Workspace that run at the same time, so one
   company cannot block another (GBR-37; replaces the round-robin of TS-130, D43).
 
@@ -92,12 +99,12 @@ per-Workspace cap.
 
 | Resource | Shared or Per-Module | Detail |
 |----------|---------------------|--------|
-| Database | shared | PostgreSQL 16 + pgvector, one schema for every Workspace; `workspace_id` + `@TenantId` + row-level security (Multi-Tenancy) |
-| Schema migrations | shared | Liquibase: `db/changelog/db.changelog-master.xml` includes formatted-SQL changesets in `db/changelog/changes/NNN-<slug>.sql`; never edit an applied changeset, add a new one |
-| Auth/Identity | shared | Central Google OIDC sign-in on `login.`; the Workspace comes from the signed state value (D9); the `hd` claim must equal the Workspace's Google domain (MSG122); Platform Operators by an allow-list (D13) |
+| Database | per Workspace | PostgreSQL 16 + pgvector on one server: a catalog database plus one database per Workspace (Multi-Tenancy, ADR-0002) |
+| Schema migrations | shared | Liquibase, two changelogs: the catalog changelog `db/changelog/catalog/catalog-master.xml` and the tenant changelog `db/changelog/db.changelog-master.xml` (formatted-SQL changesets in `db/changelog/changes/NNN-<slug>.sql`), applied to every Workspace database at startup, in the deploy and when a Workspace is created; never edit an applied changeset, add a new one |
+| Auth/Identity | shared | Central Google OIDC sign-in on `login.`; the Workspace comes from the signed state value (D9); only an email the Admin added to that Workspace signs in (GBR-03) |
 | Background jobs | shared | JobRunr OSS on PostgreSQL, `worker` process (Background Jobs) |
-| File storage | shared | One folder per Workspace (`/{workspaceId}/…`) for Evidence and Wiki documents |
-| AI | shared | Ollama on the AI VPS: the chat LLM and bge-m3 embeddings (1024 dimensions), for everything; no OpenRouter, no third-party AI service (D3, D41, GBR-12) |
+| File storage | per Workspace | One folder per Workspace (`/{workspaceId}/…`) for Evidence and Wiki documents |
+| AI | shared | Ollama on the AI VPS: the chat LLM and bge-m3 embeddings (1024 dimensions), for everything; no OpenRouter, no third-party AI service, no PII masking (content never leaves T-Solve's servers; D3, D41, GBR-12) |
 | Email | shared | SMTP, sent by the worker |
 | Logging | shared | SLF4J to stdout |
 | API docs | shared | springdoc-openapi: `/v3/api-docs`, Swagger UI `/swagger-ui.html` |
@@ -113,8 +120,8 @@ per-Workspace cap.
 
 | Server | Runs |
 |--------|------|
-| Application VPS | Caddy with the wildcard certificate `*.tsolve.io.vn`, routing by host: `{site name}.` → web app + `/api`, `admin.` → Platform Console, `login.` → central sign-in, `api.` → calls from the Jira App (Forge Remote); the web process; the worker; PostgreSQL 16 + pgvector |
-| AI VPS | Ollama with the chat LLM and bge-m3; reachable only from the application VPS over a private, encrypted link, never from the internet (D41, GBR-12) |
+| Application VPS | Caddy with the wildcard certificate `*.tsolve.io.vn`, routing by host: `{site name}.` → web app + `/api`, `login.` → central sign-in, `api.` → calls from the Jira App (Forge Remote); the web process; the worker; the ops script; PostgreSQL 16 + pgvector with the catalog database and one database per Workspace |
+| AI VPS | Ollama with the chat LLM and bge-m3; reachable only from the application VPS over a private, encrypted link, never from the internet; no Internet egress and no prompt logging (D41, GBR-12) |
 
 The two servers exist because the models need their own CPU and RAM (D41; Jira KAN-194, KAN-200, KAN-203). On a
 developer machine, Docker Compose also runs Ollama; every environment points the backend at it with
@@ -126,7 +133,7 @@ production configuration (D42, GBR-24).
 | Concern | Decision | Detail |
 |---------|----------|--------|
 | Configuration | env vars | Config files hold `${VAR}` placeholders. Secrets, credentials, hosts and URLs have **no** default — they come only from `.env` (git-ignored; Spring reads it via `spring.config.import`) or the server's environment. Non-sensitive values (a port, a feature flag) may carry a default: `${SERVER_PORT:8080}`. `.env.example` lists every name with no real value. Frontend: `VITE_*` values are build-time and end up in the browser, so they are never secret; `frontend/.env.example` lists them; Docker build args: `frontend/guidelines/11-code-quality-and-tooling.md` §6. |
-| Tenancy | pool model | The Workspace only from host / verified `cloudId` / job; `workspace_id` + `@TenantId` + RLS; no API takes a Workspace from the request (Multi-Tenancy, GBR-37, ADR-0001) |
+| Tenancy | database per Workspace | The Workspace only from host / verified `cloudId` / job; queries routed to its database; no API takes a Workspace from the request (Multi-Tenancy, GBR-37, ADR-0002) |
 | Error handling | `common/exception` + `<module>/exception` | Module exceptions extend the base exceptions in `common/exception`; one global handler: domain exceptions → `GlobalExceptionHandler` → RFC 9457 `ProblemDetail` with an SRS `code` (MSGxx). The frontend shows it by its `code` through the MSG catalog (`frontend/src/shared/messages/catalog.ts`) and never types message text (`frontend/guidelines/06-data-layer.md` §6) |
 | Security | deny by default | Every endpoint declares its roles with `@PreAuthorize`; the backend always re-checks permissions. A frontend route lists its roles and the guard does the rest; the UI only hides what a user cannot do (`frontend/guidelines/08-routing-and-access.md`) |
 | Audit | listed actions | The actions in "REST, errors, security" record an audit event; `audit_event` is never updated or deleted |
@@ -138,10 +145,10 @@ production configuration (D42, GBR-24).
 
 - No secret or environment-specific value in any committed file.
 - The schema is owned by Liquibase; Hibernate only validates (`ddl-auto: validate`).
-- No user, search result, triage suggestion, Chatbot answer, file, job or email ever crosses Workspaces (GBR-37).
+- No user, search result, AI suggestion, Chatbot answer, file, job or email ever crosses Workspaces (GBR-37).
 - No Workspace or Admin is created at installation or from the deployment configuration; Workspaces are created
-  only by a Platform Operator (UC-55, GBR-24). The demo seed runs on dev and staging only (D42).
-- Only PII-masked text is sent to Ollama on the AI VPS; no content goes to a third-party AI service (GBR-12, D41).
+  only by the operations team's ops script (GBR-24, GBR-38). The demo seed runs on dev and staging only (D42).
+- Content goes only to Ollama on the team's AI VPS; no content goes to a third-party AI service (GBR-12, D41).
 - AI is optional: an AI failure never breaks the system (GBR-12).
 
 ## Coding Conventions
