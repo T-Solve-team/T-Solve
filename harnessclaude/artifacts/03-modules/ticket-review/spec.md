@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-01 | STORY-008 | Add KAN-159 read-only Review History frontend and proposed query/MSW contract | Continue remaining frontend work; reuse Department convention and existing decision history |
 | 2026-11-01 | STORY-007 | Add KAN-158 Expired Tickets frontend, API proposal and mock send-back flow | User requested completion of FE today, one Jira branch per task; explicitly permits this branch to depend on KAN-24 |
 | 2026-11-01 | STORY-001–006 | New-main frontend/MSW delivery contract for KAN-24; UUID ids, Department filter, explicit recovery and atomic mock decisions | User chose a new branch/PR from main, frontend + MSW/OpenAPI first, and Department under current guidelines; PR #26 remains separate |
 
@@ -102,11 +103,22 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
   - AC-007.7: WHEN send-back settles, THE frontend SHALL refresh affected Expired list/eligibility, Review Queue/eligibility, Ticket Detail and Ticket List queries; IF send-back fails, THEN THE frontend SHALL retain eligible selections and show its catalog error, reconciling stale selections after 404 or 409 without reporting a completed mutation as failed because a later refetch failed.
   - AC-007.8: IF the caller is signed out or lacks Project Manager, THEN THE route guard and mock API SHALL deny access; IF a caller forges another Project or Workspace's UUID, THEN THE mock API SHALL expose no foreign ticket data and perform no write.
 
+### STORY-008: View Review History (KAN-159)
+- As a Project Manager, I want to inspect past decisions on tickets of my managed Projects and open their details.
+- Acceptance:
+  - AC-008.1: WHEN Review History loads for a Project Manager, THE frontend and mock API SHALL list decision records only for the current Workspace's managed Projects, newest first, showing Date, Ticket ID, Title, Project, Decision, Project Manager, Author and Reason / comment, with links to the existing Ticket Detail.
+  - AC-008.2: WHEN Department, decision, date range, page or supported sort changes, THE frontend SHALL preserve filters and pagination in the URL and request server-side results, resetting page when a filter changes; THE frontend SHALL retain the existing Department convention without a Project filter.
+  - AC-008.3: WHEN both date endpoints are supplied, THE frontend and mock API SHALL filter inclusively by calendar date in Vietnam time; IF only one endpoint is supplied, a date is invalid or the start exceeds the end, THEN THE frontend SHALL show MSG39 without issuing the history query and THE mock API SHALL reject the invalid request without changing stored data.
+  - AC-008.4: WHEN the history contains APPROVE, REJECT, REQUEST_CHANGES, UNPUBLISH, REPUBLISH or SEND_BACK, THE frontend SHALL display its decision label and applicable reason/comment as text, preserving distinct records for repeated decisions on the same ticket; THE frontend SHALL offer no edit, delete or decision mutation controls on this screen.
+  - AC-008.5: WHEN an existing approve, reject, request-changes or send-back mock mutation succeeds, THE mock API SHALL append a record with a unique decision UUID, actor identity/name, timestamp, ticket and existing decision content, and THE frontend SHALL invalidate Review History queries; IF that mutation fails, THEN THE mock API SHALL append no history record.
+  - AC-008.6: WHILE initial history loading is pending, THE frontend SHALL show loading; IF the query fails, THEN THE frontend SHALL show its catalog error and retry; IF no records match, THEN THE frontend SHALL show MSG04.
+  - AC-008.7: IF the caller is signed out or lacks Project Manager, THEN THE route guard and mock API SHALL deny history access; IF the caller supplies a foreign or unmanaged Department filter, THEN THE mock API SHALL expose no foreign decision or ticket data.
+
 ## Out of Scope
 
 - Production backend endpoints, identity/Project authorization, canonical Ticket/KAN-137 schema changes, migrations and durable audit/history. KAN-24 backend remains undelivered by this frontend slice.
 - Actual Jira comment delivery (including MSG64 visibility), email, notification workers and real-time updates beyond the existing polling convention. Store the mock comment and proposed contract; do not claim successful external delivery.
-- Review History (KAN-159), production send-back processing (KAN-156), JOB-02 (KAN-157) and SSE/WebSocket (KAN-154). KAN-158 delivers only the frontend, proposed API and in-memory fixtures for expiry/send-back; it does not implement a real expiry job or backend persistence.
+- Production send-back processing (KAN-156), JOB-02 (KAN-157) and SSE/WebSocket (KAN-154). KAN-158 and KAN-159 deliver frontend, proposed APIs and in-memory fixtures; they do not implement a real expiry job or backend persistence. KAN-159 displays historical Unpublish/Republish records without adding those mutation workflows.
 - Importing PR #26 or changing/closing it; creating or pushing the replacement PR still requires the user to request that action.
 
 ## Interface Contracts
@@ -120,6 +132,8 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
 
 ### Required from other modules
 
+KAN-159 proposes GET `/api/v1/review-history`, with optional UUID `departmentId`, optional `decision` enum (APPROVE, REJECT, REQUEST_CHANGES, UNPUBLISH, REPUBLISH, SEND_BACK), optional paired `dateFrom`/`dateTo` ISO calendar dates, and existing page/size/sort conventions. Default sort is timestamp descending with decision UUID as deterministic tie-breaker; supported explicit sorts are timestamp ascending/descending. Response is a generated paginated ReviewHistoryItem collection with decision UUID, ticket UUID/source key/title, Project UUID/name, decision, actor UUID/display name, nullable author name, timestamp, nullable reason and comment. Date boundaries use UTC+07:00, end-exclusive next midnight internally. Validation/authentication/authorization errors follow the existing review Problem contract. Records retain decision actor/time/action/content independently of subsequent ticket status changes; current ticket metadata supplies display/navigation and scope. An empty mock history remains valid until decisions occur; tests may seed all six actions. This contract is a proposal, not an existing production endpoint.
+
 KAN-158 proposes GET `/api/v1/expired-tickets` (optional UUID departmentId, existing page/size/sort conventions), GET `/api/v1/expired-tickets/ticket-ids` (same filter, complete eligible UUID set), and POST `/api/v1/reviews/send-back` (`ticketIds`, 1–500 unique UUIDs, response `{count}`). Add generated ExpiredTicketItem/ExpiredTicketPage schemas carrying expiry and previous status; reuse existing Ticket and decision shapes. Error codes/statuses follow the existing review proposal. Mock expiry fixtures include the Project's current reviewRangeDays; calendar due dates follow the project's existing Vietnam-time convention. SEND_BACK records are session-only and may be consumed by the later KAN-159 slice. The Ticket Detail implementation is inherited from the explicitly approved KAN-24 branch base; this task does not duplicate that feature.
 
 Use existing session roles and UUID Project memberships, catalog messages, shared form/table/error components, feature barrels and TanStack Query conventions from fe-foundation. Preserve all unrelated endpoints when regenerating the client. Future canonical backend integration must supply authoritative actor/Workspace/Project scope, persistence/audit and Jira delivery; this slice explicitly does not implement those seams.
@@ -128,5 +142,5 @@ Use existing session roles and UUID Project memberships, catalog messages, share
 
 - [ ] Current spec approved; every criterion has meaningful named tests under review feature paths.
 - [ ] All frontend verification commands pass, generation is deterministic, no test timeout/error suppression or skipped regression hides failures.
-- [ ] Browser checks cover queue, Ticket Detail, confirmation, validation, stale/failure/retry and permissions; reports disclose mock-only guarantees and backend dependencies.
+- [ ] Automated checks cover queue, Ticket Detail, confirmation, validation, stale/failure/retry and permissions; reports disclose mock-only guarantees and backend dependencies. Manual browser testing is omitted per the user's instruction.
 - [ ] Review and test evidence recorded; user approves each feature commit; push/PR only when requested.

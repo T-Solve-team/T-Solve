@@ -595,8 +595,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "52faf1d9cd258fce25e10db736fe84b3a8e49a892e2a2e70fb4c70c88b72fda3",
-    "approvedAt": "2026-11-01T10:07:45.911Z",
+    "specHash": "2088079baf14a1fae32a4d089cecdda21a700fd744541a4f22c238cabf145bfa",
+    "approvedAt": "2026-11-01T12:12:20.499Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -637,7 +637,14 @@
       "AC-007.5": "IF any submitted UUID is invalid, duplicated, missing, foreign, unmanaged, no longer EXPIRED, or the batch is empty or exceeds 500, THEN THE mock API SHALL reject the entire batch without changing any ticket or history; THE frontend SHALL disable empty, oversized and pending submissions and prevent duplicate requests.",
       "AC-007.6": "IF a list or eligibility request fails, THEN THE frontend SHALL show the catalog error and retry; WHILE initial loading is pending, THE frontend SHALL show loading; IF no Expired tickets match, THEN THE frontend SHALL show MSG04.",
       "AC-007.7": "WHEN send-back settles, THE frontend SHALL refresh affected Expired list/eligibility, Review Queue/eligibility, Ticket Detail and Ticket List queries; IF send-back fails, THEN THE frontend SHALL retain eligible selections and show its catalog error, reconciling stale selections after 404 or 409 without reporting a completed mutation as failed because a later refetch failed.",
-      "AC-007.8": "IF the caller is signed out or lacks Project Manager, THEN THE route guard and mock API SHALL deny access; IF a caller forges another Project or Workspace's UUID, THEN THE mock API SHALL expose no foreign ticket data and perform no write."
+      "AC-007.8": "IF the caller is signed out or lacks Project Manager, THEN THE route guard and mock API SHALL deny access; IF a caller forges another Project or Workspace's UUID, THEN THE mock API SHALL expose no foreign ticket data and perform no write.",
+      "AC-008.1": "WHEN Review History loads for a Project Manager, THE frontend and mock API SHALL list decision records only for the current Workspace's managed Projects, newest first, showing Date, Ticket ID, Title, Project, Decision, Project Manager, Author and Reason / comment, with links to the existing Ticket Detail.",
+      "AC-008.2": "WHEN Department, decision, date range, page or supported sort changes, THE frontend SHALL preserve filters and pagination in the URL and request server-side results, resetting page when a filter changes; THE frontend SHALL retain the existing Department convention without a Project filter.",
+      "AC-008.3": "WHEN both date endpoints are supplied, THE frontend and mock API SHALL filter inclusively by calendar date in Vietnam time; IF only one endpoint is supplied, a date is invalid or the start exceeds the end, THEN THE frontend SHALL show MSG39 without issuing the history query and THE mock API SHALL reject the invalid request without changing stored data.",
+      "AC-008.4": "WHEN the history contains APPROVE, REJECT, REQUEST_CHANGES, UNPUBLISH, REPUBLISH or SEND_BACK, THE frontend SHALL display its decision label and applicable reason/comment as text, preserving distinct records for repeated decisions on the same ticket; THE frontend SHALL offer no edit, delete or decision mutation controls on this screen.",
+      "AC-008.5": "WHEN an existing approve, reject, request-changes or send-back mock mutation succeeds, THE mock API SHALL append a record with a unique decision UUID, actor identity/name, timestamp, ticket and existing decision content, and THE frontend SHALL invalidate Review History queries; IF that mutation fails, THEN THE mock API SHALL append no history record.",
+      "AC-008.6": "WHILE initial history loading is pending, THE frontend SHALL show loading; IF the query fails, THEN THE frontend SHALL show its catalog error and retry; IF no records match, THEN THE frontend SHALL show MSG04.",
+      "AC-008.7": "IF the caller is signed out or lacks Project Manager, THEN THE route guard and mock API SHALL deny history access; IF the caller supplies a foreign or unmanaged Department filter, THEN THE mock API SHALL expose no foreign decision or ticket data."
     }
   }
 }

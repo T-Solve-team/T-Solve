@@ -485,3 +485,7 @@
 {"ts":"2026-11-01T11:57:48.595Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"09af635617e3f050798bfe52039818344948f964"}
 {"ts":"2026-11-01T11:57:48.640Z","type":"feature-status","module":"ticket-review","feature":"expired-tickets","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-01T11:57:48.674Z","type":"feature-status","module":"ticket-review","feature":"expired-tickets","from":"evaluating","to":"passing"}
+{"ts":"2026-11-01T12:12:20.500Z","type":"spec-approved","module":"ticket-review","specHash":"2088079baf14a1fae32a4d089cecdda21a700fd744541a4f22c238cabf145bfa"}
+{"ts":"2026-11-01T12:12:44.676Z","type":"feature-status","module":"ticket-review","feature":"review-history","from":null,"to":"pending"}
+{"ts":"2026-11-01T12:12:44.708Z","type":"feature-status","module":"ticket-review","feature":"review-history","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T13:09:17.091Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"903e33f32ab564bc4a6d8a3e1e348110782c2f42"}
