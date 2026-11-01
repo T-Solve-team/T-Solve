@@ -8,6 +8,9 @@
  */
 
 export interface ApproveTicketsRequest {
-  /** @minItems 1 */
-  ticketIds: number[];
+  /**
+   * @minItems 1
+   * @maxItems 500
+   */
+  ticketIds: string[];
 }

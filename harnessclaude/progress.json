@@ -257,6 +257,22 @@
         "default"
       ],
       "lastCommit": {}
+    },
+    "ticket-review": {
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "review-queue-decisions": "passing",
+        "review-ticket-detail": "pending"
+      },
+      "lastUpdated": "2026-11-01T02:30:41.497Z",
+      "branch": "feat/ticket-review",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "d8ec1dc3e1d292f9d086b2c92e56ce84484ed9a9"
+      }
     }
   },
   "dependencies": {},

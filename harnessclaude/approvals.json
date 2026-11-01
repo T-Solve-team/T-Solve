@@ -593,5 +593,43 @@
       "AC-010.3": "IF the principal is not the issue's reporter, THEN THE tracker SHALL respond 403 with MSG08 and not record an answer.",
       "AC-010.4": "IF the issue has no suggestion result with a suggested solution, or it was already answered, THEN THE tracker SHALL respond 409 with MSG06 and not record an answer."
     }
+  },
+  "ticket-review": {
+    "specHash": "9fe97b50fb58bcacae49c7f5bfdf466d26736accfb05a08b4a49c9551c5ac1f1",
+    "approvedAt": "2026-11-01T01:51:05.532Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
+      "AC-001.2": "WHEN the user changes Department, page or supported column sort, THE frontend SHALL preserve that state in the URL and request corresponding server-side results; THE frontend SHALL offer no Project filter.",
+      "AC-001.3": "WHEN the user selects across pages or chooses Select all, THE frontend SHALL use the complete eligible id set for the current filter, retain eligible off-page selections and clear selection on a filter change including browser Back/Forward navigation.",
+      "AC-001.4": "IF the queue is empty or its request fails, THEN THE frontend SHALL show MSG13 or the catalog error with retry respectively; WHILE the initial request is pending, THE frontend SHALL show its loading state.",
+      "AC-001.5": "IF a user is signed out or lacks Project Manager, THEN THE existing route guard SHALL deny queue access and THE mock API SHALL reject direct queue or decision calls without returning or changing another user's queue.",
+      "AC-001.6": "WHEN cached eligibility is refreshing or a selected ticket is decided elsewhere, THE frontend SHALL reconcile selection only against fresh successful eligibility results and SHALL retain newly selected eligible ids while that refresh is pending.",
+      "AC-002.1": "WHEN Approve succeeds for eligible tickets, THE mock API SHALL publish every selected ticket, append one decision per ticket and remove them from the queue; THE frontend SHALL show MSG14 and clear the completed selection.",
+      "AC-002.2": "WHEN two or more tickets are approved from the queue, THE frontend SHALL require MSG19 confirmation before submitting.",
+      "AC-002.3": "WHEN one ticket is approved from the queue or Ticket Detail, THE frontend SHALL submit without the bulk confirmation and SHALL allow a managing Project Manager to approve a ticket they authored.",
+      "AC-002.5": "IF the approval confirmation is cancelled, THEN THE frontend and mock API SHALL retain selection, confirmed ticket states and decision history without submitting a mutation.",
+      "AC-003.1": "WHEN Reject is chosen for one or more eligible tickets, THE frontend SHALL open the existing Reject Ticket popup with MSG15 and one required reason for the entire selection.",
+      "AC-003.2": "IF the reason is missing, whitespace-only or exceeds 1,000 characters, THEN THE frontend and mock API SHALL reject it with MSG01 or MSG02 and preserve the popup, selection and confirmed ticket states.",
+      "AC-003.3": "WHEN rejection succeeds, THE mock API SHALL set each selected ticket to Rejected and append its reason and decision; THE frontend SHALL close the popup, clear completed selection and show MSG16.",
+      "AC-003.4": "IF a Rejected ticket is submitted for another decision, THEN THE mock API SHALL reject the entire request without altering the ticket or its decision history.",
+      "AC-004.1": "WHEN Request Changes is chosen on the queue or one eligible Ticket Detail, THE frontend SHALL open one comment form for all selected tickets.",
+      "AC-004.2": "IF the comment is missing, whitespace-only or exceeds 1,000 characters, THEN THE frontend and mock API SHALL return MSG01 or MSG02 while preserving entered input, selection and confirmed ticket states.",
+      "AC-004.3": "WHEN Request Changes succeeds, THE mock API SHALL set every selected ticket to Changes requested, append the same comment and one decision per ticket and remove them from the queue; THE frontend SHALL close the popup and show MSG17.",
+      "AC-004.4": "IF a change request includes an accessible ticket not submitted through the Solution Form, THEN THE mock API SHALL reject the whole request with MSG18 before status validation; THE frontend SHALL explain that restriction accessibly where such an action is displayed.",
+      "AC-005.1": "WHEN review requests or responses carry ticket or Project identifiers, THE OpenAPI proposal, generated client, frontend and mock API SHALL use UUID strings without numeric coercion.",
+      "AC-005.2": "IF a decision includes zero, duplicate, invalid or more than 500 ticket ids, THEN THE mock API SHALL reject it before writing; WHILE selection exceeds 500, THE frontend SHALL disable all decision actions and expose accessible guidance without silently truncating selection.",
+      "AC-005.3": "IF any selected ticket is missing, unmanaged, foreign to the current Workspace or no longer Pending review, THEN THE mock API SHALL reject the whole batch without partial ticket or decision-history changes.",
+      "AC-005.4": "WHEN a decision settles with success or failure, THE frontend SHALL invalidate affected queue, eligibility, Ticket Detail and Ticket List queries; IF the response is 404 or 409, THEN THE frontend SHALL refresh stale details/actions and reconcile selection against the refreshed complete eligible set.",
+      "AC-005.5": "IF a mutation fails, THEN THE frontend SHALL show its catalog error and preserve entered popup data and remaining eligible selection for retry; WHILE submission is pending, THE frontend SHALL prevent duplicate mutation calls and disable affected decision controls.",
+      "AC-005.6": "WHEN a queue mutation succeeds, THE frontend SHALL close its popup after the mutation response without waiting for unrelated query refetches; IF an invalidated query fails, THEN THE frontend SHALL expose its query error without reporting the completed decision as failed.",
+      "AC-005.7": "WHEN a mock decision succeeds, THE mock API SHALL preserve Solution, Evidence, source Jira status and stored review due date, and append actor, action, ticket id, timestamp and applicable reason/comment to in-memory history; IF the request fails, THEN THE mock API SHALL leave that history unchanged.",
+      "AC-006.1": "WHEN a permitted Ticket Detail loads, THE frontend SHALL show confirmed ticket information, source/status, read-only populated Solution and saved Evidence references through the proposed generated API.",
+      "AC-006.2": "IF the route id is invalid or the API returns 404, THEN THE frontend SHALL show MSG04 without coercing the id; IF loading fails otherwise, THEN THE frontend SHALL show its catalog error and retry.",
+      "AC-006.3": "WHEN the current user manages the ticket's Project and the confirmed ticket is Pending review, THE frontend SHALL offer Approve, Reject and Request Changes; IF the user does not manage it or its status is no longer pending, THEN THE frontend SHALL expose no usable decision controls and THE mock API SHALL reject forged mutations.",
+      "AC-006.4": "WHEN a user views an imported Published ticket, THE frontend SHALL render MSG18 as an accessible explanation for the Request Changes restriction without constructing an impossible pending imported ticket or using an empty-Solution flag.",
+      "AC-006.5": "WHEN a permitted ticket is displayed, THE frontend SHALL show Evidence filename and readable size with safe API-provided references; IF a reference uses an unsafe URL scheme, THEN THE frontend SHALL render no executable link.",
+      "AC-006.6": "IF an ordinary reader requests an unpublished ticket they neither authored nor manage, THEN THE mock API SHALL return 404 MSG04 without its Solution or review comment; THE frontend SHALL show the queue navigation only to users permitted to open it."
+    }
   }
 }

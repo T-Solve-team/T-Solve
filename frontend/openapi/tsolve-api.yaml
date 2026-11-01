@@ -407,6 +407,30 @@ paths:
       responses:
         '204':
           description: Signed out.
+  /api/v1/tickets/{ticketId}:
+    get:
+      tags: [review]
+      operationId: getReviewTicketDetail
+      summary: Frontend proposal — read-only Ticket Detail with Workspace and unpublished-content access checks.
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Published content or an unpublished Ticket authored or managed by the current user.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewTicketDetail' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
   /api/v1/review-queue:
     get:
       tags: [review]
@@ -460,6 +484,7 @@ paths:
       tags: [review]
       operationId: approveTickets
       summary: Approves and publishes the tickets (MSG14).
+      description: Frontend proposal. Validate and authorize the entire unique 1–500 UUID batch before applying any decision; retain mock history and immutable Ticket content.
       requestBody:
         required: true
         content:
@@ -479,6 +504,8 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
   /api/v1/reviews/reject:
@@ -486,6 +513,7 @@ paths:
       tags: [review]
       operationId: rejectTickets
       summary: Rejects the tickets with one reason (MSG15 confirm, MSG16 result).
+      description: Frontend proposal. Reject the entire batch on any validation, authorization, missing or stale Ticket; retain the entered reason in mock history.
       requestBody:
         required: true
         content:
@@ -505,6 +533,8 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
   /api/v1/reviews/request-changes:
@@ -512,6 +542,7 @@ paths:
       tags: [review]
       operationId: requestTicketChanges
       summary: Sends the tickets back to their authors with one comment (MSG17).
+      description: Frontend proposal. Apply one comment atomically to pending Solution Form tickets. Imported sources return MSG18; this slice does not implement Jira delivery.
       requestBody:
         required: true
         content:
@@ -530,6 +561,8 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
         '403':
+          $ref: '#/components/responses/Problem'
+        '404':
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
@@ -1299,8 +1332,8 @@ components:
       required: [projectId, name]
       properties:
         projectId:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
         name:
           type: string
     ReviewQueueItem:
@@ -1308,8 +1341,8 @@ components:
       required: [ticketId, sourceTicketId, title, project, source, enteredQueueAt, reviewDueDate]
       properties:
         ticketId:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
         sourceTicketId:
           type: string
           description: The Jira issue key, e.g. ITSUP-1031.
@@ -1462,8 +1495,8 @@ components:
         ticketIds:
           type: array
           items:
-            type: integer
-            format: int64
+            type: string
+            format: uuid
     ApproveTicketsRequest:
       type: object
       required: [ticketIds]
@@ -1471,9 +1504,11 @@ components:
         ticketIds:
           type: array
           minItems: 1
+          maxItems: 500
+          uniqueItems: true
           items:
-            type: integer
-            format: int64
+            type: string
+            format: uuid
     RejectTicketsRequest:
       type: object
       required: [ticketIds, reason]
@@ -1481,13 +1516,16 @@ components:
         ticketIds:
           type: array
           minItems: 1
+          maxItems: 500
+          uniqueItems: true
           items:
-            type: integer
-            format: int64
+            type: string
+            format: uuid
         reason:
           type: string
           minLength: 1
           maxLength: 1000
+          pattern: '\S'
           description: Stored in Review History; not sent to the author.
     RequestChangesRequest:
       type: object
@@ -1496,14 +1534,54 @@ components:
         ticketIds:
           type: array
           minItems: 1
+          maxItems: 500
+          uniqueItems: true
           items:
-            type: integer
-            format: int64
+            type: string
+            format: uuid
         comment:
           type: string
           minLength: 1
           maxLength: 1000
+          pattern: '\S'
           description: Shown to each author in Jira (MSG64).
+    ReviewSolution:
+      type: object
+      required: [symptoms, rootCause, resolutionSteps, workaround, scope]
+      properties:
+        symptoms: { type: string }
+        rootCause: { type: string }
+        resolutionSteps: { type: string }
+        workaround: { type: [string, 'null'] }
+        scope: { type: [string, 'null'] }
+    ReviewEvidence:
+      type: object
+      required: [id, filename, sizeBytes, url]
+      properties:
+        id: { type: string, format: uuid }
+        filename: { type: string }
+        sizeBytes: { type: integer, minimum: 0 }
+        url: { type: [string, 'null'] }
+    ReviewTicketDetail:
+      type: object
+      description: Frontend proposal; read-only content, author identity and review state. Does not implement production audit or Jira delivery.
+      required: [ticketId, sourceTicketId, title, description, project, source, status, authorId, authorName, reviewDueDate, solution, evidence, lastReviewComment]
+      properties:
+        ticketId: { type: string, format: uuid }
+        sourceTicketId: { type: string }
+        title: { type: string }
+        description: { type: string }
+        project: { $ref: '#/components/schemas/ProjectRef' }
+        source: { $ref: '#/components/schemas/TicketSource' }
+        status: { $ref: '#/components/schemas/TicketStatus' }
+        authorId: { type: [string, 'null'], format: uuid }
+        authorName: { type: [string, 'null'] }
+        reviewDueDate: { type: [string, 'null'], format: date-time }
+        solution: { $ref: '#/components/schemas/ReviewSolution' }
+        evidence:
+          type: array
+          items: { $ref: '#/components/schemas/ReviewEvidence' }
+        lastReviewComment: { type: [string, 'null'] }
     ReviewDecisionResult:
       type: object
       required: [count]

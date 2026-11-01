@@ -35,7 +35,6 @@ Master registry of all artifacts in this workspace.
 | — | module | platform-console | cancelled | artifacts/03-modules/platform-console/module.md |
 | — | module | worker | draft | artifacts/03-modules/worker/module.md |
 | — | module | ai | draft | artifacts/03-modules/ai/module.md |
-| — | module | ticket-review | draft | artifacts/03-modules/ticket-review/module.md |
 | — | spec | be-foundation | draft | artifacts/03-modules/be-foundation/spec.md |
 | — | design | be-foundation | draft | artifacts/04-plans/be-foundation/design.md |
 | — | design | be-foundation | draft | artifacts/04-plans/be-foundation/iteration-1/design.md |
@@ -156,3 +155,14 @@ Master registry of all artifacts in this workspace.
 | — | design | tracker | draft | artifacts/04-plans/tracker/iteration-1/design.md |
 | — | tasks | tracker | draft | artifacts/04-plans/tracker/iteration-1/tasks.md |
 | RESEARCH-002 | research | tracker | in-progress | artifacts/01-research/RESEARCH-002-servicenow-and-zendesk-trackers.md |
+| MODULE-REVIEW-24 | module | ticket-review | decomposed | artifacts/03-modules/ticket-review/module.md |
+| SPEC-REVIEW-24 | spec | ticket-review | approved | artifacts/03-modules/ticket-review/spec.md |
+| DESIGN-REVIEW-24 | design | ticket-review | approved | artifacts/04-plans/ticket-review/design.md |
+| DESIGN-REVIEW-24-I1 | design | ticket-review | approved | artifacts/04-plans/ticket-review/iteration-1/design.md |
+| TASKS-REVIEW-24-I1 | tasks | ticket-review | approved | artifacts/04-plans/ticket-review/iteration-1/tasks.md |
+| — | session-log | ticket-review | passing | artifacts/05-implementation/ticket-review/task-1-review-queue-decisions.md |
+| — | test-report | ticket-review | pass | artifacts/06-evaluation/ticket-review/task-1-review-queue-decisions-test-report.md |
+| — | review | ticket-review | pass | artifacts/06-evaluation/ticket-review/task-1-review-queue-decisions-review.md |
+| — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-queue.jpg |
+| — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-reject-validation.jpg |
+| — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-bulk-approved.jpg |

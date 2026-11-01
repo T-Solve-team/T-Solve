@@ -44,8 +44,7 @@ owner (see "Stories → module"). Owners can change: edit the Owner column and t
 | `jira-app` | The Forge app: Solution Form (UC-19), Issue Panel, suggested solution comment (UC-36), sign-in link, install on several Jira sites | Đặng Tấn Bình | large | default | project-integration, ticket-repository, search, triage, ai |
 | `dashboard-audit` | Dashboard & Audit · UC-34–35 | Trần Hải Anh (UC-34) · Phạm Tùng Dương (UC-35) | medium | default | ticket-review, search, triage, chatbot |
 
-`ticket-review` has its `module.md` on `main` since 01/11; its code and spec are still on PR #26 (KAN-24,
-`feat/ticket-review`). When that PR merges, keep `main`'s `module.md` and move the spec into the folder.
+`ticket-review` retains the full module roadmap from main. PR #100 delivers the approved frontend/MSW KAN-24 slice with Department filtering; Ticket Detail is pending. PR #26 and live backend integration remain separate; its old spec is not imported.
 
 `import-ticket-list` (KAN-31, CSV import, UC-21) was planned and completed before this map, as its own module. Its
 work is the first part of `ticket-repository` and uses the `ticket-repository` paths below.
@@ -145,8 +144,7 @@ not exist yet are marked *proposed*; the backend lead confirms them when the mod
 
 Backend paths are under `backend/src/main/java/vn/tsolve/` and `backend/src/test/java/vn/tsolve/`; web app paths
 under `frontend/`; "Other" paths from the repo root. Until `triage` and `wiki` are planned, `fe-foundation` also owns their placeholder
-folders (`chatbot` took its folder with its plan, KAN-69), and until `ticket-review` is on `main` it also owns
-`features/review/**`; each module's planning (or arrival) removes its folder from `fe-foundation`.
+folders (`chatbot` took its folder with its plan, KAN-69). The approved `ticket-review` plan now owns `features/review/**`; each module's planning removes its folder from `fe-foundation`.
 
 ## Cross-module interface contracts
 - **TenantContext and Tenant Resolver** (`platform` → all): `TenantContext` in `common/tenant/` holds the

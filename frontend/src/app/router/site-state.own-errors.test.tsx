@@ -30,7 +30,7 @@ function ownErrorsMutation(client: QueryClient) {
   return client
     .getMutationCache()
     .build(client, {
-      mutationFn: () => approveTickets({ ticketIds: [1] }),
+      mutationFn: () => approveTickets({ ticketIds: ['20000000-0000-4000-8000-000000000001'] }),
       meta: { handlesOwnErrors: true },
       onError: (error) => {
         if (isApiError(error)) showMessage(error.code, error.params);

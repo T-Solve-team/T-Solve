@@ -8,6 +8,8 @@ paths:
   - backend/src/main/java/vn/tsolve/review/**
   - backend/src/test/java/vn/tsolve/review/**
   - frontend/src/features/review/**
+  - frontend/src/features/tickets/pages/TicketDetailPage.tsx
+  - frontend/src/features/tickets/pages/TicketDetailPage.module.css
   - backend/src/main/resources/db/changelog/**
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
@@ -25,10 +27,7 @@ becomes Published), Reject or Request changes (an email goes to the writer, who 
 reviewed within the Project's review range (default 3 days) is set to Expired by JOB-02 at 00:00 and can be sent back
 to the Review Queue. Imported tickets never enter the Review Queue (GBR-23).
 
-The first code came with PR #26 (KAN-24, branch `feat/ticket-review`), whose own `module.md` and `spec.md` were written
-before this map and before the move to one database per Workspace. When that PR merges, keep this `module.md` and move
-its spec here; the backend package `review` is *proposed* (PR #26 moves its classes there). Until this module is on
-`main`, `fe-foundation` keeps `frontend/src/features/review/**`.
+PR #100 follows the user-approved KAN-24 frontend/MSW spec in this folder, using Department filtering and UUID contracts. Its current iteration depends on fe-foundation only; backend responsibilities below are the full-module roadmap and remain future integration work. Ticket Detail is the second planned feature. PR #26 remains separate; its older backend spec is not imported or approved by this delivery. The backend package `review` remains proposed.
 
 ## Responsibilities
 - UC-29 Review Queue per Project, real time (KAN-154).
@@ -61,6 +60,6 @@ its spec here; the backend package `review` is *proposed* (PR #26 moves its clas
 - default: backend/ (`review`, proposed), frontend/ (`review`).
 
 ## Related Artifacts
-- Spec: on `feat/ticket-review` (PR #26) until it merges; then `artifacts/03-modules/ticket-review/spec.md`
+- Spec: `artifacts/03-modules/ticket-review/spec.md` (approved frontend/MSW slice; backend roadmap remains future scope)
 - Map: `artifacts/03-modules/module-map.md`
 - Stories: KAN-24, KAN-74, KAN-154, KAN-155, KAN-156, KAN-157, KAN-158, KAN-159

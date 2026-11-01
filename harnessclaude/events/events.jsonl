@@ -463,3 +463,15 @@
 {"ts":"2026-10-31T19:32:53.710Z","type":"spec-approved","module":"tracker","specHash":"e3bcc7736b76775e1621ed216babdd92b58a28833c913f2c672832a35df211f6"}
 {"ts":"2026-10-31T21:34:09.699Z","type":"quick-closed","what":"jira-app manifest: issue-created trigger to the T-Solve backend via Forge Remote (KAN-22 step 4)","files":["jira-app/TSolve_JiraApp/manifest.yml"]}
 {"ts":"2026-10-31T22:01:06.427Z","type":"spec-approved","module":"tracker","specHash":"25360cf298cb10e9aa4321237d42ce10f7ee3c78cd8e061ce66b452ce491b5a1"}
+{"ts":"2026-11-01T01:49:29.279Z","type":"module-status","module":"ticket-review","from":null,"to":"decomposed"}
+{"ts":"2026-11-01T01:51:05.534Z","type":"spec-approved","module":"ticket-review","specHash":"9fe97b50fb58bcacae49c7f5bfdf466d26736accfb05a08b4a49c9551c5ac1f1"}
+{"ts":"2026-11-01T01:57:04.965Z","type":"module-status","module":"ticket-review","from":"decomposed","to":"planned"}
+{"ts":"2026-11-01T01:57:04.998Z","type":"feature-status","module":"ticket-review","feature":"review-queue-decisions","from":null,"to":"pending"}
+{"ts":"2026-11-01T01:57:05.033Z","type":"feature-status","module":"ticket-review","feature":"review-ticket-detail","from":null,"to":"pending"}
+{"ts":"2026-11-01T01:57:05.066Z","type":"module-status","module":"ticket-review","from":"planned","to":"implementing"}
+{"ts":"2026-11-01T01:57:05.098Z","type":"feature-status","module":"ticket-review","feature":"review-queue-decisions","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T02:26:45.699Z","type":"feature-status","module":"ticket-review","feature":"review-queue-decisions","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-01T02:27:04.228Z","type":"feature-status","module":"ticket-review","feature":"review-queue-decisions","from":"evaluating","to":"passing"}
+{"ts":"2026-11-01T02:30:41.498Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"d8ec1dc3e1d292f9d086b2c92e56ce84484ed9a9"}
+{"ts":"2026-11-01T06:50:33.879Z","type":"quick-opened","what":"Fix stable accessible names for pending Save and Deactivate actions (BUG-022/073/075-079)","files":["frontend/src/shared/ui/FormModal/FormModal.tsx","frontend/src/shared/ui/FormModal/FormModal.test.tsx","frontend/src/features/users/components/CreateUserForm.tsx","frontend/src/features/users/pages/UserDetailPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-01T07:41:17.837Z","type":"quick-closed","what":"Fix stable accessible names for pending Save and Deactivate actions (BUG-022/073/075-079)","files":["frontend/src/shared/ui/FormModal/FormModal.tsx","frontend/src/shared/ui/FormModal/FormModal.test.tsx","frontend/src/features/users/components/CreateUserForm.tsx","frontend/src/features/users/pages/UserDetailPage.test.tsx","docs/bug-log.md"]}

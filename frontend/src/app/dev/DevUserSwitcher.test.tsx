@@ -135,7 +135,7 @@ describe('DevUserSwitcher', () => {
       for (const request of [
         () => getMe(),
         () => getReviewQueue(),
-        () => approveTickets({ ticketIds: [1] }),
+        () => approveTickets({ ticketIds: ['20000000-0000-4000-8000-000000000001'] }),
       ]) {
         const error = await failureOf(request);
         expect(error).toBeInstanceOf(ApiError);
