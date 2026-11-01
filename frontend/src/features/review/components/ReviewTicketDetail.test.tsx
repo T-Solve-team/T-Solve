@@ -189,7 +189,7 @@ describe('Ticket Detail review', () => {
     expect(screen.queryByRole('button', { name: 'Request Changes' })).not.toBeInTheDocument();
   });
 
-  it('AC-006.5 renders filenames as text, readable sizes, and only safe references', async () => {
+  it('AC-006.5 renders filenames as text, readable sizes, and only safe references (BUG-091)', async () => {
     const record = reviewStore.tickets.find((ticket) => ticket.ticketId === firstId);
     if (!record) throw new Error('Missing fixture');
     record.evidence = [
@@ -205,7 +205,10 @@ describe('Ticket Detail review', () => {
       url,
     }));
     renderApp(detailPath());
-    expect(await screen.findByRole('link', { name: '<script>file0</script>' })).toHaveAttribute(
+    // BUG-091: wait with a cheap text query, then check the link once. findByRole('link') inside the wait re-runs on
+    // every DOM change (~200 ms each under load) and blocks the render it waits for, so it used up the whole 1 s.
+    expect(await screen.findByText('<script>file0</script>')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '<script>file0</script>' })).toHaveAttribute(
       'href',
       '/api/evidence/a',
     );
