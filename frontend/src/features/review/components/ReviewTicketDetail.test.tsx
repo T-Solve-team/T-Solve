@@ -1,10 +1,11 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
+import { getGetMeQueryOptions, getGetReviewTicketDetailQueryOptions } from '@/shared/api';
 import { DETAIL_TICKET_IDS, ticketUuid } from '../mocks/data';
 import { reviewStore } from '../mocks/state';
 
@@ -120,7 +121,7 @@ describe('Ticket Detail review', () => {
     expect(screen.queryByRole('button', { name: 'Request Changes' })).not.toBeInTheDocument();
   });
 
-  it('AC-006.5 renders filenames as text, readable sizes, and only safe references', async () => {
+  it('AC-006.5 renders filenames as text, readable sizes, and only safe references (BUG-089)', async () => {
     const record = reviewStore.tickets.find((ticket) => ticket.ticketId === firstId);
     if (!record) throw new Error('Missing fixture');
     record.evidence = [
@@ -135,8 +136,14 @@ describe('Ticket Detail review', () => {
       sizeBytes: i === 0 ? 1048576 : 128,
       url,
     }));
-    renderApp(detailPath());
-    expect(await screen.findByRole('link', { name: '<script>file0</script>' })).toHaveAttribute(
+    const { queryClient, router } = renderApp(detailPath());
+    // Await the real MSW-backed detail request rather than giving its first render a 1 s budget.
+    await act(async () => {
+      await router.navigate(detailPath());
+      await queryClient.ensureQueryData(getGetMeQueryOptions());
+      await queryClient.ensureQueryData(getGetReviewTicketDetailQueryOptions(firstId));
+    });
+    expect(screen.getByRole('link', { name: '<script>file0</script>' })).toHaveAttribute(
       'href',
       '/api/evidence/a',
     );
