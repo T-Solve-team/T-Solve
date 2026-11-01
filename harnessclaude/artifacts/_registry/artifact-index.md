@@ -148,3 +148,4 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | dashboard-audit | verified | artifacts/assets/dashboard-audit/kan-153-filtered.jpg |
 | — | review | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-review.md |
 | — | test-report | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-test-report.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-16-viewable-spaces.md |
