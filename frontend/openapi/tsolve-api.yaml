@@ -1437,7 +1437,7 @@ components:
       enum: [VALID, ERROR, REMOVED]
     RowError:
       type: object
-      description: One failed rule of a row (MSG01, MSG02, MSG31, MSG39 or MSG78).
+      description: One failed rule of a row (MSG01, MSG02, MSG31, MSG39 or MSG_NEW_3).
       required: [code, params]
       properties:
         code:

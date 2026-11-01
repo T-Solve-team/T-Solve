@@ -103,7 +103,7 @@ public class CsvRowValidator {
             errors.add(new RowError("MSG31", CsvColumns.TICKET_ID, Map.of("ticket_id", id)));
         }
         if (id != null && idCounts.getOrDefault(id, 0) > 1) {
-            errors.add(new RowError("MSG78", CsvColumns.TICKET_ID, Map.of("ticket_id", id)));
+            errors.add(new RowError("MSG_NEW_3", CsvColumns.TICKET_ID, Map.of("ticket_id", id)));
         }
 
         String date = cells.get(CsvColumns.RESOLVED_DATE);
