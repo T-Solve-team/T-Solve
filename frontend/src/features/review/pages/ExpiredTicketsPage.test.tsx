@@ -1,6 +1,7 @@
 import { screen, within, fireEvent, waitFor, act } from '@testing-library/react';
 import type { QueryClient } from '@tanstack/react-query';
-import { renderApp } from '@/test/render';
+import { renderApp, renderWithProviders } from '@/test/render';
+import { useSendBackSelectedTickets } from '../hooks/useExpiredTickets';
 import { reviewStore } from '../mocks/state';
 import { http, HttpResponse, delay } from 'msw';
 import { server } from '@/mocks/server';
@@ -8,6 +9,10 @@ import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { ticketUuid } from '../mocks/data';
 import {
+  getGetTicketsQueryOptions,
+  getGetTicketsQueryKey,
+  getGetReviewTicketDetailQueryOptions,
+  getGetReviewTicketDetailQueryKey,
   getGetExpiredTicketsQueryKey,
   getGetExpiredTicketsQueryOptions,
   getGetExpiredTicketIdsQueryKey,
@@ -44,6 +49,18 @@ async function refreshExpiredSelection(queryClient: QueryClient) {
   await act(async () => {
     await queryClient.refetchQueries({ queryKey: getGetExpiredTicketIdsQueryKey() });
   });
+}
+
+function SendBackAction() {
+  const mutation = useSendBackSelectedTickets();
+  return (
+    <button
+      disabled={mutation.isPending}
+      onClick={() => mutation.mutate({ data: { ticketIds: [ticketUuid(323)] } })}
+    >
+      Send back to queue
+    </button>
+  );
 }
 
 describe('Expired Tickets', () => {
@@ -87,6 +104,28 @@ describe('Expired Tickets', () => {
     await waitFor(() =>
       expect(reviewStore.history.filter((entry) => entry.action === 'SEND_BACK')).toHaveLength(24),
     );
+  });
+  it('AC-007.7 invalidates cached Ticket List and Ticket Detail after successful send-back (BUG-099)', async () => {
+    const view = renderWithProviders(<SendBackAction />);
+    const list = getGetTicketsQueryOptions({ page: 0, size: 20 });
+    const detail = getGetReviewTicketDetailQueryOptions(ticketUuid(323));
+    await act(async () => {
+      await Promise.all([view.queryClient.fetchQuery(list), view.queryClient.fetchQuery(detail)]);
+    });
+    const keys = [
+      getGetTicketsQueryKey({ page: 0, size: 20 }),
+      getGetReviewTicketDetailQueryKey(ticketUuid(323)),
+    ];
+    for (const key of keys) expect(view.queryClient.getQueryState(key)?.isInvalidated).toBe(false);
+    const button = screen.getByRole('button', { name: 'Send back to queue' });
+    await waitFor(() => expect(button).toBeEnabled());
+    await submitAndAwaitMutation(view.queryClient, button);
+    expect(reviewStore.history).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ticketId: ticketUuid(323), action: 'SEND_BACK' }),
+      ]),
+    );
+    for (const key of keys) expect(view.queryClient.getQueryState(key)?.isInvalidated).toBe(true);
   });
   it('AC-007.6 shows empty results and recovers from catalog errors with retry', async () => {
     server.use(

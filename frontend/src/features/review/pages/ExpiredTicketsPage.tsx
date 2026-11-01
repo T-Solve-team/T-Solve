@@ -153,7 +153,10 @@ function ExpiredTicketsContent({ departmentId }: { departmentId: string | undefi
             onChange: list.setPage,
           }}
           sort={list.sort}
-          onSortChange={(sort) => list.setSort(sort ?? { field: 'expiredAt', order: 'asc' })}
+          onSortChange={(sort) => {
+            // Ant Design clears descending next; map that to ascending so BUG-095 cannot trap the default sort.
+            list.setSort(sort ?? { field: 'expiredAt', order: 'asc' });
+          }}
           scrollX={1088}
           rowSelection={{
             selectedRowKeys: selected,
