@@ -124,6 +124,8 @@ export function CreateUserForm() {
             Cancel
           </Button>
           <Button
+            aria-label="Save"
+            aria-busy={create.isPending}
             type="primary"
             htmlType="submit"
             loading={create.isPending}
