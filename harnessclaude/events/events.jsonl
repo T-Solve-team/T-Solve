@@ -452,3 +452,6 @@
 {"ts":"2026-11-01T05:25:58.175Z","type":"feature-status","module":"import-ticket-list","feature":"preview-read","from":"pending","to":"in-progress"}
 {"ts":"2026-11-01T05:35:59.921Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"6bb02d7e813ca4fbbe107888439016e0ab339206"}
 {"ts":"2026-11-01T05:36:00.207Z","type":"feature-status","module":"import-ticket-list","feature":"preview-read","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-01T05:37:56.057Z","type":"feature-status","module":"import-ticket-list","feature":"duplicate-id-code","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T05:45:03.075Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"da595643101cf9c8c815341c57f6ca095942fd8b"}
+{"ts":"2026-11-01T05:45:03.344Z","type":"feature-status","module":"import-ticket-list","feature":"duplicate-id-code","from":"in-progress","to":"evaluating"}
