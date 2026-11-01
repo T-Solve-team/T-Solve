@@ -5,7 +5,7 @@ import { MOCK_USERS } from '@/mocks/session';
 import { server } from '@/mocks/server';
 import { problem } from '@/shared/api/mocks';
 import type { CurrentUser } from '@/shared/api';
-import { msg } from '@/shared/messages';
+import { dismissAcknowledgement, msg } from '@/shared/messages';
 import { SESSION_QUERY_KEY, type DevUserId } from '@/shared/auth';
 import { renderApp } from '@/test/render';
 
@@ -114,6 +114,8 @@ describe('MyProfilePage', () => {
 
   afterEach(() => {
     server.events.removeAllListeners();
+    // A 401 test leaves the MSG07 dialog open, which keeps the module flag `sessionExpiredDialogOpen` true.
+    dismissAcknowledgement('MSG07');
   });
 
   describe('AC-003.1 account, Roles, Department, Departments and Projects', () => {
@@ -438,11 +440,151 @@ describe('MyProfilePage', () => {
         name: `Space ${String(index + 1).padStart(2, '0')}`,
       }));
       spacesAre(spaces);
-      const { container } = renderApp('/profile', { user: 'tr' });
+      renderApp('/profile', { user: 'tr' });
       await findLoadedSpacesCard();
       expect(spaceNames('Spaces I can view')).toHaveLength(40);
-      expect(container.querySelector('.ant-pagination')).toBeNull();
+      const spacesRegion = screen.getByRole('region', { name: 'Spaces' });
+      expect(spacesRegion.querySelector('.ant-pagination')).toBeNull();
       expect(screen.queryByRole('button', { name: /Load more|Next/ })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('My Solutions section: role gating and failures', () => {
+    const SOLUTIONS_URL = /\/api\/v1\/me\/solutions$/;
+
+    /** Counts `GET /me/solutions` requests while the real handler keeps answering. Call before `renderApp`. */
+    function solutionsRequests() {
+      const spy = { calls: 0 };
+      server.events.on('request:start', ({ request }) => {
+        if (request.method === 'GET' && SOLUTIONS_URL.test(new URL(request.url).pathname))
+          spy.calls += 1;
+      });
+      return spy;
+    }
+
+    async function findSolutionsRegion() {
+      return within(await screen.findByRole('region', { name: 'My Solutions' }, { timeout: 5000 }));
+    }
+
+    it.each(['employee', 'km', 'admin'] as const)(
+      'AC-003.20 renders no My Solutions section and sends no /me/solutions request for %s',
+      async (user) => {
+        const answered = spacesAnswered();
+        const spy = solutionsRequests();
+        renderApp('/profile', { user });
+        await findAccountCard();
+        await answered;
+        await findLoadedSpacesCard();
+        expect(screen.queryByRole('region', { name: 'My Solutions' })).not.toBeInTheDocument();
+        expect(screen.queryByText('My Solutions')).not.toBeInTheDocument();
+        expect(spy.calls).toBe(0);
+      },
+    );
+
+    it.each(['employee', 'km', 'admin'] as const)(
+      'AC-003.20 sends no summary request and shows no counters for %s',
+      async (user) => {
+        let summaryCalls = 0;
+        server.events.on('request:start', ({ request }) => {
+          if (/\/api\/v1\/me\/solutions\/summary$/.test(new URL(request.url).pathname))
+            summaryCalls += 1;
+        });
+        const answered = spacesAnswered();
+        renderApp('/profile', { user });
+        await findAccountCard();
+        await answered;
+        await findLoadedSpacesCard();
+        expect(screen.queryByRole('group', { name: 'Solution counts' })).not.toBeInTheDocument();
+        expect(screen.queryByText('Pending review')).not.toBeInTheDocument();
+        expect(summaryCalls).toBe(0);
+        server.events.removeAllListeners();
+      },
+    );
+
+    it('AC-003.20 keeps the Account and Spaces cards when the counters fail with 500', async () => {
+      server.use(http.get('*/api/v1/me/solutions/summary', () => problem(500)));
+      renderApp('/profile', { user: 'tr' });
+      const counters = within(
+        await screen.findByRole('group', { name: 'Solution counts' }, { timeout: 5000 }),
+      );
+      expect(await counters.findByText(msg('MSG06'), {}, { timeout: 5000 })).toBeInTheDocument();
+      expect((await findAccountCard()).getByText('Phạm Quốc Bảo')).toBeInTheDocument();
+      expect((await findLoadedSpacesCard()).getByText('Spaces I can view')).toBeInTheDocument();
+    });
+
+    it.each(['tr', 'pm', 'pm-km', 'admin-tr'] as const)(
+      'AC-003.20 shows the My Solutions section for %s',
+      async (user) => {
+        const spy = solutionsRequests();
+        renderApp('/profile', { user });
+        const region = await findSolutionsRegion();
+        if (user === 'admin-tr') {
+          expect(await region.findByText(msg('MSG04'), {}, { timeout: 5000 })).toBeInTheDocument();
+        } else if (user === 'pm') {
+          const table = await region.findByRole('table', { name: 'My Solutions' });
+          expect(within(table).getAllByRole('row').slice(1)).toHaveLength(8);
+        } else {
+          await region.findByRole('table', { name: 'My Solutions' });
+        }
+        expect(spy.calls).toBe(1);
+      },
+    );
+
+    it('AC-003.20 shows MSG08 in the My Solutions section when /me/solutions answers 403 (role removed while open) and keeps the other cards', async () => {
+      server.use(http.get('*/api/v1/me/solutions', () => problem(403, 'MSG08')));
+      renderApp('/profile', { user: 'tr' });
+      const region = await findSolutionsRegion();
+      expect(await region.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(
+        msg('MSG08'),
+      );
+      expect(region.queryByRole('table')).not.toBeInTheDocument();
+      const account = await findAccountCard();
+      expect(account.getByText('Phạm Quốc Bảo')).toBeInTheDocument();
+      expect(await screen.findByRole('table', { name: 'Projects' })).toBeInTheDocument();
+      expect((await findLoadedSpacesCard()).getByText('Spaces I can view')).toBeInTheDocument();
+    });
+
+    it('AC-003.14 solutions shows MSG06 only in the My Solutions section when /me/solutions fails, with no retry', async () => {
+      server.use(http.get('*/api/v1/me/solutions', () => problem(500)));
+      renderApp('/profile', { user: 'tr' });
+      const region = await findSolutionsRegion();
+      expect(await region.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(
+        msg('MSG06'),
+      );
+      expect(region.queryByRole('button', { name: /Retry|Try again/ })).not.toBeInTheDocument();
+      const account = await findAccountCard();
+      expect(account.getByText('Phạm Quốc Bảo')).toBeInTheDocument();
+      expect(await screen.findByRole('table', { name: 'Projects' })).toBeInTheDocument();
+      expect((await findLoadedSpacesCard()).getByText('Spaces I can view')).toBeInTheDocument();
+    });
+
+    it('edge 66 shows MSG06 in both the Spaces card and the My Solutions section when both fail, and keeps the account', async () => {
+      server.use(
+        http.get('*/api/v1/me/spaces', () => problem(500)),
+        http.get('*/api/v1/me/solutions', () => problem(500)),
+      );
+      renderApp('/profile', { user: 'tr' });
+      const region = await findSolutionsRegion();
+      expect(await region.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(
+        msg('MSG06'),
+      );
+      const spaces = await findSpacesCard();
+      expect(await spaces.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(
+        msg('MSG06'),
+      );
+      expect(screen.getAllByText(msg('MSG06'))).toHaveLength(2);
+      expect((await findAccountCard()).getByText('Phạm Quốc Bảo')).toBeInTheDocument();
+      expect(await screen.findByRole('table', { name: 'Projects' })).toBeInTheDocument();
+    });
+
+    it('edge 67 a 401 on /me/solutions opens the MSG07 dialog and shows no MSG06 in the section', async () => {
+      server.use(http.get('*/api/v1/me/solutions', () => problem(401)));
+      renderApp('/profile', { user: 'tr' });
+      expect(await screen.findByRole('dialog', {}, { timeout: 5000 })).toHaveTextContent(
+        msg('MSG07'),
+      );
+      const region = await findSolutionsRegion();
+      expect(region.queryByText(msg('MSG06'))).not.toBeInTheDocument();
     });
   });
 
