@@ -52,3 +52,9 @@ Append-only log of framework friction captured during usage.
 **Type:** friction
 **Context:** The user approved the concrete 17-criterion spec in chat, but the PreToolUse hook blocked `sdd.ts approve dashboard-audit` because Codex cannot display the hook confirmation prompt. The hook required the user to run the command themselves. The user did so; `sdd.ts diff dashboard-audit` confirmed the current spec was approved at 2026-10-31T07:28:12.270Z. No retry or approval-file edit was used.
 **Suggestion:** Support a native, reviewable approval action for Codex while preserving the spec-hash gate.
+
+## 2026-11-01 — `sdd.ts trace` misses Java tests (import-ticket-list)
+
+**Type:** bug
+**Context:** `TEST_GLOBS` in `hooks/sdd.ts` is `**/*.{test,spec}.*`, `**/test_*.py`, `**/*_test.*`. JUnit files (`*Test.java`, `*IT.java`) never match, so `trace import-ticket-list STORY-001` reports 0/12 although every `AC_001_*` id is named by a backend test (checked with grep).
+**Suggestion:** Add `**/*Test.java` and `**/*IT.java` (and accept the `AC_001_2` spelling the backend naming rule uses) to the trace globs.

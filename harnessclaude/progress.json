@@ -22,7 +22,7 @@
         "retire-snapshot-import": "passing",
         "csv-confirm-db-tests": "passing",
         "preview-rows-access": "passing",
-        "project-uuid": "in-progress",
+        "project-uuid": "evaluating",
         "preview-read": "pending",
         "duplicate-id-code": "pending",
         "csv-upload-kit": "pending",
@@ -31,13 +31,13 @@
         "import-preview-actions": "pending",
         "import-ticket-preview-popup": "pending"
       },
-      "lastUpdated": "2026-11-01T04:34:59.584Z",
+      "lastUpdated": "2026-11-01T05:25:21.347Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "58e0a0674251e929d2c38e31b8eacb78f861e984"
+        "default": "c4f39009aa43872e595f17ff5ca28a95c31084d0"
       }
     },
     "be-foundation": {
