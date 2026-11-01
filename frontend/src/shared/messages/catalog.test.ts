@@ -134,8 +134,15 @@ describe('message catalog', () => {
     });
   });
 
-  it('AC-006.7 holds no code other than the Report3 web codes and MSG_NEW_2', () => {
-    const expected: string[] = [...webMessages.map(([code]) => code), 'MSG_NEW_2'];
+  it('AC-006.9 holds MSG_NEW_3, a duplicate Ticket ID inside one CSV file, until System_Messages numbers it', () => {
+    expect(MESSAGES.MSG_NEW_3).toEqual({
+      type: 'inline',
+      text: 'Ticket ID {ticket_id} appears more than once in this file.',
+    });
+  });
+
+  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2 and MSG_NEW_3', () => {
+    const expected: string[] = [...webMessages.map(([code]) => code), 'MSG_NEW_2', 'MSG_NEW_3'];
     expect(Object.keys(MESSAGES).sort()).toEqual(expected.sort());
     expectTypeOf<'MSG20'>().not.toMatchTypeOf<MsgCode>();
   });
