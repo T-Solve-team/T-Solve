@@ -1,4 +1,4 @@
-import { Tooltip, Typography } from 'antd';
+import { Flex, Tooltip, Typography } from 'antd';
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import type { MySolution } from '@/shared/api';
@@ -36,7 +36,7 @@ const COLUMNS: DataTableColumn<MySolution>[] = [
     width: 170,
     render: (_, row) => cells.text(row.projectName),
   },
-  { key: 'status', title: 'Status', width: 140, render: (_, row) => cells.tag(row.status) },
+  { key: 'status', title: 'Status', width: 160, render: (_, row) => cells.tag(row.status) },
   {
     key: 'latestDecision',
     title: 'Latest decision',
@@ -74,25 +74,27 @@ export function MySolutionsSection() {
   return (
     <section aria-label="My Solutions">
       <SectionCard title="My Solutions">
-        <StatusCounters
-          counts={summary.data?.counts}
-          isPending={summary.isPending}
-          error={summary.error}
-        />
-        <SolutionFilters filters={filters} projects={summary.projects} onChange={setFilters} />
-        {query.isPending ? (
-          <LoadingState />
-        ) : (
-          <DataTable
-            label="My Solutions"
-            columns={COLUMNS}
-            rows={query.data?.content}
-            rowKey={(row) => row.ticketId}
-            loading={query.isFetching}
-            error={query.error}
-            pagination={total > 20 ? { page, total, onChange: setPage } : undefined}
+        <Flex vertical gap="large">
+          <StatusCounters
+            counts={summary.data?.counts}
+            isPending={summary.isPending}
+            error={summary.error}
           />
-        )}
+          <SolutionFilters filters={filters} projects={summary.projects} onChange={setFilters} />
+          {query.isPending ? (
+            <LoadingState />
+          ) : (
+            <DataTable
+              label="My Solutions"
+              columns={COLUMNS}
+              rows={query.data?.content}
+              rowKey={(row) => row.ticketId}
+              loading={query.isFetching}
+              error={query.error}
+              pagination={total > 20 ? { page, total, onChange: setPage } : undefined}
+            />
+          )}
+        </Flex>
       </SectionCard>
     </section>
   );

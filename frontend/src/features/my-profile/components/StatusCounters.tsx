@@ -1,6 +1,7 @@
-import { Flex, Typography } from 'antd';
+import { Typography } from 'antd';
 import type { ApiError, MySolutionSummary } from '@/shared/api';
-import { ErrorState, LoadingState, StatusTag } from '@/shared/ui';
+import { ErrorState, LoadingState, STATUS_TAGS } from '@/shared/ui';
+import styles from './StatusCounters.module.css';
 
 /** The frame's order (1.2.1 (d)), not the TicketStatus enum order. */
 const ORDER = [
@@ -27,14 +28,14 @@ export function StatusCounters({ counts, isPending, error }: StatusCountersProps
       ) : error || !counts ? (
         <ErrorState error={error} />
       ) : (
-        <Flex gap="large" wrap>
+        <div className={styles.grid}>
           {ORDER.map((status) => (
-            <Flex key={status} vertical gap="small">
-              <StatusTag status={status} />
-              <Typography.Text strong>{counts[status]}</Typography.Text>
-            </Flex>
+            <div key={status} className={styles.card}>
+              <Typography.Text type="secondary">{STATUS_TAGS[status].label}</Typography.Text>
+              <Typography.Text className={styles.value}>{counts[status]}</Typography.Text>
+            </div>
           ))}
-        </Flex>
+        </div>
       )}
     </div>
   );
