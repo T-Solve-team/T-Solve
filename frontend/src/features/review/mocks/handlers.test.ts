@@ -16,7 +16,7 @@ import { resetMockData } from './handlers';
 import { reviewStore } from './state';
 
 describe('review mock contract', () => {
-  it('AC-005.1 returns UUID Ticket and Project ids and accepts a UUID decision (BUG-080)', async () => {
+  it('AC-005.1 returns UUID Ticket and Project ids and accepts a UUID decision (BUG-086)', async () => {
     const page = await getReviewQueue();
     const ticket = page.content[0];
     expect(ticket).toBeDefined();

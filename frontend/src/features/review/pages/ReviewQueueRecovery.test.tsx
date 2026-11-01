@@ -53,7 +53,7 @@ describe('Review Queue decision recovery', () => {
     });
   }
 
-  it('AC-005.1 sends selected UUIDs unchanged rather than numeric coercion (BUG-080)', async () => {
+  it('AC-005.1 sends selected UUIDs unchanged rather than numeric coercion (BUG-086)', async () => {
     let submitted: unknown;
     server.use(
       http.get('*/api/v1/review-queue', () => queueResponse()),
