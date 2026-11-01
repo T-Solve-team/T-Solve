@@ -36,8 +36,7 @@ owner (see "Stories → module"). Owners can change: edit the Owner column and t
 | `jira-app` | The Forge app: Solution Form (UC-19), Issue Panel, triage comment, sign-in link, install on several Jira sites | Đặng Tấn Bình | large | default | project-integration, ticket-repository, search, triage, ai |
 | `dashboard-audit` | Dashboard & Audit · UC-34–35 | Trần Hải Anh (UC-34) · Phạm Tùng Dương (UC-35) | medium | default | ticket-review, search, triage, chatbot |
 
-`ticket-review` comes with PR #26 (KAN-24): its `module.md`, spec and status join this map when that PR merges,
-with the paths below; its `module.md` then also lists `worker` (JOB-02, emails).
+`ticket-review` is restored for the new-main KAN-24 frontend/MSW slice (user decision, 2026-11-01); its module/spec and status are now maintained in this workspace. PR #26 remains separate reference work. The backend package below and the `worker` dependency describe future live integration (including JOB-02 and emails); the current module paths are limited to the approved frontend slice.
 
 `import-ticket-list` (KAN-31, CSV import, UC-21) was planned and completed before this map, as its own module. Its
 work is the first part of `ticket-repository` and uses the `ticket-repository` paths below.

@@ -4,6 +4,11 @@ Master registry of all artifacts in this workspace.
 
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
+| MODULE-REVIEW-24 | module | ticket-review | decomposed | artifacts/03-modules/ticket-review/module.md |
+| SPEC-REVIEW-24 | spec | ticket-review | approved | artifacts/03-modules/ticket-review/spec.md |
+| DESIGN-REVIEW-24 | design | ticket-review | approved | artifacts/04-plans/ticket-review/design.md |
+| DESIGN-REVIEW-24-I1 | design | ticket-review | approved | artifacts/04-plans/ticket-review/iteration-1/design.md |
+| TASKS-REVIEW-24-I1 | tasks | ticket-review | approved | artifacts/04-plans/ticket-review/iteration-1/tasks.md |
 | IMPL-IDENTITY-14 | session-log | identity | passing | artifacts/05-implementation/identity/task-14-space-handover.md |
 | TEST-IDENTITY-14 | test-report | identity | pass-with-open-dev-defect | artifacts/06-evaluation/identity/task-14-space-handover-test-report.md |
 | REVIEW-IDENTITY-14 | review | identity | pass | artifacts/06-evaluation/identity/task-14-space-handover-review.md |
@@ -148,3 +153,9 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | dashboard-audit | verified | artifacts/assets/dashboard-audit/kan-153-filtered.jpg |
 | — | review | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-review.md |
 | — | test-report | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-test-report.md |
+| — | session-log | ticket-review | passing | artifacts/05-implementation/ticket-review/task-1-review-queue-decisions.md |
+| — | test-report | ticket-review | pass | artifacts/06-evaluation/ticket-review/task-1-review-queue-decisions-test-report.md |
+| — | review | ticket-review | pass | artifacts/06-evaluation/ticket-review/task-1-review-queue-decisions-review.md |
+| — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-queue.jpg |
+| — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-reject-validation.jpg |
+| — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-bulk-approved.jpg |

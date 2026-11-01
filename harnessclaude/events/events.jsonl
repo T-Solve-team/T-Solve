@@ -433,3 +433,13 @@
 {"ts":"2026-10-31T14:01:28.180Z","type":"feature-status","module":"identity","feature":"my-solutions-table","from":null,"to":"pending"}
 {"ts":"2026-10-31T14:10:38.423Z","type":"spec-approved","module":"identity","specHash":"7e00808021e6cff758fb63c5889bffa36bf9cf57c4a65dce1517566c5d764435"}
 {"ts":"2026-10-31T14:14:09.499Z","type":"spec-approved","module":"identity","specHash":"f040f761b9e95dec48eaef6cba018ed075caeaac40f866a2764c966a2b296ec5"}
+{"ts":"2026-11-01T01:49:29.279Z","type":"module-status","module":"ticket-review","from":null,"to":"decomposed"}
+{"ts":"2026-11-01T01:51:05.534Z","type":"spec-approved","module":"ticket-review","specHash":"9fe97b50fb58bcacae49c7f5bfdf466d26736accfb05a08b4a49c9551c5ac1f1"}
+{"ts":"2026-11-01T01:57:04.965Z","type":"module-status","module":"ticket-review","from":"decomposed","to":"planned"}
+{"ts":"2026-11-01T01:57:04.998Z","type":"feature-status","module":"ticket-review","feature":"review-queue-decisions","from":null,"to":"pending"}
+{"ts":"2026-11-01T01:57:05.033Z","type":"feature-status","module":"ticket-review","feature":"review-ticket-detail","from":null,"to":"pending"}
+{"ts":"2026-11-01T01:57:05.066Z","type":"module-status","module":"ticket-review","from":"planned","to":"implementing"}
+{"ts":"2026-11-01T01:57:05.098Z","type":"feature-status","module":"ticket-review","feature":"review-queue-decisions","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T02:26:45.699Z","type":"feature-status","module":"ticket-review","feature":"review-queue-decisions","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-01T02:27:04.228Z","type":"feature-status","module":"ticket-review","feature":"review-queue-decisions","from":"evaluating","to":"passing"}
+{"ts":"2026-11-01T02:30:41.498Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"d8ec1dc3e1d292f9d086b2c92e56ce84484ed9a9"}
