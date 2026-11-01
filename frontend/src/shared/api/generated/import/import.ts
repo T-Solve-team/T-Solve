@@ -270,6 +270,136 @@ export const useUploadCsvImport = <TError = ErrorType<ProblemResponse>, TContext
 > => {
   return useMutation(getUploadCsvImportMutationOptions(options), queryClient);
 };
+export const getGetImportPreviewUrl = (previewId: number) => {
+  return `/api/v1/imports/previews/${previewId}`;
+};
+
+/**
+ * @summary The caller's unconfirmed Import Preview again (counts, MSG30 and the first page of rows), e.g. after a reload. Another user's, a confirmed or a deleted preview = 404; a Project the caller no longer manages = 403 (MSG08).
+
+ */
+export const getImportPreview = async (
+  previewId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ImportPreviewResponse> => {
+  return http<ImportPreviewResponse>(getGetImportPreviewUrl(previewId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetImportPreviewQueryKey = (previewId: number) => {
+  return [`/api/v1/imports/previews/${previewId}`] as const;
+};
+
+export const getGetImportPreviewQueryOptions = <
+  TData = Awaited<ReturnType<typeof getImportPreview>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportPreview>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetImportPreviewQueryKey(previewId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getImportPreview>>> = ({ signal }) =>
+    getImportPreview(previewId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: previewId !== null && previewId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getImportPreview>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetImportPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getImportPreview>>>;
+export type GetImportPreviewQueryError = ErrorType<ProblemResponse>;
+
+export function useGetImportPreview<
+  TData = Awaited<ReturnType<typeof getImportPreview>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportPreview>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImportPreview>>,
+          TError,
+          Awaited<ReturnType<typeof getImportPreview>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetImportPreview<
+  TData = Awaited<ReturnType<typeof getImportPreview>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportPreview>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImportPreview>>,
+          TError,
+          Awaited<ReturnType<typeof getImportPreview>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetImportPreview<
+  TData = Awaited<ReturnType<typeof getImportPreview>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportPreview>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary The caller's unconfirmed Import Preview again (counts, MSG30 and the first page of rows), e.g. after a reload. Another user's, a confirmed or a deleted preview = 404; a Project the caller no longer manages = 403 (MSG08).
+
+ */
+
+export function useGetImportPreview<
+  TData = Awaited<ReturnType<typeof getImportPreview>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportPreview>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetImportPreviewQueryOptions(previewId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getGetImportPreviewRowsUrl = (
   previewId: number,
   params?: GetImportPreviewRowsParams,

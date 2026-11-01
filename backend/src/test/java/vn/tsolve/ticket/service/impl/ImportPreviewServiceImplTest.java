@@ -179,4 +179,46 @@ class ImportPreviewServiceImplTest {
         }
         verifyNoInteractions(rows);
     }
+
+    @Test
+    void readsTheCallersPreviewWithCountsMessageAndFirstPage_AC_007_1() {
+        when(rows.countByIdPreviewIdAndStatus(ID, PreviewRowStatus.VALID)).thenReturn(3L);
+        when(rows.countByIdPreviewIdAndStatus(ID, PreviewRowStatus.ERROR)).thenReturn(1L);
+        when(rows.countByIdPreviewIdAndStatus(ID, PreviewRowStatus.REMOVED)).thenReturn(2L);
+        when(rows.findByIdPreviewIdOrderByIdRowNo(eq(ID), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(row(1, "a", List.of()))));
+
+        ImportPreviewResponse response = service.preview(PM, ID);
+
+        assertThat(response.previewId()).isEqualTo(ID);
+        assertThat(response.projectId()).isEqualTo(PROJECT);
+        assertThat(response.fileName()).isEqualTo("tickets.csv");
+        assertThat(response.validCount()).isEqualTo(3);
+        assertThat(response.errorCount()).isEqualTo(1);
+        assertThat(response.removedCount()).isEqualTo(2);
+        assertThat(response.message()).isEqualTo(new MessageRef("MSG30", Map.of("count", 1L)));
+        assertThat(response.rows().getContent()).hasSize(1);
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(rows).findByIdPreviewIdOrderByIdRowNo(eq(ID), pageable.capture());
+        assertThat(pageable.getValue().getPageNumber()).isZero();
+        assertThat(pageable.getValue().getPageSize()).isEqualTo(CsvImportServiceImpl.FIRST_PAGE_SIZE);
+    }
+
+    @Test
+    void rejectsReadingAnotherUsersOrAGonePreview_AC_007_2() {
+        assertThatThrownBy(() -> service.preview("other@company.vn", ID)).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.preview(PM, 7L)).isInstanceOf(NotFoundException.class);
+        verifyNoInteractions(rows);
+    }
+
+    @Test
+    void rejectsReadingWhenTheCallerNoLongerManagesTheActiveProject_AC_007_3() {
+        when(projects.managesActive(PM, PROJECT)).thenReturn(false);
+
+        MessageCodeException e = catchThrowableOfType(() -> service.preview(PM, ID), MessageCodeException.class);
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(e.getCode()).isEqualTo("MSG08");
+        verifyNoInteractions(rows);
+    }
 }

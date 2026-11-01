@@ -565,6 +565,28 @@ paths:
           $ref: '#/components/responses/Problem'
         '413':
           $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}:
+    get:
+      tags: [import]
+      operationId: getImportPreview
+      summary: >
+        The caller's unconfirmed Import Preview again (counts, MSG30 and the first page of rows), e.g. after a reload.
+        Another user's, a confirmed or a deleted preview = 404; a Project the caller no longer manages = 403 (MSG08).
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '200':
+          description: The preview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
   /api/v1/imports/previews/{previewId}/rows:
     get:
       tags: [import]

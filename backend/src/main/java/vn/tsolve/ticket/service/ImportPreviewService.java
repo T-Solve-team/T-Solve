@@ -11,6 +11,9 @@ import vn.tsolve.ticket.entity.PreviewRowStatus;
 /** Reading and trimming the caller's own Import Preview. Another user's preview is reported as not found. */
 public interface ImportPreviewService {
 
+    /** Counts, MSG30 and the first page of rows, as the upload returned them (AC-007.1). */
+    ImportPreviewResponse preview(String user, long previewId);
+
     /** One page of rows by row number; status null = all rows. Pages hold at most 100 rows. */
     PagedModel<ImportPreviewRowSummary> rows(String user, long previewId, PreviewRowStatus status, Pageable page);
 

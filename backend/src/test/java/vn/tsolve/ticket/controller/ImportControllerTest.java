@@ -107,6 +107,18 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void readsThePreviewOfTheCaller_AC_007_1() throws Exception {
+        when(previews.preview("pm@company.vn", 42L)).thenReturn(preview());
+
+        mvc.perform(get("/api/v1/imports/previews/42"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.previewId").value(42))
+                .andExpect(jsonPath("$.projectId").value(PROJECT.toString()))
+                .andExpect(jsonPath("$.validCount").value(2));
+    }
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
     void uploadPassesUserProjectAndFile() throws Exception {
         when(csvImports.upload(eq("pm@company.vn"), eq(PROJECT), any())).thenReturn(preview());
 
@@ -135,6 +147,7 @@ class ImportControllerTest {
     @Test
     @WithMockUser(username = "admin@company.vn", roles = "ADMIN")
     void everyImportEndpointNeedsProjectManagerRole_AC_001_10() throws Exception {
+        mvc.perform(get("/api/v1/imports/previews/42")).andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/imports/previews/42/rows")).andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/imports/previews/42/rows/1")).andExpect(status().isForbidden());
         mvc.perform(post("/api/v1/imports/previews/42/remove-rows")

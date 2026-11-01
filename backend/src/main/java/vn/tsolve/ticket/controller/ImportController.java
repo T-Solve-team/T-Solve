@@ -79,6 +79,14 @@ public class ImportController {
         return ResponseEntity.ok(csvImports.upload(user.getName(), projectId, file));
     }
 
+    @GetMapping("/previews/{previewId}")
+    @Operation(operationId = "getImportPreview", summary = "The caller's Import Preview again (counts, first page).")
+    @ApiResponse(responseCode = "403")
+    @ApiResponse(responseCode = "404")
+    public ResponseEntity<ImportPreviewResponse> getImportPreview(@PathVariable long previewId, Principal user) {
+        return ResponseEntity.ok(previews.preview(user.getName(), previewId));
+    }
+
     @GetMapping("/previews/{previewId}/rows")
     @Operation(operationId = "getImportPreviewRows", summary = "One page of the preview rows.")
     @ApiResponse(responseCode = "403")
