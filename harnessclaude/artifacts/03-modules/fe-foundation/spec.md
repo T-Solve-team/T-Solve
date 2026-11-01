@@ -17,6 +17,7 @@ owner: BA
 | 2026-10-25 | STORY-005, STORY-010 | AC-005.2 drops 9.3 Audit Entry Detail; AC-010.1 counts 34 web screens; AC-010.3 also records the Workspace site, the central sign-in and the route tree by host | Screen 9.3 deleted (D18, CR-15) (KAN-198, Hiếu, 25/10) |
 | 2026-10-25 | STORY-001, STORY-009 | New AC-001.8 (the session keeps every `/me` id as a UUID string; `isProjectManagerOf` / `isMemberOf` take a UUID string) and AC-009.7 (fixture users carry UUID ids); Interface Contracts: the ids of `UserSummary`, `DepartmentRef`, `ProjectMembership` and `SpaceRef` are `string` with `format: uuid` | Change request KAN-196 Q2 (the user, 25/10): UUID primary keys in every module, so ids are UUID strings in the contract (Phan_cong v6 §1); SPEC-P1-7 |
 | 2026-10-26 | STORY-012 | returnTo backslash/control chars; google_domain two labels: AC-012.2 also rejects `\` and ASCII control or whitespace characters in `returnTo`; AC-012.4 needs two or more labels, the last one letters only | QA of Task 8 step 1 (KAN-206, Hiếu, 26/10): browsers read `/\evil.example` and a tab inside a path as `//evil.example`; Google Workspace domains always have a TLD |
+| 2026-11-01 | STORY-006 | New AC-006.9 (`MSG_NEW_3`, a duplicate Ticket ID inside one CSV file); AC-006.7 also allows `MSG_NEW_3` | import-ticket-list asked for MSG78 as a new code, but System_Messages v3460 gave MSG78 to another message; the Import Preview shows the row error from the catalog (import-ticket-list D14, user decision 2026-11-01) |
 
 ## Requirements
 
@@ -180,10 +181,12 @@ owner: BA
   - AC-006.5: WHEN a message is shown with parameters, THE web app SHALL replace each `{name}` placeholder with its
     value.
   - AC-006.6: IF a placeholder has no value, THEN THE web app SHALL leave the placeholder text as it is.
-  - AC-006.7: THE catalog SHALL hold no code other than the Report3 codes of AC-006.1 and `MSG_NEW_2`, so every code
+  - AC-006.7: THE catalog SHALL hold no code other than the Report3 codes of AC-006.1, `MSG_NEW_2` and `MSG_NEW_3`, so every code
     the app uses (review included) is a Report3 code.
   - AC-006.8: THE catalog SHALL hold the multi-tenant web codes with their exact Report3 text: MSG119, MSG120,
     MSG122, MSG123 and MSG141 (type inline) and MSG134 (type field, adding a user, UC-05).
+  - AC-006.9: THE catalog SHALL hold `MSG_NEW_3` (type inline) until System_Messages numbers it (import-ticket-list
+    D14), with the text `Ticket ID {ticket_id} appears more than once in this file.`
 
 ### STORY-007: Triage status tags
 - As the Triage and Dashboard owners, I want ready-made tags for the triage class so that both screens show it the

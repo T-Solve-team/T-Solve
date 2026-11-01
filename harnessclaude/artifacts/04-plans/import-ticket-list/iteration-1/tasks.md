@@ -1,7 +1,7 @@
 ---
 module: import-ticket-list
 date: 2026-10-21
-total_tasks: 14
+total_tasks: 22
 owner: Dev
 ---
 
@@ -252,4 +252,123 @@ If any step fails, the transaction rolls back, and `ImportBatchRecorder.recordFa
 - Modify: `T/service/impl/ImportPreviewServiceImpl.java`
 - Test: `TT/service/impl/ImportPreviewServiceImplTest.java` (AC-003.4)
 **Dependencies:** Task 7
+**Estimated size:** small
+
+---
+
+## Change 2026-11-01 — web screens (STORY-007..011, D10–D15)
+
+Design: master design, section "Change 2026-11-01". `F` = `frontend/src/features/ticket-import`, `UI` = `frontend/src/shared/ui`. Frontend tests name their AC id (`it('AC-009.3 …')`) and run on the feature's MSW mocks through `renderApp` (guideline 10). Each task ends with the verify commands of the root `CLAUDE.md` for the part it touches.
+
+## Task 15: UUID Project ids
+
+**Story:** STORY-001
+**Feature:** project-uuid
+**Description:** D10.
+- Changeset `005-ticket-import-project-uuid.sql`: `project_id` of `import_batch`, `ticket` and `import_preview` to `UUID USING lpad(to_hex(project_id), 32, '0')::uuid`; include it in the master changelog.
+- `ProjectAccess` takes `UUID`; `StubProjectAccess` parses `user:<uuid>,<uuid>;…` and ignores a malformed id; `.env.example` comment shows the new format.
+- `projectId` is `UUID` in the three entities, `ImportPreviewResponse`, `CsvImportService(Impl)`, `ImportConfirmServiceImpl`, `ImportPreviewServiceImpl` and the controller's `@RequestParam`.
+- Contract: `projectId` `format: uuid` in the upload body and `ImportPreviewResponse`; `npm run generate:api`.
+- Update the existing tests to UUID ids. Covers edge cases 31 and 32.
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/005-ticket-import-project-uuid.sql`
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `.env.example`, `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
+- Modify: `T/service/ProjectAccess.java`, `T/service/impl/{StubProjectAccess,CsvImportServiceImpl,ImportConfirmServiceImpl,ImportPreviewServiceImpl}.java`, `T/service/CsvImportService.java`, `T/entity/{ImportPreview,ImportBatch,Ticket}.java`, `T/dto/ImportPreviewResponse.java`, `T/controller/ImportController.java`
+- Test: `TT/service/impl/StubProjectAccessTest.java` (malformed UUID grants nothing), `TT/controller/ImportControllerTest.java` (non-UUID `projectId` → 400), the other `TT` tests and `ImportConfirmIT` (changeset 005 runs on the real database)
+**Dependencies:** none
+**Estimated size:** medium
+
+---
+
+## Task 16: Read an existing preview
+
+**Story:** STORY-007
+**Feature:** preview-read
+**Description:** D11. `ImportPreviewService.preview(user, previewId)`: the caller's preview through `owned()` (404, 403 MSG08) and the same `ImportPreviewResponse` as remove-rows, built by one private `summary(preview)` that `removeRows` also uses. `GET /api/v1/imports/previews/{previewId}` (`getImportPreview`) in the controller and the contract; `npm run generate:api`. Covers edge cases 29 and 30.
+**Files:**
+- Modify: `T/service/ImportPreviewService.java`, `T/service/impl/ImportPreviewServiceImpl.java`, `T/controller/ImportController.java`, `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
+- Test: `TT/service/impl/ImportPreviewServiceImplTest.java` (AC-007.1, AC-007.2, AC-007.3), `TT/controller/ImportControllerTest.java` (the path and its role check)
+**Dependencies:** Task 15
+**Estimated size:** small
+
+---
+
+## Task 17: Duplicate Ticket ID code MSG_NEW_3
+
+**Story:** STORY-002
+**Feature:** duplicate-id-code
+**Description:** D14. `CsvRowValidator` marks in-file duplicates with `MSG_NEW_3` (params `ticket_id`) instead of `MSG78`; MSG39 stays for the resolved date. The catalog entry is fe-foundation's (its AC-006.9, its own task): this task changes the backend only.
+**Files:**
+- Modify: `T/csv/CsvRowValidator.java`
+- Test: `TT/csv/CsvRowValidatorTest.java` (AC-002.6)
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 18: CsvUpload kit component
+
+**Story:** STORY-011
+**Feature:** csv-upload-kit
+**Description:** D12. `<CsvUpload name label required />` in `shared/ui` as in the design: one file by click or drag (`Upload.Dragger`, `maxCount={1}`, `accept=".csv"`), the file name listed with a remove action; `beforeUpload` returns `false` (never sends); a name not ending in `.csv` (any case) → MSG27, a file over 10 MB → MSG28, set on its own form field through `Form.useFormInstance()` without keeping the file; required → MSG01. Export it from `UI/index.ts`. Covers edge case 37. The pull request asks the FE Lead to review it.
+**Files:**
+- Create: `UI/CsvUpload/{CsvUpload.tsx,index.ts}`
+- Modify: `UI/index.ts`
+- Test: `UI/CsvUpload/CsvUpload.test.tsx` (AC-011.1, AC-011.2, AC-011.3)
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 19: Import Tickets screen — CSV tab
+
+**Story:** STORY-008
+**Feature:** import-tickets-screen
+**Description:** `ImportTicketsPage` replaces the placeholder: antd `Tabs` Jira · CSV · Manual entry, CSV selected (`?tab=csv`, the default), Jira and Manual entry disabled. `CsvImportForm`: Project select from `useSession().projects` with `roleInProject === 'PROJECT_MANAGER'` (label `<jiraProjectKey> · <departmentName>`), Download template (`downloadCsvTemplate` + `lib/save-text-file.ts`, file `ticket-import-template.csv`), `CsvUpload`, Upload. `useUploadCsvImport` with `handlesOwnErrors`: success → `/import/preview?previewId=<id>`; field codes MSG27/MSG28 under the file field, inline codes (MSG29 with `column_names`, MSG04, MSG08) in an `Alert`; the form keeps its values; Upload shows loading. MSW handlers and data in `F/mocks/` for template and upload. Covers edge cases 34 (Upload) and 39.
+**Files:**
+- Create: `F/components/CsvImportForm.tsx`, `F/lib/save-text-file.ts`, `F/mocks/data.ts`
+- Modify: `F/pages/ImportTicketsPage.tsx`, `F/mocks/handlers.ts`
+- Test: `F/pages/ImportTicketsPage.test.tsx` (AC-008.1 – AC-008.8)
+**Dependencies:** Task 15, Task 18
+**Estimated size:** medium
+
+---
+
+## Task 20: Import Preview screen — Summary, rows and states
+
+**Story:** STORY-009
+**Feature:** import-preview-screen
+**Description:** `ImportPreviewPage` replaces the placeholder. `?previewId` not a positive whole number → `<Navigate to={paths.importTickets} replace>`. `useGetImportPreview` → Summary (file name, `StatCard` Valid / Error / Removed, MSG30 `Alert`), `LoadingState`, `ErrorState` for 403 (MSG08) and 404 (MSG04). `ImportPreviewTable` on `useGetImportPreviewRows` (20 per page, local page state) with the AC-009.2 columns, Result as `StatusTag`, Error details as `msg(code, params)` (an unknown code → MSG06), checkbox selection with Removed rows disabled, a Preview button per row (opens the popup of Task 22; until then the button only sets the selected row). Mock handlers for the preview and rows paths. Covers edge cases 33 and 38.
+**Files:**
+- Create: `F/components/ImportPreviewTable.tsx`, `F/hooks/useImportPreview.ts`
+- Modify: `F/pages/ImportPreviewPage.tsx`, `F/mocks/{data,handlers}.ts`
+- Test: `F/pages/ImportPreviewPage.test.tsx` (AC-009.1, AC-009.2, AC-009.11, AC-009.12, AC-009.13)
+**Dependencies:** Task 16, Task 17, Task 19
+**Estimated size:** medium
+
+---
+
+## Task 21: Import Preview screen — Remove, Confirm, Cancel and leaving
+
+**Story:** STORY-009
+**Feature:** import-preview-actions
+**Description:** Remove (disabled with no selection; refreshes the Summary and rows, clears the selection). Confirm (disabled while `validCount` is 0, loading while pending; success → MSG32 with `created` / `skipped` and Import Tickets without MSG37; error → the returned code, stay). Cancel → navigates to Import Tickets through the blocker. `useBlocker` + `ConfirmDialog` MSG37 (danger) for every move inside the app before Confirm. Mock handlers for remove-rows and confirm (MSG40 / MSG33 cases selectable in the mock data). Covers edge cases 34 (Confirm), 35 and 36.
+**Files:**
+- Modify: `F/pages/ImportPreviewPage.tsx`, `F/hooks/useImportPreview.ts`, `F/mocks/{data,handlers}.ts`
+- Test: `F/pages/ImportPreviewPage.test.tsx` (AC-009.3, AC-009.5 – AC-009.10)
+**Dependencies:** Task 20
+**Estimated size:** medium
+
+---
+
+## Task 22: Import Ticket Preview popup
+
+**Story:** STORY-010
+**Feature:** import-ticket-preview-popup
+**Description:** D15. `DetailModal` in `shared/ui` (Modal Header of kind Form, content, one Close button; exported from `UI/index.ts`; the FE Lead reviews it with `CsvUpload`). `ImportTicketPreviewModal` on `useGetImportPreviewRow`: Ticket ID, Title, Description, Author, Resolved date, the five Solution sections in full, Result, Error details, all read-only in `Descriptions`; loading and `ErrorState` inside the popup; Close keeps the Import Preview as it was. Wire it to the Preview button. Mock handler for the row path.
+**Files:**
+- Create: `UI/DetailModal/{DetailModal.tsx,index.ts}`, `F/components/ImportTicketPreviewModal.tsx`
+- Modify: `UI/index.ts`, `F/pages/ImportPreviewPage.tsx`, `F/mocks/handlers.ts`
+- Test: `F/pages/ImportPreviewPage.test.tsx` (AC-009.4, AC-010.1, AC-010.2, AC-010.3)
+**Dependencies:** Task 20
 **Estimated size:** small

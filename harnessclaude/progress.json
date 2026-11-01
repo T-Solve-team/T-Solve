@@ -5,8 +5,8 @@
   "status": "active",
   "modules": {
     "import-ticket-list": {
-      "status": "completed",
-      "currentPhase": "evaluate",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "csv-import-contract": "passing",
         "csv-import-schema": "passing",
@@ -21,9 +21,17 @@
         "csv-import-performance": "passing",
         "retire-snapshot-import": "passing",
         "csv-confirm-db-tests": "passing",
-        "preview-rows-access": "passing"
+        "preview-rows-access": "passing",
+        "project-uuid": "in-progress",
+        "preview-read": "pending",
+        "duplicate-id-code": "pending",
+        "csv-upload-kit": "pending",
+        "import-tickets-screen": "pending",
+        "import-preview-screen": "pending",
+        "import-preview-actions": "pending",
+        "import-ticket-preview-popup": "pending"
       },
-      "lastUpdated": "2026-10-22T13:51:10.073Z",
+      "lastUpdated": "2026-11-01T04:34:59.584Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
@@ -63,9 +71,10 @@
         "catalog-sync": "passing",
         "site-sign-in": "passing",
         "host-routes": "passing",
-        "uuid-ids": "passing"
+        "uuid-ids": "passing",
+        "catalog-msg-new-3": "pending"
       },
-      "lastUpdated": "2026-10-28T14:17:22.890Z",
+      "lastUpdated": "2026-11-01T04:34:40.000Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"

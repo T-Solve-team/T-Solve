@@ -5,7 +5,7 @@ date: 2026-10-21
 
 # Design: import-ticket-list
 
-Spec: `artifacts/03-modules/import-ticket-list/spec.md` (approved, version 494d550f). This design covers KAN-31 CSV import (STORY-001..006). It is **backend + OpenAPI contract only**: the React screens are a separate frontend task that generates its client from the contract (decided 2026-10-21).
+Spec: `artifacts/03-modules/import-ticket-list/spec.md` (approved, version 494d550f). This design covers KAN-31 CSV import (STORY-001..006). It is **backend + OpenAPI contract only**: the React screens are a separate frontend task that generates its client from the contract (decided 2026-10-21). The change of 2026-11-01 (STORY-007..011, D10-D15) adds the web screens: see **Change 2026-11-01** at the end.
 
 ## Architecture Overview
 
@@ -260,3 +260,101 @@ Agreements:
 | Cross-user access by preview id | Critical | Owner check → 404 in every preview query | Task 7, Task 9 |
 | Rollback erases the Failed record | High | `REQUIRES_NEW` recorder + rollback test | Task 9 |
 | Slow Confirm on 5,000 rows | Medium | JDBC batching + sequence allocation | Task 2, Task 11 |
+
+## Change 2026-11-01 — web screens (STORY-007..011, D10–D15)
+
+Spec decisions D10–D14 (spec "Decisions taken for the web screens"). D15 is decided here with the user.
+
+### Backend
+
+```
+GET /imports/previews/{id} ──► ImportController.getImportPreview ──► ImportPreviewServiceImpl.preview
+      owned(user, id)  → 404 (other owner / gone) · 403 MSG08 (no longer manages the Active Project)
+      summary(preview) → the same ImportPreviewResponse as remove-rows (counts, MSG30, first 50 rows)
+```
+
+- **STORY-007:** `ImportPreviewService.preview(user, previewId)`. `removeRows` and `preview` share one private `summary(preview)`, which builds what `removeRows` builds today. No new query: the three counts and the first page already exist.
+- **D10, UUID Project ids:** `ProjectAccess.managesActive(String, UUID)` / `isActive(UUID)`. `projectId` becomes `UUID` in `ImportPreview`, `ImportBatch`, `Ticket`, `ImportPreviewResponse`, `CsvImportService.upload` and the controller's `@RequestParam UUID projectId`. A value that is not a UUID fails binding → 400 from the existing `GlobalExceptionHandler` (be-foundation). `StubProjectAccess` reads `user:<uuid>,<uuid>;…`; a malformed id grants nothing (fails closed, as before). `.env.example` gets the new format in its comment.
+- **Changeset `005-ticket-import-project-uuid.sql`** (003 is applied and stays as it is): `ALTER TABLE import_batch|ticket|import_preview ALTER COLUMN project_id TYPE UUID USING lpad(to_hex(project_id), 32, '0')::uuid`. Old stub ids keep a stable value (`1` → `00000000-0000-0000-0000-000000000001`), so dev data survives. PostgreSQL rebuilds `idx_import_batch_project` and `idx_ticket_project_status` itself. 005 is the next free number on every branch (checked 2026-11-01: `main` has 001, 003, 004; open branches add only 002).
+- **D14:** `CsvRowValidator` sends `MSG_NEW_3` instead of `MSG78`; MSG39 stays for the resolved date.
+- **Contract:** `projectId` `format: uuid` in the upload body and in `ImportPreviewResponse`; new path `GET /imports/previews/{previewId}` (`getImportPreview`, 200 / 403 / 404). `npm run generate:api` regenerates the client.
+
+### Web app — `frontend/src/features/ticket-import/`
+
+```
+/import?tab=csv ─ ImportTicketsPage ─ Tabs (Jira ✗, CSV, Manual entry ✗)
+                       └─ CsvImportForm: Project select · Download template · CsvUpload · Upload
+                              │ useUploadCsvImport (handlesOwnErrors)
+                              ▼ success → navigate(/import/preview?previewId=<id>)
+/import/preview?previewId=<id> ─ ImportPreviewPage
+       ├─ previewId not a positive integer → <Navigate to="/import" replace> (AC-009.11)
+       ├─ useGetImportPreview(id) → Summary: file name, StatCards Valid / Error / Removed, Alert MSG30
+       ├─ useGetImportPreviewRows(id, page) → DataTable (20 rows, checkbox; Removed rows not selectable)
+       ├─ Remove (selection) · Confirm (validCount > 0) · Cancel (MSG37)
+       ├─ Preview on a row → ImportTicketPreviewModal → useGetImportPreviewRow(id, rowNo)
+       └─ useBlocker while not finished → ConfirmDialog MSG37 (AC-009.10)
+```
+
+- **Project select (AC-008.2):** `useSession().projects` filtered by `roleInProject === 'PROJECT_MANAGER'`; label `<jiraProjectKey> · <departmentName>`, value `projectId`. No new request: the session already holds the list.
+- **Download template (AC-008.3):** `downloadCsvTemplate({ headers: { Accept: 'text/csv' } })` returns the text; a small `saveTextFile(text, 'ticket-import-template.csv')` in `ticket-import/lib/` builds a Blob URL, clicks a hidden link and revokes the URL. One use, so it stays in the feature.
+- **Upload errors (AC-008.7)** follow the catalog type of the returned code: field codes (MSG27, MSG28) go under the CSV file field with `form.setFields`; inline codes (MSG29 with `column_names`, MSG04, MSG08) go to an `Alert` above the form. Project and file stay in the form. Loading: `Button loading={upload.isPending}`, which also blocks a second click (AC-008.8).
+- **Rows table (AC-009.2):** columns checkbox · Ticket ID · Title · Author · Resolved date · Solution (the five sections as returned, label + text, cut with "…") · Result (`StatusTag` VALID / ERROR / REMOVED) · Error details (`msg(code, params)` per error, one per line; a code the catalog does not know shows MSG06) · Preview (link button). Paging is local `useState`: the page is reached only from Upload, and its URL carries only `previewId` (D11).
+- **Remove (AC-009.3):** `useRemoveImportPreviewRows` → on success invalidate the preview query and its rows queries, clear the selection. **Confirm (AC-009.5–009.8):** `useConfirmImport` with `handlesOwnErrors`; success → `showMessage('MSG32', { created, skipped })`, mark finished, `navigate(paths.importTickets)`; error → `showMessage(error.code, error.params)` and stay.
+- **Leaving (AC-009.9, 009.10):** one `isFinished` ref, set before the navigation that a successful Confirm makes. `useBlocker(() => !isFinished.current)` opens `ConfirmDialog code="MSG37" isDanger`; OK → `blocker.proceed()`, Cancel → `blocker.reset()`. The Cancel button only navigates to Import Tickets and lets the blocker ask, so MSG37 has one code path. No `beforeunload` (spec Out of Scope; guideline 08 §7 asks for it, the approved spec wins for this change).
+- **States (AC-009.12, 009.13):** the preview query's `LoadingState`; its 403 / 404 → `ErrorState` with the `ApiError` (the backend sends MSG08 on 403; a 404 without a code is shown as MSG04). The rows table uses `DataTable`'s own loading and error.
+- **Popup (AC-010.1–010.3):** `ImportTicketPreviewModal` (row number or null) → antd `Descriptions` with every field read-only, the full Solution sections, `StatusTag`, error texts; loading and `ErrorState` inside the popup; Close keeps the page as it was.
+- **Mocks:** `mocks/data.ts` holds one in-memory preview (Valid, Error and Removed rows, a duplicate id with `MSG_NEW_3`) that upload replaces and remove / confirm change; `resetMockData()` restores it. Handlers for every import path, so dev mode and the page tests run on the same data (guideline 10 §5).
+
+### Kit — `frontend/src/shared/ui/` (D12, D15; the FE Lead reviews this part)
+
+- **`CsvUpload`** (Figma "Web/Upload"): a form field, `<CsvUpload name="file" label="CSV file" required />`. It renders `FormField` + antd `Upload.Dragger` with `accept=".csv"`, `maxCount={1}` and `beforeUpload` returning `false`, so nothing is sent (AC-011.3). A file whose name does not end in `.csv` (any case) or is over 10 MB is not kept: `form.setFields([{ name, value: undefined, errors: [msg('MSG27' | 'MSG28')] }])` through `Form.useFormInstance()` (AC-011.2). The field value is the `File`; removing it clears the value. Required → `rules.required(label)` (MSG01). Exported from `shared/ui/index.ts`.
+- **`DetailModal`** (D15, user 2026-11-01): Figma Modal Header (Form kind) + content + a footer with one **Close** button; props `isOpen`, `title`, `width?`, `onClose`, `children`. The read-only popup the kit lacked (FormModal always has Cancel + OK); Triage Result Detail can reuse it.
+- **Catalog** (fe-foundation AC-006.9): `MSG_NEW_3` (inline) with the text of spec "New messages"; the AC-006.7 test allows it.
+
+### Key decisions (change)
+
+| Decision | Choice | Alternatives considered | Rationale |
+|----------|--------|------------------------|-----------|
+| D10 changeset | `ALTER COLUMN … TYPE UUID USING lpad(to_hex(id),32,'0')::uuid` in a new 005 | Drop and recreate the tables; edit 003 | 003 is applied (never edit). Recreating loses dev data; the mapping keeps it |
+| D11 preview read | `preview()` reuses `summary()` of remove-rows | A separate counts endpoint | Same response type, so the screen has one Summary source |
+| Upload error placement | By the code's catalog type (field → under the file; inline → `Alert`) | A toast for everything | Guideline 06 maps message types to places; MSG29 lists columns and must stay visible |
+| D14 duplicate code | `MSG_NEW_3` (user) | MSG31; keep MSG78 and show the raw code | MSG78 is another message in v3460; `MSG_NEW_2` is the precedent |
+| D15 read-only popup | New `DetailModal` in `shared/ui` (user) | FormModal with OK = Close; an `isReadOnly` prop on FormModal | One Close button as in SRS 5.3; FormModal stays as it is |
+| Leave guard | `useBlocker` + `ConfirmDialog`; Cancel goes through the same blocker | A separate dialog for the Cancel button | One MSG37 path; no `beforeunload` (spec Out of Scope) |
+| Rows page state | Local `useState` | `?page=` in the URL | The screen's URL carries only `previewId` (D11); a reload returns to page 1 |
+
+### Edge cases (change)
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 29 | STORY-007 | Auth | PM reads another PM's preview id | Critical | 404, nothing returned (AC-007.2) | Task 16 |
+| 30 | STORY-007 | Auth | PM lost the Project between upload and reload | High | 403 MSG08 (AC-007.3) | Task 16 |
+| 31 | STORY-007 | Data | Stub setting holds a malformed UUID | High | That id grants nothing (fails closed) | Task 15 |
+| 32 | STORY-007 | Data | Upload with `projectId=1` (not a UUID) | Medium | 400, no preview | Task 15 |
+| 33 | STORY-009 | Input | `?previewId=abc`, `0`, `-3`, `1.5`, missing | Medium | Redirect to Import Tickets (AC-009.11) | Task 20 |
+| 34 | STORY-008/009 | Concurrency | Double click on Upload / Confirm | High | One request (loading button) (AC-008.8, AC-009.8) | Task 19, Task 21 |
+| 35 | STORY-009 | State | Every Valid row removed | Medium | Confirm disabled (AC-009.5) | Task 21 |
+| 36 | STORY-009 | Navigation | Confirm succeeds | High | Goes straight to Import Tickets, no MSG37 (AC-009.6) | Task 21 |
+| 37 | STORY-011 | Input | `REPORT.CSV`, `data.csv.txt`, 10 MB exactly vs 10 MB + 1 byte | Medium | Kept / MSG27 / kept / MSG28 (AC-011.2) | Task 18 |
+| 38 | STORY-009 | Data | Row error with a code the catalog does not know | Low | MSG06 text, no crash | Task 20 |
+| 39 | STORY-008 | Data | User manages no Project | Medium | Empty select; Upload shows MSG01 at Project | Task 19 |
+
+### File structure (change)
+```
+backend/src/main/resources/db/changelog/changes/005-ticket-import-project-uuid.sql   (+ include in the master changelog)
+backend/src/main/java/vn/tsolve/ticket/  ProjectAccess · StubProjectAccess · ImportPreview · ImportBatch · Ticket
+                                         · ImportPreviewResponse · CsvImportService(Impl) · ImportConfirmServiceImpl
+                                         · ImportPreviewService(Impl) (+ preview) · ImportController (+ GET preview)
+                                         · CsvRowValidator (MSG_NEW_3)
+.env.example                              (stub format comment)
+frontend/openapi/tsolve-api.yaml · frontend/src/shared/api/generated/**
+frontend/src/shared/messages/catalog.ts · catalog.test.ts            (MSG_NEW_3)
+frontend/src/shared/ui/CsvUpload/{CsvUpload.tsx,CsvUpload.test.tsx,index.ts}
+frontend/src/shared/ui/DetailModal/{DetailModal.tsx,index.ts} · frontend/src/shared/ui/index.ts
+frontend/src/features/ticket-import/
+├── pages/ImportTicketsPage.tsx (+ .test.tsx) · ImportPreviewPage.tsx (+ .test.tsx)
+├── components/CsvImportForm.tsx · ImportPreviewTable.tsx · ImportTicketPreviewModal.tsx
+├── hooks/useImportPreview.ts            (queries + remove / confirm with cache refresh)
+├── lib/save-text-file.ts
+└── mocks/data.ts · handlers.ts
+```
