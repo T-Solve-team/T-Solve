@@ -17,7 +17,11 @@ describe('Ticket Detail review', () => {
   it('AC-006.3 AC-005.5 keeps pending actions mounted and disabled during refetch (BUG-089)', async () => {
     const user = userEvent.setup();
     const { queryClient } = renderApp(detailPath());
-    const approve = await screen.findByRole('button', { name: 'Approve' });
+    // BUG-092: this is the file's first test, so its first wait also loads the lazy page module, which under load takes
+    // more than the default 1 s (guideline 10 §6: give the first findBy 5 s). Wait with a cheap text query, then look up
+    // the buttons once: findByRole('button') re-runs on every DOM change and blocks the render it waits for.
+    await screen.findByText('Pending review', {}, { timeout: 5000 });
+    const approve = screen.getByRole('button', { name: 'Approve' });
     const reject = screen.getByRole('button', { name: 'Reject' });
     const changes = screen.getByRole('button', { name: 'Request Changes' });
     approve.focus();
