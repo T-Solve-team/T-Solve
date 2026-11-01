@@ -727,7 +727,7 @@ the Figma count cards are not built, Figma vs decisions item 6).
 | 65 | STORY-003 | Timing | Slow network; page clicked twice while the previous page loads | Medium | Section spinner on first load; previous rows kept while the next page loads (`keepPreviousData`); the last click wins | Task 18 |
 | 66 | STORY-003 | Error cascades | `/me/solutions` 500 while `/me/spaces` 200, and the reverse; both 500 | High | MSG06 only in the failing section; account (and "Spaces I manage") always shown (AC-003.14) | Tasks 16, 18 |
 | 67 | STORY-003 | Error cascades | `/me/spaces` or `/me/solutions` answers 401 (session ended meanwhile) | High | The global 401 handling opens Login (fe-foundation); not MSG06 in the section | Tasks 16, 18 |
-| 68 | STORY-003 | Error cascades | A 403 from either endpoint (not expected: every Employee may call them, AC-003.10) | Low | `ErrorState` shows MSG08 (kit rule for 403); accepted, no special case | Task 18 |
+| 68 | STORY-003 | Error cascades | The Role is removed while the page is open, so a 403 comes from `GET /api/v1/me/solutions` or `/summary` (AC-003.17) | Low | The My Solutions section shows MSG08 in an `ErrorState` (the counters and the table each show it); the other cards stay (AC-003.14, AC-003.17) | Task 18 |
 | 69 | STORY-003 | Authorization | Row with `canOpen: false` | High | Ticket ID is plain text; no link, no pointer, no click handler, nothing focusable; a click stays on `/profile` (AC-003.12) | Task 18 |
 | 70 | STORY-003 | Authorization | Request carrying `userId` / `workspaceId` (someone edits the URL or the call) | Critical | Backend risk, Task 19. Mock ignores them and answers for the dev user (contract mirror of AC-003.7); the real guarantee is Task 19 | Tasks 17, 19 |
 | 71 | STORY-003 | Authorization | `canOpen: true` row for a user whose Roles cannot open Ticket Detail (route guard TR / PM) | Medium | Not produced by the mocks (only TR / PM users get `canOpen: true`); in production the guard's own page answers; `canOpen` is the backend's UC-24 decision | Task 17 |
@@ -750,8 +750,8 @@ the Figma count cards are not built, Figma vs decisions item 6).
 | 88 | STORY-003 | Error cascades | Summary fails, so there are no Projects for the filter | Medium | Project filter shows only "All Projects"; Status and Date range work (D3); Status options follow the counters' order; no match shows MSG04 only | Task 21 |
 | 89 | STORY-003 | State transitions | Paging inside a filtered list; back from Ticket Detail with filters; a date range with only `from` or only `to` in a shared URL | Medium | Filters kept in the URL and the request; back restores filters and page; the picker writes the URL only when both days are picked, a one-sided shared URL is honoured | Task 21 |
 
-Open questions for the spec owner: none blocking this plan. For Hiếu to decide later (not needed for Tasks 15–18):
-the Figma extras of item 6 (count cards, filters, "Latest decision"), which need a Change Mode spec change; the
+Open questions for the spec owner: none blocking this plan. The Figma extras of item 6 (count cards, filters,
+"Latest decision") are specified now (AC-003.18 to AC-003.23, Tasks 20 and 21). For Hiếu to decide later: the
 "you" / "I" wording of item 9.
 
 ## Task 4 contract proposal — KAN-110
