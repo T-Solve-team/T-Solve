@@ -135,7 +135,7 @@ function ReviewQueueContent({ departmentId }: { departmentId: string | undefined
         isOpen={openDialog === 'confirmApprove'}
         code="MSG19"
         params={{ count: selectedIds.length }}
-        isConfirming={approve.isPending}
+        isConfirming={approve.isPending || invalidSelection}
         onConfirm={runApprove}
         onCancel={() => {
           if (!submitting.current) setOpenDialog(null);
