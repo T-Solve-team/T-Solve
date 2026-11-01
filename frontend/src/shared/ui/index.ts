@@ -2,6 +2,7 @@
 export { AppForm, FormField } from './AppForm';
 export { SectionCard, StatCard } from './Cards';
 export { ConfirmDialog } from './ConfirmDialog';
+export { CsvUpload } from './CsvUpload';
 export { cells, DataTable, type DataTableColumn } from './DataTable';
 export { FormModal } from './FormModal';
 export { ScreenPlaceholder } from './ScreenPlaceholder';
