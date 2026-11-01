@@ -15,6 +15,24 @@ function firstExpired() {
   return ticket;
 }
 describe('Expired Ticket mock contract', () => {
+  it('AC-007.2 BUG-095 sorts expiry instants across offsets and breaks ties by UUID', async () => {
+    const dates = [
+      '2026-11-02T01:00:00+07:00',
+      '2026-11-01T20:00:00Z',
+      '2026-11-02T03:00:00+07:00',
+    ];
+    dates.forEach((expiredAt, index) => {
+      const ticket = reviewStore.tickets.find((item) => item.ticketId === ticketUuid(300 + index));
+      if (!ticket) throw new Error('Missing expiry fixture');
+      ticket.expiredAt = expiredAt;
+    });
+    const page = await getExpiredTickets({ size: 3, sort: ['expiredAt,desc'] });
+    expect(page.content.map((item) => item.ticketId)).toEqual([
+      ticketUuid(301),
+      ticketUuid(302),
+      ticketUuid(300),
+    ]);
+  });
   it('AC-007.1 / AC-007.2 returns only managed expired tickets, filters and sorts before pagination', async () => {
     const all = await getExpiredTicketIds();
     expect(all.ticketIds).toHaveLength(24);

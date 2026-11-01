@@ -47,6 +47,24 @@ async function refreshExpiredSelection(queryClient: QueryClient) {
 }
 
 describe('Expired Tickets', () => {
+  it('AC-007.2 BUG-095 switches the default expiry sort to ascending', async () => {
+    const view = renderApp('/expired-tickets');
+    await screen.findByRole('link', { name: 'EXP-323' }, { timeout: 5000 });
+    const header = screen
+      .getAllByRole('columnheader')
+      .find((item) => item.textContent === 'Expired on');
+    if (!header) throw new Error('Missing expiry header');
+    fireEvent.click(header);
+    await waitFor(() =>
+      expect(view.router.state.location.search).toContain('sort=expiredAt%2Casc'),
+    );
+    await act(async () => {
+      await view.queryClient.ensureQueryData(
+        getGetExpiredTicketsQueryOptions({ page: 0, size: 20, sort: ['expiredAt,asc'] }),
+      );
+    });
+    expect(await screen.findByRole('link', { name: 'EXP-300' })).toBeInTheDocument();
+  });
   beforeAll(async () => {
     await import('./ExpiredTicketsPage');
   });

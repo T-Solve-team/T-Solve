@@ -153,7 +153,7 @@ function ExpiredTicketsContent({ departmentId }: { departmentId: string | undefi
             onChange: list.setPage,
           }}
           sort={list.sort}
-          onSortChange={list.setSort}
+          onSortChange={(sort) => list.setSort(sort ?? { field: 'expiredAt', order: 'asc' })}
           scrollX={1088}
           rowSelection={{
             selectedRowKeys: selected,
