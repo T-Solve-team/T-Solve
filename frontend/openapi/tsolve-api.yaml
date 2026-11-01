@@ -486,6 +486,83 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/expired-tickets:
+    get:
+      tags: [review]
+      operationId: getExpiredTickets
+      summary: Expired tickets of the Projects the user is Project Manager of (SRS 7.5).
+      parameters:
+        - name: departmentId
+          in: query
+          description: One Department; omitted = all Departments of the Project Manager.
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: One page of Expired tickets. Default sort expiredAt,desc.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpiredTicketPage'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/expired-tickets/ticket-ids:
+    get:
+      tags: [review]
+      operationId: getExpiredTicketIds
+      summary: Ids of every Expired ticket, for "Select all" (all pages, not only the one shown).
+      parameters:
+        - name: departmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: All eligible Expired ticket ids for the filter.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketIdList'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/reviews/send-back:
+    post:
+      tags: [review]
+      operationId: sendBackTickets
+      summary: Sends Expired tickets back to the queue (MSG25); frontend proposal.
+      description: Frontend proposal. Validate and authorize the entire unique 1–500 UUID batch before sending back; retain mock history and immutable Ticket content, reset due dates using current Project review ranges.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveTicketsRequest'
+      responses:
+        '200':
+          description: Sent back to queue.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDecisionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
   /api/v1/review-queue:
     get:
       tags: [review]
@@ -1100,7 +1177,19 @@ components:
                       description: The Jira project key, e.g. ITSUP.
     AuditAction:
       type: string
-      enum: [APPROVE, REJECT, REQUEST_CHANGES, PUBLISH, UNPUBLISH, IMPORT, DELETE, ROLE_CHANGE, PERMISSION_CHANGE, TRACKER_CONFIGURATION_CHANGE]
+      enum:
+        [
+          APPROVE,
+          REJECT,
+          REQUEST_CHANGES,
+          PUBLISH,
+          UNPUBLISH,
+          IMPORT,
+          DELETE,
+          ROLE_CHANGE,
+          PERMISSION_CHANGE,
+          TRACKER_CONFIGURATION_CHANGE,
+        ]
     AuditEntry:
       type: object
       required: [id, createdAt, actor, action, resourceType, resourceId, summary]
@@ -1391,6 +1480,26 @@ components:
           format: uuid
         name:
           type: string
+    ExpiredTicketItem:
+      allOf:
+        - $ref: '#/components/schemas/ReviewQueueItem'
+        - type: object
+          required: [expiredAt, previousStatus]
+          properties:
+            expiredAt:
+              type: string
+              format: date-time
+            previousStatus:
+              type: string
+              enum: [PENDING_REVIEW, CHANGES_REQUESTED]
+    ExpiredTicketPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/ExpiredTicketItem' }
+        page: { $ref: '#/components/schemas/PageMetadata' }
     ReviewQueueItem:
       type: object
       required: [ticketId, sourceTicketId, title, project, source, enteredQueueAt, reviewDueDate]
@@ -1532,7 +1641,18 @@ components:
           type: string
     TicketSummary:
       type: object
-      required: [ticketId, sourceTicketId, title, project, department, source, status, reviewDueDate, updatedAt]
+      required:
+        [
+          ticketId,
+          sourceTicketId,
+          title,
+          project,
+          department,
+          source,
+          status,
+          reviewDueDate,
+          updatedAt,
+        ]
       properties:
         ticketId:
           type: string
@@ -1688,7 +1808,22 @@ components:
     ReviewTicketDetail:
       type: object
       description: Frontend proposal; read-only content, author identity and review state. Does not implement production audit or Jira delivery.
-      required: [ticketId, sourceTicketId, title, description, project, source, status, authorId, authorName, reviewDueDate, solution, evidence, lastReviewComment]
+      required:
+        [
+          ticketId,
+          sourceTicketId,
+          title,
+          description,
+          project,
+          source,
+          status,
+          authorId,
+          authorName,
+          reviewDueDate,
+          solution,
+          evidence,
+          lastReviewComment,
+        ]
       properties:
         ticketId: { type: string, format: uuid }
         sourceTicketId: { type: string }

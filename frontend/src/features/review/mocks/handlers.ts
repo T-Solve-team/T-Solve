@@ -11,6 +11,7 @@ import { parseSort } from '@/shared/lib';
 import { MAX_REVIEW_SELECTION } from '../review-limits';
 import { departmentOf, REVIEW_WORKSPACE_ID, type MockReviewTicket } from './data';
 import { resetReviewState, reviewStore, type ReviewHistoryEntry } from './state';
+import { expiredHandlers } from './expired-handlers';
 
 export const resetMockData = resetReviewState;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -150,6 +151,7 @@ async function decide(request: Request, action: ReviewHistoryEntry['action']) {
 }
 
 export const handlers: HttpHandler[] = [
+  ...expiredHandlers,
   http.get('*/api/v1/review-queue', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const user = await actor();

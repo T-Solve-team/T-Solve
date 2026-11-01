@@ -13,6 +13,7 @@ import type { RequestHandlerOptions } from 'msw';
 
 import { TicketSource, TicketStatus } from '../model';
 import type {
+  ExpiredTicketPage,
   ReviewDecisionResult,
   ReviewQueuePage,
   ReviewTicketDetail,
@@ -65,6 +66,58 @@ export const getGetReviewTicketDetailResponseMock = (
   ]),
   ...overrideResponse,
 });
+
+export const getGetExpiredTicketsResponseMock = (
+  overrideResponse: Partial<Extract<ExpiredTicketPage, object>> = {},
+): ExpiredTicketPage => ({
+  content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      ...{
+        ticketId: faker.string.uuid(),
+        sourceTicketId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        project: {
+          projectId: faker.string.uuid(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        source: faker.helpers.arrayElement(Object.values(TicketSource)),
+        authorName: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        enteredQueueAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+        reviewDueDate: faker.date.past().toISOString().slice(0, 19) + 'Z',
+      },
+      ...{
+        expiredAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+        previousStatus: faker.helpers.arrayElement([
+          'PENDING_REVIEW',
+          'CHANGES_REQUESTED',
+        ] as const),
+      },
+    }),
+  ),
+  page: {
+    size: faker.number.int(),
+    number: faker.number.int(),
+    totalElements: faker.number.int(),
+    totalPages: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetExpiredTicketIdsResponseMock = (
+  overrideResponse: Partial<Extract<TicketIdList, object>> = {},
+): TicketIdList => ({
+  ticketIds: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.uuid(),
+  ),
+  ...overrideResponse,
+});
+
+export const getSendBackTicketsResponseMock = (
+  overrideResponse: Partial<Extract<ReviewDecisionResult, object>> = {},
+): ReviewDecisionResult => ({ count: faker.number.int(), ...overrideResponse });
 
 export const getGetReviewQueueResponseMock = (
   overrideResponse: Partial<Extract<ReviewQueuePage, object>> = {},
@@ -134,6 +187,78 @@ export const getGetReviewTicketDetailMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getGetReviewTicketDetailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetExpiredTicketsMockHandler = (
+  overrideResponse?:
+    | ExpiredTicketPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ExpiredTicketPage> | ExpiredTicketPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/expired-tickets',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetExpiredTicketsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetExpiredTicketIdsMockHandler = (
+  overrideResponse?:
+    | TicketIdList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<TicketIdList> | TicketIdList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/expired-tickets/ticket-ids',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetExpiredTicketIdsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSendBackTicketsMockHandler = (
+  overrideResponse?:
+    | ReviewDecisionResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ReviewDecisionResult> | ReviewDecisionResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    '*/api/v1/reviews/send-back',
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSendBackTicketsResponseMock(),
         { status: 200 },
       );
     },
@@ -262,6 +387,9 @@ export const getRequestTicketChangesMockHandler = (
 };
 export const getReviewMock = () => [
   getGetReviewTicketDetailMockHandler(),
+  getGetExpiredTicketsMockHandler(),
+  getGetExpiredTicketIdsMockHandler(),
+  getSendBackTicketsMockHandler(),
   getGetReviewQueueMockHandler(),
   getGetReviewQueueTicketIdsMockHandler(),
   getApproveTicketsMockHandler(),

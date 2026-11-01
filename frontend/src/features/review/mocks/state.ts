@@ -4,7 +4,7 @@ import { seedReviewTickets } from './data';
 export type ReviewHistoryEntry = {
   ticketId: string;
   actorId: string;
-  action: 'APPROVE' | 'REJECT' | 'REQUEST_CHANGES';
+  action: 'APPROVE' | 'REJECT' | 'REQUEST_CHANGES' | 'SEND_BACK';
   timestamp: string;
   beforeStatus: TicketStatus;
   afterStatus: TicketStatus;

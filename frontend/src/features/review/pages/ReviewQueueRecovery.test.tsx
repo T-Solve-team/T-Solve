@@ -1,4 +1,4 @@
-import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
@@ -93,7 +93,11 @@ describe('Review Queue decision recovery', () => {
     for (const name of ['Select ITSUP-1031', 'Select ITSUP-1102'])
       await user.click(screen.getByRole('checkbox', { name }));
     await user.click(screen.getByRole('button', { name: 'Approve' }));
-    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'OK' }));
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: /^(?:loading\s+)?OK$/,
+      }),
+    );
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: first.sourceTicketId })).not.toBeInTheDocument(),
     );
@@ -265,6 +269,66 @@ describe('Review Queue decision recovery', () => {
       });
       expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
       expect(screen.getByText('1 selected')).toBeInTheDocument();
+    } finally {
+      release?.();
+    }
+  });
+  it('AC-001.6 / AC-005.5 marks bulk confirmation busy until refreshed eligibility is accepted (BUG-090)', async () => {
+    let holdIds = false;
+    let release: (() => void) | undefined;
+    let started: (() => void) | undefined;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const idsStarted = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let submitted: unknown;
+    let calls = 0;
+    server.use(
+      http.get('*/api/v1/review-queue', () => queueResponse()),
+      http.get('*/api/v1/review-queue/ticket-ids', async () => {
+        if (holdIds) {
+          started?.();
+          await pending;
+        }
+        return HttpResponse.json({ ticketIds: [ticketId(1), ticketId(2)] });
+      }),
+      http.post('*/api/v1/reviews/approve', async ({ request }) => {
+        calls++;
+        submitted = await request.json();
+        return HttpResponse.json({ count: 2 });
+      }),
+    );
+    const { queryClient } = await openQueue();
+    try {
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1102' }));
+      const approve = screen.getByRole('button', { name: 'Approve' });
+      await waitFor(() => expect(approve).toBeEnabled());
+      fireEvent.click(approve);
+      const ok = within(await screen.findByRole('dialog')).getByRole('button', {
+        name: /^(?:loading\s+)?OK$/,
+      });
+      await waitFor(() => expect(ok).not.toHaveClass('ant-btn-loading'));
+      holdIds = true;
+      let refresh: Promise<void> | undefined;
+      await act(async () => {
+        refresh = queryClient.refetchQueries({ queryKey: getGetReviewQueueTicketIdsQueryKey() });
+        await idsStarted;
+      });
+      expect(ok).toHaveClass('ant-btn-loading');
+      fireEvent.click(ok);
+      expect(calls).toBe(0);
+      expect(screen.getByText('2 selected')).toBeInTheDocument();
+      await act(async () => {
+        release?.();
+        await refresh;
+      });
+      await waitFor(() => expect(ok).not.toHaveClass('ant-btn-loading'));
+      fireEvent.click(ok);
+      await waitFor(() => expect(calls).toBe(1));
+      expect(submitted).toEqual({ ticketIds: [ticketId(1), ticketId(2)] });
     } finally {
       release?.();
     }
