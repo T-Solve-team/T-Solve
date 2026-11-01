@@ -235,24 +235,36 @@ describe('MySolutionsSection', () => {
     expect(second.router.state.location.search).toMatch(/^(\?page=1)?$/);
   });
 
-  it('edge 64 going back from Ticket Detail keeps page 2', async () => {
+  it('edge 64 going back from Ticket Detail keeps page 2 (BUG-088)', async () => {
     const user = userEvent.setup();
     const { router } = renderApp('/profile?page=2', { user: 'tr' });
     const table = await findTable();
     await user.click(table.getByRole('link', { name: 'SUP-120' }));
     await waitFor(() => expect(router.state.location.pathname).toBe(`/tickets/${ticketId(20)}`));
+    // The router state runs ahead of React's commit: wait until the old section has really left the DOM.
+    await waitFor(
+      () => expect(screen.queryByRole('region', { name: 'My Solutions' })).not.toBeInTheDocument(),
+      { timeout: 5000 },
+    );
     await router.navigate(-1);
     expect(router.state.location.pathname).toBe('/profile');
     expect(router.state.location.search).toBe('?page=2');
-    const again = await findTable();
-    expect(within(bodyRows(again)[0] as HTMLElement).getByText('SUP-120')).toBeInTheDocument();
+    // Re-query each try: a table found mid-render can be replaced before the assertion runs.
+    await waitFor(
+      () => {
+        const again = within(screen.getByRole('table', { name: 'My Solutions' }));
+        expect(within(bodyRows(again)[0] as HTMLElement).getByText('SUP-120')).toBeInTheDocument();
+      },
+      { timeout: 5000 },
+    );
   });
 
   it('edge 65 shows a spinner in the section at once on the first load', async () => {
     server.use(http.get('*/api/v1/me/solutions', () => delay('infinite')));
     renderApp('/profile', { user: 'tr' });
     const card = await findMySolutionsCard();
-    expect(card.getByText(/Loading/)).toBeInTheDocument();
+    // Two spinners now: the counters' own (AC-003.21) and the table's.
+    expect(card.getAllByText(/Loading/)).toHaveLength(2);
     expect(screen.queryByRole('table', { name: 'My Solutions' })).not.toBeInTheDocument();
   });
 

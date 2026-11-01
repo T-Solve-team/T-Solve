@@ -20,6 +20,24 @@ export const handlers: HttpHandler[] = [
       [...VIEWABLE_SPACES[user]].sort((a, b) => a.name.localeCompare(b.name, 'vi')),
     );
   }),
+  // Counts per status and the distinct Projects of the user's Solutions; every query parameter is ignored (AC-003.18).
+  http.get('*/api/v1/me/solutions/summary', async () => {
+    await delay(MOCK_DELAY_MS);
+    const user = getDevUser();
+    if (!user) return problem(401, 'MSG07');
+    const all = MY_SOLUTIONS[user];
+    if (!all) return problem(403, 'MSG08');
+    const counts: Record<string, number> = Object.fromEntries(STATUS_VALUES.map((s) => [s, 0]));
+    const byId = new Map<string, string>();
+    for (const r of all) {
+      counts[r.status] = (counts[r.status] ?? 0) + 1;
+      byId.set(r.projectId, r.projectName);
+    }
+    const projects = [...byId]
+      .map(([projectId, name]) => ({ projectId, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+    return HttpResponse.json({ counts, projects });
+  }),
   // The signed-in user's Solutions (AC-003.6): newest first, filters of AC-003.19, wrong parameters give 400 per parameter.
   http.get('*/api/v1/me/solutions', async ({ request }) => {
     await delay(MOCK_DELAY_MS);

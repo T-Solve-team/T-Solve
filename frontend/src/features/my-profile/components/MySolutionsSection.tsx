@@ -7,6 +7,8 @@ import { paths, useListSearchParams } from '@/shared/routing';
 import { cells, DataTable, LoadingState, SectionCard } from '@/shared/ui';
 import type { DataTableColumn } from '@/shared/ui';
 import { useMySolutions } from '../hooks/useMySolutions';
+import { useMySolutionSummary } from '../hooks/useMySolutionSummary';
+import { StatusCounters } from './StatusCounters';
 
 /** One line with "…" and the full text in a tooltip (AC-003.23). */
 function oneLine(value: string | null | undefined) {
@@ -48,6 +50,7 @@ export function MySolutionsSection() {
   const { page, setPage } = useListSearchParams({ field: 'updatedAt', order: 'desc' });
   const [, setSearchParams] = useSearchParams();
   const query = useMySolutions(page);
+  const summary = useMySolutionSummary();
   const total = query.data?.page.totalElements ?? 0;
   const totalPages = query.data?.page.totalPages ?? 0;
 
@@ -68,6 +71,11 @@ export function MySolutionsSection() {
   return (
     <section aria-label="My Solutions">
       <SectionCard title="My Solutions">
+        <StatusCounters
+          counts={summary.data?.counts}
+          isPending={summary.isPending}
+          error={summary.error}
+        />
         {query.isPending ? (
           <LoadingState />
         ) : (
