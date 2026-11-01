@@ -5,6 +5,7 @@ import { delay, http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
+import { MY_SOLUTIONS } from '../mocks/data';
 
 const SOLUTIONS_URL = /\/api\/v1\/me\/solutions$/;
 const ELLIPSIS = '.ant-typography-ellipsis, .ant-table-cell-ellipsis';
@@ -36,6 +37,39 @@ function solutionsRequests() {
 }
 
 type Scoped = BoundFunctions<typeof queries>;
+
+const COUNTERS = [
+  ['PENDING_REVIEW', 'Pending review'],
+  ['CHANGES_REQUESTED', 'Changes requested'],
+  ['PUBLISHED', 'Published'],
+  ['REJECTED', 'Rejected'],
+  ['EXPIRED', 'Expired'],
+  ['UNPUBLISHED', 'Unpublished'],
+] as const;
+
+const trCount = (status: string) =>
+  (MY_SOLUTIONS.tr ?? []).filter((row) => row.status === status).length;
+
+/** The number shown with a counter label. */
+function counterValue(counters: Scoped, label: string) {
+  let node: HTMLElement | null = counters.getByText(label, { exact: true });
+  while (node && !/\d/.test(node.textContent ?? '')) node = node.parentElement;
+  if (!node) throw new Error(`no value next to ${label}`);
+  return (node.textContent ?? '').replace(label, '').trim();
+}
+
+/** Opens the select named `label` and clicks the option with that title. */
+async function pickFilter(user: ReturnType<typeof userEvent.setup>, label: string, option: string) {
+  await user.click(screen.getByRole('combobox', { name: label }));
+  const found = await waitFor(() => {
+    const el = screen
+      .getAllByTitle(option)
+      .find((e) => e.classList.contains('ant-select-item-option'));
+    if (!el) throw new Error(`no option ${option}`);
+    return el;
+  });
+  await user.click(found);
+}
 
 function bodyRows(table: Scoped) {
   return table.getAllByRole('row').slice(1);
@@ -289,7 +323,12 @@ describe('MySolutionsSection', () => {
     const { router } = renderApp('/profile', { user: 'tr' });
     const table = await findTable();
     const link = table.getByRole('link', { name: 'SUP-100' });
-    for (let i = 0; i < 60 && document.activeElement !== link; i += 1) await user.tab();
+    // The filters row sits above the table; start from the table header and tab forward.
+    const header = table.getAllByRole('columnheader')[0] as HTMLElement;
+    header.tabIndex = -1;
+    header.focus();
+    expect(header).toHaveFocus();
+    for (let i = 0; i < 5 && document.activeElement !== link; i += 1) await user.tab();
     expect(link).toHaveFocus();
     await user.keyboard('{Enter}');
     await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/tickets\//));
@@ -300,5 +339,130 @@ describe('MySolutionsSection', () => {
     const table = await findTable();
     expect(cellsOf(rowOf(table, 'SUP-100'))[5]?.textContent?.trim()).toBe('31/10/2026');
     expect(cellsOf(rowOf(table, 'SUP-101'))[5]?.textContent?.trim()).toBe('30/10/2026');
+  });
+
+  it('AC-003.13 no match: shows MSG04 in the table area and still shows the counters and the filters', async () => {
+    const user = userEvent.setup();
+    renderApp('/profile', { user: 'tr' });
+    await findTable();
+    await pickFilter(user, 'Status', 'Expired');
+    await pickFilter(user, 'Project', 'Helpdesk');
+    const card = await findMySolutionsCard();
+    expect(await card.findByText(msg('MSG04'), {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(card.getAllByRole('columnheader').map((h) => h.textContent?.trim())).toEqual(HEADERS);
+    expect(document.querySelector('.ant-pagination')).toBeNull();
+    expect(
+      screen.getByRole('combobox', { name: 'Status' }).closest('.ant-select'),
+    ).toHaveTextContent('Expired');
+    expect(
+      screen.getByRole('combobox', { name: 'Project' }).closest('.ant-select'),
+    ).toHaveTextContent('Helpdesk');
+    const counters = within(screen.getByRole('group', { name: 'Solution counts' }));
+    for (const [status, label] of COUNTERS) {
+      expect(counterValue(counters, label)).toBe(String(trCount(status)));
+    }
+    expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+  });
+
+  it('AC-003.22 going back from Ticket Detail keeps the filters and the page (edge 64, BUG-088)', async () => {
+    const user = userEvent.setup();
+    const search = '?from=2026-10-01&to=2026-10-31&page=2';
+    const { router } = renderApp(`/profile${search}`, { user: 'tr' });
+    const table = await findTable();
+    await user.click(table.getByRole('link', { name: 'SUP-120' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/tickets/${ticketId(20)}`));
+    await waitFor(
+      () => expect(screen.queryByRole('region', { name: 'My Solutions' })).not.toBeInTheDocument(),
+      { timeout: 5000 },
+    );
+    await router.navigate(-1);
+    expect(router.state.location.search).toBe(search);
+    await waitFor(
+      () => {
+        const again = within(screen.getByRole('table', { name: 'My Solutions' }));
+        expect(within(bodyRows(again)[0] as HTMLElement).getByText('SUP-120')).toBeInTheDocument();
+      },
+      { timeout: 5000 },
+    );
+    const group = within(screen.getByRole('group', { name: 'Date range' }));
+    expect(group.getByPlaceholderText<HTMLInputElement>('Start date').value).toBe('01/10/2026');
+    expect(group.getByPlaceholderText<HTMLInputElement>('End date').value).toBe('31/10/2026');
+  });
+
+  it('AC-003.21 the counters are not refetched and do not change when filtering', async () => {
+    const user = userEvent.setup();
+    let summaryCalls = 0;
+    server.events.on('request:start', ({ request }) => {
+      if (
+        request.method === 'GET' &&
+        /\/me\/solutions\/summary$/.test(new URL(request.url).pathname)
+      )
+        summaryCalls += 1;
+    });
+    renderApp('/profile', { user: 'tr' });
+    await findTable();
+    const same = async () => {
+      const counters = within(await screen.findByRole('group', { name: 'Solution counts' }));
+      for (const [status, label] of COUNTERS) {
+        await waitFor(() => expect(counterValue(counters, label)).toBe(String(trCount(status))));
+      }
+    };
+    await same();
+    expect(summaryCalls).toBe(1);
+    await pickFilter(user, 'Status', 'Expired');
+    await pickFilter(user, 'Project', 'Helpdesk');
+    await same();
+    expect(summaryCalls).toBe(1);
+    for (const label of ['Status', 'Project']) {
+      const clear = screen
+        .getByRole('combobox', { name: label })
+        .closest('.ant-select')
+        ?.querySelector('.ant-select-clear');
+      if (!clear) throw new Error(`no clear icon on ${label}`);
+      await user.click(clear);
+    }
+    await waitFor(() =>
+      expect(bodyRows(within(screen.getByRole('table', { name: 'My Solutions' })))).toHaveLength(
+        20,
+      ),
+    );
+    await same();
+    expect(summaryCalls).toBe(1);
+  });
+
+  it('edge 89 paging a filtered list keeps the filters in the URL and the request', async () => {
+    const user = userEvent.setup();
+    const spy = solutionsRequests();
+    const { router } = renderApp('/profile?from=2026-10-01&to=2026-10-31', { user: 'tr' });
+    const card = await findMySolutionsCard();
+    await findTable();
+    await user.click(card.getByTitle('3'));
+    await waitFor(() =>
+      expect(router.state.location.search).toBe('?from=2026-10-01&to=2026-10-31&page=3'),
+    );
+    await waitFor(() => {
+      const again = within(screen.getByRole('table', { name: 'My Solutions' }));
+      expect(bodyRows(again)).toHaveLength(5);
+      expect(within(bodyRows(again)[0] as HTMLElement).getByText('SUP-140')).toBeInTheDocument();
+    });
+    const last = new URLSearchParams(spy.queries[spy.queries.length - 1]);
+    expect(last.get('page')).toBe('2');
+    expect(last.get('from')).toBe('2026-10-01');
+    expect(last.get('to')).toBe('2026-10-31');
+  });
+
+  it('edge 85 a well-formed projectId that is not one of my Projects is dropped once the summary has loaded', async () => {
+    const spy = solutionsRequests();
+    const stranger = '00000000-0000-4000-8000-0000000000c9';
+    const { router } = renderApp(`/profile?projectId=${stranger}`, { user: 'tr' });
+    await findTable();
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+    expect(router.state.historyAction).toBe('REPLACE');
+    await waitFor(() => {
+      const again = within(screen.getByRole('table', { name: 'My Solutions' }));
+      expect(within(bodyRows(again)[0] as HTMLElement).getByText('SUP-100')).toBeInTheDocument();
+    });
+    expect(new URLSearchParams(spy.queries[spy.queries.length - 1]).has('projectId')).toBe(false);
+    expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
   });
 });
