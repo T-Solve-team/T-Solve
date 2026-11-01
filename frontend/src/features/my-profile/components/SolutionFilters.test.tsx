@@ -337,4 +337,78 @@ describe('SolutionFilters', () => {
     await pick(user, 'Status', 'Expired');
     await waitFor(() => expect(keys()).toHaveLength(7));
   });
+
+  it('AC-003.22 a one-sided shared URL ?from=… is honoured: from is sent without to, the start input shows it and the URL is unchanged (review S1)', async () => {
+    const spy = solutionsRequests();
+    const { router } = renderApp('/profile?from=2026-10-30', { user: 'tr' });
+    await findTable();
+    await waitFor(() => expect(rangeInputs().start.value).toBe('30/10/2026'));
+    expect(rangeInputs().end.value).toBe('');
+    const first = new URLSearchParams(spy.queries[0]);
+    expect(first.get('from')).toBe('2026-10-30');
+    expect(first.has('to')).toBe(false);
+    await delay(300);
+    expect(router.state.location.search).toBe('?from=2026-10-30');
+  });
+
+  it('AC-003.22 picking only the start day changes neither the URL nor the request (review S1)', async () => {
+    const user = userEvent.setup();
+    const spy = solutionsRequests();
+    const { router } = renderApp('/profile', { user: 'tr' });
+    await findTable();
+    const before = spy.queries.length;
+    await user.click(rangeInputs().start);
+    await user.keyboard('30/10/2026{Enter}');
+    await delay(300);
+    expect(router.state.location.search).toBe('');
+    expect(spy.queries).toHaveLength(before);
+  });
+
+  it('edge 85 the nil UUID in projectId is never sent as a bad request: no 400 and no MSG06 at any time (review S2)', async () => {
+    const statuses: number[] = [];
+    server.events.on('response:mocked', ({ request, response }) => {
+      if (SOLUTIONS_URL.test(new URL(request.url).pathname)) statuses.push(response.status);
+    });
+    const { router } = renderApp('/profile?projectId=00000000-0000-0000-0000-000000000000', {
+      user: 'tr',
+    });
+    await waitFor(() => expect(router.state.location.search).toBe(''), { timeout: 5000 });
+    await waitFor(() => expect(keys()[0]).toBe('SUP-100'), { timeout: 5000 });
+    expect(statuses.length).toBeGreaterThan(0);
+    expect(statuses).not.toContain(400);
+    expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+  });
+
+  it('edge 85 a kept projectId shows "All Projects", not the raw UUID, while the summary loads (review N1)', async () => {
+    server.use(http.get('*/api/v1/me/solutions/summary', () => delay('infinite')));
+    renderApp(`/profile?projectId=${NETWORK}`, { user: 'tr' });
+    await findTable();
+    expect(shown('Project')).toContain('All Projects');
+    expect(shown('Project')).not.toContain(NETWORK);
+  });
+
+  it('edge 88 a kept projectId shows "All Projects", not the raw UUID, after the summary failed (review N1)', async () => {
+    server.use(
+      http.get('*/api/v1/me/solutions/summary', () => HttpResponse.json({}, { status: 500 })),
+    );
+    renderApp(`/profile?projectId=${NETWORK}`, { user: 'tr' });
+    await findTable();
+    await screen.findAllByText(msg('MSG06'), {}, { timeout: 5000 });
+    expect(shown('Project')).toContain('All Projects');
+    expect(shown('Project')).not.toContain(NETWORK);
+  });
+
+  it('AC-003.22 at the default the Status and Project selects show no clear icon; with a value they do (review N4)', async () => {
+    const user = userEvent.setup();
+    renderApp('/profile', { user: 'tr' });
+    await findTable();
+    const icon = (label: string) =>
+      combo(label).closest('.ant-select')?.querySelector('.ant-select-clear') ?? null;
+    expect(icon('Status')).toBeNull();
+    expect(icon('Project')).toBeNull();
+    await pick(user, 'Status', 'Expired');
+    await pick(user, 'Project', 'Network operations');
+    await waitFor(() => expect(icon('Status')).not.toBeNull());
+    await waitFor(() => expect(icon('Project')).not.toBeNull());
+  });
 });

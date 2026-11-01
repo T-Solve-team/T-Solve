@@ -318,16 +318,16 @@ describe('MySolutionsSection', () => {
     expect(router.state.location.search).toBe('?page=3');
   });
 
-  it('edge 72 names the table "My Solutions" and opens a Ticket ID link with Tab and Enter', async () => {
+  it('edge 72 tabs from the Date range end input to the first Ticket ID link and Enter opens Ticket Detail (review N5)', async () => {
     const user = userEvent.setup();
     const { router } = renderApp('/profile', { user: 'tr' });
     const table = await findTable();
     const link = table.getByRole('link', { name: 'SUP-100' });
-    // The filters row sits above the table; start from the table header and tab forward.
-    const header = table.getAllByRole('columnheader')[0] as HTMLElement;
-    header.tabIndex = -1;
-    header.focus();
-    expect(header).toHaveFocus();
+    const end = within(screen.getByRole('group', { name: 'Date range' })).getByPlaceholderText(
+      'End date',
+    );
+    end.focus();
+    expect(end).toHaveFocus();
     for (let i = 0; i < 5 && document.activeElement !== link; i += 1) await user.tab();
     expect(link).toHaveFocus();
     await user.keyboard('{Enter}');
@@ -449,6 +449,33 @@ describe('MySolutionsSection', () => {
     expect(last.get('page')).toBe('2');
     expect(last.get('from')).toBe('2026-10-01');
     expect(last.get('to')).toBe('2026-10-31');
+  });
+
+  it('edge 65 after a filter or page change the old rows stay and the table shows a busy state while it refetches (review N3)', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get('*/api/v1/me/solutions', async ({ request }) => {
+        const q = new URL(request.url).searchParams;
+        const status = q.get('status');
+        await delay(status ? 600 : 0);
+        const rows = (MY_SOLUTIONS.tr ?? []).filter((r) => !status || r.status === status);
+        return HttpResponse.json({
+          content: rows.slice(0, 20),
+          page: { size: 20, number: 0, totalElements: rows.length, totalPages: 1 },
+        });
+      }),
+    );
+    renderApp('/profile', { user: 'tr' });
+    await findMySolutionsCard();
+    await findTable();
+    const spinning = () => document.querySelector('.ant-spin-spinning');
+    expect(spinning()).toBeNull();
+    await pickFilter(user, 'Status', 'Expired');
+    await waitFor(() => expect(spinning()).not.toBeNull());
+    const table = within(screen.getByRole('table', { name: 'My Solutions' }));
+    expect(within(bodyRows(table)[0] as HTMLElement).getByText('SUP-100')).toBeInTheDocument();
+    await waitFor(() => expect(spinning()).toBeNull(), { timeout: 5000 });
+    expect(bodyRows(within(screen.getByRole('table', { name: 'My Solutions' })))).toHaveLength(7);
   });
 
   it('edge 85 a well-formed projectId that is not one of my Projects is dropped once the summary has loaded', async () => {

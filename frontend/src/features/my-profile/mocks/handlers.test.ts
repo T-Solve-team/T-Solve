@@ -247,6 +247,16 @@ describe('my-solutions mock contract', () => {
     expect(body.fieldErrors).toEqual([expect.objectContaining({ field, code: 'MSG06' })]);
   });
 
+  it.each(['00000000-0000-0000-0000-000000000000', 'ffffffff-ffff-ffff-ffff-ffffffffffff'])(
+    'contract mirror of AC-003.9 projectId %s is a UUID for Java UUID.fromString: 200, not 400 (review S2)',
+    async (projectId) => {
+      setDevUser('tr');
+      const { status, body } = await rawGet(`?projectId=${projectId}`);
+      expect(status).toBe(200);
+      expect(body.content).toEqual([]);
+    },
+  );
+
   it('contract mirror of AC-003.9 to before from gives 400 MSG06 on to', async () => {
     setDevUser('tr');
     const { status, body } = await rawGet('?from=2026-10-31&to=2026-10-30');
@@ -363,6 +373,57 @@ function countsOf(user: DevUserId) {
     STATUSES.map((status) => [status, rows.filter((row) => row.status === status).length]),
   );
 }
+
+/** Runs `body` with the fixture of `user` replaced (or removed), then restores it. */
+async function withFixture(
+  user: DevUserId,
+  rows: (typeof MY_SOLUTIONS)[DevUserId],
+  body: () => Promise<void>,
+) {
+  const original = MY_SOLUTIONS[user];
+  if (rows === undefined) delete MY_SOLUTIONS[user];
+  else MY_SOLUTIONS[user] = rows;
+  try {
+    await body();
+  } finally {
+    if (original === undefined) delete MY_SOLUTIONS[user];
+    else MY_SOLUTIONS[user] = original;
+  }
+}
+
+describe('my-solutions 403 follows the dev user roles (review N6)', () => {
+  it.each(['tr-two-departments', 'pm'] as DevUserId[])(
+    'contract mirror of AC-003.17 %s has the role but no fixture entry: 200 with an empty page and zero counts, not 403',
+    async (user) => {
+      await withFixture(user, undefined, async () => {
+        setDevUser(user);
+        const page = await getMySolutions();
+        expect(page.content).toEqual([]);
+        expect(page.page.totalElements).toBe(0);
+        const summary = await getMySolutionSummary();
+        expect(Object.values(summary.counts)).toEqual([0, 0, 0, 0, 0, 0]);
+        expect(summary.projects).toEqual([]);
+      });
+    },
+  );
+
+  it.each(['employee', 'km', 'admin'] as DevUserId[])(
+    'contract mirror of AC-003.17 %s has no Ticket Resolver or Project Manager role: 403 MSG08 even if fixture rows exist',
+    async (user) => {
+      await withFixture(user, MY_SOLUTIONS.tr, async () => {
+        setDevUser(user);
+        expect(await rejection(() => getMySolutions())).toMatchObject({
+          status: 403,
+          code: 'MSG08',
+        });
+        expect(await rejection(() => getMySolutionSummary())).toMatchObject({
+          status: 403,
+          code: 'MSG08',
+        });
+      });
+    },
+  );
+});
 
 describe('my-solutions summary mock contract', () => {
   it("contract mirror of AC-003.18 tr's counts have all six statuses, each the number of tr's Solutions in that status", async () => {
