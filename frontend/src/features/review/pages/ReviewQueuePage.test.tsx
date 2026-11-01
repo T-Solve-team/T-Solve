@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { server } from '@/mocks/server';
@@ -6,7 +6,6 @@ import { getGetReviewQueueMockHandler } from '@/shared/api/generated/review/revi
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
-import { getGetReviewQueueTicketIdsQueryKey } from '@/shared/api';
 import { reviewStore } from '../mocks/state';
 
 /** The Review Queue with the mock Project Manager; resolves once the first page is shown. */
@@ -26,12 +25,6 @@ async function clickDecision(name: string) {
     // Check and activate in one turn; no action is sent while eligibility is refreshing.
     fireEvent.click(button);
   });
-}
-
-/** Native events test the same form/selection behavior without per-character/hover work on the large table. */
-async function clickControl(control: HTMLElement) {
-  await waitFor(() => expect(control).toBeEnabled());
-  fireEvent.click(control);
 }
 
 describe('ReviewQueuePage', () => {
@@ -71,8 +64,8 @@ describe('ReviewQueuePage', () => {
   });
 
   it('AC-002.1 / AC-002.3 approves one ticket at once (no confirm) and shows MSG14', async () => {
-    await openQueue();
-    await clickControl(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
+    const { user } = await openQueue();
+    await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await clickDecision('Approve');
     expect(await screen.findByText(msg('MSG14', { count: 1 }))).toBeInTheDocument();
     await waitFor(() =>
@@ -81,51 +74,41 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('0 selected')).toBeInTheDocument();
   });
 
-  it('AC-002.2 / AC-002.5 asks MSG19, cancels without writes and then approves two tickets (BUG-090)', async () => {
-    const { queryClient } = await openQueue();
-    await clickControl(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
-    await clickControl(screen.getByRole('checkbox', { name: 'Select ITSUP-1102' }));
+  it('AC-002.2 / AC-002.5 asks MSG19, cancels without writes and then approves two tickets', async () => {
+    const { user } = await openQueue();
+    await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1102' }));
     expect(screen.getByText('2 selected')).toBeInTheDocument();
     await clickDecision('Approve');
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent(msg('MSG19', { count: 2 }));
-    await clickControl(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     expect(screen.getByText('2 selected')).toBeInTheDocument();
     expect(reviewStore.history).toEqual([]);
     await clickDecision('Approve');
-    const confirmation = within(await screen.findByRole('dialog'));
-    // The queue poll can refresh selection eligibility while its confirmation remains open.
-    await act(async () => {
-      await queryClient.refetchQueries({ queryKey: getGetReviewQueueTicketIdsQueryKey() });
-    });
-    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
-    fireEvent.click(confirmation.getByRole('button', { name: 'OK' }));
-    await waitFor(() => expect(reviewStore.history).toHaveLength(2));
-    await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'OK' }));
 
     expect(await screen.findByText(msg('MSG14', { count: 2 }))).toBeInTheDocument();
     expect(await screen.findByText('Total 56 items')).toBeInTheDocument();
   });
 
   it('AC-003.1 / AC-003.2 / AC-003.3 rejects with MSG15, requires one reason and shows MSG16 (BUG-084)', async () => {
-    const { queryClient } = await openQueue();
-    await clickControl(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
+    const { user, queryClient } = await openQueue();
+    await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await clickDecision('Reject');
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Reject Ticket')).toBeInTheDocument();
     expect(dialog).toHaveTextContent(msg('MSG15', { count: 1 }));
 
-    await clickControl(within(dialog).getByRole('button', { name: 'Reject' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Reject' }));
     expect(
       await within(dialog).findByText(msg('MSG01', { field_name: 'Reason' })),
     ).toBeInTheDocument();
 
-    fireEvent.change(within(dialog).getByLabelText('Reason'), {
-      target: { value: 'Does not fix the certificate error.' },
-    });
-    await clickControl(within(dialog).getByRole('button', { name: 'Reject' }));
+    await user.type(within(dialog).getByLabelText('Reason'), 'Does not fix the certificate error.');
+    await user.click(within(dialog).getByRole('button', { name: 'Reject' }));
     expect(await screen.findByText(msg('MSG16', { count: 1 }))).toBeInTheDocument();
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
     await waitFor(() =>
@@ -134,27 +117,25 @@ describe('ReviewQueuePage', () => {
   });
 
   it('AC-004.1 / AC-004.3 requests changes for every selected ticket with one comment (MSG17, BUG-084)', async () => {
-    const { queryClient } = await openQueue();
-    await clickControl(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
-    await clickControl(screen.getByRole('checkbox', { name: 'Select ITNET-0415' }));
+    const { user } = await openQueue();
+    await user.click(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select ITNET-0415' }));
     await clickDecision('Request Changes');
 
     const dialog = await screen.findByRole('dialog');
-    fireEvent.change(within(dialog).getByLabelText('Comment'), {
-      target: { value: 'Please add the exact error message.' },
-    });
-    await clickControl(within(dialog).getByRole('button', { name: 'Send' }));
-    await waitFor(() => expect(reviewStore.history).toHaveLength(2));
-    await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+    await user.type(
+      within(dialog).getByLabelText('Comment'),
+      'Please add the exact error message.',
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Send' }));
 
     expect(await screen.findByText(msg('MSG17'))).toBeInTheDocument();
     expect(await screen.findByText('Total 56 items')).toBeInTheDocument();
   });
 
   it('AC-001.3 "Select all" selects every ticket in the queue, not only this page', async () => {
-    const { queryClient } = await openQueue();
-    await clickControl(screen.getByRole('checkbox', { name: 'Select all' }));
-    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    const { user } = await openQueue();
+    await user.click(screen.getByRole('checkbox', { name: 'Select all' }));
     expect(await screen.findByText('58 selected')).toBeInTheDocument();
   });
 

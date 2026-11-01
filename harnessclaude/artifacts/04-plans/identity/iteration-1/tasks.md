@@ -296,45 +296,80 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 
 **Story:** STORY-003
 **Feature:** my-solutions-contract
-**Acceptance criteria:** none passed in the web app. Contract mirror (not passed here) of AC-003.6, AC-003.7, AC-003.8, AC-003.9, AC-003.10.
-**Description:** Add `GET /api/v1/me/solutions` (`getMySolutions`, tag `profile`, the shared `Page` and `Size` parameters, no `Sort`; 200 `MySolutionPage`, 400 `Problem` with `fieldErrors`, 401 `Problem`) and the schemas `MySolutionPage` and `MySolution` exactly as the spec, reusing `PageMetadata` and `TicketStatus`; regenerate. Add the My Solutions fixtures per dev user (0 / 3 / 5 / 20 / 21 / 45 rows, all six statuses, Vietnamese and 200-character titles, `canOpen: false` rows, own UUIDs) and the handler: newest `updatedAt` first, defaults 0 / 20, 400 `MSG06` `fieldErrors` per wrong parameter, empty `content` past the end with the real totals, 401 `MSG07`, extra parameters ignored. No screen change (Task 18 uses it in the same PR).
-**What Hiếu can see or try:** the YAML shows `getMySolutions`, `MySolutionPage` and `MySolution`; the handler tests are green.
+**Acceptance criteria:** none passed in the web app. Contract mirror (not passed here) of AC-003.6, AC-003.7, AC-003.8, AC-003.9, AC-003.10, AC-003.17, AC-003.19.
+**Description:** Add `GET /api/v1/me/solutions` (`getMySolutions`, tag `profile`, the shared `Page` and `Size` parameters, no `Sort`, plus `status` (`TicketStatus`), `projectId` (uuid), `from` and `to` (date); 200 `MySolutionPage`, 400 `Problem` with `fieldErrors`, 401 and 403 `Problem`) and the schemas `MySolutionPage`, `MySolution` (with `projectId` and the required nullable `latestDecision`) and `ReviewDecision` (APPROVE, REQUEST_CHANGES, REJECT, ticket-review's names), reusing `PageMetadata` and `TicketStatus`; regenerate. Add the My Solutions fixtures per dev user: `tr` gets 45 rows with all six statuses, decisions with and without a comment, Vietnamese and 200-character titles, `canOpen: false` rows and several Projects; a resolver with 0 Solutions (so the empty state can still be tried); `pm` follows AC-003.20 (Project Manager sees the section); `employee` and `km` have no Solutions and no access. The handler: newest `updatedAt` first, defaults 0 / 20, filters of AC-003.19 (inclusive days in UTC+7, AND), 400 `MSG06` `fieldErrors` per wrong parameter (`to` before `from` on `to`), a well-formed foreign `projectId` gives an empty page, empty `content` past the end with the real totals, 401 `MSG07`, 403 `MSG08` for a user without Ticket Resolver or Project Manager, extra parameters ignored. No screen change (Task 18 uses it in the same PR).
+**What Hiếu can see or try:** the YAML shows `getMySolutions` with the four filters, `MySolutionPage`, `MySolution` and `ReviewDecision`; the handler tests are green.
 **Files:**
 - Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/features/my-profile/mocks/data.ts`, `frontend/src/features/my-profile/mocks/handlers.ts`
 - Generate only: `frontend/src/shared/api/generated/**`
 - Test: `frontend/src/features/my-profile/mocks/handlers.test.ts`
 **Dependencies:** Task 16 (the `profile` tag, `mocks/data.ts`).
-**PR / Jira:** PR 3 with Task 18, one branch `feat/KAN-238-identity-my-solutions`. About 450 lines with Task 18, over the ~400 guide: the contract, its mock and the table are one behaviour a user can try, so they stay one vertical slice (Q10). Jira: KAN-238.
-**Estimated size:** small–medium (~200 lines, generated code excluded)
-**Verification:** Handler tests named "contract mirror of AC-003.6 / .7 / .9 / .10"; design risk rows 60, 61, 70, 71, 78. Targeted: `cd frontend && npm run test -- src/features/my-profile/mocks`, then `npm run generate:api` with no diff.
-**Done when:** the handler tests pass and `generate:api` leaves no diff; the full frontend verify passes (format:check, lint, typecheck, test, build, `generate:api` no diff) — Task 18's Done-when repeats it, since both are in PR 3.
+**PR / Jira:** PR 3 with Tasks 18, 20 and 21, one branch `feat/KAN-238-identity-profile-my-solutions`. About 1,100–1,300 lines for the four tasks, far over the ~400 guide: decided by Hiếu (D3, 1/11) as one PR, because the contract, counters, filters and table are one behaviour a user can try. Jira: KAN-238.
+**Estimated size:** small–medium (~200 lines, generated code excluded); about 14 tests
+**Verification:** Handler tests named "contract mirror of AC-003.6 / .7 / .9 / .10 / .17 / .19"; design risk rows 60, 61, 70, 71, 78. Targeted: `cd frontend && npm run test -- src/features/my-profile/mocks`, then `npm run generate:api` with no diff.
+**Done when:** the handler tests pass and `generate:api` leaves no diff; the full frontend verify passes (format:check, lint, typecheck, test, build, `generate:api` no diff), repeated in Tasks 18, 20 and 21 since all four are in PR 3.
 
-## Task 18: My Solutions table — KAN-238
+## Task 18: My Solutions table and role gating — KAN-238
 
 **Story:** STORY-003
 **Feature:** my-solutions-table
-**Acceptance criteria:** AC-003.11, AC-003.12, AC-003.13, AC-003.14
-**Description:** Add the My Solutions card: `useMySolutions` (generated hook, `keepPreviousData`) with `{ page: urlPage - 1, size: 20 }` from `useListSearchParams({ field: 'updatedAt', order: 'desc' })` (the hook requires a default sort; it is passed only to satisfy the signature and its `sort` / `apiPaging` are ignored; the request has no `sort`); `DataTable` columns Ticket ID (`cells.link` to `paths.ticketDetail(ticketId)` when `canOpen`, plain text otherwise; the row is not clickable and the shared `DataTable` is not changed, R1 A), Title, Project, Status (`cells.tag`), Updated (`formatDate`), fixed widths for 1366 px (120 / 180 / 170 / 120, decided by Hiếu 31/10); pagination 20, no size changer; MSG04 when empty; MSG06 on failure with no retry; a page past the last goes to the last page (history replace, decided by Hiếu 31/10). The account and Spaces stay when My Solutions fails (AC-003.14, which closes with the Spaces half built in Task 16).
-**What Hiếu can see or try:** `/profile` for `tr`: 20 rows, three pages, `?page=2` in the URL, back from Ticket Detail keeps the page; clicking the Ticket ID of an openable row opens Ticket Detail; the `canOpen: false` rows are plain text and do nothing. `employee` and `km` show "No results found." (MSG04). `pm` shows exactly one page.
+**Acceptance criteria:** AC-003.11, AC-003.12, AC-003.13, AC-003.14, AC-003.20, AC-003.23
+**Description:** Add the My Solutions card, rendered only when the session Roles include Ticket Resolver or Project Manager (the check uses the role list; no heading, no placeholder and no request otherwise; if the role is removed while the page is open, the next call is 403 and the section shows MSG08 in an `ErrorState`, the other cards stay). `useMySolutions` (generated hook, `keepPreviousData`) with `{ page: urlPage - 1, size: 20 }` from `useListSearchParams({ field: 'updatedAt', order: 'desc' })` (the hook requires a default sort; it is passed only to satisfy the signature and its `sort` / `apiPaging` are ignored; the request has no `sort`); `DataTable` columns Ticket ID (`cells.link` to `paths.ticketDetail(ticketId)` when `canOpen`, plain text otherwise; the row is not clickable and the shared `DataTable` is not changed, R1 A), Title, Project, Status (`cells.tag`), Latest decision (the comment on one line, ellipsis and a tooltip with the full text, "—" when none) and Date (`updatedAt` with `formatDate`), fixed widths for 1366 px (Ticket ID 120, Project 170, Status 140, Latest decision 260, Date 120, Title the rest with ellipsis and tooltip; to confirm in the browser check); pagination 20, no size changer; immediate spinner while loading; MSG04 when empty (also used for no match, with counters and filters still shown); MSG06 on failure with no retry; a page past the last goes to the last page (history replace, decided by Hiếu 31/10). The account and Spaces stay when My Solutions fails (AC-003.14).
+**What Hiếu can see or try:** `/profile` for `tr`: 20 rows, three pages, `?page=2` in the URL, the Latest decision column with a comment, an ellipsis with tooltip, and "—"; back from Ticket Detail keeps the page; clicking the Ticket ID of an openable row opens Ticket Detail; the `canOpen: false` rows are plain text. The resolver with 0 Solutions shows "No results found." (MSG04). `employee` and `km` have no My Solutions section at all.
 **Files:**
 - Modify: `frontend/src/features/my-profile/pages/MyProfilePage.tsx`
-- Create: `frontend/src/features/my-profile/components/MySolutionsSection.tsx`, `frontend/src/features/my-profile/hooks/useMySolutions.ts`
+- Create: `frontend/src/features/my-profile/components/MySolutionsSection.tsx`, `frontend/src/features/my-profile/hooks/useMySolutions.ts`, `frontend/src/features/my-profile/lib/canSeeMySolutions.ts`
 - Test: `frontend/src/features/my-profile/components/MySolutionsSection.test.tsx`, `frontend/src/features/my-profile/pages/MyProfilePage.test.tsx`
 **Dependencies:** Task 17.
-**PR / Jira:** PR 3 with Task 17, branch `feat/KAN-238-identity-my-solutions`; Jira: KAN-238.
-**Estimated size:** medium (~250 lines)
-**Verification:** Tests name AC-003.11–.14; design risk rows 58, 59, 61, 63–69, 72–75, 77, 79, 81. Targeted: `cd frontend && npm run test -- src/features/my-profile`. Browser check at 1366 × 768 in mock mode against frames (main) and (d).
-**Done when:** the four criteria's tests pass; the full frontend verify passes with `generate:api` leaving no diff; `bun harnessclaude/hooks/sdd.ts trace identity STORY-003` shows AC-003.1–.3 and .11–.14 covered.
+**PR / Jira:** PR 3 with Tasks 17, 20 and 21, branch `feat/KAN-238-identity-profile-my-solutions`; Jira: KAN-238.
+**Estimated size:** medium (~300 lines); about 12 tests
+**Verification:** Tests name AC-003.11–.14, AC-003.20 and AC-003.23 (including "no request without the role" and the 403 MSG08 case); design risk rows 58, 59, 61, 63–69, 72–75, 77, 79, 81 (design row 68 reworded: 403 `MSG08` is now expected on the My Solutions endpoints). Targeted: `cd frontend && npm run test -- src/features/my-profile`. Browser check at 1366 × 768 in mock mode against frames (main) and (d).
+**Done when:** the six criteria's tests pass; the full frontend verify passes with `generate:api` leaving no diff; `bun harnessclaude/hooks/sdd.ts trace identity STORY-003` shows AC-003.1–.3, .11–.14, .20 and .23 covered.
 
 ## Task 19: My Profile backend endpoints — deferred (stub)
 
 **Story:** STORY-003
 **Feature:** none yet (no `progress.json` feature until the task has a Jira issue, Q11)
-**Acceptance criteria:** AC-003.4, AC-003.5, AC-003.6, AC-003.7, AC-003.8, AC-003.9, AC-003.10
-**Description:** Stub, planned in detail when its dependencies are ready. The backend side of `GET /api/v1/me/spaces` and `GET /api/v1/me/solutions`, exactly as the contract of Tasks 16 and 17: Spaces sorted by name from the `wiki` viewable Space lookup, empty while it is missing; the written-ticket lookup's page, newest `updatedAt` first, empty while it is missing; 400 `fieldErrors` `MSG06` for a bad `page` or `size`; 401 `MSG07` with no session; both lookups called only with the signed-in Account's id in its own Workspace, nothing taken from the request (GBR-37).
+**Acceptance criteria:** AC-003.4, AC-003.5, AC-003.6, AC-003.7, AC-003.8, AC-003.9, AC-003.10, AC-003.17, AC-003.18, AC-003.19
+**Description:** Stub, planned in detail when its dependencies are ready. The backend side of `GET /api/v1/me/spaces`, `GET /api/v1/me/solutions` and `GET /api/v1/me/solutions/summary`, exactly as the contract of Tasks 16 and 17: Spaces sorted by name from the `wiki` viewable Space lookup, empty while it is missing; the written-ticket lookup's page, newest `updatedAt` first, empty while it is missing; 400 `fieldErrors` `MSG06` for a bad `page` or `size`; 401 `MSG07` with no session (checked before the role); 403 `MSG08` for an Account that is neither Ticket Resolver nor Project Manager (AC-003.17); the summary's six counts and distinct Projects (AC-003.18); the `status`, `projectId`, `from`, `to` filters on `updatedAt` in the Workspace day (AC-003.19); `latestDecision` from the written-ticket lookup; both lookups called only with the signed-in Account's id in its own Workspace, nothing taken from the request (GBR-37).
 **What Hiếu can see or try:** nothing now (record only); later the same screens on the real backend.
 **Files (to confirm when planned):** a `vn.tsolve.identity` controller for the two endpoints, and its tests (MockMvc; two Workspaces for AC-003.7).
 **Dependencies:** `ticket-repository` written-ticket lookup (KAN-132 ticket state machine, To Do); `wiki` viewable Space lookup; be-foundation (session, ProblemDetail errors). No Jira issue yet.
 **PR / Jira:** none now; no Jira issue yet.
 **Estimated size:** small–medium (to confirm when planned)
 **Verification:** to be set when planned; JUnit names end with the AC id; then the full `mvn verify`.
+
+## Task 20: My Solutions counters — KAN-238
+
+**Story:** STORY-003
+**Feature:** my-solutions-counters
+**Acceptance criteria:** AC-003.21 (and AC-003.14 for the counters). Contract mirror (not passed here) of AC-003.8, AC-003.10, AC-003.17, AC-003.18.
+**Description:** Add `GET /api/v1/me/solutions/summary` (`getMySolutionSummary`, tag `profile`; 200 `MySolutionSummary`, 401 and 403 `Problem`) with `MySolutionSummary` and `ProjectRef`; regenerate. Mock handler: the six counts over all the user's Solutions (ignoring every filter) and the distinct Projects sorted by name; 401 `MSG07`; 403 `MSG08`. `StatusCounters` shows six counters with the Status Tag labels (not clickable), a spinner at once while loading, MSG06 in the counters only when they fail, loaded once per visit and not refetched on paging or filtering.
+**What Hiếu can see or try:** `/profile` for `tr`: six counters that match the fixtures (every status above 0); the resolver with 0 Solutions shows six 0s; a counters failure shows MSG06 only there.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/features/my-profile/mocks/handlers.ts`, `frontend/src/features/my-profile/mocks/data.ts`, `frontend/src/features/my-profile/components/MySolutionsSection.tsx`
+- Create: `frontend/src/features/my-profile/components/StatusCounters.tsx`, `frontend/src/features/my-profile/hooks/useMySolutionSummary.ts`
+- Generate only: `frontend/src/shared/api/generated/**`
+- Test: `frontend/src/features/my-profile/components/StatusCounters.test.tsx`, `frontend/src/features/my-profile/mocks/handlers.test.ts`
+**Dependencies:** Task 18.
+**PR / Jira:** PR 3 with Tasks 17, 18 and 21; Jira: KAN-238.
+**Estimated size:** medium (~250 lines); about 8 tests
+**Verification:** Tests name AC-003.21 and "AC-003.14 counters"; handler tests "contract mirror of AC-003.18 / .17 / .10". Targeted: `cd frontend && npm run test -- src/features/my-profile`, then `npm run generate:api` with no diff. Browser check at 1366 × 768 against frame (d).
+**Done when:** the tests pass; the full frontend verify passes with `generate:api` leaving no diff.
+
+## Task 21: My Solutions filters — KAN-238
+
+**Story:** STORY-003
+**Feature:** my-solutions-filters
+**Acceptance criteria:** AC-003.22, AC-003.13 (no match). Contract mirror (not passed here) of AC-003.19, AC-003.9.
+**Description:** `SolutionFilters` with Status (single select, "All statuses" + six), Project (single select, "All Projects" + `projects` of the summary) and Date range (dd/MM/yyyy, `to` not before `from`), each clearable, with `aria-label`s "Status", "Project" and "Date range" and no "Clear filters" button. The filters live in the URL (`status`, `projectId`, `from`, `to`) next to `page`; any change resets to page 1 (history replace); back from Ticket Detail keeps filters and page; a bad value in the URL is dropped silently. `useMySolutions` sends the filters. MSG04 when nothing matches, counters and filters stay.
+**What Hiếu can see or try:** `/profile` for `tr`: each filter narrows the table; `?status=EXPIRED` and the other parameters appear in the URL; "back" from Ticket Detail keeps them; a filter change goes to page 1; a match of nothing shows "No results found." with the filters still there.
+**Files:**
+- Modify: `frontend/src/features/my-profile/components/MySolutionsSection.tsx`, `frontend/src/features/my-profile/hooks/useMySolutions.ts`
+- Create: `frontend/src/features/my-profile/components/SolutionFilters.tsx`, `frontend/src/features/my-profile/hooks/useSolutionFilters.ts`
+- Test: `frontend/src/features/my-profile/components/SolutionFilters.test.tsx`, `frontend/src/features/my-profile/components/MySolutionsSection.test.tsx`
+**Dependencies:** Task 20 (the Projects come from the summary).
+**PR / Jira:** PR 3 with Tasks 17, 18 and 20; Jira: KAN-238.
+**Estimated size:** medium (~300 lines); about 12 tests
+**Verification:** Tests name AC-003.22 and AC-003.13 (no match). Targeted: `cd frontend && npm run test -- src/features/my-profile`. Browser check at 1366 × 768 against frames (main) and (d).
+**Done when:** the tests pass; the full frontend verify passes with `generate:api` leaving no diff; `bun harnessclaude/hooks/sdd.ts trace identity STORY-003` shows AC-003.11–.14 and .20–.23 covered.

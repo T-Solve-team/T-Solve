@@ -485,3 +485,9 @@
 {"ts":"2026-11-01T11:57:48.595Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"09af635617e3f050798bfe52039818344948f964"}
 {"ts":"2026-11-01T11:57:48.640Z","type":"feature-status","module":"ticket-review","feature":"expired-tickets","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-01T11:57:48.674Z","type":"feature-status","module":"ticket-review","feature":"expired-tickets","from":"evaluating","to":"passing"}
+{"ts":"2026-11-01T10:23:01.302Z","type":"quick-opened","what":"Fix PR102 review feedback","files":["frontend/src/features/review/components/ReviewTicketDetail.tsx","frontend/src/features/review/components/ReviewTicketDetail.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-01T11:07:38.906Z","type":"quick-closed","what":"Fix PR102 review feedback","files":["frontend/src/features/review/components/ReviewTicketDetail.tsx","frontend/src/features/review/components/ReviewTicketDetail.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-01T09:20:11.072Z","type":"spec-approved","module":"identity","specHash":"54c3b7e45726092e1e30b11c135529942f73b3891c46ed8e89fcf52b172f04d4"}
+{"ts":"2026-11-01T09:22:19.001Z","type":"feature-status","module":"identity","feature":"my-solutions-counters","from":null,"to":"pending"}
+{"ts":"2026-11-01T09:22:19.222Z","type":"feature-status","module":"identity","feature":"my-solutions-filters","from":null,"to":"pending"}
+{"ts":"2026-11-01T10:06:32.976Z","type":"spec-approved","module":"identity","specHash":"97b326a64c8075b18ddd986f171951fc76c6f4dc2eb7bb37ad2869639a32256a"}

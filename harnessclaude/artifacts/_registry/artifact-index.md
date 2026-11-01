@@ -149,6 +149,7 @@ Master registry of all artifacts in this workspace.
 | — | review | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-review.md |
 | — | test-report | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-test-report.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-16-viewable-spaces.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-17-21-my-solutions.md |
 | — | module | tracker | draft | artifacts/03-modules/tracker/module.md |
 | — | spec | tracker | draft | artifacts/03-modules/tracker/spec.md |
 | — | design | tracker | draft | artifacts/04-plans/tracker/design.md |

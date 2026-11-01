@@ -3,9 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { problem } from '@/shared/api/mocks';
+import {
+  getGetMeQueryOptions,
+  getGetReviewTicketDetailQueryOptions,
+  getGetReviewTicketDetailQueryKey,
+} from '@/shared/api';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
-import { getGetMeQueryOptions, getGetReviewTicketDetailQueryOptions } from '@/shared/api';
 import { DETAIL_TICKET_IDS, ticketUuid } from '../mocks/data';
 import { reviewStore } from '../mocks/state';
 
@@ -14,6 +18,74 @@ const detailPath = (id = firstId) => `/tickets/${id}`;
 const detailEndpoint = '*/api/v1/tickets/:ticketId';
 
 describe('Ticket Detail review', () => {
+  it('AC-006.3 AC-005.5 keeps pending actions mounted and disabled during refetch (BUG-089)', async () => {
+    const user = userEvent.setup();
+    const { queryClient } = renderApp(detailPath());
+    const approve = await screen.findByRole('button', { name: 'Approve' });
+    const reject = screen.getByRole('button', { name: 'Reject' });
+    const changes = screen.getByRole('button', { name: 'Request Changes' });
+    approve.focus();
+    let finish: (() => void) | undefined;
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const record = reviewStore.tickets.find((ticket) => ticket.ticketId === firstId);
+    server.use(
+      http.get(detailEndpoint, async () => {
+        await pending;
+        return HttpResponse.json(record);
+      }),
+    );
+    let refresh: Promise<void> | undefined;
+    act(() => {
+      refresh = queryClient.invalidateQueries({
+        queryKey: getGetReviewTicketDetailQueryKey(firstId),
+      });
+    });
+    try {
+      await waitFor(() => expect(approve).toBeDisabled());
+      expect(screen.getByRole('button', { name: 'Approve' })).toBe(approve);
+      expect(screen.getByRole('button', { name: 'Reject' })).toBe(reject);
+      expect(screen.getByRole('button', { name: 'Request Changes' })).toBe(changes);
+      expect(reject).toBeDisabled();
+      expect(changes).toBeDisabled();
+      await user.click(approve);
+      expect(reviewStore.history).toHaveLength(0);
+    } finally {
+      finish?.();
+      await act(async () => {
+        await refresh;
+      });
+    }
+    await waitFor(() => expect(approve).toBeEnabled());
+    expect(screen.getByRole('button', { name: 'Approve' })).toBe(approve);
+    expect(approve).toHaveFocus();
+  });
+
+  it('AC-006.3 hides every decision for a PM author who does not manage the Project', async () => {
+    const record = reviewStore.tickets.find(
+      (ticket) => ticket.ticketId === DETAIL_TICKET_IDS.unmanaged,
+    );
+    if (!record) throw new Error('Missing fixture');
+    record.authorId = '00000000-0000-4000-8000-000000000003';
+    renderApp(detailPath(record.ticketId), { role: 'PROJECT_MANAGER' });
+    expect(await screen.findByRole('heading', { name: 'HRHELP-0318' })).toBeInTheDocument();
+    expect(screen.getByText('Pending review')).toBeInTheDocument();
+    for (const name of ['Approve', 'Reject', 'Request Changes']) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+  });
+
+  it('AC-006.1 AC-006.5 shows MSG04 when the permitted Ticket has no Evidence', async () => {
+    const record = reviewStore.tickets.find((ticket) => ticket.ticketId === firstId);
+    if (!record) throw new Error('Missing fixture');
+    record.evidence = [];
+    renderApp(detailPath());
+    await screen.findByRole('heading', { name: 'ITSUP-1031' });
+    expect(screen.getByText(msg('MSG04'))).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'resolution-check.txt' })).not.toBeInTheDocument();
+  });
+
   it('AC-006.2 shows loading while the confirmed detail request is pending', async () => {
     let finish: (() => void) | undefined;
     const pending = new Promise<void>((resolve) => {
@@ -121,7 +193,7 @@ describe('Ticket Detail review', () => {
     expect(screen.queryByRole('button', { name: 'Request Changes' })).not.toBeInTheDocument();
   });
 
-  it('AC-006.5 renders filenames as text, readable sizes, and only safe references (BUG-089)', async () => {
+  it('AC-006.5 renders filenames as text, readable sizes, and only safe references (BUG-096)', async () => {
     const record = reviewStore.tickets.find((ticket) => ticket.ticketId === firstId);
     if (!record) throw new Error('Missing fixture');
     record.evidence = [
@@ -137,7 +209,7 @@ describe('Ticket Detail review', () => {
       url,
     }));
     const { queryClient, router } = renderApp(detailPath());
-    // Await the real MSW-backed detail request rather than giving its first render a 1 s budget.
+    // Preserve actual route/session/detail readiness rather than a first-render deadline.
     await act(async () => {
       await router.navigate(detailPath());
       await queryClient.ensureQueryData(getGetMeQueryOptions());
