@@ -73,6 +73,7 @@ export * from './spaceHandover';
 export * from './spaceHandoverOption';
 export * from './spaceRef';
 export * from './ticketDepartment';
+export * from './ticketFeedbackRequest';
 export * from './ticketIdList';
 export * from './ticketProject';
 export * from './ticketSearchResult';
