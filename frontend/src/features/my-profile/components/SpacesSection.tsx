@@ -1,8 +1,8 @@
 import { FolderOpenOutlined } from '@ant-design/icons';
-import { Card, Flex, Typography } from 'antd';
+import { Flex, Typography } from 'antd';
 import type { ApiError, SpaceRef } from '@/shared/api';
 import { msg } from '@/shared/messages';
-import { ErrorState, LoadingState } from '@/shared/ui';
+import { ErrorState, LoadingState, SectionCard } from '@/shared/ui';
 
 type SpacesSectionProps = {
   managed: readonly SpaceRef[];
@@ -33,19 +33,22 @@ function SpaceList({ label, spaces }: { label: string; spaces: readonly SpaceRef
 export function SpacesSection({ managed, viewable }: SpacesSectionProps) {
   const { spaces, loading, error } = viewable;
   return (
-    <Card title="Spaces" variant="borderless" role="region" aria-label="Spaces">
-      <Flex vertical gap="middle">
-        {managed.length > 0 && <SpaceList label="Spaces I manage" spaces={managed} />}
-        {loading && <LoadingState />}
-        {error && <ErrorState error={error} />}
-        {!!spaces?.length && <SpaceList label="Spaces I can view" spaces={spaces} />}
-        {spaces?.length === 0 && (
-          <Flex vertical gap="small">
-            <Typography.Text strong>Spaces I can view</Typography.Text>
-            <Typography.Text type="secondary">{msg('MSG142')}</Typography.Text>
-          </Flex>
-        )}
-      </Flex>
-    </Card>
+    <section aria-label="Spaces">
+      <SectionCard title="Spaces">
+        <Flex vertical gap="middle">
+          {managed.length > 0 && <SpaceList label="Spaces I manage" spaces={managed} />}
+          {loading && <LoadingState />}
+          {error && <ErrorState error={error} />}
+          {/* A failed refetch shows MSG06 instead of the stale list (AC-003.14). */}
+          {!error && !!spaces?.length && <SpaceList label="Spaces I can view" spaces={spaces} />}
+          {!error && spaces?.length === 0 && (
+            <Flex vertical gap="small">
+              <Typography.Text strong>Spaces I can view</Typography.Text>
+              <Typography.Text type="secondary">{msg('MSG142')}</Typography.Text>
+            </Flex>
+          )}
+        </Flex>
+      </SectionCard>
+    </section>
   );
 }

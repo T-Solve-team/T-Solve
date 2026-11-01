@@ -300,9 +300,13 @@ describe('MyProfilePage', () => {
     });
 
     it('AC-003.15 shows the Spaces card with a spinner while the viewable Spaces load', async () => {
+      let release: () => void = () => {};
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
       server.use(
         http.get('*/api/v1/me/spaces', async () => {
-          await delay(400);
+          await gate;
           return HttpResponse.json([
             { spaceId: '00000000-0000-4000-8000-0000000000b1', name: 'Late Space' },
           ]);
@@ -313,6 +317,7 @@ describe('MyProfilePage', () => {
       const region = screen.getByRole('region', { name: 'Spaces' });
       expect(within(region).getByText(/Loading/)).toBeInTheDocument();
       expect(within(region).queryByRole('list', { name: 'Spaces I can view' })).toBeNull();
+      release();
       const list = await within(region).findByRole('list', { name: 'Spaces I can view' });
       expect(within(list).getByText('Late Space')).toBeInTheDocument();
       expect(within(region).queryByText(/Loading/)).not.toBeInTheDocument();
@@ -391,6 +396,19 @@ describe('MyProfilePage', () => {
       ).toBeInTheDocument();
       await findAccountCard();
       expect(screen.getAllByText(msg('MSG06'))).toHaveLength(1);
+    });
+
+    it('AC-003.14 spaces shows MSG06 in place of the list, not next to it, when a background refetch fails', async () => {
+      const { queryClient } = renderApp('/profile', { user: 'tr' });
+      await findLoadedSpacesCard();
+      expect(screen.getByRole('list', { name: 'Spaces I can view' })).toBeInTheDocument();
+      server.use(http.get('*/api/v1/me/spaces', () => problem(500)));
+      await queryClient.refetchQueries({
+        predicate: (query) => JSON.stringify(query.queryKey).includes('spaces'),
+      });
+      const region = screen.getByRole('region', { name: 'Spaces' });
+      expect(await within(region).findByRole('alert')).toHaveTextContent(msg('MSG06'));
+      expect(within(region).queryByRole('list', { name: 'Spaces I can view' })).toBeNull();
     });
 
     it('edge 67 a 401 on /me/spaces opens the MSG07 dialog and shows no MSG06 in the Spaces card', async () => {
