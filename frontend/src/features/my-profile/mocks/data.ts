@@ -9,7 +9,8 @@ const space = (n: number, name: string): SpaceRef => ({
 // Same ids as the managed Spaces of the fixture users (src/mocks/session.ts).
 const IT_SPACE = space(0xa1, 'IT Space');
 const HR_SPACE = space(0xa2, 'HR Space');
-const LONG_NAME = `${'Regional support knowledge '.repeat(5)}`.slice(0, 119) + '…';
+const LONG_NAME =
+  'Regional support knowledge base for the EMEA and APAC service desks, escalation procedures, runbooks and onboarding gui…';
 
 /** The Spaces each dev user can view (AC-003.3); the handler sorts them by name. */
 export const VIEWABLE_SPACES: Record<DevUserId, SpaceRef[]> = {
