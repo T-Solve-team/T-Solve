@@ -2,7 +2,6 @@ package vn.tsolve.ticket.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -19,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,21 +96,23 @@ class ImportControllerTest {
         verifyNoInteractions(confirms);
     }
 
+    private static final UUID PROJECT = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
     private static final MockMultipartFile FILE =
             new MockMultipartFile("file", "tickets.csv", "text/csv", "ticket_id\n".getBytes());
 
     private static ImportPreviewResponse preview() {
-        return ImportPreviewResponse.of(42L, 1L, "tickets.csv", 2, 0, 0, new PageImpl<>(List.of()));
+        return ImportPreviewResponse.of(42L, PROJECT, "tickets.csv", 2, 0, 0, new PageImpl<>(List.of()));
     }
 
     @Test
     @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
     void uploadPassesUserProjectAndFile() throws Exception {
-        when(csvImports.upload(eq("pm@company.vn"), eq(1L), any())).thenReturn(preview());
+        when(csvImports.upload(eq("pm@company.vn"), eq(PROJECT), any())).thenReturn(preview());
 
         mvc.perform(multipart("/api/v1/imports/csv")
                         .file(FILE)
-                        .param("projectId", "1")
+                        .param("projectId", PROJECT.toString())
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.previewId").value(42))
@@ -123,7 +125,7 @@ class ImportControllerTest {
     void uploadNeedsProjectManagerRole_AC_001_10() throws Exception {
         mvc.perform(multipart("/api/v1/imports/csv")
                         .file(FILE)
-                        .param("projectId", "1")
+                        .param("projectId", PROJECT.toString())
                         .with(csrf()))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("MSG08"));
@@ -145,12 +147,23 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
-    void uploadTooLargeIs413WithMsg28_AC_001_4() throws Exception {
-        when(csvImports.upload(anyString(), anyLong(), any())).thenThrow(new UploadTooLargeException());
-
+    void uploadRejectsAProjectIdThatIsNotAUuid() throws Exception {
         mvc.perform(multipart("/api/v1/imports/csv")
                         .file(FILE)
                         .param("projectId", "1")
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(csvImports);
+    }
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void uploadTooLargeIs413WithMsg28_AC_001_4() throws Exception {
+        when(csvImports.upload(anyString(), any(), any())).thenThrow(new UploadTooLargeException());
+
+        mvc.perform(multipart("/api/v1/imports/csv")
+                        .file(FILE)
+                        .param("projectId", PROJECT.toString())
                         .with(csrf()))
                 .andExpect(status().isPayloadTooLarge())
                 .andExpect(jsonPath("$.code").value("MSG28"));

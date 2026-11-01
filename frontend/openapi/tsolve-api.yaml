@@ -548,8 +548,8 @@ paths:
                   format: binary
                   description: One .csv file, UTF-8, at most 10 MB.
                 projectId:
-                  type: integer
-                  format: int64
+                  type: string
+                  format: uuid
       responses:
         '200':
           description: Preview created.
@@ -1513,8 +1513,8 @@ components:
           type: integer
           format: int64
         projectId:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
         fileName:
           type: string
         validCount:

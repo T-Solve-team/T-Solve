@@ -11,7 +11,7 @@ import type { MessageRef } from './messageRef';
 
 export interface ImportPreviewResponse {
   previewId: number;
-  projectId: number;
+  projectId: string;
   fileName: string;
   validCount: number;
   errorCount: number;

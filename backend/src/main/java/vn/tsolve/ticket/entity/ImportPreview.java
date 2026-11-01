@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 
 /** An uploaded file waiting for Confirm. Each Project Manager has at most one (unique owner). */
 @Entity
@@ -23,7 +24,7 @@ public class ImportPreview {
     private String owner;
 
     @Column(name = "project_id", nullable = false, updatable = false)
-    private Long projectId;
+    private UUID projectId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, updatable = false)
@@ -37,7 +38,7 @@ public class ImportPreview {
 
     protected ImportPreview() {}
 
-    public ImportPreview(String owner, Long projectId, TicketSource source, String fileName, Instant createdAt) {
+    public ImportPreview(String owner, UUID projectId, TicketSource source, String fileName, Instant createdAt) {
         this.owner = owner;
         this.projectId = projectId;
         this.source = source;
@@ -53,7 +54,7 @@ public class ImportPreview {
         return owner;
     }
 
-    public Long getProjectId() {
+    public UUID getProjectId() {
         return projectId;
     }
 

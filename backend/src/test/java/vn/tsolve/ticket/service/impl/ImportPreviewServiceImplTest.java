@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -45,6 +46,7 @@ class ImportPreviewServiceImplTest {
 
     private static final String PM = "pm@company.vn";
     private static final long ID = 42L;
+    private static final UUID PROJECT = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     private final ImportPreviewRepository previews = mock(ImportPreviewRepository.class);
     private final ImportPreviewRowRepository rows = mock(ImportPreviewRowRepository.class);
@@ -63,11 +65,11 @@ class ImportPreviewServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        ImportPreview preview = new ImportPreview(PM, 1L, TicketSource.CSV, "tickets.csv", Instant.EPOCH);
+        ImportPreview preview = new ImportPreview(PM, PROJECT, TicketSource.CSV, "tickets.csv", Instant.EPOCH);
         ReflectionTestUtils.setField(preview, "id", ID);
         when(previews.findByIdAndOwner(eq(ID), any()))
                 .thenAnswer(call -> PM.equals(call.getArgument(1)) ? Optional.of(preview) : Optional.empty());
-        when(projects.managesActive(PM, 1L)).thenReturn(true);
+        when(projects.managesActive(PM, PROJECT)).thenReturn(true);
     }
 
     @Test
@@ -165,7 +167,7 @@ class ImportPreviewServiceImplTest {
 
     @Test
     void callerWhoNoLongerManagesTheProjectCannotReadOrChangeRows_AC_003_4() {
-        when(projects.managesActive(PM, 1L)).thenReturn(false);
+        when(projects.managesActive(PM, PROJECT)).thenReturn(false);
 
         for (Runnable call : List.<Runnable>of(
                 () -> service.rows(PM, ID, null, PageRequest.of(0, 20)),

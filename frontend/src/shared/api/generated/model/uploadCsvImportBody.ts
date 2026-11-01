@@ -10,5 +10,5 @@
 export type UploadCsvImportBody = {
   /** One .csv file, UTF-8, at most 10 MB. */
   file: Blob | File;
-  projectId: number;
+  projectId: string;
 };

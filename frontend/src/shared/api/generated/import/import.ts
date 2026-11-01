@@ -193,7 +193,7 @@ export const uploadCsvImport = async (
 ): Promise<ImportPreviewResponse> => {
   const formData = new FormData();
   formData.append(`file`, uploadCsvImportBody.file);
-  formData.append(`projectId`, uploadCsvImportBody.projectId.toString());
+  formData.append(`projectId`, uploadCsvImportBody.projectId);
 
   return http<ImportPreviewResponse>(getUploadCsvImportUrl(), {
     ...options,
