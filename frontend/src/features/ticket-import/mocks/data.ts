@@ -1,4 +1,9 @@
-import type { ImportPreviewResponse, ImportPreviewRowSummary } from '@/shared/api';
+import type {
+  ImportPreviewResponse,
+  ImportPreviewRowPage,
+  ImportPreviewRowSummary,
+} from '@/shared/api';
+import { PAGE_SIZE } from '@/shared/lib';
 
 /** The template the backend returns (CsvColumns.TEMPLATE): the header row only. */
 export const CSV_TEMPLATE =
@@ -13,8 +18,24 @@ const SOLUTION = {
   scope: 'Windows laptops with Outlook 2019 or later.',
 };
 
-/** Valid, Error (missing section, duplicate id with MSG_NEW_3, existing id) and Removed rows. */
+/**
+ * 25 rows: Valid, Error (missing section, duplicate id with MSG_NEW_3, existing id) and Removed rows first, then
+ * Valid ones, so the list has two pages.
+ */
 function seedRows(): ImportPreviewRowSummary[] {
+  const valid = Array.from({ length: 19 }, (_, i): ImportPreviewRowSummary => {
+    const rowNo = 7 + i;
+    return {
+      rowNo,
+      ticketId: `ITSUP-09${String(rowNo).padStart(2, '0')}`,
+      title: `Teams meeting audio issue on laptop batch ${rowNo}`,
+      author: 'Phạm Quốc Bảo',
+      resolvedDate: '2026-09-28',
+      ...SOLUTION,
+      status: 'VALID',
+      errors: [],
+    };
+  });
   return [
     {
       rowNo: 1,
@@ -77,30 +98,56 @@ function seedRows(): ImportPreviewRowSummary[] {
       status: 'REMOVED',
       errors: [],
     },
+    ...valid,
   ];
 }
 
-/** The PM's unconfirmed preview of the mock backend; an upload replaces it (spec D9). */
-export function seedPreview(
+/** One unconfirmed preview of the mock backend with every row (the API returns them page by page). */
+export type MockPreview = Pick<ImportPreviewResponse, 'previewId' | 'projectId' | 'fileName'> & {
+  rows: ImportPreviewRowSummary[];
+};
+
+export function seedImport(
   previewId = 1,
   projectId = '00000000-0000-4000-8000-000000000101',
   fileName = 'itsup-resolved-2026-09.csv',
-): ImportPreviewResponse {
-  const rows = seedRows();
+): MockPreview {
+  return { previewId, projectId, fileName, rows: seedRows() };
+}
+
+/** One page of rows (`page` from 0), as `GET /imports/previews/{id}/rows` returns it. */
+export function rowPage(
+  rows: ImportPreviewRowSummary[],
+  page = 0,
+  size = PAGE_SIZE,
+): ImportPreviewRowPage {
+  return {
+    content: rows.slice(page * size, page * size + size),
+    page: {
+      size,
+      number: page,
+      totalElements: rows.length,
+      totalPages: Math.ceil(rows.length / size),
+    },
+  };
+}
+
+/** Counts, MSG30 and the first page, as upload and `GET /imports/previews/{id}` return them. */
+export function previewResponse({ rows, ...preview }: MockPreview): ImportPreviewResponse {
   const count = (status: ImportPreviewRowSummary['status']) =>
     rows.filter((row) => row.status === status).length;
   const errorCount = count('ERROR');
   return {
-    previewId,
-    projectId,
-    fileName,
+    ...preview,
     validCount: count('VALID'),
     errorCount,
     removedCount: count('REMOVED'),
     message: errorCount > 0 ? { code: 'MSG30', params: { count: errorCount } } : null,
-    rows: {
-      content: rows,
-      page: { size: 20, number: 0, totalElements: rows.length, totalPages: 1 },
-    },
+    rows: rowPage(rows),
   };
+}
+
+/** The seed preview as the API returns it. */
+export function seedPreview(): ImportPreviewResponse {
+  return previewResponse(seedImport());
 }
