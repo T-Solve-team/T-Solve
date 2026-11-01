@@ -8,6 +8,8 @@ import { cells, DataTable, LoadingState, SectionCard } from '@/shared/ui';
 import type { DataTableColumn } from '@/shared/ui';
 import { useMySolutions } from '../hooks/useMySolutions';
 import { useMySolutionSummary } from '../hooks/useMySolutionSummary';
+import { useSolutionFilters } from '../hooks/useSolutionFilters';
+import { SolutionFilters } from './SolutionFilters';
 import { StatusCounters } from './StatusCounters';
 
 /** One line with "…" and the full text in a tooltip (AC-003.23). */
@@ -49,8 +51,9 @@ export function MySolutionsSection() {
   // The sort is not sent: the API orders by `updatedAt` desc itself.
   const { page, setPage } = useListSearchParams({ field: 'updatedAt', order: 'desc' });
   const [, setSearchParams] = useSearchParams();
-  const query = useMySolutions(page);
   const summary = useMySolutionSummary();
+  const { filters, setFilters } = useSolutionFilters(summary.projects, summary.isSuccess);
+  const query = useMySolutions(page, filters);
   const total = query.data?.page.totalElements ?? 0;
   const totalPages = query.data?.page.totalPages ?? 0;
 
@@ -76,6 +79,7 @@ export function MySolutionsSection() {
           isPending={summary.isPending}
           error={summary.error}
         />
+        <SolutionFilters filters={filters} projects={summary.projects} onChange={setFilters} />
         {query.isPending ? (
           <LoadingState />
         ) : (
