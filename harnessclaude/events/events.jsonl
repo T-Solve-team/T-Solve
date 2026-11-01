@@ -20,8 +20,27 @@
 {"ts":"2026-10-19T14:40:32.577Z","type":"quick-closed","what":"README: point to backend/AGENTS.md and docs/bug-log.md","files":["README.md"]}
 {"ts":"2026-10-19T14:43:29.072Z","type":"quick-opened","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}
 {"ts":"2026-10-19T14:43:48.790Z","type":"quick-closed","what":"Bug log: name who owns each bug","files":["docs/bug-log.md","backend/AGENTS.md"]}
+{"ts":"2026-10-21T12:45:05.172Z","type":"module-status","module":"tracker","from":null,"to":"decomposed"}
+{"ts":"2026-10-21T12:45:05.405Z","type":"module-status","module":"jira-app","from":null,"to":"decomposed"}
 {"ts":"2026-10-21T12:50:30.391Z","type":"quick-opened","what":"AGENTS.md: add exception/client folders, common layout, test layout; log ProblemDetail mismatch bug","files":["backend/AGENTS.md","docs/bug-log.md"]}
 {"ts":"2026-10-21T12:52:43.722Z","type":"quick-closed","what":"AGENTS.md: add exception/client folders, common layout, test layout; log ProblemDetail mismatch bug","files":["backend/AGENTS.md","docs/bug-log.md"]}
+{"ts":"2026-10-21T13:29:21.183Z","type":"spec-approved","module":"tracker","specHash":"ba8598baf01cc94fc957b0e25db153ef7530c766cf48f7113cb1aaa0ff2b23fa"}
+{"ts":"2026-10-21T13:46:06.211Z","type":"spec-approved","module":"tracker","specHash":"3d6e340178b268c5defe1b27ac43b38ff1624ddc888662d5b8b4e908bc3dae98"}
+{"ts":"2026-10-21T13:46:11.442Z","type":"module-status","module":"tracker","from":"decomposed","to":"planned"}
+{"ts":"2026-10-21T13:46:11.677Z","type":"feature-status","module":"tracker","feature":"forge-remote-spike","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:11.911Z","type":"feature-status","module":"tracker","feature":"tracker-foundation","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:12.162Z","type":"feature-status","module":"tracker","feature":"fit-verification","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:12.396Z","type":"feature-status","module":"tracker","feature":"jira-site-registration","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:12.641Z","type":"feature-status","module":"tracker","feature":"token-cipher","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:12.877Z","type":"feature-status","module":"tracker","feature":"receive-issue-events","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:13.105Z","type":"feature-status","module":"tracker","feature":"jira-client","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:13.342Z","type":"feature-status","module":"tracker","feature":"event-worker","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:13.583Z","type":"feature-status","module":"tracker","feature":"triage-on-create","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:13.834Z","type":"feature-status","module":"tracker","feature":"draft-on-done","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:14.088Z","type":"feature-status","module":"tracker","feature":"issue-panel","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:14.340Z","type":"feature-status","module":"tracker","feature":"solution-form","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:14.580Z","type":"feature-status","module":"tracker","feature":"suggestion-answer","from":null,"to":"pending"}
+{"ts":"2026-10-21T13:46:14.836Z","type":"feature-status","module":"tracker","feature":"event-cleanup","from":null,"to":"pending"}
 {"ts":"2026-10-21T14:57:16.551Z","type":"module-status","module":"import-ticket-list","from":null,"to":"decomposed"}
 {"ts":"2026-10-21T15:31:07.125Z","type":"spec-approved","module":"import-ticket-list","specHash":"494d550f64f8c56581bfbac990262dcf9e79a685f6cd3239c1069bea76dbde8b"}
 {"ts":"2026-10-21T17:16:52.489Z","type":"quick-opened","what":"Renumber MSG catalog to SRS v3456 (batch 1: catalog)","files":[".claude/worktrees/recursing-gauss-5887f2/frontend/src/shared/messages/catalog.ts",".claude/worktrees/recursing-gauss-5887f2/frontend/src/shared/messages/msg.test.ts",".claude/worktrees/recursing-gauss-5887f2/frontend/src/shared/messages/msg.ts",".claude/worktrees/recursing-gauss-5887f2/frontend/src/shared/messages/show.ts",".claude/worktrees/recursing-gauss-5887f2/frontend/src/shared/ui/ConfirmDialog/ConfirmDialog.tsx"]}
@@ -129,6 +148,8 @@
 {"ts":"2026-10-22T12:51:49.090Z","type":"quick-closed","what":"project rules: the team git rules win over the harness branch and commit defaults","files":["CLAUDE.md","AGENTS.md"]}
 {"ts":"2026-10-22T13:51:09.948Z","type":"module-status","module":"import-ticket-list","from":"implementing","to":"evaluating"}
 {"ts":"2026-10-22T13:51:10.074Z","type":"module-status","module":"import-ticket-list","from":"evaluating","to":"completed"}
+{"ts":"2026-10-22T13:56:00.563Z","type":"module-status","module":"tracker","from":"planned","to":"implementing"}
+{"ts":"2026-10-22T13:56:00.887Z","type":"feature-status","module":"tracker","feature":"tracker-foundation","from":"pending","to":"in-progress"}
 {"ts":"2026-10-22T14:21:21.970Z","type":"module-status","module":"be-foundation","from":null,"to":"decomposed"}
 {"ts":"2026-10-22T14:21:22.168Z","type":"module-status","module":"fe-foundation","from":null,"to":"decomposed"}
 {"ts":"2026-10-22T14:21:22.380Z","type":"module-status","module":"identity","from":null,"to":"decomposed"}
@@ -295,17 +316,6 @@
 {"ts":"2026-10-25T13:11:00.726Z","type":"spec-approved","module":"fe-foundation","specHash":"ce8e67bcffd22f87795409fd93fa5971ec816b9228a831133eafd6f6b8a0c709"}
 {"ts":"2026-10-25T13:11:41.275Z","type":"spec-approved","module":"chatbot","specHash":"d946d850ae59cb11fc9a264efba1f324436041acb8c7076b87cca332033499ca"}
 {"ts":"2026-10-25T13:16:09.818Z","type":"module-status","module":"platform","from":"decomposed","to":"planned"}
-{"ts":"2026-10-25T15:22:52.183Z","type":"spec-approved","module":"search","specHash":"f34135d02259168ef3a954dff3f3b211344f53500755f649a41b274a3dd22111"}
-{"ts":"2026-10-26T05:03:04.450Z","type":"spec-approved","module":"search","specHash":"ca43234b334badba1f84105082876252b17611f56b6bfc3299d528b883ba0eb6"}
-{"ts":"2026-10-26T05:03:11.932Z","type":"module-status","module":"search","from":"decomposed","to":"planned"}
-{"ts":"2026-10-26T05:03:12.452Z","type":"feature-status","module":"search","feature":"ticket-list","from":null,"to":"pending"}
-{"ts":"2026-10-26T05:03:13.027Z","type":"feature-status","module":"search","feature":"ticket-search","from":null,"to":"pending"}
-{"ts":"2026-10-26T05:03:13.574Z","type":"feature-status","module":"search","feature":"give-feedback","from":null,"to":"pending"}
-{"ts":"2026-10-26T05:08:49.502Z","type":"module-status","module":"search","from":"planned","to":"implementing"}
-{"ts":"2026-10-26T05:08:49.786Z","type":"feature-status","module":"search","feature":"ticket-list","from":"pending","to":"in-progress"}
-{"ts":"2026-10-26T07:34:13.989Z","type":"commit-recorded","module":"search","repo":"default","sha":"3cb60af9693ccdf5f0717bb3a3c3e172473b8258"}
-{"ts":"2026-10-26T07:34:35.935Z","type":"feature-status","module":"search","feature":"ticket-list","from":"in-progress","to":"evaluating"}
-{"ts":"2026-10-26T07:59:30.860Z","type":"feature-status","module":"search","feature":"ticket-list","from":"evaluating","to":"passing"}
 {"ts":"2026-10-25T13:16:10.653Z","type":"module-status","module":"fe-foundation","from":"completed","to":"planned"}
 {"ts":"2026-10-25T13:16:11.288Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":null,"to":"pending"}
 {"ts":"2026-10-25T13:16:11.910Z","type":"feature-status","module":"fe-foundation","feature":"site-sign-in","from":null,"to":"pending"}
@@ -315,6 +325,7 @@
 {"ts":"2026-10-25T13:16:13.659Z","type":"feature-status","module":"chatbot","feature":"uuid-ids","from":null,"to":"pending"}
 {"ts":"2026-10-25T13:17:12.440Z","type":"quick-closed","what":"UUID ids and plural tables for every module (KAN-196 Q2): backend/AGENTS.md §2 and §7, numeric-id examples in frontend guidelines 04, 05, 12","files":["backend/AGENTS.md","frontend/guidelines/12-workflow.md","frontend/guidelines/04-typescript.md","frontend/guidelines/05-react-components.md"]}
 {"ts":"2026-10-25T14:38:39.047Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":"pending","to":"in-progress"}
+{"ts":"2026-10-25T15:22:52.183Z","type":"spec-approved","module":"search","specHash":"f34135d02259168ef3a954dff3f3b211344f53500755f649a41b274a3dd22111"}
 {"ts":"2026-10-25T16:29:14.295Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-25T16:29:14.499Z","type":"feature-status","module":"fe-foundation","feature":"catalog-sync","from":"evaluating","to":"passing"}
 {"ts":"2026-10-25T16:52:18.792Z","type":"feature-status","module":"fe-foundation","feature":"uuid-ids","from":"pending","to":"in-progress"}
@@ -329,25 +340,37 @@
 {"ts":"2026-10-25T18:06:39.644Z","type":"feature-status","module":"identity","feature":"add-user","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-25T18:07:33.892Z","type":"commit-recorded","module":"identity","repo":"default","sha":"6350ccd23e01e425984e8b6d05fd4c65814e729e"}
 {"ts":"2026-10-25T18:11:26.102Z","type":"commit-recorded","module":"identity","repo":"default","sha":"169712170a416fe976ac3e3591c21df2a58eb479"}
-{"ts":"2026-10-25T18:21:04.230Z","type":"feature-status","module":"identity","feature":"add-user","from":"evaluating","to":"passing"}
 {"ts":"2026-10-25T18:12:46.526Z","type":"feature-status","module":"fe-foundation","feature":"uuid-ids","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-25T18:12:47.478Z","type":"feature-status","module":"chatbot","feature":"uuid-ids","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-25T18:12:51.251Z","type":"feature-status","module":"fe-foundation","feature":"uuid-ids","from":"evaluating","to":"passing"}
 {"ts":"2026-10-25T18:12:52.133Z","type":"feature-status","module":"chatbot","feature":"uuid-ids","from":"evaluating","to":"passing"}
+{"ts":"2026-10-25T18:21:04.230Z","type":"feature-status","module":"identity","feature":"add-user","from":"evaluating","to":"passing"}
+{"ts":"2026-10-25T18:23:01.542Z","type":"feature-status","module":"identity","feature":"account-status","from":"pending","to":"in-progress"}
 {"ts":"2026-10-25T19:30:55.103Z","type":"spec-approved","module":"fe-foundation","specHash":"fbb0c7a2082744e86516a6d42a3011f068916c555a0537958f070d7a334176d6"}
 {"ts":"2026-10-25T19:58:14.649Z","type":"feature-status","module":"fe-foundation","feature":"site-sign-in","from":"pending","to":"in-progress"}
 {"ts":"2026-10-26T01:10:32.262Z","type":"feature-status","module":"fe-foundation","feature":"site-sign-in","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-26T01:10:32.475Z","type":"feature-status","module":"fe-foundation","feature":"site-sign-in","from":"evaluating","to":"passing"}
+{"ts":"2026-10-26T05:03:04.450Z","type":"spec-approved","module":"search","specHash":"ca43234b334badba1f84105082876252b17611f56b6bfc3299d528b883ba0eb6"}
+{"ts":"2026-10-26T05:03:11.932Z","type":"module-status","module":"search","from":"decomposed","to":"planned"}
+{"ts":"2026-10-26T05:03:12.452Z","type":"feature-status","module":"search","feature":"ticket-list","from":null,"to":"pending"}
+{"ts":"2026-10-26T05:03:13.027Z","type":"feature-status","module":"search","feature":"ticket-search","from":null,"to":"pending"}
+{"ts":"2026-10-26T05:03:13.574Z","type":"feature-status","module":"search","feature":"give-feedback","from":null,"to":"pending"}
+{"ts":"2026-10-26T05:08:49.502Z","type":"module-status","module":"search","from":"planned","to":"implementing"}
+{"ts":"2026-10-26T05:08:49.786Z","type":"feature-status","module":"search","feature":"ticket-list","from":"pending","to":"in-progress"}
+{"ts":"2026-10-26T07:34:13.989Z","type":"commit-recorded","module":"search","repo":"default","sha":"3cb60af9693ccdf5f0717bb3a3c3e172473b8258"}
+{"ts":"2026-10-26T07:34:35.935Z","type":"feature-status","module":"search","feature":"ticket-list","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-26T07:59:30.860Z","type":"feature-status","module":"search","feature":"ticket-list","from":"evaluating","to":"passing"}
 {"ts":"2026-10-26T13:33:46.805Z","type":"feature-status","module":"identity","feature":"add-user-review","from":null,"to":"pending"}
 {"ts":"2026-10-26T13:34:05.210Z","type":"feature-status","module":"identity","feature":"add-user-review","from":"pending","to":"in-progress"}
 {"ts":"2026-10-26T14:05:15.988Z","type":"commit-recorded","module":"identity","repo":"default","sha":"e1a6c2bf71c28fa1fba2d9f4ddf4cbd5d9b9de04"}
 {"ts":"2026-10-26T14:05:16.044Z","type":"feature-status","module":"identity","feature":"add-user-review","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-26T14:07:00.988Z","type":"feature-status","module":"identity","feature":"add-user-review","from":"evaluating","to":"passing"}
-{"ts":"2026-10-25T18:23:01.542Z","type":"feature-status","module":"identity","feature":"account-status","from":"pending","to":"in-progress"}
+{"ts":"2026-10-27T09:25:02.290Z","type":"spec-approved","module":"tracker","specHash":"b2abb6f0716b3f6591a91d43eb2d701209cd4a7a9bbc37e5e3050d8a7f8fb8f7"}
 {"ts":"2026-10-27T12:59:37.971Z","type":"feature-status","module":"identity","feature":"account-status","from":"pending","to":"in-progress"}
 {"ts":"2026-10-27T13:24:41.393Z","type":"commit-recorded","module":"identity","repo":"default","sha":"27c2c4fe066252e23da520a623ef07da91b8daef"}
 {"ts":"2026-10-27T13:24:41.472Z","type":"feature-status","module":"identity","feature":"account-status","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-27T13:29:54.144Z","type":"feature-status","module":"identity","feature":"account-status","from":"evaluating","to":"passing"}
+{"ts":"2026-10-27T13:30:26.936Z","type":"feature-status","module":"identity","feature":"user-roles","from":"pending","to":"in-progress"}
 {"ts":"2026-10-28T13:51:03.599Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":"pending","to":"in-progress"}
 {"ts":"2026-10-28T14:17:22.683Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-28T14:17:22.891Z","type":"feature-status","module":"fe-foundation","feature":"host-routes","from":"evaluating","to":"passing"}
@@ -365,60 +388,61 @@
 {"ts":"2026-10-28T17:30:32.711Z","type":"feature-status","module":"identity","feature":"login-screen","from":"pending","to":"in-progress"}
 {"ts":"2026-10-28T17:30:38.784Z","type":"feature-status","module":"identity","feature":"login-screen","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-28T17:30:38.995Z","type":"feature-status","module":"identity","feature":"login-screen","from":"evaluating","to":"passing"}
-{"ts":"2026-10-29T14:04:09.506Z","type":"spec-approved","module":"be-foundation","specHash":"ac914d1fcad0cef12226d4f78a470afc1e97831ccda964dbb465fe15efce8b16"}
-{"ts":"2026-10-29T14:27:29.888Z","type":"feature-status","module":"be-foundation","feature":"problem-errors","from":"evaluating","to":"passing"}
-{"ts":"2026-10-29T14:30:52.590Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"70d72a96eefb41469ea3190cf717ac8ad797a235"}
-{"ts":"2026-10-30T15:55:42.036Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"fd5d5cd78312deb4ae8c37e6a86761fe52f956be"}
-{"ts":"2026-10-30T16:01:43.536Z","type":"spec-approved","module":"be-foundation","specHash":"0879bacf1c486e77afe58974f98abfa955bf1b9ea738174669a95daaa5ea0bb6"}
-{"ts":"2026-10-30T16:13:59.165Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"b7b546d51536c8fb05b9361f175a5925118bb04a"}
-{"ts":"2026-10-27T13:30:26.936Z","type":"feature-status","module":"identity","feature":"user-roles","from":"pending","to":"in-progress"}
 {"ts":"2026-10-29T12:00:19.379Z","type":"commit-recorded","module":"identity","repo":"default","sha":"f1a5b412d5df51d504834cd8e007c53e0e0bf416"}
 {"ts":"2026-10-29T12:00:19.413Z","type":"feature-status","module":"identity","feature":"user-roles","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-29T12:09:10.644Z","type":"feature-status","module":"identity","feature":"user-roles","from":"evaluating","to":"passing"}
-{"ts":"2026-10-29T13:41:16.024Z","type":"quick-opened","what":"Fix PR86 BUG026 handover regression test setup","files":["frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-29T13:59:10.933Z","type":"quick-closed","what":"Fix PR86 BUG026 handover regression test setup","files":["frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-29T15:03:00.984Z","type":"quick-opened","what":"Fix PR86 handover retry and unavailable options","files":["frontend/src/shared/ui/FormModal/FormModal.tsx","frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-30T11:33:52.243Z","type":"quick-closed","what":"Fix PR86 handover retry and unavailable options","files":["frontend/src/shared/ui/FormModal/FormModal.tsx","frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-30T11:36:54.489Z","type":"quick-opened","what":"Fix PR86 accessible guards and role regression coverage","files":["frontend/src/features/users/components/UserRolesForm.tsx","frontend/src/features/users/components/UserStatusActions.tsx","frontend/src/features/users/pages/UserRolesPage.test.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-30T12:15:29.278Z","type":"quick-closed","what":"Fix PR86 accessible guards and role regression coverage","files":["frontend/src/features/users/components/UserRolesForm.tsx","frontend/src/features/users/components/UserStatusActions.tsx","frontend/src/features/users/pages/UserRolesPage.test.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-30T21:02:37.569Z","type":"quick-opened","what":"Fix PR86 confirmation error recovery","files":["frontend/src/features/users/hooks/useRoleUpdateFlow.ts","frontend/src/features/users/components/UserRolesForm.tsx","frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-30T21:12:17.009Z","type":"quick-closed","what":"Fix PR86 confirmation error recovery","files":["frontend/src/features/users/hooks/useRoleUpdateFlow.ts","frontend/src/features/users/components/UserRolesForm.tsx","frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-30T21:12:38.846Z","type":"quick-opened","what":"Fix PR86 combined PM and resolver removal","files":["frontend/src/features/users/hooks/useRoleUpdateFlow.ts","frontend/src/features/users/mocks/roles-handler.ts","frontend/src/features/users/mocks/roles.test.ts","frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-30T21:16:44.277Z","type":"quick-closed","what":"Fix PR86 combined PM and resolver removal","files":["frontend/src/features/users/hooks/useRoleUpdateFlow.ts","frontend/src/features/users/mocks/roles-handler.ts","frontend/src/features/users/mocks/roles.test.ts","frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
-{"ts":"2026-10-30T21:17:08.577Z","type":"quick-opened","what":"Fix PR86 handover recipient field errors","files":["frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","frontend/src/features/users/mocks/handlers.ts","docs/bug-log.md"]}
-{"ts":"2026-10-30T21:28:43.938Z","type":"quick-closed","what":"Fix PR86 handover recipient field errors","files":["frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","frontend/src/features/users/mocks/handlers.ts","docs/bug-log.md"]}
 {"ts":"2026-10-29T13:32:54.240Z","type":"commit-recorded","module":"search","repo":"default","sha":"d3e0831e63de93c7dc5b758d5e97e5d088b928e4"}
 {"ts":"2026-10-29T13:38:31.531Z","type":"commit-recorded","module":"search","repo":"default","sha":"419b5e85e927ff367e4ebf60ea97c405c4a75198"}
 {"ts":"2026-10-29T13:38:54.948Z","type":"commit-recorded","module":"search","repo":"default","sha":"2a0ac123f538891ce862d979ff8fbfe44c44c5c1"}
+{"ts":"2026-10-29T13:41:16.024Z","type":"quick-opened","what":"Fix PR86 BUG026 handover regression test setup","files":["frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-29T13:59:10.933Z","type":"quick-closed","what":"Fix PR86 BUG026 handover regression test setup","files":["frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-29T14:04:09.506Z","type":"spec-approved","module":"be-foundation","specHash":"ac914d1fcad0cef12226d4f78a470afc1e97831ccda964dbb465fe15efce8b16"}
+{"ts":"2026-10-29T14:27:29.888Z","type":"feature-status","module":"be-foundation","feature":"problem-errors","from":"evaluating","to":"passing"}
+{"ts":"2026-10-29T14:30:52.590Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"70d72a96eefb41469ea3190cf717ac8ad797a235"}
 {"ts":"2026-10-29T14:39:01.347Z","type":"commit-recorded","module":"search","repo":"default","sha":"bec9a71d8d9885d7fea4ff9f46335287353e2445"}
+{"ts":"2026-10-29T14:39:26.181Z","type":"quick-opened","what":"KAN-230 Q5: add the six sign-in env values to ImportConfirmIT test properties (test properties only)","files":["backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmIT.java","backend/src/test/java/vn/tsolve/ticket/controller/ImportControllerTest.java"]}
+{"ts":"2026-10-29T15:03:00.984Z","type":"quick-opened","what":"Fix PR86 handover retry and unavailable options","files":["frontend/src/shared/ui/FormModal/FormModal.tsx","frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-10-29T17:47:37.358Z","type":"feature-status","module":"search","feature":"ticket-search","from":"pending","to":"in-progress"}
 {"ts":"2026-10-29T17:58:38.880Z","type":"feature-status","module":"search","feature":"ticket-search","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-29T18:22:25.714Z","type":"feature-status","module":"search","feature":"ticket-search","from":"evaluating","to":"passing"}
 {"ts":"2026-10-29T18:30:45.691Z","type":"commit-recorded","module":"search","repo":"default","sha":"b3f0d6da058cc1178ffed3197b16893fb47fd2ca"}
-{"ts":"2026-10-30T15:41:22.402Z","type":"commit-recorded","module":"search","repo":"default","sha":"cfdf2de2a8ce09f475abb826f9806268206032c0"}
+{"ts":"2026-10-30T06:15:49.015Z","type":"feature-status","module":"tracker","feature":"jira-client","from":"pending","to":"in-progress"}
+{"ts":"2026-10-30T11:33:52.243Z","type":"quick-closed","what":"Fix PR86 handover retry and unavailable options","files":["frontend/src/shared/ui/FormModal/FormModal.tsx","frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-30T11:36:54.489Z","type":"quick-opened","what":"Fix PR86 accessible guards and role regression coverage","files":["frontend/src/features/users/components/UserRolesForm.tsx","frontend/src/features/users/components/UserStatusActions.tsx","frontend/src/features/users/pages/UserRolesPage.test.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-30T12:15:29.278Z","type":"quick-closed","what":"Fix PR86 accessible guards and role regression coverage","files":["frontend/src/features/users/components/UserRolesForm.tsx","frontend/src/features/users/components/UserStatusActions.tsx","frontend/src/features/users/pages/UserRolesPage.test.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-10-30T13:55:55.291Z","type":"spec-approved","module":"identity","specHash":"b08119ba91a4ab5bea367703ac5bb32b79bc5c3ae81d71ff6c34d02473911464"}
 {"ts":"2026-10-30T13:56:43.910Z","type":"feature-status","module":"identity","feature":"project-handover","from":null,"to":"pending"}
 {"ts":"2026-10-30T13:56:43.955Z","type":"feature-status","module":"identity","feature":"project-handover","from":"pending","to":"in-progress"}
 {"ts":"2026-10-30T14:24:23.066Z","type":"commit-recorded","module":"identity","repo":"default","sha":"64d147ab569091152ff0f6a32991ae20bf65eddd"}
 {"ts":"2026-10-30T14:24:23.108Z","type":"feature-status","module":"identity","feature":"project-handover","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-30T14:24:23.149Z","type":"feature-status","module":"identity","feature":"project-handover","from":"evaluating","to":"passing"}
+{"ts":"2026-10-30T15:41:22.402Z","type":"commit-recorded","module":"search","repo":"default","sha":"cfdf2de2a8ce09f475abb826f9806268206032c0"}
+{"ts":"2026-10-30T15:55:42.036Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"fd5d5cd78312deb4ae8c37e6a86761fe52f956be"}
+{"ts":"2026-10-30T16:01:43.536Z","type":"spec-approved","module":"be-foundation","specHash":"0879bacf1c486e77afe58974f98abfa955bf1b9ea738174669a95daaa5ea0bb6"}
+{"ts":"2026-10-30T16:13:59.165Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"b7b546d51536c8fb05b9361f175a5925118bb04a"}
+{"ts":"2026-10-30T21:02:37.569Z","type":"quick-opened","what":"Fix PR86 confirmation error recovery","files":["frontend/src/features/users/hooks/useRoleUpdateFlow.ts","frontend/src/features/users/components/UserRolesForm.tsx","frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-30T21:12:17.009Z","type":"quick-closed","what":"Fix PR86 confirmation error recovery","files":["frontend/src/features/users/hooks/useRoleUpdateFlow.ts","frontend/src/features/users/components/UserRolesForm.tsx","frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-30T21:12:38.846Z","type":"quick-opened","what":"Fix PR86 combined PM and resolver removal","files":["frontend/src/features/users/hooks/useRoleUpdateFlow.ts","frontend/src/features/users/mocks/roles-handler.ts","frontend/src/features/users/mocks/roles.test.ts","frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-30T21:16:44.277Z","type":"quick-closed","what":"Fix PR86 combined PM and resolver removal","files":["frontend/src/features/users/hooks/useRoleUpdateFlow.ts","frontend/src/features/users/mocks/roles-handler.ts","frontend/src/features/users/mocks/roles.test.ts","frontend/src/features/users/pages/UserRolesPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-10-30T21:17:08.577Z","type":"quick-opened","what":"Fix PR86 handover recipient field errors","files":["frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","frontend/src/features/users/mocks/handlers.ts","docs/bug-log.md"]}
+{"ts":"2026-10-30T21:28:43.938Z","type":"quick-closed","what":"Fix PR86 handover recipient field errors","files":["frontend/src/features/users/components/HandOverResponsibilitiesModal.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","frontend/src/features/users/mocks/handlers.ts","docs/bug-log.md"]}
 {"ts":"2026-10-31T06:24:13.256Z","type":"commit-recorded","module":"identity","repo":"default","sha":"d2c795e315631990c6b6b384a91c9df64977322a"}
+{"ts":"2026-10-31T06:56:23.894Z","type":"quick-opened","what":"jira-app manifest: issue-created trigger to the T-Solve backend via Forge Remote (KAN-22 step 4)","files":["jira-app/TSolve_JiraApp/manifest.yml"]}
 {"ts":"2026-10-31T07:28:12.280Z","type":"spec-approved","module":"dashboard-audit","specHash":"182bec63e1e5fdae398141a0e8afc5faafaf4003b6a1245c7033d541acc205c3"}
 {"ts":"2026-10-31T07:31:16.543Z","type":"module-status","module":"dashboard-audit","from":"decomposed","to":"planned"}
 {"ts":"2026-10-31T07:31:16.574Z","type":"feature-status","module":"dashboard-audit","feature":"audit-log","from":null,"to":"pending"}
 {"ts":"2026-10-31T07:31:16.609Z","type":"module-status","module":"dashboard-audit","from":"planned","to":"implementing"}
 {"ts":"2026-10-31T07:31:16.640Z","type":"feature-status","module":"dashboard-audit","feature":"audit-log","from":"pending","to":"in-progress"}
-{"ts":"2026-10-31T10:34:30.527Z","type":"commit-recorded","module":"dashboard-audit","repo":"default","sha":"85a8aeb11008532979199decd64b362284748a0c"}
-{"ts":"2026-10-31T10:34:30.587Z","type":"feature-status","module":"dashboard-audit","feature":"audit-log","from":"in-progress","to":"evaluating"}
-{"ts":"2026-10-31T10:34:30.640Z","type":"feature-status","module":"dashboard-audit","feature":"audit-log","from":"evaluating","to":"passing"}
-{"ts":"2026-10-29T14:39:26.181Z","type":"quick-opened","what":"KAN-230 Q5: add the six sign-in env values to ImportConfirmIT test properties (test properties only)","files":["backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmIT.java","backend/src/test/java/vn/tsolve/ticket/controller/ImportControllerTest.java"]}
-{"ts":"2026-10-31T08:39:19.260Z","type":"spec-approved","module":"identity","specHash":"e367c991bee7511ad25fcfab87b6fcd92800c570def503141942f0a0008711b1"}
-{"ts":"2026-10-31T08:40:20.127Z","type":"feature-status","module":"identity","feature":"account-checks","from":null,"to":"pending"}
-{"ts":"2026-10-31T08:40:21.087Z","type":"feature-status","module":"identity","feature":"platform-adapters","from":null,"to":"pending"}
 {"ts":"2026-10-31T07:42:57.326Z","type":"quick-closed","what":"KAN-230 Q5: add the six sign-in env values to ImportConfirmIT test properties (test properties only)","files":["backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmIT.java","backend/src/test/java/vn/tsolve/ticket/controller/ImportControllerTest.java"]}
 {"ts":"2026-10-31T07:46:57.135Z","type":"feature-status","module":"identity","feature":"sign-in-start","from":"pending","to":"in-progress"}
 {"ts":"2026-10-31T07:46:58.451Z","type":"feature-status","module":"identity","feature":"sign-in-start","from":"in-progress","to":"evaluating"}
 {"ts":"2026-10-31T07:47:01.734Z","type":"feature-status","module":"identity","feature":"sign-in-start","from":"evaluating","to":"passing"}
+{"ts":"2026-10-31T08:39:19.260Z","type":"spec-approved","module":"identity","specHash":"e367c991bee7511ad25fcfab87b6fcd92800c570def503141942f0a0008711b1"}
+{"ts":"2026-10-31T08:40:20.127Z","type":"feature-status","module":"identity","feature":"account-checks","from":null,"to":"pending"}
+{"ts":"2026-10-31T08:40:21.087Z","type":"feature-status","module":"identity","feature":"platform-adapters","from":null,"to":"pending"}
+{"ts":"2026-10-31T10:34:30.527Z","type":"commit-recorded","module":"dashboard-audit","repo":"default","sha":"85a8aeb11008532979199decd64b362284748a0c"}
+{"ts":"2026-10-31T10:34:30.587Z","type":"feature-status","module":"dashboard-audit","feature":"audit-log","from":"in-progress","to":"evaluating"}
+{"ts":"2026-10-31T10:34:30.640Z","type":"feature-status","module":"dashboard-audit","feature":"audit-log","from":"evaluating","to":"passing"}
 {"ts":"2026-10-31T10:56:24.840Z","type":"spec-approved","module":"identity","specHash":"194846f998b9c2f9acfc587de8fa6c7ce0da93ca5a92f8d5545739c41ac1fa9e"}
 {"ts":"2026-10-31T10:59:46.250Z","type":"feature-status","module":"identity","feature":"space-handover","from":null,"to":"pending"}
 {"ts":"2026-10-31T10:59:46.311Z","type":"feature-status","module":"identity","feature":"space-handover","from":"pending","to":"in-progress"}
@@ -436,3 +460,6 @@
 {"ts":"2026-11-01T03:46:32.722Z","type":"spec-approved","module":"fe-foundation","specHash":"f40ebde83c4a3228d23329d8c460f21dae16024c7c4896f50875bc5b1029888e"}
 {"ts":"2026-11-01T03:47:07.372Z","type":"spec-approved","module":"fe-foundation","specHash":"f40ebde83c4a3228d23329d8c460f21dae16024c7c4896f50875bc5b1029888e"}
 {"ts":"2026-11-01T03:47:20.952Z","type":"spec-approved","module":"identity","specHash":"de7ea6a9daf2e32110324fdf080dc7cf4dc3d7a422fb5826c8c2e9521a8799f1"}
+{"ts":"2026-10-31T19:32:53.710Z","type":"spec-approved","module":"tracker","specHash":"e3bcc7736b76775e1621ed216babdd92b58a28833c913f2c672832a35df211f6"}
+{"ts":"2026-10-31T21:34:09.699Z","type":"quick-closed","what":"jira-app manifest: issue-created trigger to the T-Solve backend via Forge Remote (KAN-22 step 4)","files":["jira-app/TSolve_JiraApp/manifest.yml"]}
+{"ts":"2026-10-31T22:01:06.427Z","type":"spec-approved","module":"tracker","specHash":"25360cf298cb10e9aa4321237d42ce10f7ee3c78cd8e061ce66b452ce491b5a1"}
