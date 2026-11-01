@@ -25,19 +25,19 @@
         "project-uuid": "evaluating",
         "preview-read": "evaluating",
         "duplicate-id-code": "evaluating",
-        "csv-upload-kit": "pending",
+        "csv-upload-kit": "evaluating",
         "import-tickets-screen": "pending",
         "import-preview-screen": "pending",
         "import-preview-actions": "pending",
         "import-ticket-preview-popup": "pending"
       },
-      "lastUpdated": "2026-11-01T05:45:03.342Z",
+      "lastUpdated": "2026-11-01T06:10:51.620Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "da595643101cf9c8c815341c57f6ca095942fd8b"
+        "default": "09ab2ee908091e017d127a7d0755f388ce08a4eb"
       }
     },
     "be-foundation": {
