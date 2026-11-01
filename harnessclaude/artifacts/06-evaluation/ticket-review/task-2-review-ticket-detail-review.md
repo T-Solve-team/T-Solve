@@ -46,3 +46,12 @@ Mutation experiment: inverted the pending-status condition in ReviewTicketDetail
 See `artifacts/06-evaluation/ticket-review/task-2-review-ticket-detail-test-report.md` for independently executed full-suite and browser results. Focused implementation run: 23/23 tests. No timeout increase, skipped test, dependency or global test configuration change.
 
 Final full run after the queue-test correction: 1,136/1,136 passed, zero failed/skipped, 148/148 reported suites across 63 files in 581.4 seconds, exit 0. Format, lint, typecheck, build and generation determinism passed; desktop/narrow/keyboard and live MSW decision/reader checks passed. Task 2 is ready for the per-feature user commit checkpoint.
+
+## PR #102 FE Lead follow-up — 2026-11-01
+
+- Independent reviewer inspected the exact three-file diff, approved spec, Graphify relationships and the users/main comparison. No critical or informational findings in the correction.
+- BUG-089 regression proves all three controls keep their exact DOM identity while disabled during refetch, cannot write while unavailable, and restore the focused action on fresh success. Rendering still requires managing PM, Pending review and successful confirmed data. Submission and popup OK retain freshness/error guards.
+- Unmanaged PM-author test returns genuinely permitted detail from the mock but asserts all three decisions absent; removing the Project manager guard kills the new test. Empty-Evidence MSG04 is covered. Kept stable Approve aria-label because its loading spinner otherwise changes the accessible name; simplified redundant conditional isOpen.
+- Users follow-up is **not reproduced**, not a claimed new fix: default-worker users suites pass154/154 on Node22 and Node24, and pass again after clean local dependencies. Existing bug notes distinguish merged #100 code from the new FE Lead report and leave tester confirmation pending. No shared/users runtime was edited.
+- Fresh local-dependency format/lint/typecheck/build and generation determinism pass. Full Node24 suite result is in the test report. Browser is unavailable; no new visual verification claim.
+- Final full Node24 suite: 1,139/1,139 passed, zero failed/skipped, 148/148 reported suites, exit0. Reported wall duration1,766 seconds; the extended wait is disclosed without guessing its cause. Whole-module trace remains31/31 and the approved spec is unchanged.
