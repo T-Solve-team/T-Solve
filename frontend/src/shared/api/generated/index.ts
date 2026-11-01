@@ -1,6 +1,7 @@
 export * from './audit-log/audit-log';
 export * from './chatbot/chatbot';
 export * from './import/import';
+export * from './jira-app/jira-app';
 export * from './review/review';
 export * from './search/search';
 export * from './session/session';

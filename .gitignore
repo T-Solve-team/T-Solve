@@ -4,6 +4,7 @@ build/
 out/
 *.class
 *.log
+.codegraph/
 
 # ---- Frontend (frontend/.gitignore has the rest) ----
 node_modules/

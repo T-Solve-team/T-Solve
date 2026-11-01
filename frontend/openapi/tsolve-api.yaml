@@ -22,6 +22,8 @@ tags:
     description: Ticket List (Report3 UC-27; SRS III.6.2).
   - name: search
     description: Search of the Published tickets (Report3 UC-26; SRS III.6.1).
+  - name: jira-app
+    description: Calls from the T-Solve Jira App through Forge Remote (Forge Invocation Token).
 paths:
   /api/v1/audit-events:
     get:
@@ -512,6 +514,28 @@ paths:
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/events/issue-created:
+    post:
+      tags: [jira-app]
+      operationId: receiveIssueCreated
+      summary: Forge trigger avi:jira:created:issue — stored as a suggestion result of its Project (STORY-003).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueCreatedPayload'
+      responses:
+        '202':
+          description: Accepted — also when already stored or when the issue belongs to no T-Solve Project.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/imports/csv/template:
     get:
       tags: [import]
@@ -866,6 +890,12 @@ paths:
         '403':
           $ref: '#/components/responses/Problem'
 components:
+  securitySchemes:
+    forgeInvocationToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Forge Invocation Token (FIT) that Atlassian signs on every Forge Remote call.
   parameters:
     Page:
       name: page
@@ -907,6 +937,31 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    IssueCreatedPayload:
+      type: object
+      description: >
+        The part of a Forge avi:jira:created:issue event that T-Solve reads. Other fields Forge sends are ignored.
+      required: [issue]
+      properties:
+        issue:
+          type: object
+          required: [key, fields]
+          properties:
+            key:
+              type: string
+              maxLength: 50
+              description: The Jira issue key, e.g. ITSUP-1031.
+            fields:
+              type: object
+              required: [project]
+              properties:
+                project:
+                  type: object
+                  required: [key]
+                  properties:
+                    key:
+                      type: string
+                      description: The Jira project key, e.g. ITSUP.
     AuditAction:
       type: string
       enum: [APPROVE, REJECT, REQUEST_CHANGES, PUBLISH, UNPUBLISH, IMPORT, DELETE, ROLE_CHANGE, PERMISSION_CHANGE, TRACKER_CONFIGURATION_CHANGE]
