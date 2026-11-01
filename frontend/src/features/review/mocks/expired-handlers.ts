@@ -139,8 +139,10 @@ export const expiredHandlers = [
       const range =
         MOCK_PROJECTS.find((p) => p.projectId === ticket.project.projectId)?.reviewRangeDays ?? 3;
       reviewStore.history.push({
+        decisionId: crypto.randomUUID(),
         ticketId: ticket.ticketId,
         actorId: user.user.id,
+        actorName: user.user.fullName || user.user.email,
         action: 'SEND_BACK',
         timestamp,
         beforeStatus: 'EXPIRED',

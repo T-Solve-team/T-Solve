@@ -3,6 +3,7 @@ import {
   getGetReviewQueueQueryKey,
   getGetReviewQueueTicketIdsQueryKey,
   getGetTicketsQueryKey,
+  getGetReviewHistoryQueryKey,
   useApproveTickets,
   useRejectTickets,
   useRequestTicketChanges,
@@ -30,6 +31,7 @@ export function useApproveSelectedTickets() {
     mutation: {
       onSuccess: (result) => {
         showMessage('MSG14', { count: result.count });
+        void queryClient.invalidateQueries({ queryKey: getGetReviewHistoryQueryKey() });
       },
       onSettled: () => {
         void refreshQueue(queryClient);
@@ -46,6 +48,7 @@ export function useRejectSelectedTickets() {
       meta: { handlesOwnErrors: true },
       onSuccess: (result) => {
         showMessage('MSG16', { count: result.count });
+        void queryClient.invalidateQueries({ queryKey: getGetReviewHistoryQueryKey() });
       },
       onSettled: () => {
         void refreshQueue(queryClient);
@@ -62,6 +65,7 @@ export function useRequestChangesForTickets() {
       meta: { handlesOwnErrors: true },
       onSuccess: () => {
         showMessage('MSG17');
+        void queryClient.invalidateQueries({ queryKey: getGetReviewHistoryQueryKey() });
       },
       onSettled: () => {
         void refreshQueue(queryClient);

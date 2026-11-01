@@ -27,12 +27,14 @@ import type {
   ExpiredTicketPage,
   GetExpiredTicketIdsParams,
   GetExpiredTicketsParams,
+  GetReviewHistoryParams,
   GetReviewQueueParams,
   GetReviewQueueTicketIdsParams,
   ProblemResponse,
   RejectTicketsRequest,
   RequestChangesRequest,
   ReviewDecisionResult,
+  ReviewHistoryPage,
   ReviewQueuePage,
   ReviewTicketDetail,
   TicketIdList,
@@ -191,6 +193,151 @@ export function useGetReviewTicketDetail<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getGetReviewTicketDetailQueryOptions(ticketId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetReviewHistoryUrl = (params?: GetReviewHistoryParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ['sort'];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/review-history?${stringifiedParams}`
+    : `/api/v1/review-history`;
+};
+
+/**
+ * Scope before filtering and pagination. Paired calendar dates are inclusive in Vietnam time. Default timestamp descending, decision UUID tie-breaker; explicit timestamp sorting only. No production persistence is implemented.
+ * @summary Read-only decision history of managed Projects (KAN-159 frontend proposal).
+ */
+export const getReviewHistory = async (
+  params?: GetReviewHistoryParams,
+  options?: Parameters<typeof http>[1],
+): Promise<ReviewHistoryPage> => {
+  return http<ReviewHistoryPage>(getGetReviewHistoryUrl(params), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetReviewHistoryQueryKey = (params?: GetReviewHistoryParams) => {
+  return [`/api/v1/review-history`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetReviewHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getReviewHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetReviewHistoryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewHistory>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetReviewHistoryQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewHistory>>> = ({ signal }) =>
+    getReviewHistory(params, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getReviewHistory>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetReviewHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getReviewHistory>>>;
+export type GetReviewHistoryQueryError = ErrorType<ProblemResponse>;
+
+export function useGetReviewHistory<
+  TData = Awaited<ReturnType<typeof getReviewHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params: undefined | GetReviewHistoryParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewHistory>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReviewHistory>>,
+          TError,
+          Awaited<ReturnType<typeof getReviewHistory>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetReviewHistory<
+  TData = Awaited<ReturnType<typeof getReviewHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetReviewHistoryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewHistory>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReviewHistory>>,
+          TError,
+          Awaited<ReturnType<typeof getReviewHistory>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetReviewHistory<
+  TData = Awaited<ReturnType<typeof getReviewHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetReviewHistoryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewHistory>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Read-only decision history of managed Projects (KAN-159 frontend proposal).
+ */
+
+export function useGetReviewHistory<
+  TData = Awaited<ReturnType<typeof getReviewHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetReviewHistoryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewHistory>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetReviewHistoryQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

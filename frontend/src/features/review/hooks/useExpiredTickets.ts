@@ -7,6 +7,7 @@ import {
   getGetReviewQueueQueryKey,
   getGetReviewQueueTicketIdsQueryKey,
   getGetTicketsQueryKey,
+  getGetReviewHistoryQueryKey,
   type GetExpiredTicketsParams,
 } from '@/shared/api';
 import { showMessage } from '@/shared/messages';
@@ -18,7 +19,10 @@ export function useSendBackSelectedTickets() {
   const client = useQueryClient();
   return useSendBackTickets({
     mutation: {
-      onSuccess: (result) => showMessage('MSG25', { count: result.count }),
+      onSuccess: (result) => {
+        showMessage('MSG25', { count: result.count });
+        void client.invalidateQueries({ queryKey: getGetReviewHistoryQueryKey() });
+      },
       onSettled: () => {
         const root = getGetTicketsQueryKey()[0];
         void Promise.all([

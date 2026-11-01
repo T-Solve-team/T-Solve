@@ -431,6 +431,40 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/review-history:
+    get:
+      tags: [review]
+      operationId: getReviewHistory
+      summary: Read-only decision history of managed Projects (KAN-159 frontend proposal).
+      description: Scope before filtering and pagination. Paired calendar dates are inclusive in Vietnam time. Default timestamp descending, decision UUID tie-breaker; explicit timestamp sorting only. No production persistence is implemented.
+      parameters:
+        - name: departmentId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: decision
+          in: query
+          schema: { $ref: '#/components/schemas/ReviewDecision' }
+        - name: dateFrom
+          in: query
+          schema: { type: string, format: date }
+        - name: dateTo
+          in: query
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: One page of scoped review decisions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewHistoryPage' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/expired-tickets:
     get:
       tags: [review]
@@ -1425,6 +1459,33 @@ components:
           format: uuid
         name:
           type: string
+    ReviewDecision:
+      type: string
+      enum: [APPROVE, REJECT, REQUEST_CHANGES, UNPUBLISH, REPUBLISH, SEND_BACK]
+    ReviewHistoryItem:
+      type: object
+      required: [decisionId, ticketId, sourceTicketId, title, project, decision, actorId, actorName, authorName, timestamp, reason, comment]
+      properties:
+        decisionId: { type: string, format: uuid }
+        ticketId: { type: string, format: uuid }
+        sourceTicketId: { type: string }
+        title: { type: string }
+        project: { $ref: '#/components/schemas/ProjectRef' }
+        decision: { $ref: '#/components/schemas/ReviewDecision' }
+        actorId: { type: string, format: uuid }
+        actorName: { type: string }
+        authorName: { type: string, nullable: true }
+        timestamp: { type: string, format: date-time }
+        reason: { type: string, nullable: true }
+        comment: { type: string, nullable: true }
+    ReviewHistoryPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/ReviewHistoryItem' }
+        page: { $ref: '#/components/schemas/PageMetadata' }
     ExpiredTicketItem:
       allOf:
         - $ref: '#/components/schemas/ReviewQueueItem'

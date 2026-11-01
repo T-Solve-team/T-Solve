@@ -11,10 +11,11 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { RequestHandlerOptions } from 'msw';
 
-import { TicketSource, TicketStatus } from '../model';
+import { ReviewDecision, TicketSource, TicketStatus } from '../model';
 import type {
   ExpiredTicketPage,
   ReviewDecisionResult,
+  ReviewHistoryPage,
   ReviewQueuePage,
   ReviewTicketDetail,
   TicketIdList,
@@ -64,6 +65,46 @@ export const getGetReviewTicketDetailResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
   ]),
+  ...overrideResponse,
+});
+
+export const getGetReviewHistoryResponseMock = (
+  overrideResponse: Partial<Extract<ReviewHistoryPage, object>> = {},
+): ReviewHistoryPage => ({
+  content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      decisionId: faker.string.uuid(),
+      ticketId: faker.string.uuid(),
+      sourceTicketId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      project: {
+        projectId: faker.string.uuid(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      decision: faker.helpers.arrayElement(Object.values(ReviewDecision)),
+      actorId: faker.string.uuid(),
+      actorName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      authorName: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      timestamp: faker.date.past().toISOString().slice(0, 19) + 'Z',
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  page: {
+    size: faker.number.int(),
+    number: faker.number.int(),
+    totalElements: faker.number.int(),
+    totalPages: faker.number.int(),
+  },
   ...overrideResponse,
 });
 
@@ -187,6 +228,30 @@ export const getGetReviewTicketDetailMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getGetReviewTicketDetailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetReviewHistoryMockHandler = (
+  overrideResponse?:
+    | ReviewHistoryPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ReviewHistoryPage> | ReviewHistoryPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/review-history',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetReviewHistoryResponseMock(),
         { status: 200 },
       );
     },
@@ -387,6 +452,7 @@ export const getRequestTicketChangesMockHandler = (
 };
 export const getReviewMock = () => [
   getGetReviewTicketDetailMockHandler(),
+  getGetReviewHistoryMockHandler(),
   getGetExpiredTicketsMockHandler(),
   getGetExpiredTicketIdsMockHandler(),
   getSendBackTicketsMockHandler(),
