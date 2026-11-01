@@ -1,8 +1,17 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { getDevSite, getDevUser } from '@/shared/auth';
-import { TicketStatus } from '@/shared/api';
+import { getMe, TicketStatus } from '@/shared/api';
+import { UUID } from '../hooks/useSolutionFilters';
+import { canSeeMySolutions } from '../lib/canSeeMySolutions';
 import { MY_SOLUTIONS, VIEWABLE_SPACES } from './data';
+
+/** The dev user's live roles (users mock), fetched in parallel with the mock delay so it adds no latency. */
+const rolesAndDelay = () =>
+  Promise.all([
+    getDevUser() ? getMe().then((me) => me.roles) : Promise.resolve([]),
+    delay(MOCK_DELAY_MS),
+  ]);
 
 /**
  * MSW mock handlers of the "my-profile" feature (guideline 10 §5). Hand-written handlers with realistic data go here;
@@ -22,11 +31,11 @@ export const handlers: HttpHandler[] = [
   }),
   // Counts per status and the distinct Projects of the user's Solutions; every query parameter is ignored (AC-003.18).
   http.get('*/api/v1/me/solutions/summary', async () => {
-    await delay(MOCK_DELAY_MS);
+    const [roles] = await rolesAndDelay();
     const user = getDevUser();
     if (!user) return problem(401, 'MSG07');
-    const all = MY_SOLUTIONS[user];
-    if (!all) return problem(403, 'MSG08');
+    if (!canSeeMySolutions(roles)) return problem(403, 'MSG08');
+    const all = MY_SOLUTIONS[user] ?? [];
     const counts: Record<string, number> = Object.fromEntries(STATUS_VALUES.map((s) => [s, 0]));
     const byId = new Map<string, string>();
     for (const r of all) {
@@ -40,11 +49,11 @@ export const handlers: HttpHandler[] = [
   }),
   // The signed-in user's Solutions (AC-003.6): newest first, filters of AC-003.19, wrong parameters give 400 per parameter.
   http.get('*/api/v1/me/solutions', async ({ request }) => {
-    await delay(MOCK_DELAY_MS);
+    const [roles] = await rolesAndDelay();
     const user = getDevUser();
     if (!user) return problem(401, 'MSG07');
-    const all = MY_SOLUTIONS[user];
-    if (!all) return problem(403, 'MSG08');
+    if (!canSeeMySolutions(roles)) return problem(403, 'MSG08');
+    const all = MY_SOLUTIONS[user] ?? [];
 
     const query = new URL(request.url).searchParams;
     const wrong: string[] = [];
@@ -109,7 +118,6 @@ export const handlers: HttpHandler[] = [
   }),
 ];
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const STATUS_VALUES: string[] = Object.values(TicketStatus);
 
 /** Restores this feature's mock data to its starting state — called after every test (src/test/setup.ts). */

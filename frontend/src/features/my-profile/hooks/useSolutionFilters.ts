@@ -20,7 +20,8 @@ export type SolutionFilterValues = {
   to?: string;
 };
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Any version and variant, like Java `UUID.fromString` (the nil UUID is valid); the mock handler shares it. */
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const KEYS = ['status', 'projectId', 'from', 'to'] as const;
 

@@ -88,6 +88,7 @@ export function MySolutionsSection() {
             columns={COLUMNS}
             rows={query.data?.content}
             rowKey={(row) => row.ticketId}
+            loading={query.isFetching}
             error={query.error}
             pagination={total > 20 ? { page, total, onChange: setPage } : undefined}
           />

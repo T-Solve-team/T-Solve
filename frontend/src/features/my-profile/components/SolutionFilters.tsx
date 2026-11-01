@@ -26,9 +26,8 @@ const STATUS_OPTIONS = [
 export function SolutionFilters({ filters, projects, onChange }: SolutionFiltersProps) {
   const options = [
     { value: ALL, label: 'All Projects' },
-    ...[...projects]
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((p) => ({ value: p.projectId, label: p.name })),
+    // The backend sorts the Projects (AC-003.18); keep its order.
+    ...projects.map((p) => ({ value: p.projectId, label: p.name })),
   ];
   const pick = (key: 'status' | 'projectId') => (value: string | undefined) =>
     onChange({ [key]: !value || value === ALL ? null : value });
@@ -39,7 +38,8 @@ export function SolutionFilters({ filters, projects, onChange }: SolutionFilters
         aria-label="Status"
         className={styles.status}
         allowClear
-        value={filters.status ?? ALL}
+        placeholder="All statuses"
+        value={filters.status}
         options={STATUS_OPTIONS}
         onChange={pick('status')}
       />
@@ -47,7 +47,11 @@ export function SolutionFilters({ filters, projects, onChange }: SolutionFilters
         aria-label="Project"
         className={styles.project}
         allowClear
-        value={filters.projectId ?? ALL}
+        placeholder="All Projects"
+        // A URL projectId without an option (summary loading or failed) shows the placeholder, not the raw UUID.
+        value={
+          projects.some((p) => p.projectId === filters.projectId) ? filters.projectId : undefined
+        }
         options={options}
         onChange={pick('projectId')}
       />
