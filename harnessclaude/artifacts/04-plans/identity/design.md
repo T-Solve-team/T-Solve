@@ -560,9 +560,10 @@ the inbox icon (the kit's `EmptyState`). The red numbered markers are annotation
 1. Projects table: the frame has a "Project ID" column (PRJ-0001). `/me` has only the UUID `projectId` and no
    display id, so the table has three columns: Jira project key, Department, Role in Project (Q2).
 2. Role in Project: the frame shows "Member"; Q3 shows `MEMBER` as "Ticket Resolver".
-3. Empty Projects: frame (c) shows the card with "Not a member of any Project."; Q4 hides the card.
+3. Empty Projects: frame (c) shows the card with "Not a member of any Project."; since 1/11 (AC-003.16, MSG143) the
+   card is shown with that text, as in the frame (Q4 reversed for this card).
 4. Employee-only Spaces: frame (c) lists "Sao Mai Corporation"; the Employee-only dev user has no viewable Spaces
-   (Q8), so with Q4 frame (c)'s user sees no Spaces card at all in mock mode (see State rules).
+   (Q8), so frame (c)'s user sees the Spaces card with "No Spaces found" (AC-003.15, MSG142) in mock mode.
 5. My Solutions for a user who writes no Solutions: frames (b) and (c) have no My Solutions section; AC-003.13 and
    Q4 keep the section for every user, with MSG04 when it has no rows.
 6. My Solutions extras in the main frame — the six status count cards, the status / Project / date-range filters and
@@ -582,11 +583,14 @@ the inbox icon (the kit's `EmptyState`). The red numbered markers are annotation
 
 ### State rules (STORY-003)
 
-- Hide what is empty (Q4): no Department → no row; empty Departments → no row; empty Projects → no Projects card;
-  no `KNOWLEDGE_MANAGER` or no managed Spaces → no "Spaces I manage" list; "Spaces I can view" loaded and empty → no
-  list. The Spaces card is not rendered when both lists are hidden after a successful load (decided by Hiếu 31/10:
-  an empty card has nothing to show). While "Spaces I can view" loads, the card shows with its spinner; when it
-  fails, the card shows MSG06 in place of that list (and "Spaces I manage" still shows).
+- Hide what is empty (Q4) for the Account rows and "Spaces I manage": no Department → no row; empty Departments →
+  no row; no `KNOWLEDGE_MANAGER` or no managed Spaces → no "Spaces I manage" list.
+- Two cards are always rendered (decided by Hiếu 1/11, reversing Q4 and the 31/10 rule for these cards):
+  - Projects card (AC-003.16): the table, or when the user has no Projects the grey text MSG143 "Not a member of any
+    Project." in place of the table.
+  - Spaces card (AC-003.15): "Spaces I can view" shows its spinner at once (no 150 ms delay) while loading; loaded
+    and empty → the grey text MSG142 "No Spaces found" under "Spaces I can view"; when it fails, MSG06 in place of
+    that list (AC-003.14; "Spaces I manage" still shows).
 - My Solutions is always rendered: spinner on the first load (`DataTable` `loading`), MSG04 when `content` is empty
   on page 1 (AC-003.13), MSG06 on failure (AC-003.14, `ErrorState` without "Try again", Q9).
 - Paging (Q5): `useListSearchParams(defaultSort: TableSort)` (`shared/routing/useListSearchParams.ts`) requires a
@@ -635,7 +639,7 @@ Fixtures in `mocks/data.ts`, keyed by `DevUserId`, fixed UUIDs (guideline: ids a
 
 | Dev user | My Solutions | Spaces I can view |
 |----------|--------------|-------------------|
-| `employee` | 0 (MSG04, Q8) | none (no Spaces card, Q4/Q8) |
+| `employee` | 0 (MSG04, Q8) | none (the Spaces card shows MSG142 "No Spaces found", AC-003.15, Q8) |
 | `tr` | 45 (3 pages), all six statuses, three Projects, 3 rows `canOpen: false` | 3 |
 | `tr-two-departments` | 21 (page 2 has one row) | 4, including both Departments' Spaces |
 | `pm` | 20 (exactly one page, no second page) | 2 |
@@ -666,7 +670,7 @@ Handler rules (mirror of the contract; MSW, `delay(MOCK_DELAY_MS)`):
 - T15: AC-003.1 for `employee`, `tr-two-departments`, `pm`, `km`, `pm-km`, `admin-tr` (rows present and hidden per
   Q4, Role order, Department only for the PM, the Projects labels); AC-003.2 (list for `km` and `pm-km`, none for
   `pm`); AC-002.7 (click → `POST /auth/logout` once, Login opens, the query cache is empty).
-- T16: AC-003.3 (names sorted, `employee` has no Spaces card); the Spaces half of AC-003.14 (`server.use` 500 on
+- T16: AC-003.3 (names sorted); AC-003.15 (spinner at once, no delay; `employee` shows the Spaces card with MSG142; the card shows for every dev user); the Spaces half of AC-003.14 (`server.use` 500 on
   `/me/spaces` → MSG06 in the Spaces card, account and "Spaces I manage" still shown); handler tests: sorting, 401.
 - T17 (handler tests only): order, defaults, page boundaries 0 / 1 / 20 / 21 / 45, page past the end, each 400 case
   with its `fieldErrors`, 401, extra parameters ignored.
@@ -686,7 +690,7 @@ Handler rules (mirror of the contract; MSW, `delay(MOCK_DELAY_MS)`):
 | Layout (Q1) | The four Figma frames of 1.2.1; decisions win where they differ | SRS wording only | Frames exist; differences listed above |
 | Projects (Q2) | Shown by `jiraProjectKey`, with Department and role; no `/me` change | Add `projectName` to `/me` (fe- and be-foundation contract change) | All else is already in `/me` |
 | Project role label (Q3) | `PROJECT_MANAGER` "Project Manager", `MEMBER` "Ticket Resolver" | "Member" | Hiếu's choice; the label of the Role that makes a member |
-| Empty values (Q4) | Hide every empty row, list and section; My Solutions keeps MSG04 (AC-003.13) | "—" rows; MSG04 for Spaces (a new criterion) | No new criterion; the screen shows only what the user has |
+| Empty values (Q4; changed by Hiếu 1/11) | Hide empty Account rows and "Spaces I manage". The Spaces and Projects cards are always shown, with MSG142 "No Spaces found" (AC-003.15) and MSG143 "Not a member of any Project." (AC-003.16); My Solutions keeps MSG04 (AC-003.13, not changed; KAN-238 decides) | "—" rows; hiding the two cards (the original Q4) | A hidden card looked like a missing feature in QA; the Figma frame (c) already shows the Projects text |
 | Paging (Q5) | Kit `DataTable` pagination, 20 fixed, `size=20` sent, page in the URL (1-based; 0-based to the API) | Page in state only; "Load more" | AC-003.11; back from Ticket Detail keeps the page; like the User List |
 | Date (Q6) | Header "Updated", the shared `formatDate` (`DD/MM/YYYY`, Vietnam time, `shared/lib/date.ts`; confirmed by Hiếu 31/10) | `DD/MM/YYYY HH:mm`; relative dates | Q6 said "or the shared format if one exists" — it does |
 | Log out (Q7) | Button at the top right of the Account card, `useSignOut()`, in Task 15 | Bottom of the page; leave to a KAN-106 plan | One-button FE criterion on this screen; no backend |
@@ -708,7 +712,7 @@ the Figma count cards are not built, Figma vs decisions item 6).
 
 | # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
 |---|-------|-----------|----------|----------|-------------------|-----------|
-| 53 | STORY-003 | User types | Employee only: no Department, Departments, Projects, managed or viewable Spaces, no Solutions | High | Account card with Full name, Email, Roles "Employee"; no Projects or Spaces card; My Solutions with MSG04 (AC-003.1/.13, Q4) | Tasks 15, 16, 18 |
+| 53 | STORY-003 | User types | Employee only: no Department, Departments, Projects, managed or viewable Spaces, no Solutions | High | Account card with Full name, Email, Roles "Employee"; Projects card with MSG143 "Not a member of any Project."; Spaces card with MSG142 "No Spaces found" and no "Spaces I manage"; My Solutions with MSG04 (AC-003.1/.13/.15/.16) | Tasks 15 (follow-up Quick change), 16, 18 |
 | 54 | STORY-003 | User types | Project Manager with `department` set; a Ticket Resolver whose `department` is null; a user whose `department` is set but who is not a PM (bad data) | High | "Department" row only for the PM (AC-003.1); never for a non-PM | Task 15 |
 | 55 | STORY-003 | User types | A user with four Roles (`admin-tr` plus PM / KM in a test fixture) | Medium | All labels, Employee first, in `ROLES` order (fe-foundation AC-001.1) | Task 15 |
 | 56 | STORY-003 | User types | KM with no managed Spaces; PM + KM (`pm-km`); PM without KM | Medium | List only when KM and not empty; none for the PM alone (AC-003.2, Q4) | Task 15 |
@@ -734,9 +738,12 @@ the Figma count cards are not built, Figma vs decisions item 6).
 | 76 | STORY-003 | Data integrity | A Space in both "Spaces I manage" and "Spaces I can view" | Low | Shown in both lists (viewable includes managed, Permission Matrix footnote ⁸) | Task 16 |
 | 77 | STORY-003 | Integration | A future backend sends an unknown `status` | Low | The type checker rejects it at build (fe-foundation AC-007.3); at runtime the Status Tag's own fallback | Task 18 |
 | 78 | STORY-003 | Integration | Contract drift: `generate:api` leaves a diff, or the YAML and the handlers disagree | High | The PR's verify runs `generate:api` with no diff; handlers typed with the generated types | Tasks 16, 17 |
-| 79 | STORY-003 | Integration | Real backend while the lookups are missing: `/me/spaces` `[]`, `/me/solutions` empty page | Medium | No "Spaces I can view" list (Q4); MSG04 in My Solutions — the same screens as the `employee` mock (AC-003.5/.8) | Tasks 16, 18 |
+| 79 | STORY-003 | Integration | Real backend while the lookups are missing: `/me/spaces` `[]`, `/me/solutions` empty page | Medium | The Spaces card shows MSG142 "No Spaces found" (AC-003.15); MSG04 in My Solutions — the same screens as the `employee` mock (AC-003.5/.8) | Tasks 16, 18 |
 | 80 | STORY-002 | Compliance | The next person at the same computer after "Log out" | High | No profile data left: the cache is cleared by `useSignOut` and Login opens (AC-002.7, fe-foundation AC-008.1) | Task 15 |
 | 81 | STORY-003 | Compliance | Personal data in the URL or in logs | Medium | The URL holds only `page`; nothing about the user is logged or stored by the feature | Tasks 15, 18 |
+| 82 | STORY-003 | State transitions | "Spaces I can view" loaded empty (`employee`; any user with none), including a Knowledge Manager with managed Spaces but no viewable ones (bad data) | High | Spaces card stays; grey MSG142 "No Spaces found" under "Spaces I can view"; "Spaces I manage" unaffected (AC-003.15) | Task 16 |
+| 83 | STORY-003 | Timing | `/me/spaces` is slow (first load) | Medium | The card and its spinner show at once, with no 150 ms delay and no flash of MSG142 before the answer (AC-003.15) | Task 16 |
+| 84 | STORY-003 | User types | User with no Projects (`employee`, `km`, `admin`) | High | Projects card stays; grey MSG143 "Not a member of any Project." in place of the table, no table header (AC-003.16) | Task 15 (follow-up Quick change) |
 
 Open questions for the spec owner: none blocking this plan. For Hiếu to decide later (not needed for Tasks 15–18):
 the Figma extras of item 6 (count cards, filters, "Latest decision"), which need a Change Mode spec change; the
