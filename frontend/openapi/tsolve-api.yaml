@@ -307,6 +307,22 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/me/solutions/summary:
+    get:
+      tags: [profile]
+      operationId: getMySolutionSummary
+      summary: The counts per status and the distinct Projects of all the signed-in user's Solutions; ignores every filter and paging parameter.
+      responses:
+        '200':
+          description: Six counts (0 when none) and the Projects sorted by name; empty projects when there are no Solutions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MySolutionSummary'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/auth/sign-in:
     get:
       tags: [session]
@@ -1475,6 +1491,24 @@ components:
             $ref: '#/components/schemas/MySolution'
         page:
           $ref: '#/components/schemas/PageMetadata'
+    MySolutionSummary:
+      type: object
+      required: [counts, projects]
+      properties:
+        counts:
+          type: object
+          required: [PENDING_REVIEW, CHANGES_REQUESTED, PUBLISHED, REJECTED, UNPUBLISHED, EXPIRED]
+          properties:
+            PENDING_REVIEW: { type: integer, minimum: 0 }
+            CHANGES_REQUESTED: { type: integer, minimum: 0 }
+            PUBLISHED: { type: integer, minimum: 0 }
+            REJECTED: { type: integer, minimum: 0 }
+            UNPUBLISHED: { type: integer, minimum: 0 }
+            EXPIRED: { type: integer, minimum: 0 }
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectRef'
     TicketStatus:
       type: string
       enum: [PENDING_REVIEW, CHANGES_REQUESTED, PUBLISHED, REJECTED, UNPUBLISHED, EXPIRED]

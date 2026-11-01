@@ -12,7 +12,7 @@ import { HttpResponse, http } from 'msw';
 import type { RequestHandlerOptions } from 'msw';
 
 import { ReviewDecision, TicketStatus } from '../model';
-import type { MySolutionPage, SpaceRef } from '../model';
+import type { MySolutionPage, MySolutionSummary, SpaceRef } from '../model';
 
 export const getGetMyViewableSpacesResponseMock = (): SpaceRef[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -52,6 +52,26 @@ export const getGetMySolutionsResponseMock = (
     totalElements: faker.number.int(),
     totalPages: faker.number.int(),
   },
+  ...overrideResponse,
+});
+
+export const getGetMySolutionSummaryResponseMock = (
+  overrideResponse: Partial<Extract<MySolutionSummary, object>> = {},
+): MySolutionSummary => ({
+  counts: {
+    PENDING_REVIEW: faker.number.int({ min: 0 }),
+    CHANGES_REQUESTED: faker.number.int({ min: 0 }),
+    PUBLISHED: faker.number.int({ min: 0 }),
+    REJECTED: faker.number.int({ min: 0 }),
+    UNPUBLISHED: faker.number.int({ min: 0 }),
+    EXPIRED: faker.number.int({ min: 0 }),
+  },
+  projects: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      projectId: faker.string.uuid(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
   ...overrideResponse,
 });
 
@@ -100,7 +120,32 @@ export const getGetMySolutionsMockHandler = (
     options,
   );
 };
+
+export const getGetMySolutionSummaryMockHandler = (
+  overrideResponse?:
+    | MySolutionSummary
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<MySolutionSummary> | MySolutionSummary),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/me/solutions/summary',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetMySolutionSummaryResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getProfileMock = () => [
   getGetMyViewableSpacesMockHandler(),
   getGetMySolutionsMockHandler(),
+  getGetMySolutionSummaryMockHandler(),
 ];

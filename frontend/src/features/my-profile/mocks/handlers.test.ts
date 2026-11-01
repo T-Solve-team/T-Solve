@@ -1,5 +1,11 @@
-import { getMySolutions, getMyViewableSpaces, isApiError } from '@/shared/api';
+import {
+  getMySolutionSummary,
+  getMySolutions,
+  getMyViewableSpaces,
+  isApiError,
+} from '@/shared/api';
 import { setDevUser, type DevUserId } from '@/shared/auth';
+import { MY_SOLUTIONS } from './data';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -347,4 +353,92 @@ describe('my-solutions mock contract', () => {
     expect(status).toBe(200);
     expect(body).toEqual(plain);
   });
+});
+
+const SUMMARY_URL = '/api/v1/me/solutions/summary';
+
+function countsOf(user: DevUserId) {
+  const rows = MY_SOLUTIONS[user] ?? [];
+  return Object.fromEntries(
+    STATUSES.map((status) => [status, rows.filter((row) => row.status === status).length]),
+  );
+}
+
+describe('my-solutions summary mock contract', () => {
+  it("contract mirror of AC-003.18 tr's counts have all six statuses, each the number of tr's Solutions in that status", async () => {
+    setDevUser('tr');
+    const { counts } = await getMySolutionSummary();
+    expect(Object.keys(counts).sort()).toEqual([...STATUSES].sort());
+    expect(counts).toEqual(countsOf('tr'));
+    for (const status of STATUSES) {
+      expect(counts[status]).toBeGreaterThan(0);
+      const page = await getMySolutions({ status, size: 100 });
+      expect(page.page.totalElements).toBe(counts[status]);
+    }
+    expect(Object.values(counts).reduce((a, b) => a + b, 0)).toBe(45);
+  });
+
+  it("contract mirror of AC-003.18 projects are the distinct Projects of tr's Solutions as ProjectRef, sorted by name", async () => {
+    setDevUser('tr');
+    const { projects } = await getMySolutionSummary();
+    for (const project of projects) {
+      expect(Object.keys(project).sort()).toEqual(['name', 'projectId']);
+      expect(project.projectId).toMatch(UUID);
+    }
+    expect(new Set(projects.map((p) => p.projectId)).size).toBe(projects.length);
+    const expected = new Map((MY_SOLUTIONS.tr ?? []).map((r) => [r.projectId, r.projectName]));
+    expect(new Map(projects.map((p) => [p.projectId, p.name]))).toEqual(expected);
+    const names = projects.map((p) => p.name);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+  });
+
+  it('contract mirror of AC-003.18 ignores every filter and paging parameter', async () => {
+    setDevUser('tr');
+    const plain = await getMySolutionSummary();
+    const projectId = MY_SOLUTIONS.tr?.[0]?.projectId ?? '';
+    const response = await fetch(
+      `${SUMMARY_URL}?status=EXPIRED&projectId=${projectId}&from=2026-10-01&to=2026-10-02&page=2&size=5`,
+      { credentials: 'include' },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(plain);
+  });
+
+  it.each(['pm', 'pm-km'] as DevUserId[])(
+    'contract mirror of AC-003.18 Project Manager %s gets the counts and Projects of their own Solutions',
+    async (user) => {
+      setDevUser(user);
+      const { counts, projects } = await getMySolutionSummary();
+      expect(Object.values(counts).reduce((a, b) => a + b, 0)).toBe(8);
+      expect(counts).toEqual(countsOf(user));
+      expect(Object.keys(counts).sort()).toEqual([...STATUSES].sort());
+      expect(projects.length).toBeGreaterThan(0);
+    },
+  );
+
+  it.each(['tr-two-departments', 'admin-tr'] as DevUserId[])(
+    'contract mirror of AC-003.8 resolver %s with 0 Solutions gets six 0 counts and no Projects',
+    async (user) => {
+      setDevUser(user);
+      const summary = await getMySolutionSummary();
+      expect(Object.keys(summary.counts).sort()).toEqual([...STATUSES].sort());
+      expect(Object.values(summary.counts)).toEqual([0, 0, 0, 0, 0, 0]);
+      expect(summary.projects).toEqual([]);
+    },
+  );
+
+  it('contract mirror of AC-003.10 the summary answers 401 MSG07 when nobody is signed in, before the role check', async () => {
+    setDevUser(null);
+    const error = await rejection(() => getMySolutionSummary());
+    expect(error).toMatchObject({ status: 401, code: 'MSG07' });
+  });
+
+  it.each(['employee', 'km', 'admin'] as DevUserId[])(
+    'contract mirror of AC-003.17 the summary answers 403 MSG08 for %s without Ticket Resolver or Project Manager',
+    async (user) => {
+      setDevUser(user);
+      const error = await rejection(() => getMySolutionSummary());
+      expect(error).toMatchObject({ status: 403, code: 'MSG08' });
+    },
+  );
 });

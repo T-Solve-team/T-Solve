@@ -50,6 +50,8 @@ export * from './messageRefParams';
 export * from './mySolution';
 export * from './mySolutionLatestDecision';
 export * from './mySolutionPage';
+export * from './mySolutionSummary';
+export * from './mySolutionSummaryCounts';
 export * from './pageMetadata';
 export * from './pageParameter';
 export * from './problemDetail';

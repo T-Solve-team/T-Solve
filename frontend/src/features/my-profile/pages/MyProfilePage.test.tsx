@@ -481,6 +481,37 @@ describe('MyProfilePage', () => {
       },
     );
 
+    it.each(['employee', 'km', 'admin'] as const)(
+      'AC-003.20 sends no summary request and shows no counters for %s',
+      async (user) => {
+        let summaryCalls = 0;
+        server.events.on('request:start', ({ request }) => {
+          if (/\/api\/v1\/me\/solutions\/summary$/.test(new URL(request.url).pathname))
+            summaryCalls += 1;
+        });
+        const answered = spacesAnswered();
+        renderApp('/profile', { user });
+        await findAccountCard();
+        await answered;
+        await findLoadedSpacesCard();
+        expect(screen.queryByRole('group', { name: 'Solution counts' })).not.toBeInTheDocument();
+        expect(screen.queryByText('Pending review')).not.toBeInTheDocument();
+        expect(summaryCalls).toBe(0);
+        server.events.removeAllListeners();
+      },
+    );
+
+    it('AC-003.20 keeps the Account and Spaces cards when the counters fail with 500', async () => {
+      server.use(http.get('*/api/v1/me/solutions/summary', () => problem(500)));
+      renderApp('/profile', { user: 'tr' });
+      const counters = within(
+        await screen.findByRole('group', { name: 'Solution counts' }, { timeout: 5000 }),
+      );
+      expect(await counters.findByText(msg('MSG06'), {}, { timeout: 5000 })).toBeInTheDocument();
+      expect((await findAccountCard()).getByText('Phạm Quốc Bảo')).toBeInTheDocument();
+      expect((await findLoadedSpacesCard()).getByText('Spaces I can view')).toBeInTheDocument();
+    });
+
     it.each(['tr', 'pm', 'pm-km', 'admin-tr'] as const)(
       'AC-003.20 shows the My Solutions section for %s',
       async (user) => {

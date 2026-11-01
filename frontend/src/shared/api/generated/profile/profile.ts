@@ -22,6 +22,7 @@ import type {
 import type {
   GetMySolutionsParams,
   MySolutionPage,
+  MySolutionSummary,
   ProblemDetail,
   ProblemResponse,
   SpaceRef,
@@ -300,6 +301,131 @@ export function useGetMySolutions<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getGetMySolutionsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetMySolutionSummaryUrl = () => {
+  return `/api/v1/me/solutions/summary`;
+};
+
+/**
+ * @summary The counts per status and the distinct Projects of all the signed-in user's Solutions; ignores every filter and paging parameter.
+ */
+export const getMySolutionSummary = async (
+  options?: Parameters<typeof http>[1],
+): Promise<MySolutionSummary> => {
+  return http<MySolutionSummary>(getGetMySolutionSummaryUrl(), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetMySolutionSummaryQueryKey = () => {
+  return [`/api/v1/me/solutions/summary`] as const;
+};
+
+export const getGetMySolutionSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMySolutionSummary>>,
+  TError = ErrorType<ProblemResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMySolutionSummary>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMySolutionSummaryQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMySolutionSummary>>> = ({ signal }) =>
+    getMySolutionSummary({ signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getMySolutionSummary>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetMySolutionSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMySolutionSummary>>
+>;
+export type GetMySolutionSummaryQueryError = ErrorType<ProblemResponse>;
+
+export function useGetMySolutionSummary<
+  TData = Awaited<ReturnType<typeof getMySolutionSummary>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMySolutionSummary>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMySolutionSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getMySolutionSummary>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMySolutionSummary<
+  TData = Awaited<ReturnType<typeof getMySolutionSummary>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMySolutionSummary>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMySolutionSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getMySolutionSummary>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMySolutionSummary<
+  TData = Awaited<ReturnType<typeof getMySolutionSummary>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMySolutionSummary>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary The counts per status and the distinct Projects of all the signed-in user's Solutions; ignores every filter and paging parameter.
+ */
+
+export function useGetMySolutionSummary<
+  TData = Awaited<ReturnType<typeof getMySolutionSummary>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMySolutionSummary>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetMySolutionSummaryQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
