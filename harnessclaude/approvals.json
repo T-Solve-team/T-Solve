@@ -595,8 +595,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "9fe97b50fb58bcacae49c7f5bfdf466d26736accfb05a08b4a49c9551c5ac1f1",
-    "approvedAt": "2026-11-01T01:51:05.532Z",
+    "specHash": "52faf1d9cd258fce25e10db736fe84b3a8e49a892e2a2e70fb4c70c88b72fda3",
+    "approvedAt": "2026-11-01T10:07:45.911Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -629,7 +629,15 @@
       "AC-006.3": "WHEN the current user manages the ticket's Project and the confirmed ticket is Pending review, THE frontend SHALL offer Approve, Reject and Request Changes; IF the user does not manage it or its status is no longer pending, THEN THE frontend SHALL expose no usable decision controls and THE mock API SHALL reject forged mutations.",
       "AC-006.4": "WHEN a user views an imported Published ticket, THE frontend SHALL render MSG18 as an accessible explanation for the Request Changes restriction without constructing an impossible pending imported ticket or using an empty-Solution flag.",
       "AC-006.5": "WHEN a permitted ticket is displayed, THE frontend SHALL show Evidence filename and readable size with safe API-provided references; IF a reference uses an unsafe URL scheme, THEN THE frontend SHALL render no executable link.",
-      "AC-006.6": "IF an ordinary reader requests an unpublished ticket they neither authored nor manage, THEN THE mock API SHALL return 404 MSG04 without its Solution or review comment; THE frontend SHALL show the queue navigation only to users permitted to open it."
+      "AC-006.6": "IF an ordinary reader requests an unpublished ticket they neither authored nor manage, THEN THE mock API SHALL return 404 MSG04 without its Solution or review comment; THE frontend SHALL show the queue navigation only to users permitted to open it.",
+      "AC-007.1": "WHEN Expired Tickets loads, THE frontend and mock API SHALL list only EXPIRED Solution Form tickets in the current Workspace's Projects managed by the current Project Manager, with Ticket ID, Title, Project, Source, Expired on and previous status; THE frontend SHALL link each ticket to the existing Ticket Detail.",
+      "AC-007.2": "WHEN the user changes Department, page or supported sort, THE frontend SHALL preserve list state in the URL and request server-side results; THE frontend SHALL use the existing Department filter convention without adding a Project filter.",
+      "AC-007.3": "WHEN the user selects across pages or selects all filtered tickets, THE frontend SHALL use the complete eligible UUID set and preserve off-page selections; WHEN the Department changes including browser navigation, THE frontend SHALL clear selection.",
+      "AC-007.4": "WHEN one to 500 unique eligible tickets are sent back, THE mock API SHALL atomically change them to PENDING_REVIEW, set their queue-entry time to the send-back time, recalculate each due date from the send-back calendar date plus its Project's current reviewRangeDays (GBR-10), preserve Solution and Evidence, and append a SEND_BACK record per ticket; THE frontend SHALL show MSG25 with the returned count and remove completed selections.",
+      "AC-007.5": "IF any submitted UUID is invalid, duplicated, missing, foreign, unmanaged, no longer EXPIRED, or the batch is empty or exceeds 500, THEN THE mock API SHALL reject the entire batch without changing any ticket or history; THE frontend SHALL disable empty, oversized and pending submissions and prevent duplicate requests.",
+      "AC-007.6": "IF a list or eligibility request fails, THEN THE frontend SHALL show the catalog error and retry; WHILE initial loading is pending, THE frontend SHALL show loading; IF no Expired tickets match, THEN THE frontend SHALL show MSG04.",
+      "AC-007.7": "WHEN send-back settles, THE frontend SHALL refresh affected Expired list/eligibility, Review Queue/eligibility, Ticket Detail and Ticket List queries; IF send-back fails, THEN THE frontend SHALL retain eligible selections and show its catalog error, reconciling stale selections after 404 or 409 without reporting a completed mutation as failed because a later refetch failed.",
+      "AC-007.8": "IF the caller is signed out or lacks Project Manager, THEN THE route guard and mock API SHALL deny access; IF a caller forges another Project or Workspace's UUID, THEN THE mock API SHALL expose no foreign ticket data and perform no write."
     }
   }
 }

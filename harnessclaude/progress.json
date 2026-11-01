@@ -263,15 +263,16 @@
       "currentPhase": "implement",
       "features": {
         "review-queue-decisions": "passing",
-        "review-ticket-detail": "passing"
+        "review-ticket-detail": "passing",
+        "expired-tickets": "passing"
       },
-      "lastUpdated": "2026-11-01T09:36:45.954Z",
+      "lastUpdated": "2026-11-01T11:57:48.673Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "47c23557c3c71f269a7232c6a0ff7477eedd8ca9"
+        "default": "09af635617e3f050798bfe52039818344948f964"
       }
     }
   },

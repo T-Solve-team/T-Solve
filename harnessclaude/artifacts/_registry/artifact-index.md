@@ -173,3 +173,6 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-detail-approved.png |
 | — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-detail-changes.png |
 | — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-detail-narrow.png |
+| — | session-log | ticket-review | passing | artifacts/05-implementation/ticket-review/task-3-expired-tickets.md |
+| — | review | ticket-review | pass | artifacts/06-evaluation/ticket-review/task-3-expired-tickets-review.md |
+| — | test-report | ticket-review | pass | artifacts/06-evaluation/ticket-review/task-3-expired-tickets-test-report.md |

@@ -29,3 +29,12 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Dependencies:** Task 1 verified and committed with user agreement.
 **Estimated size:** medium.
 **Verification:** Master risks R1 and R5–R12; AC-006.1–006.6 and detail callers of earlier stories; full frontend checks, 31/31 criterion trace, deterministic generation and browser/narrow-width/keyboard inspection. No backend or real Jira/audit claims. User commit checkpoint applies; push/PR only if requested.
+
+## Task 3: KAN-158 Expired Tickets and mock send-back
+
+**Story:** STORY-007
+**Feature:** expired-tickets
+**Description:** Implement the KAN-158 extension in the master and iteration design. Generate the proposed contract, add guarded expiry fixtures/list/ids/send-back handlers, complete the existing page and reuse Ticket Detail navigation. Deliver one independently reviewable feature on feat/KAN-158-review-expired-tickets based on the authorized KAN-24 dependency.
+**Files:** frontend/openapi/tsolve-api.yaml; generated API output; frontend/src/features/review/pages/ExpiredTicketsPage*; review feature-local components/hooks/mocks and tests; docs/bug-log.md only for reproduced defects.
+**Dependencies:** User approval of current spec (AC-007.1–007.8), existing KAN-24 base; production KAN-156/157 are future integration dependencies rather than implemented here.
+**Verification:** Named AC-007.1–007.8 tests covering every risk in the extension, focused then full frontend checks, deterministic generation, trace and browser review. Record evidence and request agreement for feat(review): add expired ticket workflow (KAN-158). Do not begin KAN-159 before this feature's approved commit.
