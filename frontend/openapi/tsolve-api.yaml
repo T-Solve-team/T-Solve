@@ -268,6 +268,45 @@ paths:
                 items: { $ref: '#/components/schemas/SpaceRef' }
         '401':
           $ref: '#/components/responses/Problem'
+  /api/v1/me/solutions:
+    get:
+      tags: [profile]
+      operationId: getMySolutions
+      summary: The Tickets whose Solution the signed-in user wrote, newest update first.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/TicketStatus' }
+        - name: projectId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          description: First day (inclusive, UTC+7).
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: Last day (inclusive, UTC+7); not before `from`.
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: One page of My Solutions; empty content when there are none.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MySolutionPage'
+        '400':
+          description: A wrong query parameter (MSG06) with one fieldErrors entry per parameter.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/auth/sign-in:
     get:
       tags: [session]
@@ -1384,6 +1423,56 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReviewQueueItem'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+    ReviewDecision:
+      type: string
+      enum: [APPROVE, REQUEST_CHANGES, REJECT]
+    MySolution:
+      type: object
+      required: [ticketId, ticketKey, title, projectId, projectName, status, updatedAt, canOpen, latestDecision]
+      properties:
+        ticketId:
+          type: string
+          format: uuid
+        ticketKey:
+          type: string
+        title:
+          type: string
+        projectId:
+          type: string
+          format: uuid
+        projectName:
+          type: string
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+        updatedAt:
+          type: string
+          format: date-time
+        canOpen:
+          type: boolean
+        latestDecision:
+          description: Null when there is no decision yet.
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [action, comment, decidedAt]
+              properties:
+                action:
+                  $ref: '#/components/schemas/ReviewDecision'
+                comment:
+                  type: [string, 'null']
+                decidedAt:
+                  type: string
+                  format: date-time
+    MySolutionPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/MySolution'
         page:
           $ref: '#/components/schemas/PageMetadata'
     TicketStatus:
