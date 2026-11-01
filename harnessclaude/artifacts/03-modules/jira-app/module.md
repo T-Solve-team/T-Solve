@@ -16,7 +16,7 @@ paths:
 **Owner:** Đặng Tấn Bình
 
 ## Description
-The T-Solve Jira App on Atlassian Forge: the Solution Form when an issue moves to a Done status (UC-19, with AI drafting and rewriting), the Issue Panel with suggested Published tickets, and the triage comment on new issues.
+The T-Solve Jira App on Atlassian Forge: the Solution Form when an issue moves to a Done status (UC-19, with AI drafting and rewriting), the Issue Panel with suggested Published tickets, and the suggested solution comment on new issues (UC-36).
 
 ## Responsibilities
 - Solution Form, drafts banner and Issue Panel inside Jira.
@@ -34,7 +34,7 @@ The T-Solve Jira App on Atlassian Forge: the Solution Form when an issue moves t
 |------------|-----------|-------------|
 | ticket-repository | Submission | Sends the Solution |
 | search | Retrieval | Suggested tickets |
-| triage | Triage | The comment on new issues |
+| triage | Suggestion | The suggested solution comment on new issues |
 | project-integration | Projects | Which tracker projects are linked |
 
 ## Target Repos
@@ -43,3 +43,4 @@ The T-Solve Jira App on Atlassian Forge: the Solution Form when an issue moves t
 ## Related Artifacts
 - Spec: `artifacts/03-modules/jira-app/spec.md` (written when the module is planned)
 - Map: `artifacts/03-modules/module-map.md`
+- Stories: KAN-22, KAN-23, KAN-124, KAN-130, KAN-131
