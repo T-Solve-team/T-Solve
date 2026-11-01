@@ -232,6 +232,32 @@
       "features": {},
       "lastUpdated": "2026-10-24T23:56:43.157Z"
     },
+    "tracker": {
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "forge-remote-spike": "pending",
+        "tracker-foundation": "in-progress",
+        "fit-verification": "pending",
+        "jira-site-registration": "pending",
+        "token-cipher": "pending",
+        "receive-issue-events": "pending",
+        "jira-client": "in-progress",
+        "event-worker": "pending",
+        "triage-on-create": "pending",
+        "draft-on-done": "pending",
+        "issue-panel": "pending",
+        "solution-form": "pending",
+        "suggestion-answer": "pending",
+        "event-cleanup": "pending"
+      },
+      "lastUpdated": "2026-10-30T06:15:48.993Z",
+      "branch": "feat/tracker",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {}
+    },
     "ticket-review": {
       "status": "implementing",
       "currentPhase": "implement",

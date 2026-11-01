@@ -256,6 +256,9 @@ export const MESSAGES = {
     type: 'inline',
     text: 'This sign-in request is not valid or has expired. Please start the sign-in again.',
   },
+  /** Provisional (KAN-237): System_Messages will number these two. */
+  MSG142: { type: 'inline', text: 'No Spaces found' },
+  MSG143: { type: 'inline', text: 'Not a member of any Project.' },
   /** Provisional key (decision D3) until System_Messages numbers it: the intro of 1.3.3 Hand Over Responsibilities. */
   MSG_NEW_2: {
     type: 'inline',

@@ -4,6 +4,7 @@ build/
 out/
 *.class
 *.log
+.codegraph/
 
 # ---- Frontend (frontend/.gitignore has the rest) ----
 node_modules/
@@ -30,3 +31,7 @@ backups/
 .claude/settings.local.json
 .DS_Store
 Thumbs.db
+
+# ---- AI agents ----
+prompts/
+.claude/worktrees/

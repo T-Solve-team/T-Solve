@@ -23,6 +23,7 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
 | 2026-10-26 | STORY-004..STORY-007 | Merge the UC-04–07 frontend/MSW slice after main's unchanged STORY-001–003; renumber its AC ids to AC-004–007; add AC-004.8 for the 100-character search limit and align UserAccount ids with the UUID convention | User-requested KAN-107 review repair: preserve the other owner's sign-in/logout/profile specification and align the account contract with main |
 | 2026-10-28 | STORY-001 | Reword Functional req. 1, AC-001.1, AC-001.4, AC-001.5, AC-001.29 and AC-001.35: the central sign-in origin comes from `TSOLVE_LOGIN_ORIGIN` and the Platform Console origin from `TSOLVE_ADMIN_ORIGIN` (the production URLs stay as examples). Reword AC-001.18: the session cookie is `__Host-TSOLVE_SESSION`. Reword AC-001.21, AC-001.28, AC-001.30 and AC-001.31 to name the configured Platform Console origin the same way, and AC-002.1 and the Interface Contracts row for `GET /api/v1/auth/complete` to use `__Host-TSOLVE_SESSION` (wording only); NFR 4 names `TSOLVE_LOGIN_ORIGIN`, `TSOLVE_ADMIN_ORIGIN` and `TSOLVE_SIGNING_KEY`. Reword AC-001.42: the Login codes are fe-foundation's list (MSG06, MSG09, MSG10, MSG122, MSG123, MSG141, without MSG07 and MSG120); MSG122 needs a valid `google_domain`; `error=MSG120` leaves the message area empty and the MSG120 full page shows instead | KAN-103 plan (Hiếu, 28/10): Q7 = A (NFR 4: hosts come from the environment; local dev and tests use other origins); Q2 = B (KAN-104: the session cookie is valid only on the company's own site, enforced by the browser); Q4 = A (agree with fe-foundation AC-012.3, AC-012.4 and AC-011.4) |
 | 2026-10-31 | STORY-001 | Add AC-001.44–.47 (login CSRF: `authorize` sets the sign-in cookie `__Host-TSOLVE_SIGNIN` and accepts each state value once; the callback refuses a state value without the matching cookie and expires the cookie in every answer), AC-001.48–.49 (a Workspace with no Google domain is refused at sign-in start, `authorize` and the callback) and AC-001.50 (the state's Workspace no longer exists at the callback). Reword AC-001.2 (the state keeps the cookie hash and the "authorized" mark), AC-001.14 (the first step also covers the sign-in cookie and the state's Workspace), NFR 3 (the browser also holds the short-lived sign-in cookie), and the Interface Contracts rows for sign-in start, `authorize` and `callback`; reworded AC-001.1, .4, .14, .29, .31 (spec review) | Task 8 review (Hiếu, 29/10), design row 45; KAN-231 plan Q1–Q14 (Hiếu, 31/10); KAN-231 spec review (Hiếu, 31/10) |
+| 2026-11-01 | STORY-003 | Add AC-003.15 (the Spaces card is always shown; spinner at once; MSG142 "No Spaces found" when "Spaces I can view" is empty) and AC-003.16 (the Projects card is always shown; MSG143 "Not a member of any Project." in place of the table). Reword AC-003.1 (the Projects list is read-only; its empty state is AC-003.16) and AC-003.3. Messages MSG142 and MSG143 are new. AC-003.11 to .13 (My Solutions) unchanged | Hiếu, 1/11 (KAN-237 QA): reverses plan decision Q4 for the Spaces and Projects cards only; Account rows and "Spaces I manage" keep Q4; My Solutions is for KAN-238 |
 | 2026-10-31 | STORY-003 | AC-003.12 reworded: the Ticket ID, not the whole row, is the link (no shared DataTable change) | KAN-160 plan review; FE Lead 31/10 (R1 A, R1' A) |
 
 ## Requirements
@@ -174,9 +175,9 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
     - full name and email;
     - the Roles with the labels of fe-foundation AC-001.1 (Employee always);
     - the Department (only for a Project Manager) and the Departments;
-    - the Projects, each with its Department and the user's role in it.
+    - the Projects, each with its Department and the user's role in it (the empty case is AC-003.16).
   - AC-003.2: WHERE the user is a Knowledge Manager, THE My Profile screen SHALL list "Spaces I manage" from the session's managed Spaces.
-  - AC-003.3: WHEN My Profile opens, THE web app SHALL load `GET /api/v1/me/spaces` and list "Spaces I can view" by name.
+  - AC-003.3: WHEN My Profile opens, THE web app SHALL load `GET /api/v1/me/spaces` and list "Spaces I can view" by name (the loading and empty states are AC-003.15).
   - AC-003.4: WHEN a signed-in user calls `GET /api/v1/me/spaces`, THE backend SHALL answer 200 with a list of `SpaceRef` (`spaceId`, `name`), sorted by name, exactly as the viewable Space lookup returns them for the signed-in Account.
   - AC-003.5: WHILE the viewable Space lookup has no implementation (`wiki` not built), THE backend SHALL answer `GET /api/v1/me/spaces` with 200 and an empty list.
   - AC-003.6: WHEN a signed-in user calls `GET /api/v1/me/solutions` with `page` (from 0, default 0) and `size` (1 to 100, default 20), THE backend SHALL answer 200 with a `MySolutionPage`: that page of the written-ticket lookup for the signed-in Account, newest `updatedAt` first.
@@ -188,6 +189,11 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
   - AC-003.12: WHEN the user clicks the Ticket ID of a row whose `canOpen` is true, THE web app SHALL open Ticket Detail at `/tickets/:ticketId`. The Ticket ID of a row whose `canOpen` is false SHALL not be a link.
   - AC-003.13: WHILE My Solutions has no rows, THE My Profile screen SHALL show MSG04 in that section.
   - AC-003.14: IF loading My Solutions or "Spaces I can view" fails, THEN THE My Profile screen SHALL show MSG06 in that section and still show the account information of AC-003.1.
+  - AC-003.15: THE My Profile screen SHALL always show the Spaces card, whatever the user's Roles:
+    - WHILE "Spaces I can view" loads, the card shows a loading spinner at once, with no delay;
+    - WHEN "Spaces I can view" has loaded and is empty, the card shows, under "Spaces I can view", the grey text MSG142 ("No Spaces found");
+    - "Spaces I manage" shows only for a Knowledge Manager with managed Spaces (AC-003.2); when loading fails, AC-003.14 applies.
+  - AC-003.16: THE My Profile screen SHALL always show the Projects card; WHEN the user has no Projects, it SHALL show, in place of the table, the grey text MSG143 ("Not a member of any Project.").
 
 ### STORY-004: View Workspace users (KAN-107 / UC-04)
 - As an Admin, I want to search and filter the users of my Workspace so that I can manage their accounts.

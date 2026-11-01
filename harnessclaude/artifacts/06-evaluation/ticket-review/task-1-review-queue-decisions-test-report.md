@@ -51,3 +51,11 @@ Subsequent user request expanded PR #100 with a five-file quick fix for the user
 - Format/lint/typecheck/build: exit 0; lint retains the existing TicketListFilters fast-refresh warning. `npm run generate:api` plus `git diff --exit-code -- src/shared/api/generated`: exit 0.
 - Review found no blocking issues. Explicit accessible names remain stable through pending and spinner exit; busy/disabled state, entered values, successful retry and single-request protection are asserted. No timeout increase or weakened checks.
 - Original CI site-state failure remains BUG-085 Open: pre-fix local users/site run 165/165, shuffled site-state seed 42 11/11, current combined/full runs pass. A successful CI rerun is not treated as proof that this separate intermittent failure was fixed.
+
+## Main integration verification — 2026-11-01
+
+- Main `c4d0a30` adds profile, feedback, tracker and MSW aborted-fetch regression work. Seven metadata/document conflicts were resolved; source OpenAPI/generated auto-merges preserve both feature sets and regenerate without additional diff. Independent review confirms no lost main definitions or branch review requirements.
+- Initial cold default-worker run: 802 passed, 6 failed, 309 pending; seven setup hooks timed out at the unchanged 10-second bound. Other failures were four ReviewQueuePage cases and two UserStatusPage handover cases. Evidence: `kan24-main-sync-full.json`. Logged as follow-up evidence on existing BUG-070, not hidden or converted to passing.
+- Same source, full run with bounded parallelism: `npm run test -- --no-cache --maxWorkers=2 --reporter=json --outputFile=node_modules/.cache/kan24-main-sync-full-2workers.json` → **1,117 passed / 0 failed / 0 skipped**, 146/146 suites, 650 seconds, exit 0. All tests and timeout/CI settings remain intact.
+- Fresh format, lint, typecheck, build and API generation: pass, with the existing lint warning only. Ticket-review spec check/diff passes and still matches the user approval.
+- Unrelated baseline audit failures remain on main's platform spec; no platform approval/state was fabricated to bypass them. PR #100 could not start CI until the main conflicts were resolved; its resulting head will trigger the next run.

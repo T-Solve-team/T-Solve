@@ -1,7 +1,7 @@
 {
   "fe-foundation": {
-    "specHash": "fbb0c7a2082744e86516a6d42a3011f068916c555a0537958f070d7a334176d6",
-    "approvedAt": "2026-10-25T19:30:55.081Z",
+    "specHash": "f40ebde83c4a3228d23329d8c460f21dae16024c7c4896f50875bc5b1029888e",
+    "approvedAt": "2026-11-01T03:47:07.371Z",
     "by": "user",
     "acs": {
       "AC-001.1": "THE web app SHALL know exactly five roles — , , ,",
@@ -32,11 +32,11 @@
       "AC-005.5": "IF a user opens a path that no screen has, THEN THE web app SHALL show the 404 page.",
       "AC-006.1": "THE catalog SHALL hold every code of Report3 System_Messages with its exact text, except the codes",
       "AC-006.2": "THE catalog SHALL give each code the type of its Report3 type: \"Red text below the field\" and \"Red text",
-      "AC-006.3": "THE catalog SHALL hold  (type inline) until System_Messages numbers it (D3), with the text",
+      "AC-006.3": "THE catalog SHALL hold, besides the Report3 codes,  (type inline) until System_Messages numbers it (D3), with the text",
       "AC-006.4": "WHEN a message has the placeholder , THE web app SHALL fill it with the one configured",
       "AC-006.5": "WHEN a message is shown with parameters, THE web app SHALL replace each  placeholder with its",
       "AC-006.6": "IF a placeholder has no value, THEN THE web app SHALL leave the placeholder text as it is.",
-      "AC-006.7": "THE catalog SHALL hold no code other than the Report3 codes of AC-006.1 and , so every code",
+      "AC-006.7": "THE catalog SHALL hold no code other than the Report3 codes of AC-006.1, , MSG142 and",
       "AC-006.8": "THE catalog SHALL hold the multi-tenant web codes with their exact Report3 text: MSG119, MSG120,",
       "AC-007.1": "THE Status Tag SHALL have the values Simple and Complex for the triage class (GBR-35), next to the six",
       "AC-007.2": "WHEN the Status Tag gets the value Simple or Complex, THE Status Tag SHALL show the label \"Simple\" or",
@@ -220,8 +220,8 @@
     }
   },
   "identity": {
-    "specHash": "f040f761b9e95dec48eaef6cba018ed075caeaac40f866a2764c966a2b296ec5",
-    "approvedAt": "2026-10-31T14:14:09.498Z",
+    "specHash": "de7ea6a9daf2e32110324fdf080dc7cf4dc3d7a422fb5826c8c2e9521a8799f1",
+    "approvedAt": "2026-11-01T03:47:20.950Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace has a Google domain (AC-001.48), THE backend SHALL create a state value for the Workspace that the platform resolved from the host and answer 302 to  on the central sign-in origin configured in  ( in production), without a signed-in user.",
@@ -283,7 +283,7 @@
       "AC-002.7": "THE My Profile screen SHALL have a \"Log out\" button that signs out through fe-foundation's , exactly like the user menu (fe-foundation AC-008.1 to AC-008.3).",
       "AC-003.1": "WHEN a signed-in user opens My Profile (), THE web app SHALL show, read-only and from the session (fe-foundation AC-001.2):",
       "AC-003.2": "WHERE the user is a Knowledge Manager, THE My Profile screen SHALL list \"Spaces I manage\" from the session's managed Spaces.",
-      "AC-003.3": "WHEN My Profile opens, THE web app SHALL load  and list \"Spaces I can view\" by name.",
+      "AC-003.3": "WHEN My Profile opens, THE web app SHALL load  and list \"Spaces I can view\" by name (the loading and empty states are AC-003.15).",
       "AC-003.4": "WHEN a signed-in user calls , THE backend SHALL answer 200 with a list of  (, ), sorted by name, exactly as the viewable Space lookup returns them for the signed-in Account.",
       "AC-003.5": "WHILE the viewable Space lookup has no implementation ( not built), THE backend SHALL answer  with 200 and an empty list.",
       "AC-003.6": "WHEN a signed-in user calls  with  (from 0, default 0) and  (1 to 100, default 20), THE backend SHALL answer 200 with a : that page of the written-ticket lookup for the signed-in Account, newest  first.",
@@ -295,6 +295,8 @@
       "AC-003.12": "WHEN the user clicks the Ticket ID of a row whose  is true, THE web app SHALL open Ticket Detail at . The Ticket ID of a row whose  is false SHALL not be a link.",
       "AC-003.13": "WHILE My Solutions has no rows, THE My Profile screen SHALL show MSG04 in that section.",
       "AC-003.14": "IF loading My Solutions or \"Spaces I can view\" fails, THEN THE My Profile screen SHALL show MSG06 in that section and still show the account information of AC-003.1.",
+      "AC-003.15": "THE My Profile screen SHALL always show the Spaces card, whatever the user's Roles:",
+      "AC-003.16": "THE My Profile screen SHALL always show the Projects card; WHEN the user has no Projects, it SHALL show, in place of the table, the grey text MSG143 (\"Not a member of any Project.\").",
       "AC-004.1": "WHEN an Admin opens , THE frontend SHALL display a User List containing only accounts returned for the current Workspace.",
       "AC-004.2": "WHEN an Admin submits a search or changes role, status or Department filters, THE frontend SHALL request and display the matching users using URL-backed filter state.",
       "AC-004.3": "WHEN an Admin changes the page or sort order, THE frontend SHALL request the corresponding results with 20 rows per page by default and preserve that state in the URL.",
@@ -557,6 +559,39 @@
       "AC-001.15": "WHEN the Admin selects a valid date range, THE frontend SHALL filter from the start of the first day through the end of the last day in , including both selected dates.",
       "AC-001.16": "IF a supplied date range is incomplete, malformed, reversed or contains a future date in , THEN THE frontend SHALL show MSG39 beside the date filter and prevent an audit request using that invalid range.",
       "AC-001.17": "WHEN the Admin searches by Actor and selects an action, THE MSW handler SHALL match the trimmed Actor text as a case-insensitive substring of the actor email and match the selected action exactly."
+    }
+  },
+  "tracker": {
+    "specHash": "25360cf298cb10e9aa4321237d42ce10f7ee3c78cd8e061ce66b452ce491b5a1",
+    "approvedAt": "2026-10-31T22:01:06.419Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN a request to the Jira App API carries a FIT whose signature verifies against Atlassian's JWKS, whose issuer is , whose audience equals the configured app id, which is within its / window, and which has a , THE tracker SHALL pass the request to its handler with the cloudId and the principal (if any).",
+      "AC-001.2": "IF the  header is missing or is not a Bearer token, THEN THE tracker SHALL respond 401 with MSG08 without calling the handler.",
+      "AC-001.3": "IF the FIT signature does not verify, or its key id is unknown after one JWKS refresh, THEN THE tracker SHALL respond 401 with MSG08.",
+      "AC-001.4": "IF the FIT issuer is not  or its audience is not the configured app id, THEN THE tracker SHALL respond 401 with MSG08.",
+      "AC-001.5": "IF the FIT is expired or not yet valid, or has no , THEN THE tracker SHALL respond 401 with MSG08.",
+      "AC-001.7": "THE tracker SHALL never write a FIT to a log or to an error response.",
+      "AC-001.8": "IF Atlassian's JWKS cannot be fetched and no cached key matches, THEN THE tracker SHALL respond 503 with MSG06 and record the error type.",
+      "AC-003.1": "WHEN an \"issue created\" event arrives whose  is the Jira project key of an ACTIVE T-Solve Project, THE tracker SHALL store a suggestion result with that Project, the issue key, no sources, no suggested solution and no reporter answer, and respond 202.",
+      "AC-003.4": "IF a suggestion result for the event's issue key already exists (Forge delivered the event again), THEN THE tracker SHALL respond 202 without storing a second one or changing the existing one.",
+      "AC-003.6": "IF the event body is not a valid \"issue created\" event (no issue key, an issue key longer than 50 characters, or no ), THEN THE tracker SHALL respond 400 with the team's validation message code (missing field MSG01, too long MSG02, unreadable body MSG06) and store nothing.",
+      "AC-003.8": "IF the event's project key is not the Jira project key of an ACTIVE T-Solve Project, THEN THE tracker SHALL respond 202 and store nothing.",
+      "AC-007.1": "WHEN a principal linked to an active T-Solve user requests panel data for an issue of a T-Solve Project, THE tracker SHALL return the stored suggestions (as search allows that user, including MSG76 when search is not available to them) and the Solution Form state from the ticket package: AI draft or MSG67, unsubmitted draft (MSG77), submitted and awaiting review (MSG65), or changes requested (MSG64).",
+      "AC-007.2": "IF the principal is not linked to a T-Solve user, THEN THE tracker SHALL return panel data that only asks the user to sign in (MSG62), plus the MSG81 question when STORY-010 applies.",
+      "AC-007.3": "IF the principal is linked to a deactivated T-Solve user, THEN THE tracker SHALL return panel data with MSG10 and nothing else.",
+      "AC-007.4": "IF the issue's project is not a T-Solve Project, THEN THE tracker SHALL return panel data that says the project is not connected, with no suggestions.",
+      "AC-007.5": "WHEN a linked active user asks to search again, THE tracker SHALL read the issue's current summary and description from Jira, ask search to recompute suggestions, and return them.",
+      "AC-007.6": "IF search or Jira does not answer within 20 seconds, THEN THE tracker SHALL respond 503 with MSG06.",
+      "AC-008.1": "WHEN a linked active user saves the Solution Form as a draft, THE tracker SHALL pass it to the ticket package with that T-Solve user as author and return the result.",
+      "AC-008.2": "WHEN a linked active user finishes the Solution Form, THE tracker SHALL pass it to the ticket package with that T-Solve user as author and return the result.",
+      "AC-008.3": "WHEN a linked active user closes the Solution Form opened after resolving the issue, THE tracker SHALL submit an empty Solution for review through the ticket package (MSG70).",
+      "AC-008.4": "IF the principal is not linked to an active T-Solve user, THEN THE tracker SHALL respond 403 with MSG62 and not call the ticket package.",
+      "AC-008.5": "IF the ticket package rejects the request, THEN THE tracker SHALL return its error and message code unchanged.",
+      "AC-010.1": "WHILE the issue's suggestion result has a suggested solution (the MSG80 comment) and no reporter answer, and the principal is the issue's reporter, THE tracker SHALL include the MSG81 question in the panel data, even if the principal is not linked to a T-Solve user.",
+      "AC-010.2": "WHEN the reporter answers Yes or No, THE tracker SHALL store the answer and its time in the issue's suggestion result and return MSG82 for Yes or MSG83 for No.",
+      "AC-010.3": "IF the principal is not the issue's reporter, THEN THE tracker SHALL respond 403 with MSG08 and not record an answer.",
+      "AC-010.4": "IF the issue has no suggestion result with a suggested solution, or it was already answered, THEN THE tracker SHALL respond 409 with MSG06 and not record an answer."
     }
   },
   "ticket-review": {
