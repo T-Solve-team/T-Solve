@@ -273,7 +273,7 @@ describe('Review Queue decision recovery', () => {
       release?.();
     }
   });
-  it('AC-001.6 / AC-005.5 marks bulk confirmation busy until refreshed eligibility is accepted (BUG-090)', async () => {
+  it('AC-001.6 / AC-005.5 marks bulk confirmation busy until refreshed eligibility is accepted (BUG-100)', async () => {
     let holdIds = false;
     let release: (() => void) | undefined;
     let started: (() => void) | undefined;

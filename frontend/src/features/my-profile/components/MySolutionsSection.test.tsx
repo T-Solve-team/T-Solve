@@ -252,14 +252,15 @@ describe('MySolutionsSection', () => {
     await waitFor(() => expect(bodyRows(table)).toHaveLength(1));
   });
 
-  it('edge 63 moves ?page=4 to the last page with history replace, and an empty list to page 1 with MSG04', async () => {
+  it('edge 63 moves ?page=4 to the last page with history replace, and an empty list to page 1 with MSG04 (BUG-090)', async () => {
     const first = renderApp('/profile?page=4', { user: 'tr' });
     const table = await findTable();
     await waitFor(() => expect(first.router.state.location.search).toBe('?page=3'));
     expect(first.router.state.historyAction).toBe('REPLACE');
-    await waitFor(() =>
-      expect(within(bodyRows(table)[0] as HTMLElement).getByText('SUP-140')).toBeInTheDocument(),
-    );
+    // BUG-090: wait with a cheap text query, then check the row once. A role query (bodyRows) inside waitFor re-runs on
+    // every DOM change and blocks the render it waits for: under load it used up the whole 1 s.
+    expect(await table.findByText('SUP-140')).toBeInTheDocument();
+    expect(within(bodyRows(table)[0] as HTMLElement).getByText('SUP-140')).toBeInTheDocument();
     first.unmount();
 
     const second = renderApp('/profile?page=2', { user: 'tr-two-departments' });

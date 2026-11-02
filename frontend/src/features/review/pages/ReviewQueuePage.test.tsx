@@ -118,7 +118,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('0 selected')).toBeInTheDocument();
   });
 
-  it('AC-002.2 / AC-002.5 asks MSG19, cancels without writes and then approves two tickets (BUG-090)', async () => {
+  it('AC-002.2 / AC-002.5 asks MSG19, cancels without writes and then approves two tickets (BUG-100)', async () => {
     const { queryClient } = await openQueue();
     await clickControl(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await clickControl(screen.getByRole('checkbox', { name: 'Select ITSUP-1102' }));

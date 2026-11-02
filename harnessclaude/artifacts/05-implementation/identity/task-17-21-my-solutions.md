@@ -23,3 +23,16 @@
 3. Next: the AC-003.16 Quick change, then Task 19 when its dependencies exist.
 4. Branch: feat/KAN-238-identity-profile-my-solutions.
 5. PR: opened on 1 Nov 2026 right after this commit; squash-merge.
+
+## Quick follow-up: AC-003.16 Projects empty state (KAN-238, 1/11/2026)
+
+- Quick change: the Projects card on /profile is always shown. When the user has no projects, it shows the grey MSG143 "Not a member of any Project." in place of the table (AC-003.16), commit 6af3ce5.
+- Flaky tests fixed in tests only: BUG-090 (MySolutionsSection edge 63), BUG-091 (ReviewTicketDetail AC-006.5), BUG-092 (ReviewTicketDetail first test); commits 988e31c and 9cf2c10.
+
+## Hand-off
+
+1. Done: AC-003.16 (Projects card always shown, grey MSG143 "Not a member of any Project." in place of the table when empty), commit 6af3ce5; three flaky tests fixed in tests only (BUG-090 MySolutionsSection edge 63, BUG-091 ReviewTicketDetail AC-006.5, BUG-092 ReviewTicketDetail first test; commits 988e31c, 9cf2c10).
+2. Open: backend Task 19 (deferred); BUG-087 (ReviewQueuePage, load flake); typing dates in the range picker and the `pm` and `km` users not browser-checked.
+3. Next: Task 19 when its dependencies exist.
+4. Branch: fix/KAN-238-identity-profile-projects-empty.
+5. PR: opened right after this commit; squash-merge.

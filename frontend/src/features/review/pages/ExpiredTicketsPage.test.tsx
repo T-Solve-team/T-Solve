@@ -157,7 +157,7 @@ describe('Expired Tickets', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText(msg('MSG04'))).toBeInTheDocument();
   });
-  it('AC-007.7 preserves selection on failure and prunes stale selection after conflict (BUG-092)', async () => {
+  it('AC-007.7 preserves selection on failure and prunes stale selection after conflict (BUG-102)', async () => {
     const view = renderApp('/expired-tickets');
     await screen.findByRole('link', { name: 'EXP-323' }, { timeout: 5000 });
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select EXP-323' }));
@@ -246,7 +246,7 @@ describe('Expired Tickets', () => {
       screen.getAllByRole('alert').some((element) => element.textContent?.includes(msg('MSG06'))),
     ).toBe(true);
   });
-  it('AC-007.3 retains individual selections across pages and resets on browser Back across Departments (BUG-091)', async () => {
+  it('AC-007.3 retains individual selections across pages and resets on browser Back across Departments (BUG-101)', async () => {
     const view = renderApp('/expired-tickets');
     await screen.findByRole('link', { name: 'EXP-323' }, { timeout: 5000 });
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select EXP-323' }));
