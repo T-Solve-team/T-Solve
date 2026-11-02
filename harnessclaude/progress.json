@@ -28,16 +28,16 @@
         "csv-upload-kit": "evaluating",
         "import-tickets-screen": "evaluating",
         "import-preview-screen": "evaluating",
-        "import-preview-actions": "pending",
+        "import-preview-actions": "evaluating",
         "import-ticket-preview-popup": "pending"
       },
-      "lastUpdated": "2026-11-01T06:40:28.677Z",
+      "lastUpdated": "2026-11-02T20:00:49.662Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "84adf7ecdb077412bb6b7e5ac995f48dc5e78164"
+        "default": "55a1ee6ec40a9756571b81dbca052f0fec0a38bd"
       }
     },
     "be-foundation": {
