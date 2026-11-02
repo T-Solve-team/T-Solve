@@ -32,3 +32,32 @@ Second unchanged full standard-host run: `node node_modules/vitest/vitest.mjs ru
 Diagnostic queue-file run10/10 passed with temporary request/cache diagnostics. Those diagnostics were completely removed and ReviewQueuePage.test.tsx matches HEAD. No speculative production fix, assertion weakening, skipped tests, timeout increase or worker/config modification was made. No further blind retries are justified by the current evidence.
 
 Verdict: KAN-159 implementation and named tests are present, but frontend completion gate FAIL due to existing-suite instability. Feature remains in-progress; no commit, push, MR or Jira Done transition. BUG-093 fixed; BUG-094 recorded Open. Required next work is to diagnose and stabilize the existing queue/user test synchronization under full-suite execution, with separate scope for unrelated identity fixes.
+
+
+## Final integration verification — 2026-11-03
+
+This result supersedes the earlier failed verification outcome above.
+
+- Branch `feat/KAN-159-review-history`; integration commit `c4312ee` merges PR103 `d0dbcfc` and includes latest fetched main `9bd3a82`. No merge into main or push performed in this session.
+- Preserved current PR103 queue busy-state, Ticket Detail, expiry sorting/cache coverage and account-status test fixes. My Profile source and existing three-value ReviewDecision match PR103.
+- BUG-103: Orval first failed on duplicate ReviewDecision schema keys introduced independently by main and KAN159. Separate six-value ReviewHistoryDecision for the history proposal, retaining the existing three-value My Solutions contract; regenerate, no hand-edited output.
+- Add two real route guard cases: signed-out user redirects to Login; Employee sees MSG08; neither requests history. Initial new signed-out case used the wrong Login heading, corrected to the existing visible text, with no runtime change.
+- Full standard frontend suite: **1309/1309 passed, zero failures, zero pending**, exit 0. Evidence: `frontend/node_modules/.cache/kan159-main-pr103-full.json`. No timeout, worker, test configuration, skipped assertion or error suppression changes.
+- KAN159 has 24 tests (dates7, hook invalidation4, mock5, page8), all pass in the full suite; after formatting-only normalization the focused four-file rerun also passes **24/24**, exit0 (`kan159-final-focused.json`).
+- Fresh full Prettier, ESLint, TypeScript noEmit, production tsc/Vite build all pass. One existing TicketListFilters fast-refresh warning remains. A second Orval generation leaves every generated-file path/hash unchanged.
+- `sdd.ts diff ticket-review`: approved spec unchanged. `sdd.ts trace ticket-review STORY-008`: **7/7**. Independent read-only review: no critical findings; verified scope, safe text, date boundaries, all producer writes/invalidation, API contracts and preserved main behavior.
+- Graphify refreshed: 7288 nodes,14858 edges,444 communities. Four SQL files lack tree_sitter_sql; two symbol-free files remain a parser limitation. Source evidence verified directly.
+- Unrelated research/registry/bug-log work preserved intact in stash `5d0bd4315ff3ffffb8262dfab9ed2f3b4f97a7d4`, not mixed into this delivery. Existing stashes retained.
+- Scope remains frontend/generated API proposal/session MSW. No production persistence, backend authorization implementation, SSE, external delivery or manual browser testing.
+
+| Criterion | Final assessment |
+|---|---|
+| AC-008.1 | PASS: scope before counting/paging; required columns/detail links; timestamp + UUID ordering |
+| AC-008.2 | PASS: URL Department/decision/dates/page/sort, server requests, page reset and Back |
+| AC-008.3 | PASS: paired-date validation and inclusive Vietnam dates, leap/invalid/future boundaries |
+| AC-008.4 | PASS: six read-only labels, distinct decision UUID rows and safe text |
+| AC-008.5 | PASS: four real producers append unique actor/content records and invalidate history; failures preserve it |
+| AC-008.6 | PASS: initial loading, catalog error, real retry and MSG04 |
+| AC-008.7 | PASS: route denial without history request; API authentication and managed Workspace/Department scope |
+
+Final verdict: **PASS for the approved KAN159 frontend/MSW scope**. Feature transitions use sdd.ts; module remains implementing for its broader work.

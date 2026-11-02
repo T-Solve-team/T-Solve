@@ -498,3 +498,6 @@
 {"ts":"2026-11-01T15:14:17.840Z","type":"quick-closed","what":"Fix PR102 queue confirmation and account-status test synchronization","files":["frontend/src/features/review/pages/ReviewQueuePage.tsx","frontend/src/features/review/pages/ReviewQueuePage.test.tsx","frontend/src/features/review/pages/ReviewQueueRecovery.test.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-11-01T15:14:30.383Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"8ddf0e8493b2e373a530b7118913f4b875f22bea"}
 {"ts":"2026-11-01T16:58:56.931Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"43e4e07dd42c09ca53d67e13bc1f3ec7123efa59"}
+{"ts":"2026-11-02T18:57:24.209Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"c4312ee127e58cfb155baea2055dc8604fd319e8"}
+{"ts":"2026-11-02T18:57:24.246Z","type":"feature-status","module":"ticket-review","feature":"review-history","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-02T18:57:24.273Z","type":"feature-status","module":"ticket-review","feature":"review-history","from":"evaluating","to":"passing"}
