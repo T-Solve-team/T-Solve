@@ -26,6 +26,7 @@ import type {
   CreateUserRequest,
   DepartmentRef,
   GetUsersParams,
+  ProblemDetail,
   ProblemResponse,
   UpdateUserRolesRequest,
   UpdateUserStatusRequest,
@@ -202,7 +203,7 @@ export const getGetUsersQueryKey = (params?: GetUsersParams) => {
 
 export const getGetUsersQueryOptions = <
   TData = Awaited<ReturnType<typeof getUsers>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   params?: GetUsersParams,
   options?: {
@@ -225,11 +226,11 @@ export const getGetUsersQueryOptions = <
 };
 
 export type GetUsersQueryResult = NonNullable<Awaited<ReturnType<typeof getUsers>>>;
-export type GetUsersQueryError = ErrorType<ProblemResponse>;
+export type GetUsersQueryError = ErrorType<ProblemResponse | ProblemDetail>;
 
 export function useGetUsers<
   TData = Awaited<ReturnType<typeof getUsers>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   params: undefined | GetUsersParams,
   options: {
@@ -248,7 +249,7 @@ export function useGetUsers<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetUsers<
   TData = Awaited<ReturnType<typeof getUsers>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   params?: GetUsersParams,
   options?: {
@@ -267,7 +268,7 @@ export function useGetUsers<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetUsers<
   TData = Awaited<ReturnType<typeof getUsers>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   params?: GetUsersParams,
   options?: {
@@ -282,7 +283,7 @@ export function useGetUsers<
 
 export function useGetUsers<
   TData = Awaited<ReturnType<typeof getUsers>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   params?: GetUsersParams,
   options?: {
@@ -929,7 +930,7 @@ export const getGetUserDepartmentsQueryKey = () => {
 
 export const getGetUserDepartmentsQueryOptions = <
   TData = Awaited<ReturnType<typeof getUserDepartments>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserDepartments>>, TError, TData>>;
   request?: SecondParameter<typeof http>;
@@ -953,11 +954,11 @@ export const getGetUserDepartmentsQueryOptions = <
 export type GetUserDepartmentsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getUserDepartments>>
 >;
-export type GetUserDepartmentsQueryError = ErrorType<ProblemResponse>;
+export type GetUserDepartmentsQueryError = ErrorType<ProblemResponse | ProblemDetail>;
 
 export function useGetUserDepartments<
   TData = Awaited<ReturnType<typeof getUserDepartments>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserDepartments>>, TError, TData>> &
@@ -975,7 +976,7 @@ export function useGetUserDepartments<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetUserDepartments<
   TData = Awaited<ReturnType<typeof getUserDepartments>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   options?: {
     query?: Partial<
@@ -995,7 +996,7 @@ export function useGetUserDepartments<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetUserDepartments<
   TData = Awaited<ReturnType<typeof getUserDepartments>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserDepartments>>, TError, TData>>;
@@ -1009,7 +1010,7 @@ export function useGetUserDepartments<
 
 export function useGetUserDepartments<
   TData = Awaited<ReturnType<typeof getUserDepartments>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserDepartments>>, TError, TData>>;
