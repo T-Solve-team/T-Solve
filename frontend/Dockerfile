@@ -6,7 +6,7 @@
 
 # ---- 1. Build the static files ----------------------------------------------------------------
 # The files are the same for every CPU type, so this stage always runs on the build machine's own.
-FROM --platform=$BUILDPLATFORM node:24.21.0-alpine3.24 AS build
+FROM --platform=$BUILDPLATFORM node:24.22.2-alpine3.24 AS build
 WORKDIR /app
 
 # Dependencies first: this layer is reused until package.json or package-lock.json change.
