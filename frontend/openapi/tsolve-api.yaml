@@ -28,6 +28,8 @@ tags:
     description: My Profile — the signed-in user's own Spaces and Solutions (AC-003).
   - name: jira-app
     description: Calls from the T-Solve Jira App through Forge Remote (Forge Invocation Token).
+  - name: triage
+    description: Suggestion History and result detail (KAN-149 frontend proposal).
 paths:
   /api/v1/audit-events:
     get:
@@ -1104,6 +1106,68 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/suggestion-results:
+    get:
+      tags: [triage]
+      operationId: getSuggestionResults
+      summary: Frontend proposal — suggestion results of Projects managed by the signed-in Project Manager.
+      description: >
+        Implemented in MSW until the backend read API is agreed. The server resolves Workspace
+        from the host and checks managed Projects. Default order is createdAt descending with
+        issueKey ascending as the tie-breaker.
+      parameters:
+        - name: projectId
+          in: query
+          description: One managed Project; omitted means every Project managed by this user.
+          schema: { type: string, format: uuid }
+        - name: answer
+          in: query
+          description: NONE matches records whose reporterAnswer is null.
+          schema: { type: string, enum: [YES, NO, NONE] }
+        - name: from
+          in: query
+          description: First included calendar day in Asia/Ho_Chi_Minh; paired with to.
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: Last included calendar day in Asia/Ho_Chi_Minh; paired with from.
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: A page of matching results, newest first by default.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuggestionResultPage' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/suggestion-results/{issueKey}:
+    parameters:
+      - name: issueKey
+        in: path
+        required: true
+        description: The Jira issue key, unique within this Workspace.
+        schema: { type: string, maxLength: 50 }
+    get:
+      tags: [triage]
+      operationId: getSuggestionResult
+      summary: Frontend proposal — one result of a managed Project.
+      responses:
+        '200':
+          description: The result and visible Wiki source references.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuggestionResultDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
   /api/v1/tickets/{ticketId}/feedback:
     parameters:
       - name: ticketId
@@ -1752,6 +1816,51 @@ components:
             $ref: '#/components/schemas/TicketSearchResult'
         page:
           $ref: '#/components/schemas/PageMetadata'
+    SuggestionResultSummary:
+      type: object
+      required: [issueKey, jiraIssueUrl, issueSummary, project, createdAt, ticketSourceCount, wikiSourceCount, suggestedSolutionExcerpt, reporterAnswer]
+      properties:
+        issueKey: { type: string, maxLength: 50 }
+        jiraIssueUrl: { type: string, format: uri }
+        issueSummary: { type: string }
+        project: { $ref: '#/components/schemas/TicketProject' }
+        createdAt: { type: string, format: date-time }
+        ticketSourceCount: { type: integer, minimum: 0 }
+        wikiSourceCount: { type: integer, minimum: 0 }
+        suggestedSolutionExcerpt: { type: [string, 'null'] }
+        reporterAnswer: { type: [string, 'null'], enum: [YES, NO, null] }
+    SuggestionWikiSource:
+      type: object
+      required: [documentId, title, isAvailable]
+      properties:
+        documentId: { type: string, format: uuid }
+        title: { type: string }
+        isAvailable: { type: boolean }
+    SuggestionResultDetail:
+      type: object
+      required: [issueKey, jiraIssueUrl, issueSummary, project, createdAt, ticketSourceCount, wikiSourceCount, suggestedSolutionExcerpt, reporterAnswer, suggestedSolution, wikiSources]
+      properties:
+        issueKey: { type: string, maxLength: 50 }
+        jiraIssueUrl: { type: string, format: uri }
+        issueSummary: { type: string }
+        project: { $ref: '#/components/schemas/TicketProject' }
+        createdAt: { type: string, format: date-time }
+        ticketSourceCount: { type: integer, minimum: 0 }
+        wikiSourceCount: { type: integer, minimum: 0 }
+        suggestedSolutionExcerpt: { type: [string, 'null'] }
+        reporterAnswer: { type: [string, 'null'], enum: [YES, NO, null] }
+        suggestedSolution: { type: [string, 'null'] }
+        wikiSources:
+          type: array
+          items: { $ref: '#/components/schemas/SuggestionWikiSource' }
+    SuggestionResultPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/SuggestionResultSummary' }
+        page: { $ref: '#/components/schemas/PageMetadata' }
     TicketFeedbackRequest:
       type: object
       required: [isHelpful]
