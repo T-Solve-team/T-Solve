@@ -1,7 +1,7 @@
 ---
 module: identity
 date: 2026-10-25
-total_tasks: 21
+total_tasks: 26
 owner: Dev
 ---
 
@@ -373,3 +373,81 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 **Estimated size:** medium (~300 lines); about 12 tests
 **Verification:** Tests name AC-003.22 and AC-003.13 (no match). Targeted: `cd frontend && npm run test -- src/features/my-profile`. Browser check at 1366 × 768 against frames (main) and (d).
 **Done when:** the tests pass; the full frontend verify passes with `generate:api` leaving no diff; `bun harnessclaude/hooks/sdd.ts trace identity STORY-003` shows AC-003.11–.14 and .20–.23 covered.
+
+
+## KAN-107 SQL change — draft, 03/11/2026
+
+Spec: `artifacts/03-modules/identity/spec.md`. Master and active design amendments take precedence for this change. Existing task ownership and statuses are preserved. Feature registration happens through sdd.ts after approval, never by editing progress.json.
+
+## Task 22: SQL-U1: Contract and numeric User List compatibility
+
+**Story:** STORY-004
+**Feature:** user-list-backend
+**Description:** Update OpenAPI first with list-only decimal-string ids, list response without lastSignInAt, allowed sorts and department options. Generate the client. Keep unported detail/write contracts distinct; accept numeric list links in route validation. Normalize old Last sign-in URL sorts before fetching.
+**Files:**
+- `frontend/openapi/tsolve-api.yaml`
+- `frontend/src/shared/api/generated/**`
+- `frontend/src/features/users/pages/UserListPage.tsx`
+- `frontend/src/features/users/pages/UserDetailPage.tsx`
+- `frontend/src/features/users/mocks/**`
+**Dependencies:** Approved identity spec and completed SQL-P feature checkpoint.
+**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
+**Verification:** Contract/generation tests plus FE tests for no Last sign-in column, obsolete URL normalization, decimal-string max id and numeric link. Covers AC-004.10, .13–.15, .17; U2/U4.
+
+## Task 23: SQL-U2: Trusted Workspace principal and live Admin authorization
+
+**Story:** STORY-004
+**Feature:** user-list-backend
+**Description:** Define the immutable numeric Workspace/account principal for upstream session issuance. On only the two read paths validate its Workspace against the resolver, reload account and roles and derive current authorities before endpoint PreAuthorize. No login shortcut and no acceptance of request-provided identity.
+**Files:**
+- `backend/src/main/java/vn/tsolve/identity/session/**`
+- `backend/src/main/java/vn/tsolve/identity/service/UserListAccessService.java`
+- `backend/src/main/java/vn/tsolve/identity/service/impl/UserListAccessServiceImpl.java`
+- `backend/src/test/java/vn/tsolve/identity/session/**`
+**Dependencies:** SQL-P1–P4 and SQL-U1; add repository lookup in the next step without a parallel account store.
+**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
+**Verification:** Failing tests first for missing/unrecognized/foreign principal, missing/deactivated account, removed/granted Admin between requests; verify 401 MSG07 and 403 MSG08. Covers AC-004.16; U1/U5. No claim that OIDC callback is implemented.
+
+## Task 24: SQL-U3: Read SQL User List without duplicated rows
+
+**Story:** STORY-004
+**Feature:** user-list-backend
+**Description:** Implement layered GET users/departments on the qualified SQL tenant transaction. Parameterize literal search and filters; use EXISTS roles, stable allow-listed sort, count/page plus one bounded roles query. Materialize Employee and return DTOs directly from read projections. No account mutation/audit write.
+**Files:**
+- `backend/src/main/java/vn/tsolve/identity/controller/UserListController.java`
+- `backend/src/main/java/vn/tsolve/identity/dto/**`
+- `backend/src/main/java/vn/tsolve/identity/service/UserListService.java`
+- `backend/src/main/java/vn/tsolve/identity/service/impl/UserListServiceImpl.java`
+- `backend/src/main/java/vn/tsolve/identity/repository/UserListRepository.java`
+**Dependencies:** SQL-U1/U2; implement validation, repository, service and controller sequentially with focused tests.
+**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
+**Verification:** Test literal unicode/%/_/backslash search, 100/101 chars, Employee-only/multi-role, AND filters, null/inactive Department, pagination/count/ties, invalid filters/sorts and Long overflow. Covers AC-004.9–.16; U2/U3/U5/U7.
+
+## Task 25: SQL-U4: Real HTTP and cross-Workspace acceptance tests
+
+**Story:** STORY-004
+**Feature:** user-list-backend
+**Description:** Run HTTP tests using the actual resolver/security/service/SQL stack, two tenant databases and trusted session principals. Include query failures and successive requests on reused threads; inspect generated API shapes and coded errors.
+**Files:**
+- `backend/src/test/java/vn/tsolve/identity/UserListIT.java`
+- `backend/src/test/java/vn/tsolve/identity/controller/UserListControllerTest.java`
+- `backend/src/test/java/vn/tsolve/identity/repository/UserListRepositoryIT.java`
+**Dependencies:** SQL-U2/U3.
+**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
+**Verification:** Prove identical ids/counts remain isolated, cross-Workspace session rejected, BIGINT max retained, roles re-read and no legacy/cross-tenant fallback; cover backend AC-004.9–.16, .18–.19 and U1–U8. Run full mvn verify; do not substitute mocked repository evidence.
+
+## Task 26: SQL-U5: Finish frontend verification and feature review
+
+**Story:** STORY-004
+**Feature:** user-list-backend
+**Description:** Adapt list mocks/tests to the read contract, verify filters/empty/retry behavior and numeric navigation in a real browser. Keep unported backend actions explicitly outside completion claims. Record verification evidence and propose the feature commit.
+**Files:**
+- `frontend/src/features/users/pages/UserListPage.test.tsx`
+- `frontend/src/features/users/mocks/handlers.test.ts`
+- `harnessclaude/artifacts/05-implementation/identity/task-22-user-list-backend.md`
+- `harnessclaude/artifacts/06-evaluation/identity/task-22-user-list-backend-test-report.md`
+**Dependencies:** SQL-U1–U4.
+**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
+**Verification:** Frontend format:check, lint, typecheck, test and build; generate:api leaves generated files unchanged. Browser check plus trace identity STORY-004 and full backend verify. Hash original SQL/PDF to prove preservation. Report files/results/proposed commit; wait for user commit approval. Covers AC-004.1–.8, .17–.19 and U4/U6/U7/U8.
+
+**Commit checkpoint:** one feature at a time. Verify the feature, report changed files and proposed Jira-format commit, and wait for user agreement before committing and proceeding to the next feature. Push only on explicit request.

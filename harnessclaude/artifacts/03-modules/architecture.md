@@ -32,6 +32,18 @@ This replaces the pool model of ADR-0001 (24/10) and the single-tenant model of 
 
 **Chosen:** database per Workspace plus a catalog database (ADR-0002).
 
+**SQL alignment and staged delivery, 03/11/2026 (draft for KAN-107):** the user selected
+`01_catalog.sql` and `02_tenant.sql` as the schema authority. Their actual names and keys replace
+the older names below: catalog `tenant_workspace` and `workspace_email`, singular tenant tables,
+BIGINT keys mapped to Java Long and decimal strings on the API. `db_password_ref` names a
+server-side secret; no encrypted password is stored in the catalog. The original SQL/PDF files
+remain unchanged. KAN-107 introduces a qualified SQL tenant routing DataSource alongside the
+legacy primary DataSource. Only User List reads migrate in this delivery; legacy JPA,
+Ticket/Import and sign-in-state storage stay on their existing database until separately migrated.
+The per-Workspace database boundary applies to migrated SQL consumers; this staged delivery does
+not claim all existing modules are tenant-isolated. Details and approval: platform STORY-001/002,
+identity STORY-004, and their 03/11/2026 plan amendments.
+
 | Layer | Decision |
 |-------|----------|
 | Data | Each Workspace has its own PostgreSQL database with the business tables of every module; tables have **no** `workspace_id`. The catalog database holds only `workspaces` (site name, status, database connection with an encrypted password, the Jira site and its `cloudId`) and `workspace_emails` (one email in one Workspace, GBR-16), plus JobRunr's tables. No business data is in the catalog (GBR-37). |

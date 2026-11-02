@@ -1,7 +1,7 @@
 ---
 module: platform
 date: 2026-10-25
-total_tasks: 12
+total_tasks: 16
 owner: Dev
 iteration: 1
 ---
@@ -328,3 +328,67 @@ template and the production workflow) has no seed reference.
 - Test: `backend/src/test/java/vn/tsolve/platform/SeedRunnerTest.java`
 **Dependencies:** Task 4
 **Estimated size:** small
+
+
+## KAN-107 SQL change — draft, 03/11/2026
+
+Spec: `artifacts/03-modules/platform/spec.md`. Master and active design amendments take precedence for this change. Existing task ownership and statuses are preserved. Feature registration happens through sdd.ts after approval, never by editing progress.json.
+
+## Task 17: SQL-P1: Version catalog and tenant bootstrap
+
+**Story:** STORY-001
+**Feature:** sql-workspace-routing
+**Description:** Copy the supplied SQL byte-for-byte into versioned resources and wrap each in a new Liquibase bootstrap XML. Preserve the originals and existing legacy chain; do not run against a live database.
+**Files:**
+- `backend/src/main/resources/db/changelog/catalog/catalog-master.xml`
+- `backend/src/main/resources/db/changelog/catalog/01_catalog.sql`
+- `backend/src/main/resources/db/changelog/tenant/tenant-master.xml`
+- `backend/src/main/resources/db/changelog/tenant/02_tenant.sql`
+- `backend/src/test/java/vn/tsolve/platform/SqlBootstrapIT.java`
+**Dependencies:** Approved platform spec; no dependency on old UUID/RLS tasks.
+**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
+**Verification:** Apply both changelogs to empty PostgreSQL databases; prove exact schema, no seed/legacy tables, repeat Liquibase run is clean, and original/resource SQL hashes match. Covers AC-001.15–.25, .27 and AC-002.28; P4/P8.
+
+## Task 18: SQL-P2: Scoped context and SQL tenant pools
+
+**Story:** STORY-002
+**Feature:** sql-workspace-routing
+**Description:** Build the Long-based lexical context and fail-closed routing DataSource with a lazy bounded Hikari pool provider. Qualified configuration keeps existing primary DataSource/JPA/transactions intact. Use server-side secret references; close resources on shutdown.
+**Files:**
+- `backend/src/main/java/vn/tsolve/common/tenant/**`
+- `backend/src/main/java/vn/tsolve/platform/config/**`
+- `backend/src/main/java/vn/tsolve/platform/service/**`
+- `backend/src/main/java/vn/tsolve/platform/repository/**`
+- `backend/src/test/java/vn/tsolve/common/tenant/**`
+**Dependencies:** SQL-P1; split internals into context, pool provider and configuration steps, verifying after each.
+**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
+**Verification:** Focused tests prove no context/default target, nested same/different binding, unknown id, restore after exceptions, missing secrets, concurrent first use, caps, connection failure and shutdown. Covers AC-002.1, .11–.16, .20–.24, .26 and P2/P5/P6.
+
+## Task 19: SQL-P3: Resolve User List Workspace from Host
+
+**Story:** STORY-002
+**Feature:** sql-workspace-routing
+**Description:** Add read-only catalog lookup and resolver before security scoped to user paths. Feature-disabled reads return 503 MSG06. Validate Host; never trust forwarding/selectors. Keep other modules on their existing paths.
+**Files:**
+- `backend/src/main/java/vn/tsolve/platform/web/**`
+- `backend/src/main/java/vn/tsolve/platform/dto/**`
+- `backend/src/test/java/vn/tsolve/platform/web/**`
+- `backend/src/main/resources/application.yml`
+- `.env.example`
+**Dependencies:** SQL-P2.
+**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
+**Verification:** Host matrix includes case, ports, localhost, reserved/multiple labels, foreign suffixes, forwarding/header/body selectors, unknown site and suspension change; assert no handler/connection on rejection. Covers AC-002.2–.11, .17, .19, .25; P1/P2/P7.
+
+## Task 20: SQL-P4: Prove database boundary and legacy compatibility
+
+**Story:** STORY-001, STORY-002
+**Feature:** sql-workspace-routing
+**Description:** Create catalog, tenant A and tenant B in Testcontainers with distinct non-owner runtime users. Owner bootstraps SQL. Exercise the actual resolver, qualified transaction manager and router, alongside unchanged legacy tests.
+**Files:**
+- `backend/src/test/java/vn/tsolve/platform/SqlWorkspaceIsolationIT.java`
+- `backend/src/test/java/vn/tsolve/platform/SqlBootstrapIT.java`
+**Dependencies:** SQL-P1–P3.
+**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
+**Verification:** Same record ids return separate rows; missing context fails; runtime A cannot connect to B/catalog; no leakage after errors/reused thread; legacy JPA suite passes. Covers AC-001.26–.27, AC-002.18, .21, .23–.28 and P1–P8. Run spotless:apply then mvn verify. Stop at the feature commit checkpoint before SQL-U implementation.
+
+**Commit checkpoint:** one feature at a time. Verify the feature, report changed files and proposed Jira-format commit, and wait for user agreement before committing and proceeding to the next feature. Push only on explicit request.

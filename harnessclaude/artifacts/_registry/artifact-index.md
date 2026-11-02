@@ -174,3 +174,6 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-detail-approved.png |
 | — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-detail-changes.png |
 | — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-detail-narrow.png |
+| — | session-log | platform | in-progress | artifacts/05-implementation/platform/task-17-sql-workspace-routing.md |
+| — | test-report | platform | pass | artifacts/06-evaluation/platform/task-17-sql-workspace-routing-test-report.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-17-sql-workspace-routing-review.md |

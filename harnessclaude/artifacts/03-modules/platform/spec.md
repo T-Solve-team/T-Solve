@@ -10,6 +10,8 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-03 | STORY-004, STORY-006 | Resolve AC-004.21 malformed Jira URL as MSG06; resolve AC-006.4 Suspended Jira Workspace as 403 MSG150. | User answered both previously open spec questions; no Jira implementation added to KAN-107. |
+| 2026-11-03 | STORY-001, STORY-002 | Align catalog and tenant schema with the supplied SQL: singular names, BIGINT keys, secret references. Add a staged SQL Workspace foundation for KAN-107; legacy modules keep their database until separately migrated. Unresolved Jira messages remain outside this slice. | User selected SQL, the necessary Workspace foundation and separate migration of other modules. |
 | 2026-10-25 | STORY-001..STORY-012 | Initial spec from Report3 (GBR-03, GBR-12, GBR-14, GBR-19, GBR-24, GBR-37; MSG119–MSG124, MSG125–MSG139; D6, D9, D11, D12, D20, D29, D41, D42, D43; ADR-0001), Stories TS-001…TS-005, TS-010…TS-013, TS-022, the Jira descriptions of KAN-94…KAN-101, KAN-105, KAN-200 (subtasks KAN-6, KAN-8…KAN-14), KAN-203, Phan_cong v6 §1 and the planning decisions Q1–Q15 of 25/10 | Plan the `platform` module (KAN-196): the tenant layer of the pool model and the infrastructure every module runs on |
 | 2026-10-25 | STORY-001 | AC-001.8: a join table keeps a composite primary key of its two `<entity>_id` columns plus `workspace_id`, with no `id`; an append-only table has `created_at` and no `updated_at`. AC-001.11: the legacy list names "at most" its tables, a table leaves it once its module brings it to AC-001.8, and `audit_event` leaves now. AC-001.13 refers to the tables of AC-001.11. New AC-001.14: UUID ids are generated both by JPA and by the database. The "Owner of changeset 001" line now also covers `audit_events` | Decisions X2 and U3 of the review of the UUID-convention change requests (`be-foundation` converts `audit_event` to `audit_events`) |
 | 2026-10-25 | STORY-002, STORY-004, STORY-010, STORY-012 | New AC-002.19 (health and API-docs paths pass on any host) and AC-002.6 points to it; AC-004.3, AC-004.4: a missing or blank site name or Google domain → MSG01; AC-004.5: user info or a port → MSG136; AC-004.13: lookups return empty, only suspend / reactivate throw; AC-010.3, AC-010.5: the seed step in the deploy; AC-012.4 names what "the production configuration" is; two open questions at AC-010.6 and AC-012.5 | Builder check of the platform plan (KAN-196): contradictions with be-foundation AC-002.8, with the registry contract and with design decision P7 |
@@ -69,23 +71,17 @@ owner: BA
   database so that every module writes its tables the same way and no company's rows live in another company's
   database.
 - Acceptance:
-  - AC-001.15: THE catalog database SHALL hold the table `workspaces` with `id` (UUID, primary key), `site_name` (not null, unique), `status` (`ACTIVE` or `SUSPENDED`, not null), `db_name` (not null, unique), `db_user` (not null), `db_password` (not null, encrypted as AC-001.24 says), `jira_site_url` (nullable), `jira_cloud_id` (nullable, unique), `created_at` and `updated_at` (`TIMESTAMPTZ`, not null) (GBR-24, GBR-37).
-  - AC-001.16: THE catalog database SHALL hold the table `workspace_emails` with `email` (primary key, stored lower-case) and `workspace_id` (not null, foreign key to `workspaces`), so that one email belongs to at most one Workspace (GBR-16, GBR-37).
+  - AC-001.15: THE catalog SHALL hold `tenant_workspace` as defined in `01_catalog.sql`: BIGSERIAL `workspace_id`, unique `site_name`, nullable unique `jira_cloud_id`, `db_host`, `db_port`, unique `db_name`, `db_username`, `db_password_ref`, ACTIVE/SUSPENDED `status` and `created_at`.
+  - AC-001.16: THE catalog SHALL hold `workspace_email` with lower-case email as primary key and BIGINT `workspace_id` referencing `tenant_workspace`, as defined in `01_catalog.sql`.
   - AC-001.17: THE catalog SHALL hold no business data of a Workspace: no company information, Account name, role, ticket, Wiki document or chat (GBR-37, GBR-38).
-  - AC-001.18: THE backend SHALL keep two Liquibase changelogs: the catalog changelog `db/changelog/catalog/catalog-master.xml` and the tenant changelog `db/changelog/db.changelog-master.xml`, which every module already extends. A changeset belongs to exactly one of them.
-  - AC-001.19: WHEN the catalog changelog is applied to an empty catalog database in any environment, THE catalog SHALL contain no row in `workspaces` or `workspace_emails` (GBR-24, D42). Only STORY-013 creates Workspaces.
-  - AC-001.20: THE tenant-table convention SHALL be, for every table of the tenant changelog that is not on the allow-list of AC-001.21:
-    - a plural snake_case name;
-    - `id` UUID primary key, generated as AC-001.23 says; a join table instead has a composite primary key of
-      its two `<entity>_id` columns and no separate `id` (decision X2);
-    - no `workspace_id` column (ADR-0002);
-    - `created_at` and `updated_at` as `TIMESTAMPTZ NOT NULL`; an append-only table (rows never updated, for
-      example `audit_events`) has `created_at` and no `updated_at` (decision U3).
-  - AC-001.21: THE allow-list SHALL name each tenant-changelog table that does not follow AC-001.20, each with its reason: `databasechangelog` and `databasechangeloglock` (Liquibase), and the legacy tables `resolved_ticket_snapshot`, `solution`, `solution_source` (→ `ticket-repository`), `solution_approval` (→ `ticket-review`) and `reuse_record` (→ `search`), which their owning modules bring to AC-001.20 when they are built.
-  - AC-001.22: WHEN the convention guard test runs against the applied tenant changelog, THE test SHALL fail for every table that is not on the allow-list and breaks any part of AC-001.20, and name the table and the missing part. IF a table on the allow-list meets AC-001.20, or a table not named in AC-001.21 is added to it, THEN the test SHALL fail and say that the allow-list only shrinks.
-  - AC-001.23: THE primary key `id` of a tenant table SHALL be generated both by JPA (`@GeneratedValue(strategy = GenerationType.UUID)`) and by the database (`DEFAULT gen_random_uuid()`), so that application inserts and raw SQL inserts both get an id (decision X2).
-  - AC-001.24: THE catalog SHALL store `db_password` encrypted with AES-GCM under the key `CATALOG_SECRET_KEY`, and the backend SHALL never log it or return it from any API.
-  - AC-001.25: IF the key `CATALOG_SECRET_KEY` is missing or cannot decrypt a stored password, THEN THE backend SHALL refuse to open that Workspace's database and log which Workspace failed, without the password.
+  - AC-001.18: THE backend SHALL version separate catalog and SQL-tenant bootstrap changelogs at `db/changelog/catalog/catalog-master.xml` and `db/changelog/tenant/tenant-master.xml`; the existing `db/changelog/db.changelog-master.xml` SHALL remain the legacy changelog until its modules migrate separately. No bootstrap SHALL be applied over a legacy database or adopted by skipping an existing-table error.
+  - AC-001.19: WHEN catalog bootstrap runs on an empty database, THE catalog SHALL contain no Workspace or email rows; Workspaces SHALL be supplied by operations, never seeded automatically in production.
+  - AC-001.20: THE SQL tenant database SHALL use the table names, columns, constraints, indexes and BIGINT keys of `02_tenant.sql`, including singleton `workspace`, `department`, `app_user` and `user_role`; Employee SHALL remain implicit, and business tables SHALL have no additional Workspace discriminator column.
+  - AC-001.21: THE legacy tables SHALL remain only on the legacy database path until their owning modules migrate; Liquibase metadata tables SHALL be excluded from comparisons against the supplied SQL schema.
+  - AC-001.22: WHEN bootstrap integration tests run, THE tests SHALL compare the SQL schema and constraints with the supplied schema resources and SHALL verify that no legacy changeset, demo row or UUID replacement table was applied to either SQL database.
+  - AC-001.23: THE application SHALL map SQL BIGINT ids to Java Long and SHALL let PostgreSQL generate keys for BIGSERIAL columns; externally exposed numeric ids SHALL be decimal strings.
+  - AC-001.24: THE catalog SHALL store only `db_password_ref`, never a password; the runtime SHALL resolve that reference from server-side environment/configuration and SHALL never log or expose the resolved secret.
+  - AC-001.25: IF a database secret reference is missing or resolves to an empty value, THEN THE runtime SHALL refuse the tenant connection without falling back to another database and without logging credentials.
   - AC-001.26: THE runtime user of a Workspace database SHALL be able to connect to that database only; a connection with it to another Workspace database or to the catalog database SHALL be refused by PostgreSQL.
   - AC-001.27: THE tests of AC-001.15 to AC-001.26 SHALL run against PostgreSQL started by Testcontainers, with the changelogs applied by the owner user.
 
@@ -115,12 +111,18 @@ owner: BA
   - AC-002.15: WHILE a Workspace is Suspended, THE backend SHALL still let `runIn` bind it, so that the ops script can reactivate it and the seed can reset it. Not running its jobs is done by `worker` (GBR-38, decision Q6).
   - AC-002.16: IF code calls `requireWorkspaceId()` while no Workspace is bound, THEN THE backend SHALL throw an exception that the global handler answers with 500 and `code` `MSG06` (be-foundation AC-001.7), and it SHALL log the call site.
   - AC-002.17: WHILE the development base domain is `localhost`, THE Tenant Resolver SHALL resolve `<site name>.localhost` with any port the same way as a production Workspace site (fe-foundation design Q9).
-  - AC-002.18: THE tenant-isolation test SHALL create two Workspaces A and B, each with its own database and a row in the same tenant table. It SHALL show, through the web resolver, that a request on A's Workspace site reads only A's row with a JPA query and with a native SQL query, and never B's row (TS-011, ADR-0002).
+  - AC-002.18: THE tenant-isolation test SHALL create two Workspaces with separate databases and identical account ids and SHALL prove through the real web resolver that SQL tenant queries return only the bound database rows. Each legacy JPA module SHALL require a separate migration and JPA isolation test before being claimed migrated.
   - AC-002.19: THE Tenant Resolver SHALL let `/actuator/health`, `/v3/api-docs`, `/v3/api-docs/**`, `/v3/api-docs.yaml` and the Swagger UI through on any host without binding a Workspace, so that Docker health checks and `npm run api:pull` on `localhost:8080` work (be-foundation AC-002.8; builder check).
-  - AC-002.20: WHILE a Workspace is bound, THE backend SHALL send every JPA, JDBC and native query of the request or job to that Workspace's database, through one routing `DataSource` that the modules use without knowing the Workspace (ADR-0002).
+  - AC-002.20: WHILE a Workspace is bound, THE SQL tenant routing DataSource SHALL send every query made through it to that Workspace database. During the staged migration of AC-002.24, legacy queries SHALL remain on their separately configured legacy DataSource.
   - AC-002.21: IF a query of the tenant `DataSource` runs while no Workspace is bound, THEN THE backend SHALL throw before opening any connection and store nothing.
   - AC-002.22: THE backend SHALL open the connection pool of a Workspace's database on the first use and keep at most `TENANT_DB_POOL_MAX` connections in it (default 5), so that the total number of connections is bounded by the number of Workspaces in use.
   - AC-002.23: WHEN a transaction is open, THE backend SHALL keep it on the database of the Workspace that was bound when it began; a `runIn` of another Workspace inside it is refused by AC-002.13.
+
+  - AC-002.24: THE KAN-107 Workspace foundation SHALL provide a qualified SQL tenant DataSource, catalog lookup and tenant transaction manager alongside the existing legacy DataSource; it SHALL not redirect legacy JPA, Ticket/Import or sign-in-state storage to the new schema.
+  - AC-002.25: WHEN the SQL Workspace feature is enabled, THE User List resolver SHALL run before security on `/api/v1/users` and its subpaths, bind only an Active Workspace resolved from the actual Host, and apply AC-002.3–.9, .11 and .17; WHEN it is disabled, THEN User List reads SHALL return 503 MSG06 rather than use the legacy database. Other paths SHALL retain existing routing until their own migration; this slice SHALL not claim all of STORY-002 complete.
+  - AC-002.26: THE SQL tenant pools SHALL be lazy, bounded by `TENANT_DB_POOL_MAX` connections per Workspace (default 5) and `TENANT_DB_MAX_POOLS` pools (default 32), and closed at shutdown; IF a cap or connection failure prevents access, THEN the backend SHALL fail with 500 MSG06 and SHALL never use another Workspace or the legacy database.
+  - AC-002.27: THE catalog connection SHALL use a dedicated configured database user and SHALL never be selected by the tenant router; integration tests SHALL use separate runtime database users and prove that a tenant user cannot connect to another tenant or the catalog.
+  - AC-002.28: WHEN bootstrap resources are introduced, THE delivery SHALL preserve the original SQL/PDF files unchanged, create schema only through new Liquibase changelogs using an owner connection, and SHALL perform no automatic conversion or deletion of legacy data.
 
 ### STORY-003: PostgreSQL row-level security (KAN-100) — cancelled
 - Cancelled on 29/10 with the move to one database per Workspace (ADR-0002): the database boundary and the
@@ -137,7 +139,7 @@ owner: BA
   - AC-004.18: THE `WorkspaceCatalog` SHALL never return the database connection or password to a module; only the routing `DataSource` of STORY-002 reads them.
   - AC-004.19: WHEN `linkJiraSite(siteUrl)` is called while a Workspace with no Jira site is bound, THE catalog SHALL normalise the URL to `https://<host>` in lower case, read its `cloudId` from Atlassian's public tenant information at the address followed by `/_edge/tenant_info`, and store both on the bound Workspace (GBR-24; used by UC-10 of `workspace`).
   - AC-004.20: IF the `cloudId` of that site is already stored on another Workspace, THEN THE catalog SHALL refuse with `code` `MSG153` and `params` `tracker_name` = `Jira` on field `jiraSiteUrl`, store nothing and not name the other Workspace (GBR-14).
-  - AC-004.21: IF the URL is not an `https` address with a host and no user info, no port, no path other than `/`, no query and no fragment, THEN THE catalog SHALL refuse with `code` `MSG04` on field `jiraSiteUrl` and store nothing. [NEEDS CLARIFICATION: Report3 of 31/10 has no message for a malformed Jira site URL (MSG136 was removed); which MSG does UC-10 show?]
+  - AC-004.21: IF a Jira site URL is not an `https` address with a host and no user info, port, path other than `/`, query or fragment, THEN THE catalog SHALL refuse with `code` `MSG06` on field `jiraSiteUrl` and store nothing.
   - AC-004.22: IF Atlassian's tenant information cannot be read, THEN THE catalog SHALL store nothing, log the failure and throw an exception that the caller reports.
   - AC-004.23: IF `linkJiraSite` is called on a Workspace that already has a Jira site, THEN THE catalog SHALL change nothing and refuse, because the Jira site cannot be changed after the first sign-in (GBR-24).
   - AC-004.24: IF two Workspaces race to link the same `cloudId`, THEN THE catalog SHALL store it for only one and refuse the other with `MSG153`, never with a 500.
@@ -168,7 +170,7 @@ owner: BA
   - AC-006.1: WHEN a verified call (STORY-005) carries a `cloudId` that the catalog links to an Active Workspace, THE backend SHALL bind that Workspace for the whole request (GBR-14, GBR-37).
   - AC-006.2: THE backend SHALL take the `cloudId` only from the verified token's claims, never from a header, a parameter or the body (GBR-19).
   - AC-006.3: IF the verified `cloudId` is linked to no Workspace, THEN THE backend SHALL answer 403 with a `ProblemDetail` with `code` `MSG152` and `params` `tracker_name` = `Jira`, and run no handler (decision Q8).
-  - AC-006.4: IF the Workspace of the verified `cloudId` is Suspended, THEN THE backend SHALL answer 403 and run no handler (GBR-38). [NEEDS CLARIFICATION: Report3 of 31/10 says only that the T-Solve app "returns an error"; which MSG code does the Jira App show for a Suspended Workspace (MSG121 was removed)?]
+  - AC-006.4: IF the Workspace of the verified `cloudId` is Suspended, THEN THE backend SHALL answer 403 with `code` `MSG150` and run no handler.
   - AC-006.5: WHILE a Workspace is Suspended, THE backend SHALL record nothing for a ticket tracker event (issue created, issue moved to Done) that comes from its Jira site. No job is queued and nothing is replayed after reactivation (D29).
   - AC-006.12: WHEN a verified lifecycle event of type uninstalled arrives, THE backend SHALL change nothing and answer 204.
   - AC-006.14: THE tenant-isolation test SHALL show that a verified call from the Jira site of Workspace A reads only A's rows, and that a call whose token names B's `cloudId` reads only B's rows, never A's (ADR-0002).
@@ -286,7 +288,7 @@ owner: BA
   - AC-013.1: WHEN `infra/ops/workspace.sh create --site <site name> --admin-email <email>` runs with values that pass AC-013.2 to AC-013.5, THE script SHALL, through the backend's `ops` profile:
     1. create the Workspace database and its runtime user (AC-001.26);
     2. apply the tenant changelog to it as the owner user;
-    3. record the Workspace in the catalog as Active, with the email in `workspace_emails`;
+    3. record the Workspace in the catalog as Active, with the email in `workspace_email`;
     4. inside `TenantContext.runIn` of the new Workspace, create the Active Admin Account with that email
        through `identity`'s `FirstAdminCreator`;
 
@@ -333,13 +335,13 @@ owner: BA
 **`vn.tsolve.common.tenant`**
 ```java
 public interface TenantContext {
-    Optional<UUID> currentWorkspaceId();
-    UUID requireWorkspaceId();                      // throws when none is bound (AC-002.16)
-    <T> T runIn(UUID workspaceId, Supplier<T> action); // AC-002.12 – AC-002.15
-    void runIn(UUID workspaceId, Runnable action);
+    Optional<Long> currentWorkspaceId();
+    Long requireWorkspaceId();                      // throws when none is bound (AC-002.16)
+    <T> T runIn(Long workspaceId, Supplier<T> action); // AC-002.12 – AC-002.15
+    void runIn(Long workspaceId, Runnable action);
 }
-// The tenant DataSource is the application's primary DataSource: modules inject it (or use JPA) as usual,
-// and every connection goes to the bound Workspace's database (AC-002.20 – AC-002.23).
+// During KAN-107 the qualified SQL tenant DataSource is separate from the legacy primary DataSource.
+// No default/fallback target is permitted; other modules explicitly migrate before using it.
 ```
 - Only the resolvers (STORY-002, STORY-006) and `runIn` bind a Workspace. A thread started by a module has no
   Workspace until it calls `runIn` (`worker`'s `runInTenant` wraps it).
@@ -347,17 +349,17 @@ public interface TenantContext {
 **`vn.tsolve.platform` (service and dto)**
 ```java
 public interface WorkspaceCatalog {                             // STORY-004
-    Optional<WorkspaceSummary> findById(UUID workspaceId);
+    Optional<WorkspaceSummary> findById(Long workspaceId);
     Optional<WorkspaceSummary> findBySiteName(String siteName);
     Optional<WorkspaceSummary> findByCloudId(String cloudId);
     WorkspaceSummary linkJiraSite(String siteUrl);              // bound Workspace; AC-004.19 – AC-004.24
     void claimEmail(String email);                              // bound Workspace; AC-004.25, AC-004.26
 }
-record WorkspaceSummary(UUID id, String siteName, WorkspaceStatus status,
+record WorkspaceSummary(Long id, String siteName, WorkspaceStatus status,
                         Optional<String> jiraSiteUrl, Optional<String> jiraCloudId) {}
 enum WorkspaceStatus { ACTIVE, SUSPENDED }
-record WorkspaceSuspended(UUID workspaceId) {}                  // published after commit (AC-013.7)
-record WorkspaceReactivated(UUID workspaceId) {}
+record WorkspaceSuspended(Long workspaceId) {}                  // published after commit (AC-013.7)
+record WorkspaceReactivated(Long workspaceId) {}
 
 public interface ForgeTokenVerifier { VerifiedForgeCall verify(String bearerToken); }   // throws when invalid
 public interface ForgeCallContext { Optional<VerifiedForgeCall> current(); }
@@ -374,7 +376,7 @@ public interface DemoSeedContributor {                           // STORY-012, p
     int order();
     void seed(SeedWorkspace workspace);   // runs inside TenantContext.runIn(workspace.id())
 }
-record SeedWorkspace(UUID id, String siteName, JsonNode data) {}  // data = the module's part
+record SeedWorkspace(Long id, String siteName, JsonNode data) {}  // data = the module's part
 ```
 Catalog errors are `BusinessRuleException` with a field (be-foundation AC-001.3). Storage errors are
 `FileTooLargeException` and `NotFoundException`, and an invalid key is refused with an exception that logs the
@@ -394,7 +396,7 @@ attempt.
 **Web resolver answers** (every host that is not `login.` or `api.`; before Spring Security):
 404 `MSG151`, 403 `MSG150`, as `application/problem+json`.
 
-**Schema:** catalog tables `workspaces` and `workspace_emails`; the tenant-table convention (AC-001.20), its
+**Schema:** catalog tables `tenant_workspace` and `workspace_email`; the tenant-table convention (AC-001.20), its
 allow-list (AC-001.21) and the guard test.
 
 **Configuration** (names in `.env.example`, no real values):
@@ -402,7 +404,7 @@ allow-list (AC-001.21) and the guard test.
 - `TSOLVE_ENVIRONMENT`: `dev`, `staging` or `production`.
 - `CATALOG_DB_URL`, `CATALOG_DB_USER`, `CATALOG_DB_PASSWORD`; `TENANT_DB_HOST`; `TENANT_DB_POOL_MAX` (default 5).
 - `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` (owner user, migrations and the ops script).
-- `CATALOG_SECRET_KEY` (encrypts the Workspace database passwords).
+- Catalog connection environment variables and one server-side secret per `db_password_ref`; no catalog encryption key or stored password.
 - `FORGE_APP_ID`, `FORGE_JWKS_URL`.
 - `FILE_STORAGE_ROOT`, and `FILE_STORAGE_MAX_BYTES` (default 10485760).
 - `OLLAMA_BASE_URL`: read by `ai`.
@@ -422,7 +424,7 @@ allow-list (AC-001.21) and the guard test.
     chain (AC-005.6).
 - Owner of changeset 001 (`be-foundation`): the existing `workspace` table moves out of the tenant changelog (the
   company information stays in the Workspace database, owned by `workspace`; the catalog row is this module's), and
-  `audit_events` meets AC-001.20 as an append-only table.
+  audit persistence migrates separately to the SQL `audit_log_entry` table; legacy audit storage is unchanged by KAN-107.
 - `identity`:
   - calls `TenantContext.runIn` with the Workspace of the checked state value on the `login.` callback;
   - takes the ticket tracker account only from `ForgeCallContext`;
@@ -440,8 +442,7 @@ allow-list (AC-001.21) and the guard test.
   - sends the Forge Invocation Token on every Forge Remote call to `api.`;
   - points the installed and uninstalled lifecycle events at `POST /api/v1/jira-app/lifecycle`;
   - uses one remote base URL per Forge environment (staging: `api.staging.tsolve.io.vn`).
-- Every module with tables: follows AC-001.20 for each new table and, when built, takes its legacy tables off the
-  allow-list (AC-001.21). It contributes its demo data through a `DemoSeedContributor`.
+- Every module with tables: follows AC-001.20 for each new table and, when built, migrates its legacy tables separately from the legacy database (AC-001.21). It contributes its demo data through a `DemoSeedContributor`.
 - `ai` (Trần Hải Anh): reads `OLLAMA_BASE_URL`; the model names come from the benchmark (KAN-140).
 
 ## Definition of Done

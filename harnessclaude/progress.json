@@ -99,9 +99,10 @@
         "my-solutions-contract": "pending",
         "my-solutions-table": "pending",
         "my-solutions-counters": "pending",
-        "my-solutions-filters": "pending"
+        "my-solutions-filters": "pending",
+        "user-list-backend": "pending"
       },
-      "lastUpdated": "2026-11-01T09:22:19.220Z",
+      "lastUpdated": "2026-11-02T20:21:39.564Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -198,8 +199,8 @@
       }
     },
     "platform": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "tenant-context": "pending",
         "tenant-schema": "pending",
@@ -212,9 +213,17 @@
         "staging-servers": "pending",
         "edge-caddy": "pending",
         "staging-cd": "pending",
-        "demo-seed-workspaces": "pending"
+        "demo-seed-workspaces": "pending",
+        "sql-workspace-routing": "passing"
       },
-      "lastUpdated": "2026-10-25T13:16:09.802Z"
+      "lastUpdated": "2026-11-02T21:06:09.396Z",
+      "branch": "feat/platform",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "8e2c3ab8f1841db03148f52322d7f1b37b61b724"
+      }
     },
     "platform-console": {
       "status": "decomposed",
