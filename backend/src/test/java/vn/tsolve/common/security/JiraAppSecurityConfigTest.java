@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 @WebMvcTest(controllers = JiraAppSecurityConfigTest.ProbeController.class)
 @Import({
     JiraAppSecurityConfig.class,
-    DefaultSecurityConfig.class,
+    SecurityConfig.class,
     JiraAppSecurityConfigTest.TestDecoder.class,
     JiraAppSecurityConfigTest.ProbeController.class
 })
