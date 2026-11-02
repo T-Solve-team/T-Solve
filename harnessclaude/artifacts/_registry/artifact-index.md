@@ -144,6 +144,11 @@ Master registry of all artifacts in this workspace.
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-9-sign-in-callback-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-9-sign-in-callback-test-report.md |
 | — | spec | dashboard-audit | approved | artifacts/03-modules/dashboard-audit/spec.md |
+| — | spec | triage | approved | artifacts/03-modules/triage/spec.md |
+| — | design | triage | approved | artifacts/04-plans/triage/design.md |
+| — | design | triage | approved | artifacts/04-plans/triage/iteration-1/design.md |
+| — | tasks | triage | approved | artifacts/04-plans/triage/iteration-1/tasks.md |
+| — | session-log | triage | evaluating | artifacts/05-implementation/triage/task-1-suggestion-history.md |
 | — | design | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/design.md |
 | — | design | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/iteration-1/design.md |
 | — | tasks | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/iteration-1/tasks.md |

@@ -152,10 +152,19 @@
       }
     },
     "triage": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:23.605Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "suggestion-history": "evaluating"
+      },
+      "lastUpdated": "2026-11-02T17:57:04.853Z",
+      "branch": "feat/triage",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "4440072cedbf7081edd6274ae82b89dcd67e221e"
+      }
     },
     "chatbot": {
       "status": "planned",

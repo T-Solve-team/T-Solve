@@ -1,0 +1,34 @@
+---
+module: triage
+date: 2026-11-02
+---
+
+# Design: triage iteration 1
+
+Spec: artifacts/03-modules/triage/spec.md
+Master: artifacts/04-plans/triage/design.md
+
+## Architecture Overview
+
+Iteration 1 delivers the KAN-149 frontend slice only: 10.1 Suggestion History and the read-only
+10.2 Triage Result Detail popup. The existing route and mock registration remain. A generated
+list query and detail query use the proposed OpenAPI contract. Feature-local MSW data supports
+filtering, paging, role/Project checks and unavailable sources; production authorization and
+the backend read API remain separate work.
+
+## Key Decisions
+
+- One feature `suggestion-history` under Jira KAN-149, with list and popup built in two
+  test-first stages and verified together before its one code commit.
+- Use managed Project, answer and paired inclusive Vietnam dates as URL filters.
+- Show only a Ticket source count and available Wiki links in detail. No class or routing controls.
+- Reuse the existing UI kit and generated API pipeline. The read-only popup uses the available
+  FormModal shell; visual verification must check the two close actions.
+
+## Edge Cases & Risks
+
+Master design rows 1–18 apply. The one task includes tests for every High row: role and
+Workspace scope, forged Project/detail access, malformed dates, pagination, retry, stale detail,
+unsafe Jira URLs, unavailable Wiki sources, Ticket source exposure and generated-client drift.
+The master risk verdict is CAUTION until the proposed backend contract and production
+authorization are implemented.

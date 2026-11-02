@@ -81,6 +81,16 @@ Frontend only, on MSW mocks. Spec: `artifacts/03-modules/search/spec.md` · Desi
 | 1 · Ticket List, 6.2 (KAN-227) | Trần Hải Anh | passing |
 | 2 · Search Published tickets, 6.1 (KAN-145) | Trần Hải Anh | pending |
 | 3 · Give Feedback popup, 8.1 (KAN-148) | Trần Hải Anh | pending |
+
+### triage (added 2026-11-02)
+
+Frontend only on MSW; the current iteration remains 1 in `progress.json` even though its
+original date window has passed. Spec: `artifacts/03-modules/triage/spec.md`; active plan:
+`artifacts/04-plans/triage/iteration-1/tasks.md`.
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · Suggestion History list and detail popup, 10.1–10.2 (KAN-149) | Trần Hải Anh | evaluating |
 ## Order — feedback first
 
 1. fe-foundation Task 7 (KAN-204): catalog synced to System_Messages of 25/10; 9.3 Audit Entry Detail removed.
@@ -151,6 +161,11 @@ Frontend only, on MSW mocks. Spec: `artifacts/03-modules/search/spec.md` · Desi
    without Feedback); pick Source "Jira import" and a Resolved date range → results update; "zzz" → MSG04.
 3. The popup has no screen until 5.5 Ticket Detail mounts it: `npm run test -- GiveFeedbackModal` runs its
    tests — Send with nothing → MSG01; Helpful, a comment, Send → MSG26.
+
+### triage
+1. Mock mode, Project Manager: open Triage History, filter to one managed Project, Solved and a date range; the list and URL match.
+2. Open a result: the popup shows the full suggestion, Ticket source count, available Wiki links and reporter answer. Open a result without a suggestion: the popup shows a dash and No answer.
+3. Open the route as an Employee: MSG08; a forged unmanaged Project or issue key returns no data.
 
 ## Actual Outcomes
 <!-- filled at end of iteration, split by module -->
