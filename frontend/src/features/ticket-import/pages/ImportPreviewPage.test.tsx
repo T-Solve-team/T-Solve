@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http } from 'msw';
 import { server } from '@/mocks/server';
@@ -14,6 +14,24 @@ function rowOf(rowNo: number): HTMLElement {
   const row = screen.getByRole('checkbox', { name: `Select row ${rowNo}` }).closest('tr');
   if (!row) throw new Error(`no row ${rowNo}`);
   return row;
+}
+
+/** The Summary's StatCard with this label. */
+function statCard(label: 'Valid' | 'Error' | 'Removed'): HTMLElement {
+  const card = screen.getByText(label, { selector: '.ant-typography' }).closest('.ant-card');
+  if (!(card instanceof HTMLElement)) throw new Error(`no ${label} card`);
+  return card;
+}
+
+/** Counts the confirm requests that reach the mock backend. */
+function countConfirms() {
+  const calls = { count: 0 };
+  server.events.on('request:start', ({ request }) => {
+    if (request.method === 'POST' && new URL(request.url).pathname.endsWith('/confirm')) {
+      calls.count += 1;
+    }
+  });
+  return calls;
 }
 
 async function openPreview() {
@@ -112,7 +130,7 @@ describe('ImportPreviewPage', () => {
     expect(screen.queryByRole('checkbox', { name: 'Select row 1' })).not.toBeInTheDocument();
   });
 
-  it('AC-009.2 lets the user select rows except Removed ones', async () => {
+  it('AC-009.3 lets the user select rows except Removed ones', async () => {
     const { user } = await openPreview();
     await user.click(screen.getByRole('checkbox', { name: 'Select row 1' }));
     expect(screen.getByRole('checkbox', { name: 'Select row 1' })).toBeChecked();
@@ -164,5 +182,144 @@ describe('ImportPreviewPage', () => {
     const table = await screen.findByRole('table', { name: 'Import rows' }, { timeout: 5000 });
     const wrapper = table.closest('.ant-table-wrapper');
     await waitFor(() => expect(wrapper?.querySelector('.ant-spin-spinning')).not.toBeNull());
+  });
+  describe('actions', () => {
+    afterEach(() => {
+      server.events.removeAllListeners();
+    });
+
+    it('AC-009.3 disables Remove while no row is selected', async () => {
+      const { user } = await openPreview();
+      const remove = screen.getByRole('button', { name: 'Remove' });
+      expect(remove).toBeDisabled();
+      await user.click(screen.getByRole('checkbox', { name: 'Select row 1' }));
+      expect(remove).toBeEnabled();
+    });
+
+    it('AC-009.3 removes the selected rows, refreshes the Summary and rows and clears the selection', async () => {
+      const { user } = await openPreview();
+      await user.click(screen.getByRole('checkbox', { name: 'Select row 1' }));
+      await user.click(screen.getByRole('checkbox', { name: 'Select row 2' }));
+
+      await user.click(screen.getByRole('button', { name: 'Remove' }));
+
+      await waitFor(() => expect(statCard('Removed')).toHaveTextContent('3'));
+      expect(statCard('Valid')).toHaveTextContent('19');
+      expect(statCard('Error')).toHaveTextContent('3');
+      await waitFor(() =>
+        expect(screen.getByRole('checkbox', { name: 'Select row 1' })).toBeDisabled(),
+      );
+      expect(rowOf(1)).toHaveTextContent('Removed');
+      expect(rowOf(2)).toHaveTextContent('Removed');
+      expect(screen.queryAllByRole('checkbox', { checked: true })).toHaveLength(0);
+      // jsdom never ends antd's fade-out of the loading icon, so "loading" stays in the button's name.
+      expect(screen.getByRole('button', { name: /Remove/ })).toBeDisabled();
+    });
+
+    it('AC-009.5 disables Confirm while the preview has no Valid row (edge case 35)', async () => {
+      server.use(
+        http.get('*/api/v1/imports/previews/1', () =>
+          Response.json({ ...seedPreview(), validCount: 0 }),
+        ),
+      );
+      await openPreview();
+      expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    });
+
+    it('AC-009.6 shows MSG32 with the counts and opens Import Tickets without asking MSG37 (edge case 36)', async () => {
+      const { user, router } = await openPreview();
+
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+      expect(
+        await screen.findByText(msg('MSG32', { created: 20, skipped: 5 })),
+      ).toBeInTheDocument();
+      await waitFor(() => expect(router.state.location.pathname).toBe('/import'));
+      expect(screen.queryByText(msg('MSG37'))).not.toBeInTheDocument();
+    });
+
+    it.each([
+      [409, 'MSG30', { count: 4 }],
+      [409, 'MSG40', {}],
+      [409, 'MSG33', {}],
+      [500, 'MSG33', {}],
+    ] as const)(
+      'AC-009.7 shows %s %s from Confirm and stays on the Import Preview',
+      async (status, code, params) => {
+        server.use(
+          http.post('*/api/v1/imports/previews/1/confirm', () => problem(status, code, { params })),
+        );
+        const { user, router } = await openPreview();
+
+        await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+        // The toast: MSG30 is also on the Summary.
+        await waitFor(() =>
+          expect(document.querySelector('.ant-message')).toHaveTextContent(msg(code, params)),
+        );
+        expect(router.state.location.pathname).toBe('/import/preview');
+        expect(screen.getByRole('table', { name: 'Import rows' })).toBeInTheDocument();
+      },
+    );
+
+    it('AC-009.8 shows Confirm as loading and sends one Confirm for a double click (edge case 34)', async () => {
+      let answer: () => void = () => {};
+      const answered = new Promise<void>((resolve) => {
+        answer = resolve;
+      });
+      server.use(
+        http.post('*/api/v1/imports/previews/1/confirm', async () => {
+          await answered;
+          return problem(409, 'MSG40');
+        }),
+      );
+      const confirms = countConfirms();
+      const { user } = await openPreview();
+      const confirm = screen.getByRole('button', { name: 'Confirm' });
+
+      await user.dblClick(confirm);
+
+      await waitFor(() => expect(confirm).toHaveClass('ant-btn-loading'));
+      expect(confirms.count).toBe(1);
+      answer();
+      await waitFor(() => expect(confirm).not.toHaveClass('ant-btn-loading'));
+      expect(confirms.count).toBe(1);
+    });
+
+    it('AC-009.9 asks MSG37 on Cancel: Cancel in the dialog stays, OK opens Import Tickets without importing', async () => {
+      const confirms = countConfirms();
+      const { user, router } = await openPreview();
+      // The page's Cancel; the dialog's own Cancel stays in the DOM while it fades out.
+      const cancel = screen.getByRole('button', { name: 'Cancel' });
+
+      await user.click(cancel);
+      let dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent(msg('MSG37'));
+      await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+      expect(router.state.location.pathname).toBe('/import/preview');
+
+      await user.click(cancel);
+      dialog = await screen.findByRole('dialog');
+      await user.click(within(dialog).getByRole('button', { name: 'OK' }));
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/import'));
+      expect(confirms.count).toBe(0);
+    });
+
+    it('AC-009.10 asks MSG37 before leaving for another screen and leaves only on OK', async () => {
+      const { user, router } = await openPreview();
+
+      await act(() => router.navigate('/my-profile'));
+      let dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent(msg('MSG37'));
+      await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+      expect(router.state.location.pathname).toBe('/import/preview');
+
+      await act(() => router.navigate('/my-profile'));
+      dialog = await screen.findByRole('dialog');
+      await user.click(within(dialog).getByRole('button', { name: 'OK' }));
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/my-profile'));
+    });
   });
 });
