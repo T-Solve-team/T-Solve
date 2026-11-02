@@ -1,7 +1,17 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { getDevSite, getDevUser } from '@/shared/auth';
-import { VIEWABLE_SPACES } from './data';
+import { getMe, TicketStatus } from '@/shared/api';
+import { UUID } from '../hooks/useSolutionFilters';
+import { canSeeMySolutions } from '../lib/canSeeMySolutions';
+import { MY_SOLUTIONS, VIEWABLE_SPACES } from './data';
+
+/** The dev user's live roles (users mock), fetched in parallel with the mock delay so it adds no latency. */
+const rolesAndDelay = () =>
+  Promise.all([
+    getDevUser() ? getMe().then((me) => me.roles) : Promise.resolve([]),
+    delay(MOCK_DELAY_MS),
+  ]);
 
 /**
  * MSW mock handlers of the "my-profile" feature (guideline 10 §5). Hand-written handlers with realistic data go here;
@@ -19,7 +29,96 @@ export const handlers: HttpHandler[] = [
       [...VIEWABLE_SPACES[user]].sort((a, b) => a.name.localeCompare(b.name, 'vi')),
     );
   }),
+  // Counts per status and the distinct Projects of the user's Solutions; every query parameter is ignored (AC-003.18).
+  http.get('*/api/v1/me/solutions/summary', async () => {
+    const [roles] = await rolesAndDelay();
+    const user = getDevUser();
+    if (!user) return problem(401, 'MSG07');
+    if (!canSeeMySolutions(roles)) return problem(403, 'MSG08');
+    const all = MY_SOLUTIONS[user] ?? [];
+    const counts: Record<string, number> = Object.fromEntries(STATUS_VALUES.map((s) => [s, 0]));
+    const byId = new Map<string, string>();
+    for (const r of all) {
+      counts[r.status] = (counts[r.status] ?? 0) + 1;
+      byId.set(r.projectId, r.projectName);
+    }
+    const projects = [...byId]
+      .map(([projectId, name]) => ({ projectId, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+    return HttpResponse.json({ counts, projects });
+  }),
+  // The signed-in user's Solutions (AC-003.6): newest first, filters of AC-003.19, wrong parameters give 400 per parameter.
+  http.get('*/api/v1/me/solutions', async ({ request }) => {
+    const [roles] = await rolesAndDelay();
+    const user = getDevUser();
+    if (!user) return problem(401, 'MSG07');
+    if (!canSeeMySolutions(roles)) return problem(403, 'MSG08');
+    const all = MY_SOLUTIONS[user] ?? [];
+
+    const query = new URL(request.url).searchParams;
+    const wrong: string[] = [];
+    const int = (name: string, fallback: number, min: number, max: number) => {
+      const raw = query.get(name);
+      if (raw === null) return fallback;
+      const value = Number(raw);
+      if (raw.trim() === '' || !Number.isInteger(value) || value < min || value > max) {
+        wrong.push(name);
+        return fallback;
+      }
+      return value;
+    };
+    const day = (name: string) => {
+      const raw = query.get(name);
+      if (raw === null) return undefined;
+      const valid =
+        /^\d{4}-\d{2}-\d{2}$/.test(raw) &&
+        !Number.isNaN(Date.parse(raw)) &&
+        new Date(raw).toISOString().slice(0, 10) === raw;
+      if (!valid) wrong.push(name);
+      return valid ? raw : undefined;
+    };
+    const page = int('page', 0, 0, Number.MAX_SAFE_INTEGER);
+    const size = int('size', 20, 1, 100);
+    const status = query.get('status');
+    if (status !== null && !STATUS_VALUES.includes(status)) wrong.push('status');
+    const projectId = query.get('projectId');
+    if (projectId !== null && !UUID.test(projectId)) wrong.push('projectId');
+    const from = day('from');
+    const to = day('to');
+    if (from && to && to < from) wrong.push('to');
+    if (wrong.length) {
+      return problem(400, 'MSG06', {
+        fieldErrors: wrong.map((field) => ({ field, code: 'MSG06' as const })),
+      });
+    }
+
+    const dayOf = (iso: string) =>
+      new Date(Date.parse(iso) + 7 * 3_600_000).toISOString().slice(0, 10);
+    const rows = all
+      .filter(
+        (r) =>
+          (status === null || r.status === status) &&
+          (projectId === null || r.projectId === projectId) &&
+          (!from || dayOf(r.updatedAt) >= from) &&
+          (!to || dayOf(r.updatedAt) <= to),
+      )
+      // Ties on updatedAt: ticket id ascending (mock-only rule).
+      .sort(
+        (a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.ticketId.localeCompare(b.ticketId),
+      );
+    return HttpResponse.json({
+      content: rows.slice(page * size, (page + 1) * size),
+      page: {
+        size,
+        number: page,
+        totalElements: rows.length,
+        totalPages: Math.ceil(rows.length / size),
+      },
+    });
+  }),
 ];
+
+const STATUS_VALUES: string[] = Object.values(TicketStatus);
 
 /** Restores this feature's mock data to its starting state — called after every test (src/test/setup.ts). */
 export function resetMockData(): void {

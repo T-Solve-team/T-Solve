@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { renderApp } from '@/test/render';
 import { msg } from '@/shared/messages';
-import { ReviewDecision, getGetReviewHistoryQueryKey } from '@/shared/api';
+import { ReviewHistoryDecision, getGetReviewHistoryQueryKey } from '@/shared/api';
 import { reviewStore } from '../mocks/state';
 import { ticketUuid } from '../mocks/data';
 import { server } from '@/mocks/server';
@@ -9,6 +9,30 @@ import { http, HttpResponse, delay } from 'msw';
 import { problem } from '@/shared/api/mocks';
 
 describe('Review History', () => {
+  it.each([null, 'EMPLOYEE'] as const)(
+    'AC-008.7 denies the history route for role %s without requesting history',
+    async (role) => {
+      let reads = 0;
+      server.use(
+        http.get('*/api/v1/review-history', () => {
+          reads++;
+          return problem(403, 'MSG08');
+        }),
+      );
+      const view = renderApp('/review-history', { role });
+      if (role === null) {
+        await screen.findByRole(
+          'heading',
+          { name: 'Sign in to T-Solve', level: 1 },
+          { timeout: 5000 },
+        );
+        expect(view.router.state.location.pathname).toBe('/login');
+      } else {
+        expect(await screen.findByText(msg('MSG08'), {}, { timeout: 5000 })).toBeInTheDocument();
+      }
+      expect(reads).toBe(0);
+    },
+  );
   beforeAll(async () => {
     await import('./ReviewHistoryPage');
   });
@@ -17,7 +41,7 @@ describe('Review History', () => {
     expect(await screen.findByText(msg('MSG04'), {}, { timeout: 5000 })).toBeInTheDocument();
   });
   it('AC-008.1 / AC-008.4 renders all six decisions, repeated tickets and hostile-looking content as text with no mutations', async () => {
-    Object.values(ReviewDecision).forEach((action, index) =>
+    Object.values(ReviewHistoryDecision).forEach((action, index) =>
       reviewStore.history.push({
         decisionId: ticketUuid(900 + index),
         ticketId: ticketUuid(1),

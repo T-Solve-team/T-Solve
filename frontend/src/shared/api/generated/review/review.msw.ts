@@ -11,7 +11,7 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { RequestHandlerOptions } from 'msw';
 
-import { ReviewDecision, TicketSource, TicketStatus } from '../model';
+import { ReviewHistoryDecision, TicketSource, TicketStatus } from '../model';
 import type {
   ExpiredTicketPage,
   ReviewDecisionResult,
@@ -81,7 +81,7 @@ export const getGetReviewHistoryResponseMock = (
         projectId: faker.string.uuid(),
         name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       },
-      decision: faker.helpers.arrayElement(Object.values(ReviewDecision)),
+      decision: faker.helpers.arrayElement(Object.values(ReviewHistoryDecision)),
       actorId: faker.string.uuid(),
       actorName: faker.string.alpha({ length: { min: 10, max: 20 } }),
       authorName: faker.helpers.arrayElement([

@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
@@ -26,6 +26,30 @@ function renderUser(n: number) {
   return rendered;
 }
 
+/** Account status onSuccess awaits real detail/session invalidations before closing its dialog. */
+async function settleStatusMutation(client: ReturnType<typeof renderApp>['queryClient']) {
+  const cache = client.getMutationCache();
+  const mutations = cache.getAll();
+  if (!mutations.length) throw new Error('Expected an account-status mutation to have started');
+  await act(async () => {
+    await Promise.all(
+      mutations.map(
+        (mutation) =>
+          new Promise<void>((resolve) => {
+            let unsubscribe = () => {};
+            const finish = () => {
+              if (mutation.state.status !== 'pending') {
+                unsubscribe();
+                resolve();
+              }
+            };
+            unsubscribe = cache.subscribe(finish);
+            finish();
+          }),
+      ),
+    );
+  });
+}
 describe('User Detail account status', () => {
   afterEach(async () => {
     for (const client of clients) {
@@ -58,13 +82,14 @@ describe('User Detail account status', () => {
     expect(screen.getByText('user11@company.example')).toBeInTheDocument();
   });
 
-  it('AC-006.2 confirms MSG57 before deactivating an account without responsibilities', async () => {
+  it('AC-006.2 confirms MSG57 before deactivating an account without responsibilities (BUG-094)', async () => {
     const user = userEvent.setup();
-    renderUser(2);
+    const { queryClient } = renderUser(2);
     await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent(msg('MSG57', { user_name: 'Trần Thị Lan' }));
     await user.click(within(dialog).getByRole('button', { name: 'OK' }));
+    await settleStatusMutation(queryClient);
     expect(await screen.findByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
   });
 
@@ -138,6 +163,7 @@ describe('User Detail account status', () => {
     queryClient.setQueryData(cachedList, { content: [] });
     queryClient.setQueryData(cachedRecipient, {});
     await user.click(retry);
+    await settleStatusMutation(queryClient);
     expect(await screen.findByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
     expect(screen.getByText('Archived Support')).toBeInTheDocument();
@@ -145,19 +171,20 @@ describe('User Detail account status', () => {
     expect(queryClient.getQueryState(cachedRecipient)?.isInvalidated).toBe(true);
   });
 
-  it('AC-006.5 / AC-009.1 hands over a managed Space before deactivating a Knowledge Manager', async () => {
+  it('AC-006.5 / AC-009.1 hands over a managed Space before deactivating a Knowledge Manager (BUG-094)', async () => {
     const user = userEvent.setup();
-    renderUser(3);
+    const { queryClient } = renderUser(3);
     await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
     const dialog = await screen.findByRole('dialog');
     await user.click(await within(dialog).findByRole('combobox', { name: 'IT Knowledge' }));
     await user.click(await screen.findByRole('option', { name: /Võ Thanh Tâm/ }));
     await user.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+    await settleStatusMutation(queryClient);
     expect(await screen.findByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
   });
 
-  it('AC-009.1 / AC-009.6 / AC-009.7 / AC-009.8 requires every Space, preserves data and choices, and prevents duplicate retry submissions', async () => {
+  it('AC-009.1 / AC-009.6 / AC-009.7 / AC-009.8 requires every Space, preserves data and choices, and prevents duplicate retry submissions (BUG-094)', async () => {
     const target = store.users.find((item) => item.id === account(3));
     if (!target) throw new Error('Missing Knowledge Manager fixture');
     target.spaceIds.push(HANDBOOK_SPACE_ID);
@@ -215,6 +242,7 @@ describe('User Detail account status', () => {
     } finally {
       finish?.();
     }
+    await settleStatusMutation(queryClient);
     expect(await screen.findByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
     expect((await getUserDetail(account(3))).managedSpaces).toEqual([]);
     expect(store.spaceHistory).toHaveLength(2);

@@ -97,9 +97,11 @@
         "profile-account": "pending",
         "profile-viewable-spaces": "pending",
         "my-solutions-contract": "pending",
-        "my-solutions-table": "pending"
+        "my-solutions-table": "pending",
+        "my-solutions-counters": "pending",
+        "my-solutions-filters": "pending"
       },
-      "lastUpdated": "2026-10-31T14:01:28.179Z",
+      "lastUpdated": "2026-11-01T09:22:19.220Z",
       "branch": "feat/identity",
       "repos": [
         "default"

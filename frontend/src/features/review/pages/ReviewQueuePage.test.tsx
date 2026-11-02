@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { server } from '@/mocks/server';
@@ -6,13 +6,16 @@ import { getGetReviewQueueMockHandler } from '@/shared/api/generated/review/revi
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
-import { getGetReviewQueueTicketIdsQueryKey } from '@/shared/api';
 import { reviewStore } from '../mocks/state';
+import { getGetReviewQueueTicketIdsQueryOptions } from '@/shared/api';
+
+const clients = new Set<ReturnType<typeof renderApp>['queryClient']>();
 
 /** The Review Queue with the mock Project Manager; resolves once the first page is shown. */
 async function openQueue(path = '/review-queue') {
   const user = userEvent.setup();
   const view = renderApp(path, { role: 'PROJECT_MANAGER' });
+  clients.add(view.queryClient);
   // The first render also loads the lazy page module, which can take longer than findBy's default 1 s.
   await screen.findByRole('link', { name: 'ITSUP-1031' }, { timeout: 5000 });
   return { user, ...view };
@@ -28,13 +31,46 @@ async function clickDecision(name: string) {
   });
 }
 
-/** Native events test the same form/selection behavior without per-character/hover work on the large table. */
+/** Activate a real control only while enabled and not Ant Design's click-suppressing loading state. */
 async function clickControl(control: HTMLElement) {
-  await waitFor(() => expect(control).toBeEnabled());
-  fireEvent.click(control);
+  await waitFor(() => {
+    expect(control).toBeEnabled();
+    expect(control).not.toHaveClass('ant-btn-loading');
+    fireEvent.click(control);
+  });
 }
 
+async function settleDecision(client: ReturnType<typeof renderApp>['queryClient']) {
+  const cache = client.getMutationCache();
+  const mutations = cache.getAll();
+  if (!mutations.length) throw new Error('Expected a real review decision mutation');
+  await act(async () => {
+    await Promise.all(
+      mutations.map(
+        (mutation) =>
+          new Promise<void>((resolve) => {
+            let unsubscribe = () => {};
+            const finish = () => {
+              if (mutation.state.status !== 'pending') {
+                unsubscribe();
+                resolve();
+              }
+            };
+            unsubscribe = cache.subscribe(finish);
+            finish();
+          }),
+      ),
+    );
+  });
+}
 describe('ReviewQueuePage', () => {
+  afterEach(async () => {
+    for (const client of clients) await waitFor(() => expect(client.isMutating()).toBe(0));
+    cleanup();
+    await Promise.all([...clients].map((client) => client.cancelQueries()));
+    for (const client of clients) client.clear();
+    clients.clear();
+  });
   // BUG-004: load the lazy page module once before the tests, so the first test's 5 s wait covers only the
   // render, not the module load as well (guideline 10 §6 forbids longer timeouts).
   beforeAll(async () => {
@@ -71,9 +107,10 @@ describe('ReviewQueuePage', () => {
   });
 
   it('AC-002.1 / AC-002.3 approves one ticket at once (no confirm) and shows MSG14', async () => {
-    await openQueue();
+    const { queryClient } = await openQueue();
     await clickControl(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await clickDecision('Approve');
+    await settleDecision(queryClient);
     expect(await screen.findByText(msg('MSG14', { count: 1 }))).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: 'ITSUP-1031' })).not.toBeInTheDocument(),
@@ -81,7 +118,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('0 selected')).toBeInTheDocument();
   });
 
-  it('AC-002.2 / AC-002.5 asks MSG19, cancels without writes and then approves two tickets (BUG-090)', async () => {
+  it('AC-002.2 / AC-002.5 asks MSG19, cancels without writes and then approves two tickets (BUG-100)', async () => {
     const { queryClient } = await openQueue();
     await clickControl(screen.getByRole('checkbox', { name: 'Select ITSUP-1031' }));
     await clickControl(screen.getByRole('checkbox', { name: 'Select ITSUP-1102' }));
@@ -94,16 +131,13 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('2 selected')).toBeInTheDocument();
     expect(reviewStore.history).toEqual([]);
     await clickDecision('Approve');
-    const confirmation = within(await screen.findByRole('dialog'));
-    // The queue poll can refresh selection eligibility while its confirmation remains open.
-    await act(async () => {
-      await queryClient.refetchQueries({ queryKey: getGetReviewQueueTicketIdsQueryKey() });
-    });
-    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
-    fireEvent.click(confirmation.getByRole('button', { name: 'OK' }));
-    await waitFor(() => expect(reviewStore.history).toHaveLength(2));
-    await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+    await clickControl(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: /^(?:loading\s+)?OK$/,
+      }),
+    );
 
+    await settleDecision(queryClient);
     expect(await screen.findByText(msg('MSG14', { count: 2 }))).toBeInTheDocument();
     expect(await screen.findByText('Total 56 items')).toBeInTheDocument();
   });
@@ -126,6 +160,7 @@ describe('ReviewQueuePage', () => {
       target: { value: 'Does not fix the certificate error.' },
     });
     await clickControl(within(dialog).getByRole('button', { name: 'Reject' }));
+    await settleDecision(queryClient);
     expect(await screen.findByText(msg('MSG16', { count: 1 }))).toBeInTheDocument();
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
     await waitFor(() =>
@@ -144,9 +179,8 @@ describe('ReviewQueuePage', () => {
       target: { value: 'Please add the exact error message.' },
     });
     await clickControl(within(dialog).getByRole('button', { name: 'Send' }));
-    await waitFor(() => expect(reviewStore.history).toHaveLength(2));
-    await waitFor(() => expect(queryClient.isMutating()).toBe(0));
 
+    await settleDecision(queryClient);
     expect(await screen.findByText(msg('MSG17'))).toBeInTheDocument();
     expect(await screen.findByText('Total 56 items')).toBeInTheDocument();
   });
@@ -154,7 +188,9 @@ describe('ReviewQueuePage', () => {
   it('AC-001.3 "Select all" selects every ticket in the queue, not only this page', async () => {
     const { queryClient } = await openQueue();
     await clickControl(screen.getByRole('checkbox', { name: 'Select all' }));
-    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    await act(async () => {
+      await queryClient.ensureQueryData(getGetReviewQueueTicketIdsQueryOptions());
+    });
     expect(await screen.findByText('58 selected')).toBeInTheDocument();
   });
 

@@ -23,13 +23,13 @@ export function ReviewTicketDetail({ ticketId }: { ticketId: string }) {
   const canDecide =
     !!ticket &&
     !detail.isError &&
-    !detail.isFetching &&
     hasRole('PROJECT_MANAGER') &&
     isProjectManagerOf(ticket.project.projectId) &&
     ticket.status === 'PENDING_REVIEW';
+  const canSubmit = canDecide && !detail.isFetching;
 
   function handleApprove() {
-    if (!canDecide || submitting.current) return;
+    if (!canSubmit || submitting.current) return;
     submitting.current = true;
     approve.mutate(
       { data: { ticketIds: [ticketId] } },
@@ -60,20 +60,20 @@ export function ReviewTicketDetail({ ticketId }: { ticketId: string }) {
                   aria-busy={approve.isPending}
                   type="primary"
                   loading={approve.isPending}
-                  disabled={approve.isPending || dialog !== null}
+                  disabled={!canSubmit || approve.isPending || dialog !== null}
                   onClick={handleApprove}
                 >
                   Approve
                 </Button>
                 <Button
                   danger
-                  disabled={approve.isPending || dialog !== null}
+                  disabled={!canSubmit || approve.isPending || dialog !== null}
                   onClick={() => setDialog('reject')}
                 >
                   Reject
                 </Button>
                 <Button
-                  disabled={approve.isPending || dialog !== null}
+                  disabled={!canSubmit || approve.isPending || dialog !== null}
                   onClick={() => setDialog('changes')}
                 >
                   Request Changes
@@ -87,8 +87,8 @@ export function ReviewTicketDetail({ ticketId }: { ticketId: string }) {
       {dialog === 'reject' && (
         <RejectTicketModal
           ticketIds={[ticketId]}
-          isOpen={dialog === 'reject'}
-          isDisabled={!canDecide}
+          isOpen
+          isDisabled={!canSubmit}
           onClose={() => setDialog(null)}
           onRejected={() => setDialog(null)}
         />
@@ -96,8 +96,8 @@ export function ReviewTicketDetail({ ticketId }: { ticketId: string }) {
       {dialog === 'changes' && (
         <RequestChangesModal
           ticketIds={[ticketId]}
-          isOpen={dialog === 'changes'}
-          isDisabled={!canDecide}
+          isOpen
+          isDisabled={!canSubmit}
           onClose={() => setDialog(null)}
           onSent={() => setDialog(null)}
         />

@@ -5,14 +5,14 @@ import {
   sendBackTickets,
   getReviewHistory,
   getMe,
-  ReviewDecision,
+  ReviewHistoryDecision,
 } from '@/shared/api';
 import { setDevUser } from '@/shared/auth';
 import { DETAIL_TICKET_IDS, MOCK_PROJECTS, ticketUuid } from './data';
 import { reviewStore } from './state';
 
 function seed() {
-  Object.values(ReviewDecision).forEach((action, index) =>
+  Object.values(ReviewHistoryDecision).forEach((action, index) =>
     reviewStore.history.push({
       decisionId: ticketUuid(900 + index),
       ticketId: ticketUuid(1),
@@ -28,7 +28,7 @@ function seed() {
   );
 }
 describe('Review History mock', () => {
-  it('AC-008.1 / AC-008.2 / AC-008.4 scopes, sorts and paginates distinct decisions before counting', async () => {
+  it('AC-008.1 / AC-008.2 / AC-008.4 scopes, sorts and paginates distinct decisions before counting (BUG-103)', async () => {
     seed();
     const first = reviewStore.history[0];
     if (!first) throw new Error('Missing history');
@@ -47,7 +47,7 @@ describe('Review History mock', () => {
       (await getReviewHistory({ sort: ['timestamp,asc'], size: 100 })).content.map(
         (e) => e.decision,
       ),
-    ).toEqual(Object.values(ReviewDecision));
+    ).toEqual(Object.values(ReviewHistoryDecision));
     expect(
       (await getReviewHistory({ departmentId: MOCK_PROJECTS[2].departmentId })).page.totalElements,
     ).toBe(0);

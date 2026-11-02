@@ -69,3 +69,33 @@ User preference: subsequent verification is automated tests/CLI only, with no ma
 
 User approved commit and PR creation. Code commit: default@09af635. Pre-commit secret scan, lint-staged and commitlint passed without bypasses. Feature moved through evaluating to passing using sdd.ts; module remains implementing for subsequent review features. PR targets the explicitly authorized KAN-24 dependency branch. KAN-159 starts only after this code/harness checkpoint.
 
+
+## PR #103 integration review — 2026-11-01
+
+User requested latest main integration, conflict resolution, final KAN-158 scope audit and inclusion of two existing-flow fixes where safe. Base main a5b5a53 is now an ancestor of this branch. Integration commits: cd4e449 (main merge), 521a060 (queue eligibility), 8abd654 (account-status test synchronization). All ten conflicts resolved. Main's ce1e400 Ticket Detail production code is preserved exactly; KAN-238 My Solutions has no diff from main. Historical Evidence synchronization bug is renamed BUG-096 to preserve main's toolbar BUG-089.
+
+Independent final source review: AC-007.1–007.8 PASS in approved frontend/proposed API/MSW scope. The audit caught BUG-095: default descending expiry header trapped descending and mock dates sorted lexically across offsets. Both meaningful regressions failed before the minimal local corrections and passed afterward. Existing review/users/detail focused cases passed; initial integrated run103/104, then corrected new UI test to await real generated query and render, targeted BUG-0952/2 pass. No production change to user account logic, no shared runtime changes, no timeout/worker/config or assertion weakening, no browser tests.
+
+Final static evidence: format, lint (0errors, one existing TicketListFilters warning), typecheck and build pass. Orval131 generated-file hashes unchanged. Graphify7164nodes/14877edges, four SQL files skipped due known missing parser. Final standard full frontend test run is pending in node_modules/.cache/pr103-final-verification.json; do not infer all-green verification from focused tests.
+
+GitHub connector update permission returns403, so PR title/body cannot be edited through that connector. Proposed title: feat(review): add expired ticket workflow (KAN-158). Keep backend persistence/JOB-02/SSE outside this frontend PR and disclose test outcome before merge.
+
+### Final full verification
+
+Standard whole frontend run:1280 total,1278 passed,2 failed,0 pending; exit1. Both failures outside this PR delta: KnowledgeChatbotPage AC-002.9 timeout (BUG097) and MySolutionsSection edge63 SUP140 missing (BUG098). Source for both features matches origin/main exactly. All review, expiry and account-status cases pass. No global-green or merge-ready claim. User authorized push and conflict resolution; publish branch with this limitation disclosed. GitHub metadata write403 remains.
+
+## FE Lead review follow-up: AC-007.7 (2026-11-01)
+
+Review: https://github.com/T-Solve-team/T-Solve/pull/103#pullrequestreview-5728966461
+
+- Address BUG-099: new real send-back test populates generated Ticket List(page0,size20) and Ticket Detail(ticket323) through MSW; proves both caches are initially valid, verifies SEND_BACK history and both invalidation states after successful mutation. Existing failure/queue/expiry assertions remain.
+- Mutation sensitivity: current implementation passes. Remove only the tickets-root invalidation predicate and the same test fails with expected false-to-true assertion; restore original hook byte-for-byte (hash assertion). No permanent runtime-hook change.
+- Add the requested comment explaining why a cleared descending sort maps to ascending (BUG-095). No functional selection or mock timing change.
+- Independent reviewer: no test-quality gap; direct generated client and real QueryClient/MSW, no mocked hook/cache invalidation.
+- Format, lint(0errors, existing TicketListFilters warning), typecheck and build pass. Regeneration matches all131 generated hashes. Graphify7165nodes/14881edges; known4SQL parser omissions.
+- FE Lead confirms BUG097/098 belong to his prior work; his fixes have not landed in origin/main a5b5a53 at the start of this verification. Need update/re-run after they land before merge.
+- Whole-frontend verification pending in node_modules/.cache/pr103-ac0077-full.json. This entry does not claim global-green CI or merge readiness.
+
+### Final follow-up verification
+
+The initial full run with the full-page newtest was unstable:1167passed/1281,51failed,63pending; newcase exceeded15s. Replaced only the test harness with a small component calling the actual send-back hook; generated list/detail requests and all before/after/history assertions retained, fetched concurrently. Independent reviewer confirms equivalent AC007.7 coverage. Thin focusedGREEN passes; removing only runtime tickets-root predicate produces assertionRED; source restored byte-for-byte. Rechecked format/lint/typecheck/build pass. API output unchanged131hashes. Final full run:1162passed/1281,54failed,65pending; newBUG099 test PASSES in522ms. Broad failures include test/hook timeouts across existing chatbot/profile/review/users suites; no global-green or proven rootcause claim. Reports: node_modules/.cache/pr103-ac0077-final.json and pr103-cache-thin-red.json. User authorized fix/push; this change does not adjust configs, deadlines or existing assertions. Need main updates and successful full verification before merge.

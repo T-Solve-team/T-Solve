@@ -7,7 +7,7 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 import type { ProjectRef } from './projectRef';
-import type { ReviewDecision } from './reviewDecision';
+import type { ReviewHistoryDecision } from './reviewHistoryDecision';
 
 export interface ReviewHistoryItem {
   decisionId: string;
@@ -15,7 +15,7 @@ export interface ReviewHistoryItem {
   sourceTicketId: string;
   title: string;
   project: ProjectRef;
-  decision: ReviewDecision;
+  decision: ReviewHistoryDecision;
   actorId: string;
   actorName: string;
   /** @nullable */

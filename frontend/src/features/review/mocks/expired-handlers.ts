@@ -61,8 +61,11 @@ function list(user: CurrentUser, url: URL) {
   const value = values[sort.field] ?? values.expiredAt;
   return expired(user, url).sort(
     (a, b) =>
-      (value ? value(a).localeCompare(value(b)) : 0) * (sort.order === 'asc' ? 1 : -1) ||
-      a.ticketId.localeCompare(b.ticketId),
+      (value === values.expiredAt
+        ? Date.parse(a.expiredAt) - Date.parse(b.expiredAt)
+        : value
+          ? value(a).localeCompare(value(b))
+          : 0) * (sort.order === 'asc' ? 1 : -1) || a.ticketId.localeCompare(b.ticketId),
   );
 }
 function integer(value: string | null, fallback: number) {

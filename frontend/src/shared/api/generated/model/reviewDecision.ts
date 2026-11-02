@@ -11,9 +11,6 @@ export type ReviewDecision = (typeof ReviewDecision)[keyof typeof ReviewDecision
 
 export const ReviewDecision = {
   APPROVE: 'APPROVE',
-  REJECT: 'REJECT',
   REQUEST_CHANGES: 'REQUEST_CHANGES',
-  UNPUBLISH: 'UNPUBLISH',
-  REPUBLISH: 'REPUBLISH',
-  SEND_BACK: 'SEND_BACK',
+  REJECT: 'REJECT',
 } as const;

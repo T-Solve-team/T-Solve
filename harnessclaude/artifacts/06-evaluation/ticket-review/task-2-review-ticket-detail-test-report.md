@@ -50,6 +50,16 @@ The frontend has no adopted coverage script or percentage threshold. Named behav
 - Graphify refreshed after the queue-test correction to 6,969 nodes / 14,800 edges; four SQL files omitted due to unavailable tree_sitter_sql, unrelated to this frontend slice.
 - Backend integration, durable audit/history, real Jira/email delivery and Evidence binary downloads remain unverified/out of scope. No new bug has been demonstrated in this feature.
 
+## PR #102 FE Lead follow-up — 2026-11-01
+
+- Review: https://github.com/T-Solve-team/T-Solve/pull/102#pullrequestreview-5727559560. User approved the exact three-file quick change at 10:23:01Z. No acceptance criterion, timeout, lint rule or CI configuration changed.
+- BUG-089 failing-first run `pr102-detail-red.json`: 2 passed / 1 failed / 19 intentionally filtered; the old detached Approve element never becomes disabled because refetch removes its toolbar. Corrected `canDecide` (render permission/status) versus `canSubmit` (freshness/interaction); final focused run `pr102-detail-green.json`: 22/22 passed.
+- Added AC-006.3 unmanaged PM-author case through the real mock and AC-006.1/006.5 empty-Evidence MSG04 case. Removing the manager check makes the new permission test fail; restored exact file bytes/SHA-256 and the same test passes (`pr102-permission-mutant.json`, `pr102-permission-restored.json`). Existing pending-approval test guards the intentionally retained stable Approve accessible name. Conditional popup isOpen simplified.
+- Users default-worker rechecks: **154/154**, zero failed/skipped under Node22.16.0 and Node24.22.1; an additional Node24 run after a clean local dependency installation also passes **154/154** (`pr102-users-node24-local-deps.json`). Users/FormModal/setup have no diff against main81d64dd. Original accessible-name fix is already merged in #100; no new users fix is claimed. Bug rows now record the external remaining-failure report, successful rechecks, lack of supplied reproduction details, and pending tester confirmation; they are not Closed.
+- Environment correction: a temporary dependency junction to the original checkout produced275 false boundary lint errors. Replaced it with `npm ci --offline` (424 packages, unchanged lockfile). Stopped the preliminary full-suite attempt before completion, so it is not evidence of a pass or application failure. Fresh local-dependency format/lint/typecheck pass (zero errors, one existing warning); build passes and API regeneration leaves no generated diff.
+- Final full Node24.22.1 suite on local dependencies: **1,139/1,139 passed, zero failed/skipped, 148/148 reported suites, exit0**, using `--no-cache --maxWorkers=2 --reporter=json --outputFile=node_modules/.cache/pr102-full-final-node24.json`. Reported wall duration is1,766 seconds; one tool wait itself showed an extended wall-time gap, so no performance conclusion is drawn. All users and detail cases pass. No further test rerun is required without a source change.
+- Independent read-only reviewer: no critical/informational findings after exact diff/spec/Graphify review. Browser still disabled in Work settings; no new browser/visual check is claimed. Graphify refreshed after source changes:6,920 nodes /14,746 edges; four SQL files remain omitted due to the known missing parser.
+
 ## Trace output
 
 ```text

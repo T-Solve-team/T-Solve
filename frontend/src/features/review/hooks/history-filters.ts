@@ -1,6 +1,6 @@
-import { ReviewDecision } from '@/shared/api';
+import { ReviewHistoryDecision } from '@/shared/api';
 
-export const DECISION_LABELS: Record<ReviewDecision, string> = {
+export const DECISION_LABELS: Record<ReviewHistoryDecision, string> = {
   APPROVE: 'Approve',
   REJECT: 'Reject',
   REQUEST_CHANGES: 'Request changes',
@@ -8,8 +8,8 @@ export const DECISION_LABELS: Record<ReviewDecision, string> = {
   REPUBLISH: 'Re-publish',
   SEND_BACK: 'Send back to queue',
 };
-export function isReviewDecision(value: string | null): value is ReviewDecision {
-  return value !== null && Object.hasOwn(ReviewDecision, value);
+export function isReviewDecision(value: string | null): value is ReviewHistoryDecision {
+  return value !== null && Object.hasOwn(ReviewHistoryDecision, value);
 }
 function calendarDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;

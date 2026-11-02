@@ -7,13 +7,13 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 import type { PageParameter } from './pageParameter';
-import type { ReviewDecision } from './reviewDecision';
+import type { ReviewHistoryDecision } from './reviewHistoryDecision';
 import type { SizeParameter } from './sizeParameter';
 import type { SortParameter } from './sortParameter';
 
 export type GetReviewHistoryParams = {
   departmentId?: string;
-  decision?: ReviewDecision;
+  decision?: ReviewHistoryDecision;
   dateFrom?: string;
   dateTo?: string;
   /**
