@@ -8,6 +8,8 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
@@ -23,6 +26,8 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 @Component
 public class GoogleOidcClient {
+
+    private static final Logger LOG = LoggerFactory.getLogger(GoogleOidcClient.class);
 
     static final String CALLBACK_PATH = "/api/v1/auth/callback";
 
@@ -63,10 +68,20 @@ public class GoogleOidcClient {
                     .retrieve()
                     .body(Map.class);
             Object idToken = answer == null ? null : answer.get("id_token");
-            return idToken instanceof String text && !text.isBlank() ? Optional.of(text) : Optional.empty();
+            if (idToken instanceof String text && !text.isBlank()) {
+                return Optional.of(text);
+            }
+            LOG.warn("Google token exchange failed: the answer had no id_token");
+            return Optional.empty();
+        } catch (RestClientResponseException e) {
+            // the status only: the message and the body can carry the code or Google's error detail
+            LOG.warn(
+                    "Google token exchange failed: HTTP status {}",
+                    e.getStatusCode().value());
+            return Optional.empty();
         } catch (RuntimeException e) {
-            // any failure (non-2xx, timeout, reset, not JSON) means "no token"; not logged: the message could carry the
-            // code
+            // the class name only: the message could carry the code
+            LOG.warn("Google token exchange failed: {}", e.getClass().getSimpleName());
             return Optional.empty();
         }
     }

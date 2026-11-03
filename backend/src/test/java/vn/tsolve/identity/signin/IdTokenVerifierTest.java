@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -38,6 +40,8 @@ class IdTokenVerifierTest {
                 SignInTestFixtures.properties(),
                 FakeGoogleIssuer.jwksUri(),
                 FakeGoogleIssuer.ISSUER,
+                Duration.ofMillis(200),
+                Duration.ofMillis(200),
                 new IdentityClock(Clock.fixed(now, ZoneOffset.UTC)));
     }
 
@@ -209,5 +213,49 @@ class IdTokenVerifierTest {
         assertThat(verify(token)).isEmpty();
 
         assertThat(output.getAll()).doesNotContain(token);
+    }
+
+    @Test
+    @DisplayName("AC-001.9 / Q4 accepts an exp 30 s in the past (inside the 60 s skew)")
+    void acceptsAnExpiredTokenInsideTheSkew_AC_001_9_Q4() {
+        long thirtySecondsAgo = MutableClock.START.minusSeconds(30).getEpochSecond();
+
+        long anHourAgo = MutableClock.START.minusSeconds(3600).getEpochSecond();
+
+        assertThat(verify(FakeGoogleIssuer.idToken(NONCE, claims -> {
+                    claims.put("iat", anHourAgo);
+                    claims.put("exp", thirtySecondsAgo);
+                })))
+                .isPresent();
+    }
+
+    @Test
+    @DisplayName("AC-001.9 / Q4 rejects an exp 90 s in the past (outside the 60 s skew)")
+    void rejectsAnExpiredTokenOutsideTheSkew_AC_001_9_Q4() {
+        long ninetySecondsAgo = MutableClock.START.minusSeconds(90).getEpochSecond();
+
+        long anHourAgo = MutableClock.START.minusSeconds(3600).getEpochSecond();
+
+        assertThat(verify(FakeGoogleIssuer.idToken(NONCE, claims -> {
+                    claims.put("iat", anHourAgo);
+                    claims.put("exp", ninetySecondsAgo);
+                })))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("edge 33 an unreachable JWKS logs one WARN with the exception class only")
+    void logsOneWarnForAJwksFailure_edge33_review(CapturedOutput output) {
+        FakeGoogleIssuer.jwksDown();
+        String token = FakeGoogleIssuer.idToken(NONCE, nothing());
+
+        assertThat(verify(token)).isEmpty();
+
+        List<String> warns = output.getAll()
+                .lines()
+                .filter(line -> line.contains("WARN") && line.contains("ID token verification failed"))
+                .toList();
+        assertThat(warns).hasSize(1);
+        assertThat(warns.get(0)).contains("Exception").doesNotContain(token).doesNotContain("lan.tran");
     }
 }

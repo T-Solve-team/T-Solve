@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.support.NoOpCache;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -22,10 +24,8 @@ import org.springframework.web.client.RestTemplate;
 @Component
 public class IdTokenVerifier {
 
+    private static final Logger LOG = LoggerFactory.getLogger(IdTokenVerifier.class);
     private static final Duration SKEW = Duration.ofSeconds(60);
-    // shortcut: fixed JWKS timeouts, not configurable; make them properties if Google's JWKS ever needs tuning
-    private static final Duration JWKS_CONNECT_TIMEOUT = Duration.ofSeconds(5);
-    private static final Duration JWKS_READ_TIMEOUT = Duration.ofSeconds(10);
 
     private final NimbusJwtDecoder decoder;
     private final String clientId;
@@ -36,10 +36,12 @@ public class IdTokenVerifier {
             SignInProperties properties,
             @Value("${tsolve.oidc.google.jwk-set-uri}") String jwkSetUri,
             @Value("${tsolve.oidc.google.issuer}") String issuer,
+            @Value("${tsolve.oidc.google.connect-timeout}") Duration connectTimeout,
+            @Value("${tsolve.oidc.google.read-timeout}") Duration readTimeout,
             IdentityClock clock) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(JWKS_CONNECT_TIMEOUT);
-        factory.setReadTimeout(JWKS_READ_TIMEOUT);
+        factory.setConnectTimeout(connectTimeout);
+        factory.setReadTimeout(readTimeout);
         this.decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
                 .jwsAlgorithm(SignatureAlgorithm.RS256)
                 // shortcut: no JWKS cache, one fetch per sign-in (Spring's default cache is shared per URI and would
@@ -58,14 +60,18 @@ public class IdTokenVerifier {
     public Optional<GoogleIdentity> verify(String idToken, String expectedNonce) {
         try {
             Jwt jwt = decoder.decode(idToken);
-            return claimsAreValid(jwt, expectedNonce)
-                    ? Optional.of(new GoogleIdentity(
-                            jwt.getSubject(),
-                            jwt.getClaimAsString("email"),
-                            jwt.getClaimAsString("hd"),
-                            jwt.getClaimAsString("name")))
-                    : Optional.empty();
+            if (!claimsAreValid(jwt, expectedNonce)) {
+                LOG.warn("ID token verification failed: a claim was rejected");
+                return Optional.empty();
+            }
+            return Optional.of(new GoogleIdentity(
+                    jwt.getSubject(),
+                    jwt.getClaimAsString("email"),
+                    jwt.getClaimAsString("hd"),
+                    jwt.getClaimAsString("name")));
         } catch (RuntimeException e) {
+            // the class name only: the message can carry the token or the JWKS answer
+            LOG.warn("ID token verification failed: {}", e.getClass().getSimpleName());
             return Optional.empty();
         }
     }

@@ -964,4 +964,14 @@ class CallbackControllerTest {
                     .doesNotContain(Base64.getUrlEncoder().withoutPadding().encodeToString(hash));
         }
     }
+
+    @Test
+    @DisplayName("AC-001.9 / edge 23 a JWKS slower than the read timeout gives MSG06")
+    void aSlowJwksGivesMsg06_AC_001_9_edge23_review() throws Exception {
+        Browser browser = authorized(ACME);
+        answerValidToken(browser);
+        FakeGoogleIssuer.delayJwks(1500);
+
+        assertMsg06(callWithCode(browser), ACME);
+    }
 }

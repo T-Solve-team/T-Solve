@@ -213,6 +213,15 @@ public final class FakeGoogleIssuer {
         SERVER.stubFor(get(urlEqualTo("/jwks")).willReturn(aResponse().withStatus(500)));
     }
 
+    public static void delayJwks(int milliseconds) {
+        SERVER.stubFor(get(urlEqualTo("/jwks"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withFixedDelay(milliseconds)
+                        .withBody(new JWKSet(KEY.toPublicJWK()).toString())));
+    }
+
     public static void jwksReset() {
         SERVER.stubFor(get(urlEqualTo("/jwks")).willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
     }
