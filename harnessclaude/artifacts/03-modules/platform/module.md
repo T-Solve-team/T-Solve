@@ -36,8 +36,9 @@ decided 29/10, replacing the shared database with `workspace_id` and row-level s
 database holds only what is needed to find a Workspace: site name, status, database connection, the Jira site and
 its `cloudId`, and the emails of its Accounts (GBR-16). The Workspace of a request comes only from the Workspace
 site's host name, the verified `cloudId` of the Forge Invocation Token, or the job's Workspace; binding it routes
-every query to that Workspace's database. Workspaces are created, suspended and reactivated by the operations team
-with an ops script, not in the application (GBR-24, GBR-38, KAN-240; no Platform Console since 31/10). The module
+every query to that Workspace's database. Workspaces are created, suspended and reactivated by a Platform Operator
+in the Platform Console (module `platform-console`) or by the operations team with an ops script that runs the same
+provisioning service (GBR-24, GBR-38, KAN-240; the Console is back since the HLA of 3/11). The module
 also holds file storage per Workspace and the deployment: Docker Compose, Caddy wildcard routing by host, CI/CD, the
 application VPS and the AI VPS (D41), and the demo seed (D42). The backend packages `platform` and `common/tenant`
 are *proposed*.
@@ -55,8 +56,9 @@ are *proposed*.
   (D9) is created and checked with this module's support.
 - Catalog service: find a Workspace; link its Jira site when the Admin enters it at UC-10 (MSG153, GBR-24); keep
   each email in one Workspace (MSG155, GBR-16).
-- Ops script `infra/ops/workspace.sh`: create a Workspace (database, runtime user, migrations, catalog row, first
-  Admin Account — all or nothing), suspend and reactivate it (KAN-240, GBR-24, GBR-38).
+- Provisioning service and the ops script `infra/ops/workspace.sh` (its hand-run form): create a Workspace (database,
+  runtime user, migrations, catalog row, first-Admin invitation — all or nothing), suspend and reactivate it
+  (KAN-240, GBR-24, GBR-38); the Platform Console calls the same service.
 - File storage per Workspace: `/{workspaceId}/…`, no path traversal, size limit, upload / read / delete (KAN-96).
 - Migrations: the catalog changelog, then the tenant changelog on every Workspace database, at startup and in the
   deploy.
@@ -79,7 +81,7 @@ are *proposed*.
 | Tenant Resolver | Servlet filter / Forge token check | Sets `TenantContext` from host or verified `cloudId`; MSG150, MSG151, MSG152 |
 | WorkspaceCatalog | Service interface | Find by id, site name or `cloudId`; link the Jira site (UC-10); claim an email (UC-05) |
 | Workspace events | Application events | `WorkspaceSuspended`, `WorkspaceReactivated` |
-| Ops script | Shell + backend `ops` profile | Create, suspend, reactivate a Workspace |
+| Provisioning service | Java; Shell + backend `ops` profile | Create, suspend, reactivate a Workspace; called by the Platform Console and by the ops script |
 | File storage | Service interface | Upload, read, delete a file of the current Workspace |
 | Deployment | Compose, Caddy, CI | Hosts `{site name}.`, `login.`, `api.`; `OLLAMA_BASE_URL` to the AI VPS |
 
@@ -87,7 +89,7 @@ are *proposed*.
 | Dependency | Interface | Description |
 |------------|-----------|-------------|
 | `common/` (base exceptions) | Java | Errors with an MSG code (`backend/AGENTS.md` §1; not a module dependency) |
-| identity | `FirstAdminCreator` | Creates the first Admin Account inside a new Workspace (ops script) |
+| identity | Account creation for the first Admin (to agree) | Whether the first-Admin invitation needs an identity service is settled in the `platform` plan (identity spec, Required from other modules) |
 
 ## Target Repos
 - default: backend/ (`platform`, `common/tenant`, proposed), the repo root (`docker-compose*.yml`, `infra/`,

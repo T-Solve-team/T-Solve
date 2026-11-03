@@ -498,3 +498,4 @@
 {"ts":"2026-11-03T17:18:57.553Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"pending","to":"in-progress"}
 {"ts":"2026-11-03T17:18:57.815Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-03T17:18:58.087Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T17:59:45.096Z","type":"spec-approved","module":"identity","specHash":"5a0b213bea1cb3bbf4c97da21f250bb727a0414388a66d07927100c24cca99dd"}

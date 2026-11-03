@@ -290,7 +290,7 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
 - The T-Solve app's panel states MSG62 and MSG74, and the `api.` endpoint that asks `SignInStateService` for a
   sign-in link → `jira-app` (Đặng Tấn Bình, KAN-124).
 - The Platform Console pages, its Login page that shows MSG135 and MSG06, and what an Operator may do →
-  `platform-console` (Đặng Tấn Bình, KAN-113…116).
+  `platform-console` (restored with the HLA, 3/11; owner and issues per the module map).
 - The web-app sign-in mechanism → `fe-foundation` change request KAN-198 (decision Q16):
   - `startSignIn`, `useSignInMessage`;
   - the catalog entries;
