@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { problem } from '@/shared/api/mocks';
-import { getGetReviewTicketDetailQueryKey } from '@/shared/api';
+import {
+  getGetMeQueryOptions,
+  getGetReviewTicketDetailQueryOptions,
+  getGetReviewTicketDetailQueryKey,
+} from '@/shared/api';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 import { DETAIL_TICKET_IDS, ticketUuid } from '../mocks/data';
@@ -193,7 +197,7 @@ describe('Ticket Detail review', () => {
     expect(screen.queryByRole('button', { name: 'Request Changes' })).not.toBeInTheDocument();
   });
 
-  it('AC-006.5 renders filenames as text, readable sizes, and only safe references (BUG-091)', async () => {
+  it('AC-006.5 renders filenames as text, readable sizes, and only safe references (BUG-091, BUG-096)', async () => {
     const record = reviewStore.tickets.find((ticket) => ticket.ticketId === firstId);
     if (!record) throw new Error('Missing fixture');
     record.evidence = [
@@ -208,9 +212,14 @@ describe('Ticket Detail review', () => {
       sizeBytes: i === 0 ? 1048576 : 128,
       url,
     }));
-    renderApp(detailPath());
-    // BUG-091: wait with a cheap text query, then check the link once. findByRole('link') inside the wait re-runs on
-    // every DOM change (~200 ms each under load) and blocks the render it waits for, so it used up the whole 1 s.
+    const { queryClient, router } = renderApp(detailPath());
+    // Preserve actual route/session/detail readiness rather than a first-render deadline.
+    await act(async () => {
+      await router.navigate(detailPath());
+      await queryClient.ensureQueryData(getGetMeQueryOptions());
+      await queryClient.ensureQueryData(getGetReviewTicketDetailQueryOptions(firstId));
+    });
+    // BUG-091: wait for the rendered Evidence with a cheap text query before checking its link.
     expect(await screen.findByText('<script>file0</script>')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '<script>file0</script>' })).toHaveAttribute(
       'href',

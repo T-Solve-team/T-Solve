@@ -24,6 +24,9 @@ import type {
 
 import type {
   ApproveTicketsRequest,
+  ExpiredTicketPage,
+  GetExpiredTicketIdsParams,
+  GetExpiredTicketsParams,
   GetReviewQueueParams,
   GetReviewQueueTicketIdsParams,
   ProblemResponse,
@@ -196,6 +199,405 @@ export function useGetReviewTicketDetail<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getGetExpiredTicketsUrl = (params?: GetExpiredTicketsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ['sort'];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/expired-tickets?${stringifiedParams}`
+    : `/api/v1/expired-tickets`;
+};
+
+/**
+ * @summary Expired tickets of the Projects the user is Project Manager of (SRS 7.5).
+ */
+export const getExpiredTickets = async (
+  params?: GetExpiredTicketsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<ExpiredTicketPage> => {
+  return http<ExpiredTicketPage>(getGetExpiredTicketsUrl(params), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetExpiredTicketsQueryKey = (params?: GetExpiredTicketsParams) => {
+  return [`/api/v1/expired-tickets`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetExpiredTicketsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getExpiredTickets>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetExpiredTicketsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getExpiredTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetExpiredTicketsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getExpiredTickets>>> = ({ signal }) =>
+    getExpiredTickets(params, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getExpiredTickets>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetExpiredTicketsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getExpiredTickets>>
+>;
+export type GetExpiredTicketsQueryError = ErrorType<ProblemResponse>;
+
+export function useGetExpiredTickets<
+  TData = Awaited<ReturnType<typeof getExpiredTickets>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params: undefined | GetExpiredTicketsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getExpiredTickets>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getExpiredTickets>>,
+          TError,
+          Awaited<ReturnType<typeof getExpiredTickets>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetExpiredTickets<
+  TData = Awaited<ReturnType<typeof getExpiredTickets>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetExpiredTicketsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getExpiredTickets>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getExpiredTickets>>,
+          TError,
+          Awaited<ReturnType<typeof getExpiredTickets>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetExpiredTickets<
+  TData = Awaited<ReturnType<typeof getExpiredTickets>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetExpiredTicketsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getExpiredTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Expired tickets of the Projects the user is Project Manager of (SRS 7.5).
+ */
+
+export function useGetExpiredTickets<
+  TData = Awaited<ReturnType<typeof getExpiredTickets>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetExpiredTicketsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getExpiredTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetExpiredTicketsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetExpiredTicketIdsUrl = (params?: GetExpiredTicketIdsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/expired-tickets/ticket-ids?${stringifiedParams}`
+    : `/api/v1/expired-tickets/ticket-ids`;
+};
+
+/**
+ * @summary Ids of every Expired ticket, for "Select all" (all pages, not only the one shown).
+ */
+export const getExpiredTicketIds = async (
+  params?: GetExpiredTicketIdsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<TicketIdList> => {
+  return http<TicketIdList>(getGetExpiredTicketIdsUrl(params), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetExpiredTicketIdsQueryKey = (params?: GetExpiredTicketIdsParams) => {
+  return [`/api/v1/expired-tickets/ticket-ids`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetExpiredTicketIdsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getExpiredTicketIds>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetExpiredTicketIdsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getExpiredTicketIds>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetExpiredTicketIdsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getExpiredTicketIds>>> = ({ signal }) =>
+    getExpiredTicketIds(params, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getExpiredTicketIds>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetExpiredTicketIdsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getExpiredTicketIds>>
+>;
+export type GetExpiredTicketIdsQueryError = ErrorType<ProblemResponse>;
+
+export function useGetExpiredTicketIds<
+  TData = Awaited<ReturnType<typeof getExpiredTicketIds>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params: undefined | GetExpiredTicketIdsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getExpiredTicketIds>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getExpiredTicketIds>>,
+          TError,
+          Awaited<ReturnType<typeof getExpiredTicketIds>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetExpiredTicketIds<
+  TData = Awaited<ReturnType<typeof getExpiredTicketIds>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetExpiredTicketIdsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getExpiredTicketIds>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getExpiredTicketIds>>,
+          TError,
+          Awaited<ReturnType<typeof getExpiredTicketIds>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetExpiredTicketIds<
+  TData = Awaited<ReturnType<typeof getExpiredTicketIds>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetExpiredTicketIdsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getExpiredTicketIds>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Ids of every Expired ticket, for "Select all" (all pages, not only the one shown).
+ */
+
+export function useGetExpiredTicketIds<
+  TData = Awaited<ReturnType<typeof getExpiredTicketIds>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetExpiredTicketIdsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getExpiredTicketIds>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetExpiredTicketIdsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSendBackTicketsUrl = () => {
+  return `/api/v1/reviews/send-back`;
+};
+
+/**
+ * Frontend proposal. Validate and authorize the entire unique 1–500 UUID batch before sending back; retain mock history and immutable Ticket content, reset due dates using current Project review ranges.
+ * @summary Sends Expired tickets back to the queue (MSG25); frontend proposal.
+ */
+export const sendBackTickets = async (
+  approveTicketsRequest: ApproveTicketsRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<ReviewDecisionResult> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ReviewDecisionResult>(getSendBackTicketsUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(approveTicketsRequest),
+  });
+};
+
+export const getSendBackTicketsMutationKey = () => ['sendBackTickets'] as const;
+
+export const getSendBackTicketsMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendBackTickets>>,
+    TError,
+    SendBackTicketsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendBackTickets>>,
+  TError,
+  SendBackTicketsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSendBackTicketsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendBackTickets>>,
+    SendBackTicketsMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return sendBackTickets(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendBackTicketsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendBackTickets>>
+>;
+export type SendBackTicketsMutationBody = ApproveTicketsRequest;
+export type SendBackTicketsMutationError = ErrorType<ProblemResponse>;
+export type SendBackTicketsMutationVariables = { data: ApproveTicketsRequest };
+
+/**
+ * @summary Sends Expired tickets back to the queue (MSG25); frontend proposal.
+ */
+export const useSendBackTickets = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof sendBackTickets>>,
+      TError,
+      SendBackTicketsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof sendBackTickets>>,
+  TError,
+  SendBackTicketsMutationVariables,
+  TContext
+> => {
+  return useMutation(getSendBackTicketsMutationOptions(options), queryClient);
+};
 export const getGetReviewQueueUrl = (params?: GetReviewQueueParams) => {
   const normalizedParams = new URLSearchParams();
 
