@@ -250,8 +250,8 @@
     }
   },
   "identity": {
-    "specHash": "b1a21ad0f5d8c89a41efa789e2d662430a39e5ad8b1d8cd4ced0c1acd709e7a4",
-    "approvedAt": "2026-11-03T16:05:24.846Z",
+    "specHash": "5a0b213bea1cb3bbf4c97da21f250bb727a0414388a66d07927100c24cca99dd",
+    "approvedAt": "2026-11-03T17:59:45.094Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace has a Google domain (AC-001.48), THE backend SHALL create a state value for the Workspace that the platform resolved from the host and answer 302 to  on the central sign-in origin configured in  ( in production), without a signed-in user.",
