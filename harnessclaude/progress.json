@@ -29,15 +29,15 @@
         "import-tickets-screen": "evaluating",
         "import-preview-screen": "evaluating",
         "import-preview-actions": "evaluating",
-        "import-ticket-preview-popup": "pending"
+        "import-ticket-preview-popup": "evaluating"
       },
-      "lastUpdated": "2026-11-02T20:00:49.662Z",
+      "lastUpdated": "2026-11-03T15:38:18.596Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "55a1ee6ec40a9756571b81dbca052f0fec0a38bd"
+        "default": "1b6bef51e3bebf41193c9903a3c39380b9e2e306"
       }
     },
     "be-foundation": {

@@ -469,5 +469,9 @@
 {"ts":"2026-11-01T06:40:11.339Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"84adf7ecdb077412bb6b7e5ac995f48dc5e78164"}
 {"ts":"2026-11-01T06:40:28.679Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-screen","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-01T06:41:15.542Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-actions","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T07:32:01.573Z","type":"quick-opened","what":"Demo: Wiki Home and Wiki Document show the chatbot's mock Wiki documents","files":["frontend/src/features/wiki/pages/WikiHomePage.tsx","frontend/src/features/wiki/pages/WikiDocumentPage.tsx","frontend/src/features/wiki/components/WikiReader.tsx","frontend/src/features/wiki/components/WikiReader.module.css","frontend/src/app/router/route-table.test.tsx"]}
 {"ts":"2026-11-02T20:00:46.828Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"55a1ee6ec40a9756571b81dbca052f0fec0a38bd"}
 {"ts":"2026-11-02T20:00:49.664Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-actions","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-03T07:26:09.918Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-preview-popup","from":"pending","to":"in-progress"}
+{"ts":"2026-11-03T15:38:18.261Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"1b6bef51e3bebf41193c9903a3c39380b9e2e306"}
+{"ts":"2026-11-03T15:38:18.598Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-preview-popup","from":"in-progress","to":"evaluating"}
