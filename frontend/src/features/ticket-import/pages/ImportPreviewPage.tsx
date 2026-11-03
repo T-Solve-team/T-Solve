@@ -2,7 +2,12 @@
 import { Alert, Button, Flex, Typography } from 'antd';
 import { useRef, useState } from 'react';
 import { Navigate, useBlocker, useNavigate, useSearchParams } from 'react-router';
-import { ApiError, useGetImportPreview } from '@/shared/api';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  getGetImportPreviewQueryKey,
+  getGetImportPreviewRowsQueryKey,
+  useGetImportPreview,
+} from '@/shared/api';
 import { isMsgCode, msg, showMessage } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { ConfirmDialog, ErrorState, LoadingState, SectionCard, StatCard } from '@/shared/ui';
@@ -20,6 +25,7 @@ export function ImportPreviewPage() {
 
 function ImportPreview({ previewId }: { previewId: number }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const preview = useGetImportPreview(previewId);
   const remove = useRemovePreviewRows(previewId);
   const confirm = useConfirmPreview();
@@ -42,13 +48,10 @@ function ImportPreview({ previewId }: { previewId: number }) {
   if (preview.isPending) return <LoadingState />;
   if (preview.isError) {
     const { error } = preview;
-    // 404 comes without a code (AC-007.2); 403 carries MSG08. Neither changes on a retry (AC-009.12).
+    // 404 carries MSG04 and 403 MSG08. Neither changes on a retry (AC-009.12).
     const isFinal = error.status === 404 || error.status === 403;
     return (
-      <ErrorState
-        error={error.status === 404 ? new ApiError({ status: 404, code: 'MSG04' }) : error}
-        onRetry={isFinal ? undefined : () => void preview.refetch()}
-      />
+      <ErrorState error={error} onRetry={isFinal ? undefined : () => void preview.refetch()} />
     );
   }
 
@@ -70,7 +73,16 @@ function ImportPreview({ previewId }: { previewId: number }) {
         },
         onSuccess: () => {
           isFinished.current = true;
-          void navigate(paths.importTickets);
+          // The confirmed preview is gone: browser Back must not show it from the cache. Removed once
+          // the page has left, so its own queries do not refetch it.
+          void Promise.resolve(navigate(paths.importTickets)).then(() => {
+            for (const queryKey of [
+              getGetImportPreviewQueryKey(previewId),
+              getGetImportPreviewRowsQueryKey(previewId),
+            ]) {
+              queryClient.removeQueries({ queryKey });
+            }
+          });
         },
         onError: (error) => showMessage(error.code, error.params),
       },
@@ -97,7 +109,7 @@ function ImportPreview({ previewId }: { previewId: number }) {
         <Flex vertical gap="middle">
           <Flex gap="small">
             <Button
-              disabled={selectedRowNos.length === 0}
+              disabled={selectedRowNos.length === 0 || confirm.isPending}
               loading={remove.isPending}
               onClick={handleRemove}
             >
@@ -114,7 +126,8 @@ function ImportPreview({ previewId }: { previewId: number }) {
             <Button onClick={() => void navigate(paths.importTickets)}>Cancel</Button>
             <Button
               type="primary"
-              disabled={validCount === 0}
+              // One of Remove and Confirm at a time: a Confirm during a Remove could import a removed row.
+              disabled={validCount === 0 || remove.isPending}
               loading={confirm.isPending}
               onClick={handleConfirm}
             >

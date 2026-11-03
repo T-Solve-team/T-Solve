@@ -147,6 +147,14 @@ describe('ImportPreviewPage', () => {
     },
   );
 
+  it('answers MSG04 for a preview or row that is gone, like the backend (BUG-083)', async () => {
+    for (const path of ['/previews/99', '/previews/99/rows', '/previews/1/rows/999']) {
+      const response = await fetch(`http://localhost/api/v1/imports${path}`);
+      expect(response.status).toBe(404);
+      expect(await response.json()).toMatchObject({ code: 'MSG04' });
+    }
+  });
+
   it('AC-009.12 shows MSG04 instead of the Summary and rows when the preview does not exist', async () => {
     renderApp('/import/preview?previewId=99', { role: 'PROJECT_MANAGER' });
     expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(msg('MSG04'));
@@ -392,6 +400,57 @@ describe('ImportPreviewPage', () => {
       const { dialog } = await openPopup(1);
       expect(await within(dialog).findByRole('alert')).toHaveTextContent(msg('MSG06'));
       expect(screen.getByRole('table', { name: 'Import rows' })).toBeInTheDocument();
+    });
+  });
+
+  describe('Remove and Confirm together', () => {
+    /** Holds the answer of `path` until the returned function is called. */
+    function holdAnswer(path: string) {
+      let answer: () => void = () => {};
+      const answered = new Promise<void>((resolve) => {
+        answer = resolve;
+      });
+      server.use(
+        http.post(`*/api/v1/imports/previews/1/${path}`, async () => {
+          await answered;
+          return problem(500, 'MSG06');
+        }),
+      );
+      return answer;
+    }
+
+    it('disables Confirm while a Remove is running (BUG-084)', async () => {
+      const answer = holdAnswer('remove-rows');
+      const { user } = await openPreview();
+      await user.click(screen.getByRole('checkbox', { name: 'Select row 1' }));
+
+      await user.click(screen.getByRole('button', { name: 'Remove' }));
+
+      await waitFor(() => expect(screen.getByRole('button', { name: /Confirm/ })).toBeDisabled());
+      answer();
+    });
+
+    it('disables Remove while a Confirm is running (BUG-084)', async () => {
+      const answer = holdAnswer('confirm');
+      const { user } = await openPreview();
+      await user.click(screen.getByRole('checkbox', { name: 'Select row 1' }));
+
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+      await waitFor(() => expect(screen.getByRole('button', { name: /Remove/ })).toBeDisabled());
+      answer();
+    });
+
+    it('does not show a confirmed preview again on browser Back (BUG-085)', async () => {
+      const { user, router } = await openPreview();
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+      await waitFor(() => expect(router.state.location.pathname).toBe('/import'));
+
+      await act(() => router.navigate(-1));
+
+      // findByText: the MSG32 toast is also an alert.
+      expect(await screen.findByText(msg('MSG04'), {}, { timeout: 5000 })).toBeInTheDocument();
+      expect(screen.queryByText('itsup-resolved-2026-09.csv')).not.toBeInTheDocument();
     });
   });
 });
