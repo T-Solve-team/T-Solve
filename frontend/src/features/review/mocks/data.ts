@@ -14,18 +14,21 @@ export const MOCK_PROJECTS = [
     name: 'IT Support',
     key: 'ITSUP',
     departmentId: IT_DEPARTMENT_ID,
+    reviewRangeDays: 3,
   },
   {
     projectId: '00000000-0000-4000-8000-000000000102',
     name: 'IT Network',
     key: 'ITNET',
     departmentId: IT_DEPARTMENT_ID,
+    reviewRangeDays: 5,
   },
   {
     projectId: '00000000-0000-4000-8000-000000000201',
     name: 'HR Helpdesk',
     key: 'HRHELP',
     departmentId: HR_DEPARTMENT_ID,
+    reviewRangeDays: 3,
   },
 ] as const;
 
@@ -170,6 +173,8 @@ export type MockReviewTicket = ReviewTicketDetail & {
   workspaceId: string;
   enteredQueueAt: string;
   jiraStatus: string;
+  expiredAt?: string;
+  previousStatus?: 'PENDING_REVIEW' | 'CHANGES_REQUESTED';
 };
 
 /** Extra records never inflate the 58 pending tickets of the default Project Manager. */
@@ -244,6 +249,20 @@ export function seedReviewTickets(): MockReviewTicket[] {
       authorId: '00000000-0000-4000-8000-000000000003',
     }),
   );
+  for (let n = 0; n < 24; n++) {
+    const original = tickets[n];
+    if (original)
+      tickets.push(
+        extra(ticketUuid(300 + n), {
+          ...structuredClone(original),
+          ticketId: ticketUuid(300 + n),
+          sourceTicketId: `EXP-${300 + n}`,
+          status: 'EXPIRED',
+          expiredAt: new Date(Date.UTC(2026, 9, 31, n)).toISOString(),
+          previousStatus: n % 2 ? 'CHANGES_REQUESTED' : 'PENDING_REVIEW',
+        }),
+      );
+  }
   return tickets;
 }
 

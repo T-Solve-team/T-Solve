@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-01 | STORY-007 | Add KAN-158 Expired Tickets frontend, API proposal and mock send-back flow | User requested completion of FE today, one Jira branch per task; explicitly permits this branch to depend on KAN-24 |
 | 2026-11-01 | STORY-001–006 | New-main frontend/MSW delivery contract for KAN-24; UUID ids, Department filter, explicit recovery and atomic mock decisions | User chose a new branch/PR from main, frontend + MSW/OpenAPI first, and Department under current guidelines; PR #26 remains separate |
 
 ## Sources and precedence
@@ -89,11 +90,23 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
   - AC-006.5: WHEN a permitted ticket is displayed, THE frontend SHALL show Evidence filename and readable size with safe API-provided references; IF a reference uses an unsafe URL scheme, THEN THE frontend SHALL render no executable link.
   - AC-006.6: IF an ordinary reader requests an unpublished ticket they neither authored nor manage, THEN THE mock API SHALL return 404 MSG04 without its Solution or review comment; THE frontend SHALL show the queue navigation only to users permitted to open it.
 
+### STORY-007: View Expired tickets and send them back to review (KAN-158)
+- As a Project Manager, I want to inspect Expired tickets of my Projects and send selected tickets back to the Review Queue.
+- Acceptance:
+  - AC-007.1: WHEN Expired Tickets loads, THE frontend and mock API SHALL list only EXPIRED Solution Form tickets in the current Workspace's Projects managed by the current Project Manager, with Ticket ID, Title, Project, Source, Expired on and previous status; THE frontend SHALL link each ticket to the existing Ticket Detail.
+  - AC-007.2: WHEN the user changes Department, page or supported sort, THE frontend SHALL preserve list state in the URL and request server-side results; THE frontend SHALL use the existing Department filter convention without adding a Project filter.
+  - AC-007.3: WHEN the user selects across pages or selects all filtered tickets, THE frontend SHALL use the complete eligible UUID set and preserve off-page selections; WHEN the Department changes including browser navigation, THE frontend SHALL clear selection.
+  - AC-007.4: WHEN one to 500 unique eligible tickets are sent back, THE mock API SHALL atomically change them to PENDING_REVIEW, set their queue-entry time to the send-back time, recalculate each due date from the send-back calendar date plus its Project's current reviewRangeDays (GBR-10), preserve Solution and Evidence, and append a SEND_BACK record per ticket; THE frontend SHALL show MSG25 with the returned count and remove completed selections.
+  - AC-007.5: IF any submitted UUID is invalid, duplicated, missing, foreign, unmanaged, no longer EXPIRED, or the batch is empty or exceeds 500, THEN THE mock API SHALL reject the entire batch without changing any ticket or history; THE frontend SHALL disable empty, oversized and pending submissions and prevent duplicate requests.
+  - AC-007.6: IF a list or eligibility request fails, THEN THE frontend SHALL show the catalog error and retry; WHILE initial loading is pending, THE frontend SHALL show loading; IF no Expired tickets match, THEN THE frontend SHALL show MSG04.
+  - AC-007.7: WHEN send-back settles, THE frontend SHALL refresh affected Expired list/eligibility, Review Queue/eligibility, Ticket Detail and Ticket List queries; IF send-back fails, THEN THE frontend SHALL retain eligible selections and show its catalog error, reconciling stale selections after 404 or 409 without reporting a completed mutation as failed because a later refetch failed.
+  - AC-007.8: IF the caller is signed out or lacks Project Manager, THEN THE route guard and mock API SHALL deny access; IF a caller forges another Project or Workspace's UUID, THEN THE mock API SHALL expose no foreign ticket data and perform no write.
+
 ## Out of Scope
 
 - Production backend endpoints, identity/Project authorization, canonical Ticket/KAN-137 schema changes, migrations and durable audit/history. KAN-24 backend remains undelivered by this frontend slice.
 - Actual Jira comment delivery (including MSG64 visibility), email, notification workers and real-time updates beyond the existing polling convention. Store the mock comment and proposed contract; do not claim successful external delivery.
-- Review History, Expired Tickets, send-back actions and JOB-02 (KAN-154–159 or later work).
+- Review History (KAN-159), production send-back processing (KAN-156), JOB-02 (KAN-157) and SSE/WebSocket (KAN-154). KAN-158 delivers only the frontend, proposed API and in-memory fixtures for expiry/send-back; it does not implement a real expiry job or backend persistence.
 - Importing PR #26 or changing/closing it; creating or pushing the replacement PR still requires the user to request that action.
 
 ## Interface Contracts
@@ -106,6 +119,8 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
 - MSW fixtures hold ticket states and append-only decision records in memory, reset through the existing mock reset entry point. Invalid batches leave every ticket and history entry unchanged. No production table or second Ticket authority is created.
 
 ### Required from other modules
+
+KAN-158 proposes GET `/api/v1/expired-tickets` (optional UUID departmentId, existing page/size/sort conventions), GET `/api/v1/expired-tickets/ticket-ids` (same filter, complete eligible UUID set), and POST `/api/v1/reviews/send-back` (`ticketIds`, 1–500 unique UUIDs, response `{count}`). Add generated ExpiredTicketItem/ExpiredTicketPage schemas carrying expiry and previous status; reuse existing Ticket and decision shapes. Error codes/statuses follow the existing review proposal. Mock expiry fixtures include the Project's current reviewRangeDays; calendar due dates follow the project's existing Vietnam-time convention. SEND_BACK records are session-only and may be consumed by the later KAN-159 slice. The Ticket Detail implementation is inherited from the explicitly approved KAN-24 branch base; this task does not duplicate that feature.
 
 Use existing session roles and UUID Project memberships, catalog messages, shared form/table/error components, feature barrels and TanStack Query conventions from fe-foundation. Preserve all unrelated endpoints when regenerating the client. Future canonical backend integration must supply authoritative actor/Workspace/Project scope, persistence/audit and Jira delivery; this slice explicitly does not implement those seams.
 
