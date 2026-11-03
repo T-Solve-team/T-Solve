@@ -338,7 +338,7 @@ out.
 | KAN-77 | TicketList (web app of UC-27) | `search` (with KAN-147) |
 | KAN-78…93 | Epics E01…E17 | — (each Story above has its module) |
 | KAN-204…207 | fe-foundation tasks 7–10 (catalog, UUID ids, Workspace site, route tree by host) | `fe-foundation` |
-| KAN-229…239 | identity tasks 7–12 and 15–18: sign-in, callback, session, Platform Console sign-in, Jira account link (UC-59), My Profile | `identity` |
+| KAN-229…239, KAN-247 | identity tasks 7–12 and 15–18: sign-in, callback, session, Platform Console sign-in, Jira account link (UC-59), My Profile | `identity` |
 | KAN-240 | Ops script: create / suspend / reactivate a Workspace (GBR-24, GBR-38) | `platform` |
 | KAN-241 | [UC-58] Chatbot creates a Jira issue when no answer is found (API) | `chatbot` |
 | KAN-242 | [UC-58] Jira issue form in the Chatbot screen (web app) | `chatbot` |

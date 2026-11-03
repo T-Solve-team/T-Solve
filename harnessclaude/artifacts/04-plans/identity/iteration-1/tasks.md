@@ -218,7 +218,7 @@ runs before `WebSessionFilter`).
 **Estimated size:** small–medium
 **Verification:** Tests name AC-001.35–.38; design risk row 37. Targeted: `cd backend && mvn -Dtest='JiraLinkSignInTest,JiraAccountLinkRepositoryTest' test`; full `mvn verify` before the commit.
 
-## Task 14: Platform adapters, registry stores and Account tenancy — KAN-<task14> (stub)
+## Task 14: Platform adapters, registry stores and Account tenancy — KAN-247 (stub)
 
 **Story:** STORY-001
 **Feature:** platform-adapters
@@ -231,7 +231,7 @@ runs before `WebSessionFilter`).
 - Delete: `backend/src/main/java/vn/tsolve/identity/signin/port/{NoWorkspaceLookup,LocalTenantScope}.java` and `LocalTenantScopeTest`
 - Test: `backend/src/test/java/vn/tsolve/identity/signin/port/{PlatformWorkspaceLookupTest,PlatformTenantScopeTest}.java`; extend `SignInStateRepositoryIT` (the registry datasource) and `AccountRepositoryIT` (two company databases through the router; the RLS guard if any)
 **Dependencies:** platform KAN-98 (Task 4 registry, and the tenant-database convention and guard of Task 2) and KAN-99 (Tasks 1 and 5, `runIn`, Tenant Resolver, Database Router) on `main`; Task 9b; Task 10 (so the sessions already run on Redis).
-**PR / Jira:** its own PR, branch `feat/KAN-<task14>-identity-platform-adapters`, Jira KAN-<task14> (Subtask of KAN-103, created 2026-11-04 as a stub, blocked by KAN-98 and KAN-99; the key is filled in by a follow-up after the Jira round).
+**PR / Jira:** its own PR, branch `feat/KAN-247-identity-platform-adapters`, Jira KAN-247 (Subtask of KAN-103, created 2026-11-04 as a stub, blocked by KAN-98 and KAN-99; the key is filled in by a follow-up after the Jira round).
 **Estimated size:** medium
 **Verification:** to be set when planned; at least the AC-001.7 and AC-001.15 tests on the router, design risk rows 92 and 93, and the platform convention guard test, then the full `mvn verify`. identity cannot reach `completed` before this task is done.
 

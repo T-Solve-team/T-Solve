@@ -54,4 +54,4 @@ Role-Based Access Control (UC-01–09, UC-59): sign in with the company account 
 ## Related Artifacts
 - Spec: `artifacts/03-modules/identity/spec.md` (written when the module is planned)
 - Map: `artifacts/03-modules/module-map.md`
-- Stories: KAN-103…112, KAN-117, KAN-118, KAN-160, KAN-197, KAN-229…239, KAN-<task14> (Task 14)
+- Stories: KAN-103…112, KAN-117, KAN-118, KAN-160, KAN-197, KAN-229…239, KAN-247 (Task 14)
