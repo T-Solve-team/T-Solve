@@ -7,6 +7,7 @@ import { isMsgCode, msg, showMessage } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { ConfirmDialog, ErrorState, LoadingState, SectionCard, StatCard } from '@/shared/ui';
 import { ImportPreviewTable } from '../components/ImportPreviewTable';
+import { ImportTicketPreviewModal } from '../components/ImportTicketPreviewModal';
 import { useConfirmPreview, useRemovePreviewRows } from '../hooks/useImportPreview';
 
 /** The address keeps the preview id (D11); anything but a positive whole number opens Import Tickets (AC-009.11). */
@@ -23,6 +24,7 @@ function ImportPreview({ previewId }: { previewId: number }) {
   const remove = useRemovePreviewRows(previewId);
   const confirm = useConfirmPreview();
   const [selectedRowNos, setSelectedRowNos] = useState<number[]>([]);
+  const [previewRowNo, setPreviewRowNo] = useState<number | null>(null);
 
   // A double click reaches the handler twice before `isPending` renders: one Confirm only (AC-009.8).
   const isConfirming = useRef(false);
@@ -106,6 +108,7 @@ function ImportPreview({ previewId }: { previewId: number }) {
             previewId={previewId}
             selectedRowNos={selectedRowNos}
             onSelectionChange={setSelectedRowNos}
+            onPreview={setPreviewRowNo}
           />
           <Flex gap="small" justify="flex-end">
             <Button onClick={() => void navigate(paths.importTickets)}>Cancel</Button>
@@ -120,6 +123,11 @@ function ImportPreview({ previewId }: { previewId: number }) {
           </Flex>
         </Flex>
       </SectionCard>
+      <ImportTicketPreviewModal
+        previewId={previewId}
+        rowNo={previewRowNo}
+        onClose={() => setPreviewRowNo(null)}
+      />
       <ConfirmDialog
         isOpen={blocker.state === 'blocked'}
         code="MSG37"

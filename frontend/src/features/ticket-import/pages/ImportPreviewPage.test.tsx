@@ -322,4 +322,76 @@ describe('ImportPreviewPage', () => {
       await waitFor(() => expect(router.state.location.pathname).toBe('/my-profile'));
     });
   });
+  describe('Import Ticket Preview popup', () => {
+    async function openPopup(rowNo: number) {
+      const view = await openPreview();
+      await view.user.click(within(rowOf(rowNo)).getByRole('button', { name: 'Preview' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Import Ticket Preview' });
+      return { ...view, dialog };
+    }
+
+    it('AC-009.4 AC-010.1 shows the row read-only: every field, the Solution sections in full, Result and Error details', async () => {
+      const { dialog } = await openPopup(2);
+      await within(dialog).findByText('ITSUP-0872');
+      for (const text of [
+        'VPN drops during Teams calls',
+        'Users report the problem after the latest Windows update.',
+        'Phạm Quốc Bảo',
+        '2026-09-14',
+        'Outlook asks for the password again every few minutes after the M365 migration.',
+        '1. Remove the Outlook profile. 2. Clear the cached credentials. 3. Create the profile again.',
+        'Use Outlook on the web until the profile is recreated.',
+        'Windows laptops with Outlook 2019 or later.',
+        'Error',
+        msg('MSG01', { field_name: 'Root cause' }),
+      ]) {
+        expect(within(dialog).getByText(text)).toBeInTheDocument();
+      }
+      for (const label of [
+        'Ticket ID',
+        'Title',
+        'Description',
+        'Author',
+        'Resolved date',
+        'Symptoms',
+        'Root cause',
+        'Resolution steps',
+        'Workaround',
+        'Scope',
+        'Result',
+        'Error details',
+      ]) {
+        expect(within(dialog).getByText(label)).toBeInTheDocument();
+      }
+      expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('AC-010.2 closes on Close and keeps the Import Preview as it was', async () => {
+      const user = userEvent.setup();
+      const { router } = renderApp(PATH, { role: 'PROJECT_MANAGER' });
+      await screen.findByText('ITSUP-0871', undefined, { timeout: 5000 });
+      await user.click(screen.getByRole('checkbox', { name: 'Select row 1' }));
+      await user.click(within(rowOf(3)).getByRole('button', { name: 'Preview' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Import Ticket Preview' });
+      await within(dialog).findByText('Printer on floor 7 shows offline');
+
+      // The header's close icon is also named "Close"; the footer button is the last one.
+      const footerClose = within(dialog).getAllByRole('button', { name: 'Close' }).pop();
+      if (!footerClose) throw new Error('no Close button');
+      await user.click(footerClose);
+
+      // jsdom runs no CSS animation, so antd's fade-out never ends and the popup stays in the DOM, closing.
+      await waitFor(() => expect(dialog).toHaveClass('ant-zoom-leave'));
+      expect(screen.queryByText(msg('MSG37'))).not.toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/import/preview');
+      expect(screen.getByRole('checkbox', { name: 'Select row 1' })).toBeChecked();
+    });
+
+    it('AC-010.3 shows the error state inside the popup when the row cannot be read', async () => {
+      server.use(http.get('*/api/v1/imports/previews/1/rows/:rowNo', () => problem(500)));
+      const { dialog } = await openPopup(1);
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent(msg('MSG06'));
+      expect(screen.getByRole('table', { name: 'Import rows' })).toBeInTheDocument();
+    });
+  });
 });

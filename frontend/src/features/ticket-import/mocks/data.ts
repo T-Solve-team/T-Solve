@@ -1,6 +1,7 @@
 import type {
   ImportPreviewResponse,
   ImportPreviewRowPage,
+  ImportPreviewRowResponse,
   ImportPreviewRowSummary,
 } from '@/shared/api';
 import { PAGE_SIZE } from '@/shared/lib';
@@ -8,6 +9,9 @@ import { PAGE_SIZE } from '@/shared/lib';
 /** The template the backend returns (CsvColumns.TEMPLATE): the header row only. */
 export const CSV_TEMPLATE =
   'ticket_id,title,description,author,resolved_date,symptoms,root_cause,resolution_steps,workaround,scope\n';
+
+/** Shown only by the Import Ticket Preview popup: the rows list has no Description. */
+const DESCRIPTION = 'Users report the problem after the latest Windows update.';
 
 const SOLUTION = {
   symptoms: 'Outlook asks for the password again every few minutes after the M365 migration.',
@@ -22,8 +26,8 @@ const SOLUTION = {
  * 25 rows: Valid, Error (missing section, duplicate id with MSG_NEW_3, existing id) and Removed rows first, then
  * Valid ones, so the list has two pages.
  */
-function seedRows(): ImportPreviewRowSummary[] {
-  const valid = Array.from({ length: 19 }, (_, i): ImportPreviewRowSummary => {
+function seedRows(): ImportPreviewRowResponse[] {
+  const valid = Array.from({ length: 19 }, (_, i): ImportPreviewRowResponse => {
     const rowNo = 7 + i;
     return {
       rowNo,
@@ -31,6 +35,7 @@ function seedRows(): ImportPreviewRowSummary[] {
       title: `Teams meeting audio issue on laptop batch ${rowNo}`,
       author: 'Phạm Quốc Bảo',
       resolvedDate: '2026-09-28',
+      description: DESCRIPTION,
       ...SOLUTION,
       status: 'VALID',
       errors: [],
@@ -43,6 +48,7 @@ function seedRows(): ImportPreviewRowSummary[] {
       title: 'Outlook keeps asking for password after M365 migration',
       author: 'Nguyễn Thị Thu Hà',
       resolvedDate: '2026-09-12',
+      description: DESCRIPTION,
       ...SOLUTION,
       status: 'VALID',
       errors: [],
@@ -53,6 +59,7 @@ function seedRows(): ImportPreviewRowSummary[] {
       title: 'VPN drops during Teams calls',
       author: 'Phạm Quốc Bảo',
       resolvedDate: '2026-09-14',
+      description: DESCRIPTION,
       ...SOLUTION,
       rootCause: null,
       status: 'ERROR',
@@ -64,6 +71,7 @@ function seedRows(): ImportPreviewRowSummary[] {
       title: 'Printer on floor 7 shows offline',
       author: 'Lê Văn Tùng',
       resolvedDate: '2026-09-20',
+      description: DESCRIPTION,
       ...SOLUTION,
       status: 'ERROR',
       errors: [{ code: 'MSG_NEW_3', field: 'ticket_id', params: { ticket_id: 'ITSUP-0880' } }],
@@ -74,6 +82,7 @@ function seedRows(): ImportPreviewRowSummary[] {
       title: 'Printer on floor 7 shows offline (again)',
       author: 'Lê Văn Tùng',
       resolvedDate: '2026-09-21',
+      description: DESCRIPTION,
       ...SOLUTION,
       status: 'ERROR',
       errors: [{ code: 'MSG_NEW_3', field: 'ticket_id', params: { ticket_id: 'ITSUP-0880' } }],
@@ -84,6 +93,7 @@ function seedRows(): ImportPreviewRowSummary[] {
       title: 'Shared drive mapping lost after password change',
       author: 'Trần Thị Lan',
       resolvedDate: '2026-08-30',
+      description: DESCRIPTION,
       ...SOLUTION,
       status: 'ERROR',
       errors: [{ code: 'MSG31', field: 'ticket_id', params: { ticket_id: 'ITSUP-0715' } }],
@@ -94,6 +104,7 @@ function seedRows(): ImportPreviewRowSummary[] {
       title: 'Laptop camera not detected in Teams',
       author: 'Ngô Thị Mai',
       resolvedDate: '2026-09-25',
+      description: DESCRIPTION,
       ...SOLUTION,
       status: 'REMOVED',
       errors: [],
@@ -104,7 +115,7 @@ function seedRows(): ImportPreviewRowSummary[] {
 
 /** One unconfirmed preview of the mock backend with every row (the API returns them page by page). */
 export type MockPreview = Pick<ImportPreviewResponse, 'previewId' | 'projectId' | 'fileName'> & {
-  rows: ImportPreviewRowSummary[];
+  rows: ImportPreviewRowResponse[];
 };
 
 export function seedImport(

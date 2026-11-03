@@ -4,6 +4,7 @@ export { SectionCard, StatCard } from './Cards';
 export { ConfirmDialog } from './ConfirmDialog';
 export { CsvUpload } from './CsvUpload';
 export { cells, DataTable, type DataTableColumn } from './DataTable';
+export { DetailModal } from './DetailModal';
 export { FormModal } from './FormModal';
 export { ScreenPlaceholder } from './ScreenPlaceholder';
 export { EmptyState, ErrorState, LoadingState } from './States';

@@ -2,6 +2,7 @@ import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import type {
   ImportPreviewResponse,
   ImportPreviewRowPage,
+  ImportPreviewRowResponse,
   ImportResultResponse,
   RemoveRowsRequest,
 } from '@/shared/api';
@@ -67,6 +68,15 @@ export const handlers: HttpHandler[] = [
     const page = Number(url.searchParams.get('page')) || 0;
     const size = Number(url.searchParams.get('size')) || undefined;
     return HttpResponse.json<ImportPreviewRowPage>(rowPage(preview.rows, page, size));
+  }),
+
+  http.get('*/api/v1/imports/previews/:previewId/rows/:rowNo', async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const row = isCurrent(params.previewId)
+      ? preview.rows.find((r) => String(r.rowNo) === params.rowNo)
+      : undefined;
+    if (!row) return problem(404);
+    return HttpResponse.json<ImportPreviewRowResponse>(row);
   }),
 
   // Valid and Error rows become Removed; unknown row numbers are ignored (AC-003.1).
