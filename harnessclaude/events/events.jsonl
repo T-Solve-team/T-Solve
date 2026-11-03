@@ -494,3 +494,7 @@
 {"ts":"2026-11-02T21:05:31.912Z","type":"commit-recorded","module":"platform","repo":"default","sha":"8e2c3ab8f1841db03148f52322d7f1b37b61b724"}
 {"ts":"2026-11-02T21:05:31.959Z","type":"feature-status","module":"platform","feature":"sql-workspace-routing","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-02T21:06:09.397Z","type":"feature-status","module":"platform","feature":"sql-workspace-routing","from":"evaluating","to":"passing"}
+{"ts":"2026-11-02T21:09:17.095Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"pending","to":"in-progress"}
+{"ts":"2026-11-03T03:40:37.280Z","type":"commit-recorded","module":"identity","repo":"default","sha":"b6b15970fb03ec8f979884af4c6ad4b40771a40c"}
+{"ts":"2026-11-03T03:40:37.322Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-03T03:40:37.358Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"evaluating","to":"passing"}

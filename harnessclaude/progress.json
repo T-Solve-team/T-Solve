@@ -100,15 +100,15 @@
         "my-solutions-table": "pending",
         "my-solutions-counters": "pending",
         "my-solutions-filters": "pending",
-        "user-list-backend": "pending"
+        "user-list-backend": "passing"
       },
-      "lastUpdated": "2026-11-02T20:21:39.564Z",
+      "lastUpdated": "2026-11-03T03:40:37.357Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5310e2b10093f244440daabf3f3ca7ad14b1d613"
+        "default": "b6b15970fb03ec8f979884af4c6ad4b40771a40c"
       }
     },
     "workspace": {

@@ -177,3 +177,7 @@ Master registry of all artifacts in this workspace.
 | — | session-log | platform | in-progress | artifacts/05-implementation/platform/task-17-sql-workspace-routing.md |
 | — | test-report | platform | pass | artifacts/06-evaluation/platform/task-17-sql-workspace-routing-test-report.md |
 | — | review | platform | pass | artifacts/06-evaluation/platform/task-17-sql-workspace-routing-review.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-22-user-list-backend.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-22-user-list-backend-test-report.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-22-user-list-backend-review.md |
+| — | screenshot | identity | verified | artifacts/assets/identity/kan-107-sql-user-list.png |
