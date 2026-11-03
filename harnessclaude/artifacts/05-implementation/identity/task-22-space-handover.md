@@ -1,4 +1,4 @@
-# Task 14: Verify and complete included Space handover — KAN-112
+# Task 22: Verify and complete included Space handover — KAN-112
 
 **Module:** identity
 **Assignee:** Phạm Tùng Dương
@@ -7,7 +7,8 @@
 
 ## Session 2026-10-31
 
-- User chose frontend/MSW with an OpenAPI proposal pending backend integration, approved STORY-009, then approved the master design and Task 14 in iteration 1. `sdd.ts diff identity` confirms approval at 2026-10-31T10:56:24.836Z. No approved criterion was edited afterward.
+- User chose frontend/MSW with an OpenAPI proposal pending backend integration, approved STORY-009, then approved the master design and Task 22 in iteration 1. `sdd.ts diff identity` confirms approval at 2026-10-31T10:56:24.836Z. No approved criterion was edited afterward.
+- Renumbered: this task is Task 22 in tasks.md (was Task 14, then 20); Task 14 is platform-adapters (2026-11-04).
 - Created `feat/KAN-112-identity-space-handover` from main `4cf0594`. Preserved unrelated registry, research, proposal and Graphify changes; the safety stash remains available. KAN-153 commits were not imported.
 - Graphify-first inspection located the combined popup, caller hooks and mock handover helpers. Verified source before planning; refreshed code graph after changes (6137 nodes / 12845 edges). SQL extraction remains unavailable because tree_sitter_sql is not installed; this slice changes no SQL. Documentation semantic indexing was not refreshed.
 - Existing runtime behavior meets the criteria. Pin/verify delivery adds 28 focused contract cases, two caller scenarios and a Space variant of the cached-options refresh test (31 additional test cases). No runtime implementation rewrite or dependency was needed.

@@ -15,6 +15,7 @@ owner: BA
 | 2026-10-25 | STORY-002, STORY-004, STORY-010, STORY-012 | New AC-002.19 (health and API-docs paths pass on any host) and AC-002.6 points to it; AC-004.3, AC-004.4: a missing or blank site name or Google domain → MSG01; AC-004.5: user info or a port → MSG136; AC-004.13: lookups return empty, only suspend / reactivate throw; AC-010.3, AC-010.5: the seed step in the deploy; AC-012.4 names what "the production configuration" is; two open questions at AC-010.6 and AC-012.5 | Builder check of the platform plan (KAN-196): contradictions with be-foundation AC-002.8, with the registry contract and with design decision P7 |
 | 2026-10-25 | STORY-002, STORY-004, STORY-010, STORY-012 | Open questions answered. AC-010.6: `staging` is a reserved site name; AC-002.6 answers `staging.` + base domain with MSG119 without a lookup; AC-004.3 gives MSG139 for `staging`. AC-012.5 keeps its rule and points to the reset; new AC-012.8 (`run-seed.sh --reset` empties the dev or staging database and file storage, re-applies the changelog, re-seeds) and AC-012.9 (refused unless `dev` or `staging`) | User, 25/10: AC-010.6 = A (D44 (25/10), added to the baseline in parallel); AC-012.5 = B |
 | 2026-11-01 | STORY-001…STORY-013 | **Database per Workspace (ADR-0002) replaces the pool model (ADR-0001).** STORY-001: the catalog database and the tenant-database convention replace `workspace_id` + `@TenantId` (AC-001.1…AC-001.14 removed; new AC-001.15…AC-001.27). STORY-002: binding a Workspace selects its database (new AC-002.20…AC-002.23); MSG119 → MSG151, MSG120 → MSG150; AC-002.15 and AC-002.18 rewritten. STORY-003 (row-level security, KAN-100) cancelled; its ids are retired. STORY-004: the Workspace registry becomes the read side of the catalog plus the Jira-site link of UC-10 and the email list of GBR-16 (AC-004.1…AC-004.16 removed; new AC-004.17…AC-004.28). STORY-005: AC-005.8 without `admin.`. STORY-006: MSG124 → MSG152; the install event no longer binds the `cloudId` (AC-006.6…AC-006.11 and AC-006.13 removed; new AC-006.15, AC-006.16). STORY-008, STORY-009, STORY-010: no `admin.` host; migrations run on the catalog and on every Workspace database. STORY-011: no Internet egress, no prompt logging. STORY-012: the seed creates its Workspaces through STORY-013. New STORY-013: the ops script that creates, suspends and reactivates a Workspace (KAN-240). The Google domain, the Platform Console and its messages MSG125…MSG141 are gone | Report3 split files of 31/10 (GBR-14, GBR-16, GBR-24, GBR-37, GBR-38; MSG150…MSG153, MSG155); team decisions of 29/10 (database per company, no PII masking) and 31/10 (no Platform Console, Workspace service account); Jira KAN-98 retitled, KAN-100 and KAN-113…116 cancelled, KAN-240 added |
+| 2026-11-04 | STORY-002, STORY-013 | AC-002.10: `admin.` binds no Workspace and serves the Platform Console (it no longer answers MSG151). Requirement 4 and AC-013.1 step 4: the Platform Console and the ops script share one provisioning service; the first Admin is invited. Out of Scope: the Console screens belong to `platform-console`, not to this module. Dependencies on `identity`: no `FirstAdminCreator` is assumed; the first-Admin service is settled in the platform plan. The rest of the HLA sync (Registry name, Jobs database, tenant row guard, object storage, Redis) is left to the platform Change Mode session | KAN-231 HLA sync, 4/11 (HLA Q1 = A, H-Q4, H-Q5, H-Q6; step 1 items L3–L5) |
 
 ## Requirements
 
@@ -28,8 +29,9 @@ owner: BA
    bound, no tenant database can be reached. Business tables carry no `workspace_id`.
 3. The catalog holds, per Workspace: site name, status, database connection, the Jira site and its `cloudId`, and
    the emails of its Accounts, so that one email belongs to one Workspace (GBR-16, GBR-37).
-4. Workspaces are created, suspended and reactivated only by the T-Solve operations team with an ops script outside
-   the application; there is no screen for it (GBR-24, GBR-38, KAN-240). Creation is all or nothing.
+4. Workspaces are created, suspended and reactivated by a Platform Operator in the Platform Console, or by the
+   operations team with the ops script, which runs the same provisioning service (GBR-24, GBR-38, KAN-240; HLA, 3/11).
+   The first Admin is invited, not created by the service. Creation is all or nothing.
 5. A Suspended Workspace keeps its database; its Workspace site is refused (MSG150), the T-Solve app in its Jira site
    returns an error, ticket tracker events from it are dropped (D29), and its jobs do not run (`worker`, GBR-38).
 6. File storage keeps the files of each Workspace in that Workspace's own folder, and no file key reaches another
@@ -107,7 +109,7 @@ owner: BA
   - AC-002.7: IF the Workspace of the host is Suspended, THEN THE Tenant Resolver SHALL answer 403 with `code` `MSG150` and run no handler, whatever session the request carries (GBR-38).
   - AC-002.8: THE Tenant Resolver SHALL run before every Spring Security check, so that MSG151 and MSG150 are answered before any 401 or 403 of sign-in or roles (agreed with `fe-foundation`, KAN-198).
   - AC-002.9: THE answers of AC-002.4 to AC-002.7 SHALL have content type `application/problem+json` and follow the contract's `ProblemDetail` (`status`, `code`), with no detail that names a Workspace.
-  - AC-002.10: WHEN a request's host is `login.` or `api.` followed by the base domain, THE Tenant Resolver SHALL bind no Workspace for that host. The Workspace on `api.` comes only from STORY-006. IF the host is `admin.` followed by the base domain, THEN THE backend SHALL answer 404 with `code` `MSG151`, as for any unknown site.
+  - AC-002.10: WHEN a request's host is `login.` or `api.` followed by the base domain, THE Tenant Resolver SHALL bind no Workspace for that host. The Workspace on `api.` comes only from STORY-006. The same holds for `admin.` followed by the base domain, which serves the Platform Console and binds no Workspace (HLA, 3/11; the Console and its sign-in belong to `platform-console` and `identity`).
   - AC-002.11: WHEN a request ends, normally or with an exception, THE backend SHALL unbind its Workspace, so that the next request on the same thread starts with none.
   - AC-002.12: WHEN `runIn` is called while no Workspace is bound, or while the same Workspace is bound, THE backend SHALL run the action in that Workspace. After the action, it SHALL restore the binding as it was before, also when the action throws.
   - AC-002.13: IF `runIn` is called with a Workspace different from the bound one, THEN THE backend SHALL throw and not run the action, so that no request or job ever switches Workspace (GBR-37).
@@ -287,8 +289,9 @@ owner: BA
     1. create the Workspace database and its runtime user (AC-001.26);
     2. apply the tenant changelog to it as the owner user;
     3. record the Workspace in the catalog as Active, with the email in `workspace_emails`;
-    4. inside `TenantContext.runIn` of the new Workspace, create the Active Admin Account with that email
-       through `identity`'s `FirstAdminCreator`;
+    4. invite the first Admin with that email, as the Platform Console does through the same provisioning service
+       (the Account is created in the new Workspace's database by a first-Admin service of `identity` that the
+       platform plan settles; the invitation email goes through `worker`);
 
     and print the Workspace site address (GBR-24).
   - AC-013.2: IF the site name is missing or not an RFC 1123 label (AC-002.4), THEN THE script SHALL refuse with an error naming the rule and create nothing.
@@ -307,7 +310,7 @@ owner: BA
 - Production environment, backup and restore of every Workspace database (KAN-201) and monitoring, alerts and code
   quality (KAN-202): Sprint S3, outside this iteration. KAN-12 may prepare the production compose file; it is checked
   under KAN-201.
-- Any screen for creating, suspending or reactivating a Workspace; deleting a Workspace (GBR-38).
+- The Platform Console screens for creating, suspending or reactivating a Workspace (`platform-console`); deleting a Workspace (GBR-38).
 - `runInTenant`, the job queue on JobRunr, the per-Workspace cap and not running a Suspended Workspace's jobs (D12,
   D43, GBR-38) → `worker` (Phạm Tùng Dương). JobRunr's own tables live in the catalog database; a job carries only
   its Workspace id and record ids.
@@ -427,8 +430,8 @@ allow-list (AC-001.21) and the guard test.
   - calls `TenantContext.runIn` with the Workspace of the checked state value on the `login.` callback;
   - takes the ticket tracker account only from `ForgeCallContext`;
   - calls `WorkspaceCatalog.claimEmail` when an Account is added (UC-05);
-  - offers `FirstAdminCreator.create(email)` for STORY-013, and contributes the Accounts with the five Roles to the
-    seed.
+  - contributes the Accounts with the five Roles to the seed; whether it offers a first-Admin service for STORY-013
+    is settled in the platform plan (identity spec, Required from other modules).
 - `workspace` (Đặng Tấn Bình): calls `WorkspaceCatalog.linkJiraSite` when the Admin enters the Jira site at UC-10.
 - `worker` (Phạm Tùng Dương):
   - `runInTenant` built on `TenantContext.runIn`;

@@ -117,7 +117,7 @@ runs before `WebSessionFilter`).
 **Estimated size:** small–medium (~250 lines)
 **Verification:** Tests name AC-001.40–.43; design risk rows 39 and 40. Targeted: `cd frontend && npm run test -- src/features/auth src/app/dev/MockSignInPage.test.tsx src/shared/auth/sign-in.test.ts`, then `npm run generate:api` with no diff. Browser check at 1366 × 768 in mock mode.
 
-## Task 8: State values, sign-in start, authorize and the minimal login page — KAN-103
+## Task 8: State values, sign-in start, authorize and the minimal login page — KAN-230
 
 **Story:** STORY-001
 **Feature:** sign-in-start
@@ -170,7 +170,7 @@ runs before `WebSessionFilter`).
 **Estimated size:** medium–large
 **Verification:** Tests name AC-001.10–.16; design risk rows 24–26, 42 and 93. Targeted: `cd backend && mvn -Dtest='CallbackControllerTest,HandOffCodeServiceTest,LocalTenantScopeTest' -Dit.test=AccountRepositoryIT verify` (the IT needs Docker); full `mvn verify` before the commit.
 
-## Task 10: Hand-off, session cookie and the per-request session rules — KAN-104
+## Task 10: Hand-off, session cookie and the per-request session rules — KAN-232
 
 **Story:** STORY-001
 **Feature:** workspace-session
@@ -182,11 +182,11 @@ runs before `WebSessionFilter`).
 - Modify: `backend/src/main/java/vn/tsolve/identity/AuthSecurityConfig.java`, `backend/src/main/java/vn/tsolve/identity/signin/HandOffCodeService.java` (redeem), `backend/pom.xml` (`spring-boot-starter-data-redis`), `backend/src/main/resources/application.yml`, `docker-compose.yml` (the `redis` service), `.env.example` (the Redis values and the local-cookie note of risk row 34)
 - Test: `backend/src/test/java/vn/tsolve/identity/session/{CompleteControllerTest,WebSessionFilterTest,WebSessionStoreIT}.java` (`WebSessionStoreIT` on Testcontainers Redis, the `SignInStateRepositoryIT` pattern, needs Docker; Redis down and Redis restarted: design rows 90 and 91)
 **Dependencies:** Task 9b (it redeems the hand-off codes Task 9b issues); be-foundation `roles-security` (`TSolveUser`, the deny-by-default chain, ProblemDetail 401 bodies; it also replaces `AuthSecurityConfig`'s interim chain, conflict C5) on `main`; a Redis for the local stack and the tests (Docker Desktop).
-**PR / Jira:** PR 4, branch `feat/KAN-104-identity-workspace-session`, Jira KAN-104.
+**PR / Jira:** PR 4, branch `feat/KAN-232-identity-workspace-session`, Jira KAN-232 (Subtask of KAN-104).
 **Estimated size:** large
 **Verification:** Tests name AC-001.17–.27; design risk rows 27–34, 41, 42, 90 and 91. Targeted: `cd backend && mvn -Dtest='CompleteControllerTest,WebSessionFilterTest' -Dit.test=WebSessionStoreIT verify` (the IT needs Docker); full `mvn verify` before the commit. Local browser run of the whole sign-in (risk row 34).
 
-## Task 11: Platform Console sign-in — KAN-103
+## Task 11: Platform Console sign-in — KAN-233
 
 **Story:** STORY-001
 **Feature:** operator-sign-in
@@ -198,11 +198,11 @@ runs before `WebSessionFilter`).
 - Modify: `backend/src/main/java/vn/tsolve/identity/signin/CallbackController.java`, `backend/src/main/java/vn/tsolve/identity/signin/HandOffCodeService.java`, `backend/src/main/java/vn/tsolve/identity/session/WebSessionFilter.java`, `.env.example`
 - Test: `backend/src/test/java/vn/tsolve/identity/signin/OperatorSignInTest.java`, `backend/src/test/java/vn/tsolve/identity/session/OperatorSessionTest.java`
 **Dependencies:** Task 10.
-**PR / Jira:** PR 5 (with Task 12 if both are small), branch `feat/KAN-103-identity-operator-sign-in`, Jira KAN-103.
+**PR / Jira:** PR 5 (with Task 12 if both are small), branch `feat/KAN-233-identity-operator-sign-in`, Jira KAN-233 (Subtask of KAN-103; reopened 2026-11-04 after HLA Q1 = A brought the Console back).
 **Estimated size:** small–medium
 **Verification:** Tests name AC-001.29–.34; design risk rows 29, 35 and 36. Targeted: `cd backend && mvn -Dtest='OperatorSignInTest,OperatorSessionTest' test`; full `mvn verify` before the commit.
 
-## Task 12: Jira account link as a sign-in target — KAN-103
+## Task 12: Jira account link as a sign-in target — KAN-234
 
 **Story:** STORY-001
 **Feature:** jira-link-sign-in
@@ -214,11 +214,11 @@ runs before `WebSessionFilter`).
 - Modify: `backend/src/main/java/vn/tsolve/identity/signin/SignInStateService.java`, `backend/src/main/java/vn/tsolve/identity/signin/CallbackController.java`, `backend/src/main/java/vn/tsolve/identity/signin/LoginPage.java`, `backend/src/main/resources/db/changelog/db.changelog-master.xml`
 - Test: `backend/src/test/java/vn/tsolve/identity/jiralink/{JiraLinkSignInTest,JiraAccountLinkRepositoryTest}.java`
 **Dependencies:** Task 9b (`accounts` and the full AC-001.14 order; Task 10 is not needed).
-**PR / Jira:** PR 5 with Task 11 if both are small, else its own PR; branch `feat/KAN-103-identity-jira-link-sign-in`, Jira KAN-103.
+**PR / Jira:** PR 5 with Task 11 if both are small, else its own PR; branch `feat/KAN-234-identity-jira-link-sign-in`, Jira KAN-234 (Subtask of KAN-103).
 **Estimated size:** small–medium
 **Verification:** Tests name AC-001.35–.38; design risk row 37. Targeted: `cd backend && mvn -Dtest='JiraLinkSignInTest,JiraAccountLinkRepositoryTest' test`; full `mvn verify` before the commit.
 
-## Task 14: Platform adapters, registry stores and Account tenancy — Jira issue when KAN-98 / KAN-99 land (stub)
+## Task 14: Platform adapters, registry stores and Account tenancy — KAN-<task14> (stub)
 
 **Story:** STORY-001
 **Feature:** platform-adapters
@@ -230,8 +230,8 @@ runs before `WebSessionFilter`).
 - Modify: `backend/src/main/java/vn/tsolve/identity/signin/{SignInState,SignInStateRepository,HandOffCode,HandOffCodeRepository,SignInStartController,SignInConfig}.java`, `backend/src/main/java/vn/tsolve/identity/account/Account.java` (if the platform convention needs it), `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `backend/src/main/resources/application.yml` (C3)
 - Delete: `backend/src/main/java/vn/tsolve/identity/signin/port/{NoWorkspaceLookup,LocalTenantScope}.java` and `LocalTenantScopeTest`
 - Test: `backend/src/test/java/vn/tsolve/identity/signin/port/{PlatformWorkspaceLookupTest,PlatformTenantScopeTest}.java`; extend `SignInStateRepositoryIT` (the registry datasource) and `AccountRepositoryIT` (two company databases through the router; the RLS guard if any)
-**Dependencies:** platform KAN-98 (Task 2 base entity, Task 4 registry) and KAN-99 (Tasks 1 and 5, `runIn`, Tenant Resolver, Database Router) on `main`; Task 9b; Task 10 (so the sessions already run on Redis).
-**PR / Jira:** its own PR; the Jira issue is created when KAN-98 and KAN-99 land.
+**Dependencies:** platform KAN-98 (Task 4 registry, and the tenant-database convention and guard of Task 2) and KAN-99 (Tasks 1 and 5, `runIn`, Tenant Resolver, Database Router) on `main`; Task 9b; Task 10 (so the sessions already run on Redis).
+**PR / Jira:** its own PR, branch `feat/KAN-<task14>-identity-platform-adapters`, Jira KAN-<task14> (Subtask of KAN-103, created 2026-11-04 as a stub, blocked by KAN-98 and KAN-99; the key is filled in by a follow-up after the Jira round).
 **Estimated size:** medium
 **Verification:** to be set when planned; at least the AC-001.7 and AC-001.15 tests on the router, design risk rows 92 and 93, and the platform convention guard test, then the full `mvn verify`. identity cannot reach `completed` before this task is done.
 
@@ -246,7 +246,7 @@ runs before `WebSessionFilter`).
 **Estimated size:** small verification/gap-filling slice, reassess after examining the merged dependencies.
 **Verification:** Map each AC-008 criterion to tests; run `bun harnessclaude/hooks/sdd.ts trace identity STORY-008`; run frontend `format:check`, `lint`, `typecheck`, `test`, `build`, and `generate:api` with no generated diff. Browser-check caller flows, errors, cancellation and recipients at 1366 × 768. These checks are pending. Report actual changed files and results; propose `feat(identity): complete project handover (KAN-111)` only if implementation changes are needed, or `test(identity): verify project handover (KAN-111)` for a tests-only result. Ask for commit approval before committing or starting KAN-112; never push or merge main without the user's instruction.
 
-## Task 20: Verify and complete included Space handover — KAN-112
+## Task 22: Verify and complete included Space handover — KAN-112
 
 **Story:** STORY-009
 **Feature:** space-handover
@@ -255,7 +255,7 @@ runs before `WebSessionFilter`).
 **Files:** `frontend/src/features/users/components/HandOverResponsibilitiesModal.test.tsx`, `frontend/src/features/users/pages/{UserStatusPage,UserRolesPage}.test.tsx`, focused tests under `frontend/src/features/users/mocks/`, existing implementation files only if a failing test establishes a gap; `frontend/openapi/tsolve-api.yaml` and generated output. `docs/bug-log.md` for established defects.
 **Dependencies:** STORY-009 approved; user approved master design and placement in iteration 1 on 2026-10-31; KAN-109/110/111 are on main. Branch `feat/KAN-112-identity-space-handover` from main `4cf0594`.
 **Estimated size:** one verification and contract-clarification slice.
-**Verification:** Cover master design risk rows S1–S8, trace all AC-009 criteria, run focused and full frontend tests, format/lint/typecheck/build, and generate the API twice without drift. Browser-check both callers at 1366 × 768, including errors, cancellation and eligible choices. Record actual results in task-14-space-handover session/test/review reports. Report the feature and propose a conventional commit for user agreement before committing; no push unless requested.
+**Verification:** Cover master design risk rows S1–S8, trace all AC-009 criteria, run focused and full frontend tests, format/lint/typecheck/build, and generate the API twice without drift. Browser-check both callers at 1366 × 768, including errors, cancellation and eligible choices. Record actual results in task-22-space-handover session/test/review reports. Report the feature and propose a conventional commit for user agreement before committing; no push unless requested.
 
 ## STORY-003 tasks (KAN-160 plan, 2026-10-31; stacked on `chore/KAN-231-identity-plan`, PR #94)
 
