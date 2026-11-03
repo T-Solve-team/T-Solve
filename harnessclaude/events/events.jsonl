@@ -551,3 +551,7 @@
 {"ts":"2026-11-03T17:16:21.038Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"9bcfddfcc113f945d76c519af16bd5a924ad3ac9"}
 {"ts":"2026-11-03T17:24:23.956Z","type":"module-status","module":"import-ticket-list","from":"implementing","to":"evaluating"}
 {"ts":"2026-11-03T17:24:24.236Z","type":"module-status","module":"import-ticket-list","from":"evaluating","to":"completed"}
+{"ts":"2026-11-03T18:47:41.106Z","type":"quick-opened","what":"Publish the local Docker database on DB_PORT from .env (default 5432), set 5433 here because a Windows PostgreSQL holds 5432","files":["docker-compose.yml",".env"]}
+{"ts":"2026-11-03T18:49:40.345Z","type":"quick-closed","what":"Publish the local Docker database on DB_PORT from .env (default 5432), set 5433 here because a Windows PostgreSQL holds 5432","files":["docker-compose.yml",".env"]}
+{"ts":"2026-11-03T19:28:32.021Z","type":"quick-opened","what":"BUG-110: send jsdom FormData uploads as Node forms in the test fetch so CI passes on Node 24","files":["frontend/src/test/setup.ts","frontend/src/test/setup.test.ts","frontend/src/features/ticket-import/pages/ImportTicketsPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-03T19:45:05.937Z","type":"quick-closed","what":"BUG-110: send jsdom FormData uploads as Node forms in the test fetch so CI passes on Node 24","files":["frontend/src/test/setup.ts","frontend/src/test/setup.test.ts","frontend/src/features/ticket-import/pages/ImportTicketsPage.test.tsx","docs/bug-log.md"]}
