@@ -371,8 +371,15 @@ paths:
             Location:
               description: The Google authorization URL.
               schema: { type: string }
+            Set-Cookie:
+              description: >
+                `__Host-TSOLVE_SIGNIN=<random value>; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=Lax`. Binds
+                this sign-in to this browser (AC-001.44); the callback refuses a browser without it.
+              schema: { type: string }
         '400':
-          description: A minimal HTML page with MSG141 (the state value is missing, wrong or expired).
+          description: >
+            A minimal HTML page with MSG141 (the state value is missing, wrong, expired or used; the state was
+            already authorized, AC-001.45; or its Workspace has no Google domain, AC-001.49).
           content:
             text/html:
               schema: { type: string }
@@ -401,12 +408,19 @@ paths:
           in: query
           description: >
             Set by Google when the user cancels or denies access (for example `access_denied`); the site then
-            redirects to `/login?error=MSG09` (AC-001.8).
+            redirects to `/login?error=MSG06` (AC-001.8).
           schema: { type: string }
         - name: state
           in: query
           required: true
           description: The signed state value.
+          schema: { type: string }
+        - name: __Host-TSOLVE_SIGNIN
+          in: cookie
+          required: false
+          description: >
+            The sign-in cookie `authorize` set in this browser (AC-001.44). Without it, or with another browser's
+            value, the answer is the MSG141 page (AC-001.46). Every answer expires it (AC-001.47).
           schema: { type: string }
       responses:
         '302':
@@ -414,6 +428,9 @@ paths:
           headers:
             Location:
               description: The Workspace site's complete URL.
+              schema: { type: string }
+            Set-Cookie:
+              description: Expires the sign-in cookie (`__Host-TSOLVE_SIGNIN=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax`).
               schema: { type: string }
         '200':
           description: A minimal HTML page (no redirect possible).
