@@ -13,7 +13,7 @@ export type AuthCallbackParams = {
    */
   code?: string;
   /**
-   * Set by Google when the user cancels or denies access (for example `access_denied`); the site then redirects to `/login?error=MSG09` (AC-001.8).
+   * Set by Google when the user cancels or denies access (for example `access_denied`); the site then redirects to `/login?error=MSG06` (AC-001.8).
    */
   error?: string;
   /**

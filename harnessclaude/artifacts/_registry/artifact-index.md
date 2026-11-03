@@ -140,6 +140,9 @@ Master registry of all artifacts in this workspace.
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-8-sign-in-start.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-8-sign-in-start-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-8-sign-in-start-test-report.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-9-sign-in-callback.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-9-sign-in-callback-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-9-sign-in-callback-test-report.md |
 | — | spec | dashboard-audit | approved | artifacts/03-modules/dashboard-audit/spec.md |
 | — | design | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/design.md |
 | — | design | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/iteration-1/design.md |

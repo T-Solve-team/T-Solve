@@ -22,6 +22,7 @@
         <springdoc.version>2.6.0</springdoc.version>
         <commons-csv.version>1.12.0</commons-csv.version>
         <spotless.version>2.43.0</spotless.version>
+        <wiremock.version>3.9.2</wiremock.version>
     </properties>
 
     <dependencies>
@@ -100,6 +101,13 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- A fake Google (token and JWKS endpoints) for the identity callback tests; not in the Spring Boot BOM -->
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-standalone</artifactId>
+            <version>${wiremock.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

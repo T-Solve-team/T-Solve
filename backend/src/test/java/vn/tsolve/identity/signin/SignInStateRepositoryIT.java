@@ -8,7 +8,14 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
@@ -89,6 +96,146 @@ class SignInStateRepositoryIT {
         OffsetDateTime usedAt =
                 jdbc.queryForObject("SELECT used_at FROM sign_in_states WHERE id = ?", OffsetDateTime.class, id);
         return usedAt == null ? null : usedAt.toInstant();
+    }
+
+    /** Like {@link #insert} but sets the binding columns of changeset 005 (they do not exist before it). */
+    private void insertWithBinding(
+            UUID id, Instant createdAt, Instant expiresAt, Instant authorizedAt, byte[] bindingHash, Instant usedAt) {
+        jdbc.update(
+                "INSERT INTO sign_in_states (id, target, workspace_id, tracker_account_id, return_to, nonce,"
+                        + " pkce_verifier, created_at, expires_at, used_at, authorized_at, browser_binding_hash)"
+                        + " VALUES (?, 'PLATFORM_CONSOLE', NULL, NULL, '/', ?, ?, ?, ?, ?, ?, ?)",
+                id,
+                "nonce-" + id,
+                "verifier-" + id,
+                OffsetDateTime.ofInstant(createdAt, ZoneOffset.UTC),
+                OffsetDateTime.ofInstant(expiresAt, ZoneOffset.UTC),
+                usedAt == null ? null : OffsetDateTime.ofInstant(usedAt, ZoneOffset.UTC),
+                authorizedAt == null ? null : OffsetDateTime.ofInstant(authorizedAt, ZoneOffset.UTC),
+                bindingHash);
+    }
+
+    private void insertFreshWithBinding(UUID id) {
+        Instant now = Instant.now();
+        insertWithBinding(id, now, now.plus(SignInTestFixtures.STATE_LIFETIME), null, null, null);
+    }
+
+    private static byte[] hash(int first) {
+        byte[] hash = new byte[32];
+        hash[0] = (byte) first;
+        return hash;
+    }
+
+    private int markAuthorized(UUID id, byte[] hash, Instant now) {
+        SignInStateRepository repository = repositories.getObject();
+        return transactions.execute(status -> repository.markAuthorized(id, hash, now));
+    }
+
+    private Instant authorizedAt(UUID id) {
+        OffsetDateTime at =
+                jdbc.queryForObject("SELECT authorized_at FROM sign_in_states WHERE id = ?", OffsetDateTime.class, id);
+        return at == null ? null : at.toInstant();
+    }
+
+    private byte[] storedHash(UUID id) {
+        return jdbc.queryForObject("SELECT browser_binding_hash FROM sign_in_states WHERE id = ?", byte[].class, id);
+    }
+
+    @Test
+    @DisplayName("AC-001.44 markAuthorized sets authorized_at and the 32-byte hash once: 1, then 0")
+    void markAuthorizedSetsTheColumnsOnce_AC_001_44() {
+        UUID id = UUID.randomUUID();
+        insertFreshWithBinding(id);
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
+
+        assertThat(markAuthorized(id, hash(1), now)).isEqualTo(1);
+        assertThat(markAuthorized(id, hash(2), now.plusSeconds(1))).isZero();
+
+        assertThat(storedHash(id)).isEqualTo(hash(1));
+        assertThat(authorizedAt(id)).isEqualTo(now);
+    }
+
+    @Test
+    @DisplayName("AC-001.45 markAuthorized returns 0 for a used state")
+    void markAuthorizedReturnsZeroForAUsedState_AC_001_45() {
+        UUID id = UUID.randomUUID();
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        insertWithBinding(id, now, now.plus(SignInTestFixtures.STATE_LIFETIME), null, null, now);
+
+        assertThat(markAuthorized(id, hash(1), now)).isZero();
+        assertThat(authorizedAt(id)).isNull();
+    }
+
+    @Test
+    @DisplayName("AC-001.45 / edge 20 markAuthorized returns 0 when expires_at is not after :now")
+    void markAuthorizedReturnsZeroAtExpiry_AC_001_45_edge20() {
+        Instant expiresAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        UUID atExpiry = UUID.randomUUID();
+        UUID justBefore = UUID.randomUUID();
+        insertWithBinding(atExpiry, expiresAt.minusSeconds(600), expiresAt, null, null, null);
+        insertWithBinding(justBefore, expiresAt.minusSeconds(600), expiresAt, null, null, null);
+
+        assertThat(markAuthorized(atExpiry, hash(1), expiresAt)).isZero();
+        assertThat(markAuthorized(justBefore, hash(1), expiresAt.minusSeconds(1)))
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Q9 markAuthorized compares expires_at with the passed time, not the database now()")
+    void markAuthorizedUsesThePassedTime_Q9() {
+        UUID id = UUID.randomUUID();
+        Instant created = Instant.now().minus(Duration.ofHours(2)).truncatedTo(ChronoUnit.MICROS);
+        insertWithBinding(id, created, created.plus(Duration.ofMinutes(10)), null, null, null);
+
+        assertThat(markAuthorized(id, hash(1), created.plus(Duration.ofMinutes(1))))
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("AC-001.2 the check constraint rejects authorized_at without a hash")
+    void rejectsAuthorizedAtWithoutAHash_AC_001_2() {
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
+
+        assertThatThrownBy(() -> insertWithBinding(UUID.randomUUID(), now, now.plusSeconds(600), now, null, null))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("AC-001.2 the check constraint rejects a hash without authorized_at")
+    void rejectsAHashWithoutAuthorizedAt_AC_001_2() {
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
+
+        assertThatThrownBy(() -> insertWithBinding(UUID.randomUUID(), now, now.plusSeconds(600), null, hash(1), null))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("AC-001.44 / edge 51 two concurrent markAuthorized calls let exactly one through")
+    void twoConcurrentMarkAuthorizedLetExactlyOneThrough_AC_001_44_edge51() throws Exception {
+        UUID id = UUID.randomUUID();
+        insertFreshWithBinding(id);
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<Integer>> results = new ArrayList<>();
+            for (int i = 1; i <= 2; i++) {
+                byte[] hash = hash(i);
+                results.add(pool.submit(() -> {
+                    start.await();
+                    return markAuthorized(id, hash, now);
+                }));
+            }
+            start.countDown();
+            List<Integer> counts = new ArrayList<>();
+            for (Future<Integer> result : results) {
+                counts.add(result.get(30, TimeUnit.SECONDS));
+            }
+
+            assertThat(counts).containsExactlyInAnyOrder(1, 0);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     @Test

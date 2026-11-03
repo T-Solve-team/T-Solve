@@ -27,6 +27,7 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
 | 2026-11-01 | STORY-003 | Add AC-003.15 (the Spaces card is always shown; spinner at once; MSG142 "No Spaces found" when "Spaces I can view" is empty) and AC-003.16 (the Projects card is always shown; MSG143 "Not a member of any Project." in place of the table). Reword AC-003.1 (the Projects list is read-only; its empty state is AC-003.16) and AC-003.3. Messages MSG142 and MSG143 are new. AC-003.11 to .13 (My Solutions) unchanged | Hiếu, 1/11 (KAN-237 QA): reverses plan decision Q4 for the Spaces and Projects cards only; Account rows and "Spaces I manage" keep Q4; My Solutions is for KAN-238 |
 | 2026-10-31 | STORY-003 | AC-003.12 reworded: the Ticket ID, not the whole row, is the link (no shared DataTable change) | KAN-160 plan review; FE Lead 31/10 (R1 A, R1' A) |
 | 2026-11-01 | STORY-003 | AC-003.14: a 403 on My Solutions shows MSG08 | KAN-238 Task 18 QA plan Q2; FE Lead 1/11 |
+| 2026-11-03 | STORY-001, STORY-002 | Align with the multi-tenant HLA (29/10). Reword AC-001.15 (the Account lookup runs in the Workspace's own database, reached only through the bound tenant context) and AC-002.4 (the session lives in the shared session store, and the 15-minute bound for `EXPIRED` stays). Reword NFR 5 (the two-Workspace tests use two databases), Out of Scope (the Tenant Resolver, the Tenant Context and Database Router and the per-database RLS guard → `platform`) and Required from `platform` (the Tenant Context bound before the transaction with no default fallback, the Registry lookup, the first-Admin invitation). Rewrite the Interface Contracts "Database" paragraph: one database per company, so `accounts`, `account_roles` and `jira_account_links` have no `workspace_id`; platform-wide email uniqueness goes through the Tenant Registry; sign-in states and hand-off codes live in the Platform / Tenant Registry database; sessions live in Redis. The Platform Console on `admin.` stays (AC-001.21, .28–.34, NFR 4). No criterion is added or removed | KAN-231 HLA change, step 2 (Hiếu, 3/11: Q1–Q4 = A); step-1 mismatches H1–H14 |
 
 ## Requirements
 
@@ -78,7 +79,8 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
    - `TSOLVE_ADMIN_ORIGIN` (the Platform Console origin; `https://admin.tsolve.io.vn` in production)
    - `PLATFORM_OPERATOR_EMAILS` (the allow-list, a comma-separated list)
 5. Two-Workspace tests cover the session rules: AC-001.7, AC-001.15, AC-001.17, AC-001.20 and AC-001.32. Each
-   uses two Workspaces with Accounts of the same Roles.
+   uses two Workspaces, each with its own database (or the Database Router test double) and Accounts of the same
+   Roles.
 6. Error bodies follow be-foundation (`ProblemDetail` with a Report3 `code`). Sign-in failures are redirects with
    a code, never backend text.
 
@@ -111,7 +113,7 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
   - AC-001.12: IF the Workspace has no Account with the verified email (compared ignoring case), THEN THE backend SHALL redirect to `/login?error=MSG09` on its Workspace site and create no session.
   - AC-001.13: IF the Account with that email is Deactivated, THEN THE backend SHALL redirect to `/login?error=MSG10` on its Workspace site and create no session.
   - AC-001.14: THE callback SHALL check a state value for a Workspace or Jira-link target (not the Platform Console, whose checks are AC-001.29 to AC-001.31) in this order and report only the first failure: state value, sign-in cookie and the state's Workspace (MSG141; AC-001.6, AC-001.46, AC-001.49, AC-001.50), Google result and ID token (MSG06), Workspace Active (MSG120), `hd` (MSG122), Account exists (MSG09), Account Active (MSG10).
-  - AC-001.15: THE callback SHALL look up the Account only among the Accounts of the state value's Workspace (in that Workspace's tenant context), so an Account of another Workspace is never found or changed (GBR-37).
+  - AC-001.15: THE callback SHALL look up the Account only in the database of the state value's Workspace, reached through that Workspace's tenant context bound before the transaction, so an Account of another Workspace is never found or changed (GBR-37).
   - AC-001.16: WHEN every check passes for a Workspace target, THE backend SHALL:
     - set the Account's full name from the `name` claim (unchanged when the claim is empty);
     - record the sign-in time, and the first sign-in time when the Account has none (D14);
@@ -164,7 +166,7 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
   - AC-002.1: WHEN a signed-in user sends `POST /api/v1/auth/logout` with a valid CSRF token, on a Workspace site or on `admin.`, THE backend SHALL end the session, expire the cookie `__Host-TSOLVE_SESSION` (`Max-Age=0`, with `Secure` and `Path=/` and no `Domain`) and answer 204.
   - AC-002.2: WHEN a session has been ended by logout, THE backend SHALL answer every later request that carries its cookie with 401 and `code` `MSG07`.
   - AC-002.3: WHEN a Workspace session ends, THE backend SHALL publish exactly one `SessionEnded` event with the Account id, the Workspace id, the session id and the reason, after the session is gone. The reason SHALL be `LOGOUT` (AC-002.1), `EXPIRED` (AC-001.23) or `DEACTIVATED` (AC-001.27).
-  - AC-002.4: WHILE a Workspace session is past a limit of AC-001.23 and no request uses it, THE backend SHALL still end it and publish `SessionEnded` with `EXPIRED` at most 15 minutes after the limit passed.
+  - AC-002.4: WHILE a Workspace session is past a limit of AC-001.23 and no request uses it, THE backend SHALL still remove it from the shared session store and publish `SessionEnded` with `EXPIRED` at most 15 minutes after the limit passed.
   - AC-002.5: WHEN a user logs out, THE backend SHALL keep every Jira account link of the Account unchanged.
   - AC-002.6: IF `POST /api/v1/auth/logout` comes with no valid session, THEN THE backend SHALL answer 401 with `code` `MSG07` (be-foundation AC-002.4) and publish no event. The web app still clears its data and opens Login (fe-foundation AC-008.3).
   - AC-002.7: THE My Profile screen SHALL have a "Log out" button that signs out through fe-foundation's `useSignOut()`, exactly like the user menu (fe-foundation AC-008.1 to AC-008.3).
@@ -282,8 +284,8 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
 
 ## Out of Scope
 - Standalone Project or Space handover pages, routes, menu actions or mutation endpoints are outside KAN-111 and KAN-112. Reuse the combined popup required by STORY-006–007. KAN-112 does not implement production backend persistence or authorization.
-- The Workspace resolver, MSG119 and MSG120 on ordinary requests, the Forge Invocation Token check, RLS →
-  `platform` (KAN-196). A Suspended Workspace's site is refused there; its sessions are not ended by this
+- The Tenant Resolver, MSG119 and MSG120 on ordinary requests, the Forge Invocation Token check, the Tenant
+  Context and Database Router, the per-database RLS guard, the Platform / Tenant Registry → `platform` (KAN-196). A Suspended Workspace's site is refused there; its sessions are not ended by this
   module.
 - The T-Solve app's panel states MSG62 and MSG74, and the `api.` endpoint that asks `SignInStateService` for a
   sign-in link → `jira-app` (Đặng Tấn Bình, KAN-124).
@@ -381,14 +383,22 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
 - `SessionEnded` (Spring application event): Account id, Workspace id, session id, reason `LOGOUT` /
   `EXPIRED` / `DEACTIVATED`.
 
-**Database.** One Liquibase changeset. Every table follows the platform tenant-table convention (platform AC-001.8):
-a plural name, UUID ids (`id` and every `<entity>_id`), `workspace_id` and row-level security.
-- `accounts`: email unique on the whole platform and stored lower-case (GBR-37, D7); full name, empty until the
-  first sign-in; status `ACTIVE` / `DEACTIVATED`; the Department of a Project Manager; first and last sign-in
-  time.
-- `account_roles`: the Account's Roles, the four Roles besides Employee, since Employee is implied (be-foundation
-  AC-002.2).
-- `jira_account_links` (the D1 name).
+**Stores.** The HLA gives each company its own PostgreSQL database (database per company, ADR-0002), so the account
+tables below have no `workspace_id`; the Workspace is the database the tenant context is bound to. Three places:
+- **Each company database** (the tenant Liquibase changelog; plural names and UUID ids as platform AC-001.8, but no
+  `workspace_id` and no foreign key to a Workspace; the RLS guard in each database is `platform`'s convention):
+  - `accounts`: email stored lower-case and unique inside that database (GBR-37, D7); full name, empty until the
+    first sign-in; status `ACTIVE` / `DEACTIVATED`; the Department of a Project Manager; first and last sign-in
+    time. Email uniqueness across the whole platform (one email in one Workspace) is checked through the Tenant
+    Registry's `workspace_emails` (a `platform` service that identity calls when an Account is added); no index can
+    span the company databases.
+  - `account_roles`: the Account's Roles, the four Roles besides Employee, since Employee is implied
+    (be-foundation AC-002.2).
+  - `jira_account_links` (the D1 name).
+- **The Platform / Tenant Registry database** (not a tenant database; the catalog changelog): the sign-in states and
+  the hand-off codes, because both are read before any tenant context exists (on `login.`).
+- **Redis** (the shared session store of the HLA): the Workspace and Operator sessions, so no API replica keeps a
+  session of its own.
 
 **Header.** `X-TSolve-Background: 1` marks a request that is not user activity (AC-001.25).
 
@@ -402,10 +412,15 @@ a plural name, UUID ids (`id` and every `<entity>_id`), `workspace_id` and row-l
 
 ### Required from other modules
 - `platform` (KAN-196):
-  - `TenantResolver` and `TenantContext` for Workspace-site requests;
-  - a way to run the callback's lookups in the context of the state value's Workspace;
-  - the Workspace record (site name, Google domain, status);
-  - the convention for tenant tables.
+  - the Tenant Resolver for Workspace-site requests, which refuses an unknown or suspended Workspace;
+  - the Tenant Context bound before the transaction, with no default fallback, and the Database Router behind it,
+    and a way to run the callback's lookups in the context of the state value's Workspace;
+  - the Registry lookup: the Workspace record (site name, Google domain, status) and the `workspace_emails` check
+    of email uniqueness across the platform;
+  - the per-database RLS guard convention and the Registry database datasource;
+  - the first-Admin invitation of a new Workspace, started by a Platform Operator in the Platform Console (the
+    HLA's `platform` use case; whether it needs an Account-creation service from identity is for the `platform`
+    plan to settle).
 - `be-foundation`: `TSolveUser`, the five Role constants, `ProblemDetail` errors, CSRF (AC-002.11, AC-002.13),
   and `/me` (STORY-003 of be-foundation), whose Department lookup this module implements.
 - `fe-foundation` change request KAN-198: `startSignIn(returnTo)` (full-page `GET /api/v1/auth/sign-in`),
