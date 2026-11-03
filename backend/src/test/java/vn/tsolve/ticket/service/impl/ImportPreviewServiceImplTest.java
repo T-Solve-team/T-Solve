@@ -221,4 +221,19 @@ class ImportPreviewServiceImplTest {
         assertThat(e.getCode()).isEqualTo("MSG08");
         verifyNoInteractions(rows);
     }
+
+    @Test
+    void rejectsReadingWhenTheProjectIsNoLongerActive_AC_007_3() {
+        // The real stub, with the PM's Project listed as inactive: the other half of AC-007.3.
+        ProjectAccess inactive = new StubProjectAccess(PM + ":" + PROJECT, PROJECT.toString());
+        ImportPreviewServiceImpl withInactiveProject =
+                new ImportPreviewServiceImpl(previews, rows, new ImportPreviewMapperImpl(), inactive);
+
+        MessageCodeException e =
+                catchThrowableOfType(() -> withInactiveProject.preview(PM, ID), MessageCodeException.class);
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(e.getCode()).isEqualTo("MSG08");
+        verifyNoInteractions(rows);
+    }
 }
