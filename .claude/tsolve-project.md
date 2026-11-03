@@ -7,14 +7,15 @@
 ## What T-Solve is
 Ticket Solution Repository Application — a knowledge layer next to **Jira Cloud** (does not replace it).
 Loop: resolved Jira issue → Ticket Resolver writes Solution (AI-drafted) in the Solution Form → Project Manager
-reviews → Published ticket → reused via Search / Issue Panel suggestions in Jira, AI Ticket Triage on new issues
+reviews → Published ticket → reused via Search / Issue Panel suggestions in Jira, AI Solution Suggestion on new issues
 and the Knowledge Chatbot. Capstone FPT University, Fall 2026, supervisor Tô Thanh Hải.
 
 ## Source of truth in DOCS (first wins)
-1. `Report3/` — `CONTEXT.md` (glossary: use its terms, never its _Avoid_ words), `SRS_Delta.md` (decisions D1–D43,
-   CR register), `adr/0001-multi-tenant-pool-model.md`, `UC_list_and_Actors.md` (4.1 Actors, 4.2 UC-01…56; UC-54…56 =
-   Platform Operator, P-01…03 in the Stories; 4.4 Permission Matrix), `Business_Rules.md` (GBR-01…37),
-   `System_Messages.md` (MSG01…141), `Architecture.jpg` (left as is, D6).
+1. `Report/Sua_31-10/Report_3_BreakDown/` (31/10, master) — `UC_list_and_Actors.docx` (UC-01…53, UC-58 Chatbot
+   creates an issue, UC-59 link ticket tracker account; 54–57 unused), `Business_Rules.docx` (GBR-01…40),
+   `System_Messages.docx` (MSG01…157). Then `Report3/` (25/10): `CONTEXT.md` (glossary: use its terms, never its
+   _Avoid_ words), `SRS_Delta.md` (decisions D1–D43, CR register); its ADR-0001 (pool model) is superseded by
+   `docs/adr/0002-database-per-workspace.md` in this repo.
 2. `Claude decisions/T-Solve_FE_spec_gap_Report3.md` — FE Lead decisions D1–D6 (win over Report3 where they differ;
    Report3 will be updated) · `T-Solve_UI_design_v3_decisions.md` (screens, menus, Figma) ·
    `T-Solve_Jira_ticket_convention.md`.
@@ -28,10 +29,11 @@ and the Knowledge Chatbot. Capstone FPT University, Fall 2026, supervisor Tô Th
 - Roles (4.1, GBR-28): **Employee** (every account), **Ticket Resolver**, **Project Manager**, **Knowledge Manager**,
   **Admin**. A user can hold several; permissions add up. Only a Project Manager has a Department (exactly one);
   a Ticket Resolver belongs to the Departments of their Projects.
-- Multi-tenant (ADR-0001, GBR-37): one deployment serves many companies, a **Workspace** per company on its
-  **Workspace site** `{site name}.tsolve.io.vn`; **Platform Operators** create and suspend Workspaces on the
-  **Platform Console** (`admin.`, UC-54…56). Every record belongs to one Workspace, taken only from the host, the
-  verified Jira `cloudId` or the job — never from the request.
+- Multi-tenant (ADR-0002, GBR-37): one deployment serves many companies, a **Workspace** per company on its
+  **Workspace site** `{site name}.tsolve.io.vn`, **each with its own database** plus a catalog database. The T-Solve
+  operations team creates, suspends and reactivates Workspaces with an ops script (GBR-24, GBR-38; no Platform
+  Console, no Platform Operator actor). The Workspace is taken only from the host, the verified Jira `cloudId` or
+  the job — never from the request. One email belongs to one Workspace (GBR-16).
 - Workspace → Department → Project (linked to exactly one Jira project, exactly one Project Manager) → Ticket (exactly one Solution, no versions).
 - Each Department has one Space (Wiki); a Space has folders (≤ 3 levels) and Wiki documents with visibility
   Department or Company-wide, and at most one Knowledge Manager.
@@ -42,15 +44,16 @@ and the Knowledge Chatbot. Capstone FPT University, Fall 2026, supervisor Tô Th
 
 ## Features (Report3 UC groups)
 RBAC · Workspace & Department · Ticket tracker integration · Solution Authoring · Ticket Import & Repository ·
-Intelligent Retrieval (Search) · Reuse & Feedback · Review & Approval · Dashboard & Audit · **AI Ticket Triage**
-(Simple / Complex on a new Jira issue; a suggested solution on Simple ones) · **Wiki** (Space management, documents)
-· **Knowledge Chatbot** (web only, cites its sources).
+Intelligent Retrieval (Search) · Reuse & Feedback · Review & Approval · Dashboard & Audit · **AI Solution
+Suggestion** (on a new Jira issue, a suggested solution when a source passes the relevance threshold; no Simple /
+Complex) · **Wiki** (Space management, documents; re-upload overwrites, no versions, no review) · **Knowledge
+Chatbot** (web only, cites its sources; creates a Jira issue when no answer is found, UC-58).
 
 ## Tech stack
 FE React 19 + TypeScript + Vite + Ant Design 6 · BE Spring Boot 3 (Java 21, Maven, modular monolith) ·
-PostgreSQL 16 + pgvector (`workspace_id` + Hibernate `@TenantId` + RLS) · Liquibase · Docker Compose + Caddy wildcard
+PostgreSQL 16 + pgvector (one database per Workspace + a catalog database) · Liquibase · Docker Compose + Caddy wildcard
 on an application VPS (Vietnam) · Jira App on Atlassian Forge (Forge Remote) · Google OIDC (central sign-in on `login.`) ·
-Ollama for the LLM and bge-m3 embeddings on a dedicated AI VPS, private link only, PII-masked (D3, D41; no OpenRouter) ·
+Ollama for the LLM and bge-m3 embeddings on a dedicated AI VPS, private link only, no PII masking since content never leaves T-Solve's servers (D3, D41; no OpenRouter) ·
 background jobs on JobRunr OSS (PostgreSQL storage, `worker` process, per-Workspace cap, D43) · SMTP email.
 AI model choice pending benchmark (KAN-140, DOCS/`Notes/Chon_Model_AI.md`). Modules and owners:
 `harnessclaude/artifacts/03-modules/module-map.md`.
@@ -59,9 +62,9 @@ AI model choice pending benchmark (KAN-140, DOCS/`Notes/Chon_Model_AI.md`). Modu
 | Member | Role | Owns (harness modules, per Jira assignees — D40) |
 |---|---|---|
 | Đặng Nhật Minh | PM, Scrum Master | `ticket-repository` (UC-20…25), `wiki` (UC-38…50); file storage, AI benchmark |
-| Đặng Tấn Bình | BA, Document Owner | `platform-console` (UC-54…56), `workspace` (UC-10…15), `project-integration` (UC-16…18), `jira-app` |
-| Trần Trung Hiếu | Dev FE / UI-UX, DevOps | `platform` (tenant layer, infrastructure), `fe-foundation`, `identity` UC-01…03, `chatbot` web app (done) |
-| Trần Hải Anh | Dev BE / DB | `be-foundation`, `ai`, `search` (UC-26…28), `triage` (UC-36…37), `chatbot` backend, dashboard (UC-34); RLS |
+| Đặng Tấn Bình | BA, Document Owner | `workspace` (UC-10…15), `project-integration` (UC-16…18), `jira-app` |
+| Trần Trung Hiếu | Dev FE / UI-UX, DevOps | `platform` (tenant layer, ops script, infrastructure), `fe-foundation`, `identity` UC-01…03, UC-59, `chatbot` web app (done) |
+| Trần Hải Anh | Dev BE / DB | `be-foundation`, `ai`, `search` (UC-26…28), `triage` (UC-36…37), `chatbot` backend (UC-51…53, UC-58), dashboard (UC-34) |
 | Phạm Tùng Dương | Tester / QA | `worker`, `identity` UC-04…09 + RBAC rules, `ticket-review` (UC-29…33), audit log (UC-35); test plan, E2E |
 
 ## Timeline

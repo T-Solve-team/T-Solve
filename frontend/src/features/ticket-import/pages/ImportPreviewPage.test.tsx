@@ -147,7 +147,7 @@ describe('ImportPreviewPage', () => {
     },
   );
 
-  it('answers MSG04 for a preview or row that is gone, like the backend (BUG-083)', async () => {
+  it('answers MSG04 for a preview or row that is gone, like the backend (BUG-107)', async () => {
     for (const path of ['/previews/99', '/previews/99/rows', '/previews/1/rows/999']) {
       const response = await fetch(`http://localhost/api/v1/imports${path}`);
       expect(response.status).toBe(404);
@@ -419,7 +419,7 @@ describe('ImportPreviewPage', () => {
       return answer;
     }
 
-    it('disables Confirm while a Remove is running (BUG-084)', async () => {
+    it('disables Confirm while a Remove is running (BUG-108)', async () => {
       const answer = holdAnswer('remove-rows');
       const { user } = await openPreview();
       await user.click(screen.getByRole('checkbox', { name: 'Select row 1' }));
@@ -430,7 +430,7 @@ describe('ImportPreviewPage', () => {
       answer();
     });
 
-    it('disables Remove while a Confirm is running (BUG-084)', async () => {
+    it('disables Remove while a Confirm is running (BUG-108)', async () => {
       const answer = holdAnswer('confirm');
       const { user } = await openPreview();
       await user.click(screen.getByRole('checkbox', { name: 'Select row 1' }));
@@ -441,7 +441,7 @@ describe('ImportPreviewPage', () => {
       answer();
     });
 
-    it('does not show a confirmed preview again on browser Back (BUG-085)', async () => {
+    it('does not show a confirmed preview again on browser Back (BUG-109)', async () => {
       const { user, router } = await openPreview();
       await user.click(screen.getByRole('button', { name: 'Confirm' }));
       await waitFor(() => expect(router.state.location.pathname).toBe('/import'));

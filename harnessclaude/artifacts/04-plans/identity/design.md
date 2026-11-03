@@ -143,12 +143,20 @@ screen: Tasks 7–12 of `iteration-1/tasks.md`. KAN-104's leftovers (D2) map ont
 the company's own site is AC-001.18/.20/.21/.22/.32; the role's default page after sign-in is AC-001.18 (`returnTo`
 or `/`) plus fe-foundation AC-003.1. The Jira line "Callback chỉ về `login.`" is AC-001.4/.5 (Q1).
 
+**HLA change, 2026-11-03 (KAN-231 step 2, Hiếu: Q1–Q4 = A).** The multi-tenant HLA (drawio, 29/10) changes four
+things
+in this plan; each is marked "HLA" where it lands: (Q1) the Platform Console on `admin.` stays (Task 11); (Q2) sign-in
+states and hand-off codes live in the Platform / Tenant Registry database, moved there by Task 14 while Tasks 8–9 keep
+their tables in the one changelog until then; (Q3) sessions live in Redis, not in a Postgres `web_sessions` table
+(Task 10); (Q4) one database per company, so the account tables have no `workspace_id` and platform-wide email
+uniqueness goes through the registry (Tasks 9b and 14). Task 9 (KAN-231) is unchanged.
+
 ### Flow
 
 ```text
 Workspace site (acme.)              login. (TSOLVE_LOGIN_ORIGIN)                  Google
  Login "Sign in with Google"
-  └ startSignIn(returnTo) ─► GET /api/v1/auth/sign-in ─ state row ─► 302 ─► GET /api/v1/auth/authorize?state
+  └ startSignIn(returnTo) ─► GET /api/v1/auth/sign-in ─ state row (Registry DB) ─► 302 ─► GET /api/v1/auth/authorize?state
                                          ├ mark authorized (once) · Set-Cookie __Host-TSOLVE_SIGNIN
                                          └ 302 (scope, state, nonce, PKCE S256, hd) ─► accounts.google.com
                                    GET /api/v1/auth/callback?code&state ◄──────────────────── 302
@@ -156,9 +164,9 @@ Workspace site (acme.)              login. (TSOLVE_LOGIN_ORIGIN)                
                                     ├ code exchange (RestClient) · ID token (NimbusJwtDecoder)
                                     ├ checks in the AC-001.14 order, inside runIn(state.workspace)
                                     ├ every answer: Set-Cookie __Host-TSOLVE_SIGNIN Max-Age=0
-                                    └ hand-off code row ─► 302 acme./api/v1/auth/complete?code
- GET /api/v1/auth/complete?code ─ consume code · web_sessions row · Set-Cookie __Host-TSOLVE_SESSION ─► 302 returnTo or /
- every later request: WebSessionFilter ─ host/kind check · 8 h / 60 min · re-read Account ─► TSolveUser
+                                    └ hand-off code row (Registry DB) ─► 302 acme./api/v1/auth/complete?code
+ GET /api/v1/auth/complete?code ─ consume code · session key in Redis · Set-Cookie __Host-TSOLVE_SESSION ─► 302 returnTo or /
+ every later request: WebSessionFilter ─ host/kind check · 8 h / 60 min (session from Redis) · re-read Account (tenant DB) ─► TSolveUser
 ```
 
 `admin.` (`TSOLVE_ADMIN_ORIGIN`) follows the same path with a Platform Console state value (no `hd`, the allow-list
@@ -174,9 +182,9 @@ page (MSG75 or the failure), never on a Workspace site.
 | `frontend/src/shared/auth/sign-in.ts` | `startSignIn` goes to `/dev/sign-in?returnTo=…` in mock mode and to `/api/v1/auth/sign-in?returnTo=…` otherwise (the same `returnTo` filter) | T7 |
 | `frontend/openapi/tsolve-api.yaml` | The redirect contract (Q6), see "Contract" | T7 |
 | `vn.tsolve.identity.signin` | `SignInStateService` (create, check and consume state values; `createJiraLinkUrl` for `jira-app`), `SignInStartController` (`/sign-in` on a Workspace site or `admin.`), `AuthorizeController` and `CallbackController` (`login.` only), `GoogleOidcClient` (authorization URL, code exchange), `IdTokenVerifier`, `HandOffCodeService` (issue), `LoginPage` (the minimal `login.` HTML page), `AuthHosts` (which configured origin a request is on), `SignedToken` (HMAC-SHA256 sign and verify), `SignInCookie` (makes, hashes and expires `__Host-TSOLVE_SIGNIN`), `IdentityClock` (identity's time, KAN-231 Q9) | T8, T9, T9b |
-| `vn.tsolve.identity.signin.port` | `WorkspaceLookup` and `TenantScope` (Q11), `LocalTenantScope` (interim production `TenantScope`, KAN-231 Q10), see "Ports" | T8, T9b |
-| `vn.tsolve.identity.account` | `Account` (own `workspace_id` column, no base entity yet, KAN-231 Q10), `AccountRole`, `AccountStatus`, `AccountRepository` (`findByWorkspaceIdAndEmailIgnoreCase`; every method takes the Workspace id) | T9b |
-| `vn.tsolve.identity.session` | `CompleteController` (`/complete`, redeems hand-off codes), `WebSession`, `WebSessionRepository`, `WebSessionFilter` (the per-request rules), `SessionCleanup` (scheduled), `OperatorAllowList` | T10, T11 |
+| `vn.tsolve.identity.signin.port` | `WorkspaceLookup` and `TenantScope` (Q11), `LocalTenantScope` (interim production `TenantScope`, KAN-231 Q10; one database until Task 14, HLA Q4), see "Ports" | T8, T9b |
+| `vn.tsolve.identity.account` | `Account` (no `workspace_id`: one database per company, HLA Q4; no base entity yet), `AccountRole`, `AccountStatus`, `AccountRepository` (`findByEmailIgnoreCase`; reached only inside `TenantScope.runIn`) | T9b |
+| `vn.tsolve.identity.session` | `CompleteController` (`/complete`, redeems hand-off codes), `WebSession`, `WebSessionStore` (Redis, HLA Q3; replaces `WebSessionRepository`), `WebSessionFilter` (the per-request rules), `SessionCleanup` is not built; the `SessionEnded` `EXPIRED` publisher is planned with KAN-106 (see Data model), `OperatorAllowList` | T10, T11 |
 | `vn.tsolve.identity.jiralink` | `JiraAccountLink`, `JiraAccountLinkRepository` (one link per tracker account and Workspace) | T12 |
 | `vn.tsolve.identity.AuthSecurityConfig` | An `@Order(1)` `SecurityFilterChain` whose `securityMatcher` is the four redirect paths: `permitAll`, stateless, no CSRF (all four are GET). Logout and every other path stay under be-foundation's deny-by-default chain (`roles-security`) | T8 |
 
@@ -213,61 +221,82 @@ All four redirect endpoints go into `frontend/openapi/tsolve-api.yaml`, tag `ses
 
 orval generates unused functions for them; `generate:api` must leave no diff.
 
-### Data model (Q8)
+### Data model (Q8, HLA Q2–Q4)
 
-Three tables in the shared (non-tenant) schema, because each is read before any tenant context exists. Ids are
-UUIDs (platform AC-001.8). Liquibase SQL files in `backend/src/main/resources/db/changelog/changes/` with the next
-free number, listed in `db.changelog-master.xml`.
+The HLA has one PostgreSQL database per company and a Platform / Tenant Registry database. identity's data goes to
+three places (HLA, 2026-11-03):
 
-| Table | Columns | Rules |
-|-------|---------|-------|
-| `sign_in_states` | `id`, `target` (`WORKSPACE`, `PLATFORM_CONSOLE`, `JIRA_LINK`), `workspace_id` (null for the Console), `tracker_account_id` (Jira link only), `return_to`, `nonce`, `pkce_verifier`, `created_at`, `expires_at` (+10 min), `used_at`, and from T9 `authorized_at` and `browser_binding_hash` (SHA-256 of the sign-in cookie value, 32 bytes; both null until `authorize`) | A check constraint allows exactly one target shape (AC-001.2), and a second one that `authorized_at` and `browser_binding_hash` are both null or both set. The browser gets `<id>.<HMAC>`; nonce and verifier never leave the server. `authorize` sets both new columns with `UPDATE … SET authorized_at = :now, browser_binding_hash = :hash WHERE id = :id AND authorized_at IS NULL AND used_at IS NULL AND expires_at > :now`, where `:now` is the `IdentityClock` time passed as a parameter, never the database `now()` (state times come from `IdentityClock`, so tests with `Clock.fixed` stay consistent; spec review, KAN-231): one row updated, or the MSG141 page (AC-001.44/.45). The two columns come in a new changeset (`<next>-identity-sign-in-state-binding.sql`); Task 8's `004-identity-sign-in-states.sql` is never edited (Decided in planning, KAN-231) |
-| `hand_off_codes` | `id`, `target` (`WORKSPACE`, `PLATFORM_CONSOLE`), `workspace_id`, `account_id`, `operator_email`, `site_host`, `return_to`, `created_at`, `expires_at` (+60 s), `used_at` | The code is `<id>.<HMAC>`. Redeemed by `UPDATE … SET used_at = now() WHERE id = ? AND used_at IS NULL AND expires_at > now()`: one row updated, or MSG141 (AC-001.17/.19) |
-| `web_sessions` | `id`, `token_hash` (SHA-256 of the cookie value, unique), `kind` (`WORKSPACE`, `OPERATOR`), `workspace_id`, `account_id`, `operator_email`, `site_host`, `created_at`, `last_activity_at`, `ended_at` | The cookie holds 32 random bytes (base64url); only the hash is stored. "End the session" sets `ended_at` |
+- **Platform / Tenant Registry database** (non-tenant; the catalog changelog): `sign_in_states` and `hand_off_codes`
+  (HLA Q2), because both are read on `login.` or at `complete` with no tenant bound, and with "no default fallback"
+  there is no tenant database to reach. **Interim:** Tasks 8 and 9 keep `sign_in_states` in today's only changelog
+  (`db.changelog-master.xml`, one database until `platform` builds the registry and the router), and Task 9's new
+  column changeset goes there too; Task 9b's `hand_off_codes` changeset likewise. Task 14 moves both tables into the
+  registry changelog and gives their repositories the registry datasource.
+- **Each company database** (the tenant changelog): `accounts`, `account_roles`, `jira_account_links`.
+- **Redis** (HLA Q3): the sessions. No `web_sessions` table.
 
-`SessionCleanup` (`@Scheduled`, every 15 minutes) deletes states and codes one hour after `expires_at`, and
-sessions one day after `ended_at` or after the 8-hour limit (Decided in planning).
+Ids are UUIDs (platform AC-001.8). Liquibase SQL files in `backend/src/main/resources/db/changelog/changes/` with the
+next free number, listed in `db.changelog-master.xml` (until Task 14 moves the two registry tables).
 
-Tenant tables, under the platform convention (platform Task 2 base entity, Task 3 row-level security). Interim
-until the platform lands (KAN-231 Q10, Hiếu, 2026-10-31): `accounts` and `account_roles` get their own
-`workspace_id` column, with no base entity, no foreign key to the Workspace registry and no row-level security yet;
-every repository method takes the Workspace id explicitly. Task 14 (after platform KAN-98 / KAN-99 merge) moves
-`Account` onto the base entity and adds the foreign key, the row-level-security changeset and the adapters; this is
-an exception to backend AGENTS.md §7, recorded in Key decisions "Platform gap".
-- `accounts` (T9b): `id`, `workspace_id`, `email` (stored lower-cased, unique on the whole platform: a unique index on
-  `email` across all rows, GBR-37, D7, spec Interface Contracts; KAN-231 Q13), `full_name`, `status`
+| Store | Columns / shape | Rules |
+|-------|-----------------|-------|
+| `sign_in_states` (Registry DB; interim: the one changelog) | `id`, `target` (`WORKSPACE`, `PLATFORM_CONSOLE`, `JIRA_LINK`), `workspace_id` (null for the Console), `tracker_account_id` (Jira link only), `return_to`, `nonce`, `pkce_verifier`, `created_at`, `expires_at` (+10 min), `used_at`, and from T9 `authorized_at` and `browser_binding_hash` (SHA-256 of the sign-in cookie value, 32 bytes; both null until `authorize`) | A check constraint allows exactly one target shape (AC-001.2), and a second one that `authorized_at` and `browser_binding_hash` are both null or both set. The browser gets `<id>.<HMAC>`; nonce and verifier never leave the server. `authorize` sets both new columns with `UPDATE … SET authorized_at = :now, browser_binding_hash = :hash WHERE id = :id AND authorized_at IS NULL AND used_at IS NULL AND expires_at > :now`, where `:now` is the `IdentityClock` time passed as a parameter, never the database `now()` (state times come from `IdentityClock`, so tests with `Clock.fixed` stay consistent; spec review, KAN-231): one row updated, or the MSG141 page (AC-001.44/.45). The two columns come in a new changeset (`<next>-identity-sign-in-state-binding.sql`); Task 8's `004-identity-sign-in-states.sql` is never edited (Decided in planning, KAN-231). Here `workspace_id` names the target Workspace in the registry; it is not a tenant column |
+| `hand_off_codes` (Registry DB; interim: the one changelog) | `id`, `target` (`WORKSPACE`, `PLATFORM_CONSOLE`), `workspace_id`, `account_id`, `operator_email`, `site_host`, `return_to`, `created_at`, `expires_at` (+60 s), `used_at` | The code is `<id>.<HMAC>`. Redeemed by `UPDATE … SET used_at = now() WHERE id = ? AND used_at IS NULL AND expires_at > now()`: one row updated, or MSG141 (AC-001.17/.19) |
+| Session (Redis, HLA Q3) | Key `tsolve:session:<SHA-256 of the cookie value, hex>`, a hash: `kind` (`WORKSPACE`, `OPERATOR`), `workspace_id`, `account_id`, `operator_email`, `site_host`, `created_at`, `last_activity_at` | The cookie holds 32 random bytes (base64url); only the hash is in the key. The limits of AC-001.23 are checked in the application from `created_at` and `last_activity_at` with `IdentityClock` (so tests use `Clock.fixed`); the key's time to live (the 60-minute idle window, renewed by activity, never past the 8-hour limit) is only a backstop that removes it. "End the session" deletes the key. Sessions are kept in a Redis that is not an eviction cache (HLA: apart from the cache) |
+
+Expiry and `SessionEnded` (AC-002.4, HLA Q3): the key's time to live removes an unused session; the 15-minute bound
+for `SessionEnded` `EXPIRED` needs the session's Account id and Workspace id, which a Redis expiry event does not
+carry. How `EXPIRED` is produced (keyspace events on a shadow key, or a recurring worker job over an expiry-ordered
+index, the JobRunr worker of the HLA) is settled when KAN-106 (STORY-002, AC-002.4) is planned, because Task 10 only stores the session; it must keep the
+15-minute bound
+and the single event of AC-002.3. `SessionCleanup` (`@Scheduled`, every 15 minutes) goes: N API replicas must not each
+run it. Old states and hand-off codes (one hour after `expires_at`) are deleted by a recurring job in the `worker`
+process (JobRunr) once the tables are in the registry, and until then by a `@Scheduled` job in the web process
+(Decided in planning; the sessions are no longer part of it).
+
+Tenant tables (HLA Q4, Hiếu, 2026-11-03): one database per company, so `accounts`, `account_roles` and
+`jira_account_links` have **no** `workspace_id` and no foreign key to a Workspace; the Workspace is the database the
+tenant context is bound to (`TenantScope.runIn(workspaceId, …)`, the Database Router of `platform` later). This
+replaces the interim `workspace_id` columns of KAN-231 Q10. The per-database RLS guard is whatever convention
+`platform` defines (no FK; Task 14).
+- `accounts` (T9b): `id`, `email` (stored lower-cased, unique inside the company database; one email in one Workspace
+  across the platform goes through the registry's `workspace_emails`, GBR-16, GBR-37, D7: a `platform` service that
+  identity calls when an Account is added, STORY-005; no index can span the databases), `full_name`, `status`
   (`ACTIVE`, `DEACTIVATED`), `first_sign_in_at`, `last_sign_in_at`, `created_at`. The Department column comes with
   the story that needs it (STORY-003 or STORY-007), not here (Decided in planning).
-- `account_roles` (T9b): `id`, `workspace_id`, `account_id`, `role` (the five be-foundation Role constants), unique
-  per pair.
-- `jira_account_links` (T12): `id`, `workspace_id`, `tracker_account_id` (unique per Workspace), `account_id`,
-  `linked_at`. A new link of the same tracker account replaces the row (AC-001.36).
+- `account_roles` (T9b): `id`, `account_id`, `role` (the five be-foundation Role constants), unique per pair.
+- `jira_account_links` (T12): `id`, `tracker_account_id` (unique in the company database), `account_id`, `linked_at`.
+  A new link of the same tracker account replaces the row (AC-001.36).
 
 ### Ports (Q11)
 
 T8 starts before the platform tasks merge. identity owns two small interfaces in `identity.signin.port`, with test
 doubles in the test sources:
 - `WorkspaceLookup`: `findBySiteHost(host)` and `findById(id)` → `WorkspaceRef(id, siteHost, googleDomain, status)`.
-  Its adapter reads the Workspace registry (platform Task 4, KAN-98) and the Tenant Resolver (Task 5, KAN-99).
+  Its adapter reads the Platform / Tenant Registry database (platform Task 4, KAN-98) and the Tenant Resolver
+  (Task 5, KAN-99).
 - `TenantScope`: `currentWorkspaceId()` and `runIn(workspaceId, supplier)`. Its adapter calls `TenantContext` and
   `runIn` (platform Task 1, KAN-99).
 
 The adapters (`PlatformWorkspaceLookup`, `PlatformTenantScope`) are written in the first identity task that starts
 after those platform tasks are on `main`. Until then T8's behaviour is shown by its tests, not on the local stack.
 
-Platform gap (KAN-231 Q10, Hiếu, 2026-10-31): KAN-98 and KAN-99 are still To Do, so T9 and T9b are built against the
-ports and test doubles too, like T8:
+Platform gap (KAN-231 Q10, Hiếu, 2026-10-31; reworded for the HLA, Q4, 2026-11-03): KAN-98 and KAN-99 are still To
+Do, so T9 and T9b are built against the ports and test doubles too, like T8:
 - Production beans until the adapters exist: `NoWorkspaceLookup` (every lookup finds nothing, so every Workspace
   site answers 404, as today) and, new in T9b, `LocalTenantScope` in `identity.signin.port`: a `ThreadLocal` holding
   the Workspace id, set by `runIn(workspaceId, supplier)` and cleared in a `finally`; `currentWorkspaceId()` throws
   when no scope is open. It keeps the `runIn` calls in place, so the platform adapter later replaces only the bean.
-- Isolation does not rest on the scope: every `AccountRepository` method takes the Workspace id explicitly (for
-  example `findByWorkspaceIdAndEmailIgnoreCase`), and the two-Workspace tests (AC-001.7, AC-001.15) prove it through
-  that filter.
-- The follow-up after the platform lands is Task 14 (tasks.md): `PlatformWorkspaceLookup`, `PlatformTenantScope`,
-  `Account` and `account_roles` on the platform base entity with the foreign key to `workspaces`, the
-  row-level-security changeset for `accounts` and `account_roles`, and demo Accounts for the seed Workspaces.
-  Platform Task 15's demo seed is not edited by T9 or T9b. identity cannot reach `completed` before Task 14.
+- No `workspace_id` filter (HLA Q4): isolation is the tenant's database, reached only inside `TenantScope.runIn`.
+  Until Task 14 production has one database and `NoWorkspaceLookup` answers 404 on every Workspace site, so no
+  Workspace is reachable; the isolation is shown by the two-Workspace tests (AC-001.7, AC-001.15), which run on two
+  databases routed by a test `TenantScope` double and a test routing `DataSource` (test sources only; Decided in
+  planning, builder check: two databases of one Testcontainers Postgres).
+- The follow-up after the platform lands is Task 14 (tasks.md): `PlatformWorkspaceLookup`, `PlatformTenantScope` (and
+  the Database Router behind it), the move of `sign_in_states` and `hand_off_codes` to the registry database (HLA Q2),
+  the registry's `workspace_emails` adapter (HLA Q4), the per-database RLS guard for `accounts` and `account_roles`
+  if `platform` defines one, and demo Accounts for the seed Workspaces. Platform Task 15's demo seed is not edited by
+  T9 or T9b. identity cannot reach `completed` before Task 14.
 - While `NoWorkspaceLookup` answers 404, Hiếu sees T9 and T9b through their tests (fake issuer) only.
 
 T8 does not wait for be-foundation `problem-errors`: its failures are the minimal `login.` page (HTML) and
@@ -301,9 +330,11 @@ listed in `.env.example` with a local value.
 | `TSOLVE_SIGNING_KEY` | HMAC-SHA256 key for state values and hand-off codes, at least 32 bytes (base64) | a random local key |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | the OAuth client | a developer's own client, or the fake issuer |
 | `PLATFORM_OPERATOR_EMAILS` | the comma-separated allow-list; entries trimmed, compared ignoring case | a developer's email |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | the session store (HLA Q3), Spring's `spring.data.redis.*`; Task 10 (Decided in planning: names; `platform` or be-foundation may define the same values first, then they are reused) | `localhost`, `6379`, none (the Docker Compose Redis service) |
 
 The redirect URI is always `TSOLVE_LOGIN_ORIGIN` + `/api/v1/auth/callback`. AC-001.21, .28, .29, .30 and .31 name the
-configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`); the code builds those URLs from it (Q7, Hiếu, 2026-10-28).
+configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`; the Console on `admin.` stays, HLA Q1); the code builds those URLs from it (Q7, Hiếu,
+2026-10-28).
 
 ### Sign-in and session rules (how the criteria are met)
 
@@ -318,7 +349,8 @@ configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`); the code builds thos
   `authorized_at` in one conditional update (see Data model), then answers 302 to Google with
   `Set-Cookie: __Host-TSOLVE_SIGNIN=<value>; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=Lax` (no Domain) and
   `Cache-Control: no-store` (AC-001.44; no cache or proxy keeps the answer that carries the cookie; spec review,
-  KAN-231). `SameSite=Lax` is required: Google's redirect back is a cross-site top-level GET, which sends a `Lax` cookie and not
+  KAN-231). `SameSite=Lax` is required: Google's redirect back is a cross-site top-level GET, which sends a `Lax` cookie and
+  not
   a `Strict` one. The callback hashes the received cookie value and compares it with `browser_binding_hash` in
   constant time (`MessageDigest.isEqual`); a missing cookie, a missing hash (never authorized) or a mismatch is
   MSG141 (AC-001.46). Every callback answer on `login.`, of any outcome, sets
@@ -341,7 +373,8 @@ configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`); the code builds thos
   (AC-001.49) → Google `error`, code exchange and ID token (MSG06) → Workspace Active → `hd` → Account exists →
   Account Active. Every MSG141 in this first step is the 400 minimal page, because a target may not be known; the
   Workspace must be found before the MSG06 step, whose redirect needs the Workspace site. The Account lookup and
-  update run inside `TenantScope.runIn(state.workspaceId)` and filter on that Workspace id explicitly (AC-001.15).
+  update run inside `TenantScope.runIn(state.workspaceId)`, i.e. in that Workspace's database, with the tenant bound
+  before the transaction (AC-001.15, HLA Q4).
 - Decided in planning (KAN-231 step 1): a callback with neither `code` nor `error` counts as a failed code exchange
   (MSG06, AC-001.9); an ID token with no `email` claim fails verification (MSG06).
 - Interim answers until the later tasks exist (KAN-231 Q12): a Platform Console state value runs the shared checks
@@ -351,7 +384,8 @@ configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`); the code builds thos
   (Workspace and Account checks, hand-off) and T12 (link) replace it. No session, no Account change, no link.
 - Per request (`WebSessionFilter`, after the platform's Tenant Resolver): on `login.` or `api.` → no session
   (AC-001.22); then a host or kind mismatch → 401 MSG123 without ending the session (AC-001.20/.21/.32); then the
-  8 h / 60 min limits → end + 401 MSG07 (AC-001.23); then the Account re-read → Deactivated: end + 401 MSG10
+  8 h / 60 min limits (read from the Redis session) → end (delete the key) + 401 MSG07 (AC-001.23); then the
+  Account re-read → Deactivated: end + 401 MSG10
   (AC-001.27), else a `TSolveUser` with the current Roles (AC-001.26). A request without `X-TSolve-Background: 1`
   updates `last_activity_at` (AC-001.24/.25). The order follows from AC-001.20, which keeps a mismatched session
   alive (Decided in planning). Time comes from `IdentityClock` (KAN-231 Q9): a small identity type wrapping a
@@ -376,12 +410,17 @@ configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`); the code builds thos
   endpoint and a JWKS made from a test RSA key (nimbus `RSAKeyGenerator`); tests sign their own ID tokens to cover
   every AC-001.9 failure, plus an unreachable token endpoint.
 - Controller tests use MockMvc with the `Host` set per site (`acme.localhost`, `beta.localhost`, `login.localhost`,
-  `admin.localhost`). The two-Workspace tests (NFR 5) use two Workspaces with Accounts of the same Roles:
-  AC-001.7 (T9), AC-001.15 (T9b), AC-001.17 and .20 (T10), AC-001.32 (T11). The AC-001.15 test: Workspace B's
-  Account email signing in on Workspace A gets MSG09, and B's Account is untouched (email is unique on the whole
-  platform, KAN-231 Q13).
+  `admin.localhost`). The two-Workspace tests (NFR 5) use two Workspaces, each with its own database
+  (HLA Q4: two databases on one Testcontainers Postgres, routed by a test `TenantScope` double) and Accounts of the
+  same Roles: AC-001.7 (T9), AC-001.15 (T9b), AC-001.17 and .20 (T10), AC-001.32 (T11). The AC-001.15 test: Workspace
+  B's Account email signing in on Workspace A gets MSG09, and B's Account is untouched, because A's database does not
+  hold it (an email lives in one Workspace on the whole platform; the registry's `workspace_emails` enforces it when
+  an Account is added, KAN-231 Q13, HLA Q4).
 - Repository and migration tests run against Postgres with Testcontainers, the `SignInStateRepositoryIT` pattern
   (needs Docker), until the database test setup of platform Task 2 is on `main` (KAN-231 Q10).
+- Session tests (Task 10, HLA Q3) run against Redis with Testcontainers Redis (the same pattern, needs Docker); on a
+  developer machine the local stack runs Redis as a Docker Compose service on Docker Desktop. The limits are tested
+  with `Clock.fixed`, not with Redis time.
 - JUnit names end with the AC id (`…_AC_001_6`); Vitest `it` names start with it.
 - The real Google client is used on staging only.
 
@@ -401,7 +440,7 @@ own client.
 | Mock mode (Q5) | Dev-only mock sign-in page at `/dev/sign-in` | Vite middleware; no click-through | Hiếu can try every outcome from the button; Vitest can test it |
 | Contract (Q6) | All four redirect endpoints in the YAML, tag `session` | Only the web app's calls; an orval filter | One contract for the backend team |
 | Origins (Q7) | `TSOLVE_LOGIN_ORIGIN`, `TSOLVE_ADMIN_ORIGIN`, no default | Production-only wording | NFR 4; local dev and tests use other origins |
-| Stores (Q8) | Own Postgres tables in the shared schema, single-use `used_at`, scheduled cleanup | Spring Session JDBC; in-memory | Survives restarts and a second instance; the background-header and re-read rules are custom anyway |
+| Stores (Q8, reworded by the HLA, Q2/Q3, Hiếu 2026-11-03) | Sign-in states and hand-off codes: own Postgres tables, single-use `used_at`, in the Platform / Tenant Registry database (interim: the one changelog until Task 14); sessions: Redis, own keys, with the 8 h / 60 min limits checked in the application | Spring Session JDBC / Redis (the background-header and re-read rules are custom anyway); states and codes in a tenant DB, in Redis (`GETDEL`), or "decide later"; sessions in Postgres `web_sessions` (a recorded deviation from the HLA) | The HLA: no tenant is bound on `login.`, so a tenant table cannot hold them (Q2); replicas keep no local session and Redis HA is the shared store (Q3). States and codes keep the conditional-UPDATE design already built and tested; Redis for sessions changes Task 10, which has not started |
 | OIDC (Q9) | Own controllers + `spring-security-oauth2-jose` + `RestClient` | `oauth2Login`; Google's client library | Full control of the signed single-use state and the hand-off; every check explicit and testable |
 | Tests (Q10) | Fake issuer (WireMock + test JWKS) in CI; real Google on staging only | `mock-oauth2-server` in compose; manual checks | Every failure path in CI with no Docker extra |
 | Start (Q11) | T8 now against the `WorkspaceLookup` / `TenantScope` ports with doubles | Wait for platform; identity builds be-foundation pieces | `login.` has no Workspace, so the state core can be built first |
@@ -412,10 +451,11 @@ own client.
 | Login CSRF cookie (KAN-231 Q1–Q5, Hiếu, 2026-10-31) | `authorize` on `login.` sets `__Host-TSOLVE_SIGNIN` (HttpOnly, Secure, Lax, Path `/`, no Domain, 600 s) holding 32 random bytes; only their SHA-256 is kept on the state (`browser_binding_hash`); `authorize` accepts each state once (`authorized_at`); the callback compares hashes in constant time, answers the 400 MSG141 page without a match, and expires the cookie in every answer; all three targets (AC-001.44–.47) | Set at sign-in start and checked at `complete` (the cookie of one host never reaches `login.`; the callback's side effects would still run; no Jira-link cover); a `Domain=` cookie (drops `__Host-`); the state value or its HMAC in the cookie (state in browser storage, against NFR 3; deterministic); one cookie per state; `SameSite=Strict`; a 302 to the Workspace Login instead of the page | One host, the check stays at the callback, the `web_sessions.token_hash` pattern, NFR 3 holds with a small rewording; authorize-once is what makes the cookie bind the browser that went to Google. Cost: two parallel sign-ins in one browser → one or both tabs get MSG141 and start again (row 47) |
 | No Google domain (KAN-231 Q8) | Refused at sign-in start (302 `/login?error=MSG141`, no state, `WARN` with the Workspace id), at `authorize` and at the callback (400 MSG141 page) (AC-001.48/.49) | Refuse at `authorize` only; 404 at sign-in start | Never sent to Google without `hd`; the user sees a known code on their own site. Hiếu accepts MSG141's text for this case |
 | Identity time (KAN-231 Q9) | `IdentityClock` wrapping a `java.time.Clock`, bean in `SignInConfig`; tests pass `Clock.fixed` | A second `Clock` bean `identityClock` with `@Qualifier`; one shared `Clock` bean in `common` | No second `Clock` bean, so no other module's wiring can break; identity owns its time; the shared bean would edit the ticket module |
-| Platform gap (KAN-231 Q10) | T9 and T9b against the ports and doubles; `accounts` and `account_roles` with their own `workspace_id` (no base entity, FK or RLS yet); explicit Workspace id in every repository method; interim production `LocalTenantScope`; Task 14 (after KAN-98 / KAN-99 are on `main`) moves `Account` and `account_roles` onto the platform base entity with the FK to `workspaces`, RLS and the adapters; no edit to platform Task 15's seed. Exception to backend AGENTS.md §7 (Database, the tenant-table convention of platform AC-001.8) (Hiếu, 2026-10-31): until Task 14, `accounts` and `account_roles` have an interim `workspace_id UUID NOT NULL` column with no `REFERENCES workspaces (id)` foreign key, no row-level security (neither enabled nor forced, no tenant policy), and `Account` does not extend `TenantEntity`. Scope: these two tables only; Task 14 ends the exception, and identity cannot reach `completed` before it | Wait for KAN-98 / KAN-99; a smaller T9 and the Account part after the platform | The pattern T8 proved; the rework is small and mechanical; isolation never relies on RLS alone. Cost: no local-stack demo while `NoWorkspaceLookup` answers 404 |
+| Platform gap (KAN-231 Q10; Q4 = A, Hiếu 2026-11-03) | T9 and T9b against the ports and doubles; `accounts` and `account_roles` with **no** `workspace_id` (one database per company, HLA); no Workspace filter in the repository, the tenant database is reached only inside `TenantScope.runIn`; interim production `LocalTenantScope` (one database, every Workspace site answers 404 until Task 14); Task 14 (after KAN-98 / KAN-99 are on `main`) brings the adapters, the Database Router, the move of the two registry tables, the registry's `workspace_emails` adapter and the per-database RLS guard if `platform` defines one; no edit to platform Task 15's seed. Exception to backend AGENTS.md §7 (the tenant-table convention of platform AC-001.8, which assumed a shared pool) until Task 14: `accounts` and `account_roles` have no `workspace_id`, and `Account` does not extend `TenantEntity` (it may not need to: the convention is the platform's to restate for a database per company). Scope: these two tables only; Task 14 ends the exception, and identity cannot reach `completed` before it | Wait for KAN-98 / KAN-99; a smaller T9 and the Account part after the platform | The pattern T8 proved; the rework is small and mechanical; isolation never relies on RLS alone. Cost: no local-stack demo while `NoWorkspaceLookup` answers 404 |
 | Task 9 PR split (KAN-231 Q11) | Two PRs: T9 (KAN-231, the callback refuses forged, replayed, cookie-less returns and Google failures: AC-001.7–.9, .44–.50) and T9b (KAN-235, Workspace and Account checks, `accounts`, hand-off: AC-001.10–.16) | One large PR; three PRs with the review follow-ups alone first | Each PR is a behaviour Hiếu can test from the callback URL; reviews stay small; one branch per Jira issue. Replaces "one PR per task" (Q12 above) for Task 9 only |
 | Console state before T11 (KAN-231 Q12) | Shared checks, then the 400 MSG141 page; nothing logged in | Bring AC-001.29–.31 forward; 501 | Safe and small; T11 stays as planned |
-| Account email uniqueness (KAN-231 Q13) | Unique lower-case email on the whole platform, as the spec says (GBR-37, D7) | Unique per Workspace (a spec change against D7) | The spec is the contract; this design said "per Workspace" by mistake (fixed here and in row 24) |
+| Account email uniqueness (KAN-231 Q13; HLA Q4, Hiếu 2026-11-03) | One email in one Workspace on the whole platform (GBR-37, D7), kept by the Tenant Registry's `workspace_emails` through a `platform` service that identity calls when an Account is added; inside a company database the email is unique and lower-case | A unique index on `accounts.email` across all rows (impossible with one database per company); per-Workspace uniqueness only (a spec change against D7) | The spec is the contract (GBR-37, D7); no index can span the databases |
+| Platform Console stays (HLA Q1, Hiếu 2026-11-03) | The Console on `admin.` is back as in the HLA; identity keeps requirements 2–3, AC-001.21, AC-001.28–.34, NFR 4 and Task 11; architecture.md is reworded | The 31/10 removal wins (drop AC-001.21 and .28–.34, Task 11); the Console as "future" | Hiếu's rule: the HLA wins. It costs Task 9 nothing |
 | Workspace gone at the callback (KAN-231 Q14) | State consumed, 400 MSG141 page, no session (AC-001.50) | Treat as not Active (MSG120 page) | "MSG141 when no target is known" in Interface Contracts; there is no site to redirect to |
 
 ### Edge cases and risks (STORY-001)
@@ -430,14 +470,14 @@ authorization, data integrity, integration, compliance. Skipped: business logic 
 | 21 | STORY-001 | Authorization | Callback with `?workspace=beta`, a spoofed `Host` / `X-Forwarded-Host`, or another site's cookie | Critical | Ignored; the target comes only from the state (AC-001.7) | Task 9 |
 | 22 | STORY-001 | Integration | ID token with a wrong `aud` or `iss`, expired, a nonce mismatch, `email_verified` false, `alg: none`, a key not in the JWKS | Critical | MSG06, no session (AC-001.9) | Task 9 |
 | 23 | STORY-001 | Error cascades | Google's token endpoint or JWKS down or slow | High | MSG06 after the timeout, no 500 (AC-001.9) | Task 9 |
-| 24 | STORY-001 | Data integrity | Workspace B's Account email signs in on Workspace A (an email exists only once on the whole platform, GBR-37, D7) | Critical | MSG09 on A's site; B's Account is neither found nor changed (AC-001.12/.15) | Task 9b |
+| 24 | STORY-001 | Data integrity | Workspace B's Account email signs in on Workspace A (an email exists only once on the whole platform, GBR-37, D7; HLA: each in its own database) | Critical | MSG09 on A's site; A's database does not hold B's Account, so it is neither found nor changed (AC-001.12/.15; two-database test) | Task 9b |
 | 25 | STORY-001 | Input extremes | Email `Lan.Tran@Company.Example`, `hd` `ACME.com` | High | Matched ignoring case (AC-001.11/.12) | Task 9b |
 | 26 | STORY-001 | Timing | Two callbacks with the same state (back button, a repeated redirect) | High | One goes on; the other gets MSG141 (AC-001.2/.6) | Tasks 9, 9b |
 | 27 | STORY-001 | Timing | A hand-off code redeemed twice (two tabs, a reload of `complete`) | Critical | One session; the second gets `/login?error=MSG141` (AC-001.17/.19) | Task 10 |
 | 28 | STORY-001 | Authorization | A hand-off code of Workspace A presented on site B or on `admin.` | Critical | MSG141 on that site, no session (AC-001.17/.19) | Task 10 |
 | 29 | STORY-001 | Authorization | A's cookie copied to B or to `admin.`; an Operator cookie on a Workspace site | Critical | 401 MSG123, endpoint not run, A's session not ended (AC-001.20/.21/.32) | Tasks 10, 11 |
 | 30 | STORY-001 | Authorization | Any session cookie sent to `login.` or `api.` | High | No session (AC-001.22) | Task 10 |
-| 31 | STORY-001 | State transitions | Idle 59 vs 61 minutes; only background polling for 2 h; 8 h with activity | High | MSG07 just past each limit (AC-001.23–.25), with the injected `Clock` | Task 10 |
+| 31 | STORY-001 | State transitions | Idle 59 vs 61 minutes; only background polling for 2 h; 8 h with activity | High | MSG07 just past each limit (AC-001.23–.25), with the injected `IdentityClock`, whatever the Redis time to live | Task 10 |
 | 32 | STORY-001 | State transitions | Account deactivated or its Roles changed during a session | High | Next request: MSG10, or the new Roles (AC-001.26/.27) | Task 10 |
 | 33 | STORY-001 | Compliance | A state value, code, ID token or cookie value in a log or in browser storage | High | Never; session ids stored only as hashes (NFR 3) | Task 10 |
 | 34 | STORY-001 | Environment | A `__Host-` + `Secure` cookie on `http://acme.localhost` in local dev | Medium | Check in T10's local run which browsers accept it, for `__Host-TSOLVE_SESSION` and for the sign-in cookie `__Host-TSOLVE_SIGNIN` on `http://login.localhost` (KAN-231); note the result in `.env.example` | Tasks 9, 10 |
@@ -447,7 +487,7 @@ authorization, data integrity, integration, compliance. Skipped: business logic 
 | 38 | STORY-001 | Environment | A required env value missing, or `TSOLVE_SIGNING_KEY` shorter than 32 bytes | High | Startup fails and names the value (NFR 4) | Task 8 |
 | 39 | STORY-001 | Input extremes | `/login?error=MSG122&google_domain=<script>`; `error=MSG07`; `error=MSG120` | High | MSG122 dropped and text never rendered as HTML; empty message area (AC-001.42/.43) | Task 7 |
 | 40 | STORY-001 | Timing | A double click on "Sign in with Google" | Low | The button is pending after the first click; one navigation | Task 7 |
-| 41 | STORY-001 | Scale | Rows of old states, codes and ended sessions pile up | Medium | `SessionCleanup` removes them | Task 10 |
+| 41 | STORY-001 | Scale | Rows of old states and codes pile up; session keys of users who never return | Medium | A cleanup job deletes old states and codes (once in the registry, by the worker); a session key's time to live removes the session (HLA Q3) | Task 10 |
 | 42 | STORY-001 | Error cascades | The database is unavailable during the callback or `complete` | Medium | No session (one transaction); the browser gets be-foundation's 500 ProblemDetail (accepted: generic 500 (Hiếu, 2026-10-28)) | Tasks 9, 9b, 10 |
 | 43 | STORY-001 | Authorization | Q1: a path outside the four redirect paths (for example `/api/v1/anything`) | High | Anonymous: 401, no form login, no HTTP Basic; signed in: reaches it (the lowest-order chain `anyRequest().authenticated()`) | Task 8 |
 | 44 | STORY-001 | Input extremes | Q2: `GET /api/v1/auth/sign-in` on a host that is no Workspace site and not the Platform Console origin (an unknown host, `login.`, `api.`) | High | 404, status only, no state created (same rule as AC-001.5) | Task 8 |
@@ -459,6 +499,10 @@ authorization, data integrity, integration, compliance. Skipped: business logic 
 | 50 | STORY-001 | Input extremes | A Workspace with no Google domain (never set, or cleared after a state was made) | High | Sign-in start: 302 `/login?error=MSG141`, no state, `WARN` with the Workspace id only; `authorize` and callback: 400 MSG141 page; never sent to Google without `hd` (AC-001.48/.49) | Task 9 |
 | 51 | STORY-001 | Timing | Two `authorize` requests for the same state at once (a double load), or a reload of `authorize` | High | The conditional update lets one through (cookie + 302 to Google); the other gets the 400 MSG141 page and no cookie (AC-001.44/.45) | Task 9 |
 | 52 | STORY-001 | Input extremes | Callback with neither `code` nor `error`; an ID token with no `email` claim | Medium | MSG06, no session (AC-001.9; Decided in planning, KAN-231) | Task 9 |
+| 90 | STORY-001 | Error cascades | Redis down, or slow, at `complete` or on a request (HLA Q3) | High | Fail closed: no session is created (`complete` redirects to `/login?error=MSG141`) and no request is treated as signed in; the Redis failure is logged without any session value; the browser gets be-foundation's generic error, as row 42 | Task 10 |
+| 91 | STORY-001 | State transitions | Redis restarts or evicts keys: every session is lost (HLA Q3) | High | Each next request is 401 `MSG07` and the person signs in again; Redis for sessions has persistence on and no eviction (`noeviction`), kept apart from any cache (HLA) | Task 10 |
+| 92 | STORY-001 | Data integrity | Registry database unavailable at `authorize`, the callback or `complete` after states and codes moved there (HLA Q2) | Medium | As row 42: the transaction fails, no session; generic 500 (accepted) | Task 14 |
+| 93 | STORY-001 | Authorization | A request with no tenant bound reaches an account table (HLA "no default fallback") | Critical | No tenant database can be reached; `TenantScope.currentWorkspaceId()` throws outside `runIn` (test in T9b); the router's own guard is Task 14 | Tasks 9b, 14 |
 
 Q1-Q5 (Hiếu, 2026-10-29): Q1 `AuthSecurityConfig` also adds a second, lowest-order `SecurityFilterChain`
 (`anyRequest().authenticated()`, 401, no form login, no HTTP Basic); be-foundation `roles-security` replaces it later.
@@ -472,6 +516,9 @@ exception is recorded in Key decisions above. Login CSRF is row 45, closed by th
 (AC-001.44–.47), which Hiếu approves before Task 9 code starts. The two other review findings are in Task 9: the
 Workspace with no Google domain (AC-001.48/.49, Key decisions "No Google domain") and `IdentityClock` (Key decisions
 "Identity time").
+
+HLA change (2026-11-03): rows 24, 31 and 41 reworded; rows 90–93 added (rows 53–89 belong to STORY-003); every
+Critical or High row has its test task (Task 10: 90, 91; Task 9b: 93; Task 14: 92, 93).
 
 Open questions for the spec owner: none for Task 9 / 9b once the 2026-10-31 spec change is approved (row 45 closed; row 46 waits for the Task 12 plan). Row 42 is accepted (C3, Hiếu, 2026-10-28): a database failure during a
 sign-in redirect keeps be-foundation's generic 500.
@@ -560,9 +607,10 @@ the inbox icon (the kit's `EmptyState`). The red numbered markers are annotation
 1. Projects table: the frame has a "Project ID" column (PRJ-0001). `/me` has only the UUID `projectId` and no
    display id, so the table has three columns: Jira project key, Department, Role in Project (Q2).
 2. Role in Project: the frame shows "Member"; Q3 shows `MEMBER` as "Ticket Resolver".
-3. Empty Projects: frame (c) shows the card with "Not a member of any Project."; Q4 hides the card.
+3. Empty Projects: frame (c) shows the card with "Not a member of any Project."; since 1/11 (AC-003.16, MSG143) the
+   card is shown with that text, as in the frame (Q4 reversed for this card).
 4. Employee-only Spaces: frame (c) lists "Sao Mai Corporation"; the Employee-only dev user has no viewable Spaces
-   (Q8), so with Q4 frame (c)'s user sees no Spaces card at all in mock mode (see State rules).
+   (Q8), so frame (c)'s user sees the Spaces card with "No Spaces found" (AC-003.15, MSG142) in mock mode.
 5. My Solutions for a user who writes no Solutions: frames (b) and (c) have no My Solutions section; AC-003.13 and
    Q4 keep the section for every user, with MSG04 when it has no rows.
 6. My Solutions extras in the main frame — the six status count cards, the status / Project / date-range filters and
@@ -582,11 +630,14 @@ the inbox icon (the kit's `EmptyState`). The red numbered markers are annotation
 
 ### State rules (STORY-003)
 
-- Hide what is empty (Q4): no Department → no row; empty Departments → no row; empty Projects → no Projects card;
-  no `KNOWLEDGE_MANAGER` or no managed Spaces → no "Spaces I manage" list; "Spaces I can view" loaded and empty → no
-  list. The Spaces card is not rendered when both lists are hidden after a successful load (decided by Hiếu 31/10:
-  an empty card has nothing to show). While "Spaces I can view" loads, the card shows with its spinner; when it
-  fails, the card shows MSG06 in place of that list (and "Spaces I manage" still shows).
+- Hide what is empty (Q4) for the Account rows and "Spaces I manage": no Department → no row; empty Departments →
+  no row; no `KNOWLEDGE_MANAGER` or no managed Spaces → no "Spaces I manage" list.
+- Two cards are always rendered (decided by Hiếu 1/11, reversing Q4 and the 31/10 rule for these cards):
+  - Projects card (AC-003.16): the table, or when the user has no Projects the grey text MSG143 "Not a member of any
+    Project." in place of the table.
+  - Spaces card (AC-003.15): "Spaces I can view" shows its spinner at once (no 150 ms delay) while loading; loaded
+    and empty → the grey text MSG142 "No Spaces found" under "Spaces I can view"; when it fails, MSG06 in place of
+    that list (AC-003.14; "Spaces I manage" still shows).
 - My Solutions is always rendered: spinner on the first load (`DataTable` `loading`), MSG04 when `content` is empty
   on page 1 (AC-003.13), MSG06 on failure (AC-003.14, `ErrorState` without "Try again", Q9).
 - Paging (Q5): `useListSearchParams(defaultSort: TableSort)` (`shared/routing/useListSearchParams.ts`) requires a
@@ -635,7 +686,7 @@ Fixtures in `mocks/data.ts`, keyed by `DevUserId`, fixed UUIDs (guideline: ids a
 
 | Dev user | My Solutions | Spaces I can view |
 |----------|--------------|-------------------|
-| `employee` | 0 (MSG04, Q8) | none (no Spaces card, Q4/Q8) |
+| `employee` | 0 (MSG04, Q8) | none (the Spaces card shows MSG142 "No Spaces found", AC-003.15, Q8) |
 | `tr` | 45 (3 pages), all six statuses, three Projects, 3 rows `canOpen: false` | 3 |
 | `tr-two-departments` | 21 (page 2 has one row) | 4, including both Departments' Spaces |
 | `pm` | 20 (exactly one page, no second page) | 2 |
@@ -666,7 +717,7 @@ Handler rules (mirror of the contract; MSW, `delay(MOCK_DELAY_MS)`):
 - T15: AC-003.1 for `employee`, `tr-two-departments`, `pm`, `km`, `pm-km`, `admin-tr` (rows present and hidden per
   Q4, Role order, Department only for the PM, the Projects labels); AC-003.2 (list for `km` and `pm-km`, none for
   `pm`); AC-002.7 (click → `POST /auth/logout` once, Login opens, the query cache is empty).
-- T16: AC-003.3 (names sorted, `employee` has no Spaces card); the Spaces half of AC-003.14 (`server.use` 500 on
+- T16: AC-003.3 (names sorted); AC-003.15 (spinner at once, no delay; `employee` shows the Spaces card with MSG142; the card shows for every dev user); the Spaces half of AC-003.14 (`server.use` 500 on
   `/me/spaces` → MSG06 in the Spaces card, account and "Spaces I manage" still shown); handler tests: sorting, 401.
 - T17 (handler tests only): order, defaults, page boundaries 0 / 1 / 20 / 21 / 45, page past the end, each 400 case
   with its `fieldErrors`, 401, extra parameters ignored.
@@ -686,7 +737,7 @@ Handler rules (mirror of the contract; MSW, `delay(MOCK_DELAY_MS)`):
 | Layout (Q1) | The four Figma frames of 1.2.1; decisions win where they differ | SRS wording only | Frames exist; differences listed above |
 | Projects (Q2) | Shown by `jiraProjectKey`, with Department and role; no `/me` change | Add `projectName` to `/me` (fe- and be-foundation contract change) | All else is already in `/me` |
 | Project role label (Q3) | `PROJECT_MANAGER` "Project Manager", `MEMBER` "Ticket Resolver" | "Member" | Hiếu's choice; the label of the Role that makes a member |
-| Empty values (Q4) | Hide every empty row, list and section; My Solutions keeps MSG04 (AC-003.13) | "—" rows; MSG04 for Spaces (a new criterion) | No new criterion; the screen shows only what the user has |
+| Empty values (Q4; changed by Hiếu 1/11) | Hide empty Account rows and "Spaces I manage". The Spaces and Projects cards are always shown, with MSG142 "No Spaces found" (AC-003.15) and MSG143 "Not a member of any Project." (AC-003.16); My Solutions keeps MSG04 (AC-003.13, not changed; KAN-238 decides) | "—" rows; hiding the two cards (the original Q4) | A hidden card looked like a missing feature in QA; the Figma frame (c) already shows the Projects text |
 | Paging (Q5) | Kit `DataTable` pagination, 20 fixed, `size=20` sent, page in the URL (1-based; 0-based to the API) | Page in state only; "Load more" | AC-003.11; back from Ticket Detail keeps the page; like the User List |
 | Date (Q6) | Header "Updated", the shared `formatDate` (`DD/MM/YYYY`, Vietnam time, `shared/lib/date.ts`; confirmed by Hiếu 31/10) | `DD/MM/YYYY HH:mm`; relative dates | Q6 said "or the shared format if one exists" — it does |
 | Log out (Q7) | Button at the top right of the Account card, `useSignOut()`, in Task 15 | Bottom of the page; leave to a KAN-106 plan | One-button FE criterion on this screen; no backend |
@@ -708,7 +759,7 @@ the Figma count cards are not built, Figma vs decisions item 6).
 
 | # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
 |---|-------|-----------|----------|----------|-------------------|-----------|
-| 53 | STORY-003 | User types | Employee only: no Department, Departments, Projects, managed or viewable Spaces, no Solutions | High | Account card with Full name, Email, Roles "Employee"; no Projects or Spaces card; My Solutions with MSG04 (AC-003.1/.13, Q4) | Tasks 15, 16, 18 |
+| 53 | STORY-003 | User types | Employee only: no Department, Departments, Projects, managed or viewable Spaces, no Solutions | High | Account card with Full name, Email, Roles "Employee"; Projects card with MSG143 "Not a member of any Project."; Spaces card with MSG142 "No Spaces found" and no "Spaces I manage"; My Solutions with MSG04 (AC-003.1/.13/.15/.16) | Tasks 15 (follow-up Quick change), 16, 18 |
 | 54 | STORY-003 | User types | Project Manager with `department` set; a Ticket Resolver whose `department` is null; a user whose `department` is set but who is not a PM (bad data) | High | "Department" row only for the PM (AC-003.1); never for a non-PM | Task 15 |
 | 55 | STORY-003 | User types | A user with four Roles (`admin-tr` plus PM / KM in a test fixture) | Medium | All labels, Employee first, in `ROLES` order (fe-foundation AC-001.1) | Task 15 |
 | 56 | STORY-003 | User types | KM with no managed Spaces; PM + KM (`pm-km`); PM without KM | Medium | List only when KM and not empty; none for the PM alone (AC-003.2, Q4) | Task 15 |
@@ -723,7 +774,7 @@ the Figma count cards are not built, Figma vs decisions item 6).
 | 65 | STORY-003 | Timing | Slow network; page clicked twice while the previous page loads | Medium | Section spinner on first load; previous rows kept while the next page loads (`keepPreviousData`); the last click wins | Task 18 |
 | 66 | STORY-003 | Error cascades | `/me/solutions` 500 while `/me/spaces` 200, and the reverse; both 500 | High | MSG06 only in the failing section; account (and "Spaces I manage") always shown (AC-003.14) | Tasks 16, 18 |
 | 67 | STORY-003 | Error cascades | `/me/spaces` or `/me/solutions` answers 401 (session ended meanwhile) | High | The global 401 handling opens Login (fe-foundation); not MSG06 in the section | Tasks 16, 18 |
-| 68 | STORY-003 | Error cascades | A 403 from either endpoint (not expected: every Employee may call them, AC-003.10) | Low | `ErrorState` shows MSG08 (kit rule for 403); accepted, no special case | Task 18 |
+| 68 | STORY-003 | Error cascades | The Role is removed while the page is open, so a 403 comes from `GET /api/v1/me/solutions` or `/summary` (AC-003.17) | Low | The My Solutions section shows MSG08 in an `ErrorState` (the counters and the table each show it); the other cards stay (AC-003.14, AC-003.17) | Task 18 |
 | 69 | STORY-003 | Authorization | Row with `canOpen: false` | High | Ticket ID is plain text; no link, no pointer, no click handler, nothing focusable; a click stays on `/profile` (AC-003.12) | Task 18 |
 | 70 | STORY-003 | Authorization | Request carrying `userId` / `workspaceId` (someone edits the URL or the call) | Critical | Backend risk, Task 19. Mock ignores them and answers for the dev user (contract mirror of AC-003.7); the real guarantee is Task 19 | Tasks 17, 19 |
 | 71 | STORY-003 | Authorization | `canOpen: true` row for a user whose Roles cannot open Ticket Detail (route guard TR / PM) | Medium | Not produced by the mocks (only TR / PM users get `canOpen: true`); in production the guard's own page answers; `canOpen` is the backend's UC-24 decision | Task 17 |
@@ -734,12 +785,20 @@ the Figma count cards are not built, Figma vs decisions item 6).
 | 76 | STORY-003 | Data integrity | A Space in both "Spaces I manage" and "Spaces I can view" | Low | Shown in both lists (viewable includes managed, Permission Matrix footnote ⁸) | Task 16 |
 | 77 | STORY-003 | Integration | A future backend sends an unknown `status` | Low | The type checker rejects it at build (fe-foundation AC-007.3); at runtime the Status Tag's own fallback | Task 18 |
 | 78 | STORY-003 | Integration | Contract drift: `generate:api` leaves a diff, or the YAML and the handlers disagree | High | The PR's verify runs `generate:api` with no diff; handlers typed with the generated types | Tasks 16, 17 |
-| 79 | STORY-003 | Integration | Real backend while the lookups are missing: `/me/spaces` `[]`, `/me/solutions` empty page | Medium | No "Spaces I can view" list (Q4); MSG04 in My Solutions — the same screens as the `employee` mock (AC-003.5/.8) | Tasks 16, 18 |
+| 79 | STORY-003 | Integration | Real backend while the lookups are missing: `/me/spaces` `[]`, `/me/solutions` empty page | Medium | The Spaces card shows MSG142 "No Spaces found" (AC-003.15); MSG04 in My Solutions — the same screens as the `employee` mock (AC-003.5/.8) | Tasks 16, 18 |
 | 80 | STORY-002 | Compliance | The next person at the same computer after "Log out" | High | No profile data left: the cache is cleared by `useSignOut` and Login opens (AC-002.7, fe-foundation AC-008.1) | Task 15 |
-| 81 | STORY-003 | Compliance | Personal data in the URL or in logs | Medium | The URL holds only `page`; nothing about the user is logged or stored by the feature | Tasks 15, 18 |
+| 81 | STORY-003 | Compliance | Personal data in the URL or in logs | Medium | The URL holds only `page`, `status`, `projectId`, `from` and `to` (none is personal data); nothing about the user is logged or stored by the feature | Tasks 15, 18 |
+| 82 | STORY-003 | State transitions | "Spaces I can view" loaded empty (`employee`; any user with none), including a Knowledge Manager with managed Spaces but no viewable ones (bad data) | High | Spaces card stays; grey MSG142 "No Spaces found" under "Spaces I can view"; "Spaces I manage" unaffected (AC-003.15) | Task 16 |
+| 83 | STORY-003 | Timing | `/me/spaces` is slow (first load) | Medium | The card and its spinner show at once, with no 150 ms delay and no flash of MSG142 before the answer (AC-003.15) | Task 16 |
+| 84 | STORY-003 | User types | User with no Projects (`employee`, `km`, `admin`) | High | Projects card stays; grey MSG143 "Not a member of any Project." in place of the table, no table header (AC-003.16) | Task 15 (follow-up Quick change) |
+| 85 | STORY-003 | Input extremes | `?status=FOO`, `?status=expired`, `?projectId=not-a-uuid`, `?from=2026-02-30`, `?to=31/10/2026`, `to` before `from`; a well-formed `projectId` that is not one of the summary's Projects | Medium | Dropped silently: no 400, no MSG06, filter at its default (AC-003.22); `to` before `from` drops both; dropped values are removed from the URL (history replace); an unknown `projectId` is dropped once the summary has loaded, kept while it loads or fails | Task 21 |
+| 86 | STORY-003 | Environment | Date range at the UTC+7 day boundary (17:00:00Z vs 16:59:59Z) | Medium | Whole days in Vietnam time, inclusive (AC-003.19); `from`/`to` sent as `YYYY-MM-DD` | Task 21 |
+| 87 | STORY-003 | Timing | Two filter changes while the table loads | Medium | Last change wins; previous rows kept meanwhile | Task 21 |
+| 88 | STORY-003 | Error cascades | Summary fails, so there are no Projects for the filter | Medium | Project filter shows only "All Projects"; Status and Date range work (D3); Status options follow the counters' order; no match shows MSG04 only | Task 21 |
+| 89 | STORY-003 | State transitions | Paging inside a filtered list; back from Ticket Detail with filters; a date range with only `from` or only `to` in a shared URL | Medium | Filters kept in the URL and the request; back restores filters and page; the picker writes the URL only when both days are picked, a one-sided shared URL is honoured | Task 21 |
 
-Open questions for the spec owner: none blocking this plan. For Hiếu to decide later (not needed for Tasks 15–18):
-the Figma extras of item 6 (count cards, filters, "Latest decision"), which need a Change Mode spec change; the
+Open questions for the spec owner: none blocking this plan. The Figma extras of item 6 (count cards, filters,
+"Latest decision") are specified now (AC-003.18 to AC-003.23, Tasks 20 and 21). For Hiếu to decide later: the
 "you" / "I" wording of item 9.
 
 ## Task 4 contract proposal — KAN-110

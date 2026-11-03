@@ -8,5 +8,5 @@
  */
 
 export interface TicketIdList {
-  ticketIds: number[];
+  ticketIds: string[];
 }

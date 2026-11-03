@@ -95,7 +95,7 @@
         "add-user-review": "passing",
         "login-screen": "passing",
         "sign-in-start": "passing",
-        "sign-in-callback": "pending",
+        "sign-in-callback": "passing",
         "workspace-session": "pending",
         "operator-sign-in": "pending",
         "jira-link-sign-in": "pending",
@@ -106,9 +106,11 @@
         "profile-account": "pending",
         "profile-viewable-spaces": "pending",
         "my-solutions-contract": "pending",
-        "my-solutions-table": "pending"
+        "my-solutions-table": "pending",
+        "my-solutions-counters": "pending",
+        "my-solutions-filters": "pending"
       },
-      "lastUpdated": "2026-10-31T14:01:28.179Z",
+      "lastUpdated": "2026-11-03T17:18:58.086Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -240,6 +242,49 @@
       "currentPhase": "decompose",
       "features": {},
       "lastUpdated": "2026-10-24T23:56:43.157Z"
+    },
+    "tracker": {
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "forge-remote-spike": "pending",
+        "tracker-foundation": "in-progress",
+        "fit-verification": "pending",
+        "jira-site-registration": "pending",
+        "token-cipher": "pending",
+        "receive-issue-events": "pending",
+        "jira-client": "in-progress",
+        "event-worker": "pending",
+        "triage-on-create": "pending",
+        "draft-on-done": "pending",
+        "issue-panel": "pending",
+        "solution-form": "pending",
+        "suggestion-answer": "pending",
+        "event-cleanup": "pending"
+      },
+      "lastUpdated": "2026-10-30T06:15:48.993Z",
+      "branch": "feat/tracker",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {}
+    },
+    "ticket-review": {
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "review-queue-decisions": "passing",
+        "review-ticket-detail": "passing",
+        "expired-tickets": "passing"
+      },
+      "lastUpdated": "2026-11-01T16:58:56.921Z",
+      "branch": "feat/ticket-review",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "43e4e07dd42c09ca53d67e13bc1f3ec7123efa59"
+      }
     }
   },
   "dependencies": {},

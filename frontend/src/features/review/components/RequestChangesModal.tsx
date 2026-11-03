@@ -1,4 +1,5 @@
 import { Form, Input } from 'antd';
+import { useRef } from 'react';
 import type { RequestChangesRequest } from '@/shared/api';
 import { applyApiErrors, rules } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
@@ -9,7 +10,8 @@ type RequestChangesFormValues = Pick<RequestChangesRequest, 'comment'>;
 const COMMENT_MAX = 1000;
 
 type RequestChangesModalProps = {
-  ticketIds: number[];
+  ticketIds: string[];
+  isDisabled?: boolean;
   isOpen: boolean;
   onClose: () => void;
   /** After the tickets were sent back (MSG17 is already shown). */
@@ -25,15 +27,22 @@ export function RequestChangesModal({
   isOpen,
   onClose,
   onSent,
+  isDisabled = false,
 }: RequestChangesModalProps) {
   const [form] = Form.useForm<RequestChangesFormValues>();
   const requestChanges = useRequestChangesForTickets();
+  const submitting = useRef(false);
 
   function handleSubmit(values: RequestChangesFormValues) {
+    if (isDisabled || submitting.current) return;
+    submitting.current = true;
     requestChanges.mutate(
       { data: { ticketIds, comment: values.comment } },
       {
         onSuccess: onSent,
+        onSettled: () => {
+          submitting.current = false;
+        },
         onError: (error) => {
           if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
         },
@@ -49,8 +58,11 @@ export function RequestChangesModal({
       form={form}
       okText="Send"
       isSubmitting={requestChanges.isPending}
+      isOkDisabled={isDisabled}
       onSubmit={handleSubmit}
-      onCancel={onClose}
+      onCancel={() => {
+        if (!submitting.current) onClose();
+      }}
     >
       <FormField<RequestChangesFormValues>
         name="comment"

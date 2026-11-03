@@ -136,14 +136,15 @@ describe('the background-request header', () => {
       () => ({
         queue: useGetReviewQueue(),
         approve: useMutation({
-          mutationFn: (ticketIds: number[]) => approveTickets({ ticketIds }),
+          mutationFn: (ticketIds: string[]) => approveTickets({ ticketIds }),
           meta: { handlesOwnErrors: true },
         }),
       }),
       { wrapper },
     );
     await waitFor(() => expect(result.current.queue.isSuccess).toBe(true));
-    const ticketId = result.current.queue.data?.content[0]?.ticketId ?? 1;
+    const ticketId =
+      result.current.queue.data?.content[0]?.ticketId ?? '20000000-0000-4000-8000-000000000001';
 
     await act(() => result.current.approve.mutateAsync([ticketId]).catch(() => undefined));
 

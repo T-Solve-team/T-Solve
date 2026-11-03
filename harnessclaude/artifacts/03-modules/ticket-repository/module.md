@@ -50,3 +50,4 @@ Ticket Import & Repository (UC-20–25), plus the backend of Solution Authoring 
 ## Related Artifacts
 - Spec: `artifacts/03-modules/ticket-repository/spec.md` (written when the module is planned)
 - Map: `artifacts/03-modules/module-map.md`
+- Stories: KAN-29 (epic), KAN-31, KAN-45, KAN-132…137

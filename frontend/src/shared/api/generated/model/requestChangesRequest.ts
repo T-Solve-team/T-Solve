@@ -8,12 +8,16 @@
  */
 
 export interface RequestChangesRequest {
-  /** @minItems 1 */
-  ticketIds: number[];
+  /**
+   * @minItems 1
+   * @maxItems 500
+   */
+  ticketIds: string[];
   /**
    * Shown to each author in Jira (MSG64).
    * @minLength 1
    * @maxLength 1000
+   * @pattern \S
    */
   comment: string;
 }

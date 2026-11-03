@@ -10,7 +10,7 @@ import type { ProjectRef } from './projectRef';
 import type { TicketSource } from './ticketSource';
 
 export interface ReviewQueueItem {
-  ticketId: number;
+  ticketId: string;
   /** The Jira issue key, e.g. ITSUP-1031. */
   sourceTicketId: string;
   title: string;

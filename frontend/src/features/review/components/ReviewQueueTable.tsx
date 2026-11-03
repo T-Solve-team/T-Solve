@@ -67,8 +67,9 @@ type ReviewQueueTableProps = {
   onPageChange: (page: number) => void;
   sort: TableSort;
   onSortChange: (sort: TableSort | null) => void;
-  selectedIds: number[];
-  onSelectionChange: (ids: number[]) => void;
+  selectedIds: string[];
+  onSelectionChange: (ids: string[]) => void;
+  isDisabled?: boolean;
   /** Header checkbox (callout 2/3): every ticket in the queue, on every page (SRS 7.1). */
   onSelectAll: (isChecked: boolean) => void;
 };
@@ -87,6 +88,7 @@ export function ReviewQueueTable({
   selectedIds,
   onSelectionChange,
   onSelectAll,
+  isDisabled = false,
 }: ReviewQueueTableProps) {
   const isAllSelected = total > 0 && selectedIds.length >= total;
   return (
@@ -107,14 +109,17 @@ export function ReviewQueueTable({
         selectedRowKeys: selectedIds,
         preserveSelectedRowKeys: true, // the selection survives paging
         columnWidth: 48,
-        onChange: (keys) => onSelectionChange(keys.map(Number)),
-        getCheckboxProps: (t) => ({ 'aria-label': `Select ${t.sourceTicketId}` }),
+        onChange: (keys) => onSelectionChange(keys.map(String)),
+        getCheckboxProps: (t) => ({
+          'aria-label': `Select ${t.sourceTicketId}`,
+          disabled: isDisabled,
+        }),
         columnTitle: (
           <Checkbox
             aria-label="Select all"
             checked={isAllSelected}
             indeterminate={selectedIds.length > 0 && !isAllSelected}
-            disabled={total === 0}
+            disabled={total === 0 || isDisabled}
             onChange={(event) => onSelectAll(event.target.checked)}
           />
         ),

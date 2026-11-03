@@ -20,7 +20,7 @@ paths:
 **Owner:** Trần Hải Anh (UC-34) · Phạm Tùng Dương (UC-35)
 
 ## Description
-Dashboard & Audit (UC-34–35): the knowledge dashboard for a Project Manager's Department or the whole Workspace (last 30 days by default; triage Simple / Complex; knowledge gaps) and the audit log for the Admin.
+Dashboard & Audit (UC-34–35): the knowledge dashboard for a Project Manager's Department or the whole Workspace (last 30 days by default; AI suggestions and their answers; knowledge gaps) and the audit log for the Admin.
 
 ## Responsibilities
 - Dashboard figures (GBR-18).

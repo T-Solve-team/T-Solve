@@ -53,7 +53,7 @@ function quietMutation(client: QueryClient) {
   return client
     .getMutationCache()
     .build(client, {
-      mutationFn: () => approveTickets({ ticketIds: [1] }),
+      mutationFn: () => approveTickets({ ticketIds: ['20000000-0000-4000-8000-000000000001'] }),
       meta: { handlesOwnErrors: true },
     })
     .execute(undefined)
@@ -87,7 +87,9 @@ describe('global error handling', () => {
 
     await queryClient
       .getMutationCache()
-      .build(queryClient, { mutationFn: () => approveTickets({ ticketIds: [1] }) })
+      .build(queryClient, {
+        mutationFn: () => approveTickets({ ticketIds: ['20000000-0000-4000-8000-000000000001'] }),
+      })
       .execute(undefined)
       .catch(() => undefined);
 
@@ -102,7 +104,7 @@ describe('global error handling', () => {
     await queryClient
       .getMutationCache()
       .build(queryClient, {
-        mutationFn: () => approveTickets({ ticketIds: [1] }),
+        mutationFn: () => approveTickets({ ticketIds: ['20000000-0000-4000-8000-000000000001'] }),
         meta: { handlesOwnErrors: true },
       })
       .execute(undefined)
@@ -187,7 +189,9 @@ describe('401 with MSG123 (a session of another Workspace site)', () => {
     server.use(mock.post('*/api/v1/reviews/approve', () => problem(401, 'MSG123')));
     await queryClient
       .getMutationCache()
-      .build(queryClient, { mutationFn: () => approveTickets({ ticketIds: [1] }) })
+      .build(queryClient, {
+        mutationFn: () => approveTickets({ ticketIds: ['20000000-0000-4000-8000-000000000001'] }),
+      })
       .execute(undefined)
       .catch(() => undefined);
 

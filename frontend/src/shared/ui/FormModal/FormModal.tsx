@@ -52,6 +52,8 @@ export function FormModal<T>({
       okText={okText}
       cancelText="Cancel"
       okButtonProps={{
+        'aria-label': okText,
+        'aria-busy': isSubmitting,
         htmlType: 'submit',
         danger: isOkDanger,
         disabled: isOkDisabled || isSubmitting,

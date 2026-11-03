@@ -24,6 +24,8 @@ const JIRA_APP_ONLY = [
 ];
 /** D2 (no empty Solution) and D3 (the Hand Over popup replaces the confirm dialogs). */
 const LEFT_OUT = ['MSG20', 'MSG70', 'MSG58', 'MSG79'];
+/** AC-006.3: codes the catalog holds that report3-messages.json does not; System_Messages will number them. */
+const NOT_IN_REPORT3 = ['MSG142', 'MSG143'];
 
 /** AC-006.1: a code whose Context starts "Retired" (edge case 20) is not in the catalog. */
 const isRetired = ({ context }: Report3Message) => /^Retired\b/.test(context);
@@ -37,6 +39,7 @@ const webMessages = Object.entries(report3).filter(
   ([code, message]) =>
     !JIRA_APP_ONLY.includes(message.type) &&
     !LEFT_OUT.includes(code) &&
+    !NOT_IN_REPORT3.includes(code) &&
     !isRetired(message) &&
     !isPlatformConsole(code),
 );
@@ -141,8 +144,18 @@ describe('message catalog', () => {
     });
   });
 
-  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2 and MSG_NEW_3', () => {
-    const expected: string[] = [...webMessages.map(([code]) => code), 'MSG_NEW_2', 'MSG_NEW_3'];
+  it('AC-006.3 holds MSG142 and MSG143, the empty-state messages of the identity profile, as inline', () => {
+    expect(entry('MSG142')).toEqual({ type: 'inline', text: 'No Spaces found' });
+    expect(entry('MSG143')).toEqual({ type: 'inline', text: 'Not a member of any Project.' });
+  });
+
+  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2, MSG_NEW_3, MSG142 and MSG143', () => {
+    const expected: string[] = [
+      ...webMessages.map(([code]) => code),
+      'MSG_NEW_2',
+      'MSG_NEW_3',
+      ...NOT_IN_REPORT3,
+    ];
     expect(Object.keys(MESSAGES).sort()).toEqual(expected.sort());
     expectTypeOf<'MSG20'>().not.toMatchTypeOf<MsgCode>();
   });

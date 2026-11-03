@@ -144,7 +144,7 @@ type MessageDefinition = { type: 'field' | 'inline' | 'toast' | 'confirm' | 'too
 | `/me` shape | `roles[]`, `department`, `departments`, `projects`, `managedSpaces`, `workspaceReady` (spec contract) | + `viewableSpaces`; keep the old `role` | Viewable Spaces come from the Wiki API, so the session stays stable; `role` has no reader outside this module (user, 22/10) |
 | New paths | Gap report A4 (`/workspace-setup`, `/triage-history`, `/wiki…`, `/chatbot`) | Wiki nested under `/wiki/spaces/:spaceId` | Company-wide documents need no pseudo-Space; short links (user, 22/10) |
 | Unmapped message types | Upload area → field; error row and chat answer → inline | A new `upload` type | No new type to keep in sync (user, 22/10) |
-| MSG-new-2 key | `MSG_NEW_2` | `MSG119` | Cannot clash with a future number (user, 22/10) |
+| MSG-new-2 key | `MSG_NEW_2` | `MSG119` | Cannot clash with a future number (user, 22/10). MSG142 and MSG143 (identity, KAN-237) are real codes numbered from MSG141, not `MSG_NEW_n` keys (Hiếu, 1/11) |
 | Workspace not set up | Only an Admin is redirected; others land as usual | A "not set up yet" page | MSG60 is for the Admin; no new message needed (user, 22/10) |
 | `EMPLOYEE` in the session | Added on read when missing | Trust the server | GBR-28 makes it always true; one place to guarantee it |
 | Employee-only screens | Route roles `['EMPLOYEE']` | A special `ALL_SIGNED_IN` value | Same meaning, one mechanism; the table in the spec reads the same |

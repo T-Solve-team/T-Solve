@@ -8,6 +8,6 @@
  */
 
 export interface ProjectRef {
-  projectId: number;
+  projectId: string;
   name: string;
 }

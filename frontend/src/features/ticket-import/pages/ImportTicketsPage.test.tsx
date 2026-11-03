@@ -111,7 +111,7 @@ describe('ImportTicketsPage', () => {
     await waitFor(() => expect(revoke).toHaveBeenCalledWith('blob:template'));
   });
 
-  it('keeps the template URL alive until the download has started (BUG-082)', async () => {
+  it('keeps the template URL alive until the download has started (BUG-106)', async () => {
     URL.createObjectURL = vi.fn(() => 'blob:template');
     const revoke = vi.fn();
     URL.revokeObjectURL = revoke;
@@ -194,7 +194,7 @@ describe('ImportTicketsPage', () => {
     );
   });
 
-  it('shows only the MSG07 dialog, not an Alert, when Upload answers 401 (BUG-081)', async () => {
+  it('shows only the MSG07 dialog, not an Alert, when Upload answers 401 (BUG-105)', async () => {
     server.use(http.post('*/api/v1/imports/csv', () => problem(401, 'MSG07')));
     const { user } = await openImport();
     await chooseProject(user, 'ITSUP · IT');

@@ -53,6 +53,7 @@
 | FE-42 | Route map for the 35 Report3 screens, 15 features | Approved (2026-10-22) — supersedes the feature list of FE-22; screen counts superseded by D18 (25/10): 34 screens, 8 popups |
 | FE-43 | Workspace site and central sign-in: same-origin API, `GET /api/v1/auth/sign-in`, MSG119 / MSG120 / MSG123, background header | Approved (2026-10-26, KAN-198) — updates FE-09 |
 | FE-44 | Route tree chosen by host: `admin.<domain>` gets only the Platform Console routes, every other host only the Workspace routes | Approved (2026-10-28, KAN-198); `platformConsoleRoutes` name and type to be confirmed by `platform-console` |
+| FE-45 | Project filter allowed on My Profile → My Solutions only (KAN-238) | Approved (FE Lead 1/11); exception to the rule "never a Project filter" in 03 §5 (UI decisions 04/10) |
 
 ---
 

@@ -2,6 +2,7 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   getGetReviewQueueQueryKey,
   getGetReviewQueueTicketIdsQueryKey,
+  getGetTicketsQueryKey,
   useApproveTickets,
   useRejectTickets,
   useRequestTicketChanges,
@@ -10,9 +11,15 @@ import { showMessage } from '@/shared/messages';
 
 /** Every decision changes the queue: refetch all its pages and the ids used by "Select all". */
 function refreshQueue(queryClient: QueryClient) {
+  const ticketRoot = getGetTicketsQueryKey()[0];
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: getGetReviewQueueQueryKey() }),
     queryClient.invalidateQueries({ queryKey: getGetReviewQueueTicketIdsQueryKey() }),
+    queryClient.invalidateQueries({
+      predicate: ({ queryKey }) =>
+        typeof queryKey[0] === 'string' &&
+        (queryKey[0] === ticketRoot || queryKey[0].startsWith(`${ticketRoot}/`)),
+    }),
   ]);
 }
 
@@ -23,7 +30,9 @@ export function useApproveSelectedTickets() {
     mutation: {
       onSuccess: (result) => {
         showMessage('MSG14', { count: result.count });
-        return refreshQueue(queryClient);
+      },
+      onSettled: () => {
+        void refreshQueue(queryClient);
       },
     },
   });
@@ -37,7 +46,9 @@ export function useRejectSelectedTickets() {
       meta: { handlesOwnErrors: true },
       onSuccess: (result) => {
         showMessage('MSG16', { count: result.count });
-        return refreshQueue(queryClient);
+      },
+      onSettled: () => {
+        void refreshQueue(queryClient);
       },
     },
   });
@@ -51,7 +62,9 @@ export function useRequestChangesForTickets() {
       meta: { handlesOwnErrors: true },
       onSuccess: () => {
         showMessage('MSG17');
-        return refreshQueue(queryClient);
+      },
+      onSettled: () => {
+        void refreshQueue(queryClient);
       },
     },
   });

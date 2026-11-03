@@ -22,6 +22,12 @@ tags:
     description: Ticket List (Report3 UC-27; SRS III.6.2).
   - name: search
     description: Search of the Published tickets (Report3 UC-26; SRS III.6.1).
+  - name: feedback
+    description: Feedback on a Published ticket (Report3 UC-28; SRS III.8.1).
+  - name: profile
+    description: My Profile — the signed-in user's own Spaces and Solutions (AC-003).
+  - name: jira-app
+    description: Calls from the T-Solve Jira App through Forge Remote (Forge Invocation Token).
 paths:
   /api/v1/audit-events:
     get:
@@ -247,6 +253,76 @@ paths:
                 $ref: '#/components/schemas/CurrentUser'
         '401':
           $ref: '#/components/responses/Problem'
+  /api/v1/me/spaces:
+    get:
+      tags: [profile]
+      operationId: getMyViewableSpaces
+      summary: The Spaces the signed-in user can view, sorted by name.
+      responses:
+        '200':
+          description: The viewable Spaces; an empty list when there are none.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SpaceRef' }
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/me/solutions:
+    get:
+      tags: [profile]
+      operationId: getMySolutions
+      summary: The Tickets whose Solution the signed-in user wrote, newest update first.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/TicketStatus' }
+        - name: projectId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          description: First day (inclusive, UTC+7).
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: Last day (inclusive, UTC+7); not before `from`.
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: One page of My Solutions; empty content when there are none.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MySolutionPage'
+        '400':
+          description: A wrong query parameter (MSG06) with one fieldErrors entry per parameter.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/me/solutions/summary:
+    get:
+      tags: [profile]
+      operationId: getMySolutionSummary
+      summary: The counts per status and the distinct Projects of all the signed-in user's Solutions; ignores every filter and paging parameter.
+      responses:
+        '200':
+          description: Six counts (0 when none) and the Projects sorted by name; empty projects when there are no Solutions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MySolutionSummary'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/auth/sign-in:
     get:
       tags: [session]
@@ -295,8 +371,15 @@ paths:
             Location:
               description: The Google authorization URL.
               schema: { type: string }
+            Set-Cookie:
+              description: >
+                `__Host-TSOLVE_SIGNIN=<random value>; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=Lax`. Binds
+                this sign-in to this browser (AC-001.44); the callback refuses a browser without it.
+              schema: { type: string }
         '400':
-          description: A minimal HTML page with MSG141 (the state value is missing, wrong or expired).
+          description: >
+            A minimal HTML page with MSG141 (the state value is missing, wrong, expired or used; the state was
+            already authorized, AC-001.45; or its Workspace has no Google domain, AC-001.49).
           content:
             text/html:
               schema: { type: string }
@@ -313,9 +396,12 @@ paths:
       description: >
         The central sign-in site reads the Google answer and redirects (302) to the Workspace site's complete step
         with a one-time hand-off code. When Google or the check fails, it redirects to the Workspace site's
-        `/login?error=` with one of MSG06, MSG09, MSG10, MSG120, MSG122 (adds `google_domain`) or MSG141
+        `/login?error=` with one of MSG06, MSG09, MSG10, MSG120 or MSG122 (adds `google_domain`)
         (on the `admin.` site: MSG06 or MSG135).
-        When the browser has no usable state, it answers 400 with a minimal page. The web app never calls it.
+        When the state value is missing, wrong, expired or used, the browser has no sign-in cookie or another
+        browser's (AC-001.46), the Workspace has no Google domain (AC-001.49) or the Workspace no longer exists
+        (AC-001.50), it answers 400 with a minimal page showing MSG141 and no redirect. Every answer expires the
+        sign-in cookie (AC-001.47). The web app never calls it.
       parameters:
         - name: code
           in: query
@@ -325,12 +411,19 @@ paths:
           in: query
           description: >
             Set by Google when the user cancels or denies access (for example `access_denied`); the site then
-            redirects to `/login?error=MSG09` (AC-001.8).
+            redirects to `/login?error=MSG06` (AC-001.8).
           schema: { type: string }
         - name: state
           in: query
           required: true
           description: The signed state value.
+          schema: { type: string }
+        - name: __Host-TSOLVE_SIGNIN
+          in: cookie
+          required: false
+          description: >
+            The sign-in cookie `authorize` set in this browser (AC-001.44). Without it, or with another browser's
+            value, the answer is the MSG141 page (AC-001.46). Every answer expires it (AC-001.47).
           schema: { type: string }
       responses:
         '302':
@@ -339,13 +432,27 @@ paths:
             Location:
               description: The Workspace site's complete URL.
               schema: { type: string }
+            Set-Cookie:
+              description: Expires the sign-in cookie (`__Host-TSOLVE_SIGNIN=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax`).
+              schema: { type: string }
         '200':
           description: A minimal HTML page (no redirect possible).
+          headers:
+            Set-Cookie:
+              description: Expires the sign-in cookie (`__Host-TSOLVE_SIGNIN=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax`).
+              schema: { type: string }
           content:
             text/html:
               schema: { type: string }
         '400':
-          description: A minimal HTML page with MSG141 (the state value is missing, wrong or expired).
+          description: >
+            A minimal HTML page with MSG141: the state value is missing, wrong, expired or used; the browser has no
+            sign-in cookie or another browser's (AC-001.46); the Workspace has no Google domain (AC-001.49); or the
+            Workspace no longer exists (AC-001.50).
+          headers:
+            Set-Cookie:
+              description: Expires the sign-in cookie (`__Host-TSOLVE_SIGNIN=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax`).
+              schema: { type: string }
           content:
             text/html:
               schema: { type: string }
@@ -386,6 +493,107 @@ paths:
       responses:
         '204':
           description: Signed out.
+  /api/v1/tickets/{ticketId}:
+    get:
+      tags: [review]
+      operationId: getReviewTicketDetail
+      summary: Frontend proposal — read-only Ticket Detail with Workspace and unpublished-content access checks.
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Published content or an unpublished Ticket authored or managed by the current user.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewTicketDetail' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/expired-tickets:
+    get:
+      tags: [review]
+      operationId: getExpiredTickets
+      summary: Expired tickets of the Projects the user is Project Manager of (SRS 7.5).
+      parameters:
+        - name: departmentId
+          in: query
+          description: One Department; omitted = all Departments of the Project Manager.
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: One page of Expired tickets. Default sort expiredAt,desc.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpiredTicketPage'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/expired-tickets/ticket-ids:
+    get:
+      tags: [review]
+      operationId: getExpiredTicketIds
+      summary: Ids of every Expired ticket, for "Select all" (all pages, not only the one shown).
+      parameters:
+        - name: departmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: All eligible Expired ticket ids for the filter.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketIdList'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/reviews/send-back:
+    post:
+      tags: [review]
+      operationId: sendBackTickets
+      summary: Sends Expired tickets back to the queue (MSG25); frontend proposal.
+      description: Frontend proposal. Validate and authorize the entire unique 1–500 UUID batch before sending back; retain mock history and immutable Ticket content, reset due dates using current Project review ranges.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveTicketsRequest'
+      responses:
+        '200':
+          description: Sent back to queue.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDecisionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
   /api/v1/review-queue:
     get:
       tags: [review]
@@ -439,6 +647,7 @@ paths:
       tags: [review]
       operationId: approveTickets
       summary: Approves and publishes the tickets (MSG14).
+      description: Frontend proposal. Validate and authorize the entire unique 1–500 UUID batch before applying any decision; retain mock history and immutable Ticket content.
       requestBody:
         required: true
         content:
@@ -458,6 +667,8 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
   /api/v1/reviews/reject:
@@ -465,6 +676,7 @@ paths:
       tags: [review]
       operationId: rejectTickets
       summary: Rejects the tickets with one reason (MSG15 confirm, MSG16 result).
+      description: Frontend proposal. Reject the entire batch on any validation, authorization, missing or stale Ticket; retain the entered reason in mock history.
       requestBody:
         required: true
         content:
@@ -484,6 +696,8 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
   /api/v1/reviews/request-changes:
@@ -491,6 +705,7 @@ paths:
       tags: [review]
       operationId: requestTicketChanges
       summary: Sends the tickets back to their authors with one comment (MSG17).
+      description: Frontend proposal. Apply one comment atomically to pending Solution Form tickets. Imported sources return MSG18; this slice does not implement Jira delivery.
       requestBody:
         required: true
         content:
@@ -510,7 +725,31 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
         '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/events/issue-created:
+    post:
+      tags: [jira-app]
+      operationId: receiveIssueCreated
+      summary: Forge trigger avi:jira:created:issue — stored as a suggestion result of its Project (STORY-003).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueCreatedPayload'
+      responses:
+        '202':
+          description: Accepted — also when already stored or when the issue belongs to no T-Solve Project.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
           $ref: '#/components/responses/Problem'
   /api/v1/imports/csv/template:
     get:
@@ -887,7 +1126,42 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/tickets/{ticketId}/feedback:
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [feedback]
+      operationId: giveFeedback
+      summary: Saves this user's Feedback on a Published ticket; replaces any earlier Feedback of this user (UC-28).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketFeedbackRequest'
+      responses:
+        '204':
+          description: Feedback saved.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
 components:
+  securitySchemes:
+    forgeInvocationToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Forge Invocation Token (FIT) that Atlassian signs on every Forge Remote call.
   parameters:
     Page:
       name: page
@@ -929,9 +1203,46 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    IssueCreatedPayload:
+      type: object
+      description: >
+        The part of a Forge avi:jira:created:issue event that T-Solve reads. Other fields Forge sends are ignored.
+      required: [issue]
+      properties:
+        issue:
+          type: object
+          required: [key, fields]
+          properties:
+            key:
+              type: string
+              maxLength: 50
+              description: The Jira issue key, e.g. ITSUP-1031.
+            fields:
+              type: object
+              required: [project]
+              properties:
+                project:
+                  type: object
+                  required: [key]
+                  properties:
+                    key:
+                      type: string
+                      description: The Jira project key, e.g. ITSUP.
     AuditAction:
       type: string
-      enum: [APPROVE, REJECT, REQUEST_CHANGES, PUBLISH, UNPUBLISH, IMPORT, DELETE, ROLE_CHANGE, PERMISSION_CHANGE, TRACKER_CONFIGURATION_CHANGE]
+      enum:
+        [
+          APPROVE,
+          REJECT,
+          REQUEST_CHANGES,
+          PUBLISH,
+          UNPUBLISH,
+          IMPORT,
+          DELETE,
+          ROLE_CHANGE,
+          PERMISSION_CHANGE,
+          TRACKER_CONFIGURATION_CHANGE,
+        ]
     AuditEntry:
       type: object
       required: [id, createdAt, actor, action, resourceType, resourceId, summary]
@@ -1218,17 +1529,37 @@ components:
       required: [projectId, name]
       properties:
         projectId:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
         name:
           type: string
+    ExpiredTicketItem:
+      allOf:
+        - $ref: '#/components/schemas/ReviewQueueItem'
+        - type: object
+          required: [expiredAt, previousStatus]
+          properties:
+            expiredAt:
+              type: string
+              format: date-time
+            previousStatus:
+              type: string
+              enum: [PENDING_REVIEW, CHANGES_REQUESTED]
+    ExpiredTicketPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/ExpiredTicketItem' }
+        page: { $ref: '#/components/schemas/PageMetadata' }
     ReviewQueueItem:
       type: object
       required: [ticketId, sourceTicketId, title, project, source, enteredQueueAt, reviewDueDate]
       properties:
         ticketId:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
         sourceTicketId:
           type: string
           description: The Jira issue key, e.g. ITSUP-1031.
@@ -1272,6 +1603,74 @@ components:
             $ref: '#/components/schemas/ReviewQueueItem'
         page:
           $ref: '#/components/schemas/PageMetadata'
+    ReviewDecision:
+      type: string
+      enum: [APPROVE, REQUEST_CHANGES, REJECT]
+    MySolution:
+      type: object
+      required: [ticketId, ticketKey, title, projectId, projectName, status, updatedAt, canOpen, latestDecision]
+      properties:
+        ticketId:
+          type: string
+          format: uuid
+        ticketKey:
+          type: string
+        title:
+          type: string
+        projectId:
+          type: string
+          format: uuid
+        projectName:
+          type: string
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+        updatedAt:
+          type: string
+          format: date-time
+        canOpen:
+          type: boolean
+        latestDecision:
+          description: Null when there is no decision yet.
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [action, comment, decidedAt]
+              properties:
+                action:
+                  $ref: '#/components/schemas/ReviewDecision'
+                comment:
+                  type: [string, 'null']
+                decidedAt:
+                  type: string
+                  format: date-time
+    MySolutionPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/MySolution'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+    MySolutionSummary:
+      type: object
+      required: [counts, projects]
+      properties:
+        counts:
+          type: object
+          required: [PENDING_REVIEW, CHANGES_REQUESTED, PUBLISHED, REJECTED, UNPUBLISHED, EXPIRED]
+          properties:
+            PENDING_REVIEW: { type: integer, minimum: 0 }
+            CHANGES_REQUESTED: { type: integer, minimum: 0 }
+            PUBLISHED: { type: integer, minimum: 0 }
+            REJECTED: { type: integer, minimum: 0 }
+            UNPUBLISHED: { type: integer, minimum: 0 }
+            EXPIRED: { type: integer, minimum: 0 }
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectRef'
     TicketStatus:
       type: string
       enum: [PENDING_REVIEW, CHANGES_REQUESTED, PUBLISHED, REJECTED, UNPUBLISHED, EXPIRED]
@@ -1295,7 +1694,18 @@ components:
           type: string
     TicketSummary:
       type: object
-      required: [ticketId, sourceTicketId, title, project, department, source, status, reviewDueDate, updatedAt]
+      required:
+        [
+          ticketId,
+          sourceTicketId,
+          title,
+          project,
+          department,
+          source,
+          status,
+          reviewDueDate,
+          updatedAt,
+        ]
       properties:
         ticketId:
           type: string
@@ -1364,6 +1774,16 @@ components:
             $ref: '#/components/schemas/TicketSearchResult'
         page:
           $ref: '#/components/schemas/PageMetadata'
+    TicketFeedbackRequest:
+      type: object
+      required: [isHelpful]
+      properties:
+        isHelpful:
+          type: boolean
+          description: true = Helpful, false = Not helpful.
+        comment:
+          type: [string, 'null']
+          maxLength: 500
     TicketIdList:
       type: object
       required: [ticketIds]
@@ -1371,8 +1791,8 @@ components:
         ticketIds:
           type: array
           items:
-            type: integer
-            format: int64
+            type: string
+            format: uuid
     ApproveTicketsRequest:
       type: object
       required: [ticketIds]
@@ -1380,9 +1800,11 @@ components:
         ticketIds:
           type: array
           minItems: 1
+          maxItems: 500
+          uniqueItems: true
           items:
-            type: integer
-            format: int64
+            type: string
+            format: uuid
     RejectTicketsRequest:
       type: object
       required: [ticketIds, reason]
@@ -1390,13 +1812,16 @@ components:
         ticketIds:
           type: array
           minItems: 1
+          maxItems: 500
+          uniqueItems: true
           items:
-            type: integer
-            format: int64
+            type: string
+            format: uuid
         reason:
           type: string
           minLength: 1
           maxLength: 1000
+          pattern: '\S'
           description: Stored in Review History; not sent to the author.
     RequestChangesRequest:
       type: object
@@ -1405,14 +1830,69 @@ components:
         ticketIds:
           type: array
           minItems: 1
+          maxItems: 500
+          uniqueItems: true
           items:
-            type: integer
-            format: int64
+            type: string
+            format: uuid
         comment:
           type: string
           minLength: 1
           maxLength: 1000
+          pattern: '\S'
           description: Shown to each author in Jira (MSG64).
+    ReviewSolution:
+      type: object
+      required: [symptoms, rootCause, resolutionSteps, workaround, scope]
+      properties:
+        symptoms: { type: string }
+        rootCause: { type: string }
+        resolutionSteps: { type: string }
+        workaround: { type: [string, 'null'] }
+        scope: { type: [string, 'null'] }
+    ReviewEvidence:
+      type: object
+      required: [id, filename, sizeBytes, url]
+      properties:
+        id: { type: string, format: uuid }
+        filename: { type: string }
+        sizeBytes: { type: integer, minimum: 0 }
+        url: { type: [string, 'null'] }
+    ReviewTicketDetail:
+      type: object
+      description: Frontend proposal; read-only content, author identity and review state. Does not implement production audit or Jira delivery.
+      required:
+        [
+          ticketId,
+          sourceTicketId,
+          title,
+          description,
+          project,
+          source,
+          status,
+          authorId,
+          authorName,
+          reviewDueDate,
+          solution,
+          evidence,
+          lastReviewComment,
+        ]
+      properties:
+        ticketId: { type: string, format: uuid }
+        sourceTicketId: { type: string }
+        title: { type: string }
+        description: { type: string }
+        project: { $ref: '#/components/schemas/ProjectRef' }
+        source: { $ref: '#/components/schemas/TicketSource' }
+        status: { $ref: '#/components/schemas/TicketStatus' }
+        authorId: { type: [string, 'null'], format: uuid }
+        authorName: { type: [string, 'null'] }
+        reviewDueDate: { type: [string, 'null'], format: date-time }
+        solution: { $ref: '#/components/schemas/ReviewSolution' }
+        evidence:
+          type: array
+          items: { $ref: '#/components/schemas/ReviewEvidence' }
+        lastReviewComment: { type: [string, 'null'] }
     ReviewDecisionResult:
       type: object
       required: [count]

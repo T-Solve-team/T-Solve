@@ -54,7 +54,7 @@ class StubProjectAccessTest {
     }
 
     @Test
-    void aShortFormIdGrantsNothing_BUG_080() {
+    void aShortFormIdGrantsNothing_BUG_104() {
         StubProjectAccess access = new StubProjectAccess("alice:1-1-1-1-1", "");
 
         assertThat(access.managesActive("alice", id("00000001-0001-0001-0001-000000000001")))

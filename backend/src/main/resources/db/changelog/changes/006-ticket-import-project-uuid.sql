@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset ticket:005-ticket-import-project-uuid
+--changeset ticket:006-ticket-import-project-uuid
 
 -- Project ids are UUIDs (import-ticket-list D10): the web app takes the Project from the session.
 -- Earlier stub ids keep a stable value: 1 -> 00000000-0000-0000-0000-000000000001.

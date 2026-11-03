@@ -44,7 +44,7 @@ function quietMutation(client: QueryClient) {
   return client
     .getMutationCache()
     .build(client, {
-      mutationFn: () => approveTickets({ ticketIds: [1] }),
+      mutationFn: () => approveTickets({ ticketIds: ['20000000-0000-4000-8000-000000000001'] }),
       meta: { handlesOwnErrors: true },
     })
     .execute(undefined)
@@ -135,7 +135,9 @@ describe('site state (unknown site, Suspended Workspace)', () => {
     server.use(mock.post('*/api/v1/reviews/approve', () => problem(403, 'MSG120')));
     await queryClient
       .getMutationCache()
-      .build(queryClient, { mutationFn: () => approveTickets({ ticketIds: [1] }) })
+      .build(queryClient, {
+        mutationFn: () => approveTickets({ ticketIds: ['20000000-0000-4000-8000-000000000001'] }),
+      })
       .execute(undefined)
       .catch(() => undefined);
 

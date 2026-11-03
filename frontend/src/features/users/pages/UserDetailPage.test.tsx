@@ -143,8 +143,9 @@ describe('UserDetailPage creation', () => {
     expect(email).toHaveValue('user11@company.example');
   });
 
-  it('AC-005.7 retains input after a network failure and allows retry', async () => {
-    server.use(http.post('*/api/v1/users', () => problem(500)));
+  it('AC-005.7 retains input after a network failure and allows retry (BUG-022, BUG-073)', async () => {
+    let fails = true;
+    server.use(http.post('*/api/v1/users', () => (fails ? problem(500) : undefined)));
     const user = userEvent.setup();
     renderApp('/users/new', { role: 'ADMIN' });
     const email = await screen.findByRole('textbox', { name: 'Email' }, { timeout: 5000 });
@@ -152,10 +153,13 @@ describe('UserDetailPage creation', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
     expect(email).toHaveValue('retry@company.example');
-    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled());
+    fails = false;
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText(msg('MSG12'))).toBeInTheDocument();
   });
 
-  it('AC-005.7 disables Save during a pending request to prevent double submission (BUG-013)', async () => {
+  it('AC-005.7 keeps Save named and disabled during a pending request (BUG-013, BUG-022, BUG-073)', async () => {
     let finish: (() => void) | undefined;
     let calls = 0;
     const pending = new Promise<void>((resolve) => {
@@ -180,17 +184,23 @@ describe('UserDetailPage creation', () => {
       }),
     );
     const user = userEvent.setup();
-    renderApp('/users/new', { role: 'ADMIN' });
+    const { queryClient } = renderApp('/users/new', { role: 'ADMIN' });
     await user.type(
       await screen.findByRole('textbox', { name: 'Email' }, { timeout: 5000 }),
       'pending@company.example',
     );
     const save = screen.getByRole('button', { name: 'Save' });
-    await user.dblClick(save);
-    await waitFor(() => expect(save).toBeDisabled());
-    expect(calls).toBe(1);
-    expect(screen.getByRole('textbox', { name: 'Email' })).toHaveValue('pending@company.example');
-    finish?.();
+    try {
+      await user.dblClick(save);
+      await waitFor(() => expect(save).toBeDisabled());
+      expect(screen.getByRole('button', { name: 'Save' })).toBe(save);
+      expect(save).toHaveAttribute('aria-busy', 'true');
+      expect(calls).toBe(1);
+      expect(screen.getByRole('textbox', { name: 'Email' })).toHaveValue('pending@company.example');
+    } finally {
+      finish?.();
+      await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+    }
     expect(await screen.findByText(msg('MSG12'))).toBeInTheDocument();
   });
 

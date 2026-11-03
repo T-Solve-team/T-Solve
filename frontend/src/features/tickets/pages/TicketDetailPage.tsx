@@ -1,8 +1,10 @@
 /** 5.5 Ticket Detail — SRS III.5.5 */
-import { ScreenPlaceholder } from '@/shared/ui';
+import { useParams } from 'react-router';
+import { ReviewTicketDetail } from '@/features/review';
 
 export function TicketDetailPage() {
-  return <ScreenPlaceholder number="5.5" name="Ticket Detail" />;
+  const { ticketId = '' } = useParams();
+  return <ReviewTicketDetail key={ticketId} ticketId={ticketId} />;
 }
 
 export default TicketDetailPage;

@@ -159,7 +159,7 @@ Status labels shown in the UI come from one place — `StatusTag`'s label map �
 | the old triage words sensitive, escalation handler, route to handler, correct class | Simple · Complex (triage class) |
 | migrate (Department data), wiki review, wiki versions, wiki editor, transfer owner | (removed in Report3) |
 
-Also never add a **Project filter** to any screen — only a sortable Project column (UI decisions 04/10).
+Also never add a **Project filter** to any screen — only a sortable Project column (UI decisions 04/10); except My Profile → My Solutions (KAN-238, FE Lead 1/11; decision FE-45).
 
 *Why:* the team and the examiners read the SRS, Figma and the running app side by side. One word per
 concept removes a whole class of "is this the same thing?" questions.
