@@ -86,7 +86,7 @@
         "add-user-review": "passing",
         "login-screen": "passing",
         "sign-in-start": "passing",
-        "sign-in-callback": "pending",
+        "sign-in-callback": "passing",
         "workspace-session": "pending",
         "operator-sign-in": "pending",
         "jira-link-sign-in": "pending",
@@ -101,7 +101,7 @@
         "my-solutions-counters": "pending",
         "my-solutions-filters": "pending"
       },
-      "lastUpdated": "2026-11-01T09:22:19.220Z",
+      "lastUpdated": "2026-11-03T17:18:58.086Z",
       "branch": "feat/identity",
       "repos": [
         "default"
