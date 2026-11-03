@@ -56,7 +56,7 @@ tsolve:
   oidc:
     google:
       authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
-  # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId". Empty = nobody can import.
+  # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId", ids as UUIDs. Empty = nobody can import.
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
     inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}

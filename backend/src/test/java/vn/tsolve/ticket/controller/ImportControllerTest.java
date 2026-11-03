@@ -165,7 +165,8 @@ class ImportControllerTest {
                         .file(FILE)
                         .param("projectId", "1")
                         .with(csrf()))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").exists());
         verifyNoInteractions(csvImports);
     }
 
