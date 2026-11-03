@@ -177,7 +177,6 @@ describe('ImportTicketsPage', () => {
         .then(async (form) => {
           const file = form.get('file');
           sent.projectId = form.get('projectId');
-          // jsdom's file reaches the request as a Node Blob named "blob": compare its content instead.
           sent.fileText = typeof file === 'string' ? undefined : await file?.text();
         });
     });
