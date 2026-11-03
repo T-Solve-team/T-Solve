@@ -34,5 +34,16 @@ template and transaction manager. They are intentionally not separate Spring bea
 base types: publishing them would make Boot back off its legacy auto-configuration. The old
 JPA repositories, sign-in state and Ticket/Import remain on the legacy primary database.
 
-This feature supplies routing only. KAN-107's read API and real sign-in/session integration are
-separate delivery steps. It does not establish tenant isolation for unported legacy modules.
+KAN-107 supplies `GET /api/v1/users` and `GET /api/v1/users/departments`. The list reads
+`app_user`, `user_role` and `department`; BIGINT ids are decimal strings in its responses.
+No Last sign-in value exists in this SQL contract. Both reads require an authenticated,
+server-issued `WorkspaceAccountPrincipal(workspaceId, accountId)` in the Spring Security
+session. A legacy principal, request header or Workspace selector cannot substitute for it.
+The account must be Active and have ADMIN in the current tenant database; roles are reloaded
+on every request. A fresh read-only snapshot also checks access before reading the response.
+
+Real OIDC callback/session issuance remains a separate backend slice. Keep this feature
+disabled in deployments until provisioning and trusted session issuance are connected.
+User creation, detail and mutations remain separate backend work. Their existing frontend
+mock contracts use UUIDs; the numeric-list adapter exists only at the mock boundary.
+This does not establish tenant isolation for unported legacy modules.

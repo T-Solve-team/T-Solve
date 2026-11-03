@@ -9,7 +9,7 @@
 import type { PageParameter } from './pageParameter';
 import type { Role } from './role';
 import type { SizeParameter } from './sizeParameter';
-import type { SortParameter } from './sortParameter';
+import type { SqlId } from './sqlId';
 import type { UserAccountStatus } from './userAccountStatus';
 
 export type GetUsersParams = {
@@ -23,7 +23,7 @@ export type GetUsersParams = {
    */
   role?: Role;
   status?: UserAccountStatus;
-  departmentId?: string;
+  departmentId?: SqlId;
   /**
    * Page number, starting at 0.
    * @minimum 0
@@ -36,7 +36,8 @@ export type GetUsersParams = {
    */
   size?: SizeParameter;
   /**
-   * "field,asc" or "field,desc"; may repeat.
+   * Ordered fullName/email sort expressions; numeric user id ascending breaks ties. Last sign-in is unsupported.
+   * @items.pattern ^(fullName|email),(asc|desc)$
    */
-  sort?: SortParameter;
+  sort?: string[];
 };

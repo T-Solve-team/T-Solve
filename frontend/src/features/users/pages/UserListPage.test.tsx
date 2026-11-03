@@ -14,7 +14,7 @@ describe('UserListPage', () => {
   it('AC-004.1 displays Workspace users with the SRS columns and named action (BUG-010)', async () => {
     renderApp('/users', { role: 'ADMIN' });
     const table = await screen.findByRole('table', { name: 'Workspace users' }, { timeout: 5000 });
-    for (const label of ['Full name', 'Email', 'Department', 'Roles', 'Status', 'Last sign-in']) {
+    for (const label of ['Full name', 'Email', 'Department', 'Roles', 'Status']) {
       expect(
         within(table).getByRole('columnheader', { name: new RegExp(label) }),
       ).toBeInTheDocument();
@@ -90,10 +90,7 @@ describe('UserListPage', () => {
 
   it('AC-004.2 combines role, Department and status filters and resets pagination', async () => {
     const user = userEvent.setup();
-    const { router } = renderApp(
-      '/users?page=2&status=ACTIVE&departmentId=00000000-0000-4000-8000-0000000000d2',
-      { role: 'ADMIN' },
-    );
+    const { router } = renderApp('/users?page=2&status=ACTIVE&departmentId=2', { role: 'ADMIN' });
     await screen.findByRole('table', { name: 'Workspace users' }, { timeout: 5000 });
     await user.click(screen.getByRole('combobox', { name: 'Role' }));
     await user.click(await screen.findByRole('option', { name: 'Employee only' }));
@@ -103,9 +100,7 @@ describe('UserListPage', () => {
     expect(await screen.findByRole('link', { name: 'Trần Thị Lan' })).toBeInTheDocument();
     expect(await screen.findByText('Total 6 items')).toBeInTheDocument();
     expect(new URLSearchParams(router.state.location.search).get('status')).toBe('ACTIVE');
-    expect(new URLSearchParams(router.state.location.search).get('departmentId')).toBe(
-      '00000000-0000-4000-8000-0000000000d2',
-    );
+    expect(new URLSearchParams(router.state.location.search).get('departmentId')).toBe('2');
   });
 
   it('AC-004.2 submits Department and status changes through their controls', async () => {
@@ -119,9 +114,7 @@ describe('UserListPage', () => {
     await user.click(await screen.findByRole('option', { name: 'Deactivated' }));
     expect(await screen.findByRole('link', { name: 'Tạ Minh Khang' })).toBeInTheDocument();
     expect(await screen.findByText('Total 2 items')).toBeInTheDocument();
-    expect(new URLSearchParams(router.state.location.search).get('departmentId')).toBe(
-      '00000000-0000-4000-8000-0000000000d1',
-    );
+    expect(new URLSearchParams(router.state.location.search).get('departmentId')).toBe('1');
     expect(new URLSearchParams(router.state.location.search).get('status')).toBe('DEACTIVATED');
   });
 
@@ -198,13 +191,12 @@ describe('UserListPage', () => {
         HttpResponse.json({
           content: [
             {
-              id: '10000000-0000-4000-8000-000000000025',
+              id: '25',
               fullName: null,
               email: 'new@company.example',
               roles: ['EMPLOYEE'],
               department: null,
               status: 'ACTIVE',
-              lastSignInAt: null,
             },
           ],
           page: { size: 20, number: 0, totalElements: 1, totalPages: 1 },
@@ -217,7 +209,7 @@ describe('UserListPage', () => {
     expect(within(row).getAllByRole('cell')[0]).toBeEmptyDOMElement();
     expect(within(row).getByRole('link', { name: 'new@company.example' })).toHaveAttribute(
       'href',
-      '/users/10000000-0000-4000-8000-000000000025',
+      '/users/25',
     );
   });
 

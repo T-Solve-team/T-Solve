@@ -39,7 +39,18 @@ describe('Workspace user mock contracts', () => {
       roles: ['EMPLOYEE', 'ADMIN'],
       lastSignInAt: null,
     });
-    expect((await getUsers({ q: created.email })).content).toEqual([created]);
+    const listed = (await getUsers({ q: created.email })).content;
+    expect(listed[0]?.id).toMatch(/^[1-9][0-9]*$/);
+    expect(listed).toEqual([
+      {
+        id: listed[0]?.id,
+        fullName: created.fullName,
+        email: created.email,
+        roles: created.roles,
+        department: created.department,
+        status: created.status,
+      },
+    ]);
   });
 
   it.each([
@@ -141,7 +152,7 @@ describe('Workspace user mock contracts', () => {
     expect(page.content).toEqual([]);
     expect(page.page.totalElements).toBe(0);
     const departments = await getUserDepartments();
-    expect(departments.map((department) => department.name)).toEqual(['IT', 'HR']);
+    expect(departments.map((department) => department.name)).toEqual(['HR', 'IT']);
   });
 
   it('AC-004.2 applies every filter before pagination', async () => {
@@ -149,12 +160,12 @@ describe('Workspace user mock contracts', () => {
       q: 'USER',
       role: 'PROJECT_MANAGER',
       status: 'ACTIVE',
-      departmentId: '00000000-0000-4000-8000-0000000000d1',
+      departmentId: '1',
     });
     expect(page.content.length).toBeGreaterThan(0);
     for (const user of page.content) {
       expect(user.roles).toContain('PROJECT_MANAGER');
-      expect(user.department?.departmentId).toBe('00000000-0000-4000-8000-0000000000d1');
+      expect(user.department?.departmentId).toBe('1');
       expect(user.status).toBe('ACTIVE');
     }
     const employees = await getUsers({ role: 'EMPLOYEE' });
@@ -170,15 +181,19 @@ describe('Workspace user mock contracts', () => {
     });
   });
 
-  it('AC-004.3 provides stable pages, totals, descending sign-in sorting and an empty overflow page', async () => {
+  it('AC-004.3 provides stable pages, totals, descending email sorting and an empty overflow page', async () => {
     const first = await getUsers();
     const last = await getUsers({ page: 1 });
     expect(first.content).toHaveLength(20);
     expect(last.content).toHaveLength(4);
     expect(new Set([...first.content, ...last.content].map((user) => user.id)).size).toBe(24);
     expect(first.page).toEqual({ size: 20, number: 0, totalElements: 24, totalPages: 2 });
-    const signedIn = await getUsers({ sort: ['lastSignInAt,desc'] });
-    expect(signedIn.content[0]?.id).toBe('10000000-0000-4000-8000-000000000024');
+    const emailDescending = await getUsers({ sort: ['email,desc'] });
+    expect(emailDescending.content[0]?.email).toBe('user9@company.example');
+    await expect(getUsers({ sort: ['lastSignInAt,desc'] })).rejects.toMatchObject({
+      status: 400,
+      code: 'MSG06',
+    });
     expect((await getUsers({ page: 2 })).content).toEqual([]);
   });
 
@@ -190,10 +205,12 @@ describe('Workspace user mock contracts', () => {
     await expect(getUsers()).rejects.toMatchObject({ status: 401, code: 'MSG07' });
   });
 
-  it('AC-004.3 falls back safely for inherited and unsupported sort keys (BUG-011)', async () => {
-    const expected = await getUsers();
+  it('AC-004.14 rejects inherited and unsupported sort keys safely (BUG-011)', async () => {
     for (const key of ['constructor', 'toString', '__proto__', 'unknown']) {
-      expect((await getUsers({ sort: [`${key},asc`] })).content).toEqual(expected.content);
+      await expect(getUsers({ sort: [`${key},asc`] })).rejects.toMatchObject({
+        status: 400,
+        code: 'MSG06',
+      });
     }
   });
 });

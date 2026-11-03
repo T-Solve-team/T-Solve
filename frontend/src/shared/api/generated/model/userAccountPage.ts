@@ -7,9 +7,9 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 import type { PageMetadata } from './pageMetadata';
-import type { UserAccount } from './userAccount';
+import type { UserListItem } from './userListItem';
 
 export interface UserAccountPage {
-  content: UserAccount[];
+  content: UserListItem[];
   page: PageMetadata;
 }

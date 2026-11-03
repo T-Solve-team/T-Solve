@@ -6,9 +6,12 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
+import type { DepartmentRef } from './departmentRef';
 import type { SpaceRef } from './spaceRef';
 
 export interface UserCreationOptions {
   companyDomain: string;
   spaces: SpaceRef[];
+  /** Department options for the existing account creation/role-editing proposal, kept separate from SQL User List filter ids until those mutations migrate. */
+  departments?: DepartmentRef[];
 }

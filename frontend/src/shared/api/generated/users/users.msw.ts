@@ -13,12 +13,12 @@ import type { RequestHandlerOptions } from 'msw';
 
 import { Role, UserAccountStatus } from '../model';
 import type {
-  DepartmentRef,
   UserAccount,
   UserAccountPage,
   UserCreationOptions,
   UserDetail,
   UserHandoverOptions,
+  UserListDepartmentRef,
 } from '../model';
 
 export const getCreateUserResponseMock = (
@@ -51,7 +51,7 @@ export const getGetUsersResponseMock = (
 ): UserAccountPage => ({
   content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
-      id: faker.string.uuid(),
+      id: faker.helpers.fromRegExp('^[1-9][0-9]{0,18}$'),
       fullName: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -60,16 +60,12 @@ export const getGetUsersResponseMock = (
       roles: faker.helpers.arrayElements(Object.values(Role)),
       department: faker.helpers.arrayElement([
         {
-          departmentId: faker.string.uuid(),
+          departmentId: faker.helpers.fromRegExp('^[1-9][0-9]{0,18}$'),
           name: faker.string.alpha({ length: { min: 10, max: 20 } }),
         },
         null,
       ]),
       status: faker.helpers.arrayElement(Object.values(UserAccountStatus)),
-      lastSignInAt: faker.helpers.arrayElement([
-        faker.date.past().toISOString().slice(0, 19) + 'Z',
-        null,
-      ]),
     }),
   ),
   page: {
@@ -317,12 +313,19 @@ export const getGetUserCreationOptionsResponseMock = (
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     }),
   ),
+  departments: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      departmentId: faker.string.uuid(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
-export const getGetUserDepartmentsResponseMock = (): DepartmentRef[] =>
+export const getGetUserDepartmentsResponseMock = (): UserListDepartmentRef[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    departmentId: faker.string.uuid(),
+    departmentId: faker.helpers.fromRegExp('^[1-9][0-9]{0,18}$'),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   }));
 
@@ -490,10 +493,10 @@ export const getGetUserCreationOptionsMockHandler = (
 
 export const getGetUserDepartmentsMockHandler = (
   overrideResponse?:
-    | DepartmentRef[]
+    | UserListDepartmentRef[]
     | ((
         info: Parameters<Parameters<typeof http.get>[1]>[0],
-      ) => Promise<DepartmentRef[]> | DepartmentRef[]),
+      ) => Promise<UserListDepartmentRef[]> | UserListDepartmentRef[]),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(

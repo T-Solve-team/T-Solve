@@ -24,7 +24,6 @@ import type {
 
 import type {
   CreateUserRequest,
-  DepartmentRef,
   GetUsersParams,
   ProblemDetail,
   ProblemResponse,
@@ -35,6 +34,7 @@ import type {
   UserCreationOptions,
   UserDetail,
   UserHandoverOptions,
+  UserListDepartmentRef,
 } from '../model';
 
 import { http } from '../../http';
@@ -185,7 +185,7 @@ export const getGetUsersUrl = (params?: GetUsersParams) => {
 };
 
 /**
- * @summary Workspace users; default sort fullName,asc with id as a stable tie-breaker.
+ * @summary SQL Workspace users; default sort fullName,asc with numeric id as a stable tie-breaker.
  */
 export const getUsers = async (
   params?: GetUsersParams,
@@ -278,7 +278,7 @@ export function useGetUsers<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Workspace users; default sort fullName,asc with id as a stable tie-breaker.
+ * @summary SQL Workspace users; default sort fullName,asc with numeric id as a stable tie-breaker.
  */
 
 export function useGetUsers<
@@ -917,8 +917,8 @@ export const getGetUserDepartmentsUrl = () => {
  */
 export const getUserDepartments = async (
   options?: Parameters<typeof http>[1],
-): Promise<DepartmentRef[]> => {
-  return http<DepartmentRef[]>(getGetUserDepartmentsUrl(), {
+): Promise<UserListDepartmentRef[]> => {
+  return http<UserListDepartmentRef[]>(getGetUserDepartmentsUrl(), {
     ...options,
     method: 'GET',
   });

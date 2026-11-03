@@ -10,6 +10,7 @@ import {
   workspaceUser,
 } from './state';
 import { WORKSPACE_ID } from './data';
+import { detailAccountId } from './list-ids';
 import {
   applyHandover,
   isRecord,
@@ -30,7 +31,7 @@ export const statusHandlers: HttpHandler[] = [
     await delay(MOCK_DELAY_MS);
     const denied = accountAccessError();
     if (denied) return denied;
-    const detail = userDetail(String(params.userId));
+    const detail = userDetail(detailAccountId(String(params.userId)));
     return detail ? HttpResponse.json(detail) : problem(404, 'MSG04');
   }),
   http.put('*/api/v1/users/:userId/status', async ({ params, request }) => {

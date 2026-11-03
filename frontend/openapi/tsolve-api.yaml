@@ -99,7 +99,7 @@ paths:
     get:
       tags: [users]
       operationId: getUsers
-      summary: Workspace users; default sort fullName,asc with id as a stable tie-breaker.
+      summary: SQL Workspace users; default sort fullName,asc with numeric id as a stable tie-breaker.
       parameters:
         - name: q
           in: query
@@ -114,10 +114,16 @@ paths:
           schema: { $ref: '#/components/schemas/UserAccountStatus' }
         - name: departmentId
           in: query
-          schema: { type: string, format: uuid }
+          schema: { $ref: '#/components/schemas/SqlId' }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
-        - $ref: '#/components/parameters/Sort'
+        - name: sort
+          in: query
+          description: Ordered fullName/email sort expressions; numeric user id ascending breaks ties. Last sign-in is unsupported.
+          schema:
+            type: array
+            items: { type: string, pattern: '^(fullName|email),(asc|desc)$' }
+            default: ['fullName,asc']
       responses:
         '200':
           description: One page of users in the signed-in Admin's Workspace.
@@ -246,7 +252,9 @@ paths:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/DepartmentRef' }
+                items: { $ref: '#/components/schemas/UserListDepartmentRef' }
+        '400':
+          $ref: '#/components/responses/Problem'
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -1287,6 +1295,10 @@ components:
         spaces:
           type: array
           items: { $ref: '#/components/schemas/SpaceRef' }
+        departments:
+          description: Department options for the existing account creation/role-editing proposal, kept separate from SQL User List filter ids until those mutations migrate.
+          type: array
+          items: { $ref: '#/components/schemas/DepartmentRef' }
     UserAccountStatus:
       type: string
       enum: [ACTIVE, DEACTIVATED]
@@ -1312,8 +1324,35 @@ components:
       properties:
         content:
           type: array
-          items: { $ref: '#/components/schemas/UserAccount' }
+          items: { $ref: '#/components/schemas/UserListItem' }
         page: { $ref: '#/components/schemas/PageMetadata' }
+    SqlId:
+      type: string
+      pattern: '^[1-9][0-9]{0,18}$'
+      maxLength: 19
+      description: Positive PostgreSQL BIGINT encoded as a decimal string, at most 9223372036854775807. Never convert through a JavaScript Number.
+      example: '9223372036854775807'
+    UserListDepartmentRef:
+      type: object
+      required: [departmentId, name]
+      properties:
+        departmentId: { $ref: '#/components/schemas/SqlId' }
+        name: { type: string }
+    UserListItem:
+      type: object
+      required: [id, fullName, email, roles, department, status]
+      properties:
+        id: { $ref: '#/components/schemas/SqlId' }
+        fullName: { type: [string, 'null'] }
+        email: { type: string, format: email }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/Role' }
+        department:
+          anyOf:
+            - { $ref: '#/components/schemas/UserListDepartmentRef' }
+            - { type: 'null' }
+        status: { $ref: '#/components/schemas/UserAccountStatus' }
     Role:
       type: string
       description: A role of a user (Report3 4.1, GBR-28). A user can hold several; every user has EMPLOYEE.

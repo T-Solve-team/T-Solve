@@ -16,7 +16,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-class SqlBootstrapIT {
+public class SqlBootstrapIT {
 
     @Test
     void
@@ -99,11 +99,11 @@ class SqlBootstrapIT {
         }
     }
 
-    static JdbcTemplate jdbc(String url, PostgreSQLContainer<?> db) {
+    public static JdbcTemplate jdbc(String url, PostgreSQLContainer<?> db) {
         return new JdbcTemplate(new DriverManagerDataSource(url, db.getUsername(), db.getPassword()));
     }
 
-    static void migrate(String url, PostgreSQLContainer<?> db, String kind) throws Exception {
+    public static void migrate(String url, PostgreSQLContainer<?> db, String kind) throws Exception {
         try (var connection = DriverManager.getConnection(url, db.getUsername(), db.getPassword());
                 var liquibase = new Liquibase(
                         "db/changelog/" + kind + "/" + kind + "-master.xml",

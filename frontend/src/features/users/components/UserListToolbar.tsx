@@ -2,7 +2,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { Button, Flex, Input, Select, Typography } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Role, UserAccountStatus, type DepartmentRef } from '@/shared/api';
+import { Role, UserAccountStatus, type UserListDepartmentRef } from '@/shared/api';
 import { ROLE_LABELS, ROLES } from '@/shared/auth';
 import { msg } from '@/shared/messages';
 import { paths, type useListSearchParams } from '@/shared/routing';
@@ -14,7 +14,7 @@ type Props = {
   role: Role | undefined;
   status: UserAccountStatus | undefined;
   departmentId: string | undefined;
-  departments: DepartmentRef[] | undefined;
+  departments: UserListDepartmentRef[] | undefined;
   departmentsPending: boolean;
   departmentsError: boolean;
 };

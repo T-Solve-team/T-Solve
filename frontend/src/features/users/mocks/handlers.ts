@@ -2,7 +2,7 @@ import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import {
   Role,
   UserAccountStatus,
-  type DepartmentRef,
+  type UserListDepartmentRef,
   type UserAccount,
   type UserAccountPage,
   type UserCreationOptions,
@@ -16,6 +16,7 @@ import { accountAccessError as accessError, resetUserState, store } from './stat
 import { statusHandlers } from './status-handlers';
 import { rolesHandler } from './roles-handler';
 import { isRecord } from './handover';
+import { listDepartmentId, listUserId } from './list-ids';
 
 export function resetMockData(): void {
   resetUserState();
@@ -24,12 +25,14 @@ export function resetMockData(): void {
 const SORT_VALUE: Record<string, (user: UserAccount) => string> = {
   fullName: (user) => user.fullName ?? '',
   email: (user) => user.email,
-  lastSignInAt: (user) => user.lastSignInAt ?? '',
 };
 
 function nonNegativeInteger(value: string | null, fallback: number): number {
+  if (value === null) return fallback;
   const parsed = Number(value);
-  return value !== null && Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : fallback;
+  return /^[0-9]+$/.test(value) && Number.isSafeInteger(parsed) && parsed <= 2147483647
+    ? parsed
+    : NaN;
 }
 
 function fieldError(field: string, code: MsgCode, params?: MsgParams, status = 400) {
@@ -45,7 +48,11 @@ export const handlers: HttpHandler[] = [
     await delay(MOCK_DELAY_MS);
     return (
       accessError() ??
-      HttpResponse.json<UserCreationOptions>({ companyDomain: COMPANY_DOMAIN, spaces: SPACES })
+      HttpResponse.json<UserCreationOptions>({
+        companyDomain: COMPANY_DOMAIN,
+        spaces: SPACES,
+        departments: DEPARTMENTS,
+      })
     );
   }),
   http.post('*/api/v1/users', async ({ request }) => {
@@ -119,7 +126,15 @@ export const handlers: HttpHandler[] = [
   }),
   http.get('*/api/v1/users/departments', async () => {
     await delay(MOCK_DELAY_MS);
-    return accessError() ?? HttpResponse.json<DepartmentRef[]>(DEPARTMENTS);
+    return (
+      accessError() ??
+      HttpResponse.json<UserListDepartmentRef[]>(
+        DEPARTMENTS.map((department) => ({
+          ...department,
+          departmentId: listDepartmentId(department.departmentId),
+        })).sort((a, b) => a.name.localeCompare(b.name, 'vi')),
+      )
+    );
   }),
   http.get('*/api/v1/users', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
@@ -127,16 +142,31 @@ export const handlers: HttpHandler[] = [
     if (denied) return denied;
     const params = new URL(request.url).searchParams;
     const q = (params.get('q') ?? '').trim().toLocaleLowerCase();
-    if (q.length > 100)
-      return problem(400, 'MSG02', { params: { field_name: 'Search', max_length: 100 } });
+    if (q.length > 100) return fieldError('q', 'MSG02', { field_name: 'Search', max_length: 100 });
     const role = params.get('role');
     const status = params.get('status');
     const departmentId = params.get('departmentId');
-    const sort = parseSort(params.get('sort')) ?? { field: 'fullName', order: 'asc' };
-    const value = Object.hasOwn(SORT_VALUE, sort.field)
-      ? SORT_VALUE[sort.field]
-      : SORT_VALUE.fullName;
-    const direction = sort.order === 'asc' ? 1 : -1;
+    const expressions = params.getAll('sort');
+    const sorts = (expressions.length ? expressions : ['fullName,asc']).map(parseSort);
+    const page = nonNegativeInteger(params.get('page'), 0);
+    const size = nonNegativeInteger(params.get('size'), 20);
+    if (
+      ['q', 'role', 'status', 'departmentId', 'page', 'size'].some(
+        (key) => params.getAll(key).length > 1,
+      ) ||
+      expressions.some((expression) => !/^(fullName|email),(asc|desc)$/.test(expression)) ||
+      sorts.some((sort) => !sort || !Object.hasOwn(SORT_VALUE, sort.field)) ||
+      (role !== null && !isRole(role)) ||
+      (status !== null && status !== 'ACTIVE' && status !== 'DEACTIVATED') ||
+      (departmentId !== null &&
+        (!/^[1-9][0-9]{0,18}$/.test(departmentId) ||
+          BigInt(departmentId) > 9223372036854775807n)) ||
+      !Number.isInteger(page) ||
+      !Number.isInteger(size) ||
+      size < 1 ||
+      size > 100
+    )
+      return problem(400, 'MSG06');
     const matching = store.users
       .filter(
         (user) =>
@@ -148,19 +178,33 @@ export const handlers: HttpHandler[] = [
               ? user.roles.length === 1 && user.roles[0] === Role.EMPLOYEE
               : user.roles.some((held) => held === role))) &&
           (!status || user.status === status) &&
-          (!departmentId || String(user.department?.departmentId) === departmentId),
+          (!departmentId ||
+            (user.department && listDepartmentId(user.department.departmentId) === departmentId)),
       )
-      .sort(
-        (a, b) =>
-          (value ? value(a).localeCompare(value(b), 'vi') : 0) * direction ||
-          a.id.localeCompare(b.id),
-      );
-    const size = Math.min(100, Math.max(1, nonNegativeInteger(params.get('size'), 20)));
-    const page = nonNegativeInteger(params.get('page'), 0);
+      .sort((a, b) => {
+        for (const sort of sorts) {
+          if (!sort) continue;
+          const value = SORT_VALUE[sort.field];
+          if (!value) continue;
+          const comparison =
+            value(a).localeCompare(value(b), 'vi') * (sort.order === 'asc' ? 1 : -1);
+          if (comparison) return comparison;
+        }
+        const aId = BigInt(listUserId(a.id));
+        const bId = BigInt(listUserId(b.id));
+        return aId < bId ? -1 : aId > bId ? 1 : 0;
+      });
     return HttpResponse.json<UserAccountPage>({
-      content: matching
-        .slice(page * size, (page + 1) * size)
-        .map(({ workspaceId: _workspaceId, spaceIds: _spaceIds, ...user }) => user),
+      content: matching.slice(page * size, (page + 1) * size).map((user) => ({
+        id: listUserId(user.id),
+        fullName: user.fullName,
+        email: user.email,
+        roles: user.roles,
+        department: user.department
+          ? { ...user.department, departmentId: listDepartmentId(user.department.departmentId) }
+          : null,
+        status: user.status,
+      })),
       page: {
         number: page,
         size,

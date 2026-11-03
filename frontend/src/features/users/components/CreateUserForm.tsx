@@ -2,12 +2,7 @@
 import { Button, Checkbox, Flex, Form, Input, Select, Typography } from 'antd';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router';
-import {
-  Role,
-  useGetUserCreationOptions,
-  useGetUserDepartments,
-  type CreateUserRequest,
-} from '@/shared/api';
+import { Role, useGetUserCreationOptions, type CreateUserRequest } from '@/shared/api';
 import { ROLE_LABELS, ROLES } from '@/shared/auth';
 import { applyApiErrors, rules } from '@/shared/forms';
 import { msg, showMessage } from '@/shared/messages';
@@ -19,7 +14,6 @@ export function CreateUserForm() {
   const navigate = useNavigate();
   const [form] = Form.useForm<CreateUserRequest>();
   const roles: CreateUserRequest['roles'] = Form.useWatch('roles', form) ?? [Role.EMPLOYEE];
-  const departments = useGetUserDepartments();
   const options = useGetUserCreationOptions();
   const create = useAddUser();
   const submitting = useRef(false);
@@ -50,9 +44,7 @@ export function CreateUserForm() {
     );
   }
 
-  if (departments.isPending || options.isPending) return <LoadingState />;
-  if (departments.isError)
-    return <ErrorState error={departments.error} onRetry={() => void departments.refetch()} />;
+  if (options.isPending) return <LoadingState />;
   if (options.isError)
     return <ErrorState error={options.error} onRetry={() => void options.refetch()} />;
 
@@ -80,13 +72,13 @@ export function CreateUserForm() {
           <Select
             allowClear
             virtual={false}
-            options={departments.data.map((department) => ({
+            options={(options.data.departments ?? []).map((department) => ({
               value: department.departmentId,
               label: department.name,
             }))}
           />
         </FormField>
-        {departments.data.length === 0 && <EmptyState />}
+        {!options.data.departments?.length && <EmptyState />}
         <FormField<CreateUserRequest>
           name="roles"
           label="Roles"

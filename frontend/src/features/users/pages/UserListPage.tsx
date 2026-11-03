@@ -1,6 +1,7 @@
 /** 1.3.1 User List — SRS III.1.3.1, field table 98. */
 import { Flex } from 'antd';
-import { useGetUserDepartments, UserAccountStatus, type UserAccount } from '@/shared/api';
+import { useEffect } from 'react';
+import { useGetUserDepartments, UserAccountStatus, type UserListItem } from '@/shared/api';
 import { isRole, ROLE_LABELS } from '@/shared/auth';
 import { paths, useListSearchParams } from '@/shared/routing';
 import {
@@ -15,7 +16,7 @@ import { UserListToolbar } from '../components/UserListToolbar';
 import { useUsers } from '../hooks/useUsers';
 import styles from './UserListPage.module.css';
 
-const COLUMNS: DataTableColumn<UserAccount>[] = [
+const COLUMNS: DataTableColumn<UserListItem>[] = [
   {
     key: 'fullName',
     title: 'Full name',
@@ -49,17 +50,15 @@ const COLUMNS: DataTableColumn<UserAccount>[] = [
     width: 130,
     render: (_, user) => <StatusTag status={user.status} />,
   },
-  {
-    key: 'lastSignInAt',
-    title: 'Last sign-in',
-    width: 160,
-    sortable: true,
-    render: (_, user) => cells.dateTime(user.lastSignInAt),
-  },
 ];
 
 export function UserListPage() {
   const list = useListSearchParams({ field: 'fullName', order: 'asc' });
+  const legacySignInSort = list.sort.field === 'lastSignInAt';
+  const setSort = list.setSort;
+  useEffect(() => {
+    if (legacySignInSort) setSort({ field: 'fullName', order: 'asc' });
+  }, [legacySignInSort, setSort]);
   const q = list.getFilter('q') ?? '';
   const rawRole = list.getFilter('role');
   const role = rawRole && isRole(rawRole) ? rawRole : undefined;
@@ -76,6 +75,7 @@ export function UserListPage() {
     status,
     departmentId,
     ...list.apiPaging,
+    ...(legacySignInSort ? { page: 0, sort: ['fullName,asc'] } : {}),
   });
 
   return (
@@ -98,7 +98,7 @@ export function UserListPage() {
         {users.isPending ? (
           <LoadingState />
         ) : (
-          <DataTable<UserAccount>
+          <DataTable<UserListItem>
             label="Workspace users"
             columns={COLUMNS}
             rows={users.data?.content}
@@ -107,13 +107,13 @@ export function UserListPage() {
             error={users.isError ? users.error : null}
             onRetry={() => void users.refetch()}
             pagination={{
-              page: list.page,
+              page: legacySignInSort ? 1 : list.page,
               total: users.data?.page.totalElements ?? 0,
               onChange: list.setPage,
             }}
-            sort={list.sort}
+            sort={legacySignInSort ? { field: 'fullName', order: 'asc' } : list.sort}
             onSortChange={list.setSort}
-            scrollX={1005}
+            scrollX={845}
           />
         )}
       </div>
