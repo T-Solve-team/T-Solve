@@ -160,9 +160,11 @@ class CsvRowValidatorTest {
                 List.of(row(1, valid("T-1")), row(2, valid("T-2")), row(3, valid("T-1")), row(4, valid("T-1"))),
                 Set.of());
 
-        assertThat(results).extracting(r -> r.errors().isEmpty()).containsExactly(false, true, false, false);
-        assertThat(results.get(0).errors())
-                .containsExactly(new RowError("MSG_NEW_3", "ticket_id", Map.of("ticket_id", "T-1")));
+        RowError duplicate = new RowError("MSG_NEW_3", "ticket_id", Map.of("ticket_id", "T-1"));
+        assertThat(results.get(0).errors()).containsExactly(duplicate);
+        assertThat(results.get(1).errors()).isEmpty();
+        assertThat(results.get(2).errors()).containsExactly(duplicate);
+        assertThat(results.get(3).errors()).containsExactly(duplicate);
     }
 
     @Test
