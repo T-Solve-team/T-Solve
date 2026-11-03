@@ -5,5 +5,6 @@ export function saveTextFile(text: string, fileName: string): void {
   link.href = url;
   link.download = fileName;
   link.click();
-  URL.revokeObjectURL(url);
+  // Some browsers start the download after click() returns: revoke on the next task, not at once.
+  setTimeout(() => URL.revokeObjectURL(url));
 }

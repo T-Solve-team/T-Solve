@@ -58,6 +58,8 @@ export function CsvImportForm() {
         onSuccess: (preview) =>
           void navigate(`${paths.importPreview}?previewId=${preview.previewId}`),
         onError: (error) => {
+          // The global MSG07 dialog is the one message for a 401 (guideline 06 §6).
+          if (error.status === 401) return;
           if (MESSAGES[error.code].type === 'field') {
             form.setFields([{ name: 'file', errors: [msg(error.code, error.params)] }]);
           } else {

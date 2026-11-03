@@ -9,9 +9,12 @@ import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 
 const PM = MOCK_USERS.pm; // manages ITSUP and ITNET (IT)
+const ITSUP_ID = '00000000-0000-4000-8000-000000000101';
 
-function csvFile(name = 'tickets.csv'): File {
-  return new File(['ticket_id,title\n'], name, { type: 'text/csv' });
+function csvFile(name = 'tickets.csv', size?: number): File {
+  const file = new File(['ticket_id,title\n'], name, { type: 'text/csv' });
+  if (size !== undefined) Object.defineProperty(file, 'size', { value: size });
+  return file;
 }
 
 function fileInput(): HTMLInputElement {
@@ -105,7 +108,25 @@ describe('ImportTicketsPage', () => {
     await waitFor(() => expect(click).toHaveBeenCalledOnce());
     expect(saved.name).toBe('ticket-import-template.csv');
     expect(await saved.blob?.text()).toMatch(/^ticket_id,title,description,author,resolved_date,/);
-    expect(revoke).toHaveBeenCalledWith('blob:template');
+    await waitFor(() => expect(revoke).toHaveBeenCalledWith('blob:template'));
+  });
+
+  it('keeps the template URL alive until the download has started (BUG-082)', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:template');
+    const revoke = vi.fn();
+    URL.revokeObjectURL = revoke;
+    const revokedRightAfterClick: boolean[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {
+      // Runs once the code after click() in the same task is done, like a browser starting the download.
+      queueMicrotask(() => revokedRightAfterClick.push(revoke.mock.calls.length > 0));
+    });
+    const { user } = await openImport();
+
+    await user.click(screen.getByRole('button', { name: 'Download template' }));
+
+    await waitFor(() => expect(click).toHaveBeenCalledOnce());
+    await waitFor(() => expect(revokedRightAfterClick).toEqual([false]));
+    await waitFor(() => expect(revoke).toHaveBeenCalledWith('blob:template'));
   });
 
   it('AC-008.4 shows MSG01 at Project and CSV file and sends nothing when both are missing', async () => {
@@ -131,16 +152,35 @@ describe('ImportTicketsPage', () => {
     expect(uploads.count).toBe(0);
   });
 
-  it('AC-008.5 shows MSG27 at the CSV file field and does not keep a file that is not .csv', async () => {
-    const { user } = await openImport({ applyAccept: false });
+  it.each([
+    ['MSG27', 'not .csv', csvFile('tickets.xlsx')],
+    ['MSG28', 'larger than 10 MB', csvFile('big.csv', 10 * 1024 * 1024 + 1)],
+  ] as const)(
+    'AC-008.5 shows %s at the CSV file field and does not keep a file %s',
+    async (code, _, file) => {
+      const { user } = await openImport({ applyAccept: false });
 
-    await user.upload(fileInput(), csvFile('tickets.xlsx'));
+      await user.upload(fileInput(), file);
 
-    expect(await screen.findByText(msg('MSG27'))).toBeInTheDocument();
-    expect(screen.queryByText('tickets.xlsx')).not.toBeInTheDocument();
-  });
+      expect(await screen.findByText(msg(code))).toBeInTheDocument();
+      expect(screen.queryByText(file.name)).not.toBeInTheDocument();
+    },
+  );
 
-  it('AC-008.6 opens the Import Preview of the new preview after a successful upload', async () => {
+  it('AC-008.6 sends the chosen Project and file, then opens the Import Preview of the new preview', async () => {
+    const sent: { projectId?: FormDataEntryValue | null; fileText?: string } = {};
+    server.events.on('request:start', ({ request }) => {
+      if (request.method !== 'POST' || !request.url.endsWith('/api/v1/imports/csv')) return;
+      void request
+        .clone()
+        .formData()
+        .then(async (form) => {
+          const file = form.get('file');
+          sent.projectId = form.get('projectId');
+          // jsdom's file reaches the request as a Node Blob named "blob": compare its content instead.
+          sent.fileText = typeof file === 'string' ? undefined : await file?.text();
+        });
+    });
     const { user, router } = await openImport();
     await chooseProject(user, 'ITSUP · IT');
     await user.upload(fileInput(), csvFile());
@@ -149,6 +189,21 @@ describe('ImportTicketsPage', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/import/preview'));
     expect(router.state.location.search).toMatch(/^\?previewId=[1-9]\d*$/);
+    await waitFor(() =>
+      expect(sent).toEqual({ projectId: ITSUP_ID, fileText: 'ticket_id,title\n' }),
+    );
+  });
+
+  it('shows only the MSG07 dialog, not an Alert, when Upload answers 401 (BUG-081)', async () => {
+    server.use(http.post('*/api/v1/imports/csv', () => problem(401, 'MSG07')));
+    const { user } = await openImport();
+    await chooseProject(user, 'ITSUP · IT');
+    await user.upload(fileInput(), csvFile());
+
+    await user.click(screen.getByRole('button', { name: 'Upload' }));
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent(msg('MSG07'));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('AC-008.7 shows MSG29 with the missing columns and keeps the chosen Project and file', async () => {
