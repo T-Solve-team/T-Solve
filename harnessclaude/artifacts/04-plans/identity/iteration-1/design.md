@@ -59,3 +59,14 @@ under tag `profile` (`getMyViewableSpaces`, `getMySolutions`), each in its scree
 dev user with `getDevUser()`. No shared edit: in My Solutions only the Ticket ID of a `canOpen` row is a link
 (`cells.link`, R1 A). Edge-case rows 53–81 of the master apply. Task 19 (backend
 AC-003.4–.10) is a stub with no feature until it has a Jira issue.
+
+## HLA change — Tasks 9b, 10, 11, 12, 14 (2026-11-03)
+
+Master: artifacts/04-plans/identity/design.md, "HLA change, 2026-11-03" and "Data model (Q8, HLA Q2–Q4)".
+Spec: artifacts/03-modules/identity/spec.md, Changelog row 2026-11-03.
+
+Aligns identity's backend plan with the multi-tenant HLA (KAN-231 step 2, Hiếu: Q1–Q4 = A). The Platform Console on
+`admin.` stays (Task 11). Sign-in states and hand-off codes move to the Platform / Tenant Registry database in Task 14;
+Tasks 8–9 keep their tables until then. Sessions live in Redis (Task 10; local stack and tests use a Redis container).
+One database per company: the account tables have no `workspace_id` and email uniqueness across the platform goes
+through the registry (Tasks 9b and 14). Task 9 is unchanged. New edge-case rows 90–93 apply to Tasks 9b, 10 and 14.

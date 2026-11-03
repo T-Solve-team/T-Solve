@@ -220,8 +220,8 @@
     }
   },
   "identity": {
-    "specHash": "97b326a64c8075b18ddd986f171951fc76c6f4dc2eb7bb37ad2869639a32256a",
-    "approvedAt": "2026-11-01T10:06:32.952Z",
+    "specHash": "b1a21ad0f5d8c89a41efa789e2d662430a39e5ad8b1d8cd4ced0c1acd709e7a4",
+    "approvedAt": "2026-11-03T16:05:24.846Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace has a Google domain (AC-001.48), THE backend SHALL create a state value for the Workspace that the platform resolved from the host and answer 302 to  on the central sign-in origin configured in  ( in production), without a signed-in user.",
@@ -238,7 +238,7 @@
       "AC-001.12": "IF the Workspace has no Account with the verified email (compared ignoring case), THEN THE backend SHALL redirect to  on its Workspace site and create no session.",
       "AC-001.13": "IF the Account with that email is Deactivated, THEN THE backend SHALL redirect to  on its Workspace site and create no session.",
       "AC-001.14": "THE callback SHALL check a state value for a Workspace or Jira-link target (not the Platform Console, whose checks are AC-001.29 to AC-001.31) in this order and report only the first failure: state value, sign-in cookie and the state's Workspace (MSG141; AC-001.6, AC-001.46, AC-001.49, AC-001.50), Google result and ID token (MSG06), Workspace Active (MSG120),  (MSG122), Account exists (MSG09), Account Active (MSG10).",
-      "AC-001.15": "THE callback SHALL look up the Account only among the Accounts of the state value's Workspace (in that Workspace's tenant context), so an Account of another Workspace is never found or changed (GBR-37).",
+      "AC-001.15": "THE callback SHALL look up the Account only in the database of the state value's Workspace, reached through that Workspace's tenant context bound before the transaction, so an Account of another Workspace is never found or changed (GBR-37).",
       "AC-001.16": "WHEN every check passes for a Workspace target, THE backend SHALL:",
       "AC-001.17": "THE backend SHALL sign every hand-off code. A code SHALL be valid for 60 seconds, usable once, and redeemable only on the site of the target it names (a Workspace site, or  for an Operator).",
       "AC-001.18": "WHEN a valid hand-off code is redeemed on its site, THE backend SHALL:",
@@ -277,7 +277,7 @@
       "AC-002.1": "WHEN a signed-in user sends  with a valid CSRF token, on a Workspace site or on , THE backend SHALL end the session, expire the cookie  (, with  and  and no ) and answer 204.",
       "AC-002.2": "WHEN a session has been ended by logout, THE backend SHALL answer every later request that carries its cookie with 401 and  .",
       "AC-002.3": "WHEN a Workspace session ends, THE backend SHALL publish exactly one  event with the Account id, the Workspace id, the session id and the reason, after the session is gone. The reason SHALL be  (AC-002.1),  (AC-001.23) or  (AC-001.27).",
-      "AC-002.4": "WHILE a Workspace session is past a limit of AC-001.23 and no request uses it, THE backend SHALL still end it and publish  with  at most 15 minutes after the limit passed.",
+      "AC-002.4": "WHILE a Workspace session is past a limit of AC-001.23 and no request uses it, THE backend SHALL still remove it from the shared session store and publish  with  at most 15 minutes after the limit passed.",
       "AC-002.5": "WHEN a user logs out, THE backend SHALL keep every Jira account link of the Account unchanged.",
       "AC-002.6": "IF  comes with no valid session, THEN THE backend SHALL answer 401 with   (be-foundation AC-002.4) and publish no event. The web app still clears its data and opens Login (fe-foundation AC-008.3).",
       "AC-002.7": "THE My Profile screen SHALL have a \"Log out\" button that signs out through fe-foundation's , exactly like the user menu (fe-foundation AC-008.1 to AC-008.3).",
