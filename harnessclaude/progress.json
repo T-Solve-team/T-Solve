@@ -22,22 +22,22 @@
         "retire-snapshot-import": "passing",
         "csv-confirm-db-tests": "passing",
         "preview-rows-access": "passing",
-        "project-uuid": "evaluating",
-        "preview-read": "evaluating",
-        "duplicate-id-code": "evaluating",
-        "csv-upload-kit": "evaluating",
-        "import-tickets-screen": "evaluating",
-        "import-preview-screen": "evaluating",
-        "import-preview-actions": "evaluating",
-        "import-ticket-preview-popup": "evaluating"
+        "project-uuid": "passing",
+        "preview-read": "passing",
+        "duplicate-id-code": "passing",
+        "csv-upload-kit": "passing",
+        "import-tickets-screen": "passing",
+        "import-preview-screen": "passing",
+        "import-preview-actions": "passing",
+        "import-ticket-preview-popup": "passing"
       },
-      "lastUpdated": "2026-11-03T15:38:18.596Z",
+      "lastUpdated": "2026-11-03T17:16:21.035Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "1b6bef51e3bebf41193c9903a3c39380b9e2e306"
+        "default": "9bcfddfcc113f945d76c519af16bd5a924ad3ac9"
       }
     },
     "be-foundation": {

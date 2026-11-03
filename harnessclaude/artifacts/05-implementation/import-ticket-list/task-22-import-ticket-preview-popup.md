@@ -31,3 +31,14 @@
 
 ### Next up
 All features of import-ticket-list are implemented; evaluate Tasks 15–22.
+
+## Session 2026-11-04
+
+### Working on: import-ticket-preview-popup — Low findings of review attempt 1
+- Review issue 1: `DetailModal.test.tsx` checks the title, content, one Close button with no OK or Cancel, and that Close and Esc call `onClose`.
+- Review issue 2 (blank body while closing) not changed: in jsdom the content stays while the popup closes (antd keeps the children during the leave), so nothing to fix was reproduced.
+- Verify: `mvn verify` BUILD SUCCESS (235 unit tests, 1 skipped as before; 10 ITs; spotless) with JDK 24 and `-Dapi.version=1.44` for Docker Desktop 29; frontend `format:check`, `lint` (0 errors, the old `TicketListFilters.tsx` warning), `typecheck`, `test` (58 files, 1083 passed), `build` pass; `generate:api` leaves no diff.
+- Commit: default@9bcfddf
+
+### Next up
+Module completion

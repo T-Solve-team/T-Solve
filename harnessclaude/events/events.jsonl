@@ -475,3 +475,12 @@
 {"ts":"2026-11-03T07:26:09.918Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-preview-popup","from":"pending","to":"in-progress"}
 {"ts":"2026-11-03T15:38:18.261Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"1b6bef51e3bebf41193c9903a3c39380b9e2e306"}
 {"ts":"2026-11-03T15:38:18.598Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-preview-popup","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-03T16:00:37.011Z","type":"feature-status","module":"import-ticket-list","feature":"csv-upload-kit","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:00:37.291Z","type":"feature-status","module":"import-ticket-list","feature":"import-tickets-screen","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:00:43.278Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-screen","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:00:43.552Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-actions","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:00:43.826Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-preview-popup","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:02:46.319Z","type":"feature-status","module":"import-ticket-list","feature":"project-uuid","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:02:46.594Z","type":"feature-status","module":"import-ticket-list","feature":"preview-read","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:02:46.871Z","type":"feature-status","module":"import-ticket-list","feature":"duplicate-id-code","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T17:16:21.038Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"9bcfddfcc113f945d76c519af16bd5a924ad3ac9"}

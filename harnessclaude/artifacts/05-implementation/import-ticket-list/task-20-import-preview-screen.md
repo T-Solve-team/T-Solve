@@ -30,3 +30,13 @@
 
 ### Next up
 Task 21 import-preview-actions
+
+## Session 2026-11-04
+
+### Working on: import-preview-screen — Low findings of review attempt 1
+- Review issue 1 → BUG-083: the mocks answer a gone preview or row with 404 MSG04, like the backend; the page no longer remaps 404 itself. Shared commit with Task 21 (same page and test file).
+- Verify: `mvn verify` BUILD SUCCESS (235 unit tests, 1 skipped as before; 10 ITs; spotless) with JDK 24 and `-Dapi.version=1.44` for Docker Desktop 29; frontend `format:check`, `lint` (0 errors, the old `TicketListFilters.tsx` warning), `typecheck`, `test` (58 files, 1083 passed), `build` pass; `generate:api` leaves no diff.
+- Commit: default@11c35cc
+
+### Next up
+Module completion

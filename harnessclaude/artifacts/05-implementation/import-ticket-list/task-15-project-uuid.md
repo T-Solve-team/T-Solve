@@ -28,3 +28,15 @@
 
 ### Next up
 Task 16 preview-read
+
+## Session 2026-11-04
+
+### Working on: project-uuid — Low findings of review attempt 1
+- Review issue 2 → BUG-080: `StubProjectAccess` keeps an id only when it is the canonical UUID form; test `aShortFormIdGrantsNothing_BUG_080` (red before the fix).
+- Review issue 1: the `application.yml` comment says the ids are UUIDs.
+- Review issue 3: `uploadRejectsAProjectIdThatIsNotAUuid` also checks the body carries a `code`.
+- Verify: `mvn verify` BUILD SUCCESS (235 unit tests, 1 skipped as before; 10 ITs; spotless) with JDK 24 and `-Dapi.version=1.44` for Docker Desktop 29; frontend `format:check`, `lint` (0 errors, the old `TicketListFilters.tsx` warning), `typecheck`, `test` (58 files, 1083 passed), `build` pass; `generate:api` leaves no diff.
+- Commit: default@462b826
+
+### Next up
+Module completion

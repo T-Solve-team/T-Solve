@@ -24,3 +24,13 @@
 
 ### Next up
 Task 17 duplicate-id-code
+
+## Session 2026-11-04
+
+### Working on: preview-read — Low findings of review attempt 1
+- Review issue 1: `rejectsReadingWhenTheProjectIsNoLongerActive_AC_007_3` uses the real `StubProjectAccess` with the Project listed as inactive, the other half of AC-007.3.
+- Verify: `mvn verify` BUILD SUCCESS (235 unit tests, 1 skipped as before; 10 ITs; spotless) with JDK 24 and `-Dapi.version=1.44` for Docker Desktop 29; frontend `format:check`, `lint` (0 errors, the old `TicketListFilters.tsx` warning), `typecheck`, `test` (58 files, 1083 passed), `build` pass; `generate:api` leaves no diff.
+- Commit: default@84245c1
+
+### Next up
+Module completion
