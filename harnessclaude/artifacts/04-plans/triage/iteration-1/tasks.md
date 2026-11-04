@@ -84,7 +84,9 @@ endpoints (MSW stays for tests).
 - Create: `backend/src/main/java/vn/tsolve/triage/**`
 - Create: `backend/src/test/java/vn/tsolve/triage/**`
 
-**Dependencies:** KAN-117 (PR #107) merged to `main`, then this branch rebased on it.
+**Dependencies:** none to start (revised 04/11): the managed Projects, the Jira site URL and Wiki
+availability come through triage ports with fail-closed stand-ins (master design, "Backend history
+API"); their real implementations belong to identity, workspace and wiki.
 **Estimated size:** medium.
 **Verification:** `sdd.ts trace triage`; in `backend/`, `mvn verify`; FE checks again. One code
 commit after user agreement.

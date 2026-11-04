@@ -174,8 +174,22 @@ backend/src/test/java/vn/tsolve/triage/        controller slice + service tests 
 | 23 | STORY-004 | Data integrity | `sources_used` holds junk or unknown type | Medium | Item skipped, result returned | Task 3 |
 | 24 | STORY-003 | Integration | Workspace without `jira_site_url` | Medium | `jiraIssueUrl` null | Task 3 |
 
-Dependency: KAN-117 (users, roles, `project_membership`, method security, PR #107) must be on
-`main` before Task 3 starts; Task 2 does not need it.
+Dependency, revised 04/11 (user: build the backend now, own tasks only): neither `main` nor KAN-117
+(PR #107) has `app_user`/`project_membership`, and `workspace` has no `jira_site_url`. Task 3 therefore
+reads them through three triage ports in `service/`, each with a fail-closed stand-in in
+`service/impl/`, the team's pattern of `ticket`'s `ProjectAccess`/`StubProjectAccess`:
+
+| Port | Stand-in | Answers until its owner implements it |
+|------|----------|---------------------------------------|
+| `ManagedProjects.of(user)` → `ManagedProject(id, publicId, key)` | `NoManagedProjects` | no Project: the history is empty, the detail 404 |
+| `JiraSite.url()` | `NoJiraSite` | empty: `jiraIssueUrl` null (AC-003.6) |
+| `WikiDocumentAccess.available(user, ids)` | `NoWikiDocumentAccess` | none: every Wiki source unavailable (AC-004.3) |
+
+`ManagedProject` carries both the database id and the id the web app knows, so the API keeps the
+session's id type while `project` stays BIGINT. The caller is `Authentication.getName()` and the role
+check is `hasRole('PROJECT_MANAGER')`, as `ImportController` does; both keep working with KAN-117's
+`TSolveUser`. The detail endpoint is `isAuthenticated()` so a non-Project Manager gets the same 404.
+Query correctness is proven by `SuggestionResultRecordRepositoryIT` (Testcontainers; CI needs Docker).
 
 ## Proposed Iteration
 
