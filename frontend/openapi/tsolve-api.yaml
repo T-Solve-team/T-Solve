@@ -29,7 +29,7 @@ tags:
   - name: jira-app
     description: Calls from the T-Solve Jira App through Forge Remote (Forge Invocation Token).
   - name: triage
-    description: Suggestion History and result detail (KAN-149 frontend proposal).
+    description: Suggestion History and result detail (KAN-149), served by the backend triage module.
 paths:
   /api/v1/audit-events:
     get:
