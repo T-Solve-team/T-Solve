@@ -7,7 +7,7 @@ iteration: 1
 # Design: platform — iteration 1 (local stack, Workspaces and the staging demo of 15/11; DevOps Phase A)
 
 Master: `artifacts/04-plans/platform/design.md` (Data Model, Key Decisions, File Structure, Edge Cases, Traceability).
-This file keeps only what Tasks 1 – 21 of `iteration-1/tasks.md` need. The 4/11 multi-tenant HLA (database per
+This file keeps only what Tasks 1 – 22 of `iteration-1/tasks.md` need. The 4/11 multi-tenant HLA (database per
 Workspace, Registry, row guard, Garage, Redis, STORY-013, STORY-014) is in the master and in those tasks.
 
 ## Scope
@@ -21,10 +21,10 @@ All the tenant layer and the infrastructure for the demo of 15/11:
 - staging, Caddy and CD (STORY-009, STORY-010, and the edge limits AC-014.9 – AC-014.11 of STORY-014; Tasks 13 – 15);
 - file storage and its signed-URL route (STORY-007; Tasks 16, 17);
 - the Jira site link, the Forge Invocation Token and the Tenant Resolver of the Jira App (STORY-004, STORY-005,
-  STORY-006; Tasks 18 – 20);
-- the AI VPS (STORY-011; Task 21).
+  STORY-006; Tasks 18 – 21);
+- the AI VPS (STORY-011; Task 22).
 
-Iteration 2 holds only the seed's module data and the reset (Task 22) and the rest of STORY-014 (Tasks 23 – 25).
+Iteration 2 holds only the seed's module data and the reset (Task 23) and the rest of STORY-014 (Tasks 24 – 26).
 
 ## Decisions used in this iteration
 
@@ -61,10 +61,10 @@ all as in the master's Data Model.
 - The smoke test (Task 15) depends on `be-foundation` answering 401 `MSG07` on any `/api/**` path without a session.
 - The real `FirstAdminCreator` (`identity`, KAN-247) and `InvitationJobQueue` (`platform`, JobRunr; Task 8, minimal, user decision of 4/11) before Tasks 9, 12 and 15 can start the
   real backend.
-- KAN-140 (the chat model) for the chat-model part of Task 21; its `bge-m3` part does not wait.
+- KAN-140 (the chat model) for the chat-model part of Task 22; its `bge-m3` part does not wait.
 
 ## Edge cases covered here
 
-Master rows 1 – 55, 57 – 64 and 69 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
+Master rows 1 – 55, 57 – 64 and 69 – 71 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
 STORY-009, STORY-010, STORY-011, STORY-012 without the contributors, STORY-013 and the edge limits of STORY-014). Rows 45
-(also in Task 24), 56 and 65 – 68 belong to iteration 2.
+(also in Task 25), 56 and 65 – 68 belong to iteration 2.

@@ -229,9 +229,10 @@
         "demo-seed-contributors": "pending",
         "backup-restore": "pending",
         "monitoring": "pending",
-        "load-test": "pending"
+        "load-test": "pending",
+        "forge-security-chain": "pending"
       },
-      "lastUpdated": "2026-11-04T13:45:33.460Z"
+      "lastUpdated": "2026-11-04T13:58:39.188Z"
     },
     "platform-console": {
       "status": "decomposed",

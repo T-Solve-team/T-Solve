@@ -17,7 +17,7 @@ limits (AC-014.9 – AC-014.11), which are in iteration 1, Task 14 (DevOps step 
 
 ---
 
-## Task 22: Demo seed: module data through contributors, and the reset
+## Task 23: Demo seed: module data through contributors, and the reset
 
 **Story:** STORY-012
 **Feature:** demo-seed-contributors
@@ -50,7 +50,7 @@ output (AC-012.5, AC-012.8); the databases and bucket prefixes of the old Worksp
 
 ---
 
-## Task 23: Nightly backup, off-server copy and the restore drill
+## Task 24: Nightly backup, off-server copy and the restore drill
 
 **Story:** STORY-014
 **Feature:** backup-restore
@@ -81,7 +81,7 @@ AC-014.5).
 
 ---
 
-## Task 24: Monitoring and alerts: Alloy, Prometheus, Loki, Grafana
+## Task 25: Monitoring and alerts: Alloy, Prometheus, Loki, Grafana
 
 **Story:** STORY-014
 **Feature:** monitoring
@@ -103,13 +103,13 @@ Redis memory alert fires near the limit (Edge #45).
 - Create: `infra/compose.monitoring.yml`, `infra/monitoring/alloy.river`, `prometheus.yml`, `alerts.yml`, `dashboard.json`
 - Modify: `infra/caddy/Caddyfile`, `.env.example`, `infra/README.md`
 - Test: `infra/tests/monitoring.test.sh`
-**Dependencies:** iteration 1 Tasks 13, 14; F4 (metrics endpoints); Task 23 for the backup-failure signal
+**Dependencies:** iteration 1 Tasks 13, 14; F4 (metrics endpoints); Task 24 for the backup-failure signal
 **Estimated size:** medium
 **Done when:** the Redis-unreachable alert is seen on the alert channel.
 
 ---
 
-## Task 25: Load-test script and one measured run on staging
+## Task 26: Load-test script and one measured run on staging
 
 **Story:** STORY-014
 **Feature:** load-test
@@ -129,6 +129,6 @@ that the test traffic is not refused, or the test says which limit it hit.
 **Files:**
 - Create: `infra/loadtest/tsolve.js`, `infra/loadtest/README.md`, `infra/loadtest/report-<date>.md`
 - Test: `infra/tests/loadtest.test.sh`
-**Dependencies:** iteration 1 Tasks 14, 15; Task 22 (seed data for the ticket list); Task 24 (to watch the run)
+**Dependencies:** iteration 1 Tasks 14, 15; Task 23 (seed data for the ticket list); Task 25 (to watch the run)
 **Estimated size:** small
 **Done when:** one report is committed and the script's exit code follows the thresholds.

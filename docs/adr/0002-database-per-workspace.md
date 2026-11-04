@@ -33,7 +33,7 @@ own, and business tables stay the same as in the single-tenant design of Report 
 
 - Name: the former catalog DB is now the **Tenant Registry** (Registry DB). It also holds the short-lived sign-in states and
   hand-off codes of `identity`; a worker job deletes the expired ones.
-- **Jobs DB:** JobRunr uses its own database `tsolve_<env>_jobs` on the same PostgreSQL server, not the Registry DB.
+- **Jobs DB:** JobRunr uses its own database `tsolve_<env>_jobs` on the same PostgreSQL server, not the Registry DB. `platform` owns it and stores the first-Admin invitation job in it through `jobrunr-spring-boot-3-starter`; `worker` runs the jobs.
 - **Row guard (reverses "RLS is not used"):** each Workspace database has a one-row tenant-id table and a row policy on
   every tenant table, so a query bound to the wrong Workspace returns nothing. It backs up the database boundary; the
   runtime user has no BYPASSRLS. Accepted: SQL injection in a module's code could set the tenant setting to the id of

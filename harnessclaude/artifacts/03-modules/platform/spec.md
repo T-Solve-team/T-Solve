@@ -20,6 +20,7 @@ owner: BA
 | 2026-11-04 | STORY-004 | AC-004.21: the invalid Jira site URL refusal uses the new code `MSG156` instead of `MSG04`; `MSG156` added to the baseline System_Messages. | `MSG04` reads "No results found", which does not describe the error (user, 4/11) |
 | 2026-11-04 | STORY-007, STORY-008, STORY-010, STORY-013, STORY-014 | **DevOps sync (KAN-98).** The object store is Garage (S3-compatible; ADR-014), not MinIO: AC-007 wording, AC-008.1, AC-008.11, AC-010.11, AC-010.12, AC-014.1, AC-014.6, AC-014.8, NFR 3 and 6, Requirement 6 and 7, the interface comment and the Definition of Done name Garage; the keys, signed URLs, "no local files" and the `FILE_STORAGE_*` names are unchanged. Redis and Garage run one per environment (Requirement 7). AC-014.1: the backup goes to a Cloudflare R2 bucket with `restic` (encrypted, deduplicated; ADR-015), not `age`; no new id, no id removed. STORY-014 is scheduled after 15/11 (DevOps Phase B), not in "Sprint S3"; its edge limits (AC-014.9 – AC-014.11) follow the DevOps design's step A5 default (proposed there in the Phase A edge stack); Out of Scope reworded the same way. AC-013.3: `grafana` joins the reserved site names (the DevOps design serves Grafana on `grafana.<base>`). Monitoring is Grafana Alloy, Prometheus, Grafana and Grafana alerts, not Alertmanager, and Loki stays for logs (design only; AC-014.6 – AC-014.8 keep their text). No acceptance criterion is added or removed | Hiếu's answers of 4/11 (Q1 Garage, Q2 restic to R2, Q3 STORY-014 after 15/11, Q4 Loki kept; W3 Alloy, no Alertmanager); DevOps design 4/11 and ADR-014, -015, -016; aligns the platform spec with the DevOps design |
 | 2026-11-04 | STORY-013, STORY-008, STORY-014 | AC-013.15 now refuses to start without a bean for either port, `FirstAdminCreator` or `InvitationJobQueue` (reworded; no id added). Interface Contracts declare `InvitationJobQueue.queueFirstAdminInvitation(workspaceId, accountId)`, which the design already used. Configuration adds `FILE_STORAGE_PUBLIC_URL_PATTERN`, `CLOUDFLARE_API_TOKEN`, `STAGING_BASIC_AUTH_HASH` and the restic, R2 and Grafana variable names. The extra column of the DevOps sync row is merged into its Reason | Review of the platform plan (KAN-98): the design named a second port the spec did not; user decision of 4/11: platform provides a minimal `InvitationJobQueue` on JobRunr in the Jobs database and `worker` takes the job handler over later |
+| 2026-11-04 | STORY-013, STORY-001 | Queue ownership made consistent (review 2, KAN-98): `platform` provides a minimal `InvitationJobQueue` on JobRunr in the Jobs database and owns the Jobs database and its tables; `worker` takes over the job handler and the background job server later. Out of Scope, Configuration (`JOBS_DB_*` also used by `platform` processes), Required from other modules (`worker`) and Interface Contracts reworded; AC-013.17 reworded (the job is queued through `InvitationJobQueue`, not "on `worker`"). No criterion added or removed | User decision of 4/11 after review 2 (finding M1): the first Admin's invitation does not wait for `worker`; the spec still gave the queue to `worker` |
 
 ## Requirements
 
@@ -348,7 +349,7 @@ owner: BA
   - AC-013.14: THE platform SHALL declare in its public API the port `FirstAdminCreator` with `UUID createFirstAdmin(UUID workspaceId, String email)`, implemented by `identity`. WHEN provisioning reaches step 5 of AC-013.1, THE service SHALL call it inside `TenantContext.runIn(workspaceId)`, passing the Workspace id and the email in lower case and nothing else. The Account is created Active with the role Admin, and its id is returned (decision Q1, Q2, 4/11).
   - AC-013.15: IF the backend starts in the `ops` profile or in a profile that serves the Platform Console and no bean implements `FirstAdminCreator` or no bean implements `InvitationJobQueue`, THEN THE backend SHALL refuse to start and name the missing port.
   - AC-013.16: IF `createFirstAdmin` throws, THEN THE service SHALL undo as AC-013.6 says, so that no Workspace is left without its first Admin Account.
-  - AC-013.17: WHEN the creation has been committed, THE service SHALL queue one invitation-email job for the new Workspace on `worker`, stored in the Jobs database, and the job SHALL carry only the Workspace id and the id of the first Admin Account. The email SHALL tell the Admin the address of the Workspace site and to sign in with Google (decision Q2, Q4).
+  - AC-013.17: WHEN the creation has been committed, THE service SHALL queue, through `InvitationJobQueue` (JobRunr), one invitation-email job for the new Workspace in the Jobs database, for `worker` to run, and the job SHALL carry only the Workspace id and the id of the first Admin Account. The email SHALL tell the Admin the address of the Workspace site and to sign in with Google (decision Q2, Q4).
   - AC-013.18: IF queueing the job fails, or the mail cannot be sent, THEN THE service SHALL keep the Workspace and its Admin Account, THE failure SHALL be logged without the email address, and `worker` SHALL retry the job. The MVP has no command to send the invitation again.
   - AC-013.19: IF two creations race for the same email, THEN THE unique constraint on `workspace_emails` SHALL let only one claim it, and the other SHALL fail at step 4 of AC-013.1 with the `MSG155` refusal and be undone as AC-013.6 says (decision Q3).
   - AC-013.20: THE Platform Console SHALL be the only caller of `WorkspaceProvisioning` over HTTP, and only on `admin.` for an allow-listed Platform Operator (AC-004.28); no other module SHALL call `create`, `suspend` or `reactivate`, except the seed through AC-012.1.
@@ -384,9 +385,10 @@ owner: BA
   target: Kubernetes and high availability are the target of the HLA, not the MVP (H-Q1); STORY-014 measures the
   staging stack against the target of AC-014.12.
 - The address and routing of the signed URLs of AC-007.12 (which host Caddy serves them on) → `design.md`.
-- `runInTenant`, the job queue on JobRunr, the per-Workspace cap and not running a Suspended Workspace's jobs (D12,
-  D43, GBR-38) → `worker` (Phạm Tùng Dương). JobRunr's own tables live in the Jobs database `tsolve_<env>_jobs`
-  (AC-001.33); a job carries only its Workspace id and record ids.
+- `runInTenant`, the background job server, the handler of the first-Admin invitation job, the per-Workspace cap and not
+  running a Suspended Workspace's jobs (D12, D43, GBR-38) → `worker` (Phạm Tùng Dương). This module owns the Jobs database
+  `tsolve_<env>_jobs` and JobRunr's tables in it (AC-001.33) and provides the minimal `InvitationJobQueue` on JobRunr that
+  only stores the invitation job (AC-013.17); a job carries only its Workspace id and record ids.
 - The central sign-in: UC-01, the D9 state value, sessions (kept in Redis), the check that an email was added by the
   Admin (GBR-03), the Jira account link (UC-59), the Platform Operator allow-list → `identity`. The tables of the
   sign-in states and hand-off codes and their cleanup job are `identity`'s and `worker`'s; this module only hosts
@@ -457,7 +459,7 @@ public interface WorkspaceProvisioning {                        // STORY-013; th
 public interface FirstAdminCreator {                            // declared here, implemented by identity (AC-013.14)
     UUID createFirstAdmin(UUID workspaceId, String email);      // called inside TenantContext.runIn(workspaceId)
 }
-public interface InvitationJobQueue {                           // declared here (AC-013.15, AC-013.17), job stored in the Jobs database
+public interface InvitationJobQueue {                           // declared here, minimal implementation here on JobRunr (AC-013.15, AC-013.17), job stored in the Jobs database
     void queueFirstAdminInvitation(UUID workspaceId, UUID accountId);   // after the commit; ids only, no email address
 }
 
@@ -499,7 +501,7 @@ tables only (AC-001.33).
 - `TSOLVE_BASE_DOMAIN`: `tsolve.io.vn`, `staging.tsolve.io.vn` or `localhost`.
 - `TSOLVE_ENVIRONMENT`: `dev`, `staging` or `production`.
 - `CATALOG_DB_URL`, `CATALOG_DB_USER`, `CATALOG_DB_PASSWORD`; `TENANT_DB_HOST`; `TENANT_DB_POOL_MAX` (default 5).
-- `JOBS_DB_URL`, `JOBS_DB_USER`, `JOBS_DB_PASSWORD` (the Jobs database, read by `worker`).
+- `JOBS_DB_URL`, `JOBS_DB_USER`, `JOBS_DB_PASSWORD` (the Jobs database: the web, `ops` and `seed` processes of this module store the invitation job in it through `InvitationJobQueue`; `worker` runs jobs from it).
 - `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` (owner user, migrations and the ops script).
 - `CATALOG_SECRET_KEY` (encrypts the Workspace database passwords).
 - `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` (sessions; used by `identity`).
@@ -551,7 +553,10 @@ tables only (AC-001.33).
   - does not run a Suspended Workspace's jobs, from the catalog status and the events `WorkspaceSuspended` /
     `WorkspaceReactivated` (GBR-38);
   - runs JOB-02 once per Active Workspace (GBR-37);
-  - keeps JobRunr's tables in the Jobs database `tsolve_<env>_jobs` (AC-001.33) and never runs Liquibase;
+  - starts the JobRunr background job server on the Jobs database `tsolve_<env>_jobs` (the `worker` profile sets
+    `jobrunr.background-job-server.enabled: true`; `platform` switches it off in its own processes), supplies the handler of
+    the first-Admin invitation job in place of the placeholder in the web image, and never runs Liquibase; the database and
+    JobRunr's tables in it (AC-001.33) belong to `platform`;
   - sends the invitation email of AC-013.17 and deletes the expired sign-in states and hand-off codes in the catalog
     database on a schedule (with `identity`).
 - `jira-app` (Đặng Tấn Bình):

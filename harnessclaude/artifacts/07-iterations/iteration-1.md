@@ -53,7 +53,7 @@ Knowledge Chatbot screen on mocks (`chatbot`, KAN-48).
 
 ### platform
 
-Spec re-approved after X2 and U3. Tasks 3–5 also wait on Trần Hải Anh's answer about the
+The platform spec changed on 4/11 (multi-tenant HLA, KAN-98) and the user must approve it again before any code. Tasks 3–5 also wait on Trần Hải Anh's answer about the
 `workspaces` reshape changeset (design decision P1).
 
 | Task | Assignee | Status |
@@ -74,6 +74,12 @@ Spec re-approved after X2 and U3. Tasks 3–5 also wait on Trần Hải Anh's an
 | 14 · Main Caddy, Cloudflare DNS, wildcard certificates (KAN-13, KAN-95) | Trần Trung Hiếu | pending |
 | 15 · Deploy staging on merge with the smoke test (KAN-14, KAN-200) | Trần Trung Hiếu | pending |
 | 16 · File storage per Workspace (KAN-96) | Đặng Nhật Minh | pending |
+| 17 · Signed-URL route on a Workspace site (KAN-96) | Đặng Nhật Minh | pending |
+| 18 · Link a Jira site to a Workspace (KAN-98) | Trần Trung Hiếu | pending |
+| 19 · Forge Invocation Token verifier (KAN-105) | Trần Trung Hiếu | pending |
+| 20 · Forge security chain on `api.` (KAN-105) | Trần Trung Hiếu | pending |
+| 21 · Tenant Resolver of the Jira App and the lifecycle endpoint (KAN-101) | Trần Trung Hiếu | pending |
+| 22 · AI VPS with Ollama behind WireGuard (KAN-203) | Trần Trung Hiếu | pending |
 
 ### search
 
@@ -102,9 +108,10 @@ Frontend only, on MSW mocks. Spec: `artifacts/03-modules/search/spec.md` · Desi
 7. platform Task 6 TenantContext and `runIn` (KAN-99); unblocks Đặng Nhật Minh's Task 16. You see: its tests.
 8. platform Task 2 backend CI and images on GHCR (KAN-6, KAN-8, KAN-9). You see: CI checks on PRs and images on
    GHCR.
-9. After Phase 1 (about 2026-10-28): platform Tasks 1 → 3 → 4 → 5 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15. You see: after Task 12 the
-   local stack with the two demo Workspaces in a browser; after Task 15 the staging stack.
-10. Iteration 2: platform Tasks 22–25.
+9. After Phase 1 (about 2026-10-28): platform Tasks 1 → 3 → 4 → 5 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15, then 16 → 17, 18 → 19 → 20 → 21, and 22 (after 13). You see: after Task 12 the
+   local stack with the two demo Workspaces in a browser; after Task 15 the staging stack; after Task 17 a signed-URL
+   download; after Task 21 the Jira App calls; after Task 22 the AI VPS.
+10. Iteration 2: platform Tasks 23–26.
 
 ### import-ticket-list
 - import-ticket-list Tasks 1–12 (`artifacts/04-plans/import-ticket-list/iteration-1/tasks.md`): contract, schema, parser, validator, ProjectAccess stub + ProblemDetail errors, upload, preview rows, controller + template, confirm, cleanup job, performance check, retire the old snapshot import
@@ -114,7 +121,7 @@ Frontend only, on MSW mocks. Spec: `artifacts/03-modules/search/spec.md` · Desi
 ### platform
 1. `mvn verify`: the tenant tests pass on Testcontainers as the application user — a native `SELECT` in Workspace A
    returns no row of B, and `ALTER TABLE … DISABLE ROW LEVEL SECURITY` is refused.
-2. `docker compose up`: `curl -H 'Host: nosuch.localhost' localhost/api/v1/me` → 404 MSG119; on a seeded site
+2. `docker compose up`: `curl -H 'Host: nosuch.localhost' localhost/api/v1/me` → 404 MSG151; on a seeded site
    `<site>.localhost` → 401 MSG07.
 3. Merge to `main`: the `cd-staging` run shows pull, migrate, up, seed and the smoke test green;
    `https://<site>.staging.tsolve.io.vn` opens with a valid certificate (after basic auth); `https://www.staging…` → 404.

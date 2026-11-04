@@ -455,19 +455,24 @@ backend/
     │   │   └── NoTenantException.java
     │   └── platform/
     │       ├── config/       PlatformProperties (base domain, environment, Forge, storage), ForgeSecurityConfig, TenantFilterConfig,
-    │       │                 StorageConfig (`tsolve.storage.*`)
+    │       │                 StorageConfig (`tsolve.storage.*`), JobsDataSourceConfig (Task 8)
     │       ├── web/          TenantResolverFilter, HostClassifier, HostKind, ProblemResponses
     │       ├── forge/        ForgeTokenVerifier (+ NimbusForgeTokenVerifier), ForgeTokenFilter, ForgeCallContext (+ impl),
     │       │                 VerifiedForgeCall, ForgeCallAuthentication
     │       ├── controller/   ForgeLifecycleController
     │       ├── service/      WorkspaceCatalog, WorkspaceProvisioning, FirstAdminCreator, InvitationJobQueue, FileStorage,
     │       │                 DemoSeedContributor
-    │       │   └── impl/     WorkspaceCatalogImpl, WorkspaceProvisioningService, ObjectFileStorage
+    │       │   └── impl/     WorkspaceCatalogImpl, WorkspaceProvisioningService, ObjectFileStorage,
+    │       │                 JobRunrInvitationJobQueue (Task 8)
+    │       ├── job/          FirstAdminInvitationJobHandler (Task 8: no-op placeholder that logs the two ids, in the web
+    │       │                 image; `worker` replaces it)
     │       ├── registry/     RegistryRepository (JdbcClient), PasswordCipher (AES-GCM), RegistryDataSourceConfig
     │       ├── tenantdb/     TenantDatabaseProvisioner, TenantMigrator, TenantStartupMigrator (web process only)
     │       ├── client/       TenantInfoClient (+ RestTenantInfoClient)
-    │       ├── dto/          WorkspaceSummary, WorkspaceSuspended, WorkspaceReactivated, StoredFile, SeedWorkspace
-    │       ├── exception/    FileTooLargeException, InvalidFileKeyException, WorkspaceRuleException (extends BusinessRuleException)
+    │       ├── dto/          WorkspaceSummary, WorkspaceSuspended, WorkspaceReactivated, StoredFile, SeedWorkspace,
+    │       │                 FirstAdminInvitationJobRequest (Task 8)
+    │       ├── exception/    FileTooLargeException, InvalidFileKeyException, InvitationQueueException,
+    │       │                 WorkspaceRuleException (extends BusinessRuleException)
     │       └── seed/         SeedRunner, SeedData, MigrateRunner, OpsRunner (profile ops)
     ├── main/resources/
     │   ├── application.yml            + tsolve.base-domain, tsolve.environment, tsolve.forge.*, tsolve.storage.*, tsolve.tenant-db.*
@@ -475,11 +480,12 @@ backend/
     │   ├── application-seed.yml, application-ops.yml, application-migrate.yml   web-application-type none
     │   └── db/changelog/
     │       ├── catalog/catalog-master.xml, catalog/C001-…, C002-…       Registry changelog
-    │       └── changes/NNN-platform-tenant-identity.sql, NNN-platform-tenant-guard.sql   (platform's tenant changesets)
+    │       └── changes/NNN-platform-tenant-identity.sql, NNN-platform-tenant-guard-function.sql,
+    │                         NNN-platform-tenant-guard-policies.sql   (platform's tenant changesets, Task 5)
     └── test/java/vn/tsolve/
         ├── common/tenant/   ThreadLocalTenantContextTest, TenantRoutingIT, RowGuardIT, ConventionGuardIT, TenantIsolationIT
         ├── platform/        HostClassifierTest, TenantResolverFilterTest, WorkspaceCatalogImplTest, WorkspaceCatalogIT,
-        │                    WorkspaceProvisioningIT, PasswordCipherTest, NimbusForgeTokenVerifierTest, ForgeSecurityIT,
+        │                    WorkspaceProvisioningIT, InvitationJobQueueIT, JobRunrInvitationJobQueueTest, PasswordCipherTest, NimbusForgeTokenVerifierTest, ForgeSecurityIT,
         │                    ForgeLifecycleIT, ObjectFileStorageIT (Garage), SeedRunnerTest
         └── support/         PostgresTestBase (Testcontainers pgvector:pg16 + infra/postgres/init, owner and runtime users),
                              GarageTestBase
@@ -506,6 +512,7 @@ docker-compose.yml                      local stack (KAN-94)
   the user on 25/10.**
 - Testcontainers (`spring-boot-testcontainers`, `org.testcontainers:postgresql`, Spring Boot BOM): decided by
   `be-foundation` (its Q7). Garage has no Testcontainers module: `GarageTestBase` starts the pinned Garage image as a generic container and runs the same bootstrap (Decided in planning: builder check).
+- `org.jobrunr:jobrunr-spring-boot-3-starter` (JobRunr OSS; named in ADR-0002): the `InvitationJobQueue` implementation of Task 8 stores the invitation job in the Jobs DB. The web, `ops` and `seed` processes set `jobrunr.background-job-server.enabled: false`; `worker` sets it to `true`. **To be confirmed by the user in the plan review** (Task 8). Assumption (JobRunr's documentation was not available while planning): the enqueue call needs the handler class named by `JobRequest#getJobRequestHandler()` on the web classpath, hence the placeholder handler.
 - S3 client library: AWS SDK v2 `software.amazon.awssdk:s3` (W1, decided).
 - Caddy 2 built with `github.com/caddy-dns/cloudflare` and `github.com/mholt/caddy-ratelimit` (**W2**) via `xcaddy` (pinned versions in
   `infra/caddy/Dockerfile`).
@@ -520,7 +527,7 @@ docker-compose.yml                      local stack (KAN-94)
 |----------|---------|---------|
 | `CATALOG_DB_URL`, `CATALOG_DB_USER`, `CATALOG_DB_PASSWORD` | backend, worker (Registry runtime user) | none |
 | `TENANT_DB_HOST`, `TENANT_DB_POOL_MAX` | backend, worker (Workspace databases) | none · 5 |
-| `JOBS_DB_URL`, `JOBS_DB_USER`, `JOBS_DB_PASSWORD` | worker, ops profile (JobRunr enqueue) | none |
+| `JOBS_DB_URL`, `JOBS_DB_USER`, `JOBS_DB_PASSWORD` | web, `ops` and `seed` processes (JobRunr enqueue, Task 8); `worker` (job server) | none |
 | `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` | Liquibase, provisioning, ops (owner user) | none |
 | `CATALOG_SECRET_KEY` | backend, ops (encrypts Workspace database passwords) | none |
 | `POSTGRES_PASSWORD` and the passwords of the roles | `infra/postgres/init` | none |
@@ -533,8 +540,8 @@ docker-compose.yml                      local stack (KAN-94)
 | `TSOLVE_SEED_FILE` | seed | none |
 | `OLLAMA_BASE_URL`, `OLLAMA_CHAT_MODEL` | `ai`; local `ollama-pull` | none |
 | `CLOUDFLARE_API_TOKEN`, `STAGING_BASIC_AUTH_HASH` | edge Caddy (server `.env` only); the smoke test's plaintext credential is a repository secret of `cd-staging.yml`, not a variable | none |
-| `RESTIC_PASSWORD`, `BACKUP_R2_ENDPOINT`, `BACKUP_R2_BUCKET`, `BACKUP_R2_ACCESS_KEY`, `BACKUP_R2_SECRET_KEY` | `backup-db.sh` (server `.env` only; Task 23) | none |
-| `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_BASIC_AUTH_HASH`, `GRAFANA_ALERT_WEBHOOK_URL` | monitoring stack, edge Caddy (Task 24) | none |
+| `RESTIC_PASSWORD`, `BACKUP_R2_ENDPOINT`, `BACKUP_R2_BUCKET`, `BACKUP_R2_ACCESS_KEY`, `BACKUP_R2_SECRET_KEY` | `backup-db.sh` (server `.env` only; Task 24) | none |
+| `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_BASIC_AUTH_HASH`, `GRAFANA_ALERT_WEBHOOK_URL` | monitoring stack, edge Caddy (Task 25) | none |
 | `SERVER_PORT`, `CORS_ALLOWED_ORIGINS` | backend (existing) | as today |
 
 `FILE_STORAGE_ROOT`, `TSOLVE_DATABASES`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` and the per-database `<DB>_APP_PASSWORD`

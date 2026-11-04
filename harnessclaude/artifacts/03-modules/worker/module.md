@@ -41,6 +41,8 @@ queues, which the cap replaces for the MVP.
 - A job of a Suspended Workspace does not run; JOB-02 runs once per Active Workspace (GBR-37, GBR-38).
 - Per-Workspace fairness: a configurable cap of concurrently running jobs per Workspace (D43).
 - Email through SMTP, sent as a job, never to another Workspace's Accounts (KAN-162, GBR-27, GBR-37).
+- In the `worker` profile, set `jobrunr.background-job-server.enabled: true` (`platform` switches it off in the web, `ops` and
+  `seed` processes) and replace the placeholder handler of `platform` with the real one.
 - The handler of the first-Admin invitation job. `platform` declares the `InvitationJobQueue` port and provides a minimal
   implementation on JobRunr in the Jobs database (decision of 4/11); `worker` takes the job handler over when it is
   built and sends the email (platform AC-013.17, AC-013.18).

@@ -1,7 +1,7 @@
 ---
 module: platform
 date: 2026-11-04
-total_tasks: 21
+total_tasks: 22
 owner: Dev
 iteration: 1
 ---
@@ -12,7 +12,7 @@ Spec: `artifacts/03-modules/platform/spec.md` · Design: `artifacts/04-plans/pla
 (master: `artifacts/04-plans/platform/design.md`).
 
 Rewritten on 4/11 for the multi-tenant HLA (database per Workspace, Registry, Jobs database, row guard, Garage, Redis,
-provisioning service; KAN-98). Task numbers are shared with iteration 2 (Tasks 22–25 are there). Backend tests name the
+provisioning service; KAN-98). Task numbers are shared with iteration 2 (Tasks 23–26 are there). Backend tests name the
 criterion: `…_AC_002_13`; infrastructure checks are scripts in `infra/tests/*.test.sh` whose log lines start with the AC
 id. "Edge #n" refers to the Edge Cases table of the design.
 
@@ -22,7 +22,7 @@ a bigger one is split here.
 **Order rule (feedback first):** a task that a person can see or try comes before plumbing. Each task names "After this
 task you can …"; a plumbing task names the visible task it serves. The sequence: the local data plane (1), CI (2), the
 Registry and the row guard and routing (3–6), the first Workspace by script (7–9, with the invitation queue as 8), a Workspace site in the browser
-(10–11), the demo Workspaces (12), staging (13–15), files and the Jira App (16–20), the AI VPS (21).
+(10–11), the demo Workspaces (12), staging (13–15), files and the Jira App (16–21), the AI VPS (22).
 
 **Other modules (blockers, not tasks of this module):**
 - `identity` (KAN-247) implements `FirstAdminCreator`. `InvitationJobQueue` has a minimal implementation in `platform`
@@ -30,7 +30,7 @@ Registry and the row guard and routing (3–6), the first Workspace by script (7
   Task 7 declares both ports and tests with doubles in test sources only. Tasks 9, 12 and 15 start the real backend in
   the `ops` / `seed` profile, which refuses to start without both beans (AC-013.15), so they wait for Task 8 and for
   `identity` KAN-247.
-- `docker-compose.yml` and `.env.example` are edited by Tasks 1, 10, 11, 16 and 19 here and by `identity` Task 10 (Redis
+- `docker-compose.yml` and `.env.example` are edited by Tasks 1, 8, 10, 11, 14, 16 and 19 here (Tasks 8, 14 and 19 only add names to `.env.example`) and by `identity` Task 10 (Redis
   host, session variables): rebase on each other's branch and do not overwrite another module's variable.
 - The Spring Boot bump to 3.5.x (DevOps A2) is not a task of this module.
 
@@ -145,7 +145,7 @@ has no table from the Registry changelog (AC-001.33), the Registry holds no tabl
 **Story:** STORY-004
 **Feature:** workspace-catalog
 **Assignee:** Trần Trung Hiếu (KAN-98)
-**After this task you can:** (plumbing, serves Tasks 7, 10 and 20 and the `identity` sign-in) see the lookups and the
+**After this task you can:** (plumbing, serves Tasks 7, 10 and 21 and the `identity` sign-in) see the lookups and the
 email rule in `WorkspaceCatalogIT`: one email in one Workspace, whatever the case.
 **Covers:** AC-004.17, AC-004.18, AC-004.25, AC-004.26, AC-004.27, AC-004.28 (no endpoint: asserted with Task 7's source scan).
 **Design:** Registry rules; Interface Contracts.
@@ -304,10 +304,16 @@ AC-001.32 (the Jobs user is neither superuser nor `BYPASSRLS`, re-checked throug
 (record of the two ids; the job id is derived from the Workspace id, so a second call for the same Workspace stores no second
 job), failures wrapped in `InvitationQueueException` without any email. `JobsDataSourceConfig`: `jobsDataSource` from
 `JOBS_DB_URL`, `JOBS_DB_USER`, `JOBS_DB_PASSWORD` (its own small pool, separate from the Registry and Workspace pools) and
-a JobRunr storage provider on it; the background job server is switched **off** in the web, `ops` and `seed` processes (this
-task only stores jobs; `worker` starts the server and supplies the handler for the request class later).
-`jobrunr-spring-boot-3-starter` is added to `pom.xml` (named in the spec and ADR-0002; the user confirms it in the review of
-this plan). JobRunr creates its own tables with the Jobs user (design, Roles and grants); nothing is added to any changelog.
+a JobRunr storage provider on it; the background job server is switched **off** in the web, `ops` and `seed` processes
+(`jobrunr.background-job-server.enabled: false` in `application.yml`; this task only stores jobs). A JobRunr `JobRequest`
+names its handler class in `getJobRequestHandler()`, so a handler class must exist in the web image: `FirstAdminInvitationJobHandler`
+is a no-op placeholder that logs only the two ids (never an email). `worker` replaces it later and **its profile must set
+`jobrunr.background-job-server.enabled: true`** (written in `worker/module.md`, Responsibilities). Assumption: JobRunr's
+documentation was not available while planning; the builder confirms from the JobRunr documentation that enqueueing needs the
+handler class on the classpath of the enqueuing process and that no handler runs while the server is off; a difference is a
+note in the task's session log, not a silent change.
+`jobrunr-spring-boot-3-starter` is added to `pom.xml` (named in the master design, External Dependencies, and in ADR-0002; the
+user confirms it in the review of this plan). JobRunr creates its own tables with the Jobs user (design, Roles and grants); nothing is added to any changelog.
 **Edge rows (test targets):** #62 (the Jobs database holds ids only), #64 (the bean now exists: the start-up check of Task 7
 passes with it), #70 (the Jobs database down at enqueue), #71 (a second enqueue for the same Workspace).
 **Tests (about 8):** `JobRunrInvitationJobQueueTest` (the request carries two ids and no other field; the same Workspace twice
@@ -321,11 +327,12 @@ queues exactly one job after the commit; the Jobs user is neither superuser nor 
 - Create: `backend/src/main/java/vn/tsolve/platform/dto/FirstAdminInvitationJobRequest.java`
 - Create: `backend/src/main/java/vn/tsolve/platform/exception/InvitationQueueException.java`
 - Create: `backend/src/main/java/vn/tsolve/platform/config/JobsDataSourceConfig.java`
+- Create: `backend/src/main/java/vn/tsolve/platform/job/FirstAdminInvitationJobHandler.java` (placeholder, see Description)
 - Modify: `backend/pom.xml`, `backend/src/main/resources/application.yml` (`jobrunr.background-job-server.enabled: false`),
   `.env.example` (`JOBS_DB_URL`, `JOBS_DB_USER`, `JOBS_DB_PASSWORD` if missing)
 - Test: `backend/src/test/java/vn/tsolve/platform/JobRunrInvitationJobQueueTest.java`, `InvitationJobQueueIT.java`
 **Dependencies:** Tasks 1 (the Jobs database and user), 3 (`PostgresTestBase`), 7 (the port and the service). `worker` later
-supplies the handler and the background job server; it does not block this task.
+replaces the placeholder handler and starts the background job server; it does not block this task.
 **Estimated size:** small
 **Done when:** both test classes pass and the walkthrough above shows the one job with ids only.
 
@@ -374,7 +381,7 @@ exist; they are not build dependencies of this task (Task 11 depends on Task 9)
 **After this task you can:** run the backend and `curl -H 'Host: acme.localhost' localhost:8080/api/v1/me` → 401 `MSG07` for a
 real Workspace, 404 `MSG151` for an unknown one, 403 `MSG150` for a Suspended one.
 **Covers:** AC-002.2 – AC-002.10, AC-002.11 (the filter unbinds when a request ends; the holder side is Task 6), AC-002.17, AC-002.18, AC-002.19, AC-013.11, AC-005.7 and the host part of AC-005.8
-(`/api/v1/jira-app/**` on any host but `api.` → 404 `MSG06`; the chain itself is Task 19).
+(`/api/v1/jira-app/**` on any host but `api.` → 404 `MSG06`; the chain itself is Task 20).
 **Design:** How a request or job gets its Workspace; Security chains (1); Key Decisions P5, R2.
 **Description:** `PlatformProperties` (`tsolve.base-domain`, `tsolve.environment`), `HostClassifier` / `HostKind`,
 `TenantResolverFilter` + `TenantFilterConfig` (order before Spring Security), `ProblemResponses`
@@ -445,7 +452,7 @@ see "already exists, skipped".
 **Description:** `SeedRunner` (profile `seed`, no web server) reads `infra/seed/demo-workspaces.json` (`TSOLVE_SEED_FILE`),
 refuses unless `TSOLVE_ENVIRONMENT` is `dev` or `staging`, creates each Workspace through `WorkspaceProvisioning.create`,
 skips existing site names, exits non-zero naming the Workspace on a rule failure. `DemoSeedContributor` and
-`SeedWorkspace` exist but no contributor is called yet (Task 22). `infra/seed/run-seed.sh` without `--reset`.
+`SeedWorkspace` exist but no contributor is called yet (Task 23). `infra/seed/run-seed.sh` without `--reset`.
 **Edge rows:** #54 (production or unset → non-zero, nothing written), #55 (a second run skips both).
 **Tests (about 8):** `SeedRunnerTest`: production, `prod`, unset → non-zero and `create` never called (AC-012.3); second run
 skips and says so (AC-012.5); a provisioning failure names the Workspace (AC-012.6); the production compose file, its
@@ -473,7 +480,7 @@ AC-010.12, AC-001.33 and AC-001.26 (users reach only their own database, checked
 **Design:** Infrastructure — Application VPS; Redis; Key Decisions P9, R14.
 **Description:** Manual first (Hiếu): buy the application VPS (KVM, Ubuntu LTS, snapshots). `infra/scripts/bootstrap.sh`
 (deploy user, key-only SSH, ufw 22/80/443, unattended upgrades, Docker + Compose, swap, log rotation, `/srv/tsolve`
-layout; the `--role ai` variant is Task 21). `infra/compose.edge.yml` (PostgreSQL with the init script of Task 1,
+layout; the `--role ai` variant is Task 22). `infra/compose.edge.yml` (PostgreSQL with the init script of Task 1,
 private network only, no published port; **replaces `TSOLVE_DATABASES=tsolve_staging`**; Caddy placeholder until Task
 14). `infra/compose.staging.yml` (backend, worker, web by `:staging`, **its own Redis and its own Garage** with
 `garage-init`, `env_file /srv/tsolve/staging/.env`, memory and CPU limits, health checks, `restart: unless-stopped`,
@@ -638,39 +645,64 @@ AC-004.22; second link refused, Edge #27); `WorkspaceCatalogIT` (race, Edge #24;
 
 ---
 
-## Task 19: Verify the Forge Invocation Token on `api.`
+## Task 19: Verify the Forge Invocation Token (the verifier)
 
 **Story:** STORY-005
 **Feature:** forge-token
 **Assignee:** Trần Trung Hiếu (KAN-105)
-**After this task you can:** call `api.localhost/api/v1/jira-app/...` with `curl`: 401 for a forged or expired token, and a
-Forge token sent to a Workspace site gets 404.
-**Covers:** AC-005.1 – AC-005.8.
+**After this task you can:** run `NimbusForgeTokenVerifierTest` and see a valid test token accepted and a forged, expired,
+unsigned, wrong-audience or wrong-issuer token refused, with the key set fetched again once for an unknown key id.
+**Covers:** AC-005.2, AC-005.3 (the verifier's refusals), AC-005.4.
 **Design:** Security chains (2); Key Decisions P3.
-**Description:** `spring-security-oauth2-jose` in `pom.xml` (approved, P3). `NimbusForgeTokenVerifier`
+**Description:** `spring-security-oauth2-jose` in `pom.xml` (approved, P3). `ForgeTokenVerifier` and `NimbusForgeTokenVerifier`
 (`NimbusJwtDecoder.withJwkSource` over a caching `JWKSource` from `FORGE_JWKS_URL`, an unknown key id refetches once;
-validators: timestamp, issuer `forge/invocation-token`, audience `ari:cloud:ecosystem::app/` + `FORGE_APP_ID`),
-`ForgeTokenFilter`, `ForgeCallContext`, `ForgeCallAuthentication`, `ForgeSecurityConfig` (`@Order(1)`, host `api.<base>`,
-stateless, no CSRF, no cookie). First step, before any code or fixture: confirm from Atlassian's Forge Remote
-documentation the claim paths of the `cloudId`, the principal's account id and the lifecycle body's `eventType`
-values, and record them in the master design.
+validators: timestamp, issuer `forge/invocation-token`, audience `ari:cloud:ecosystem::app/` + `FORGE_APP_ID`) returning
+`VerifiedForgeCall` (claims only). First step, before any code or fixture: confirm from Atlassian's Forge Remote documentation
+the claim paths of the `cloudId`, the principal's account id and the lifecycle body's `eventType` values, and record them in
+the master design.
 **Edge rows (Critical/High):** #28 (`alg: none`, HS256 with the public key, expired, wrong audience or issuer), #29 (key set
-unreachable, unknown key id), #30 (Forge token on a Workspace site, `login.` or `admin.`).
-**Tests (about 12):** `NimbusForgeTokenVerifierTest` (Edge #28, #29, no Workspace lookup on a refused token, logs hold no
-token, Edge #22); `ForgeSecurityIT` (Edge #30, no `Set-Cookie` on `api.`, other paths on `api.` → 404 `MSG06`, AC-005.7).
+unreachable, unknown key id). Medium: #22 (logs hold no token).
+**Tests (about 7):** `NimbusForgeTokenVerifierTest` (Edge #28, #29; logs hold no token, Edge #22).
 **Files:**
 - Modify: `backend/pom.xml`, `backend/src/main/resources/application.yml`, `.env.example` (`FORGE_APP_ID`, `FORGE_JWKS_URL`)
 - Create: `backend/src/main/java/vn/tsolve/platform/forge/ForgeTokenVerifier.java`, `NimbusForgeTokenVerifier.java`,
-  `ForgeTokenFilter.java`, `ForgeCallContext.java` (+ request-scoped impl), `VerifiedForgeCall.java`, `ForgeCallAuthentication.java`
-- Create: `backend/src/main/java/vn/tsolve/platform/config/ForgeSecurityConfig.java`
-- Test: `backend/src/test/java/vn/tsolve/platform/NimbusForgeTokenVerifierTest.java`, `ForgeSecurityIT.java`
+  `VerifiedForgeCall.java`
+- Test: `backend/src/test/java/vn/tsolve/platform/NimbusForgeTokenVerifierTest.java`
 **Dependencies:** Task 10
-**Estimated size:** medium
-**Done when:** both test classes pass and the claim paths are recorded in the design.
+**Estimated size:** small
+**Done when:** the test class passes and the claim paths are recorded in the design.
 
 ---
 
-## Task 20: Tenant Resolver of the Jira App and the lifecycle endpoint
+## Task 20: Forge security chain on `api.`: the filter, the call context, the 404s
+
+**Story:** STORY-005
+**Feature:** forge-security-chain
+**Assignee:** Trần Trung Hiếu (KAN-105)
+**After this task you can:** call `api.localhost/api/v1/jira-app/...` with `curl`: 401 for a missing, forged or expired token,
+and a Forge token sent to a Workspace site gets 404; any other path on `api.` gets 404.
+**Covers:** AC-005.1, AC-005.3 (the 401 `ProblemDetail`, no handler, no Workspace lookup), AC-005.5, AC-005.6, AC-005.7, AC-005.8.
+**Design:** Security chains (2); Key Decisions P3.
+**Description:** `ForgeTokenFilter` (reads the `Authorization: Bearer` header, calls `ForgeTokenVerifier`, refuses with 401
+without `code`), `ForgeCallContext` with its request-scoped implementation (the `cloudId` and the principal's account id for
+that request only), `ForgeCallAuthentication`, and `ForgeSecurityConfig` (`@Order(1)`, host `api.<base>`, stateless, no CSRF,
+no cookie; other paths on `api.` → 404 `MSG06`).
+**Edge rows (Critical/High):** #30 (Forge token on a Workspace site, `login.` or `admin.`). Verifier rows #28 and #29 are
+re-asserted through the HTTP chain.
+**Tests (about 6):** `ForgeSecurityIT` (Edge #30, a refused token reaches no handler and no Workspace lookup, no `Set-Cookie` on
+`api.`, other paths on `api.` → 404 `MSG06`, AC-005.7; the claims are visible only for the request, AC-005.5).
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/platform/forge/ForgeTokenFilter.java`, `ForgeCallContext.java` (+ request-scoped
+  impl), `ForgeCallAuthentication.java`
+- Create: `backend/src/main/java/vn/tsolve/platform/config/ForgeSecurityConfig.java`
+- Test: `backend/src/test/java/vn/tsolve/platform/ForgeSecurityIT.java`
+**Dependencies:** Tasks 10, 19
+**Estimated size:** small
+**Done when:** the test class passes.
+
+---
+
+## Task 21: Tenant Resolver of the Jira App and the lifecycle endpoint
 
 **Story:** STORY-006
 **Feature:** jira-tenant-resolver
@@ -693,13 +725,13 @@ AC-006.12, AC-006.15, AC-006.16); `TenantIsolationIT` Jira App case (AC-006.14, 
 - Create: `backend/src/main/java/vn/tsolve/platform/controller/ForgeLifecycleController.java`
 - Test: `backend/src/test/java/vn/tsolve/platform/ForgeLifecycleIT.java`, `ForgeSecurityIT.java`,
   `backend/src/test/java/vn/tsolve/common/tenant/TenantIsolationIT.java`
-**Dependencies:** Tasks 4, 7, 19
+**Dependencies:** Tasks 4, 7, 20
 **Estimated size:** small
 **Done when:** the three test classes pass and `npm run generate:api` leaves no diff.
 
 ---
 
-## Task 21: AI VPS with Ollama behind WireGuard
+## Task 22: AI VPS with Ollama behind WireGuard
 
 **Story:** STORY-011
 **Feature:** ai-vps
