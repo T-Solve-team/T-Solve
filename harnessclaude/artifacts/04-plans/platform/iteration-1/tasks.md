@@ -1,7 +1,7 @@
 ---
 module: platform
 date: 2026-11-04
-total_tasks: 19
+total_tasks: 20
 owner: Dev
 iteration: 1
 ---
@@ -12,7 +12,7 @@ Spec: `artifacts/03-modules/platform/spec.md` · Design: `artifacts/04-plans/pla
 (master: `artifacts/04-plans/platform/design.md`).
 
 Rewritten on 4/11 for the multi-tenant HLA (database per Workspace, Registry, Jobs database, row guard, Garage, Redis,
-provisioning service; KAN-98). Task numbers are shared with iteration 2 (Tasks 20–23 are there). Backend tests name the
+provisioning service; KAN-98). Task numbers are shared with iteration 2 (Tasks 21–24 are there). Backend tests name the
 criterion: `…_AC_002_13`; infrastructure checks are scripts in `infra/tests/*.test.sh` whose log lines start with the AC
 id. "Edge #n" refers to the Edge Cases table of the design.
 
@@ -22,13 +22,15 @@ a bigger one is split here.
 **Order rule (feedback first):** a task that a person can see or try comes before plumbing. Each task names "After this
 task you can …"; a plumbing task names the visible task it serves. The sequence: the local data plane (1), CI (2), the
 Registry and the row guard and routing (3–6), the first Workspace by script (7–8), a Workspace site in the browser
-(9–10), the demo Workspaces (11), staging (12–14), files and the Jira App (15–18), the AI VPS (19).
+(9–10), the demo Workspaces (11), staging (12–14), files and the Jira App (15–19), the AI VPS (20).
 
 **Other modules (blockers, not tasks of this module):**
-- `identity` (KAN-247) implements `FirstAdminCreator`; `worker` implements `InvitationJobQueue`. Task 7 declares both
-  ports and tests with doubles in test sources only. Tasks 8, 11 and 14 start the real backend in the `ops` / `seed`
-  profile, which refuses to start without both beans (AC-013.15), so they wait for those two implementations.
-- `docker-compose.yml` and `.env.example` are edited by Tasks 1, 10 and 15 here and by `identity` Task 10 (Redis
+- `identity` (KAN-247) implements `FirstAdminCreator`. `InvitationJobQueue` has a minimal implementation in `platform`
+  on JobRunr in the Jobs database (user decision, 4/11; `worker` takes the job handler over later): the planning card
+  that follows this one adds its task. Task 7 declares both ports and tests with doubles in test sources only. Tasks 8,
+  11 and 14 start the real backend in the `ops` / `seed` profile, which refuses to start without both beans
+  (AC-013.15), so they wait for those two implementations.
+- `docker-compose.yml` and `.env.example` are edited by Tasks 1, 9, 10, 15 and 18 here and by `identity` Task 10 (Redis
   host, session variables): rebase on each other's branch and do not overwrite another module's variable.
 - The Spring Boot bump to 3.5.x (DevOps A2) is not a task of this module.
 
@@ -107,8 +109,8 @@ merge (Hiếu): mark frontend, backend, PR title and gitleaks as required checks
 **Assignee:** Trần Trung Hiếu (KAN-98)
 **After this task you can:** start the backend against the compose stack of Task 1 and see `workspaces` and
 `workspace_emails` created, empty, in `tsolve_<env>_registry` (`psql \dt`).
-**Covers:** AC-001.15, AC-001.16, AC-001.17, AC-001.18 (catalog changelog), AC-001.19, AC-001.24, AC-001.25,
-AC-001.27 (Registry part), AC-001.33 (the catalog changelog creates nothing in the Jobs database), AC-008.4 (the
+**Covers:** AC-001.15, AC-001.16, AC-001.17, AC-001.18 (Registry changelog), AC-001.19, AC-001.24, AC-001.25,
+AC-001.27 (Registry part), AC-001.33 (the Registry changelog creates nothing in the Jobs database), AC-008.4 (the
 Registry changelog applied at startup, the worker never runs Liquibase).
 **Design:** Data Model — Tenant Registry DB; Key Decisions R1, R8; Configuration.
 **Description:** `catalog/catalog-master.xml`, `C001-registry-workspaces.sql`, `C002-registry-workspace-emails.sql`;
@@ -122,7 +124,7 @@ line; the log-capture test is finished in Task 6).
 **Tests (about 12):** `PasswordCipherTest`: round trip, a ciphertext copied to another row does not decrypt, wrong key,
 missing key at startup names the variable (AC-001.24, AC-001.25, Edge #13); `RegistryChangelogIT`: tables and columns,
 `jira_cloud_id` and `db_name` unique, email stored lower-case only, both tables empty (AC-001.19), the Jobs database
-has no table from the catalog changelog (AC-001.33), the Registry holds no table other than the allowed set
+has no table from the Registry changelog (AC-001.33), the Registry holds no table other than the allowed set
 (AC-001.17).
 **Files:**
 - Create: `backend/src/main/resources/db/changelog/catalog/catalog-master.xml`, `C001-registry-workspaces.sql`,
@@ -143,17 +145,17 @@ has no table from the catalog changelog (AC-001.33), the Registry holds no table
 **Story:** STORY-004
 **Feature:** workspace-catalog
 **Assignee:** Trần Trung Hiếu (KAN-98)
-**After this task you can:** (plumbing, serves Tasks 7, 9 and 18 and the `identity` sign-in) see the lookups and the
+**After this task you can:** (plumbing, serves Tasks 7, 9 and 19 and the `identity` sign-in) see the lookups and the
 email rule in `WorkspaceCatalogIT`: one email in one Workspace, whatever the case.
 **Covers:** AC-004.17, AC-004.18, AC-004.25, AC-004.26, AC-004.27, AC-004.28 (no endpoint: asserted with Task 7's source scan).
 **Design:** Registry rules; Interface Contracts.
 **Description:** `WorkspaceCatalog` (`findById`, `findBySiteName` without case, `findByCloudId`, `claimEmail`; no connection
 data returned), `WorkspaceCatalogImpl` over `RegistryRepository` (`INSERT … ON CONFLICT (email) DO NOTHING`, then read
-the row), `WorkspaceSummary`, `WorkspaceStatus`. `linkJiraSite` is Task 16.
+the row), `WorkspaceSummary`, `WorkspaceStatus`. `linkJiraSite` is Task 17.
 **Edge rows:** #26 (same email in another case or with spaces in two Workspaces at once → one row, the other `MSG155`).
 **Tests (about 10):** each lookup finds and returns empty for an unknown key; the summary holds no password or database
 name (AC-004.18); claim: free email recorded lower-case, same Workspace succeeds with no change, another Workspace
-→ `MSG155` on `email` and nothing recorded (AC-004.26); concurrent claim (Edge #26); the catalog never binds a Workspace
+→ `MSG155` on `email` and nothing recorded (AC-004.26); concurrent claim (Edge #26); `WorkspaceCatalog` never binds a Workspace
 (AC-004.27).
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/platform/service/WorkspaceCatalog.java`
@@ -278,7 +280,7 @@ log capture (Edge #62); a source scan fails when a class outside the Console, `o
 - Create: `backend/src/main/java/vn/tsolve/platform/exception/WorkspaceRuleException.java`
 - Test: `backend/src/test/java/vn/tsolve/platform/WorkspaceProvisioningIT.java`, `ProvisioningSourceScanTest.java`
 **Dependencies:** Tasks 3, 4, 5, 6; `be-foundation` Task 1. The real `FirstAdminCreator` (`identity`, KAN-247) and
-`InvitationJobQueue` (`worker`) are needed from Task 8 on.
+`InvitationJobQueue` (`platform`, JobRunr; its task is added by the next planning card) are needed from Task 8 on.
 **Estimated size:** medium
 **Done when:** `WorkspaceProvisioningIT` passes including the compensation at every step and the race.
 
@@ -312,7 +314,9 @@ on the local stack: create → resolves → suspend → refused → reactivate �
 - Create: `backend/src/main/resources/application-ops.yml`, `infra/ops/workspace.sh`
 - Modify: `infra/README.md`
 - Test: `backend/src/test/java/vn/tsolve/platform/OpsRunnerIT.java`, `infra/tests/ops-script.test.sh`
-**Dependencies:** Task 7; `identity` KAN-247 and `worker` (the real ports)
+**Dependencies:** Tasks 1, 2 (the stack and the backend Dockerfile that `workspace.sh` runs), 7; `identity` KAN-247 and the
+`InvitationJobQueue` implementation (the real ports). `infra/tests/ops-script.test.sh` needs Tasks 9 and 10 and runs once they
+exist; they are not build dependencies of this task (Task 10 depends on Task 8)
 **Estimated size:** medium
 **Done when:** the walkthrough above works on the local stack and `OpsRunnerIT` passes.
 
@@ -325,9 +329,9 @@ on the local stack: create → resolves → suspend → refused → reactivate �
 **Assignee:** Trần Trung Hiếu (KAN-99)
 **After this task you can:** run the backend and `curl -H 'Host: acme.localhost' localhost:8080/api/v1/me` → 401 `MSG07` for a
 real Workspace, 404 `MSG151` for an unknown one, 403 `MSG150` for a Suspended one.
-**Covers:** AC-002.2 – AC-002.10, AC-002.17, AC-002.18, AC-002.19, AC-013.11, AC-005.7 and the host part of AC-005.8
-(`/api/v1/jira-app/**` on any host but `api.` → 404 `MSG06`; the chain itself is Task 17).
-**Design:** How a request or job gets its Workspace; Security chains (1); Key Decisions P4.
+**Covers:** AC-002.2 – AC-002.10, AC-002.11 (the filter unbinds when a request ends; the holder side is Task 6), AC-002.17, AC-002.18, AC-002.19, AC-013.11, AC-005.7 and the host part of AC-005.8
+(`/api/v1/jira-app/**` on any host but `api.` → 404 `MSG06`; the chain itself is Task 18).
+**Design:** How a request or job gets its Workspace; Security chains (1); Key Decisions P5, R2.
 **Description:** `PlatformProperties` (`tsolve.base-domain`, `tsolve.environment`), `HostClassifier` / `HostKind`,
 `TenantResolverFilter` + `TenantFilterConfig` (order before Spring Security), `ProblemResponses`
 (`application/problem+json`, `code`); `/actuator/health`, `/v3/api-docs*`, Swagger UI pass on any host (AC-002.19);
@@ -335,7 +339,7 @@ real Workspace, 404 `MSG151` for an unknown one, 403 `MSG150` for a Suspended on
 **Edge rows (Critical/High):** #1 (forwarded headers and Workspace ids ignored), #2 (unbound after an exception), #18
 (404 / 403 before any 401), #19 (host variants), #20 (health on `localhost:8080`). Medium: #22 (logs hold host and code only).
 **Tests (about 12):** `HostClassifierTest`: Edge #19, `www.`/`staging.`/bare/deep hosts, reserved labels; `TenantResolverFilterTest`: Edge
-#1, #2, #18, #20, #22, no catalog lookup for a bad label (AC-002.4, AC-002.6), `MSG150` for Suspended; `TenantIsolationIT`
+#1, #2, #18, #20, #22, no Registry lookup for a bad label (AC-002.4, AC-002.6), `MSG150` for Suspended; `TenantIsolationIT`
 (Workspaces A and B on two databases, JPA and native query through the filter, AC-002.18).
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/platform/config/PlatformProperties.java`, `TenantFilterConfig.java`
@@ -360,7 +364,7 @@ real Workspace, 404 `MSG151` for an unknown one, 403 `MSG150` for a Suspended on
 **Covers:** AC-008.1, AC-008.2, AC-008.3, AC-008.4 (tenant changelog applied to every Workspace database at startup of
 the web process; the worker never runs Liquibase), AC-008.5, AC-008.6, AC-008.7, AC-008.9, AC-009.2, AC-009.4, AC-009.5,
 AC-009.11 (local routing).
-**Design:** Infrastructure — Local; Configuration; Key Decisions P8.
+**Design:** Infrastructure — Local; Configuration; Key Decisions R14, R16.
 **Description:** `docker-compose.yml`: add `backend`, `worker` (same image, `SPRING_PROFILES_ACTIVE=worker`, depends on
 Redis and `garage-init`), `web`, `ollama` + one-shot `ollama-pull` (`bge-m3`, `OLLAMA_CHAT_MODEL`), `caddy`; health
 checks; every credential from `.env`. `infra/caddy/Caddyfile.local`: `*.localhost`, `admin.localhost`, `login.localhost`,
@@ -397,7 +401,7 @@ see "already exists, skipped".
 **Description:** `SeedRunner` (profile `seed`, no web server) reads `infra/seed/demo-workspaces.json` (`TSOLVE_SEED_FILE`),
 refuses unless `TSOLVE_ENVIRONMENT` is `dev` or `staging`, creates each Workspace through `WorkspaceProvisioning.create`,
 skips existing site names, exits non-zero naming the Workspace on a rule failure. `DemoSeedContributor` and
-`SeedWorkspace` exist but no contributor is called yet (Task 20). `infra/seed/run-seed.sh` without `--reset`.
+`SeedWorkspace` exist but no contributor is called yet (Task 21). `infra/seed/run-seed.sh` without `--reset`.
 **Edge rows:** #54 (production or unset → non-zero, nothing written), #55 (a second run skips both).
 **Tests (about 8):** `SeedRunnerTest`: production, `prod`, unset → non-zero and `create` never called (AC-012.3); second run
 skips and says so (AC-012.5); a provisioning failure names the Workspace (AC-012.6); the production compose file, its
@@ -425,7 +429,7 @@ AC-010.12, AC-001.33 and AC-001.26 (users reach only their own database, checked
 **Design:** Infrastructure — Application VPS; Redis; Key Decisions P9, R14.
 **Description:** Manual first (Hiếu): buy the application VPS (KVM, Ubuntu LTS, snapshots). `infra/scripts/bootstrap.sh`
 (deploy user, key-only SSH, ufw 22/80/443, unattended upgrades, Docker + Compose, swap, log rotation, `/srv/tsolve`
-layout; the `--role ai` variant is Task 19). `infra/compose.edge.yml` (PostgreSQL with the init script of Task 1,
+layout; the `--role ai` variant is Task 20). `infra/compose.edge.yml` (PostgreSQL with the init script of Task 1,
 private network only, no published port; **replaces `TSOLVE_DATABASES=tsolve_staging`**; Caddy placeholder until Task
 13). `infra/compose.staging.yml` (backend, worker, web by `:staging`, **its own Redis and its own Garage** with
 `garage-init`, `env_file /srv/tsolve/staging/.env`, memory and CPU limits, health checks, `restart: unless-stopped`,
@@ -456,7 +460,7 @@ process does not start healthy with Redis stopped).
 Workspace created after the deploy get HTTPS with no manual step, and get a 413 or 429 from a request over the edge limits.
 **Covers:** AC-009.1, AC-009.2, AC-009.4, AC-009.5, AC-009.6, AC-009.7, AC-009.8, AC-009.9, AC-009.10, AC-009.11 (for staging;
 production hosts later), AC-014.9, AC-014.10, AC-014.11 (DevOps step A5).
-**Design:** Infrastructure — DNS, Edge limits; Signed URL host and routing (the route is added by Task 15); Tooling
+**Design:** Infrastructure — DNS, Edge limits; Signed URL host and routing (the route is added by Task 16); Tooling
 decisions W2.
 **Description:** Manual prerequisites (whoever controls `tsolve.io.vn`): move the nameservers to Cloudflare (free plan);
 DNS-only records `tsolve.io.vn`, `*.tsolve.io.vn`, `*.staging.tsolve.io.vn` → application VPS; an API token with
@@ -492,7 +496,7 @@ a file between the two limits passes the edge, a failing check if `EDGE_MAX_BODY
 `tsolve-deploy`, runner group limited to `cd-staging.yml`). `cd-staging.yml` triggered by `workflow_run` of `images.yml` on
 `main` only: pull → `migrate` profile (Registry changelog, then the tenant changelog for every Workspace through
 `TenantMigrator.applyAll()`) → `up -d` → wait for health → `seed` profile → `infra/tests/smoke.test.sh` (`api.staging…/actuator/health`
-UP; a seed site's page 200 with basic auth; its `/api/v1/me` → 401 `MSG07`; credential from `STAGING_BASIC_AUTH`).
+UP; a seed site's page 200 with basic auth; its `/api/v1/me` → 401 `MSG07`; credential from a repository secret of the workflow, the plaintext of `STAGING_BASIC_AUTH_HASH`).
 `application-migrate.yml` + `MigrateRunner`.
 **Edge rows (Critical/High):** #49 (a pull request from a fork never reaches the self-hosted runner), #50 (a failing
 migration stops before `up`, names the Workspace, old containers keep serving).
@@ -511,40 +515,60 @@ no trigger from pull requests (Edge #49).
 
 ## Task 15: File storage per Workspace in object storage, with signed URLs
 
-**Story:** STORY-007, STORY-009
+**Story:** STORY-007
 **Feature:** file-storage
 **Assignee:** Đặng Nhật Minh (KAN-96)
-**After this task you can:** store a file in a Workspace in `ObjectFileStorageIT` and download it from a signed URL on the
-Workspace site (`http://acme.localhost/<bucket>/…`); the same URL fails after the TTL and with another Workspace's key.
-**Covers:** AC-007.1 – AC-007.15, AC-009.2 (the `/<bucket>/*` route on a Workspace site).
+**After this task you can:** store a file in a Workspace in `ObjectFileStorageIT` and read it back; get a signed URL for it
+that the test downloads straight from Garage; the same URL fails after the TTL, and another Workspace's key gets nothing.
+**Covers:** AC-007.1 – AC-007.15 (the signed URL as the service returns it; its route on a Workspace site is Task 16).
 **Design:** Storage layout; Signed URL host and routing (R11); Tooling decisions W1; Key Decisions R10 – R13.
 **Description:** `FileStorage`, `ObjectFileStorage` (AWS SDK v2 `s3`, path-style, one `PutObject` of known length,
 object name `<workspaceId>/<uuid>`, key = the UUID only, `S3Presigner` signed for `FILE_STORAGE_PUBLIC_URL_PATTERN` with
 the site name from `WorkspaceCatalog.findById`), `StoredFile`, `FileTooLargeException`, `InvalidFileKeyException` (extends
 `NotFoundException`, 404 `MSG06`), `StorageConfig` (`tsolve.storage.*`). `GarageTestBase` starts the pinned Garage image
-as a generic container with the bootstrap of `garage-init.sh`. The Caddy route (GET/HEAD of `/<bucket>/*` to
-`garage:3900` with the original `Host`, other methods 405, `nosniff`, signature parameters out of the access log) is
-added to `Caddyfile.local` and `Caddyfile`.
+as a generic container with the bootstrap of `garage-init.sh`. Six production files.
 **Edge rows (Critical/High):** #35 (traversal and malformed keys refused before any object call), #36 (A's key while B is
 bound: `read`, `delete`, `signedUrl`), #37 (10 MB, +1 byte, 0 bytes), #38 (Garage down or broken connection during
-`store`), #39 (expired or altered URL, unsigned request), #40 (signature not in the Caddy access log), #41 (HTML/SVG
-downloaded, not rendered). Low: #42.
-**Tests (about 12):** `ObjectFileStorageIT` (Edge #35, #37, #38, #39, #42; read and delete of a missing key; none bound throws;
-no file on the local disk, AC-007.14); `TenantIsolationIT` storage case (AC-007.11, Edge #36); `infra/tests/caddy-routing.test.sh`
-additions for Edge #40, #41 and the 405.
+`store`), #39 (expired or altered URL, unsigned request). Low: #42.
+**Tests (about 10):** `ObjectFileStorageIT` (Edge #35, #37, #38, #39, #42; read and delete of a missing key; none bound throws;
+no file on the local disk, AC-007.14; anonymous request refused, AC-007.15); `TenantIsolationIT` storage case (AC-007.11,
+Edge #36).
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/platform/service/FileStorage.java`, `service/impl/ObjectFileStorage.java`,
   `dto/StoredFile.java`, `exception/FileTooLargeException.java`, `InvalidFileKeyException.java`, `config/StorageConfig.java`
-- Modify: `backend/pom.xml` (W1), `backend/src/main/resources/application.yml`, `.env.example`, `infra/caddy/Caddyfile.local`,
-  `infra/caddy/Caddyfile`
+- Modify: `backend/pom.xml` (W1), `backend/src/main/resources/application.yml`, `.env.example` (`FILE_STORAGE_PUBLIC_URL_PATTERN`)
 - Test: `backend/src/test/java/vn/tsolve/platform/ObjectFileStorageIT.java`, `backend/src/test/java/vn/tsolve/support/GarageTestBase.java`
-**Dependencies:** Tasks 1, 4, 6, 10 (local Caddy), 13 (staging Caddy)
-**Estimated size:** medium (nine production files; split the Caddy route to its own card if the review asks)
-**Done when:** `ObjectFileStorageIT` passes and the signed-URL download works in a browser on a local Workspace site.
+**Dependencies:** Tasks 1, 4, 6
+**Estimated size:** medium
+**Done when:** `ObjectFileStorageIT` passes and the isolation test shows A's file out of B's reach.
 
 ---
 
-## Task 16: Link a Jira site to a Workspace
+## Task 16: Signed-URL route on a Workspace site
+
+**Story:** STORY-009, STORY-007
+**Feature:** signed-url-route
+**Assignee:** Đặng Nhật Minh (KAN-96)
+**After this task you can:** download a stored file in a browser from its signed URL on the Workspace site
+(`http://acme.localhost/<bucket>/…`), on staging too; see a 405 for any other method and a download, not a rendered page,
+for a stored HTML file.
+**Covers:** AC-009.2 (the `/<bucket>/*` route on a Workspace site), AC-007.12 and AC-007.15 (through Caddy).
+**Design:** Signed URL host and routing (R11, R12); Infrastructure — Edge limits.
+**Description:** The Caddy route (GET/HEAD of `/<bucket>/*` to `garage:3900` with the original `Host`, other methods 405,
+`nosniff`, signature parameters out of the access log) added to `Caddyfile.local` and `Caddyfile`.
+**Edge rows:** #40 (signature not in the Caddy access log), #41 (HTML/SVG downloaded, not rendered).
+**Tests (about 5 checks):** `infra/tests/caddy-routing.test.sh` additions: signed GET 200 with `nosniff` and a download type,
+HEAD allowed, PUT/POST/DELETE 405, an altered signature refused, Edge #40 and #41.
+**Files:**
+- Modify: `infra/caddy/Caddyfile.local`, `infra/caddy/Caddyfile`
+- Test: `infra/tests/caddy-routing.test.sh`
+**Dependencies:** Tasks 10 (local Caddy), 13 (staging Caddy), 15
+**Estimated size:** small
+**Done when:** the signed-URL download works in a browser on a local Workspace site and `caddy-routing.test.sh` passes.
+
+---
+
+## Task 17: Link a Jira site to a Workspace
 
 **Story:** STORY-004
 **Feature:** jira-site-link
@@ -570,7 +594,7 @@ AC-004.22; second link refused, Edge #27); `WorkspaceCatalogIT` (race, Edge #24;
 
 ---
 
-## Task 17: Verify the Forge Invocation Token on `api.`
+## Task 18: Verify the Forge Invocation Token on `api.`
 
 **Story:** STORY-005
 **Feature:** forge-token
@@ -602,7 +626,7 @@ token, Edge #22); `ForgeSecurityIT` (Edge #30, no `Set-Cookie` on `api.`, other 
 
 ---
 
-## Task 18: Tenant Resolver of the Jira App and the lifecycle endpoint
+## Task 19: Tenant Resolver of the Jira App and the lifecycle endpoint
 
 **Story:** STORY-006
 **Feature:** jira-tenant-resolver
@@ -625,13 +649,13 @@ AC-006.12, AC-006.15, AC-006.16); `TenantIsolationIT` Jira App case (AC-006.14, 
 - Create: `backend/src/main/java/vn/tsolve/platform/controller/ForgeLifecycleController.java`
 - Test: `backend/src/test/java/vn/tsolve/platform/ForgeLifecycleIT.java`, `ForgeSecurityIT.java`,
   `backend/src/test/java/vn/tsolve/common/tenant/TenantIsolationIT.java`
-**Dependencies:** Tasks 4, 7, 17
+**Dependencies:** Tasks 4, 7, 18
 **Estimated size:** small
 **Done when:** the three test classes pass and `npm run generate:api` leaves no diff.
 
 ---
 
-## Task 19: AI VPS with Ollama behind WireGuard
+## Task 20: AI VPS with Ollama behind WireGuard
 
 **Story:** STORY-011
 **Feature:** ai-vps

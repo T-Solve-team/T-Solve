@@ -7,6 +7,7 @@ complexity: large
 paths:
   - backend/src/main/java/vn/tsolve/platform/**
   - backend/src/test/java/vn/tsolve/platform/**
+  - backend/src/test/java/vn/tsolve/support/**
   - backend/src/main/java/vn/tsolve/common/tenant/**
   - backend/src/test/java/vn/tsolve/common/tenant/**
   - backend/src/main/resources/db/changelog/**
@@ -64,7 +65,7 @@ are *proposed*.
   each email in one Workspace (MSG155, GBR-16).
 - Provisioning service and the ops script `infra/ops/workspace.sh` (its hand-run form): create a Workspace (database,
   runtime user, migrations, tenant id row, catalog row, first Admin Account through the `FirstAdminCreator` port that
-  `identity` implements — all or nothing; then the invitation email queued on `worker`), suspend and reactivate it
+  `identity` implements — all or nothing; then the invitation email job queued through the `InvitationJobQueue` port), suspend and reactivate it
   (KAN-240, GBR-24, GBR-38); the Platform Console calls the same service.
 - File storage per Workspace in Garage: object keys prefixed by the Workspace id, signed URLs, no local files, no path
   traversal, size limit, upload / read / signed URL / delete (KAN-96).
@@ -95,6 +96,7 @@ are *proposed*.
 | Workspace events | Application events | `WorkspaceSuspended`, `WorkspaceReactivated` |
 | Provisioning service (`WorkspaceProvisioning`) | Java; Shell + backend `ops` profile | Create, suspend, reactivate a Workspace; called by the Platform Console (`platform-console`, REST on `admin.`) and by the ops script |
 | FirstAdminCreator | Java port, declared here, implemented by `identity` | `UUID createFirstAdmin(UUID workspaceId, String email)`, called inside `TenantContext.runIn` by the provisioning service |
+| InvitationJobQueue | Java port, declared here; minimal implementation here on JobRunr in the Jobs database (platform owns the Jobs database); `worker` takes the job handler over later | `void queueFirstAdminInvitation(UUID workspaceId, UUID accountId)`, called after the commit; the job carries ids only (AC-013.17) |
 | File storage | Service interface (Garage) | Upload, read, signed URL, delete a file of the current Workspace |
 | Deployment | Compose, Caddy, CI | Hosts `{site name}.`, `admin.`, `login.`, `api.`; Redis, Garage; `OLLAMA_BASE_URL` to the AI VPS |
 | Operations | Scripts, monitoring, load test under `infra/` | Backup, restore, alerts, edge limits, load test (STORY-014) |
@@ -104,7 +106,7 @@ are *proposed*.
 |------------|-----------|-------------|
 | `common/` (base exceptions) | Java | Errors with an MSG code (`backend/AGENTS.md` §1; not a module dependency) |
 | identity | `FirstAdminCreator` (implements the port declared here) | Creates the first Admin Account, Active with the role Admin, in the new Workspace's database; also hosts its sign-in states and hand-off codes in the Registry |
-| worker | Job queue (Jobs database) | Queues the first-Admin invitation email after the commit (AC-013.17) |
+| worker | Job handler (later) | Takes over the handler of the first-Admin invitation job that the `InvitationJobQueue` implementation here stores in the Jobs database (AC-013.17); until then the job waits in the queue |
 
 ## Target Repos
 - default: backend/ (`platform`, `common/tenant`, proposed), the repo root (`docker-compose*.yml`, `infra/`,
@@ -112,8 +114,7 @@ are *proposed*.
 - Shared files that `be-foundation` owns and `platform` also changes (25/10, KAN-196 plan decision P2):
   `backend/pom.xml`, `backend/src/main/resources/application*.yml` and the Liquibase changelogs;
   `backend/.dockerignore` comes with the backend image (KAN-9).
-- Design and tasks: `artifacts/04-plans/platform/design.md`, `iteration-1/` and `iteration-2/` — written for the
-  pool model on 25/10; re-plan them from the spec of 01/11 before building.
+- Design and tasks: `artifacts/04-plans/platform/design.md`, `iteration-1/` and `iteration-2/`.
 
 ## Related Artifacts
 - Spec: `artifacts/03-modules/platform/spec.md` (database per Workspace, 01/11; HLA sync 04/11; needs re-approval)

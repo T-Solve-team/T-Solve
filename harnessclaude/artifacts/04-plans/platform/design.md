@@ -25,7 +25,7 @@ the target, not built here — H-Q1):
 |-------|---------------|--------------|
 | Tenant Registry DB `tsolve_<env>_registry` ("the Registry") | `workspaces`, `workspace_emails`, and `identity`'s sign-in states and hand-off codes | the Tenant Resolver, `WorkspaceCatalog`, the router, provisioning, `identity` |
 | One Workspace DB `tsolve_<env>_ws_<id>` per company | all business tables, the one-row `tenant_identity`, the row policies | only through the routing `DataSource` (runtime user) or the owner user (migrations, provisioning) |
-| Jobs DB `tsolve_<env>_jobs` | JobRunr's own tables only | `worker` (and the enqueue call of the provisioning service) |
+| Jobs DB `tsolve_<env>_jobs` | JobRunr's own tables only | `worker`; the `InvitationJobQueue` implementation of `platform` (enqueue) |
 | Garage bucket `FILE_STORAGE_BUCKET` + Redis | files under `<workspaceId>/` keys; sessions of `identity` | `FileStorage`; `identity` |
 
 ### How a request or job gets its Workspace
@@ -95,7 +95,7 @@ user is not the owner (AC-001.32), so its queries are always filtered.
 
 ## Data Model
 
-### Tenant Registry DB (catalog changelog `db/changelog/catalog/catalog-master.xml`; no row policy)
+### Tenant Registry DB (Registry changelog `db/changelog/catalog/catalog-master.xml`; no row policy)
 
 ```sql
 --changeset platform:C001-registry-workspaces
@@ -259,7 +259,8 @@ the Registry rows (`workspace_emails`, `workspaces`) in one transaction, `DROP D
 the failing step is named in the error. `suspend` / `reactivate` change the Registry `status` in one transaction and
 publish `WorkspaceSuspended` / `WorkspaceReactivated` after the commit (a `TransactionSynchronization`).
 
-`InvitationJobQueue` is a port declared in `platform`, implemented by `worker` (it owns JobRunr and the email job); the
+`InvitationJobQueue` is a port declared in `platform`. User decision of 4/11: `platform` provides a minimal implementation
+on JobRunr in the Jobs DB (it owns the Jobs DB) and `worker` takes the job handler over later. The
 `ops` and Console profiles refuse to start without a bean for it and for `FirstAdminCreator` (AC-013.15).
 
 ### Storage layout (STORY-007)
@@ -297,7 +298,7 @@ Caddy must forward it unchanged.
 each `DemoSeedContributor` the `modules.<module>` part, where `<module>` is the contributor's package segment after
 `vn.tsolve.` (Decided in planning). `run-seed.sh --reset` (AC-012.8, AC-012.9): checks `TSOLVE_ENVIRONMENT` is `dev` or
 `staging` first, stops the backend and worker, drops every Workspace database named in the Registry, empties the
-Registry tables and the bucket (`mc rm --recursive --force`), re-applies the Registry changelog, starts the stack and
+Registry tables and the bucket (`aws s3 rm --recursive` with `--endpoint-url $FILE_STORAGE_ENDPOINT`; the AWS CLI speaks the same S3 API as W1), re-applies the Registry changelog, starts the stack and
 runs the seed. No argument: one source for the environment.
 
 ## Redis (HLA Q3; AC-008.10, AC-010.11)
@@ -402,7 +403,7 @@ another's; no such use exists yet (see Out of Scope of the spec).
 | R7 Names | `tsolve_<env>_ws_<32 hex>` for database and user | Site name in the database name | A site name never changes the database; no reserved-word or length trouble |
 | R8 Password storage | AES-256-GCM, random nonce, Workspace id as associated data, key `CATALOG_SECRET_KEY` | Application-level hash; pgcrypto | The password must be recoverable to connect |
 | R9 Provisioning order | As AC-013.1: database, changelog, `tenant_identity`, Registry rows (the first and only commit that makes the Workspace visible), first Admin, then the invitation after the commit; saga compensation drops everything | Registry row first with a "provisioning" status | The spec's status set is ACTIVE or SUSPENDED only; a failed run leaves no visible Workspace |
-| R10 Invitation | `InvitationJobQueue` port declared in `platform`, implemented by `worker` (JobRunr, Jobs DB); the job carries the Workspace id and the Account id | JobRunr dependency in `platform` | `worker` owns JobRunr (D43); the job holds no personal data |
+| R10 Invitation | `InvitationJobQueue` port declared in `platform`, with a minimal implementation in `platform` on JobRunr in the Jobs DB; `worker` takes the job handler over later; the job carries the Workspace id and the Account id | Implemented by `worker` only (blocks the ops script until `worker` is built); a table of our own | User decision, 4/11: `platform` owns the Jobs DB, so the first Admin's invitation does not wait for `worker`; the job holds no personal data. Its task is added by the planning card that follows this one |
 | R11 Signed-URL host | Path-style URL on the Workspace's own site: `/<bucket>/<workspaceId>/<uuid>`, signed for `FILE_STORAGE_PUBLIC_URL_PATTERN`; Caddy forwards `GET`/`HEAD` of `/<bucket>/*` to Garage with `Host` unchanged | A dedicated `files.` host (a new reserved site name); streaming every file through the backend; a rewritten path (breaks the signature) | No new host, certificate or reserved name; same origin; Garage stays private; signature remains valid |
 | R12 Object content | Stored as `application/octet-stream`; Caddy adds `nosniff` on that route | Content type from the caller | A stored HTML file is downloaded, never rendered on a Workspace site |
 | R13 In-memory upload | `store` buffers up to 10 MB in memory and writes with one `PutObject` | Multipart upload; spool to disk | Atomic, no partial object, no local file (AC-007.8, AC-007.14) |
@@ -453,7 +454,8 @@ backend/
     │   │   ├── TenantDataSourceConfig.java            primary and registry DataSources, JPA properties (R15)
     │   │   └── NoTenantException.java
     │   └── platform/
-    │       ├── config/       PlatformProperties (base domain, environment, Forge, storage), ForgeSecurityConfig, TenantFilterConfig
+    │       ├── config/       PlatformProperties (base domain, environment, Forge, storage), ForgeSecurityConfig, TenantFilterConfig,
+    │       │                 StorageConfig (`tsolve.storage.*`)
     │       ├── web/          TenantResolverFilter, HostClassifier, HostKind, ProblemResponses
     │       ├── forge/        ForgeTokenVerifier (+ NimbusForgeTokenVerifier), ForgeTokenFilter, ForgeCallContext (+ impl),
     │       │                 VerifiedForgeCall, ForgeCallAuthentication
@@ -462,7 +464,7 @@ backend/
     │       │                 DemoSeedContributor
     │       │   └── impl/     WorkspaceCatalogImpl, WorkspaceProvisioningService, ObjectFileStorage
     │       ├── registry/     RegistryRepository (JdbcClient), PasswordCipher (AES-GCM), RegistryDataSourceConfig
-    │       ├── tenantdb/     TenantDatabaseProvisioner, TenantMigrator
+    │       ├── tenantdb/     TenantDatabaseProvisioner, TenantMigrator, TenantStartupMigrator (web process only)
     │       ├── client/       TenantInfoClient (+ RestTenantInfoClient)
     │       ├── dto/          WorkspaceSummary, WorkspaceSuspended, WorkspaceReactivated, StoredFile, SeedWorkspace
     │       ├── exception/    FileTooLargeException, InvalidFileKeyException, WorkspaceRuleException (extends BusinessRuleException)
@@ -507,7 +509,7 @@ docker-compose.yml                      local stack (KAN-94)
 - S3 client library: AWS SDK v2 `software.amazon.awssdk:s3` (W1, decided).
 - Caddy 2 built with `github.com/caddy-dns/cloudflare` and `github.com/mholt/caddy-ratelimit` (**W2**) via `xcaddy` (pinned versions in
   `infra/caddy/Dockerfile`).
-- Garage, Redis 7, PostgreSQL 16 with pgvector (pinned images); Grafana Alloy, Prometheus, Loki and Grafana (**W3**); k6 (**W4**); `restic` with Cloudflare R2 (**W5**).
+- Garage, Redis 7, PostgreSQL 16 with pgvector (pinned images); the AWS CLI v2 for the seed reset of the bucket only; Grafana Alloy, Prometheus, Loki and Grafana (**W3**); k6 (**W4**); `restic` with Cloudflare R2 (**W5**).
 - Cloudflare DNS (free plan) for `tsolve.io.vn`; GHCR; GitHub Actions self-hosted runner.
 - WireGuard (Ubuntu package), Ollama (official installer, pinned version) with `bge-m3` and the chat model of KAN-140.
 - Atlassian: the Forge key set (`FORGE_JWKS_URL`) and the public `/_edge/tenant_info` of a Jira site.
@@ -530,7 +532,9 @@ docker-compose.yml                      local stack (KAN-94)
 | `EDGE_MAX_BODY_BYTES`, `EDGE_TIMEOUT_SECONDS`, `EDGE_RATE_PER_IP`, `EDGE_RATE_PER_SITE`, `EDGE_RATE_WINDOW_SECONDS` | edge Caddy | none |
 | `TSOLVE_SEED_FILE` | seed | none |
 | `OLLAMA_BASE_URL`, `OLLAMA_CHAT_MODEL` | `ai`; local `ollama-pull` | none |
-| `CLOUDFLARE_API_TOKEN`, `STAGING_BASIC_AUTH_HASH` | edge Caddy (server `.env` only) | none |
+| `CLOUDFLARE_API_TOKEN`, `STAGING_BASIC_AUTH_HASH` | edge Caddy (server `.env` only); the smoke test's plaintext credential is a repository secret of `cd-staging.yml`, not a variable | none |
+| `RESTIC_PASSWORD`, `BACKUP_R2_ENDPOINT`, `BACKUP_R2_BUCKET`, `BACKUP_R2_ACCESS_KEY`, `BACKUP_R2_SECRET_KEY` | `backup-db.sh` (server `.env` only; Task 22) | none |
+| `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_BASIC_AUTH_HASH`, `GRAFANA_ALERT_WEBHOOK_URL` | monitoring stack, edge Caddy (Task 23) | none |
 | `SERVER_PORT`, `CORS_ALLOWED_ORIGINS` | backend (existing) | as today |
 
 `FILE_STORAGE_ROOT`, `TSOLVE_DATABASES`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` and the per-database `<DB>_APP_PASSWORD`
@@ -617,9 +621,7 @@ High row into a task.
 | 68 | STORY-014 | Scale | Many users behind one office address hit `EDGE_RATE_PER_IP` | Medium | Values are generous; the per-site limit is the second guard; 429 carries `Retry-After` | `edge-limits.test.sh` |
 | 69 | STORY-014 | Input extremes | Body over `EDGE_MAX_BODY_BYTES`; file between `FILE_STORAGE_MAX_BYTES` and the edge limit | Medium | 413 at the edge; an allowed file always passes; the backend still refuses a file over its limit | `edge-limits.test.sh` |
 
-Open questions for the spec owner: (a) the spec lists a tenant-scoped Redis cache and quota as out of scope while the
-planning card names it for STORY-014 — this design only sets the key convention (Redis section); (b) `schema_version`
-as "the id of the last changeset applied" is a design choice the spec leaves open.
+Open questions for the spec owner: none (the spec settles the Redis cache as out of scope and defines `schema_version` in AC-001.15).
 
 ## Traceability
 

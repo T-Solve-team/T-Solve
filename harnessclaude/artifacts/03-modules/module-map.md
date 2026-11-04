@@ -163,8 +163,7 @@ folders (`chatbot` took its folder with its plan, KAN-69). The approved `ticket-
   `workspace`); record an Account's email so it belongs to one Workspace (MSG155, called by `identity` at UC-05).
   Workspaces are created, suspended and reactivated by a Platform Operator in the Platform Console, who invites the
   first Admin (HLA, 3/11; architecture.md "Provisioning"); the ops script (KAN-240) is the hand-run form of the same
-  provisioning service. Whether that needs an Account-creation service from `identity` is for the `platform` plan to
-  settle; events `WorkspaceSuspended` / `WorkspaceReactivated` tell `worker`.
+  provisioning service. The `FirstAdminCreator` port, declared by `platform` and implemented by `identity`, settles the Account creation; events `WorkspaceSuspended` / `WorkspaceReactivated` tell `worker`.
 - **File storage** (`platform` → `wiki`, `ticket-repository`, `jira-app`): upload, read and delete an object in Garage
   under the key prefix `{workspaceId}/` of the current Workspace; signed URLs for download; no pod-local files;
   path traversal refused; size limit.

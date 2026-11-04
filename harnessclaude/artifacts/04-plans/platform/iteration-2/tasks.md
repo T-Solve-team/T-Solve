@@ -17,7 +17,7 @@ limits (AC-014.9 – AC-014.11), which are in iteration 1, Task 13 (DevOps step 
 
 ---
 
-## Task 20: Demo seed: module data through contributors, and the reset
+## Task 21: Demo seed: module data through contributors, and the reset
 
 **Story:** STORY-012
 **Feature:** demo-seed-contributors
@@ -32,7 +32,7 @@ exit naming the Workspace and the contributor on a failure. Extend `infra/seed/d
 sections for each module that has a contributor (the contributors themselves are each module's work: identity,
 workspace, project-integration, ticket-repository, wiki). Add `--reset` to `run-seed.sh`: environment check first
 (`dev` or `staging` only, else non-zero with nothing touched), then stop backend and worker, drop every Workspace
-database named in the Registry, empty the Registry tables and the bucket, re-apply the Registry changelog, start,
+database named in the Registry, empty the Registry tables and the bucket (`aws s3 rm --recursive --endpoint-url $FILE_STORAGE_ENDPOINT`, the AWS CLI v2; not the MinIO client), re-apply the Registry changelog, start,
 seed. Last step, once, by hand: run `infra/seed/run-seed.sh --reset` on the staging server before the S3 seed.
 **Edge rows:** #54 (`--reset` and the seed with `TSOLVE_ENVIRONMENT` unset, `production` or `prod` → non-zero before anything is
 touched), #56 (a contributor fails for Workspace 2 → stops, names Workspace 2 and the contributor).
@@ -44,13 +44,13 @@ output (AC-012.5, AC-012.8); the databases and bucket prefixes of the old Worksp
 - Modify: `backend/src/main/java/vn/tsolve/platform/seed/SeedRunner.java`, `SeedData.java`
 - Modify: `infra/seed/demo-workspaces.json`, `infra/seed/run-seed.sh`
 - Test: `backend/src/test/java/vn/tsolve/platform/SeedRunnerTest.java`, `infra/tests/seed-reset.test.sh`
-**Dependencies:** iteration 1 Tasks 11, 15 (the bucket); contributors of the modules above
+**Dependencies:** iteration 1 Tasks 11, 15 (the bucket); the AWS CLI v2 on the host that runs the script; contributors of the modules above
 **Estimated size:** medium
 **Done when:** the reset walkthrough above works and both test files pass.
 
 ---
 
-## Task 21: Nightly backup, off-server copy and the restore drill
+## Task 22: Nightly backup, off-server copy and the restore drill
 
 **Story:** STORY-014
 **Feature:** backup-restore
@@ -62,7 +62,7 @@ database and each Workspace's object prefix, encrypted by `restic`), and follow 
 **Description:** `infra/scripts/backup-db.sh` (the Workspace list from the Registry; one compressed custom-format dump per database;
 a copy of each Workspace prefix; `restic` to R2 with a token limited to that bucket; `restic forget` keeps seven days;
 exit non-zero naming the failed database or prefix and raise the alert; `CATALOG_SECRET_KEY` kept apart from the dumps,
-Redis not backed up); a nightly systemd timer; `infra/RESTORE.md` (restore one Workspace to staging under a new database
+Redis not backed up; variables `RESTIC_PASSWORD`, `BACKUP_R2_ENDPOINT`, `BACKUP_R2_BUCKET`, `BACKUP_R2_ACCESS_KEY`, `BACKUP_R2_SECRET_KEY` in `.env.example`); a nightly systemd timer; `infra/RESTORE.md` (restore one Workspace to staging under a new database
 name, user and password, rewrite its Registry row for staging, the time taken recorded; dump and prefix are taken at
 different moments, Edge #67). Manual: create the R2 bucket and token; two people keep the `restic` password offline.
 **Edge rows (Critical/High):** #65 (one dump or prefix copy fails → non-zero, named, alert, other files still written),
@@ -81,7 +81,7 @@ AC-014.5).
 
 ---
 
-## Task 22: Monitoring and alerts: Alloy, Prometheus, Loki, Grafana
+## Task 23: Monitoring and alerts: Alloy, Prometheus, Loki, Grafana
 
 **Story:** STORY-014
 **Feature:** monitoring
@@ -94,7 +94,7 @@ commands per second) and Garage; stop Redis and see the "Redis unreachable" aler
 Grafana), `infra/monitoring/alloy.river`, `prometheus.yml`, the dashboard and the alert rules as files (Grafana-managed
 alerts, no separate alert-routing service): Redis unreachable, Jobs database unreachable, Garage unreachable, a failed
 nightly backup, Redis memory near its limit. The backend and worker expose metrics (DevOps F4, owner Trần Hải Anh);
-`grafana.<base>` route and basic authentication in the main `Caddyfile`.
+`grafana.<base>` route and basic authentication in the main `Caddyfile`; variables `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_BASIC_AUTH_HASH`, `GRAFANA_ALERT_WEBHOOK_URL` in `.env.example`.
 **Edge rows (Critical/High):** #45 (a full Redis under `noeviction` fails writes loudly and the memory alert fires).
 **Tests (about 6 checks):** `infra/tests/monitoring.test.sh`: every target is up; stopping Redis fires the alert within its
 for-duration; stopping Garage and the Jobs database fire theirs; a simulated backup failure fires the backup alert; the
@@ -103,13 +103,13 @@ Redis memory alert fires near the limit (Edge #45).
 - Create: `infra/compose.monitoring.yml`, `infra/monitoring/alloy.river`, `prometheus.yml`, `alerts.yml`, `dashboard.json`
 - Modify: `infra/caddy/Caddyfile`, `.env.example`, `infra/README.md`
 - Test: `infra/tests/monitoring.test.sh`
-**Dependencies:** iteration 1 Tasks 12, 13; F4 (metrics endpoints); Task 21 for the backup-failure signal
+**Dependencies:** iteration 1 Tasks 12, 13; F4 (metrics endpoints); Task 22 for the backup-failure signal
 **Estimated size:** medium
 **Done when:** the Redis-unreachable alert is seen on the alert channel.
 
 ---
 
-## Task 23: Load-test script and one measured run on staging
+## Task 24: Load-test script and one measured run on staging
 
 **Story:** STORY-014
 **Feature:** load-test
@@ -129,6 +129,6 @@ that the test traffic is not refused, or the test says which limit it hit.
 **Files:**
 - Create: `infra/loadtest/tsolve.js`, `infra/loadtest/README.md`, `infra/loadtest/report-<date>.md`
 - Test: `infra/tests/loadtest.test.sh`
-**Dependencies:** iteration 1 Tasks 13, 14; Task 20 (seed data for the ticket list); Task 22 (to watch the run)
+**Dependencies:** iteration 1 Tasks 13, 14; Task 21 (seed data for the ticket list); Task 23 (to watch the run)
 **Estimated size:** small
 **Done when:** one report is committed and the script's exit code follows the thresholds.
