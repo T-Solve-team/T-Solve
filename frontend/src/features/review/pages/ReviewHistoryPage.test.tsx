@@ -110,6 +110,11 @@ describe('Review History', () => {
         .getAllByRole('columnheader')
         .find((header) => header.textContent === 'Date');
       if (!dateHeader) throw new Error('Missing accessible Date header');
+      fireEvent.click(within(dateHeader).getByText('Date', { exact: true }));
+      await waitFor(() => expect(requests.at(-1)?.searchParams.get('sort')).toBe('timestamp,asc'));
+      expect(view.router.state.location.search).toContain('sort=timestamp%2Casc');
+      fireEvent.click(within(dateHeader).getByText('Date', { exact: true }));
+      await waitFor(() => expect(requests.at(-1)?.searchParams.get('sort')).toBe('timestamp,desc'));
       fireEvent.click(within(dateHeader).getByLabelText('caret-up'));
       await waitFor(() => expect(requests.at(-1)?.searchParams.get('sort')).toBe('timestamp,asc'));
       fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Decision' }));
