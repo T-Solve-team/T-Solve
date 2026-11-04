@@ -71,3 +71,8 @@ Evaluate `suggestion-history` and `suggestion-history-contract`. Task 3 after PR
 - Independent review: `suggestion-history` pass (moved to passing); `suggestion-history-contract` fail on one CRITICAL — the AC-001.11 Workspace-exclusion assertion checked a removed `issueSummary` string and could not fail (moved to fixing).
 - Fix `default@c2a80da`: assert the foreign issue key and suggestion are absent; AC-001.7 covers a null `jiraIssueUrl`; mock sorts by parsed time; the day-boundary test is renamed AC-001.3. BUG-105 logged (open, FE Lead): the shared `src/test/setup.ts` `beforeAll` hits the 10 s hook timeout under load. Triage + route-table: 71 passed, 8 skipped by BUG-105; `history-filters.test.ts` alone 8/8; trace 20/20.
 - Open for the FE Lead: the Project filter versus guideline 03 §5 (decision-log entry). Feature back to evaluating for attempt 2.
+
+## Session 2026-11-04 — evaluation attempt 2
+
+- Independent review attempt 2 of `suggestion-history-contract`: pass. The AC-001.11 assertions now fail if the foreign row leaks. Re-checked here: verdict pass in the review frontmatter; triage mocks + hooks 16/16. Feature moved to passing.
+- Open: BUG-105 (FE Lead); Project filter vs guideline 03 §5 (FE Lead decision log); `openapi/tsolve-api.yaml` tag text still says "frontend proposal". Task 3 (`suggestion-history-api`) waits for PR #107.

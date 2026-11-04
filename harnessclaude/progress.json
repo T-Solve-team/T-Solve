@@ -156,10 +156,10 @@
       "currentPhase": "implement",
       "features": {
         "suggestion-history": "passing",
-        "suggestion-history-contract": "evaluating",
+        "suggestion-history-contract": "passing",
         "suggestion-history-api": "pending"
       },
-      "lastUpdated": "2026-11-04T09:31:44.007Z",
+      "lastUpdated": "2026-11-04T09:39:46.150Z",
       "branch": "feat/triage",
       "repos": [
         "default"
