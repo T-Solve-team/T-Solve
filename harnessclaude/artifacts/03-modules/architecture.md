@@ -46,7 +46,7 @@ This replaces the pool model of ADR-0001 (24/10) and the single-tenant model of 
 | Provisioning | A Platform Operator creates, suspends and reactivates a Workspace in the Platform Console and invites its first Admin (HLA, `platform` package): Workspace database and runtime user, migrations, registry row, first-Admin invitation — all or nothing (GBR-24). `infra/ops/workspace.sh` (KAN-240) stays as the hand-run form of the same provisioning service the Console calls (the demo seed uses it before the Console exists); the first Admin is invited, as in the HLA. The Admin then enters the company information, the Jira site and the service account at the first sign-in (UC-10); the Jira site's `cloudId` is recorded in the registry then and cannot change (GBR-14, GBR-24). Nobody deletes a Workspace or reads its data (GBR-38). |
 | Sessions | A Workspace session is valid only on its own Workspace site (GBR-03). Sessions live in **Redis** (the HLA's shared, site-bound session store), so no API replica keeps a session of its own; the session store is kept apart from any eviction cache. |
 | Suspended Workspace | Its Workspace site and sign-in are refused (MSG150), the Jira App's calls are refused; its database is kept; its jobs do not run and JOB-02 skips it; ticket tracker events received meanwhile are dropped and not replayed (D29, GBR-38). |
-| Files | Stored in object storage (MinIO, S3-compatible; HLA 4/11): every object key starts with the Workspace's prefix taken from `TenantContext` (GBR-37); files are served by signed URLs; no pod-local or container-local files, so any API replica can serve any file. |
+| Files | Stored in object storage (Garage, S3-compatible; HLA 4/11): every object key starts with the Workspace's prefix taken from `TenantContext` (GBR-37); files are served by signed URLs; no pod-local or container-local files, so any API replica can serve any file. |
 | AI | Retrieval for Search, AI Solution Suggestion and the Knowledge Chatbot only uses data of the Workspace of the request or job, filtered by what the user may see (GBR-12, GBR-37). |
 
 The tenant-isolation test (an Account of Workspace A cannot read Workspace B — web app, Jira App, Search,
@@ -111,7 +111,7 @@ per-Workspace cap.
 | Schema migrations | shared | Liquibase, two changelogs: the catalog changelog `db/changelog/catalog/catalog-master.xml` and the tenant changelog `db/changelog/db.changelog-master.xml` (formatted-SQL changesets in `db/changelog/changes/NNN-<slug>.sql`), applied to every Workspace database at startup, in the deploy and when a Workspace is created; never edit an applied changeset, add a new one |
 | Auth/Identity | shared | Central Google OIDC sign-in on `login.`; the Workspace comes from the signed state value (D9), kept in the registry database; the session lives in Redis; only an email the Admin added to that Workspace signs in (GBR-03) |
 | Background jobs | shared | JobRunr OSS on the Jobs database, `worker` process (Background Jobs) |
-| File storage | per Workspace | MinIO (S3-compatible) in the stack: one key prefix per Workspace for Evidence and Wiki documents, signed URLs, no local files (Multi-Tenancy, Files) |
+| File storage | per Workspace | Garage (S3-compatible) in the stack: one key prefix per Workspace for Evidence and Wiki documents, signed URLs, no local files (Multi-Tenancy, Files) |
 | AI | shared | Ollama on the AI VPS: the chat LLM and bge-m3 embeddings (1024 dimensions), for everything; no OpenRouter, no third-party AI service, no PII masking anywhere (ai module, Chatbot, suggestions; content never leaves T-Solve's servers; D3, D41, GBR-12). The HLA drawing still shows "PII masking"; it is dropped here (decision 4/11) and the drawing is to be corrected |
 | Email | shared | SMTP, sent by the worker |
 | Logging | shared | SLF4J to stdout |
@@ -128,11 +128,11 @@ per-Workspace cap.
 
 | Server | Runs |
 |--------|------|
-| Application VPS | Caddy with the wildcard certificate `*.tsolve.io.vn`, routing by host: `{site name}.` → web app + `/api`, `admin.` → Platform Console, `login.` → central sign-in, `api.` → calls from the Jira App (Forge Remote); the web process; the worker; the ops script; Redis (one container with persistence, `noeviction`); MinIO; PostgreSQL 16 + pgvector with the catalog database, the Jobs database and one database per Workspace |
+| Application VPS | Caddy with the wildcard certificate `*.tsolve.io.vn`, routing by host: `{site name}.` → web app + `/api`, `admin.` → Platform Console, `login.` → central sign-in, `api.` → calls from the Jira App (Forge Remote); the web process; the worker; the ops script; Redis (one container with persistence, `noeviction`); Garage; PostgreSQL 16 + pgvector with the catalog database, the Jobs database and one database per Workspace |
 | AI VPS | Ollama with the chat LLM and bge-m3; reachable only from the application VPS over a private, encrypted link, never from the internet; no Internet egress and no prompt logging (D41, GBR-12) |
 
 The two servers exist because the models need their own CPU and RAM (D41; Jira KAN-194, KAN-200, KAN-203). On a
-developer machine, Docker Compose also runs Redis, MinIO and Ollama (every app-level HLA rule — registry, router, Redis sessions, site-bound sessions, row guard — works the same on Compose; the move to Kubernetes is a later step for infra); every environment points the backend at it with
+developer machine, Docker Compose also runs Redis, Garage and Ollama (every app-level HLA rule — registry, router, Redis sessions, site-bound sessions, row guard — works the same on Compose; the move to Kubernetes is a later step for infra); every environment points the backend at it with
 `OLLAMA_BASE_URL`. Demo data (two Workspaces, created through the provisioning service) is seeded from `infra/seed/` on dev and staging only, never from the
 production configuration (D42, GBR-24).
 
