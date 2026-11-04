@@ -9,7 +9,7 @@ reviewer: Codex self-review
 iteration: 1
 ---
 
-# Review: identity — Task 14: space-handover
+# Review: identity — Task 22: space-handover
 
 Self-review of the uncommitted diff against approved STORY-009. No independent external approval is claimed. Existing runtime logic is reused; changes are tests, OpenAPI descriptions/generated comments, bug tracking and harness evidence.
 

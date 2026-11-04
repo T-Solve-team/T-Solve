@@ -6,9 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,7 +40,8 @@ class SignInStateServiceTest {
     private final SignInStateRepository repository = store.repository();
     private final MutableClock clock = new MutableClock();
     private final SignedToken signedToken = new SignedToken(SignInTestFixtures.properties());
-    private final SignInStateService service = new SignInStateService(repository, signedToken, clock);
+    private final SignInStateService service =
+            new SignInStateService(repository, signedToken, new IdentityClock(clock));
 
     @Test
     @DisplayName("AC-001.2 creates a Workspace state with exactly one target, kept returnTo and a 10-minute life")
@@ -170,6 +175,78 @@ class SignInStateServiceTest {
         assertThat(service.consume(value)).map(SignInState::getId).contains(id);
         verify(repository).markUsed(id, MutableClock.START);
         assertThat(service.consume(value)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("AC-001.2 / Q9 takes createdAt and expiresAt from IdentityClock")
+    void takesTimesFromIdentityClock_AC_001_2_Q9() {
+        Instant time = Instant.parse("2031-05-06T07:08:09Z");
+        SignInStateService other =
+                new SignInStateService(repository, signedToken, new IdentityClock(Clock.fixed(time, ZoneOffset.UTC)));
+
+        other.createForWorkspace(ACME_ID, "/");
+
+        SignInState saved = store.onlySaved();
+        assertThat(saved.getCreatedAt()).isEqualTo(time);
+        assertThat(saved.getExpiresAt()).isEqualTo(time.plus(SignInTestFixtures.STATE_LIFETIME));
+    }
+
+    @Test
+    @DisplayName("AC-001.44 authorizeOnce marks the checked state with the hash and the IdentityClock time")
+    void authorizeOnceMarksTheState_AC_001_44() {
+        String value = service.createForWorkspace(ACME_ID, "/");
+        UUID id = store.onlySaved().getId();
+        byte[] hash = new byte[32];
+        hash[0] = 7;
+
+        Optional<SignInState> result = service.authorizeOnce(value, hash);
+
+        assertThat(result).map(SignInState::getId).contains(id);
+        verify(repository).markAuthorized(id, hash, MutableClock.START);
+    }
+
+    @Test
+    @DisplayName("AC-001.45 authorizeOnce returns empty when the state is already authorized")
+    void authorizeOnceReturnsEmptyWhenAlreadyAuthorized_AC_001_45() {
+        String value = service.createForWorkspace(ACME_ID, "/");
+        doReturn(0).when(repository).markAuthorized(any(), any(), any());
+
+        assertThat(service.authorizeOnce(value, new byte[32])).isEmpty();
+    }
+
+    enum Untouchable {
+        EDITED,
+        EXPIRED,
+        USED
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @EnumSource(Untouchable.class)
+    @DisplayName("AC-001.45 authorizeOnce does not touch an invalid, expired or used state")
+    void authorizeOnceDoesNotTouchAnInvalidState_AC_001_45(Untouchable kind) {
+        String valid = service.createForWorkspace(ACME_ID, "/");
+        String value = valid;
+        switch (kind) {
+            case EDITED -> value = BadState.MAC_EDITED.make(valid, signedToken);
+            case EXPIRED -> clock.advance(JUST_AFTER_EXPIRY);
+            case USED -> ReflectionTestUtils.setField(store.onlySaved(), "usedAt", MutableClock.START);
+        }
+
+        assertThat(service.authorizeOnce(value, new byte[32])).isEmpty();
+        verify(repository, never()).markAuthorized(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("AC-001.46 consume still consumes a state that was never authorized")
+    void consumeStillConsumesAStateThatWasNeverAuthorized_AC_001_46() {
+        String value = service.createForWorkspace(ACME_ID, "/");
+        UUID id = store.onlySaved().getId();
+
+        Optional<SignInState> consumed = service.consume(value);
+
+        assertThat(consumed).map(SignInState::getId).contains(id);
+        assertThat(consumed.get().getAuthorizedAt()).isNull();
+        verify(repository, times(1)).markUsed(id, MutableClock.START);
     }
 
     static Stream<String> keptReturnTo() {

@@ -59,6 +59,13 @@ public class SignInState {
     @Column(name = "used_at")
     private Instant usedAt;
 
+    // only SignInStateRepository.markAuthorized writes these two, together, in one conditional UPDATE
+    @Column(name = "authorized_at")
+    private Instant authorizedAt;
+
+    @Column(name = "browser_binding_hash")
+    private byte[] browserBindingHash;
+
     protected SignInState() {}
 
     SignInState(
@@ -114,6 +121,14 @@ public class SignInState {
 
     public Instant getExpiresAt() {
         return expiresAt;
+    }
+
+    public Instant getAuthorizedAt() {
+        return authorizedAt;
+    }
+
+    public byte[] getBrowserBindingHash() {
+        return browserBindingHash;
     }
 
     public Instant getUsedAt() {

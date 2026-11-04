@@ -5,6 +5,8 @@ date: 2026-10-23
 
 # Design: chatbot
 
+> **Schema alignment pending (KAN-33, 4/11):** `02_tenant.sql` holds the chat data in `chat_session`, `chat_message` and `chat_feedback`, with no `workspace_id` and no row-level security. The "Tables" row below still names `chatbot_answers` and `chatbot_ratings`. Re-plan it against the DDL before building the backend tables.
+
 Spec: `artifacts/03-modules/chatbot/spec.md` · Module: `artifacts/03-modules/chatbot/module.md` ·
 Rules: `frontend/AGENTS.md` and `frontend/guidelines/` (they win over anything here that contradicts them).
 

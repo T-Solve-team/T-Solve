@@ -8,11 +8,16 @@ total_modules: 17
 ## Overview
 > **Sync of 01/11 with Jira (export of 01/11, KAN-1…244) and Report3 (split files of 31/10).** Added the
 > `ticket-review` folder (it was only on PR #26). Recorded the decisions of 29–31/10: one database per Workspace plus
-> a catalog DB (KAN-98; RLS KAN-100 cancelled), no Platform Console (`platform-console` cancelled, ops script KAN-240
-> in `platform`), no PII masking (KAN-138 cancelled), FE-10 is AI Solution Suggestion with no Simple / Complex
+> a catalog DB (KAN-98; RLS KAN-100 cancelled), no PII masking (KAN-138 cancelled), FE-10 is AI Solution Suggestion with no Simple / Complex
 > (module name `triage` kept), new UC-58 (Chatbot creates a Jira issue) and UC-59 (link ticket tracker account).
 > Tenancy follows `docs/adr/0002-database-per-workspace.md`; the `platform` spec was rewritten on 01/11 and needs
 > re-approval.
+>
+> **Sync of 04/11 with the multi-tenant HLA (KAN-231).** The Platform Console on `admin.` is back (`platform-console`
+> restored with its owner; KAN-113…116, KAN-184 and KAN-233 reopened, KAN-244 narrowed), Redis keeps the sessions,
+> the catalog is the Platform / Tenant Registry database, JobRunr has its own Jobs database, files are in Garage, the
+> ops script KAN-240 is the hand-run form of the Console's provisioning, and every tenant table has a row guard.
+> No PII masking anywhere. Compose is the MVP deployment; Kubernetes is the HLA target.
 
 Full-stack modules (backend + web app) cut along the 13 Report3 features, two foundations that every feature
 builds on, the Jira App, and three platform modules of the multi-tenant model (GBR-37): the tenant
@@ -26,13 +31,13 @@ owner (see "Stories → module"). Owners can change: edit the Owner column and t
 
 | Module | Report3 feature · UCs | Owner | Complexity | Repos | Dependencies |
 |--------|-----------------------|-------|-----------|-------|--------------|
-| `platform` | Tenant layer: `TenantContext`, catalog DB + one database per Workspace (KAN-98), Tenant Resolvers (host, `cloudId`), Forge Invocation Token check, Workspace ops script (KAN-240), file storage per Workspace; infrastructure (Compose, Caddy, CI/CD, VPS, seed) | Trần Trung Hiếu | large | default | — |
+| `platform` | Tenant layer: `TenantContext`, Registry (catalog) DB + one database per Workspace (KAN-98), Jobs DB, per-DB row guard, Tenant Resolvers (host, `cloudId`), Forge Invocation Token check, provisioning service and its ops script (KAN-240), Garage object storage with a prefix per Workspace, Redis; infrastructure (Compose, Caddy, CI/CD, VPS, seed) | Trần Trung Hiếu | large | default | — |
 | `be-foundation` | Five roles in security, `/me`, `ProblemDetail` + MSG codes, audit events | Anh Tran Hai | medium | default | platform |
 | `fe-foundation` | Web app base: roles, session, guards, landing, menus, routes, catalog, mocks, guidelines (KAN-57) | Trần Trung Hiếu | large | default | — |
 | `ai` | AI gateway: chat LLM and bge-m3 embedding clients (Ollama on the AI VPS, no PII masking), AI draft and rewrite of a Solution (UC-19), model benchmark | Trần Hải Anh | medium | default | platform, be-foundation |
-| `worker` | Background worker: JobRunr OSS jobs per Workspace, `runInTenant`, no jobs for Suspended Workspaces, per-Workspace cap; SMTP email | Phạm Tùng Dương | medium | default | platform |
+| `worker` | Background worker: JobRunr OSS jobs per Workspace on its own Jobs DB (`tsolve_<env>_jobs`), `runInTenant`, no jobs for Suspended Workspaces, per-Workspace cap; cleanup of expired sign-in states and hand-off codes; SMTP email | Phạm Tùng Dương | medium | default | platform |
 | `identity` | Role-Based Access Control · UC-01–09, UC-59 | Trần Trung Hiếu (UC-01–03, UC-59) · Phạm Tùng Dương (UC-04–09, RBAC rules) | large | default | platform, be-foundation, fe-foundation |
-| `platform-console` | **Cancelled 31/10** (no Platform Console; ops script KAN-240 in `platform`) | — | — | — | — |
+| `platform-console` | Platform Console on `admin.` (restored 04/11, HLA): Workspace list, create, suspend / reactivate, invite the first Admin (UC-54…56); Operator sign-in is `identity` Task 11 (KAN-233) | Đặng Tấn Bình | medium | default | platform, identity, worker, fe-foundation |
 | `workspace` | Workspace & Department Management · UC-10–15 | Đặng Tấn Bình | medium | default | identity |
 | `project-integration` | Ticket tracker integration · UC-16–18; tracker client and issue events | Đặng Tấn Bình | medium | default | workspace, worker |
 | `wiki` | Space Management + Wiki Document Management · UC-38–50 | Đặng Nhật Minh | large | default | workspace, ai |
@@ -130,7 +135,7 @@ not exist yet are marked *proposed*; the backend lead confirms them when the mod
 | `ai` | `ai/**` *(proposed)* | — | — |
 | `worker` | `worker/**` *(proposed; SMTP in `worker/client/`)* | — | — |
 | `identity` | `identity/**` | `features/auth/**`, `features/my-profile/**`, `features/users/**` | — |
-| `platform-console` | — *(cancelled)* | — *(cancelled; KAN-244 removes the old code)* | — |
+| `platform-console` | `console/**` *(proposed)* | `features/platform-console/**` | — |
 | `workspace` | `workspace/**` | `features/workspace/**` | — |
 | `project-integration` | `project/**` *(proposed)* | `features/jira-integration/**` | — |
 | `wiki` | `wiki/**` *(proposed)* | `features/wiki/**` | — |
@@ -156,10 +161,12 @@ folders (`chatbot` took its folder with its plan, KAN-69). The approved `ticket-
 - **Workspace catalog** (`platform` → `identity`, `workspace`, `jira-app`, `worker`): find a Workspace by id, site
   name or Jira `cloudId` and read its status; link the Jira site entered by the Admin at UC-10 (MSG153, called by
   `workspace`); record an Account's email so it belongs to one Workspace (MSG155, called by `identity` at UC-05).
-  Workspaces are created, suspended and reactivated only by the ops script (KAN-240), which calls `identity`'s
-  `FirstAdminCreator`; events `WorkspaceSuspended` / `WorkspaceReactivated` tell `worker`.
-- **File storage** (`platform` → `wiki`, `ticket-repository`, `jira-app`): upload, read and delete a file under
-  `/{workspaceId}/…` of the current Workspace; path traversal refused; size limit.
+  Workspaces are created, suspended and reactivated by a Platform Operator in the Platform Console, who invites the
+  first Admin (HLA, 3/11; architecture.md "Provisioning"); the ops script (KAN-240) is the hand-run form of the same
+  provisioning service. The `FirstAdminCreator` port, declared by `platform` and implemented by `identity`, settles the Account creation; events `WorkspaceSuspended` / `WorkspaceReactivated` tell `worker`.
+- **File storage** (`platform` → `wiki`, `ticket-repository`, `jira-app`): upload, read and delete an object in Garage
+  under the key prefix `{workspaceId}/` of the current Workspace; signed URLs for download; no pod-local files;
+  path traversal refused; size limit.
 - **Job queue and `runInTenant`** (`worker` → `project-integration`, `chatbot`, `search`, `ticket-review`,
   `triage`): enqueue a job (it takes the `workspaceId` from `TenantContext`), schedule a recurring job per
   Workspace (JOB-02 at 00:00); every job runs inside `runInTenant(workspaceId, …)`; a Suspended Workspace's job does
@@ -206,10 +213,10 @@ Assignee = the Jira assignee (D40).
 | KAN-110 | Phạm Tùng Dương | [UC-07] Update roles and Department | `identity` |
 | KAN-111 | Phạm Tùng Dương | [UC-08] Hand over Projects | `identity` |
 | KAN-112 | Phạm Tùng Dương | [UC-09] Hand over Spaces | `identity` |
-| KAN-113 | Đặng Tấn Bình | **Cancelled** [UC-54] View Workspaces (Platform Console) | — (cancelled) |
-| KAN-114 | Đặng Tấn Bình | **Cancelled** [UC-55] Create Workspace | — (cancelled) |
-| KAN-115 | Đặng Tấn Bình | **Cancelled** [UC-55] Suspend / reactivate a Workspace | — (cancelled) |
-| KAN-116 | Đặng Tấn Bình | **Cancelled** [UC-56] Invite the first Admin | — (cancelled) |
+| KAN-113 | Đặng Tấn Bình | [UC-54] View Workspaces (Platform Console; restored 04/11) | `platform-console` |
+| KAN-114 | Đặng Tấn Bình | [UC-55] Create Workspace (restored 04/11) | `platform-console` |
+| KAN-115 | Đặng Tấn Bình | [UC-55] Suspend / reactivate a Workspace (restored 04/11) | `platform-console` |
+| KAN-116 | Đặng Tấn Bình | [UC-56] Invite the first Admin (restored 04/11) | `platform-console` |
 | KAN-117 | Phạm Tùng Dương | Role union + method security | `identity` |
 | KAN-118 | Phạm Tùng Dương | Department / Project / Space scope checks | `identity` |
 | KAN-119 | Đặng Tấn Bình | [UC-10, UC-11] Add / update Workspace information | `workspace` |
@@ -277,7 +284,7 @@ Assignee = the Jira assignee (D40).
 | KAN-181 | Trần Hải Anh | [UC-51] Follow-up questions in the session's context | `chatbot` |
 | KAN-182 | Trần Hải Anh | [UC-53] Rate a Chatbot answer | `chatbot` |
 | KAN-183 | Trần Hải Anh | [UC-52] View the chat history of the session | `chatbot` |
-| KAN-184 | Đặng Tấn Bình | **Cancelled** Platform Operator UC specs in Report 3 | — (cancelled) |
+| KAN-184 | Đặng Tấn Bình | Platform Operator UC specs in Report 3 (restored 04/11) | `platform-console` |
 | KAN-185 | Phạm Tùng Dương | Test plan | docs, no module |
 | KAN-186 | Phạm Tùng Dương | E2E tests + tenant-isolation test (the isolation criterion lives in the `platform` spec) | QA, no module |
 | KAN-187 | Đặng Tấn Bình | Report 4 – II. Detailed Code Design: Workspace provisioning (ops script) & tenant layer | docs, no module |
@@ -331,13 +338,12 @@ out.
 | KAN-77 | TicketList (web app of UC-27) | `search` (with KAN-147) |
 | KAN-78…93 | Epics E01…E17 | — (each Story above has its module) |
 | KAN-204…207 | fe-foundation tasks 7–10 (catalog, UUID ids, Workspace site, route tree by host) | `fe-foundation` |
-| KAN-229…232, KAN-234…239 | identity tasks 7–18: sign-in, callback, session, Jira account link (UC-59), My Profile | `identity` |
-| KAN-233 | **Cancelled** identity Task 11: Platform Console sign-in | — (cancelled) |
+| KAN-229…239, KAN-247 | identity tasks 7–12 and 15–18: sign-in, callback, session, Platform Console sign-in, Jira account link (UC-59), My Profile | `identity` |
 | KAN-240 | Ops script: create / suspend / reactivate a Workspace (GBR-24, GBR-38) | `platform` |
 | KAN-241 | [UC-58] Chatbot creates a Jira issue when no answer is found (API) | `chatbot` |
 | KAN-242 | [UC-58] Jira issue form in the Chatbot screen (web app) | `chatbot` |
 | KAN-243 | [UC-51, GBR-39] Chatbot classifies questions before searching | `chatbot` |
-| KAN-244 | [FE] Remove the old Simple/Complex/Sensitive triage and Platform Console code | `fe-foundation` |
+| KAN-244 | [FE] Remove the old Simple/Complex/Sensitive triage code (the Platform Console route tree and sign-in stay, 04/11) | `fe-foundation` |
 
 Stories of `Stories_T-Solve.md` that have no key in KAN-94…203 (TS-066…068, TS-06A…06C, TS-071, TS-100, TS-101,
 TS-121, TS-156) are not in this table; they are mapped when their Jira issues are checked.
