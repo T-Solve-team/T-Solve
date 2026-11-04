@@ -42,6 +42,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
+import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.AuthSecurityConfig;
 import vn.tsolve.identity.account.Account;
 import vn.tsolve.identity.account.AccountSignInService;
@@ -58,6 +59,7 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
  */
 @WebMvcTest({CallbackController.class, AuthorizeController.class})
 @Import({
+    SecurityConfig.class,
     AuthSecurityConfig.class,
     AuthHosts.class,
     SignInStateService.class,

@@ -483,6 +483,9 @@
 {"ts":"2026-11-01T09:32:10.534Z","type":"feature-status","module":"ticket-review","feature":"review-ticket-detail","from":"evaluating","to":"passing"}
 {"ts":"2026-11-01T09:36:45.955Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"47c23557c3c71f269a7232c6a0ff7477eedd8ca9"}
 {"ts":"2026-11-01T10:06:32.976Z","type":"spec-approved","module":"identity","specHash":"97b326a64c8075b18ddd986f171951fc76c6f4dc2eb7bb37ad2869639a32256a"}
+{"ts":"2026-11-02T19:18:24.846Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":"pending","to":"in-progress"}
+{"ts":"2026-11-02T19:36:19.211Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"673f3abcfd893c972558b3e8630b9e2bba859bac"}
+{"ts":"2026-11-02T19:36:20.126Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-01T10:07:45.918Z","type":"spec-approved","module":"ticket-review","specHash":"52faf1d9cd258fce25e10db736fe84b3a8e49a892e2a2e70fb4c70c88b72fda3"}
 {"ts":"2026-11-01T10:08:20.558Z","type":"feature-status","module":"ticket-review","feature":"expired-tickets","from":null,"to":"pending"}
 {"ts":"2026-11-01T10:08:20.596Z","type":"feature-status","module":"ticket-review","feature":"expired-tickets","from":"pending","to":"in-progress"}
@@ -523,6 +526,10 @@
 {"ts":"2026-11-04T13:58:39.189Z","type":"feature-status","module":"platform","feature":"forge-security-chain","from":null,"to":"pending"}
 {"ts":"2026-11-04T14:00:54.904Z","type":"spec-approved","module":"platform","specHash":"2d8f13b5dc906217c8defe2206c7b8fb8b3a86f1864ca9e3871bdc246a60aab3"}
 {"ts":"2026-11-04T14:19:50.609Z","type":"spec-approved","module":"platform","specHash":"b1089aec1c4aabd28788d9c379999070f635d32449eb69d0d0c004567eab8c31"}
+{"ts":"2026-11-04T14:36:23.296Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-04T14:50:22.154Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"6e07c515870cf16d9b61f2eac5872c3a2c81f30f"}
+{"ts":"2026-11-04T14:50:22.207Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-04T14:50:22.251Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":"evaluating","to":"passing"}
 {"ts":"2026-11-04T14:42:58.818Z","type":"spec-approved","module":"identity","specHash":"feafd900f11237b700c3d8013f72f6a1040bb5df3ff34808450b672d4136e8d1"}
 {"ts":"2026-11-04T14:43:36.284Z","type":"spec-approved","module":"identity","specHash":"feafd900f11237b700c3d8013f72f6a1040bb5df3ff34808450b672d4136e8d1"}
 {"ts":"2026-11-04T15:24:34.114Z","type":"spec-approved","module":"identity","specHash":"4d335498b9a25027341bb3064753365210d5fd834dce36bad793cb83dde7b32a"}

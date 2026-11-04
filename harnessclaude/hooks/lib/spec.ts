@@ -31,7 +31,7 @@ const STORY_HEADING = /^(#{2,4})\s+(STORY-\d{3})\b/;
 const HEADING = /^(#{1,6})\s/;
 const AC_ITEM = /^\s*[-*]\s+(AC-[^\s:]+):?\s*(.*)$/;
 const AC_ID = /^AC-(\d{3})\.(\d+)$/;
-const AC_MENTION = /\bAC-\d{3}\.\d+\b/g;
+const AC_MENTION = /(?<![A-Za-z0-9])AC(?:-(\d{3})\.(\d+)|_(\d{3})_(\d+))(?![A-Za-z0-9])/g;
 const VAGUE =
   /\b(fast|quick(?:ly)?|appropriate(?:ly)?|reasonabl[ey]|user[- ]friendly|intuitive(?:ly)?|robust|efficient(?:ly)?|easy|easily|seamless(?:ly)?|etc|as needed|and\/or)\b/i;
 
@@ -191,7 +191,8 @@ export function trace(spec: Spec, tests: TraceTest[], stories: string[] = []) {
   const unknown = new Set<string>();
 
   for (const test of tests) {
-    for (const [id] of test.text.matchAll(AC_MENTION)) {
+    for (const [, dottedStory, dottedCriterion, javaStory, javaCriterion] of test.text.matchAll(AC_MENTION)) {
+      const id = `AC-${dottedStory ?? javaStory}.${dottedCriterion ?? javaCriterion}`;
       const rivals = (test.others ?? []).filter((o) => o.acIds.has(id)).map((o) => o.name);
       if (!known.has(id)) {
         if (!rivals.length) unknown.add(id);

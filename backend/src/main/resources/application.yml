@@ -28,6 +28,11 @@ spring:
 server:
   port: ${SERVER_PORT}
 
+springdoc:
+  swagger-ui:
+    csrf:
+      enabled: true
+
 logging:
   level:
     # their messages carry the values of a failed insert, i.e. ticket content (AGENTS.md §9); the services log
