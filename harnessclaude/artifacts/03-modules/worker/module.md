@@ -31,7 +31,10 @@ queues, which the cap replaces for the MVP.
 
 ## Responsibilities
 - The worker process: `worker` profile, its own container (KAN-161, with `platform`'s Compose file).
-- JobRunr OSS on the catalog database: enqueue, retries, recurring jobs, dashboard (KAN-161).
+- JobRunr OSS on its own Jobs database, `tsolve_<env>_jobs`, on the same PostgreSQL server (not the Tenant Registry
+  DB): enqueue, retries, recurring jobs, dashboard (KAN-161).
+- A recurring cleanup job that deletes the expired sign-in states and hand-off codes kept in the Registry DB
+  (written with `identity`, which owns their meaning; HLA Q2).
 - `workspaceId` on every job, taken from `TenantContext` at enqueue; every job runs inside
   `runInTenant(workspaceId, …)` (KAN-102, GBR-37).
 - A recurring job per Workspace (for JOB-02 at 00:00, used by `ticket-review`).
@@ -51,7 +54,7 @@ queues, which the cap replaces for the MVP.
 ### Consumed
 | Dependency | Interface | Description |
 |------------|-----------|-------------|
-| platform | TenantContext, Workspace catalog and its events | Set the Workspace of a job; know whether a Workspace is Suspended |
+| platform | TenantContext, Tenant Registry (Workspace catalog) and its events | Set the Workspace of a job; know whether a Workspace is Suspended |
 
 ## Target Repos
 - default: backend/ (`worker`, proposed).
