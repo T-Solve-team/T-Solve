@@ -56,3 +56,16 @@ were not rewritten. No original SQL/PDF, schema, API YAML or dependency manifest
 No numeric coverage threshold or blanket production-security certification is claimed.
 Deployment proxy/cookie policy, FE CSRF transport and sign-in token rotation are follow-ups
 owned outside STORY-002's repair scope.
+
+## Subsequent main update — 2026-11-04
+
+Main advanced to `969fa18` during the earlier verification window. The PR's reported base
+SHA lagged the live main ref, so comparing that SHA alone missed a new append conflict in
+`harnessclaude/events/events.jsonl`. The browser conflict editor identified the two new
+identity approval events overlapping the four role-security repair events.
+
+Fetched the live main ref and preserved both complete histories. All 534 resulting JSONL
+lines parse; every original event line from HEAD and main is retained. Audit passes with
+12 pre-existing warnings; identity spec check passes (10 stories/137 ACs); STORY-002 trace
+remains 13/13. This merge changes only Harness documentation/approval metadata, so the
+427 unit/18 integration result remains applicable without repeating unchanged code tests.

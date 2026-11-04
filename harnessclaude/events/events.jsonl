@@ -530,3 +530,5 @@
 {"ts":"2026-11-04T14:50:22.154Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"6e07c515870cf16d9b61f2eac5872c3a2c81f30f"}
 {"ts":"2026-11-04T14:50:22.207Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":"fixing","to":"evaluating"}
 {"ts":"2026-11-04T14:50:22.251Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":"evaluating","to":"passing"}
+{"ts":"2026-11-04T14:42:58.818Z","type":"spec-approved","module":"identity","specHash":"feafd900f11237b700c3d8013f72f6a1040bb5df3ff34808450b672d4136e8d1"}
+{"ts":"2026-11-04T14:43:36.284Z","type":"spec-approved","module":"identity","specHash":"feafd900f11237b700c3d8013f72f6a1040bb5df3ff34808450b672d4136e8d1"}
