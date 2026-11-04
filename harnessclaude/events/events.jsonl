@@ -526,3 +526,5 @@
 {"ts":"2026-11-04T10:34:32.703Z","type":"feature-status","module":"triage","feature":"suggestion-history-api","from":"evaluating","to":"passing"}
 {"ts":"2026-11-04T10:42:00.516Z","type":"commit-recorded","module":"triage","repo":"default","sha":"ad3053418ff5a3f7315f82ecf7355438691c9271"}
 {"ts":"2026-11-04T10:43:49.144Z","type":"spec-approved","module":"triage","specHash":"cf15ceed7867e474f6e446a10b65fa6d5851f5a7a007ada778357f66748b3156"}
+{"ts":"2026-11-03T19:46:40.160Z","type":"quick-opened","what":"Align the database conventions in AGENTS.md with the DDL and ADR-0002: singular tables, <table>_id UUID keys, no workspace_id or row-level security","files":["backend/AGENTS.md"]}
+{"ts":"2026-11-04T03:14:57.195Z","type":"quick-closed","what":"Align the database conventions in AGENTS.md with the DDL and ADR-0002: singular tables, <table>_id UUID keys, no workspace_id or row-level security","files":["backend/AGENTS.md"]}
