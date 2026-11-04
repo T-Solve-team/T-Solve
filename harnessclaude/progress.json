@@ -92,7 +92,7 @@
         "jira-link-sign-in": "pending",
         "project-handover": "passing",
         "space-handover": "passing",
-        "account-checks": "pending",
+        "account-checks": "passing",
         "platform-adapters": "pending",
         "profile-account": "pending",
         "profile-viewable-spaces": "pending",
@@ -101,7 +101,7 @@
         "my-solutions-counters": "pending",
         "my-solutions-filters": "pending"
       },
-      "lastUpdated": "2026-11-03T17:18:58.086Z",
+      "lastUpdated": "2026-11-04T15:51:41.365Z",
       "branch": "feat/identity",
       "repos": [
         "default"
