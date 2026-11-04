@@ -28,6 +28,7 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
 | 2026-11-01 | STORY-003 | Add AC-003.15 (the Spaces card is always shown; spinner at once; MSG142 "No Spaces found" when "Spaces I can view" is empty) and AC-003.16 (the Projects card is always shown; MSG143 "Not a member of any Project." in place of the table). Reword AC-003.1 (the Projects list is read-only; its empty state is AC-003.16) and AC-003.3. Messages MSG142 and MSG143 are new. AC-003.11 to .13 (My Solutions) unchanged | Hiếu, 1/11 (KAN-237 QA): reverses plan decision Q4 for the Spaces and Projects cards only; Account rows and "Spaces I manage" keep Q4; My Solutions is for KAN-238 |
 | 2026-10-31 | STORY-003 | AC-003.12 reworded: the Ticket ID, not the whole row, is the link (no shared DataTable change) | KAN-160 plan review; FE Lead 31/10 (R1 A, R1' A) |
 | 2026-11-01 | STORY-003 | AC-003.14: a 403 on My Solutions shows MSG08 | KAN-238 Task 18 QA plan Q2; FE Lead 1/11 |
+| 2026-11-04 | STORY-001 | Interface Contracts "Stores" wording only: the Database Tables baseline (Markdown companion `00-baseline/T-Solve_Database_Tables.md`; the source PDF is kept outside the repo) wins on names: keys are `id` (not `<table>_id`), the Registry's table is `workspace_email` (singular), `app_user.full_name` is at most 100 characters (was 255), and `app_user.first_sign_in_at`, `last_sign_in_at` and `hand_off_code` are additions the baseline lists. No acceptance criterion added, reworded or removed | KAN-235 Task 9b, Hiếu 04/11 |
 | 2026-11-04 | STORY-001 | Interface Contracts "Stores" wording only: the Account table is `app_user`, the Roles table `user_role` and the hand-off table `hand_off_code`, singular with `<table>_id` keys (the KAN-33 DDL, platform AC-001.20); the Java names stay `Account`, `AccountRole`, `HandOffCode`. No acceptance criterion added, reworded or removed | KAN-235 Task 9b QA plan Q1 = A (Hiếu) |
 | 2026-11-03 | STORY-001, STORY-002 | Align with the multi-tenant HLA (29/10). Reword AC-001.15 (the Account lookup runs in the Workspace's own database, reached only through the bound tenant context) and AC-002.4 (the session lives in the shared session store, and the 15-minute bound for `EXPIRED` stays). Reword NFR 5 (the two-Workspace tests use two databases), Out of Scope (the Tenant Resolver, the Tenant Context and Database Router and the per-database RLS guard → `platform`) and Required from `platform` (the Tenant Context bound before the transaction with no default fallback, the Registry lookup, the first-Admin invitation). Rewrite the Interface Contracts "Database" paragraph: one database per company, so `accounts`, `account_roles` and `jira_account_links` have no `workspace_id`; platform-wide email uniqueness goes through the Tenant Registry; sign-in states and hand-off codes live in the Platform / Tenant Registry database; sessions live in Redis. The Platform Console on `admin.` stays (AC-001.21, .28–.34, NFR 4). No criterion is added or removed | KAN-231 HLA change, step 2 (Hiếu, 3/11: Q1–Q4 = A); step-1 mismatches H1–H14 |
 
@@ -410,19 +411,19 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
 
 **Stores.** The HLA gives each company its own PostgreSQL database (database per company, ADR-0002), so the account
 tables below have no `workspace_id`; the Workspace is the database the tenant context is bound to. Three places:
-- **Each company database** (the tenant Liquibase changelog; singular names and `<table>_id` UUID keys as platform AC-001.20, but no
+- **Each company database** (the tenant Liquibase changelog; singular names and `id` keys as the Database Tables baseline (`00-baseline/T-Solve_Database_Tables.md`), but no
   `workspace_id` and no foreign key to a Workspace; the RLS guard in each database is `platform`'s convention):
-  - `app_user` (the Account; Java `Account`): email stored lower-case and unique inside that database (GBR-37, D7); full name, empty until the
+  - `app_user` (the Account; Java `Account`): email stored lower-case and unique inside that database (GBR-37, D7); full name (at most 100 characters), empty until the
     first sign-in; status `ACTIVE` / `DEACTIVATED`; the Department of a Project Manager; first and last sign-in
     time. Email uniqueness across the whole platform (one email in one Workspace) is checked through the Tenant
-    Registry's `workspace_emails` (a `platform` service that identity calls when an Account is added; for the first
+    Registry's `workspace_email` (a `platform` service that identity calls when an Account is added; for the first
     Admin, `platform` claims the email itself before it calls `FirstAdminCreator`, AC-010.6); no index can span the
     company databases.
   - `user_role` (Java `AccountRole`): the Account's Roles, the four Roles besides Employee, since Employee is implied
     (be-foundation AC-002.2).
   - `jira_account_links` (the D1 name).
-- **The Platform / Tenant Registry database** (not a tenant database; the catalog changelog): the sign-in states and
-  the hand-off codes (table `hand_off_code`), because both are read before any tenant context exists (on `login.`).
+- **The Platform / Tenant Registry database** (not a tenant database; the catalog changelog; the Catalog database of the baseline): the sign-in states and
+  the hand-off codes (table `hand_off_code`, key `id`; not in the baseline's tables, listed there under "Additions not in the PDF"), because both are read before any tenant context exists (on `login.`).
 - **Redis** (the shared session store of the HLA): the Workspace and Operator sessions, so no API replica keeps a
   session of its own.
 
@@ -433,7 +434,7 @@ tables below have no `workspace_id`; the Workspace is the database the tenant co
 - An API contract stub in `frontend/openapi/tsolve-api.yaml`, generated through orval, for user list/detail and mutations plus the lookup data required by these screens. Endpoint and schema details belong in the design and are frontend mock proposals until agreed with the backend owner.
 - Pagination and errors follow guideline 06: `{ content, page: { size, number, totalElements, totalPages } }`; RFC 9457 Problem Details with catalog `code`, `params` and optional `fieldErrors`.
 - Mutable MSW handlers live in `frontend/src/features/users/mocks/handlers.ts`, using synthetic Workspace-scoped fixtures and validating rejected operations before changing mock records.
-- `UserAccount.id` is a UUID string (`type: string`, `format: uuid`), consistent with the `app_user_id` key convention; `/users/:userId` carries that UUID. DepartmentRef and SpaceRef follow the current shared contracts.
+- `UserAccount.id` is a UUID string (`type: string`, `format: uuid`), consistent with the UUID type of `app_user.id`; `/users/:userId` carries that UUID. DepartmentRef and SpaceRef follow the current shared contracts.
 - The user-list query `q` has a 100-character maximum after trimming; the mock rejects longer values with 400 MSG02 and parameters `field_name: Search`, `max_length: 100`.
 
 ### Required from other modules
@@ -441,12 +442,12 @@ tables below have no `workspace_id`; the Workspace is the database the tenant co
   - the Tenant Resolver for Workspace-site requests, which refuses an unknown or suspended Workspace;
   - the Tenant Context bound before the transaction, with no default fallback, and the Database Router behind it,
     and a way to run the callback's lookups in the context of the state value's Workspace;
-  - the Registry lookup: the Workspace record (site name, Google domain, status) and the `workspace_emails` check
+  - the Registry lookup: the Workspace record (site name, Google domain, status) and the `workspace_email` check
     of email uniqueness across the platform;
   - the per-database RLS guard convention and the Registry database datasource;
   - the port `FirstAdminCreator` and the `WorkspaceProvisioning` service that calls it (platform AC-013.13,
     AC-013.14): the first Admin of a new Workspace is created by this module through that port, after `platform` has
-    claimed the email in `workspace_emails`; the invitation email and its job (`InvitationJobQueue`) are `platform`'s
+    claimed the email in `workspace_email`; the invitation email and its job (`InvitationJobQueue`) are `platform`'s
     and `worker`'s (platform AC-013.17).
 - `be-foundation`: `TSolveUser`, the five Role constants, `ProblemDetail` errors, CSRF (AC-002.11, AC-002.13),
   and `/me` (STORY-003 of be-foundation), whose Department lookup this module implements.
