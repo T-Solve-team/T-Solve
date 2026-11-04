@@ -648,8 +648,8 @@
     }
   },
   "triage": {
-    "specHash": "f89248b2b780db18b2da123dbfedb0b2781eb33728fefd65a1e45fcab4babd86",
-    "approvedAt": "2026-11-02T12:58:28.358Z",
+    "specHash": "24d4a988954dec938ba4129c93b47fbd740282d95913759ef8b13582d38e7f10",
+    "approvedAt": "2026-11-04T07:52:13.297Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager opens , THE frontend SHALL show screen 10.1 with columns Issue, Sources, Suggested solution and Reporter's answer, ordered by newest result first.",
@@ -658,20 +658,30 @@
       "AC-001.4": "WHEN the user changes a filter, THE frontend SHALL combine the selected filters, return to page 1 and retain them in the URL across reload and browser Back navigation.",
       "AC-001.5": "IF the date range in the URL is incomplete, malformed or reversed, THEN THE frontend SHALL show MSG39 beside the date filter and prevent a request with that range.",
       "AC-001.6": "WHEN more than 20 results match, THE frontend SHALL show Total N items and paginate by 20 while retaining the current filters.",
-      "AC-001.7": "THE Issue cell SHALL show the Jira issue key and its Project; a safe HTTPS issue link SHALL open Jira, and a separate View details action SHALL open the 10.2 popup.",
+      "AC-001.7": "THE Issue cell SHALL show the Jira issue key and its Project's Jira project key; a safe HTTPS issue link SHALL open Jira, and a separate View details action SHALL open the 10.2 popup.",
       "AC-001.8": "THE Sources cell SHALL show the count of Ticket and Wiki sources used; THE Suggested solution cell SHALL show a plain-text excerpt or a dash when no suggestion was posted; THE Reporter's answer SHALL show Solved, Not solved or No answer.",
       "AC-001.9": "WHILE the list loads, THE frontend SHALL show LoadingState; IF no results match, THEN THE frontend SHALL show MSG04; IF the list request fails, THEN THE frontend SHALL show ErrorState with retry that retains the filters.",
       "AC-001.10": "IF the user lacks Project Manager, THEN THE existing route guard SHALL deny the page and the mock history API SHALL refuse a direct request without returning results.",
       "AC-001.11": "WHEN the mock history API receives a Project filter outside the user's managed Projects, THE mock API SHALL return 403/MSG08 rather than widening the list; THE mock API SHALL exclude results of another Workspace before filtering, ordering and pagination.",
-      "AC-001.12": "THE frontend SHALL render issue summaries, solution excerpts and all other API text as plain text, never as HTML, and SHALL reject non-HTTPS Jira URLs.",
-      "AC-002.1": "WHEN View details is chosen on a result, THE frontend SHALL open the read-only 10.2 Triage Result Detail popup for that Jira issue, showing issue key, summary, Project, date, full suggested solution, source summary and reporter's answer.",
+      "AC-001.12": "THE frontend SHALL render issue keys, Project keys, solution excerpts and all other API text as plain text, never as HTML, and SHALL reject non-HTTPS Jira URLs.",
+      "AC-002.1": "WHEN View details is chosen on a result, THE frontend SHALL open the read-only 10.2 Triage Result Detail popup for that Jira issue, showing issue key, Project key, date, full suggested solution, source summary and reporter's answer.",
       "AC-002.2": "WHEN the result has no suggested solution, THE popup SHALL show a dash for that field and No answer when the reporter has not answered.",
       "AC-002.3": "THE popup SHALL show the number of Ticket sources without linking or exposing their details; THE popup SHALL link only available Wiki sources through the existing Wiki Document route.",
       "AC-002.4": "IF a Wiki source is no longer available to the viewer, THEN THE popup SHALL show MSG110 for that source without a usable link.",
       "AC-002.5": "WHILE the detail request loads, THE popup SHALL show LoadingState; IF it fails, THEN THE popup SHALL show ErrorState with retry; IF the result no longer exists, THEN THE popup SHALL show MSG04.",
       "AC-002.6": "WHEN the popup closes and another result is opened, THE frontend SHALL show only the newly selected issue's detail, with no stale suggestion or source data.",
       "AC-002.7": "IF the requested issue belongs to a Project the user does not manage or another Workspace, THEN THE mock detail API SHALL return 404/MSG04 without revealing whether a suggestion exists.",
-      "AC-002.8": "THE popup SHALL provide no class correction, routing or other mutation controls."
+      "AC-002.8": "THE popup SHALL provide no class correction, routing or other mutation controls.",
+      "AC-003.1": "WHEN a signed-in user holding PROJECT_MANAGER calls , THE backend SHALL return only the  rows of Projects where that user's  is , newest  first, as a paged list with page 0 and size 20 by default.",
+      "AC-003.2": "WHEN ,  or a / pair is given, THE backend SHALL combine them with AND;  SHALL match rows with no reporter answer;  and  SHALL include both whole calendar days in Asia/Ho_Chi_Minh.",
+      "AC-003.3": "IF the caller has no session, THEN THE backend SHALL return 401/MSG07; IF the caller lacks PROJECT_MANAGER or  is a Project they do not manage, THEN THE backend SHALL return 403/MSG08 without returning results.",
+      "AC-003.4": "IF  is not ,  or ,  is negative or  is outside 1..100, THEN THE backend SHALL return 400/MSG06; IF only one of / is given, either is not a calendar date, or  is after , THEN THE backend SHALL return 400/MSG39.",
+      "AC-003.5": "THE backend SHALL return for each row the issue key,  built as the Workspace  plus  and the key, the Project id and Jira project key, , the Ticket and Wiki source counts from , the reporter answer, and a plain-text excerpt of at most 200 characters of  (null when none was posted).",
+      "AC-003.6": "IF the Workspace has no , THEN THE backend SHALL return  as null and still return the row.",
+      "AC-004.1": "WHEN a Project Manager calls  for an issue of a Project they manage, THE backend SHALL return the AC-003.5 fields plus the full  and one  entry (, , ) per  item in , and no Ticket source details.",
+      "AC-004.2": "IF the issue has no result, belongs to a Project the caller does not manage, or the caller lacks PROJECT_MANAGER, THEN THE backend SHALL return 404/MSG04 without revealing whether a result exists.",
+      "AC-004.3": "THE backend SHALL set  from the wiki module's document-access port for the caller; WHILE the wiki module provides no implementation, THE default SHALL answer false for every document.",
+      "AC-004.4": "IF  holds an item it cannot read (unknown  or missing ), THEN THE backend SHALL skip that item in the counts and the list and still return the result."
     }
   }
 }

@@ -45,3 +45,23 @@ Review the KAN-149 diff and test evidence with the user. Resolve the unrelated f
 
 ### Next up
 Commit the triage HarnessClaude records separately, then begin KAN-151 on its own Jira branch. No push or merge was requested.
+
+## Session 2026-11-04
+
+### Working on: suggestion-history-contract (Task 2)
+- The user ruled that KAN-149 is done only with FE and BE. The branch was rebased on `main` 626ce59 (conflicts in `docs/bug-log.md` and `events.jsonl` kept both sides).
+- Spec change approved twice (`9e1ada09`, then `24d4a988`): STORY-003/004 add the backend list/detail; the issue summary is dropped and the Project is shown by its Jira project key; `sources_used` shape and the `WikiDocumentAccess` port are defined. A triage-only int64 id was rejected because the session `ProjectMembership.projectId` is UUID; ids follow the team's shared type, which the team still has to decide (DB tables on `main` are BIGINT, `backend/AGENTS.md` says UUID).
+- Design: master "Backend history API" section and rows 19–24; tasks 2–3 added; features `suggestion-history-contract` and `suggestion-history-api` registered.
+- Task 2 test-first: AC-001.7, AC-001.12, AC-002.1 and AC-002.6 tests failed on the old shape, then passed after the OpenAPI `SuggestionProject` schema, nullable `jiraIssueUrl`, mock data and list/popup changes. Triage run: 26 passed, 8 skipped; `history-filters.test.ts` once hit a 10 s setup-hook timeout under load and passed 8/8 alone.
+- `format:check`, `lint` (1 existing warning), `typecheck`, `build` pass; `generate:api` re-run leaves no diff; `trace triage STORY-001 STORY-002` passes; STORY-003/004 have no tests yet (Task 3).
+
+- BUG-104: the full suite showed `route-table.test.tsx` `AC-005.3 shows the placeholder of 10.1 Triage History` failing since Task 1 built the screen. Fixed under the user-confirmed quick change: removed the 10.1 row (the file's own rule; chatbot did the same for 12.1) and added `AC-001.1 renders 10.1 instead of the not-built placeholder (BUG-104)`.
+- Full `npm run test` (default workers): 35 failures in 20 files of other features, all `findBy` or hook timeouts under load. Re-run of those files plus triage with `--maxWorkers=2`: 61 files, 1199 tests passed.
+
+- Commits (user agreed 04/11): `default@6de048c` fix BUG-104 (quick change closed), `default@bef5072` Task 2 contract. `sdd.ts commit triage default` recorded bef5072; `suggestion-history-contract` moved to evaluating.
+
+### Blockers
+Task 3 (backend) waits for KAN-117 / PR #107 (users, roles, `project_membership`) on `main`.
+
+### Next up
+Evaluate `suggestion-history` and `suggestion-history-contract`. Task 3 after PR #107 merges; then push and open one KAN-149 PR with FE and BE.

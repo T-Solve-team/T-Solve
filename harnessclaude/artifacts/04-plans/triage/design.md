@@ -130,6 +130,53 @@ review if the final Figma frame requires a dedicated kit component.
 | Backend contract drift | High | Generated client; agreement with KAN-131 owner before backend integration | Task 1/2 |
 | Obsolete class/routing behavior reappears | High | Explicit out-of-scope and absence tests | Task 2 |
 
+## Backend history API — 2026-11-04
+
+The spec change of 04/11 (STORY-003, STORY-004) makes KAN-149 a FE + BE task. It replaces the
+issue-summary and Project-name decisions above: the issue summary is dropped and the Project is
+shown by `jira_project_key`. API ids keep the team's shared id type (today UUID in the session
+`ProjectMembership`) while the tables on `main` are BIGINT; the team decides one type for all, and
+the backend maps between them until then.
+
+```text
+backend/src/main/java/vn/tsolve/triage/
+  controller/SuggestionResultController.java   GET list + GET {issueKey}; @PreAuthorize PROJECT_MANAGER
+  dto/                                          SuggestionResultSummary, SuggestionResultDetail, ...
+  entity/SuggestionResultView.java             read-only @Immutable mapping of suggestion_result
+  repository/SuggestionResultViewRepository.java   Specification query: project_id IN managed, filters
+  service/SuggestionResultService(.impl)       scope, filters, excerpt, sources_used parsing, URL
+  port/WikiDocumentAccess.java                 isAvailable(callerId, documentIds); default bean: all false
+backend/src/test/java/vn/tsolve/triage/        controller slice + service tests named with AC ids
+```
+
+- **Read-only mapping.** Triage maps `suggestion_result` as its own `@Immutable` entity and never
+  writes it, so the tracker's `SuggestionResult` entity and migration `002` stay untouched. No new
+  changeset: every column read exists on `main`.
+- **Scope first.** The service resolves the caller's managed Project ids from `project_membership`
+  (KAN-117) before any filter; a `projectId` outside that set is 403/MSG08; the detail looks up
+  `jira_issue_key` with `project_id IN managed` and answers 404/MSG04 for every miss.
+- **Dates.** `from`/`to` are `LocalDate`s converted to `[from 00:00, to+1 00:00)` in
+  Asia/Ho_Chi_Minh, matching the FE helper `historyDateRange`.
+- **sources_used.** Parsed with Jackson into `{type, id, title, similarity}`; unreadable items are
+  skipped (AC-004.4). Counts and the Wiki list come from the parsed items.
+- **Wiki availability.** `WikiDocumentAccess` is an interface in triage; the default bean answers
+  false until the wiki module provides a bean (AC-004.3), so no document is linked by mistake.
+- **Excerpt.** First 200 characters of `suggested_solution`, whitespace collapsed; null when none.
+- **Jira URL.** `jira_site_url` + `/browse/` + key, only when the site URL is HTTPS; else null
+  (AC-003.6); the FE keeps its HTTPS check.
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 19 | STORY-003 | Authorization | PM of Project A passes `projectId` of B | High | 403/MSG08, no rows | Task 3 |
+| 20 | STORY-003 | User types | Resolver or Employee calls the list | High | 403/MSG08 | Task 3 |
+| 21 | STORY-004 | Authorization | Detail of an issue in an unmanaged Project | High | 404/MSG04, same as missing | Task 3 |
+| 22 | STORY-003 | Environment | Row at 16:59:59Z / 17:00:00Z UTC | High | Correct Vietnam day | Task 3 |
+| 23 | STORY-004 | Data integrity | `sources_used` holds junk or unknown type | Medium | Item skipped, result returned | Task 3 |
+| 24 | STORY-003 | Integration | Workspace without `jira_site_url` | Medium | `jiraIssueUrl` null | Task 3 |
+
+Dependency: KAN-117 (users, roles, `project_membership`, method security, PR #107) must be on
+`main` before Task 3 starts; Task 2 does not need it.
+
 ## Proposed Iteration
 
 Current iteration 1 gets one Jira feature `suggestion-history` (KAN-149) with two implementation

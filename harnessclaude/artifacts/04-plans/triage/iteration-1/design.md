@@ -32,3 +32,9 @@ Workspace scope, forged Project/detail access, malformed dates, pagination, retr
 unsafe Jira URLs, unavailable Wiki sources, Ticket source exposure and generated-client drift.
 The master risk verdict is CAUTION until the proposed backend contract and production
 authorization are implemented.
+
+## Change 2026-11-04 — backend
+
+KAN-149 now needs FE and BE. Task 2 aligns the FE contract and mocks with the Project key, no
+issue summary and a nullable Jira URL; ids keep the session's id type. Task 3 adds the backend list/detail in `vn.tsolve.triage` after
+KAN-117 is on `main`. Master design "Backend history API" and rows 19–24 apply.

@@ -506,3 +506,12 @@
 {"ts":"2026-11-02T12:59:30.585Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":"pending","to":"in-progress"}
 {"ts":"2026-11-02T17:56:45.204Z","type":"commit-recorded","module":"triage","repo":"default","sha":"4440072cedbf7081edd6274ae82b89dcd67e221e"}
 {"ts":"2026-11-02T17:57:04.854Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-04T07:48:08.026Z","type":"spec-approved","module":"triage","specHash":"9e1ada09f381e554981143da69c9268e656f0507f0163b60ac0b3cf8e6245db1"}
+{"ts":"2026-11-04T07:48:56.681Z","type":"feature-status","module":"triage","feature":"suggestion-history-contract","from":null,"to":"pending"}
+{"ts":"2026-11-04T07:48:57.189Z","type":"feature-status","module":"triage","feature":"suggestion-history-api","from":null,"to":"pending"}
+{"ts":"2026-11-04T07:49:06.572Z","type":"feature-status","module":"triage","feature":"suggestion-history-contract","from":"pending","to":"in-progress"}
+{"ts":"2026-11-04T07:52:13.300Z","type":"spec-approved","module":"triage","specHash":"24d4a988954dec938ba4129c93b47fbd740282d95913759ef8b13582d38e7f10"}
+{"ts":"2026-11-04T08:15:44.697Z","type":"quick-opened","what":"Remove the 10.1 Triage History placeholder row now that KAN-149 builds the screen (BUG-104)","files":["frontend/src/app/router/route-table.test.tsx"]}
+{"ts":"2026-11-04T08:52:29.572Z","type":"commit-recorded","module":"triage","repo":"default","sha":"bef50724d203826ef7fed7f65152c7430012efd9"}
+{"ts":"2026-11-04T08:52:30.497Z","type":"feature-status","module":"triage","feature":"suggestion-history-contract","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-04T08:52:37.567Z","type":"quick-closed","what":"Remove the 10.1 Triage History placeholder row now that KAN-149 builds the screen (BUG-104)","files":["frontend/src/app/router/route-table.test.tsx"]}
