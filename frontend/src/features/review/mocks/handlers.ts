@@ -12,6 +12,7 @@ import { MAX_REVIEW_SELECTION } from '../review-limits';
 import { departmentOf, REVIEW_WORKSPACE_ID, type MockReviewTicket } from './data';
 import { resetReviewState, reviewStore, type ReviewHistoryEntry } from './state';
 import { expiredHandlers } from './expired-handlers';
+import { historyHandlers } from './history-handlers';
 
 export const resetMockData = resetReviewState;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -94,7 +95,10 @@ function validIds(value: unknown): value is string[] {
   );
 }
 
-async function decide(request: Request, action: ReviewHistoryEntry['action']) {
+async function decide(
+  request: Request,
+  action: Extract<ReviewHistoryEntry['action'], 'APPROVE' | 'REJECT' | 'REQUEST_CHANGES'>,
+) {
   await delay(MOCK_DELAY_MS);
   let body: unknown;
   try {
@@ -133,8 +137,10 @@ async function decide(request: Request, action: ReviewHistoryEntry['action']) {
   const timestamp = new Date().toISOString();
   for (const ticket of tickets) {
     reviewStore.history.push({
+      decisionId: crypto.randomUUID(),
       ticketId: ticket.ticketId,
       actorId: user.user.id,
+      actorName: user.user.fullName || user.user.email,
       action,
       timestamp,
       beforeStatus: ticket.status,
@@ -151,6 +157,7 @@ async function decide(request: Request, action: ReviewHistoryEntry['action']) {
 }
 
 export const handlers: HttpHandler[] = [
+  ...historyHandlers,
   ...expiredHandlers,
   http.get('*/api/v1/review-queue', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
