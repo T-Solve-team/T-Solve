@@ -2,9 +2,9 @@ import type { SuggestionResultDetail } from '@/shared/api';
 
 export const MOCK_WORKSPACE = 'current';
 export const PROJECTS = {
-  ITSUP: { projectId: '00000000-0000-4000-8000-000000000101', name: 'IT Support' },
-  ITNET: { projectId: '00000000-0000-4000-8000-000000000102', name: 'IT Network' },
-  HRHELP: { projectId: '00000000-0000-4000-8000-000000000201', name: 'HR Help' },
+  ITSUP: { projectId: '00000000-0000-4000-8000-000000000101', key: 'ITSUP' },
+  ITNET: { projectId: '00000000-0000-4000-8000-000000000102', key: 'ITNET' },
+  HRHELP: { projectId: '00000000-0000-4000-8000-000000000201', key: 'HRHELP' },
 } as const;
 
 export type MockSuggestionResult = SuggestionResultDetail & { workspaceId: string };
@@ -29,14 +29,13 @@ const supportResults: MockSuggestionResult[] = Array.from({ length: 25 }, (_, in
   const suggestion = isNoSuggestion
     ? null
     : number === 1002
-      ? 'Follow the documented VPN reset steps for this account.'
+      ? '<script>alert(1)</script> Follow the documented VPN reset steps.'
       : 'Check the VPN configuration, then retry the connection.';
   return {
     workspaceId: MOCK_WORKSPACE,
     issueKey,
     jiraIssueUrl:
       number === 1004 ? 'javascript:alert(1)' : `https://jira.example/browse/${issueKey}`,
-    issueSummary: number === 1002 ? '<script>alert(1)</script> VPN issue' : `VPN issue ${number}`,
     project: PROJECTS.ITSUP,
     createdAt:
       number === 1001
@@ -58,7 +57,6 @@ export const MOCK_SUGGESTION_RESULTS: MockSuggestionResult[] = [
     workspaceId: MOCK_WORKSPACE,
     issueKey: 'ITNET-2001',
     jiraIssueUrl: 'https://jira.example/browse/ITNET-2001',
-    issueSummary: 'Network at the end of a Vietnam day',
     project: PROJECTS.ITNET,
     createdAt: '2026-11-01T16:59:59.999Z',
     ticketSourceCount: 1,
@@ -71,8 +69,7 @@ export const MOCK_SUGGESTION_RESULTS: MockSuggestionResult[] = [
   {
     workspaceId: MOCK_WORKSPACE,
     issueKey: 'ITNET-2002',
-    jiraIssueUrl: 'https://jira.example/browse/ITNET-2002',
-    issueSummary: 'Network at the start of a Vietnam day',
+    jiraIssueUrl: null,
     project: PROJECTS.ITNET,
     createdAt: '2026-11-01T17:00:00Z',
     ticketSourceCount: 0,
@@ -86,7 +83,6 @@ export const MOCK_SUGGESTION_RESULTS: MockSuggestionResult[] = [
     workspaceId: MOCK_WORKSPACE,
     issueKey: 'HRHELP-3001',
     jiraIssueUrl: 'https://jira.example/browse/HRHELP-3001',
-    issueSummary: 'Leave request guidance',
     project: PROJECTS.HRHELP,
     createdAt: '2026-11-01T08:00:00Z',
     ticketSourceCount: 0,
@@ -100,7 +96,6 @@ export const MOCK_SUGGESTION_RESULTS: MockSuggestionResult[] = [
     workspaceId: 'foreign',
     issueKey: 'ITSUP-9999',
     jiraIssueUrl: 'https://jira.foreign.example/browse/ITSUP-9999',
-    issueSummary: 'Foreign Workspace suggestion',
     project: PROJECTS.ITSUP,
     createdAt: '2026-11-02T10:00:00Z',
     ticketSourceCount: 1,

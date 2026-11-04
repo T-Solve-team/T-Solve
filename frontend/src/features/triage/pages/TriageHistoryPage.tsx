@@ -10,7 +10,8 @@ import styles from '../components/TriageHistory.module.css';
 import { historyDateRange } from '../hooks/history-filters';
 import { useSuggestionHistory } from '../hooks/useSuggestionHistory';
 
-function safeIssueUrl(value: string): string | null {
+function safeIssueUrl(value: string | null): string | null {
+  if (value === null) return null;
   try {
     const url = new URL(value);
     return url.protocol === 'https:' && url.hostname ? url.href : null;
@@ -53,10 +54,7 @@ export function TriageHistoryPage() {
             ) : (
               <Typography.Text>{row.issueKey}</Typography.Text>
             )}
-            <Typography.Text ellipsis={{ tooltip: row.issueSummary }}>
-              {row.issueSummary}
-            </Typography.Text>
-            <Typography.Text type="secondary">{row.project.name}</Typography.Text>
+            <Typography.Text type="secondary">{row.project.key}</Typography.Text>
             <Button type="link" onClick={() => setSelectedIssue(row.issueKey)}>
               View details
             </Button>

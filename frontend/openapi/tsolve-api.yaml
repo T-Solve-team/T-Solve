@@ -1110,9 +1110,9 @@ paths:
     get:
       tags: [triage]
       operationId: getSuggestionResults
-      summary: Frontend proposal — suggestion results of Projects managed by the signed-in Project Manager.
+      summary: Suggestion results of Projects managed by the signed-in Project Manager.
       description: >
-        Implemented in MSW until the backend read API is agreed. The server resolves Workspace
+        Served by the backend triage module (KAN-149); MSW mirrors it in tests. The server resolves Workspace
         from the host and checks managed Projects. Default order is createdAt descending with
         issueKey ascending as the tie-breaker.
       parameters:
@@ -1157,7 +1157,7 @@ paths:
     get:
       tags: [triage]
       operationId: getSuggestionResult
-      summary: Frontend proposal — one result of a managed Project.
+      summary: One result of a managed Project.
       responses:
         '200':
           description: The result and visible Wiki source references.
@@ -1818,17 +1818,26 @@ components:
           $ref: '#/components/schemas/PageMetadata'
     SuggestionResultSummary:
       type: object
-      required: [issueKey, jiraIssueUrl, issueSummary, project, createdAt, ticketSourceCount, wikiSourceCount, suggestedSolutionExcerpt, reporterAnswer]
+      required: [issueKey, jiraIssueUrl, project, createdAt, ticketSourceCount, wikiSourceCount, suggestedSolutionExcerpt, reporterAnswer]
       properties:
         issueKey: { type: string, maxLength: 50 }
-        jiraIssueUrl: { type: string, format: uri }
-        issueSummary: { type: string }
-        project: { $ref: '#/components/schemas/TicketProject' }
+        jiraIssueUrl:
+          type: [string, 'null']
+          format: uri
+          description: Workspace Jira site URL + /browse/ + issueKey; null when the Workspace has no Jira site URL.
+        project: { $ref: '#/components/schemas/SuggestionProject' }
         createdAt: { type: string, format: date-time }
         ticketSourceCount: { type: integer, minimum: 0 }
         wikiSourceCount: { type: integer, minimum: 0 }
         suggestedSolutionExcerpt: { type: [string, 'null'] }
         reporterAnswer: { type: [string, 'null'], enum: [YES, NO, null] }
+    SuggestionProject:
+      type: object
+      description: The Project of a suggestion result, shown by its Jira project key (no table stores a Project name).
+      required: [projectId, key]
+      properties:
+        projectId: { type: string, format: uuid }
+        key: { type: string, maxLength: 20 }
     SuggestionWikiSource:
       type: object
       required: [documentId, title, isAvailable]
@@ -1838,12 +1847,14 @@ components:
         isAvailable: { type: boolean }
     SuggestionResultDetail:
       type: object
-      required: [issueKey, jiraIssueUrl, issueSummary, project, createdAt, ticketSourceCount, wikiSourceCount, suggestedSolutionExcerpt, reporterAnswer, suggestedSolution, wikiSources]
+      required: [issueKey, jiraIssueUrl, project, createdAt, ticketSourceCount, wikiSourceCount, suggestedSolutionExcerpt, reporterAnswer, suggestedSolution, wikiSources]
       properties:
         issueKey: { type: string, maxLength: 50 }
-        jiraIssueUrl: { type: string, format: uri }
-        issueSummary: { type: string }
-        project: { $ref: '#/components/schemas/TicketProject' }
+        jiraIssueUrl:
+          type: [string, 'null']
+          format: uri
+          description: Workspace Jira site URL + /browse/ + issueKey; null when the Workspace has no Jira site URL.
+        project: { $ref: '#/components/schemas/SuggestionProject' }
         createdAt: { type: string, format: date-time }
         ticketSourceCount: { type: integer, minimum: 0 }
         wikiSourceCount: { type: integer, minimum: 0 }

@@ -35,10 +35,8 @@ export function TriageResultDetailModal({ issueKey, onClose }: Props) {
         <div className={styles.detail}>
           <Typography.Text strong>Issue</Typography.Text>
           <Typography.Text>{result.issueKey}</Typography.Text>
-          <Typography.Text strong>Summary</Typography.Text>
-          <Typography.Text>{result.issueSummary}</Typography.Text>
           <Typography.Text strong>Project</Typography.Text>
-          <Typography.Text>{result.project.name}</Typography.Text>
+          <Typography.Text>{result.project.key}</Typography.Text>
           <Typography.Text strong>Date</Typography.Text>
           <Typography.Text>
             {new Intl.DateTimeFormat('en-GB', {

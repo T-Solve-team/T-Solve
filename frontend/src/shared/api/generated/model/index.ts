@@ -89,6 +89,7 @@ export * from './sortParameter';
 export * from './spaceHandover';
 export * from './spaceHandoverOption';
 export * from './spaceRef';
+export * from './suggestionProject';
 export * from './suggestionResultDetail';
 export * from './suggestionResultDetailReporterAnswer';
 export * from './suggestionResultPage';

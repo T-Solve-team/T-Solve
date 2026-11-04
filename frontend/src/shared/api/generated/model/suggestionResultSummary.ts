@@ -6,15 +6,18 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
+import type { SuggestionProject } from './suggestionProject';
 import type { SuggestionResultSummaryReporterAnswer } from './suggestionResultSummaryReporterAnswer';
-import type { TicketProject } from './ticketProject';
 
 export interface SuggestionResultSummary {
   /** @maxLength 50 */
   issueKey: string;
-  jiraIssueUrl: string;
-  issueSummary: string;
-  project: TicketProject;
+  /**
+   * Workspace Jira site URL + /browse/ + issueKey; null when the Workspace has no Jira site URL.
+   * @nullable
+   */
+  jiraIssueUrl: string | null;
+  project: SuggestionProject;
   createdAt: string;
   /** @minimum 0 */
   ticketSourceCount: number;

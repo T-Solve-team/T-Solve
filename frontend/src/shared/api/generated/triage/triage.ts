@@ -73,8 +73,8 @@ export const getGetSuggestionResultsUrl = (params?: GetSuggestionResultsParams) 
 };
 
 /**
- * Implemented in MSW until the backend read API is agreed. The server resolves Workspace from the host and checks managed Projects. Default order is createdAt descending with issueKey ascending as the tie-breaker.
- * @summary Frontend proposal — suggestion results of Projects managed by the signed-in Project Manager.
+ * Served by the backend triage module (KAN-149); MSW mirrors it in tests. The server resolves Workspace from the host and checks managed Projects. Default order is createdAt descending with issueKey ascending as the tie-breaker.
+ * @summary Suggestion results of Projects managed by the signed-in Project Manager.
  */
 export const getSuggestionResults = async (
   params?: GetSuggestionResultsParams,
@@ -179,7 +179,7 @@ export function useGetSuggestionResults<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Frontend proposal — suggestion results of Projects managed by the signed-in Project Manager.
+ * @summary Suggestion results of Projects managed by the signed-in Project Manager.
  */
 
 export function useGetSuggestionResults<
@@ -209,7 +209,7 @@ export const getGetSuggestionResultUrl = (issueKey: string) => {
 };
 
 /**
- * @summary Frontend proposal — one result of a managed Project.
+ * @summary One result of a managed Project.
  */
 export const getSuggestionResult = async (
   issueKey: string,
@@ -319,7 +319,7 @@ export function useGetSuggestionResult<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Frontend proposal — one result of a managed Project.
+ * @summary One result of a managed Project.
  */
 
 export function useGetSuggestionResult<

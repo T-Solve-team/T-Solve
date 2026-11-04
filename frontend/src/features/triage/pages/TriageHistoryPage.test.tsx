@@ -7,6 +7,9 @@ import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 
+const VPN_SUGGESTION = 'Check the VPN configuration, then retry the connection.';
+const SCRIPT_SUGGESTION = '<script>alert(1)</script> Follow the documented VPN reset steps.';
+
 const emptyPage: SuggestionResultPage = {
   content: [],
   page: { number: 0, size: 20, totalElements: 0, totalPages: 0 },
@@ -117,7 +120,7 @@ describe('TriageHistoryPage', () => {
   it('AC-001.7 shows a separate HTTPS Jira link and detail action', async () => {
     renderApp('/triage-history');
     const row = await issueRow('ITSUP-1001');
-    expect(within(row).getByText('IT Support')).toBeInTheDocument();
+    expect(within(row).getByText('ITSUP')).toBeInTheDocument();
     expect(within(row).getByRole('link', { name: 'ITSUP-1001' })).toHaveAttribute(
       'href',
       'https://jira.example/browse/ITSUP-1001',
@@ -172,7 +175,8 @@ describe('TriageHistoryPage', () => {
     const row = await issueRow('ITSUP-1004');
     expect(within(row).queryByRole('link', { name: 'ITSUP-1004' })).not.toBeInTheDocument();
     expect(document.querySelector('script')).toBeNull();
-    expect(await screen.findByText('<script>alert(1)</script> VPN issue')).toBeInTheDocument();
+    const htmlRow = await issueRow('ITSUP-1002');
+    expect(htmlRow).toHaveTextContent(SCRIPT_SUGGESTION);
   });
 
   it('AC-002.1 opens detail with full result fields', async () => {
@@ -181,8 +185,9 @@ describe('TriageHistoryPage', () => {
     const row = await issueRow('ITSUP-1001');
     await user.click(within(row).getByRole('button', { name: 'View details' }));
     const dialog = await screen.findByRole('dialog', { name: 'Triage Result Detail' });
-    expect(await within(dialog).findByText('VPN issue 1001')).toBeInTheDocument();
-    expect(dialog).toHaveTextContent('IT Support');
+    expect(await within(dialog).findByText(VPN_SUGGESTION)).toBeInTheDocument();
+    expect(dialog).toHaveTextContent('ITSUP-1001');
+    expect(within(dialog).getByText('ITSUP')).toBeInTheDocument();
     expect(dialog).toHaveTextContent('Check the VPN configuration, then retry the connection.');
     expect(dialog).toHaveTextContent('Solved');
   });
@@ -247,7 +252,7 @@ describe('TriageHistoryPage', () => {
     const first = await issueRow('ITSUP-1001');
     await user.click(within(first).getByRole('button', { name: 'View details' }));
     const dialog = await screen.findByRole('dialog', { name: 'Triage Result Detail' });
-    await within(dialog).findByText('VPN issue 1001');
+    await within(dialog).findByText(VPN_SUGGESTION);
     const closeButton = within(dialog).getAllByRole('button', { name: 'Close' }).at(-1);
     if (!closeButton) throw new Error('Close button was not found');
     await user.click(closeButton);
@@ -261,11 +266,11 @@ describe('TriageHistoryPage', () => {
     await user.click(within(second).getByRole('button', { name: 'View details' }));
     expect(
       within(await screen.findByRole('dialog', { name: 'Triage Result Detail' })).queryByText(
-        'VPN issue 1001',
+        VPN_SUGGESTION,
       ),
     ).not.toBeInTheDocument();
     expect(
-      await within(screen.getByRole('dialog')).findByText('<script>alert(1)</script> VPN issue'),
+      await within(screen.getByRole('dialog')).findByText(SCRIPT_SUGGESTION),
     ).toBeInTheDocument();
   });
 
