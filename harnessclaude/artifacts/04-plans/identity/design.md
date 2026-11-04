@@ -278,6 +278,21 @@ doubles in the test sources:
 - `TenantScope`: `currentWorkspaceId()` and `runIn(workspaceId, supplier)`. Its adapter calls `TenantContext` and
   `runIn` (platform Task 1, KAN-99).
 
+**`FirstAdminCreator` (STORY-010, KAN-98 Change Mode 2026-11-04; Task 14).** Unlike the two ports above, this one is
+declared by `platform` (`vn.tsolve.platform.service.FirstAdminCreator`, platform Task 7) and implemented here, because
+`identity` depends on `platform` and not the other way round. Chosen: `identity.account.AccountFirstAdminCreator`, one
+`@Service` with `UUID createFirstAdmin(UUID workspaceId, String email)` in a single `@Transactional` method. It checks
+`TenantScope.currentWorkspaceId()` equals `workspaceId` (AC-010.3), lower-cases and validates the email (AC-010.4),
+refuses an existing Account (AC-010.5), saves the `Account` (ACTIVE, empty full name) and its Admin `AccountRole`
+(AC-010.1, AC-010.2) and returns the id only. Alternatives: an event that identity listens to (breaks the all-or-nothing
+rule of platform Requirement 4); platform writing the `accounts` rows itself (platform would own identity's tables).
+It does not claim the email: `WorkspaceProvisioning` does at step 4 (platform AC-013.19), so a second claim here would
+only repeat it (AC-010.6). The invitation job carries the returned id; `worker` reads the Account through
+`AccountDirectory` (an Account by id in the caller's Workspace). No status `Invited` is added (platform Q2 = A); the
+invitation creates no credential (AC-010.7). Until Task 14 there is no bean: only platform's `ops` and Console
+profiles require it (platform AC-013.15). Decided in planning: class name `AccountFirstAdminCreator` and its package
+`identity.account` (no new package for one class).
+
 The adapters (`PlatformWorkspaceLookup`, `PlatformTenantScope`) are written in the first identity task that starts
 after those platform tasks are on `main`. Until then T8's behaviour is shown by its tests, not on the local stack.
 
@@ -295,7 +310,7 @@ Do, so T9 and T9b are built against the ports and test doubles too, like T8:
 - The follow-up after the platform lands is Task 14 (tasks.md): `PlatformWorkspaceLookup`, `PlatformTenantScope` (and
   the Database Router behind it), the move of `sign_in_states` and `hand_off_codes` to the registry database (HLA Q2),
   the registry's `workspace_emails` adapter (HLA Q4), the per-database RLS guard for `accounts` and `account_roles`
-  if `platform` defines one, and demo Accounts for the seed Workspaces. Platform Task 15's demo seed is not edited by
+  if `platform` defines one, the `FirstAdminCreator` implementation (STORY-010, above), and demo Accounts for the seed Workspaces. Platform Task 15's demo seed is not edited by
   T9 or T9b. identity cannot reach `completed` before Task 14.
 - While `NoWorkspaceLookup` answers 404, Hiếu sees T9 and T9b through their tests (fake issuer) only.
 
@@ -503,6 +518,12 @@ authorization, data integrity, integration, compliance. Skipped: business logic 
 | 91 | STORY-001 | State transitions | Redis restarts or evicts keys: every session is lost (HLA Q3) | High | Each next request is 401 `MSG07` and the person signs in again; Redis for sessions has persistence on and no eviction (`noeviction`), kept apart from any cache (HLA) | Task 10 |
 | 92 | STORY-001 | Data integrity | Registry database unavailable at `authorize`, the callback or `complete` after states and codes moved there (HLA Q2) | Medium | As row 42: the transaction fails, no session; generic 500 (accepted) | Task 14 |
 | 93 | STORY-001 | Authorization | A request with no tenant bound reaches an account table (HLA "no default fallback") | Critical | No tenant database can be reached; `TenantScope.currentWorkspaceId()` throws outside `runIn` (test in T9b); the router's own guard is Task 14 | Tasks 9b, 14 |
+| 94 | STORY-010 | Authorization | `createFirstAdmin(A, email)` runs while Workspace B is bound, or with nothing bound (a wrong call from the provisioning service) | Critical | Throws; no row is written in B's database (AC-010.3) | Task 14 |
+| 95 | STORY-010 | Data integrity | The email already has an Account in that database (a retry after a half-done creation, or a seed Account) | High | `BusinessRuleException` on `email`, nothing created; the service undoes the Workspace (AC-010.5, platform AC-013.16) | Task 14 |
+| 96 | STORY-010 | Error cascades | The Role row cannot be written after the Account row | High | One transaction: both rolled back, so no Account without the Admin Role (AC-010.2) | Task 14 |
+| 97 | STORY-010 | Compliance | The email or name reaches a log line, an exception message or the returned value | High | Only the `UUID` is returned; logs and exceptions carry the Account id and the field name, never the address (AC-010.1, AC-010.7) | Task 14 |
+| 98 | STORY-010 | Timing | Two creations race for one email | High | The platform's unique constraint on `workspace_emails` lets one through at step 4; `createFirstAdmin` does not claim and is never reached by the loser (AC-010.6, platform AC-013.19) | Task 14 |
+| 99 | STORY-010 | Input extremes | Email `Lan.Tran@Company.Example`, blank, or without `@` | High | Stored lower-case and found by the sign-in lookup (AC-001.12); blank or malformed refused on `email` (AC-010.1, AC-010.4) | Task 14 |
 
 Q1-Q5 (Hiếu, 2026-10-29): Q1 `AuthSecurityConfig` also adds a second, lowest-order `SecurityFilterChain`
 (`anyRequest().authenticated()`, 401, no form login, no HTTP Basic); be-foundation `roles-security` replaces it later.
@@ -519,6 +540,8 @@ Workspace with no Google domain (AC-001.48/.49, Key decisions "No Google domain"
 
 HLA change (2026-11-03): rows 24, 31 and 41 reworded; rows 90–93 added (rows 53–89 belong to STORY-003); every
 Critical or High row has its test task (Task 10: 90, 91; Task 9b: 93; Task 14: 92, 93).
+
+FirstAdminCreator change (2026-11-04, KAN-98): rows 94–99 added for STORY-010, all tested in Task 14.
 
 Open questions for the spec owner: none for Task 9 / 9b once the 2026-10-31 spec change is approved (row 45 closed; row 46 waits for the Task 12 plan). Row 42 is accepted (C3, Hiếu, 2026-10-28): a database failure during a
 sign-in redirect keeps be-foundation's generic 500.
