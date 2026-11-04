@@ -40,6 +40,7 @@ Role-Based Access Control (UC-01–09, UC-59): sign in with the company account 
 | Interface | Type | Description |
 |-----------|------|-------------|
 | Users | Service interface + REST | User accounts, roles, status |
+| FirstAdminCreator | Service interface (declared by `platform`, implemented here) | `UUID createFirstAdmin(UUID workspaceId, String email)`: creates the first Admin Account of a new Workspace, Active, and returns its id (platform AC-013.14; identity STORY-010) |
 
 ### Consumed
 | Dependency | Interface | Description |
