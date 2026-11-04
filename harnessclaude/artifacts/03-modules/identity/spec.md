@@ -13,6 +13,7 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-04 | new STORY-010; STORY-001 Requirement 8 and Interface Contracts | **The platform's `FirstAdminCreator` port (KAN-98, platform STORY-013).** New STORY-010 with AC-010.1…AC-010.8: `identity` implements `FirstAdminCreator.createFirstAdmin(workspaceId, email)` and returns the Account's `UUID`; the Account is created Active with the Role Admin in the bound Workspace's own database, in one transaction with its Role row; it does not claim the email again (the platform claimed it at step 4 of platform AC-013.1) and creates no password, token or invitation link; a wrong or unbound Workspace, a bad email or a duplicate Account is refused, creating nothing, so that platform AC-013.16 can undo the Workspace. Requirement 8 and the `Services` list of Interface Contracts name the port; Stores and Required from `platform` reworded (the port is settled; the first Admin is not created by a screen); Out of Scope adds the invitation email, the job and the Console. No existing criterion is changed, removed or renumbered | User decision of 4/11: the port belongs to `platform`'s `WorkspaceProvisioning`, `identity` implements it, `createFirstAdmin` returns the Account `UUID`, the first Admin is Active and invited by email, the email is claimed through the registry's `workspace_emails` (platform STORY-013: AC-013.13…AC-013.19; step-1 answers Q1…Q5 of KAN-98, all recommendations) |
 | 2026-10-31 | STORY-009 | Draft KAN-112 Space handover criteria AC-009.1–009.9, reusing the UC-06/07 popup and atomic mutations | User selected frontend, MSW and an OpenAPI proposal pending backend integration; Jira requires every Space to be handed over before deactivation or role removal |
 | 2026-10-29 | STORY-008 | Draft KAN-111 frontend/MSW Project handover criteria AC-008.1–008.9; extend requirement 10 and delivery exclusions, clarify that there is no standalone handover screen | User requested one branch per task from main, then selected waiting for KAN-109/110 to merge while preparing scope and spec; reuse their existing handover instead of duplicating it |
 | 2026-10-25 | STORY-001..STORY-003 | Initial spec of the UC-01…03 slice: central sign-in through `login.` with Google OIDC, the session per Workspace site, the Platform Operator and Jira-link sign-ins, log out, My Profile with solution history. Written from Report3 (GBR-03, GBR-19, GBR-28, GBR-37, D1, D9, D13, D14, D22, D23, D36), Stories TS-020, TS-021, TS-023, TS-127 and the planning decisions Q1–Q16 of 25/10 | KAN-197 (Phase 1, multi-tenant baseline) |
@@ -27,6 +28,7 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
 | 2026-11-01 | STORY-003 | Add AC-003.15 (the Spaces card is always shown; spinner at once; MSG142 "No Spaces found" when "Spaces I can view" is empty) and AC-003.16 (the Projects card is always shown; MSG143 "Not a member of any Project." in place of the table). Reword AC-003.1 (the Projects list is read-only; its empty state is AC-003.16) and AC-003.3. Messages MSG142 and MSG143 are new. AC-003.11 to .13 (My Solutions) unchanged | Hiếu, 1/11 (KAN-237 QA): reverses plan decision Q4 for the Spaces and Projects cards only; Account rows and "Spaces I manage" keep Q4; My Solutions is for KAN-238 |
 | 2026-10-31 | STORY-003 | AC-003.12 reworded: the Ticket ID, not the whole row, is the link (no shared DataTable change) | KAN-160 plan review; FE Lead 31/10 (R1 A, R1' A) |
 | 2026-11-01 | STORY-003 | AC-003.14: a 403 on My Solutions shows MSG08 | KAN-238 Task 18 QA plan Q2; FE Lead 1/11 |
+| 2026-11-04 | STORY-001 | Interface Contracts "Stores" wording only: the Account table is `app_user`, the Roles table `user_role` and the hand-off table `hand_off_code`, singular with `<table>_id` keys (the KAN-33 DDL, platform AC-001.20); the Java names stay `Account`, `AccountRole`, `HandOffCode`. No acceptance criterion added, reworded or removed | KAN-235 Task 9b QA plan Q1 = A (Hiếu) |
 | 2026-11-03 | STORY-001, STORY-002 | Align with the multi-tenant HLA (29/10). Reword AC-001.15 (the Account lookup runs in the Workspace's own database, reached only through the bound tenant context) and AC-002.4 (the session lives in the shared session store, and the 15-minute bound for `EXPIRED` stays). Reword NFR 5 (the two-Workspace tests use two databases), Out of Scope (the Tenant Resolver, the Tenant Context and Database Router and the per-database RLS guard → `platform`) and Required from `platform` (the Tenant Context bound before the transaction with no default fallback, the Registry lookup, the first-Admin invitation). Rewrite the Interface Contracts "Database" paragraph: one database per company, so `accounts`, `account_roles` and `jira_account_links` have no `workspace_id`; platform-wide email uniqueness goes through the Tenant Registry; sign-in states and hand-off codes live in the Platform / Tenant Registry database; sessions live in Redis. The Platform Console on `admin.` stays (AC-001.21, .28–.34, NFR 4). No criterion is added or removed | KAN-231 HLA change, step 2 (Hiếu, 3/11: Q1–Q4 = A); step-1 mismatches H1–H14 |
 
 ## Requirements
@@ -56,7 +58,9 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
    and the Tickets whose Solution the user wrote, with their status (UC-03, TS-127).
 8. This slice creates the Account store that sign-in reads: email, full name, status, Roles, the Department of a
    Project Manager, and the sign-in times. The UC-04…09 stories extend it (decision Q8). The full name comes from
-   Google at every sign-in (decision Q7).
+   Google at every sign-in (decision Q7). The first Admin Account of a new Workspace is created in the same store,
+   through the port `FirstAdminCreator` that `platform` declares and this module implements (STORY-010; platform
+   AC-013.14).
 
 9. Implement the Admin User List (1.3.1), User Detail (1.3.2, creation and editing), and required Hand Over Responsibilities popup (1.3.3).
 10. Follow KAN-107, KAN-108, KAN-109 and KAN-110 as read from the signed-in user's Jira board on 2026-10-25. KAN-111, inspected in Jira on 2026-10-29, extends that frontend/MSW delivery with explicit Project-handover criteria in STORY-008. KAN-112, inspected in Jira on 2026-10-31, adds Space handover in STORY-009 using MSW and the proposed OpenAPI contract pending backend integration; STORY-001–003 keep their separately specified backend and authentication scope.
@@ -282,7 +286,24 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
   - AC-009.8: WHILE recipient lookup is pending, refreshing or failed, THE frontend SHALL prevent submission and show the existing loading or error-with-retry state; WHILE the including mutation is pending, THE frontend SHALL prevent duplicate submission.
   - AC-009.9: WHEN a former manager is reactivated or their Knowledge Manager role is restored, THE mock API SHALL retain confirmed Space handovers rather than return those Spaces automatically.
 
+### STORY-010: The first Admin Account of a new Workspace (`FirstAdminCreator`; platform STORY-013)
+- As the T-Solve operations team, we want the `platform` provisioning service to ask `identity` for the first Admin
+  Account of a new Workspace, so that every Workspace starts with one Active Admin who can sign in with Google.
+- Sources: platform `spec.md` AC-013.1 (step 5), AC-013.13…AC-013.19 and Interface Contracts (`FirstAdminCreator`,
+  `InvitationJobQueue`); decisions of 4/11 (KAN-98 Q1…Q5: the port is declared by `platform` and implemented here; the
+  first Admin is Active and invited by email; the invitation is outside the all-or-nothing rule); GBR-16, GBR-37, D7.
+- Acceptance:
+  - AC-010.1: WHEN `platform` calls `createFirstAdmin(workspaceId, email)` inside `TenantContext.runIn(workspaceId)` (platform AC-013.14), THE identity module SHALL create in the bound Workspace's own database one Account with the email in lower case, status `ACTIVE`, an empty full name and no sign-in time, and the Role Admin (Employee is implied, be-foundation AC-002.2), and SHALL return the Account's `UUID` and nothing else.
+  - AC-010.2: THE identity module SHALL write the Account and its Role row in one transaction, so that either both exist or neither does (platform AC-013.16).
+  - AC-010.3: IF no Workspace is bound, or the bound Workspace is not `workspaceId`, THEN THE identity module SHALL throw an exception and create nothing (platform AC-013.14: the call runs only inside the Workspace's own `runIn`).
+  - AC-010.4: IF the email is null, blank or not a valid email address, THEN THE identity module SHALL throw a `BusinessRuleException` with the field `email` and create nothing (a second check behind platform AC-013.4).
+  - AC-010.5: IF the Workspace's database already has an Account with that email (compared in lower case), THEN THE identity module SHALL throw a `BusinessRuleException` with the field `email` and create nothing, and THE exception SHALL reach the provisioning service unchanged so that it undoes the creation (platform AC-013.16).
+  - AC-010.6: THE identity module SHALL NOT call `WorkspaceCatalog.claimEmail` from `createFirstAdmin`, because the email is claimed for the new Workspace at step 4 of platform AC-013.1, before the call, and a lost race ends there (platform AC-013.19).
+  - AC-010.7: THE identity module SHALL create no password, token, link or other credential for the first Admin, and SHALL log neither the email nor the Account's name: the Admin signs in with Google under AC-001.11 to AC-001.13 like any Account, and the invitation email and its job belong to `platform` and `worker` (platform AC-013.17, AC-013.18).
+  - AC-010.8: THE identity module SHALL offer `createFirstAdmin` as a Spring bean implementing the `platform` port `FirstAdminCreator` in every profile that serves a Workspace creation (`ops` and the one that serves the Platform Console), so that the backend does not refuse to start (platform AC-013.15).
+
 ## Out of Scope
+- The invitation email, the job that carries it (`InvitationJobQueue`) and its retries → `platform` (the queue) and `worker` (the handler); the Platform Console screen and endpoint that start a creation → `platform-console` (platform AC-013.17, AC-013.18, AC-013.20).
 - Standalone Project or Space handover pages, routes, menu actions or mutation endpoints are outside KAN-111 and KAN-112. Reuse the combined popup required by STORY-006–007. KAN-112 does not implement production backend persistence or authorization.
 - The Tenant Resolver, MSG119 and MSG120 on ordinary requests, the Forge Invocation Token check, the Tenant
   Context and Database Router, the per-database RLS guard, the Platform / Tenant Registry → `platform` (KAN-196). A Suspended Workspace's site is refused there; its sessions are not ended by this
@@ -379,24 +400,29 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
   - for `platform-console`: the number of Active and Deactivated Accounts of a Workspace (UC-54), and whether
     any Admin of a Workspace has signed in (D14, UC-56);
   - for every module: an Account by id (a `UUID`), in the caller's Workspace.
+- `FirstAdminCreator` (the port is declared by `platform`, implemented here; STORY-010): `UUID createFirstAdmin(UUID
+  workspaceId, String email)`, called by `platform`'s `WorkspaceProvisioning` inside `TenantContext.runIn(workspaceId)`
+  after the email is claimed (platform AC-013.14, AC-013.19). It creates the Account Active with the Role Admin and
+  returns its id; the id is the only thing the invitation job carries besides the Workspace id.
 - The Department lookup of be-foundation (`common`): the Department of a Project Manager.
 - `SessionEnded` (Spring application event): Account id, Workspace id, session id, reason `LOGOUT` /
   `EXPIRED` / `DEACTIVATED`.
 
 **Stores.** The HLA gives each company its own PostgreSQL database (database per company, ADR-0002), so the account
 tables below have no `workspace_id`; the Workspace is the database the tenant context is bound to. Three places:
-- **Each company database** (the tenant Liquibase changelog; plural names and UUID ids as platform AC-001.8, but no
+- **Each company database** (the tenant Liquibase changelog; singular names and `<table>_id` UUID keys as platform AC-001.20, but no
   `workspace_id` and no foreign key to a Workspace; the RLS guard in each database is `platform`'s convention):
-  - `accounts`: email stored lower-case and unique inside that database (GBR-37, D7); full name, empty until the
+  - `app_user` (the Account; Java `Account`): email stored lower-case and unique inside that database (GBR-37, D7); full name, empty until the
     first sign-in; status `ACTIVE` / `DEACTIVATED`; the Department of a Project Manager; first and last sign-in
     time. Email uniqueness across the whole platform (one email in one Workspace) is checked through the Tenant
-    Registry's `workspace_emails` (a `platform` service that identity calls when an Account is added); no index can
-    span the company databases.
-  - `account_roles`: the Account's Roles, the four Roles besides Employee, since Employee is implied
+    Registry's `workspace_emails` (a `platform` service that identity calls when an Account is added; for the first
+    Admin, `platform` claims the email itself before it calls `FirstAdminCreator`, AC-010.6); no index can span the
+    company databases.
+  - `user_role` (Java `AccountRole`): the Account's Roles, the four Roles besides Employee, since Employee is implied
     (be-foundation AC-002.2).
   - `jira_account_links` (the D1 name).
 - **The Platform / Tenant Registry database** (not a tenant database; the catalog changelog): the sign-in states and
-  the hand-off codes, because both are read before any tenant context exists (on `login.`).
+  the hand-off codes (table `hand_off_code`), because both are read before any tenant context exists (on `login.`).
 - **Redis** (the shared session store of the HLA): the Workspace and Operator sessions, so no API replica keeps a
   session of its own.
 
@@ -407,7 +433,7 @@ tables below have no `workspace_id`; the Workspace is the database the tenant co
 - An API contract stub in `frontend/openapi/tsolve-api.yaml`, generated through orval, for user list/detail and mutations plus the lookup data required by these screens. Endpoint and schema details belong in the design and are frontend mock proposals until agreed with the backend owner.
 - Pagination and errors follow guideline 06: `{ content, page: { size, number, totalElements, totalPages } }`; RFC 9457 Problem Details with catalog `code`, `params` and optional `fieldErrors`.
 - Mutable MSW handlers live in `frontend/src/features/users/mocks/handlers.ts`, using synthetic Workspace-scoped fixtures and validating rejected operations before changing mock records.
-- `UserAccount.id` is a UUID string (`type: string`, `format: uuid`), consistent with the `accounts.id` convention; `/users/:userId` carries that UUID. DepartmentRef and SpaceRef follow the current shared contracts.
+- `UserAccount.id` is a UUID string (`type: string`, `format: uuid`), consistent with the `app_user_id` key convention; `/users/:userId` carries that UUID. DepartmentRef and SpaceRef follow the current shared contracts.
 - The user-list query `q` has a 100-character maximum after trimming; the mock rejects longer values with 400 MSG02 and parameters `field_name: Search`, `max_length: 100`.
 
 ### Required from other modules
@@ -418,9 +444,10 @@ tables below have no `workspace_id`; the Workspace is the database the tenant co
   - the Registry lookup: the Workspace record (site name, Google domain, status) and the `workspace_emails` check
     of email uniqueness across the platform;
   - the per-database RLS guard convention and the Registry database datasource;
-  - the first-Admin invitation of a new Workspace, started by a Platform Operator in the Platform Console (the
-    HLA's `platform` use case; whether it needs an Account-creation service from identity is for the `platform`
-    plan to settle).
+  - the port `FirstAdminCreator` and the `WorkspaceProvisioning` service that calls it (platform AC-013.13,
+    AC-013.14): the first Admin of a new Workspace is created by this module through that port, after `platform` has
+    claimed the email in `workspace_emails`; the invitation email and its job (`InvitationJobQueue`) are `platform`'s
+    and `worker`'s (platform AC-013.17).
 - `be-foundation`: `TSolveUser`, the five Role constants, `ProblemDetail` errors, CSRF (AC-002.11, AC-002.13),
   and `/me` (STORY-003 of be-foundation), whose Department lookup this module implements.
 - `fe-foundation` change request KAN-198: `startSignIn(returnTo)` (full-page `GET /api/v1/auth/sign-in`),

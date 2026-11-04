@@ -40,6 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
+import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.AuthSecurityConfig;
 import vn.tsolve.identity.signin.SignInTestFixtures.BadState;
 import vn.tsolve.identity.signin.SignInTestFixtures.StateStore;
@@ -49,6 +50,7 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
 /** States are made by the real SignInStateService; only the repository is in memory. */
 @WebMvcTest({AuthorizeController.class, CallbackController.class})
 @Import({
+    SecurityConfig.class,
     AuthSecurityConfig.class,
     AuthHosts.class,
     SignInStateService.class,

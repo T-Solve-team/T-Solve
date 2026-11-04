@@ -44,7 +44,7 @@ const USAGE = `usage: bun ${WS}/hooks/sdd.ts <command>
   check <module> · trace <module> [STORY-001 …] · approve <module> · diff <module>
   status <module> <status> · feature <module> <feature> <status> · commit <module> <repo> [sha] · repos · audit
   quick "<what>" <file>… · quick done`;
-const TEST_GLOBS = ["**/*.{test,spec}.*", "**/test_*.py", "**/*_test.*"];
+const TEST_GLOBS = ["**/*.{test,spec}.*", "**/test_*.py", "**/*_test.*", "**/*Test.java", "**/*IT.java"];
 // ponytail: the glob walks node_modules too before this filter drops it; use `git ls-files` if it gets slow.
 const notProjectTest = (path: string) => /(^|\/)(node_modules|\.git)\//.test(path) || path.startsWith(`${WS}/`);
 const NAME = /^\w[\w.-]*$/;

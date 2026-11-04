@@ -27,3 +27,21 @@ Risks/tests: (1) stale off-page selection or forged UUIDs: fresh eligibility and
 Builder check: inherited detail component and API contract are available on the approved branch base. No unresolved behavior beyond the choices stated here. KAN-159 remains excluded and gets its own branch/commit. No production expiry job, email, audit persistence or SSE is claimed.
 
 Verification: focused tests first, then full format:check, lint, typecheck, test, build; generate API twice with no additional diff. Trace STORY-007, inspect browser at desktop and narrow widths, exercise selecting/sending, detail navigation and stale/error recovery. Record task-3-expired-tickets reports. Stop at the user's feature commit checkpoint before starting KAN-159.
+
+## KAN-159 extension: Review History (STORY-008)
+
+Scope: complete existing ReviewHistoryPage only, using the existing PM route, shared DataTable/cells/states, generated API and feature-owned MSW store. No new dependencies, shared runtime changes, browser test requirement or backend implementation.
+
+Chosen: reuse reviewStore.history and current scoped ticket metadata; alternatives: separate fixture authority or durable backend work; rationale: preserve existing session decisions and the approved frontend-first scope. Add stable UUID and actor display snapshot to successful decision producers, using native crypto.randomUUID and the existing getMe result. Keep the private queue decision helper restricted to its three supported mutation actions when widening the history action type. Reset retains the existing empty-history contract. UNPUBLISH/REPUBLISH are read-only fixture/query values, with no new mutation route.
+
+Chosen: GET /api/v1/review-history contract in the spec; alternatives: client-only filtering or hand-written client; rationale: existing server pagination and generated-hook conventions. Generate DTOs/hooks from YAML. Feature-local handler validates query inputs, authenticates PM and scopes through current Workspace/managed Projects before filtering/counting. Unknown/foreign Department must never broaden access. Sort by timestamp with UUID tie-breaker, then paginate. GET must not mutate history or tickets.
+
+Chosen: Department filter, decision select and paired date inputs with URL state; alternatives: Project filter or local-only state; rationale: existing frontend vocabulary and list conventions. Both dates absent means unrestricted; partial/invalid/reversed range shows MSG39 and disables query. Inclusive Vietnam dates become start midnight and exclusive next-day midnight. No extra future-date restriction. Back/forward must restore filters, paging and validity. Stable decision UUID is the row key; ticket UUID is only the detail link. Render user content as text; nullable author/reason/comment use shared empty-value cells.
+
+Invalidate generated history query keys after successful existing decisions/send-back using the existing invalidation architecture, without turning a completed mutation into a failure if refetch fails. No polling/SSE extension belongs to this task.
+
+### Edge cases and verification
+
+Test scoped access before pagination/counting; signed-out/non-PM/foreign Department; all six labels; duplicate ticket decisions and equal timestamps; empty history/filter result; null author/content and HTML-like text; UTC+7 midnight/leap-date/invalid/partial/reversed ranges; URL navigation/page reset; server errors/retry/loading; each successful existing producer appends identity/content and invalidates history; failed decisions leave history unchanged. Reuse existing fixtures and meaningful interaction assertions, without weakening timeouts or regression checks.
+
+Delivery: separate branch feat/KAN-159-review-history currently stacked on committed KAN-158 to reuse SEND_BACK history and KAN-24 detail. Keep the KAN-159 commit distinct; disclose this dependency before any MR. Required checks: named AC-008 tests, trace, full frontend format/lint/typecheck/test/build, deterministic regeneration, independent review and Graphify refresh. User commit checkpoint applies.
