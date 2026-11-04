@@ -44,7 +44,7 @@ Role-Based Access Control (UC-01–09, UC-59): sign in with the company account 
 ### Consumed
 | Dependency | Interface | Description |
 |------------|-----------|-------------|
-| platform | Tenant Context, Registry, Database Router | The Workspace record and status, `runIn` in a Workspace's own database, the Registry database for sign-in states and hand-off codes, `workspace_emails` (HLA, 3/11) |
+| platform | Tenant Context, Registry, Database Router | The Workspace record and status, `runIn` in a Workspace's own database, the Registry database for sign-in states and hand-off codes, `workspace_email` (HLA, 3/11) |
 | be-foundation | Roles, session, errors | Security and `/me` |
 | workspace | Departments | The Department of a Project Manager |
 

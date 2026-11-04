@@ -5,6 +5,8 @@ date: 2026-10-25
 
 # Design: identity
 
+> **Schema alignment pending (KAN-33, 4/11):** the DDL differs from the tables below. `01_catalog.sql` names `sign_in_state` and `hand_off_code` (keys `<table>_id`). `02_tenant.sql` has `app_user`, `user_role` (four stored roles; Employee is implicit) and the column `app_user.linked_jira_account_id`, not `accounts`, `account_roles` and `jira_account_links`. Settle this with the spec before building Task 9b or Task 12.
+
 Spec: artifacts/03-modules/identity/spec.md
 
 ## Architecture Overview

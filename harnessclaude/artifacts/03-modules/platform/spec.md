@@ -21,6 +21,8 @@ owner: BA
 | 2026-11-04 | STORY-007, STORY-008, STORY-010, STORY-013, STORY-014 | **DevOps sync (KAN-98).** The object store is Garage (S3-compatible; ADR-014), not MinIO: AC-007 wording, AC-008.1, AC-008.11, AC-010.11, AC-010.12, AC-014.1, AC-014.6, AC-014.8, NFR 3 and 6, Requirement 6 and 7, the interface comment and the Definition of Done name Garage; the keys, signed URLs, "no local files" and the `FILE_STORAGE_*` names are unchanged. Redis and Garage run one per environment (Requirement 7). AC-014.1: the backup goes to a Cloudflare R2 bucket with `restic` (encrypted, deduplicated; ADR-015), not `age`; no new id, no id removed. STORY-014 is scheduled after 15/11 (DevOps Phase B), not in "Sprint S3"; its edge limits (AC-014.9 – AC-014.11) follow the DevOps design's step A5 default (proposed there in the Phase A edge stack); Out of Scope reworded the same way. AC-013.3: `grafana` joins the reserved site names (the DevOps design serves Grafana on `grafana.<base>`). Monitoring is Grafana Alloy, Prometheus, Grafana and Grafana alerts, not Alertmanager, and Loki stays for logs (design only; AC-014.6 – AC-014.8 keep their text). No acceptance criterion is added or removed | Hiếu's answers of 4/11 (Q1 Garage, Q2 restic to R2, Q3 STORY-014 after 15/11, Q4 Loki kept; W3 Alloy, no Alertmanager); DevOps design 4/11 and ADR-014, -015, -016; aligns the platform spec with the DevOps design |
 | 2026-11-04 | STORY-013, STORY-008, STORY-014 | AC-013.15 now refuses to start without a bean for either port, `FirstAdminCreator` or `InvitationJobQueue` (reworded; no id added). Interface Contracts declare `InvitationJobQueue.queueFirstAdminInvitation(workspaceId, accountId)`, which the design already used. Configuration adds `FILE_STORAGE_PUBLIC_URL_PATTERN`, `CLOUDFLARE_API_TOKEN`, `STAGING_BASIC_AUTH_HASH` and the restic, R2 and Grafana variable names. The extra column of the DevOps sync row is merged into its Reason | Review of the platform plan (KAN-98): the design named a second port the spec did not; user decision of 4/11: platform provides a minimal `InvitationJobQueue` on JobRunr in the Jobs database and `worker` takes the job handler over later |
 | 2026-11-04 | STORY-013, STORY-001 | Queue ownership made consistent (review 2, KAN-98): `platform` provides a minimal `InvitationJobQueue` on JobRunr in the Jobs database and owns the Jobs database and its tables; `worker` takes over the job handler and the background job server later. Out of Scope, Configuration (`JOBS_DB_*` also used by `platform` processes), Required from other modules (`worker`) and Interface Contracts reworded; AC-013.17 reworded (the job is queued through `InvitationJobQueue`, not "on `worker`"). No criterion added or removed | User decision of 4/11 after review 2 (finding M1): the first Admin's invitation does not wait for `worker`; the spec still gave the queue to `worker` |
+| 2026-11-04 | STORY-001, STORY-013 | Table names follow `01_catalog.sql` / `02_tenant.sql`: AC-001.15, AC-001.16, AC-001.19 and the step that records a Workspace name the catalog tables `tenant_workspace` and `workspace_email`, with the key `workspace_id`. AC-001.20 and AC-001.23: a tenant table has a singular name and the UUID key `<table>_id`. AC-001.20: a tenant table has only the timestamp columns the DDL gives it. The other catalog columns stay as AC-001.15 gives them, and the DDL was changed to match | Schema decisions of 4/11 (KAN-33) |
+| 2026-11-04 | STORY-001, STORY-013 | Merge of `main` (#112, KAN-33) into the HLA change: the schema names of #112 are applied to the HLA wording. AC-001.15, AC-001.16, AC-001.19, AC-013.1 step 4, AC-013.19 and the Schema contract name the catalog tables `tenant_workspace` (key `workspace_id`; `schema_version` kept) and `workspace_email`; AC-001.20 and AC-001.23 take the singular names, the `<table>_id` key and the DDL's timestamp columns; `audit_log_entry` replaces `audit_events` in the changeset-001 line. AC-001.17 (sign-in states in the Registry), AC-001.21 (`tenant_identity` on the allow-list), the Registry, `schema_version`, the tenant row guard and Garage keep the HLA wording. No criterion added or removed | Merge conflict of PR #114 with `main` (KAN-98, KAN-33) |
 
 ## Requirements
 
@@ -87,21 +89,22 @@ owner: BA
   database so that every module writes its tables the same way and no company's rows live in another company's
   database.
 - Acceptance:
-  - AC-001.15: THE catalog database (the Platform / Tenant Registry of the HLA, named `tsolve_<env>_registry`) SHALL hold the table `workspaces` with `id` (UUID, primary key), `site_name` (not null, unique), `status` (`ACTIVE` or `SUSPENDED`, not null), `db_name` (not null, unique), `db_user` (not null), `db_password` (not null, encrypted as AC-001.24 says), `schema_version` (the tenant changelog version last applied to that database, not null), `jira_site_url` (nullable), `jira_cloud_id` (nullable, unique), `created_at` and `updated_at` (`TIMESTAMPTZ`, not null) (GBR-24, GBR-37).
-  - AC-001.16: THE catalog database SHALL hold the table `workspace_emails` with `email` (primary key, stored lower-case) and `workspace_id` (not null, foreign key to `workspaces`), so that one email belongs to at most one Workspace (GBR-16, GBR-37).
+  - AC-001.15: THE catalog database (the Platform / Tenant Registry of the HLA, named `tsolve_<env>_registry`) SHALL hold the table `tenant_workspace` with `workspace_id` (UUID, primary key), `site_name` (not null, unique), `status` (`ACTIVE` or `SUSPENDED`, not null), `db_name` (not null, unique), `db_user` (not null), `db_password` (not null, encrypted as AC-001.24 says), `schema_version` (the tenant changelog version last applied to that database, not null), `jira_site_url` (nullable), `jira_cloud_id` (nullable, unique), `created_at` and `updated_at` (`TIMESTAMPTZ`, not null) (GBR-24, GBR-37).
+  - AC-001.16: THE catalog database SHALL hold the table `workspace_email` with `email` (primary key, stored lower-case) and `workspace_id` (not null, foreign key to `tenant_workspace`), so that one email belongs to at most one Workspace (GBR-16, GBR-37).
   - AC-001.17: THE catalog SHALL hold no business data of a Workspace: no company information, Account name, role, ticket, Wiki document or chat (GBR-37, GBR-38). The short-lived sign-in states and hand-off codes of `identity` are not business data; they live in the catalog database because they are read on `login.`, before any Workspace is bound, and they are deleted when they expire.
   - AC-001.18: THE backend SHALL keep two Liquibase changelogs: the catalog changelog `db/changelog/catalog/catalog-master.xml` and the tenant changelog `db/changelog/db.changelog-master.xml`, which every module already extends. A changeset belongs to exactly one of them.
-  - AC-001.19: WHEN the catalog changelog is applied to an empty catalog database in any environment, THE catalog SHALL contain no row in `workspaces` or `workspace_emails` (GBR-24, D42). Only STORY-013 creates Workspaces.
+  - AC-001.19: WHEN the catalog changelog is applied to an empty catalog database in any environment, THE catalog SHALL contain no row in `tenant_workspace` or `workspace_email` (GBR-24, D42). Only STORY-013 creates Workspaces.
   - AC-001.20: THE tenant-table convention SHALL be, for every table of the tenant changelog that is not on the allow-list of AC-001.21:
-    - a plural snake_case name;
-    - `id` UUID primary key, generated as AC-001.23 says; a join table instead has a composite primary key of
-      its two `<entity>_id` columns and no separate `id` (decision X2);
+    - a singular snake_case name;
+    - `<table>_id` UUID primary key, generated as AC-001.23 says; a join table instead has a composite primary key
+      of its two `<entity>_id` columns and no separate key (decision X2);
     - no `workspace_id` column (ADR-0002);
-    - `created_at` and `updated_at` as `TIMESTAMPTZ NOT NULL`; an append-only table (rows never updated, for
-      example `audit_events`) has `created_at` and no `updated_at` (decision U3).
+    - only the timestamp columns that `02_tenant.sql` gives the table; a `created_at` or `updated_at` column is
+      `TIMESTAMPTZ NOT NULL`, and an append-only table (rows never updated, for example `audit_log_entry`) has no
+      `updated_at` (decision U3).
   - AC-001.21: THE allow-list SHALL name each tenant-changelog table that does not follow AC-001.20, each with its reason: `databasechangelog` and `databasechangeloglock` (Liquibase), `tenant_identity` (the one-row table of AC-001.28, which stays on the list), and the legacy tables `resolved_ticket_snapshot`, `solution`, `solution_source` (→ `ticket-repository`), `solution_approval` (→ `ticket-review`) and `reuse_record` (→ `search`), which their owning modules bring to AC-001.20 when they are built.
   - AC-001.22: WHEN the convention guard test runs against the applied tenant changelog, THE test SHALL fail for every table that is not on the allow-list and breaks any part of AC-001.20, and name the table and the missing part. IF a table on the allow-list meets AC-001.20, or a table not named in AC-001.21 is added to it, THEN the test SHALL fail and say that the allow-list only shrinks.
-  - AC-001.23: THE primary key `id` of a tenant table SHALL be generated both by JPA (`@GeneratedValue(strategy = GenerationType.UUID)`) and by the database (`DEFAULT gen_random_uuid()`), so that application inserts and raw SQL inserts both get an id (decision X2).
+  - AC-001.23: THE primary key `<table>_id` of a tenant table SHALL be generated both by JPA (`@GeneratedValue(strategy = GenerationType.UUID)`) and by the database (`DEFAULT gen_random_uuid()`), so that application inserts and raw SQL inserts both get an id (decision X2).
   - AC-001.24: THE catalog SHALL store `db_password` encrypted with AES-GCM under the key `CATALOG_SECRET_KEY`, and the backend SHALL never log it or return it from any API.
   - AC-001.25: IF the key `CATALOG_SECRET_KEY` is missing or cannot decrypt a stored password, THEN THE backend SHALL refuse to open that Workspace's database and log which Workspace failed, without the password.
   - AC-001.26: THE runtime user of a Workspace database SHALL be able to connect to that database only; a connection with it to another Workspace database or to the catalog database SHALL be refused by PostgreSQL.
@@ -330,7 +333,7 @@ owner: BA
     1. create the Workspace database and its runtime user (AC-001.26);
     2. apply the tenant changelog to it as the owner user;
     3. write the Workspace's id into `tenant_identity` (AC-001.28);
-    4. record the Workspace in the catalog as Active, with the email in `workspace_emails`;
+    4. record the Workspace in the catalog as Active, with the email in `workspace_email`;
     5. create the first Admin Account by calling `FirstAdminCreator` (AC-013.14);
 
     and print the Workspace site address (GBR-24). After the commit, the service queues the invitation email (AC-013.17).
@@ -351,7 +354,7 @@ owner: BA
   - AC-013.16: IF `createFirstAdmin` throws, THEN THE service SHALL undo as AC-013.6 says, so that no Workspace is left without its first Admin Account.
   - AC-013.17: WHEN the creation has been committed, THE service SHALL queue, through `InvitationJobQueue` (JobRunr), one invitation-email job for the new Workspace in the Jobs database, for `worker` to run, and the job SHALL carry only the Workspace id and the id of the first Admin Account. The email SHALL tell the Admin the address of the Workspace site and to sign in with Google (decision Q2, Q4).
   - AC-013.18: IF queueing the job fails, or the mail cannot be sent, THEN THE service SHALL keep the Workspace and its Admin Account, THE failure SHALL be logged without the email address, and `worker` SHALL retry the job. The MVP has no command to send the invitation again.
-  - AC-013.19: IF two creations race for the same email, THEN THE unique constraint on `workspace_emails` SHALL let only one claim it, and the other SHALL fail at step 4 of AC-013.1 with the `MSG155` refusal and be undone as AC-013.6 says (decision Q3).
+  - AC-013.19: IF two creations race for the same email, THEN THE unique constraint on `workspace_email` SHALL let only one claim it, and the other SHALL fail at step 4 of AC-013.1 with the `MSG155` refusal and be undone as AC-013.6 says (decision Q3).
   - AC-013.20: THE Platform Console SHALL be the only caller of `WorkspaceProvisioning` over HTTP, and only on `admin.` for an allow-listed Platform Operator (AC-004.28); no other module SHALL call `create`, `suspend` or `reactivate`, except the seed through AC-012.1.
 
 ### STORY-014: Operations readiness: backup, restore, monitoring, edge limits and load test (KAN-201, KAN-202, KAN-95)
@@ -491,7 +494,7 @@ rules, `infra/loadtest/`.
 **Web resolver answers** (every host that is not `login.`, `api.` or `admin.`; before Spring Security):
 404 `MSG151`, 403 `MSG150`, as `application/problem+json`.
 
-**Schema:** catalog (Registry) tables `workspaces` (with `schema_version`) and `workspace_emails`, and the tables of
+**Schema:** catalog (Registry) tables `tenant_workspace` (with `schema_version`) and `workspace_email`, and the tables of
 `identity`'s sign-in states and hand-off codes (AC-001.17); in each Workspace database the one-row table
 `tenant_identity` and a row policy on every tenant table (AC-001.28, AC-001.29); the tenant-table convention
 (AC-001.20), its allow-list (AC-001.21) and the guard test (AC-001.22, AC-001.31). The Jobs database holds JobRunr's
@@ -535,7 +538,7 @@ tables only (AC-001.33).
     chain (AC-005.6).
 - Owner of changeset 001 (`be-foundation`): the existing `workspace` table moves out of the tenant changelog (the
   company information stays in the Workspace database, owned by `workspace`; the catalog row is this module's), and
-  `audit_events` meets AC-001.20 as an append-only table.
+  `audit_log_entry` meets AC-001.20 as an append-only table.
 - `identity`:
   - calls `TenantContext.runIn` with the Workspace of the checked state value on the `login.` callback;
   - takes the ticket tracker account only from `ForgeCallContext`;
