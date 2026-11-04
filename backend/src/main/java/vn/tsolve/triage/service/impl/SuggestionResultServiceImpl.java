@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -48,6 +49,7 @@ public class SuggestionResultServiceImpl implements SuggestionResultService {
     static final Sort ORDER = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.asc("jiraIssueKey"));
 
     private static final Set<String> ANSWERS = Set.of("YES", "NO", "NONE");
+    private static final Pattern CALENDAR_DATE = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
     private static final String INVALID_VALUE = "MSG06";
     private static final String INVALID_DATE_RANGE = "MSG39";
     private static final String NO_RESULT = "MSG04";
@@ -181,6 +183,11 @@ public class SuggestionResultServiceImpl implements SuggestionResultService {
             return new Range(null, null);
         }
         if (from == null || to == null) {
+            throw new InvalidHistoryFilterException(INVALID_DATE_RANGE);
+        }
+        // Only yyyy-MM-dd, as the web app sends: a signed or 5+ digit year would overflow the day arithmetic or
+        // PostgreSQL's timestamp range instead of getting MSG39 (BUG-106).
+        if (!CALENDAR_DATE.matcher(from).matches() || !CALENDAR_DATE.matcher(to).matches()) {
             throw new InvalidHistoryFilterException(INVALID_DATE_RANGE);
         }
         LocalDate first;

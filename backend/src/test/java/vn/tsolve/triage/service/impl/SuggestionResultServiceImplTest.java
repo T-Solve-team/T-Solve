@@ -216,6 +216,19 @@ class SuggestionResultServiceImplTest {
     }
 
     @Test
+    void rejectsADateOutsideFourDigitYearsWithMsg39_AC_003_4_BUG_106() {
+        for (HistoryQuery query : List.of(
+                new HistoryQuery(null, null, "2026-11-01", "+999999999-12-31", null, null, null),
+                new HistoryQuery(null, null, "+10000-01-01", "+10000-01-02", null, null, null),
+                new HistoryQuery(null, null, "-0001-01-01", "2026-11-01", null, null, null))) {
+            assertThat(code(() -> service().history(PM, query)))
+                    .as(query.toString())
+                    .isEqualTo("MSG39");
+        }
+        verifyNoInteractions(repository);
+    }
+
+    @Test
     void returnsTheRowFieldsWithCountsExcerptAndJiraLink_AC_003_5() {
         given(managedProjects.of(PM)).willReturn(List.of(ITSUP));
         given(jiraSite.url()).willReturn(Optional.of("https://acme.atlassian.net/"));
