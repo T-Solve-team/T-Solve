@@ -15,7 +15,7 @@ total_modules: 17
 >
 > **Sync of 04/11 with the multi-tenant HLA (KAN-231).** The Platform Console on `admin.` is back (`platform-console`
 > restored with its owner; KAN-113…116, KAN-184 and KAN-233 reopened, KAN-244 narrowed), Redis keeps the sessions,
-> the catalog is the Platform / Tenant Registry database, JobRunr has its own Jobs database, files are in MinIO, the
+> the catalog is the Platform / Tenant Registry database, JobRunr has its own Jobs database, files are in Garage, the
 > ops script KAN-240 is the hand-run form of the Console's provisioning, and every tenant table has a row guard.
 > No PII masking anywhere. Compose is the MVP deployment; Kubernetes is the HLA target.
 
@@ -31,11 +31,11 @@ owner (see "Stories → module"). Owners can change: edit the Owner column and t
 
 | Module | Report3 feature · UCs | Owner | Complexity | Repos | Dependencies |
 |--------|-----------------------|-------|-----------|-------|--------------|
-| `platform` | Tenant layer: `TenantContext`, Registry (catalog) DB + one database per Workspace (KAN-98), Jobs DB, per-DB row guard, Tenant Resolvers (host, `cloudId`), Forge Invocation Token check, provisioning service and its ops script (KAN-240), MinIO object storage with a prefix per Workspace, Redis; infrastructure (Compose, Caddy, CI/CD, VPS, seed) | Trần Trung Hiếu | large | default | — |
+| `platform` | Tenant layer: `TenantContext`, Registry (catalog) DB + one database per Workspace (KAN-98), Jobs DB, per-DB row guard, Tenant Resolvers (host, `cloudId`), Forge Invocation Token check, provisioning service and its ops script (KAN-240), Garage object storage with a prefix per Workspace, Redis; infrastructure (Compose, Caddy, CI/CD, VPS, seed) | Trần Trung Hiếu | large | default | — |
 | `be-foundation` | Five roles in security, `/me`, `ProblemDetail` + MSG codes, audit events | Anh Tran Hai | medium | default | platform |
 | `fe-foundation` | Web app base: roles, session, guards, landing, menus, routes, catalog, mocks, guidelines (KAN-57) | Trần Trung Hiếu | large | default | — |
 | `ai` | AI gateway: chat LLM and bge-m3 embedding clients (Ollama on the AI VPS, no PII masking), AI draft and rewrite of a Solution (UC-19), model benchmark | Trần Hải Anh | medium | default | platform, be-foundation |
-| `worker` | Background worker: JobRunr OSS jobs per Workspace, `runInTenant`, no jobs for Suspended Workspaces, per-Workspace cap; SMTP email | Phạm Tùng Dương | medium | default | platform |
+| `worker` | Background worker: JobRunr OSS jobs per Workspace on its own Jobs DB (`tsolve_<env>_jobs`), `runInTenant`, no jobs for Suspended Workspaces, per-Workspace cap; cleanup of expired sign-in states and hand-off codes; SMTP email | Phạm Tùng Dương | medium | default | platform |
 | `identity` | Role-Based Access Control · UC-01–09, UC-59 | Trần Trung Hiếu (UC-01–03, UC-59) · Phạm Tùng Dương (UC-04–09, RBAC rules) | large | default | platform, be-foundation, fe-foundation |
 | `platform-console` | Platform Console on `admin.` (restored 04/11, HLA): Workspace list, create, suspend / reactivate, invite the first Admin (UC-54…56); Operator sign-in is `identity` Task 11 (KAN-233) | Đặng Tấn Bình | medium | default | platform, identity, worker, fe-foundation |
 | `workspace` | Workspace & Department Management · UC-10–15 | Đặng Tấn Bình | medium | default | identity |
@@ -163,10 +163,10 @@ folders (`chatbot` took its folder with its plan, KAN-69). The approved `ticket-
   `workspace`); record an Account's email so it belongs to one Workspace (MSG155, called by `identity` at UC-05).
   Workspaces are created, suspended and reactivated by a Platform Operator in the Platform Console, who invites the
   first Admin (HLA, 3/11; architecture.md "Provisioning"); the ops script (KAN-240) is the hand-run form of the same
-  provisioning service. Whether that needs an Account-creation service from `identity` is for the `platform` plan to
-  settle; events `WorkspaceSuspended` / `WorkspaceReactivated` tell `worker`.
-- **File storage** (`platform` → `wiki`, `ticket-repository`, `jira-app`): upload, read and delete a file under
-  `/{workspaceId}/…` of the current Workspace; path traversal refused; size limit.
+  provisioning service. The `FirstAdminCreator` port, declared by `platform` and implemented by `identity`, settles the Account creation; events `WorkspaceSuspended` / `WorkspaceReactivated` tell `worker`.
+- **File storage** (`platform` → `wiki`, `ticket-repository`, `jira-app`): upload, read and delete an object in Garage
+  under the key prefix `{workspaceId}/` of the current Workspace; signed URLs for download; no pod-local files;
+  path traversal refused; size limit.
 - **Job queue and `runInTenant`** (`worker` → `project-integration`, `chatbot`, `search`, `ticket-review`,
   `triage`): enqueue a job (it takes the `workspaceId` from `TenantContext`), schedule a recurring job per
   Workspace (JOB-02 at 00:00); every job runs inside `runInTenant(workspaceId, …)`; a Suspended Workspace's job does

@@ -501,3 +501,24 @@
 {"ts":"2026-11-03T17:59:45.096Z","type":"spec-approved","module":"identity","specHash":"5a0b213bea1cb3bbf4c97da21f250bb727a0414388a66d07927100c24cca99dd"}
 {"ts":"2026-11-03T19:46:40.160Z","type":"quick-opened","what":"Align the database conventions in AGENTS.md with the DDL and ADR-0002: singular tables, <table>_id UUID keys, no workspace_id or row-level security","files":["backend/AGENTS.md"]}
 {"ts":"2026-11-04T03:14:57.195Z","type":"quick-closed","what":"Align the database conventions in AGENTS.md with the DDL and ADR-0002: singular tables, <table>_id UUID keys, no workspace_id or row-level security","files":["backend/AGENTS.md"]}
+{"ts":"2026-11-04T13:45:29.331Z","type":"feature-status","module":"platform","feature":"local-data-plane","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:29.587Z","type":"feature-status","module":"platform","feature":"registry-db","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:29.833Z","type":"feature-status","module":"platform","feature":"workspace-catalog","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:30.100Z","type":"feature-status","module":"platform","feature":"row-guard","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:30.347Z","type":"feature-status","module":"platform","feature":"tenant-routing","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:30.609Z","type":"feature-status","module":"platform","feature":"provisioning-core","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:30.847Z","type":"feature-status","module":"platform","feature":"invitation-job-queue","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:31.111Z","type":"feature-status","module":"platform","feature":"ops-script","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:31.344Z","type":"feature-status","module":"platform","feature":"signed-url-route","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:31.565Z","type":"feature-status","module":"platform","feature":"jira-site-link","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:31.802Z","type":"feature-status","module":"platform","feature":"forge-token","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:32.080Z","type":"feature-status","module":"platform","feature":"jira-tenant-resolver","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:32.346Z","type":"feature-status","module":"platform","feature":"ai-vps","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:32.603Z","type":"feature-status","module":"platform","feature":"demo-seed-contributors","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:32.927Z","type":"feature-status","module":"platform","feature":"backup-restore","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:33.198Z","type":"feature-status","module":"platform","feature":"monitoring","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:45:33.462Z","type":"feature-status","module":"platform","feature":"load-test","from":null,"to":"pending"}
+{"ts":"2026-11-04T13:49:58.320Z","type":"spec-approved","module":"platform","specHash":"67a83b65ac3a875374f1a7709fcdccdc87ed1b2d5acd736a1308e336480992aa"}
+{"ts":"2026-11-04T13:58:39.189Z","type":"feature-status","module":"platform","feature":"forge-security-chain","from":null,"to":"pending"}
+{"ts":"2026-11-04T14:00:54.904Z","type":"spec-approved","module":"platform","specHash":"2d8f13b5dc906217c8defe2206c7b8fb8b3a86f1864ca9e3871bdc246a60aab3"}
+{"ts":"2026-11-04T14:19:50.609Z","type":"spec-approved","module":"platform","specHash":"b1089aec1c4aabd28788d9c379999070f635d32449eb69d0d0c004567eab8c31"}

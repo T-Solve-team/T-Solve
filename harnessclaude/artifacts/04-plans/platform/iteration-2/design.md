@@ -1,30 +1,40 @@
 ---
 module: platform
-date: 2026-10-25
+date: 2026-11-04
 iteration: 2
 ---
 
-# Design: platform — iteration 2 (31/10–13/11)
+# Design: platform — iteration 2 (module seed data, and operations readiness after 15/11; DevOps Phase B)
 
-Master: `artifacts/04-plans/platform/design.md` (full Data Model, Key Decisions, File Structure, Edge Cases, Risk
-Review, Builder Check). This file keeps only what Tasks 6, 7, 14 and 16 need.
+Master: `artifacts/04-plans/platform/design.md` (Data Model, Key Decisions, File Structure, Edge Cases, Traceability).
+This file keeps only what Tasks 23 – 26 of `iteration-2/tasks.md` need. Iteration 1 holds Tasks 1 – 22.
 
 ## Scope
 
-The Forge Invocation Token check (STORY-005), the Jira App resolver and Jira site registration (STORY-006), the AI VPS
-(STORY-011) and the seed's module data through contributors (STORY-012, AC-012.2, AC-012.6, AC-012.7).
+- The seed's module data through contributors, and the reset (STORY-012; AC-012.2, AC-012.5 – AC-012.9; Task 23).
+- Operations readiness (STORY-014, after 15/11): the nightly backup with the off-server copy and the restore drill
+  (AC-014.1 – AC-014.5; Task 24), monitoring and alerts (AC-014.6 – AC-014.8; Task 25), the load-test script and one
+  measured run (AC-014.12, AC-014.13; Task 26). The edge limits (AC-014.9 – AC-014.11) are in iteration 1, Task 14.
 
 ## Decisions used in this iteration
 
 | Decision | Choice |
 |----------|--------|
-| P3 | `spring-security-oauth2-jose` (Nimbus), Spring Boot BOM version — approved by the user on 25/10 |
-| Security chain | `ForgeSecurityConfig` `@Order(1)`, matches the `api.` host; stateless; no CSRF; no cookie; be-foundation's and identity's chains unchanged |
-| Forge claims | `cloudId` and principal read from the token's claims; the builder confirms the claim paths against Atlassian's Forge Remote documentation before Task 6 and records them in the master |
-| Install matching | Signed site URL if present; else `TenantInfoClient` on each unbound registered site (public addresses only, `https`, no redirects, 5 s, 64 KB); conditional update `cloud_id IS NULL` |
-| P11, Q13 | WireGuard `wg0` (10.66.0.1 / 10.66.0.2), keys on the hosts, `wg-quick@wg0` enabled; Ollama native systemd on `10.66.0.2:11434`, override before first start; ufw 11434 only from the peer on `wg0` |
-| Seed contributors | Called in `order()`, each in `runIn` of the new Workspace, with `modules.<module>` of the seed file |
+| P7 | The seed runner creates Workspaces through provisioning; CD runs it on staging after each deploy; contributors are called in `order()`, each in `runIn` of the new Workspace, with `modules.<module>` of the seed file |
+| Seed reset | `run-seed.sh --reset` checks `TSOLVE_ENVIRONMENT` is `dev` or `staging` first; it empties the bucket with the AWS CLI v2 (`aws s3 rm --recursive --endpoint-url`), the same S3 API as W1 |
+| W3 | Grafana Alloy (the one collector), Prometheus, Loki and Grafana; Grafana-managed alerts, no separate alert-routing service |
+| W4 | k6 for the load test |
+| W5 | `restic` (encrypted, deduplicated) to a Cloudflare R2 bucket with its own token; the `restic` password is kept offline by two people |
+| R16 | One Redis per environment, persistence, `noeviction`; the "Redis unreachable" and memory alerts are Task 25 |
+
+## Open before coding
+
+- Iteration 1 Tasks 12 – 16 come first; the contributors are each module's own work (`identity`,
+  `workspace`, `project-integration`, `ticket-repository`, `wiki`).
+- Manual: the R2 bucket and token, and the `restic` password (Task 24); the metrics endpoints of the backend and worker
+  (DevOps F4, owner Trần Hải Anh) for Task 25; Hiếu's confirmation of the load-test numbers (Task 26).
 
 ## Edge cases covered here
 
-Master rows 15–23, 35, 36, 39.
+Master rows 56 (a seed contributor fails), 65 – 67 (backup and restore), 68 (many users behind one address, Task 26) and
+45 (a full Redis, Task 25). The other rows are in iteration 1.
