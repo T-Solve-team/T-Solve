@@ -37,7 +37,7 @@ own, and business tables stay the same as in the single-tenant design of Report 
 - **Row guard (reverses "RLS is not used"):** each Workspace database has a one-row tenant-id table and a row policy on
   every tenant table, so a query bound to the wrong Workspace returns nothing. It backs up the database boundary; the
   runtime user has no BYPASSRLS.
-- **MinIO** (S3-compatible) holds files: object keys prefixed by Workspace id, signed URLs, no pod-local files.
+- **Garage** (S3-compatible) holds files: object keys prefixed by Workspace id, signed URLs, no pod-local files.
 - **Redis** (one container, persistence on) keeps the sessions.
 - `admin.` is used again for the Platform Console. Docker Compose is the MVP and demo deployment; Kubernetes with high
   availability is the target.

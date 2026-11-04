@@ -8,7 +8,7 @@ iteration: 1
 
 Master: `artifacts/04-plans/platform/design.md` (Data Model, Key Decisions, File Structure, Edge Cases, Traceability).
 This file keeps only what the first iteration's tasks need. The 4/11 sync (database per Workspace, Registry, row
-guard, MinIO, Redis, STORY-013, STORY-014) is in the master; the tasks card re-assigns tasks to iterations, and
+guard, Garage, Redis, STORY-013, STORY-014) is in the master; the tasks card re-assigns tasks to iterations, and
 STORY-013 and STORY-014 have none yet.
 
 ## Scope
@@ -43,8 +43,8 @@ all as in the master's Data Model.
 
 ## Open before coding
 
-- The user re-approves the spec (`sdd.ts approve platform`) and answers the "Decisions waiting for the user" of the
-  master (W1 – W5; W1 and W2 block the storage and Caddy tasks).
+- The user re-approves the spec (`sdd.ts approve platform`). The tooling decisions W1 – W5 of the master are settled
+  (4/11), so they no longer block the storage and Caddy tasks.
 - Trần Hải Anh's answer on who edits the tenant master and changeset 001 (P1).
 - The smoke test depends on `be-foundation` answering 401 `MSG07` on any `/api/**` path without a session.
 

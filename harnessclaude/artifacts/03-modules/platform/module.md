@@ -40,7 +40,7 @@ site's host name, the verified `cloudId` of the Forge Invocation Token, or the j
 every query to that Workspace's database. Workspaces are created, suspended and reactivated by a Platform Operator
 in the Platform Console (module `platform-console`) or by the operations team with an ops script that runs the same
 provisioning service (GBR-24, GBR-38, KAN-240; the Console is back since the HLA of 3/11). The module
-also holds file storage per Workspace in object storage (MinIO) and the deployment: Docker Compose (the MVP and demo
+also holds file storage per Workspace in object storage (Garage) and the deployment: Docker Compose (the MVP and demo
 deployment; the HLA's Kubernetes deployment is the target), Caddy wildcard routing by host, CI/CD, the application VPS
 and the AI VPS (D41), operations readiness (backup, monitoring, edge limits, load test) and the demo seed (D42). The backend packages `platform` and `common/tenant`
 are *proposed*.
@@ -66,16 +66,16 @@ are *proposed*.
   runtime user, migrations, tenant id row, catalog row, first Admin Account through the `FirstAdminCreator` port that
   `identity` implements — all or nothing; then the invitation email queued on `worker`), suspend and reactivate it
   (KAN-240, GBR-24, GBR-38); the Platform Console calls the same service.
-- File storage per Workspace in MinIO: object keys prefixed by the Workspace id, signed URLs, no local files, no path
+- File storage per Workspace in Garage: object keys prefixed by the Workspace id, signed URLs, no local files, no path
   traversal, size limit, upload / read / signed URL / delete (KAN-96).
 - Migrations: the catalog changelog, then the tenant changelog on every Workspace database, at startup and in the
   deploy.
 - Infrastructure: Docker Compose with PostgreSQL 16 + pgvector (Registry, Jobs and Workspace databases), Redis (one
-  container, persistence, sessions; H-Q1), MinIO (H-Q4), Ollama and the worker (KAN-94); Caddy wildcard
+  container, persistence, sessions; H-Q1), Garage (H-Q4), Ollama and the worker (KAN-94); Caddy wildcard
   `*.tsolve.io.vn` and routing by host, including `admin.` (KAN-95); staging and CI/CD (KAN-200, subtasks KAN-1…14);
   the AI VPS for Ollama, private link only and no Internet egress (KAN-203, D41).
 - Operations readiness (STORY-014): backup and restore drill of the Registry, the Jobs database, each Workspace
-  database and MinIO (KAN-201, KAN-15…18); monitoring with Redis metrics and the "Redis unreachable" alert (KAN-202,
+  database and Garage (KAN-201, KAN-15…18); monitoring with Redis metrics and the "Redis unreachable" alert (KAN-202,
   KAN-19, KAN-20); Caddy edge limits (body size, timeout, rate per IP and per site); a load-test script and one
   measured staging run. The production environment itself (KAN-15, KAN-16, KAN-21) and code quality (KAN-7) stay
   outside this iteration.
@@ -95,8 +95,8 @@ are *proposed*.
 | Workspace events | Application events | `WorkspaceSuspended`, `WorkspaceReactivated` |
 | Provisioning service (`WorkspaceProvisioning`) | Java; Shell + backend `ops` profile | Create, suspend, reactivate a Workspace; called by the Platform Console (`platform-console`, REST on `admin.`) and by the ops script |
 | FirstAdminCreator | Java port, declared here, implemented by `identity` | `UUID createFirstAdmin(UUID workspaceId, String email)`, called inside `TenantContext.runIn` by the provisioning service |
-| File storage | Service interface (MinIO) | Upload, read, signed URL, delete a file of the current Workspace |
-| Deployment | Compose, Caddy, CI | Hosts `{site name}.`, `admin.`, `login.`, `api.`; Redis, MinIO; `OLLAMA_BASE_URL` to the AI VPS |
+| File storage | Service interface (Garage) | Upload, read, signed URL, delete a file of the current Workspace |
+| Deployment | Compose, Caddy, CI | Hosts `{site name}.`, `admin.`, `login.`, `api.`; Redis, Garage; `OLLAMA_BASE_URL` to the AI VPS |
 | Operations | Scripts, monitoring, load test under `infra/` | Backup, restore, alerts, edge limits, load test (STORY-014) |
 
 ### Consumed

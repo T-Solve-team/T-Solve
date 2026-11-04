@@ -26,7 +26,7 @@ the target, not built here — H-Q1):
 | Tenant Registry DB `tsolve_<env>_registry` ("the Registry") | `workspaces`, `workspace_emails`, and `identity`'s sign-in states and hand-off codes | the Tenant Resolver, `WorkspaceCatalog`, the router, provisioning, `identity` |
 | One Workspace DB `tsolve_<env>_ws_<id>` per company | all business tables, the one-row `tenant_identity`, the row policies | only through the routing `DataSource` (runtime user) or the owner user (migrations, provisioning) |
 | Jobs DB `tsolve_<env>_jobs` | JobRunr's own tables only | `worker` (and the enqueue call of the provisioning service) |
-| MinIO bucket `FILE_STORAGE_BUCKET` + Redis | files under `<workspaceId>/` keys; sessions of `identity` | `FileStorage`; `identity` |
+| Garage bucket `FILE_STORAGE_BUCKET` + Redis | files under `<workspaceId>/` keys; sessions of `identity` | `FileStorage`; `identity` |
 
 ### How a request or job gets its Workspace
 
@@ -226,7 +226,7 @@ last step of `TenantMigrator` (Decided in planning; builder check).
 
 | Operation | Check, in order | Code |
 |-----------|-----------------|------|
-| `linkJiraSite(url)` | bound Workspace has no Jira site (else refuse, AC-004.23); URL parsed with `java.net.URI`: scheme `https`, a host, no user info, no port, path empty or `/`, no query, no fragment (else `MSG04` on `jiraSiteUrl`); normalised to `https://<host>` lower-case; `cloudId` read from `<url>/_edge/tenant_info` (failure → nothing stored, logged, exception); conditional `UPDATE … WHERE jira_cloud_id IS NULL`, a unique violation on `jira_cloud_id` → `MSG153` with `tracker_name` = `Jira` on `jiraSiteUrl` (never a 500, AC-004.24) | `MSG04`; `MSG153` |
+| `linkJiraSite(url)` | bound Workspace has no Jira site (else refuse, AC-004.23); URL parsed with `java.net.URI`: scheme `https`, a host, no user info, no port, path empty or `/`, no query, no fragment (else `MSG156` on `jiraSiteUrl`); normalised to `https://<host>` lower-case; `cloudId` read from `<url>/_edge/tenant_info` (failure → nothing stored, logged, exception); conditional `UPDATE … WHERE jira_cloud_id IS NULL`, a unique violation on `jira_cloud_id` → `MSG153` with `tracker_name` = `Jira` on `jiraSiteUrl` (never a 500, AC-004.24) | `MSG156`; `MSG153` |
 | `claimEmail(email)` | lower-case, trimmed; `INSERT … ON CONFLICT (email) DO NOTHING`, then read the row: same Workspace → success, another → `MSG155` on `email`, nothing recorded | `MSG155` |
 | lookups | `findById`, `findBySiteName` (compared without case through the lower-case column), `findByCloudId`: one indexed query, empty when none; they return no connection data | — |
 
@@ -276,15 +276,15 @@ first confirms the object exists (`HeadObject`; AC-007.13), then signs offline.
 
 #### Signed URL host and routing (decision R11)
 
-The signature covers the host and path MinIO sees, so the URL must be signed for the address the browser uses, and
+The signature covers the host and path Garage sees, so the URL must be signed for the address the browser uses, and
 Caddy must forward it unchanged.
 - The signed URL is `FILE_STORAGE_PUBLIC_URL_PATTERN` with the bound Workspace's site name, path-style:
   `https://<site>.<base>/<bucket>/<workspaceId>/<uuid>?X-Amz-…` (e.g. pattern `https://{site}.${TSOLVE_BASE_DOMAIN}`;
   locally `http://{site}.localhost`). The backend finds the site name through `WorkspaceCatalog.findById`.
 - The signer is created with this public endpoint (signing needs no network call); reads and writes use the internal
   endpoint `FILE_STORAGE_ENDPOINT`.
-- Caddy, on every Workspace site, routes `GET`/`HEAD` of `/<bucket>/*` to `minio:9000` with the original `Host` header
-  (Caddy's default), before the web-app route; other methods get 405. MinIO has no published port. The route adds
+- Caddy, on every Workspace site, routes `GET`/`HEAD` of `/<bucket>/*` to `garage:3900` with the original `Host` header
+  (Caddy's default), before the web-app route; other methods get 405. Garage has no published port. The route adds
   `X-Content-Type-Options: nosniff` and removes the signature parameters from the access log. The bucket name is
   reserved as a path on the Workspace site (the web app has no such route).
 - No new host, no new certificate (the Workspace wildcard covers it) and no new reserved site name. TTL is
@@ -324,17 +324,21 @@ another's; no such use exists yet (see Out of Scope of the spec).
 
 | Environment | Runs | Files |
 |-------------|------|-------|
-| Local (Docker Compose) | PostgreSQL 16 + pgvector (Registry, Jobs and Workspace databases), Redis, MinIO (+ one-shot bucket init), backend, worker, web app, Ollama (+ one-shot model pull), Caddy (HTTP, `*.localhost`) | `docker-compose.yml`, `infra/caddy/Caddyfile.local` |
-| Application VPS — edge | Caddy (custom image: Cloudflare DNS module for wildcard certificates by DNS-01, and a rate-limit module), PostgreSQL (one instance), Redis, MinIO | `infra/compose.edge.yml`, `infra/caddy/Caddyfile`, `infra/postgres/init/` |
-| Application VPS — staging | backend, worker, web app (images `:staging`); migrate, seed and ops as one-off runs | `infra/compose.staging.yml` |
+| Local (Docker Compose) | PostgreSQL 16 + pgvector (Registry, Jobs and Workspace databases), Redis, Garage (+ one-shot bucket init), backend, worker, web app, Ollama (+ one-shot model pull), Caddy (HTTP, `*.localhost`) | `docker-compose.yml`, `infra/caddy/Caddyfile.local` |
+| Application VPS — edge | Caddy (custom image: Cloudflare DNS module for wildcard certificates by DNS-01, and a rate-limit module), PostgreSQL (one instance, shared by both environments); Redis and Garage are **not** here | `infra/compose.edge.yml`, `infra/caddy/Caddyfile`, `infra/postgres/init/` |
+| Application VPS — staging (production the same, later) | backend, worker, web app (images `:staging`), **its own Redis and its own Garage** (+ one-shot `garage-init`); migrate, seed and ops as one-off runs | `infra/compose.staging.yml` (`compose.prod.yml` later) |
 | AI VPS | Ollama as a native systemd service bound to the WireGuard address (decision P11) | `infra/scripts/ollama-setup.sh`, `infra/scripts/wireguard-setup.sh` |
 
 - PostgreSQL: `max_connections = 300` in the compose file (decision R2: Workspaces in use × `TENANT_DB_POOL_MAX` + the
   Registry, Jobs and migration pools must stay below it), `shared_buffers` and memory limit as the staging VPS allows.
-- MinIO: one container, persistent volume, credentials from `.env`, no published port. A one-shot `minio-init` (the
-  `mc` client) creates `FILE_STORAGE_BUCKET` if absent, sets it private (no anonymous policy), and creates a service
-  account for the backend with a policy limited to that bucket; the backend never uses the root credentials
-  (`FILE_STORAGE_ACCESS_KEY`, `FILE_STORAGE_SECRET_KEY`). Backend and worker `depends_on` `minio-init` completed.
+- Redis and Garage run **one per environment** (in the staging or production compose file, not in the shared
+  `compose.edge.yml`), so that sessions and files of staging and production never mix (AC-008.10, AC-008.11, AC-010.11).
+- Garage (S3-compatible, ADR-014): one container (pinned `dxflrs/garage` image), single node with
+  `replication_factor = 1`, persistent data and metadata volumes, no published port (the S3 API is internal). A one-shot
+  `garage-init` (`infra/scripts/garage-init.sh`) assigns and applies the node layout, creates `FILE_STORAGE_BUCKET` if
+  absent (private, no anonymous access) and one access key with read/write on that bucket only; the backend never uses
+  the admin credentials (`FILE_STORAGE_ACCESS_KEY`, `FILE_STORAGE_SECRET_KEY`). Backend and worker `depends_on`
+  `garage-init` completed. The S3 client uses path-style addressing and a fixed region name.
 - DNS: the `tsolve.io.vn` zone moves to Cloudflare (free plan). Records `tsolve.io.vn`, `*.tsolve.io.vn`,
   `*.staging.tsolve.io.vn` → application VPS, DNS only (not proxied), so Caddy terminates TLS and sees client addresses.
   The API token `CLOUDFLARE_API_TOKEN` has Zone:DNS:Edit and Zone:Read on that zone only and lives only in the edge
@@ -357,25 +361,28 @@ another's; no such use exists yet (see Out of Scope of the spec).
   `EDGE_MAX_BODY_BYTES` is not larger than `FILE_STORAGE_MAX_BYTES`.
 - Operations (STORY-014; AC-014.1 – AC-014.8, AC-014.12, AC-014.13): `infra/scripts/backup-db.sh` lists the Workspace
   databases from the Registry and writes one compressed custom-format dump per database (Registry, Jobs, each
-  Workspace) plus a copy of each Workspace prefix of the bucket, encrypts each file before it leaves the server, keeps
-  seven days, exits non-zero naming the database or prefix that failed, and raises the alert. `CATALOG_SECRET_KEY` is
-  kept apart from the dumps; Redis is not backed up. `infra/RESTORE.md` restores one Workspace onto staging under new
+  Workspace) plus a copy of each Workspace prefix of the bucket, sends them with `restic` (encrypted, deduplicated) to a
+  Cloudflare R2 bucket limited by its own token (W5, ADR-015), keeps seven days (`restic forget`), exits non-zero naming the database or prefix that failed, and raises the alert. `CATALOG_SECRET_KEY` is
+  kept apart from the dumps and left out of the backed-up `.env` copy (the restic password is kept offline by two people); Redis is not backed up. `infra/RESTORE.md` restores one Workspace onto staging under new
   database name, user and password and rewrites its Registry row for staging (the restored row never carries a
-  production name, user or password, AC-014.5), and records the time. Monitoring: the backend and worker expose metrics,
-  exporters cover PostgreSQL, Redis and MinIO, one dashboard shows them including Redis memory, clients and command
-  rate, and alert rules cover Redis, the Jobs DB and MinIO unreachable and a failed backup. A load-test script under
-  `infra/loadtest/` with the thresholds in the script. The tools for these are proposed under "Decisions waiting for
-  the user".
+  production name, user or password, AC-014.5), and records the time. Monitoring (W3): the backend and worker expose metrics; Grafana
+  Alloy is the one collector (the backend and worker metrics, host metrics, PostgreSQL, Redis and the Garage metrics
+  endpoint, and container logs to Loki), Prometheus stores the metrics, one Grafana dashboard shows them including
+  Redis memory, clients and command rate, and Grafana-managed alert rules (no separate alert-routing service) cover Redis, the Jobs DB
+  and Garage unreachable and a failed backup. Grafana is served on `grafana.<base>` (reserved site name, AC-013.3).
+  A load-test script (k6, W4) under `infra/loadtest/` with the thresholds in the script. The stack runs in
+  `compose.monitoring.yml`; STORY-014 is built after 15/11 (DevOps Phase B), except the edge limits (DevOps step A5).
+  The tools are the decisions W1 – W5 below.
 
 ## Key Decisions
 
 | Decision | Choice | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
 | Model | One database per Workspace, a Registry DB, a Jobs DB; no Workspace-id column on tenant tables (ADR-0002, GBR-37) | Shared database with a per-row filter and a row policy on a Workspace-id column | User, 29/10; HLA, 3/11 |
-| Spec Q1–Q10 of 4/11 | As recorded in the spec Changelog (recommended options; Q9 `MSG04` stays; Q10 403 `MSG150` for a Suspended Workspace on the Jira path) | see the spec | User, 4/11 ("all recommendations") |
+| Spec Q1–Q10 of 4/11 | As recorded in the spec Changelog (recommended options; Q9 answered: the invalid-URL refusal uses the new code `MSG156` (AC-004.21), not `MSG04`; Q10 403 `MSG150` for a Suspended Workspace on the Jira path) | see the spec | User, 4/11 ("all recommendations") |
 | H-Q1 Deployment | Docker Compose on a VPS for the MVP and the demo; Kubernetes and high availability are the target only; Redis is one container with persistence | Build for Kubernetes now | Hiếu, 4/11 |
 | H-Q3 Jobs DB | `tsolve_<env>_jobs` on the same server, own user, JobRunr's tables only | JobRunr tables in the Registry DB | Hiếu, 4/11; the Registry stays small and restorable on its own |
-| H-Q4 Object storage | MinIO (S3-compatible); object names `<workspaceId>/<uuid>`; signed URLs; no local files | Local volume; a cloud bucket | Hiếu, 4/11; any API replica can serve any file |
+| H-Q4 Object storage | Garage (S3-compatible; ADR-014); one per environment; object names `<workspaceId>/<uuid>`; signed URLs; no local files | Local volume; a cloud bucket; the store first named on 4/11 (its community images stopped) | Hiếu, 4/11 and the user, 4/11 (Q1); any API replica can serve any file |
 | H-Q5 Provisioning | One `WorkspaceProvisioning` service; the script and the Console both call it; the first Admin is invited | Script with its own SQL | Hiếu, 4/11 |
 | H-Q6 Row guard | One-row `tenant_identity`; policy `tenant_guard` on every tenant table comparing it with the transaction's `app.tenant_id`; no `BYPASSRLS`; guard test enforces it | Boundary only | Hiếu, 4/11 |
 | P1 Shared changeset 001 | `be-foundation` (Trần Hải Anh) owns the master and decides who edits changeset 001; the legacy `workspace` table leaves the tenant changelog, its company data stays with `workspace`; platform's changesets are added after it | platform rewrites 001 | Ownership stays with `be-foundation` (user, 25/10) |
@@ -396,7 +403,7 @@ another's; no such use exists yet (see Out of Scope of the spec).
 | R8 Password storage | AES-256-GCM, random nonce, Workspace id as associated data, key `CATALOG_SECRET_KEY` | Application-level hash; pgcrypto | The password must be recoverable to connect |
 | R9 Provisioning order | As AC-013.1: database, changelog, `tenant_identity`, Registry rows (the first and only commit that makes the Workspace visible), first Admin, then the invitation after the commit; saga compensation drops everything | Registry row first with a "provisioning" status | The spec's status set is ACTIVE or SUSPENDED only; a failed run leaves no visible Workspace |
 | R10 Invitation | `InvitationJobQueue` port declared in `platform`, implemented by `worker` (JobRunr, Jobs DB); the job carries the Workspace id and the Account id | JobRunr dependency in `platform` | `worker` owns JobRunr (D43); the job holds no personal data |
-| R11 Signed-URL host | Path-style URL on the Workspace's own site: `/<bucket>/<workspaceId>/<uuid>`, signed for `FILE_STORAGE_PUBLIC_URL_PATTERN`; Caddy forwards `GET`/`HEAD` of `/<bucket>/*` to MinIO with `Host` unchanged | A dedicated `files.` host (a new reserved site name); streaming every file through the backend; a rewritten path (breaks the signature) | No new host, certificate or reserved name; same origin; MinIO stays private; signature remains valid |
+| R11 Signed-URL host | Path-style URL on the Workspace's own site: `/<bucket>/<workspaceId>/<uuid>`, signed for `FILE_STORAGE_PUBLIC_URL_PATTERN`; Caddy forwards `GET`/`HEAD` of `/<bucket>/*` to Garage with `Host` unchanged | A dedicated `files.` host (a new reserved site name); streaming every file through the backend; a rewritten path (breaks the signature) | No new host, certificate or reserved name; same origin; Garage stays private; signature remains valid |
 | R12 Object content | Stored as `application/octet-stream`; Caddy adds `nosniff` on that route | Content type from the caller | A stored HTML file is downloaded, never rendered on a Workspace site |
 | R13 In-memory upload | `store` buffers up to 10 MB in memory and writes with one `PutObject` | Multipart upload; spool to disk | Atomic, no partial object, no local file (AC-007.8, AC-007.14) |
 | R14 Migrations | The web process applies the Registry changelog, then `TenantMigrator` for every Workspace (a bean the routing `DataSource` depends on, so it finishes before the server accepts requests); after each success it writes `schema_version`; a failure stops startup naming the Workspace (AC-008.9). CD also runs the `migrate` profile before `up` (AC-010.3). The worker never runs Liquibase | Migrations only in CD | Both criteria hold; a failed migration stops the deploy before new containers start |
@@ -412,26 +419,27 @@ another's; no such use exists yet (see Out of Scope of the spec).
 | Events | `WorkspaceSuspended` / `WorkspaceReactivated` records in `platform/dto`, published from an after-commit `TransactionSynchronization` | `@TransactionalEventListener` on the consumer side | Guarantees "after the commit" for every listener |
 | GHCR namespace | `ghcr.io/${{ github.repository_owner }}` lower-cased | hard-coded owner | `GITHUB_TOKEN` can push only to the repository owner's namespace |
 | Staging basic auth | Caddy `basic_auth` with a bcrypt hash from the edge `.env` on staging Workspace sites, `admin.`, `login.`; not on `api.` | IP allow-list | Team members work from changing addresses; Forge Remote must reach `api.` (AC-009.10) |
-| Reserved `staging` (D44) | `staging` joins `admin`, `login`, `api`, `www`: refused at provisioning; resolver 404 `MSG151` without a lookup | own staging domain | User, 25/10 |
+| Reserved `staging` (D44) | `staging` joins `admin`, `login`, `api`, `www`: refused at provisioning; resolver 404 `MSG151` without a lookup. `grafana` is reserved too (AC-013.3), because Grafana is served on `grafana.<base>` (DevOps design) | own staging domain | User, 25/10 |
 | Seed data format | JSON | YAML | No new dependency |
 
-### Decisions waiting for the user
+### Tooling decisions (W1 – W5)
 
-Proposed, not decided; each needs a yes before the tasks that use it are built (`backend/AGENTS.md` "new dependency").
+Decided on 4/11 (the user, with the DevOps design and ADR-014, -015, -016); each is a new dependency or tool in the
+sense of `backend/AGENTS.md`.
 
-| # | Question | Options | Recommendation |
-|---|----------|---------|----------------|
-| W1 | Client library for object storage | AWS SDK v2 `software.amazon.awssdk:s3` (BOM-managed; `S3Presigner` signs offline) · MinIO Java SDK `io.minio:minio` | AWS SDK v2: works with any S3 store (the HLA target), offline presigning for a public endpoint, maintained by Amazon; Testcontainers MinIO module for tests |
-| W2 | Rate-limit module for the custom Caddy image | `github.com/mholt/caddy-ratelimit` · `github.com/RussellLuo/caddy-ext/ratelimit` | `mholt/caddy-ratelimit`: maintained by the Caddy author, per-key zones |
-| W3 | Monitoring and alerts (KAN-19, KAN-20) | Prometheus + Grafana + exporters (Micrometer Prometheus registry in the backend) · Uptime Kuma only | Prometheus + Grafana + Alertmanager: covers metrics, the Redis dashboard and alerts in one stack |
-| W4 | Load-test tool | k6 · Gatling | k6: one script file, thresholds and non-zero exit built in |
-| W5 | Backup encryption and off-server copy | `age` + a second storage target · GPG | `age` (small, no key ring); the off-server target is Hiếu's to name |
+| # | Question | Chosen | Alternatives | Rationale |
+|---|----------|--------|--------------|-----------|
+| W1 | Client library for object storage | AWS SDK v2 `software.amazon.awssdk:s3` (BOM-managed; `S3Presigner` signs offline; path-style addressing) | a vendor-specific Java SDK (`io.minio:minio`) | Works with any S3 store (Garage now, the HLA target later), offline presigning for a public endpoint, maintained by Amazon |
+| W2 | Rate-limit module for the custom Caddy image | `github.com/mholt/caddy-ratelimit` (ADR-016) | `github.com/RussellLuo/caddy-ext/ratelimit` | Maintained by the Caddy author, per-key zones |
+| W3 | Monitoring and alerts (KAN-19, KAN-20) | Grafana Alloy (the one collector) + Prometheus + Grafana + Grafana-managed alerts; Loki for logs; no separate alert-routing service (user, 4/11) | Prometheus + Grafana + a separate alert-routing service; Uptime Kuma only | One collector for metrics and logs, alerts in Grafana, one dashboard for Redis, the Jobs DB and Garage; matches the DevOps design §10 and ADR-010 |
+| W4 | Load-test tool | k6 (ADR-016) | Gatling | One script file, thresholds and non-zero exit built in |
+| W5 | Backup encryption and off-server copy | `restic` (encrypted, deduplicated) to a Cloudflare R2 bucket (ADR-015; user, 4/11) | file-level encryption of each dump plus a second target; GPG | One tool for encryption, deduplication and retention; R2 has a free tier, an S3 API and no egress fees; replaces file-level encryption |
 
 ## File Structure
 
 ```
 backend/
-├── pom.xml                                   + spring-security-oauth2-jose, spring-boot-starter-jdbc if absent; W1 library; Testcontainers (postgresql, minio)
+├── pom.xml                                   + spring-security-oauth2-jose, spring-boot-starter-jdbc if absent; W1 library; Testcontainers (postgresql)
 ├── Dockerfile, .dockerignore                 Maven build stage, Java 21 JRE, non-root, health check
 └── src/
     ├── main/java/vn/tsolve/
@@ -470,15 +478,15 @@ backend/
         ├── common/tenant/   ThreadLocalTenantContextTest, TenantRoutingIT, RowGuardIT, ConventionGuardIT, TenantIsolationIT
         ├── platform/        HostClassifierTest, TenantResolverFilterTest, WorkspaceCatalogImplTest, WorkspaceCatalogIT,
         │                    WorkspaceProvisioningIT, PasswordCipherTest, NimbusForgeTokenVerifierTest, ForgeSecurityIT,
-        │                    ForgeLifecycleIT, ObjectFileStorageIT (MinIO), SeedRunnerTest
+        │                    ForgeLifecycleIT, ObjectFileStorageIT (Garage), SeedRunnerTest
         └── support/         PostgresTestBase (Testcontainers pgvector:pg16 + infra/postgres/init, owner and runtime users),
-                             MinioTestBase
+                             GarageTestBase
 infra/
 ├── README.md                          variables per environment, local start, DNS table, runbooks
 ├── caddy/Dockerfile, Caddyfile, Caddyfile.local
 ├── compose.edge.yml, compose.staging.yml
 ├── postgres/init/10-tsolve-roles.sh   roles, Registry and Jobs databases, template database
-├── minio/init.sh                      bucket, private policy, backend service account
+├── scripts/garage-init.sh             layout, private bucket, bucket-limited access key (Garage)
 ├── ops/workspace.sh                   create | suspend | reactivate (starts the ops profile)
 ├── scripts/bootstrap.sh, install-runner.sh, wireguard-setup.sh, ollama-setup.sh, backup-db.sh
 ├── RESTORE.md
@@ -495,12 +503,11 @@ docker-compose.yml                      local stack (KAN-94)
 - `org.springframework.security:spring-security-oauth2-jose` (Spring Boot BOM): Forge Invocation Tokens. **Approved by
   the user on 25/10.**
 - Testcontainers (`spring-boot-testcontainers`, `org.testcontainers:postgresql`, Spring Boot BOM): decided by
-  `be-foundation` (its Q7). The MinIO module `org.testcontainers:minio` is added with W1.
-- S3 client library for MinIO: **waiting for the user (W1)**.
-- Caddy 2 built with `github.com/caddy-dns/cloudflare` and a rate-limit module (**W2**) via `xcaddy` (pinned versions in
+  `be-foundation` (its Q7). Garage has no Testcontainers module: `GarageTestBase` starts the pinned Garage image as a generic container and runs the same bootstrap (Decided in planning: builder check).
+- S3 client library: AWS SDK v2 `software.amazon.awssdk:s3` (W1, decided).
+- Caddy 2 built with `github.com/caddy-dns/cloudflare` and `github.com/mholt/caddy-ratelimit` (**W2**) via `xcaddy` (pinned versions in
   `infra/caddy/Dockerfile`).
-- MinIO, Redis 7, PostgreSQL 16 with pgvector (pinned images); monitoring and load-test tools (**W3**, **W4**); backup
-  encryption (**W5**).
+- Garage, Redis 7, PostgreSQL 16 with pgvector (pinned images); Grafana Alloy, Prometheus, Loki and Grafana (**W3**); k6 (**W4**); `restic` with Cloudflare R2 (**W5**).
 - Cloudflare DNS (free plan) for `tsolve.io.vn`; GHCR; GitHub Actions self-hosted runner.
 - WireGuard (Ubuntu package), Ollama (official installer, pinned version) with `bge-m3` and the chat model of KAN-140.
 - Atlassian: the Forge key set (`FORGE_JWKS_URL`) and the public `/_edge/tenant_info` of a Jira site.
@@ -517,7 +524,7 @@ docker-compose.yml                      local stack (KAN-94)
 | `POSTGRES_PASSWORD` and the passwords of the roles | `infra/postgres/init` | none |
 | `TSOLVE_BASE_DOMAIN`, `TSOLVE_ENVIRONMENT` | backend, worker, seed, ops | none |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `identity` sessions; the Redis container | none |
-| `FILE_STORAGE_ENDPOINT`, `FILE_STORAGE_ACCESS_KEY`, `FILE_STORAGE_SECRET_KEY`, `FILE_STORAGE_BUCKET`, `FILE_STORAGE_URL_TTL_SECONDS` (default 300), `FILE_STORAGE_MAX_BYTES` (default 10485760) | backend, worker, MinIO init | none (as listed) |
+| `FILE_STORAGE_ENDPOINT`, `FILE_STORAGE_ACCESS_KEY`, `FILE_STORAGE_SECRET_KEY`, `FILE_STORAGE_BUCKET`, `FILE_STORAGE_URL_TTL_SECONDS` (default 300), `FILE_STORAGE_MAX_BYTES` (default 10485760) | backend, worker, Garage init | none (as listed) |
 | `FILE_STORAGE_PUBLIC_URL_PATTERN` (new, R11) | backend (signed URLs) | none |
 | `FORGE_APP_ID`, `FORGE_JWKS_URL` | backend | none |
 | `EDGE_MAX_BODY_BYTES`, `EDGE_TIMEOUT_SECONDS`, `EDGE_RATE_PER_IP`, `EDGE_RATE_PER_SITE`, `EDGE_RATE_WINDOW_SECONDS` | edge Caddy | none |
@@ -564,7 +571,7 @@ High row into a task.
 | 22 | STORY-002 | Compliance | Logs of refused requests | Medium | Host and code only; no token, cookie or body | TenantResolverFilterTest, NimbusForgeTokenVerifierTest |
 | 23 | STORY-002 | Environment | Hibernate asks the database for metadata at startup with no Workspace bound | High | Startup succeeds (R15) | TenantRoutingIT |
 | 24 | STORY-004 | Timing | Two Admins link the same Jira site to different Workspaces at once | High | One stored; the other `MSG153`, never a 500 | WorkspaceCatalogIT |
-| 25 | STORY-004 | Input extremes | `http://x.atlassian.net`, `https://x.atlassian.net/jira`, `https://user@x`, `https://x:8443`, a host resolving to a private address | High | `MSG04`; no outbound call to an internal address | WorkspaceCatalogImplTest |
+| 25 | STORY-004 | Input extremes | `http://x.atlassian.net`, `https://x.atlassian.net/jira`, `https://user@x`, `https://x:8443`, a host resolving to a private address | High | `MSG156`; no outbound call to an internal address | WorkspaceCatalogImplTest |
 | 26 | STORY-004 | Data integrity | Same email in other case or with spaces in two Workspaces at once | High | One row (lower-case primary key); the other `MSG155` | WorkspaceCatalogIT |
 | 27 | STORY-004 | State transitions | Link a second Jira site to a linked Workspace | Medium | Refused, nothing changed | WorkspaceCatalogIT |
 | 28 | STORY-005 | Authorization | Token with `alg: none`, HS256 signed with the public key, expired by 1 s, wrong audience or issuer | Critical | 401 without code, no lookup | NimbusForgeTokenVerifierTest |
@@ -577,20 +584,20 @@ High row into a task.
 | 35 | STORY-007 | Input extremes | Key `../b/…`, `C:\x`, `%2e%2e/`, NUL, `a/b`, upper-case UUID, absolute | Critical | Refused before any object call; logged | ObjectFileStorageIT |
 | 36 | STORY-007 | Authorization | A's key used while B is bound: `read`, `delete`, `signedUrl` | Critical | `NotFoundException`, no content, no URL, nothing deleted | TenantIsolationIT (AC-007.11) |
 | 37 | STORY-007 | Scale | File of exactly 10 MB, 10 MB + 1 byte, 0 bytes | High | 10 MB stored; +1 refused with no object; 0 bytes stored | ObjectFileStorageIT |
-| 38 | STORY-007 | Error cascades | MinIO down or the connection breaks during `store` | High | Exception, no object, no multipart upload; `read` fails closed | ObjectFileStorageIT |
-| 39 | STORY-007 | Authorization | Signed URL after the TTL; URL with a changed key or method; unsigned request to `/<bucket>/…` | High | Refused by MinIO (403); bucket has no anonymous access | ObjectFileStorageIT, `caddy-routing.test.sh` |
+| 38 | STORY-007 | Error cascades | Garage down or the connection breaks during `store` | High | Exception, no object, no multipart upload; `read` fails closed | ObjectFileStorageIT |
+| 39 | STORY-007 | Authorization | Signed URL after the TTL; URL with a changed key or method; unsigned request to `/<bucket>/…` | High | Refused by Garage (403); bucket has no anonymous access | ObjectFileStorageIT, `caddy-routing.test.sh` |
 | 40 | STORY-007 | Compliance | The signature in the query string reaches the Caddy access log | High | Signature parameters removed from the log | `caddy-routing.test.sh` |
 | 41 | STORY-007 | Input extremes | An uploaded HTML or SVG file opened through its signed URL | High | Stored as `application/octet-stream` with `nosniff`: downloaded, not rendered | `caddy-routing.test.sh` |
 | 42 | STORY-007 | Timing | Two `delete` calls for one key | Low | Both succeed (AC-007.10) | ObjectFileStorageIT |
 | 43 | STORY-008 | Environment | `.env` missing a required variable (for example `DB_MIGRATION_PASSWORD`, `REDIS_PASSWORD`) | Medium | Backend refuses to start naming it | start-up test |
 | 44 | STORY-008 | Error cascades | Tenant changelog fails on one Workspace at startup | High | Stops, names that site name, leaves the others untouched | WorkspaceProvisioningIT / TenantMigrator test |
 | 45 | STORY-008 | Error cascades | Redis down at start; Redis full under `noeviction` | High | Backend is not healthy without Redis; a full Redis fails writes loudly and the memory alert fires | `infra/tests` health check, monitoring rule |
-| 46 | STORY-008 | State transitions | Bucket init fails or the bucket is missing | Medium | `minio-init` exits non-zero; backend and worker do not start | `infra/tests` |
+| 46 | STORY-008 | State transitions | Bucket init fails or the bucket is missing | Medium | `garage-init` exits non-zero; backend and worker do not start | `infra/tests` |
 | 47 | STORY-009 | Integration | Cloudflare token expired at renewal time | High | Existing certificates keep serving (renewal starts 30 days early); Caddy logs it; runbook rotates the token | `caddy-routing.test.sh` |
 | 48 | STORY-009 | Authorization | `www.staging.…`, `staging.…`, `a.b.staging.…`; `POST` to `/<bucket>/…` on a Workspace site | Medium | 404 from Caddy for the first two; third has no certificate; `POST` gets 405 | `caddy-routing.test.sh` |
 | 49 | STORY-010 | Authorization | A pull request from a fork tries to run on the self-hosted runner | Critical | Deploy job only on `push`/`workflow_run` of `main`; runner group restricted to `cd-staging.yml` | `infra-checks.yml` |
 | 50 | STORY-010 | Error cascades | Migration fails for one Workspace mid-deploy | High | Workflow fails before `up`, naming the Workspace; old containers keep serving | `cd-staging.yml` dry run |
-| 51 | STORY-010 | Authorization | Docker publishes PostgreSQL, Redis or MinIO ports, bypassing ufw | Critical | No `ports:` on those services in server compose files; port test from the internet | `ports.test.sh` |
+| 51 | STORY-010 | Authorization | Docker publishes PostgreSQL, Redis or Garage ports, bypassing ufw | Critical | No `ports:` on those services in server compose files; port test from the internet | `ports.test.sh` |
 | 52 | STORY-011 | Environment | AI VPS reboots | High | `wg0` and Ollama come back (systemd order) | `ai-vps.test.sh` |
 | 53 | STORY-011 | Authorization | Ollama started by the installer on `0.0.0.0:11434` before the override | Critical | Override applied before first start; ufw denies 11434 on the public interface anyway | `ai-vps.test.sh` |
 | 54 | STORY-012 | Business logic | Seed or `run-seed.sh --reset` with `TSOLVE_ENVIRONMENT` unset, `production` or `prod` | Critical | Exit non-zero before anything is touched | SeedRunnerTest, `run-seed` test |
@@ -629,11 +636,11 @@ as "the id of the last changeset applied" is a design choice the spec leaves ope
 | AC-005.1 – .8 (Forge token, `admin.` on the Jira path) | Security chains; Key Decisions (P3, Forge) |
 | AC-006.1 – .16 (Jira App resolver, Suspended 403 `MSG150`, lifecycle) | How a request or job gets its Workspace; Lifecycle events |
 | AC-007.1 – .15 (object storage, signed URL) | Storage layout; Signed URL host and routing; R10–R13 |
-| AC-008.1 – .11 (stack, Redis, MinIO) | Infrastructure; Redis |
+| AC-008.1 – .11 (stack, Redis, Garage) | Infrastructure; Redis |
 | AC-009.1 – .11 (Caddy, `admin.`, signed-URL route) | Infrastructure; Signed URL host and routing |
-| AC-010.1 – .12 (CD, migrations per Workspace, Redis, MinIO, Jobs DB in staging) | Infrastructure — Deploy; R14 |
+| AC-010.1 – .12 (CD, migrations per Workspace, Redis, Garage, Jobs DB in staging) | Infrastructure — Deploy; R14 |
 | AC-011.1 – .6 (AI VPS) | Infrastructure — Private link; P11, Q13 |
 | AC-012.1 – .9 (seed through provisioning, reset) | Seed data; P7 |
 | AC-013.1 – .20 (provisioning, first Admin, invitation, race) | Provisioning; R9, R10 |
-| AC-014.1 – .13 (backup, restore, monitoring, edge limits, load test) | Infrastructure — Edge limits, Operations; Decisions waiting for the user |
+| AC-014.1 – .13 (backup, restore, monitoring, edge limits, load test) | Infrastructure — Edge limits, Operations; Tooling decisions (W1 – W5) |
 | Non-functional 1 – 7 | Data Model; Edge Cases & Risks rows 1 – 15 |

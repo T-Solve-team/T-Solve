@@ -15,7 +15,7 @@ total_modules: 17
 >
 > **Sync of 04/11 with the multi-tenant HLA (KAN-231).** The Platform Console on `admin.` is back (`platform-console`
 > restored with its owner; KAN-113…116, KAN-184 and KAN-233 reopened, KAN-244 narrowed), Redis keeps the sessions,
-> the catalog is the Platform / Tenant Registry database, JobRunr has its own Jobs database, files are in MinIO, the
+> the catalog is the Platform / Tenant Registry database, JobRunr has its own Jobs database, files are in Garage, the
 > ops script KAN-240 is the hand-run form of the Console's provisioning, and every tenant table has a row guard.
 > No PII masking anywhere. Compose is the MVP deployment; Kubernetes is the HLA target.
 
@@ -31,7 +31,7 @@ owner (see "Stories → module"). Owners can change: edit the Owner column and t
 
 | Module | Report3 feature · UCs | Owner | Complexity | Repos | Dependencies |
 |--------|-----------------------|-------|-----------|-------|--------------|
-| `platform` | Tenant layer: `TenantContext`, Registry (catalog) DB + one database per Workspace (KAN-98), Jobs DB, per-DB row guard, Tenant Resolvers (host, `cloudId`), Forge Invocation Token check, provisioning service and its ops script (KAN-240), MinIO object storage with a prefix per Workspace, Redis; infrastructure (Compose, Caddy, CI/CD, VPS, seed) | Trần Trung Hiếu | large | default | — |
+| `platform` | Tenant layer: `TenantContext`, Registry (catalog) DB + one database per Workspace (KAN-98), Jobs DB, per-DB row guard, Tenant Resolvers (host, `cloudId`), Forge Invocation Token check, provisioning service and its ops script (KAN-240), Garage object storage with a prefix per Workspace, Redis; infrastructure (Compose, Caddy, CI/CD, VPS, seed) | Trần Trung Hiếu | large | default | — |
 | `be-foundation` | Five roles in security, `/me`, `ProblemDetail` + MSG codes, audit events | Anh Tran Hai | medium | default | platform |
 | `fe-foundation` | Web app base: roles, session, guards, landing, menus, routes, catalog, mocks, guidelines (KAN-57) | Trần Trung Hiếu | large | default | — |
 | `ai` | AI gateway: chat LLM and bge-m3 embedding clients (Ollama on the AI VPS, no PII masking), AI draft and rewrite of a Solution (UC-19), model benchmark | Trần Hải Anh | medium | default | platform, be-foundation |
@@ -165,7 +165,7 @@ folders (`chatbot` took its folder with its plan, KAN-69). The approved `ticket-
   first Admin (HLA, 3/11; architecture.md "Provisioning"); the ops script (KAN-240) is the hand-run form of the same
   provisioning service. Whether that needs an Account-creation service from `identity` is for the `platform` plan to
   settle; events `WorkspaceSuspended` / `WorkspaceReactivated` tell `worker`.
-- **File storage** (`platform` → `wiki`, `ticket-repository`, `jira-app`): upload, read and delete an object in MinIO
+- **File storage** (`platform` → `wiki`, `ticket-repository`, `jira-app`): upload, read and delete an object in Garage
   under the key prefix `{workspaceId}/` of the current Workspace; signed URLs for download; no pod-local files;
   path traversal refused; size limit.
 - **Job queue and `runInTenant`** (`worker` → `project-integration`, `chatbot`, `search`, `ticket-review`,

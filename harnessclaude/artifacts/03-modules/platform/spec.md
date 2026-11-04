@@ -18,6 +18,7 @@ owner: BA
 | 2026-11-04 | STORY-002, STORY-013 | AC-002.10: `admin.` binds no Workspace and serves the Platform Console (it no longer answers MSG151). Requirement 4 and AC-013.1 step 4: the Platform Console and the ops script share one provisioning service; the first Admin is invited. Out of Scope: the Console screens belong to `platform-console`, not to this module. Dependencies on `identity`: no `FirstAdminCreator` is assumed; the first-Admin service is settled in the platform plan. The rest of the HLA sync (Registry name, Jobs database, tenant row guard, object storage, Redis) is left to the platform Change Mode session | KAN-231 HLA sync, 4/11 (HLA Q1 = A, H-Q4, H-Q5, H-Q6; step 1 items L3–L5) |
 | 2026-11-04 | STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008, STORY-009, STORY-010, STORY-012, STORY-013, new STORY-014 | **Multi-tenant HLA sync (KAN-98; items 1–12 and 19 of the KAN-231 list).** STORY-001: AC-001.15 adds `schema_version` and names the catalog the Platform / Tenant Registry (the Registry); AC-001.17 says identity's short-lived sign-in states and hand-off codes are not business data and live in the Registry; AC-001.21 and AC-001.27 reworded; new AC-001.28…AC-001.33 (per-database tenant row guard: the one-row table `tenant_identity`, a row policy on every tenant table, its guard test, no BYPASSRLS; the Jobs database). **AC-003.9 is retired** (it forbade row-level security policies; the guard of AC-001.29 reverses it); STORY-003 stays cancelled and its ids AC-003.1…AC-003.9 are never reused; its single criterion is the new AC-003.10 (no policy on `workspace_id`). STORY-002: AC-002.5 leaves `admin.` to AC-002.10; new AC-002.24, AC-002.25 (each transaction sets the tenant setting the guard checks; a misrouted connection sees nothing). STORY-004: AC-004.21 answered (MSG04, Q9); AC-004.28 reworded (the only endpoint that creates, suspends or reactivates a Workspace is the Console's on `admin.`, Q5). STORY-005: AC-005.8 adds `admin.`. STORY-006: AC-006.4 answered (403 with `MSG150`, Q10). STORY-007 rewritten for object storage (MinIO, H-Q4): AC-007.1, .3, .5, .7, .8, .9, .10 and .11 reworded; new AC-007.12…AC-007.15 (signed URL, no local files). STORY-008: AC-008.1 and AC-008.2 reworded; new AC-008.10, AC-008.11 (Redis, MinIO). STORY-009: AC-009.1 and AC-009.10 reworded; **AC-009.3 for `admin.` returns as AC-009.11** (removed ids are not reused). STORY-010: AC-010.6 and AC-010.10 reworded; new AC-010.11, AC-010.12 (Redis, MinIO and Jobs database in the staging stack). STORY-012: AC-012.8 reworded (object storage). STORY-013: retitled "Provisioning service and ops script"; AC-013.1 and AC-013.5 reworded; new AC-013.13…AC-013.20 (one `WorkspaceProvisioning` service for the Console and the script, the `FirstAdminCreator` port implemented by `identity`, the first Admin created Active and invited by email, the email-claim race, the invitation outside the all-or-nothing rule). **New STORY-014: operations readiness** (backup and restore drill, monitoring with Redis metrics and alert, edge limits on Caddy, load-test script and one measured staging run); (AC-014.1…AC-014.13); KAN-201 and KAN-202 move from Out of Scope into it. Requirements 1, 3, 4, 6, 7 and 8, NFR 3, 5 and 6, Out of Scope, Interface Contracts, Required from other modules and Definition of Done updated; JobRunr's tables move from the catalog to the Jobs database `tsolve_<env>_jobs` | Hiếu's decisions of 4/11 (H-Q1 A: Compose for the MVP and the demo, one Redis container with persistence; H-Q3 A; H-Q4 B; H-Q5 A; H-Q6 A) and the HLA Q1–Q4 of 3/11; step-1 questions Q1…Q10 of KAN-98 answered with the recommended option (user: "all recommendations"); sync list `KAN-231-hla-sync-step2.md`, items 1–12 and 19 |
 | 2026-11-04 | STORY-004 | AC-004.21: the invalid Jira site URL refusal uses the new code `MSG156` instead of `MSG04`; `MSG156` added to the baseline System_Messages. | `MSG04` reads "No results found", which does not describe the error (user, 4/11) |
+| 2026-11-04 | STORY-007, STORY-008, STORY-010, STORY-013, STORY-014 | **DevOps sync (KAN-98).** The object store is Garage (S3-compatible; ADR-014), not MinIO: AC-007 wording, AC-008.1, AC-008.11, AC-010.11, AC-010.12, AC-014.1, AC-014.6, AC-014.8, NFR 3 and 6, Requirement 6 and 7, the interface comment and the Definition of Done name Garage; the keys, signed URLs, "no local files" and the `FILE_STORAGE_*` names are unchanged. Redis and Garage run one per environment (Requirement 7). AC-014.1: the backup goes to a Cloudflare R2 bucket with `restic` (encrypted, deduplicated; ADR-015), not `age`; no new id, no id removed. STORY-014 is scheduled after 15/11 (DevOps Phase B), not in "Sprint S3"; its edge limits (AC-014.9 – AC-014.11) follow the DevOps design's step A5 default (proposed there in the Phase A edge stack); Out of Scope reworded the same way. AC-013.3: `grafana` joins the reserved site names (the DevOps design serves Grafana on `grafana.<base>`). Monitoring is Grafana Alloy, Prometheus, Grafana and Grafana alerts, not Alertmanager, and Loki stays for logs (design only; AC-014.6 – AC-014.8 keep their text). No acceptance criterion is added or removed | Hiếu's answers of 4/11 (Q1 Garage, Q2 restic to R2, Q3 STORY-014 after 15/11, Q4 Loki kept; W3 Alloy, no Alertmanager); DevOps design 4/11 and ADR-014, -015, -016 | Align the platform spec with the DevOps design |
 
 ## Requirements
 
@@ -40,16 +41,16 @@ owner: BA
    after the commit and is not part of it.
 5. A Suspended Workspace keeps its database; its Workspace site is refused (MSG150), the T-Solve app in its Jira site
    returns an error, ticket tracker events from it are dropped (D29), and its jobs do not run (`worker`, GBR-38).
-6. File storage keeps the files in object storage (MinIO, S3-compatible), under the object-key prefix of each
+6. File storage keeps the files in object storage (Garage, S3-compatible), under the object-key prefix of each
    Workspace, serves them by signed URLs and keeps no file on the local disk of the backend or the worker; no file key
    reaches another Workspace (TS-004, GBR-37; H-Q4).
 7. The infrastructure covers these environments. Docker Compose on a VPS is the deployment of the MVP and the demo
    (H-Q1); the HLA's Kubernetes and high-availability deployment is the target and is not built in this module:
-   - local: Docker Compose with Ollama, Redis and MinIO;
+   - local: Docker Compose with Ollama, Redis and Garage;
    - staging: on the application VPS, deployed on every merge to `main`;
    - AI VPS: runs Ollama, reachable only privately, with no Internet egress (D41).
 
-   Caddy routes by host. Redis (the session store, one container with persistence) and MinIO run in every stack. The
+   Caddy routes by host. Redis (the session store, one container with persistence) and Garage run in every stack, one of each per environment (staging and production never share them). The
    demo seed runs on dev and staging only (D42).
 8. Operations: every database and the object storage are backed up and the restore is practised; the monitoring
    covers Redis; Caddy limits request size, time and request rate; a load test shows the stated target on staging
@@ -65,14 +66,14 @@ owner: BA
    the id.
 3. `mvn verify` passes on every commit. Database criteria run against PostgreSQL started by Testcontainers from
    `pgvector/pgvector:pg16`, with the catalog and tenant changelogs applied as in production. Object-storage criteria
-   run against MinIO started by Testcontainers.
+   run against Garage started by Testcontainers (the pinned image of the stack, with its bucket bootstrap).
 4. No secret, credential, host or URL is in a committed file (`backend/AGENTS.md` §4). Environment values come from a
    per-environment `.env` (git-ignored, mode 600 on servers) or from GitHub secrets. gitleaks runs on every PR.
 5. Each Workspace database has its own runtime database user that can connect only to that database, does not own
    its tables, is not a superuser and has no `BYPASSRLS`. Migrations run as a separate owner user (KAN-11). Each
    Workspace database is backed up separately (GBR-37; STORY-014).
 6. Only Caddy listens on the internet, on ports 80 and 443. SSH is the only other open port. The backend,
-   PostgreSQL, Redis, MinIO and Ollama ports are never reachable from the internet.
+   PostgreSQL, Redis, Garage and Ollama ports are never reachable from the internet.
 7. No log line contains a token, a secret, a database password, a file's content or personal data
    (`backend/AGENTS.md` §9).
 
@@ -230,7 +231,7 @@ owner: BA
 - Owner: Trần Trung Hiếu. Sprint S1.
 - As a developer, I want the whole stack started with one command so that dev and demo behave the same.
 - Acceptance:
-  - AC-008.1: WHEN a developer runs `docker compose up` in the repository root with a filled `.env`, THE local stack SHALL start and report healthy: PostgreSQL 16 with pgvector (the catalog database, the Jobs database and the Workspace databases), Redis, MinIO, the backend web process, the worker (same backend image, `worker` profile), the web app, Ollama and Caddy (TS-001, H-Q1).
+  - AC-008.1: WHEN a developer runs `docker compose up` in the repository root with a filled `.env`, THE local stack SHALL start and report healthy: PostgreSQL 16 with pgvector (the catalog database, the Jobs database and the Workspace databases), Redis, Garage, the backend web process, the worker (same backend image, `worker` profile), the web app, Ollama and Caddy (TS-001, H-Q1).
   - AC-008.2: WHEN the local stack is up, THE Caddy of the local stack SHALL serve `<site name>.localhost`, `admin.localhost`, `login.localhost` and `api.localhost` with the routing of AC-009.2, AC-009.11, AC-009.4 and AC-009.5, so that host-based resolution works locally.
   - AC-008.3: WHEN the local stack is up, THE backend and the worker SHALL reach Ollama at `OLLAMA_BASE_URL`, and the local Ollama SHALL have the embedding model `bge-m3` and the chat model named in `.env` pulled.
   - AC-008.4: THE web process SHALL apply the catalog changelog to the catalog database and then the tenant changelog to every Workspace database as the owner user at startup, and the worker SHALL never run Liquibase.
@@ -240,7 +241,7 @@ owner: BA
   - AC-008.8: THE staging stack SHALL run no Ollama container; the backend and the worker SHALL reach the AI VPS through `OLLAMA_BASE_URL` (D41, KAN-12).
   - AC-008.9: IF the tenant changelog fails on one Workspace database at startup, THEN THE web process SHALL stop with an error that names that Workspace's site name, and leave the other databases as they are.
   - AC-008.10: THE Redis of every stack SHALL be one container with persistence on, a password from `.env`, the eviction policy `noeviction` and no published port. It SHALL hold the sessions of `identity` and no cache that may be evicted (H-Q1).
-  - AC-008.11: THE MinIO of every stack SHALL run as one container with a persistent volume, credentials from `.env`, the bucket `FILE_STORAGE_BUCKET` created at startup if absent, and no published port except through the routing of the signed URLs that `design.md` settles (H-Q4).
+  - AC-008.11: THE Garage object store of every stack SHALL run as one container with a persistent volume, credentials from `.env`, the bucket `FILE_STORAGE_BUCKET` created at startup if absent, and no published port except through the routing of the signed URLs that `design.md` settles (H-Q4).
 
 ### STORY-009: Caddy wildcard and routing by host (KAN-95)
 - Owner: Trần Trung Hiếu. Sprint S1.
@@ -279,8 +280,8 @@ owner: BA
   - AC-010.8: THE staging stack SHALL have a memory and CPU limit and a health check on every container, and restart `unless-stopped` (KAN-12).
   - AC-010.9: THE application VPS SHALL refuse password login over SSH and allow key login only. Only ports 22, 80 and 443 SHALL be open to the internet (KAN-10).
   - AC-010.10: THE staging databases SHALL be reachable only on the private network of the stack, and each Workspace's runtime user, the catalog user and the Jobs database user SHALL each reach only their own database (KAN-11, AC-001.26, AC-001.33).
-  - AC-010.11: THE staging stack SHALL run Redis as AC-008.10 says and MinIO as AC-008.11 says, each with a memory and CPU limit and a health check, and the web process SHALL not start healthy while Redis is unreachable (KAN-12).
-  - AC-010.12: IF anyone connects from the internet to the port of PostgreSQL, Redis or MinIO of the application VPS, THEN THE server SHALL refuse the connection (NFR 6).
+  - AC-010.11: THE staging stack SHALL run Redis as AC-008.10 says and Garage as AC-008.11 says, each with a memory and CPU limit and a health check, and the web process SHALL not start healthy while Redis is unreachable (KAN-12).
+  - AC-010.12: IF anyone connects from the internet to the port of PostgreSQL, Redis or Garage of the application VPS, THEN THE server SHALL refuse the connection (NFR 6).
 
 ### STORY-011: AI VPS for Ollama (KAN-203)
 - Owner: Trần Trung Hiếu. Sprint S1 (may land after 30/10).
@@ -332,7 +333,7 @@ owner: BA
 
     and print the Workspace site address (GBR-24). After the commit, the service queues the invitation email (AC-013.17).
   - AC-013.2: IF the site name is missing or not an RFC 1123 label (AC-002.4), THEN THE script SHALL refuse with an error naming the rule and create nothing.
-  - AC-013.3: IF the site name is `admin`, `login`, `api`, `www` or `staging`, or is the site name of another Workspace, THEN THE script SHALL refuse with an error naming the rule and create nothing (D11, D44 (25/10)).
+  - AC-013.3: IF the site name is `admin`, `login`, `api`, `www`, `grafana` or `staging`, or is the site name of another Workspace, THEN THE script SHALL refuse with an error naming the rule and create nothing (D11, D44 (25/10)).
   - AC-013.4: IF the email is missing or not a valid email address, THEN THE script SHALL refuse and create nothing.
   - AC-013.5: IF the email already belongs to another Workspace in the catalog, THEN THE script SHALL refuse before step 1, with an error that cites GBR-16, and create nothing. The Console gets `MSG155` on field `email` from the same check (AC-013.13).
   - AC-013.6: IF any step of AC-013.1 fails, THEN THE script SHALL undo the steps already done (drop the database and its user, remove the catalog rows), exit with a non-zero status and name the failing step, so that nothing is left created (GBR-24).
@@ -352,19 +353,19 @@ owner: BA
   - AC-013.20: THE Platform Console SHALL be the only caller of `WorkspaceProvisioning` over HTTP, and only on `admin.` for an allow-listed Platform Operator (AC-004.28); no other module SHALL call `create`, `suspend` or `reactivate`, except the seed through AC-012.1.
 
 ### STORY-014: Operations readiness: backup, restore, monitoring, edge limits and load test (KAN-201, KAN-202, KAN-95)
-- Owner: Trần Trung Hiếu. Sprint S3.
+- Owner: Trần Trung Hiếu. Scheduled after 15/11 (DevOps Phase B); the edge limits (AC-014.9 – AC-014.11) follow the DevOps design's step A5.
 - As the operations team, we want every database and the object storage backed up and restorable, Redis and the other
   services watched, the edge limiting what one client can send, and a measured load test, so that a Workspace can be
   recovered, an outage is noticed, and the HLA's load target has evidence behind it (GBR-37; HLA 3/11 notes).
 - Acceptance:
-  - AC-014.1: WHEN the nightly backup runs on an environment, THE backup SHALL write one compressed dump of the catalog database, one of the Jobs database and one of each Workspace database as its own file (the list comes from the catalog), and a copy of each Workspace's object-key prefix in MinIO, keep seven days of them, and encrypt every file before it leaves the server (KAN-17; H-Q3, H-Q4).
+  - AC-014.1: WHEN the nightly backup runs on an environment, THE backup SHALL write one compressed dump of the catalog database, one of the Jobs database and one of each Workspace database as its own file (the list comes from the catalog), and a copy of each Workspace's object-key prefix in Garage, keep seven days of them, and send them with `restic` (encrypted and deduplicated) to a Cloudflare R2 bucket, so that no file leaves the server unencrypted (KAN-17; H-Q3, H-Q4; ADR-015).
   - AC-014.2: IF a dump or a copy fails, THEN THE backup SHALL exit non-zero, name the database or prefix that failed and raise an alert (KAN-17, KAN-20).
   - AC-014.3: THE backup SHALL store `CATALOG_SECRET_KEY` separately from the dumps, never in the same place, and SHALL not back up Redis, whose content is sessions only.
   - AC-014.4: WHEN the restore procedure `infra/RESTORE.md` is followed for the last night's dump of one production Workspace, THE restore SHALL bring that Workspace database and its object prefix up on staging with new database names, users and passwords, with its catalog rows rewritten for staging, without touching any other Workspace, and the web app SHALL work on it. THE time taken SHALL be recorded in the document (KAN-18).
   - AC-014.5: IF a restore targets staging from a production backup, THEN THE restored catalog SHALL never point at a production database, user or password.
-  - AC-014.6: THE monitoring SHALL collect metrics from the backend, the worker, PostgreSQL, Redis and MinIO and show them in one dashboard, including for Redis its memory use, connected clients and command rate (KAN-19, KAN-202).
+  - AC-014.6: THE monitoring SHALL collect metrics from the backend, the worker, PostgreSQL, Redis and Garage and show them in one dashboard, including for Redis its memory use, connected clients and command rate (KAN-19, KAN-202).
   - AC-014.7: IF Redis cannot be reached by the monitoring's health check, THEN THE monitoring SHALL raise the alert "Redis unreachable" on the alert channel of KAN-20, because nobody can sign in without it.
-  - AC-014.8: THE alert rules of KAN-20 SHALL also cover the Jobs database and MinIO being unreachable and the failure of a nightly backup.
+  - AC-014.8: THE alert rules of KAN-20 SHALL also cover the Jobs database and Garage being unreachable and the failure of a nightly backup.
   - AC-014.9: THE Caddy SHALL reject a request whose body is larger than `EDGE_MAX_BODY_BYTES` with 413, and `EDGE_MAX_BODY_BYTES` SHALL be larger than `FILE_STORAGE_MAX_BYTES`, so that an allowed file always passes the edge.
   - AC-014.10: THE Caddy SHALL close a request that exceeds the read, write or idle time set by `EDGE_TIMEOUT_SECONDS`.
   - AC-014.11: IF one client IP address sends more than `EDGE_RATE_PER_IP` requests within `EDGE_RATE_WINDOW_SECONDS`, or the requests to one Workspace site (all its clients together) exceed `EDGE_RATE_PER_SITE` within it, THEN THE Caddy SHALL answer 429 with a `Retry-After` header and pass nothing to the backend. The rates are values in `.env`; Caddy runs as an image with the rate-limit module (decision Q8).
@@ -373,7 +374,7 @@ owner: BA
 
 ## Out of Scope
 - The production environment itself (its compose file, deploy workflow and server setup) and code quality (KAN-15,
-  KAN-16, KAN-21, KAN-7): Sprint S3, outside this iteration. Backup, restore and monitoring are in STORY-014.
+  KAN-16, KAN-21, KAN-7): after 15/11 (DevOps Phase B), outside this iteration. Backup, restore and monitoring are in STORY-014.
 - The Platform Console screens and its REST endpoint for creating, suspending or reactivating a Workspace
   (`platform-console`); this module offers the `WorkspaceProvisioning` service they call. Deleting a Workspace (GBR-38).
 - A command or button to send the first Admin's invitation again (decision Q4; the Operator tells the Admin by hand).
@@ -439,7 +440,7 @@ public interface ForgeTokenVerifier { VerifiedForgeCall verify(String bearerToke
 public interface ForgeCallContext { Optional<VerifiedForgeCall> current(); }
 record VerifiedForgeCall(String cloudId, Optional<String> atlassianAccountId) {}
 
-public interface FileStorage {                                   // STORY-007, object storage (MinIO)
+public interface FileStorage {                                   // STORY-007, object storage (Garage)
     StoredFile store(InputStream content);
     InputStream read(String key);
     URI signedUrl(String key);                                  // AC-007.12, expires after FILE_STORAGE_URL_TTL_SECONDS
@@ -510,7 +511,7 @@ tables only (AC-001.33).
 - Images on GHCR: `tsolve-backend` (also the worker, `worker` profile, and the ops script, `ops` profile) and
   `tsolve-frontend`. Caddy runs as an image with the rate-limit module.
 - Compose and Caddy files under `infra/`, plus `docker-compose.yml` for local use. Services: PostgreSQL 16 with
-  pgvector, Redis (one container, persistence), MinIO, backend, worker, web app, Caddy, and Ollama (local only).
+  pgvector, Redis (one container, persistence), Garage, backend, worker, web app, Caddy, and Ollama (local only).
   Docker Compose is the deployment of the MVP and the demo; the HLA's Kubernetes deployment is the target (H-Q1).
 
 ### Required from other modules
