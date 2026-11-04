@@ -65,3 +65,9 @@ Task 3 (backend) waits for KAN-117 / PR #107 (users, roles, `project_membership`
 
 ### Next up
 Evaluate `suggestion-history` and `suggestion-history-contract`. Task 3 after PR #107 merges; then push and open one KAN-149 PR with FE and BE.
+
+## Session 2026-11-04 — evaluation attempt 1
+
+- Independent review: `suggestion-history` pass (moved to passing); `suggestion-history-contract` fail on one CRITICAL — the AC-001.11 Workspace-exclusion assertion checked a removed `issueSummary` string and could not fail (moved to fixing).
+- Fix `default@c2a80da`: assert the foreign issue key and suggestion are absent; AC-001.7 covers a null `jiraIssueUrl`; mock sorts by parsed time; the day-boundary test is renamed AC-001.3. BUG-105 logged (open, FE Lead): the shared `src/test/setup.ts` `beforeAll` hits the 10 s hook timeout under load. Triage + route-table: 71 passed, 8 skipped by BUG-105; `history-filters.test.ts` alone 8/8; trace 20/20.
+- Open for the FE Lead: the Project filter versus guideline 03 §5 (decision-log entry). Feature back to evaluating for attempt 2.
