@@ -13,6 +13,7 @@ owner: BA
 | 2026-11-02 | STORY-001..STORY-002 | Initial frontend-only spec for 10.1 Suggestion History and read-only 10.2 Triage Result Detail on MSW | KAN-149, current module map and tracker record; the 01/11 Jira update removed the obsolete class/routing behavior |
 | 2026-11-04 | STORY-003..STORY-004 | Add the backend history and detail APIs; ids become BIGINT, the issue summary is dropped and the Project is shown by its Jira project key; define the `sources_used` JSON shape and Wiki availability through a wiki port; reword AC-001.7, AC-001.12 and AC-002.1 | KAN-149 is done only with FE and BE (user, 04/11); BIGINT ids per "T-Solve Database Tables" 31/10 and the tables on main; no table stores an issue summary or Project name |
 | 2026-11-04 | STORY-001..STORY-004 | Ids in the API follow the team's shared id type (today the session `ProjectMembership.projectId`) instead of int64 | The session `/me` contract still uses UUID; a triage-only int64 would not match the Project filter. The team decides the id type for all tables and APIs (user, 04/11) |
+| 2026-11-04 | STORY-003..STORY-004 | "Required from other modules" names the triage ports `ManagedProjects`, `WikiDocumentAccess` and `JiraSite` and their fail-closed stand-ins; the backend no longer waits for KAN-117 | User chose on 04/11 to build the backend now with ports; neither `main` nor KAN-117 has `project_membership` or `jira_site_url`. No acceptance criterion changes |
 
 ## Requirements
 
@@ -103,9 +104,9 @@ Both endpoints use same-origin relative paths with no Workspace query or header.
 ### Required from other modules
 - fe-foundation: route/role guard, session managed Projects, URL state, UI kit, message catalog, generated transport and MSW registration.
 - tracker/KAN-131: one `suggestion_result` row per Jira issue, with `sources_used` in the shape above, the posted suggestion and the reporter answer.
-- identity/KAN-117: the signed-in user's id, the PROJECT_MANAGER role and `project_membership`; the backend code waits for it on `main`.
-- wiki: a document-access port answering, for the caller, whether a Wiki document id is available.
-- workspace: the Workspace `jira_site_url`.
+- identity: the signed-in user and the PROJECT_MANAGER role (KAN-117), and the Projects the user manages in `project_membership`, through the triage port `ManagedProjects`. Until identity implements it, the stand-in `NoManagedProjects` answers no Project, so the list is empty and every detail is 404/MSG04.
+- wiki: the triage port `WikiDocumentAccess`, answering for the caller whether a Wiki document id is available; until the wiki module implements it, `NoWikiDocumentAccess` answers none (AC-004.3).
+- workspace: the Workspace `jira_site_url` through the triage port `JiraSite`; until the workspace table has it, `NoJiraSite` answers none, so `jiraIssueUrl` is null (AC-003.6).
 
 ## Definition of Done
 - [ ] The current spec is approved through `sdd.ts approve triage` before code is written.

@@ -91,3 +91,4 @@ Evaluate `suggestion-history` and `suggestion-history-contract`. Task 3 after PR
 - Independent review (with security review): `suggestion-history-api` pass; moved to passing. Concerns recorded in the review: AC-003.1 relies on identity providing `ManagedProjects` (fail-closed until then); 401 has no MSG07 body from the shared security chain (not triage-owned); `trace` cannot see Java tests on `main`; the IT needs Docker in CI.
 - BUG-106 (own, Low): an extreme ISO date gave 500. Test-first fix: `rejectsADateOutsideFourDigitYearsWithMsg39_AC_003_4_BUG_106` failed with a `DateTimeException`, then passed once the filter takes only `yyyy-MM-dd`. Triage tests 20/20; Spotless pass. Not committed yet.
 - Commit (user agreed 04/11): `default@ad30534` fix BUG-106; recorded with `sdd.ts commit`.
+- Spec text synced with the ports decision (no criterion changed); user re-approved `cf15ceed`.

@@ -648,8 +648,8 @@
     }
   },
   "triage": {
-    "specHash": "24d4a988954dec938ba4129c93b47fbd740282d95913759ef8b13582d38e7f10",
-    "approvedAt": "2026-11-04T07:52:13.297Z",
+    "specHash": "cf15ceed7867e474f6e446a10b65fa6d5851f5a7a007ada778357f66748b3156",
+    "approvedAt": "2026-11-04T10:43:49.142Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager opens , THE frontend SHALL show screen 10.1 with columns Issue, Sources, Suggested solution and Reporter's answer, ordered by newest result first.",
