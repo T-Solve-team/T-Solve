@@ -21,7 +21,7 @@ limits (AC-014.9 – AC-014.11), which are in iteration 1, Task 14 (DevOps step 
 
 **Story:** STORY-012
 **Feature:** demo-seed-contributors
-**Assignee:** Trần Trung Hiếu (KAN-97, S3)
+**Assignee:** Trần Trung Hiếu (KAN-97, S3); Jira sub-task KAN-271
 **After this task you can:** run `infra/seed/run-seed.sh --reset` on the local stack and see both Workspaces created anew with
 the data of every module that has a contributor; run it with `TSOLVE_ENVIRONMENT=production` and see it refused.
 **Covers:** AC-012.2, AC-012.5 (the reset before the S3 seed), AC-012.6 (contributor failures), AC-012.7, AC-012.8, AC-012.9.
@@ -54,7 +54,7 @@ output (AC-012.5, AC-012.8); the databases and bucket prefixes of the old Worksp
 
 **Story:** STORY-014
 **Feature:** backup-restore
-**Assignee:** Trần Trung Hiếu (KAN-17, KAN-18)
+**Assignee:** Trần Trung Hiếu (KAN-17, KAN-18); Jira sub-task KAN-272
 **After this task you can:** see last night's backup in the Cloudflare R2 bucket (dumps of the Registry, Jobs and each Workspace
 database and each Workspace's object prefix, encrypted by `restic`), and follow `infra/RESTORE.md` to bring one Workspace up on staging.
 **Covers:** AC-014.1, AC-014.2, AC-014.3, AC-014.4, AC-014.5.
@@ -85,7 +85,7 @@ AC-014.5).
 
 **Story:** STORY-014
 **Feature:** monitoring
-**Assignee:** Trần Trung Hiếu (KAN-19, KAN-20, KAN-202)
+**Assignee:** Trần Trung Hiếu (KAN-19, KAN-20, KAN-202); Jira sub-task KAN-273
 **After this task you can:** open `grafana.<base>` and see one dashboard for the backend, worker, PostgreSQL, Redis (memory, clients,
 commands per second) and Garage; stop Redis and see the "Redis unreachable" alert reach the alert channel.
 **Covers:** AC-014.6, AC-014.7, AC-014.8.
@@ -113,7 +113,7 @@ Redis memory alert fires near the limit (Edge #45).
 
 **Story:** STORY-014
 **Feature:** load-test
-**Assignee:** Trần Trung Hiếu (KAN-202; Hiếu confirms the numbers)
+**Assignee:** Trần Trung Hiếu (KAN-202; Hiếu confirms the numbers); Jira sub-task KAN-274
 **After this task you can:** run `k6 run infra/loadtest/tsolve.js` against staging and see a pass or a non-zero exit, and read the
 report of one run.
 **Covers:** AC-014.12, AC-014.13.

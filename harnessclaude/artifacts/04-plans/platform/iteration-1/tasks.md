@@ -40,7 +40,7 @@ Registry and the row guard and routing (3–6), the first Workspace by script (7
 
 **Story:** STORY-008, STORY-001
 **Feature:** local-data-plane
-**Assignee:** Trần Trung Hiếu (KAN-94)
+**Assignee:** Trần Trung Hiếu (KAN-94); Jira sub-task KAN-249
 **After this task you can:** run `docker compose up db redis garage garage-init`, see all four healthy, open `psql` and
 list the Registry, Jobs and template databases, and see the private bucket in Garage.
 **Covers:** AC-008.10, AC-008.11, AC-008.6 (data-plane part), AC-001.32 (the Registry and Jobs users are neither
@@ -80,7 +80,7 @@ nothing; `.env.example` holds no value (AC-008.6).
 
 **Story:** STORY-010
 **Feature:** ci-images
-**Assignee:** Trần Trung Hiếu (KAN-6, KAN-8, KAN-9)
+**Assignee:** Trần Trung Hiếu (KAN-6, KAN-8, KAN-9); Jira sub-task KAN-250
 **After this task you can:** open a pull request and see the `backend` check (`mvn -B verify`) beside the frontend one;
 merge to `main` and find `tsolve-backend` and `tsolve-frontend` in GHCR tagged `sha-<commit>` and `staging`.
 **Covers:** AC-010.1, AC-010.2.
@@ -106,7 +106,7 @@ merge (Hiếu): mark frontend, backend, PR title and gitleaks as required checks
 
 **Story:** STORY-001
 **Feature:** registry-db
-**Assignee:** Trần Trung Hiếu (KAN-98)
+**Assignee:** Trần Trung Hiếu (KAN-98); Jira sub-task KAN-251
 **After this task you can:** start the backend against the compose stack of Task 1 and see `workspaces` and
 `workspace_emails` created, empty, in `tsolve_<env>_registry` (`psql \dt`).
 **Covers:** AC-001.15, AC-001.16, AC-001.17, AC-001.18 (Registry changelog), AC-001.19, AC-001.24, AC-001.25,
@@ -144,7 +144,7 @@ has no table from the Registry changelog (AC-001.33), the Registry holds no tabl
 
 **Story:** STORY-004
 **Feature:** workspace-catalog
-**Assignee:** Trần Trung Hiếu (KAN-98)
+**Assignee:** Trần Trung Hiếu (KAN-98); Jira sub-task KAN-252
 **After this task you can:** (plumbing, serves Tasks 7, 10 and 21 and the `identity` sign-in) see the lookups and the
 email rule in `WorkspaceCatalogIT`: one email in one Workspace, whatever the case.
 **Covers:** AC-004.17, AC-004.18, AC-004.25, AC-004.26, AC-004.27, AC-004.28 (no endpoint: asserted with Task 7's source scan).
@@ -172,7 +172,7 @@ name (AC-004.18); claim: free email recorded lower-case, same Workspace succeeds
 
 **Story:** STORY-001, STORY-003
 **Feature:** row-guard
-**Assignee:** Trần Trung Hiếu (KAN-98)
+**Assignee:** Trần Trung Hiếu (KAN-98); Jira sub-task KAN-253
 **After this task you can:** apply the tenant changelog to an empty database and see, with `\d+` and `pg_policies`, that every
 table has the policy `tenant_guard` and that a runtime user sees no row until `app.tenant_id` equals `tenant_identity`.
 **Covers:** AC-001.18 (tenant changelog), AC-001.20, AC-001.21, AC-001.22, AC-001.23, AC-001.27 (tenant part),
@@ -209,7 +209,7 @@ refusals in Edge #6; superuser / `BYPASSRLS` / owner check (Edge #7, AC-001.32);
 
 **Story:** STORY-002
 **Feature:** tenant-routing
-**Assignee:** Trần Trung Hiếu (KAN-99)
+**Assignee:** Trần Trung Hiếu (KAN-99); Jira sub-task KAN-254
 **After this task you can:** (plumbing, serves Tasks 7–10) run `TenantRoutingIT` and see one JPA query go to Workspace A's
 database and another to B's, and a misrouted connection read nothing.
 **Covers:** AC-002.1, AC-002.11 (holder side), AC-002.12 – AC-002.16, AC-002.20 – AC-002.25, AC-001.25 (the pool of
@@ -247,7 +247,7 @@ connection (AC-002.21), pool size and lazy open, two first requests open one poo
 
 **Story:** STORY-013, STORY-001, STORY-004
 **Feature:** provisioning-core
-**Assignee:** Trần Trung Hiếu (KAN-240)
+**Assignee:** Trần Trung Hiếu (KAN-240); Jira sub-task KAN-255
 **After this task you can:** (plumbing, serves Task 9) call `WorkspaceProvisioning.create` in `WorkspaceProvisioningIT` and see
 a new database, its runtime user, the applied changelog, `tenant_identity`, the Registry rows and the first Admin
 Account; and see a forced failure leave nothing behind.
@@ -290,7 +290,7 @@ log capture (Edge #62); a source scan fails when a class outside the Console, `o
 
 **Story:** STORY-013, STORY-001
 **Feature:** invitation-job-queue
-**Assignee:** Trần Trung Hiếu (KAN-240; Jira sub-task to be created after this plan is reviewed)
+**Assignee:** Trần Trung Hiếu (KAN-240; Jira sub-task KAN-256)
 **After this task you can:** (plumbing, serves Tasks 9, 12 and 15) call `WorkspaceProvisioning.create` in
 `InvitationJobQueueIT` and see, in `psql` on `tsolve_<env>_jobs`, one waiting JobRunr job that holds only the Workspace id
 and the Account id (no email), while the Registry database holds no JobRunr table.
@@ -342,7 +342,7 @@ replaces the placeholder handler and starts the background job server; it does n
 
 **Story:** STORY-013
 **Feature:** ops-script
-**Assignee:** Trần Trung Hiếu (KAN-240)
+**Assignee:** Trần Trung Hiếu (KAN-240); Jira sub-task KAN-257
 **After this task you can:** run `infra/ops/workspace.sh create --site acme --admin-email admin@acme.test` on the local stack,
 see the address printed and the database and the Registry row in `psql`; suspend and reactivate it.
 **Covers:** AC-013.1 (the script and its printed address), AC-013.2 – AC-013.4 (script messages), AC-013.7, AC-013.8,
@@ -377,7 +377,7 @@ exist; they are not build dependencies of this task (Task 11 depends on Task 9)
 
 **Story:** STORY-002, STORY-005
 **Feature:** web-tenant-resolver
-**Assignee:** Trần Trung Hiếu (KAN-99)
+**Assignee:** Trần Trung Hiếu (KAN-99); Jira sub-task KAN-258
 **After this task you can:** run the backend and `curl -H 'Host: acme.localhost' localhost:8080/api/v1/me` → 401 `MSG07` for a
 real Workspace, 404 `MSG151` for an unknown one, 403 `MSG150` for a Suspended one.
 **Covers:** AC-002.2 – AC-002.10, AC-002.11 (the filter unbinds when a request ends; the holder side is Task 6), AC-002.17, AC-002.18, AC-002.19, AC-013.11, AC-005.7 and the host part of AC-005.8
@@ -409,7 +409,7 @@ real Workspace, 404 `MSG151` for an unknown one, 403 `MSG150` for a Suspended on
 
 **Story:** STORY-008, STORY-009
 **Feature:** local-compose
-**Assignee:** Trần Trung Hiếu (KAN-94)
+**Assignee:** Trần Trung Hiếu (KAN-94); Jira sub-task KAN-259
 **After this task you can:** run `docker compose up`, create a Workspace with Task 9's script, and open
 `http://acme.localhost` in a browser (and `login.`, `admin.`, `api.localhost` answering by their routing).
 **Covers:** AC-008.1, AC-008.2, AC-008.3, AC-008.4 (tenant changelog applied to every Workspace database at startup of
@@ -444,7 +444,7 @@ Ollama; Edge #43 and #45; `.env.example` has no value).
 
 **Story:** STORY-012
 **Feature:** demo-seed-workspaces
-**Assignee:** Trần Trung Hiếu (KAN-97)
+**Assignee:** Trần Trung Hiếu (KAN-97); Jira sub-task KAN-260
 **After this task you can:** run `infra/seed/run-seed.sh` on the local stack and open two Workspace sites; run it again and
 see "already exists, skipped".
 **Covers:** AC-012.1, AC-012.3, AC-012.4, AC-012.5 (skip part), AC-012.6 (provisioning failures).
@@ -472,7 +472,7 @@ skips and says so (AC-012.5); a provisioning failure names the Workspace (AC-012
 
 **Story:** STORY-010, STORY-008
 **Feature:** staging-servers
-**Assignee:** Trần Trung Hiếu (KAN-10, KAN-11, KAN-12)
+**Assignee:** Trần Trung Hiếu (KAN-10, KAN-11, KAN-12); Jira sub-task KAN-261
 **After this task you can:** SSH to the application VPS with a key, see the staging stack's containers healthy on the private
 network, and see from the internet that only 22, 80 and 443 answer.
 **Covers:** AC-008.8, AC-010.6 (hosts through `TSOLVE_BASE_DOMAIN`), AC-010.7, AC-010.8, AC-010.9, AC-010.10, AC-010.11,
@@ -506,7 +506,7 @@ process does not start healthy with Redis stopped).
 
 **Story:** STORY-009, STORY-014
 **Feature:** edge-caddy
-**Assignee:** Trần Trung Hiếu (KAN-13, KAN-95)
+**Assignee:** Trần Trung Hiếu (KAN-13, KAN-95); Jira sub-task KAN-262
 **After this task you can:** open `https://<seed site>.staging.tsolve.io.vn` over HTTPS behind basic authentication, see a
 Workspace created after the deploy get HTTPS with no manual step, and get a 413 or 429 from a request over the edge limits.
 **Covers:** AC-009.1, AC-009.2, AC-009.4, AC-009.5, AC-009.6, AC-009.7, AC-009.8, AC-009.9, AC-009.10, AC-009.11 (for staging;
@@ -539,7 +539,7 @@ a file between the two limits passes the edge, a failing check if `EDGE_MAX_BODY
 
 **Story:** STORY-010
 **Feature:** staging-cd
-**Assignee:** Trần Trung Hiếu (KAN-14, KAN-200)
+**Assignee:** Trần Trung Hiếu (KAN-14, KAN-200); Jira sub-task KAN-263
 **After this task you can:** merge a pull request into `main` and watch staging update by itself, finishing with the smoke test.
 **Covers:** AC-010.3, AC-010.4, AC-010.5, AC-010.6, AC-008.4 (tenant changelog on every Workspace before `up`).
 **Design:** Infrastructure — Deploy; Key Decisions P9, R14.
@@ -568,7 +568,7 @@ no trigger from pull requests (Edge #49).
 
 **Story:** STORY-007
 **Feature:** file-storage
-**Assignee:** Đặng Nhật Minh (KAN-96)
+**Assignee:** Đặng Nhật Minh (KAN-96); Jira sub-task KAN-264
 **After this task you can:** store a file in a Workspace in `ObjectFileStorageIT` and read it back; get a signed URL for it
 that the test downloads straight from Garage; the same URL fails after the TTL, and another Workspace's key gets nothing.
 **Covers:** AC-007.1 – AC-007.15 (the signed URL as the service returns it; its route on a Workspace site is Task 17).
@@ -599,7 +599,7 @@ Edge #36).
 
 **Story:** STORY-009, STORY-007
 **Feature:** signed-url-route
-**Assignee:** Đặng Nhật Minh (KAN-96)
+**Assignee:** Đặng Nhật Minh (KAN-96); Jira sub-task KAN-265
 **After this task you can:** download a stored file in a browser from its signed URL on the Workspace site
 (`http://acme.localhost/<bucket>/…`), on staging too; see a 405 for any other method and a download, not a rendered page,
 for a stored HTML file.
@@ -623,7 +623,7 @@ HEAD allowed, PUT/POST/DELETE 405, an altered signature refused, Edge #40 and #4
 
 **Story:** STORY-004
 **Feature:** jira-site-link
-**Assignee:** Trần Trung Hiếu (KAN-98; used by UC-10 of `workspace`)
+**Assignee:** Trần Trung Hiếu (KAN-98; used by UC-10 of `workspace`); Jira sub-task KAN-266
 **After this task you can:** (serves `workspace` UC-10) call `linkJiraSite` in `WorkspaceCatalogIT` and see the normalised URL and
 the `cloudId` stored on the bound Workspace, and a second Workspace refused with `MSG153`.
 **Covers:** AC-004.19, AC-004.20, AC-004.21, AC-004.22, AC-004.23, AC-004.24.
@@ -649,7 +649,7 @@ AC-004.22; second link refused, Edge #27); `WorkspaceCatalogIT` (race, Edge #24;
 
 **Story:** STORY-005
 **Feature:** forge-token
-**Assignee:** Trần Trung Hiếu (KAN-105)
+**Assignee:** Trần Trung Hiếu (KAN-105); Jira sub-task KAN-267
 **After this task you can:** run `NimbusForgeTokenVerifierTest` and see a valid test token accepted and a forged, expired,
 unsigned, wrong-audience or wrong-issuer token refused, with the key set fetched again once for an unknown key id.
 **Covers:** AC-005.2, AC-005.3 (the verifier's refusals), AC-005.4.
@@ -678,7 +678,7 @@ unreachable, unknown key id). Medium: #22 (logs hold no token).
 
 **Story:** STORY-005
 **Feature:** forge-security-chain
-**Assignee:** Trần Trung Hiếu (KAN-105)
+**Assignee:** Trần Trung Hiếu (KAN-105); Jira sub-task KAN-268
 **After this task you can:** call `api.localhost/api/v1/jira-app/...` with `curl`: 401 for a missing, forged or expired token,
 and a Forge token sent to a Workspace site gets 404; any other path on `api.` gets 404.
 **Covers:** AC-005.1, AC-005.3 (the 401 `ProblemDetail`, no handler, no Workspace lookup), AC-005.5, AC-005.6, AC-005.7, AC-005.8.
@@ -706,7 +706,7 @@ re-asserted through the HTTP chain.
 
 **Story:** STORY-006
 **Feature:** jira-tenant-resolver
-**Assignee:** Trần Trung Hiếu (KAN-101; contract agreed with Đặng Tấn Bình through the spec)
+**Assignee:** Trần Trung Hiếu (KAN-101; contract agreed with Đặng Tấn Bình through the spec); Jira sub-task KAN-269
 **After this task you can:** send a verified test token for a linked `cloudId` and see that Workspace's data; an unlinked one gets
 403 `MSG152`, a Suspended one 403 `MSG150`; post an installed event and get 204 with nothing changed.
 **Covers:** AC-006.1 – AC-006.5, AC-006.12, AC-006.14, AC-006.15, AC-006.16.
@@ -735,7 +735,7 @@ AC-006.12, AC-006.15, AC-006.16); `TenantIsolationIT` Jira App case (AC-006.14, 
 
 **Story:** STORY-011
 **Feature:** ai-vps
-**Assignee:** Trần Trung Hiếu (KAN-203)
+**Assignee:** Trần Trung Hiếu (KAN-203); Jira sub-task KAN-270
 **After this task you can:** from the application VPS call the AI VPS and get a 1024-dimension embedding from `bge-m3`, also after
 rebooting the AI VPS; see from the internet that port 11434 is closed.
 **Covers:** AC-011.1 – AC-011.6.
