@@ -52,3 +52,18 @@ Append-only log of framework friction captured during usage.
 **Type:** friction
 **Context:** The user approved the concrete 17-criterion spec in chat, but the PreToolUse hook blocked `sdd.ts approve dashboard-audit` because Codex cannot display the hook confirmation prompt. The hook required the user to run the command themselves. The user did so; `sdd.ts diff dashboard-audit` confirmed the current spec was approved at 2026-10-31T07:28:12.270Z. No retry or approval-file edit was used.
 **Suggestion:** Support a native, reviewable approval action for Codex while preserving the spec-hash gate.
+
+## 2026-11-04 — preserve Java trace customization during upgrade (PR #107)
+
+**Type:** maintenance gap
+**Context:** The user-applied Java trace correction is recorded in T-Solve commit
+`21096b37c74f455a1f772d4391c1529f1072f7ac` (BUG-093). It recognizes Java Test/IT files and
+underscore AC ids, with four passing regressions. Framework upgrades can replace these files;
+the current globs still do not recognize the alternative `*Tests.java` naming convention.
+The BE lead requested upstreaming this during PR #107 review. Protected hook files were not
+edited in this follow-up, and the redundant proposed patch artifact was removed.
+
+**Suggestion:** Integrate the Java support upstream, include `*Tests.java`, and preserve or
+explicitly report local customization during upgrade. Until then, compare the applied commit
+and rerun hook tests plus a Java STORY trace after every upgrade. This is a local feedback
+record; no external upstream issue or message was sent by the agent.

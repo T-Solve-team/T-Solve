@@ -37,15 +37,15 @@ public class JiraAppSecurityConfig {
         SecurityProblemWriter problems = new SecurityProblemWriter(objectMapper);
         // Missing, malformed, badly signed, expired or foreign FIT (AC-001.2 to AC-001.5).
         AuthenticationEntryPoint unauthorized = (request, response, e) ->
-                problems.write(response, HttpStatus.UNAUTHORIZED, SecurityProblemWriter.MSG08);
+                problems.write(request, response, HttpStatus.UNAUTHORIZED, SecurityProblemWriter.MSG08);
         // An authenticated call an endpoint's @PreAuthorize refuses.
-        AccessDeniedHandler forbidden =
-                (request, response, e) -> problems.write(response, HttpStatus.FORBIDDEN, SecurityProblemWriter.MSG08);
+        AccessDeniedHandler forbidden = (request, response, e) ->
+                problems.write(request, response, HttpStatus.FORBIDDEN, SecurityProblemWriter.MSG08);
         // The JWKS could not be fetched: our failure, not the caller's (AC-001.8).
         AuthenticationFailureHandler failure = (request, response, e) -> {
             if (e instanceof AuthenticationServiceException) {
                 log.warn("FIT not verified: error type JWKS_UNAVAILABLE");
-                problems.write(response, HttpStatus.SERVICE_UNAVAILABLE, SecurityProblemWriter.MSG06);
+                problems.write(request, response, HttpStatus.SERVICE_UNAVAILABLE, SecurityProblemWriter.MSG06);
             } else {
                 unauthorized.commence(request, response, e);
             }
