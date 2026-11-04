@@ -436,7 +436,7 @@ export const getAuthCallbackUrl = (params: AuthCallbackParams) => {
 };
 
 /**
- * The central sign-in site reads the Google answer and redirects (302) to the Workspace site's complete step with a one-time hand-off code. When Google or the check fails, it redirects to the Workspace site's `/login?error=` with one of MSG06, MSG09, MSG10, MSG120, MSG122 (adds `google_domain`) or MSG141 (on the `admin.` site: MSG06 or MSG135). When the browser has no usable state, it answers 400 with a minimal page. The web app never calls it.
+ * The central sign-in site reads the Google answer and redirects (302) to the Workspace site's complete step with a one-time hand-off code. When Google or the check fails, it redirects to the Workspace site's `/login?error=` with one of MSG06, MSG09, MSG10, MSG120 or MSG122 (adds `google_domain`) (on the `admin.` site: MSG06 or MSG135). When the state value is missing, wrong, expired or used, the browser has no sign-in cookie or another browser's (AC-001.46), the Workspace has no Google domain (AC-001.49) or the Workspace no longer exists (AC-001.50), it answers 400 with a minimal page showing MSG141 and no redirect. Every answer expires the sign-in cookie (AC-001.47). The web app never calls it.
  * @summary Google redirects here after sign-in; the browser follows it as a page (never a fetch call).
  */
 export const authCallback = async (

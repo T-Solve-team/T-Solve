@@ -8,8 +8,8 @@ import vn.tsolve.identity.signin.SignInTestFixtures.StateStore;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
 
 /**
- * Beans the sign-in slice tests add: a movable clock (replacing the app's Clock), the in-memory Workspaces, the
- * in-memory state repository, and the bound {@link SignInProperties}.
+ * Beans the sign-in slice tests add: a movable clock (replacing the app's Clock), the {@link IdentityClock} over it,
+ * the in-memory Workspaces, the in-memory state repository, and the bound {@link SignInProperties}.
  */
 @TestConfiguration(proxyBeanMethods = false)
 @EnableConfigurationProperties(SignInProperties.class)
@@ -19,6 +19,12 @@ public class SignInTestBeans {
     @Primary
     MutableClock mutableClock() {
         return new MutableClock();
+    }
+
+    @Bean
+    @Primary
+    IdentityClock identityClock(MutableClock clock) {
+        return new IdentityClock(clock);
     }
 
     @Bean

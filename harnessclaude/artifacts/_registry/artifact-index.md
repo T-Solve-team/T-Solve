@@ -7,9 +7,9 @@ Master registry of all artifacts in this workspace.
 | IMPL-REVIEW-4 | session-log | ticket-review | passing | artifacts/05-implementation/ticket-review/task-4-review-history.md |
 | TEST-REVIEW-4 | test-report | ticket-review | passing | artifacts/06-evaluation/ticket-review/task-4-review-history-test-report.md |
 | REVIEW-REVIEW-4 | review | ticket-review | passing | artifacts/06-evaluation/ticket-review/task-4-review-history-review.md |
-| IMPL-IDENTITY-14 | session-log | identity | passing | artifacts/05-implementation/identity/task-14-space-handover.md |
-| TEST-IDENTITY-14 | test-report | identity | pass-with-open-dev-defect | artifacts/06-evaluation/identity/task-14-space-handover-test-report.md |
-| REVIEW-IDENTITY-14 | review | identity | pass | artifacts/06-evaluation/identity/task-14-space-handover-review.md |
+| IMPL-IDENTITY-22 | session-log | identity | passing | artifacts/05-implementation/identity/task-22-space-handover.md |
+| TEST-IDENTITY-22 | test-report | identity | pass-with-open-dev-defect | artifacts/06-evaluation/identity/task-22-space-handover-test-report.md |
+| REVIEW-IDENTITY-22 | review | identity | pass | artifacts/06-evaluation/identity/task-22-space-handover-review.md |
 | ITER-1 | iteration | — | planned | artifacts/07-iterations/iteration-1.md |
 | ITER-2 | iteration | — | planned | artifacts/07-iterations/iteration-2.md |
 | — | architecture | — | draft | artifacts/03-modules/architecture.md |
@@ -143,6 +143,9 @@ Master registry of all artifacts in this workspace.
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-8-sign-in-start.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-8-sign-in-start-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-8-sign-in-start-test-report.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-9-sign-in-callback.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-9-sign-in-callback-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-9-sign-in-callback-test-report.md |
 | — | spec | dashboard-audit | approved | artifacts/03-modules/dashboard-audit/spec.md |
 | — | design | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/design.md |
 | — | design | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/iteration-1/design.md |

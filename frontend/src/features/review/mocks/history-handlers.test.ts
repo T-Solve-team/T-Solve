@@ -28,7 +28,7 @@ function seed() {
   );
 }
 describe('Review History mock', () => {
-  it('AC-008.1 / AC-008.2 / AC-008.4 scopes, sorts and paginates distinct decisions before counting (BUG-103)', async () => {
+  it('AC-008.1 / AC-008.2 / AC-008.4 scopes, sorts and paginates distinct decisions before counting (BUG-104)', async () => {
     seed();
     const first = reviewStore.history[0];
     if (!first) throw new Error('Missing history');

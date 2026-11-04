@@ -42,12 +42,12 @@ Spec: artifacts/03-modules/identity/spec.md, STORY-008 / AC-008.1–008.9.
 
 The user selected preparing the scope/spec now and waiting for KAN-109/110 to merge into main before code. This is preparation in the current plan folder, not a change to Jira sprint dates. Reuse the included Project handover and its existing popup/mutation contracts; no standalone screen or endpoint. Reconcile the merged code against the master's risk table, implement only gaps, and retain existing Space behavior. Approval of the new spec and merged KAN-109 permit the first caller slice (user continuation request, 2026-10-30); the KAN-110 caller and final completion wait for KAN-110 on main. Full frontend verification, browser inspection and a user commit checkpoint apply; KAN-112 remains separate.
 
-## KAN-112 — Task 20: Space handover
+## KAN-112 — Task 22: Space handover
 
 Master: artifacts/04-plans/identity/design.md, "KAN-112 — Space handover — 2026-10-31".
 Spec: artifacts/03-modules/identity/spec.md, STORY-009 / AC-009.1–AC-009.9.
 
-User approved the master design and placement in iteration 1 on 2026-10-31 after approving the spec. Reuse UC-06/07 caller flows, the shared handover popup, existing generated models and atomic mutable MSW helpers. Expand the existing OpenAPI proposal's descriptions; no new endpoint, model, dependency or backend implementation. Exercise master risk rows S1–S8: eligibility and stale choices, exactly the affected Space set, multi-Space/mixed-Project atomicity, cancellation/failure/retry, loading/refetch/pending controls and retained history. Task 20 owns implementation, browser evidence, trace and the required frontend checks. Runtime changes require a demonstrated gap; commit and push remain separate user checkpoints.
+User approved the master design and placement in iteration 1 on 2026-10-31 after approving the spec. Reuse UC-06/07 caller flows, the shared handover popup, existing generated models and atomic mutable MSW helpers. Expand the existing OpenAPI proposal's descriptions; no new endpoint, model, dependency or backend implementation. Exercise master risk rows S1–S8: eligibility and stale choices, exactly the affected Space set, multi-Space/mixed-Project atomicity, cancellation/failure/retry, loading/refetch/pending controls and retained history. Task 22 owns implementation, browser evidence, trace and the required frontend checks. Runtime changes require a demonstrated gap; commit and push remain separate user checkpoints.
 
 ## STORY-003 My Profile — KAN-160 (2026-10-31)
 
@@ -59,3 +59,14 @@ under tag `profile` (`getMyViewableSpaces`, `getMySolutions`), each in its scree
 dev user with `getDevUser()`. No shared edit: in My Solutions only the Ticket ID of a `canOpen` row is a link
 (`cells.link`, R1 A). Edge-case rows 53–81 of the master apply. Task 19 (backend
 AC-003.4–.10) is a stub with no feature until it has a Jira issue.
+
+## HLA change — Tasks 9b, 10, 11, 12, 14 (2026-11-03)
+
+Master: artifacts/04-plans/identity/design.md, "HLA change, 2026-11-03" and "Data model (Q8, HLA Q2–Q4)".
+Spec: artifacts/03-modules/identity/spec.md, Changelog row 2026-11-03.
+
+Aligns identity's backend plan with the multi-tenant HLA (KAN-231 step 2, Hiếu: Q1–Q4 = A). The Platform Console on
+`admin.` stays (Task 11). Sign-in states and hand-off codes move to the Platform / Tenant Registry database in Task 14;
+Tasks 8–9 keep their tables until then. Sessions live in Redis (Task 10; local stack and tests use a Redis container).
+One database per company: the account tables have no `workspace_id` and email uniqueness across the platform goes
+through the registry (Tasks 9b and 14). Task 9 is unchanged. New edge-case rows 90–93 apply to Tasks 9b, 10 and 14.

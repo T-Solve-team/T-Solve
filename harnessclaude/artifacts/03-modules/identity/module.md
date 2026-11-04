@@ -28,7 +28,7 @@ paths:
 Role-Based Access Control (UC-01–09, UC-59): sign in with the company account through the OIDC Provider and log out, my profile, linking the user's Jira account, the user list, adding users, account status, roles and Department, and handing over Projects and Spaces.
 
 ## Responsibilities
-- OIDC sign-in (Google in the MVP) and logout; the session cookie.
+- OIDC sign-in (Google in the MVP) on the central `login.` site for a Workspace site, the Platform Console on `admin.` (allow-listed Platform Operators) and the Jira account link; logout; the session cookie and the sessions in Redis (HLA, 3/11).
 - User accounts: add by email, Active / Deactivated, roles, the Department of a Project Manager, the Spaces of a Knowledge Manager.
 - Hand Over Responsibilities (Projects and Spaces) before a role change or deactivation (D3).
 - UC-59 Link ticket tracker account: tie the Account to its Jira account, used as a sign-in target by the Jira App (KAN-234, GBR-19).
@@ -40,10 +40,12 @@ Role-Based Access Control (UC-01–09, UC-59): sign in with the company account 
 | Interface | Type | Description |
 |-----------|------|-------------|
 | Users | Service interface + REST | User accounts, roles, status |
+| FirstAdminCreator | Service interface (declared by `platform`, implemented here) | `UUID createFirstAdmin(UUID workspaceId, String email)`: creates the first Admin Account of a new Workspace, Active, and returns its id (platform AC-013.14; identity STORY-010) |
 
 ### Consumed
 | Dependency | Interface | Description |
 |------------|-----------|-------------|
+| platform | Tenant Context, Registry, Database Router | The Workspace record and status, `runIn` in a Workspace's own database, the Registry database for sign-in states and hand-off codes, `workspace_email` (HLA, 3/11) |
 | be-foundation | Roles, session, errors | Security and `/me` |
 | workspace | Departments | The Department of a Project Manager |
 
@@ -53,4 +55,4 @@ Role-Based Access Control (UC-01–09, UC-59): sign in with the company account 
 ## Related Artifacts
 - Spec: `artifacts/03-modules/identity/spec.md` (written when the module is planned)
 - Map: `artifacts/03-modules/module-map.md`
-- Stories: KAN-103…112, KAN-117, KAN-118, KAN-160, KAN-197, KAN-229…232, KAN-234…239
+- Stories: KAN-103…112, KAN-117, KAN-118, KAN-160, KAN-197, KAN-229…239, KAN-247 (Task 14)

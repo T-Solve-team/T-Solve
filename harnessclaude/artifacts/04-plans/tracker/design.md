@@ -45,7 +45,7 @@ discovery (not tracker) ─► picks the tenant database for the request before 
   the constraint; `saveAndFlush` in the repository's own transaction, catch only that constraint → 202.
 - **Who fills the row later.** The AI Solution Suggestion owner updates the row (`sources_used`,
   `suggested_solution`) — they must update, not insert. Flag in the PR.
-- **Fallback chain.** `common/security/DefaultSecurityConfig` stays until `identity` replaces it.
+- **Fallback chain.** `common/security/DefaultSecurityConfig` stays until be-foundation `roles-security` replaces the fallback chains; `identity` adds only its `/api/v1/auth/**` chain (identity tasks.md, conflict C5).
 
 ## Data Model
 

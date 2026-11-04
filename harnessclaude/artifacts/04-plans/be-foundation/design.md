@@ -5,6 +5,8 @@ date: 2026-10-23
 
 # Design: be-foundation
 
+> **Schema alignment pending (KAN-33, 4/11):** `02_tenant.sql` names the audit table `audit_log_entry` (`audit_entry_id`, `actor_id`, `action`, `target`, `details`, `created_at`), with no `workspace_id` and no row-level security. The `audit_events` design below and AC-004.6, AC-004.7 of the spec still name the old table. Change the spec and this design together before building or changing the audit table.
+
 Spec: `artifacts/03-modules/be-foundation/spec.md` (approved, version 26428535). Conventions: `backend/AGENTS.md`;
 system decisions: `artifacts/03-modules/architecture.md`.
 
