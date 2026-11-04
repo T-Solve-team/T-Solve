@@ -53,23 +53,27 @@ Knowledge Chatbot screen on mocks (`chatbot`, KAN-48).
 
 ### platform
 
-Spec re-approved after X2 and U3. Tasks 2–5 also wait on Trần Hải Anh's answer about the
+Spec re-approved after X2 and U3. Tasks 3–5 also wait on Trần Hải Anh's answer about the
 `workspaces` reshape changeset (design decision P1).
 
 | Task | Assignee | Status |
 |------|----------|--------|
-| 1 · TenantContext and `runIn` (KAN-99) | Trần Trung Hiếu | pending |
-| 2 · Tenant schema, base entity, convention guard (KAN-98) | Trần Trung Hiếu | pending |
-| 3 · Row-level security (KAN-100) | Trần Hải Anh | pending |
-| 4 · Workspace registry (KAN-98) | Trần Trung Hiếu | pending |
-| 5 · Tenant Resolver of the web app and the isolation test (KAN-99) | Trần Trung Hiếu | pending |
-| 8 · File storage per Workspace (KAN-96) | Đặng Nhật Minh | pending |
-| 9 · Local Docker Compose (KAN-94) | Trần Trung Hiếu | pending |
-| 10 · Backend CI and images on GHCR (KAN-6, KAN-8, KAN-9) | Trần Trung Hiếu | pending |
-| 11 · Application VPS and the staging stack (KAN-10, KAN-11, KAN-12) | Trần Trung Hiếu | pending |
-| 12 · Main Caddy, Cloudflare DNS, wildcard certificates (KAN-13, KAN-95) | Trần Trung Hiếu | pending |
-| 13 · Deploy staging on merge with the smoke test (KAN-14) | Trần Trung Hiếu | pending |
-| 15 · Demo seed: the two Workspaces (KAN-97, moved forward) | Trần Trung Hiếu | pending |
+| 1 · Local data plane: PostgreSQL roles and databases, Redis, Garage (KAN-94) | Trần Trung Hiếu | pending |
+| 2 · Backend CI and images on GHCR (KAN-6, KAN-8, KAN-9) | Trần Trung Hiếu | pending |
+| 3 · Registry database (KAN-98) | Trần Trung Hiếu | pending |
+| 4 · WorkspaceCatalog (KAN-98) | Trần Trung Hiếu | pending |
+| 5 · Tenant changelog, row guard, convention guard test (KAN-98) | Trần Trung Hiếu | pending |
+| 6 · Tenant routing: TenantContext and `runIn` (KAN-99) | Trần Trung Hiếu | pending |
+| 7 · Provisioning service (KAN-240) | Trần Trung Hiếu | pending |
+| 8 · Invitation job queue (KAN-240) | Trần Trung Hiếu | pending |
+| 9 · Ops script: create, suspend, reactivate a Workspace (KAN-240) | Trần Trung Hiếu | pending |
+| 10 · Tenant Resolver of the web app and the isolation test (KAN-99) | Trần Trung Hiếu | pending |
+| 11 · Local stack behind Caddy on `*.localhost` (KAN-94) | Trần Trung Hiếu | pending |
+| 12 · Demo seed: the two Workspaces (KAN-97) | Trần Trung Hiếu | pending |
+| 13 · Application VPS and the staging stack (KAN-10, KAN-11, KAN-12) | Trần Trung Hiếu | pending |
+| 14 · Main Caddy, Cloudflare DNS, wildcard certificates (KAN-13, KAN-95) | Trần Trung Hiếu | pending |
+| 15 · Deploy staging on merge with the smoke test (KAN-14, KAN-200) | Trần Trung Hiếu | pending |
+| 16 · File storage per Workspace (KAN-96) | Đặng Nhật Minh | pending |
 
 ### search
 
@@ -95,12 +99,12 @@ Frontend only, on MSW mocks. Spec: `artifacts/03-modules/search/spec.md` · Desi
    plan, for review.
 6. identity slices: My Profile (KAN-160) → Log out (KAN-106) → Login / landing (KAN-103, KAN-104); the backend
    after each screen. You see: each screen on mocks first, then on the real API.
-7. platform Task 1 TenantContext and `runIn` (KAN-99); unblocks Đặng Nhật Minh's Task 8. You see: its tests.
-8. platform Task 10 backend CI and images on GHCR (KAN-6, KAN-8, KAN-9). You see: CI checks on PRs and images on
+7. platform Task 6 TenantContext and `runIn` (KAN-99); unblocks Đặng Nhật Minh's Task 16. You see: its tests.
+8. platform Task 2 backend CI and images on GHCR (KAN-6, KAN-8, KAN-9). You see: CI checks on PRs and images on
    GHCR.
-9. After Phase 1 (about 2026-10-28): platform Tasks 2 → 4 → 15 → 9 → 5 → 11 → 12 → 13. You see: after Task 9 the
-   local stack with the two demo Workspaces in a browser; after Task 13 the staging stack.
-10. Iteration 2: platform Tasks 6, 7, 14, 16.
+9. After Phase 1 (about 2026-10-28): platform Tasks 1 → 3 → 4 → 5 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15. You see: after Task 12 the
+   local stack with the two demo Workspaces in a browser; after Task 15 the staging stack.
+10. Iteration 2: platform Tasks 22–25.
 
 ### import-ticket-list
 - import-ticket-list Tasks 1–12 (`artifacts/04-plans/import-ticket-list/iteration-1/tasks.md`): contract, schema, parser, validator, ProjectAccess stub + ProblemDetail errors, upload, preview rows, controller + template, confirm, cleanup job, performance check, retire the old snapshot import

@@ -309,7 +309,7 @@ task only stores jobs; `worker` starts the server and supplies the handler for t
 `jobrunr-spring-boot-3-starter` is added to `pom.xml` (named in the spec and ADR-0002; the user confirms it in the review of
 this plan). JobRunr creates its own tables with the Jobs user (design, Roles and grants); nothing is added to any changelog.
 **Edge rows (test targets):** #62 (the Jobs database holds ids only), #64 (the bean now exists: the start-up check of Task 7
-passes with it).
+passes with it), #70 (the Jobs database down at enqueue), #71 (a second enqueue for the same Workspace).
 **Tests (about 8):** `JobRunrInvitationJobQueueTest` (the request carries two ids and no other field; the same Workspace twice
 → one job; a storage failure → `InvitationQueueException` with no email in the message); `InvitationJobQueueIT` (Testcontainers
 `PostgresTestBase`: JobRunr tables exist in the Jobs database and in no other; the stored job payload holds no email, AC-013.17,

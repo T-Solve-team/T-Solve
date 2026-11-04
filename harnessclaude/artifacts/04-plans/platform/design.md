@@ -620,6 +620,8 @@ High row into a task.
 | 67 | STORY-014 | Data integrity | Database dump and its bucket prefix are taken at different moments | Medium | Accepted; documented in `RESTORE.md` | runbook |
 | 68 | STORY-014 | Scale | Many users behind one office address hit `EDGE_RATE_PER_IP` | Medium | Values are generous; the per-site limit is the second guard; 429 carries `Retry-After` | `edge-limits.test.sh` |
 | 69 | STORY-014 | Input extremes | Body over `EDGE_MAX_BODY_BYTES`; file between `FILE_STORAGE_MAX_BYTES` and the edge limit | Medium | 413 at the edge; an allowed file always passes; the backend still refuses a file over its limit | `edge-limits.test.sh` |
+| 70 | STORY-013 | Error cascades | The Jobs database is down when the invitation is enqueued | High | `create` still keeps the Workspace and the Admin; the failure is logged without the email; `worker` retries the send later (AC-013.18) | InvitationJobQueueIT (Jobs database stopped) |
+| 71 | STORY-013 | Timing | A second enqueue for the same Workspace (retry, double call) | Medium | The job id derives from the Workspace id: one waiting job, no second one (AC-013.17) | InvitationJobQueueIT, JobRunrInvitationJobQueueTest (same Workspace twice) |
 
 Open questions for the spec owner: none (the spec settles the Redis cache as out of scope and defines `schema_version` in AC-001.15).
 
