@@ -50,6 +50,25 @@ globalThis.FormData = (
   }).formData()
 ).constructor as typeof FormData;
 
+// BUG-112: antd leaves timers running after a component unmounts (Upload's list item waits 300 ms, rc-util's
+// useDelayState has no cleanup). One that fires after jsdom is torn down sets React state, and React's "window is not
+// defined" fails the whole run although every test passed. So the last afterAll below cancels what a file left.
+const nativeSetTimeout = globalThis.setTimeout;
+const nativeClearTimeout = globalThis.clearTimeout;
+const runningTimers = new Set<ReturnType<typeof setTimeout>>();
+globalThis.setTimeout = ((
+  callback: (...args: unknown[]) => void,
+  delay?: number,
+  ...args: unknown[]
+) => {
+  const timer = nativeSetTimeout(() => {
+    runningTimers.delete(timer);
+    callback(...args);
+  }, delay);
+  runningTimers.add(timer);
+  return timer;
+}) as typeof setTimeout;
+
 const FETCH_ID = 'x-test-fetch-id';
 
 /**
@@ -129,6 +148,7 @@ afterEach(() => {
 });
 afterAll(() => {
   app?.server.close();
+  runningTimers.forEach((timer) => nativeClearTimeout(timer));
 });
 
 beforeEach(() => {
