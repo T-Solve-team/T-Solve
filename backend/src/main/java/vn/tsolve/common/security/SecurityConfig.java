@@ -2,16 +2,13 @@ package vn.tsolve.common.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.DispatcherType;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.Map;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationTrustResolver;
 import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -21,14 +18,16 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfException;
 import vn.tsolve.common.config.MethodSecurityConfig;
-import vn.tsolve.common.exception.ProblemDetails;
 
 @Configuration
 @Import(MethodSecurityConfig.class)
 public class SecurityConfig {
+    private static final AuthenticationTrustResolver TRUST_RESOLVER = new AuthenticationTrustResolverImpl();
+
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
     SecurityFilterChain webSecurityChain(HttpSecurity http, ObjectMapper mapper) throws Exception {
+        var problems = new SecurityProblemWriter(mapper);
         return http.authorizeHttpRequests(requests -> requests.dispatcherTypeMatchers(DispatcherType.ERROR)
                         .permitAll()
                         .requestMatchers(
@@ -51,24 +50,16 @@ public class SecurityConfig {
                 .logout(AbstractHttpConfigurer::disable)
                 .requestCache(AbstractHttpConfigurer::disable)
                 .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, failure) ->
-                                write(mapper, response, HttpStatus.UNAUTHORIZED, "MSG07"))
+                                problems.write(request, response, HttpStatus.UNAUTHORIZED, "MSG07"))
                         .accessDeniedHandler((request, response, failure) -> {
-                            boolean authenticated = new AuthenticationTrustResolverImpl()
-                                    .isAuthenticated(
-                                            SecurityContextHolder.getContext().getAuthentication());
-                            write(
-                                    mapper,
+                            boolean authenticated = TRUST_RESOLVER.isAuthenticated(
+                                    SecurityContextHolder.getContext().getAuthentication());
+                            problems.write(
+                                    request,
                                     response,
                                     authenticated ? HttpStatus.FORBIDDEN : HttpStatus.UNAUTHORIZED,
                                     !authenticated || failure instanceof CsrfException ? "MSG07" : "MSG08");
                         }))
                 .build();
-    }
-
-    private static void write(ObjectMapper mapper, HttpServletResponse response, HttpStatus status, String code)
-            throws IOException {
-        response.setStatus(status.value());
-        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        mapper.writeValue(response.getOutputStream(), ProblemDetails.of(status, code, Map.of()));
     }
 }

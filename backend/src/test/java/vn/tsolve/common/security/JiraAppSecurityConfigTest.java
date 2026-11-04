@@ -101,11 +101,13 @@ class JiraAppSecurityConfigTest {
     }
 
     @Test
-    void keepsTokenOutOfErrorResponse_AC_001_7() throws Exception {
+    void keepsTokenOutOfErrorResponse_AC_001_7_BUG_110() throws Exception {
         String fit = FitTokens.sign(b -> b.audience(List.of("ari:cloud:ecosystem::app/other")));
         mvc.perform(post(URL).header("Authorization", "Bearer " + fit))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(fit))))
-                .andExpect(jsonPath("$.detail").value("You do not have permission to access this page."));
+                .andExpect(jsonPath("$.detail").value("You do not have permission to access this page."))
+                .andExpect(jsonPath("$.params").isMap())
+                .andExpect(jsonPath("$.instance").value(URL));
     }
 
     @Test

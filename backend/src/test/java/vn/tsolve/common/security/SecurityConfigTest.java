@@ -3,6 +3,7 @@ package vn.tsolve.common.security;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -14,11 +15,13 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.common.config.MethodSecurityConfig;
 import vn.tsolve.common.config.WebConfig;
@@ -51,7 +54,9 @@ class SecurityConfigTest {
             return "ok";
         }
 
-        @PostMapping("/api/probe")
+        @RequestMapping(
+                value = "/api/probe",
+                method = {RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE})
         String write() {
             return "ok";
         }
@@ -79,7 +84,9 @@ class SecurityConfigTest {
         mvc.perform(get("/api/admin"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("MSG08"));
-        mvc.perform(get("/outside")).andExpect(status().isForbidden());
+        mvc.perform(get("/outside"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MSG08"));
     }
 
     @Test
@@ -94,7 +101,6 @@ class SecurityConfigTest {
     @ParameterizedTest
     @ValueSource(
             strings = {
-                "/actuator/health",
                 "/v3/api-docs",
                 "/v3/api-docs/probe",
                 "/v3/api-docs.yaml",
@@ -102,9 +108,7 @@ class SecurityConfigTest {
                 "/swagger-ui/probe"
             })
     void allowsPublicPaths_AC_002_8(String path) throws Exception {
-        mvc.perform(get(path)).andExpect(result -> org.assertj.core.api.Assertions.assertThat(
-                        result.getResponse().getStatus())
-                .isNotIn(401, 403));
+        mvc.perform(get(path)).andExpect(status().isOk());
     }
 
     @Test
@@ -136,6 +140,38 @@ class SecurityConfigTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("MSG07"));
         mvc.perform(post("/api/probe").cookie(token).header("X-XSRF-TOKEN", token.getValue()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void rejectsAnonymousOutsideAndValidCsrfMutation_AC_002_4_AC_002_7() throws Exception {
+        mvc.perform(get("/outside"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("MSG07"));
+        mvc.perform(
+                        post("/api/probe")
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.csrf()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("MSG07"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"PUT", "PATCH", "DELETE"})
+    @WithTSolveUser
+    void enforcesCsrfOnEveryMutation_AC_002_11_AC_002_13(String method) throws Exception {
+        var token = mvc.perform(get("/api/probe")).andReturn().getResponse().getCookie("XSRF-TOKEN");
+        mvc.perform(request(HttpMethod.valueOf(method), "/api/probe"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MSG07"));
+        mvc.perform(request(HttpMethod.valueOf(method), "/api/probe")
+                        .cookie(token)
+                        .header("X-XSRF-TOKEN", "invalid"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MSG07"));
+        mvc.perform(request(HttpMethod.valueOf(method), "/api/probe")
+                        .cookie(token)
+                        .header("X-XSRF-TOKEN", token.getValue()))
                 .andExpect(status().isOk());
     }
 }

@@ -1,23 +1,36 @@
 package vn.tsolve.common.security;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.security.core.AuthenticatedPrincipal;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-public record TSolveUser(UUID id, String email, String fullName, Set<Role> roles) implements Serializable {
+public record TSolveUser(UUID id, String email, String fullName, Set<Role> roles)
+        implements AuthenticatedPrincipal, Serializable {
     public TSolveUser {
         Objects.requireNonNull(id);
         Objects.requireNonNull(email);
         Objects.requireNonNull(fullName);
         var effective = EnumSet.of(Role.EMPLOYEE);
-        effective.addAll(roles);
-        roles = Set.copyOf(effective);
+        effective.addAll(Objects.requireNonNull(roles, "roles"));
+        roles = Collections.unmodifiableSet(effective);
+    }
+
+    @Override
+    public String getName() {
+        return id.toString();
+    }
+
+    @Override
+    public String toString() {
+        return "TSolveUser[id=" + id + ", roles=" + roles + "]";
     }
 
     public List<SimpleGrantedAuthority> authorities() {
