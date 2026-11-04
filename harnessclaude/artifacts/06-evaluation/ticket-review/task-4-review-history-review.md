@@ -71,3 +71,19 @@ This result supersedes the earlier failed verification outcome above.
 | AC-008.7 | PASS: route denial without history request; API authentication and managed Workspace/Department scope |
 
 Final verdict: **PASS for the approved KAN159 frontend/MSW scope**. Feature transitions use sdd.ts; module remains implementing for its broader work.
+
+
+## Main integration recheck — 2026-11-04
+
+This verification supersedes the Nov03 all-green claim for the current branch head.
+
+- Main `3ff7218` includes KAN158 squash PR103 `74fef30`. Integrated it in `57efd36`, resolving source, generated API and artifact conflicts. Preserved the already approved STORY008 spec/hash and newer identity/platform artifacts from main. No code or merge state in the separate root KAN117 checkout was changed.
+- Net application diff against main is Review History and its producer/cache wiring only; backend, My Solutions and Ticket Detail match main. API generated through Orval; no generated output hand-edit.
+- Keep main's BUG103 callback entry; rename the prior history-schema integration bug to BUG104 in its log and regression name.
+- Approved spec unchanged; trace7/7. Independent source review PASS AC008.1–7 with no critical findings. All24 history tests pass in the complete run.
+- Full default-config frontend run exit1: **1250 passed, zero assertion failures,59 pending** out of1309. `src/test/guidelines.test.ts`57 and `src/app/dev/mock-mode.test.tsx`2 exceed the10000ms setup-hook limit. Exact two-suite rerun exit1 repeats59 pending. Neither test file nor shared setup differs from main. Root cause remains unconfirmed; record under existing BUG070. No test limit, worker, skip or assertion changed.
+- Evidence JSON: ignored frontend/node_modules/.cache/kan159-after-main-nov04.json and kan159-after-main-nov04-setup-recheck.json.
+- Fresh format, lint, typecheck, production tsc/Vite build PASS; second API generation path/hash comparison identical. Existing TicketListFilters fast-refresh warning remains. No manual browser test.
+- Graphify refreshed7551nodes16491edges434communities; five SQL files lack tree_sitter_sql and four files emitted no symbols. Specific conclusions verified from source.
+- Verdict: source/24 history tests PASS, **global verification gate FAIL**. Existing passing feature state is historical and terminal in sdd.ts; no manual status edit or new all-green completion claim made. Resolve/assess BUG070 before marking CI/merge readiness green.
+- PR body drafted with actual failure disclosure at D:/T-Solve/frontend/.vitest/KAN-159-pr-description.md. Browser extension tab reads timed out; native Computer Use then stopped because it could not determine the current URL confidently. No GitHub form edit or PR creation was performed.

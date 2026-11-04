@@ -5,8 +5,8 @@ Master registry of all artifacts in this workspace.
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
 | IMPL-REVIEW-4 | session-log | ticket-review | passing | artifacts/05-implementation/ticket-review/task-4-review-history.md |
-| TEST-REVIEW-4 | test-report | ticket-review | passing | artifacts/06-evaluation/ticket-review/task-4-review-history-test-report.md |
-| REVIEW-REVIEW-4 | review | ticket-review | passing | artifacts/06-evaluation/ticket-review/task-4-review-history-review.md |
+| TEST-REVIEW-4 | test-report | ticket-review | fail-global-verification | artifacts/06-evaluation/ticket-review/task-4-review-history-test-report.md |
+| REVIEW-REVIEW-4 | review | ticket-review | fail-global-verification | artifacts/06-evaluation/ticket-review/task-4-review-history-review.md |
 | IMPL-IDENTITY-22 | session-log | identity | passing | artifacts/05-implementation/identity/task-22-space-handover.md |
 | TEST-IDENTITY-22 | test-report | identity | pass-with-open-dev-defect | artifacts/06-evaluation/identity/task-22-space-handover-test-report.md |
 | REVIEW-IDENTITY-22 | review | identity | pass | artifacts/06-evaluation/identity/task-22-space-handover-review.md |
