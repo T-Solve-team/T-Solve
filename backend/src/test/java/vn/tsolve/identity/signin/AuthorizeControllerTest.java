@@ -42,6 +42,7 @@ import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.AuthSecurityConfig;
+import vn.tsolve.identity.account.AccountSignInService;
 import vn.tsolve.identity.signin.SignInTestFixtures.BadState;
 import vn.tsolve.identity.signin.SignInTestFixtures.StateStore;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
@@ -58,6 +59,8 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
     GoogleOidcClient.class,
     SignInCookie.class,
     IdTokenVerifier.class,
+    AccountSignInService.class,
+    HandOffCodeService.class,
     SignInTestBeans.class
 })
 @TestPropertySource(

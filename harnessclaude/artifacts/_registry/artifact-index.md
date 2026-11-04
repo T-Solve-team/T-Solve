@@ -188,6 +188,7 @@ Master registry of all artifacts in this workspace.
 | — | session-log | ticket-review | passing | artifacts/05-implementation/ticket-review/task-3-expired-tickets.md |
 | — | review | ticket-review | pass | artifacts/06-evaluation/ticket-review/task-3-expired-tickets-review.md |
 | — | test-report | ticket-review | pass | artifacts/06-evaluation/ticket-review/task-3-expired-tickets-test-report.md |
+| — | baseline | — | source | artifacts/00-baseline/T-Solve_Database_Tables.md |
 | — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-2-roles-security-review.md |
 | — | test-report | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-2-roles-security-test-report.md |
 | — | session-log | be-foundation | passing | artifacts/05-implementation/be-foundation/task-2-roles-security.md |
