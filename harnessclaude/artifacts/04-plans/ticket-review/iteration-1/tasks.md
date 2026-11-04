@@ -38,3 +38,12 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** frontend/openapi/tsolve-api.yaml; generated API output; frontend/src/features/review/pages/ExpiredTicketsPage*; review feature-local components/hooks/mocks and tests; docs/bug-log.md only for reproduced defects.
 **Dependencies:** User approval of current spec (AC-007.1–007.8), existing KAN-24 base; production KAN-156/157 are future integration dependencies rather than implemented here.
 **Verification:** Named AC-007.1–007.8 tests covering every risk in the extension, focused then full frontend checks, deterministic generation, trace and browser review. Record evidence and request agreement for feat(review): add expired ticket workflow (KAN-158). Do not begin KAN-159 before this feature's approved commit.
+
+## Task 4: KAN-159 Review History
+
+**Story:** STORY-008
+**Feature:** review-history
+**Description:** Implement the KAN-159 extension in the master/iteration design. Add the proposed read-only generated endpoint, scoped mock query and stable history records; replace ReviewHistoryPage placeholder with shared table, Department/decision/date URL filters, server pagination/sort, Ticket Detail links and query states. Invalidate history after existing successful decisions/send-back.
+**Files:** frontend/openapi/tsolve-api.yaml; generated API output; frontend/src/features/review/pages/ReviewHistoryPage*; review feature-local hooks/components/mocks and tests; existing review decision/send-back invalidation callers; docs/bug-log.md only for reproduced defects.
+**Dependencies:** Current STORY-008 spec approval; committed KAN-158 and inherited KAN-24 detail. No backend/SSE/Unpublish mutation delivery.
+**Verification:** AC-008.1–008.7 tests and design edge cases; focused tests, trace, full required frontend checks and deterministic generation. No manual browser testing per user. Review before reporting completion and request agreement for feat(review): add review history (KAN-159).

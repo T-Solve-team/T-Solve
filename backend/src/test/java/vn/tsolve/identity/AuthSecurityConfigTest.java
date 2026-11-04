@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.signin.AuthHosts;
 import vn.tsolve.identity.signin.SignInTestBeans;
 import vn.tsolve.identity.signin.SignInTestFixtures;
@@ -35,7 +36,12 @@ import vn.tsolve.identity.signin.SignInTestFixtures;
  * API still needs a signed-in user (design row 43: 401, no form login, no HTTP Basic).
  */
 @WebMvcTest(AuthSecurityConfigTest.ProbeController.class)
-@Import({AuthSecurityConfig.class, AuthHosts.class, SignInTestBeans.class, AuthSecurityConfigTest.ProbeController.class
+@Import({
+    SecurityConfig.class,
+    AuthSecurityConfig.class,
+    AuthHosts.class,
+    SignInTestBeans.class,
+    AuthSecurityConfigTest.ProbeController.class
 })
 @TestPropertySource(
         properties = {

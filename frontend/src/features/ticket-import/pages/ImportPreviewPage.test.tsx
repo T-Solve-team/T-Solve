@@ -441,7 +441,7 @@ describe('ImportPreviewPage', () => {
       answer();
     });
 
-    it('does not show a confirmed preview again on browser Back (BUG-109)', async () => {
+    it('does not show a confirmed preview again on browser Back (BUG-115)', async () => {
       const { user, router } = await openPreview();
       await user.click(screen.getByRole('button', { name: 'Confirm' }));
       await waitFor(() => expect(router.state.location.pathname).toBe('/import'));

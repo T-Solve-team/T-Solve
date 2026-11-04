@@ -15,6 +15,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -35,12 +37,20 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.util.UriComponentsBuilder;
+import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.AuthSecurityConfig;
+import vn.tsolve.identity.account.Account;
+import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.account.AccountStatus;
 import vn.tsolve.identity.signin.SignInTestFixtures.BadState;
 import vn.tsolve.identity.signin.SignInTestFixtures.StateStore;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
+import vn.tsolve.identity.signin.port.RecordingTenantScope;
 import vn.tsolve.identity.signin.port.WorkspaceRef;
 
 /**
@@ -49,6 +59,7 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
  */
 @WebMvcTest({CallbackController.class, AuthorizeController.class})
 @Import({
+    SecurityConfig.class,
     AuthSecurityConfig.class,
     AuthHosts.class,
     SignInStateService.class,
@@ -56,6 +67,8 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
     GoogleOidcClient.class,
     SignInCookie.class,
     IdTokenVerifier.class,
+    AccountSignInService.class,
+    HandOffCodeService.class,
     SignInTestBeans.class
 })
 @TestPropertySource(
@@ -96,6 +109,15 @@ class CallbackControllerTest {
     @Autowired
     private InMemoryWorkspaceLookup workspaces;
 
+    @Autowired
+    private AccountStore accounts;
+
+    @Autowired
+    private HandOffStore codes;
+
+    @Autowired
+    private RecordingTenantScope scope;
+
     @DynamicPropertySource
     static void fakeGoogle(DynamicPropertyRegistry registry) {
         registry.add("tsolve.oidc.google.token-uri", FakeGoogleIssuer::tokenUri);
@@ -109,10 +131,81 @@ class CallbackControllerTest {
         store.reset();
         clock.reset();
         workspaces.reset();
+        accounts.reset();
+        codes.reset();
+        scope.reset();
         FakeGoogleIssuer.reset();
     }
 
     // ---- helpers
+
+    private static final String LAN_EMAIL = "lan.tran@acme.example";
+    private static final Instant EARLIER = Instant.parse("2026-01-01T00:00:00Z");
+
+    /** An Account with the full name "Old Name" and earlier sign-in times, in the given Workspace's database. */
+    private Account seedAccount(WorkspaceRef workspace, String email, AccountStatus status) {
+        Account account = new Account(email, "Old Name", status, EARLIER);
+        ReflectionTestUtils.setField(account, "firstSignInAt", EARLIER);
+        ReflectionTestUtils.setField(account, "lastSignInAt", EARLIER);
+        return accounts.seed(workspace.id(), account);
+    }
+
+    private Account seedLan(WorkspaceRef workspace) {
+        return seedAccount(workspace, LAN_EMAIL, AccountStatus.ACTIVE);
+    }
+
+    private static void assertUnchanged(Account account) {
+        assertThat(account.getFullName()).as("full name").isEqualTo("Old Name");
+        assertThat(account.getFirstSignInAt()).as("first_sign_in_at").isEqualTo(EARLIER);
+        assertThat(account.getLastSignInAt()).as("last_sign_in_at").isEqualTo(EARLIER);
+    }
+
+    private void replaceStatus(WorkspaceRef workspace, WorkspaceRef.Status status) {
+        workspaces.replace(new WorkspaceRef(workspace.id(), workspace.siteHost(), workspace.googleDomain(), status));
+    }
+
+    private static String workspaceSite(WorkspaceRef workspace) {
+        return "http://" + workspace.siteHost() + ":8081";
+    }
+
+    /** A 302 to this exact URL with the expired sign-in cookie and no session. */
+    private static void assertRedirect(MockHttpServletResponse response, String location) {
+        assertThat(response.getStatus()).as("status").isEqualTo(302);
+        assertThat(response.getHeader(HttpHeaders.LOCATION)).as("Location").isEqualTo(location);
+        SignInTestFixtures.assertExpiredSignInCookie(response);
+        SignInTestFixtures.assertNoSession(response);
+    }
+
+    private static void assertLoginError(MockHttpServletResponse response, WorkspaceRef workspace, String query) {
+        assertRedirect(response, workspaceSite(workspace) + "/login?" + query);
+    }
+
+    /** A 302 to the Workspace site's complete URL with the code as the only parameter; returns the code. */
+    private static String assertCompleteRedirect(MockHttpServletResponse response, WorkspaceRef workspace) {
+        assertThat(response.getStatus()).as("status").isEqualTo(302);
+        String location = response.getHeader(HttpHeaders.LOCATION);
+        assertThat(location).as("Location").startsWith(workspaceSite(workspace) + "/api/v1/auth/complete?code=");
+        MultiValueMap<String, String> query =
+                UriComponentsBuilder.fromUriString(location).build().getQueryParams();
+        assertThat(query.keySet()).as("query parameters").containsExactly("code");
+        SignInTestFixtures.assertExpiredSignInCookie(response);
+        SignInTestFixtures.assertNoSession(response);
+        assertThat(response.getHeaders(HttpHeaders.SET_COOKIE))
+                .as("Set-Cookie: only the expired sign-in cookie")
+                .hasSize(1);
+        return query.getFirst("code");
+    }
+
+    /** No Workspace was bound, no Account was read and no hand-off code was saved. */
+    private void assertNothingTouched() {
+        assertThat(scope.boundIds()).as("Workspaces bound").isEmpty();
+        assertThat(accounts.callWorkspaces()).as("Account repository calls").isEmpty();
+        assertThat(codes.saved()).as("hand-off codes").isEmpty();
+    }
+
+    private void answerToken(Browser browser, Consumer<Map<String, Object>> edit) {
+        FakeGoogleIssuer.answerToken(FakeGoogleIssuer.idToken(browser.row().getNonce(), edit));
+    }
 
     /** One sign-in attempt that went through the real {@code authorize}: the state, the cookie it set, its row. */
     private record Browser(String state, String cookie, SignInState row) {}
@@ -444,8 +537,33 @@ class CallbackControllerTest {
                     FakeGoogleIssuer.signedWithOtherKey(b.row().getNonce(), claims -> {}));
             return t.callWithCode(b);
         }),
-        INTERIM_WORKSPACE_PAGE(t -> {
+        SIGNED_IN(t -> {
             Browser b = t.authorized(ACME);
+            t.seedLan(ACME);
+            answerValidToken(b);
+            return t.callWithCode(b);
+        }),
+        SUSPENDED_WORKSPACE(t -> {
+            Browser b = t.authorized(ACME);
+            t.seedLan(ACME);
+            t.replaceStatus(ACME, WorkspaceRef.Status.SUSPENDED);
+            answerValidToken(b);
+            return t.callWithCode(b);
+        }),
+        WRONG_HD(t -> {
+            Browser b = t.authorized(ACME);
+            t.seedLan(ACME);
+            t.answerToken(b, claims -> claims.put("hd", "beta.example"));
+            return t.callWithCode(b);
+        }),
+        NO_ACCOUNT(t -> {
+            Browser b = t.authorized(ACME);
+            answerValidToken(b);
+            return t.callWithCode(b);
+        }),
+        DEACTIVATED(t -> {
+            Browser b = t.authorized(ACME);
+            t.seedAccount(ACME, LAN_EMAIL, AccountStatus.DEACTIVATED);
             answerValidToken(b);
             return t.callWithCode(b);
         }),
@@ -840,7 +958,7 @@ class CallbackControllerTest {
 
         MockHttpServletResponse response = callWithCode(browser);
 
-        SignInTestFixtures.assertCallbackMsg141Page(response);
+        assertLoginError(response, ACME, "error=MSG122&google_domain=acme.example");
         assertThat(workspaces.askedIds()).isNotEmpty().containsOnly(ACME.id());
     }
 
@@ -856,19 +974,6 @@ class CallbackControllerTest {
 
         SignInTestFixtures.assertCallbackMsg141Page(response);
         assertThat(FakeGoogleIssuer.tokenRequests()).hasSize(1);
-    }
-
-    @Test
-    @DisplayName("interim T9b a Workspace state that passes the Google step gets the MSG141 page")
-    void interimAWorkspaceStateThatPassesGetsMsg141_T9b() throws Exception {
-        Browser browser = authorized(ACME);
-        answerValidToken(browser);
-
-        MockHttpServletResponse response = callWithCode(browser);
-
-        SignInTestFixtures.assertCallbackMsg141Page(response);
-        assertThat(FakeGoogleIssuer.tokenRequests()).hasSize(1);
-        assertThat(FakeGoogleIssuer.jwksRequestCount()).isEqualTo(1);
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
@@ -897,9 +1002,25 @@ class CallbackControllerTest {
     @DisplayName("interim T12 a Jira-link state that passes the shared checks gets the MSG141 page")
     void interimAJiraLinkStateThatPassesGetsMsg141_T12() throws Exception {
         Browser browser = authorizedJiraLink(ACME);
+        seedLan(ACME);
         answerValidToken(browser);
 
         SignInTestFixtures.assertCallbackMsg141Page(callWithCode(browser));
+
+        assertNothingTouched();
+    }
+
+    @Test
+    @DisplayName("interim T12 a Jira-link state of a suspended Workspace still gets the MSG141 page, not MSG120")
+    void interimAJiraLinkStateOfASuspendedWorkspaceGetsMsg141_T12() throws Exception {
+        Browser browser = authorizedJiraLink(ACME);
+        seedLan(ACME);
+        replaceStatus(ACME, WorkspaceRef.Status.SUSPENDED);
+        answerValidToken(browser);
+
+        SignInTestFixtures.assertCallbackMsg141Page(callWithCode(browser));
+
+        assertNothingTouched();
     }
 
     // ---- Other rows
@@ -946,14 +1067,21 @@ class CallbackControllerTest {
     @DisplayName("edge 33 the callback logs no state, code, ID token, cookie value or its hash")
     void theCallbackLogsNoSecrets_edge33(CapturedOutput output) throws Exception {
         Browser valid = authorized(ACME);
+        seedLan(ACME);
         String idToken = FakeGoogleIssuer.idToken(valid.row().getNonce(), claims -> {});
         FakeGoogleIssuer.answerToken(idToken);
-        callWithCode(valid);
+        MockHttpServletResponse signedIn = callWithCode(valid);
+        String handOffCode = assertCompleteRedirect(signedIn, ACME);
         Browser cancelled = authorized(ACME);
         callWithError(cancelled, "access_denied");
 
         String log = output.getAll();
-        assertThat(log).doesNotContain(CODE).doesNotContain(idToken);
+        assertThat(log)
+                .doesNotContain(CODE)
+                .doesNotContain(idToken)
+                .doesNotContain(handOffCode)
+                .doesNotContain(LAN_EMAIL)
+                .doesNotContain("Lan Tran");
         for (Browser browser : List.of(valid, cancelled)) {
             byte[] hash = sha256(browser.cookie());
             assertThat(log)
@@ -973,5 +1101,354 @@ class CallbackControllerTest {
         FakeGoogleIssuer.delayJwks(1500);
 
         assertMsg06(callWithCode(browser), ACME);
+    }
+
+    // ---- Workspace and Account checks (T9b: AC-001.10 to AC-001.16, rows 24, 25, 26, 42)
+
+    @Test
+    @DisplayName("AC-001.10 sends a suspended Workspace's sign-in back with MSG120")
+    void sendsASuspendedWorkspacesSignInBackWithMsg120_AC_001_10() throws Exception {
+        Browser browser = authorized(ACME);
+        Account lan = seedLan(ACME);
+        replaceStatus(ACME, WorkspaceRef.Status.SUSPENDED);
+        answerValidToken(browser);
+
+        MockHttpServletResponse response = callWithCode(browser);
+
+        assertLoginError(response, ACME, "error=MSG120");
+        assertConsumed(browser);
+        assertNothingTouched();
+        assertUnchanged(lan);
+    }
+
+    @ParameterizedTest(name = "[{index}] hd=[{0}]")
+    @NullSource
+    @ValueSource(strings = {"", "beta.example", "acme.example.evil", "evil.acme.example"})
+    @DisplayName("AC-001.11 sends a missing or different hd back with MSG122 and the Workspace's Google domain")
+    void sendsAMissingOrDifferentHdBackWithMsg122_AC_001_11(String hd) throws Exception {
+        Browser browser = authorized(ACME);
+        Account lan = seedLan(ACME);
+        workspaces.reset();
+        answerToken(browser, claims -> {
+            if (hd == null) {
+                claims.remove("hd");
+            } else {
+                claims.put("hd", hd);
+            }
+        });
+
+        MockHttpServletResponse response = callWithCode(browser);
+
+        assertLoginError(response, ACME, "error=MSG122&google_domain=acme.example");
+        assertNothingTouched();
+        assertUnchanged(lan);
+        assertThat(workspaces.askedIds()).isNotEmpty().containsOnly(ACME.id());
+    }
+
+    @ParameterizedTest(name = "[{index}] token hd=[{0}] Workspace domain=[{1}]")
+    @CsvSource({"ACME.Example,acme.example", "acme.example,Acme.EXAMPLE"})
+    @DisplayName("AC-001.11 / edge 25 matches hd and the Workspace's Google domain ignoring case")
+    void matchesHdAndTheGoogleDomainIgnoringCase_AC_001_11_edge25(String tokenHd, String domain) throws Exception {
+        Browser browser = authorized(ACME);
+        seedLan(ACME);
+        workspaces.replace(new WorkspaceRef(ACME.id(), ACME.siteHost(), domain, ACME.status()));
+        answerToken(browser, claims -> claims.put("hd", tokenHd));
+
+        MockHttpServletResponse response = callWithCode(browser);
+
+        assertCompleteRedirect(response, ACME);
+    }
+
+    @Test
+    @DisplayName("AC-001.12 sends an email with no Account in the Workspace back with MSG09")
+    void sendsAnEmailWithNoAccountBackWithMsg09_AC_001_12() throws Exception {
+        Browser browser = authorized(ACME);
+        answerValidToken(browser);
+
+        MockHttpServletResponse response = callWithCode(browser);
+
+        assertLoginError(response, ACME, "error=MSG09");
+        assertConsumed(browser);
+        assertThat(scope.boundIds()).as("Workspaces bound").containsExactly(ACME.id());
+        assertThat(accounts.callWorkspaces()).isNotEmpty().containsOnly(ACME.id());
+        assertThat(codes.saved()).as("hand-off codes").isEmpty();
+    }
+
+    @Test
+    @DisplayName("AC-001.12 / edge 25 finds the Account ignoring the email's case")
+    void findsTheAccountIgnoringTheEmailsCase_AC_001_12_edge25() throws Exception {
+        Browser browser = authorized(ACME);
+        Account lan = seedLan(ACME);
+        answerToken(browser, claims -> claims.put("email", "Lan.Tran@ACME.Example"));
+
+        MockHttpServletResponse response = callWithCode(browser);
+
+        assertCompleteRedirect(response, ACME);
+        assertThat(lan.getLastSignInAt()).as("last_sign_in_at").isEqualTo(MutableClock.START);
+        assertThat(lan.getEmail()).as("stored email").isEqualTo(LAN_EMAIL);
+    }
+
+    @Test
+    @DisplayName("AC-001.13 sends a Deactivated Account back with MSG10")
+    void sendsADeactivatedAccountBackWithMsg10_AC_001_13() throws Exception {
+        Browser browser = authorized(ACME);
+        Account lan = seedAccount(ACME, LAN_EMAIL, AccountStatus.DEACTIVATED);
+        answerValidToken(browser);
+
+        MockHttpServletResponse response = callWithCode(browser);
+
+        assertLoginError(response, ACME, "error=MSG10");
+        assertConsumed(browser);
+        assertThat(codes.saved()).as("hand-off codes").isEmpty();
+        assertUnchanged(lan);
+    }
+
+    enum FailureStack {
+        GOOGLE_ERROR_BEFORE_ALL(true, true, true, true, false, "error=MSG06"),
+        SUSPENDED_BEFORE_HD_AND_ACCOUNT(false, true, true, true, false, "error=MSG120"),
+        SUSPENDED_BEFORE_DEACTIVATED(false, true, true, false, true, "error=MSG120"),
+        HD_BEFORE_NO_ACCOUNT(false, false, true, true, false, "error=MSG122&google_domain=acme.example"),
+        HD_BEFORE_DEACTIVATED(false, false, true, false, true, "error=MSG122&google_domain=acme.example"),
+        DEACTIVATED_ALONE(false, false, false, false, true, "error=MSG10");
+
+        private final boolean googleError;
+        private final boolean suspended;
+        private final boolean badHd;
+        private final boolean noAccount;
+        private final boolean deactivated;
+        private final String query;
+
+        FailureStack(
+                boolean googleError,
+                boolean suspended,
+                boolean badHd,
+                boolean noAccount,
+                boolean deactivated,
+                String query) {
+            this.googleError = googleError;
+            this.suspended = suspended;
+            this.badHd = badHd;
+            this.noAccount = noAccount;
+            this.deactivated = deactivated;
+            this.query = query;
+        }
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @EnumSource(FailureStack.class)
+    @DisplayName("AC-001.14 reports only the first failure, in the spec's order")
+    void reportsOnlyTheFirstFailure_AC_001_14(FailureStack stack) throws Exception {
+        Browser browser = authorized(ACME);
+        if (!stack.noAccount) {
+            seedAccount(ACME, LAN_EMAIL, stack.deactivated ? AccountStatus.DEACTIVATED : AccountStatus.ACTIVE);
+        }
+        if (stack.suspended) {
+            replaceStatus(ACME, WorkspaceRef.Status.SUSPENDED);
+        }
+        answerToken(browser, claims -> {
+            if (stack.badHd) {
+                claims.put("hd", "beta.example");
+            }
+        });
+
+        MockHttpServletResponse response =
+                stack.googleError ? callWithError(browser, "access_denied") : callWithCode(browser);
+
+        assertLoginError(response, ACME, stack.query);
+        MultiValueMap<String, String> query = UriComponentsBuilder.fromUriString(
+                        response.getHeader(HttpHeaders.LOCATION))
+                .build()
+                .getQueryParams();
+        assertThat(query.get("error")).as("error parameters").hasSize(1);
+        if (!stack.query.contains("MSG122")) {
+            assertThat(query.keySet()).containsExactly("error");
+        }
+        if (!stack.query.equals("error=MSG10")) {
+            assertNothingTouched();
+        }
+    }
+
+    @Test
+    @DisplayName("AC-001.14 checks the state's Workspace (MSG141) before Workspace Active")
+    void checksTheStatesWorkspaceBeforeWorkspaceActive_AC_001_14() throws Exception {
+        Browser browser = authorized(ACME);
+        seedLan(ACME);
+        workspaces.replace(new WorkspaceRef(ACME.id(), ACME.siteHost(), null, WorkspaceRef.Status.SUSPENDED));
+        answerValidToken(browser);
+
+        SignInTestFixtures.assertCallbackMsg141Page(callWithCode(browser));
+
+        assertNoGoogleCall();
+        assertNothingTouched();
+    }
+
+    @Test
+    @DisplayName("AC-001.15 looks the Account up only inside the state's Workspace")
+    void looksTheAccountUpOnlyInsideTheStatesWorkspace_AC_001_15() throws Exception {
+        Browser browser = authorized(ACME);
+        Account inBeta = seedLan(BETA);
+        answerValidToken(browser);
+
+        MockHttpServletResponse response = callWithCode(browser);
+
+        assertLoginError(response, ACME, "error=MSG09");
+        assertThat(scope.boundIds()).as("Workspaces bound").containsExactly(ACME.id());
+        assertThat(accounts.callWorkspaces()).isNotEmpty().containsOnly(ACME.id());
+        assertUnchanged(inBeta);
+        assertThat(codes.saved()).as("hand-off codes").isEmpty();
+    }
+
+    @Test
+    @DisplayName("AC-001.16 redirects to complete on the Workspace site with a one-time hand-off code")
+    void redirectsToCompleteWithAHandOffCode_AC_001_16() throws Exception {
+        Browser browser = authorizeState(states.createForWorkspace(ACME.id(), "/tickets/42"));
+        Account lan = seedLan(ACME);
+        answerValidToken(browser);
+
+        MockHttpServletResponse response = callWithCode(browser);
+
+        String code = assertCompleteRedirect(response, ACME);
+        assertConsumed(browser);
+        HandOffCode row = codes.onlySaved();
+        assertThat(signedToken.verify(code))
+                .as("verified code")
+                .contains(row.getId().toString());
+        assertThat(row.getTarget()).isEqualTo(HandOffCode.Target.WORKSPACE);
+        assertThat(row.getWorkspaceId()).isEqualTo(ACME.id());
+        assertThat(row.getAccountId()).isEqualTo(lan.getId());
+        assertThat(row.getOperatorEmail()).isNull();
+        assertThat(row.getSiteHost()).isEqualTo("acme.localhost");
+        assertThat(row.getReturnTo()).isEqualTo("/tickets/42");
+        assertThat(row.getCreatedAt()).isEqualTo(MutableClock.START);
+        assertThat(row.getExpiresAt()).isEqualTo(MutableClock.START.plusSeconds(60));
+        assertThat(row.getUsedAt()).isNull();
+        assertThat(scope.boundIds()).containsExactly(ACME.id());
+    }
+
+    @ParameterizedTest(name = "[{index}] claim=[{0}] stored=[{1}]")
+    @CsvSource(
+            delimiter = '|',
+            value = {"Trần Thị Lan|Trần Thị Lan", "'  Trần Thị Lan  '|Trần Thị Lan"})
+    @DisplayName("AC-001.16 sets the Account's full name from the name claim, trimmed")
+    void setsTheFullNameFromTheNameClaim_AC_001_16(String claim, String stored) throws Exception {
+        Browser browser = authorized(ACME);
+        Account lan = seedLan(ACME);
+        answerToken(browser, claims -> claims.put("name", claim));
+
+        assertCompleteRedirect(callWithCode(browser), ACME);
+
+        assertThat(lan.getFullName()).isEqualTo(stored);
+    }
+
+    @ParameterizedTest(name = "[{index}] name=[{0}]")
+    @NullSource
+    @ValueSource(strings = {"", "   ", " ", "　"})
+    @DisplayName("AC-001.16 keeps the full name when the name claim is absent, empty, blank, NBSP or U+3000")
+    void keepsTheFullNameWhenTheNameClaimIsEmpty_AC_001_16(String name) throws Exception {
+        Browser browser = authorized(ACME);
+        Account lan = seedLan(ACME);
+        answerToken(browser, claims -> {
+            if (name == null) {
+                claims.remove("name");
+            } else {
+                claims.put("name", name);
+            }
+        });
+
+        assertCompleteRedirect(callWithCode(browser), ACME);
+
+        assertThat(lan.getFullName()).isEqualTo("Old Name");
+        assertThat(lan.getLastSignInAt()).isEqualTo(MutableClock.START);
+    }
+
+    @Test
+    @DisplayName("AC-001.16 records the sign-in time, and the first sign-in time only once")
+    void recordsTheSignInTimeAndTheFirstOnlyOnce_AC_001_16() throws Exception {
+        Account lan = accounts.seed(ACME.id(), new Account(LAN_EMAIL, "Old Name", AccountStatus.ACTIVE, EARLIER));
+        Browser first = authorized(ACME);
+        answerValidToken(first);
+
+        assertCompleteRedirect(callWithCode(first), ACME);
+
+        assertThat(lan.getFirstSignInAt()).isEqualTo(MutableClock.START);
+        assertThat(lan.getLastSignInAt()).isEqualTo(MutableClock.START);
+
+        clock.advance(Duration.ofHours(1));
+        Browser second = authorized(ACME);
+        FakeGoogleIssuer.answerToken(
+                FakeGoogleIssuer.idToken(clock.instant(), second.row().getNonce(), claims -> {}));
+
+        assertCompleteRedirect(callWithCode(second), ACME);
+
+        assertThat(lan.getFirstSignInAt()).isEqualTo(MutableClock.START);
+        assertThat(lan.getLastSignInAt()).isEqualTo(MutableClock.START.plus(Duration.ofHours(1)));
+    }
+
+    @Test
+    @DisplayName("AC-001.6 / edge 26 a repeated successful callback gets MSG141 and no second code")
+    void aRepeatedSuccessfulCallbackGetsMsg141AndNoSecondCode_AC_001_6_edge26() throws Exception {
+        Browser browser = authorized(ACME);
+        Account lan = seedLan(ACME);
+        answerValidToken(browser);
+
+        assertCompleteRedirect(callWithCode(browser), ACME);
+        int callsAfterFirst = accounts.callWorkspaces().size();
+
+        SignInTestFixtures.assertCallbackMsg141Page(callWithCode(browser));
+
+        assertThat(codes.saved()).as("hand-off codes").hasSize(1);
+        assertThat(accounts.callWorkspaces()).as("Account repository calls").hasSize(callsAfterFirst);
+        assertThat(lan.getLastSignInAt()).isEqualTo(MutableClock.START);
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @ValueSource(strings = {"the Account save fails", "the hand-off code save fails"})
+    @DisplayName("edge 42 a database failure after the checks gives a 500, no code and no session")
+    void aDatabaseFailureAfterTheChecksGivesA500_edge42(String failure) throws Exception {
+        Browser browser = authorized(ACME);
+        // a first-ever sign-in: both times are null until the sign-in records them
+        Account lan = accounts.seed(ACME.id(), new Account(LAN_EMAIL, "Old Name", AccountStatus.ACTIVE, EARLIER));
+        answerValidToken(browser);
+        boolean accountFails = failure.startsWith("the Account");
+        if (accountFails) {
+            accounts.failOnSave();
+        } else {
+            codes.failOnSave();
+        }
+
+        MockHttpServletResponse response = callWithCode(browser);
+
+        assertThat(response.getStatus()).as("status").isEqualTo(500);
+        assertThat(response.getHeader(HttpHeaders.LOCATION)).isNull();
+        SignInTestFixtures.assertNoSession(response);
+        SignInTestFixtures.assertExpiredSignInCookie(response);
+        assertThat(codes.saved()).as("hand-off codes").isEmpty();
+        if (!accountFails) {
+            // Q5 = A: the Account is updated before the code is saved, so the sign-in times stay recorded
+            assertThat(lan.getFirstSignInAt()).as("firstSignInAt").isEqualTo(MutableClock.START);
+            assertThat(lan.getLastSignInAt()).as("lastSignInAt").isEqualTo(MutableClock.START);
+        }
+    }
+
+    @Test
+    @DisplayName("AC-001.12 / edge 25 matches email and hd ignoring case under a Turkish default locale")
+    void matchesEmailAndHdUnderATurkishLocale_AC_001_12_edge25() throws Exception {
+        Browser browser = authorized(ACME);
+        Account liam = seedAccount(ACME, "liam@acme.example", AccountStatus.ACTIVE);
+        answerToken(browser, claims -> {
+            claims.put("email", "LIAM@ACME.EXAMPLE");
+            claims.put("hd", "ACME.EXAMPLE");
+        });
+        Locale original = Locale.getDefault();
+        MockHttpServletResponse response;
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+            response = callWithCode(browser);
+        } finally {
+            Locale.setDefault(original);
+        }
+
+        assertCompleteRedirect(response, ACME);
+        assertThat(liam.getLastSignInAt()).isEqualTo(MutableClock.START);
     }
 }

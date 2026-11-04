@@ -58,3 +58,18 @@ Append-only log of framework friction captured during usage.
 **Type:** bug
 **Context:** `TEST_GLOBS` in `hooks/sdd.ts` is `**/*.{test,spec}.*`, `**/test_*.py`, `**/*_test.*`. JUnit files (`*Test.java`, `*IT.java`) never match, so `trace import-ticket-list STORY-001` reports 0/12 although every `AC_001_*` id is named by a backend test (checked with grep).
 **Suggestion:** Add `**/*Test.java` and `**/*IT.java` (and accept the `AC_001_2` spelling the backend naming rule uses) to the trace globs.
+
+## 2026-11-04 — preserve Java trace customization during upgrade (PR #107)
+
+**Type:** maintenance gap
+**Context:** The user-applied Java trace correction is recorded in T-Solve commit
+`21096b37c74f455a1f772d4391c1529f1072f7ac` (BUG-093). It recognizes Java Test/IT files and
+underscore AC ids, with four passing regressions. Framework upgrades can replace these files;
+the current globs still do not recognize the alternative `*Tests.java` naming convention.
+The BE lead requested upstreaming this during PR #107 review. Protected hook files were not
+edited in this follow-up, and the redundant proposed patch artifact was removed.
+
+**Suggestion:** Integrate the Java support upstream, include `*Tests.java`, and preserve or
+explicitly report local customization during upgrade. Until then, compare the applied commit
+and rerun hook tests plus a Java STORY trace after every upgrade. This is a local feedback
+record; no external upstream issue or message was sent by the agent.

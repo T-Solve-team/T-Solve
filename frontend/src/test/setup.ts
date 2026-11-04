@@ -39,7 +39,7 @@ if (!window.ResizeObserver) {
   };
 }
 
-// BUG-110: Node 24's fetch (undici 7) builds and parses forms with the global File, which jsdom replaces, so an
+// BUG-116: Node 24's fetch (undici 7) builds and parses forms with the global File, which jsdom replaces, so an
 // upload is rejected (UND_ERR_REQ_CONTENT_LENGTH_MISMATCH → MSG06) and request.formData() throws. Node 22 only loses
 // the file name. Tests use Node's File and FormData, like the fetch they call. An empty urlencoded body gives a
 // FormData of Node's: no Node module exports that class.

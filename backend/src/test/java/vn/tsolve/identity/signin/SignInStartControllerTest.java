@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
+import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.AuthSecurityConfig;
 import vn.tsolve.identity.signin.SignInTestFixtures.StateStore;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
@@ -33,6 +34,7 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
 /** Anonymous on purpose: sign-in start is reached before anyone is signed in (no @WithMockUser here). */
 @WebMvcTest(SignInStartController.class)
 @Import({
+    SecurityConfig.class,
     AuthSecurityConfig.class,
     AuthHosts.class,
     SignInStateService.class,

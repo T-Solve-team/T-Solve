@@ -5,7 +5,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 
 /**
  * Turns on {@code @PreAuthorize} on every endpoint (backend/AGENTS.md §5). How users sign in (Google OIDC) is the
- * identity module's job; until then Spring Boot's default login applies.
+ * identity module's job; the shared web chain requires authentication and provides no built-in login.
  */
 @Configuration
 @EnableMethodSecurity

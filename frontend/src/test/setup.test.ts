@@ -37,7 +37,7 @@ describe('test setup', () => {
     expect(mocked).toBe(true);
   });
 
-  it('sends a FormData file with its name and content (BUG-110)', async () => {
+  it('sends a FormData file with its name and content (BUG-116)', async () => {
     let body = '';
     server.use(
       http.post('*/api/v1/bug-110', async ({ request }) => {

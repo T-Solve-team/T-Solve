@@ -1,49 +1,70 @@
 ---
 module: platform
-date: 2026-10-25
+date: 2026-11-04
 iteration: 1
 ---
 
-# Design: platform — iteration 1 (to 30/10)
+# Design: platform — iteration 1 (local stack, Workspaces and the staging demo of 15/11; DevOps Phase A)
 
-Master: `artifacts/04-plans/platform/design.md` (full Data Model, Key Decisions, File Structure, Edge Cases, Risk
-Review, Builder Check). This file keeps only what Tasks 1–5, 8–13 and 15 need.
+Master: `artifacts/04-plans/platform/design.md` (Data Model, Key Decisions, File Structure, Edge Cases, Traceability).
+This file keeps only what Tasks 1 – 22 of `iteration-1/tasks.md` need. The 4/11 multi-tenant HLA (database per
+Workspace, Registry, row guard, Garage, Redis, STORY-013, STORY-014) is in the master and in those tasks.
 
 ## Scope
 
-The tenant layer for Workspace-site requests (STORY-001…004, STORY-002's resolver), file storage (STORY-007), the
-local stack (STORY-008), Caddy and certificates (STORY-009), staging with CI/CD (STORY-010) and the Workspaces-only
-seed that the smoke test needs (STORY-012, AC-012.1, AC-012.3–AC-012.5; decision P7). The Forge token, the Jira App
-resolver, the AI VPS and the seed's module data are iteration 2.
+All the tenant layer and the infrastructure for the demo of 15/11:
+- the Registry, the row guard, routing and the Tenant Resolver of the web app (STORY-001, STORY-002, STORY-004;
+  Tasks 3 – 6, 10);
+- provisioning, the invitation queue and the ops script (STORY-013; Tasks 7 – 9);
+- the local stack and CI (STORY-008; Tasks 1, 2, 11);
+- the demo Workspaces through provisioning (STORY-012, AC-012.1, AC-012.3 – AC-012.5; Task 12);
+- staging, Caddy and CD (STORY-009, STORY-010, and the edge limits AC-014.9 – AC-014.11 of STORY-014; Tasks 13 – 15);
+- file storage and its signed-URL route (STORY-007; Tasks 16, 17);
+- the Jira site link, the Forge Invocation Token and the Tenant Resolver of the Jira App (STORY-004, STORY-005,
+  STORY-006; Tasks 18 – 21);
+- the AI VPS (STORY-011; Task 22).
+
+Iteration 2 holds only the seed's module data and the reset (Task 23) and the rest of STORY-014 (Tasks 24 – 26).
 
 ## Decisions used in this iteration
 
 | Decision | Choice |
 |----------|--------|
-| P1 | Tasks 2–5 wait on Trần Hải Anh's answer about who writes the `workspaces` reshape changeset; platform offers a draft |
-| P2 | `backend/pom.xml`, `application*.yml`, `backend/.dockerignore` are in platform's `paths` (be-foundation owns them) |
-| P4 | `TenantAwareJpaTransactionManager.doBegin` → `set_config('app.workspace_id', ?, true)` |
+| P1, P2 | `be-foundation` owns the tenant master and the shared files; platform's changesets are added after changeset 001 |
+| P3 | `spring-security-oauth2-jose` (Nimbus) for the Forge Invocation Token, version from the Spring Boot BOM |
 | P5 | `runIn` runs the action in a new transaction (`REQUIRES_NEW`) |
-| P6 | Roles and default privileges in `infra/postgres/init/10-tsolve-roles.sh`, also used by Testcontainers; no GRANT in changesets |
-| P7 | Seed runner (Workspaces only) runs on staging after each deploy |
-| P9 | `tsolve-caddy` image built in CI |
-| Q12 | Cloudflare DNS; DNS-01 wildcards `*.tsolve.io.vn` (+ apex) and `*.staging.tsolve.io.vn`; token in the edge `.env` |
-| X2, U3 | Join tables: composite key with `workspace_id`; append-only: no `updated_at`; ids by `@GeneratedValue(UUID)` + `DEFAULT gen_random_uuid()` |
-| Planning | `ThreadLocal` binding; no resolver cache; placeholder tenant id + `@PrePersist` guard; `/actuator/health` passes every host; migrations at web startup and as a CD step; staging basic auth except `api.`; GHCR under the repository owner |
+| P7 | The seed runner creates Workspaces through provisioning and runs on staging after each deploy |
+| P9 | `tsolve-caddy` image built in CI (Cloudflare DNS module, rate-limit module) |
+| P11, Q12, Q13 | Ollama native on the AI VPS behind WireGuard; Cloudflare DNS-01 wildcards for `*.tsolve.io.vn` and `*.staging.tsolve.io.vn` |
+| Q9 | The Jira site URL is normalised and checked through `TenantInfoClient` (public address, `https`, no redirects) |
+| R1 – R3, R15 | Registry through `JdbcClient`; routing `DataSource` with lazy per-Workspace pools; `app.tenant_id` set from the bound id |
+| R4 – R6 | One `runAlways`, `runOrder="last"` changeset installs policy `tenant_guard`; owner role and template database; per-Workspace runtime user |
+| R7, R8 | Database and user named `tsolve_<env>_ws_<32 hex>`; AES-256-GCM password storage |
+| R9, R10 | Provisioning order of AC-013.1; `InvitationJobQueue` is a port with a minimal JobRunr implementation in `platform` (user, 4/11) |
+| R11 – R13 | Signed URLs on the Workspace's own site; objects stored as `application/octet-stream`; in-memory upload |
+| R14 | The web process migrates the Registry and every Workspace database at startup; CD also runs a `migrate` step |
+| R16 | One Redis container with persistence and `noeviction` |
+| W1, W2 | AWS SDK v2 `s3`; `caddy-ratelimit` in the custom Caddy image |
+| Forge | `ForgeSecurityConfig` `@Order(1)` on the `api.` host; stateless, no CSRF, no cookie; the claim paths of `cloudId`, principal and lifecycle `eventType` are confirmed against Atlassian's Forge Remote documentation first (Task 19) and recorded in the master |
+| Planning | `ThreadLocal` binding; no resolver cache; `/actuator/health` passes every host; staging basic auth except `api.`; GHCR under the repository owner |
 
 ## Data model in this iteration
 
-`workspaces`, `jira_sites`, the tenant-table template, the two allow-lists, the database roles, the storage layout
-and the seed file — all as in the master's Data Model.
+The Registry tables `workspaces` and `workspace_emails`, the tenant-table template, `tenant_identity` with the guard
+function and policies, the two allow-lists, the roles and the template database, the storage layout and the seed file —
+all as in the master's Data Model.
 
 ## Open before coding
 
-- Spec questions at AC-010.6 (a Workspace named `staging` on production) and AC-012.5 (seed re-runs after S3); the
-  user re-approves the spec after answering them.
-- Trần Hải Anh's answer on the reshape changeset (P1) for Tasks 2–5.
-- Settled by the builder check (master, Builder Check): AC-002.19 for health and API docs, guard rules for join and
-  append-only tables, temp files outside Workspace folders, the smoke test's dependency on be-foundation Task 2.
+- The user re-approves the spec (`sdd.ts approve platform`).
+- Trần Hải Anh's answer on who edits the tenant master and changeset 001 (P1).
+- The smoke test (Task 15) depends on `be-foundation` answering 401 `MSG07` on any `/api/**` path without a session.
+- The real `FirstAdminCreator` (`identity`, KAN-247) and `InvitationJobQueue` (`platform`, JobRunr; Task 8, minimal, user decision of 4/11) before Tasks 9, 12 and 15 can start the
+  real backend.
+- KAN-140 (the chat model) for the chat-model part of Task 22; its `bge-m3` part does not wait.
 
 ## Edge cases covered here
 
-Master rows 1–14, 24–34, 37, 38, 40–42 (rows 15–23, 35, 36 and 39 are iteration 2).
+Master rows 1 – 55, 57 – 64 and 69 – 71 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
+STORY-009, STORY-010, STORY-011, STORY-012 without the contributors, STORY-013 and the edge limits of STORY-014). Rows 45
+(also in Task 25), 56 and 65 – 68 belong to iteration 2.

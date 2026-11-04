@@ -53,23 +53,33 @@ Knowledge Chatbot screen on mocks (`chatbot`, KAN-48).
 
 ### platform
 
-Spec re-approved after X2 and U3. Tasks 2–5 also wait on Trần Hải Anh's answer about the
+The platform spec changed on 4/11 (multi-tenant HLA, KAN-98) and the user must approve it again before any code. Tasks 3–5 also wait on Trần Hải Anh's answer about the
 `workspaces` reshape changeset (design decision P1).
 
 | Task | Assignee | Status |
 |------|----------|--------|
-| 1 · TenantContext and `runIn` (KAN-99) | Trần Trung Hiếu | pending |
-| 2 · Tenant schema, base entity, convention guard (KAN-98) | Trần Trung Hiếu | pending |
-| 3 · Row-level security (KAN-100) | Trần Hải Anh | pending |
-| 4 · Workspace registry (KAN-98) | Trần Trung Hiếu | pending |
-| 5 · Tenant Resolver of the web app and the isolation test (KAN-99) | Trần Trung Hiếu | pending |
-| 8 · File storage per Workspace (KAN-96) | Đặng Nhật Minh | pending |
-| 9 · Local Docker Compose (KAN-94) | Trần Trung Hiếu | pending |
-| 10 · Backend CI and images on GHCR (KAN-6, KAN-8, KAN-9) | Trần Trung Hiếu | pending |
-| 11 · Application VPS and the staging stack (KAN-10, KAN-11, KAN-12) | Trần Trung Hiếu | pending |
-| 12 · Main Caddy, Cloudflare DNS, wildcard certificates (KAN-13, KAN-95) | Trần Trung Hiếu | pending |
-| 13 · Deploy staging on merge with the smoke test (KAN-14) | Trần Trung Hiếu | pending |
-| 15 · Demo seed: the two Workspaces (KAN-97, moved forward) | Trần Trung Hiếu | pending |
+| 1 · Local data plane: PostgreSQL roles and databases, Redis, Garage (KAN-94) | Trần Trung Hiếu | pending |
+| 2 · Backend CI and images on GHCR (KAN-6, KAN-8, KAN-9) | Trần Trung Hiếu | pending |
+| 3 · Registry database (KAN-98) | Trần Trung Hiếu | pending |
+| 4 · WorkspaceCatalog (KAN-98) | Trần Trung Hiếu | pending |
+| 5 · Tenant changelog, row guard, convention guard test (KAN-98) | Trần Trung Hiếu | pending |
+| 6 · Tenant routing: TenantContext and `runIn` (KAN-99) | Trần Trung Hiếu | pending |
+| 7 · Provisioning service (KAN-240) | Trần Trung Hiếu | pending |
+| 8 · Invitation job queue (KAN-240) | Trần Trung Hiếu | pending |
+| 9 · Ops script: create, suspend, reactivate a Workspace (KAN-240) | Trần Trung Hiếu | pending |
+| 10 · Tenant Resolver of the web app and the isolation test (KAN-99) | Trần Trung Hiếu | pending |
+| 11 · Local stack behind Caddy on `*.localhost` (KAN-94) | Trần Trung Hiếu | pending |
+| 12 · Demo seed: the two Workspaces (KAN-97) | Trần Trung Hiếu | pending |
+| 13 · Application VPS and the staging stack (KAN-10, KAN-11, KAN-12) | Trần Trung Hiếu | pending |
+| 14 · Main Caddy, Cloudflare DNS, wildcard certificates (KAN-13, KAN-95) | Trần Trung Hiếu | pending |
+| 15 · Deploy staging on merge with the smoke test (KAN-14, KAN-200) | Trần Trung Hiếu | pending |
+| 16 · File storage per Workspace (KAN-96) | Đặng Nhật Minh | pending |
+| 17 · Signed-URL route on a Workspace site (KAN-96) | Đặng Nhật Minh | pending |
+| 18 · Link a Jira site to a Workspace (KAN-98) | Trần Trung Hiếu | pending |
+| 19 · Forge Invocation Token verifier (KAN-105) | Trần Trung Hiếu | pending |
+| 20 · Forge security chain on `api.` (KAN-105) | Trần Trung Hiếu | pending |
+| 21 · Tenant Resolver of the Jira App and the lifecycle endpoint (KAN-101) | Trần Trung Hiếu | pending |
+| 22 · AI VPS with Ollama behind WireGuard (KAN-203) | Trần Trung Hiếu | pending |
 
 ### search
 
@@ -95,12 +105,13 @@ Frontend only, on MSW mocks. Spec: `artifacts/03-modules/search/spec.md` · Desi
    plan, for review.
 6. identity slices: My Profile (KAN-160) → Log out (KAN-106) → Login / landing (KAN-103, KAN-104); the backend
    after each screen. You see: each screen on mocks first, then on the real API.
-7. platform Task 1 TenantContext and `runIn` (KAN-99); unblocks Đặng Nhật Minh's Task 8. You see: its tests.
-8. platform Task 10 backend CI and images on GHCR (KAN-6, KAN-8, KAN-9). You see: CI checks on PRs and images on
+7. platform Task 6 TenantContext and `runIn` (KAN-99); unblocks Đặng Nhật Minh's Task 16. You see: its tests.
+8. platform Task 2 backend CI and images on GHCR (KAN-6, KAN-8, KAN-9). You see: CI checks on PRs and images on
    GHCR.
-9. After Phase 1 (about 2026-10-28): platform Tasks 2 → 4 → 15 → 9 → 5 → 11 → 12 → 13. You see: after Task 9 the
-   local stack with the two demo Workspaces in a browser; after Task 13 the staging stack.
-10. Iteration 2: platform Tasks 6, 7, 14, 16.
+9. After Phase 1 (about 2026-10-28): platform Tasks 1 → 3 → 4 → 5 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15, then 16 → 17, 18 → 19 → 20 → 21, and 22 (after 13). You see: after Task 12 the
+   local stack with the two demo Workspaces in a browser; after Task 15 the staging stack; after Task 17 a signed-URL
+   download; after Task 21 the Jira App calls; after Task 22 the AI VPS.
+10. Iteration 2: platform Tasks 23–26.
 
 ### import-ticket-list
 - import-ticket-list Tasks 1–12 (`artifacts/04-plans/import-ticket-list/iteration-1/tasks.md`): contract, schema, parser, validator, ProjectAccess stub + ProblemDetail errors, upload, preview rows, controller + template, confirm, cleanup job, performance check, retire the old snapshot import
@@ -110,7 +121,7 @@ Frontend only, on MSW mocks. Spec: `artifacts/03-modules/search/spec.md` · Desi
 ### platform
 1. `mvn verify`: the tenant tests pass on Testcontainers as the application user — a native `SELECT` in Workspace A
    returns no row of B, and `ALTER TABLE … DISABLE ROW LEVEL SECURITY` is refused.
-2. `docker compose up`: `curl -H 'Host: nosuch.localhost' localhost/api/v1/me` → 404 MSG119; on a seeded site
+2. `docker compose up`: `curl -H 'Host: nosuch.localhost' localhost/api/v1/me` → 404 MSG151; on a seeded site
    `<site>.localhost` → 401 MSG07.
 3. Merge to `main`: the `cd-staging` run shows pull, migrate, up, seed and the smoke test green;
    `https://<site>.staging.tsolve.io.vn` opens with a valid certificate (after basic auth); `https://www.staging…` → 404.

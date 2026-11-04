@@ -45,17 +45,17 @@
       "currentPhase": "implement",
       "features": {
         "problem-errors": "passing",
-        "roles-security": "pending",
+        "roles-security": "passing",
         "me-session": "pending",
         "audit-writer": "pending"
       },
-      "lastUpdated": "2026-10-30T16:13:59.159Z",
+      "lastUpdated": "2026-11-04T14:50:22.250Z",
       "branch": "feat/be-foundation",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b7b546d51536c8fb05b9361f175a5925118bb04a"
+        "default": "6e07c515870cf16d9b61f2eac5872c3a2c81f30f"
       }
     },
     "fe-foundation": {
@@ -101,7 +101,7 @@
         "jira-link-sign-in": "pending",
         "project-handover": "passing",
         "space-handover": "passing",
-        "account-checks": "pending",
+        "account-checks": "passing",
         "platform-adapters": "pending",
         "profile-account": "pending",
         "profile-viewable-spaces": "pending",
@@ -110,7 +110,7 @@
         "my-solutions-counters": "pending",
         "my-solutions-filters": "pending"
       },
-      "lastUpdated": "2026-11-03T17:18:58.086Z",
+      "lastUpdated": "2026-11-04T15:51:41.365Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -221,9 +221,27 @@
         "staging-servers": "pending",
         "edge-caddy": "pending",
         "staging-cd": "pending",
-        "demo-seed-workspaces": "pending"
+        "demo-seed-workspaces": "pending",
+        "local-data-plane": "pending",
+        "registry-db": "pending",
+        "workspace-catalog": "pending",
+        "row-guard": "pending",
+        "tenant-routing": "pending",
+        "provisioning-core": "pending",
+        "invitation-job-queue": "pending",
+        "ops-script": "pending",
+        "signed-url-route": "pending",
+        "jira-site-link": "pending",
+        "forge-token": "pending",
+        "jira-tenant-resolver": "pending",
+        "ai-vps": "pending",
+        "demo-seed-contributors": "pending",
+        "backup-restore": "pending",
+        "monitoring": "pending",
+        "load-test": "pending",
+        "forge-security-chain": "pending"
       },
-      "lastUpdated": "2026-10-25T13:16:09.802Z"
+      "lastUpdated": "2026-11-04T13:58:39.188Z"
     },
     "platform-console": {
       "status": "decomposed",
@@ -275,15 +293,16 @@
       "features": {
         "review-queue-decisions": "passing",
         "review-ticket-detail": "passing",
-        "expired-tickets": "passing"
+        "expired-tickets": "passing",
+        "review-history": "passing"
       },
-      "lastUpdated": "2026-11-01T16:58:56.921Z",
+      "lastUpdated": "2026-11-04T14:48:28.461Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "43e4e07dd42c09ca53d67e13bc1f3ec7123efa59"
+        "default": "57efd3620b4a58678607501aa5dd4c124496ab7e"
       }
     }
   },
