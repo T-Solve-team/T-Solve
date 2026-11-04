@@ -80,7 +80,7 @@ describe('Review History', () => {
     expect(rows).toHaveLength(6);
     for (const row of rows) expect(within(row).getAllByRole('cell')[6]).toBeEmptyDOMElement();
   });
-  it('AC-008.2 sends Department/decision/page/sort filters to the server and restores URL state with Back (BUG-093)', async () => {
+  it('AC-008.2 sends Department/decision/page/sort filters to the server and restores URL state with Back (BUG-111)', async () => {
     for (let index = 0; index < 25; index++)
       reviewStore.history.push({
         decisionId: ticketUuid(1000 + index),

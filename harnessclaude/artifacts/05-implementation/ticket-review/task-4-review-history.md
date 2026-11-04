@@ -30,7 +30,7 @@ Pending feature completion and user checkpoint.
 
 ### Implementation and verification outcome
 
-Implemented generated proposed history API, scoped MSW query, unique decision/actor snapshots, read-only URL-filtered paginated page and history invalidation after four real producers. Fixed BUG-093 with failing-then-passing sort regression. Full source review and trace7/7 complete. Parent format/lint/typecheck/build and deterministic generation passed. Whole frontend suite failed twice1164/1170; all22 new tests pass. Existing failures investigated without a proven product cause, tracked under BUG-004/084/090 and Open BUG-094. Queue-only10/10 passes; temporary diagnostics removed. Completion gate remains unmet; feature stays in-progress and no commit/push/MR/Jira change was made. Full evidence in task-4-review-history-test-report.md.
+Implemented generated proposed history API, scoped MSW query, unique decision/actor snapshots, read-only URL-filtered paginated page and history invalidation after four real producers. Fixed BUG-111 with failing-then-passing sort regression. Full source review and trace7/7 complete. Parent format/lint/typecheck/build and deterministic generation passed. Whole frontend suite failed twice1164/1170; all22 new tests pass. Existing failures investigated without a proven product cause, tracked under BUG-004/084/090 and Open BUG-094. Queue-only10/10 passes; temporary diagnostics removed. Completion gate remains unmet; feature stays in-progress and no commit/push/MR/Jira change was made. Full evidence in task-4-review-history-test-report.md.
 
 ### User-authorized publication
 

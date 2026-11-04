@@ -18,7 +18,7 @@ iteration: 1
 - Full frontend standard-host run: `node node_modules/vitest/vitest.mjs run --reporter=json --outputFile=.vitest/kan159-final-verification.json`, exit 1; 1170 tests, 1164 passed, 6 failed, 0 pending. All 22 KAN-159 tests passed (date helper7, mutation-hook invalidation4, history page6, history mock5).
 - Failures: ReviewQueuePage bulk confirmation BUG-090 timeout; reason validation BUG-084; request-changes BUG-084; Select all first-load; UserStatusPage two Reactivate waits.
 - Focused investigation: same runner on ReviewQueuePage and UserStatusPage, `.vitest/kan159-failure-recheck.json`, exit1; 24/25 passed, only BUG-090 retained (history remained empty). No source change or timeout/worker/config relaxation before recheck. New history tests do not intercept queue/users and no production leak has been established.
-- BUG-093: meaningful history sort regression failed before feature-local null-to-ascending fix, targeted flow passes afterward and passed in full run.
+- BUG-111: meaningful history sort regression failed before feature-local null-to-ascending fix, targeted flow passes afterward and passed in full run.
 - Graphify refreshed code graph: 7190 nodes, 14599 edges, 454 communities. SQL parser missing for4files; code-only leaves non-code documents unindexed in this refresh. Three dependency reference-id collisions reported for monorepo package graphs; verify specific relationships in source rather than treating inferred/reference nodes as authoritative.
 
 ## Pending
@@ -31,7 +31,7 @@ Second unchanged full standard-host run: `node node_modules/vitest/vitest.mjs ru
 
 Diagnostic queue-file run10/10 passed with temporary request/cache diagnostics. Those diagnostics were completely removed and ReviewQueuePage.test.tsx matches HEAD. No speculative production fix, assertion weakening, skipped tests, timeout increase or worker/config modification was made. No further blind retries are justified by the current evidence.
 
-Verdict: KAN-159 implementation and named tests are present, but frontend completion gate FAIL due to existing-suite instability. Feature remains in-progress; no commit, push, MR or Jira Done transition. BUG-093 fixed; BUG-094 recorded Open. Required next work is to diagnose and stabilize the existing queue/user test synchronization under full-suite execution, with separate scope for unrelated identity fixes.
+Verdict: KAN-159 implementation and named tests are present, but frontend completion gate FAIL due to existing-suite instability. Feature remains in-progress; no commit, push, MR or Jira Done transition. BUG-111 fixed; BUG-094 recorded Open. Required next work is to diagnose and stabilize the existing queue/user test synchronization under full-suite execution, with separate scope for unrelated identity fixes.
 
 
 ## Final integration verification — 2026-11-03

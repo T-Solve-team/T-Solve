@@ -15,7 +15,7 @@ Reviewed the frontend task delta from e7d96d2, including untracked feature tests
 | AC | Evidence | Result |
 |---|---|---|
 | AC-008.1 | Managed Workspace/Project scope before counting; required table fields/detail links; timestamp instant sorting and UUID tie-break; history handler/page tests | PASS by inspection; full test evidence pending |
-| AC-008.2 | Department/decision/dates in URL; server paging/sort; filter reset and Back; BUG-093 local default-desc sort-cycle repair | PASS by inspection; full test evidence pending |
+| AC-008.2 | Department/decision/dates in URL; server paging/sort; filter reset and Back; BUG-111 local default-desc sort-cycle repair | PASS by inspection; full test evidence pending |
 | AC-008.3 | Paired real calendar dates; inclusive UTC+7 day bounds; invalid/partial/reversed ranges suppress requests; leap-date and boundaries tests | PASS by inspection; full test evidence pending |
 | AC-008.4 | All six decisions; UUID row keys preserve repeated ticket decisions; nullable shared cells; text-only reason/comment; no mutations on history page | PASS by inspection; full test evidence pending |
 | AC-008.5 | Four existing producers append UUID/actor snapshot and content; successful hooks invalidate generated history keys; failures preserve records | PASS by inspection; full test evidence pending |
@@ -26,10 +26,10 @@ Trace command: `bun harnessclaude/hooks/sdd.ts trace ticket-review STORY-008` re
 
 ## Stage 2: Quality
 
-- Initial review missed Ant Design's default-descending sort cycle. The meaningful UI regression exposed BUG-093; fixed with the same feature-local null-to-ascending convention used by AuditLogPage. No shared runtime edit or test weakening.
+- Initial review missed Ant Design's default-descending sort cycle. The meaningful UI regression exposed BUG-111; fixed with the same feature-local null-to-ascending convention used by AuditLogPage. No shared runtime edit or test weakening.
 - Date ordering compares instants rather than lexical date-time strings; an offset-time regression and deterministic UUID tie-break are present.
 - No new dependency, HTML injection sink, persistence claim, production backend endpoint, broad query invalidation or mutation workflow for Unpublish/Republish.
-- Independent final inspection: no remaining blocking finding after BUG-093 fix. Parent fresh checks required before completion.
+- Independent final inspection: no remaining blocking finding after BUG-111 fix. Parent fresh checks required before completion.
 
 ## Limitations
 
