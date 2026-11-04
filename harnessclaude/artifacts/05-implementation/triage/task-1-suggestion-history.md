@@ -85,3 +85,9 @@ Evaluate `suggestion-history` and `suggestion-history-contract`. Task 3 after PR
 - `SERVER_PORT=8080 mvn verify`: surefire 425/425 pass; failsafe 3 ITs error with "Could not find a valid Docker environment" (two existing ITs and the new one); `mvn spotless:check` pass. Without `SERVER_PORT`, `JiraAppSecurityConfigTest` and `JiraAppEventControllerTest` (tracker) fail on the unresolved `${SERVER_PORT}` — local environment, not triage.
 - `sdd.ts trace triage` cannot see Java tests on `main` (its globs miss `*Test.java`); the fix is on the KAN-117 branch. Test names cite `_AC_003_x` / `_AC_004_x`.
 - Commit (user agreed 04/11): `default@9970e7e`. `sdd.ts commit triage default` recorded it; `suggestion-history-api` moved to evaluating (the first `feature` call exited with a Bun crash banner and changed nothing; the retry succeeded).
+
+## Session 2026-11-04 — Task 3 evaluation attempt 1
+
+- Independent review (with security review): `suggestion-history-api` pass; moved to passing. Concerns recorded in the review: AC-003.1 relies on identity providing `ManagedProjects` (fail-closed until then); 401 has no MSG07 body from the shared security chain (not triage-owned); `trace` cannot see Java tests on `main`; the IT needs Docker in CI.
+- BUG-106 (own, Low): an extreme ISO date gave 500. Test-first fix: `rejectsADateOutsideFourDigitYearsWithMsg39_AC_003_4_BUG_106` failed with a `DateTimeException`, then passed once the filter takes only `yyyy-MM-dd`. Triage tests 20/20; Spotless pass. Not committed yet.
+- Commit (user agreed 04/11): `default@ad30534` fix BUG-106; recorded with `sdd.ts commit`.
