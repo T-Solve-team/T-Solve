@@ -102,7 +102,8 @@ export const handlers: HttpHandler[] = [
         (range.end === undefined || timestamp < range.end)
       );
     }).sort(
-      (a, b) => b.createdAt.localeCompare(a.createdAt) || a.issueKey.localeCompare(b.issueKey),
+      (a, b) =>
+        Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.issueKey.localeCompare(b.issueKey),
     );
     return HttpResponse.json<SuggestionResultPage>({
       content: rows.slice(page * size, (page + 1) * size).map(summary),

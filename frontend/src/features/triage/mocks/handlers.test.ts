@@ -51,7 +51,7 @@ describe('suggestion history mock contract', () => {
     }
   });
 
-  it('AC-001.6 includes the last milliseconds of a Vietnam day', async () => {
+  it('AC-001.3 includes the last milliseconds of a Vietnam day', async () => {
     const firstDay = await getSuggestionResults({ from: '2026-11-01', to: '2026-11-01' });
     const secondDay = await getSuggestionResults({ from: '2026-11-02', to: '2026-11-02' });
     expect(firstDay.content.some((entry) => entry.issueKey === 'ITNET-2001')).toBe(true);
@@ -74,7 +74,8 @@ describe('suggestion history mock contract', () => {
     const response = await fetch('/api/v1/suggestion-results?workspaceId=foreign');
     expect(response.status).toBe(200);
     const body = await response.text();
-    expect(body).not.toContain('Foreign Workspace suggestion');
+    expect(body).not.toContain('ITSUP-9999');
+    expect(body).not.toContain('Foreign private data');
   });
 
   it('AC-002.7 hides inaccessible detail existence', async () => {

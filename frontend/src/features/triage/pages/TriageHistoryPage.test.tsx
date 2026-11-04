@@ -126,6 +126,10 @@ describe('TriageHistoryPage', () => {
       'https://jira.example/browse/ITSUP-1001',
     );
     expect(within(row).getByRole('button', { name: 'View details' })).toBeInTheDocument();
+    // A Workspace without a Jira site URL gives a null URL: the key stays, unlinked.
+    const noUrlRow = await issueRow('ITNET-2002');
+    expect(within(noUrlRow).queryByRole('link', { name: 'ITNET-2002' })).not.toBeInTheDocument();
+    expect(within(noUrlRow).getByText('ITNET-2002')).toBeInTheDocument();
   });
 
   it('AC-001.8 shows source counts, plain text excerpt, and answer labels', async () => {
