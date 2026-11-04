@@ -1,128 +1,134 @@
 ---
 module: platform
-date: 2026-10-25
+date: 2026-11-04
 total_tasks: 4
 owner: Dev
 iteration: 2
 ---
 
-# Tasks: platform — iteration 2 (31/10–13/11)
+# Tasks: platform — iteration 2 (module seed data, and operations readiness after 15/11; DevOps Phase B)
 
 Spec: `artifacts/03-modules/platform/spec.md` · Design: `artifacts/04-plans/platform/iteration-2/design.md`
 (master: `artifacts/04-plans/platform/design.md`).
 
-Task numbers continue those of iteration 1. "Edge #n" refers to the Edge Cases table of the design.
+Task numbers continue those of iteration 1. "Edge #n" refers to the Edge Cases table of the design. The size rule
+and the order rule of iteration 1 apply. STORY-014 is built after 15/11 (DevOps Phase B: B3 – B5, B10), except its edge
+limits (AC-014.9 – AC-014.11), which are in iteration 1, Task 13 (DevOps step A5).
 
 ---
 
-## Task 6: Verify the Forge Invocation Token
-
-**Story:** STORY-005
-**Feature:** forge-token
-**Assignee:** Trần Trung Hiếu (KAN-105)
-**Description:** Add `spring-security-oauth2-jose` to `backend/pom.xml` (approved, P3). `NimbusForgeTokenVerifier`
-(`NimbusJwtDecoder.withJwkSource` over a caching Nimbus `JWKSource` from `FORGE_JWKS_URL` with no rate limit, so an
-unknown key id refetches once; validators: `JwtTimestampValidator(Duration.ZERO)`, issuer `forge/invocation-token`,
-audience `ari:cloud:ecosystem::app/` + `FORGE_APP_ID`); `ForgeTokenFilter`; `ForgeCallContext` (request-scoped);
-`ForgeCallAuthentication`; `ForgeSecurityConfig` (`@Order(1)`, host `api.<base>`, stateless, no CSRF, no cookie).
-First step, before any code or fixture: confirm from Atlassian's Forge Remote documentation the claim paths of the
-`cloudId`, the principal's account id and any site URL, and the lifecycle body's `eventType` values; record them in
-the master design. Covers AC-005.1 – AC-005.8. Tests: forged and expired tokens (Edge #15); key set
-unreachable and unknown key id (Edge #16); a Forge token on a Workspace site authenticates nothing (Edge #17); no
-`Set-Cookie` on `api.`; no Workspace lookup on a refused token (registry mock never called); logs carry no token
-(Edge #41).
-**Files:**
-- Modify: `backend/pom.xml`
-- Create: `backend/src/main/java/vn/tsolve/platform/forge/ForgeTokenVerifier.java`, `NimbusForgeTokenVerifier.java`,
-  `ForgeTokenFilter.java`, `ForgeCallContext.java`, `RequestForgeCallContext.java`, `VerifiedForgeCall.java`,
-  `ForgeCallAuthentication.java`
-- Create: `backend/src/main/java/vn/tsolve/platform/config/ForgeSecurityConfig.java`
-- Modify: `backend/src/main/resources/application.yml`, `.env.example` (`FORGE_APP_ID`, `FORGE_JWKS_URL`)
-- Test: `backend/src/test/java/vn/tsolve/platform/NimbusForgeTokenVerifierTest.java`
-- Test: `backend/src/test/java/vn/tsolve/platform/ForgeSecurityIT.java`
-**Dependencies:** iteration 1 Task 5
-**Estimated size:** medium
-
----
-
-## Task 7: Tenant Resolver of the Jira App and Jira site registration
-
-**Story:** STORY-006
-**Feature:** jira-tenant-resolver
-**Assignee:** Trần Trung Hiếu (KAN-101; contract agreed with Đặng Tấn Bình through the spec)
-**Description:** In `ForgeTokenFilter`: verified `cloudId` → `findByCloudId` → bind; MSG124 (`tracker_name` = `Jira`)
-and MSG121 as 403. `ForgeLifecycleController` (`POST /api/v1/jira-app/lifecycle`, no Workspace bound);
-`JiraSiteMatcher`: signed site URL first, else `TenantInfoClient` on every unbound site in parallel (public-address
-guard, `https`, no redirects, 5 s timeouts, 64 KB cap, overall deadline 10 s); any failed probe → store nothing, 503
-(AC-006.11); conditional update `cloud_id IS NULL`; uninstalled → no change. Check Atlassian's retry rules for
-Forge Remote events: if a 4xx is retried, tell Đặng Tấn Bình and raise a spec change before closing the task (design
-builder check #12). Tests use a test-only event handler to prove nothing runs for a Suspended Workspace. Covers
-AC-006.1 – AC-006.14. Tests: body site URL ignored (Edge #18); private or IP-literal site URL never called (Edge #19);
-two installs at once (Edge #20); replay (Edge #21); one lookup fails (Edge #22) → nothing stored, 503;
-Suspended Workspace's issue event → MSG121, nothing recorded (Edge #23); conflicts logged; Suspended Workspace still
-bound on install; isolation case AC-006.14.
-**Files:**
-- Modify: `backend/src/main/java/vn/tsolve/platform/forge/ForgeTokenFilter.java`
-- Create: `backend/src/main/java/vn/tsolve/platform/controller/ForgeLifecycleController.java`
-- Create: `backend/src/main/java/vn/tsolve/platform/service/JiraSiteMatcher.java`
-- Create: `backend/src/main/java/vn/tsolve/platform/service/impl/JiraSiteMatcherImpl.java`
-- Create: `backend/src/main/java/vn/tsolve/platform/client/TenantInfoClient.java`, `RestTenantInfoClient.java`
-- Modify: `frontend/openapi/tsolve-api.yaml` (the lifecycle endpoint, for the contract)
-- Test: `backend/src/test/java/vn/tsolve/platform/JiraSiteMatcherImplTest.java`
-- Test: `backend/src/test/java/vn/tsolve/platform/ForgeLifecycleIT.java`
-- Test: `backend/src/test/java/vn/tsolve/common/tenant/TenantIsolationIT.java` (Jira App case)
-**Dependencies:** Task 6; iteration 1 Task 4
-**Estimated size:** medium
-
----
-
-## Task 14: AI VPS with Ollama behind WireGuard
-
-**Story:** STORY-011
-**Feature:** ai-vps
-**Assignee:** Trần Trung Hiếu (KAN-203)
-**Description:** Manual first (Hiếu): buy the AI VPS sized for the KAN-140 models. `bootstrap.sh --role ai` (ufw:
-22, UDP 51820 only from the application VPS). `infra/scripts/wireguard-setup.sh app|ai` (keys generated on the host in
-`/etc/wireguard`, mode 600, never committed; `wg0` 10.66.0.1 / 10.66.0.2; `PersistentKeepalive`; `systemctl enable
-wg-quick@wg0`). `infra/scripts/ollama-setup.sh` (pinned installer; systemd override `OLLAMA_HOST=10.66.0.2:11434`
-written **before** the first start; `After=`/`Requires=wg-quick@wg0.service`; ufw allows 11434 only on `wg0` from
-10.66.0.1; pulls `bge-m3` and `OLLAMA_CHAT_MODEL`). Staging `.env`: `OLLAMA_BASE_URL=http://10.66.0.2:11434`. Covers
-AC-011.1 – AC-011.5. Checks: `infra/tests/ai-vps.test.sh` from the application VPS (embedding of 1024 dimensions and a
-completion), again after a reboot of the AI VPS (Edge #35); `ports.test.sh` from a hosted runner finds 11434 closed
-(Edge #36); `server.test.sh` on the AI VPS (AC-011.5). The chat-model pull and the completion check wait for KAN-140;
-the `bge-m3` parts do not.
-**Files:**
-- Modify: `infra/scripts/bootstrap.sh`
-- Create: `infra/scripts/wireguard-setup.sh`, `infra/scripts/ollama-setup.sh`
-- Test: `infra/tests/ai-vps.test.sh`
-- Modify: `infra/tests/ports.test.sh`, `infra/tests/server.test.sh`, `infra/README.md`
-**Dependencies:** iteration 1 Task 11; KAN-140 model choice
-**Estimated size:** medium
-
----
-
-## Task 16: Demo seed — module data through contributors
+## Task 20: Demo seed: module data through contributors, and the reset
 
 **Story:** STORY-012
 **Feature:** demo-seed-contributors
 **Assignee:** Trần Trung Hiếu (KAN-97, S3)
-**Description:** `SeedRunner` calls every `DemoSeedContributor` in `order()`, each inside `TenantContext.runIn` of the
-new Workspace, with the `modules.<module>` part of the seed file (module = package segment after `vn.tsolve.`).
-Stops with a non-zero exit naming the Workspace and the contributor on a failure. Extend
-`infra/seed/demo-workspaces.json` with the TS-005 sections for each module that has a contributor; the contributors
-themselves are each module's work (identity, workspace, project-integration, ticket-repository, wiki).
-Add `--reset` to `infra/seed/run-seed.sh` (design, "Seed after S3"): environment check first (`dev` or `staging`
-only, else exit non-zero with nothing touched), then stop backend and worker, drop and recreate the database and
-re-run `infra/postgres/init` for it, empty the file storage, `migrate`, start, seed. Last step, once, by hand: run
-`infra/seed/run-seed.sh --reset` on the staging server, where `TSOLVE_ENVIRONMENT=staging` (no argument), before the S3 seed so staging's Workspaces are re-created with every contributor.
-Covers AC-012.2, AC-012.5, AC-012.6 – AC-012.9. Tests: order and binding with two test contributors; a failing contributor
-(Edge #39); `--reset` refused for `production`, `prod` and unset (Edge #43), checked by `infra/tests/seed-reset.test.sh`
-against the local stack, which also shows a reset local stack re-seeded, with the contributors run on freshly
-created Workspaces (no "already exists, skipped" output, AC-012.5).
+**After this task you can:** run `infra/seed/run-seed.sh --reset` on the local stack and see both Workspaces created anew with
+the data of every module that has a contributor; run it with `TSOLVE_ENVIRONMENT=production` and see it refused.
+**Covers:** AC-012.2, AC-012.5 (the reset before the S3 seed), AC-012.6 (contributor failures), AC-012.7, AC-012.8, AC-012.9.
+**Design:** Seed data; Key Decisions P7.
+**Description:** `SeedRunner` calls every `DemoSeedContributor` in `order()`, each inside `TenantContext.runIn` of the new Workspace,
+with the `modules.<module>` part of the seed file (module = package segment after `vn.tsolve.`); stops with a non-zero
+exit naming the Workspace and the contributor on a failure. Extend `infra/seed/demo-workspaces.json` with the TS-005
+sections for each module that has a contributor (the contributors themselves are each module's work: identity,
+workspace, project-integration, ticket-repository, wiki). Add `--reset` to `run-seed.sh`: environment check first
+(`dev` or `staging` only, else non-zero with nothing touched), then stop backend and worker, drop every Workspace
+database named in the Registry, empty the Registry tables and the bucket, re-apply the Registry changelog, start,
+seed. Last step, once, by hand: run `infra/seed/run-seed.sh --reset` on the staging server before the S3 seed.
+**Edge rows:** #54 (`--reset` and the seed with `TSOLVE_ENVIRONMENT` unset, `production` or `prod` → non-zero before anything is
+touched), #56 (a contributor fails for Workspace 2 → stops, names Workspace 2 and the contributor).
+**Tests (about 8):** `SeedRunnerTest`: order and binding with two test contributors, a failing contributor (Edge #56);
+`infra/tests/seed-reset.test.sh` against the local stack: refused for `production`, `prod` and unset (Edge #54, AC-012.9);
+a reset local stack re-seeded with the contributors run on freshly created Workspaces and no "already exists, skipped"
+output (AC-012.5, AC-012.8); the databases and bucket prefixes of the old Workspaces are gone.
 **Files:**
 - Modify: `backend/src/main/java/vn/tsolve/platform/seed/SeedRunner.java`, `SeedData.java`
 - Modify: `infra/seed/demo-workspaces.json`, `infra/seed/run-seed.sh`
-- Test: `backend/src/test/java/vn/tsolve/platform/SeedRunnerTest.java`
-- Test: `infra/tests/seed-reset.test.sh`
-**Dependencies:** iteration 1 Task 15
+- Test: `backend/src/test/java/vn/tsolve/platform/SeedRunnerTest.java`, `infra/tests/seed-reset.test.sh`
+**Dependencies:** iteration 1 Tasks 11, 15 (the bucket); contributors of the modules above
 **Estimated size:** medium
+**Done when:** the reset walkthrough above works and both test files pass.
+
+---
+
+## Task 21: Nightly backup, off-server copy and the restore drill
+
+**Story:** STORY-014
+**Feature:** backup-restore
+**Assignee:** Trần Trung Hiếu (KAN-17, KAN-18)
+**After this task you can:** see last night's backup in the Cloudflare R2 bucket (dumps of the Registry, Jobs and each Workspace
+database and each Workspace's object prefix, encrypted by `restic`), and follow `infra/RESTORE.md` to bring one Workspace up on staging.
+**Covers:** AC-014.1, AC-014.2, AC-014.3, AC-014.4, AC-014.5.
+**Design:** Infrastructure — Operations; Tooling decisions W5.
+**Description:** `infra/scripts/backup-db.sh` (the Workspace list from the Registry; one compressed custom-format dump per database;
+a copy of each Workspace prefix; `restic` to R2 with a token limited to that bucket; `restic forget` keeps seven days;
+exit non-zero naming the failed database or prefix and raise the alert; `CATALOG_SECRET_KEY` kept apart from the dumps,
+Redis not backed up); a nightly systemd timer; `infra/RESTORE.md` (restore one Workspace to staging under a new database
+name, user and password, rewrite its Registry row for staging, the time taken recorded; dump and prefix are taken at
+different moments, Edge #67). Manual: create the R2 bucket and token; two people keep the `restic` password offline.
+**Edge rows (Critical/High):** #65 (one dump or prefix copy fails → non-zero, named, alert, other files still written),
+#66 (a staging restore never carries a production database name, user or password). Medium: #67.
+**Tests (about 8 checks):** `infra/tests/backup.test.sh` (one file per database and one copy per prefix; a failing dump is named
+and the rest are written, Edge #65; no key in the dump directory, AC-014.3; Redis absent); the drill of `RESTORE.md` once
+with its time recorded, and a check that the restored Registry row holds no production name, user or password (Edge #66,
+AC-014.5).
+**Files:**
+- Create: `infra/scripts/backup-db.sh`, `infra/systemd/tsolve-backup.service`, `tsolve-backup.timer`, `infra/RESTORE.md`
+- Modify: `.env.example`, `infra/README.md`
+- Test: `infra/tests/backup.test.sh`
+**Dependencies:** iteration 1 Tasks 12, 15; the R2 bucket and the `restic` password (manual)
+**Estimated size:** medium
+**Done when:** one backup is in R2 and the restore drill has been run once with its time written in `RESTORE.md`.
+
+---
+
+## Task 22: Monitoring and alerts: Alloy, Prometheus, Loki, Grafana
+
+**Story:** STORY-014
+**Feature:** monitoring
+**Assignee:** Trần Trung Hiếu (KAN-19, KAN-20, KAN-202)
+**After this task you can:** open `grafana.<base>` and see one dashboard for the backend, worker, PostgreSQL, Redis (memory, clients,
+commands per second) and Garage; stop Redis and see the "Redis unreachable" alert reach the alert channel.
+**Covers:** AC-014.6, AC-014.7, AC-014.8.
+**Design:** Infrastructure — Operations; Redis; Tooling decisions W3.
+**Description:** `infra/compose.monitoring.yml` (Grafana Alloy as the one collector for metrics and container logs, Prometheus, Loki,
+Grafana), `infra/monitoring/alloy.river`, `prometheus.yml`, the dashboard and the alert rules as files (Grafana-managed
+alerts, no separate alert-routing service): Redis unreachable, Jobs database unreachable, Garage unreachable, a failed
+nightly backup, Redis memory near its limit. The backend and worker expose metrics (DevOps F4, owner Trần Hải Anh);
+`grafana.<base>` route and basic authentication in the main `Caddyfile`.
+**Edge rows (Critical/High):** #45 (a full Redis under `noeviction` fails writes loudly and the memory alert fires).
+**Tests (about 6 checks):** `infra/tests/monitoring.test.sh`: every target is up; stopping Redis fires the alert within its
+for-duration; stopping Garage and the Jobs database fire theirs; a simulated backup failure fires the backup alert; the
+Redis memory alert fires near the limit (Edge #45).
+**Files:**
+- Create: `infra/compose.monitoring.yml`, `infra/monitoring/alloy.river`, `prometheus.yml`, `alerts.yml`, `dashboard.json`
+- Modify: `infra/caddy/Caddyfile`, `.env.example`, `infra/README.md`
+- Test: `infra/tests/monitoring.test.sh`
+**Dependencies:** iteration 1 Tasks 12, 13; F4 (metrics endpoints); Task 21 for the backup-failure signal
+**Estimated size:** medium
+**Done when:** the Redis-unreachable alert is seen on the alert channel.
+
+---
+
+## Task 23: Load-test script and one measured run on staging
+
+**Story:** STORY-014
+**Feature:** load-test
+**Assignee:** Trần Trung Hiếu (KAN-202; Hiếu confirms the numbers)
+**After this task you can:** run `k6 run infra/loadtest/tsolve.js` against staging and see a pass or a non-zero exit, and read the
+report of one run.
+**Covers:** AC-014.12, AC-014.13.
+**Design:** Infrastructure — Operations; Tooling decisions W4.
+**Description:** `infra/loadtest/tsolve.js` (sign-in, ticket list and a call of the Jira App path; 500 concurrent users; thresholds: 95th
+percentile under 1 second, errors under 1 %; the numbers wait for Hiếu's confirmation), `infra/loadtest/README.md` (how to
+run it, the staging basic-auth and seed Workspaces it uses, the stated edge-limit values it must stay under), and the report
+of one run in `infra/loadtest/report-<date>.md`. The run goes through the edge limits of Task 13: the rates in `.env` are set so
+that the test traffic is not refused, or the test says which limit it hit.
+**Edge rows:** #68 (many users behind one address hit `EDGE_RATE_PER_IP`; the report names the values used).
+**Tests (about 4 checks):** a run against staging exits 0 when the thresholds hold and non-zero when a threshold is missed
+(run once with a threshold set impossibly low to prove it, AC-014.13); the report exists and names the numbers.
+**Files:**
+- Create: `infra/loadtest/tsolve.js`, `infra/loadtest/README.md`, `infra/loadtest/report-<date>.md`
+- Test: `infra/tests/loadtest.test.sh`
+**Dependencies:** iteration 1 Tasks 13, 14; Task 20 (seed data for the ticket list); Task 22 (to watch the run)
+**Estimated size:** small
+**Done when:** one report is committed and the script's exit code follows the thresholds.
