@@ -13,11 +13,11 @@ Spec: `artifacts/03-modules/platform/spec.md` · Design: `artifacts/04-plans/pla
 
 Task numbers continue those of iteration 1. "Edge #n" refers to the Edge Cases table of the design. The size rule
 and the order rule of iteration 1 apply. STORY-014 is built after 15/11 (DevOps Phase B: B3 – B5, B10), except its edge
-limits (AC-014.9 – AC-014.11), which are in iteration 1, Task 13 (DevOps step A5).
+limits (AC-014.9 – AC-014.11), which are in iteration 1, Task 14 (DevOps step A5).
 
 ---
 
-## Task 21: Demo seed: module data through contributors, and the reset
+## Task 22: Demo seed: module data through contributors, and the reset
 
 **Story:** STORY-012
 **Feature:** demo-seed-contributors
@@ -44,13 +44,13 @@ output (AC-012.5, AC-012.8); the databases and bucket prefixes of the old Worksp
 - Modify: `backend/src/main/java/vn/tsolve/platform/seed/SeedRunner.java`, `SeedData.java`
 - Modify: `infra/seed/demo-workspaces.json`, `infra/seed/run-seed.sh`
 - Test: `backend/src/test/java/vn/tsolve/platform/SeedRunnerTest.java`, `infra/tests/seed-reset.test.sh`
-**Dependencies:** iteration 1 Tasks 11, 15 (the bucket); the AWS CLI v2 on the host that runs the script; contributors of the modules above
+**Dependencies:** iteration 1 Tasks 12, 16 (the bucket); the AWS CLI v2 on the host that runs the script; contributors of the modules above
 **Estimated size:** medium
 **Done when:** the reset walkthrough above works and both test files pass.
 
 ---
 
-## Task 22: Nightly backup, off-server copy and the restore drill
+## Task 23: Nightly backup, off-server copy and the restore drill
 
 **Story:** STORY-014
 **Feature:** backup-restore
@@ -75,13 +75,13 @@ AC-014.5).
 - Create: `infra/scripts/backup-db.sh`, `infra/systemd/tsolve-backup.service`, `tsolve-backup.timer`, `infra/RESTORE.md`
 - Modify: `.env.example`, `infra/README.md`
 - Test: `infra/tests/backup.test.sh`
-**Dependencies:** iteration 1 Tasks 12, 15; the R2 bucket and the `restic` password (manual)
+**Dependencies:** iteration 1 Tasks 13, 16; the R2 bucket and the `restic` password (manual)
 **Estimated size:** medium
 **Done when:** one backup is in R2 and the restore drill has been run once with its time written in `RESTORE.md`.
 
 ---
 
-## Task 23: Monitoring and alerts: Alloy, Prometheus, Loki, Grafana
+## Task 24: Monitoring and alerts: Alloy, Prometheus, Loki, Grafana
 
 **Story:** STORY-014
 **Feature:** monitoring
@@ -103,13 +103,13 @@ Redis memory alert fires near the limit (Edge #45).
 - Create: `infra/compose.monitoring.yml`, `infra/monitoring/alloy.river`, `prometheus.yml`, `alerts.yml`, `dashboard.json`
 - Modify: `infra/caddy/Caddyfile`, `.env.example`, `infra/README.md`
 - Test: `infra/tests/monitoring.test.sh`
-**Dependencies:** iteration 1 Tasks 12, 13; F4 (metrics endpoints); Task 22 for the backup-failure signal
+**Dependencies:** iteration 1 Tasks 13, 14; F4 (metrics endpoints); Task 23 for the backup-failure signal
 **Estimated size:** medium
 **Done when:** the Redis-unreachable alert is seen on the alert channel.
 
 ---
 
-## Task 24: Load-test script and one measured run on staging
+## Task 25: Load-test script and one measured run on staging
 
 **Story:** STORY-014
 **Feature:** load-test
@@ -121,7 +121,7 @@ report of one run.
 **Description:** `infra/loadtest/tsolve.js` (sign-in, ticket list and a call of the Jira App path; 500 concurrent users; thresholds: 95th
 percentile under 1 second, errors under 1 %; the numbers wait for Hiếu's confirmation), `infra/loadtest/README.md` (how to
 run it, the staging basic-auth and seed Workspaces it uses, the stated edge-limit values it must stay under), and the report
-of one run in `infra/loadtest/report-<date>.md`. The run goes through the edge limits of Task 13: the rates in `.env` are set so
+of one run in `infra/loadtest/report-<date>.md`. The run goes through the edge limits of Task 14: the rates in `.env` are set so
 that the test traffic is not refused, or the test says which limit it hit.
 **Edge rows:** #68 (many users behind one address hit `EDGE_RATE_PER_IP`; the report names the values used).
 **Tests (about 4 checks):** a run against staging exits 0 when the thresholds hold and non-zero when a threshold is missed
@@ -129,6 +129,6 @@ that the test traffic is not refused, or the test says which limit it hit.
 **Files:**
 - Create: `infra/loadtest/tsolve.js`, `infra/loadtest/README.md`, `infra/loadtest/report-<date>.md`
 - Test: `infra/tests/loadtest.test.sh`
-**Dependencies:** iteration 1 Tasks 13, 14; Task 21 (seed data for the ticket list); Task 23 (to watch the run)
+**Dependencies:** iteration 1 Tasks 14, 15; Task 22 (seed data for the ticket list); Task 24 (to watch the run)
 **Estimated size:** small
 **Done when:** one report is committed and the script's exit code follows the thresholds.

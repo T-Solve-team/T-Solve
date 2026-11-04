@@ -7,24 +7,24 @@ iteration: 1
 # Design: platform — iteration 1 (local stack, Workspaces and the staging demo of 15/11; DevOps Phase A)
 
 Master: `artifacts/04-plans/platform/design.md` (Data Model, Key Decisions, File Structure, Edge Cases, Traceability).
-This file keeps only what Tasks 1 – 20 of `iteration-1/tasks.md` need. The 4/11 multi-tenant HLA (database per
+This file keeps only what Tasks 1 – 21 of `iteration-1/tasks.md` need. The 4/11 multi-tenant HLA (database per
 Workspace, Registry, row guard, Garage, Redis, STORY-013, STORY-014) is in the master and in those tasks.
 
 ## Scope
 
 All the tenant layer and the infrastructure for the demo of 15/11:
 - the Registry, the row guard, routing and the Tenant Resolver of the web app (STORY-001, STORY-002, STORY-004;
-  Tasks 3 – 6, 9);
-- provisioning and the ops script (STORY-013; Tasks 7, 8);
-- the local stack and CI (STORY-008; Tasks 1, 2, 10);
-- the demo Workspaces through provisioning (STORY-012, AC-012.1, AC-012.3 – AC-012.5; Task 11);
-- staging, Caddy and CD (STORY-009, STORY-010, and the edge limits AC-014.9 – AC-014.11 of STORY-014; Tasks 12 – 14);
-- file storage and its signed-URL route (STORY-007; Tasks 15, 16);
+  Tasks 3 – 6, 10);
+- provisioning, the invitation queue and the ops script (STORY-013; Tasks 7 – 9);
+- the local stack and CI (STORY-008; Tasks 1, 2, 11);
+- the demo Workspaces through provisioning (STORY-012, AC-012.1, AC-012.3 – AC-012.5; Task 12);
+- staging, Caddy and CD (STORY-009, STORY-010, and the edge limits AC-014.9 – AC-014.11 of STORY-014; Tasks 13 – 15);
+- file storage and its signed-URL route (STORY-007; Tasks 16, 17);
 - the Jira site link, the Forge Invocation Token and the Tenant Resolver of the Jira App (STORY-004, STORY-005,
-  STORY-006; Tasks 17 – 19);
-- the AI VPS (STORY-011; Task 20).
+  STORY-006; Tasks 18 – 20);
+- the AI VPS (STORY-011; Task 21).
 
-Iteration 2 holds only the seed's module data and the reset (Task 21) and the rest of STORY-014 (Tasks 22 – 24).
+Iteration 2 holds only the seed's module data and the reset (Task 22) and the rest of STORY-014 (Tasks 23 – 25).
 
 ## Decisions used in this iteration
 
@@ -45,7 +45,7 @@ Iteration 2 holds only the seed's module data and the reset (Task 21) and the re
 | R14 | The web process migrates the Registry and every Workspace database at startup; CD also runs a `migrate` step |
 | R16 | One Redis container with persistence and `noeviction` |
 | W1, W2 | AWS SDK v2 `s3`; `caddy-ratelimit` in the custom Caddy image |
-| Forge | `ForgeSecurityConfig` `@Order(1)` on the `api.` host; stateless, no CSRF, no cookie; the claim paths of `cloudId`, principal and lifecycle `eventType` are confirmed against Atlassian's Forge Remote documentation first (Task 18) and recorded in the master |
+| Forge | `ForgeSecurityConfig` `@Order(1)` on the `api.` host; stateless, no CSRF, no cookie; the claim paths of `cloudId`, principal and lifecycle `eventType` are confirmed against Atlassian's Forge Remote documentation first (Task 19) and recorded in the master |
 | Planning | `ThreadLocal` binding; no resolver cache; `/actuator/health` passes every host; staging basic auth except `api.`; GHCR under the repository owner |
 
 ## Data model in this iteration
@@ -58,13 +58,13 @@ all as in the master's Data Model.
 
 - The user re-approves the spec (`sdd.ts approve platform`).
 - Trần Hải Anh's answer on who edits the tenant master and changeset 001 (P1).
-- The smoke test (Task 14) depends on `be-foundation` answering 401 `MSG07` on any `/api/**` path without a session.
-- The real `FirstAdminCreator` (`identity`, KAN-247) and `InvitationJobQueue` (`platform`, JobRunr; its task is added by
-  the planning card that follows this one) before Tasks 8, 11 and 14 can start the real backend.
-- KAN-140 (the chat model) for the chat-model part of Task 20; its `bge-m3` part does not wait.
+- The smoke test (Task 15) depends on `be-foundation` answering 401 `MSG07` on any `/api/**` path without a session.
+- The real `FirstAdminCreator` (`identity`, KAN-247) and `InvitationJobQueue` (`platform`, JobRunr; Task 8, minimal, user decision of 4/11) before Tasks 9, 12 and 15 can start the
+  real backend.
+- KAN-140 (the chat model) for the chat-model part of Task 21; its `bge-m3` part does not wait.
 
 ## Edge cases covered here
 
 Master rows 1 – 55, 57 – 64 and 69 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
 STORY-009, STORY-010, STORY-011, STORY-012 without the contributors, STORY-013 and the edge limits of STORY-014). Rows 45
-(also in Task 23), 56 and 65 – 68 belong to iteration 2.
+(also in Task 24), 56 and 65 – 68 belong to iteration 2.

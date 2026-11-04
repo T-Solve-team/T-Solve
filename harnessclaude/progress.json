@@ -212,9 +212,26 @@
         "staging-servers": "pending",
         "edge-caddy": "pending",
         "staging-cd": "pending",
-        "demo-seed-workspaces": "pending"
+        "demo-seed-workspaces": "pending",
+        "local-data-plane": "pending",
+        "registry-db": "pending",
+        "workspace-catalog": "pending",
+        "row-guard": "pending",
+        "tenant-routing": "pending",
+        "provisioning-core": "pending",
+        "invitation-job-queue": "pending",
+        "ops-script": "pending",
+        "signed-url-route": "pending",
+        "jira-site-link": "pending",
+        "forge-token": "pending",
+        "jira-tenant-resolver": "pending",
+        "ai-vps": "pending",
+        "demo-seed-contributors": "pending",
+        "backup-restore": "pending",
+        "monitoring": "pending",
+        "load-test": "pending"
       },
-      "lastUpdated": "2026-10-25T13:16:09.802Z"
+      "lastUpdated": "2026-11-04T13:45:33.460Z"
     },
     "platform-console": {
       "status": "decomposed",

@@ -1,7 +1,7 @@
 ---
 module: platform
 date: 2026-11-04
-total_tasks: 20
+total_tasks: 21
 owner: Dev
 iteration: 1
 ---
@@ -12,7 +12,7 @@ Spec: `artifacts/03-modules/platform/spec.md` · Design: `artifacts/04-plans/pla
 (master: `artifacts/04-plans/platform/design.md`).
 
 Rewritten on 4/11 for the multi-tenant HLA (database per Workspace, Registry, Jobs database, row guard, Garage, Redis,
-provisioning service; KAN-98). Task numbers are shared with iteration 2 (Tasks 21–24 are there). Backend tests name the
+provisioning service; KAN-98). Task numbers are shared with iteration 2 (Tasks 22–25 are there). Backend tests name the
 criterion: `…_AC_002_13`; infrastructure checks are scripts in `infra/tests/*.test.sh` whose log lines start with the AC
 id. "Edge #n" refers to the Edge Cases table of the design.
 
@@ -21,16 +21,16 @@ a bigger one is split here.
 
 **Order rule (feedback first):** a task that a person can see or try comes before plumbing. Each task names "After this
 task you can …"; a plumbing task names the visible task it serves. The sequence: the local data plane (1), CI (2), the
-Registry and the row guard and routing (3–6), the first Workspace by script (7–8), a Workspace site in the browser
-(9–10), the demo Workspaces (11), staging (12–14), files and the Jira App (15–19), the AI VPS (20).
+Registry and the row guard and routing (3–6), the first Workspace by script (7–9, with the invitation queue as 8), a Workspace site in the browser
+(10–11), the demo Workspaces (12), staging (13–15), files and the Jira App (16–20), the AI VPS (21).
 
 **Other modules (blockers, not tasks of this module):**
 - `identity` (KAN-247) implements `FirstAdminCreator`. `InvitationJobQueue` has a minimal implementation in `platform`
-  on JobRunr in the Jobs database (user decision, 4/11; `worker` takes the job handler over later): the planning card
-  that follows this one adds its task. Task 7 declares both ports and tests with doubles in test sources only. Tasks 8,
-  11 and 14 start the real backend in the `ops` / `seed` profile, which refuses to start without both beans
-  (AC-013.15), so they wait for those two implementations.
-- `docker-compose.yml` and `.env.example` are edited by Tasks 1, 9, 10, 15 and 18 here and by `identity` Task 10 (Redis
+  on JobRunr in the Jobs database (user decision, 4/11; `worker` takes the job handler over later): it is Task 8 here.
+  Task 7 declares both ports and tests with doubles in test sources only. Tasks 9, 12 and 15 start the real backend in
+  the `ops` / `seed` profile, which refuses to start without both beans (AC-013.15), so they wait for Task 8 and for
+  `identity` KAN-247.
+- `docker-compose.yml` and `.env.example` are edited by Tasks 1, 10, 11, 16 and 19 here and by `identity` Task 10 (Redis
   host, session variables): rebase on each other's branch and do not overwrite another module's variable.
 - The Spring Boot bump to 3.5.x (DevOps A2) is not a task of this module.
 
@@ -58,7 +58,7 @@ superuser nor `BYPASSRLS`), AC-001.33 (Jobs database, its user connects only to 
 - `.env.example` lists the new variable names with no value; `infra/README.md` (new) has the start command and the
   variable table of this task.
 **Edge rows (test targets):** #46 (bucket init fails → `garage-init` exits non-zero, backend and worker do not start;
-checked in Task 10).
+checked in Task 11).
 **Tests (`infra/tests/data-plane.test.sh`, about 8 checks):** the three databases exist and the template has `vector`;
 Registry and Jobs users cannot connect to each other's database and are not superuser or `BYPASSRLS` (AC-001.32,
 AC-001.33); Redis refuses a client without the password and does not evict (AC-008.10); no port of `db`, `redis`,
@@ -88,7 +88,7 @@ merge to `main` and find `tsolve-backend` and `tsolve-frontend` in GHCR tagged `
 **Description:** `backend` job in `ci.yml` (Temurin 21, Maven cache, `mvn -B verify` with Testcontainers; path filter
 `backend/**`, `infra/postgres/**`). `backend/Dockerfile` + `.dockerignore` (Maven build stage, Java 21 JRE, non-root,
 `HEALTHCHECK` on `/actuator/health`, `-XX:MaxRAMPercentage=75`). `images.yml` on `main`: build and push
-`tsolve-backend` and `tsolve-frontend` (the `tsolve-caddy` job is added by Task 13) to `ghcr.io/<owner>`. Manual after the
+`tsolve-backend` and `tsolve-frontend` (the `tsolve-caddy` job is added by Task 14) to `ghcr.io/<owner>`. Manual after the
 merge (Hiếu): mark frontend, backend, PR title and gitleaks as required checks.
 **Tests:** a pull request run shows the check; the image starts and answers `/actuator/health` (smoke step in
 `images.yml`); a red backend test blocks the merge (manual check, recorded in the PR).
@@ -145,13 +145,13 @@ has no table from the Registry changelog (AC-001.33), the Registry holds no tabl
 **Story:** STORY-004
 **Feature:** workspace-catalog
 **Assignee:** Trần Trung Hiếu (KAN-98)
-**After this task you can:** (plumbing, serves Tasks 7, 9 and 19 and the `identity` sign-in) see the lookups and the
+**After this task you can:** (plumbing, serves Tasks 7, 10 and 20 and the `identity` sign-in) see the lookups and the
 email rule in `WorkspaceCatalogIT`: one email in one Workspace, whatever the case.
 **Covers:** AC-004.17, AC-004.18, AC-004.25, AC-004.26, AC-004.27, AC-004.28 (no endpoint: asserted with Task 7's source scan).
 **Design:** Registry rules; Interface Contracts.
 **Description:** `WorkspaceCatalog` (`findById`, `findBySiteName` without case, `findByCloudId`, `claimEmail`; no connection
 data returned), `WorkspaceCatalogImpl` over `RegistryRepository` (`INSERT … ON CONFLICT (email) DO NOTHING`, then read
-the row), `WorkspaceSummary`, `WorkspaceStatus`. `linkJiraSite` is Task 17.
+the row), `WorkspaceSummary`, `WorkspaceStatus`. `linkJiraSite` is Task 18.
 **Edge rows:** #26 (same email in another case or with spaces in two Workspaces at once → one row, the other `MSG155`).
 **Tests (about 10):** each lookup finds and returns empty for an unknown key; the summary holds no password or database
 name (AC-004.18); claim: free email recorded lower-case, same Workspace succeeds with no change, another Workspace
@@ -210,7 +210,7 @@ refusals in Edge #6; superuser / `BYPASSRLS` / owner check (Edge #7, AC-001.32);
 **Story:** STORY-002
 **Feature:** tenant-routing
 **Assignee:** Trần Trung Hiếu (KAN-99)
-**After this task you can:** (plumbing, serves Tasks 7–9) run `TenantRoutingIT` and see one JPA query go to Workspace A's
+**After this task you can:** (plumbing, serves Tasks 7–10) run `TenantRoutingIT` and see one JPA query go to Workspace A's
 database and another to B's, and a misrouted connection read nothing.
 **Covers:** AC-002.1, AC-002.11 (holder side), AC-002.12 – AC-002.16, AC-002.20 – AC-002.25, AC-001.25 (the pool of
 a Workspace with a bad key is refused).
@@ -248,12 +248,12 @@ connection (AC-002.21), pool size and lazy open, two first requests open one poo
 **Story:** STORY-013, STORY-001, STORY-004
 **Feature:** provisioning-core
 **Assignee:** Trần Trung Hiếu (KAN-240)
-**After this task you can:** (plumbing, serves Task 8) call `WorkspaceProvisioning.create` in `WorkspaceProvisioningIT` and see
+**After this task you can:** (plumbing, serves Task 9) call `WorkspaceProvisioning.create` in `WorkspaceProvisioningIT` and see
 a new database, its runtime user, the applied changelog, `tenant_identity`, the Registry rows and the first Admin
 Account; and see a forced failure leave nothing behind.
 **Covers:** AC-013.1 (steps 1–5 and the print of the address, via the service), AC-013.2 – AC-013.6, AC-013.11 (resolution is
-tested again in Task 9), AC-013.13, AC-013.14, AC-013.15, AC-013.16, AC-013.17, AC-013.18, AC-013.19, AC-013.20,
-AC-001.26 (the Workspace runtime user reaches only its database), AC-001.28 (the row is written, then writes revoked),
+tested again in Task 10), AC-013.13, AC-013.14, AC-013.15 (the check; the real queue is Task 8), AC-013.16, AC-013.17 and AC-013.18 (with a double port; the real queue is Task 8),
+AC-013.19, AC-013.20, AC-001.26 (the Workspace runtime user reaches only its database), AC-001.28 (the row is written, then writes revoked),
 AC-001.32 (Workspace users), AC-004.28 (no REST endpoint creates a Workspace: source scan).
 **Design:** Provisioning; Roles and grants; Key Decisions R9, R10, R6.
 **Description:** `WorkspaceProvisioning` (interface), `WorkspaceProvisioningService` (`create` only; steps and compensation of the
@@ -280,13 +280,58 @@ log capture (Edge #62); a source scan fails when a class outside the Console, `o
 - Create: `backend/src/main/java/vn/tsolve/platform/exception/WorkspaceRuleException.java`
 - Test: `backend/src/test/java/vn/tsolve/platform/WorkspaceProvisioningIT.java`, `ProvisioningSourceScanTest.java`
 **Dependencies:** Tasks 3, 4, 5, 6; `be-foundation` Task 1. The real `FirstAdminCreator` (`identity`, KAN-247) and
-`InvitationJobQueue` (`platform`, JobRunr; its task is added by the next planning card) are needed from Task 8 on.
+`InvitationJobQueue` (`platform`, JobRunr; Task 8) are needed from Task 9 on.
 **Estimated size:** medium
 **Done when:** `WorkspaceProvisioningIT` passes including the compensation at every step and the race.
 
 ---
 
-## Task 8: Ops script: create, suspend and reactivate a Workspace by hand
+## Task 8: Invitation job queue: the minimal `InvitationJobQueue` on JobRunr in the Jobs database
+
+**Story:** STORY-013, STORY-001
+**Feature:** invitation-job-queue
+**Assignee:** Trần Trung Hiếu (KAN-240; Jira sub-task to be created after this plan is reviewed)
+**After this task you can:** (plumbing, serves Tasks 9, 12 and 15) call `WorkspaceProvisioning.create` in
+`InvitationJobQueueIT` and see, in `psql` on `tsolve_<env>_jobs`, one waiting JobRunr job that holds only the Workspace id
+and the Account id (no email), while the Registry database holds no JobRunr table.
+**Covers:** AC-013.15 (the `InvitationJobQueue` bean exists, so the `ops` and Console profiles can start with it),
+AC-013.17 (one job stored in the Jobs database after the commit, ids only; the email itself is `worker`'s), AC-013.18
+(a failed enqueue is logged without the email and does not undo the Workspace; the retry and the send are `worker`'s),
+AC-001.33 (JobRunr's tables appear in the Jobs database only; the web process connects to it as the Jobs user),
+AC-001.32 (the Jobs user is neither superuser nor `BYPASSRLS`, re-checked through the real connection).
+**Design:** Provisioning (step 7); Roles and grants (the Jobs user); Key Decisions R10, H-Q3; Configuration (`JOBS_DB_*`).
+**Description:** `JobRunrInvitationJobQueue` implements `InvitationJobQueue`: one `enqueue` of a `FirstAdminInvitationJobRequest`
+(record of the two ids; the job id is derived from the Workspace id, so a second call for the same Workspace stores no second
+job), failures wrapped in `InvitationQueueException` without any email. `JobsDataSourceConfig`: `jobsDataSource` from
+`JOBS_DB_URL`, `JOBS_DB_USER`, `JOBS_DB_PASSWORD` (its own small pool, separate from the Registry and Workspace pools) and
+a JobRunr storage provider on it; the background job server is switched **off** in the web, `ops` and `seed` processes (this
+task only stores jobs; `worker` starts the server and supplies the handler for the request class later).
+`jobrunr-spring-boot-3-starter` is added to `pom.xml` (named in the spec and ADR-0002; the user confirms it in the review of
+this plan). JobRunr creates its own tables with the Jobs user (design, Roles and grants); nothing is added to any changelog.
+**Edge rows (test targets):** #62 (the Jobs database holds ids only), #64 (the bean now exists: the start-up check of Task 7
+passes with it).
+**Tests (about 8):** `JobRunrInvitationJobQueueTest` (the request carries two ids and no other field; the same Workspace twice
+→ one job; a storage failure → `InvitationQueueException` with no email in the message); `InvitationJobQueueIT` (Testcontainers
+`PostgresTestBase`: JobRunr tables exist in the Jobs database and in no other; the stored job payload holds no email, AC-013.17,
+Edge #62; the job stays waiting, no handler runs in the web process; with the Jobs database stopped, `create` still keeps the
+Workspace and logs a line without the email, AC-013.18; `create` with the real queue and a double `FirstAdminCreator`
+queues exactly one job after the commit; the Jobs user is neither superuser nor `BYPASSRLS`, AC-001.32).
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/platform/service/impl/JobRunrInvitationJobQueue.java`
+- Create: `backend/src/main/java/vn/tsolve/platform/dto/FirstAdminInvitationJobRequest.java`
+- Create: `backend/src/main/java/vn/tsolve/platform/exception/InvitationQueueException.java`
+- Create: `backend/src/main/java/vn/tsolve/platform/config/JobsDataSourceConfig.java`
+- Modify: `backend/pom.xml`, `backend/src/main/resources/application.yml` (`jobrunr.background-job-server.enabled: false`),
+  `.env.example` (`JOBS_DB_URL`, `JOBS_DB_USER`, `JOBS_DB_PASSWORD` if missing)
+- Test: `backend/src/test/java/vn/tsolve/platform/JobRunrInvitationJobQueueTest.java`, `InvitationJobQueueIT.java`
+**Dependencies:** Tasks 1 (the Jobs database and user), 3 (`PostgresTestBase`), 7 (the port and the service). `worker` later
+supplies the handler and the background job server; it does not block this task.
+**Estimated size:** small
+**Done when:** both test classes pass and the walkthrough above shows the one job with ids only.
+
+---
+
+## Task 9: Ops script: create, suspend and reactivate a Workspace by hand
 
 **Story:** STORY-013
 **Feature:** ops-script
@@ -294,7 +339,7 @@ log capture (Edge #62); a source scan fails when a class outside the Console, `o
 **After this task you can:** run `infra/ops/workspace.sh create --site acme --admin-email admin@acme.test` on the local stack,
 see the address printed and the database and the Registry row in `psql`; suspend and reactivate it.
 **Covers:** AC-013.1 (the script and its printed address), AC-013.2 – AC-013.4 (script messages), AC-013.7, AC-013.8,
-AC-013.9, AC-013.10, AC-013.11 (the next request after a create, with Task 9), AC-013.12, AC-013.13 (the script holds no logic).
+AC-013.9, AC-013.10, AC-013.11 (the next request after a create, with Task 10), AC-013.12, AC-013.13 (the script holds no logic).
 **Design:** Provisioning; Security chains; Key Decisions R9.
 **Description:** `OpsRunner` (profile `ops`, `web-application-type: none`, parses `create`/`suspend`/`reactivate` and the
 two options, prints the address or the refusal, exit codes), `application-ops.yml`, `infra/ops/workspace.sh` (starts
@@ -306,7 +351,7 @@ twice, `reactivate` an Active one, an unknown site name → message, no second e
 **Tests (about 10):** `OpsRunnerIT`: create prints the address and exit 0; each refusal exit non-zero with the rule
 named; no command deletes, renames or reads tenant data (AC-013.10); suspend and reactivate publish one event each
 after the commit, none on a no-op (AC-013.9, Edge #63); output and logs hold no password (Edge #62). `infra/tests/ops-script.test.sh`
-on the local stack: create → resolves → suspend → refused → reactivate → served (needs Tasks 9 and 10).
+on the local stack: create → resolves → suspend → refused → reactivate → served (needs Tasks 10 and 11).
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/platform/seed/OpsRunner.java`
 - Create: `backend/src/main/java/vn/tsolve/platform/dto/WorkspaceSuspended.java`, `WorkspaceReactivated.java`
@@ -314,15 +359,14 @@ on the local stack: create → resolves → suspend → refused → reactivate �
 - Create: `backend/src/main/resources/application-ops.yml`, `infra/ops/workspace.sh`
 - Modify: `infra/README.md`
 - Test: `backend/src/test/java/vn/tsolve/platform/OpsRunnerIT.java`, `infra/tests/ops-script.test.sh`
-**Dependencies:** Tasks 1, 2 (the stack and the backend Dockerfile that `workspace.sh` runs), 7; `identity` KAN-247 and the
-`InvitationJobQueue` implementation (the real ports). `infra/tests/ops-script.test.sh` needs Tasks 9 and 10 and runs once they
-exist; they are not build dependencies of this task (Task 10 depends on Task 8)
+**Dependencies:** Tasks 1, 2 (the stack and the backend Dockerfile that `workspace.sh` runs), 7, 8; `identity` KAN-247 (the real `FirstAdminCreator`). `infra/tests/ops-script.test.sh` needs Tasks 10 and 11 and runs once they
+exist; they are not build dependencies of this task (Task 11 depends on Task 9)
 **Estimated size:** medium
 **Done when:** the walkthrough above works on the local stack and `OpsRunnerIT` passes.
 
 ---
 
-## Task 9: Tenant Resolver of the web app and the isolation test
+## Task 10: Tenant Resolver of the web app and the isolation test
 
 **Story:** STORY-002, STORY-005
 **Feature:** web-tenant-resolver
@@ -330,7 +374,7 @@ exist; they are not build dependencies of this task (Task 10 depends on Task 8)
 **After this task you can:** run the backend and `curl -H 'Host: acme.localhost' localhost:8080/api/v1/me` → 401 `MSG07` for a
 real Workspace, 404 `MSG151` for an unknown one, 403 `MSG150` for a Suspended one.
 **Covers:** AC-002.2 – AC-002.10, AC-002.11 (the filter unbinds when a request ends; the holder side is Task 6), AC-002.17, AC-002.18, AC-002.19, AC-013.11, AC-005.7 and the host part of AC-005.8
-(`/api/v1/jira-app/**` on any host but `api.` → 404 `MSG06`; the chain itself is Task 18).
+(`/api/v1/jira-app/**` on any host but `api.` → 404 `MSG06`; the chain itself is Task 19).
 **Design:** How a request or job gets its Workspace; Security chains (1); Key Decisions P5, R2.
 **Description:** `PlatformProperties` (`tsolve.base-domain`, `tsolve.environment`), `HostClassifier` / `HostKind`,
 `TenantResolverFilter` + `TenantFilterConfig` (order before Spring Security), `ProblemResponses`
@@ -354,12 +398,12 @@ real Workspace, 404 `MSG151` for an unknown one, 403 `MSG150` for a Suspended on
 
 ---
 
-## Task 10: Local stack: the whole application behind Caddy on `*.localhost`
+## Task 11: Local stack: the whole application behind Caddy on `*.localhost`
 
 **Story:** STORY-008, STORY-009
 **Feature:** local-compose
 **Assignee:** Trần Trung Hiếu (KAN-94)
-**After this task you can:** run `docker compose up`, create a Workspace with Task 8's script, and open
+**After this task you can:** run `docker compose up`, create a Workspace with Task 9's script, and open
 `http://acme.localhost` in a browser (and `login.`, `admin.`, `api.localhost` answering by their routing).
 **Covers:** AC-008.1, AC-008.2, AC-008.3, AC-008.4 (tenant changelog applied to every Workspace database at startup of
 the web process; the worker never runs Liquibase), AC-008.5, AC-008.6, AC-008.7, AC-008.9, AC-009.2, AC-009.4, AC-009.5,
@@ -382,14 +426,14 @@ Ollama; Edge #43 and #45; `.env.example` has no value).
 - Create: `infra/caddy/Caddyfile.local`, `backend/src/main/resources/application-worker.yml`
 - Create: `backend/src/main/java/vn/tsolve/platform/tenantdb/TenantStartupMigrator.java`
 - Test: `backend/src/test/java/vn/tsolve/platform/TenantStartupMigratorTest.java`, `infra/tests/local-stack.test.sh`
-**Dependencies:** Tasks 1, 2 (Dockerfile), 7, 8, 9; `fe-foundation` web image; coordinate `docker-compose.yml` /
+**Dependencies:** Tasks 1, 2 (Dockerfile), 7, 9, 10; `fe-foundation` web image; coordinate `docker-compose.yml` /
 `.env.example` with `identity` Task 10
 **Estimated size:** medium
 **Done when:** a teammate starts the stack from `infra/README.md` and opens the Workspace site.
 
 ---
 
-## Task 11: Demo seed: the two Workspaces, created through provisioning
+## Task 12: Demo seed: the two Workspaces, created through provisioning
 
 **Story:** STORY-012
 **Feature:** demo-seed-workspaces
@@ -401,7 +445,7 @@ see "already exists, skipped".
 **Description:** `SeedRunner` (profile `seed`, no web server) reads `infra/seed/demo-workspaces.json` (`TSOLVE_SEED_FILE`),
 refuses unless `TSOLVE_ENVIRONMENT` is `dev` or `staging`, creates each Workspace through `WorkspaceProvisioning.create`,
 skips existing site names, exits non-zero naming the Workspace on a rule failure. `DemoSeedContributor` and
-`SeedWorkspace` exist but no contributor is called yet (Task 21). `infra/seed/run-seed.sh` without `--reset`.
+`SeedWorkspace` exist but no contributor is called yet (Task 22). `infra/seed/run-seed.sh` without `--reset`.
 **Edge rows:** #54 (production or unset → non-zero, nothing written), #55 (a second run skips both).
 **Tests (about 8):** `SeedRunnerTest`: production, `prod`, unset → non-zero and `create` never called (AC-012.3); second run
 skips and says so (AC-012.5); a provisioning failure names the Workspace (AC-012.6); the production compose file, its
@@ -411,13 +455,13 @@ skips and says so (AC-012.5); a provisioning failure names the Workspace (AC-012
 - Create: `backend/src/main/java/vn/tsolve/platform/service/DemoSeedContributor.java`, `backend/src/main/java/vn/tsolve/platform/dto/SeedWorkspace.java`
 - Create: `backend/src/main/resources/application-seed.yml`, `infra/seed/demo-workspaces.json`, `infra/seed/run-seed.sh`
 - Test: `backend/src/test/java/vn/tsolve/platform/SeedRunnerTest.java`
-**Dependencies:** Tasks 7, 8, 10; real `FirstAdminCreator` and `InvitationJobQueue` (AC-013.15)
+**Dependencies:** Tasks 7, 8, 9, 11; the real `FirstAdminCreator` (`identity` KAN-247) and `InvitationJobQueue` (Task 8) (AC-013.15)
 **Estimated size:** small
 **Done when:** the walkthrough above works on the local stack.
 
 ---
 
-## Task 12: Application VPS and the staging stack
+## Task 13: Application VPS and the staging stack
 
 **Story:** STORY-010, STORY-008
 **Feature:** staging-servers
@@ -429,9 +473,9 @@ AC-010.12, AC-001.33 and AC-001.26 (users reach only their own database, checked
 **Design:** Infrastructure — Application VPS; Redis; Key Decisions P9, R14.
 **Description:** Manual first (Hiếu): buy the application VPS (KVM, Ubuntu LTS, snapshots). `infra/scripts/bootstrap.sh`
 (deploy user, key-only SSH, ufw 22/80/443, unattended upgrades, Docker + Compose, swap, log rotation, `/srv/tsolve`
-layout; the `--role ai` variant is Task 20). `infra/compose.edge.yml` (PostgreSQL with the init script of Task 1,
+layout; the `--role ai` variant is Task 21). `infra/compose.edge.yml` (PostgreSQL with the init script of Task 1,
 private network only, no published port; **replaces `TSOLVE_DATABASES=tsolve_staging`**; Caddy placeholder until Task
-13). `infra/compose.staging.yml` (backend, worker, web by `:staging`, **its own Redis and its own Garage** with
+14). `infra/compose.staging.yml` (backend, worker, web by `:staging`, **its own Redis and its own Garage** with
 `garage-init`, `env_file /srv/tsolve/staging/.env`, memory and CPU limits, health checks, `restart: unless-stopped`,
 **no `ports:`**, no Ollama). `infra-checks.yml` runs the two tests below.
 **Edge rows (Critical/High):** #51 (Docker publishing PostgreSQL, Redis or Garage ports around ufw), #45 (staging
@@ -451,7 +495,7 @@ process does not start healthy with Redis stopped).
 
 ---
 
-## Task 13: Main Caddy: Cloudflare DNS, wildcard certificates, routing and edge limits
+## Task 14: Main Caddy: Cloudflare DNS, wildcard certificates, routing and edge limits
 
 **Story:** STORY-009, STORY-014
 **Feature:** edge-caddy
@@ -460,7 +504,7 @@ process does not start healthy with Redis stopped).
 Workspace created after the deploy get HTTPS with no manual step, and get a 413 or 429 from a request over the edge limits.
 **Covers:** AC-009.1, AC-009.2, AC-009.4, AC-009.5, AC-009.6, AC-009.7, AC-009.8, AC-009.9, AC-009.10, AC-009.11 (for staging;
 production hosts later), AC-014.9, AC-014.10, AC-014.11 (DevOps step A5).
-**Design:** Infrastructure — DNS, Edge limits; Signed URL host and routing (the route is added by Task 16); Tooling
+**Design:** Infrastructure — DNS, Edge limits; Signed URL host and routing (the route is added by Task 17); Tooling
 decisions W2.
 **Description:** Manual prerequisites (whoever controls `tsolve.io.vn`): move the nameservers to Cloudflare (free plan);
 DNS-only records `tsolve.io.vn`, `*.tsolve.io.vn`, `*.staging.tsolve.io.vn` → application VPS; an API token with
@@ -478,13 +522,13 @@ a file between the two limits passes the edge, a failing check if `EDGE_MAX_BODY
 - Create: `infra/caddy/Dockerfile`, `infra/caddy/Caddyfile`
 - Modify: `infra/compose.edge.yml`, `.github/workflows/images.yml`, `.env.example`, `infra/README.md` (DNS table, token rotation)
 - Test: `infra/tests/caddy-routing.test.sh`, `infra/tests/edge-limits.test.sh`
-**Dependencies:** Task 12; the manual DNS move
+**Dependencies:** Task 13; the manual DNS move
 **Estimated size:** medium
 **Done when:** both scripts pass against staging.
 
 ---
 
-## Task 14: Deploy staging on every merge, with migrations, seed and the smoke test
+## Task 15: Deploy staging on every merge, with migrations, seed and the smoke test
 
 **Story:** STORY-010
 **Feature:** staging-cd
@@ -507,20 +551,20 @@ no trigger from pull requests (Edge #49).
 - Create: `infra/scripts/install-runner.sh`, `.github/workflows/cd-staging.yml`
 - Create: `backend/src/main/resources/application-migrate.yml`, `backend/src/main/java/vn/tsolve/platform/seed/MigrateRunner.java`
 - Test: `infra/tests/smoke.test.sh`, `backend/src/test/java/vn/tsolve/platform/MigrateRunnerTest.java`
-**Dependencies:** Tasks 2, 9, 11, 12, 13; `be-foundation` Task 2 (401 `MSG07` on `/api/**` without a session)
+**Dependencies:** Tasks 2, 8, 10, 12, 13, 14; `be-foundation` Task 2 (401 `MSG07` on `/api/**` without a session)
 **Estimated size:** medium
 **Done when:** a merge to `main` ends with a green smoke test on staging.
 
 ---
 
-## Task 15: File storage per Workspace in object storage, with signed URLs
+## Task 16: File storage per Workspace in object storage, with signed URLs
 
 **Story:** STORY-007
 **Feature:** file-storage
 **Assignee:** Đặng Nhật Minh (KAN-96)
 **After this task you can:** store a file in a Workspace in `ObjectFileStorageIT` and read it back; get a signed URL for it
 that the test downloads straight from Garage; the same URL fails after the TTL, and another Workspace's key gets nothing.
-**Covers:** AC-007.1 – AC-007.15 (the signed URL as the service returns it; its route on a Workspace site is Task 16).
+**Covers:** AC-007.1 – AC-007.15 (the signed URL as the service returns it; its route on a Workspace site is Task 17).
 **Design:** Storage layout; Signed URL host and routing (R11); Tooling decisions W1; Key Decisions R10 – R13.
 **Description:** `FileStorage`, `ObjectFileStorage` (AWS SDK v2 `s3`, path-style, one `PutObject` of known length,
 object name `<workspaceId>/<uuid>`, key = the UUID only, `S3Presigner` signed for `FILE_STORAGE_PUBLIC_URL_PATTERN` with
@@ -544,7 +588,7 @@ Edge #36).
 
 ---
 
-## Task 16: Signed-URL route on a Workspace site
+## Task 17: Signed-URL route on a Workspace site
 
 **Story:** STORY-009, STORY-007
 **Feature:** signed-url-route
@@ -562,13 +606,13 @@ HEAD allowed, PUT/POST/DELETE 405, an altered signature refused, Edge #40 and #4
 **Files:**
 - Modify: `infra/caddy/Caddyfile.local`, `infra/caddy/Caddyfile`
 - Test: `infra/tests/caddy-routing.test.sh`
-**Dependencies:** Tasks 10 (local Caddy), 13 (staging Caddy), 15
+**Dependencies:** Tasks 11 (local Caddy), 14 (staging Caddy), 16
 **Estimated size:** small
 **Done when:** the signed-URL download works in a browser on a local Workspace site and `caddy-routing.test.sh` passes.
 
 ---
 
-## Task 17: Link a Jira site to a Workspace
+## Task 18: Link a Jira site to a Workspace
 
 **Story:** STORY-004
 **Feature:** jira-site-link
@@ -594,7 +638,7 @@ AC-004.22; second link refused, Edge #27); `WorkspaceCatalogIT` (race, Edge #24;
 
 ---
 
-## Task 18: Verify the Forge Invocation Token on `api.`
+## Task 19: Verify the Forge Invocation Token on `api.`
 
 **Story:** STORY-005
 **Feature:** forge-token
@@ -620,13 +664,13 @@ token, Edge #22); `ForgeSecurityIT` (Edge #30, no `Set-Cookie` on `api.`, other 
   `ForgeTokenFilter.java`, `ForgeCallContext.java` (+ request-scoped impl), `VerifiedForgeCall.java`, `ForgeCallAuthentication.java`
 - Create: `backend/src/main/java/vn/tsolve/platform/config/ForgeSecurityConfig.java`
 - Test: `backend/src/test/java/vn/tsolve/platform/NimbusForgeTokenVerifierTest.java`, `ForgeSecurityIT.java`
-**Dependencies:** Task 9
+**Dependencies:** Task 10
 **Estimated size:** medium
 **Done when:** both test classes pass and the claim paths are recorded in the design.
 
 ---
 
-## Task 19: Tenant Resolver of the Jira App and the lifecycle endpoint
+## Task 20: Tenant Resolver of the Jira App and the lifecycle endpoint
 
 **Story:** STORY-006
 **Feature:** jira-tenant-resolver
@@ -649,13 +693,13 @@ AC-006.12, AC-006.15, AC-006.16); `TenantIsolationIT` Jira App case (AC-006.14, 
 - Create: `backend/src/main/java/vn/tsolve/platform/controller/ForgeLifecycleController.java`
 - Test: `backend/src/test/java/vn/tsolve/platform/ForgeLifecycleIT.java`, `ForgeSecurityIT.java`,
   `backend/src/test/java/vn/tsolve/common/tenant/TenantIsolationIT.java`
-**Dependencies:** Tasks 4, 7, 18
+**Dependencies:** Tasks 4, 7, 19
 **Estimated size:** small
 **Done when:** the three test classes pass and `npm run generate:api` leaves no diff.
 
 ---
 
-## Task 20: AI VPS with Ollama behind WireGuard
+## Task 21: AI VPS with Ollama behind WireGuard
 
 **Story:** STORY-011
 **Feature:** ai-vps
@@ -678,6 +722,6 @@ The chat-model pull and the completion check wait for KAN-140; the `bge-m3` part
 - Modify: `infra/scripts/bootstrap.sh`, `infra/tests/ports.test.sh`, `infra/tests/server.test.sh`, `infra/README.md`
 - Create: `infra/scripts/wireguard-setup.sh`, `infra/scripts/ollama-setup.sh`
 - Test: `infra/tests/ai-vps.test.sh`
-**Dependencies:** Task 12; KAN-140 model choice
+**Dependencies:** Task 13; KAN-140 model choice
 **Estimated size:** medium
 **Done when:** `ai-vps.test.sh` passes after a reboot.
