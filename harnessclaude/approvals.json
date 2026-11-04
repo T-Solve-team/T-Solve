@@ -220,8 +220,8 @@
     }
   },
   "identity": {
-    "specHash": "5a0b213bea1cb3bbf4c97da21f250bb727a0414388a66d07927100c24cca99dd",
-    "approvedAt": "2026-11-03T17:59:45.094Z",
+    "specHash": "4c23ee6507baf0dcca7b4860701c12737121dd04ee036d2c22d0b8a03d0c9f66",
+    "approvedAt": "2026-11-04T14:15:40.159Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace has a Google domain (AC-001.48), THE backend SHALL create a state value for the Workspace that the platform resolved from the host and answer 302 to  on the central sign-in origin configured in  ( in production), without a signed-in user.",
@@ -352,7 +352,15 @@
       "AC-009.6": "IF the Admin cancels or the including mutation fails, THEN THE frontend and mock API SHALL retain the last confirmed account and responsibility data; a failed mutation SHALL show its catalog error and keep entered handover choices available for retry.",
       "AC-009.7": "WHEN the including mutation succeeds, THE mock API SHALL transfer every affected Space exactly once, retain Space ids and former-manager history, and commit the account change and any accompanying Project handovers together; THE frontend SHALL invalidate affected user and session queries using the existing hooks.",
       "AC-009.8": "WHILE recipient lookup is pending, refreshing or failed, THE frontend SHALL prevent submission and show the existing loading or error-with-retry state; WHILE the including mutation is pending, THE frontend SHALL prevent duplicate submission.",
-      "AC-009.9": "WHEN a former manager is reactivated or their Knowledge Manager role is restored, THE mock API SHALL retain confirmed Space handovers rather than return those Spaces automatically."
+      "AC-009.9": "WHEN a former manager is reactivated or their Knowledge Manager role is restored, THE mock API SHALL retain confirmed Space handovers rather than return those Spaces automatically.",
+      "AC-010.1": "WHEN  calls  inside  (platform AC-013.14), THE identity module SHALL create in the bound Workspace's own database one Account with the email in lower case, status , an empty full name and no sign-in time, and the Role Admin (Employee is implied, be-foundation AC-002.2), and SHALL return the Account's  and nothing else.",
+      "AC-010.2": "THE identity module SHALL write the Account and its Role row in one transaction, so that either both exist or neither does (platform AC-013.16).",
+      "AC-010.3": "IF no Workspace is bound, or the bound Workspace is not , THEN THE identity module SHALL throw an exception and create nothing (platform AC-013.14: the call runs only inside the Workspace's own ).",
+      "AC-010.4": "IF the email is null, blank or not a valid email address, THEN THE identity module SHALL throw a  with the field  and create nothing (a second check behind platform AC-013.4).",
+      "AC-010.5": "IF the Workspace's database already has an Account with that email (compared in lower case), THEN THE identity module SHALL throw a  with the field  and create nothing, and THE exception SHALL reach the provisioning service unchanged so that it undoes the creation (platform AC-013.16).",
+      "AC-010.6": "THE identity module SHALL NOT call  from , because the email is claimed for the new Workspace at step 4 of platform AC-013.1, before the call, and a lost race ends there (platform AC-013.19).",
+      "AC-010.7": "THE identity module SHALL create no password, token, link or other credential for the first Admin, and SHALL log neither the email nor the Account's name: the Admin signs in with Google under AC-001.11 to AC-001.13 like any Account, and the invitation email and its job belong to  and  (platform AC-013.17, AC-013.18).",
+      "AC-010.8": "THE identity module SHALL offer  as a Spring bean implementing the  port  in every profile that serves a Workspace creation ( and the one that serves the Platform Console), so that the backend does not refuse to start (platform AC-013.15)."
     }
   },
   "platform": {
