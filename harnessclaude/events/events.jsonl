@@ -605,4 +605,17 @@
 {"ts":"2026-11-04T15:51:41.101Z","type":"feature-status","module":"identity","feature":"account-checks","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-04T15:51:41.366Z","type":"feature-status","module":"identity","feature":"account-checks","from":"evaluating","to":"passing"}
 {"ts":"2026-11-04T19:20:18.632Z","type":"quick-opened","what":"Renumber KAN-31 bug ids that collide with main: BUG-104 to BUG-114, BUG-109 to BUG-115, BUG-110 to BUG-116","files":["frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/test/setup.test.ts","frontend/src/test/setup.ts","backend/src/test/java/vn/tsolve/ticket/service/impl/StubProjectAccessTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-04T19:31:14.630Z","type":"spec-approved","module":"import-ticket-list","specHash":"c4f0244c704c57bf6a672485efd84d49dda922c4a45fd13b9a4a4e9eab64d691"}
 {"ts":"2026-11-04T19:33:20.314Z","type":"quick-closed","what":"Renumber KAN-31 bug ids that collide with main: BUG-104 to BUG-114, BUG-109 to BUG-115, BUG-110 to BUG-116","files":["frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/test/setup.test.ts","frontend/src/test/setup.ts","backend/src/test/java/vn/tsolve/ticket/service/impl/StubProjectAccessTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-04T19:33:49.369Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-contract","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:49.677Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-upload","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:49.982Z","type":"feature-status","module":"import-ticket-list","feature":"preview-fill-solution","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:50.280Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-confirm","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:50.586Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-form","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:50.884Z","type":"feature-status","module":"import-ticket-list","feature":"row-solution-popup","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:51.186Z","type":"feature-status","module":"import-ticket-list","feature":"fill-solution-screen","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:51.486Z","type":"module-status","module":"import-ticket-list","from":"completed","to":"planned"}
+{"ts":"2026-11-04T19:35:44.780Z","type":"module-status","module":"import-ticket-list","from":"planned","to":"implementing"}
+{"ts":"2026-11-04T19:35:45.205Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-contract","from":"pending","to":"in-progress"}
+{"ts":"2026-11-05T05:22:16.990Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"0526620ad325f10b1f653a980937f86acf138db6"}
+{"ts":"2026-11-05T05:22:17.278Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-contract","from":"in-progress","to":"evaluating"}

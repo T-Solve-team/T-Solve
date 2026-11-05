@@ -1,7 +1,7 @@
 ---
 module: import-ticket-list
 date: 2026-10-21
-total_tasks: 22
+total_tasks: 29
 owner: Dev
 ---
 
@@ -372,3 +372,97 @@ Design: master design, section "Change 2026-11-01". `F` = `frontend/src/features
 - Test: `F/pages/ImportPreviewPage.test.tsx` (AC-009.4, AC-010.1, AC-010.2, AC-010.3)
 **Dependencies:** Task 20
 **Estimated size:** small
+
+---
+
+## Task 23: Contract for the import type
+
+**Story:** STORY-012, STORY-013, STORY-014
+**Feature:** import-type-contract
+**Description:** In the contract: `ImportType` enum; `importType` on the template query and the upload body (optional); `NEEDS_SOLUTION` in `ImportPreviewRowStatus`; `importType` and `needsSolutionCount` as required fields of `ImportPreviewResponse`; path `POST /imports/previews/{previewId}/fill-solution` (`fillImportPreviewSolution`, 200 / 400 / 403 / 404 / 409); 409 `MSG_NEW_4` on confirm. Regenerate the client. The feature's mocks return the new fields, so the frontend stays green.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (generated only), `F/mocks/{data,handlers}.ts`
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 24: Upload a file without Solutions
+
+**Story:** STORY-012, STORY-016
+**Feature:** import-type-upload
+**Description:** Changeset `<next free number>-ticket-import-type.sql` (new `import_type` column; `import_preview_row.status` widened to `VARCHAR(20)`) and its include. `ImportType`, `PreviewRowStatus.NEEDS_SOLUTION`, `ImportPreview.importType`, the row constructor's type. `parse(in, type)` and `validate(rows, existing, type)`. Upload counts by status. Controller: `importType` with default `WITH_SOLUTION` on upload and template. `ImportPreviewResponse` and `summary` carry the type and `needsSolutionCount`, from the existing count query.
+**Files:**
+- Create: the changeset, `T/entity/ImportType.java`
+- Modify: `T/entity/{PreviewRowStatus,ImportPreview,ImportPreviewRow}.java`, `T/csv/{CsvColumns,CsvTicketParser,CsvRowValidator}.java`, `T/dto/ImportPreviewResponse.java`, `T/service/CsvImportService.java`, `T/service/impl/{CsvImportServiceImpl,ImportPreviewServiceImpl}.java`, `T/controller/ImportController.java`, `db.changelog-master.xml`
+- Test: `TT/csv/*`, `TT/service/impl/*`, `TT/controller/*` (AC-012.1 – AC-012.7, AC-016.1; edge cases 40, 41, 42, 52)
+**Dependencies:** Task 23
+**Estimated size:** medium
+
+---
+
+## Task 25: Fill solution endpoint
+
+**Story:** STORY-013
+**Feature:** preview-fill-solution
+**Description:** `POST /imports/previews/{previewId}/fill-solution`: `FillSolutionRequest` with `@Valid` (`rowNumbers` not empty; MSG01 for each empty required section; MSG02 for over 10,000 characters in total); `ImportPreviewService.fillSolution`, in this order: `owned` (404, 403), `lockByIdAndOwner`, type and row checks (409 MSG06, 404), then `row.fillSolution` on every row, all in one transaction. Duplicate numbers count once.
+**Files:**
+- Create: `T/dto/FillSolutionRequest.java`
+- Modify: `T/entity/ImportPreviewRow.java`, `T/service/ImportPreviewService.java`, `T/service/impl/ImportPreviewServiceImpl.java`, `T/controller/ImportController.java`
+- Test: `TT/service/impl/*`, `TT/controller/*` (AC-013.1 – AC-013.7; edge cases 43, 44, 45, 46)
+**Dependencies:** Task 24
+**Estimated size:** medium
+
+---
+
+## Task 26: Confirm of a file without Solutions
+
+**Story:** STORY-014, STORY-016
+**Feature:** import-type-confirm
+**Description:** `RowsNotReadyException` → 409 `MSG_NEW_4` with `count`, in `GlobalExceptionHandler`'s existing style for import errors. Checked first in `confirm` and again in `importRows` under the lock. No Import Batch. `toTicket` unchanged. A test that a filled row becomes a Ticket with the written Solution, Published, with an approve decision and a `TicketsPublishedEvent`.
+**Files:**
+- Create: `T/exception/RowsNotReadyException.java`
+- Modify: `T/service/impl/ImportConfirmServiceImpl.java`, and the exception's handler
+- Test: `TT/service/impl/ImportConfirmServiceImplTest` and the DB-backed confirm test (AC-014.1, AC-014.2, AC-016.1; edge cases 47, 48, 49)
+**Dependencies:** Task 25
+**Estimated size:** small
+
+---
+
+## Task 27: Import type on the CSV tab
+
+**Story:** STORY-015
+**Feature:** import-type-form
+**Description:** `Radio.Group` "Import type" in a `FormField`, initial `WITH_SOLUTION`. Download template and Upload send the chosen type. Changing the type keeps the file.
+**Files:**
+- Modify: `F/components/CsvImportForm.tsx`, `F/mocks/handlers.ts`
+- Test: `F/pages/ImportTicketsPage.test.tsx` (AC-015.1)
+**Dependencies:** Task 23
+**Estimated size:** small
+
+---
+
+## Task 28: Write the Solution of one row
+
+**Story:** STORY-015
+**Feature:** row-solution-popup
+**Description:** `SolutionFormModal` on `FormModal` (the row's read-only fields, the five sections, Apply). `useFillPreviewSolution` refreshes the Summary and the rows; 400 field errors go to the form, and the popup stays open with what was written. Preview opens it for a Needs Solution or Valid row of a type 2 preview, and `ImportTicketPreviewModal` otherwise. `NEEDS_SOLUTION` in `status-tags.ts`; StatCard Needs Solution for type 2. Mock handler for fill-solution.
+**Files:**
+- Create: `F/components/SolutionFormModal.tsx`
+- Modify: `F/pages/ImportPreviewPage.tsx`, `F/hooks/useImportPreview.ts`, `F/mocks/{data,handlers}.ts`, `frontend/src/shared/ui/StatusTag/status-tags.ts`
+- Test: `F/pages/ImportPreviewPage.test.tsx` (AC-015.2, AC-015.3, AC-015.7; edge case 51)
+**Dependencies:** Task 23
+**Estimated size:** medium
+
+---
+
+## Task 29: Fill solution and the Confirm lock on screen
+
+**Story:** STORY-015
+**Feature:** fill-solution-screen
+**Description:** `ImportPreviewTable` reports the selected rows, and the page keeps each selected row's status. Fill solution appears only on a type 2 preview and is enabled by AC-015.4. It opens `SolutionFormModal` empty, asks MSG36 with the count of selected Valid rows, and clears the selection on success. `MSG_NEW_4` in the catalog; Alert and Confirm disabled while `needsSolutionCount + errorCount > 0` on type 2.
+**Files:**
+- Modify: `F/components/{ImportPreviewTable,SolutionFormModal}.tsx`, `F/pages/ImportPreviewPage.tsx`, `F/mocks/handlers.ts`, `frontend/src/shared/messages/catalog.ts`, `frontend/src/shared/messages/catalog.test.ts`
+- Test: `F/pages/ImportPreviewPage.test.tsx` (AC-015.4, AC-015.5, AC-015.6; edge case 50)
+**Dependencies:** Task 28
+**Estimated size:** medium

@@ -358,3 +358,95 @@ frontend/src/features/ticket-import/
 ├── lib/save-text-file.ts
 └── mocks/data.ts · handlers.ts
 ```
+
+## Change 2026-11-05 — import type (STORY-012..016, spec D15–D20)
+
+Spec decisions D15–D20 are in the spec, section "Decisions taken for the import type". They are not the D15 of the change above (`DetailModal`), which is a design decision of 2026-11-01.
+
+### Backend
+
+```
+POST /imports/csv (importType?) ──► parser(type) ──► validator(type) ──► rows: VALID | NEEDS_SOLUTION | ERROR
+POST /imports/previews/{id}/fill-solution
+      owned(user, id) → 404 · 403 MSG08
+      lockByIdAndOwner → waits for a running Confirm, then 404 when it is gone (AC-013.4)
+      type WITH_SOLUTION, or a row ERROR / REMOVED → 409 MSG06 · a row number that does not exist → 404
+      row.fillSolution(trimmed sections) → VALID · summary(preview)
+POST /imports/previews/{id}/confirm
+      WITHOUT_SOLUTION with NEEDS_SOLUTION + ERROR > 0 → 409 MSG_NEW_4, no batch (before and inside the transaction)
+      otherwise as today
+```
+
+- **`ImportType`** (`WITH_SOLUTION`, `WITHOUT_SOLUTION`), a new enum in `T/entity`, holds its required columns and template columns, taken from `CsvColumns`. `import_preview.import_type` stores it.
+- **Changeset `<next free number>-ticket-import-type.sql`:** `ALTER TABLE import_preview ADD COLUMN import_type VARCHAR(20) NOT NULL DEFAULT 'WITH_SOLUTION'`, and `ALTER TABLE import_preview_row ALTER COLUMN status TYPE VARCHAR(20)`: the column is `VARCHAR(10)` and `NEEDS_SOLUTION` has 14 characters. Previews that exist today stay files with Solutions (AC-012.1).
+- **`PreviewRowStatus.NEEDS_SOLUTION`:** the `ImportPreviewRow` constructor gets the type: errors → `ERROR`; none → `VALID` or, for `WITHOUT_SOLUTION`, `NEEDS_SOLUTION`.
+- **`ImportPreviewRow`:** the five Solution columns lose `updatable = false`. `fillSolution(symptoms, rootCause, resolutionSteps, workaround, scope)` stores the trimmed sections and sets `VALID`. `errors` stays not updatable: a fillable row has none.
+- **Parser and validator:** `parse(in, type)` and `validate(rows, existing, type)` use the type's required columns. For `WITHOUT_SOLUTION` the parser leaves the five sections null, which is how AC-012.4 ignores them. Every other rule of `check` runs unchanged.
+- **Upload:** counts come from the rows by status; today's `rows.size() - valid` would count Needs Solution as Error.
+- **Fill solution:** `ImportPreviewService.fillSolution`, one endpoint for one row and for several. `FillSolutionRequest` validates with `@Valid`, so a rejection uses the existing field errors of `GlobalExceptionHandler`. The 10,000-character total is checked on the request (MSG02 for the Solution), with the same limit as `CsvRowValidator.SOLUTION_MAX_LENGTH`.
+- **Confirm:** `RowsNotReadyException` (409, `MSG_NEW_4`, `count`). The check comes first, so a file with only Needs Solution rows answers `MSG_NEW_4`, not MSG30. It runs again in `importRows` under the preview lock, because Remove and Fill solution do not wait for the first check. Tickets are built from the row values as today, so `toTicket` does not change.
+
+### Web app — `frontend/src/features/ticket-import/`
+
+```
+CsvImportForm: Project · Import type (Radio) · Download template (type) · CsvUpload · Upload (type)
+ImportPreviewPage (WITHOUT_SOLUTION only):
+  StatCard Needs Solution · Alert MSG_NEW_4 + Confirm disabled while needsSolutionCount + errorCount > 0
+  Fill solution (selected rows, none Error / Removed) ──► SolutionFormModal (empty) ──► MSG36 when some have a Solution
+  Preview on a Needs Solution / Valid row ─────────────► SolutionFormModal (the row, Apply)
+  Preview on an Error / Removed row ───────────────────► ImportTicketPreviewModal (read-only, as today)
+```
+
+- **`SolutionFormModal`** is one `FormModal` for both uses: `rowNumbers`, and with one row from Preview the row's read-only fields and its sections as start values. One new hook, `useFillPreviewSolution`, refreshes the Summary and the rows like `useRemovePreviewRows` and handles its own errors: 400 field errors go to `form.setFields`, others to the message the backend returned, and the popup stays open.
+- **Selection:** `ImportPreviewTable` reports the selected rows, not only their numbers, and the page keeps the status of each selected row. Fill solution and the MSG36 count need the status of rows on other pages too. Fill solution clears the selection, like Remove.
+- **Import type:** `Radio.Group` in a `FormField`, initial value `WITH_SOLUTION`. Changing it keeps the chosen file. The downloaded file name stays `ticket-import-template.csv` (AC-008.3).
+- **Catalog and tag:** `MSG_NEW_4` (inline) in `catalog.ts` and `NEEDS_SOLUTION` in `status-tags.ts`. These two shared files are added to the module's `paths`.
+
+### Key decisions (change)
+
+| Decision | Choice | Alternatives considered | Rationale |
+|----------|--------|------------------------|-----------|
+| One write endpoint | `fill-solution` with `rowNumbers` | A second `PUT .../rows/{rowNo}/solution` | One row is a list of one; UC-20 can use it later |
+| Where the type lives | A column on `import_preview` | Infer it from the row statuses | The screen and Confirm must know it after every row is Valid |
+| Solution columns of a type 2 file | The parser leaves them null | Keep them and let the validator skip them | They cannot reach a Ticket or a screen by accident (AC-012.4) |
+| Concurrency of Fill solution | The lock Confirm already takes | A version column | A Solution cannot change while Confirm reads it; no new column |
+
+### Edge cases (change)
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 40 | STORY-012 | Input | Type 2 file with Solution columns filled | Medium | Row is Needs Solution, sections empty (AC-012.4) | Task 24 |
+| 41 | STORY-012 | Input | Type 1 file uploaded as type 2, or the reverse | Medium | Type 2: sections ignored. Type 1 with the type 2 template: MSG29 | Task 24 |
+| 42 | STORY-012 | Data | Type 2 row with a duplicate or existing `ticket_id` | High | Error, not Needs Solution (AC-012.5) | Task 24 |
+| 43 | STORY-013 | Input | Sections of only spaces; 10,000 characters exactly, then 10,001 | High | MSG01; accepted; MSG02 (AC-013.2) | Task 25 |
+| 44 | STORY-013 | Concurrency | Fill solution while Confirm of the same preview runs | Critical | Fill waits, then 404; Tickets hold what Confirm read (AC-013.4) | Task 25 |
+| 45 | STORY-013 | Input | `rowNumbers` empty, or a number twice | Medium | Empty: 400. Twice: saved once | Task 25 |
+| 46 | STORY-013 | Atomicity | Several rows, one of them Error, Removed or not found | High | 409 or 404, no row changed (AC-013.3, AC-013.4) | Task 25 |
+| 47 | STORY-014 | State | Type 2 with only Needs Solution rows | High | `MSG_NEW_4`, not MSG30 (AC-014.1) | Task 26 |
+| 48 | STORY-014 | Concurrency | A row changes between the first check and the transaction | Medium | Second check under the lock rejects it, no batch | Task 26 |
+| 49 | STORY-014 | State | Type 2, every row Removed | Low | Not blocked by `MSG_NEW_4`; AC-004.5 answers 409 MSG30 | Task 26 |
+| 50 | STORY-015 | State | Selection spans pages, some rows already have a Solution | Medium | MSG36 counts every selected row (AC-015.5) | Task 29 |
+| 51 | STORY-015 | Navigation | Reload after writing some Solutions | Medium | Written Solutions are shown again (AC-013.7) | Task 28 |
+| 52 | STORY-016 | Regression | Upload with no `importType` | High | Behaves as today (AC-012.1, AC-016.1) | Task 24 |
+
+### File structure (change)
+```
+backend/src/main/resources/db/changelog/changes/<next free number>-ticket-import-type.sql   (+ include in the master changelog)
+backend/src/main/java/vn/tsolve/ticket/
+├── entity/   ImportType (new) · PreviewRowStatus · ImportPreview · ImportPreviewRow
+├── csv/      CsvColumns · CsvTicketParser · CsvRowValidator
+├── dto/      FillSolutionRequest (new) · ImportPreviewResponse
+├── exception/ RowsNotReadyException (new)
+├── service/  CsvImportService(Impl) · ImportPreviewService(Impl) · ImportConfirmServiceImpl
+└── controller/ ImportController
+frontend/openapi/tsolve-api.yaml · frontend/src/shared/api/generated/**
+frontend/src/shared/messages/catalog.ts · catalog.test.ts      (MSG_NEW_4)
+frontend/src/shared/ui/StatusTag/status-tags.ts                (NEEDS_SOLUTION)
+frontend/src/features/ticket-import/
+├── components/ CsvImportForm · ImportPreviewTable · SolutionFormModal (new)
+├── hooks/      useImportPreview
+├── pages/      ImportPreviewPage · both page tests
+└── mocks/      data · handlers
+```
+
+The schema alignment plan (`artifacts/04-plans/platform/schema-ddl-alignment.md`, KAN-248) renames `import_preview` columns and rewrites the same entities. Whichever lands second adapts to the other: the new column and status carry over as they are.
