@@ -32,8 +32,8 @@ Task 20 import-preview-screen
 ## Session 2026-11-04
 
 ### Working on: import-tickets-screen — Low findings of review attempt 1
-- Review issue 1 → BUG-105: `CsvImportForm` ignores a 401 in its `onError`; the global MSG07 dialog is the one message.
-- Review issue 4 → BUG-106: `saveTextFile` revokes the Blob URL on the next task.
+- Review issue 1 → BUG-125: `CsvImportForm` ignores a 401 in its `onError`; the global MSG07 dialog is the one message.
+- Review issue 4 → BUG-126: `saveTextFile` revokes the Blob URL on the next task.
 - Review issues 2 and 3: AC-008.5 covers MSG28 on the screen; AC-008.6 checks the Project id and file content that were sent (jsdom files reach the request named "blob", so the content is compared).
 - Verify: `mvn verify` BUILD SUCCESS (235 unit tests, 1 skipped as before; 10 ITs; spotless) with JDK 24 and `-Dapi.version=1.44` for Docker Desktop 29; frontend `format:check`, `lint` (0 errors, the old `TicketListFilters.tsx` warning), `typecheck`, `test` (58 files, 1083 passed), `build` pass; `generate:api` leaves no diff.
 - Commit: default@653111a

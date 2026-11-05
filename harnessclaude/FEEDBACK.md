@@ -58,6 +58,11 @@ Append-only log of framework friction captured during usage.
 **Type:** bug
 **Context:** `TEST_GLOBS` in `hooks/sdd.ts` is `**/*.{test,spec}.*`, `**/test_*.py`, `**/*_test.*`. JUnit files (`*Test.java`, `*IT.java`) never match, so `trace import-ticket-list STORY-001` reports 0/12 although every `AC_001_*` id is named by a backend test (checked with grep).
 **Suggestion:** Add `**/*Test.java` and `**/*IT.java` (and accept the `AC_001_2` spelling the backend naming rule uses) to the trace globs.
+## 2026-11-02 — spec approval from Codex (KAN-149)
+
+**Type:** friction
+**Context:** The user approved the 20-criterion triage frontend spec in chat, but the PreToolUse hook blocked `sdd.ts approve triage` because Codex cannot confirm through the hook prompt. The hook instructed the user to run the command in their own terminal. No retry or approval-file edit was attempted.
+**Suggestion:** Provide a native approval prompt for Codex that records the approved spec hash, while keeping the same user confirmation requirement.
 
 ## 2026-11-04 — preserve Java trace customization during upgrade (PR #107)
 

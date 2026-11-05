@@ -35,7 +35,7 @@ owner (see "Stories → module"). Owners can change: edit the Owner column and t
 | `be-foundation` | Five roles in security, `/me`, `ProblemDetail` + MSG codes, audit events | Anh Tran Hai | medium | default | platform |
 | `fe-foundation` | Web app base: roles, session, guards, landing, menus, routes, catalog, mocks, guidelines (KAN-57) | Trần Trung Hiếu | large | default | — |
 | `ai` | AI gateway: chat LLM and bge-m3 embedding clients (Ollama on the AI VPS, no PII masking), AI draft and rewrite of a Solution (UC-19), model benchmark | Trần Hải Anh | medium | default | platform, be-foundation |
-| `worker` | Background worker: JobRunr OSS jobs per Workspace on its own Jobs DB (`tsolve_<env>_jobs`), `runInTenant`, no jobs for Suspended Workspaces, per-Workspace cap; cleanup of expired sign-in states and hand-off codes; SMTP email | Phạm Tùng Dương | medium | default | platform |
+| `worker` | Background worker: JobRunr OSS jobs per Workspace on its own Jobs DB (`tsolve_<env>_jobs`), `runInTenant`, no jobs for Suspended Workspaces, per-Workspace cap; SMTP email | Phạm Tùng Dương | medium | default | platform |
 | `identity` | Role-Based Access Control · UC-01–09, UC-59 | Trần Trung Hiếu (UC-01–03, UC-59) · Phạm Tùng Dương (UC-04–09, RBAC rules) | large | default | platform, be-foundation, fe-foundation |
 | `platform-console` | Platform Console on `admin.` (restored 04/11, HLA): Workspace list, create, suspend / reactivate, invite the first Admin (UC-54…56); Operator sign-in is `identity` Task 11 (KAN-233) | Đặng Tấn Bình | medium | default | platform, identity, worker, fe-foundation |
 | `workspace` | Workspace & Department Management · UC-10–15 | Đặng Tấn Bình | medium | default | identity |
@@ -155,7 +155,7 @@ folders (`chatbot` took its folder with its plan, KAN-69). The approved `ticket-
 - **TenantContext and Tenant Resolver** (`platform` → all): `TenantContext` in `common/tenant/` holds the
   Workspace of the current request or job (read it; require it, failing when there is none); it is set only by the
   resolvers — host name of a Workspace site (MSG151), verified `cloudId` of the Forge Invocation Token (MSG152),
-  signed state value on `login.` (D9) — or by `runInTenant` for a job, never from request data (GBR-37). The bound
+  the callback on the Workspace site (the token's Organization and `hd` match it, ADR-0003) — or by `runInTenant` for a job, never from request data (GBR-37). The bound
   Workspace selects its own database through the routing `DataSource`; tables carry no `workspace_id`
   (ADR-0002). A Suspended Workspace is refused (MSG150; GBR-38).
 - **Workspace catalog** (`platform` → `identity`, `workspace`, `jira-app`, `worker`): find a Workspace by id, site
@@ -203,7 +203,7 @@ Assignee = the Jira assignee (D40).
 | KAN-100 | Trần Hải Anh | **Cancelled** PostgreSQL row-level security | — (cancelled) |
 | KAN-101 | Trần Trung Hiếu | Tenant Resolver for the Jira App (`cloudId` → Workspace) | `platform` |
 | KAN-102 | Phạm Tùng Dương | Run jobs in the right TenantContext (`runInTenant`) | `worker` |
-| KAN-103 | Trần Trung Hiếu | [UC-01] Sign in through the central sign-in (Google OIDC) | `identity` |
+| KAN-103 | Trần Trung Hiếu | [UC-01] Sign in (central sign-in, now Keycloak, ADR-0003) | `identity` |
 | KAN-104 | Trần Trung Hiếu | [UC-01] Session per site and landing page per role | `identity` |
 | KAN-105 | Trần Trung Hiếu | Verify the Forge Invocation Token | `platform` |
 | KAN-106 | Trần Trung Hiếu | [UC-02] Log out | `identity` |

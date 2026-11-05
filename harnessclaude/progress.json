@@ -115,9 +115,17 @@
         "my-solutions-contract": "pending",
         "my-solutions-table": "pending",
         "my-solutions-counters": "pending",
-        "my-solutions-filters": "pending"
+        "my-solutions-filters": "pending",
+        "keycloak-sign-in": "pending",
+        "remove-custom-sign-in": "pending",
+        "account-sub-binding": "pending",
+        "callback-workspace-checks": "pending",
+        "user-role": "pending",
+        "logout-rp-initiated": "pending",
+        "keycloak-provisioning": "pending",
+        "keycloak-theme": "pending"
       },
-      "lastUpdated": "2026-11-04T15:51:41.365Z",
+      "lastUpdated": "2026-11-05T15:33:35.932Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -168,10 +176,21 @@
       }
     },
     "triage": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:23.605Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "suggestion-history": "passing",
+        "suggestion-history-contract": "passing",
+        "suggestion-history-api": "passing"
+      },
+      "lastUpdated": "2026-11-05T14:10:40.456Z",
+      "branch": "feat/triage",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "6cefdf9443d81628a7819c855a363f111cc44cf7"
+      }
     },
     "chatbot": {
       "status": "planned",
@@ -263,10 +282,19 @@
       "lastUpdated": "2026-10-24T23:56:42.970Z"
     },
     "ai": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-24T23:56:43.157Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "ollama-clients": "passing",
+        "solution-draft": "pending",
+        "solution-rewrite": "pending"
+      },
+      "lastUpdated": "2026-11-05T11:28:04.196Z",
+      "branch": "feat/ai",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {}
     },
     "tracker": {
       "status": "implementing",
