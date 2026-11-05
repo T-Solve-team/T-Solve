@@ -700,6 +700,35 @@
       "AC-008.7": "IF the caller is signed out or lacks Project Manager, THEN THE route guard and mock API SHALL deny history access; IF the caller supplies a foreign or unmanaged Department filter, THEN THE mock API SHALL expose no foreign decision or ticket data."
     }
   },
+  "ai": {
+    "specHash": "ad7e0d13621067934ecc9d3e20cdb2c6a766646173980bf68965215599e3f650",
+    "approvedAt": "2026-11-05T06:18:59.919Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN a caller asks  for a chat completion with a list of messages (each with the role ,  or  and its text), THE ai module SHALL send them in one  with the model  and , and SHALL return the text of the answer's message.",
+      "AC-001.2": "WHERE the caller gives a JSON schema, THE ai module SHALL send it as the request's  and SHALL return the answer only if its text parses as a JSON object.",
+      "AC-001.3": "IF the answer's text is empty or blank, or a JSON answer does not parse as a JSON object, THEN THE ai module SHALL throw .",
+      "AC-002.1": "WHEN a caller asks  to embed a list of one or more texts, THE ai module SHALL send them in one  with the model  (default ) and SHALL return one vector per text, in the order of the texts.",
+      "AC-002.2": "IF Ollama returns a number of vectors different from the number of texts, or any vector whose length is not 1024, THEN THE ai module SHALL throw .",
+      "AC-002.3": "IF the list of texts is empty, THEN THE ai module SHALL return an empty list without calling Ollama.",
+      "AC-003.1": "THE ai module SHALL send requests only to , which has no default value; IF  or  is not set, THEN THE backend SHALL refuse to start and name the missing variable.",
+      "AC-003.2": "IF Ollama does not accept the connection within  (default 2 s), or does not answer within  (default 60 s) for a chat completion or  (default 10 s) for an embedding, THEN THE ai module SHALL stop waiting and throw .",
+      "AC-003.3": "IF the connection to Ollama fails or Ollama answers with a 5xx status, THEN THE ai module SHALL send the same request once more, and IF that also fails, THEN THE ai module SHALL throw .",
+      "AC-003.4": "IF Ollama answers with a 4xx status or the answer times out (AC-003.2), THEN THE ai module SHALL throw  without sending the request again.",
+      "AC-003.5": "WHILE  (default 2) calls of one backend process are waiting for Ollama, THE ai module SHALL hold any further call for at most  (default 1 s) for a free slot, and IF no slot frees in that time, THEN THE ai module SHALL throw  without calling Ollama.",
+      "AC-003.6": "THE ai module SHALL log no message text, issue text, Solution text, answer or vector; the log line of a call SHALL hold only the operation ( or ), the model, the duration, the outcome and, on a failure, the class of the error.",
+      "AC-003.7": "WHEN the backend starts while Ollama cannot be reached, THE backend SHALL start and serve the requests that need no AI.",
+      "AC-003.8": "IF an  is not caught by its caller and reaches the global error handler, THEN THE backend SHALL answer  with a  whose  is .",
+      "AC-004.1": "WHEN a caller asks  to draft a Solution from an issue's summary, description and comments, THE ai module SHALL ask the LLM for the five sections of the Solution template (Symptoms, Root cause, Resolution steps, Workaround, Scope of applicability; GBR-33) as a JSON object and SHALL return them with  true.",
+      "AC-004.2": "IF the LLM call fails, or the answer leaves Symptoms, Root cause, Resolution steps or Scope of applicability empty, or the five sections together are longer than 10,000 characters, THEN THE ai module SHALL return the fallback draft — Symptoms is the issue's description, Resolution steps is the issue's last comment, the other sections are empty — with  false, so the caller shows MSG67 (UC-19 Step 3).",
+      "AC-004.3": "THE  operation SHALL never throw because of an AI failure; its only failure result is the fallback draft of AC-004.2.",
+      "AC-004.4": "WHEN the description and the comments together are longer than 12,000 characters, THE ai module SHALL send the summary, the description cut to 12,000 characters and then, newest first, only the comments that still fit in 12,000 characters in all.",
+      "AC-004.5": "IF the issue has no description, or has no comment, THEN THE fallback draft SHALL leave Symptoms, or Resolution steps, empty.",
+      "AC-005.1": "WHEN a caller asks  to rewrite a Solution, THE ai module SHALL send its filled sections to the LLM with the instruction to keep the meaning and the five-section template, and SHALL return the rewritten five sections.",
+      "AC-005.2": "WHEN a section of the Solution given is empty, THE rewritten Solution SHALL have that section empty.",
+      "AC-005.3": "IF the LLM call fails, or the answer leaves empty a section that was filled in the Solution given, or the rewritten sections together are longer than 10,000 characters, THEN THE ai module SHALL throw , which reaches the client as  with   when the caller does not catch it.",
+      "AC-005.4": "IF every section of the Solution given is empty, THEN THE ai module SHALL return it unchanged without calling the LLM.",
+      "AC-005.5": "THE ai module SHALL only return a draft or a rewrite; it SHALL never save, replace or submit a Solution (the writer reads it and clicks Finish themselves, GBR-12)."
   "triage": {
     "specHash": "cf15ceed7867e474f6e446a10b65fa6d5851f5a7a007ada778357f66748b3156",
     "approvedAt": "2026-11-04T10:43:49.142Z",

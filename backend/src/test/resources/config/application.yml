@@ -2,3 +2,5 @@ SERVER_PORT: 0
 CORS_ALLOWED_ORIGINS: https://client.example.test
 TSOLVE_JIRA_APP_ID: test-jira-app
 FORGE_JWKS_URI: https://jwks.example.test/keys
+OLLAMA_BASE_URL: http://127.0.0.1:9
+OLLAMA_CHAT_MODEL: test-chat-model
