@@ -394,3 +394,11 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 **Files:** backend identity controller/dto/repository/service/session/config and tests; common/tenant/TenantContext.java (port only); frontend/openapi/tsolve-api.yaml, generated API and users feature/tests. Remove only this branch's standalone SQL platform/common-tenant implementation, bootstrap resources, config flags and corresponding old tests.
 **Dependencies:** platform UUID contract (kept unchanged), shared security principal/writer on main; actual provisioning/tenant runtime and trusted session issuer are deployment prerequisites. Feature remains disabled.
 **Verification:** Test-first UUID validation, invalid/foreign principal before connection, CORS/error envelope, live role reload and guard mismatch. Use two real PostgreSQL databases with the KAN-235 Account migration, test-only platform adapters and fixtures for the remaining tables and columns. Run full backend verification, all frontend gates, deterministic generation and trace for STORY-004. Review before commit/push to PR119.
+
+## Task 24: Align User List with the reviewed tenant read contract (KAN-107)
+
+**Story:** STORY-004
+**Feature:** user-list-review-contract
+**Description:** Address PR #119's HTTP contract review. Reject an unavailable tenant transaction or missing or mismatched guard with 503 MSG06, and make OpenAPI reflect the enabled handlers. Preserve 500 MSG06 for unexpected query errors. Correct BUG-115's PR reference.
+**Dependencies:** The UUID Department migration, routing and session issuer remain deployment prerequisites.
+**Verification:** Verify both 503 endpoints, the guard and transaction cleanup, 500 for unexpected query failures, full backend and frontend checks, and deterministic client generation.

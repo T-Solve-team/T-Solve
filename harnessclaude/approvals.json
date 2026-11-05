@@ -220,8 +220,8 @@
     }
   },
   "identity": {
-    "specHash": "e958cca3812837d5add71983eb70f874ca4619ad3235c3d8a0b00dbfc2331a5e",
-    "approvedAt": "2026-11-05T12:22:27.025Z",
+    "specHash": "5d29abdf82aca4c7cf60709aceb0656f1f48bfaad5e2ed4c556cbf8ce2d2e9a7",
+    "approvedAt": "2026-11-05T13:35:01.604Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace has a Google domain (AC-001.48), THE backend SHALL create a state value for the Workspace that the platform resolved from the host and answer 302 to  on the central sign-in origin configured in  ( in production), without a signed-in user.",
@@ -322,7 +322,7 @@
       "AC-004.16": "IF authentication is missing, anonymous, not a shared UUID TSolveUser, lacks a trusted server-created WorkspaceSessionBinding in Authentication details, or that binding differs from TenantContext, THEN both read endpoints SHALL answer 401 MSG07 before any database connection; missing/deactivated accounts SHALL answer 401 MSG07 and current non-Admin accounts 403 MSG08. THE backend SHALL reload account roles on each request and again in the response transaction, declare PreAuthorize, retain shared CORS handling, and render catalog detail/params/path-only instance using SecurityProblemWriter. No request header/parameter can supply the binding.",
       "AC-004.17": "THE User List and its read response SHALL omit Last sign-in and SHALL normalize legacy lastSignInAt URL sorting to fullName ascending before requesting results; the existing User Detail display SHALL remain unchanged.",
       "AC-004.18": "WHEN runtime tests use two tenant databases with overlapping UUID account and Department ids, THE tests SHALL prove separate counts/results, foreign-session rejection, live role revalidation and denied reads when the transaction setting or database tenant_identity differs from the bound Workspace; successful and failed reads SHALL leak no binding or transaction state.",
-      "AC-004.19": "THE KAN-107 UUID slice SHALL consume platform's TenantContext, primary tenant-aware transaction manager/DataSource and installed tenant guard, and SHALL fail closed when those prerequisites are absent or mismatched; it SHALL add no parallel catalog, pool/router, password storage, bootstrap or production migration, and SHALL leave the user's source SQL/PDF and applied legacy changesets unchanged. Provisioning, converting legacy table keys and issuing Workspace-bound sign-in sessions SHALL remain platform/identity dependency tasks, not completion claims of this slice.",
+      "AC-004.19": "WHEN either read endpoint is enabled and a validated Workspace session reaches the tenant read path with an unavailable tenant transaction or a missing or mismatched tenant guard, THE backend SHALL refuse the read with 503 MSG06. WHEN the feature is disabled, THE backend SHALL leave the read handlers unregistered. THE KAN-107 UUID slice SHALL consume platform's TenantContext, primary tenant-aware transaction manager/DataSource and installed tenant guard, add no parallel catalog, pool/router, password storage, bootstrap or production migration, and leave the user's source SQL/PDF and applied legacy changesets unchanged. Provisioning, converting legacy table keys and issuing Workspace-bound sign-in sessions remain platform/identity dependency tasks.",
       "AC-005.1": "WHEN an Admin chooses to add a user, THE frontend SHALL open the creation mode of User Detail at .",
       "AC-005.2": "WHEN an Admin submits a new account, THE frontend SHALL validate required inputs, email format and the SRS email limit of 100 characters using catalog messages.",
       "AC-005.3": "IF an email is outside the Workspace domain or already belongs to an account, THEN THE mock API SHALL reject creation and THE frontend SHALL display the corresponding catalog validation message without losing form input.",

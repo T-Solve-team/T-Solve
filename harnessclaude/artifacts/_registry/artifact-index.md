@@ -198,3 +198,6 @@ Master registry of all artifacts in this workspace.
 | IMPL-IDENTITY-23 | session-log | identity | passing | artifacts/05-implementation/identity/task-23-user-list-uuid-read.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-23-user-list-uuid-read-test-report.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-23-user-list-uuid-read-review.md |
+| IMPL-IDENTITY-24 | session-log | identity | passing | artifacts/05-implementation/identity/task-24-user-list-review-contract.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-24-user-list-review-contract-test-report.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-24-user-list-review-contract-review.md |

@@ -101,15 +101,16 @@
         "my-solutions-counters": "pending",
         "my-solutions-filters": "pending",
         "user-list-backend": "passing",
-        "user-list-uuid-read": "passing"
+        "user-list-uuid-read": "passing",
+        "user-list-review-contract": "passing"
       },
-      "lastUpdated": "2026-11-05T12:34:40.275Z",
+      "lastUpdated": "2026-11-05T13:40:24.201Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5a6661610e5ffdcdb6ba08f30d3353edf3fcab2b"
+        "default": "0a764cb5ec610da7ff9984adb9f38684ac27fb60"
       }
     },
     "workspace": {

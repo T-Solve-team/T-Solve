@@ -567,3 +567,10 @@
 {"ts":"2026-11-05T12:34:40.276Z","type":"feature-status","module":"identity","feature":"user-list-uuid-read","from":"evaluating","to":"passing"}
 {"ts":"2026-11-05T12:50:15.401Z","type":"quick-opened","what":"Stabilize Review Queue eligibility test on PR 119 CI","files":["frontend/src/features/review/pages/ReviewQueueRecovery.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-11-05T13:04:07.404Z","type":"quick-closed","what":"Stabilize Review Queue eligibility test on PR 119 CI","files":["frontend/src/features/review/pages/ReviewQueueRecovery.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-05T13:17:50.717Z","type":"spec-approved","module":"identity","specHash":"f63755f60969a09bb72abc842d68b16152acdac325984e9307a38cef4efdc56d"}
+{"ts":"2026-11-05T13:22:15.424Z","type":"feature-status","module":"identity","feature":"user-list-review-contract","from":null,"to":"pending"}
+{"ts":"2026-11-05T13:22:15.502Z","type":"feature-status","module":"identity","feature":"user-list-review-contract","from":"pending","to":"in-progress"}
+{"ts":"2026-11-05T13:35:01.609Z","type":"spec-approved","module":"identity","specHash":"5d29abdf82aca4c7cf60709aceb0656f1f48bfaad5e2ed4c556cbf8ce2d2e9a7"}
+{"ts":"2026-11-05T13:40:24.128Z","type":"commit-recorded","module":"identity","repo":"default","sha":"0a764cb5ec610da7ff9984adb9f38684ac27fb60"}
+{"ts":"2026-11-05T13:40:24.167Z","type":"feature-status","module":"identity","feature":"user-list-review-contract","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-05T13:40:24.202Z","type":"feature-status","module":"identity","feature":"user-list-review-contract","from":"evaluating","to":"passing"}
