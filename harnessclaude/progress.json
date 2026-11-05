@@ -247,10 +247,14 @@
       "lastUpdated": "2026-10-24T23:56:42.970Z"
     },
     "ai": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-24T23:56:43.157Z"
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "ollama-clients": "pending",
+        "solution-draft": "pending",
+        "solution-rewrite": "pending"
+      },
+      "lastUpdated": "2026-11-05T06:19:05.826Z"
     },
     "tracker": {
       "status": "implementing",

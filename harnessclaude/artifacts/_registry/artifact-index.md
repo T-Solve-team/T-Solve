@@ -37,7 +37,12 @@ Master registry of all artifacts in this workspace.
 | — | module | platform | draft | artifacts/03-modules/platform/module.md |
 | — | module | platform-console | cancelled | artifacts/03-modules/platform-console/module.md |
 | — | module | worker | draft | artifacts/03-modules/worker/module.md |
-| — | module | ai | draft | artifacts/03-modules/ai/module.md |
+| — | module | ai | planned | artifacts/03-modules/ai/module.md |
+| — | spec | ai | approved | artifacts/03-modules/ai/spec.md |
+| — | design | ai | approved | artifacts/04-plans/ai/design.md |
+| — | tasks | ai | approved | artifacts/04-plans/ai/iteration-1/tasks.md |
+| — | design | ai | approved | artifacts/04-plans/ai/iteration-2/design.md |
+| — | tasks | ai | approved | artifacts/04-plans/ai/iteration-2/tasks.md |
 | — | spec | be-foundation | draft | artifacts/03-modules/be-foundation/spec.md |
 | — | design | be-foundation | draft | artifacts/04-plans/be-foundation/design.md |
 | — | design | be-foundation | draft | artifacts/04-plans/be-foundation/iteration-1/design.md |

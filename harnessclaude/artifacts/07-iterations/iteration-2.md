@@ -25,6 +25,14 @@ they plan this iteration.
 | 14 · AI VPS with Ollama behind WireGuard (KAN-203) | Trần Trung Hiếu | pending |
 | 16 · Demo seed: module data through contributors (KAN-97) | Trần Trung Hiếu | pending |
 
+### ai
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · Ollama chat and embedding clients (KAN-139) | Trần Hải Anh | pending |
+| 2 · AI draft of a Solution (KAN-142) | Trần Hải Anh | pending |
+| 3 · AI rewrite of a Solution (KAN-143) | Trần Hải Anh | pending |
+
 ## Demo Script
 
 ### platform
@@ -37,6 +45,13 @@ they plan this iteration.
    hosted runner, port 11434 of the AI VPS is closed; after rebooting the AI VPS the check passes again.
 5. `run-seed.sh staging` fills both Workspaces with Accounts of all five Roles, Departments, a Project, Published
    tickets and Wiki documents (as far as the contributing modules are built).
+
+### ai
+1. With the local Ollama up, a backend test call returns a chat answer and a 1024-dimension bge-m3 vector; with
+   Ollama stopped, the backend still starts and the call fails fast with `AiUnavailableException`.
+2. `SolutionAiService.draft` on a sample issue returns the five sections; with Ollama stopped, it returns the fallback
+   draft (description in Symptoms, last comment in Resolution steps) flagged for MSG67.
+3. `SolutionAiService.rewrite` returns a clearer Solution with the same empty sections; with Ollama stopped → MSG68.
 
 ## Actual Outcomes
 <!-- filled at end of iteration, split by module -->

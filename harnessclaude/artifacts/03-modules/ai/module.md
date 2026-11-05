@@ -7,8 +7,7 @@ complexity: medium
 paths:
   - backend/src/main/java/vn/tsolve/ai/**
   - backend/src/test/java/vn/tsolve/ai/**
-  - frontend/openapi/**
-  - frontend/src/shared/api/generated/**
+  - .env.example
   - docs/bug-log.md
 ---
 
@@ -29,8 +28,9 @@ callers (`search`, `wiki`, `triage`, `chatbot`) keep their own Workspace-scoped 
 
 ## Responsibilities
 - `LlmClient` and `EmbeddingClient` with their Ollama implementations; timeouts and failure reporting (KAN-139).
-- AI draft Solution and AI rewrite Solution endpoints (UC-19; the writer reads and clicks Finish themselves)
-  (KAN-142, KAN-143).
+- AI draft Solution and AI rewrite Solution as the Java `SolutionAiService` (UC-19; the writer reads and clicks
+  Finish themselves) (KAN-142, KAN-143). `tracker` calls it from its FIT-secured Jira App endpoints (decision Q3,
+  05/11); `ai` has no REST endpoint of its own.
 - The benchmark of the models on CPU; its result goes to the team notes (KAN-140, assignee Đặng Nhật Minh).
 
 ## Interfaces
@@ -40,18 +40,18 @@ callers (`search`, `wiki`, `triage`, `chatbot`) keep their own Workspace-scoped 
 |-----------|------|-------------|
 | LlmClient | Java (`ai/client`) | Chat completion on the Ollama LLM |
 | EmbeddingClient | Java (`ai/client`) | bge-m3 embeddings, 1024 dimensions |
-| AI draft / rewrite | REST | Draft or rewrite a Solution for the Solution Form (UC-19) |
+| SolutionAiService | Java (`ai/service`) | Draft or rewrite a Solution for the Solution Form (UC-19); called by `tracker` |
 
 ### Consumed
 | Dependency | Interface | Description |
 |------------|-----------|-------------|
-| platform | TenantContext, deployment | The Workspace of a draft / rewrite request; `OLLAMA_BASE_URL` to the AI VPS |
-| be-foundation | Roles, errors | `@PreAuthorize` on the draft / rewrite endpoints; `ProblemDetail` errors |
+| platform | deployment | `OLLAMA_BASE_URL`, `OLLAMA_CHAT_MODEL` and the Ollama on the AI VPS (no Workspace: `ai` stores nothing) |
+| be-foundation | errors | `MessageCodeException` and the global `ProblemDetail` handler |
 
 ## Target Repos
 - default: backend/ (`ai`, proposed).
 
 ## Related Artifacts
-- Spec: `artifacts/03-modules/ai/spec.md` (written when the module is planned)
+- Spec: `artifacts/03-modules/ai/spec.md`; design: `artifacts/04-plans/ai/design.md`
 - Map: `artifacts/03-modules/module-map.md`
 - Stories: KAN-139, KAN-140, KAN-142, KAN-143 (KAN-138 PII masking cancelled)
