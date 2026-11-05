@@ -49,7 +49,7 @@ public class StubProjectAccess implements ProjectAccess {
             String trimmed = id.trim();
             try {
                 UUID uuid = UUID.fromString(trimmed);
-                // UUID.fromString also takes short forms such as 1-1-1-1-1; only the canonical form counts
+                // UUID.fromString also takes short forms such as 1-1-1-1-1; only the canonical form counts, in any case
                 if (uuid.toString().equalsIgnoreCase(trimmed)) {
                     ids.add(uuid);
                 }
