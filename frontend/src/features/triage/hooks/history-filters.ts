@@ -4,7 +4,7 @@ function calendarDate(value: string): boolean {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
-/** A selected pair includes both full calendar days in Vietnam, regardless of browser timezone. */
+/** Validate a pair of inclusive calendar-day strings without converting them to timestamps. */
 export function historyDateRange(from: string | null, to: string | null) {
   if (from === null && to === null) return { valid: true } as const;
   if (!from || !to || !calendarDate(from) || !calendarDate(to) || from > to) {
@@ -14,7 +14,5 @@ export function historyDateRange(from: string | null, to: string | null) {
     valid: true,
     from,
     to,
-    start: Date.parse(`${from}T00:00:00+07:00`),
-    end: Date.parse(`${to}T00:00:00+07:00`) + 24 * 60 * 60 * 1000,
   } as const;
 }

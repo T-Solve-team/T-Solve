@@ -24,6 +24,13 @@
   display: grid;
   grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr);
   gap: 12px 20px;
+  margin: 0;
+}
+.detail dt {
+  font-weight: var(--ant-font-weight-strong);
+}
+.detail dd {
+  margin: 0;
 }
 .solution {
   white-space: pre-wrap;

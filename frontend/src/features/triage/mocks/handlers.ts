@@ -16,11 +16,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ANSWERS = new Set(['YES', 'NO', 'NONE']);
 
 /** Use the live /me seam so role and Project changes made in mock mode apply immediately. */
-async function projectManager(): Promise<CurrentUser | ReturnType<typeof problem>> {
+async function projectManager(isDetail = false): Promise<CurrentUser | ReturnType<typeof problem>> {
   if (!getDevUser()) return problem(401, 'MSG07');
   try {
     const user = await getMe();
-    return user.roles.includes('PROJECT_MANAGER') ? user : problem(403, 'MSG08');
+    return user.roles.includes('PROJECT_MANAGER')
+      ? user
+      : isDetail
+        ? problem(404, 'MSG04')
+        : problem(403, 'MSG08');
   } catch (error) {
     return isApiError(error) ? problem(error.status, error.code) : problem(401, 'MSG07');
   }
@@ -79,6 +83,10 @@ export const handlers: HttpHandler[] = [
     const query = new URL(request.url).searchParams;
     const range = historyDateRange(query.get('from'), query.get('to'));
     if (!range.valid) return problem(400, 'MSG39');
+    const start = range.from ? Date.parse(`${range.from}T00:00:00+07:00`) : undefined;
+    const end = range.to
+      ? Date.parse(`${range.to}T00:00:00+07:00`) + 24 * 60 * 60 * 1000
+      : undefined;
     const projectId = query.get('projectId');
     if (projectId !== null && !UUID.test(projectId)) return problem(400, 'MSG06');
     const answer = query.get('answer');
@@ -98,8 +106,8 @@ export const handlers: HttpHandler[] = [
         (projectId === null || row.project.projectId === projectId) &&
         (answer === null ||
           (answer === 'NONE' ? row.reporterAnswer === null : row.reporterAnswer === answer)) &&
-        (range.start === undefined || timestamp >= range.start) &&
-        (range.end === undefined || timestamp < range.end)
+        (start === undefined || timestamp >= start) &&
+        (end === undefined || timestamp < end)
       );
     }).sort(
       (a, b) =>
@@ -117,7 +125,7 @@ export const handlers: HttpHandler[] = [
   }),
   http.get('*/api/v1/suggestion-results/:issueKey', async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    const user = await projectManager();
+    const user = await projectManager(true);
     if (!isUser(user)) return user;
     const issueKey = params.issueKey;
     const managed = managedIds(user);

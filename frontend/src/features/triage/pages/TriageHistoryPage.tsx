@@ -1,7 +1,9 @@
 /** 10.1 Suggestion History (KAN-149). */
 import { useState } from 'react';
 import { Button, Flex, Typography } from 'antd';
+import { Navigate, useSearchParams } from 'react-router';
 import type { SuggestionResultSummary } from '@/shared/api';
+import { useSession } from '@/shared/auth';
 import { useListSearchParams } from '@/shared/routing';
 import { cells, DataTable, LoadingState, type DataTableColumn } from '@/shared/ui';
 import { HistoryFilters } from '../components/HistoryFilters';
@@ -14,7 +16,9 @@ function safeIssueUrl(value: string | null): string | null {
   if (value === null) return null;
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && url.hostname ? url.href : null;
+    return url.protocol === 'https:' && url.hostname && !url.username && !url.password
+      ? url.href
+      : null;
   } catch {
     return null;
   }
@@ -22,12 +26,18 @@ function safeIssueUrl(value: string | null): string | null {
 
 export function TriageHistoryPage() {
   const list = useListSearchParams({ field: 'createdAt', order: 'desc' });
+  const [params] = useSearchParams();
+  const { session, isProjectManagerOf } = useSession();
   const range = historyDateRange(list.getFilter('from'), list.getFilter('to'));
   const [selectedIssue, setSelectedIssue] = useState<string | null>(null);
   const answer = list.getFilter('answer');
+  const projectId = list.getFilter('projectId');
+  const staleAnswer = answer !== null && !['YES', 'NO', 'NONE'].includes(answer);
+  const staleProject = projectId !== null && !isProjectManagerOf(projectId);
+  const staleFilters = staleAnswer || staleProject;
   const history = useSuggestionHistory(
     {
-      projectId: list.getFilter('projectId') || undefined,
+      projectId: projectId || undefined,
       answer: answer === 'YES' || answer === 'NO' || answer === 'NONE' ? answer : undefined,
       from: range.from,
       to: range.to,
@@ -35,8 +45,16 @@ export function TriageHistoryPage() {
       size: list.apiPaging.size,
       sort: ['createdAt,desc'],
     },
-    range.valid,
+    range.valid && Boolean(session) && !staleFilters,
   );
+
+  if (session && staleFilters) {
+    const cleaned = new URLSearchParams(params);
+    if (staleAnswer) cleaned.delete('answer');
+    if (staleProject) cleaned.delete('projectId');
+    cleaned.delete('page');
+    return <Navigate to={{ search: cleaned.toString() }} replace />;
+  }
 
   const columns: DataTableColumn<SuggestionResultSummary>[] = [
     {
@@ -94,7 +112,7 @@ export function TriageHistoryPage() {
     <Flex vertical gap="large">
       <HistoryFilters />
       {range.valid &&
-        (history.isPending ? (
+        (history.isPending && !history.data ? (
           <LoadingState />
         ) : (
           <DataTable<SuggestionResultSummary>

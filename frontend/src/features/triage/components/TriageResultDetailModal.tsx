@@ -1,6 +1,7 @@
 import { Form, Typography } from 'antd';
 import { Link } from 'react-router';
 import { isApiError } from '@/shared/api';
+import { formatDateTime } from '@/shared/lib';
 import { msg } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { EmptyState, ErrorState, FormModal, LoadingState } from '@/shared/ui';
@@ -32,25 +33,17 @@ export function TriageResultDetailModal({ issueKey, onClose }: Props) {
       ) : detail.isError ? (
         <ErrorState error={detail.error} onRetry={() => void detail.refetch()} />
       ) : result ? (
-        <div className={styles.detail}>
-          <Typography.Text strong>Issue</Typography.Text>
-          <Typography.Text>{result.issueKey}</Typography.Text>
-          <Typography.Text strong>Project</Typography.Text>
-          <Typography.Text>{result.project.key}</Typography.Text>
-          <Typography.Text strong>Date</Typography.Text>
-          <Typography.Text>
-            {new Intl.DateTimeFormat('en-GB', {
-              timeZone: 'Asia/Ho_Chi_Minh',
-              dateStyle: 'medium',
-              timeStyle: 'short',
-            }).format(new Date(result.createdAt))}
-          </Typography.Text>
-          <Typography.Text strong>Suggested solution</Typography.Text>
-          <Typography.Text className={styles.solution}>
-            {result.suggestedSolution ?? '—'}
-          </Typography.Text>
-          <Typography.Text strong>Sources</Typography.Text>
-          <div>
+        <dl className={styles.detail}>
+          <dt>Issue</dt>
+          <dd>{result.issueKey}</dd>
+          <dt>Jira project key</dt>
+          <dd>{result.project.key}</dd>
+          <dt>Date</dt>
+          <dd>{formatDateTime(result.createdAt)}</dd>
+          <dt>Suggested solution</dt>
+          <dd className={styles.solution}>{result.suggestedSolution ?? '—'}</dd>
+          <dt>Sources</dt>
+          <dd>
             <Typography.Text>
               {result.ticketSourceCount} Tickets · {result.wikiSourceCount} Wiki
             </Typography.Text>
@@ -65,16 +58,16 @@ export function TriageResultDetailModal({ issueKey, onClose }: Props) {
                 )}
               </div>
             ))}
-          </div>
-          <Typography.Text strong>Reporter's answer</Typography.Text>
-          <Typography.Text>
+          </dd>
+          <dt>Reporter's answer</dt>
+          <dd>
             {result.reporterAnswer === 'YES'
               ? 'Solved'
               : result.reporterAnswer === 'NO'
                 ? 'Not solved'
                 : 'No answer'}
-          </Typography.Text>
-        </div>
+          </dd>
+        </dl>
       ) : null}
     </FormModal>
   );

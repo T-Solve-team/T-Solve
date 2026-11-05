@@ -15,7 +15,7 @@ export function HistoryFilters() {
   const managed =
     session?.projects.filter((project) => project.roleInProject === 'PROJECT_MANAGER') ?? [];
 
-  function update(changes: Record<string, string | null>) {
+  function setFilters(changes: Record<string, string | null>) {
     setParams((current) => {
       const next = new URLSearchParams(current);
       next.delete('page');
@@ -36,7 +36,7 @@ export function HistoryFilters() {
           virtual={false}
           className={styles.select}
           value={params.get('projectId') ?? ''}
-          onChange={(value) => update({ projectId: value })}
+          onChange={(value) => setFilters({ projectId: value })}
           options={[
             { value: '', label: 'All managed Projects' },
             ...managed.map((project) => ({
@@ -53,7 +53,7 @@ export function HistoryFilters() {
           virtual={false}
           className={styles.select}
           value={params.get('answer') ?? ''}
-          onChange={(value) => update({ answer: value })}
+          onChange={(value) => setFilters({ answer: value })}
           options={[
             { value: '', label: 'All answers' },
             { value: 'YES', label: 'Solved' },
@@ -75,19 +75,19 @@ export function HistoryFilters() {
           status={range.valid ? undefined : 'error'}
           aria-describedby={range.valid ? undefined : 'triage-date-error'}
           onChange={(dates) =>
-            update({
+            setFilters({
               from: dates?.[0]?.format('YYYY-MM-DD') ?? null,
               to: dates?.[1]?.format('YYYY-MM-DD') ?? null,
             })
           }
         />
         {!range.valid && (
-          <>
-            <Typography.Text id="triage-date-error" type="danger" role="alert">
-              {msg('MSG39')}
-            </Typography.Text>
-            <Button onClick={() => update({ from: null, to: null })}>Clear date range</Button>
-          </>
+          <Typography.Text id="triage-date-error" type="danger" role="alert">
+            {msg('MSG39')}
+          </Typography.Text>
+        )}
+        {(from !== null || to !== null) && (
+          <Button onClick={() => setFilters({ from: null, to: null })}>Clear date range</Button>
         )}
       </Flex>
     </Flex>

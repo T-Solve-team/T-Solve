@@ -16,13 +16,11 @@ describe('suggestion history dates', () => {
     expect(historyDateRange(from, to)).toEqual({ valid: false });
   });
 
-  it('AC-001.3 includes both Vietnam calendar days', () => {
+  it('AC-001.3 preserves the selected calendar-day strings', () => {
     expect(historyDateRange('2026-11-01', '2026-11-01')).toEqual({
       valid: true,
       from: '2026-11-01',
       to: '2026-11-01',
-      start: Date.parse('2026-10-31T17:00:00Z'),
-      end: Date.parse('2026-11-01T17:00:00Z'),
     });
   });
 });

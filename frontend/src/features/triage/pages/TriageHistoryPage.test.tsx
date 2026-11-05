@@ -7,6 +7,7 @@ import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 
+const ITSUP_ID = '00000000-0000-4000-8000-000000000101';
 const VPN_SUGGESTION = 'Check the VPN configuration, then retry the connection.';
 const SCRIPT_SUGGESTION = '<script>alert(1)</script> Follow the documented VPN reset steps.';
 
@@ -25,6 +26,8 @@ describe('TriageHistoryPage', () => {
   beforeAll(async () => {
     await import('./TriageHistoryPage');
   });
+
+  afterEach(() => vi.unstubAllEnvs());
 
   it('AC-001.1 shows the history columns in newest-first order', async () => {
     renderApp('/triage-history');
@@ -91,6 +94,112 @@ describe('TriageHistoryPage', () => {
     expect(new URLSearchParams(router.state.location.search).get('page')).toBe('2');
   });
 
+  it('AC-001.3 sends the picked calendar days and clears both dates from the URL and request', async () => {
+    // Midnight in UTC+7 is the previous UTC day: ISO conversion would shift these dates.
+    vi.stubEnv('TZ', 'Asia/Ho_Chi_Minh');
+    expect(new Date(2026, 10, 1).getTimezoneOffset()).toBe(-420);
+    const user = userEvent.setup();
+    const requests: URL[] = [];
+    server.use(
+      http.get('*/api/v1/suggestion-results', ({ request }) => {
+        requests.push(new URL(request.url));
+        return HttpResponse.json(emptyPage);
+      }),
+    );
+    const { router } = renderApp('/triage-history?page=2&from=2026-11-05&to=2026-11-06');
+    await screen.findByText(msg('MSG04'), {}, { timeout: 5000 });
+    await user.click(screen.getByLabelText('Date range'));
+    await user.click(await screen.findByTitle('2026-11-01'));
+    await user.click(await screen.findByTitle('2026-11-03'));
+
+    await waitFor(() => expect(requests.at(-1)?.searchParams.get('to')).toBe('2026-11-03'));
+    const picked = new URLSearchParams(router.state.location.search);
+    expect(picked.get('from')).toBe('2026-11-01');
+    expect(picked.get('to')).toBe('2026-11-03');
+    expect(picked.has('page')).toBe(false);
+    expect(requests.at(-1)?.searchParams.get('from')).toBe('2026-11-01');
+    expect(screen.getByLabelText('Date range')).toHaveValue('01/11/2026');
+    expect(screen.getByLabelText('To date')).toHaveValue('03/11/2026');
+
+    const beforeClear = requests.length;
+    await user.click(screen.getByRole('button', { name: 'Clear date range' }));
+    await waitFor(() => expect(requests).toHaveLength(beforeClear + 1));
+    const cleared = new URLSearchParams(router.state.location.search);
+    expect(cleared.has('from')).toBe(false);
+    expect(cleared.has('to')).toBe(false);
+    expect(requests.at(-1)?.searchParams.has('from')).toBe(false);
+    expect(requests.at(-1)?.searchParams.has('to')).toBe(false);
+    expect(screen.getByLabelText('Date range')).toHaveValue('');
+    expect(screen.getByLabelText('To date')).toHaveValue('');
+  });
+
+  it('AC-001.4 sends Project and answer selections together in the list request', async () => {
+    const user = userEvent.setup();
+    const requests: URL[] = [];
+    server.use(
+      http.get('*/api/v1/suggestion-results', ({ request }) => {
+        requests.push(new URL(request.url));
+        return HttpResponse.json(emptyPage);
+      }),
+    );
+    const { router } = renderApp('/triage-history?page=2');
+    await screen.findByText(msg('MSG04'), {}, { timeout: 5000 });
+    await user.click(screen.getByRole('combobox', { name: 'Project' }));
+    await user.click(await screen.findByRole('option', { name: 'ITSUP' }));
+    await user.click(screen.getByRole('combobox', { name: 'Answer' }));
+    await user.click(await screen.findByRole('option', { name: 'Not solved' }));
+    await waitFor(() => expect(requests.at(-1)?.searchParams.get('answer')).toBe('NO'));
+    expect(requests.at(-1)?.searchParams.get('projectId')).toBe(ITSUP_ID);
+    expect(requests.at(-1)?.searchParams.get('page')).toBe('0');
+    const params = new URLSearchParams(router.state.location.search);
+    expect(params.get('projectId')).toBe(ITSUP_ID);
+    expect(params.get('answer')).toBe('NO');
+    expect(params.has('page')).toBe(false);
+  });
+
+  it.each([
+    ['answer=STALE', 'STALE', 'All managed Projects', 'All answers'],
+    [
+      'projectId=00000000-0000-4000-8000-000000000201',
+      '00000000-0000-4000-8000-000000000201',
+      'All managed Projects',
+      'All answers',
+    ],
+    [`projectId=${ITSUP_ID}&answer=STALE`, 'STALE', 'ITSUP', 'All answers'],
+    ['projectId=stale-project&answer=NO', 'stale-project', 'All managed Projects', 'Not solved'],
+    [
+      'projectId=stale-project&answer=STALE',
+      'stale-project',
+      'All managed Projects',
+      'All answers',
+    ],
+  ])(
+    'AC-001.4 replaces stale filters before requesting history: %s',
+    async (filters, stale, projectLabel, answerLabel) => {
+      const requests: URL[] = [];
+      server.use(
+        http.get('*/api/v1/suggestion-results', ({ request }) => {
+          requests.push(new URL(request.url));
+          return HttpResponse.json(emptyPage);
+        }),
+      );
+      const { router } = renderApp(`/triage-history?page=3&${filters}`);
+      await screen.findByText(msg('MSG04'), {}, { timeout: 5000 });
+      const params = new URLSearchParams(router.state.location.search);
+      expect(params.has('page')).toBe(false);
+      expect(params.get('projectId')).toBe(projectLabel === 'ITSUP' ? ITSUP_ID : null);
+      expect(params.get('answer')).toBe(answerLabel === 'Not solved' ? 'NO' : null);
+      expect(router.state.historyAction).toBe('REPLACE');
+      expect(screen.queryByText(stale)).not.toBeInTheDocument();
+      expect(screen.getByText(projectLabel)).toBeInTheDocument();
+      expect(screen.getByText(answerLabel)).toBeInTheDocument();
+      expect(requests).toHaveLength(1);
+      expect(requests[0]?.searchParams.get('page')).toBe('0');
+      expect(requests[0]?.searchParams.get('projectId')).toBe(params.get('projectId'));
+      expect(requests[0]?.searchParams.get('answer')).toBe(params.get('answer'));
+    },
+  );
+
   it('AC-001.5 rejects an invalid URL date range without requesting it', async () => {
     let requests = 0;
     server.use(
@@ -100,7 +209,10 @@ describe('TriageHistoryPage', () => {
       }),
     );
     renderApp('/triage-history?from=2026-11-02&to=2026-11-01');
-    expect(await screen.findByText(msg('MSG39'), {}, { timeout: 5000 })).toBeInTheDocument();
+    const message = await screen.findByText(msg('MSG39'), {}, { timeout: 5000 });
+    expect(message).toHaveAttribute('id', 'triage-date-error');
+    expect(screen.getByLabelText('Date range')).toHaveAttribute('aria-describedby', message.id);
+    expect(screen.getByLabelText('To date')).toHaveAttribute('aria-describedby', message.id);
     expect(requests).toBe(0);
   });
 
@@ -139,6 +251,36 @@ describe('TriageHistoryPage', () => {
     expect(row).toHaveTextContent('1 Wiki');
     expect(row).toHaveTextContent('No answer');
     expect(row).toHaveTextContent('—');
+    expect(await issueRow('ITSUP-1004')).toHaveTextContent('Solved');
+    expect(await issueRow('ITSUP-1002')).toHaveTextContent('Not solved');
+  });
+
+  it('AC-001.9 keeps the existing table during a filter refetch', async () => {
+    const user = userEvent.setup();
+    renderApp('/triage-history');
+    const row = await issueRow('ITSUP-1001');
+    let finish = () => {};
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    let started = false;
+    server.use(
+      http.get('*/api/v1/suggestion-results', async () => {
+        started = true;
+        await pending;
+        return HttpResponse.json(emptyPage);
+      }),
+    );
+    try {
+      await user.click(screen.getByRole('combobox', { name: 'Answer' }));
+      await user.click(await screen.findByRole('option', { name: 'Not solved' }));
+      await waitFor(() => expect(started).toBe(true));
+      expect(screen.getByRole('table', { name: 'Suggestion history' })).toContainElement(row);
+      expect(screen.queryByText('Loading ...')).not.toBeInTheDocument();
+    } finally {
+      finish();
+    }
+    await screen.findByText(msg('MSG04'));
   });
 
   it('AC-001.9 shows loading, empty, and retry states with filters retained', async () => {
@@ -178,9 +320,41 @@ describe('TriageHistoryPage', () => {
     renderApp('/triage-history?page=2&projectId=00000000-0000-4000-8000-000000000101');
     const row = await issueRow('ITSUP-1004');
     expect(within(row).queryByRole('link', { name: 'ITSUP-1004' })).not.toBeInTheDocument();
-    expect(document.querySelector('script')).toBeNull();
     const htmlRow = await issueRow('ITSUP-1002');
     expect(htmlRow).toHaveTextContent(SCRIPT_SUGGESTION);
+    const excerpt = within(htmlRow).getByText(SCRIPT_SUGGESTION);
+    expect(excerpt.childNodes).toHaveLength(1);
+    expect(excerpt.firstChild?.nodeType).toBe(Node.TEXT_NODE);
+    expect(excerpt.firstChild?.textContent).toBe(SCRIPT_SUGGESTION);
+    expect(htmlRow.querySelector('script')).toBeNull();
+  });
+
+  it.each([
+    'https://user@jira.example/browse/ITSUP-1001',
+    'https://:password@jira.example/browse/ITSUP-1001',
+  ])('AC-001.12 rejects Jira URLs containing credentials: %s', async (jiraIssueUrl) => {
+    server.use(
+      http.get('*/api/v1/suggestion-results', () =>
+        HttpResponse.json<SuggestionResultPage>({
+          ...emptyPage,
+          content: [
+            {
+              issueKey: 'ITSUP-1001',
+              jiraIssueUrl,
+              project: { projectId: ITSUP_ID, key: 'ITSUP' },
+              createdAt: '2026-11-01T10:00:00Z',
+              ticketSourceCount: 0,
+              wikiSourceCount: 0,
+              suggestedSolutionExcerpt: null,
+              reporterAnswer: null,
+            },
+          ],
+        }),
+      ),
+    );
+    renderApp('/triage-history');
+    const row = await issueRow('ITSUP-1001');
+    expect(within(row).queryByRole('link', { name: 'ITSUP-1001' })).not.toBeInTheDocument();
   });
 
   it('AC-002.1 opens detail with full result fields', async () => {
@@ -192,6 +366,12 @@ describe('TriageHistoryPage', () => {
     expect(await within(dialog).findByText(VPN_SUGGESTION)).toBeInTheDocument();
     expect(dialog).toHaveTextContent('ITSUP-1001');
     expect(within(dialog).getByText('ITSUP')).toBeInTheDocument();
+    expect(within(dialog).getByText('Jira project key').closest('dt')).toBeInTheDocument();
+    expect(within(dialog).getByText('ITSUP').closest('dd')).toBeInTheDocument();
+    expect(within(dialog).getByText('01/11/2026 17:00').closest('dd')).toBeInTheDocument();
+    expect(within(dialog).getAllByRole('term')).toHaveLength(6);
+    expect(within(dialog).getAllByRole('definition')).toHaveLength(6);
+    expect(within(dialog).getByText(VPN_SUGGESTION).closest('dl')).toBeInTheDocument();
     expect(dialog).toHaveTextContent('Check the VPN configuration, then retry the connection.');
     expect(dialog).toHaveTextContent('Solved');
   });

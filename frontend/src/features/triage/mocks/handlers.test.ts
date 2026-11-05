@@ -89,6 +89,14 @@ describe('suggestion history mock contract', () => {
     });
   });
 
+  it('AC-002.7 hides detail existence from a non-Project Manager', async () => {
+    setDevUser('employee');
+    await expect(getSuggestionResult('ITSUP-1001')).rejects.toMatchObject({
+      status: 404,
+      code: 'MSG04',
+    });
+  });
+
   it('AC-002.3 returns only Ticket source counts and Wiki references', async () => {
     const detail = await getSuggestionResult('ITSUP-1001');
     expect(detail.ticketSourceCount).toBe(2);
