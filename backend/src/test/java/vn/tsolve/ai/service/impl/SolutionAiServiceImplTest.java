@@ -2,8 +2,10 @@ package vn.tsolve.ai.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +19,7 @@ import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.dto.IssueContent;
 import vn.tsolve.ai.dto.SolutionDraft;
 import vn.tsolve.ai.dto.SolutionSections;
+import vn.tsolve.ai.exception.AiRewriteUnavailableException;
 import vn.tsolve.ai.exception.AiUnavailableException;
 
 class SolutionAiServiceImplTest {
@@ -264,6 +267,178 @@ class SolutionAiServiceImplTest {
         assertThat(draft.sections())
                 .isEqualTo(new SolutionSections(
                         "Lỗi đăng nhập", "Sai cấu hình", "Khởi động lại", "Tạm chờ", "Máy chủ Hà Nội"));
+    }
+
+    @Test
+    @DisplayName("AC-005.1 sends filled sections with the five-field schema and returns stripped rewrite")
+    void rewritesFilledSections() {
+        StubLlmClient client = new StubLlmClient(VALID_ANSWER);
+        SolutionSections given =
+                new SolutionSections(" Login fails ", " Bad setting ", " Restart ", " Wait ", " Server ");
+
+        SolutionSections rewritten = service(client).rewrite(given);
+
+        assertThat(rewritten).isEqualTo(new SolutionSections("Failure", "Cause", "Restart", "Wait", "Server"));
+        assertThat(client.messages).hasSize(2);
+        assertThat(client.messages.get(0).role()).isEqualTo(ChatMessage.Role.SYSTEM);
+        assertThat(client.messages.get(0).content())
+                .contains("meaning", "five-section", "Vietnamese", "English", "plain text");
+        assertThat(client.messages.get(1).role()).isEqualTo(ChatMessage.Role.USER);
+        assertThat(client.messages.get(1).content())
+                .contains("Login fails", "Bad setting", "Restart", "Wait", "Server");
+        assertThat(client.schema).isNotNull();
+        assertThat(client.schema.get("type")).isEqualTo("object");
+        assertThat(((Map<?, ?>) client.schema.get("properties"))
+                        .keySet().stream().map(Object::toString).toList())
+                .containsExactlyInAnyOrder(
+                        "symptoms", "rootCause", "resolutionSteps", "workaround", "scopeOfApplicability");
+    }
+
+    @Test
+    @DisplayName("AC-005.2 forces model-filled empty sections back to empty in a partial Solution")
+    void keepsUnfilledSectionsEmpty() {
+        StubLlmClient client = new StubLlmClient(VALID_ANSWER);
+        SolutionSections given = new SolutionSections("Failure", "  ", "Restart", null, "\u3000");
+
+        SolutionSections rewritten = service(client).rewrite(given);
+
+        assertThat(rewritten).isEqualTo(new SolutionSections("Failure", "", "Restart", "", ""));
+        assertThat(client.messages.get(1).content())
+                .contains("Symptoms: Failure", "Resolution steps: Restart")
+                .doesNotContain("Root cause", "Workaround", "Scope", "Cause", "Wait", "Server");
+    }
+
+    @ParameterizedTest
+    @MethodSource("malformedEmptySectionAnswers")
+    @DisplayName("AC-005.2 ignores missing, null and non-text answers for empty input sections")
+    void ignoresMalformedEmptySectionAnswers(String answer) {
+        SolutionSections given = new SolutionSections("Failure", "", "", "", "");
+
+        assertThat(service(new StubLlmClient(answer)).rewrite(given))
+                .isEqualTo(new SolutionSections("Failure", "", "", "", ""));
+    }
+
+    private static Stream<String> malformedEmptySectionAnswers() {
+        return Stream.of(
+                "{\"symptoms\":\"Failure\"}",
+                "{\"symptoms\":\"Failure\",\"rootCause\":null,\"resolutionSteps\":null,\"workaround\":null,\"scopeOfApplicability\":null}",
+                "{\"symptoms\":\"Failure\",\"rootCause\":42,\"resolutionSteps\":false,\"workaround\":[],\"scopeOfApplicability\":{}}");
+    }
+
+    @Test
+    @DisplayName("AC-005.3 maps AI and unexpected runtime failures to rewrite unavailable")
+    void callFailuresBecomeRewriteUnavailable() {
+        SolutionSections given = new SolutionSections("Failure", "Cause", "Restart", "Wait", "Server");
+        for (RuntimeException failure : List.of(new AiUnavailableException(), new IllegalStateException("failure"))) {
+            assertThatThrownBy(() ->
+                            service(new StubLlmClient(VALID_ANSWER, failure)).rewrite(given))
+                    .isInstanceOf(AiRewriteUnavailableException.class);
+        }
+    }
+
+    @Test
+    @DisplayName("AC-005.3 rejects a model answer that empties any filled section")
+    void rejectsEmptiedFilledSection() {
+        SolutionSections given = new SolutionSections("Failure", "Cause", "Restart", "Wait", "Server");
+        for (String field : List.of("symptoms", "rootCause", "resolutionSteps", "workaround", "scopeOfApplicability")) {
+            String answer = VALID_ANSWER.replaceFirst("\"" + field + "\":\"[^\"]*\"", "\"" + field + "\":\"   \"");
+            assertThatThrownBy(() -> service(new StubLlmClient(answer)).rewrite(given))
+                    .as(field)
+                    .isInstanceOf(AiRewriteUnavailableException.class);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("malformedRewriteAnswers")
+    @DisplayName("AC-005.3 rejects blank, invalid, trailing, non-object, and malformed-field answers")
+    void rejectsMalformedRewriteAnswer(String answer) {
+        SolutionSections given = new SolutionSections("Failure", "Cause", "Restart", "Wait", "Server");
+
+        assertThatThrownBy(() ->
+                        new SolutionAiServiceImpl((messages, schema) -> answer, new ObjectMapper()).rewrite(given))
+                .isInstanceOf(AiRewriteUnavailableException.class)
+                .extracting(failure -> ((AiRewriteUnavailableException) failure).getCode())
+                .isEqualTo("MSG68");
+    }
+
+    private static Stream<String> malformedRewriteAnswers() {
+        return Stream.of(
+                null,
+                "null",
+                "",
+                "   ",
+                "{broken",
+                VALID_ANSWER + " junk",
+                "[]",
+                VALID_ANSWER.replace("\"  Failure  \"", "null"),
+                VALID_ANSWER.replace("\"  Failure  \"", "42"),
+                VALID_ANSWER.replaceFirst(",\"scopeOfApplicability\":\"[^\"]*\"", ""));
+    }
+
+    @Test
+    @DisplayName("AC-005.3 accepts 10000 stripped characters and rejects 10001")
+    void rewriteOutputLimit() {
+        SolutionSections given = new SolutionSections("a", "b", "c", "d", "e");
+        String exact =
+                "{\"symptoms\":\"%s\",\"rootCause\":\"b\",\"resolutionSteps\":\"c\",\"workaround\":\"d\",\"scopeOfApplicability\":\"e\"}"
+                        .formatted("a".repeat(9_996));
+        String over = exact.replace("a".repeat(9_996), "a".repeat(9_997));
+
+        assertThat(service(new StubLlmClient(exact)).rewrite(given).symptoms()).hasSize(9_996);
+        String padded = exact.replace("a".repeat(9_996), "  " + "a".repeat(9_996) + "  ");
+        assertThat(service(new StubLlmClient(padded)).rewrite(given).symptoms()).isEqualTo("a".repeat(9_996));
+
+        SolutionSections partial = new SolutionSections("a", "", "", "", "");
+        String fillsEmpty = exact.replace("\"b\"", "\"" + "b".repeat(10_001) + "\"");
+        assertThat(service(new StubLlmClient(fillsEmpty)).rewrite(partial))
+                .isEqualTo(new SolutionSections("a".repeat(9_996), "", "", "", ""));
+        assertThatThrownBy(() -> service(new StubLlmClient(over)).rewrite(given))
+                .isInstanceOf(AiRewriteUnavailableException.class);
+    }
+
+    @Test
+    @DisplayName("AC-005.4 returns all blank or null sections unchanged without an LLM call")
+    void allEmptySectionsSkipLlm() {
+        for (SolutionSections given : List.of(
+                new SolutionSections("", "", "", "", ""), new SolutionSections(null, " ", "\u3000", null, "\n"))) {
+            StubLlmClient client = new StubLlmClient(VALID_ANSWER);
+
+            assertThat(service(client).rewrite(given)).isSameAs(given);
+            assertThat(client.messages).isNull();
+        }
+    }
+
+    @Test
+    @DisplayName("AC-005.5 returns a new value without changing the supplied Solution or using storage")
+    void rewriteOnlyReturnsValue() {
+        SolutionSections given = new SolutionSections("Failure", "Cause", "Restart", "Wait", "Server");
+
+        SolutionSections rewritten = service(new StubLlmClient(VALID_ANSWER)).rewrite(given);
+
+        assertThat(rewritten).isNotSameAs(given);
+        assertThat(given).isEqualTo(new SolutionSections("Failure", "Cause", "Restart", "Wait", "Server"));
+        assertThat(Arrays.stream(SolutionAiServiceImpl.class.getDeclaredFields())
+                        .filter(field -> !Modifier.isStatic(field.getModifiers()))
+                        .map(field -> field.getType().getName())
+                        .toList())
+                .containsExactlyInAnyOrder(LlmClient.class.getName(), ObjectMapper.class.getName());
+    }
+
+    @Test
+    @DisplayName("AC-005.1 preserves Vietnamese diacritics through rewrite JSON")
+    void rewritePreservesVietnamese() {
+        String answer =
+                "{\"symptoms\":\"Lỗi đăng nhập\",\"rootCause\":\"Sai cấu hình\",\"resolutionSteps\":\"Khởi động lại\",\"workaround\":\"Tạm chờ\",\"scopeOfApplicability\":\"Máy chủ Hà Nội\"}";
+        StubLlmClient client = new StubLlmClient(answer);
+
+        SolutionSections rewritten = service(client)
+                .rewrite(new SolutionSections(
+                        "Lỗi đăng nhập", "Sai cấu hình", "Khởi động lại", "Tạm chờ", "Máy chủ Hà Nội"));
+
+        assertThat(rewritten)
+                .isEqualTo(new SolutionSections(
+                        "Lỗi đăng nhập", "Sai cấu hình", "Khởi động lại", "Tạm chờ", "Máy chủ Hà Nội"));
+        assertThat(client.messages.get(1).content()).contains("Lỗi đăng nhập", "Máy chủ Hà Nội");
     }
 
     private SolutionAiServiceImpl service(StubLlmClient client) {
