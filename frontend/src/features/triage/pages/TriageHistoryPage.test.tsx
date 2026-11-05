@@ -39,7 +39,7 @@ describe('TriageHistoryPage', () => {
     expect(within(table).getAllByRole('row')[1]).toHaveTextContent('ITNET-2002');
   });
 
-  it('AC-001.1 renders 10.1 instead of the not-built placeholder (BUG-104)', async () => {
+  it('AC-001.1 renders 10.1 instead of the not-built placeholder (BUG-121)', async () => {
     renderApp('/triage-history');
     await screen.findByRole('table', { name: 'Suggestion history' }, { timeout: 5000 });
     expect(screen.queryByText(/not built yet/)).not.toBeInTheDocument();

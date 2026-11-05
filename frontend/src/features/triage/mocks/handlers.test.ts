@@ -23,7 +23,7 @@ describe('suggestion history mock contract', () => {
     expect(newest.createdAt >= next.createdAt).toBe(true);
   });
 
-  it('AC-001.3 filters Project and answer together (BUG-093)', async () => {
+  it('AC-001.3 filters Project and answer together (BUG-120)', async () => {
     const filtered = await getSuggestionResults({
       projectId: ITSUP_ID,
       answer: GetSuggestionResultsAnswer.YES,
