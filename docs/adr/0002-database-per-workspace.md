@@ -26,13 +26,12 @@ own, and business tables stay the same as in the single-tenant design of Report 
 - Each Workspace database has its own runtime database user that can connect only to it; migrations and the ops
   script use a separate owner user. Database passwords are stored encrypted in the Registry.
 - The tenant-isolation test (an Account of Workspace A cannot read Workspace B) stays mandatory before the demo.
-- `login.` and `api.` have no Workspace of their own and must get it from a signed state value or a verified token;
+- `login.` and `api.` have no Workspace of their own and must get it from a verified token (`login.` is Keycloak, ADR-0003);
   `admin.` is used again by the Platform Console (addendum).
 
 ## Addendum 04/11/2026 (multi-tenant HLA, KAN-98)
 
-- Name: the former catalog DB is now the **Tenant Registry** (Registry DB). It also holds the short-lived sign-in states and
-  hand-off codes of `identity`; a worker job deletes the expired ones.
+- Name: the former catalog DB is now the **Tenant Registry** (Registry DB). It holds no sign-in state: the sign-in is Keycloak's (ADR-0003).
 - **Jobs DB:** JobRunr uses its own database `tsolve_<env>_jobs` on the same PostgreSQL server, not the Registry DB. `platform` owns it and stores the first-Admin invitation job in it through `jobrunr-spring-boot-3-starter`; `worker` runs the jobs.
 - **Row guard (reverses "RLS is not used"):** each Workspace database has a one-row tenant-id table and a row policy on
   every tenant table, so a query bound to the wrong Workspace returns nothing. It backs up the database boundary; the

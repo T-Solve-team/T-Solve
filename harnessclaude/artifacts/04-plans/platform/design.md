@@ -23,7 +23,7 @@ the target, not built here — H-Q1):
 
 | Store | What it holds | Who reads it |
 |-------|---------------|--------------|
-| Tenant Registry DB `tsolve_<env>_registry` ("the Registry") | `workspaces`, `workspace_emails`, and `identity`'s sign-in states and hand-off codes | the Tenant Resolver, `WorkspaceCatalog`, the router, provisioning, `identity` |
+| Tenant Registry DB `tsolve_<env>_registry` ("the Registry") | `workspaces`, `workspace_emails` | the Tenant Resolver, `WorkspaceCatalog`, the router, provisioning, `identity` |
 | One Workspace DB `tsolve_<env>_ws_<id>` per company | all business tables, the one-row `tenant_identity`, the row policies | only through the routing `DataSource` (runtime user) or the owner user (migrations, provisioning) |
 | Jobs DB `tsolve_<env>_jobs` | JobRunr's own tables only | `worker`; the `InvitationJobQueue` implementation of `platform` (enqueue) |
 | Garage bucket `FILE_STORAGE_BUCKET` + Redis | files under `<workspaceId>/` keys; sessions of `identity` | `FileStorage`; `identity` |
@@ -35,8 +35,8 @@ the target, not built here — H-Q1):
 | Workspace site `<site>.<base>` `/api/**` | `TenantResolverFilter` (servlet filter, before Spring Security) → `HostClassifier` → `WorkspaceCatalog.findBySiteName` → bind → security chain of `be-foundation` / `identity` → handler → unbind in `finally` | from the host (AC-002.2) |
 | `api.<base>` `/api/v1/jira-app/**` | `TenantResolverFilter` (host check only) → `ForgeSecurityConfig` chain (ordered first, matches the `api.` host) → `ForgeTokenFilter` → `ForgeTokenVerifier` → `findByCloudId` → bind → handler → unbind | from the verified `cloudId` (AC-006.1) |
 | `api.<base>` `POST /api/v1/jira-app/lifecycle` | as above, but `ForgeTokenFilter` skips the Workspace lookup → `ForgeLifecycleController` answers 204 and changes nothing | none (AC-006.12, AC-006.15, AC-006.16) |
-| `login.<base>`, `admin.<base>` | `TenantResolverFilter` binds nothing → `identity` / `platform-console` chains | none; `runIn` where the spec allows it (the `login.` callback, the Console) |
-| Job, `login.` callback, Console, ops script, seed | `TenantContext.runIn(workspaceId, action)` → new transaction on that Workspace's database → action | the given Workspace (AC-002.12) |
+| `login.<base>`, `admin.<base>` | `TenantResolverFilter` binds nothing → `login.` is Keycloak (Caddy, AC-009.4); `admin.` → `platform-console` chain | none; `runIn` where the spec allows it (the Console) |
+| Job, Console, ops script, seed | `TenantContext.runIn(workspaceId, action)` → new transaction on that Workspace's database → action | the given Workspace (AC-002.12) |
 | any host `/actuator/health`, `/v3/api-docs*`, Swagger UI | passes every host check (AC-002.19) | none |
 
 ### The binding
@@ -107,6 +107,8 @@ CREATE TABLE workspaces (
     db_user         VARCHAR(63)  NOT NULL,
     db_password     TEXT         NOT NULL,                  -- 'v1:' + base64(nonce || AES-GCM ciphertext), AAD = id
     schema_version  VARCHAR(255) NOT NULL,                  -- id of the last tenant changeset applied to that database
+    google_domain   VARCHAR(253) NOT NULL,                  -- lower case (AC-001.34, AC-013.21)
+    keycloak_organization_id VARCHAR(100),                  -- null until the sign-in setup returns it; unique (AC-001.34)
     jira_site_url   VARCHAR(300),
     jira_cloud_id   VARCHAR(100),
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
@@ -114,6 +116,7 @@ CREATE TABLE workspaces (
     CONSTRAINT uq_workspaces_site_name UNIQUE (site_name),
     CONSTRAINT uq_workspaces_db_name UNIQUE (db_name),
     CONSTRAINT uq_workspaces_jira_cloud_id UNIQUE (jira_cloud_id),
+    CONSTRAINT uq_workspaces_keycloak_org UNIQUE (keycloak_organization_id),
     CONSTRAINT ck_workspaces_site_name CHECK (site_name ~ '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$')
 );
 
@@ -126,9 +129,8 @@ CREATE TABLE workspace_emails (
 CREATE INDEX idx_workspace_emails_workspace ON workspace_emails (workspace_id);
 ```
 
-`identity` adds its sign-in-state and hand-off-code tables to the same changelog (AC-001.17; its design settles their
-columns). The seed or any environment starts with both tables empty (AC-001.19). A Workspace id in these tables names a
-row of `workspaces`; it is not a tenant column.
+The seed or any environment starts with both tables empty (AC-001.19). A Workspace id in these tables names a
+row of `workspaces`; it is not a tenant column. `identity` adds no table to the Registry (ADR-0003, K12).
 
 Registry access is `JdbcClient` on the `registryDataSource` bean with its own `registryTransactionManager` (decision
 R1), not a second JPA unit. The runtime user of the Registry (`CATALOG_DB_USER`) has DML only; the owner user applies
@@ -234,27 +236,32 @@ last step of `TenantMigrator` (Decided in planning; builder check).
 `code` and `params` as `be-foundation` AC-001.1 defines them; `params` is a JSON object, for example `{"tracker_name":
 "Jira"}`.
 
-### Provisioning (STORY-013; AC-013.1 – AC-013.20)
+### Provisioning (STORY-013; AC-013.1 – AC-013.24)
 
 `WorkspaceProvisioning` (spec contract) is implemented by `WorkspaceProvisioningService`. The script
 `infra/ops/workspace.sh` only starts the backend's `ops` profile with the arguments; it holds no logic (AC-013.13).
 
-`create(siteName, adminEmail)`:
+`create(siteName, adminEmail, googleDomain)`:
 
-1. Validate (AC-013.2 – AC-013.4): label rule, reserved names, site name taken, email format. Pre-check that the
+1. Validate (AC-013.2 – AC-013.4, AC-013.21): label rule, reserved names, site name taken, email format, Google domain. Pre-check that the
    lower-case email is in no Workspace → else `MSG155` before anything is created (AC-013.5). Generate the Workspace id.
 2. `TenantDatabaseProvisioner`: create role and database, grants (above), generate a random password.
 3. `TenantMigrator`: apply the tenant changelog as the owner user; read the last changeset id.
 4. Write `tenant_identity` (AC-001.28) and revoke writes (above).
-5. Registry transaction: insert `workspaces` (ACTIVE, encrypted password, `schema_version`) and `workspace_emails`
-   together. A unique violation on `site_name` or the email means a lost race → the same refusal as step 1 (AC-013.19).
+5. Registry transaction: insert `workspaces` (ACTIVE, encrypted password, `schema_version`, `google_domain`) and
+   `workspace_emails` together. A unique violation on `site_name` or the email means a lost race → the same refusal as
+   step 1 (AC-013.19). A Workspace is Active here; there is no `PENDING_SIGN_IN` and no `activate` (AC-013.24).
+5b. `WorkspaceSignInProvisioner.provision(workspaceId, siteName, googleDomain)` (Keycloak Organization, IdP
+   `google-<slug>`, domain, redirect URI; identity-owned port, a no-op bean until its Keycloak implementation exists);
+   update `keycloak_organization_id` with the id it returns (AC-013.22).
 6. `TenantContext.runIn(workspaceId, () -> firstAdminCreator.createFirstAdmin(workspaceId, email))`, which returns the
    Account `UUID` (AC-013.14). `identity` also calls `claimEmail`; it succeeds without change because step 5 already
    recorded it.
 7. After the commit: `InvitationJobQueue.queueFirstAdminInvitation(workspaceId, accountId)` — carries ids only
    (AC-013.17). A failure here is logged without the email and does not undo anything (AC-013.18).
 
-Any failure in steps 2–6 runs the compensation (AC-013.6, AC-013.16): close and evict the pool of that Workspace, delete
+Any failure in steps 2–6 runs the compensation (AC-013.6, AC-013.16, AC-013.23): call `WorkspaceSignInProvisioner.remove(workspaceId)`
+when step 5b was reached, close and evict the pool of that Workspace, delete
 the Registry rows (`workspace_emails`, `workspaces`) in one transaction, `DROP DATABASE … WITH (FORCE)`, `DROP ROLE`;
 the failing step is named in the error. `suspend` / `reactivate` change the Registry `status` in one transaction and
 publish `WorkspaceSuspended` / `WorkspaceReactivated` after the commit (a `TransactionSynchronization`).

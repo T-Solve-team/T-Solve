@@ -35,8 +35,8 @@ The tenant layer of the multi-tenant model and the infrastructure the whole syst
 every Workspace, and **each Workspace has its own PostgreSQL database** and its own file storage (ADR-0002, GBR-37;
 decided 29/10, replacing the shared database with `workspace_id` and row-level security of ADR-0001). A catalog
 database (the HLA's Platform / Tenant Registry, "the Registry") holds only what is needed to find a Workspace: site
-name, status, database connection, schema version, the Jira site and its `cloudId`, and the emails of its Accounts
-(GBR-16); it also hosts `identity`'s short-lived sign-in states and hand-off codes. The Workspace of a request comes only from the Workspace
+name, status, database connection, schema version, the Google domain, the Keycloak Organization id, the Jira site and its
+`cloudId`, and the emails of its Accounts (GBR-16); sign-in is Keycloak's (ADR-0003). The Workspace of a request comes only from the Workspace
 site's host name, the verified `cloudId` of the Forge Invocation Token, or the job's Workspace; binding it routes
 every query to that Workspace's database. Workspaces are created, suspended and reactivated by a Platform Operator
 in the Platform Console (module `platform-console`) or by the operations team with an ops script that runs the same
@@ -59,12 +59,13 @@ are *proposed*.
   Suspended → MSG150 (KAN-99, GBR-38).
 - Forge Invocation Token check and the Tenant Resolver for the Jira App: Workspace from the verified `cloudId` on
   `api.`; Jira site linked to no Workspace → MSG152 (KAN-101, KAN-105, GBR-14, GBR-19).
-- `login.` and `api.` have no Workspace of their own; the signed state value that carries the Workspace to `login.`
-  (D9) is created and checked with this module's support.
+- `login.` (Keycloak, ADR-0003) and `api.` have no Workspace of their own; the Workspace of a sign-in is the host of its
+  Workspace site.
 - Catalog service: find a Workspace; link its Jira site when the Admin enters it at UC-10 (MSG153, GBR-24); keep
   each email in one Workspace (MSG155, GBR-16).
 - Provisioning service and the ops script `infra/ops/workspace.sh` (its hand-run form): create a Workspace (database,
-  runtime user, migrations, tenant id row, catalog row, first Admin Account through the `FirstAdminCreator` port that
+  runtime user, migrations, tenant id row, catalog row with the Google domain, Keycloak sign-in setup through the
+  provisioning port `identity` implements, first Admin Account through the `FirstAdminCreator` port that
   `identity` implements — all or nothing; then the invitation email job queued through the `InvitationJobQueue` port), suspend and reactivate it
   (KAN-240, GBR-24, GBR-38); the Platform Console calls the same service.
 - File storage per Workspace in Garage: object keys prefixed by the Workspace id, signed URLs, no local files, no path
@@ -105,7 +106,8 @@ are *proposed*.
 | Dependency | Interface | Description |
 |------------|-----------|-------------|
 | `common/` (base exceptions) | Java | Errors with an MSG code (`backend/AGENTS.md` §1; not a module dependency) |
-| identity | `FirstAdminCreator` (implements the port declared here) | Creates the first Admin Account, Active with the role Admin, in the new Workspace's database; also hosts its sign-in states and hand-off codes in the Registry |
+| identity | `FirstAdminCreator` (implements the port declared here) | Creates the first Admin Account, Active with the role Admin, in the new Workspace's database |
+| identity | `WorkspaceSignInProvisioner` (owned by identity for now) | Sets up and removes the Workspace's Keycloak Organization, Google identity provider and redirect URI; called by the provisioning service (open: it may move to platform's public API) |
 | worker | Job handler (later) | Takes over the handler of the first-Admin invitation job that the `InvitationJobQueue` implementation here stores in the Jobs database (AC-013.17); until then the job waits in the queue |
 
 ## Target Repos

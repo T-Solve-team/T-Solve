@@ -139,6 +139,12 @@ Eligibility is Active, same Workspace, different user, with Project Manager in t
 
 ## STORY-001: central sign-in and the session per Workspace site — KAN-103 / KAN-104 plan, 2026-10-28
 
+> **Superseded in part, 2026-11-05 (KAN-275).** The sign-in mechanism below (signed state values, `authorize`, hand-off
+> codes, the `login.` page, the sign-in and start cookies, `sign_in_states`, `hand_off_code`, `TSOLVE_SIGNING_KEY`, the
+> Google OIDC code) is replaced by Keycloak: see "Keycloak re-plan: STORY-001 sign-in and STORY-002 logout" further
+> down. Sessions in Redis, `WebSessionFilter`, tenant isolation, `app_user`, `user_role` and the Platform Console
+> stay as described here.
+
 This section covers identity STORY-001 only (decision D1); STORY-002 and STORY-003 get their own plan. It builds
 the backend that the sections above leave out (the real sign-in, sessions and the `app_user` store) and the Login
 screen: Tasks 7–12 of `iteration-1/tasks.md`. KAN-104's leftovers (D2) map onto STORY-001: the cookie valid only on
@@ -242,8 +248,8 @@ next free number, listed in `db.changelog-master.xml` (until Task 14 moves the t
 
 | Store | Columns / shape | Rules |
 |-------|-----------------|-------|
-| `sign_in_states` (Registry DB; interim: the one changelog) | `id`, `target` (`WORKSPACE`, `PLATFORM_CONSOLE`, `JIRA_LINK`), `workspace_id` (null for the Console), `tracker_account_id` (Jira link only), `return_to`, `nonce`, `pkce_verifier`, `created_at`, `expires_at` (+10 min), `used_at`, and from T9 `authorized_at` and `browser_binding_hash` (SHA-256 of the sign-in cookie value, 32 bytes; both null until `authorize`) | A check constraint allows exactly one target shape (AC-001.2), and a second one that `authorized_at` and `browser_binding_hash` are both null or both set. The browser gets `<id>.<HMAC>`; nonce and verifier never leave the server. `authorize` sets both new columns with `UPDATE … SET authorized_at = :now, browser_binding_hash = :hash WHERE id = :id AND authorized_at IS NULL AND used_at IS NULL AND expires_at > :now`, where `:now` is the `IdentityClock` time passed as a parameter, never the database `now()` (state times come from `IdentityClock`, so tests with `Clock.fixed` stay consistent; spec review, KAN-231): one row updated, or the MSG141 page (AC-001.44/.45). The two columns come in a new changeset (`<next>-identity-sign-in-state-binding.sql`); Task 8's `004-identity-sign-in-states.sql` is never edited (Decided in planning, KAN-231). Here `workspace_id` names the target Workspace in the registry; it is not a tenant column |
-| `hand_off_code` (Registry DB; interim: the one changelog) | `id`, `target` (`WORKSPACE`, `PLATFORM_CONSOLE`), `workspace_id`, `account_id`, `operator_email`, `site_host`, `return_to`, `created_at`, `expires_at` (+60 s), `used_at` | The code is `<id>.<HMAC>`. Redeemed by `UPDATE … SET used_at = now() WHERE id = ? AND used_at IS NULL AND expires_at > now()`: one row updated, or MSG141 (AC-001.17/.19) |
+| `sign_in_states` (Registry DB; interim: the one changelog) | `id`, `target` (`WORKSPACE`, `PLATFORM_CONSOLE`, `JIRA_LINK`), `workspace_id` (null for the Console), `tracker_account_id` (Jira link only), `return_to`, `nonce`, `pkce_verifier`, `created_at`, `expires_at` (+10 min), `used_at`, and from T9 `authorized_at` and `browser_binding_hash` (SHA-256 of the sign-in cookie value, 32 bytes; both null until `authorize`), and from T10 `start_hash` (SHA-256 of the `__Host-TSOLVE_START` cookie value, 32 bytes; set when the Workspace sign-in start creates the state, null for Console and Jira-link states) | A check constraint allows exactly one target shape (AC-001.2), and a second one that `authorized_at` and `browser_binding_hash` are both null or both set. The browser gets `<id>.<HMAC>`; nonce and verifier never leave the server. `authorize` sets both new columns with `UPDATE … SET authorized_at = :now, browser_binding_hash = :hash WHERE id = :id AND authorized_at IS NULL AND used_at IS NULL AND expires_at > :now`, where `:now` is the `IdentityClock` time passed as a parameter, never the database `now()` (state times come from `IdentityClock`, so tests with `Clock.fixed` stay consistent; spec review, KAN-231): one row updated, or the MSG141 page (AC-001.44/.45). The two columns come in a new changeset (`<next>-identity-sign-in-state-binding.sql`); Task 8's `004-identity-sign-in-states.sql` is never edited (Decided in planning, KAN-231). `start_hash` is its own changeset (`<next>-identity-sign-in-state-start-hash.sql`, Task 10; AC-001.51, KAN-232 Q7). Here `workspace_id` names the target Workspace in the registry; it is not a tenant column |
+| `hand_off_code` (Registry DB; interim: the one changelog) | `id`, `target` (`WORKSPACE`, `PLATFORM_CONSOLE`), `workspace_id`, `account_id`, `operator_email`, `site_host`, `return_to`, `created_at`, `expires_at` (+60 s), `used_at`, and from T10 `start_hash` (copied from the state at the callback; null for an Operator code) | The code is `<id>.<HMAC>`. Redeemed by `UPDATE … SET used_at = :now WHERE id = :id AND used_at IS NULL AND expires_at > :now`, where `:now` is the `IdentityClock` time passed as a parameter, never the database `now()` (as for `sign_in_states`, so tests with `Clock.fixed` stay consistent; KAN-232 Q6): one row updated, or MSG141 (AC-001.17/.19). The update runs first, whatever happens next (KAN-232 Q5): a code shown on the wrong site is consumed by the update, then the site check fails (MSG141 on that site) and the code is dead on its own site too. AC-001.19 names a code "presented on another site" but not that it is consumed, so this is the design's reading of AC-001.17 ("usable once"), not a widened AC. Then the `__Host-TSOLVE_START` check (AC-001.51): the cookie's SHA-256 against `start_hash` with `MessageDigest.isEqual`; a missing cookie or a mismatch is MSG141, no session, the code stays consumed. `start_hash` is its own changeset (`<next>-identity-hand-off-code-start-hash.sql`, Task 10) |
 | Session (Redis, HLA Q3) | Key `tsolve:session:<SHA-256 of the cookie value, hex>`, a hash: `kind` (`WORKSPACE`, `OPERATOR`), `workspace_id`, `account_id`, `operator_email`, `site_host`, `created_at`, `last_activity_at` | The cookie holds 32 random bytes (base64url); only the hash is in the key. The limits of AC-001.23 are checked in the application from `created_at` and `last_activity_at` with `IdentityClock` (so tests use `Clock.fixed`); the key's time to live (the 60-minute idle window, renewed by activity, never past the 8-hour limit) is only a backstop that removes it. "End the session" deletes the key. Sessions are kept in a Redis that is not an eviction cache (HLA: apart from the cache) |
 
 Expiry and `SessionEnded` (AC-002.4, HLA Q3): the key's time to live removes an unused session; the 15-minute bound
@@ -347,7 +353,7 @@ listed in `.env.example` with a local value.
 | `TSOLVE_LOGIN_ORIGIN` | the central sign-in origin (`https://login.tsolve.io.vn` in production) | `http://login.localhost:<port>` |
 | `TSOLVE_ADMIN_ORIGIN` | the Platform Console origin (`https://admin.tsolve.io.vn` in production) | `http://admin.localhost:<port>` |
 | `TSOLVE_SIGNING_KEY` | HMAC-SHA256 key for state values and hand-off codes, at least 32 bytes (base64) | a random local key |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | the OAuth client | a developer's own client, or the fake issuer |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | the OAuth client | any placeholder; the `dev` profile's fake issuer ignores them. The real client is used from the staging deploy on |
 | `PLATFORM_OPERATOR_EMAILS` | the comma-separated allow-list; entries trimmed, compared ignoring case | a developer's email |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | the session store (HLA Q3), Spring's `spring.data.redis.*`; Task 10 (Decided in planning: names; `platform` or be-foundation may define the same values first, then they are reused) | `localhost`, `6379`, none (the Docker Compose Redis service) |
 
@@ -407,6 +413,28 @@ configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`; the Console on `admin
   nothing is logged in. Decided in planning (builder check, same rule): in T9, a Workspace state value that passes
   the Google step, and a Jira-link state value after the shared checks, get the same 400 MSG141 page until T9b
   (Workspace and Account checks, hand-off) and T12 (link) replace it. No session, no Account change, no link.
+- Start cookie (login CSRF at `complete`, AC-001.51, KAN-232 Q7): sign-in start on a Workspace site makes 32 random
+  bytes (`SecureRandom`, base64url without padding), stores only their SHA-256 as the state's `start_hash` and sets
+  `Set-Cookie: __Host-TSOLVE_START=<value>; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=Lax` (no Domain) in the
+  same 302. The callback copies `start_hash` from the state to the hand-off code it issues. `complete` consumes the
+  code first (conditional update, see Data model), then checks the site, then compares the hash of the received
+  cookie with the code's `start_hash` in constant time; a missing cookie or a mismatch → `/login?error=MSG141`, no
+  session. Every `complete` answer on a Workspace site sets `__Host-TSOLVE_START=; Max-Age=0; Path=/; Secure;
+  HttpOnly; SameSite=Lax`. `SameSite=Lax` is enough: the redirect back from `login.` to `complete` is a top-level GET.
+  This is separate from `__Host-TSOLVE_SIGNIN`, which lives on `login.` and guards the callback; the start cookie lives
+  on the Workspace site and guards `complete`, so an attacker's hand-off code opened in the victim's browser fails
+  there. Decided in planning (builder check): the sign-in start answer also carries `Cache-Control: no-store`, as
+  `authorize` does (AC-001.44). A second sign-in start in the same browser overwrites the cookie; the first sign-in
+  then fails at `complete` with MSG141 and starts again. The Platform Console target has no start cookie in this task:
+  an Operator code has `start_hash` null and is handled in Task 11 (see Open questions).
+- Session filter rules (KAN-232 Q1, Q2, Q10): if the Account row is gone when the filter re-reads it, the session is
+  ended and the answer is 401 `MSG07` (the same as expiry; not `MSG10`, since the Account is absent, not
+  Deactivated). A session cookie that names no session (unknown,
+  expired in Redis, or Redis restarted) on a Workspace site is treated as anonymous, and the answer carries
+  `__Host-TSOLVE_SESSION=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax` so the browser drops it. A session is
+  honoured only on `admin.` or on a host that `WorkspaceLookup` resolves as a Workspace site; there is no
+  `TSOLVE_API_ORIGIN` (Q10). `SecurityConfig` registers `WebSessionFilter` and `SecurityProblemWriter` gets the MSG10
+  and MSG123 texts (Q11, a small edit in `common/security`, the BE lead agrees).
 - Per request (`WebSessionFilter`, after the platform's Tenant Resolver): on `login.` or `api.` → no session
   (AC-001.22); then a host or kind mismatch → 401 MSG123 without ending the session (AC-001.20/.21/.32); then the
   8 h / 60 min limits (read from the Redis session) → end (delete the key) + 401 MSG07 (AC-001.23); then the
@@ -451,8 +479,7 @@ configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`; the Console on `admin
 
 **Open item for the staging demo (not a spec question):** the Google Workspace domain whose `hd` the staging
 Workspace uses, and the Google Cloud OAuth client (with the redirect URI of staging's `login.`), are not chosen
-yet. Hiếu chooses them before the staging demo of T9/T10; until then demos run on the fake issuer or a developer's
-own client.
+yet. Hiếu chooses them before the staging demo of T9/T10; until then demos run on the dev fake issuer.
 
 ### Key decisions (STORY-001)
 
@@ -505,7 +532,7 @@ authorization, data integrity, integration, compliance. Skipped: business logic 
 | 31 | STORY-001 | State transitions | Idle 59 vs 61 minutes; only background polling for 2 h; 8 h with activity | High | MSG07 just past each limit (AC-001.23–.25), with the injected `IdentityClock`, whatever the Redis time to live | Task 10 |
 | 32 | STORY-001 | State transitions | Account deactivated or its Roles changed during a session | High | Next request: MSG10, or the new Roles (AC-001.26/.27) | Task 10 |
 | 33 | STORY-001 | Compliance | A state value, code, ID token or cookie value in a log or in browser storage | High | Never; session ids stored only as hashes (NFR 3) | Task 10 |
-| 34 | STORY-001 | Environment | A `__Host-` + `Secure` cookie on `http://acme.localhost` in local dev | Medium | Check in T10's local run which browsers accept it, for `__Host-TSOLVE_SESSION` and for the sign-in cookie `__Host-TSOLVE_SIGNIN` on `http://login.localhost` (KAN-231); note the result in `.env.example` | Tasks 9, 10 |
+| 34 | STORY-001 | Environment | A `__Host-` + `Secure` cookie on `http://acme.localhost` in local dev | Medium | Check in T10's local run which browsers accept it, for `__Host-TSOLVE_SESSION` and for the sign-in cookie `__Host-TSOLVE_SIGNIN` on `http://login.localhost` (KAN-231); note the result in `.env.example`; also `__Host-TSOLVE_START` on `http://acme.localhost`. The local run does not use real Google (Google refused a `.localhost` redirect URI): the `dev` profile serves a fake Google from the backend itself. Shown by the local browser run in Task 10 (it stays in Task 10, not Task 14): sign in through the dev fake issuer on `http://acme.localhost:<port>` and see the `__Host-TSOLVE_SESSION` cookie set (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, no `Domain`) | Tasks 9, 10 |
 | 35 | STORY-001 | User types | Allow-list entry ` Ops@X.com `, or an email removed from the list | High | Trimmed and compared ignoring case (AC-001.29/.30); removed → MSG135 at the next request (AC-001.33) | Task 11 |
 | 36 | STORY-001 | User types | An Operator who also has a Workspace Account | High | Each site gets only its own kind of session (AC-001.29/.32) | Task 11 |
 | 37 | STORY-001 | Authorization | Jira link: a tracker account in a callback parameter; a relink; a suspended Workspace | Critical | Parameter ignored (AC-001.38); link replaced (AC-001.36); MSG121 (AC-001.37) | Task 12 |
@@ -534,6 +561,9 @@ authorization, data integrity, integration, compliance. Skipped: business logic 
 | 97 | STORY-010 | Compliance | The email or name reaches a log line, an exception message or the returned value | High | Only the `UUID` is returned; logs and exceptions carry the Account id and the field name, never the address (AC-010.1, AC-010.7) | Task 14 |
 | 98 | STORY-010 | Timing | Two creations race for one email | High | The platform's unique constraint on `workspace_email` lets one through at step 4; `createFirstAdmin` does not claim and is never reached by the loser (AC-010.6, platform AC-013.19) | Task 14 |
 | 99 | STORY-010 | Input extremes | Email `Lan.Tran@Company.Example`, blank, or without `@` | High | Stored lower-case and found by the sign-in lookup (AC-001.12); blank or malformed refused on `email` (AC-010.1, AC-010.4) | Task 14 |
+| 100 | STORY-001 | Authorization | Login CSRF at `complete`: an attacker signs in with the attacker's own Google account in the attacker's browser, keeps the hand-off code, and makes the victim's browser open `complete?code=…` on the Workspace site (the victim then works inside the attacker's Account) | Medium | Closed by AC-001.51: the victim's browser has no `__Host-TSOLVE_START` cookie, or another one, so the hash differs; `/login?error=MSG141`, no session, the code stays consumed, the cookie is cleared (the code is also valid for 60 seconds only and works once, AC-001.17) | Task 10 |
+| 101 | STORY-001 | Authorization | A hand-off code shown on the wrong site (Workspace B's host or `admin.`) | High | The conditional update runs first, then the site check fails: MSG141 on that site; the code is dead on its own site too (KAN-232 Q5; AC-001.17/.19) | Task 10 |
+| 102 | STORY-001 | State transitions | A session cookie that names no session on a Workspace site (Redis restarted, key expired); the Account row gone when the filter re-reads it | High | Anonymous request plus `__Host-TSOLVE_SESSION=; Max-Age=0`; for a vanished Account the session is ended and the answer is 401 `MSG07` (KAN-232 Q1, Q2) | Task 10 |
 
 Q1-Q5 (Hiếu, 2026-10-29): Q1 `AuthSecurityConfig` also adds a second, lowest-order `SecurityFilterChain`
 (`anyRequest().authenticated()`, 401, no form login, no HTTP Basic); be-foundation `roles-security` replaces it later.
@@ -553,8 +583,248 @@ Critical or High row has its test task (Task 10: 90, 91; Task 9b: 93; Task 14: 9
 
 FirstAdminCreator change (2026-11-04, KAN-98): rows 94–99 added for STORY-010, all tested in Task 14.
 
+KAN-232 Task 10 change (2026-11-04, Hiếu Q1–Q11): rows 100–102 added (login CSRF at `complete`, a code on the wrong site, a session cookie that names no session); AC-001.51 added; every row is tested in Task 10. Open question for Task 11: the Operator target has no start cookie in Task 10 (an Operator code has `start_hash` null).
+
 Open questions for the spec owner: none for Task 9 / 9b once the 2026-10-31 spec change is approved (row 45 closed; row 46 waits for the Task 12 plan). Row 42 is accepted (C3, Hiếu, 2026-10-28): a database failure during a
 sign-in redirect keeps be-foundation's generic 500.
+
+## Keycloak re-plan: STORY-001 sign-in and STORY-002 logout — KAN-275 plan, 2026-11-05
+
+Master: this file. Spec: `artifacts/03-modules/identity/spec.md`, Changelog row 2026-11-05 (AC-001.52–.73, AC-002.8).
+Decisions: ADR `docs/adr/0003-keycloak-sign-in.md` (K1–K14). Runbook: `docs/runbooks/onboard-company.md`.
+Step 1 (inventory, verdicts, risks R1–R20, questions Q1–Q16): `prompts/handoffs/KAN-275-plan-step1.md`.
+
+**This section replaces the sign-in mechanism of the "STORY-001: central sign-in…" section above** (flow, signed state
+values, `authorize`, hand-off codes, the `login.` page, `__Host-TSOLVE_SIGNIN`, `__Host-TSOLVE_START`, `sign_in_states`,
+`hand_off_code`, `TSOLVE_SIGNING_KEY`, the Google OIDC libraries and the rows 19–23, 26–28, 34 (cookies), 38, 41 (state
+cleanup), 43–52, 92, 100–101 of its edge-case table). What stays: sessions in Redis and `WebSessionFilter` (K9), tenant
+isolation (K11), `LocalTenantScope`, the `app_user` and `user_role` tables, the `IdentityClock`, the Login screen
+(Task 7), the `FirstAdminCreator` (STORY-010) and the Platform Console on `admin.`. Where the older section and this
+one differ, this one wins.
+
+### Flow (Workspace sign-in)
+
+```text
+Workspace site (acme.)                    Keycloak (TSOLVE_LOGIN_ORIGIN, realm tsolve)            Google
+ Login "Sign in with Google"
+  └ GET /api/v1/auth/sign-in ─ checks AC-001.48 · auth request → Redis · Set-Cookie __Host-TSOLVE_AUTHREQ
+      └ 302 ─► /realms/tsolve/protocol/openid-connect/auth  (client tsolve-web, PKCE S256, kc_idp_hint=google-acme)
+                       ├ broker to the Workspace's Google IdP (hostedDomain = the company domain) ─────────────► account chooser
+                       └ first broker login: create user, add to the Organization, no review, no email link ◄── back
+ GET /api/v1/auth/callback?code&state ◄─ 302 (the site's exact redirect URI)
+   ├ read + delete the auth request (cookie hash) · expire the cookie · state check (Spring)
+   ├ code exchange + ID token (Spring OAuth2 client; issuer, audience, nonce, email_verified)
+   ├ organization + hd · Workspace Active · inside runIn(Workspace): match sub / first-time email, bind sub · Active
+   └ new Redis session (id_token kept as id_token_hint) · Set-Cookie __Host-TSOLVE_SESSION ─► 302 returnTo or /
+ every later request: WebSessionFilter (unchanged rules, K9)
+ POST /api/v1/auth/logout ─ end session ─► 200 { logoutUrl } ─► the browser opens Keycloak's end-session URL ─► /login
+```
+
+`admin.` runs the same path against the realm `tsolve-ops` (client `tsolve-console`, Google IdP without `hd`, a second
+factor) and ends in an Operator session after the allow-list check (AC-001.28–.34).
+
+### Components and packages (what happens to each class)
+
+| Where | Verdict | Task |
+|-------|---------|------|
+| `identity/AuthSecurityConfig` | modify: one chain for sign-in start + callback on Workspace sites and `admin.`: OAuth2 client (`oauth2Login` with a custom `AuthorizationRequestRepository` and `OAuth2AuthorizationRequestResolver`), `NullSecurityContextRepository`, `SessionCreationPolicy.STATELESS`, success handler = session creation; the `authorize` and `complete` paths are dropped | 23, 24 |
+| `signin/KeycloakAuthorizationRequestResolver` (new) | Spring's resolver plus `kc_idp_hint=google-<slug>` from the resolved Workspace, PKCE `S256` (Spring's default for public and confidential clients is set on), the exact redirect URI of the site, the kept `returnTo` as an attribute | 23 |
+| `signin/RedisAuthorizationRequestRepository`, with the `__Host-TSOLVE_AUTHREQ` cookie (new) | `saveAuthorizationRequest`, `removeAuthorizationRequest` (read + `GETDEL` in one step); key `tsolve:authreq:<SHA-256 hex of the cookie value>`, 600 s | 23 |
+| `signin/OidcCallbackHandler` (new) | success: the Account checks (Tasks 25a and 25b) then the session; failure: maps Spring's `OAuth2AuthenticationException` to MSG141 or MSG06 by cause; always expires the cookie | 23, 25, 26 |
+| `signin/SignInStartController` | modify: same URL and `returnTo` filter; checks AC-001.48; hands over to the resolver (302 comes from Spring's `OAuth2AuthorizationRequestRedirectFilter` or the controller calls the resolver; Decided in planning: the controller, so the AC-001.48 refusal and the cookie stay in one place) | 23 |
+| `signin/SignInConfig`, `SignInProperties`, `AuthHosts` | modify: Keycloak issuer and client values; `AuthHosts` keeps Workspace site vs `admin.` only (K1) | 23, 24 |
+| `signin/port/WorkspaceLookup`, `WorkspaceRef`, `NoWorkspaceLookup` | modify: `WorkspaceRef(id, slug, siteHost, googleDomain, organizationId, status)`; `NoWorkspaceLookup` follows | 25 |
+| `signin/port/WorkspaceSignInProvisioner` (new) + `NoopWorkspaceSignInProvisioner`, `KeycloakWorkspaceSignInProvisioner` (new, in `identity/keycloak`) | the port of K6 and its two beans (AC-001.57–.62) | 28 |
+| `account/Account`, `AccountRepository`, `AccountSignInService` | modify: the `sub` column, `findBySub`, the first-sign-in email match, the bind, the refusal (AC-001.12, .16, .56) | 25 |
+| `account/AccountRole`, `AccountRoleRepository`, `session/WebSessionFilter`, `SessionCookie` | keep (salvage of the uncommitted Task 10 tree) | 26 |
+| `session/WebSession`, `WebSessionStore` | salvage, plus the `id_token_hint` field | 26 |
+| `session/OperatorAllowList`, `OperatorPrincipal` | new (Task 11's classes, rebuilt) | 29 |
+| `jiralink/JiraLinkRequestService`, `JiraLinkController`, `JiraAccountLink*` | new | 30 |
+| deleted | `AuthorizeController`, `signin/CallbackController` (the one on `login.`), `GoogleIdentity`, `GoogleOidcClient`, `IdTokenVerifier`, `LoginPage` (backend), `SignInCookie`, `SignInState*`, `SignedToken`, `HandOffCode*`, `session/CompleteController`, `signin/StartCookie`, the `dev/DevGoogle*` classes and `DevSecurityConfig` | 24, 26 |
+| `common/security/SecurityProblemWriter` (MSG10, MSG123) | keep | 26 |
+| frontend `LoginPage.tsx`, `MockSignInPage.tsx`, `shared/auth/sign-in.ts` | keep; the mock page keeps its outcomes | 31 |
+| `identity/dev/DevWorkspaceLookup`, `DevAccountSeeder`, `DevAccounts`, `DevStartupGuard` | modify: Organization id and slug for `acme` and `beta`; the seeded Accounts match the realm-import users (their `sub` is bound at the first sign-in) | 23, 26 |
+| `infra/keycloak/realm-tsolve.json`, `realm-tsolve-ops.json`, `fake-google/` (WireMock mappings), `themes/tsolve/` (new) | the realm imports (K14), the fake Google upstream (Q8), the theme (K13) | 23, 29, 31 |
+
+### Data model
+
+- **Dropped by new changesets** (the files `004`, `005`, `006`, `007` on `main` are never edited): `sign_in_states`,
+  `hand_off_code`. The uncommitted `008` and `009` (never released) are not kept (Q5). A developer database that
+  already ran them is reset with `docker compose down -v` (R20).
+- **`app_user.keycloak_sub`**: a nullable `VARCHAR(64)`, unique inside the company database (one new tenant changeset;
+  K8, K11). Filled at the first sign-in; never cleared except by the runbook's rebind (Q11).
+- **Redis keys** (one Redis, persistence on, `noeviction`): `tsolve:session:<hex>` (as before; plus the field
+  `id_token_hint` and `kind`), `tsolve:authreq:<hex>` (a hash: `target`, `workspace_id`, `state`, `nonce`,
+  `pkce_verifier`, `return_to`; 600 s), `tsolve:jiralink:<id>` (`workspace_id`, `tracker_account_id`; 600 s).
+- **Keycloak**: its own database `keycloak` and user on the existing PostgreSQL server (Q3). Realm `tsolve`: client
+  `tsolve-web`; client `tsolve-provisioner` (service account); one Organization and one IdP `google-<slug>` per
+  Workspace; the `organization` client scope and a mapper for the user attribute `hd`. Realm `tsolve-ops`: client
+  `tsolve-console`; the IdP `google-operators`. Both realms come from the realm-import files (K14) and are changed
+  at run time only by the provisioning adapter.
+- **Platform record** (change request, below): `google_domain` and `keycloak_organization_id`; the
+  Workspace is `ACTIVE` at creation (platform AC-013.1).
+
+### Configuration
+
+| Name | Meaning | Local dev |
+|------|---------|-----------|
+| `TSOLVE_LOGIN_ORIGIN` | Keycloak's public origin; the issuer is this + `/realms/tsolve` | `http://login.localhost:8081` (compose `keycloak`, `KC_HOSTNAME` the same) |
+| `TSOLVE_ADMIN_ORIGIN` | the Platform Console origin | `http://admin.localhost:<port>` |
+| `KEYCLOAK_WEB_CLIENT_SECRET`, `KEYCLOAK_CONSOLE_CLIENT_SECRET` | the two confidential clients | the value in the realm-import file |
+| `PLATFORM_OPERATOR_EMAILS` | allow-list, second check after Keycloak (Q1) | a developer's email |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | as Task 10 | compose Redis |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | only the profiles that create or remove Workspaces (AC-001.61); absent elsewhere | a placeholder; the dev fake Google ignores them |
+| removed | `TSOLVE_SIGNING_KEY`, `tsolve.oidc.google.*` | |
+
+The backend reaches Keycloak at the issuer it expects in tokens (the Docker network name and `KC_HOSTNAME` are set
+together; a start-up check reads both discovery documents, R11).
+
+### Rules (how the criteria are met)
+
+- **Authorization request (AC-001.52, .53, .55, R15).** Sign-in start makes 32 random bytes (`SecureRandom`, base64url
+  without padding), sets `Set-Cookie: __Host-TSOLVE_AUTHREQ=<value>; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=Lax`
+  and stores the request under the SHA-256 of the value. `SameSite=Lax` is required: Keycloak's redirect back is a
+  cross-site top-level GET. The callback hashes the received value, reads and deletes the key in one `GETDEL`, and
+  expires the cookie in every answer. A missing cookie, another browser's cookie (no key), a used or expired request
+  are all MSG141. This cookie is the login-CSRF binding that the old `__Host-TSOLVE_SIGNIN` and `__Host-TSOLVE_START`
+  were (rows 45 and 100 are closed by it). Spring's `state` check still runs against the stored request.
+  `oauth2Login` is configured with `STATELESS` and a `NullSecurityContextRepository`; the success handler, not Spring,
+  makes the session.
+- **Callback order (AC-001.14).** request → Keycloak error / token → organization and `hd` → Workspace Active → `runIn(
+  Workspace)`: match by `sub`, else (first sign-in, no `sub` yet) by verified email ignoring case, then bind →
+  Account Active → session. The Workspace is the one the platform resolved from the host; the Tenant Resolver already
+  refuses an unknown or suspended site (the old rows 49 and 50 go away, K5).
+- **Email drift (R19).** Decided in planning: `app_user.email` is not changed by a later sign-in; the token's email is
+  used only for the first match. A changed Google address keeps the Account through its `sub`; the Admin's user list
+  keeps showing the old address until STORY-007 edits it.
+- **K9 limits.** The realm sets SSO Session Max 8 h and Idle 60 min (AC-001.63). T-Solve's own 8 h / 60 min checks
+  stay in `WebSessionFilter`.
+- **Logout (K10, Q7 = A).** `logoutUrl` = Keycloak's `end_session_endpoint` + `id_token_hint` + `post_logout_redirect_uri`
+  (the site's `/login`, registered per Workspace by AC-001.58). `SessionEnded` is unchanged. fe-foundation's
+  `useSignOut` navigates to the URL (change request KAN-198). The Operator's logout uses the `tsolve-ops` endpoint.
+- **Operators (Q1 = B).** A separate realm and client, a Google IdP without `hd`, TOTP or WebAuthn required, the
+  allow-list as the backend's second check. A mistake in a tenant IdP can never grant the Console.
+- **Failures (Q6 = A).** Failures that reach the callback go to `/login?error=` on the site. The others show on
+  Keycloak's themed page (AC-001.67); which case lands where is fixed by the Testcontainers tests of Task 23 (K14).
+  The error list of the Login screen does not change (Q11 = A adds no message).
+- **Keycloak hardening (Q13 = A).** Realm import: registration off, no password form, IdPs hidden on the login page,
+  a custom first-broker-login flow, brute-force detection on (AC-001.64); the provisioning adapter sets
+  "hide on login page" and the flow on each IdP it creates. Tests: a request with no hint, a hint for an unknown
+  alias and a hint edited to another Workspace.
+- **Claims (Q10 = C).** `organization` and `hd` are both required (AC-001.11). The realm import carries the
+  `organization` scope and the `hd` mapper (AC-001.65); a test signs in with a token that lacks each of them.
+- **Provisioning (K6, Q12, Q14, Q16).** `provision` runs under a PostgreSQL advisory lock taken on the registry
+  connection, creates Organization → IdP → client URIs, re-reads the client and checks that the earlier URIs are all
+  still there, and on any failure deletes in reverse order, idempotent by alias. The adapter's credentials are only
+  in the `ops` and Console profiles. Until the platform exists the no-op bean answers (AC-001.60).
+- **Jira link (Q2 = A).** `jira-app` calls `JiraLinkRequestService` after verifying the Forge token; the person
+  confirms on the Workspace site. The confirm page is a web-app route (`/jira-link`); the POST needs CSRF and a
+  Workspace session. Design row 46 changes from Open to mitigated: a victim who confirms without reading the page is
+  still exposed; the option B (a code typed into the Jira panel) stays available if the team wants it closed.
+- **Dev and tests (K14, Q8 = A).** Compose gets `keycloak` (26.x pinned, heap capped, health check) with the database
+  `keycloak`, and a WireMock `fake-google` that Keycloak brokers to as `google-acme` and `google-beta`. The realm import
+  holds users that match `DevAccounts`. Tests use `testcontainers-keycloak` with the same fake issuer
+  (`FakeGoogleIssuer`, modified); CI never calls Google. `DevGoogleIssuer` and `DevGoogleController` are deleted.
+- **Redis is the only shared state**; no sign-in table remains in a database.
+
+### Platform change requests (Q4 revised, 5/11) — for the platform owner (KAN-98 / KAN-99 / KAN-240)
+
+Decision (Q4, revised): the Platform Console is the site of the one platform admin, who provisions the Workspaces and
+their first Admin. A Workspace is `ACTIVE` at creation, as platform AC-013.1 already says. There is no
+`PENDING_SIGN_IN` status and no `activate` operation. The test sign-in and the Google redirect-URI step are steps of the
+runbook `onboard-company.md`, done by the platform admin before the company is told; they are not a gate in the data
+model. If sign-in is tried before Google has the redirect URI, Google refuses and the Workspace site shows the normal
+sign-in error. Identity edits no platform file; the requests are:
+1. Columns `google_domain` and `keycloak_organization_id` on `tenant_workspace` (identity's spec reads the Google domain
+   from the platform's Workspace record; the platform spec does not list it), and the two fields in `WorkspaceSummary`.
+2. `WorkspaceProvisioning.create` calls `WorkspaceSignInProvisioner.provision` after step 4 and before the first Admin;
+   AC-013.6 and AC-013.16 undo calls `remove`; a `remove` for the "remove a company" runbook. `create(siteName,
+   adminEmail)` gets the Google domain as a new `create` parameter.
+3. Where the port is declared: K6 says identity-owned; platform cannot depend on identity, so once the platform's
+   `WorkspaceProvisioning` exists the interface moves to the platform's public API (the pattern of `FirstAdminCreator`)
+   and identity implements it (Decided in planning; confirm with the platform owner).
+Other cross-module changes (R17): `jira-app` (KAN-124) calls `JiraLinkRequestService`, not `SignInStateService`;
+fe-foundation (KAN-198): `useSignOut` navigates to `logoutUrl`; PR #119 (KAN-107 backend) adds a second session filter
+in `identity/session` and `common/tenant/TenantContext`: identity is the code owner, so `WebSessionFilter` wins and
+`UserListSessionFilter` and `WorkspaceSessionBinding` are dropped from identity's side, planned as part of Task 26a
+(a note to the owner of PR #119, that their code touches identity, is written by Hiếu, not in this plan; who owns
+`common/tenant/TenantContext` is agreed with platform).
+
+### Test approach
+
+- `testcontainers-keycloak` (26.x, the realm-import files) brokering to the WireMock fake issuer, the pattern of
+  `SignInStateRepositoryIT`; needs Docker. Controller tests use MockMvc with the `Host` per site. Redis tests use
+  Testcontainers Redis. Two-Workspace tests (NFR 5): AC-001.7, .11, .15, .20, .32.
+- JUnit names end with the AC id (`…_AC_001_6`). Retired ids have no test left.
+
+### Key decisions (Keycloak re-plan)
+
+| Decision | Chosen | Alternatives | Rationale |
+|----------|--------|--------------|-----------|
+| K1 Where sign-in lives | Keycloak 26.x at `login.`, realm `tsolve` | Keep the custom `login.` backend | Less security code to own; ADR-0003 |
+| K2 Tenant in the identity layer | One Organization per Workspace, id kept on the platform's record | A user attribute only | Organizations give a claim the backend can check (AC-001.11) |
+| K3 Google | One IdP per Workspace, alias `google-<slug>`, one Google client, `hostedDomain` | One IdP for all, `hd` checked in the backend | `hd` is enforced twice (Google and AC-001.11) |
+| K4 Redirect URIs at Google | Manual runbook step per company | Automation with the Google API | Google has no API for it; Q4 = A blocks Active until it works |
+| K5 Site clients | One confidential client `tsolve-web`, exact URI per site, PKCE `S256`, `kc_idp_hint` | One client per Workspace (Q12 B) | One secret, one definition; the URI list is serialised (Q12) |
+| K6 Provisioning | Admin REST behind a port, no-op until the platform exists | Manual setup in the console | Workspace creation stays all-or-nothing; Q12, Q14, Q16 below |
+| K7 Backend client | Spring Security OAuth2 client, request kept in Redis (Q9) | Own OIDC code (the old design) | No hand-written crypto or OIDC; replica-safe |
+| K8 Account match | Callback on the Workspace site; org + `hd`, Workspace, Account by `sub` (first time by email), Active | Email only (the old design) | `sub` survives an email change; a bound `sub` is not re-takeable (Q11) |
+| K9 Sessions | As Task 10: Redis, 8 h / 60 min, plus Keycloak SSO limits | Keycloak sessions only | Per-request Account re-read must stay in T-Solve |
+| K10 Logout | RP-initiated, `id_token_hint` kept in the session; Q7 = A: 200 `{ logoutUrl }` | Back-channel call (Q7 B, keeps 204) | K10's wording; needs the fe-foundation change |
+| K11 Tenancy | Unchanged | | One database per company |
+| K12 Deletions | The custom classes, tables and cookies, by new changesets | Keep them dormant | Dead security code is a liability |
+| K13 Theme | Minimal T-Solve theme on Keycloak's login and error pages | Default theme | Report3 text on failures (Q6 A) |
+| K14 Dev and CI | Compose Keycloak + realm import; Testcontainers + WireMock fake (Q8 A) | Real Google (Q8 C); keep the backend's fake (Q8 B) | One broker path in dev and CI; CI never calls Google |
+| Q1 Operators | Separate realm `tsolve-ops`, own client, Google IdP without `hd`, second factor, allow-list second check | Role in `tsolve` (A); allow-list only (C) | Operator privileges never mix with tenant IdPs |
+| Q2 Jira link | Single-use link request in Redis, confirm page, POST with CSRF | Code check (B); confirm on Keycloak's theme (C) | Closes the "no click" phishing; no signing key |
+| Q3 Hosting | Same VPS behind Caddy, own database and user, 1–1.5 GB heap cap, in the nightly `pg_dump`, backup owner DevOps | Separate Postgres (B); separate VPS (C) | One container, one backup job |
+| Q4 Redirect URI not added | No gate in the data model: the Workspace is Active at creation; the runbook does the test sign-in before the company is told; Google's refusal shows the normal sign-in error | Block until a test sign-in (A, a `PENDING_SIGN_IN` status); a separate flag (C) | One platform admin follows the runbook; no extra status or operation |
+| Q5 In-progress work | Salvage the Task 10 tree by patch; Jira per the step-1 hand-off (KAN-229/230/231/235 stay Done; KAN-232 → Tasks 26a and 26b, KAN-233 → Task 29, KAN-234 → Task 30, KAN-106 → Task 27, KAN-247 keeps adapters and `FirstAdminCreator`; new issues for Tasks 23, 24, 28, 31) | Discard (B); commit then remove (C) | Keeps about 20 working files and tests |
+| Q6 Failure display | Callback failures on `/login?error=`; the rest on Keycloak's themed page | All on Keycloak (C); all in the app (B, not possible) | B is not fully possible |
+| Q7 Logout | 200 `{ logoutUrl }` | Back-channel | See K10 |
+| Q8 Dev upstream | WireMock fake in compose as `google-acme` / `google-beta` | Keep `DevGoogleIssuer` (B) | The backend serves no IdP |
+| Q9 Authorization request store | Redis, key = SHA-256 of the `__Host-TSOLVE_AUTHREQ` cookie | Signed cookie (B) | Reuses Redis, no new key |
+| Q10 Claim | `organization` and `hd` both | One of them | Catches a misconfigured IdP or Organization |
+| Q11 `sub` bound elsewhere | MSG09 and a `WARN` with the Account id; rebind is a runbook step | A new message and an Admin button (B); auto-rebind (C) | C reopens takeover |
+| Q12 Provisioning race | Advisory lock, re-read and verify, compensating deletes by alias | A client per Workspace (B) | Keeps K5 |
+| Q13 Hardening | Realm and IdP settings of AC-001.64, with tests | Defaults (B) | Closes R4 and R5 |
+| Q14 Admin credentials | `tsolve-provisioner`, least roles, only in `ops` / Console | Master admin (B) | Least privilege |
+| Q15 PR #119 | `WebSessionFilter` wins; their second filter is dropped on our side in Task 26a; a note to the owner (written by Hiếu) | Merge as is (B) | One session model |
+| Q16 Google client values | Provisioning profile only | By hand in the console (B) | The only fully automatic K6 |
+
+### Edge cases and risks (Keycloak re-plan)
+
+Dimensions analyzed: user types, input extremes, timing, state transitions, environment, error cascades,
+authorization, data integrity, integration, compliance. Skipped: scale (the volume is a few sign-ins per minute per
+company), business logic (no amounts). Rows 103–124; the rows of the older section that this section replaces are
+listed in its banner. Every Critical or High row has its test task.
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 103 | STORY-001 | Authorization | The token has no `organization` or no `hd` claim (R3: the mappers are missing or removed) | Critical | MSG122, no session (AC-001.11); the realm import carries both mappers (AC-001.65) and a test proves it | Tasks 23, 25b |
+| 104 | STORY-001 | Authorization | `kc_idp_hint` removed or edited in the browser (R4) | High | The login page lists no IdP and offers no form (AC-001.64) | Task 23 |
+| 105 | STORY-001 | Authorization | First broker login offers "review profile" or "link existing account by email" (R5) | High | The custom flow creates the user and never links by email (AC-001.64) | Task 23 |
+| 106 | STORY-001 | Authorization | The hint is edited to Workspace B's IdP on A's site (R6) | High | The token's Organization is B's: MSG122 (AC-001.11); two-Workspace test | Task 25b |
+| 107 | STORY-001 | Timing | Two Workspace creations at once rewrite `tsolve-web`'s redirect list (R7) | High | One at a time; every earlier URI is still there after each write (AC-001.59) | Task 28 |
+| 108 | STORY-001 | Error cascades | `provision` fails after the Organization exists, or the platform undoes the Workspace (R8) | High | The objects created are deleted in reverse order; a repeated call is harmless (AC-001.59, .62) | Task 28 |
+| 109 | STORY-001 | Authorization | The Admin API credentials are read from a Workspace web replica (R9) | High | Not loaded there; least roles in the profiles that have them (AC-001.61) | Task 28 |
+| 110 | STORY-001 | Error cascades | Keycloak is down (R10) | Medium | Nobody can start a sign-in; signed-in sessions in Redis continue; compose and Caddy health check; ADR-0003 upgrade note | Task 23 |
+| 111 | STORY-001 | Environment | The backend reaches Keycloak at a name that differs from the token issuer (R11) | Medium | The start-up check refuses to start and names the issuer (NFR 4) | Task 23 |
+| 112 | STORY-001 | Compliance | A company is removed but its Keycloak users, Organization or IdP remain (R12); PII in Keycloak logs | High | `remove` deletes them (AC-001.62); the runbook's "remove a company"; no email in Keycloak logs | Task 28 |
+| 113 | STORY-001 | Data integrity | A Keycloak user is re-created and gets a new `sub` (R13) | High | MSG09 and a `WARN` with the Account id only (AC-001.56); the runbook rebinds after an identity check | Task 25a |
+| 114 | STORY-001 | User types | A shared computer: the next person clicks "Sign in" while Keycloak's SSO session lives (R14) | Medium | SSO Idle ≤ 60 min and Max ≤ 8 h (AC-001.63); logout ends Keycloak's session (AC-002.1) | Tasks 23, 27 |
+| 115 | STORY-001 | Timing | The callback reaches another API replica than the sign-in start (R15) | High | The request is in Redis, no HTTP session, `NullSecurityContextRepository` (AC-001.55); a two-instance test | Task 23 |
+| 116 | STORY-002 | Integration | A `fetch` POST cannot follow the redirect to Keycloak's end-session URL (R16) | Medium | The answer is 200 `{ logoutUrl }`; the browser navigates (AC-002.1, AC-002.8) | Task 27 |
+| 117 | STORY-001 | Integration | The platform, `jira-app` or fe-foundation still use the old contract (R17) | High | Change requests sent before the dependent code (this plan, "Platform change requests") | Tasks 28, 30, 27 |
+| 118 | STORY-001 | Environment | Google has not applied the new redirect URI yet, or the client's URI limit is reached (R18) | Medium | Google refuses and the Workspace site shows the normal sign-in error; the runbook does the test sign-in before the company is told, lists the URIs and says to check the limit | Task 28 (runbook) |
+| 119 | STORY-001 | Data integrity | A person's Google email changes (R19) | Low | The Account is found by `sub`; `app_user.email` is unchanged (design decision above) | Task 25a |
+| 120 | STORY-001 | State transitions | A developer database already ran the unreleased `008` and `009` (R20) | Low | `docker compose down -v`; the card notes it | Task 24 |
+| 121 | STORY-001 | Authorization | Jira-link phishing: the victim opens the attacker's link URL and confirms without reading (replaces row 46) | Critical | Mitigated, not closed: single-use 10-minute request, the person's own session, the confirm page names both accounts, CSRF POST; option B (a typed code) stays open (AC-001.69–.72) | Task 30 |
+| 122 | STORY-001 | Authorization | Login CSRF: a callback URL (state and code) of the attacker's own sign-in is opened in the victim's browser (replaces rows 45 and 100) | Critical | The victim's browser has no matching `__Host-TSOLVE_AUTHREQ`: MSG141, no session (AC-001.6, .53) | Task 23 |
+| 123 | STORY-001 | Integration | PR #119's `UserListSessionFilter` next to `WebSessionFilter` | High | One session model; the second filter is dropped from identity (Q15) | Task 26a |
+| 124 | STORY-001 | State transitions | Sign-in tried before the test sign-in of the runbook (redirect URI not yet applied) | Medium | Google refuses; the Workspace site shows the normal sign-in error; no data-model gate (AC-001.73 retired) | Task 28 (runbook) |
+
+Open questions for the spec owner: none. Every row is closed by the answers Q1–Q16.
 
 ## STORY-003: My Profile — KAN-160 plan, 2026-10-31
 

@@ -1,7 +1,7 @@
 ---
 module: identity
 date: 2026-10-25
-total_tasks: 21
+total_tasks: 31
 owner: Dev
 ---
 
@@ -119,6 +119,8 @@ runs before `WebSessionFilter`).
 
 ## Task 8: State values, sign-in start, authorize and the minimal login page — KAN-230
 
+> **Superseded 2026-11-05 (KAN-275).** Done and merged; its state values, `authorize`, `login.` page and `sign_in_states` are removed by Task 24 (K12). The sign-in start and the `returnTo` filter stay (Task 23).
+
 **Story:** STORY-001
 **Feature:** sign-in-start
 **Acceptance criteria:** AC-001.1, AC-001.2, AC-001.3, AC-001.4, AC-001.5, AC-001.6, AC-001.28, AC-001.39
@@ -136,6 +138,8 @@ runs before `WebSessionFilter`).
 **Verification:** Tests name AC-001.1–.6, .28 and .39; design risk rows 19, 20, 38, 43 and 44. Targeted: `cd backend && mvn -Dtest='SignInStateServiceTest,SignedTokenTest,SignInStartControllerTest,AuthorizeControllerTest,LoginPageTest,SignInPropertiesTest,AuthSecurityConfigTest' -Dit.test=SignInStateRepositoryIT verify` (the IT needs Docker); full `mvn verify` before the commit.
 
 ## Task 9: The callback refuses forged, replayed or cookie-less returns and Google failures — KAN-231
+
+> **Superseded 2026-11-05 (KAN-275).** Done and merged; the callback on `login.`, `SignInCookie` and `IdTokenVerifier` are removed by Task 24; the Workspace-site callback is Task 23 (K7, K12).
 
 **Story:** STORY-001
 **Feature:** sign-in-callback
@@ -155,6 +159,8 @@ runs before `WebSessionFilter`).
 
 ## Task 9b: Workspace and Account checks, the Account store and the hand-off code — KAN-235
 
+> **Superseded in part 2026-11-05 (KAN-275).** Done and merged. `app_user`, `Account*`, `LocalTenantScope` and the two-Workspace test stay (adapted by Tasks 25a and 25b: `sub`, new check order). The hand-off code and `hand_off_code` are removed by Task 24 (K12).
+
 **Story:** STORY-001
 **Feature:** account-checks
 **Acceptance criteria:** AC-001.10, AC-001.11, AC-001.12, AC-001.13, AC-001.14, AC-001.15, AC-001.16
@@ -173,21 +179,31 @@ runs before `WebSessionFilter`).
 
 ## Task 10: Hand-off, session cookie and the per-request session rules — KAN-232
 
+> **Superseded in part 2026-11-05 (KAN-275).** Never committed. Salvaged into Tasks 26a and 26b (Redis session, `WebSessionFilter`, `user_role`, dev seeder); `CompleteController`, `StartCookie`, the changesets `008` and `009`, and the dev fake Google are dropped (K9, K12, Q5, Q8).
+
 **Story:** STORY-001
 **Feature:** workspace-session
-**Acceptance criteria:** AC-001.17, AC-001.18, AC-001.19, AC-001.20, AC-001.21, AC-001.22, AC-001.23, AC-001.24, AC-001.25, AC-001.26, AC-001.27
-**Description:** HLA change (Hiếu, 2026-11-03, Q3 = A): sessions live in **Redis**, not in a `web_sessions` table. Add the first read of Roles (Hiếu 04/11, moved from Task 9b): the `user_role` table (PDF names: `id`, `user_id`, `role`, `assigned_at`, unique per `(user_id, role)`; no `workspace_id`) in a new changeset, the `AccountRole` class and the read of an Account's Roles for the `TSolveUser`. Add `identity/session` with `WebSessionStore` (one Redis key per session, named by the SHA-256 of the cookie value, holding `kind`, `workspace_id`, `account_id`, `operator_email`, `site_host`, `created_at`, `last_activity_at`; design "Data model"). `CompleteController` redeems a hand-off code once (atomic `used_at` update, 60 seconds, only on the site it names), creates a new session and sets `__Host-TSOLVE_SESSION` (HttpOnly, Secure, SameSite=Lax, Path `/`, no Domain), then redirects to `returnTo` or `/`. `WebSessionFilter` applies, in the design's order: no session on `login.`/`api.`; MSG123 on a host or kind mismatch without ending the session; MSG07 past 8 hours or 60 idle minutes; the Account re-read with MSG10 for a Deactivated Account; a `TSolveUser` with the current Roles. The limits are checked in the application with `IdentityClock` from the stored times; the key's time to live is a backstop. A request without `X-TSolve-Background: 1` counts as activity. `SessionCleanup` is not built (N API replicas must not each run a scheduler). The `SessionEnded` `EXPIRED` event within 15 minutes (AC-002.4, STORY-002) is planned with KAN-106, not here: keyspace events or a worker job, chosen then, because an expiry event does not carry the Account id and Workspace id; this task stores both in the session so that either works. Add Redis to the local stack: a `redis` service in `docker-compose.yml` (Docker Desktop), `spring-boot-starter-data-redis` and `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` in `application.yml` and `.env.example`. Redis for sessions is not an eviction cache. AC-001.17 and .20 are two-Workspace tests.
-**What Hiếu can see or try:** a full sign-in end to end: the browser lands on `returnTo`, or on the role's page through `/`. DevTools shows a host-only HttpOnly `__Host-TSOLVE_SESSION` cookie. The same cookie copied to the other Workspace site or to `admin.` → MSG123. After 60 idle minutes → MSG07. Deactivating the Account → MSG10 at the next request.
+**Acceptance criteria:** AC-001.17, AC-001.18, AC-001.19, AC-001.20, AC-001.21, AC-001.22, AC-001.23, AC-001.24, AC-001.25, AC-001.26, AC-001.27, AC-001.51
+**Description:** HLA change (Hiếu, 2026-11-03, Q3 = A): sessions live in **Redis**, not in a `web_sessions` table. Add the first read of Roles (Hiếu 04/11, moved from Task 9b): the `user_role` table (PDF names: `id`, `user_id`, `role`, `assigned_at`, unique per `(user_id, role)`; no `workspace_id`) in a new changeset, the `AccountRole` class and the read of an Account's Roles for the `TSolveUser`. Add `identity/session` with `WebSessionStore` (one Redis key per session, named by the SHA-256 of the cookie value, holding `kind`, `workspace_id`, `account_id`, `operator_email`, `site_host`, `created_at`, `last_activity_at`; design "Data model"). `CompleteController` redeems a hand-off code once (atomic `used_at` update with the `IdentityClock` time as a parameter, not the database `now()`, 60 seconds, only on the site it names; the update runs first, so a code shown on the wrong site is consumed and the site check then fails with MSG141, KAN-232 Q5, Q6), checks the start cookie (below), creates a new session and sets `__Host-TSOLVE_SESSION` (HttpOnly, Secure, SameSite=Lax, Path `/`, no Domain), then redirects to `returnTo` or `/`. `WebSessionFilter` applies, in the design's order: no session on `login.`/`api.`; MSG123 on a host or kind mismatch without ending the session; MSG07 past 8 hours or 60 idle minutes; the Account re-read with MSG10 for a Deactivated Account; a `TSolveUser` with the current Roles. The limits are checked in the application with `IdentityClock` from the stored times; the key's time to live is a backstop. A request without `X-TSolve-Background: 1` counts as activity. `SessionCleanup` is not built (N API replicas must not each run a scheduler). The `SessionEnded` `EXPIRED` event within 15 minutes (AC-002.4, STORY-002) is planned with KAN-106, not here: keyspace events or a worker job, chosen then, because an expiry event does not carry the Account id and Workspace id; this task stores both in the session so that either works. Add Redis to the local stack: a `redis` service in `docker-compose.yml` (Docker Desktop), `spring-boot-starter-data-redis` and `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` in `application.yml` and `.env.example`. Redis for sessions is not an eviction cache. AC-001.17 and .20 are two-Workspace tests.
+**Added by the KAN-232 plan (Hiếu, 2026-11-04):**
+- **Login CSRF at `complete` (Q7, AC-001.51).** Sign-in start on a Workspace site sets the host-only cookie `__Host-TSOLVE_START` (Secure, HttpOnly, SameSite=Lax, Path `/`, Max-Age 600, no Domain). Its SHA-256 travels sign-in state → hand-off code: a new `start_hash` column on each, each its own changeset (`<next>-identity-sign-in-state-start-hash.sql`, `<next>-identity-hand-off-code-start-hash.sql`). `SignInStateService`, `HandOffCodeService` and `CallbackController` (copy the hash) and the sign-in start controller are modified for it. `complete` reads the cookie, compares the hash in constant time and clears the cookie in every answer; no cookie or another browser's → `/login?error=MSG141`, no session, the code still consumed. The Platform Console target is Task 11's.
+- **Filter rules (Q1, Q2, Q10).** Account row gone at the re-read → end the session, 401 MSG07. A session cookie that names no session on a Workspace site → anonymous request and `__Host-TSOLVE_SESSION=; Max-Age=0`. A session is honoured only on `admin.` or on a host that `WorkspaceLookup` resolves as a Workspace site; no `TSOLVE_API_ORIGIN`.
+- **Dev profile only (Q2 earlier; Google refused `http://login.localhost:<port>/...` as a redirect URI, so the local run does not use real Google).** Spring profile `dev`: a dev-only `WorkspaceLookup` for `acme.localhost` and `beta.localhost`; hard-coded FAKE Google domains and emails for them; a dev seed of Accounts and Roles (idempotent; Liquibase `context: dev` or a dev-profile `ApplicationRunner`, as the QA plan says); and a dev-profile fake Google served by the backend itself (authorization, token and JWKS endpoints, signed with a throw-away key, letting the person pick a seeded Account). Real Google is used only from the staging deploy on, with the existing `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
+- **`common/security` (Q11).** A small edit, the BE lead has agreed: `SecurityConfig` registers `WebSessionFilter`; `SecurityProblemWriter` gets the MSG10 and MSG123 texts.
+- **Scope.** One task, not split (Hiếu), about 22+ production files. Logout (Q8) stays with KAN-106.
+**What Hiếu can see or try:** sign in through the dev fake issuer on `http://acme.localhost:<port>` and see the `__Host-TSOLVE_SESSION` cookie set (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, no `Domain`): a full sign-in end to end, the browser lands on `returnTo`, or on the role's page through `/`. DevTools shows a host-only HttpOnly `__Host-TSOLVE_SESSION` cookie (and `__Host-TSOLVE_START` cleared). Opening the same `complete?code=…` link in a second browser → `/login?error=MSG141`, no session. The same cookie copied to the other Workspace site or to `admin.` → MSG123. After 60 idle minutes → MSG07. Deactivating the Account → MSG10 at the next request.
 **Files:**
-- Create: `backend/src/main/java/vn/tsolve/identity/session/{CompleteController,WebSession,WebSessionStore,WebSessionFilter,SessionCookie}.java`, `backend/src/main/java/vn/tsolve/identity/account/AccountRole.java`, `backend/src/main/resources/db/changelog/changes/<next>-identity-user-role.sql` (table `user_role`)
-- Modify: `backend/src/main/java/vn/tsolve/identity/AuthSecurityConfig.java`, `backend/src/main/java/vn/tsolve/identity/signin/HandOffCodeService.java` (redeem), `backend/src/main/java/vn/tsolve/identity/account/{Account,AccountRepository}.java` (the Roles), `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `backend/pom.xml` (`spring-boot-starter-data-redis`), `backend/src/main/resources/application.yml`, `docker-compose.yml` (the `redis` service), `.env.example` (the Redis values and the local-cookie note of risk row 34)
+- Create: `backend/src/main/java/vn/tsolve/identity/session/{CompleteController,WebSession,WebSessionStore,WebSessionFilter,SessionCookie}.java`, `backend/src/main/java/vn/tsolve/identity/account/AccountRole.java`, the dev-profile classes under `backend/src/main/java/vn/tsolve/identity/dev/` (`DevWorkspaceLookup`, `DevAccountSeeder`, and the fake Google issuer: controller and its security chain), `backend/src/main/resources/db/changelog/changes/<next>-identity-user-role.sql` (table `user_role`), `<next>-identity-sign-in-state-start-hash.sql` and `<next>-identity-hand-off-code-start-hash.sql`
+- Modify: `backend/src/main/java/vn/tsolve/identity/AuthSecurityConfig.java`, `backend/src/main/java/vn/tsolve/identity/signin/{HandOffCodeService,SignInStateService,CallbackController}.java` and `SignInStartController` (redeem; the `start_hash` and the start cookie), `backend/src/main/java/vn/tsolve/common/security/{SecurityConfig,SecurityProblemWriter}.java`, `backend/src/main/java/vn/tsolve/identity/account/{Account,AccountRepository}.java` (the Roles), `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `backend/pom.xml` (`spring-boot-starter-data-redis`), `backend/src/main/resources/application.yml`, `docker-compose.yml` (the `redis` service), `.env.example` (the Redis values and the local-cookie note of risk row 34)
 - Test: `backend/src/test/java/vn/tsolve/identity/session/{CompleteControllerTest,WebSessionFilterTest,WebSessionStoreIT}.java` (`WebSessionStoreIT` on Testcontainers Redis, the `SignInStateRepositoryIT` pattern, needs Docker; Redis down and Redis restarted: design rows 90 and 91)
 **Dependencies:** Task 9b (it redeems the hand-off codes Task 9b issues); be-foundation `roles-security` (`TSolveUser`, the deny-by-default chain, ProblemDetail 401 bodies; it also replaces `AuthSecurityConfig`'s interim chain, conflict C5) on `main`; a Redis for the local stack and the tests (Docker Desktop).
 **PR / Jira:** PR 4, branch `feat/KAN-232-identity-workspace-session`, Jira KAN-232 (Subtask of KAN-104).
 **Estimated size:** large
-**Verification:** Tests name AC-001.17–.27; design risk rows 27–34, 41, 42, 90 and 91. Targeted: `cd backend && mvn -Dtest='CompleteControllerTest,WebSessionFilterTest' -Dit.test=WebSessionStoreIT verify` (the IT needs Docker); full `mvn verify` before the commit. Local browser run of the whole sign-in (risk row 34).
+**Verification:** Tests name AC-001.17–.27 and AC-001.51; design risk rows 27–34, 41, 42, 90, 91 and 100–102. Targeted: `cd backend && mvn -Dtest='CompleteControllerTest,WebSessionFilterTest' -Dit.test=WebSessionStoreIT verify` (the IT needs Docker); full `mvn verify` before the commit. Local browser run of the whole sign-in through the dev fake issuer on `http://acme.localhost:<port>` (risk row 34, shown here, not in Task 14).
 
 ## Task 11: Platform Console sign-in — KAN-233
+
+> **Superseded 2026-11-05 (KAN-275).** Rebuilt as Task 29 on the realm `tsolve-ops` (Q1 = B).
 
 **Story:** STORY-001
 **Feature:** operator-sign-in
@@ -205,6 +221,8 @@ runs before `WebSessionFilter`).
 
 ## Task 12: Jira account link as a sign-in target — KAN-234
 
+> **Superseded 2026-11-05 (KAN-275).** Replaced by Task 30: a link request and a confirm page, no sign-in state (Q2 = A; design row 46 becomes row 121).
+
 **Story:** STORY-001
 **Feature:** jira-link-sign-in
 **Acceptance criteria:** AC-001.35, AC-001.36, AC-001.37, AC-001.38
@@ -220,6 +238,8 @@ runs before `WebSessionFilter`).
 **Verification:** Tests name AC-001.35–.38; design risk row 37. Targeted: `cd backend && mvn -Dtest='JiraLinkSignInTest,JiraAccountLinkRepositoryTest' test`; full `mvn verify` before the commit.
 
 ## Task 14: Platform adapters, registry stores and Account tenancy — KAN-247 (stub)
+
+> **Changed 2026-11-05 (KAN-275).** The sign-in tables no longer move to the registry: they are dropped by Task 24 (so the parts of this stub about `sign_in_states` and `hand_off_code` fall away). The adapters, `workspace_email`, the tenant row guard and the `FirstAdminCreator` stay. `WorkspaceSignInProvisioner` moves into the platform's public API when `WorkspaceProvisioning` exists (design, "Platform change requests").
 
 **Story:** STORY-001, STORY-010
 **Feature:** platform-adapters
@@ -385,3 +405,223 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 **Estimated size:** medium (~300 lines); about 12 tests
 **Verification:** Tests name AC-003.22 and AC-003.13 (no match). Targeted: `cd frontend && npm run test -- src/features/my-profile`. Browser check at 1366 × 768 against frames (main) and (d).
 **Done when:** the tests pass; the full frontend verify passes with `generate:api` leaving no diff; `bun harnessclaude/hooks/sdd.ts trace identity STORY-003` shows AC-003.11–.14 and .20–.23 covered.
+
+## Keycloak re-plan tasks (KAN-275 plan, 2026-11-05)
+
+Spec: artifacts/03-modules/identity/spec.md
+Master: artifacts/04-plans/identity/design.md ("Keycloak re-plan: STORY-001 sign-in and STORY-002 logout")
+ADR: `docs/adr/0003-keycloak-sign-in.md` (K1–K14). Runbook: `docs/runbooks/onboard-company.md`.
+
+Tasks 23, 24, 25a, 25b, 26a, 26b and 27–31 replace the sign-in mechanism of Tasks 8, 9, 9b, 10, 11 and 12 (Tasks 7, 14 and 15–22 stay). Order: feedback
+first (Task 23 is a sign-in Hiếu can try), then the removal, then the `sub` binding and the Workspace checks (25a, 25b), the session and `user_role` (26a, 26b), logout, provisioning,
+Operators, the Jira link and the theme. One PR per task, each on its own branch `<type>/KAN-<n>-identity-<desc>` from an
+up-to-date `main`; at most about 8 production files and 12 tests each (Task 26a carries the salvage).
+Before each commit: the full verify of the side the task touches (CLAUDE.md project rules). Every AC id below is in
+exactly one task (AC-001.16 is in Task 26a, which traces it; its Account update is written in Task 25a); ids retired by the 2026-11-05 spec change are in none (Task 24 removes their code and tests).
+Every code card's "Read first" carries the K-ids and AC ids of its task in full text. All code tasks and the reviewer
+run Opus, high (auth).
+
+**Jira and the old tasks (Q5 = A).** KAN-229, 230, 231 and 235 stay Done (their code is removed by Task 24). KAN-232 is
+re-scoped to Tasks 26a and 26b, KAN-233 to Task 29, KAN-234 to Task 30, KAN-106 to Task 27; KAN-247 keeps the platform adapters
+and the `FirstAdminCreator` (Task 14). New issues for Tasks 23, 24, 28 and 31 (a bookkeeping card does this after the
+PR split is agreed). Salvage of the uncommitted Task 10 tree (61 files on `feat/KAN-232-identity-workspace-session`):
+save it as a patch outside the repo (do not revert, stash or commit it); Tasks 26a and 26b re-apply, on a new branch from
+`main`, `identity/session` without `CompleteController`, `AccountRole*`, the `user_role` changeset, Redis in compose,
+pom and yml, `SecurityProblemWriter`, and the dev seeder; it drops `StartCookie`, the changesets `008` and `009`, and
+the hand-off edits, and does not commit the start-cookie spec change (superseded). Task 26a also drops PR #119's second
+session filter on identity's side (Q15).
+
+**Before Task 25b starts:** the platform owner has the change requests of the design ("Platform change requests": the two
+columns on `tenant_workspace`, the provisioning-port call and the `create` parameter). There is no `PENDING_SIGN_IN`
+status and no `activate` operation; a Workspace is Active at creation, and the test sign-in is a runbook step. Tasks 23
+and 25a need nothing from the platform.
+
+## Task 23: Keycloak sign-in on the local stack — new Jira issue
+
+**Story:** STORY-001
+**Feature:** keycloak-sign-in
+**Decisions owned:** K1, K3 (the dev IdPs), K5, K7, K14, Q3, Q8, Q9, Q10 (realm mappers), Q13
+**Acceptance criteria:** AC-001.1, AC-001.3, AC-001.6, AC-001.8, AC-001.9, AC-001.52, AC-001.53, AC-001.54, AC-001.55, AC-001.63, AC-001.64, AC-001.65
+**Description:** Add Keycloak 26.x to `docker-compose.yml` (pinned image, heap cap, health check, its own database `keycloak`) with the realm import `infra/keycloak/realm-tsolve.json` (the client `tsolve-web` with PKCE `S256` and the `acme` and `beta` redirect URIs, the `organization` scope and the `hd` mapper, SSO Session Max 8 h and Idle 60 min, registration off, no password form, IdPs hidden, the custom first-broker-login flow, brute-force detection, the IdPs `google-acme` and `google-beta` pointing at a WireMock `fake-google` service in compose, and users that match `DevAccounts`). In the backend: add `spring-boot-starter-oauth2-client` and `testcontainers-keycloak`; `KeycloakAuthorizationRequestResolver` (`kc_idp_hint`, PKCE, the site's exact redirect URI), `RedisAuthorizationRequestRepository` with the `__Host-TSOLVE_AUTHREQ` cookie (read and delete in one step), `OidcCallbackHandler` (request check → MSG141, Keycloak error and token failures → MSG06, cookie always expired; on success in this task it only hands the claims to a dev-profile `DevClaimsController` that shows them), `AuthSecurityConfig` (stateless, `NullSecurityContextRepository`, no HTTP session) and the start-up check of both discovery documents. The old `login.` classes keep answering on `login.` only until Task 24 deletes them: the new chain ignores that host. The Account checks, `sub` binding and the session are Tasks 25 and 26.
+**What Hiếu can see or try:** `docker compose up`, then `http://acme.localhost:<port>/api/v1/auth/sign-in` goes to Keycloak, then to the fake Google account chooser for the `acme` domain, back to the site's callback, and the dev page shows the verified claims (`sub`, email, `organization`, `hd`). A callback opened in a second browser answers `/login?error=MSG141`. A sign-in request with the hint removed shows no list of companies and no password form.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/signin/{KeycloakAuthorizationRequestResolver,RedisAuthorizationRequestRepository,OidcCallbackHandler}.java`, `backend/src/main/java/vn/tsolve/identity/dev/DevClaimsController.java`, `infra/keycloak/realm-tsolve.json`, `infra/keycloak/fake-google/mappings/*.json`
+- Modify: `backend/src/main/java/vn/tsolve/identity/AuthSecurityConfig.java`, `backend/src/main/java/vn/tsolve/identity/signin/{SignInConfig,SignInProperties,SignInStartController}.java`, `backend/pom.xml`, `backend/src/main/resources/application.yml`, `docker-compose.yml`, `.env.example`, `backend/src/test/resources/config/application.yml`
+- Test: `backend/src/test/java/vn/tsolve/identity/signin/{KeycloakAuthorizationRequestResolverTest,RedisAuthorizationRequestRepositoryIT,OidcCallbackHandlerTest,KeycloakSignInEndToEndIT,RealmImportIT,DiscoveryCheckTest,TwoInstanceCallbackIT}.java`; modify `SignInStartControllerTest`, `AuthSecurityConfigTest`, `SignInPropertiesTest`, `FakeGoogleIssuer` (the upstream that Keycloak brokers to)
+**Dependencies:** Docker Desktop; none of the platform tasks (the dev lookup answers for `acme` and `beta`).
+**PR / Jira:** branch `feat/KAN-<n>-identity-keycloak-sign-in`; Jira to create (Q5).
+**Estimated size:** large (8 production Java files; 11 tests)
+**Verification:** Tests name AC-001.1, .3, .6, .8, .9, .52–.55, .63–.65; design risk rows 103–105, 110, 111, 114, 115, 122. Targeted: `cd backend && mvn -Dtest='KeycloakAuthorizationRequestResolverTest,OidcCallbackHandlerTest,DiscoveryCheckTest,SignInStartControllerTest,AuthSecurityConfigTest' -Dit.test='RedisAuthorizationRequestRepositoryIT,KeycloakSignInEndToEndIT,RealmImportIT,TwoInstanceCallbackIT' verify` (the ITs need Docker); full `mvn verify` before the commit. Local browser run through Keycloak at `acme.localhost`.
+
+## Task 24: Remove the custom sign-in — new Jira issue
+
+**Story:** STORY-001
+**Feature:** remove-custom-sign-in
+**Decisions owned:** K12
+**Acceptance criteria:** none passed. It retires the code and tests of AC-001.2, .4, .5, .17, .19, .35, .36, .37, .39, .44, .45, .46, .47, .49, .50 and .51 (ids never reused).
+**Description:** Delete `AuthorizeController`, the `login.` `CallbackController`, `GoogleIdentity`, `GoogleOidcClient`, `IdTokenVerifier`, the backend `LoginPage`, `SignInCookie`, `SignInState`, `SignInStateRepository`, `SignInStateService`, `SignedToken`, `HandOffCode`, `HandOffCodeRepository`, `HandOffCodeService`, and their tests (`AuthorizeControllerTest`, `IdTokenVerifierTest`, `LoginPageTest`, `SignInCookieTest`, `SignInStateRepositoryIT`, `SignInStateServiceTest`, `SignedTokenTest`, `CallbackControllerTest`, `CallbackFailureLoggingTest`, `HandOffCodeSchemaIT`, `HandOffCodeServiceTest`, `HandOffStore`). New changesets drop `sign_in_states` and `hand_off_code` (the files `004`, `005`, `006`, `007` are never edited). Remove `TSOLVE_SIGNING_KEY`, `tsolve.oidc.google.*` and the `GOOGLE_*` values from the web process; remove `/api/v1/auth/authorize` and `/api/v1/auth/complete` from the OpenAPI file and regenerate; `AuthHosts` keeps only Workspace site vs `admin.`. The build and the suites stay green.
+**What Hiếu can see or try:** `git diff --stat` shows the removal; `mvn verify` is green; the Task 23 sign-in still works; `docker compose down -v` then `up` starts clean (note for developers whose database ran the unreleased `008` and `009`, row 120).
+**Files:**
+- Delete: the classes and tests above
+- Modify: `backend/src/main/java/vn/tsolve/identity/{AuthSecurityConfig}.java`, `backend/src/main/java/vn/tsolve/identity/signin/{AuthHosts,SignInConfig,SignInProperties}.java`, `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `backend/src/main/resources/application.yml`, `.env.example`, `frontend/openapi/tsolve-api.yaml`
+- Create: `backend/src/main/resources/db/changelog/changes/<next>-identity-drop-sign-in-states.sql`, `<next>-identity-drop-hand-off-code.sql`
+- Generate only: `frontend/src/shared/api/generated/**`
+- Test: modify `AuthHostsTest` if any; a changelog test that both tables are gone
+**Dependencies:** Task 23 merged.
+**PR / Jira:** branch `refactor/KAN-<n>-identity-remove-custom-sign-in`; Jira to create.
+**Estimated size:** medium (about 8 modified production files; mostly deletions); 2 new tests
+**Verification:** `mvn verify`; `cd frontend && npm run generate:api` leaves no diff and the frontend `verify` passes; `sdd.ts trace identity STORY-001` lists no retired id; design risk row 120.
+
+## Task 25a: The `sub` binding of the Account — new Jira issue
+
+**Story:** STORY-001
+**Feature:** account-sub-binding
+**Decisions owned:** K8, Q11
+**Acceptance criteria:** AC-001.12, AC-001.13, AC-001.15, AC-001.56
+**Description:** New tenant changeset: `app_user.keycloak_sub` (unique). `AccountSignInService` (inside `TenantScope.runIn`) matches the Account by `sub`, else on a first sign-in by the verified email (ignoring case), binds the `sub` and refuses a `sub` bound to another Account (MSG09, `WARN` with the Account id); a Deactivated Account is refused (MSG10); it records the full name and the sign-in times (the Account update named by AC-001.16, which is traced in Task 26a). `app_user.email` is not updated by a later sign-in. `OidcCallbackHandler` calls the service in Task 25b; until then only its tests run it.
+**What Hiếu can see or try:** the tests only: the first sign-in of a seeded Account binds its `sub`; the same Keycloak user after `sub` was bound to another Account → MSG09; a Deactivated Account → MSG10; an Account of Workspace B is never found from Workspace A (two databases).
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/<next>-identity-app-user-keycloak-sub.sql`
+- Modify: `backend/src/main/java/vn/tsolve/identity/account/{Account,AccountRepository,AccountSignInService}.java`, `backend/src/main/resources/db/changelog/db.changelog-master.xml`
+- Test: `backend/src/test/java/vn/tsolve/identity/account/{AccountRepositoryIT,AccountSubBindingTest}.java`, `backend/src/test/java/vn/tsolve/identity/signin/CallbackAccountIsolationIT.java` (two Workspaces, two databases, two IdPs: rows 106, 24)
+**Dependencies:** Task 24 merged.
+**PR / Jira:** branch `feat/KAN-<n>-identity-account-sub-binding`; Jira to create (KAN-235 stays Done).
+**Estimated size:** small (3 production files, 1 changeset); about 8 tests
+**Verification:** Tests name AC-001.12, .13, .15, .56; design risk rows 113, 119. Targeted: `cd backend && mvn -Dtest='AccountSubBindingTest' -Dit.test='CallbackAccountIsolationIT,AccountRepositoryIT' verify`; full `mvn verify`.
+
+## Task 25b: The Workspace checks of the callback and the sign-in start — new Jira issue
+
+**Story:** STORY-001
+**Feature:** callback-workspace-checks
+**Decisions owned:** K2, K11, Q10
+**Acceptance criteria:** AC-001.7, AC-001.10, AC-001.11, AC-001.14, AC-001.48
+**Description:** `WorkspaceRef` gets the slug and the Organization id; `WorkspaceLookup`, `NoWorkspaceLookup` and `DevWorkspaceLookup` follow. `OidcCallbackHandler` runs the AC-001.14 order inside `TenantScope.runIn`: Organization and `hd` (both) → Workspace Active → Account (Task 25a) → Account Active; only the first failure is reported. `SignInStartController` refuses a Workspace with no Google domain or no Organization id (AC-001.48). There is no status gate: a Workspace is Active at creation; if Google has not got the redirect URI yet, Google refuses and the Workspace site shows the normal sign-in error (runbook).
+**What Hiếu can see or try:** locally, the dev claims page of Task 23 now ends in each outcome: `beta`'s Google user on `acme` → `/login?error=MSG122`; a user with no Account → MSG09; a Deactivated Account → MSG10; a suspended Workspace → MSG120; a Workspace with no Organization id → MSG141 at sign-in start.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/identity/signin/port/{WorkspaceLookup,WorkspaceRef,NoWorkspaceLookup}.java`, `backend/src/main/java/vn/tsolve/identity/signin/{OidcCallbackHandler,SignInStartController}.java`, `backend/src/main/java/vn/tsolve/identity/dev/DevWorkspaceLookup.java`
+- Test: `backend/src/test/java/vn/tsolve/identity/signin/CallbackAccountChecksTest.java`, `backend/src/test/java/vn/tsolve/identity/signin/port/InMemoryWorkspaceLookup.java` (modify), `SignInStartControllerTest` (modify)
+**Dependencies:** Task 25a merged; the platform change requests sent (the real lookup waits for them; the dev and in-memory lookups do not).
+**PR / Jira:** branch `feat/KAN-<n>-identity-callback-workspace-checks`; Jira to create.
+**Estimated size:** small (6 production files); about 8 tests
+**Verification:** Tests name AC-001.7, .10, .11, .14, .48; design risk rows 103, 106, 124. Targeted: `cd backend && mvn -Dtest='CallbackAccountChecksTest,SignInStartControllerTest' verify`; full `mvn verify`.
+
+## Task 26a: Redis session and `WebSessionFilter` — KAN-232 (re-scoped)
+
+**Story:** STORY-001
+**Feature:** workspace-session
+**Decisions owned:** K9, Q15
+**Acceptance criteria:** AC-001.16, AC-001.18, AC-001.20, AC-001.21, AC-001.22, AC-001.23, AC-001.24, AC-001.25, AC-001.27
+**Description:** Salvage of the uncommitted Task 10 tree (see the header): `WebSessionStore` (Redis, `tsolve:session:<hash>`; gets the `id_token_hint`), `WebSession`, `SessionCookie`, `WebSessionFilter` with the rules of the old design (site and kind MSG123, 8 h / 60 min MSG07, the Account re-read with MSG10, the `X-TSolve-Background` header, a cookie that names no session is anonymous and is cleared), `SecurityProblemWriter` texts, the `WebSessionFilter` registration in `SecurityConfig`, Redis in compose, pom and yml (already on the branch of Task 23 if Task 23 needed it; otherwise here). `OidcCallbackHandler` now creates the session (AC-001.18) and redirects to `returnTo` or `/`. Until Task 26b the `TSolveUser` has no Roles. AC-001.16 is traced here: its Account update is written in Task 25a, its last bullet (the session) in this task. Dropped: `CompleteController`, `StartCookie`, the changesets `008` and `009`, the hand-off edits and the dev fake Google classes. PR #119's `UserListSessionFilter` and `WorkspaceSessionBinding` are not carried into identity (Q15); the note to its owner is Hiếu's, outside this plan.
+**What Hiếu can see or try:** a full local sign-in through Keycloak ends on `/` with the `__Host-TSOLVE_SESSION` cookie set (host-only, `HttpOnly`, `Secure`, `Lax`); the same cookie copied to `beta.localhost` or `admin.localhost` → MSG123; 60 idle minutes → MSG07; Deactivating the Account → MSG10 at the next request.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/session/{WebSession,WebSessionStore,WebSessionFilter,SessionCookie}.java`
+- Modify: `backend/src/main/java/vn/tsolve/identity/signin/OidcCallbackHandler.java`, `backend/src/main/java/vn/tsolve/common/security/{SecurityConfig,SecurityProblemWriter}.java`, `docker-compose.yml`, `backend/pom.xml`, `backend/src/main/resources/application.yml`
+- Test: `backend/src/test/java/vn/tsolve/identity/session/{WebSessionFilterTest,WebSessionStoreIT,SessionRedisDownTest,AbstractSessionIT,SessionTestFixtures,WhoAmITestController}.java`, `backend/src/test/java/vn/tsolve/identity/signin/SessionCreationTest.java`
+**Dependencies:** Task 25b merged; be-foundation `roles-security` on `main` (`TSolveUser`, the deny-by-default chain, ProblemDetail 401 bodies).
+**PR / Jira:** branch `feat/KAN-232-identity-workspace-session` (the existing branch name; a new branch from `main` with the salvaged patch applied); Jira KAN-232.
+**Estimated size:** medium (7 production Java files, most salvaged from the uncommitted tree, plus compose, pom and yml); 7 tests
+**Verification:** Tests name AC-001.16, .18, .20–.25, .27; AC-001.20 and .21 are two-Workspace tests; design risk rows 114, 123 and the older rows 27–32, 90, 91, 102 that survive. Targeted: `cd backend && mvn -Dtest='WebSessionFilterTest,SessionCreationTest,SessionRedisDownTest' -Dit.test='WebSessionStoreIT' verify`; full `mvn verify`; the local sign-in run.
+
+## Task 26b: `user_role` and the Roles in the session — KAN-232 (re-scoped)
+
+**Story:** STORY-001
+**Feature:** user-role
+**Decisions owned:** K11
+**Acceptance criteria:** AC-001.26
+**Description:** Salvage of the uncommitted Task 10 tree: `AccountRole`, `AccountRoleRepository`, the `user_role` changeset, `Account` (its Roles), the dev Account and Role seeder (`DevAccountSeeder`, `DevAccounts`). `WebSessionFilter` puts a `TSolveUser` with the Account's current id, email, full name and Roles in the security context at each request, so a Role change applies from the next request (AC-001.26; Task 26a's filter built it without Roles).
+**What Hiếu can see or try:** the dev seeder creates Accounts with Roles that match the Keycloak realm import users; after a sign-in the whoami test endpoint shows the Roles; changing a Role in the database shows at the next request.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/account/{AccountRole,AccountRoleRepository}.java`, `backend/src/main/resources/db/changelog/changes/<next>-identity-user-role.sql`
+- Modify: `backend/src/main/java/vn/tsolve/identity/account/Account.java`, `backend/src/main/java/vn/tsolve/identity/session/WebSessionFilter.java`, `backend/src/main/java/vn/tsolve/identity/dev/{DevAccountSeeder,DevAccounts}.java`, `backend/src/main/resources/db/changelog/db.changelog-master.xml`
+- Test: `backend/src/test/java/vn/tsolve/identity/dev/{DevAccountSeederIT,DevSessionWhoAmITest}.java` (modified), `backend/src/test/java/vn/tsolve/identity/session/RoleChangeTest.java`, `backend/src/test/java/vn/tsolve/identity/account/AccountRoleRepositoryIT.java`
+**Dependencies:** Task 26a merged.
+**PR / Jira:** branch `feat/KAN-<n>-identity-user-role`; Jira KAN-232 (re-scoped) or a sub-task of it.
+**Estimated size:** small (7 production files incl. the changeset); about 5 tests
+**Verification:** Tests name AC-001.26; design risk row 32. Targeted: `cd backend && mvn -Dtest='RoleChangeTest,DevSessionWhoAmITest' -Dit.test='DevAccountSeederIT,AccountRoleRepositoryIT' verify`; full `mvn verify`.
+
+## Task 27: Logout with Keycloak end-session — KAN-106
+
+**Story:** STORY-002
+**Feature:** logout-rp-initiated
+**Decisions owned:** K10, Q7
+**Acceptance criteria:** AC-002.1, AC-002.2, AC-002.3, AC-002.4, AC-002.5, AC-002.6, AC-002.8
+**Description:** `POST /api/v1/auth/logout` (CSRF) ends the Redis session, expires the cookie, publishes `SessionEnded` (`LOGOUT`) once, and answers 200 `{ logoutUrl }` built from Keycloak's `end_session_endpoint`, the session's `id_token_hint` and `post_logout_redirect_uri` (the site's `/login`; `tsolve-ops` on `admin.`). The `EXPIRED` event within 15 minutes (keyspace events on a shadow key, or a worker job over an expiry-ordered index: chosen when the card is written, because an expiry event carries no Account id) and the `DEACTIVATED` event. The OpenAPI answer changes from 204 to 200 and is regenerated. fe-foundation's `useSignOut` must navigate to `logoutUrl` (a change request to KAN-198 before this task's merge, owner of fe-foundation).
+**What Hiếu can see or try:** log out on `acme.localhost`: the browser goes through Keycloak's end-session page back to `/login`; "Sign in" afterwards asks Google again (Keycloak's SSO session is gone); the old cookie answers MSG07.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/session/{LogoutController,KeycloakLogoutUrlBuilder,SessionEnded,SessionExpiryPublisher}.java`
+- Modify: `backend/src/main/java/vn/tsolve/identity/session/{WebSessionStore,WebSessionFilter}.java`, `frontend/openapi/tsolve-api.yaml`
+- Generate only: `frontend/src/shared/api/generated/**`
+- Test: `backend/src/test/java/vn/tsolve/identity/session/{LogoutControllerTest,KeycloakLogoutUrlBuilderTest,SessionEndedEventTest,SessionExpiryPublisherIT}.java`
+**Dependencies:** Task 26a merged; the fe-foundation change request for `useSignOut`.
+**PR / Jira:** branch `feat/KAN-106-identity-logout`; Jira KAN-106.
+**Estimated size:** medium (6 production files); about 10 tests
+**Verification:** Tests name AC-002.1–.6 and .8; design risk rows 114, 116. Targeted: `cd backend && mvn -Dtest='LogoutControllerTest,KeycloakLogoutUrlBuilderTest,SessionEndedEventTest' -Dit.test=SessionExpiryPublisherIT verify`; `cd frontend && npm run generate:api` with no diff; full `mvn verify`.
+
+## Task 28: Keycloak provisioning port and Admin API adapter — new Jira issue
+
+**Story:** STORY-001
+**Feature:** keycloak-provisioning
+**Decisions owned:** K2, K3, K4, K6, Q3, Q4, Q12, Q14, Q16
+**Acceptance criteria:** AC-001.57, AC-001.58, AC-001.59, AC-001.60, AC-001.61, AC-001.62
+**Description:** The port `WorkspaceSignInProvisioner` (`provision`, `check`, `remove`), the no-op bean, and `KeycloakWorkspaceSignInProvisioner` over the Keycloak Admin REST API with the client `tsolve-provisioner` (least roles, in the realm import): Organization with the domain, the Google IdP `google-<slug>` (client id and secret from the provisioning profile, `hostedDomain`, hidden on the login page, the first-broker-login flow, the link to the Organization), the two URIs in `tsolve-web`; serialised by an advisory lock, a re-read and verify after each write, compensating deletes by alias; `remove` for the runbook. The credentials load only in the `ops` and Console profiles. The design's "Platform change requests" (status, columns, the call from `WorkspaceProvisioning`) are made by the platform owner; until then only the no-op bean is wired. The runbook `docs/runbooks/onboard-company.md` is updated if the adapter changes a step.
+**What Hiếu can see or try:** a test or an `ops`-profile call creates the Organization, the IdP and the URIs for a new slug, and the Keycloak admin console shows them; the call twice changes nothing; a failure midway leaves nothing; `provision` for two slugs at once keeps all four URIs; a Workspace web profile starts without any Keycloak Admin or Google value.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/signin/port/{WorkspaceSignInProvisioner,NoopWorkspaceSignInProvisioner}.java`, `backend/src/main/java/vn/tsolve/identity/keycloak/{KeycloakWorkspaceSignInProvisioner,KeycloakAdminClient,ProvisioningLock,KeycloakProvisioningProperties}.java`
+- Modify: `infra/keycloak/realm-tsolve.json` (the `tsolve-provisioner` client), `backend/src/main/resources/application.yml`, `.env.example`
+- Test: `backend/src/test/java/vn/tsolve/identity/keycloak/{KeycloakWorkspaceSignInProvisionerIT,ProvisioningRaceIT,ProvisioningUndoIT,KeycloakAdminClientTest,ProvisioningProfileTest,NoopWorkspaceSignInProvisionerTest,FakeWorkspaceSignInProvisioner}.java`
+**Dependencies:** Task 23 (Keycloak in compose and Testcontainers); the platform's `WorkspaceProvisioning` only for the real call (Task 14).
+**PR / Jira:** branch `feat/KAN-<n>-identity-keycloak-provisioning`; Jira to create.
+**Estimated size:** medium (8 production files); about 9 tests
+**Verification:** Tests name AC-001.57–.62; design risk rows 107–109, 112, 118. Targeted: `cd backend && mvn -Dtest='KeycloakAdminClientTest,ProvisioningProfileTest,NoopWorkspaceSignInProvisionerTest' -Dit.test='KeycloakWorkspaceSignInProvisionerIT,ProvisioningRaceIT,ProvisioningUndoIT' verify`; full `mvn verify`.
+
+## Task 29: Platform Console Operators on `tsolve-ops` — KAN-233 (re-scoped)
+
+**Story:** STORY-001
+**Feature:** operator-sign-in
+**Decisions owned:** Q1 (B), K9
+**Acceptance criteria:** AC-001.28, AC-001.29, AC-001.30, AC-001.31, AC-001.32, AC-001.33, AC-001.34, AC-001.66
+**Description:** The realm import `infra/keycloak/realm-tsolve-ops.json` (Google IdP without `hd`, a required second factor, the client `tsolve-console`, the exact redirect URI of `TSOLVE_ADMIN_ORIGIN`), the second client registration and request resolver for `admin.`, `OperatorAllowList` (trimmed, ignoring case), `OperatorPrincipal`, the allow-list check at the callback (MSG135) and at every request, and the Operator session on `admin.` only (MSG123 on a Workspace site). Console failures go to `/login?error=MSG06` on `admin.`.
+**What Hiếu can see or try:** on `admin.localhost`, an allow-listed Operator signs in through Keycloak, sets up the second factor once, and reaches the Console placeholder; any other Google user → MSG135; the Operator cookie copied to a Workspace site → MSG123; no tenant IdP is on the `tsolve-ops` login page.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/session/{OperatorAllowList,OperatorPrincipal}.java`, `infra/keycloak/realm-tsolve-ops.json`
+- Modify: `backend/src/main/java/vn/tsolve/identity/AuthSecurityConfig.java`, `backend/src/main/java/vn/tsolve/identity/signin/{OidcCallbackHandler,KeycloakAuthorizationRequestResolver,SignInProperties}.java`, `backend/src/main/java/vn/tsolve/identity/session/WebSessionFilter.java`, `docker-compose.yml`, `.env.example`
+- Test: `backend/src/test/java/vn/tsolve/identity/signin/OperatorSignInTest.java`, `backend/src/test/java/vn/tsolve/identity/session/OperatorSessionTest.java`, `backend/src/test/java/vn/tsolve/identity/signin/OpsRealmImportIT.java`
+**Dependencies:** Task 26b merged.
+**PR / Jira:** branch `feat/KAN-233-identity-operator-sign-in`; Jira KAN-233.
+**Estimated size:** medium (about 8 production files); about 8 tests
+**Verification:** Tests name AC-001.28–.34 and .66; AC-001.32 is a two-Workspace test; design older rows 29, 35, 36. Targeted: `cd backend && mvn -Dtest='OperatorSignInTest,OperatorSessionTest' -Dit.test=OpsRealmImportIT verify`; full `mvn verify`.
+
+## Task 30: Jira account link with a confirm page — KAN-234 (re-scoped)
+
+**Story:** STORY-001
+**Feature:** jira-link-sign-in
+**Decisions owned:** Q2 (A), K5, K7, K8, K9
+**Acceptance criteria:** AC-001.38, AC-001.69, AC-001.70, AC-001.71, AC-001.72
+**Description:** `JiraLinkRequestService` (a single-use request in Redis, 10 minutes, holding the Workspace and the tracker account from the verified Forge token) for `jira-app`; the web-app route `/jira-link` with the confirm page "Link Jira user X (site S) to your account Y?" (it sends a signed-out person through the sign-in of Task 23 with that URL as `returnTo`); `POST /api/v1/auth/jira-link/confirm` with CSRF and a Workspace session, which consumes the request, records the link in the Workspace's database (`jira_account_links`, replacing an earlier link of the same tracker account) and answers MSG75. Failures as AC-001.72. Design row 121 stays "mitigated"; option B (a typed code) is documented in the design if the team wants the Critical row closed.
+**What Hiếu can see or try:** a dev call of `JiraLinkRequestService` prints the URL; opened signed out it goes through Keycloak and back to the confirm page; "Link" shows MSG75 and the link row exists; a second open of the same URL, a URL made for `beta`, or a POST with no CSRF token records nothing.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/jiralink/{JiraLinkRequestService,JiraLinkController,JiraAccountLink,JiraAccountLinkRepository}.java`, `backend/src/main/resources/db/changelog/changes/<next>-identity-jira-account-links.sql`, `frontend/src/features/auth/pages/JiraLinkPage.tsx`
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `frontend/src/app/router/routes.tsx`, `frontend/openapi/tsolve-api.yaml`
+- Generate only: `frontend/src/shared/api/generated/**`
+- Test: `backend/src/test/java/vn/tsolve/identity/jiralink/{JiraLinkRequestServiceTest,JiraLinkControllerTest,JiraAccountLinkRepositoryIT}.java`, `frontend/src/features/auth/pages/JiraLinkPage.test.tsx`
+**Dependencies:** Task 26a merged (the Workspace session and CSRF); `jira-app` (KAN-124) calls the service once it exists.
+**PR / Jira:** branch `feat/KAN-234-identity-jira-link-confirm`; Jira KAN-234.
+**Estimated size:** medium (8 production files incl. frontend); about 9 tests
+**Verification:** Tests name AC-001.38 and .69–.72; design row 121. Targeted: `cd backend && mvn -Dtest='JiraLinkRequestServiceTest,JiraLinkControllerTest' -Dit.test=JiraAccountLinkRepositoryIT verify`; frontend `npm run test -- src/features/auth`, then `generate:api` with no diff; full verify of both sides.
+
+## Task 31: Keycloak theme, failure pages and the Login screen check — new Jira issue
+
+**Story:** STORY-001
+**Feature:** keycloak-theme
+**Decisions owned:** K13, Q6
+**Acceptance criteria:** AC-001.67, AC-001.68. Verifies the unchanged AC-001.40, .41, .42 and .43 (their tests from Task 7 stay green).
+**Description:** The minimal T-Solve theme `infra/keycloak/themes/tsolve/login/` (logo, colours, no external resource, no script) on Keycloak's login and error pages; the error page shows the exact Report3 text of MSG06 and a "Back to sign-in" link to the base URL of the client that started the request; the realm import sets the theme. The tests (Task 23's Keycloak container) trigger each failure Keycloak cannot hand back (`redirect_uri_mismatch` from the fake upstream, an expired login session, an unknown `kc_idp_hint`, an internal error) and record which land on the themed page and which reach `/login?error=` (Q6). The mock sign-in page and `startSignIn` stay. The last card of the item, a `tsolve-doc-writer` card, updates the authentication guide to this design and links ADR-0003 and the runbook.
+**What Hiếu can see or try:** a screenshot of Keycloak's login (when the hint is wrong), error and logout pages in the T-Solve theme; the failure table in the test output.
+**Files:**
+- Create: `infra/keycloak/themes/tsolve/login/{theme.properties,template.ftl,error.ftl,messages/messages_en.properties,resources/css/tsolve.css}`
+- Modify: `infra/keycloak/realm-tsolve.json` (the theme), `docker-compose.yml` (the theme mount)
+- Test: `backend/src/test/java/vn/tsolve/identity/signin/KeycloakThemeIT.java`, `backend/src/test/java/vn/tsolve/identity/signin/KeycloakFailurePlacementIT.java`
+**Dependencies:** Task 23 merged; Task 28 not required.
+**PR / Jira:** branch `feat/KAN-<n>-identity-keycloak-theme`; Jira to create.
+**Estimated size:** small–medium (5 theme files, no production Java); about 6 tests
+**Verification:** Tests name AC-001.67 and .68; `cd frontend && npm run test -- src/features/auth src/app/dev` stays green for AC-001.40–.43. Targeted: `cd backend && mvn -Dit.test='KeycloakThemeIT,KeycloakFailurePlacementIT' verify`.

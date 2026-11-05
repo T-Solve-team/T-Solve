@@ -70,3 +70,16 @@ Aligns identity's backend plan with the multi-tenant HLA (KAN-231 step 2, Hiếu
 Tasks 8–9 keep their tables until then. Sessions live in Redis (Task 10; local stack and tests use a Redis container).
 One database per company: the account tables have no `workspace_id` and email uniqueness across the platform goes
 through the registry (Tasks 9b and 14). Task 9 is unchanged. New edge-case rows 90–93 apply to Tasks 9b, 10 and 14.
+
+## Keycloak re-plan — Tasks 23–31 (2026-11-05, KAN-275)
+
+Master: artifacts/04-plans/identity/design.md, "Keycloak re-plan: STORY-001 sign-in and STORY-002 logout".
+Spec: artifacts/03-modules/identity/spec.md, Changelog row 2026-11-05 (AC-001.52–.73, AC-002.8). ADR: `docs/adr/0003-keycloak-sign-in.md`.
+
+Replaces the sign-in mechanism of Tasks 8, 9, 9b, 10, 11 and 12 with Keycloak 26.x (K1–K14): Spring Security's OAuth2
+client against the realm `tsolve`, one Organization and one Google IdP per Workspace, the authorization request in
+Redis, the callback on the Workspace site creating the Redis session. Tasks 8, 9 and 9b stay Done and their code is
+removed by Task 24; Task 10's uncommitted tree is salvaged into Task 26; Tasks 11 and 12 become Tasks 29 and 30;
+Task 14 keeps the platform adapters and the `FirstAdminCreator` but no longer moves sign-in tables. Feedback first:
+Task 23 lets Hiếu sign in locally through Keycloak. Edge-case rows 103–124 apply. No open question.
+

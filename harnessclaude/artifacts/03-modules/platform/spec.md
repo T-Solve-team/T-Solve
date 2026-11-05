@@ -23,6 +23,7 @@ owner: BA
 | 2026-11-04 | STORY-013, STORY-001 | Queue ownership made consistent (review 2, KAN-98): `platform` provides a minimal `InvitationJobQueue` on JobRunr in the Jobs database and owns the Jobs database and its tables; `worker` takes over the job handler and the background job server later. Out of Scope, Configuration (`JOBS_DB_*` also used by `platform` processes), Required from other modules (`worker`) and Interface Contracts reworded; AC-013.17 reworded (the job is queued through `InvitationJobQueue`, not "on `worker`"). No criterion added or removed | User decision of 4/11 after review 2 (finding M1): the first Admin's invitation does not wait for `worker`; the spec still gave the queue to `worker` |
 | 2026-11-04 | STORY-001, STORY-013 | Table names follow `01_catalog.sql` / `02_tenant.sql`: AC-001.15, AC-001.16, AC-001.19 and the step that records a Workspace name the catalog tables `tenant_workspace` and `workspace_email`, with the key `workspace_id`. AC-001.20 and AC-001.23: a tenant table has a singular name and the UUID key `<table>_id`. AC-001.20: a tenant table has only the timestamp columns the DDL gives it. The other catalog columns stay as AC-001.15 gives them, and the DDL was changed to match | Schema decisions of 4/11 (KAN-33) |
 | 2026-11-04 | STORY-001, STORY-013 | Merge of `main` (#112, KAN-33) into the HLA change: the schema names of #112 are applied to the HLA wording. AC-001.15, AC-001.16, AC-001.19, AC-013.1 step 4, AC-013.19 and the Schema contract name the catalog tables `tenant_workspace` (key `workspace_id`; `schema_version` kept) and `workspace_email`; AC-001.20 and AC-001.23 take the singular names, the `<table>_id` key and the DDL's timestamp columns; `audit_log_entry` replaces `audit_events` in the changeset-001 line. AC-001.17 (sign-in states in the Registry), AC-001.21 (`tenant_identity` on the allow-list), the Registry, `schema_version`, the tenant row guard and Garage keep the HLA wording. No criterion added or removed | Merge conflict of PR #114 with `main` (KAN-98, KAN-33) |
+| 2026-11-05 | STORY-001, STORY-009, STORY-013 | **Keycloak sign-in (ADR-0003, KAN-275; identity design, "Platform change requests").** New AC-001.34 (`tenant_workspace` gets `google_domain` and `keycloak_organization_id`; `WorkspaceSummary` carries both). AC-001.17 no longer says the Registry hosts `identity`'s sign-in states and hand-off codes (identity deletes them, K12). AC-009.4: `login.` goes to Keycloak, not to the backend. STORY-013: `create` takes the Google domain (AC-013.1, AC-013.13 reworded; steps renumbered, AC-013.14 and AC-013.19 follow); new AC-013.21 (Google domain refused if missing or invalid), AC-013.22 (provisioning port call at creation), AC-013.23 (undo calls `remove`), AC-013.24 (a Workspace is Active at creation; the sign-in test is a runbook step, `docs/runbooks/onboard-company.md`). Requirements 1, 3 and 4, Out of Scope, Interface Contracts, Required from other modules and Schema reworded: no state value, hand-off code or sign-in table is mentioned any more | Decisions K1–K14 of ADR-0003 (4/11, 5/11), Q4 revised: no `PENDING_SIGN_IN` status, no `activate` (AC-013.1 keeps Active at creation); Hiếu's request that identity's old sign-in text leave the platform spec |
 
 ## Requirements
 
@@ -31,18 +32,21 @@ owner: BA
    prefix in object storage, and a catalog database (the HLA's Platform / Tenant Registry, "the Registry") holds only
    what is needed to find a Workspace (ADR-0002, GBR-37). JobRunr's tables live in a separate Jobs database. The Workspace
    of a request is decided only by the host of a Workspace site, the `cloudId` of a verified Forge Invocation Token,
-   or an explicit scoped binding used by jobs, the central sign-in callback, the ops script and the demo seed. No API
+   or an explicit scoped binding used by jobs, the sign-in callback of a Workspace site, the ops script and the demo seed. No API
    takes a Workspace from the request (GBR-37).
 2. Binding a Workspace selects that Workspace's database for every query of the request or job; with no Workspace
    bound, no tenant database can be reached. Business tables carry no `workspace_id`.
-3. The catalog holds, per Workspace: site name, status, database connection, the Jira site and its `cloudId`, and
-   the emails of its Accounts, so that one email belongs to one Workspace (GBR-16, GBR-37). It also holds the
-   short-lived sign-in states and hand-off codes of `identity`, which are not business data.
+3. The catalog holds, per Workspace: site name, status, database connection, the Google domain, the Keycloak
+   Organization id, the Jira site and its `cloudId`, and the emails of its Accounts, so that one email belongs to one
+   Workspace (GBR-16, GBR-37). It holds no sign-in data: sign-in is done by Keycloak (ADR-0003) and sessions are in Redis.
 4. Workspaces are created, suspended and reactivated by a Platform Operator in the Platform Console, or by the
    operations team with the ops script, which is the hand-run form of the same provisioning service (GBR-24, GBR-38,
-   KAN-240; HLA, 3/11; H-Q5). The first Admin Account is created by `identity` through the port `FirstAdminCreator` and
-   invited by email. Creation of the Workspace and its Admin Account is all or nothing; the invitation email is sent
-   after the commit and is not part of it.
+   KAN-240; HLA, 3/11; H-Q5). Creation takes the company's Google domain and has `identity` set up its sign-in in
+   Keycloak through a provisioning port (ADR-0003, K6). The first Admin Account is created by `identity` through the port
+   `FirstAdminCreator` and invited by email. Creation of the Workspace, its Keycloak sign-in setup and its Admin Account
+   is all or nothing; the invitation email is sent after the commit and is not part of it. A Workspace is Active at
+   creation; before telling the company, the platform admin follows the runbook `docs/runbooks/onboard-company.md`
+   (Google redirect URI, test sign-in), which is not a status of the Workspace.
 5. A Suspended Workspace keeps its database; its Workspace site is refused (MSG150), the T-Solve app in its Jira site
    returns an error, ticket tracker events from it are dropped (D29), and its jobs do not run (`worker`, GBR-38).
 6. File storage keeps the files in object storage (Garage, S3-compatible), under the object-key prefix of each
@@ -91,7 +95,8 @@ owner: BA
 - Acceptance:
   - AC-001.15: THE catalog database (the Platform / Tenant Registry of the HLA, named `tsolve_<env>_registry`) SHALL hold the table `tenant_workspace` with `workspace_id` (UUID, primary key), `site_name` (not null, unique), `status` (`ACTIVE` or `SUSPENDED`, not null), `db_name` (not null, unique), `db_user` (not null), `db_password` (not null, encrypted as AC-001.24 says), `schema_version` (the tenant changelog version last applied to that database, not null), `jira_site_url` (nullable), `jira_cloud_id` (nullable, unique), `created_at` and `updated_at` (`TIMESTAMPTZ`, not null) (GBR-24, GBR-37).
   - AC-001.16: THE catalog database SHALL hold the table `workspace_email` with `email` (primary key, stored lower-case) and `workspace_id` (not null, foreign key to `tenant_workspace`), so that one email belongs to at most one Workspace (GBR-16, GBR-37).
-  - AC-001.17: THE catalog SHALL hold no business data of a Workspace: no company information, Account name, role, ticket, Wiki document or chat (GBR-37, GBR-38). The short-lived sign-in states and hand-off codes of `identity` are not business data; they live in the catalog database because they are read on `login.`, before any Workspace is bound, and they are deleted when they expire.
+  - AC-001.17: THE catalog SHALL hold no business data of a Workspace: no company information, Account name, role, ticket, Wiki document or chat (GBR-37, GBR-38). The Google domain and the Keycloak Organization id of AC-001.34 are catalog data, not business data.
+  - AC-001.34: THE table `tenant_workspace` SHALL also have `google_domain` (the Workspace's Google domain, stored lower-case, not null) and `keycloak_organization_id` (the id of the Workspace's Keycloak Organization, unique, null until the sign-in setup of AC-013.22 has returned it), and `WorkspaceSummary` SHALL carry both as `googleDomain` and `keycloakOrganizationId` (ADR-0003, K2).
   - AC-001.18: THE backend SHALL keep two Liquibase changelogs: the catalog changelog `db/changelog/catalog/catalog-master.xml` and the tenant changelog `db/changelog/db.changelog-master.xml`, which every module already extends. A changeset belongs to exactly one of them.
   - AC-001.19: WHEN the catalog changelog is applied to an empty catalog database in any environment, THE catalog SHALL contain no row in `tenant_workspace` or `workspace_email` (GBR-24, D42). Only STORY-013 creates Workspaces.
   - AC-001.20: THE tenant-table convention SHALL be, for every table of the tenant changelog that is not on the allow-list of AC-001.21:
@@ -255,7 +260,7 @@ owner: BA
 - Acceptance:
   - AC-009.1: THE main Caddy (`infra/caddy/Caddyfile`) SHALL serve `api.`, `admin.`, `login.` and every Workspace site over HTTPS with a valid certificate. This includes a Workspace created after the deployment, with no manual certificate step (TS-002).
   - AC-009.2: WHEN a request comes to a Workspace site, THE Caddy SHALL send `/api/*` to the backend web process and every other path to the web app.
-  - AC-009.4: WHEN a request comes to `login.`, THE Caddy SHALL send `/api/*` to the backend web process (the central sign-in of `identity`) and answer 404 to every other path.
+  - AC-009.4: WHEN a request comes to `login.`, THE Caddy SHALL send the request to Keycloak (the sign-in of ADR-0003, realm `tsolve`) and to no backend process; the backend no longer serves `login.`.
   - AC-009.5: WHEN a request comes to `api.`, THE Caddy SHALL send `/api/v1/jira-app/*` and `/actuator/health` to the backend web process and answer 404 to every other path.
   - AC-009.6: THE Caddy SHALL pass the original `Host` header unchanged to the backend for every `/api/v1/**` request (TS-002).
   - AC-009.7: IF a request comes to the bare base domain or to `www.`, THEN THE Caddy SHALL answer 404 itself and pass nothing to the web app or the backend (decision Q15).
@@ -329,12 +334,13 @@ owner: BA
   Workspace, and suspends or reactivates it, called by the Platform Console and by a hand-run script, so that every
   Workspace is created the same way whichever way it is started (GBR-24, GBR-38).
 - Acceptance:
-  - AC-013.1: WHEN `infra/ops/workspace.sh create --site <site name> --admin-email <email>` runs with values that pass AC-013.2 to AC-013.5, THE script SHALL, through the backend's `ops` profile and the `WorkspaceProvisioning` service of AC-013.13:
+  - AC-013.1: WHEN `infra/ops/workspace.sh create --site <site name> --admin-email <email> --google-domain <domain>` runs with values that pass AC-013.2 to AC-013.5 and AC-013.21, THE script SHALL, through the backend's `ops` profile and the `WorkspaceProvisioning` service of AC-013.13:
     1. create the Workspace database and its runtime user (AC-001.26);
     2. apply the tenant changelog to it as the owner user;
     3. write the Workspace's id into `tenant_identity` (AC-001.28);
-    4. record the Workspace in the catalog as Active, with the email in `workspace_email`;
-    5. create the first Admin Account by calling `FirstAdminCreator` (AC-013.14);
+    4. record the Workspace in the catalog as Active, with the Google domain and the email in `workspace_email`;
+    5. set up its sign-in in Keycloak through the provisioning port (AC-013.22) and record the Organization id it returns;
+    6. create the first Admin Account by calling `FirstAdminCreator` (AC-013.14);
 
     and print the Workspace site address (GBR-24). After the commit, the service queues the invitation email (AC-013.17).
   - AC-013.2: IF the site name is missing or not an RFC 1123 label (AC-002.4), THEN THE script SHALL refuse with an error naming the rule and create nothing.
@@ -348,14 +354,18 @@ owner: BA
   - AC-013.10: THE script SHALL offer no command that deletes a Workspace, changes its site name or reads data inside its database (GBR-38).
   - AC-013.11: WHEN a Workspace has been created, THE Tenant Resolver SHALL resolve its Workspace site on the next request, with no wait and no restart.
   - AC-013.12: THE script SHALL run only on the application VPS (or a developer machine), with the owner database credentials from the server's `.env`, and SHALL print no password.
-  - AC-013.13: THE platform SHALL offer one Java service `WorkspaceProvisioning` with `create(siteName, adminEmail)`, `suspend(siteName)` and `reactivate(siteName)`, used by the backend's `ops` profile and by `platform-console`. THE script SHALL hold no provisioning logic of its own, and the rules of AC-013.2 to AC-013.11 SHALL be enforced by the service, so that the Console gets the same refusals: a `BusinessRuleException` with the field and, for an email of another Workspace, `code` `MSG155` on field `email` (H-Q5).
-  - AC-013.14: THE platform SHALL declare in its public API the port `FirstAdminCreator` with `UUID createFirstAdmin(UUID workspaceId, String email)`, implemented by `identity`. WHEN provisioning reaches step 5 of AC-013.1, THE service SHALL call it inside `TenantContext.runIn(workspaceId)`, passing the Workspace id and the email in lower case and nothing else. The Account is created Active with the role Admin, and its id is returned (decision Q1, Q2, 4/11).
+  - AC-013.13: THE platform SHALL offer one Java service `WorkspaceProvisioning` with `create(siteName, adminEmail, googleDomain)`, `suspend(siteName)` and `reactivate(siteName)`, used by the backend's `ops` profile and by `platform-console`. THE script SHALL hold no provisioning logic of its own, and the rules of AC-013.2 to AC-013.11 SHALL be enforced by the service, so that the Console gets the same refusals: a `BusinessRuleException` with the field and, for an email of another Workspace, `code` `MSG155` on field `email` (H-Q5).
+  - AC-013.14: THE platform SHALL declare in its public API the port `FirstAdminCreator` with `UUID createFirstAdmin(UUID workspaceId, String email)`, implemented by `identity`. WHEN provisioning reaches step 6 of AC-013.1, THE service SHALL call it inside `TenantContext.runIn(workspaceId)`, passing the Workspace id and the email in lower case and nothing else. The Account is created Active with the role Admin, and its id is returned (decision Q1, Q2, 4/11).
   - AC-013.15: IF the backend starts in the `ops` profile or in a profile that serves the Platform Console and no bean implements `FirstAdminCreator` or no bean implements `InvitationJobQueue`, THEN THE backend SHALL refuse to start and name the missing port.
   - AC-013.16: IF `createFirstAdmin` throws, THEN THE service SHALL undo as AC-013.6 says, so that no Workspace is left without its first Admin Account.
   - AC-013.17: WHEN the creation has been committed, THE service SHALL queue, through `InvitationJobQueue` (JobRunr), one invitation-email job for the new Workspace in the Jobs database, for `worker` to run, and the job SHALL carry only the Workspace id and the id of the first Admin Account. The email SHALL tell the Admin the address of the Workspace site and to sign in with Google (decision Q2, Q4).
   - AC-013.18: IF queueing the job fails, or the mail cannot be sent, THEN THE service SHALL keep the Workspace and its Admin Account, THE failure SHALL be logged without the email address, and `worker` SHALL retry the job. The MVP has no command to send the invitation again.
-  - AC-013.19: IF two creations race for the same email, THEN THE unique constraint on `workspace_email` SHALL let only one claim it, and the other SHALL fail at step 4 of AC-013.1 with the `MSG155` refusal and be undone as AC-013.6 says (decision Q3).
+  - AC-013.19: IF two creations race for the same email, THEN THE unique constraint on `workspace_email` SHALL let only one claim it, and the other SHALL fail at step 4 of AC-013.1 (before step 5, so no Keycloak object is created for it) with the `MSG155` refusal and be undone as AC-013.6 says (decision Q3).
   - AC-013.20: THE Platform Console SHALL be the only caller of `WorkspaceProvisioning` over HTTP, and only on `admin.` for an allow-listed Platform Operator (AC-004.28); no other module SHALL call `create`, `suspend` or `reactivate`, except the seed through AC-012.1.
+  - AC-013.21: IF the Google domain is missing or not a valid domain name, THEN THE service SHALL refuse with a `BusinessRuleException` on field `googleDomain` and create nothing; the domain is stored in lower case (ADR-0003, K2, K3).
+  - AC-013.22: WHEN provisioning reaches step 5 of AC-013.1, THE service SHALL call the port `WorkspaceSignInProvisioner.provision(workspaceId, siteName, googleDomain)`, which sets up the Keycloak Organization, the Google identity provider `google-<site name>`, the domain and the client redirect URI of the Workspace site (K6), and SHALL store the Organization id it returns in `keycloak_organization_id` (AC-001.34). IF the port throws, THEN THE service SHALL undo as AC-013.23 says.
+  - AC-013.23: IF any step after step 5 of AC-013.1 fails, or step 5 itself fails, THEN THE undo of AC-013.6 SHALL also call `WorkspaceSignInProvisioner.remove(workspaceId)`, so that no Keycloak object is left for a Workspace that does not exist. THE service SHALL offer a removal of a Workspace's Keycloak objects for the runbook "remove a company" through the same port, and SHALL still offer no command that deletes a Workspace (AC-013.10).
+  - AC-013.24: THE service SHALL record a new Workspace as Active at step 4 of AC-013.1 and SHALL have no pending-sign-in status and no `activate` operation; the Google redirect URI and the test sign-in are steps of the runbook `docs/runbooks/onboard-company.md`, done by the platform admin before the company is told (decision Q4, revised 5/11).
 
 ### STORY-014: Operations readiness: backup, restore, monitoring, edge limits and load test (KAN-201, KAN-202, KAN-95)
 - Owner: Trần Trung Hiếu. Scheduled after 15/11 (DevOps Phase B); the edge limits (AC-014.9 – AC-014.11) follow the DevOps design's step A5.
@@ -392,10 +402,11 @@ owner: BA
   running a Suspended Workspace's jobs (D12, D43, GBR-38) → `worker` (Phạm Tùng Dương). This module owns the Jobs database
   `tsolve_<env>_jobs` and JobRunr's tables in it (AC-001.33) and provides the minimal `InvitationJobQueue` on JobRunr that
   only stores the invitation job (AC-013.17); a job carries only its Workspace id and record ids.
-- The central sign-in: UC-01, the D9 state value, sessions (kept in Redis), the check that an email was added by the
-  Admin (GBR-03), the Jira account link (UC-59), the Platform Operator allow-list → `identity`. The tables of the
-  sign-in states and hand-off codes and their cleanup job are `identity`'s and `worker`'s; this module only hosts
-  the Registry database (AC-001.17).
+- The sign-in: UC-01, Keycloak and its realm, the Organization and Google identity provider of each Workspace,
+  sessions (kept in Redis), the check that an email was added by the Admin (GBR-03), the Jira account link (UC-59), the
+  Platform Operator allow-list → `identity` (ADR-0003). The Keycloak provisioning code behind the port of AC-013.22 is
+  `identity`'s; the manual Google redirect-URI step and the test sign-in are the runbook
+  `docs/runbooks/onboard-company.md`, not code of this module.
 - The Admin Account itself (including the first Admin created through `FirstAdminCreator`), the UC-05 screen and its
   messages (MSG111, MSG155 on screen) → `identity`; this module only keeps the email list (AC-004.25, AC-004.26).
 - The company information, the service account and the UC-10 screen (MSG153 on screen) → `workspace`; this module
@@ -436,8 +447,9 @@ public interface WorkspaceCatalog {                             // STORY-004
     WorkspaceSummary linkJiraSite(String siteUrl);              // bound Workspace; AC-004.19 – AC-004.24
     void claimEmail(String email);                              // bound Workspace; AC-004.25, AC-004.26
 }
-record WorkspaceSummary(UUID id, String siteName, WorkspaceStatus status,
-                        Optional<String> jiraSiteUrl, Optional<String> jiraCloudId) {}
+record WorkspaceSummary(UUID id, String siteName, WorkspaceStatus status, String googleDomain,
+                        Optional<String> keycloakOrganizationId,
+                        Optional<String> jiraSiteUrl, Optional<String> jiraCloudId) {}   // AC-001.34
 enum WorkspaceStatus { ACTIVE, SUSPENDED }
 record WorkspaceSuspended(UUID workspaceId) {}                  // published after commit (AC-013.7)
 record WorkspaceReactivated(UUID workspaceId) {}
@@ -455,10 +467,15 @@ public interface FileStorage {                                   // STORY-007, o
 record StoredFile(String key, long sizeBytes) {}
 
 public interface WorkspaceProvisioning {                        // STORY-013; the Console and the ops profile
-    WorkspaceSummary create(String siteName, String adminEmail);
+    WorkspaceSummary create(String siteName, String adminEmail, String googleDomain);   // AC-013.1, AC-013.21
     void suspend(String siteName);
     void reactivate(String siteName);
 }
+public interface WorkspaceSignInProvisioner {                   // K6; owned by identity for now (AC-013.22, AC-013.23)
+    String provision(UUID workspaceId, String siteName, String googleDomain);   // returns the Keycloak Organization id
+    void remove(UUID workspaceId);
+}   // Open note: the port may move into platform's public API once `WorkspaceProvisioning` exists (the pattern of
+    // `FirstAdminCreator`), because platform cannot depend on identity; to confirm with the platform owner.
 public interface FirstAdminCreator {                            // declared here, implemented by identity (AC-013.14)
     UUID createFirstAdmin(UUID workspaceId, String email);      // called inside TenantContext.runIn(workspaceId)
 }
@@ -477,7 +494,7 @@ Catalog errors are `BusinessRuleException` with a field (be-foundation AC-001.3)
 attempt.
 
 **Ops script** (`infra/ops/workspace.sh`, backend profile `ops`): the hand-run form of `WorkspaceProvisioning`:
-`create --site --admin-email`, `suspend --site`, `reactivate --site` (STORY-013). The Platform Console reaches the same
+`create --site --admin-email --google-domain`, `suspend --site`, `reactivate --site` (STORY-013). The Platform Console reaches the same
 service through its own REST endpoint on `admin.`, which belongs to `platform-console` (AC-004.28, AC-013.20).
 
 **Operations** (`infra/`, STORY-014): `infra/scripts/backup-db.sh`, `infra/RESTORE.md`, the monitoring and alert
@@ -491,11 +508,11 @@ rules, `infra/loadtest/`.
 | every other `/api/v1/jira-app/**` path | Forge Invocation Token, then the Workspace of the `cloudId` | the handler of its module; 401 without `code`, 403 `MSG152`, 403 for a Suspended Workspace (AC-006.4) |
 | `/actuator/health` | none | health |
 
-**Web resolver answers** (every host that is not `login.`, `api.` or `admin.`; before Spring Security):
+**Web resolver answers** (every host that is not `login.` (Keycloak), `api.` or `admin.`; before Spring Security):
 404 `MSG151`, 403 `MSG150`, as `application/problem+json`.
 
-**Schema:** catalog (Registry) tables `tenant_workspace` (with `schema_version`) and `workspace_email`, and the tables of
-`identity`'s sign-in states and hand-off codes (AC-001.17); in each Workspace database the one-row table
+**Schema:** catalog (Registry) tables `tenant_workspace` (with `schema_version`, `google_domain` and
+`keycloak_organization_id`, AC-001.34) and `workspace_email`; in each Workspace database the one-row table
 `tenant_identity` and a row policy on every tenant table (AC-001.28, AC-001.29); the tenant-table convention
 (AC-001.20), its allow-list (AC-001.21) and the guard test (AC-001.22, AC-001.31). The Jobs database holds JobRunr's
 tables only (AC-001.33).
@@ -540,13 +557,16 @@ tables only (AC-001.33).
   company information stays in the Workspace database, owned by `workspace`; the catalog row is this module's), and
   `audit_log_entry` meets AC-001.20 as an append-only table.
 - `identity`:
-  - calls `TenantContext.runIn` with the Workspace of the checked state value on the `login.` callback;
+  - calls `TenantContext.runIn` with the Workspace of the host on the sign-in callback of a Workspace site;
+  - owns, for now, the port `WorkspaceSignInProvisioner` (Keycloak Organization, Google identity provider, redirect URI) that
+    `WorkspaceProvisioning` calls at creation and undo (AC-013.22, AC-013.23); a no-op bean until the Keycloak
+    implementation exists;
   - takes the ticket tracker account only from `ForgeCallContext`;
   - calls `WorkspaceCatalog.claimEmail` when an Account is added (UC-05);
   - contributes the Accounts with the five Roles to the seed;
   - implements `FirstAdminCreator` (AC-013.14): creates the first Admin Account Active with the role Admin inside the
     Workspace's own database and returns its id; the first-Admin invitation email is sent by `worker` (AC-013.17);
-  - keeps its sign-in states and hand-off codes in the catalog (Registry) database (AC-001.17).
+  - reads the Workspace's Google domain and Keycloak Organization id from `WorkspaceSummary` (AC-001.34).
 - `platform-console` (the Console on `admin.`): exposes the REST endpoint that creates, suspends and
   reactivates a Workspace, only for an allow-listed Platform Operator, and calls `WorkspaceProvisioning`
   (AC-004.28, AC-013.20).
@@ -560,8 +580,7 @@ tables only (AC-001.33).
     `jobrunr.background-job-server.enabled: true`; `platform` switches it off in its own processes), supplies the handler of
     the first-Admin invitation job in place of the placeholder in the web image, and never runs Liquibase; the database and
     JobRunr's tables in it (AC-001.33) belong to `platform`;
-  - sends the invitation email of AC-013.17 and deletes the expired sign-in states and hand-off codes in the catalog
-    database on a schedule (with `identity`).
+  - sends the invitation email of AC-013.17.
 - `jira-app` (Đặng Tấn Bình):
   - sends the Forge Invocation Token on every Forge Remote call to `api.`;
   - points the installed and uninstalled lifecycle events at `POST /api/v1/jira-app/lifecycle`;
@@ -576,7 +595,7 @@ tables only (AC-001.33).
 - [ ] `mvn verify` passes, with the Testcontainers tests of STORY-001, STORY-002 and the tenant-isolation test
 - [ ] A merge to `main` deploys staging and the smoke test passes in the workflow log (AC-010.4)
 - [ ] The Ollama port of the AI VPS is shown closed from the internet (AC-011.3)
-- [ ] `workspace.sh create` then `suspend` then `reactivate` runs on staging (STORY-013)
+- [ ] `workspace.sh create --google-domain …` then `suspend` then `reactivate` runs on staging (STORY-013)
 - [ ] A restore of one Workspace into staging is done once and timed, and one load-test run against staging is
       recorded (STORY-014)
 - [ ] The owners of `be-foundation`, `identity`, `workspace`, `worker`, `jira-app`, `ticket-repository`,
