@@ -46,7 +46,11 @@ public class UserListTransaction {
                     // Missing platform schema or guard never permits reads from the legacy database.
                     throw unavailable();
                 }
-                return query.get();
+                try {
+                    return query.get();
+                } catch (DataAccessException failure) {
+                    throw new UserListException(HttpStatus.INTERNAL_SERVER_ERROR, "MSG06");
+                }
             });
         } catch (TransactionException | DataAccessException failure) {
             throw unavailable();
@@ -54,6 +58,6 @@ public class UserListTransaction {
     }
 
     private static UserListException unavailable() {
-        return new UserListException(HttpStatus.INTERNAL_SERVER_ERROR, "MSG06");
+        return new UserListException(HttpStatus.SERVICE_UNAVAILABLE, "MSG06");
     }
 }

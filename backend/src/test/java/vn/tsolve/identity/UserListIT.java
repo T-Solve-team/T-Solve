@@ -251,17 +251,19 @@ class UserListIT {
     }
 
     @Test
-    void deniesWrongOrMissingPlatformGuardWithoutLeakingState_AC_004_18_AC_004_19_BUG_114() throws Exception {
+    void deniesWrongOrMissingPlatformGuardWithoutLeakingState_AC_004_18_AC_004_19_BUG_114_BUG_121() throws Exception {
         manager.omitSetting = true;
         http.perform(get("/api/v1/users").session(session(A, ADMIN)))
-                .andExpect(status().isInternalServerError())
+                .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.code").value("MSG06"));
         manager.omitSetting = false;
         manager.wrongSetting = B;
-        http.perform(get("/api/v1/users").session(session(A, ADMIN))).andExpect(status().isInternalServerError());
+        http.perform(get("/api/v1/users/departments").session(session(A, ADMIN)))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("MSG06"));
         manager.wrongSetting = null;
         owner(A).update("UPDATE tenant_identity SET tenant_id=?", B);
-        http.perform(get("/api/v1/users").session(session(A, ADMIN))).andExpect(status().isInternalServerError());
+        http.perform(get("/api/v1/users").session(session(A, ADMIN))).andExpect(status().isServiceUnavailable());
         owner(A).update("UPDATE tenant_identity SET tenant_id=?", A);
         http.perform(get("/api/v1/users").session(session(A, ADMIN))).andExpect(status().isOk());
         assertClean();

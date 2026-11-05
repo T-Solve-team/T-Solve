@@ -1,5 +1,6 @@
 package vn.tsolve.identity.session;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -13,6 +14,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
@@ -43,14 +45,31 @@ class UserListTransactionTest {
         for (Boolean valid : new Boolean[] {false, null}) {
             when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(workspace), eq(workspace)))
                     .thenReturn(valid);
-            assertThatThrownBy(() -> transactions.read(query)).isInstanceOf(UserListException.class);
+            assertThatThrownBy(() -> transactions.read(query))
+                    .isInstanceOfSatisfying(UserListException.class, failure -> assertThat(failure.getStatus())
+                            .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE));
         }
         when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(workspace), eq(workspace)))
                 .thenThrow(new DataAccessResourceFailureException("Missing platform guard"));
-        assertThatThrownBy(() -> transactions.read(query))
-                .isInstanceOfSatisfying(UserListException.class, failure -> org.assertj.core.api.Assertions.assertThat(
-                                failure.getCode())
-                        .isEqualTo("MSG06"));
-        org.assertj.core.api.Assertions.assertThat(calls.get()).isZero();
+        assertThatThrownBy(() -> transactions.read(query)).isInstanceOfSatisfying(UserListException.class, failure -> {
+            assertThat(failure.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+            assertThat(failure.getCode()).isEqualTo("MSG06");
+        });
+        assertThat(calls.get()).isZero();
+    }
+
+    @Test
+    void unexpectedQueryFailureReturns500AfterReadinessPasses_AC_004_19_BUG_121() {
+        when(context.currentWorkspaceId()).thenReturn(Optional.of(workspace));
+        when(manager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+        when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(workspace), eq(workspace)))
+                .thenReturn(true);
+        assertThatThrownBy(() -> transactions.read(() -> {
+                    throw new DataAccessResourceFailureException("Read failure after readiness check");
+                }))
+                .isInstanceOfSatisfying(UserListException.class, failure -> {
+                    assertThat(failure.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+                    assertThat(failure.getCode()).isEqualTo("MSG06");
+                });
     }
 }

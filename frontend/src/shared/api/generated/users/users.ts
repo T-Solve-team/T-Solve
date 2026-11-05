@@ -185,6 +185,7 @@ export const getGetUsersUrl = (params?: GetUsersParams) => {
 };
 
 /**
+ * This read operation is registered only when User List reads are enabled.
  * @summary Workspace users; default sort fullName,asc with UUID id as a stable tie-breaker.
  */
 export const getUsers = async (
@@ -913,6 +914,7 @@ export const getGetUserDepartmentsUrl = () => {
 };
 
 /**
+ * This read operation is registered only when User List reads are enabled.
  * @summary Departments available for filtering the Workspace User List.
  */
 export const getUserDepartments = async (
