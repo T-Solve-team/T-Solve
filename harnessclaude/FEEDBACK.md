@@ -53,6 +53,12 @@ Append-only log of framework friction captured during usage.
 **Context:** The user approved the concrete 17-criterion spec in chat, but the PreToolUse hook blocked `sdd.ts approve dashboard-audit` because Codex cannot display the hook confirmation prompt. The hook required the user to run the command themselves. The user did so; `sdd.ts diff dashboard-audit` confirmed the current spec was approved at 2026-10-31T07:28:12.270Z. No retry or approval-file edit was used.
 **Suggestion:** Support a native, reviewable approval action for Codex while preserving the spec-hash gate.
 
+## 2026-11-02 — spec approval from Codex (KAN-149)
+
+**Type:** friction
+**Context:** The user approved the 20-criterion triage frontend spec in chat, but the PreToolUse hook blocked `sdd.ts approve triage` because Codex cannot confirm through the hook prompt. The hook instructed the user to run the command in their own terminal. No retry or approval-file edit was attempted.
+**Suggestion:** Provide a native approval prompt for Codex that records the approved spec hash, while keeping the same user confirmation requirement.
+
 ## 2026-11-04 — preserve Java trace customization during upgrade (PR #107)
 
 **Type:** maintenance gap
