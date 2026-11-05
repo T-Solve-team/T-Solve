@@ -37,7 +37,8 @@ function ImportPreview({ previewId }: { previewId: number }) {
   // Set before the move a successful Confirm makes, so only that move skips MSG37 (AC-009.6).
   const isFinished = useRef(false);
   // Every move to another screen before Confirm asks MSG37, Cancel included (AC-009.9, AC-009.10).
-  // A preview that could not be read has nothing to lose.
+  // A preview that could not be read has nothing to lose. Only the path is compared: nothing in the app
+  // moves from one previewId to another on this page (Upload always starts from Import Tickets).
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       preview.isSuccess &&
@@ -84,7 +85,10 @@ function ImportPreview({ previewId }: { previewId: number }) {
             }
           });
         },
-        onError: (error) => showMessage(error.code, error.params),
+        onError: (error) => {
+          // The global MSG07 dialog is the one message for a 401 (guideline 06 §6).
+          if (error.status !== 401) showMessage(error.code, error.params);
+        },
       },
     );
   }

@@ -270,6 +270,16 @@ describe('ImportPreviewPage', () => {
       },
     );
 
+    it('shows only the MSG07 dialog, not a toast, when Confirm answers 401 (BUG-123)', async () => {
+      server.use(http.post('*/api/v1/imports/previews/1/confirm', () => problem(401, 'MSG07')));
+      const { user } = await openPreview();
+
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+      expect(await screen.findByRole('dialog')).toHaveTextContent(msg('MSG07'));
+      expect(document.querySelector('.ant-message')).not.toBeInTheDocument();
+    });
+
     it('AC-009.8 shows Confirm as loading and sends one Confirm for a double click (edge case 34)', async () => {
       let answer: () => void = () => {};
       const answered = new Promise<void>((resolve) => {
