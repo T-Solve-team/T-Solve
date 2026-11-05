@@ -510,6 +510,33 @@
 {"ts":"2026-11-03T17:18:57.815Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-03T17:18:58.087Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"evaluating","to":"passing"}
 {"ts":"2026-11-03T17:59:45.096Z","type":"spec-approved","module":"identity","specHash":"5a0b213bea1cb3bbf4c97da21f250bb727a0414388a66d07927100c24cca99dd"}
+{"ts":"2026-11-02T12:58:28.366Z","type":"spec-approved","module":"triage","specHash":"f89248b2b780db18b2da123dbfedb0b2781eb33728fefd65a1e45fcab4babd86"}
+{"ts":"2026-11-02T12:59:04.385Z","type":"module-status","module":"triage","from":"decomposed","to":"planned"}
+{"ts":"2026-11-02T12:59:07.659Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":null,"to":"pending"}
+{"ts":"2026-11-02T12:59:24.984Z","type":"module-status","module":"triage","from":"planned","to":"implementing"}
+{"ts":"2026-11-02T12:59:30.585Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":"pending","to":"in-progress"}
+{"ts":"2026-11-02T17:56:45.204Z","type":"commit-recorded","module":"triage","repo":"default","sha":"4440072cedbf7081edd6274ae82b89dcd67e221e"}
+{"ts":"2026-11-02T17:57:04.854Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-04T07:48:08.026Z","type":"spec-approved","module":"triage","specHash":"9e1ada09f381e554981143da69c9268e656f0507f0163b60ac0b3cf8e6245db1"}
+{"ts":"2026-11-04T07:48:56.681Z","type":"feature-status","module":"triage","feature":"suggestion-history-contract","from":null,"to":"pending"}
+{"ts":"2026-11-04T07:48:57.189Z","type":"feature-status","module":"triage","feature":"suggestion-history-api","from":null,"to":"pending"}
+{"ts":"2026-11-04T07:49:06.572Z","type":"feature-status","module":"triage","feature":"suggestion-history-contract","from":"pending","to":"in-progress"}
+{"ts":"2026-11-04T07:52:13.300Z","type":"spec-approved","module":"triage","specHash":"24d4a988954dec938ba4129c93b47fbd740282d95913759ef8b13582d38e7f10"}
+{"ts":"2026-11-04T08:15:44.697Z","type":"quick-opened","what":"Remove the 10.1 Triage History placeholder row now that KAN-149 builds the screen (BUG-104)","files":["frontend/src/app/router/route-table.test.tsx"]}
+{"ts":"2026-11-04T08:52:29.572Z","type":"commit-recorded","module":"triage","repo":"default","sha":"bef50724d203826ef7fed7f65152c7430012efd9"}
+{"ts":"2026-11-04T08:52:30.497Z","type":"feature-status","module":"triage","feature":"suggestion-history-contract","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-04T08:52:37.567Z","type":"quick-closed","what":"Remove the 10.1 Triage History placeholder row now that KAN-149 builds the screen (BUG-104)","files":["frontend/src/app/router/route-table.test.tsx"]}
+{"ts":"2026-11-04T09:24:41.846Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":"evaluating","to":"passing"}
+{"ts":"2026-11-04T09:24:42.177Z","type":"feature-status","module":"triage","feature":"suggestion-history-contract","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-04T09:31:43.730Z","type":"commit-recorded","module":"triage","repo":"default","sha":"c2a80da78c10956dc060393068b87070d2706df1"}
+{"ts":"2026-11-04T09:31:44.008Z","type":"feature-status","module":"triage","feature":"suggestion-history-contract","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-04T09:39:46.153Z","type":"feature-status","module":"triage","feature":"suggestion-history-contract","from":"evaluating","to":"passing"}
+{"ts":"2026-11-04T09:45:47.560Z","type":"feature-status","module":"triage","feature":"suggestion-history-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-04T10:10:25.758Z","type":"commit-recorded","module":"triage","repo":"default","sha":"9970e7e9e144ff623e9d22ad24af19495de7e043"}
+{"ts":"2026-11-04T10:10:33.061Z","type":"feature-status","module":"triage","feature":"suggestion-history-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-04T10:34:32.703Z","type":"feature-status","module":"triage","feature":"suggestion-history-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-04T10:42:00.516Z","type":"commit-recorded","module":"triage","repo":"default","sha":"ad3053418ff5a3f7315f82ecf7355438691c9271"}
+{"ts":"2026-11-04T10:43:49.144Z","type":"spec-approved","module":"triage","specHash":"cf15ceed7867e474f6e446a10b65fa6d5851f5a7a007ada778357f66748b3156"}
 {"ts":"2026-11-03T19:46:40.160Z","type":"quick-opened","what":"Align the database conventions in AGENTS.md with the DDL and ADR-0002: singular tables, <table>_id UUID keys, no workspace_id or row-level security","files":["backend/AGENTS.md"]}
 {"ts":"2026-11-04T03:14:57.195Z","type":"quick-closed","what":"Align the database conventions in AGENTS.md with the DDL and ADR-0002: singular tables, <table>_id UUID keys, no workspace_id or row-level security","files":["backend/AGENTS.md"]}
 {"ts":"2026-11-04T14:15:40.160Z","type":"spec-approved","module":"identity","specHash":"4c23ee6507baf0dcca7b4860701c12737121dd04ee036d2c22d0b8a03d0c9f66"}
@@ -545,3 +572,4 @@
 {"ts":"2026-11-04T15:51:40.834Z","type":"feature-status","module":"identity","feature":"account-checks","from":"pending","to":"in-progress"}
 {"ts":"2026-11-04T15:51:41.101Z","type":"feature-status","module":"identity","feature":"account-checks","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-04T15:51:41.366Z","type":"feature-status","module":"identity","feature":"account-checks","from":"evaluating","to":"passing"}
+{"ts":"2026-11-05T14:10:40.463Z","type":"commit-recorded","module":"triage","repo":"default","sha":"6cefdf9443d81628a7819c855a363f111cc44cf7"}
