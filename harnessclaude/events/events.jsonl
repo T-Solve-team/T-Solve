@@ -556,3 +556,6 @@
 {"ts":"2026-11-05T11:28:03.757Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-05T11:28:04.199Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"evaluating","to":"passing"}
 {"ts":"2026-11-05T11:28:41.466Z","type":"quick-closed","what":"Test values for OLLAMA_BASE_URL and OLLAMA_CHAT_MODEL so existing Spring contexts start (KAN-139)","files":["backend/src/test/resources/config/application.yml"]}
+{"ts":"2026-11-05T12:04:02.990Z","type":"feature-status","module":"ai","feature":"solution-draft","from":"pending","to":"in-progress"}
+{"ts":"2026-11-05T12:30:39.959Z","type":"feature-status","module":"ai","feature":"solution-draft","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-05T12:30:40.497Z","type":"feature-status","module":"ai","feature":"solution-draft","from":"evaluating","to":"passing"}
