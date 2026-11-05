@@ -12,7 +12,6 @@ paths:
   - frontend/src/features/*/routes.ts
   - frontend/src/features/*/index.ts
   - frontend/src/features/*/mocks/handlers.ts
-  - frontend/src/features/triage/**
   - frontend/src/features/wiki/**
   - frontend/src/features/workspace/pages/WorkspaceSetupPage.tsx
   - frontend/src/features/workspace/pages/WorkspaceSettingsPage.tsx
