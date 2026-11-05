@@ -11,7 +11,7 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { RequestHandlerOptions } from 'msw';
 
-import { ImportPreviewRowStatus } from '../model';
+import { ImportPreviewRowStatus, ImportType } from '../model';
 import type {
   ImportPreviewResponse,
   ImportPreviewRowPage,
@@ -43,9 +43,11 @@ export const getUploadCsvImportResponseMock = (
   previewId: faker.number.int(),
   projectId: faker.string.uuid(),
   fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  importType: faker.helpers.arrayElement(Object.values(ImportType)),
   validCount: faker.number.int(),
   errorCount: faker.number.int(),
   removedCount: faker.number.int(),
+  needsSolutionCount: faker.number.int(),
   message: faker.helpers.arrayElement([{ ...getUploadCsvImportResponseMessageRefMock() }, null]),
   rows: {
     content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -136,9 +138,11 @@ export const getGetImportPreviewResponseMock = (
   previewId: faker.number.int(),
   projectId: faker.string.uuid(),
   fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  importType: faker.helpers.arrayElement(Object.values(ImportType)),
   validCount: faker.number.int(),
   errorCount: faker.number.int(),
   removedCount: faker.number.int(),
+  needsSolutionCount: faker.number.int(),
   message: faker.helpers.arrayElement([{ ...getGetImportPreviewResponseMessageRefMock() }, null]),
   rows: {
     content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -352,11 +356,111 @@ export const getRemoveImportPreviewRowsResponseMock = (
   previewId: faker.number.int(),
   projectId: faker.string.uuid(),
   fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  importType: faker.helpers.arrayElement(Object.values(ImportType)),
   validCount: faker.number.int(),
   errorCount: faker.number.int(),
   removedCount: faker.number.int(),
+  needsSolutionCount: faker.number.int(),
   message: faker.helpers.arrayElement([
     { ...getRemoveImportPreviewRowsResponseMessageRefMock() },
+    null,
+  ]),
+  rows: {
+    content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        rowNo: faker.number.int(),
+        ticketId: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        title: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        author: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        resolvedDate: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        symptoms: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        rootCause: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        resolutionSteps: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        workaround: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        scope: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        status: faker.helpers.arrayElement(Object.values(ImportPreviewRowStatus)),
+        errors: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+          () => ({
+            code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            field: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            params: {
+              [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+                faker.string.alpha({ length: { min: 10, max: 20 } }),
+                faker.number.float({ fractionDigits: 2 }),
+              ]),
+            },
+          }),
+        ),
+      }),
+    ),
+    page: {
+      size: faker.number.int(),
+      number: faker.number.int(),
+      totalElements: faker.number.int(),
+      totalPages: faker.number.int(),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getFillImportPreviewSolutionResponseMessageRefMock = (
+  overrideResponse: Partial<MessageRef> = {},
+): MessageRef => ({
+  ...{
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getFillImportPreviewSolutionResponseMock = (
+  overrideResponse: Partial<Extract<ImportPreviewResponse, object>> = {},
+): ImportPreviewResponse => ({
+  previewId: faker.number.int(),
+  projectId: faker.string.uuid(),
+  fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  importType: faker.helpers.arrayElement(Object.values(ImportType)),
+  validCount: faker.number.int(),
+  errorCount: faker.number.int(),
+  removedCount: faker.number.int(),
+  needsSolutionCount: faker.number.int(),
+  message: faker.helpers.arrayElement([
+    { ...getFillImportPreviewSolutionResponseMessageRefMock() },
     null,
   ]),
   rows: {
@@ -587,6 +691,30 @@ export const getRemoveImportPreviewRowsMockHandler = (
   );
 };
 
+export const getFillImportPreviewSolutionMockHandler = (
+  overrideResponse?:
+    | ImportPreviewResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ImportPreviewResponse> | ImportPreviewResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    '*/api/v1/imports/previews/:previewId/fill-solution',
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getFillImportPreviewSolutionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getConfirmImportMockHandler = (
   overrideResponse?:
     | ImportResultResponse
@@ -617,5 +745,6 @@ export const getImportMock = () => [
   getGetImportPreviewRowsMockHandler(),
   getGetImportPreviewRowMockHandler(),
   getRemoveImportPreviewRowsMockHandler(),
+  getFillImportPreviewSolutionMockHandler(),
   getConfirmImportMockHandler(),
 ];

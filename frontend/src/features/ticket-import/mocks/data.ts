@@ -114,7 +114,10 @@ function seedRows(): ImportPreviewRowResponse[] {
 }
 
 /** One unconfirmed preview of the mock backend with every row (the API returns them page by page). */
-export type MockPreview = Pick<ImportPreviewResponse, 'previewId' | 'projectId' | 'fileName'> & {
+export type MockPreview = Pick<
+  ImportPreviewResponse,
+  'previewId' | 'projectId' | 'fileName' | 'importType'
+> & {
   rows: ImportPreviewRowResponse[];
 };
 
@@ -123,7 +126,7 @@ export function seedImport(
   projectId = '00000000-0000-4000-8000-000000000101',
   fileName = 'itsup-resolved-2026-09.csv',
 ): MockPreview {
-  return { previewId, projectId, fileName, rows: seedRows() };
+  return { previewId, projectId, fileName, importType: 'WITH_SOLUTION', rows: seedRows() };
 }
 
 /** One page of rows (`page` from 0), as `GET /imports/previews/{id}/rows` returns it. */
@@ -153,6 +156,7 @@ export function previewResponse({ rows, ...preview }: MockPreview): ImportPrevie
     validCount: count('VALID'),
     errorCount,
     removedCount: count('REMOVED'),
+    needsSolutionCount: count('NEEDS_SOLUTION'),
     message: errorCount > 0 ? { code: 'MSG30', params: { count: errorCount } } : null,
     rows: rowPage(rows),
   };

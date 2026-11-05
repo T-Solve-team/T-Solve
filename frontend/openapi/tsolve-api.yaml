@@ -789,7 +789,13 @@ paths:
     get:
       tags: [import]
       operationId: downloadCsvTemplate
-      summary: The CSV template — header row only, UTF-8.
+      summary: The CSV template of an import type — header row only, UTF-8.
+      parameters:
+        - name: importType
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ImportType'
       responses:
         '200':
           description: The template file.
@@ -823,6 +829,8 @@ paths:
                 projectId:
                   type: string
                   format: uuid
+                importType:
+                  $ref: '#/components/schemas/ImportType'
       responses:
         '200':
           description: Preview created.
@@ -942,13 +950,48 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/fill-solution:
+    post:
+      tags: [import]
+      operationId: fillImportPreviewSolution
+      summary: >
+        Saves one Solution as a separate copy in each given row of a WITHOUT_SOLUTION preview; each row becomes Valid.
+        An empty required section = MSG01 (400); over 10,000 characters in total = MSG02 (400); a WITH_SOLUTION
+        preview or an Error or Removed row = MSG06 (409); a row number that does not exist = 404. A rejection changes
+        no row.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FillSolutionRequest'
+      responses:
+        '200':
+          description: The updated preview (counts and the first page of rows).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
   /api/v1/imports/previews/{previewId}/confirm:
     post:
       tags: [import]
       operationId: confirmImport
       summary: >
-        Imports the remaining Valid rows as Published tickets (MSG32). No Valid row left = MSG30 (409); Project no
-        longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
+        Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution
+        or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a
+        Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
       parameters:
         - $ref: '#/components/parameters/PreviewId'
       responses:
@@ -1973,9 +2016,13 @@ components:
           type: object
           additionalProperties:
             type: [string, number]
+    ImportType:
+      type: string
+      description: The kind of file. An upload or template request that names none is WITH_SOLUTION.
+      enum: [WITH_SOLUTION, WITHOUT_SOLUTION]
     ImportPreviewRowStatus:
       type: string
-      enum: [VALID, ERROR, REMOVED]
+      enum: [VALID, ERROR, REMOVED, NEEDS_SOLUTION]
     RowError:
       type: object
       description: One failed rule of a row (MSG01, MSG02, MSG31, MSG39 or MSG_NEW_3).
@@ -2070,7 +2117,8 @@ components:
           $ref: '#/components/schemas/PageMetadata'
     ImportPreviewResponse:
       type: object
-      required: [previewId, projectId, fileName, validCount, errorCount, removedCount, rows]
+      required:
+        [previewId, projectId, fileName, importType, validCount, errorCount, removedCount, needsSolutionCount, rows]
       properties:
         previewId:
           type: integer
@@ -2080,11 +2128,15 @@ components:
           format: uuid
         fileName:
           type: string
+        importType:
+          $ref: '#/components/schemas/ImportType'
         validCount:
           type: integer
         errorCount:
           type: integer
         removedCount:
+          type: integer
+        needsSolutionCount:
           type: integer
         message:
           description: MSG30 with {count} when at least one row is an Error; otherwise null.
@@ -2103,6 +2155,26 @@ components:
           items:
             type: integer
             minimum: 1
+    FillSolutionRequest:
+      type: object
+      required: [rowNumbers, symptoms, rootCause, resolutionSteps, scope]
+      properties:
+        rowNumbers:
+          type: array
+          minItems: 1
+          items:
+            type: integer
+            minimum: 1
+        symptoms:
+          type: string
+        rootCause:
+          type: string
+        resolutionSteps:
+          type: string
+        workaround:
+          type: [string, 'null']
+        scope:
+          type: string
     ImportResultResponse:
       type: object
       required: [importBatchId, created, skipped, message]

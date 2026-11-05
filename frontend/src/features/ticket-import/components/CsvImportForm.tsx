@@ -37,7 +37,7 @@ export function CsvImportForm() {
 
   // Errors: the global toast.
   const template = useMutation({
-    mutationFn: () => downloadCsvTemplate({ headers: { Accept: 'text/csv' } }),
+    mutationFn: () => downloadCsvTemplate(undefined, { headers: { Accept: 'text/csv' } }),
     onSuccess: (text) => saveTextFile(text, TEMPLATE_FILE_NAME),
   });
 

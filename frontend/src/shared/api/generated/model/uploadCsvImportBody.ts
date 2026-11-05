@@ -6,9 +6,11 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
+import type { ImportType } from './importType';
 
 export type UploadCsvImportBody = {
   /** One .csv file, UTF-8, at most 10 MB. */
   file: Blob | File;
   projectId: string;
+  importType?: ImportType;
 };
