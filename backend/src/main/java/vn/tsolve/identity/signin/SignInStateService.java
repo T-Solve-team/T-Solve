@@ -1,7 +1,6 @@
 package vn.tsolve.identity.signin;
 
 import java.security.SecureRandom;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
@@ -24,10 +23,10 @@ public class SignInStateService {
 
     private final SignInStateRepository repository;
     private final SignedToken signedToken;
-    private final Clock clock;
+    private final IdentityClock clock;
     private final SecureRandom random = new SecureRandom();
 
-    public SignInStateService(SignInStateRepository repository, SignedToken signedToken, Clock clock) {
+    public SignInStateService(SignInStateRepository repository, SignedToken signedToken, IdentityClock clock) {
         this.repository = repository;
         this.signedToken = signedToken;
         this.clock = clock;
@@ -52,16 +51,25 @@ public class SignInStateService {
                 .flatMap(SignInStateService::parseId)
                 .flatMap(repository::findById)
                 .filter(state -> state.getUsedAt() == null)
-                .filter(state -> clock.instant().isBefore(state.getExpiresAt()));
+                .filter(state -> clock.now().isBefore(state.getExpiresAt()));
     }
 
     /** As {@link #check}, then marks the state used; of two requests with the same value only one gets it. */
     public Optional<SignInState> consume(String stateValue) {
-        return check(stateValue).filter(state -> repository.markUsed(state.getId(), clock.instant()) == 1);
+        return check(stateValue).filter(state -> repository.markUsed(state.getId(), clock.now()) == 1);
+    }
+
+    /**
+     * As {@link #check}, then binds the state to the browser's cookie hash; of two requests only one gets it, and a
+     * state that was already authorized gets none (AC-001.44/.45).
+     */
+    public Optional<SignInState> authorizeOnce(String stateValue, byte[] bindingHash) {
+        return check(stateValue)
+                .filter(state -> repository.markAuthorized(state.getId(), bindingHash, clock.now()) == 1);
     }
 
     private String create(SignInState.Target target, UUID workspaceId, String returnTo) {
-        Instant now = clock.instant();
+        Instant now = clock.now();
         SignInState state = new SignInState(
                 target,
                 workspaceId,

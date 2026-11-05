@@ -6,17 +6,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -26,24 +33,34 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
+import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.AuthSecurityConfig;
+import vn.tsolve.identity.account.AccountSignInService;
 import vn.tsolve.identity.signin.SignInTestFixtures.BadState;
 import vn.tsolve.identity.signin.SignInTestFixtures.StateStore;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
+import vn.tsolve.identity.signin.port.WorkspaceRef;
 
 /** States are made by the real SignInStateService; only the repository is in memory. */
-@WebMvcTest(AuthorizeController.class)
+@WebMvcTest({AuthorizeController.class, CallbackController.class})
 @Import({
+    SecurityConfig.class,
     AuthSecurityConfig.class,
     AuthHosts.class,
     SignInStateService.class,
     SignedToken.class,
     GoogleOidcClient.class,
+    SignInCookie.class,
+    IdTokenVerifier.class,
+    AccountSignInService.class,
+    HandOffCodeService.class,
     SignInTestBeans.class
 })
 @TestPropertySource(
@@ -79,10 +96,23 @@ class AuthorizeControllerTest {
     @Autowired
     private MutableClock clock;
 
+    @Autowired
+    private InMemoryWorkspaceLookup workspaces;
+
+    @DynamicPropertySource
+    static void fakeGoogle(DynamicPropertyRegistry registry) {
+        registry.add("tsolve.oidc.google.token-uri", FakeGoogleIssuer::tokenUri);
+        registry.add("tsolve.oidc.google.jwk-set-uri", FakeGoogleIssuer::jwksUri);
+        registry.add("tsolve.oidc.google.connect-timeout", () -> "200ms");
+        registry.add("tsolve.oidc.google.read-timeout", () -> "200ms");
+    }
+
     @BeforeEach
     void reset() {
         store.reset();
         clock.reset();
+        workspaces.reset();
+        FakeGoogleIssuer.reset();
     }
 
     private static MockHttpServletRequestBuilder authorize(String host) {
@@ -145,8 +175,12 @@ class AuthorizeControllerTest {
         String state = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");
         SignInState saved = store.onlySaved();
 
-        String location = redirectLocation(perform(authorizeOnLogin(state)));
+        MockHttpServletResponse response = perform(authorizeOnLogin(state));
+        String location = redirectLocation(response);
 
+        assertThat(SignInTestFixtures.signInCookieValue(response))
+                .as("the sign-in cookie")
+                .isNotNull();
         assertThat(withoutQuery(location)).isEqualTo(GOOGLE_AUTHORIZATION_URI);
         assertThat(query(location))
                 .containsEntry("response_type", "code")
@@ -189,21 +223,19 @@ class AuthorizeControllerTest {
     @DisplayName("AC-001.2 uses the nonce and verifier kept on the server")
     void usesTheNonceAndVerifierKeptOnTheServer_AC_001_2() throws Exception {
         String state = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");
-        String verifier = store.onlySaved().getPkceVerifier();
+        SignInState saved = store.onlySaved();
 
-        MockHttpServletResponse first = perform(authorizeOnLogin(state));
-        MockHttpServletResponse second = perform(authorizeOnLogin(state));
+        MockHttpServletResponse response = perform(authorizeOnLogin(state));
 
-        Map<String, String> firstQuery = query(redirectLocation(first));
-        Map<String, String> secondQuery = query(redirectLocation(second));
-        assertThat(secondQuery.get("nonce")).isNotNull().isEqualTo(firstQuery.get("nonce"));
-        assertThat(secondQuery.get("code_challenge")).isNotNull().isEqualTo(firstQuery.get("code_challenge"));
-        for (MockHttpServletResponse response : List.of(first, second)) {
-            assertThat(response.getHeader(HttpHeaders.LOCATION)).doesNotContain(verifier);
-            assertThat(response.getHeaders(HttpHeaders.SET_COOKIE))
-                    .as("Set-Cookie")
-                    .isEmpty();
-        }
+        Map<String, String> parameters = query(redirectLocation(response));
+        assertThat(parameters).containsEntry("nonce", saved.getNonce());
+        assertThat(parameters).containsEntry("code_challenge", s256(saved.getPkceVerifier()));
+        String cookieValue = SignInTestFixtures.signInCookieValue(response);
+        assertThat(cookieValue).as("the sign-in cookie").isNotNull();
+        assertThat(response.getHeader(HttpHeaders.LOCATION))
+                .doesNotContain(saved.getPkceVerifier())
+                .doesNotContain(saved.getNonce() + "&" + saved.getPkceVerifier());
+        assertThat(cookieValue).doesNotContain(saved.getPkceVerifier()).doesNotContain(saved.getNonce());
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
@@ -238,7 +270,6 @@ class AuthorizeControllerTest {
      * slice ({@code @WebMvcTest}) for it to pass.
      */
     @Test
-    @Disabled("T9: callback handler")
     @DisplayName("AC-001.5 does not answer 404 for the callback on login.")
     void handlesCallbackOnLogin_AC_001_5() throws Exception {
         String state = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");
@@ -291,11 +322,209 @@ class AuthorizeControllerTest {
         String state = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");
         SignInState saved = store.onlySaved();
 
-        redirectLocation(perform(authorizeOnLogin(state)));
+        MockHttpServletResponse response = perform(authorizeOnLogin(state));
+        redirectLocation(response);
+        String cookieValue = SignInTestFixtures.signInCookieValue(response);
+        assertThat(cookieValue).as("the sign-in cookie").isNotNull();
 
         assertThat(output.getAll())
                 .doesNotContain(state)
                 .doesNotContain(saved.getNonce())
-                .doesNotContain(saved.getPkceVerifier());
+                .doesNotContain(saved.getPkceVerifier())
+                .doesNotContain(cookieValue)
+                .doesNotContain(hex(sha256(cookieValue)))
+                .doesNotContain(Base64.getEncoder().encodeToString(sha256(cookieValue)))
+                .doesNotContain(Base64.getUrlEncoder().withoutPadding().encodeToString(sha256(cookieValue)));
+    }
+
+    private static byte[] sha256(String value) throws Exception {
+        return MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.US_ASCII));
+    }
+
+    private static String hex(byte[] bytes) {
+        return java.util.HexFormat.of().formatHex(bytes);
+    }
+
+    private static void assertSignInCookieAttributes(MockHttpServletResponse response) {
+        List<String> headers = SignInTestFixtures.setCookie(response, SignInTestFixtures.SIGN_IN_COOKIE);
+        assertThat(response.getHeaders(HttpHeaders.SET_COOKIE)).as("Set-Cookie").hasSize(1);
+        assertThat(headers).as("sign-in Set-Cookie").hasSize(1);
+        Map<String, String> attributes = SignInTestFixtures.attributes(headers.get(0));
+        assertThat(attributes)
+                .containsEntry("max-age", "600")
+                .containsEntry("path", "/")
+                .containsKeys("secure", "httponly")
+                .doesNotContainKey("domain");
+        assertThat(attributes.get("samesite")).isEqualToIgnoringCase("Lax");
+        String value = SignInTestFixtures.signInCookieValue(response);
+        assertThat(value).matches("^[A-Za-z0-9_-]{43}$");
+        assertThat(Base64.getUrlDecoder().decode(value)).hasSize(32);
+    }
+
+    @Test
+    @DisplayName("AC-001.44 sets the __Host-TSOLVE_SIGNIN cookie on the 302 to Google")
+    void setsTheSignInCookie_AC_001_44() throws Exception {
+        String state = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");
+
+        MockHttpServletResponse response = perform(authorizeOnLogin(state));
+
+        redirectLocation(response);
+        assertSignInCookieAttributes(response);
+    }
+
+    @Test
+    @DisplayName("AC-001.44 sends the 302 with Cache-Control no-store")
+    void sendsNoStore_AC_001_44() throws Exception {
+        String state = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");
+
+        MockHttpServletResponse response = perform(authorizeOnLogin(state));
+
+        redirectLocation(response);
+        assertThat(response.getHeader(HttpHeaders.CACHE_CONTROL))
+                .as("Cache-Control")
+                .contains("no-store");
+    }
+
+    @Test
+    @DisplayName("AC-001.44 keeps only the SHA-256 of the cookie value and marks the state authorized")
+    void keepsOnlyTheHashAndMarksTheStateAuthorized_AC_001_44() throws Exception {
+        String state = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");
+        SignInState saved = store.onlySaved();
+
+        MockHttpServletResponse response = perform(authorizeOnLogin(state));
+
+        String location = redirectLocation(response);
+        String value = SignInTestFixtures.signInCookieValue(response);
+        assertThat(value).as("the sign-in cookie").isNotNull();
+        assertThat(saved.getBrowserBindingHash()).hasSize(32).isEqualTo(sha256(value));
+        assertThat(saved.getAuthorizedAt()).isEqualTo(MutableClock.START);
+        assertThat(location).doesNotContain(value);
+        assertThat(state).doesNotContain(value);
+    }
+
+    @Test
+    @DisplayName("AC-001.44 makes a new random value for every state")
+    void makesANewValueForEveryState_AC_001_44() throws Exception {
+        String first = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");
+        String second = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");
+
+        String firstValue = SignInTestFixtures.signInCookieValue(perform(authorizeOnLogin(first)));
+        String secondValue = SignInTestFixtures.signInCookieValue(perform(authorizeOnLogin(second)));
+
+        assertThat(firstValue).isNotNull().isNotEqualTo(secondValue);
+        assertThat(secondValue).isNotNull();
+        List<SignInState> rows = store.saved();
+        assertThat(rows.get(0).getBrowserBindingHash())
+                .isNotNull()
+                .isNotEqualTo(rows.get(1).getBrowserBindingHash());
+    }
+
+    @Test
+    @DisplayName("AC-001.44 sets the cookie for a Platform Console state too")
+    void setsTheCookieForAPlatformConsoleState_AC_001_44() throws Exception {
+        String state = states.createForPlatformConsole("/");
+
+        MockHttpServletResponse response = perform(authorizeOnLogin(state));
+
+        String location = redirectLocation(response);
+        assertSignInCookieAttributes(response);
+        assertThat(query(location)).doesNotContainKey("hd");
+    }
+
+    @Test
+    @DisplayName("AC-001.44 sets the cookie for a Jira-link state, with hd")
+    void setsTheCookieForAJiraLinkState_AC_001_44() throws Exception {
+        String state = SignInTestFixtures.plantJiraLinkState(
+                store, signedToken, clock, InMemoryWorkspaceLookup.ACME.id(), "tracker-account-1");
+
+        MockHttpServletResponse response = perform(authorizeOnLogin(state));
+
+        String location = redirectLocation(response);
+        assertSignInCookieAttributes(response);
+        assertThat(query(location)).containsEntry("hd", "acme.example");
+    }
+
+    @Test
+    @DisplayName("AC-001.45 / edge 48 refuses a second authorize for the same state")
+    void refusesASecondAuthorize_AC_001_45_edge48() throws Exception {
+        String state = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");
+        SignInState saved = store.onlySaved();
+        MockHttpServletResponse first = perform(authorizeOnLogin(state));
+        redirectLocation(first);
+        assertThat(SignInTestFixtures.signInCookieValue(first))
+                .as("first cookie")
+                .isNotNull();
+        byte[] hash = saved.getBrowserBindingHash().clone();
+        Instant authorizedAt = saved.getAuthorizedAt();
+
+        MockHttpServletResponse second = perform(authorizeOnLogin(state));
+
+        assertMsg141Page(second);
+        assertThat(saved.getBrowserBindingHash()).isEqualTo(hash);
+        assertThat(saved.getAuthorizedAt()).isEqualTo(authorizedAt);
+    }
+
+    @Test
+    @DisplayName("AC-001.45 / edge 51 lets one of two concurrent authorize requests through")
+    void letsOneOfTwoConcurrentRequestsThrough_AC_001_45_edge51() throws Exception {
+        String state = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<MockHttpServletResponse>> results = new ArrayList<>();
+            for (int i = 0; i < 2; i++) {
+                results.add(pool.submit(() -> {
+                    start.await();
+                    return perform(authorizeOnLogin(state));
+                }));
+            }
+            start.countDown();
+            List<MockHttpServletResponse> responses = new ArrayList<>();
+            for (Future<MockHttpServletResponse> result : results) {
+                responses.add(result.get(30, TimeUnit.SECONDS));
+            }
+
+            List<MockHttpServletResponse> redirects =
+                    responses.stream().filter(r -> r.getStatus() == 302).toList();
+            List<MockHttpServletResponse> pages =
+                    responses.stream().filter(r -> r.getStatus() == 400).toList();
+            assertThat(redirects).as("302 answers").hasSize(1);
+            assertThat(pages).as("400 answers").hasSize(1);
+            assertThat(SignInTestFixtures.signInCookieValue(redirects.get(0)))
+                    .as("cookie on the 302")
+                    .isNotNull();
+            assertThat(pages.get(0).getHeaders(HttpHeaders.SET_COOKIE)).isEmpty();
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    private static WorkspaceRef withDomain(WorkspaceRef workspace, String domain) {
+        return new WorkspaceRef(workspace.id(), workspace.siteHost(), domain, workspace.status());
+    }
+
+    @ParameterizedTest(name = "[{index}] domain=[{0}]")
+    @NullSource
+    @ValueSource(strings = {"  "})
+    @DisplayName("AC-001.49 refuses a Workspace state whose Workspace has no Google domain")
+    void refusesAWorkspaceStateWithNoGoogleDomain_AC_001_49(String domain) throws Exception {
+        String state = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");
+        workspaces.replace(withDomain(InMemoryWorkspaceLookup.ACME, domain));
+
+        assertMsg141Page(perform(authorizeOnLogin(state)));
+
+        assertThat(store.onlySaved().getAuthorizedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("AC-001.49 refuses a Jira-link state whose Workspace has no Google domain")
+    void refusesAJiraLinkStateWithNoGoogleDomain_AC_001_49() throws Exception {
+        String state = SignInTestFixtures.plantJiraLinkState(
+                store, signedToken, clock, InMemoryWorkspaceLookup.ACME.id(), "tracker-account-1");
+        workspaces.replace(withDomain(InMemoryWorkspaceLookup.ACME, null));
+
+        assertMsg141Page(perform(authorizeOnLogin(state)));
+
+        assertThat(store.onlySaved().getAuthorizedAt()).isNull();
     }
 }

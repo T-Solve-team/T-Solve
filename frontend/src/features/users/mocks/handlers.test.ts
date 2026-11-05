@@ -1,6 +1,6 @@
 import { createUser, getUserCreationOptions, getUserDepartments, getUsers } from '@/shared/api';
 import { setDevUser } from '@/shared/auth';
-import { HANDBOOK_SPACE_ID, IT_SPACE_ID } from './data';
+import { HANDBOOK_SPACE_ID, IT_DEPARTMENT_ID, IT_SPACE_ID } from './data';
 
 describe('Workspace user mock contracts', () => {
   beforeEach(() => setDevUser('admin'));
@@ -40,10 +40,10 @@ describe('Workspace user mock contracts', () => {
       lastSignInAt: null,
     });
     const listed = (await getUsers({ q: created.email })).content;
-    expect(listed[0]?.id).toMatch(/^[1-9][0-9]*$/);
+    expect(listed[0]?.id).toBe(created.id);
     expect(listed).toEqual([
       {
-        id: listed[0]?.id,
+        id: created.id,
         fullName: created.fullName,
         email: created.email,
         roles: created.roles,
@@ -160,12 +160,12 @@ describe('Workspace user mock contracts', () => {
       q: 'USER',
       role: 'PROJECT_MANAGER',
       status: 'ACTIVE',
-      departmentId: '1',
+      departmentId: IT_DEPARTMENT_ID,
     });
     expect(page.content.length).toBeGreaterThan(0);
     for (const user of page.content) {
       expect(user.roles).toContain('PROJECT_MANAGER');
-      expect(user.department?.departmentId).toBe('1');
+      expect(user.department?.departmentId).toBe(IT_DEPARTMENT_ID);
       expect(user.status).toBe('ACTIVE');
     }
     const employees = await getUsers({ role: 'EMPLOYEE' });

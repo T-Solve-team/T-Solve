@@ -4,14 +4,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.swagger.v3.oas.models.media.Schema;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.util.LinkedMultiValueMap;
 import vn.tsolve.identity.exception.UserListException;
 
 class UserListQueryTest {
     @Test
-    void defaultsAndPreservesLongIds_AC_004_10_AC_004_13() {
+    void readDtoSchemaUsesUuidIdentifiers_AC_004_10_BUG_114_BUG_117() {
+        Schema<?> account = io.swagger.v3.core.converter.ModelConverters.getInstance()
+                .read(UserListItem.class)
+                .get("UserListItem");
+        Schema<?> department = io.swagger.v3.core.converter.ModelConverters.getInstance()
+                .read(UserListDepartmentRef.class)
+                .get("UserListDepartmentRef");
+        assertThat(account.getProperties().get("id").getFormat()).isEqualTo("uuid");
+        assertThat(department.getProperties().get("departmentId").getFormat()).isEqualTo("uuid");
+    }
+
+    @Test
+    void defaultsAndPreservesUuidIds_AC_004_10_AC_004_13_BUG_114() {
         var parameters = new LinkedMultiValueMap<String, String>();
         assertThatCode(() -> UserListQuery.parse(parameters)).doesNotThrowAnyException();
         var query = UserListQuery.parse(parameters);
@@ -19,9 +33,10 @@ class UserListQueryTest {
         assertThat(query.pageable().getPageSize()).isEqualTo(20);
         assertThat(query.pageable().getSort().getOrderFor("fullName").isAscending())
                 .isTrue();
-        parameters.add("departmentId", "9223372036854775807");
+        parameters.add("departmentId", "8a5409d4-2da5-440d-974d-a3c13a70b321");
         parameters.add("q", "  Nguyễn  ");
-        assertThat(UserListQuery.parse(parameters).departmentId()).isEqualTo(Long.MAX_VALUE);
+        assertThat(UserListQuery.parse(parameters).departmentId())
+                .isEqualTo(UUID.fromString("8a5409d4-2da5-440d-974d-a3c13a70b321"));
         assertThat(UserListQuery.parse(parameters).q()).isEqualTo("Nguyễn");
     }
 
@@ -38,6 +53,8 @@ class UserListQueryTest {
                 List.of("departmentId", "0"),
                 List.of("departmentId", "9223372036854775808"),
                 List.of("departmentId", "not-an-id"),
+                List.of("departmentId", "1-1-1-1-1"),
+                List.of("departmentId", "8a5409d4-2da5-440d-974d-a3c13a70b321 "),
                 List.of("role", "OWNER"),
                 List.of("status", "UNKNOWN"),
                 List.of("sort", "lastSignInAt,desc"),

@@ -7,12 +7,11 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 import type { Role } from './role';
-import type { SqlId } from './sqlId';
 import type { UserAccountStatus } from './userAccountStatus';
 import type { UserListDepartmentRef } from './userListDepartmentRef';
 
 export interface UserListItem {
-  id: SqlId;
+  id: string;
   /** @nullable */
   fullName: string | null;
   email: string;

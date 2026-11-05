@@ -6,7 +6,6 @@ import { getGetUsersQueryKey } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
-import { DEPARTMENTS } from '../mocks/data';
 
 describe('UserDetailPage creation', () => {
   beforeAll(async () => {
@@ -209,13 +208,7 @@ describe('UserDetailPage creation', () => {
     let fails = true;
     server.use(
       http.get('*/api/v1/users/creation-options', () =>
-        fails
-          ? problem(500)
-          : HttpResponse.json({
-              companyDomain: 'company.example',
-              departments: DEPARTMENTS,
-              spaces: [],
-            }),
+        fails ? problem(500) : HttpResponse.json({ companyDomain: 'company.example', spaces: [] }),
       ),
     );
     const user = userEvent.setup();

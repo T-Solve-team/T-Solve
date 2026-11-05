@@ -1,16 +1,17 @@
 package vn.tsolve.common.tenant;
 
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 public interface TenantContext {
-    Optional<Long> currentWorkspaceId();
+    Optional<UUID> currentWorkspaceId();
 
-    Long requireWorkspaceId();
+    UUID requireWorkspaceId();
 
-    <T> T runIn(Long workspaceId, Supplier<T> action);
+    <T> T runIn(UUID workspaceId, Supplier<T> action);
 
-    default void runIn(Long workspaceId, Runnable action) {
+    default void runIn(UUID workspaceId, Runnable action) {
         runIn(workspaceId, () -> {
             action.run();
             return null;

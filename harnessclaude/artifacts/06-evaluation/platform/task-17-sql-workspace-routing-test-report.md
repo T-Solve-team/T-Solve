@@ -82,3 +82,6 @@ No test was skipped, removed or given a longer timeout to make this feature pass
   behavior was checked directly in PostgreSQL. No document semantic re-indexing claim is made.
 - A supplementary tracked-env filename listing was blocked by the privacy hook; it was not retried and no env
   content was read. Production and test Java directory secret scans completed separately with zero findings.
+
+## Superseded integration scope — 2026-11-05
+User selected the current main UUID architecture for PR119. The earlier numeric SQL checkpoint above remains historical evidence only. The parallel catalog/router/bootstrap is retired from this PR. Current work is identity Task23 user-list-uuid-read, approved AC-004.9–.19; do not infer deployment readiness or current test results from this report. Original commits remain in history.

@@ -80,3 +80,6 @@ four regression tests pass. No technical blocker remains. The user approved the 
 
 Commit the separate harness record, then proceed to KAN-107 User List backend (SQL-U1–U5).
 The next feature has its own verification and user commit checkpoint. Push only on request.
+
+## Superseded integration scope — 2026-11-05
+User selected the current main UUID architecture for PR119. The earlier numeric SQL checkpoint above remains historical evidence only. The parallel catalog/router/bootstrap is retired from this PR. Current work is identity Task23 user-list-uuid-read, approved AC-004.9–.19; do not infer deployment readiness or current test results from this report. Original commits remain in history.

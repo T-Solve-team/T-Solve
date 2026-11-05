@@ -1,3 +1,5 @@
 package vn.tsolve.identity.dto;
 
-public record UserListDepartmentRef(String departmentId, String name) {}
+import java.util.UUID;
+
+public record UserListDepartmentRef(UUID departmentId, String name) {}

@@ -1,10 +1,12 @@
-import type { TicketStatus } from '@/shared/api';
+import type { ReviewHistoryDecision, TicketStatus } from '@/shared/api';
 import { seedReviewTickets } from './data';
 
 export type ReviewHistoryEntry = {
+  decisionId: string;
   ticketId: string;
   actorId: string;
-  action: 'APPROVE' | 'REJECT' | 'REQUEST_CHANGES';
+  actorName: string;
+  action: ReviewHistoryDecision;
   timestamp: string;
   beforeStatus: TicketStatus;
   afterStatus: TicketStatus;

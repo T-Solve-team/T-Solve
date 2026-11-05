@@ -20,16 +20,16 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import vn.tsolve.common.security.DefaultSecurityConfig;
 import vn.tsolve.common.security.JiraAppAuthentication;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.JiraAppSecurityConfig;
 import vn.tsolve.common.security.Roles;
+import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.tracker.dto.IssueCreatedPayload;
 import vn.tsolve.tracker.service.IssueCreatedService;
 
 @WebMvcTest(JiraAppEventController.class)
-@Import({JiraAppSecurityConfig.class, DefaultSecurityConfig.class})
+@Import({JiraAppSecurityConfig.class, SecurityConfig.class})
 class JiraAppEventControllerTest {
 
     private static final String URL = "/api/v1/jira-app/events/issue-created";

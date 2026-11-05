@@ -4,6 +4,7 @@ import { useId } from 'react';
 import {
   Role,
   useGetUserCreationOptions,
+  useGetUserDepartments,
   type UpdateUserRolesRequest,
   type UserDetail,
 } from '@/shared/api';
@@ -28,6 +29,7 @@ export function UserRolesForm({ user }: UserRolesFormProps) {
   const adminHelpId = useId();
   const [form] = Form.useForm<UpdateUserRolesRequest>();
   const roles: UpdateUserRolesRequest['roles'] = Form.useWatch('roles', form) ?? user.roles;
+  const departments = useGetUserDepartments();
   const options = useGetUserCreationOptions();
   const flow = useRoleUpdateFlow(user, (error) => {
     if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
@@ -37,7 +39,9 @@ export function UserRolesForm({ user }: UserRolesFormProps) {
   const isBusy = flow.isPending || flow.step !== null;
   const protectsAdmin = user.isCurrentUser && user.roles.includes(Role.ADMIN);
 
-  if (options.isPending) return <LoadingState />;
+  if (departments.isPending || options.isPending) return <LoadingState />;
+  if (departments.isError)
+    return <ErrorState error={departments.error} onRetry={() => void departments.refetch()} />;
   if (options.isError)
     return <ErrorState error={options.error} onRetry={() => void options.refetch()} />;
 
@@ -62,13 +66,13 @@ export function UserRolesForm({ user }: UserRolesFormProps) {
           <Select
             allowClear
             virtual={false}
-            options={(options.data.departments ?? []).map((department) => ({
+            options={departments.data.map((department) => ({
               value: department.departmentId,
               label: department.name,
             }))}
           />
         </FormField>
-        {!options.data.departments?.length && <EmptyState />}
+        {!departments.data.length && <EmptyState />}
         <FormField<UpdateUserRolesRequest>
           name="roles"
           label="Roles"

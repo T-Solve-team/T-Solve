@@ -16,7 +16,6 @@ import { accountAccessError as accessError, resetUserState, store } from './stat
 import { statusHandlers } from './status-handlers';
 import { rolesHandler } from './roles-handler';
 import { isRecord } from './handover';
-import { listDepartmentId, listUserId } from './list-ids';
 
 export function resetMockData(): void {
   resetUserState();
@@ -48,11 +47,7 @@ export const handlers: HttpHandler[] = [
     await delay(MOCK_DELAY_MS);
     return (
       accessError() ??
-      HttpResponse.json<UserCreationOptions>({
-        companyDomain: COMPANY_DOMAIN,
-        spaces: SPACES,
-        departments: DEPARTMENTS,
-      })
+      HttpResponse.json<UserCreationOptions>({ companyDomain: COMPANY_DOMAIN, spaces: SPACES })
     );
   }),
   http.post('*/api/v1/users', async ({ request }) => {
@@ -129,10 +124,7 @@ export const handlers: HttpHandler[] = [
     return (
       accessError() ??
       HttpResponse.json<UserListDepartmentRef[]>(
-        DEPARTMENTS.map((department) => ({
-          ...department,
-          departmentId: listDepartmentId(department.departmentId),
-        })).sort((a, b) => a.name.localeCompare(b.name, 'vi')),
+        [...DEPARTMENTS].sort((a, b) => a.name.localeCompare(b.name, 'vi')),
       )
     );
   }),
@@ -159,8 +151,7 @@ export const handlers: HttpHandler[] = [
       (role !== null && !isRole(role)) ||
       (status !== null && status !== 'ACTIVE' && status !== 'DEACTIVATED') ||
       (departmentId !== null &&
-        (!/^[1-9][0-9]{0,18}$/.test(departmentId) ||
-          BigInt(departmentId) > 9223372036854775807n)) ||
+        !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(departmentId)) ||
       !Number.isInteger(page) ||
       !Number.isInteger(size) ||
       size < 1 ||
@@ -178,8 +169,7 @@ export const handlers: HttpHandler[] = [
               ? user.roles.length === 1 && user.roles[0] === Role.EMPLOYEE
               : user.roles.some((held) => held === role))) &&
           (!status || user.status === status) &&
-          (!departmentId ||
-            (user.department && listDepartmentId(user.department.departmentId) === departmentId)),
+          (!departmentId || user.department?.departmentId === departmentId),
       )
       .sort((a, b) => {
         for (const sort of sorts) {
@@ -190,19 +180,15 @@ export const handlers: HttpHandler[] = [
             value(a).localeCompare(value(b), 'vi') * (sort.order === 'asc' ? 1 : -1);
           if (comparison) return comparison;
         }
-        const aId = BigInt(listUserId(a.id));
-        const bId = BigInt(listUserId(b.id));
-        return aId < bId ? -1 : aId > bId ? 1 : 0;
+        return a.id.localeCompare(b.id);
       });
     return HttpResponse.json<UserAccountPage>({
       content: matching.slice(page * size, (page + 1) * size).map((user) => ({
-        id: listUserId(user.id),
+        id: user.id,
         fullName: user.fullName,
         email: user.email,
         roles: user.roles,
-        department: user.department
-          ? { ...user.department, departmentId: listDepartmentId(user.department.departmentId) }
-          : null,
+        department: user.department,
         status: user.status,
       })),
       page: {

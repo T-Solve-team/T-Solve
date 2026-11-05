@@ -37,17 +37,17 @@
       "currentPhase": "implement",
       "features": {
         "problem-errors": "passing",
-        "roles-security": "pending",
+        "roles-security": "passing",
         "me-session": "pending",
         "audit-writer": "pending"
       },
-      "lastUpdated": "2026-10-30T16:13:59.159Z",
+      "lastUpdated": "2026-11-04T14:50:22.250Z",
       "branch": "feat/be-foundation",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b7b546d51536c8fb05b9361f175a5925118bb04a"
+        "default": "6e07c515870cf16d9b61f2eac5872c3a2c81f30f"
       }
     },
     "fe-foundation": {
@@ -86,13 +86,13 @@
         "add-user-review": "passing",
         "login-screen": "passing",
         "sign-in-start": "passing",
-        "sign-in-callback": "pending",
+        "sign-in-callback": "passing",
         "workspace-session": "pending",
         "operator-sign-in": "pending",
         "jira-link-sign-in": "pending",
         "project-handover": "passing",
         "space-handover": "passing",
-        "account-checks": "pending",
+        "account-checks": "passing",
         "platform-adapters": "pending",
         "profile-account": "pending",
         "profile-viewable-spaces": "pending",
@@ -100,15 +100,16 @@
         "my-solutions-table": "pending",
         "my-solutions-counters": "pending",
         "my-solutions-filters": "pending",
-        "user-list-backend": "passing"
+        "user-list-backend": "passing",
+        "user-list-uuid-read": "in-progress"
       },
-      "lastUpdated": "2026-11-03T03:40:37.357Z",
+      "lastUpdated": "2026-11-05T00:25:36.837Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b6b15970fb03ec8f979884af4c6ad4b40771a40c"
+        "default": "5310e2b10093f244440daabf3f3ca7ad14b1d613"
       }
     },
     "workspace": {
@@ -199,8 +200,8 @@
       }
     },
     "platform": {
-      "status": "implementing",
-      "currentPhase": "implement",
+      "status": "planned",
+      "currentPhase": "plan",
       "features": {
         "tenant-context": "pending",
         "tenant-schema": "pending",
@@ -214,16 +215,27 @@
         "edge-caddy": "pending",
         "staging-cd": "pending",
         "demo-seed-workspaces": "pending",
+        "local-data-plane": "pending",
+        "registry-db": "pending",
+        "workspace-catalog": "pending",
+        "row-guard": "pending",
+        "tenant-routing": "pending",
+        "provisioning-core": "pending",
+        "invitation-job-queue": "pending",
+        "ops-script": "pending",
+        "signed-url-route": "pending",
+        "jira-site-link": "pending",
+        "forge-token": "pending",
+        "jira-tenant-resolver": "pending",
+        "ai-vps": "pending",
+        "demo-seed-contributors": "pending",
+        "backup-restore": "pending",
+        "monitoring": "pending",
+        "load-test": "pending",
+        "forge-security-chain": "pending",
         "sql-workspace-routing": "passing"
       },
-      "lastUpdated": "2026-11-02T21:06:09.396Z",
-      "branch": "feat/platform",
-      "repos": [
-        "default"
-      ],
-      "lastCommit": {
-        "default": "8e2c3ab8f1841db03148f52322d7f1b37b61b724"
-      }
+      "lastUpdated": "2026-11-04T13:58:39.188Z"
     },
     "platform-console": {
       "status": "decomposed",
@@ -274,15 +286,17 @@
       "currentPhase": "implement",
       "features": {
         "review-queue-decisions": "passing",
-        "review-ticket-detail": "passing"
+        "review-ticket-detail": "passing",
+        "expired-tickets": "passing",
+        "review-history": "passing"
       },
-      "lastUpdated": "2026-11-01T09:36:45.954Z",
+      "lastUpdated": "2026-11-04T14:48:28.461Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "47c23557c3c71f269a7232c6a0ff7477eedd8ca9"
+        "default": "57efd3620b4a58678607501aa5dd4c124496ab7e"
       }
     }
   },

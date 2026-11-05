@@ -7,14 +7,15 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import vn.tsolve.common.security.Role;
+import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.common.tenant.TenantContext;
 import vn.tsolve.identity.exception.UserListException;
 import vn.tsolve.identity.repository.UserListRepository;
 import vn.tsolve.identity.service.UserListAccessService;
-import vn.tsolve.identity.session.WorkspaceAccountPrincipal;
+import vn.tsolve.identity.session.WorkspaceSessionBinding;
 
 @Service
-@ConditionalOnProperty(name = "tsolve.sql-workspace.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "tsolve.identity.user-list.enabled", havingValue = "true")
 public class UserListAccessServiceImpl implements UserListAccessService {
     private final TenantContext context;
     private final UserListRepository repository;
@@ -29,9 +30,10 @@ public class UserListAccessServiceImpl implements UserListAccessService {
         if (authentication == null
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken
-                || !(authentication.getPrincipal() instanceof WorkspaceAccountPrincipal principal)
+                || !(authentication.getPrincipal() instanceof TSolveUser)
+                || !(authentication.getDetails() instanceof WorkspaceSessionBinding binding)
                 || context.currentWorkspaceId()
-                        .filter(id -> id == principal.workspaceId())
+                        .filter(binding.workspaceId()::equals)
                         .isEmpty()) {
             throw expired();
         }
@@ -40,9 +42,9 @@ public class UserListAccessServiceImpl implements UserListAccessService {
     @Override
     public Set<Role> requireAdmin(Authentication authentication) {
         validateSession(authentication);
-        var principal = (WorkspaceAccountPrincipal) authentication.getPrincipal();
+        var principal = (TSolveUser) authentication.getPrincipal();
         var account = repository
-                .accountAccess(principal.accountId())
+                .accountAccess(principal.id())
                 .filter(found -> "ACTIVE".equals(found.status()))
                 .orElseThrow(UserListAccessServiceImpl::expired);
         if (!account.roles().contains(Role.ADMIN)) {

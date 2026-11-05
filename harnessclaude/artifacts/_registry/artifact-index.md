@@ -1,12 +1,16 @@
 # Artifact Index
 
+
 Master registry of all artifacts in this workspace.
 
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
-| IMPL-IDENTITY-14 | session-log | identity | passing | artifacts/05-implementation/identity/task-14-space-handover.md |
-| TEST-IDENTITY-14 | test-report | identity | pass-with-open-dev-defect | artifacts/06-evaluation/identity/task-14-space-handover-test-report.md |
-| REVIEW-IDENTITY-14 | review | identity | pass | artifacts/06-evaluation/identity/task-14-space-handover-review.md |
+| IMPL-REVIEW-4 | session-log | ticket-review | passing | artifacts/05-implementation/ticket-review/task-4-review-history.md |
+| TEST-REVIEW-4 | test-report | ticket-review | fail-global-verification | artifacts/06-evaluation/ticket-review/task-4-review-history-test-report.md |
+| REVIEW-REVIEW-4 | review | ticket-review | fail-global-verification | artifacts/06-evaluation/ticket-review/task-4-review-history-review.md |
+| IMPL-IDENTITY-22 | session-log | identity | passing | artifacts/05-implementation/identity/task-22-space-handover.md |
+| TEST-IDENTITY-22 | test-report | identity | pass-with-open-dev-defect | artifacts/06-evaluation/identity/task-22-space-handover-test-report.md |
+| REVIEW-IDENTITY-22 | review | identity | pass | artifacts/06-evaluation/identity/task-22-space-handover-review.md |
 | ITER-1 | iteration | — | planned | artifacts/07-iterations/iteration-1.md |
 | ITER-2 | iteration | — | planned | artifacts/07-iterations/iteration-2.md |
 | — | architecture | — | draft | artifacts/03-modules/architecture.md |
@@ -140,6 +144,9 @@ Master registry of all artifacts in this workspace.
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-8-sign-in-start.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-8-sign-in-start-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-8-sign-in-start-test-report.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-9-sign-in-callback.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-9-sign-in-callback-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-9-sign-in-callback-test-report.md |
 | — | spec | dashboard-audit | approved | artifacts/03-modules/dashboard-audit/spec.md |
 | — | design | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/design.md |
 | — | design | dashboard-audit | approved | artifacts/04-plans/dashboard-audit/iteration-1/design.md |
@@ -174,6 +181,13 @@ Master registry of all artifacts in this workspace.
 | — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-detail-approved.png |
 | — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-detail-changes.png |
 | — | screenshot | ticket-review | verified | artifacts/assets/ticket-review/kan-24-detail-narrow.png |
+| — | session-log | ticket-review | passing | artifacts/05-implementation/ticket-review/task-3-expired-tickets.md |
+| — | review | ticket-review | pass | artifacts/06-evaluation/ticket-review/task-3-expired-tickets-review.md |
+| — | test-report | ticket-review | pass | artifacts/06-evaluation/ticket-review/task-3-expired-tickets-test-report.md |
+| — | baseline | — | source | artifacts/00-baseline/T-Solve_Database_Tables.md |
+| — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-2-roles-security-review.md |
+| — | test-report | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-2-roles-security-test-report.md |
+| — | session-log | be-foundation | passing | artifacts/05-implementation/be-foundation/task-2-roles-security.md |
 | — | session-log | platform | in-progress | artifacts/05-implementation/platform/task-17-sql-workspace-routing.md |
 | — | test-report | platform | pass | artifacts/06-evaluation/platform/task-17-sql-workspace-routing-test-report.md |
 | — | review | platform | pass | artifacts/06-evaluation/platform/task-17-sql-workspace-routing-review.md |
@@ -181,3 +195,4 @@ Master registry of all artifacts in this workspace.
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-22-user-list-backend-test-report.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-22-user-list-backend-review.md |
 | — | screenshot | identity | verified | artifacts/assets/identity/kan-107-sql-user-list.png |
+| IMPL-IDENTITY-23 | session-log | identity | in-progress | artifacts/05-implementation/identity/task-23-user-list-uuid-read.md |

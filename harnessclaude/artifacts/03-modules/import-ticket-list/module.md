@@ -44,7 +44,7 @@ Exact paths and payloads are fixed in the design and in `frontend/openapi/tsolve
 ### Consumed
 | Dependency | Interface | Description |
 |------------|-----------|-------------|
-| identity (not decomposed yet) | current user + role | The PM role check (`@PreAuthorize`). Until the identity module exists, tests use `@WithMockUser` |
+| identity | current user + role | The PM role check (`@PreAuthorize`); tests use `@WithMockUser` until be-foundation `roles-security` is on `main` |
 | workspace (not decomposed yet) | Projects managed by the user, Project Active, Jira token | Behind a service interface with a minimal stub implementation until the workspace module exists |
 | Jira Cloud | REST search API | UC-20 only |
 

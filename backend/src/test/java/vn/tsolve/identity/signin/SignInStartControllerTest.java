@@ -3,16 +3,20 @@ package vn.tsolve.identity.signin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
+import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -21,13 +25,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
+import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.AuthSecurityConfig;
 import vn.tsolve.identity.signin.SignInTestFixtures.StateStore;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
+import vn.tsolve.identity.signin.port.WorkspaceRef;
 
 /** Anonymous on purpose: sign-in start is reached before anyone is signed in (no @WithMockUser here). */
 @WebMvcTest(SignInStartController.class)
 @Import({
+    SecurityConfig.class,
     AuthSecurityConfig.class,
     AuthHosts.class,
     SignInStateService.class,
@@ -46,6 +53,7 @@ import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
             "CORS_ALLOWED_ORIGINS=http://localhost:5173",
             "server.port=0"
         })
+@ExtendWith(OutputCaptureExtension.class)
 class SignInStartControllerTest {
 
     private static final String AUTHORIZE_URL = SignInTestFixtures.LOGIN_ORIGIN + "/api/v1/auth/authorize";
@@ -174,6 +182,49 @@ class SignInStartControllerTest {
         SignInState saved = store.onlySaved();
         assertThat(saved.getTarget()).isEqualTo(SignInState.Target.WORKSPACE);
         assertThat(saved.getWorkspaceId()).isEqualTo(InMemoryWorkspaceLookup.GAMMA.id());
+    }
+
+    private static WorkspaceRef noDomain(String host) {
+        return host.startsWith("nodomain") ? InMemoryWorkspaceLookup.NO_DOMAIN : InMemoryWorkspaceLookup.BLANK_DOMAIN;
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @ValueSource(strings = {"nodomain.localhost", "blankdomain.localhost"})
+    @DisplayName("AC-001.48 refuses sign-in start for a Workspace with no Google domain")
+    void refusesSignInStartForAWorkspaceWithNoGoogleDomain_AC_001_48(String host) throws Exception {
+        MockHttpServletResponse response = perform(start(host));
+
+        assertThat(response.getStatus()).as("status").isEqualTo(302);
+        String location = response.getHeader(HttpHeaders.LOCATION);
+        assertThat(location).as("Location").isNotNull();
+        URI resolved =
+                URI.create("http://" + host + ":8081/api/v1/auth/sign-in").resolve(location);
+        assertThat(resolved.toString()).isEqualTo("http://" + host + ":8081/login?error=MSG141");
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @ValueSource(strings = {"nodomain.localhost", "blankdomain.localhost"})
+    @DisplayName("AC-001.48 creates no state for a Workspace with no Google domain")
+    void createsNoStateForAWorkspaceWithNoGoogleDomain_AC_001_48(String host) throws Exception {
+        perform(start(host));
+
+        assertThat(store.calls("save")).isZero();
+        assertThat(store.saved()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("AC-001.48 logs one WARN that names only the Workspace id")
+    void logsOneWarnThatNamesOnlyTheWorkspaceId_AC_001_48(CapturedOutput output) throws Exception {
+        perform(start("nodomain.localhost").param("returnTo", "/secret-return-path"));
+
+        String id = noDomain("nodomain").id().toString();
+        List<String> warnLines = output.getAll()
+                .lines()
+                .filter(line -> line.contains(" WARN "))
+                .filter(line -> line.contains(id))
+                .toList();
+        assertThat(warnLines).hasSize(1);
+        assertThat(warnLines.get(0)).doesNotContain("nodomain.localhost").doesNotContain("secret-return-path");
     }
 
     @ParameterizedTest(name = "[{index}] {0}")

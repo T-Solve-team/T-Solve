@@ -105,3 +105,6 @@ No blocking issue remains in this feature. The no-concurrent-build/indexing fron
 passes all 1273 tests in 67 files, exit 0. This does not close BUG-108 or BUG-069. The user
 approved the commit: code is `b6b15970fb03ec8f979884af4c6ad4b40771a40c`, repository hooks passed,
 and official feature tracking is passing. No push is authorized.
+
+## Superseded integration scope — 2026-11-05
+User selected the current main UUID architecture for PR119. The earlier numeric SQL checkpoint above remains historical evidence only. The parallel catalog/router/bootstrap is retired from this PR. Current work is identity Task23 user-list-uuid-read, approved AC-004.9–.19; do not infer deployment readiness or current test results from this report. Original commits remain in history.

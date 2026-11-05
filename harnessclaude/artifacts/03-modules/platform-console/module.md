@@ -16,11 +16,12 @@ paths:
 
 # Module: platform-console
 
-> **Cancelled (31/10).** The MVP has no Platform Console and no Platform Operator actor: the T-Solve team creates,
-> suspends and reactivates Workspaces and gives them their first Admin with an ops script outside the app
-> (KAN-240, GBR-24, GBR-38, in `platform`). KAN-113…116, KAN-184 and KAN-233 (Console sign-in) are cancelled;
-> KAN-244 removes the Console code from the web app. UC-54…56 are no longer in Report3 (numbers 54–57 stay unused).
-> This file is kept as a record; plan nothing here.
+> **Restored (4/11).** The multi-tenant HLA brings the Platform Console on `admin.` back (HLA Q1 = A), which reverses
+> the cancellation of 31/10. The module has its owner again; KAN-113…116 and KAN-184 are reopened, KAN-233 (identity
+> Task 11, Console sign-in) is reopened, and KAN-244 no longer removes the Console route tree or sign-in screen.
+> Workspace provisioning is a service of `platform` that the Console and the ops script (KAN-240) both call; the first
+> Admin is invited. Status is still `decomposed`; the next step is the `plan` of this module. Whether UC-54…56 return
+> to Report 3 is for the team to settle (numbers 54–57 were left unused on 31/10).
 
 **Owner:** Đặng Tấn Bình
 

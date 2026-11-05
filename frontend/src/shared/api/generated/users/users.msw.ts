@@ -51,7 +51,7 @@ export const getGetUsersResponseMock = (
 ): UserAccountPage => ({
   content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
-      id: faker.helpers.fromRegExp('^[1-9][0-9]{0,18}$'),
+      id: faker.string.uuid(),
       fullName: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -60,7 +60,7 @@ export const getGetUsersResponseMock = (
       roles: faker.helpers.arrayElements(Object.values(Role)),
       department: faker.helpers.arrayElement([
         {
-          departmentId: faker.helpers.fromRegExp('^[1-9][0-9]{0,18}$'),
+          departmentId: faker.string.uuid(),
           name: faker.string.alpha({ length: { min: 10, max: 20 } }),
         },
         null,
@@ -313,19 +313,12 @@ export const getGetUserCreationOptionsResponseMock = (
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     }),
   ),
-  departments: faker.helpers.arrayElement([
-    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-      departmentId: faker.string.uuid(),
-      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    })),
-    undefined,
-  ]),
   ...overrideResponse,
 });
 
 export const getGetUserDepartmentsResponseMock = (): UserListDepartmentRef[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    departmentId: faker.helpers.fromRegExp('^[1-9][0-9]{0,18}$'),
+    departmentId: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   }));
 

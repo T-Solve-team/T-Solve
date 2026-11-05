@@ -7,49 +7,49 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import vn.tsolve.common.security.Role;
-import vn.tsolve.common.tenant.TenantAccessException;
-import vn.tsolve.common.tenant.TenantDatabase;
 import vn.tsolve.identity.dto.UserListDepartmentRef;
 import vn.tsolve.identity.dto.UserListItem;
 import vn.tsolve.identity.dto.UserListQuery;
+import vn.tsolve.identity.exception.UserListException;
 
 @Repository
-@ConditionalOnProperty(name = "tsolve.sql-workspace.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "tsolve.identity.user-list.enabled", havingValue = "true")
 public class UserListRepository {
     public record AccountAccess(String status, Set<Role> roles) {}
 
     private final JdbcTemplate jdbc;
 
-    public UserListRepository(@Qualifier("sqlTenantDatabase") TenantDatabase database) {
-        jdbc = database.jdbc();
+    public UserListRepository(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
     }
 
     public Page<UserListItem> list(UserListQuery query) {
         var predicates = new ArrayList<String>();
         var arguments = new ArrayList<Object>();
         if (query.q() != null) {
-            predicates.add("(u.full_name ILIKE ? ESCAPE '\\' OR u.company_email ILIKE ? ESCAPE '\\')");
+            predicates.add("(u.full_name ILIKE ? ESCAPE '\\' OR u.email ILIKE ? ESCAPE '\\')");
             String pattern =
                     "%" + query.q().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
             arguments.add(pattern);
             arguments.add(pattern);
         }
         if (query.role() == Role.EMPLOYEE) {
-            predicates.add("NOT EXISTS (SELECT 1 FROM user_role r WHERE r.user_id=u.user_id)");
+            predicates.add("NOT EXISTS (SELECT 1 FROM user_role r WHERE r.user_id=u.id)");
         } else if (query.role() != null) {
-            predicates.add("EXISTS (SELECT 1 FROM user_role r WHERE r.user_id=u.user_id AND r.role=?)");
+            predicates.add("EXISTS (SELECT 1 FROM user_role r WHERE r.user_id=u.id AND r.role=?)");
             arguments.add(query.role().name());
         }
         if (query.status() != null) {
-            predicates.add("u.account_status=?");
+            predicates.add("u.status=?");
             arguments.add(query.status());
         }
         if (query.departmentId() != null) {
@@ -63,7 +63,7 @@ public class UserListRepository {
                     String column =
                             switch (order.getProperty()) {
                                 case "fullName" -> "u.full_name";
-                                case "email" -> "u.company_email";
+                                case "email" -> "u.email";
                                 default -> throw new IllegalArgumentException("Unsupported user sort");
                             };
                     return column + " " + order.getDirection().name();
@@ -73,35 +73,36 @@ public class UserListRepository {
         arguments.add(query.pageable().getPageSize());
         arguments.add(query.pageable().getOffset());
         var rows = jdbc.query(
-                "SELECT u.user_id,u.full_name,u.company_email,u.account_status,"
-                        + " d.department_id,d.name AS department_name FROM app_user u"
-                        + " LEFT JOIN department d ON d.department_id=u.department_id" + where
-                        + " ORDER BY " + order + ", u.user_id ASC LIMIT ? OFFSET ?",
+                "SELECT u.id,u.full_name,u.email,u.status,"
+                        + " d.id AS department_id,d.name AS department_name FROM app_user u"
+                        + " LEFT JOIN department d ON d.id=u.department_id" + where
+                        + " ORDER BY " + order + ", u.id ASC LIMIT ? OFFSET ?",
                 (rs, row) -> {
-                    Long departmentId = rs.getObject("department_id", Long.class);
+                    UUID departmentId = rs.getObject("department_id", UUID.class);
                     var department = departmentId == null
                             ? null
                             : new UserListDepartmentRef(id(departmentId), rs.getString("department_name"));
-                    String status = rs.getString("account_status");
-                    if (!List.of("ACTIVE", "DEACTIVATED").contains(status)) throw new TenantAccessException();
+                    String status = rs.getString("status");
+                    if (!List.of("ACTIVE", "DEACTIVATED").contains(status))
+                        throw new UserListException(HttpStatus.INTERNAL_SERVER_ERROR, "MSG06");
                     return new UserListItem(
-                            id(rs.getLong("user_id")),
+                            id(rs.getObject("id", UUID.class)),
                             rs.getString("full_name"),
-                            rs.getString("company_email"),
+                            rs.getString("email"),
                             List.of(Role.EMPLOYEE),
                             department,
                             status);
                 },
                 arguments.toArray());
-        var roles = new HashMap<String, EnumSet<Role>>();
+        var roles = new HashMap<UUID, EnumSet<Role>>();
         rows.forEach(user -> roles.put(user.id(), EnumSet.of(Role.EMPLOYEE)));
         if (!rows.isEmpty()) {
             String placeholders = String.join(",", Collections.nCopies(rows.size(), "?"));
             jdbc.query(
                     "SELECT user_id,role FROM user_role WHERE user_id IN (" + placeholders + ")",
-                    (org.springframework.jdbc.core.RowCallbackHandler)
-                            rs -> roles.get(id(rs.getLong("user_id"))).add(Role.valueOf(rs.getString("role"))),
-                    rows.stream().map(user -> Long.valueOf(user.id())).toArray());
+                    (org.springframework.jdbc.core.RowCallbackHandler) rs ->
+                            roles.get(id(rs.getObject("user_id", UUID.class))).add(Role.valueOf(rs.getString("role"))),
+                    rows.stream().map(UserListItem::id).toArray());
         }
         var content = rows.stream()
                 .map(user -> new UserListItem(
@@ -117,17 +118,16 @@ public class UserListRepository {
 
     public List<UserListDepartmentRef> departments() {
         return jdbc.query(
-                "SELECT department_id,name FROM department ORDER BY name,department_id",
-                (rs, row) -> new UserListDepartmentRef(id(rs.getLong(1)), rs.getString(2)));
+                "SELECT id,name FROM department ORDER BY name,id",
+                (rs, row) -> new UserListDepartmentRef(id(rs.getObject(1, UUID.class)), rs.getString(2)));
     }
 
-    public Optional<AccountAccess> accountAccess(long accountId) {
+    public Optional<AccountAccess> accountAccess(UUID accountId) {
         return jdbc.query(
-                "SELECT u.account_status,r.role FROM app_user u"
-                        + " LEFT JOIN user_role r ON r.user_id=u.user_id WHERE u.user_id=?",
+                "SELECT u.status,r.role FROM app_user u" + " LEFT JOIN user_role r ON r.user_id=u.id WHERE u.id=?",
                 rs -> {
                     if (!rs.next()) return Optional.empty();
-                    String status = rs.getString("account_status");
+                    String status = rs.getString("status");
                     var roles = EnumSet.of(Role.EMPLOYEE);
                     do {
                         String role = rs.getString("role");
@@ -138,8 +138,8 @@ public class UserListRepository {
                 accountId);
     }
 
-    private static String id(long id) {
-        if (id <= 0) throw new TenantAccessException();
-        return Long.toString(id);
+    private static UUID id(UUID id) {
+        if (id == null) throw new UserListException(HttpStatus.INTERNAL_SERVER_ERROR, "MSG06");
+        return id;
     }
 }

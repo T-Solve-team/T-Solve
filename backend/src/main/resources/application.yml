@@ -28,6 +28,11 @@ spring:
 server:
   port: ${SERVER_PORT}
 
+springdoc:
+  swagger-ui:
+    csrf:
+      enabled: true
+
 logging:
   level:
     # their messages carry the values of a failed insert, i.e. ticket content (AGENTS.md §9); the services log
@@ -42,18 +47,9 @@ management:
         include: health,info
 
 tsolve:
-  # Separate SQL Workspace path; legacy JPA/Liquibase keep spring.datasource above.
-  sql-workspace:
-    enabled: ${TSOLVE_SQL_WORKSPACE_ENABLED:false}
-    base-domain: ${TSOLVE_BASE_DOMAIN}
-    pool-max: ${TENANT_DB_POOL_MAX:5}
-    max-pools: ${TENANT_DB_MAX_POOLS:32}
-    catalog:
-      host: ${CATALOG_DB_HOST}
-      port: ${CATALOG_DB_PORT}
-      database: ${CATALOG_DB_NAME}
-      username: ${CATALOG_DB_USER}
-      password: ${CATALOG_DB_PASSWORD}
+  identity:
+    user-list:
+      enabled: ${TSOLVE_USER_LIST_ENABLED:false}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
   tracker:
@@ -71,6 +67,11 @@ tsolve:
   oidc:
     google:
       authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+      token-uri: https://oauth2.googleapis.com/token
+      jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
+      issuer: https://accounts.google.com
+      connect-timeout: 5s
+      read-timeout: 10s
   # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId". Empty = nobody can import.
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}

@@ -3,6 +3,7 @@ package vn.tsolve.identity.signin;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -15,6 +16,9 @@ import org.mockito.Answers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /** Shared values and doubles for the sign-in tests. */
@@ -51,6 +55,93 @@ public final class SignInTestFixtures {
                 "test-client-id",
                 "test-secret",
                 "ops@example.test");
+    }
+
+    public static final String SIGN_IN_COOKIE = "__Host-TSOLVE_SIGNIN";
+    public static final String SESSION_COOKIE = "__Host-TSOLVE_SESSION";
+
+    /** Plants a Jira-link state (the service cannot make one yet) and returns its signed state value. */
+    public static String plantJiraLinkState(
+            StateStore store, SignedToken token, MutableClock clock, UUID workspaceId, String trackerAccountId) {
+        Instant now = clock.instant();
+        SignInState state = new SignInState(
+                SignInState.Target.JIRA_LINK,
+                workspaceId,
+                trackerAccountId,
+                "/",
+                "nonce-" + UUID.randomUUID(),
+                "verifier-" + UUID.randomUUID() + "-0123456789012345678901234567890",
+                now,
+                now.plus(STATE_LIFETIME));
+        store.plant(state);
+        return token.sign(state.getId().toString());
+    }
+
+    /** Every Set-Cookie header value whose cookie has this name. */
+    public static List<String> setCookie(MockHttpServletResponse response, String name) {
+        return response.getHeaders(HttpHeaders.SET_COOKIE).stream()
+                .filter(header -> header.startsWith(name + "="))
+                .toList();
+    }
+
+    /** The value of the non-empty sign-in cookie the response sets, or null. */
+    public static String signInCookieValue(MockHttpServletResponse response) {
+        for (String header : setCookie(response, SIGN_IN_COOKIE)) {
+            String value = header.substring(
+                    SIGN_IN_COOKIE.length() + 1, header.indexOf(';') < 0 ? header.length() : header.indexOf(';'));
+            if (!value.isEmpty()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    /** The attributes of one Set-Cookie value, lower-cased names; a flag has an empty value. */
+    public static Map<String, String> attributes(String setCookie) {
+        Map<String, String> attributes = new LinkedHashMap<>();
+        String[] parts = setCookie.split(";\\s*");
+        for (int i = 1; i < parts.length; i++) {
+            int eq = parts[i].indexOf('=');
+            String name = (eq < 0 ? parts[i] : parts[i].substring(0, eq)).toLowerCase(java.util.Locale.ROOT);
+            attributes.put(name, eq < 0 ? "" : parts[i].substring(eq + 1));
+        }
+        return attributes;
+    }
+
+    /** Exactly one expiring sign-in cookie, with the __Host- attributes. */
+    public static void assertExpiredSignInCookie(MockHttpServletResponse response) {
+        List<String> headers = setCookie(response, SIGN_IN_COOKIE);
+        assertThat(headers).as("Set-Cookie of %s", SIGN_IN_COOKIE).hasSize(1);
+        String header = headers.get(0);
+        assertThat(header).startsWith(SIGN_IN_COOKIE + "=;");
+        Map<String, String> attributes = attributes(header);
+        assertThat(attributes).containsEntry("max-age", "0").containsEntry("path", "/");
+        assertThat(attributes).containsKeys("secure", "httponly");
+        assertThat(attributes.get("samesite")).isEqualToIgnoringCase("Lax");
+        assertThat(attributes).doesNotContainKey("domain");
+    }
+
+    public static void assertNoSession(MockHttpServletResponse response) {
+        assertThat(setCookie(response, SESSION_COOKIE)).as("session cookie").isEmpty();
+        assertThat(response.getHeaders(HttpHeaders.SET_COOKIE))
+                .as("Set-Cookie")
+                .noneMatch(header -> header.contains("SESSION"));
+    }
+
+    /** The MSG141 page of the callback: 400, text/html, exact text, no Location, only the expired sign-in cookie. */
+    public static void assertCallbackMsg141Page(MockHttpServletResponse response) throws Exception {
+        assertThat(response.getStatus()).as("status").isEqualTo(400);
+        assertThat(response.getContentType()).as("Content-Type").isNotNull();
+        assertThat(MediaType.parseMediaType(response.getContentType()).isCompatibleWith(MediaType.TEXT_HTML))
+                .as("Content-Type %s is text/html", response.getContentType())
+                .isTrue();
+        assertThat(response.getContentAsString(StandardCharsets.UTF_8)).contains(MSG141_TEXT);
+        assertThat(response.getHeader(HttpHeaders.LOCATION)).as("Location").isNull();
+        assertExpiredSignInCookie(response);
+        assertNoSession(response);
+        assertThat(response.getHeaders(HttpHeaders.SET_COOKIE))
+                .as("Set-Cookie: only the expired sign-in cookie")
+                .hasSize(1);
     }
 
     /** Ways a browser can send a state value that must not be trusted. {@code valid} is {@code <id>.<mac>}. */
@@ -159,6 +250,15 @@ public final class SignInTestFixtures {
             Mockito.clearInvocations(repository);
         }
 
+        /** Puts a row that the service could not make (a Jira-link state) into the store. */
+        public synchronized void plant(SignInState state) {
+            if (state.getId() == null) {
+                ReflectionTestUtils.setField(state, "id", UUID.randomUUID());
+            }
+            saved.add(state);
+            rows.put(state.getId(), state);
+        }
+
         public synchronized void reset() {
             rows.clear();
             saved.clear();
@@ -190,6 +290,22 @@ public final class SignInTestFixtures {
                         return 0;
                     }
                     ReflectionTestUtils.setField(state, "usedAt", usedAt);
+                    return 1;
+                }
+                case "markAuthorized" -> {
+                    // the planned SQL: one row only when unused, not yet authorized and expires_at > now
+                    SignInState state = rows.get(invocation.getArgument(0));
+                    byte[] hash = invocation.getArgument(1);
+                    Instant now = invocation.getArgument(2);
+                    if (state == null
+                            || now == null
+                            || state.getUsedAt() != null
+                            || state.getAuthorizedAt() != null
+                            || !state.getExpiresAt().isAfter(now)) {
+                        return 0;
+                    }
+                    ReflectionTestUtils.setField(state, "authorizedAt", now);
+                    ReflectionTestUtils.setField(state, "browserBindingHash", hash);
                     return 1;
                 }
                 default -> {

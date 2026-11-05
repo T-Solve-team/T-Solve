@@ -94,3 +94,6 @@ The user approved the feature commit. Code committed with repository hooks as
 `feat(identity): implement SQL user list (KAN-107)` (44 files).
 Official tracking recorded that commit, then moved user-list-backend through evaluating to passing.
 Save the separate harness commit. No push is authorized for this branch.
+
+## Superseded integration scope — 2026-11-05
+User selected the current main UUID architecture for PR119. The earlier numeric SQL checkpoint above remains historical evidence only. The parallel catalog/router/bootstrap is retired from this PR. Current work is identity Task23 user-list-uuid-read, approved AC-004.9–.19; do not infer deployment readiness or current test results from this report. Original commits remain in history.

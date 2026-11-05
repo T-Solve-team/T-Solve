@@ -3,6 +3,7 @@ package vn.tsolve.identity.dto;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -11,7 +12,7 @@ import org.springframework.util.MultiValueMap;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.identity.exception.UserListException;
 
-public record UserListQuery(String q, Role role, String status, Long departmentId, Pageable pageable) {
+public record UserListQuery(String q, Role role, String status, UUID departmentId, Pageable pageable) {
     public static UserListQuery parse(MultiValueMap<String, String> parameters) {
         String q = single(parameters, "q");
         q = q == null ? null : q.trim();
@@ -32,7 +33,7 @@ public record UserListQuery(String q, Role role, String status, Long departmentI
                 throw invalid();
             }
             String department = single(parameters, "departmentId");
-            Long departmentId = department == null ? null : positiveId(department);
+            UUID departmentId = department == null ? null : uuid(department);
             var orders = new ArrayList<Sort.Order>();
             for (String expression : parameters.getOrDefault("sort", List.of("fullName,asc"))) {
                 String[] pieces = expression.split(",", -1);
@@ -69,11 +70,12 @@ public record UserListQuery(String q, Role role, String status, Long departmentI
         return value == null ? fallback : Integer.parseInt(value);
     }
 
-    private static long positiveId(String value) {
-        if (!value.matches("[1-9][0-9]{0,18}")) {
+    private static UUID uuid(String value) {
+        UUID id = UUID.fromString(value);
+        if (!id.toString().equalsIgnoreCase(value)) {
             throw invalid();
         }
-        return Long.parseLong(value);
+        return id;
     }
 
     private static UserListException invalid() {

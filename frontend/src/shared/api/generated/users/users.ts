@@ -185,7 +185,7 @@ export const getGetUsersUrl = (params?: GetUsersParams) => {
 };
 
 /**
- * @summary SQL Workspace users; default sort fullName,asc with numeric id as a stable tie-breaker.
+ * @summary Workspace users; default sort fullName,asc with UUID id as a stable tie-breaker.
  */
 export const getUsers = async (
   params?: GetUsersParams,
@@ -278,7 +278,7 @@ export function useGetUsers<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary SQL Workspace users; default sort fullName,asc with numeric id as a stable tie-breaker.
+ * @summary Workspace users; default sort fullName,asc with UUID id as a stable tie-breaker.
  */
 
 export function useGetUsers<

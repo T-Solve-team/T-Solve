@@ -6,9 +6,8 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
-import type { SqlId } from './sqlId';
 
 export interface UserListDepartmentRef {
-  departmentId: SqlId;
+  departmentId: string;
   name: string;
 }

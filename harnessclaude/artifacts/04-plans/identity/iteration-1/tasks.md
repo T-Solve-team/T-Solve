@@ -1,7 +1,7 @@
 ---
 module: identity
 date: 2026-10-25
-total_tasks: 26
+total_tasks: 21
 owner: Dev
 ---
 
@@ -90,6 +90,16 @@ Workspace site"); Task 14 is the platform follow-up. Every AC-001.1–AC-001.50 
 `<type>/KAN-<n>-identity-<desc>` from an up-to-date `main`; several branches per Jira key are fine (Q12). Before
 each commit: the full verify of the side the task touches (CLAUDE.md project rules).
 
+**HLA change, 2026-11-03 (KAN-231 step 2, Hiếu: Q1–Q4 = A; design "HLA change").** The multi-tenant HLA changes Tasks
+9b, 10, 11 (kept), 12 and 14; Tasks 8 and 9 keep their tables and tests until Task 14 moves them. Task 9 is unchanged.
+Code conflicts of the step-1 check and their owners: C1 `sign_in_states` in the tenant changelog and C2 its JPA entity
+and repository on the default datasource → Task 14 (the move to the registry database); C3 one datasource and one
+changelog → `platform` (Task 14 only adapts); C4 `SignInStartController` resolves the host itself and does not check the
+Workspace's status → Task 14 (`PlatformWorkspaceLookup` reads the bound Tenant Context; AC-001.10 still refuses a
+suspended Workspace at the callback); C5 `AuthSecurityConfig`'s interim chain has no tenant step → be-foundation
+`roles-security` and `platform` replace it (Task 10 waits for `roles-security`; Task 14 re-checks that the tenant step
+runs before `WebSessionFilter`).
+
 ## Task 7: Login screen, sign-in contract and mock sign-in — KAN-229
 
 **Story:** STORY-001
@@ -107,7 +117,7 @@ each commit: the full verify of the side the task touches (CLAUDE.md project rul
 **Estimated size:** small–medium (~250 lines)
 **Verification:** Tests name AC-001.40–.43; design risk rows 39 and 40. Targeted: `cd frontend && npm run test -- src/features/auth src/app/dev/MockSignInPage.test.tsx src/shared/auth/sign-in.test.ts`, then `npm run generate:api` with no diff. Browser check at 1366 × 768 in mock mode.
 
-## Task 8: State values, sign-in start, authorize and the minimal login page — KAN-103
+## Task 8: State values, sign-in start, authorize and the minimal login page — KAN-230
 
 **Story:** STORY-001
 **Feature:** sign-in-start
@@ -119,6 +129,7 @@ each commit: the full verify of the side the task touches (CLAUDE.md project rul
 - Modify: `backend/pom.xml`, `backend/src/main/resources/application.yml`, `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `.env.example`; ticket's `backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmIT.java` and `backend/src/test/java/vn/tsolve/ticket/controller/ImportControllerTest.java` (test properties only: the six new required env values and the new security chain; Q5, because the PR cannot be green without it)
 - Test: `backend/src/test/java/vn/tsolve/identity/signin/{SignInStateServiceTest,SignedTokenTest,SignInStartControllerTest,AuthorizeControllerTest,LoginPageTest,SignInPropertiesTest}.java`, `backend/src/test/java/vn/tsolve/identity/AuthSecurityConfigTest.java`, `SignInStateRepositoryIT` (Testcontainers, the `ImportConfirmIT` pattern, needs Docker), test doubles in `backend/src/test/java/vn/tsolve/identity/signin/port/`
 **Decisions (Hiếu, 2026-10-29):** Q1 `AuthSecurityConfig` also adds a second, lowest-order `SecurityFilterChain` (`anyRequest().authenticated()`, 401, no form login, no HTTP Basic), tested in `AuthSecurityConfigTest`; be-foundation `roles-security` replaces it later. Q2 `GET /api/v1/auth/sign-in` on a host that is no Workspace site and not the Platform Console origin answers 404, status only, no state. Q3 `SignInStateRepositoryIT`: the check constraint rejects `WORKSPACE` without `workspace_id` and `PLATFORM_CONSOLE` with one; `markUsed` returns 1 then 0, and 0 after `expires_at`. Q4 before the QA tests, a developer step adds empty skeletons of the Task 8 classes with the agreed signatures (methods throw `UnsupportedOperationException`, controllers mapped but answer 501). Q5 as in Modify above.
+**HLA note (2026-11-03, Q2):** this task is done and unchanged. Its `sign_in_states` table and `SignInStateRepository` move to the Platform / Tenant Registry database and datasource in Task 14 (conflicts C1, C2); the `SignInState` javadoc and the `004` comment ("shared (non-tenant)") then say "Registry DB".
 **Dependencies:** Task 7 is not needed. Platform Tasks 1 and 5 (KAN-99) and Task 4 (KAN-98) only through the ports (test doubles until they merge). be-foundation `problem-errors` is not needed: the failures are the HTML page and redirects, and the 404 test asserts only the status.
 **PR / Jira:** PR 2, branch `feat/KAN-230-identity-sign-in-start`, Jira KAN-230 (Subtask of KAN-103).
 **Estimated size:** medium–large
@@ -147,82 +158,83 @@ each commit: the full verify of the side the task touches (CLAUDE.md project rul
 **Story:** STORY-001
 **Feature:** account-checks
 **Acceptance criteria:** AC-001.10, AC-001.11, AC-001.12, AC-001.13, AC-001.14, AC-001.15, AC-001.16
-**Description:** Second of the two Task 9 PRs (KAN-231 Q11). Add the `accounts` and `account_roles` tables (KAN-231 Q10: each with its own `workspace_id` column; no base entity, no foreign key, no row-level security yet; `accounts.email` stored lower-case and unique on the whole platform, Q13) and `identity/account` (`Account`, `AccountRole`, `AccountStatus`, `AccountRepository` whose every method takes the Workspace id, e.g. `findByWorkspaceIdAndEmailIgnoreCase`). Add `LocalTenantScope` (the interim production `TenantScope`, a `ThreadLocal` cleared in a `finally`). In `CallbackController`, replace Task 9's interim MSG141 page for a Workspace state by the rest of the AC-001.14 order: Workspace Active (MSG120), `hd` against the Workspace's Google domain ignoring case (MSG122 with `google_domain`), Account exists in the state's Workspace (MSG09), Account Active (MSG10), each as `/login?error=…` on the Workspace site; the Account lookup and update run inside `TenantScope.runIn(state.workspaceId)` and filter on that Workspace id. On success set the full name from `name` (unchanged when empty), record the sign-in time and the first sign-in time when there is none, issue a hand-off code (`hand_off_codes` table, `HandOffCodeService.issue`; redemption is Task 10) and answer 302 to `/api/v1/auth/complete?code=…` on the Workspace site. Jira-link and Console states keep Task 9's interim page (Tasks 12 and 11). AC-001.15 is a two-Workspace test: Workspace B's Account email signing in on Workspace A gets MSG09, and B's Account is untouched (Q13). No demo Accounts and no edit to platform Task 15's seed; they come with the platform follow-up (design "Ports").
-**What Hiếu can see or try:** the tests only (fake issuer), while `NoWorkspaceLookup` answers 404. They show each failure in the AC-001.14 order (suspended → MSG120, wrong or missing `hd` → MSG122 with the domain, unknown email → MSG09, Deactivated → MSG10, and only the first failure reported), the case-insensitive match of email and `hd`, the full name and sign-in times written on success, and a 302 to `complete` with a hand-off code; B's Account is never found from Workspace A.
+**Description:** Second of the two Task 9 PRs (KAN-231 Q11). Add the `app_user` table (KAN-235 Q1 = A, then Hiếu 04/11: the Database Tables PDF wins on names, so the key is `id`, `full_name` is `VARCHAR(100)`, and the table has the two extra columns `first_sign_in_at` and `last_sign_in_at`, all in `00-baseline/T-Solve_Database_Tables.md`; the Java class stays `Account`; `user_role` and `AccountRole` move to Task 10) (HLA Q4, 2026-11-03: one database per company, so **no** `workspace_id` column; no base entity, no foreign key, no row-level security yet; `app_user.email` stored lower-case and unique inside the database; one email in one Workspace across the platform is the registry's `workspace_email`, called when an Account is added in STORY-005, not here) and `identity/account` (`Account`, `AccountStatus`, `AccountRepository`, e.g. `findByEmail` on the lower-cased column, and `AccountSignInService` for the lookup and the update, reached only inside `TenantScope.runIn`). Task 9b only reads Accounts: it has no `user_role` table and writes no role row (the table comes in Task 10; it stores four Roles, Employee is implicit). Add `LocalTenantScope` (the interim production `TenantScope`, a `ThreadLocal` cleared in a `finally`; `currentWorkspaceId()` throws outside `runIn`, and a nested `runIn` with another Workspace throws `IllegalStateException` without running the inner supplier, KAN-235 Q3 = A; design row 93). In `CallbackController`, replace Task 9's interim MSG141 page for a Workspace state by the rest of the AC-001.14 order: Workspace Active (MSG120), `hd` against the Workspace's Google domain ignoring case (MSG122 with `google_domain`), Account exists in the state's Workspace (MSG09), Account Active (MSG10), each as `/login?error=…` on the Workspace site; the Account lookup and update run inside `TenantScope.runIn(state.workspaceId)`, in that Workspace's database. On success set the full name from `name` (unchanged when the claim is absent, `""` or whitespace-only, else stored trimmed, KAN-235 Q2 = A; a name of more than 100 code points, the `VARCHAR(100)` column of the PDF, leaves the old name unchanged, see the design AC-001.16 note), record the sign-in time and the first sign-in time when there is none, update the Account first, then issue a hand-off code (KAN-235 Q5 = A: if issuing fails the sign-in time stays recorded, no session, 500) (`hand_off_code` table, key `id`, not in the PDF and listed in the companion under "Additions not in the PDF"; interim in today's only changelog and moved to the Registry DB by Task 14, HLA Q2; `HandOffCodeService.issue`; redemption is Task 10) and answer 302 to `/api/v1/auth/complete?code=…` on the Workspace site. Jira-link and Console states keep Task 9's interim page (Tasks 12 and 11). AC-001.15 is a two-Workspace test on two databases (HLA Q4: two databases of one Testcontainers Postgres, routed by a test `TenantScope` double and a test routing `DataSource`, in test sources only): Workspace B's Account email signing in on Workspace A gets MSG09, and B's Account is untouched because A's database does not hold it. No demo Accounts and no edit to platform Task 15's seed; they come with the platform follow-up (design "Ports").
+**What Hiếu can see or try:** the tests only (fake issuer), while `NoWorkspaceLookup` answers 404. They show each failure in the AC-001.14 order (suspended → MSG120, wrong or missing `hd` → MSG122 with the domain, unknown email → MSG09, Deactivated → MSG10, and only the first failure reported), the case-insensitive match of email and `hd`, the full name and sign-in times written on success, and a 302 to `complete` with a hand-off code; B's Account is never found from Workspace A (two databases).
 **Files:**
-- Create: `backend/src/main/java/vn/tsolve/identity/account/{Account,AccountRole,AccountStatus,AccountRepository}.java`, `backend/src/main/java/vn/tsolve/identity/signin/{HandOffCode,HandOffCodeRepository,HandOffCodeService}.java`, `backend/src/main/java/vn/tsolve/identity/signin/port/LocalTenantScope.java`, `backend/src/main/resources/db/changelog/changes/<next>-identity-accounts.sql`, `backend/src/main/resources/db/changelog/changes/<next>-identity-hand-off-codes.sql`
+- Create: `backend/src/main/java/vn/tsolve/identity/account/{Account,AccountStatus,AccountRepository,AccountSignInService}.java`, `backend/src/main/java/vn/tsolve/identity/signin/{HandOffCode,HandOffCodeRepository,HandOffCodeService}.java`, `backend/src/main/java/vn/tsolve/identity/signin/port/LocalTenantScope.java`, `backend/src/main/resources/db/changelog/changes/<next>-identity-app-user.sql` (table `app_user` only), `backend/src/main/resources/db/changelog/changes/<next>-identity-hand-off-code.sql`
 - Modify: `backend/src/main/java/vn/tsolve/identity/signin/{CallbackController,SignInConfig}.java` (`SignInConfig` declares the `LocalTenantScope` bean), `backend/src/main/resources/db/changelog/db.changelog-master.xml`
-- Test: extend `backend/src/test/java/vn/tsolve/identity/signin/CallbackControllerTest.java`; create `backend/src/test/java/vn/tsolve/identity/signin/HandOffCodeServiceTest.java`, `backend/src/test/java/vn/tsolve/identity/signin/port/LocalTenantScopeTest.java`, `backend/src/test/java/vn/tsolve/identity/account/AccountRepositoryIT.java` (Testcontainers, the `SignInStateRepositoryIT` pattern, needs Docker: the platform-wide unique lower-case email, the Workspace filter)
-**Decisions (Hiếu, 2026-10-31, KAN-231 plan):** Q10 = A (own `workspace_id` columns, explicit Workspace id, `LocalTenantScope`, later platform follow-up, no Task 15 seed edit); Q11 = B (this PR); Q13 = A (email unique on the whole platform; design row 24 and the AC-001.15 test reworded).
+- Test: extend `backend/src/test/java/vn/tsolve/identity/signin/CallbackControllerTest.java`; create `backend/src/test/java/vn/tsolve/identity/signin/CallbackAccountIsolationIT.java` (two Workspaces on two databases, AC-001.15, row 24), `backend/src/test/java/vn/tsolve/identity/signin/HandOffCodeServiceTest.java`, `backend/src/test/java/vn/tsolve/identity/signin/port/LocalTenantScopeTest.java`, `backend/src/test/java/vn/tsolve/identity/account/AccountRepositoryIT.java` (Testcontainers, the `SignInStateRepositoryIT` pattern, needs Docker: the unique lower-case email inside one database; two databases, so an Account of one is not found in the other)
+**Decisions (Hiếu, 2026-10-31, KAN-231 plan):** Q10 = A (`LocalTenantScope`, later platform follow-up, no Task 15 seed edit); Q11 = B (this PR); Q13 = A (one email in one Workspace across the platform; design row 24 and the AC-001.15 test reworded). **HLA change (Hiếu, 2026-11-03, Q4 = A):** the interim `workspace_id` columns and the explicit Workspace id in repository methods are dropped; email uniqueness across the platform goes through the registry (Task 14 adds the adapter; STORY-005 calls it).
+**Size (KAN-235 Q4 = B, Hiếu; KAN-231 Q11 = B):** stays one PR, accepted at about 28 tests and 14 production files.
 **Dependencies:** Task 9 merged. The ports and test doubles only; no platform task (KAN-231 Q10).
 **PR / Jira:** PR 3b (second of the two Task 9 PRs), branch `feat/KAN-235-identity-account-checks`, Jira KAN-235 (Subtask of KAN-103).
 **Estimated size:** medium–large
-**Verification:** Tests name AC-001.10–.16; design risk rows 24–26 and 42. Targeted: `cd backend && mvn -Dtest='CallbackControllerTest,HandOffCodeServiceTest,LocalTenantScopeTest' -Dit.test=AccountRepositoryIT verify` (the IT needs Docker); full `mvn verify` before the commit.
+**Verification:** Tests name AC-001.10–.16; design risk rows 24–26, 42 and 93. Targeted: `cd backend && mvn -Dtest='CallbackControllerTest,HandOffCodeServiceTest,LocalTenantScopeTest' -Dit.test=AccountRepositoryIT verify` (the IT needs Docker); full `mvn verify` before the commit.
 
-## Task 10: Hand-off, session cookie and the per-request session rules — KAN-104
+## Task 10: Hand-off, session cookie and the per-request session rules — KAN-232
 
 **Story:** STORY-001
 **Feature:** workspace-session
 **Acceptance criteria:** AC-001.17, AC-001.18, AC-001.19, AC-001.20, AC-001.21, AC-001.22, AC-001.23, AC-001.24, AC-001.25, AC-001.26, AC-001.27
-**Description:** Add the `web_sessions` table and `identity/session`: `CompleteController` redeems a hand-off code once (atomic `used_at` update, 60 seconds, only on the site it names), creates a new session and sets `__Host-TSOLVE_SESSION` (HttpOnly, Secure, SameSite=Lax, Path `/`, no Domain), then redirects to `returnTo` or `/`. `WebSessionFilter` applies, in the design's order: no session on `login.`/`api.`; MSG123 on a host or kind mismatch without ending the session; MSG07 past 8 hours or 60 idle minutes; the Account re-read with MSG10 for a Deactivated Account; a `TSolveUser` with the current Roles. A request without `X-TSolve-Background: 1` counts as activity. Add `SessionCleanup`. AC-001.17 and .20 are two-Workspace tests.
+**Description:** HLA change (Hiếu, 2026-11-03, Q3 = A): sessions live in **Redis**, not in a `web_sessions` table. Add the first read of Roles (Hiếu 04/11, moved from Task 9b): the `user_role` table (PDF names: `id`, `user_id`, `role`, `assigned_at`, unique per `(user_id, role)`; no `workspace_id`) in a new changeset, the `AccountRole` class and the read of an Account's Roles for the `TSolveUser`. Add `identity/session` with `WebSessionStore` (one Redis key per session, named by the SHA-256 of the cookie value, holding `kind`, `workspace_id`, `account_id`, `operator_email`, `site_host`, `created_at`, `last_activity_at`; design "Data model"). `CompleteController` redeems a hand-off code once (atomic `used_at` update, 60 seconds, only on the site it names), creates a new session and sets `__Host-TSOLVE_SESSION` (HttpOnly, Secure, SameSite=Lax, Path `/`, no Domain), then redirects to `returnTo` or `/`. `WebSessionFilter` applies, in the design's order: no session on `login.`/`api.`; MSG123 on a host or kind mismatch without ending the session; MSG07 past 8 hours or 60 idle minutes; the Account re-read with MSG10 for a Deactivated Account; a `TSolveUser` with the current Roles. The limits are checked in the application with `IdentityClock` from the stored times; the key's time to live is a backstop. A request without `X-TSolve-Background: 1` counts as activity. `SessionCleanup` is not built (N API replicas must not each run a scheduler). The `SessionEnded` `EXPIRED` event within 15 minutes (AC-002.4, STORY-002) is planned with KAN-106, not here: keyspace events or a worker job, chosen then, because an expiry event does not carry the Account id and Workspace id; this task stores both in the session so that either works. Add Redis to the local stack: a `redis` service in `docker-compose.yml` (Docker Desktop), `spring-boot-starter-data-redis` and `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` in `application.yml` and `.env.example`. Redis for sessions is not an eviction cache. AC-001.17 and .20 are two-Workspace tests.
 **What Hiếu can see or try:** a full sign-in end to end: the browser lands on `returnTo`, or on the role's page through `/`. DevTools shows a host-only HttpOnly `__Host-TSOLVE_SESSION` cookie. The same cookie copied to the other Workspace site or to `admin.` → MSG123. After 60 idle minutes → MSG07. Deactivating the Account → MSG10 at the next request.
 **Files:**
-- Create: `backend/src/main/java/vn/tsolve/identity/session/{CompleteController,WebSession,WebSessionRepository,WebSessionFilter,SessionCleanup,SessionCookie}.java`, `backend/src/main/resources/db/changelog/changes/<next>-identity-web-sessions.sql`
-- Modify: `backend/src/main/java/vn/tsolve/identity/AuthSecurityConfig.java`, `backend/src/main/java/vn/tsolve/identity/signin/HandOffCodeService.java` (redeem), `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `.env.example` (the local-cookie note of risk row 34)
-- Test: `backend/src/test/java/vn/tsolve/identity/session/{CompleteControllerTest,WebSessionFilterTest,WebSessionRepositoryTest,SessionCleanupTest}.java`
-**Dependencies:** Task 9b (it redeems the hand-off codes Task 9b issues); be-foundation `roles-security` (`TSolveUser`, the deny-by-default chain, ProblemDetail 401 bodies) on `main`.
-**PR / Jira:** PR 4, branch `feat/KAN-104-identity-workspace-session`, Jira KAN-104.
+- Create: `backend/src/main/java/vn/tsolve/identity/session/{CompleteController,WebSession,WebSessionStore,WebSessionFilter,SessionCookie}.java`, `backend/src/main/java/vn/tsolve/identity/account/AccountRole.java`, `backend/src/main/resources/db/changelog/changes/<next>-identity-user-role.sql` (table `user_role`)
+- Modify: `backend/src/main/java/vn/tsolve/identity/AuthSecurityConfig.java`, `backend/src/main/java/vn/tsolve/identity/signin/HandOffCodeService.java` (redeem), `backend/src/main/java/vn/tsolve/identity/account/{Account,AccountRepository}.java` (the Roles), `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `backend/pom.xml` (`spring-boot-starter-data-redis`), `backend/src/main/resources/application.yml`, `docker-compose.yml` (the `redis` service), `.env.example` (the Redis values and the local-cookie note of risk row 34)
+- Test: `backend/src/test/java/vn/tsolve/identity/session/{CompleteControllerTest,WebSessionFilterTest,WebSessionStoreIT}.java` (`WebSessionStoreIT` on Testcontainers Redis, the `SignInStateRepositoryIT` pattern, needs Docker; Redis down and Redis restarted: design rows 90 and 91)
+**Dependencies:** Task 9b (it redeems the hand-off codes Task 9b issues); be-foundation `roles-security` (`TSolveUser`, the deny-by-default chain, ProblemDetail 401 bodies; it also replaces `AuthSecurityConfig`'s interim chain, conflict C5) on `main`; a Redis for the local stack and the tests (Docker Desktop).
+**PR / Jira:** PR 4, branch `feat/KAN-232-identity-workspace-session`, Jira KAN-232 (Subtask of KAN-104).
 **Estimated size:** large
-**Verification:** Tests name AC-001.17–.27; design risk rows 27–34, 41 and 42. Targeted: `cd backend && mvn -Dtest='CompleteControllerTest,WebSessionFilterTest,WebSessionRepositoryTest,SessionCleanupTest' test`; full `mvn verify` before the commit. Local browser run of the whole sign-in (risk row 34).
+**Verification:** Tests name AC-001.17–.27; design risk rows 27–34, 41, 42, 90 and 91. Targeted: `cd backend && mvn -Dtest='CompleteControllerTest,WebSessionFilterTest' -Dit.test=WebSessionStoreIT verify` (the IT needs Docker); full `mvn verify` before the commit. Local browser run of the whole sign-in (risk row 34).
 
-## Task 11: Platform Console sign-in — KAN-103
+## Task 11: Platform Console sign-in — KAN-233
 
 **Story:** STORY-001
 **Feature:** operator-sign-in
 **Acceptance criteria:** AC-001.29, AC-001.30, AC-001.31, AC-001.32, AC-001.33, AC-001.34
-**Description:** Finish the Platform Console target: at the callback, after the AC-001.6 and AC-001.9 checks, an email in `PLATFORM_OPERATOR_EMAILS` (trimmed, ignoring case) gets a hand-off code for `admin.` and a 302 to `complete` on `TSOLVE_ADMIN_ORIGIN`; any other email → `/login?error=MSG135` on `admin.`; a Google or token failure → MSG06 on `admin.`. The session made there is an Operator session (an `OperatorPrincipal`, no Account, no Workspace, no Role). `WebSessionFilter`: an Operator session on a Workspace site → MSG123; an email no longer in the list → end + MSG135; the 8 h / 60 min rules apply. AC-001.32 is a two-Workspace test.
+**Description:** Unchanged by the HLA change (Q1 = A: the Platform Console on `admin.` stays). Finish the Platform Console target: at the callback, after the AC-001.6 and AC-001.9 checks, an email in `PLATFORM_OPERATOR_EMAILS` (trimmed, ignoring case) gets a hand-off code for `admin.` and a 302 to `complete` on `TSOLVE_ADMIN_ORIGIN`; any other email → `/login?error=MSG135` on `admin.`; a Google or token failure → MSG06 on `admin.`. The session made there is an Operator session (an `OperatorPrincipal`, no Account, no Workspace, no Role). `WebSessionFilter`: an Operator session on a Workspace site → MSG123; an email no longer in the list → end + MSG135; the 8 h / 60 min rules apply. AC-001.32 is a two-Workspace test.
 **What Hiếu can see or try:** on `admin.localhost`, an allow-listed email reaches the Platform Console placeholder; any other email → MSG135; the Operator cookie copied to a Workspace site → MSG123.
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/identity/session/{OperatorAllowList,OperatorPrincipal}.java`
 - Modify: `backend/src/main/java/vn/tsolve/identity/signin/CallbackController.java`, `backend/src/main/java/vn/tsolve/identity/signin/HandOffCodeService.java`, `backend/src/main/java/vn/tsolve/identity/session/WebSessionFilter.java`, `.env.example`
 - Test: `backend/src/test/java/vn/tsolve/identity/signin/OperatorSignInTest.java`, `backend/src/test/java/vn/tsolve/identity/session/OperatorSessionTest.java`
 **Dependencies:** Task 10.
-**PR / Jira:** PR 5 (with Task 12 if both are small), branch `feat/KAN-103-identity-operator-sign-in`, Jira KAN-103.
+**PR / Jira:** PR 5 (with Task 12 if both are small), branch `feat/KAN-233-identity-operator-sign-in`, Jira KAN-233 (Subtask of KAN-103; reopened 2026-11-04 after HLA Q1 = A brought the Console back).
 **Estimated size:** small–medium
 **Verification:** Tests name AC-001.29–.34; design risk rows 29, 35 and 36. Targeted: `cd backend && mvn -Dtest='OperatorSignInTest,OperatorSessionTest' test`; full `mvn verify` before the commit.
 
-## Task 12: Jira account link as a sign-in target — KAN-103
+## Task 12: Jira account link as a sign-in target — KAN-234
 
 **Story:** STORY-001
 **Feature:** jira-link-sign-in
 **Acceptance criteria:** AC-001.35, AC-001.36, AC-001.37, AC-001.38
-**Description:** Add `SignInStateService.createJiraLinkUrl(workspaceId, trackerAccountId)` for `jira-app`, which returns the `authorize` URL on the central sign-in origin with a state value that carries both. At the callback, a Jira-link state runs the AC-001.14 checks and, when all pass, records the link in that Workspace (`jira_account_links`, replacing an earlier link of the same tracker account) and shows the minimal page with MSG75 (`{tracker_name}` = Jira), with no web session. A failure shows the minimal page with the first failure's message (MSG121 for a Workspace that is not Active; MSG122 with `{google_domain}`) and records no link. The tracker account comes only from the state.
+**Description:** Add `SignInStateService.createJiraLinkUrl(workspaceId, trackerAccountId)` for `jira-app`, which returns the `authorize` URL on the central sign-in origin with a state value that carries both. At the callback, a Jira-link state runs the AC-001.14 checks and, when all pass, records the link in that Workspace's database (`jira_account_links`, no `workspace_id` column, HLA Q4; replacing an earlier link of the same tracker account) and shows the minimal page with MSG75 (`{tracker_name}` = Jira), with no web session. A failure shows the minimal page with the first failure's message (MSG121 for a Workspace that is not Active; MSG122 with `{google_domain}`) and records no link. The tracker account comes only from the state.
 **What Hiếu can see or try:** nothing on screen until `jira-app` exists; the tests (or a dev-only call of `createJiraLinkUrl`) show the MSG75, MSG121 and MSG122 pages on `login.`.
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/identity/jiralink/{JiraAccountLink,JiraAccountLinkRepository}.java`, `backend/src/main/resources/db/changelog/changes/<next>-identity-jira-account-links.sql`
 - Modify: `backend/src/main/java/vn/tsolve/identity/signin/SignInStateService.java`, `backend/src/main/java/vn/tsolve/identity/signin/CallbackController.java`, `backend/src/main/java/vn/tsolve/identity/signin/LoginPage.java`, `backend/src/main/resources/db/changelog/db.changelog-master.xml`
 - Test: `backend/src/test/java/vn/tsolve/identity/jiralink/{JiraLinkSignInTest,JiraAccountLinkRepositoryTest}.java`
-**Dependencies:** Task 9b (`accounts` and the full AC-001.14 order; Task 10 is not needed).
-**PR / Jira:** PR 5 with Task 11 if both are small, else its own PR; branch `feat/KAN-103-identity-jira-link-sign-in`, Jira KAN-103.
+**Dependencies:** Task 9b (`app_user` and the full AC-001.14 order; Task 10 is not needed).
+**PR / Jira:** PR 5 with Task 11 if both are small, else its own PR; branch `feat/KAN-234-identity-jira-link-sign-in`, Jira KAN-234 (Subtask of KAN-103).
 **Estimated size:** small–medium
 **Verification:** Tests name AC-001.35–.38; design risk row 37. Targeted: `cd backend && mvn -Dtest='JiraLinkSignInTest,JiraAccountLinkRepositoryTest' test`; full `mvn verify` before the commit.
 
-## Task 14: Platform adapters and Account tenancy — Jira issue when KAN-98 / KAN-99 land (stub)
+## Task 14: Platform adapters, registry stores and Account tenancy — KAN-247 (stub)
 
-**Story:** STORY-001
+**Story:** STORY-001, STORY-010
 **Feature:** platform-adapters
-**Acceptance criteria:** none new. It ends the backend AGENTS.md §7 exception of design Key decisions "Platform gap" (KAN-231 Q10) and meets the spec's Interface Contracts "Database" paragraph (tenant-table convention, platform AC-001.8); the AC-001.7 and AC-001.15 two-Workspace tests keep passing on the platform adapters.
-**Description:** Stub, planned in detail when the platform tasks are on `main`. Replace the interim production beans by the platform adapters: `PlatformWorkspaceLookup` replaces `NoWorkspaceLookup` and `PlatformTenantScope` replaces `LocalTenantScope` (the `runIn` calls stay; only the beans change). Move `Account` and `account_roles` onto the platform base entity (`TenantEntity`) and add a new changeset with the foreign key `workspace_id → workspaces (id)` and row-level security (enabled and forced, the platform's tenant policy) for `accounts` and `account_roles`; Task 9b's changeset is never edited. Add demo Accounts for the seed Workspaces of platform Task 15. Afterwards the whole sign-in can be tried on the local stack.
-**What Hiếu can see or try:** a sign-in on the local stack against a seed Workspace (fake issuer), and the convention guard test of platform AC-001.8 passing for `accounts` and `account_roles`.
+**Acceptance criteria:** AC-010.1…AC-010.8 (the port `FirstAdminCreator`, added 2026-11-04; traces to platform AC-013.14…AC-013.19). For STORY-001 none new. It ends the backend AGENTS.md §7 exception of design Key decisions "Platform gap" (KAN-231 Q10, HLA Q4) and meets the HLA change of 2026-11-03: the sign-in states and hand-off codes in the Platform / Tenant Registry database (Q2), one database per company for the account tables (Q4). The AC-001.7 and AC-001.15 two-Workspace tests keep passing on the platform adapters.
+**Description:** Stub, planned in detail when the platform tasks are on `main`. It carries the fixes for the code conflicts of the step-1 check (tasks.md header): (C1, C2) move `sign_in_states` and `hand_off_code` into the registry changelog (`db/changelog/catalog/`) with a new changeset, give `SignInStateRepository` and `HandOffCodeRepository` the registry datasource, never edit Task 8's `004` or Task 9's changesets, and change the `SignInState` javadoc and the `004` comment to "Registry DB"; (C4) replace `NoWorkspaceLookup` by `PlatformWorkspaceLookup`, which reads the Registry DB, and make `SignInStartController` read the Workspace the Tenant Resolver bound (site, status, database mapping) instead of resolving the host itself (`WorkspaceLookup.findBySiteHost`); an unknown or suspended Workspace is refused by the resolver, and AC-001.10 still refuses a suspended Workspace at the callback; (C3) adapt to the Registry DB, the Database Router and the Jobs DB that `platform` builds (identity's own datasource and changelog settings move with them); (C5) check that the platform's tenant step runs before `WebSessionFilter` once be-foundation `roles-security` and `platform` have replaced `AuthSecurityConfig`'s interim chain. Replace `LocalTenantScope` by `PlatformTenantScope` (the `runIn` calls stay; only the beans change), so every `Account`, `user_role` and `jira_account_links` query goes to the bound Workspace's database through the Database Router. Add the adapter for the registry's `workspace_email` (one email in one Workspace across the platform; STORY-005 calls it when an Account is added). If `platform` defines a per-database RLS guard, apply it to `app_user` and `user_role` in a new changeset (no foreign key to a Workspace). Add demo Accounts for the seed Workspaces of platform Task 15. **The port (STORY-010):** implement `vn.tsolve.platform.service.FirstAdminCreator` with `AccountFirstAdminCreator` in `identity.account` (design "Ports", `FirstAdminCreator`): `UUID createFirstAdmin(UUID workspaceId, String email)` runs in one `@Transactional` method, checks the bound Workspace against `workspaceId` (`TenantScope.currentWorkspaceId()`), lower-cases and validates the email, refuses a duplicate Account, saves the `Account` (ACTIVE, empty full name, no sign-in time) and its `AccountRole` Admin, and returns the id; it never calls `claimEmail`, creates no credential, and logs no email. Test-first, with a test double `TenantScope` and then the two-database router test. Write the start-up test that the `ops` profile boots with this bean. Afterwards the whole sign-in can be tried on the local stack.
+**What Hiếu can see or try:** a sign-in on the local stack against a seed Workspace (fake issuer), the sign-in states and hand-off codes found in the Registry DB and not in a company database, and the platform's convention guard test passing for `app_user` and `user_role`.
 **Files (to confirm when planned):**
-- Create: `backend/src/main/java/vn/tsolve/identity/signin/port/{PlatformWorkspaceLookup,PlatformTenantScope}.java`, `backend/src/main/resources/db/changelog/changes/<next>-identity-accounts-tenancy.sql`, the demo Accounts changeset next to platform Task 15's seed
-- Modify: `backend/src/main/java/vn/tsolve/identity/account/Account.java`, `backend/src/main/java/vn/tsolve/identity/signin/SignInConfig.java`, `backend/src/main/resources/db/changelog/db.changelog-master.xml`
+- Create: `backend/src/main/java/vn/tsolve/identity/signin/port/{PlatformWorkspaceLookup,PlatformTenantScope,PlatformWorkspaceEmails}.java`, `backend/src/main/java/vn/tsolve/identity/account/AccountFirstAdminCreator.java`, `backend/src/main/resources/db/changelog/catalog/<next>-identity-sign-in-states-and-codes.sql` (the move), `backend/src/main/resources/db/changelog/changes/<next>-identity-app-user-rls-guard.sql` (only if `platform` defines the guard), the demo Accounts changeset next to platform Task 15's seed
+- Modify: `backend/src/main/java/vn/tsolve/identity/signin/{SignInState,SignInStateRepository,HandOffCode,HandOffCodeRepository,SignInStartController,SignInConfig}.java`, `backend/src/main/java/vn/tsolve/identity/account/Account.java` (if the platform convention needs it), `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `backend/src/main/resources/application.yml` (C3)
 - Delete: `backend/src/main/java/vn/tsolve/identity/signin/port/{NoWorkspaceLookup,LocalTenantScope}.java` and `LocalTenantScopeTest`
-- Test: `backend/src/test/java/vn/tsolve/identity/signin/port/{PlatformWorkspaceLookupTest,PlatformTenantScopeTest}.java`; extend `AccountRepositoryIT` (row-level security hides the other Workspace's rows)
-**Dependencies:** platform KAN-98 (Task 2 base entity, Task 4) and KAN-99 (Tasks 1 and 5, `runIn`) on `main`; Task 9b.
-**PR / Jira:** its own PR; the Jira issue is created when KAN-98 and KAN-99 land.
-**Estimated size:** small–medium
-**Verification:** to be set when planned; at least the AC-001.7 and AC-001.15 tests and the platform convention guard test, then the full `mvn verify`. identity cannot reach `completed` before this task is done.
+- Test: `backend/src/test/java/vn/tsolve/identity/signin/port/{PlatformWorkspaceLookupTest,PlatformTenantScopeTest}.java`, `backend/src/test/java/vn/tsolve/identity/account/AccountFirstAdminCreatorTest.java` and `…IT.java` (names cite AC-010.1…AC-010.8; design risk rows 94 to 99); extend `SignInStateRepositoryIT` (the registry datasource) and `AccountRepositoryIT` (two company databases through the router; the RLS guard if any)
+**Dependencies:** platform KAN-98 (Task 4 registry, and the tenant-database convention and guard of Task 2) and KAN-99 (Tasks 1 and 5, `runIn`, Tenant Resolver, Database Router) on `main`; platform Task 7 (the `FirstAdminCreator` port and `WorkspaceProvisioning`, KAN-98 numbering of the platform plan) for the port interface; Task 9b; Task 10 (so the sessions already run on Redis).
+**PR / Jira:** its own PR, branch `feat/KAN-247-identity-platform-adapters`, Jira KAN-247 (Subtask of KAN-103, created 2026-11-04 as a stub, blocked by KAN-98 and KAN-99; the key is filled in by a follow-up after the Jira round).
+**Estimated size:** medium
+**Verification:** to be set when planned; at least the AC-001.7 and AC-001.15 tests on the router, design risk rows 92 to 99 (94 to 99: the first Admin), the tests of AC-010.1…AC-010.8, and the platform convention guard test, then the full `mvn verify`. identity cannot reach `completed` before this task is done.
 
 ## Task 13: Verify and complete included Project handover — KAN-111 (draft)
 
@@ -235,7 +247,7 @@ each commit: the full verify of the side the task touches (CLAUDE.md project rul
 **Estimated size:** small verification/gap-filling slice, reassess after examining the merged dependencies.
 **Verification:** Map each AC-008 criterion to tests; run `bun harnessclaude/hooks/sdd.ts trace identity STORY-008`; run frontend `format:check`, `lint`, `typecheck`, `test`, `build`, and `generate:api` with no generated diff. Browser-check caller flows, errors, cancellation and recipients at 1366 × 768. These checks are pending. Report actual changed files and results; propose `feat(identity): complete project handover (KAN-111)` only if implementation changes are needed, or `test(identity): verify project handover (KAN-111)` for a tests-only result. Ask for commit approval before committing or starting KAN-112; never push or merge main without the user's instruction.
 
-## Task 20: Verify and complete included Space handover — KAN-112
+## Task 22: Verify and complete included Space handover — KAN-112
 
 **Story:** STORY-009
 **Feature:** space-handover
@@ -244,7 +256,7 @@ each commit: the full verify of the side the task touches (CLAUDE.md project rul
 **Files:** `frontend/src/features/users/components/HandOverResponsibilitiesModal.test.tsx`, `frontend/src/features/users/pages/{UserStatusPage,UserRolesPage}.test.tsx`, focused tests under `frontend/src/features/users/mocks/`, existing implementation files only if a failing test establishes a gap; `frontend/openapi/tsolve-api.yaml` and generated output. `docs/bug-log.md` for established defects.
 **Dependencies:** STORY-009 approved; user approved master design and placement in iteration 1 on 2026-10-31; KAN-109/110/111 are on main. Branch `feat/KAN-112-identity-space-handover` from main `4cf0594`.
 **Estimated size:** one verification and contract-clarification slice.
-**Verification:** Cover master design risk rows S1–S8, trace all AC-009 criteria, run focused and full frontend tests, format/lint/typecheck/build, and generate the API twice without drift. Browser-check both callers at 1366 × 768, including errors, cancellation and eligible choices. Record actual results in task-14-space-handover session/test/review reports. Report the feature and propose a conventional commit for user agreement before committing; no push unless requested.
+**Verification:** Cover master design risk rows S1–S8, trace all AC-009 criteria, run focused and full frontend tests, format/lint/typecheck/build, and generate the API twice without drift. Browser-check both callers at 1366 × 768, including errors, cancellation and eligible choices. Record actual results in task-22-space-handover session/test/review reports. Report the feature and propose a conventional commit for user agreement before committing; no push unless requested.
 
 ## STORY-003 tasks (KAN-160 plan, 2026-10-31; stacked on `chore/KAN-231-identity-plan`, PR #94)
 
@@ -374,80 +386,11 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 **Verification:** Tests name AC-003.22 and AC-003.13 (no match). Targeted: `cd frontend && npm run test -- src/features/my-profile`. Browser check at 1366 × 768 against frames (main) and (d).
 **Done when:** the tests pass; the full frontend verify passes with `generate:api` leaving no diff; `bun harnessclaude/hooks/sdd.ts trace identity STORY-003` shows AC-003.11–.14 and .20–.23 covered.
 
-
-## KAN-107 SQL change — draft, 03/11/2026
-
-Spec: `artifacts/03-modules/identity/spec.md`. Master and active design amendments take precedence for this change. Existing task ownership and statuses are preserved. Feature registration happens through sdd.ts after approval, never by editing progress.json.
-
-## Task 22: SQL-U1: Contract and numeric User List compatibility
+## Task 23: UUID User List read integration (KAN-107, replaces branch SQL-U1–U5)
 
 **Story:** STORY-004
-**Feature:** user-list-backend
-**Description:** Update OpenAPI first with list-only decimal-string ids, list response without lastSignInAt, allowed sorts and department options. Generate the client. Keep unported detail/write contracts distinct; accept numeric list links in route validation. Normalize old Last sign-in URL sorts before fetching.
-**Files:**
-- `frontend/openapi/tsolve-api.yaml`
-- `frontend/src/shared/api/generated/**`
-- `frontend/src/features/users/pages/UserListPage.tsx`
-- `frontend/src/features/users/pages/UserDetailPage.tsx`
-- `frontend/src/features/users/mocks/**`
-**Dependencies:** Approved identity spec and completed SQL-P feature checkpoint.
-**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
-**Verification:** Contract/generation tests plus FE tests for no Last sign-in column, obsolete URL normalization, decimal-string max id and numeric link. Covers AC-004.10, .13–.15, .17; U2/U4.
-
-## Task 23: SQL-U2: Trusted Workspace principal and live Admin authorization
-
-**Story:** STORY-004
-**Feature:** user-list-backend
-**Description:** Define the immutable numeric Workspace/account principal for upstream session issuance. On only the two read paths validate its Workspace against the resolver, reload account and roles and derive current authorities before endpoint PreAuthorize. No login shortcut and no acceptance of request-provided identity.
-**Files:**
-- `backend/src/main/java/vn/tsolve/identity/session/**`
-- `backend/src/main/java/vn/tsolve/identity/service/UserListAccessService.java`
-- `backend/src/main/java/vn/tsolve/identity/service/impl/UserListAccessServiceImpl.java`
-- `backend/src/test/java/vn/tsolve/identity/session/**`
-**Dependencies:** SQL-P1–P4 and SQL-U1; add repository lookup in the next step without a parallel account store.
-**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
-**Verification:** Failing tests first for missing/unrecognized/foreign principal, missing/deactivated account, removed/granted Admin between requests; verify 401 MSG07 and 403 MSG08. Covers AC-004.16; U1/U5. No claim that OIDC callback is implemented.
-
-## Task 24: SQL-U3: Read SQL User List without duplicated rows
-
-**Story:** STORY-004
-**Feature:** user-list-backend
-**Description:** Implement layered GET users/departments on the qualified SQL tenant transaction. Parameterize literal search and filters; use EXISTS roles, stable allow-listed sort, count/page plus one bounded roles query. Materialize Employee and return DTOs directly from read projections. No account mutation/audit write.
-**Files:**
-- `backend/src/main/java/vn/tsolve/identity/controller/UserListController.java`
-- `backend/src/main/java/vn/tsolve/identity/dto/**`
-- `backend/src/main/java/vn/tsolve/identity/service/UserListService.java`
-- `backend/src/main/java/vn/tsolve/identity/service/impl/UserListServiceImpl.java`
-- `backend/src/main/java/vn/tsolve/identity/repository/UserListRepository.java`
-**Dependencies:** SQL-U1/U2; implement validation, repository, service and controller sequentially with focused tests.
-**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
-**Verification:** Test literal unicode/%/_/backslash search, 100/101 chars, Employee-only/multi-role, AND filters, null/inactive Department, pagination/count/ties, invalid filters/sorts and Long overflow. Covers AC-004.9–.16; U2/U3/U5/U7.
-
-## Task 25: SQL-U4: Real HTTP and cross-Workspace acceptance tests
-
-**Story:** STORY-004
-**Feature:** user-list-backend
-**Description:** Run HTTP tests using the actual resolver/security/service/SQL stack, two tenant databases and trusted session principals. Include query failures and successive requests on reused threads; inspect generated API shapes and coded errors.
-**Files:**
-- `backend/src/test/java/vn/tsolve/identity/UserListIT.java`
-- `backend/src/test/java/vn/tsolve/identity/controller/UserListControllerTest.java`
-- `backend/src/test/java/vn/tsolve/identity/repository/UserListRepositoryIT.java`
-**Dependencies:** SQL-U2/U3.
-**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
-**Verification:** Prove identical ids/counts remain isolated, cross-Workspace session rejected, BIGINT max retained, roles re-read and no legacy/cross-tenant fallback; cover backend AC-004.9–.16, .18–.19 and U1–U8. Run full mvn verify; do not substitute mocked repository evidence.
-
-## Task 26: SQL-U5: Finish frontend verification and feature review
-
-**Story:** STORY-004
-**Feature:** user-list-backend
-**Description:** Adapt list mocks/tests to the read contract, verify filters/empty/retry behavior and numeric navigation in a real browser. Keep unported backend actions explicitly outside completion claims. Record verification evidence and propose the feature commit.
-**Files:**
-- `frontend/src/features/users/pages/UserListPage.test.tsx`
-- `frontend/src/features/users/mocks/handlers.test.ts`
-- `harnessclaude/artifacts/05-implementation/identity/task-22-user-list-backend.md`
-- `harnessclaude/artifacts/06-evaluation/identity/task-22-user-list-backend-test-report.md`
-**Dependencies:** SQL-U1–U4.
-**Estimated size:** medium; larger directory scopes are sequential internal steps, not a bulk rewrite.
-**Verification:** Frontend format:check, lint, typecheck, test and build; generate:api leaves generated files unchanged. Browser check plus trace identity STORY-004 and full backend verify. Hash original SQL/PDF to prove preservation. Report files/results/proposed commit; wait for user commit approval. Covers AC-004.1–.8, .17–.19 and U4/U6/U7/U8.
-
-**Commit checkpoint:** one feature at a time. Verify the feature, report changed files and proposed Jira-format commit, and wait for user agreement before committing and proceeding to the next feature. Push only on explicit request.
+**Feature:** user-list-uuid-read
+**Description:** Update approved AC-004.9–.19/OpenAPI to UUIDs first; remove parallel platform foundation and numeric mock adapters, retaining the list-only no-Last-sign-in response. Use shared TSolveUser, server-created WorkspaceSessionBinding, canonical UUID TenantContext port, primary JdbcTemplate/transaction manager and fail-closed tenant guard validation. Preserve literal filtering/live authorization/pagination and shared security/CORS error behavior. No provisioning or production schema change.
+**Files:** backend identity controller/dto/repository/service/session/config and tests; common/tenant/TenantContext.java (port only); frontend/openapi/tsolve-api.yaml, generated API and users feature/tests. Remove only this branch's standalone SQL platform/common-tenant implementation, bootstrap resources, config flags and corresponding old tests.
+**Dependencies:** platform UUID contract (kept unchanged), shared security principal/writer on main; actual provisioning/tenant runtime and trusted session issuer are deployment prerequisites. Feature remains disabled.
+**Verification:** Test-first UUID validation, invalid/foreign principal before connection, CORS/error envelope, live role reload and guard mismatch. Use two real PostgreSQL databases with the KAN-235 Account migration, test-only platform adapters and fixtures for the remaining tables and columns. Run full backend verification, all frontend gates, deterministic generation and trace for STORY-004. Review before commit/push to PR119.

@@ -1,30 +1,29 @@
 package vn.tsolve.identity.session;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
-import vn.tsolve.common.exception.ProblemDetails;
-import vn.tsolve.common.tenant.TenantDatabase;
+import vn.tsolve.common.security.SecurityProblemWriter;
 import vn.tsolve.identity.exception.UserListException;
 import vn.tsolve.identity.service.UserListAccessService;
+import vn.tsolve.identity.service.impl.UserListTransaction;
 
 public final class UserListSessionFilter extends OncePerRequestFilter {
-    private final TenantDatabase database;
+    private final UserListTransaction database;
     private final UserListAccessService access;
-    private final ObjectMapper mapper;
+    private final SecurityProblemWriter problems;
 
-    public UserListSessionFilter(TenantDatabase database, UserListAccessService access, ObjectMapper mapper) {
+    public UserListSessionFilter(
+            UserListTransaction database, UserListAccessService access, SecurityProblemWriter problems) {
         this.database = database;
         this.access = access;
-        this.mapper = mapper;
+        this.problems = problems;
     }
 
     @Override
@@ -36,20 +35,18 @@ public final class UserListSessionFilter extends OncePerRequestFilter {
             access.validateSession(authentication);
             var roles = database.read(() -> access.requireAdmin(authentication));
             var current = SecurityContextHolder.createEmptyContext();
-            current.setAuthentication(new UsernamePasswordAuthenticationToken(
+            var live = new UsernamePasswordAuthenticationToken(
                     authentication.getPrincipal(),
                     null,
                     roles.stream()
                             .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
-                            .toList()));
+                            .toList());
+            live.setDetails(authentication.getDetails());
+            current.setAuthentication(live);
             SecurityContextHolder.setContext(current);
             chain.doFilter(request, response);
         } catch (UserListException failure) {
-            response.setStatus(failure.getStatus().value());
-            response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-            mapper.writeValue(
-                    response.getOutputStream(),
-                    ProblemDetails.of(failure.getStatus(), failure.getCode(), failure.getParams()));
+            problems.write(request, response, failure.getStatus(), failure.getCode());
         } finally {
             // Do not mutate/persist the session's original context while rebuilding live database authorities.
             SecurityContextHolder.setContext(original);

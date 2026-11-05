@@ -100,3 +100,6 @@ indexing is not claimed. No package was installed to bypass the missing optional
 Required backend/frontend checks pass. Review attempt 2 is pass. The user approved the commit;
 code is `b6b15970fb03ec8f979884af4c6ad4b40771a40c`, repository hooks passed, and official feature
 tracking is passing. Harness records are committed separately. No push is authorized.
+
+## Superseded integration scope — 2026-11-05
+User selected the current main UUID architecture for PR119. The earlier numeric SQL checkpoint above remains historical evidence only. The parallel catalog/router/bootstrap is retired from this PR. Current work is identity Task23 user-list-uuid-read, approved AC-004.9–.19; do not infer deployment readiness or current test results from this report. Original commits remain in history.

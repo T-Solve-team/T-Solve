@@ -23,7 +23,7 @@ import vn.tsolve.identity.service.UserListService;
 @RestController
 @RequestMapping("/api/v1/users")
 @Tag(name = "users")
-@ConditionalOnProperty(name = "tsolve.sql-workspace.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "tsolve.identity.user-list.enabled", havingValue = "true")
 public class UserListController {
     private final UserListService users;
 
@@ -33,7 +33,7 @@ public class UserListController {
 
     @GetMapping
     @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    @Operation(operationId = "getUsers", summary = "List users in the signed-in Admin's SQL Workspace")
+    @Operation(operationId = "getUsers", summary = "List users in the signed-in Admin's Workspace")
     @ApiResponse(responseCode = "400", description = "Invalid filter, paging or sort")
     @ApiResponse(responseCode = "401", description = "Missing, invalid or foreign Workspace session")
     @ApiResponse(responseCode = "403", description = "Current account is not an Admin")
@@ -44,7 +44,7 @@ public class UserListController {
 
     @GetMapping("/departments")
     @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    @Operation(operationId = "getUserDepartments", summary = "List Department filters in the Admin's SQL Workspace")
+    @Operation(operationId = "getUserDepartments", summary = "List Department filters in the Admin's Workspace")
     @ApiResponse(responseCode = "401", description = "Missing, invalid or foreign Workspace session")
     @ApiResponse(responseCode = "403", description = "Current account is not an Admin")
     public ResponseEntity<List<UserListDepartmentRef>> departments(Authentication authentication) {
