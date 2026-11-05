@@ -2,7 +2,7 @@
 
 **Module:** identity
 **Assignee:** Phạm Tùng Dương
-**Status:** in-progress
+**Status:** passing
 **Iteration:** 1
 
 ---
@@ -26,5 +26,9 @@
 - Java 21 Maven verification passed with 437 unit and 29 PostgreSQL integration tests. Rerun after switching the fixture to the KAN-235 migration.
 - Frontend formatting, lint, typecheck and build passed. The generated API was reproducible across 137 files. The focused User List/UUID/MSW run passed 38 tests. The first full run passed 1,240 of 1,313 tests and failed 73 (BUG-070). The complete two-worker recheck passed all 1,313 tests with zero failures or pending tests (`pr119-uuid-full-2workers.json`).
 
+### Verification on ed34ba3
+- The user approved the combined spec. The PostgreSQL fixture now executes Account changeset 006. The earlier repository returned MSG06 for all four repository tests on that schema. The updated queries use the migrated Account columns and both repository and HTTP test classes pass.
+- Full Java 21 Maven verification passed 488 unit and 46 integration tests with zero failures, errors or skips. Frontend source matches the 1,313-test recheck. Story trace is 19/19.
+
 ### Next up
-- Obtain the spec approval, adapt the repository and verify it against the merged Account migration. Propose the Jira-format commit after verification.
+- The verified code is in `default@5a66616`. Push the branch and update PR #119 with the UUID scope and verification.

@@ -101,15 +101,15 @@
         "my-solutions-counters": "pending",
         "my-solutions-filters": "pending",
         "user-list-backend": "passing",
-        "user-list-uuid-read": "in-progress"
+        "user-list-uuid-read": "passing"
       },
-      "lastUpdated": "2026-11-05T00:25:36.837Z",
+      "lastUpdated": "2026-11-05T12:34:40.275Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5310e2b10093f244440daabf3f3ca7ad14b1d613"
+        "default": "5a6661610e5ffdcdb6ba08f30d3353edf3fcab2b"
       }
     },
     "workspace": {
