@@ -92,3 +92,11 @@ Evaluate `suggestion-history` and `suggestion-history-contract`. Task 3 after PR
 - BUG-106 (own, Low): an extreme ISO date gave 500. Test-first fix: `rejectsADateOutsideFourDigitYearsWithMsg39_AC_003_4_BUG_106` failed with a `DateTimeException`, then passed once the filter takes only `yyyy-MM-dd`. Triage tests 20/20; Spotless pass. Not committed yet.
 - Commit (user agreed 04/11): `default@ad30534` fix BUG-106; recorded with `sdd.ts commit`.
 - Spec text synced with the ports decision (no criterion changed); user re-approved `cf15ceed`.
+
+## Session 2026-11-05 — PR #113 FE review (Hiếu, changes requested)
+
+- Blocking 1: the triage bug rows collided with main; renumbered BUG-093 to BUG-120 and BUG-104 to BUG-121 with their test names (`31c31e5`), old ids noted in each row.
+- FE Lead decision: FE-46 in the decision log and the 03 §5 exception for the 10.1 Project filter (`2674122`).
+- Blocking 2 and nits, written by Codex (gpt-6.1-sol) and reviewed here (`6cefdf9`): date range pick/clear page tests (they fail with `toISOString()`), a combined Project + answer request test, stale URL filter cleanup, keepPreviousData, mock detail 404/MSG04 for a non-PM, a `dl` popup with `formatDateTime` and "Jira project key", URLs with login information rejected, stronger AC-001.8/AC-001.12 assertions.
+- Not done (outside triage): the FormModal footer showing both Cancel and Close needs a shared read-only modal (FE Lead); a guard on the route-table row lives in `src/app`.
+- Checks: typecheck, lint (1 existing warning), prettier, triage + router tests 168/168 (`--hookTimeout=60000`, BUG-105), build, generate:api no diff, trace 30/30.
