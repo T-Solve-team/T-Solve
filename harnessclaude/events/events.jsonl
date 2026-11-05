@@ -619,3 +619,5 @@
 {"ts":"2026-11-04T19:35:45.205Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-contract","from":"pending","to":"in-progress"}
 {"ts":"2026-11-05T05:22:16.990Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"0526620ad325f10b1f653a980937f86acf138db6"}
 {"ts":"2026-11-05T05:22:17.278Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-contract","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-05T05:22:46.496Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-upload","from":"pending","to":"in-progress"}
+{"ts":"2026-11-05T18:36:20.804Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"025794b869adbc64aaafd5eb8e67d47c5632d961"}

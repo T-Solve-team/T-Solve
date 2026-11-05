@@ -11,7 +11,7 @@
 
 ### Working on: project-uuid
 - D10: `ProjectAccess`, `StubProjectAccess` (`user:<uuid>,<uuid>;…`, a malformed id grants nothing), the three entities, `ImportPreviewResponse`, `CsvImportService(Impl)` and the controller take `UUID`. A non-UUID `projectId` is a 400 (Spring type mismatch, existing handler).
-- Changeset `005-ticket-import-project-uuid.sql`: `ALTER COLUMN project_id TYPE UUID USING lpad(to_hex(project_id), 32, '0')::uuid` on `import_batch`, `ticket`, `import_preview`; included in the master changelog. `ImportConfirmIT` runs it on PostgreSQL.
+- Changeset `008-ticket-import-project-uuid.sql`: `ALTER COLUMN project_id TYPE UUID USING lpad(to_hex(project_id), 32, '0')::uuid` on `import_batch`, `ticket`, `import_preview`; included in the master changelog. `ImportConfirmIT` runs it on PostgreSQL.
 - Contract: `projectId` `format: uuid` in the upload body and `ImportPreviewResponse`; client regenerated.
 - `.env.example`: stub format comment.
 - Tests: `StubProjectAccessTest` on UUIDs (+ an old numeric id grants nothing), `ImportControllerTest.uploadRejectsAProjectIdThatIsNotAUuid`, the other ticket tests and `ImportConfirmIT` moved to UUID ids.

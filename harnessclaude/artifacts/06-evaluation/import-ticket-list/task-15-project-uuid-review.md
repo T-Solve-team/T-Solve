@@ -15,7 +15,7 @@ iteration: 1
 Commit `c4f3900` (repo `default`, range `c4f3900^..c4f3900`) puts D10 in place:
 - `projectId` is now a `UUID` in `ProjectAccess`, `StubProjectAccess`, the three entities (`ImportBatch`, `ImportPreview`, `Ticket`), `ImportPreviewResponse`, `CsvImportService(Impl)` and the controller's `@RequestParam UUID projectId`.
 - The stub reads `user:<uuid>,<uuid>;…` and drops a malformed id, so it still fails closed.
-- The new changeset `005-ticket-import-project-uuid.sql` changes the three `project_id` columns with `lpad(to_hex(project_id), 32, '0')::uuid`. Applied changeset 003 is not touched.
+- The new changeset `008-ticket-import-project-uuid.sql` changes the three `project_id` columns with `lpad(to_hex(project_id), 32, '0')::uuid`. Applied changeset 003 is not touched.
 - The contract (`format: uuid` in the upload body and in `ImportPreviewResponse`) and the generated client match, and `npm run generate:api` leaves no diff.
 
 Every STORY-001 criterion has a passing test. `mvn verify` passes at HEAD, including `ImportConfirmIT` 6/6, which runs changeset 005 on PostgreSQL with Hibernate `validate`. **Verdict: pass.**

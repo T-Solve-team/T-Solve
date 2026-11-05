@@ -275,7 +275,7 @@ GET /imports/previews/{id} ──► ImportController.getImportPreview ──►
 
 - **STORY-007:** `ImportPreviewService.preview(user, previewId)`. `removeRows` and `preview` share one private `summary(preview)`, which builds what `removeRows` builds today. No new query: the three counts and the first page already exist.
 - **D10, UUID Project ids:** `ProjectAccess.managesActive(String, UUID)` / `isActive(UUID)`. `projectId` becomes `UUID` in `ImportPreview`, `ImportBatch`, `Ticket`, `ImportPreviewResponse`, `CsvImportService.upload` and the controller's `@RequestParam UUID projectId`. A value that is not a UUID fails binding → 400 from the existing `GlobalExceptionHandler` (be-foundation). `StubProjectAccess` reads `user:<uuid>,<uuid>;…`; a malformed id grants nothing (fails closed, as before). `.env.example` gets the new format in its comment.
-- **Changeset `005-ticket-import-project-uuid.sql`** (003 is applied and stays as it is): `ALTER TABLE import_batch|ticket|import_preview ALTER COLUMN project_id TYPE UUID USING lpad(to_hex(project_id), 32, '0')::uuid`. Old stub ids keep a stable value (`1` → `00000000-0000-0000-0000-000000000001`), so dev data survives. PostgreSQL rebuilds `idx_import_batch_project` and `idx_ticket_project_status` itself. 005 is the next free number on every branch (checked 2026-11-01: `main` has 001, 003, 004; open branches add only 002).
+- **Changeset `008-ticket-import-project-uuid.sql`** (003 is applied and stays as it is): `ALTER TABLE import_batch|ticket|import_preview ALTER COLUMN project_id TYPE UUID USING lpad(to_hex(project_id), 32, '0')::uuid`. Old stub ids keep a stable value (`1` → `00000000-0000-0000-0000-000000000001`), so dev data survives. PostgreSQL rebuilds `idx_import_batch_project` and `idx_ticket_project_status` itself. 005 is the next free number on every branch (checked 2026-11-01: `main` has 001, 003, 004; open branches add only 002).
 - **D14:** `CsvRowValidator` sends `MSG_NEW_3` instead of `MSG78`; MSG39 stays for the resolved date.
 - **Contract:** `projectId` `format: uuid` in the upload body and in `ImportPreviewResponse`; new path `GET /imports/previews/{previewId}` (`getImportPreview`, 200 / 403 / 404). `npm run generate:api` regenerates the client.
 
@@ -341,7 +341,7 @@ GET /imports/previews/{id} ──► ImportController.getImportPreview ──►
 
 ### File structure (change)
 ```
-backend/src/main/resources/db/changelog/changes/005-ticket-import-project-uuid.sql   (+ include in the master changelog)
+backend/src/main/resources/db/changelog/changes/008-ticket-import-project-uuid.sql   (+ include in the master changelog)
 backend/src/main/java/vn/tsolve/ticket/  ProjectAccess · StubProjectAccess · ImportPreview · ImportBatch · Ticket
                                          · ImportPreviewResponse · CsvImportService(Impl) · ImportConfirmServiceImpl
                                          · ImportPreviewService(Impl) (+ preview) · ImportController (+ GET preview)

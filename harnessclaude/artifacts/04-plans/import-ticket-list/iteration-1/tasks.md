@@ -265,13 +265,13 @@ Design: master design, section "Change 2026-11-01". `F` = `frontend/src/features
 **Story:** STORY-001
 **Feature:** project-uuid
 **Description:** D10.
-- Changeset `005-ticket-import-project-uuid.sql`: `project_id` of `import_batch`, `ticket` and `import_preview` to `UUID USING lpad(to_hex(project_id), 32, '0')::uuid`; include it in the master changelog.
+- Changeset `008-ticket-import-project-uuid.sql`: `project_id` of `import_batch`, `ticket` and `import_preview` to `UUID USING lpad(to_hex(project_id), 32, '0')::uuid`; include it in the master changelog.
 - `ProjectAccess` takes `UUID`; `StubProjectAccess` parses `user:<uuid>,<uuid>;…` and ignores a malformed id; `.env.example` comment shows the new format.
 - `projectId` is `UUID` in the three entities, `ImportPreviewResponse`, `CsvImportService(Impl)`, `ImportConfirmServiceImpl`, `ImportPreviewServiceImpl` and the controller's `@RequestParam`.
 - Contract: `projectId` `format: uuid` in the upload body and `ImportPreviewResponse`; `npm run generate:api`.
 - Update the existing tests to UUID ids. Covers edge cases 31 and 32.
 **Files:**
-- Create: `backend/src/main/resources/db/changelog/changes/005-ticket-import-project-uuid.sql`
+- Create: `backend/src/main/resources/db/changelog/changes/008-ticket-import-project-uuid.sql`
 - Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `.env.example`, `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
 - Modify: `T/service/ProjectAccess.java`, `T/service/impl/{StubProjectAccess,CsvImportServiceImpl,ImportConfirmServiceImpl,ImportPreviewServiceImpl}.java`, `T/service/CsvImportService.java`, `T/entity/{ImportPreview,ImportBatch,Ticket}.java`, `T/dto/ImportPreviewResponse.java`, `T/controller/ImportController.java`
 - Test: `TT/service/impl/StubProjectAccessTest.java` (malformed UUID grants nothing), `TT/controller/ImportControllerTest.java` (non-UUID `projectId` → 400), the other `TT` tests and `ImportConfirmIT` (changeset 005 runs on the real database)
