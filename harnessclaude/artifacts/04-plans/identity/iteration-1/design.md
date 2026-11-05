@@ -83,3 +83,25 @@ removed by Task 24; Task 10's uncommitted tree is salvaged into Task 26; Tasks 1
 Task 14 keeps the platform adapters and the `FirstAdminCreator` but no longer moves sign-in tables. Feedback first:
 Task 23 lets Hiếu sign in locally through Keycloak. Edge-case rows 103–124 apply. No open question.
 
+
+## Task 23 split and the QA answers — KAN-276 (2026-11-05)
+
+Master: artifacts/04-plans/identity/design.md, "Keycloak re-plan", rows 103–105, 110, 111, 114, 115, 122.
+Spec: artifacts/03-modules/identity/spec.md. No acceptance criterion changes: every answer below fits AC-001.1, .52–.55 as written.
+
+QA step 1 of Task 23 asked eight questions; the user answered on 5/11. Each is chosen / alternatives / rationale:
+
+| QA | Chosen | Alternatives | Rationale and where it binds |
+|----|--------|--------------|------------------------------|
+| 1 | B: a prerequisite PR, Task 23a (Redis starter, compose service and config, `identity/dev` lookup, `slug` and `organizationId` on `WorkspaceRef`) | A: Task 23 adds them (11–12 files); C: wait for Task 26a | Keeps Task 23 at 8 production files. Tasks: 23a, 23. Task 25b no longer adds the two `WorkspaceRef` fields or creates `DevWorkspaceLookup`; it keeps the AC-001.48 refusal. |
+| 2 | A: the success handler forwards in the same request to the dev-profile `DevClaimsController`; outside `dev` a success answers 302 `/login?error=MSG06` with one WARN until Task 26a | B: claims in Redis behind a single-use key; C: 501 outside `dev` | Nothing stored, nothing in a URL (row 122 stays closed). Task 23. |
+| 3 | A: `admin.` sign-in start keeps the old path in Task 23, the callback on `admin.` answers 404 until Task 29 | B: 404 on `admin.` start now | The AC-001.28 test stays green; AC-001.28 is Task 29. |
+| 4 | A: "both discovery documents" are the realms `tsolve` and `tsolve-ops`; Task 23 checks `tsolve`, Task 29 adds `tsolve-ops` | B: one realm read at two URLs | Row 111. |
+| 5 | B: Keycloak unreachable at start gives a WARN naming the issuer; a mismatch on a reachable document fails start-up; no later re-check | A: fail start-up; C: B plus a background re-check | Row 110: signed-in sessions continue while Keycloak is down, so an API restart must not depend on it. |
+| 6 | A: `TSOLVE_SIGNING_KEY` and `GOOGLE_*` stay required, `KEYCLOAK_WEB_CLIENT_SECRET` is added; Task 24 removes the old ones | B: old values optional now | The old classes live until Task 24. |
+| 7 | A: WireMock `fake-google` with response templating and a JWT-signing extension (the nonce is encoded into the code, the token stub signs per request); the dev and CI IdPs are type `oidc` pointing at it | B: one pre-signed long-lived token; C: another mock server | Keycloak's `google` type has fixed Google URLs. The nonce check stays on in dev and CI (rows 103, 122). Real Google `hostedDomain` is not testable here (runbook, Task 28). |
+| 8 | A: the redirect URI's origin comes from the request, with `server.forward-headers-strategy=framework` behind Caddy | B: `WorkspaceRef.siteHost` plus a configured scheme | The host has already resolved to a Workspace; Keycloak's exact match is the guard (AC-001.54); local ports keep working. |
+
+Non-scope notes (kept out of Task 23): an optional real-Google IdP turned on by `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) for a manual smoke test belongs to the Keycloak provisioning task (Task 28) and the runbook; a real Google Workspace or Cloud Identity domain is a prerequisite of the staging smoke test and of production readiness (`hd` exists only for Workspace domains), not of Task 23; Microsoft Entra ID is NOT in scope and needs a separate Change Mode decision.
+
+Test size: the QA plan has 84 test methods for the old Task 23 against a rule of about 12 per task. Tasks 23a and 23 each carry a "Test scope" line; QA step 1 is re-run on both. Proposed division if Task 23 still exceeds the rule: by user-visible slice, (a) start and configuration, (b) callback and Redis, (c) realm and compose. The final count is decided at that re-run.
