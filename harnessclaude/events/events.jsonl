@@ -565,3 +565,5 @@
 {"ts":"2026-11-05T12:34:40.212Z","type":"commit-recorded","module":"identity","repo":"default","sha":"5a6661610e5ffdcdb6ba08f30d3353edf3fcab2b"}
 {"ts":"2026-11-05T12:34:40.247Z","type":"feature-status","module":"identity","feature":"user-list-uuid-read","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-05T12:34:40.276Z","type":"feature-status","module":"identity","feature":"user-list-uuid-read","from":"evaluating","to":"passing"}
+{"ts":"2026-11-05T12:50:15.401Z","type":"quick-opened","what":"Stabilize Review Queue eligibility test on PR 119 CI","files":["frontend/src/features/review/pages/ReviewQueueRecovery.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-05T13:04:07.404Z","type":"quick-closed","what":"Stabilize Review Queue eligibility test on PR 119 CI","files":["frontend/src/features/review/pages/ReviewQueueRecovery.test.tsx","docs/bug-log.md"]}
