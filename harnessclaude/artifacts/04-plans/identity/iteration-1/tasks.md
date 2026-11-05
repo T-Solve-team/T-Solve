@@ -423,7 +423,7 @@ run Opus, high (auth).
 
 **Jira and the old tasks (Q5 = A).** KAN-229, 230, 231 and 235 stay Done (their code is removed by Task 24). KAN-232 is
 re-scoped to Tasks 26a and 26b, KAN-233 to Task 29, KAN-234 to Task 30, KAN-106 to Task 27; KAN-247 keeps the platform adapters
-and the `FirstAdminCreator` (Task 14). Task 23 is KAN-276; Tasks 23b and 23c are Subtasks of KAN-275 still to be created; Task 23a is KAN-287 (a Subtask of the Story KAN-275, a sibling of KAN-276; already created in Jira); new issues are still to be created for Tasks 24, 28 and 31. Salvage of the uncommitted Task 10 tree (61 files on `feat/KAN-232-identity-workspace-session`):
+and the `FirstAdminCreator` (Task 14). Task 23 is KAN-276; Task 23b is KAN-288 and Task 23c is KAN-289 (Subtasks of KAN-275); Task 23a is KAN-287 (a Subtask of the Story KAN-275, a sibling of KAN-276; already created in Jira); new issues are still to be created for Tasks 24, 28 and 31. Salvage of the uncommitted Task 10 tree (61 files on `feat/KAN-232-identity-workspace-session`):
 save it as a patch outside the repo (do not revert, stash or commit it); Tasks 26a and 26b re-apply, on a new branch from
 `main`, `identity/session` without `CompleteController`, `AccountRole*`, the `user_role` changeset, Redis in compose,
 pom and yml, `SecurityProblemWriter`, and the dev seeder; it drops `StartCookie`, the changesets `008` and `009`, and
@@ -480,7 +480,7 @@ Answers that bind this task (QA step 1 questions, user, 5/11):
 **Test scope:** 22 test methods against the rule of about 12 per task (RealmImport 11, DiscoveryCheck 6, SignInProperties 5; the fixture has none). Over the rule, kept together because the realm import and its check are one result Hiếu can see. AC-001.54 and AC-001.63–.65 by `RealmImportIT` (token and client settings, the mappers `organization` and `hd`, no password form, IdPs hidden, the custom first-broker-login flow); edge 111 by `DiscoveryCheckTest`; the required secret by `SignInPropertiesTest`. QA step 1 must be re-run on this slice before its code starts.
 **Verification:** Tests name AC-001.54, .63–.65; design risk rows 103 (the mappers), 104, 105, 110, 111, 114. Targeted: `cd backend && mvn -Dtest='DiscoveryCheckTest,SignInPropertiesTest' -Dit.test='RealmImportIT' verify` (the IT needs Docker); full `mvn verify` before the commit. Local browser check of the realm at `localhost`.
 
-## Task 23b: Sign-in start through Keycloak: the authorization request in Redis — Jira Subtask of KAN-275 (to create)
+## Task 23b: Sign-in start through Keycloak: the authorization request in Redis — Jira KAN-288 (Subtask of KAN-275)
 
 **Story:** STORY-001
 **Feature:** keycloak-sign-in-start
@@ -498,12 +498,12 @@ Answers that bind this task (QA step 1 questions, user, 5/11):
 - Modify: `backend/src/main/java/vn/tsolve/identity/signin/SignInStartController.java`, `backend/pom.xml`, `backend/src/main/resources/application.yml`, `backend/src/test/resources/config/application.yml`
 - Test: `backend/src/test/java/vn/tsolve/identity/signin/{KeycloakAuthorizationRequestResolverTest,RedisAuthorizationRequestRepositoryIT}.java`; modify `SignInStartControllerTest`
 **Dependencies:** Task 23a and Task 23 merged (the realm and the client `tsolve-web`); Docker Desktop.
-**PR / Jira:** branch `feat/KAN-<n>-identity-keycloak-sign-in-start`; Jira Subtask of KAN-275 (to create).
+**PR / Jira:** branch `feat/KAN-288-identity-keycloak-sign-in-start`; Jira KAN-288 (Subtask of KAN-275).
 **Estimated size:** medium (2 new and 1 modified production Java files, plus build and config files); 28 tests in 2 new test files and 1 modified.
 **Test scope:** 28 test methods against the rule of about 12 per task (Resolver 8, StartController 11, Redis IT 9). Over the rule, kept together because the start cannot be tried without the saved request. AC-001.1, .3, .52 by `KeycloakAuthorizationRequestResolverTest` and `SignInStartControllerTest`; AC-001.53 (cookie, read and delete in one step) by `RedisAuthorizationRequestRepositoryIT`. Whether S8 and S9, the refusal of AC-001.48, stay here or move to Task 25b is settled in the QA re-run (S9 needs `organizationId` from Task 23a). QA step 1 must be re-run on this slice before its code starts.
 **Verification:** Tests name AC-001.1, .3, .52, .53. Targeted: `cd backend && mvn -Dtest='KeycloakAuthorizationRequestResolverTest,SignInStartControllerTest' -Dit.test='RedisAuthorizationRequestRepositoryIT' verify` (the IT needs Docker); full `mvn verify` before the commit. Local browser run at `acme.localhost` up to the account chooser.
 
-## Task 23c: Keycloak callback and the whole sign-in round trip — Jira Subtask of KAN-275 (to create)
+## Task 23c: Keycloak callback and the whole sign-in round trip — Jira KAN-289 (Subtask of KAN-275)
 
 **Story:** STORY-001
 **Feature:** keycloak-callback
@@ -522,7 +522,7 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 - Modify: `backend/src/main/java/vn/tsolve/identity/AuthSecurityConfig.java`
 - Test: `backend/src/test/java/vn/tsolve/identity/signin/{OidcCallbackHandlerTest,TwoInstanceCallbackIT,KeycloakSignInEndToEndIT}.java`; modify `AuthSecurityConfigTest`
 **Dependencies:** Task 23a, Task 23 and Task 23b merged; Docker Desktop; none of the platform tasks (the dev lookup answers for `acme` and `beta`).
-**PR / Jira:** branch `feat/KAN-<n>-identity-keycloak-callback`; Jira Subtask of KAN-275 (to create).
+**PR / Jira:** branch `feat/KAN-289-identity-keycloak-callback`; Jira KAN-289 (Subtask of KAN-275).
 **Estimated size:** medium (2 new and 1 modified production Java files); 34 tests in 3 new test files and 1 modified.
 **Test scope:** 34 test methods against the rule of about 12 per task (OidcCallbackHandler 15, AuthSecurityConfig 5, TwoInstance 3, EndToEnd 11). Over the rule; the unit tests are fast and the two ITs are the slow part. AC-001.6, .8, .9 by `OidcCallbackHandlerTest`; AC-001.55 by `AuthSecurityConfigTest` and `TwoInstanceCallbackIT`; AC-001.53, .54 and .63–.65 end to end by `KeycloakSignInEndToEndIT`. QA step 1 must be re-run on this slice before its code starts.
 **Verification:** Tests name AC-001.6, .8, .9, .55 and the end-to-end ids; design risk rows 115 and 122. Targeted: `cd backend && mvn -Dtest='OidcCallbackHandlerTest,AuthSecurityConfigTest' -Dit.test='KeycloakSignInEndToEndIT,TwoInstanceCallbackIT' verify` (the ITs need Docker); full `mvn verify` before the commit. Local browser run through Keycloak at `acme.localhost`.
