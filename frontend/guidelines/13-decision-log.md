@@ -325,6 +325,8 @@ Console routes behind a guard; a path prefix such as `/platform-console`. *Why:*
 on the Console host (and the reverse), so the 404 is the same for every role; the Console team can change its tree
 without touching the Workspace guards.
 
+**FE-46 — Project filter on 10.1 Suggestion History (FE Lead review of PR #113, 2026-11-05, KAN-149).** 10.1 Suggestion History keeps a Project filter, an exception to the "never a Project filter" rule of 03 §5, because the approved spec AC-001.3 requires it. The filter offers only the Projects the signed-in Project Manager manages, and both the filter and the list show a Project only by its Jira project key; no table stores a Project name. *Options:* a sortable Project column only. *Why:* a Project Manager with several Projects reviews one Project's suggestion results at a time, and the server still checks each Project (403/MSG08).
+
 ## Working conventions (not code decisions)
 
 - Each change goes on its own short-lived branch; PR title and description follow the DevOps template.
