@@ -550,3 +550,9 @@
 {"ts":"2026-11-05T06:19:05.231Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":null,"to":"pending"}
 {"ts":"2026-11-05T06:19:05.534Z","type":"feature-status","module":"ai","feature":"solution-draft","from":null,"to":"pending"}
 {"ts":"2026-11-05T06:19:05.828Z","type":"feature-status","module":"ai","feature":"solution-rewrite","from":null,"to":"pending"}
+{"ts":"2026-11-05T06:23:16.100Z","type":"module-status","module":"ai","from":"planned","to":"implementing"}
+{"ts":"2026-11-05T06:23:16.353Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"pending","to":"in-progress"}
+{"ts":"2026-11-05T06:26:20.459Z","type":"quick-opened","what":"Test values for OLLAMA_BASE_URL and OLLAMA_CHAT_MODEL so existing Spring contexts start (KAN-139)","files":["backend/src/test/resources/config/application.yml"]}
+{"ts":"2026-11-05T11:28:03.757Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-05T11:28:04.199Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"evaluating","to":"passing"}
+{"ts":"2026-11-05T11:28:41.466Z","type":"quick-closed","what":"Test values for OLLAMA_BASE_URL and OLLAMA_CHAT_MODEL so existing Spring contexts start (KAN-139)","files":["backend/src/test/resources/config/application.yml"]}
