@@ -627,3 +627,6 @@
 {"ts":"2026-11-06T15:17:32.149Z","type":"commit-recorded","module":"search","repo":"default","sha":"88b225144e391dc613a30b6c2d9048e4b124c96a"}
 {"ts":"2026-11-06T15:17:32.421Z","type":"feature-status","module":"search","feature":"ticket-ranking","from":"evaluating","to":"passing"}
 {"ts":"2026-11-06T15:17:32.705Z","type":"feature-status","module":"search","feature":"ticket-search-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-06T15:18:33.197Z","type":"feature-status","module":"search","feature":"ticket-search-connect","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T15:47:37.280Z","type":"feature-status","module":"search","feature":"ticket-search-connect","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T15:47:38.181Z","type":"commit-recorded","module":"search","repo":"default","sha":"c973207b29a3099ac466ffe777a90fec6696b93c"}
