@@ -117,6 +117,74 @@ class SearchSchemaIT {
         assertThat(after).isAfter(before);
     }
 
+    @Test
+    void createsTicketEmbeddingWithTenantConvention_AC_005_2() throws Exception {
+        migrateAll(dataSource);
+        insertTicketsAndProjects();
+        insertEmbedding("SEARCH-1", vector(1024));
+        assertThat(jdbc.queryForObject("SELECT ticket_embedding_id FROM ticket_embedding", UUID.class))
+                .isNotNull();
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM ticket_embedding WHERE created_at IS NOT NULL AND updated_at IS NOT NULL",
+                        Integer.class))
+                .isEqualTo(1);
+        assertThat(jdbc.queryForList(
+                        "SELECT column_name FROM information_schema.columns WHERE table_name = 'ticket_embedding'",
+                        String.class))
+                .containsExactlyInAnyOrder(
+                        "ticket_embedding_id", "ticket_id", "embedding", "model", "created_at", "updated_at");
+        assertThat(jdbc.queryForList(
+                        """
+                        SELECT data_type FROM information_schema.columns
+                        WHERE table_name = 'ticket_embedding' AND column_name IN ('created_at', 'updated_at')
+                          AND is_nullable = 'NO' AND column_default = 'now()'
+                        """,
+                        String.class))
+                .containsExactly("timestamp with time zone", "timestamp with time zone");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pg_extension WHERE extname = 'vector'", Integer.class))
+                .isEqualTo(1);
+        assertThatThrownBy(() -> jdbc.update(
+                        "INSERT INTO ticket_embedding (ticket_id, embedding, model) VALUES (-1, CAST(? AS vector),"
+                                + " 'bge-m3')",
+                        vector(1024)))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        jdbc.update("DELETE FROM ticket WHERE ticket_id = 'SEARCH-1'");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM ticket_embedding", Integer.class))
+                .isZero();
+    }
+
+    @Test
+    void refusesVectorOfOtherLength_AC_005_2() throws Exception {
+        migrateAll(dataSource);
+        insertTicketsAndProjects();
+        assertThatThrownBy(() -> insertEmbedding("SEARCH-1", vector(3)))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void keepsOneEmbeddingPerTicket_AC_005_2() throws Exception {
+        migrateAll(dataSource);
+        insertTicketsAndProjects();
+        insertEmbedding("SEARCH-1", vector(1024));
+        assertThatThrownBy(() -> insertEmbedding("SEARCH-1", vector(1024)))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("uq_ticket_embedding_ticket");
+    }
+
+    private void insertEmbedding(String sourceId, String vector) {
+        jdbc.update(
+                """
+                INSERT INTO ticket_embedding (ticket_id, embedding, model)
+                SELECT id, CAST(? AS vector), 'bge-m3' FROM ticket WHERE ticket_id = ?
+                """,
+                vector,
+                sourceId);
+    }
+
+    private static String vector(int dimensions) {
+        return "[" + String.join(",", java.util.Collections.nCopies(dimensions, "0")) + "]";
+    }
+
     private void insertTicketsAndProjects() {
         for (int index = 1; index <= 2; index++) {
             Long departmentId = jdbc.queryForObject(

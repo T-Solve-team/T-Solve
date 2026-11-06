@@ -58,9 +58,15 @@ class SearchChangesetRollbackIT {
             liquibase.rollback(searchChangesets, "");
 
             assertNoSearchArtifacts(jdbc);
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM pg_extension WHERE extname = 'vector'", Integer.class))
+                    .as("vector extension survives rollback")
+                    .isEqualTo(1);
 
             liquibase.update("");
 
+            assertThat(columnExists(jdbc, "ticket_embedding", "ticket_embedding_id"))
+                    .as("embedding table restored")
+                    .isTrue();
             for (String table : PUBLIC_ID_TABLES) {
                 assertThat(columnExists(jdbc, table, "public_id"))
                         .as("public id restored on %s", table)
