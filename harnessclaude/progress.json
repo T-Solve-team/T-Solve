@@ -161,17 +161,17 @@
         "ticket-ranking": "pending",
         "ticket-search-api": "pending",
         "ticket-search-connect": "pending",
-        "ticket-feedback-api": "pending",
-        "give-feedback-connect": "pending",
+        "ticket-feedback-api": "passing",
+        "give-feedback-connect": "evaluating",
         "ticket-suggestion-api": "pending"
       },
-      "lastUpdated": "2026-11-06T14:15:01.547Z",
+      "lastUpdated": "2026-11-06T16:05:30.861Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "198fa83e3ce660d769ab2d12cd2477ed3cda6755"
+        "default": "e41ce6f7df1f8b78d946336122180e376a5f5922"
       }
     },
     "triage": {
