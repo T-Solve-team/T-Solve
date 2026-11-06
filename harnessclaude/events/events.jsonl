@@ -602,3 +602,7 @@
 {"ts":"2026-11-06T13:54:54.665Z","type":"feature-status","module":"ticket-review","feature":"review-decision-transaction","from":"pending","to":"in-progress"}
 {"ts":"2026-11-06T23:22:03.220Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"32918fb8117f8ea4b849ea342d7382d8cc7c68ea"}
 {"ts":"2026-11-06T23:22:03.281Z","type":"feature-status","module":"ticket-review","feature":"review-decision-transaction","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T23:30:35.619Z","type":"feature-status","module":"ticket-review","feature":"review-decision-endpoints","from":null,"to":"pending"}
+{"ts":"2026-11-06T23:30:35.684Z","type":"feature-status","module":"ticket-review","feature":"review-decision-endpoints","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T23:39:38.612Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"4a908312ee9d5d9ed6ab17edafef1755e9fb063c"}
+{"ts":"2026-11-06T23:39:38.687Z","type":"feature-status","module":"ticket-review","feature":"review-decision-endpoints","from":"in-progress","to":"evaluating"}

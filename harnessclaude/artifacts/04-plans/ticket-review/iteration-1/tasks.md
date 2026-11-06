@@ -1,7 +1,7 @@
 ---
 module: ticket-review
 date: 2026-11-01
-total_tasks: 8
+total_tasks: 9
 owner: Dev
 ---
 
@@ -66,20 +66,29 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Dependencies:** Task 5. A scoped PostgreSQL test supplies the authorized Account and Project set.
 **Verification:** Real PostgreSQL tests for decisions, rejection of invalid batches, competing decisions and rollback; run backend verification and Spotless.
 
-## Task 7: Production Review API (KAN-24)
+## Task 7: Review decision endpoints (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-decision-endpoints
+**Description:** Connect the three existing OpenAPI mutations to Task 6. Use an internal access interface for the verified Workspace Account and managed Projects. Deny access when its production adapter or binding is absent. Cover AC-009.3 and the decision API portion of AC-009.4–009.8.
+**Files:** Review controller, access interface and two-Workspace API integration tests.
+**Dependencies:** Task 6. Tests implement the trusted Workspace and membership contract against two PostgreSQL databases.
+**Verification:** Check session, role, scope, UUID batch and feedback validation, cross-Workspace denial and committed decisions through HTTP.
+
+## Task 8: Production Review reads and web integration (KAN-24)
 
 **Story:** STORY-009
 **Feature:** review-production-api
-**Description:** Implement AC-009.1–009.8 and AC-009.10 except Jira visibility. Connect the existing queue, eligible IDs, detail and decision routes to persisted data and cover R14.
+**Description:** Implement AC-009.1–009.2 and AC-009.10. Connect queue, eligible IDs and detail to persisted data, and verify the existing web decision callers through the production contract.
 **Files:** Review controller, services, tests and existing OpenAPI or web Review files where needed.
-**Dependencies:** Task 6, trusted Workspace binding, authenticated Account and Project Manager membership.
+**Dependencies:** Task 7 and Workspace-scoped Project metadata including public Project and Department IDs.
 **Verification:** Backend authorization, concurrency and rollback tests, plus real web API integration.
 
-## Task 8: Request Changes feedback in Jira (KAN-24)
+## Task 9: Request Changes feedback in Jira (KAN-24)
 
 **Story:** STORY-009
 **Feature:** review-jira-feedback
 **Description:** Complete the Jira clause of AC-009.6 and cover R15.
 **Files:** Jira issue panel and Review feedback boundary and tests.
-**Dependencies:** Task 7 and verified Jira issue and writer context.
+**Dependencies:** Tasks 7 and 8 and verified Jira issue and writer context.
 **Verification:** MSG64 for the writer and denial for an unrelated issue, Account or Workspace.

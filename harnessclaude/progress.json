@@ -318,15 +318,16 @@
         "review-storage": "evaluating",
         "review-production-api": "pending",
         "review-jira-feedback": "pending",
-        "review-decision-transaction": "evaluating"
+        "review-decision-transaction": "evaluating",
+        "review-decision-endpoints": "evaluating"
       },
-      "lastUpdated": "2026-11-06T23:22:03.279Z",
+      "lastUpdated": "2026-11-06T23:39:38.685Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "32918fb8117f8ea4b849ea342d7382d8cc7c68ea"
+        "default": "4a908312ee9d5d9ed6ab17edafef1755e9fb063c"
       }
     }
   },
