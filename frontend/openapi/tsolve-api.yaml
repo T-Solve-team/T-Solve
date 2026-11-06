@@ -1867,7 +1867,7 @@ components:
           maximum: 100
           description: Rounded percent of Helpful Feedback; null = no Feedback yet.
         resolvedAt:
-          type: string
+          type: [string, 'null']
           format: date-time
     TicketSearchResultPage:
       type: object
