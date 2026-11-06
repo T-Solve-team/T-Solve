@@ -151,11 +151,11 @@
         "give-feedback": "pending",
         "search-public-ids": "in-progress",
         "ticket-updated-at": "in-progress",
-        "ticket-embedding-schema": "pending",
+        "ticket-embedding-schema": "passing",
         "search-log-schema": "pending",
         "ticket-feedback-schema": "pending",
         "visible-scope": "in-progress",
-        "ticket-embedding-pipeline": "pending",
+        "ticket-embedding-pipeline": "passing",
         "ticket-list-api": "in-progress",
         "ticket-list-connect": "in-progress",
         "ticket-ranking": "pending",
@@ -165,13 +165,13 @@
         "give-feedback-connect": "pending",
         "ticket-suggestion-api": "pending"
       },
-      "lastUpdated": "2026-11-06T07:14:27.729Z",
+      "lastUpdated": "2026-11-06T13:31:52.097Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "13d583a0d92a04bfbc0e9b7724ec60e2432f5c83"
+        "default": "a70f4abf6c1cf60169c7142e5e3138fecf31560a"
       }
     },
     "triage": {
