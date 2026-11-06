@@ -11,12 +11,19 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { RequestHandlerOptions } from 'msw';
 
-import { ImportPreviewRowStatus, ImportType } from '../model';
+import { ImportPreviewRowStatus, ImportSource, ImportType } from '../model';
 import type {
+  DraftSavedResponse,
+  ImportDraftSummary,
   ImportPreviewResponse,
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
   ImportResultResponse,
+  ImportSolution,
+  JiraImportPreviewResponse,
+  JiraImportResultResponse,
+  JiraPreviewIssuePage,
+  JiraPreviewIssueResponse,
   MessageRef,
 } from '../model';
 
@@ -549,6 +556,289 @@ export const getConfirmImportResponseMock = (
   ...overrideResponse,
 });
 
+export const getPullJiraImportResponseMessageRefMock = (
+  overrideResponse: Partial<MessageRef> = {},
+): MessageRef => ({
+  ...{
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getPullJiraImportResponseMock = (
+  overrideResponse: Partial<Extract<JiraImportPreviewResponse, object>> = {},
+): JiraImportPreviewResponse => ({
+  previewId: faker.number.int(),
+  projectId: faker.number.int(),
+  resolvedFrom: faker.date.past().toISOString().slice(0, 10),
+  resolvedTo: faker.date.past().toISOString().slice(0, 10),
+  issueCount: faker.number.int(),
+  solvedCount: faker.number.int(),
+  draftSavedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    null,
+  ]),
+  message: faker.helpers.arrayElement([{ ...getPullJiraImportResponseMessageRefMock() }, null]),
+  issues: {
+    content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        jiraKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        assignee: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        resolvedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+        hasSolution: faker.datatype.boolean(),
+      }),
+    ),
+    page: {
+      size: faker.number.int(),
+      number: faker.number.int(),
+      totalElements: faker.number.int(),
+      totalPages: faker.number.int(),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getGetJiraPreviewIssuesResponseMock = (
+  overrideResponse: Partial<Extract<JiraPreviewIssuePage, object>> = {},
+): JiraPreviewIssuePage => ({
+  content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      jiraKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      assignee: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      resolvedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+      hasSolution: faker.datatype.boolean(),
+    }),
+  ),
+  page: {
+    size: faker.number.int(),
+    number: faker.number.int(),
+    totalElements: faker.number.int(),
+    totalPages: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetJiraPreviewIssueResponseImportSolutionMock = (
+  overrideResponse: Partial<ImportSolution> = {},
+): ImportSolution => ({
+  ...{
+    symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    workaround: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    scope: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetJiraPreviewIssueResponseMock = (
+  overrideResponse: Partial<Extract<JiraPreviewIssueResponse, object>> = {},
+): JiraPreviewIssueResponse => ({
+  jiraKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  description: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  assignee: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  resolvedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  sourceUrl: faker.internet.url(),
+  comments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      author: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      created: faker.date.past().toISOString().slice(0, 19) + 'Z',
+      body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  solution: faker.helpers.arrayElement([
+    { ...getGetJiraPreviewIssueResponseImportSolutionMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getApplyJiraPreviewSolutionResponseMessageRefMock = (
+  overrideResponse: Partial<MessageRef> = {},
+): MessageRef => ({
+  ...{
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getApplyJiraPreviewSolutionResponseMock = (
+  overrideResponse: Partial<Extract<JiraImportPreviewResponse, object>> = {},
+): JiraImportPreviewResponse => ({
+  previewId: faker.number.int(),
+  projectId: faker.number.int(),
+  resolvedFrom: faker.date.past().toISOString().slice(0, 10),
+  resolvedTo: faker.date.past().toISOString().slice(0, 10),
+  issueCount: faker.number.int(),
+  solvedCount: faker.number.int(),
+  draftSavedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    null,
+  ]),
+  message: faker.helpers.arrayElement([
+    { ...getApplyJiraPreviewSolutionResponseMessageRefMock() },
+    null,
+  ]),
+  issues: {
+    content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        jiraKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        assignee: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        resolvedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+        hasSolution: faker.datatype.boolean(),
+      }),
+    ),
+    page: {
+      size: faker.number.int(),
+      number: faker.number.int(),
+      totalElements: faker.number.int(),
+      totalPages: faker.number.int(),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getRemoveJiraPreviewIssuesResponseMessageRefMock = (
+  overrideResponse: Partial<MessageRef> = {},
+): MessageRef => ({
+  ...{
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getRemoveJiraPreviewIssuesResponseMock = (
+  overrideResponse: Partial<Extract<JiraImportPreviewResponse, object>> = {},
+): JiraImportPreviewResponse => ({
+  previewId: faker.number.int(),
+  projectId: faker.number.int(),
+  resolvedFrom: faker.date.past().toISOString().slice(0, 10),
+  resolvedTo: faker.date.past().toISOString().slice(0, 10),
+  issueCount: faker.number.int(),
+  solvedCount: faker.number.int(),
+  draftSavedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    null,
+  ]),
+  message: faker.helpers.arrayElement([
+    { ...getRemoveJiraPreviewIssuesResponseMessageRefMock() },
+    null,
+  ]),
+  issues: {
+    content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        jiraKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        assignee: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        resolvedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+        hasSolution: faker.datatype.boolean(),
+      }),
+    ),
+    page: {
+      size: faker.number.int(),
+      number: faker.number.int(),
+      totalElements: faker.number.int(),
+      totalPages: faker.number.int(),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getFinishJiraImportResponseMock = (
+  overrideResponse: Partial<Extract<JiraImportResultResponse, object>> = {},
+): JiraImportResultResponse => ({
+  importBatchId: faker.number.int(),
+  created: faker.number.int(),
+  skipped: faker.number.int(),
+  skippedKeys: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  messages: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      params: {
+        [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          faker.number.float({ fractionDigits: 2 }),
+        ]),
+      },
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getSaveImportDraftResponseMock = (
+  overrideResponse: Partial<Extract<DraftSavedResponse, object>> = {},
+): DraftSavedResponse => ({
+  previewId: faker.number.int(),
+  savedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  message: {
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getListImportDraftsResponseMock = (): ImportDraftSummary[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    previewId: faker.number.int(),
+    source: faker.helpers.arrayElement(Object.values(ImportSource)),
+    projectId: faker.number.int(),
+    itemCount: faker.number.int(),
+    savedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  }));
+
 export const getDownloadCsvTemplateMockHandler = (
   overrideResponse?:
     string | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<string> | string),
@@ -738,6 +1028,216 @@ export const getConfirmImportMockHandler = (
     options,
   );
 };
+
+export const getPullJiraImportMockHandler = (
+  overrideResponse?:
+    | JiraImportPreviewResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<JiraImportPreviewResponse> | JiraImportPreviewResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    '*/api/v1/imports/jira',
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPullJiraImportResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetJiraPreviewIssuesMockHandler = (
+  overrideResponse?:
+    | JiraPreviewIssuePage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<JiraPreviewIssuePage> | JiraPreviewIssuePage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/imports/previews/:previewId/issues',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetJiraPreviewIssuesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetJiraPreviewIssueMockHandler = (
+  overrideResponse?:
+    | JiraPreviewIssueResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<JiraPreviewIssueResponse> | JiraPreviewIssueResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/imports/previews/:previewId/issues/:jiraKey',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetJiraPreviewIssueResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getApplyJiraPreviewSolutionMockHandler = (
+  overrideResponse?:
+    | JiraImportPreviewResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<JiraImportPreviewResponse> | JiraImportPreviewResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    '*/api/v1/imports/previews/:previewId/solutions',
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getApplyJiraPreviewSolutionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRemoveJiraPreviewIssuesMockHandler = (
+  overrideResponse?:
+    | JiraImportPreviewResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<JiraImportPreviewResponse> | JiraImportPreviewResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    '*/api/v1/imports/previews/:previewId/remove-issues',
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRemoveJiraPreviewIssuesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getFinishJiraImportMockHandler = (
+  overrideResponse?:
+    | JiraImportResultResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<JiraImportResultResponse> | JiraImportResultResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    '*/api/v1/imports/previews/:previewId/finish',
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getFinishJiraImportResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSaveImportDraftMockHandler = (
+  overrideResponse?:
+    | DraftSavedResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DraftSavedResponse> | DraftSavedResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    '*/api/v1/imports/previews/:previewId/draft',
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSaveImportDraftResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListImportDraftsMockHandler = (
+  overrideResponse?:
+    | ImportDraftSummary[]
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ImportDraftSummary[]> | ImportDraftSummary[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/imports/drafts',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListImportDraftsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteImportDraftMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    '*/api/v1/imports/drafts/:previewId',
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
 export const getImportMock = () => [
   getDownloadCsvTemplateMockHandler(),
   getUploadCsvImportMockHandler(),
@@ -747,4 +1247,13 @@ export const getImportMock = () => [
   getRemoveImportPreviewRowsMockHandler(),
   getFillImportPreviewSolutionMockHandler(),
   getConfirmImportMockHandler(),
+  getPullJiraImportMockHandler(),
+  getGetJiraPreviewIssuesMockHandler(),
+  getGetJiraPreviewIssueMockHandler(),
+  getApplyJiraPreviewSolutionMockHandler(),
+  getRemoveJiraPreviewIssuesMockHandler(),
+  getFinishJiraImportMockHandler(),
+  getSaveImportDraftMockHandler(),
+  getListImportDraftsMockHandler(),
+  getDeleteImportDraftMockHandler(),
 ];
