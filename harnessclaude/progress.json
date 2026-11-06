@@ -158,20 +158,20 @@
         "ticket-embedding-pipeline": "passing",
         "ticket-list-api": "in-progress",
         "ticket-list-connect": "in-progress",
-        "ticket-ranking": "pending",
-        "ticket-search-api": "pending",
+        "ticket-ranking": "passing",
+        "ticket-search-api": "passing",
         "ticket-search-connect": "pending",
         "ticket-feedback-api": "pending",
         "give-feedback-connect": "pending",
         "ticket-suggestion-api": "pending"
       },
-      "lastUpdated": "2026-11-06T14:15:01.547Z",
+      "lastUpdated": "2026-11-06T15:17:32.703Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "198fa83e3ce660d769ab2d12cd2477ed3cda6755"
+        "default": "88b225144e391dc613a30b6c2d9048e4b124c96a"
       }
     },
     "triage": {
