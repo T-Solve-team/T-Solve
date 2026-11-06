@@ -850,14 +850,22 @@ describe('KnowledgeChatbotPage ratings', () => {
     vi.restoreAllMocks();
   });
 
-  it('AC-003.1 shows Helpful and Not helpful under an answer, the MSG109 answer included', async () => {
+  it('AC-003.1 shows Helpful and Not helpful under an answer, the MSG109 answer included (BUG-125)', async () => {
     const { user, box } = await openChatbot();
+    // This case checks answer ratings; typing and Enter behavior have their own AC-001 tests.
+    async function askForRating(question: string) {
+      await user.click(box);
+      await user.paste(question);
+      await user.keyboard('{Enter}');
+      await waitFor(() => expect(box).toHaveValue(''));
+      await waitFor(() => expect(screen.getByRole('button', { name: /Send/ })).toBeEnabled());
+    }
 
-    await ask(user, box, VPN_QUESTION);
+    await askForRating(VPN_QUESTION);
     expect(helpful(false)).toBeEnabled();
     expect(notHelpful(false)).toBeEnabled();
 
-    await ask(user, box, 'Who won the football match yesterday?');
+    await askForRating('Who won the football match yesterday?');
     expect(within(thread()).getAllByRole('button', { name: 'Helpful' })).toHaveLength(2);
     expect(within(thread()).getAllByRole('button', { name: 'Not helpful' })).toHaveLength(2);
   });

@@ -42,8 +42,8 @@ async function clickControl(control: HTMLElement) {
 
 async function settleDecision(client: ReturnType<typeof renderApp>['queryClient']) {
   const cache = client.getMutationCache();
+  await waitFor(() => expect(cache.getAll().length).toBeGreaterThan(0));
   const mutations = cache.getAll();
-  if (!mutations.length) throw new Error('Expected a real review decision mutation');
   await act(async () => {
     await Promise.all(
       mutations.map(
