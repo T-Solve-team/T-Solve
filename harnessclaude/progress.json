@@ -148,9 +148,24 @@
       "features": {
         "ticket-list": "passing",
         "ticket-search": "passing",
-        "give-feedback": "pending"
+        "give-feedback": "pending",
+        "search-public-ids": "in-progress",
+        "ticket-updated-at": "in-progress",
+        "ticket-embedding-schema": "pending",
+        "search-log-schema": "pending",
+        "ticket-feedback-schema": "pending",
+        "visible-scope": "in-progress",
+        "ticket-embedding-pipeline": "pending",
+        "ticket-list-api": "in-progress",
+        "ticket-list-connect": "in-progress",
+        "ticket-ranking": "pending",
+        "ticket-search-api": "pending",
+        "ticket-search-connect": "pending",
+        "ticket-feedback-api": "pending",
+        "give-feedback-connect": "pending",
+        "ticket-suggestion-api": "pending"
       },
-      "lastUpdated": "2026-10-30T15:41:22.397Z",
+      "lastUpdated": "2026-11-06T04:48:52.147Z",
       "branch": "feat/search",
       "repos": [
         "default"
