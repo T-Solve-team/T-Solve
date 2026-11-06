@@ -99,9 +99,17 @@
         "my-solutions-contract": "pending",
         "my-solutions-table": "pending",
         "my-solutions-counters": "pending",
-        "my-solutions-filters": "pending"
+        "my-solutions-filters": "pending",
+        "keycloak-sign-in": "pending",
+        "remove-custom-sign-in": "pending",
+        "account-sub-binding": "pending",
+        "callback-workspace-checks": "pending",
+        "user-role": "pending",
+        "logout-rp-initiated": "pending",
+        "keycloak-provisioning": "pending",
+        "keycloak-theme": "pending"
       },
-      "lastUpdated": "2026-11-04T15:51:41.365Z",
+      "lastUpdated": "2026-11-05T15:33:35.932Z",
       "branch": "feat/identity",
       "repos": [
         "default"
