@@ -598,3 +598,7 @@
 {"ts":"2026-11-06T13:42:35.577Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"dbfaea6041929a88c4c0c5236ebced8a2a1a5491"}
 {"ts":"2026-11-06T13:42:35.614Z","type":"feature-status","module":"ticket-review","feature":"review-storage","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-06T13:42:35.650Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-uuid-compatibility","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T13:54:54.625Z","type":"feature-status","module":"ticket-review","feature":"review-decision-transaction","from":null,"to":"pending"}
+{"ts":"2026-11-06T13:54:54.665Z","type":"feature-status","module":"ticket-review","feature":"review-decision-transaction","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T23:22:03.220Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"32918fb8117f8ea4b849ea342d7382d8cc7c68ea"}
+{"ts":"2026-11-06T23:22:03.281Z","type":"feature-status","module":"ticket-review","feature":"review-decision-transaction","from":"in-progress","to":"evaluating"}

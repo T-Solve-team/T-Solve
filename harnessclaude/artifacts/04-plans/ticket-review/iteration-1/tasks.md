@@ -1,7 +1,7 @@
 ---
 module: ticket-review
 date: 2026-11-01
-total_tasks: 7
+total_tasks: 8
 owner: Dev
 ---
 
@@ -57,20 +57,29 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Dependencies:** Approved STORY-009, current Liquibase baseline and database/02_tenant.sql.
 **Verification:** PostgreSQL upgrade test, import regressions, backend verification and Spotless.
 
-## Task 6: Production Review API (KAN-24)
+## Task 6: Atomic Review decisions (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-decision-transaction
+**Description:** Implement the transaction for AC-009.4–009.8, covering Approve, Reject and Request Changes. Keep it inside the Ticket service boundary so ticket state and decision history share the same transaction. Accept Account and managed Project scope from a trusted internal caller. Keep HTTP integration in Task 7.
+**Files:** Ticket domain model, repository and decision service; decision history entity and repository; PostgreSQL integration tests in the Review test scope.
+**Dependencies:** Task 5. A scoped PostgreSQL test supplies the authorized Account and Project set.
+**Verification:** Real PostgreSQL tests for decisions, rejection of invalid batches, competing decisions and rollback; run backend verification and Spotless.
+
+## Task 7: Production Review API (KAN-24)
 
 **Story:** STORY-009
 **Feature:** review-production-api
 **Description:** Implement AC-009.1–009.8 and AC-009.10 except Jira visibility. Connect the existing queue, eligible IDs, detail and decision routes to persisted data and cover R14.
 **Files:** Review controller, services, tests and existing OpenAPI or web Review files where needed.
-**Dependencies:** Task 5, trusted Workspace binding, authenticated Account and Project Manager membership.
+**Dependencies:** Task 6, trusted Workspace binding, authenticated Account and Project Manager membership.
 **Verification:** Backend authorization, concurrency and rollback tests, plus real web API integration.
 
-## Task 7: Request Changes feedback in Jira (KAN-24)
+## Task 8: Request Changes feedback in Jira (KAN-24)
 
 **Story:** STORY-009
 **Feature:** review-jira-feedback
 **Description:** Complete the Jira clause of AC-009.6 and cover R15.
 **Files:** Jira issue panel and Review feedback boundary and tests.
-**Dependencies:** Task 6 and verified Jira issue and writer context.
+**Dependencies:** Task 7 and verified Jira issue and writer context.
 **Verification:** MSG64 for the writer and denial for an unrelated issue, Account or Workspace.

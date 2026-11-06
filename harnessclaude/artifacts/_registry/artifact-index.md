@@ -4,6 +4,7 @@ Master registry of all artifacts in this workspace.
 
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
+| IMPL-REVIEW-6 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-6-review-decision-transaction.md |
 | IMPL-REVIEW-5 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-5-review-storage.md |
 | IMPL-IMPORT-15 | session-log | import-ticket-list | evaluating | artifacts/05-implementation/import-ticket-list/task-15-import-ticket-uuid-compatibility.md |
 | IMPL-REVIEW-4 | session-log | ticket-review | passing | artifacts/05-implementation/ticket-review/task-4-review-history.md |
