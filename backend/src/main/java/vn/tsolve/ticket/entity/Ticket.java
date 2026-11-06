@@ -68,6 +68,15 @@ public class Ticket {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "updated_at", insertable = false)
+    private Instant updatedAt;
+
+    @Column(name = "rejection_reason", columnDefinition = "text")
+    private String rejectionReason;
+
+    @Column(name = "change_request_comment", columnDefinition = "text")
+    private String changeRequestComment;
+
     protected Ticket() {}
 
     /** An imported ticket: brought in by its Project Manager, so it is Published at once (GBR-23). */
@@ -102,6 +111,13 @@ public class Ticket {
     /** The five Solution sections (GBR-33); Workaround is the only optional one. */
     public record Solution(
             String symptoms, String rootCause, String resolutionSteps, String workaround, String scope) {}
+
+    public void applyReview(TicketStatus outcome, String feedback, Instant decidedAt) {
+        status = outcome;
+        rejectionReason = outcome == TicketStatus.REJECTED ? feedback : null;
+        changeRequestComment = outcome == TicketStatus.CHANGES_REQUESTED ? feedback : null;
+        updatedAt = decidedAt;
+    }
 
     public UUID getId() {
         return id;

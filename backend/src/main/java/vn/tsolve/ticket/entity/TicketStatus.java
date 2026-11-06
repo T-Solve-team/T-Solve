@@ -1,5 +1,8 @@
 package vn.tsolve.ticket.entity;
 
 public enum TicketStatus {
-    PUBLISHED
+    PENDING_REVIEW,
+    PUBLISHED,
+    REJECTED,
+    CHANGES_REQUESTED
 }
