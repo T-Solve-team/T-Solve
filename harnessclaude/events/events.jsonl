@@ -686,3 +686,6 @@
 {"ts":"2026-11-06T19:50:32.989Z","type":"feature-status","module":"ticket-repository","feature":"jira-issue-source","from":"pending","to":"in-progress"}
 {"ts":"2026-11-06T19:57:49.228Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"1b9ea284f35d800fe6e045c507a4bbd2ae44a8c2"}
 {"ts":"2026-11-06T19:57:49.508Z","type":"feature-status","module":"ticket-repository","feature":"jira-issue-source","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T20:00:40.812Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T20:05:14.757Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T20:09:20.998Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"5281b56dcbffc55b277db70bcb30a29d16e149c4"}
