@@ -584,3 +584,5 @@
 {"ts":"2026-11-05T11:28:04.199Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"evaluating","to":"passing"}
 {"ts":"2026-11-05T11:28:41.466Z","type":"quick-closed","what":"Test values for OLLAMA_BASE_URL and OLLAMA_CHAT_MODEL so existing Spring contexts start (KAN-139)","files":["backend/src/test/resources/config/application.yml"]}
 {"ts":"2026-11-05T14:10:40.463Z","type":"commit-recorded","module":"triage","repo":"default","sha":"6cefdf9443d81628a7819c855a363f111cc44cf7"}
+{"ts":"2026-11-06T00:05:07.005Z","type":"quick-opened","what":"KAN-117 cover Suggestion History method security with TSolveUser","files":["backend/src/test/java/vn/tsolve/triage/controller/SuggestionResultControllerTest.java"]}
+{"ts":"2026-11-06T00:17:30.307Z","type":"quick-closed","what":"KAN-117 cover Suggestion History method security with TSolveUser","files":["backend/src/test/java/vn/tsolve/triage/controller/SuggestionResultControllerTest.java"]}
