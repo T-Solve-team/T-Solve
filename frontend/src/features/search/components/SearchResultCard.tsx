@@ -10,6 +10,8 @@ import styles from './SearchResults.module.css';
  * One result of the Search (Figma 6.1, spec AC-002.7): every API text is React text, never HTML (AC-002.14).
  */
 export function SearchResultCard({ result }: { result: TicketSearchResult }) {
+  const resolvedAt = result.resolvedAt === null ? '—' : formatDateTime(result.resolvedAt);
+
   return (
     <article className={styles.card}>
       <Flex vertical gap="small">
@@ -18,7 +20,7 @@ export function SearchResultCard({ result }: { result: TicketSearchResult }) {
         </Link>
         <Flex align="center" gap="middle" wrap>
           <Typography.Text type="secondary">
-            {`${result.project.name} · ${result.department.name} · Resolved ${formatDateTime(result.resolvedAt)}`}
+            {`${result.project.name} · ${result.department.name} · Resolved ${resolvedAt}`}
           </Typography.Text>
           {result.helpfulRate !== null && ( // null = no Feedback yet: no rate (decision Q4, AC-002.8)
             <Typography.Text type="secondary">

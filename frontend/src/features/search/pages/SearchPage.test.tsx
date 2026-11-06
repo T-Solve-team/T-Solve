@@ -448,4 +448,10 @@ describe('SearchPage', () => {
     expect(screen.getByText(excerpt)).toBeInTheDocument();
     expect(results().querySelector('img, b, i, script')).toBeNull();
   });
+
+  it('AC-002.15 shows "Resolved —" when resolvedAt is null', async () => {
+    server.use(onePage([{ ...RESULT, resolvedAt: null }]));
+    await openResults('/search?q=vpn');
+    expect(within(cardOf(RESULT.title)).getByText('ITSUP · IT · Resolved —')).toBeInTheDocument();
+  });
 });
