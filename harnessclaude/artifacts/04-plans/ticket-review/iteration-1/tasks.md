@@ -1,7 +1,7 @@
 ---
 module: ticket-review
 date: 2026-11-01
-total_tasks: 2
+total_tasks: 7
 owner: Dev
 ---
 
@@ -47,3 +47,30 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** frontend/openapi/tsolve-api.yaml; generated API output; frontend/src/features/review/pages/ReviewHistoryPage*; review feature-local hooks/components/mocks and tests; existing review decision/send-back invalidation callers; docs/bug-log.md only for reproduced defects.
 **Dependencies:** Current STORY-008 spec approval; committed KAN-158 and inherited KAN-24 detail. No backend/SSE/Unpublish mutation delivery.
 **Verification:** AC-008.1–008.7 tests and design edge cases; focused tests, trace, full required frontend checks and deterministic generation. No manual browser testing per user. Review before reporting completion and request agreement for feat(review): add review history (KAN-159).
+
+## Task 5: Shared UUID storage for Review (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-storage
+**Description:** Implement AC-009.9 and R13. Evolve the shared Ticket table, add Evidence and Review decision storage, and preserve import rows and event delivery.
+**Files:** Tenant Liquibase changelog, Ticket entity and repository, import decision entity, import confirmation service and event, affected import tests and Review migration integration test.
+**Dependencies:** Approved STORY-009, current Liquibase baseline and database/02_tenant.sql.
+**Verification:** PostgreSQL upgrade test, import regressions, backend verification and Spotless.
+
+## Task 6: Production Review API (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-production-api
+**Description:** Implement AC-009.1–009.8 and AC-009.10 except Jira visibility. Connect the existing queue, eligible IDs, detail and decision routes to persisted data and cover R14.
+**Files:** Review controller, services, tests and existing OpenAPI or web Review files where needed.
+**Dependencies:** Task 5, trusted Workspace binding, authenticated Account and Project Manager membership.
+**Verification:** Backend authorization, concurrency and rollback tests, plus real web API integration.
+
+## Task 7: Request Changes feedback in Jira (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-jira-feedback
+**Description:** Complete the Jira clause of AC-009.6 and cover R15.
+**Files:** Jira issue panel and Review feedback boundary and tests.
+**Dependencies:** Task 6 and verified Jira issue and writer context.
+**Verification:** MSG64 for the writer and denial for an unrelated issue, Account or Workspace.

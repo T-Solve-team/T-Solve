@@ -584,3 +584,17 @@
 {"ts":"2026-11-05T11:28:04.199Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"evaluating","to":"passing"}
 {"ts":"2026-11-05T11:28:41.466Z","type":"quick-closed","what":"Test values for OLLAMA_BASE_URL and OLLAMA_CHAT_MODEL so existing Spring contexts start (KAN-139)","files":["backend/src/test/resources/config/application.yml"]}
 {"ts":"2026-11-05T14:10:40.463Z","type":"commit-recorded","module":"triage","repo":"default","sha":"6cefdf9443d81628a7819c855a363f111cc44cf7"}
+{"ts":"2026-11-06T13:24:56.950Z","type":"spec-approved","module":"ticket-review","specHash":"ee7b222e4b5e768c82849d76a8acb61369acbc989d6520f88d3ebbe51b293bee"}
+{"ts":"2026-11-06T13:29:28.009Z","type":"feature-status","module":"ticket-review","feature":"review-storage","from":null,"to":"pending"}
+{"ts":"2026-11-06T13:29:28.053Z","type":"feature-status","module":"ticket-review","feature":"review-production-api","from":null,"to":"pending"}
+{"ts":"2026-11-06T13:29:28.094Z","type":"feature-status","module":"ticket-review","feature":"review-jira-feedback","from":null,"to":"pending"}
+{"ts":"2026-11-06T13:29:28.141Z","type":"feature-status","module":"ticket-review","feature":"review-storage","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T13:33:33.226Z","type":"spec-approved","module":"import-ticket-list","specHash":"6e1831be5dc824ede9ec0877e9a67e1e04642acdc22bf563cb02d33c0ad63540"}
+{"ts":"2026-11-06T13:34:11.991Z","type":"module-status","module":"import-ticket-list","from":"completed","to":"planned"}
+{"ts":"2026-11-06T13:34:12.025Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-uuid-compatibility","from":null,"to":"pending"}
+{"ts":"2026-11-06T13:34:12.064Z","type":"module-status","module":"import-ticket-list","from":"planned","to":"implementing"}
+{"ts":"2026-11-06T13:34:12.101Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-uuid-compatibility","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T13:42:35.304Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"dbfaea6041929a88c4c0c5236ebced8a2a1a5491"}
+{"ts":"2026-11-06T13:42:35.577Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"dbfaea6041929a88c4c0c5236ebced8a2a1a5491"}
+{"ts":"2026-11-06T13:42:35.614Z","type":"feature-status","module":"ticket-review","feature":"review-storage","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T13:42:35.650Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-uuid-compatibility","from":"in-progress","to":"evaluating"}
