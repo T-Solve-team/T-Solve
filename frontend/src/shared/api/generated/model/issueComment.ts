@@ -6,9 +6,14 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
-import type { ImportSolution } from './importSolution';
 
-export type ApplySolutionRequest = ImportSolution & {
-  /** @minItems 1 */
-  jiraKeys: string[];
-};
+/**
+ * A Jira comment as it was at pull time.
+ */
+export interface IssueComment {
+  /** @nullable */
+  author: string | null;
+  created: string;
+  /** Plain text. */
+  body: string;
+}

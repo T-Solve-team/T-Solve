@@ -993,7 +993,8 @@ paths:
       summary: >
         Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution
         or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a
-        Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
+        Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500). A Jira preview (source
+        JIRA_IMPORT, Finish) instead skips rows whose key became a ticket and returns notice MSG38.
       parameters:
         - $ref: '#/components/parameters/PreviewId'
       responses:
@@ -1019,7 +1020,8 @@ paths:
       operationId: pullJiraImport
       summary: >
         Pulls the resolved Jira issues of one Project that have no Ticket yet (at most 100, oldest first, GBR-15) and
-        returns their Import Preview. Replaces the caller's previous preview that is not a Draft. Missing date = MSG01,
+        returns their Import Preview: source JIRA_IMPORT, import type WITHOUT_SOLUTION, one Needs Solution row per
+        issue. Replaces the caller's previous preview that is not a Draft. Missing date = MSG01,
         invalid range = MSG39 (400); no issue = MSG04 (404); Jira failed = MSG50 (502, Failed Import Batch).
       requestBody:
         required: true
@@ -1033,7 +1035,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JiraImportPreviewResponse'
+                $ref: '#/components/schemas/ImportPreviewResponse'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -1043,134 +1045,6 @@ paths:
         '404':
           $ref: '#/components/responses/Problem'
         '502':
-          $ref: '#/components/responses/Problem'
-  /api/v1/imports/previews/{previewId}/issues:
-    get:
-      tags: [import]
-      operationId: getJiraPreviewIssues
-      summary: One page of the issues of a Jira preview, in resolution-date order.
-      parameters:
-        - $ref: '#/components/parameters/PreviewId'
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Size'
-      responses:
-        '200':
-          description: One page of issues.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JiraPreviewIssuePage'
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          $ref: '#/components/responses/Problem'
-        '404':
-          $ref: '#/components/responses/Problem'
-  /api/v1/imports/previews/{previewId}/issues/{jiraKey}:
-    get:
-      tags: [import]
-      operationId: getJiraPreviewIssue
-      summary: One issue of a Jira preview — the snapshot taken at pull time, with its comments and Solution.
-      parameters:
-        - $ref: '#/components/parameters/PreviewId'
-        - $ref: '#/components/parameters/JiraKey'
-      responses:
-        '200':
-          description: The issue.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JiraPreviewIssueResponse'
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          $ref: '#/components/responses/Problem'
-        '404':
-          $ref: '#/components/responses/Problem'
-  /api/v1/imports/previews/{previewId}/solutions:
-    post:
-      tags: [import]
-      operationId: applyJiraPreviewSolution
-      summary: >
-        Copies one Solution to each listed issue, replacing any Solution it had. Keys no longer in the preview are
-        ignored. A required section missing = MSG01, longer than 10,000 characters in total = MSG02 (400).
-      parameters:
-        - $ref: '#/components/parameters/PreviewId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ApplySolutionRequest'
-      responses:
-        '200':
-          description: The updated preview (counts and the first page of issues).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JiraImportPreviewResponse'
-        '400':
-          $ref: '#/components/responses/Problem'
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          $ref: '#/components/responses/Problem'
-        '404':
-          $ref: '#/components/responses/Problem'
-  /api/v1/imports/previews/{previewId}/remove-issues:
-    post:
-      tags: [import]
-      operationId: removeJiraPreviewIssues
-      summary: Deletes issues from a Jira preview; they are not remembered and can be pulled again. Unknown keys are ignored.
-      parameters:
-        - $ref: '#/components/parameters/PreviewId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RemoveIssuesRequest'
-      responses:
-        '200':
-          description: The updated preview (counts and the first page of issues).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JiraImportPreviewResponse'
-        '400':
-          $ref: '#/components/responses/Problem'
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          $ref: '#/components/responses/Problem'
-        '404':
-          $ref: '#/components/responses/Problem'
-  /api/v1/imports/previews/{previewId}/finish:
-    post:
-      tags: [import]
-      operationId: finishJiraImport
-      summary: >
-        Imports every issue of a Jira preview as a Published ticket (MSG32); issues that became tickets since the pull
-        are skipped (MSG38). An issue without a Solution or no issue left = MSG01 (409); Project no longer Active =
-        MSG40 (409); saving failed = MSG33 (500, Failed Import Batch). Finished already = 404.
-      parameters:
-        - $ref: '#/components/parameters/PreviewId'
-      responses:
-        '200':
-          description: Imported.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JiraImportResultResponse'
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          $ref: '#/components/responses/Problem'
-        '404':
-          $ref: '#/components/responses/Problem'
-        '409':
-          $ref: '#/components/responses/Problem'
-        '500':
           $ref: '#/components/responses/Problem'
   /api/v1/imports/previews/{previewId}/draft:
     post:
@@ -1549,12 +1423,6 @@ components:
       schema:
         type: integer
         format: int64
-    JiraKey:
-      name: jiraKey
-      in: path
-      required: true
-      schema:
-        type: string
   responses:
     Problem:
       description: Error (RFC 9457 Problem Details with an SRS MSG code).
@@ -2413,7 +2281,7 @@ components:
             $ref: '#/components/schemas/RowError'
     ImportPreviewRowResponse:
       type: object
-      description: One preview row in full, read-only.
+      description: One preview row in full.
       required: [rowNo, status, errors]
       properties:
         rowNo:
@@ -2444,6 +2312,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RowError'
+        sourceUrl:
+          type: [string, 'null']
+          format: uri
+          description: Jira only — the issue in Jira.
+        comments:
+          type: array
+          description: Jira only — the comments at pull time; empty for CSV.
+          items:
+            $ref: '#/components/schemas/IssueComment'
     ImportPreviewRowPage:
       type: object
       required: [content, page]
@@ -2466,9 +2343,26 @@ components:
           type: string
           format: uuid
         fileName:
-          type: string
+          type: [string, 'null']
+          description: Null for a Jira preview.
         importType:
           $ref: '#/components/schemas/ImportType'
+        source:
+          description: Omitted = CSV.
+          allOf:
+            - $ref: '#/components/schemas/ImportSource'
+        resolvedFrom:
+          type: [string, 'null']
+          format: date
+          description: Jira only.
+        resolvedTo:
+          type: [string, 'null']
+          format: date
+          description: Jira only.
+        draftSavedAt:
+          type: [string, 'null']
+          format: date-time
+          description: Null when the preview is not a Draft.
         validCount:
           type: integer
         errorCount:
@@ -2478,7 +2372,9 @@ components:
         needsSolutionCount:
           type: integer
         message:
-          description: MSG30 with {count} when at least one row is an Error; otherwise null.
+          description: >
+            MSG30 with {count} when at least one row is an Error (CSV); MSG35 when more Jira issues match the date
+            range; otherwise null.
           oneOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
@@ -2526,16 +2422,21 @@ components:
           description: Tickets published.
         skipped:
           type: integer
-          description: Error rows plus Removed rows.
+          description: Error rows plus Removed rows (CSV); issues skipped because they already had a ticket (Jira).
         message:
           $ref: '#/components/schemas/MessageRef'
+        notice:
+          description: Jira only — MSG38 with {count} and {issue_keys} when issues were skipped; otherwise null.
+          oneOf:
+            - $ref: '#/components/schemas/MessageRef'
+            - type: 'null'
     JiraPullRequest:
       type: object
       required: [projectId, resolvedFrom, resolvedTo]
       properties:
         projectId:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
         resolvedFrom:
           type: [string, 'null']
           format: date
@@ -2544,34 +2445,9 @@ components:
           type: [string, 'null']
           format: date
           description: Vietnam time, not before resolvedFrom and not in the future (MSG39).
-    JiraPreviewIssueSummary:
+    IssueComment:
       type: object
-      required: [jiraKey, summary, assignee, resolvedAt, hasSolution]
-      properties:
-        jiraKey:
-          type: string
-        summary:
-          type: string
-        assignee:
-          type: [string, 'null']
-          description: Jira display name at pull time; null when unassigned.
-        resolvedAt:
-          type: string
-          format: date-time
-        hasSolution:
-          type: boolean
-    JiraPreviewIssuePage:
-      type: object
-      required: [content, page]
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/JiraPreviewIssueSummary'
-        page:
-          $ref: '#/components/schemas/PageMetadata'
-    JiraIssueComment:
-      type: object
+      description: A Jira comment as it was at pull time.
       required: [author, created, body]
       properties:
         author:
@@ -2582,129 +2458,12 @@ components:
         body:
           type: string
           description: Plain text.
-    ImportSolution:
-      type: object
-      description: The five Solution sections (GBR-33); every section except workaround is required.
-      required: [symptoms, rootCause, resolutionSteps, scope]
-      properties:
-        symptoms:
-          type: string
-        rootCause:
-          type: string
-        resolutionSteps:
-          type: string
-        workaround:
-          type: [string, 'null']
-        scope:
-          type: string
-    JiraPreviewIssueResponse:
-      type: object
-      required: [jiraKey, summary, description, assignee, resolvedAt, sourceUrl, comments, solution]
-      properties:
-        jiraKey:
-          type: string
-        summary:
-          type: string
-        description:
-          type: [string, 'null']
-          description: Plain text.
-        assignee:
-          type: [string, 'null']
-        resolvedAt:
-          type: string
-          format: date-time
-        sourceUrl:
-          type: string
-          format: uri
-        comments:
-          type: array
-          items:
-            $ref: '#/components/schemas/JiraIssueComment'
-        solution:
-          description: Null until a Solution is applied.
-          oneOf:
-            - $ref: '#/components/schemas/ImportSolution'
-            - type: 'null'
-    JiraImportPreviewResponse:
-      type: object
-      required: [previewId, projectId, resolvedFrom, resolvedTo, issueCount, solvedCount, draftSavedAt, issues]
-      properties:
-        previewId:
-          type: integer
-          format: int64
-        projectId:
-          type: integer
-          format: int64
-        resolvedFrom:
-          type: string
-          format: date
-        resolvedTo:
-          type: string
-          format: date
-        issueCount:
-          type: integer
-        solvedCount:
-          type: integer
-          description: Issues that have a Solution.
-        draftSavedAt:
-          type: [string, 'null']
-          format: date-time
-          description: Null when the preview is not a Draft.
-        message:
-          description: MSG35 when more issues match the date range; otherwise null.
-          oneOf:
-            - $ref: '#/components/schemas/MessageRef'
-            - type: 'null'
-        issues:
-          $ref: '#/components/schemas/JiraPreviewIssuePage'
-    ApplySolutionRequest:
-      allOf:
-        - $ref: '#/components/schemas/ImportSolution'
-        - type: object
-          required: [jiraKeys]
-          properties:
-            jiraKeys:
-              type: array
-              minItems: 1
-              items:
-                type: string
-    RemoveIssuesRequest:
-      type: object
-      required: [jiraKeys]
-      properties:
-        jiraKeys:
-          type: array
-          minItems: 1
-          items:
-            type: string
-    JiraImportResultResponse:
-      type: object
-      required: [importBatchId, created, skipped, skippedKeys, messages]
-      properties:
-        importBatchId:
-          type: integer
-          format: int64
-        created:
-          type: integer
-          description: Tickets published.
-        skipped:
-          type: integer
-          description: Issues that already had a ticket at Finish.
-        skippedKeys:
-          type: array
-          items:
-            type: string
-        messages:
-          type: array
-          description: MSG32, plus MSG38 when skipped > 0 (only MSG38 when nothing was published).
-          items:
-            $ref: '#/components/schemas/MessageRef'
     ImportSource:
       type: string
       enum: [JIRA_IMPORT, CSV]
     ImportDraftSummary:
       type: object
-      required: [previewId, source, projectId, itemCount, savedAt]
+      required: [previewId, source, projectId, rowCount, savedAt]
       properties:
         previewId:
           type: integer
@@ -2712,11 +2471,10 @@ components:
         source:
           $ref: '#/components/schemas/ImportSource'
         projectId:
+          type: string
+          format: uuid
+        rowCount:
           type: integer
-          format: int64
-        itemCount:
-          type: integer
-          description: Issues (Jira) or rows (CSV) in the Draft.
         savedAt:
           type: string
           format: date-time

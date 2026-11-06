@@ -11,8 +11,7 @@ import type { ImportSource } from './importSource';
 export interface ImportDraftSummary {
   previewId: number;
   source: ImportSource;
-  projectId: number;
-  /** Issues (Jira) or rows (CSV) in the Draft. */
-  itemCount: number;
+  projectId: string;
+  rowCount: number;
   savedAt: string;
 }

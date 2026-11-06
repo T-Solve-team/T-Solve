@@ -27,3 +27,23 @@
 
 ### Next up
 Task 2 — jira-import-schema
+
+## Session 2026-11-07 (redo after stacking on PR #110)
+### Working on: jira-import-contract (fixing)
+- The branch was rebased onto PR #110 and the spec changed to D7 (a Jira issue is a row of the CSV Import Preview),
+  so the first contract no longer fits. Removed: `GET …/issues`, `GET …/issues/{jiraKey}`, `POST …/solutions`,
+  `POST …/remove-issues`, `POST …/finish`, parameter `JiraKey`, schemas `JiraImportPreviewResponse`,
+  `JiraPreviewIssuePage`, `JiraPreviewIssueSummary`, `JiraPreviewIssueResponse`, `ImportSolution`,
+  `ApplySolutionRequest`, `RemoveIssuesRequest`, `JiraImportResultResponse`; `JiraIssueComment` renamed `IssueComment`.
+- `POST /imports/jira` takes `projectId` as a UUID and returns `ImportPreviewResponse` (import type WITHOUT_SOLUTION,
+  source JIRA_IMPORT). `ImportDraftSummary.itemCount` → `rowCount`, `projectId` UUID.
+- Shared schemas: `ImportPreviewResponse` + `source` (optional, omitted = CSV), `resolvedFrom`, `resolvedTo`,
+  `draftSavedAt`, `fileName` nullable, message also MSG35; `ImportPreviewRowResponse` + `sourceUrl`, `comments`
+  (optional); `ImportResultResponse` + `notice` (MSG38). Confirm's summary names the Jira behaviour.
+- `source` and `comments` are optional, not required, so the CSV mocks and screens of PR #110 keep compiling;
+  the backend will always send them. `fileName` nullable needed two `?.` in `features/ticket-import/mocks/handlers.ts`.
+- Verify (Node 24.22.2, `frontend/`): `format:check` 0, `lint` 0 (only the old `TicketListFilters.tsx` warning),
+  `typecheck` 0, `test` 0 — 80 files, 1419 tests passed, `build` 0; `generate:api` twice → identical output.
+
+### Next up
+Task 2 — jira-import-schema

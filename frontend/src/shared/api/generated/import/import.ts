@@ -23,24 +23,17 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ApplySolutionRequest,
   DownloadCsvTemplateParams,
   DraftSavedResponse,
   FillSolutionRequest,
   GetImportPreviewRowsParams,
-  GetJiraPreviewIssuesParams,
   ImportDraftSummary,
   ImportPreviewResponse,
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
   ImportResultResponse,
-  JiraImportPreviewResponse,
-  JiraImportResultResponse,
-  JiraPreviewIssuePage,
-  JiraPreviewIssueResponse,
   JiraPullRequest,
   ProblemResponse,
-  RemoveIssuesRequest,
   RemoveRowsRequest,
   UploadCsvImportBody,
 } from '../model';
@@ -975,7 +968,7 @@ export const getConfirmImportUrl = (previewId: number) => {
 };
 
 /**
- * @summary Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
+ * @summary Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500). A Jira preview (source JIRA_IMPORT, Finish) instead skips rows whose key became a ticket and returns notice MSG38.
 
  */
 export const confirmImport = async (
@@ -1032,7 +1025,7 @@ export type ConfirmImportMutationError = ErrorType<ProblemResponse>;
 export type ConfirmImportMutationVariables = { previewId: number };
 
 /**
- * @summary Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
+ * @summary Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500). A Jira preview (source JIRA_IMPORT, Finish) instead skips rows whose key became a ticket and returns notice MSG38.
 
  */
 export const useConfirmImport = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
@@ -1059,13 +1052,13 @@ export const getPullJiraImportUrl = () => {
 };
 
 /**
- * @summary Pulls the resolved Jira issues of one Project that have no Ticket yet (at most 100, oldest first, GBR-15) and returns their Import Preview. Replaces the caller's previous preview that is not a Draft. Missing date = MSG01, invalid range = MSG39 (400); no issue = MSG04 (404); Jira failed = MSG50 (502, Failed Import Batch).
+ * @summary Pulls the resolved Jira issues of one Project that have no Ticket yet (at most 100, oldest first, GBR-15) and returns their Import Preview: source JIRA_IMPORT, import type WITHOUT_SOLUTION, one Needs Solution row per issue. Replaces the caller's previous preview that is not a Draft. Missing date = MSG01, invalid range = MSG39 (400); no issue = MSG04 (404); Jira failed = MSG50 (502, Failed Import Batch).
 
  */
 export const pullJiraImport = async (
   jiraPullRequest: JiraPullRequest,
   options?: Parameters<typeof http>[1],
-): Promise<JiraImportPreviewResponse> => {
+): Promise<ImportPreviewResponse> => {
   const getHeaders = (
     h?: NonNullable<RequestInit['headers']>,
   ): Record<string, string | readonly string[]> => {
@@ -1085,7 +1078,7 @@ export const pullJiraImport = async (
     }
     return headers;
   };
-  return http<JiraImportPreviewResponse>(getPullJiraImportUrl(), {
+  return http<ImportPreviewResponse>(getPullJiraImportUrl(), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
@@ -1137,7 +1130,7 @@ export type PullJiraImportMutationError = ErrorType<ProblemResponse>;
 export type PullJiraImportMutationVariables = { data: JiraPullRequest };
 
 /**
- * @summary Pulls the resolved Jira issues of one Project that have no Ticket yet (at most 100, oldest first, GBR-15) and returns their Import Preview. Replaces the caller's previous preview that is not a Draft. Missing date = MSG01, invalid range = MSG39 (400); no issue = MSG04 (404); Jira failed = MSG50 (502, Failed Import Batch).
+ * @summary Pulls the resolved Jira issues of one Project that have no Ticket yet (at most 100, oldest first, GBR-15) and returns their Import Preview: source JIRA_IMPORT, import type WITHOUT_SOLUTION, one Needs Solution row per issue. Replaces the caller's previous preview that is not a Draft. Missing date = MSG01, invalid range = MSG39 (400); no issue = MSG04 (404); Jira failed = MSG50 (502, Failed Import Batch).
 
  */
 export const usePullJiraImport = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
@@ -1158,626 +1151,6 @@ export const usePullJiraImport = <TError = ErrorType<ProblemResponse>, TContext 
   TContext
 > => {
   return useMutation(getPullJiraImportMutationOptions(options), queryClient);
-};
-export const getGetJiraPreviewIssuesUrl = (
-  previewId: number,
-  params?: GetJiraPreviewIssuesParams,
-) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value));
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0
-    ? `/api/v1/imports/previews/${previewId}/issues?${stringifiedParams}`
-    : `/api/v1/imports/previews/${previewId}/issues`;
-};
-
-/**
- * @summary One page of the issues of a Jira preview, in resolution-date order.
- */
-export const getJiraPreviewIssues = async (
-  previewId: number,
-  params?: GetJiraPreviewIssuesParams,
-  options?: Parameters<typeof http>[1],
-): Promise<JiraPreviewIssuePage> => {
-  return http<JiraPreviewIssuePage>(getGetJiraPreviewIssuesUrl(previewId, params), {
-    ...options,
-    method: 'GET',
-  });
-};
-
-export const getGetJiraPreviewIssuesQueryKey = (
-  previewId: number,
-  params?: GetJiraPreviewIssuesParams,
-) => {
-  return [`/api/v1/imports/previews/${previewId}/issues`, ...(params ? [params] : [])] as const;
-};
-
-export const getGetJiraPreviewIssuesQueryOptions = <
-  TData = Awaited<ReturnType<typeof getJiraPreviewIssues>>,
-  TError = ErrorType<ProblemResponse>,
->(
-  previewId: number,
-  params?: GetJiraPreviewIssuesParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getJiraPreviewIssues>>, TError, TData>
-    >;
-    request?: SecondParameter<typeof http>;
-  },
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey = queryOptions?.queryKey ?? getGetJiraPreviewIssuesQueryKey(previewId, params);
-
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJiraPreviewIssues>>> = ({ signal }) =>
-    getJiraPreviewIssues(previewId, params, { signal, ...requestOptions });
-
-  const customOptions = withBackgroundMarking({
-    queryKey,
-    queryFn,
-    enabled: previewId !== null && previewId !== undefined,
-    ...queryOptions,
-  });
-
-  return customOptions as UseQueryOptions<
-    Awaited<ReturnType<typeof getJiraPreviewIssues>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type GetJiraPreviewIssuesQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getJiraPreviewIssues>>
->;
-export type GetJiraPreviewIssuesQueryError = ErrorType<ProblemResponse>;
-
-export function useGetJiraPreviewIssues<
-  TData = Awaited<ReturnType<typeof getJiraPreviewIssues>>,
-  TError = ErrorType<ProblemResponse>,
->(
-  previewId: number,
-  params: undefined | GetJiraPreviewIssuesParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getJiraPreviewIssues>>, TError, TData>
-    > &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getJiraPreviewIssues>>,
-          TError,
-          Awaited<ReturnType<typeof getJiraPreviewIssues>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetJiraPreviewIssues<
-  TData = Awaited<ReturnType<typeof getJiraPreviewIssues>>,
-  TError = ErrorType<ProblemResponse>,
->(
-  previewId: number,
-  params?: GetJiraPreviewIssuesParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getJiraPreviewIssues>>, TError, TData>
-    > &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getJiraPreviewIssues>>,
-          TError,
-          Awaited<ReturnType<typeof getJiraPreviewIssues>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetJiraPreviewIssues<
-  TData = Awaited<ReturnType<typeof getJiraPreviewIssues>>,
-  TError = ErrorType<ProblemResponse>,
->(
-  previewId: number,
-  params?: GetJiraPreviewIssuesParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getJiraPreviewIssues>>, TError, TData>
-    >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-/**
- * @summary One page of the issues of a Jira preview, in resolution-date order.
- */
-
-export function useGetJiraPreviewIssues<
-  TData = Awaited<ReturnType<typeof getJiraPreviewIssues>>,
-  TError = ErrorType<ProblemResponse>,
->(
-  previewId: number,
-  params?: GetJiraPreviewIssuesParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getJiraPreviewIssues>>, TError, TData>
-    >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getGetJiraPreviewIssuesQueryOptions(previewId, params, options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-export const getGetJiraPreviewIssueUrl = (previewId: number, jiraKey: string) => {
-  return `/api/v1/imports/previews/${previewId}/issues/${jiraKey}`;
-};
-
-/**
- * @summary One issue of a Jira preview — the snapshot taken at pull time, with its comments and Solution.
- */
-export const getJiraPreviewIssue = async (
-  previewId: number,
-  jiraKey: string,
-  options?: Parameters<typeof http>[1],
-): Promise<JiraPreviewIssueResponse> => {
-  return http<JiraPreviewIssueResponse>(getGetJiraPreviewIssueUrl(previewId, jiraKey), {
-    ...options,
-    method: 'GET',
-  });
-};
-
-export const getGetJiraPreviewIssueQueryKey = (previewId: number, jiraKey: string) => {
-  return [`/api/v1/imports/previews/${previewId}/issues/${jiraKey}`] as const;
-};
-
-export const getGetJiraPreviewIssueQueryOptions = <
-  TData = Awaited<ReturnType<typeof getJiraPreviewIssue>>,
-  TError = ErrorType<ProblemResponse>,
->(
-  previewId: number,
-  jiraKey: string,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getJiraPreviewIssue>>, TError, TData>
-    >;
-    request?: SecondParameter<typeof http>;
-  },
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey = queryOptions?.queryKey ?? getGetJiraPreviewIssueQueryKey(previewId, jiraKey);
-
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJiraPreviewIssue>>> = ({ signal }) =>
-    getJiraPreviewIssue(previewId, jiraKey, { signal, ...requestOptions });
-
-  const customOptions = withBackgroundMarking({
-    queryKey,
-    queryFn,
-    enabled:
-      previewId !== null && previewId !== undefined && jiraKey !== null && jiraKey !== undefined,
-    ...queryOptions,
-  });
-
-  return customOptions as UseQueryOptions<
-    Awaited<ReturnType<typeof getJiraPreviewIssue>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type GetJiraPreviewIssueQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getJiraPreviewIssue>>
->;
-export type GetJiraPreviewIssueQueryError = ErrorType<ProblemResponse>;
-
-export function useGetJiraPreviewIssue<
-  TData = Awaited<ReturnType<typeof getJiraPreviewIssue>>,
-  TError = ErrorType<ProblemResponse>,
->(
-  previewId: number,
-  jiraKey: string,
-  options: {
-    query: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getJiraPreviewIssue>>, TError, TData>
-    > &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getJiraPreviewIssue>>,
-          TError,
-          Awaited<ReturnType<typeof getJiraPreviewIssue>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetJiraPreviewIssue<
-  TData = Awaited<ReturnType<typeof getJiraPreviewIssue>>,
-  TError = ErrorType<ProblemResponse>,
->(
-  previewId: number,
-  jiraKey: string,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getJiraPreviewIssue>>, TError, TData>
-    > &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getJiraPreviewIssue>>,
-          TError,
-          Awaited<ReturnType<typeof getJiraPreviewIssue>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetJiraPreviewIssue<
-  TData = Awaited<ReturnType<typeof getJiraPreviewIssue>>,
-  TError = ErrorType<ProblemResponse>,
->(
-  previewId: number,
-  jiraKey: string,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getJiraPreviewIssue>>, TError, TData>
-    >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-/**
- * @summary One issue of a Jira preview — the snapshot taken at pull time, with its comments and Solution.
- */
-
-export function useGetJiraPreviewIssue<
-  TData = Awaited<ReturnType<typeof getJiraPreviewIssue>>,
-  TError = ErrorType<ProblemResponse>,
->(
-  previewId: number,
-  jiraKey: string,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getJiraPreviewIssue>>, TError, TData>
-    >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getGetJiraPreviewIssueQueryOptions(previewId, jiraKey, options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-export const getApplyJiraPreviewSolutionUrl = (previewId: number) => {
-  return `/api/v1/imports/previews/${previewId}/solutions`;
-};
-
-/**
- * @summary Copies one Solution to each listed issue, replacing any Solution it had. Keys no longer in the preview are ignored. A required section missing = MSG01, longer than 10,000 characters in total = MSG02 (400).
-
- */
-export const applyJiraPreviewSolution = async (
-  previewId: number,
-  applySolutionRequest: ApplySolutionRequest,
-  options?: Parameters<typeof http>[1],
-): Promise<JiraImportPreviewResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit['headers']>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-  return http<JiraImportPreviewResponse>(getApplyJiraPreviewSolutionUrl(previewId), {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(applySolutionRequest),
-  });
-};
-
-export const getApplyJiraPreviewSolutionMutationKey = () => ['applyJiraPreviewSolution'] as const;
-
-export const getApplyJiraPreviewSolutionMutationOptions = <
-  TError = ErrorType<ProblemResponse>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof applyJiraPreviewSolution>>,
-    TError,
-    ApplyJiraPreviewSolutionMutationVariables,
-    TContext
-  >;
-  request?: SecondParameter<typeof http>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof applyJiraPreviewSolution>>,
-  TError,
-  ApplyJiraPreviewSolutionMutationVariables,
-  TContext
-> => {
-  const mutationKey = getApplyJiraPreviewSolutionMutationKey();
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof applyJiraPreviewSolution>>,
-    ApplyJiraPreviewSolutionMutationVariables
-  > = (props) => {
-    const { previewId, data } = props ?? {};
-
-    return applyJiraPreviewSolution(previewId, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type ApplyJiraPreviewSolutionMutationResult = NonNullable<
-  Awaited<ReturnType<typeof applyJiraPreviewSolution>>
->;
-export type ApplyJiraPreviewSolutionMutationBody = ApplySolutionRequest;
-export type ApplyJiraPreviewSolutionMutationError = ErrorType<ProblemResponse>;
-export type ApplyJiraPreviewSolutionMutationVariables = {
-  previewId: number;
-  data: ApplySolutionRequest;
-};
-
-/**
- * @summary Copies one Solution to each listed issue, replacing any Solution it had. Keys no longer in the preview are ignored. A required section missing = MSG01, longer than 10,000 characters in total = MSG02 (400).
-
- */
-export const useApplyJiraPreviewSolution = <
-  TError = ErrorType<ProblemResponse>,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof applyJiraPreviewSolution>>,
-      TError,
-      ApplyJiraPreviewSolutionMutationVariables,
-      TContext
-    >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof applyJiraPreviewSolution>>,
-  TError,
-  ApplyJiraPreviewSolutionMutationVariables,
-  TContext
-> => {
-  return useMutation(getApplyJiraPreviewSolutionMutationOptions(options), queryClient);
-};
-export const getRemoveJiraPreviewIssuesUrl = (previewId: number) => {
-  return `/api/v1/imports/previews/${previewId}/remove-issues`;
-};
-
-/**
- * @summary Deletes issues from a Jira preview; they are not remembered and can be pulled again. Unknown keys are ignored.
- */
-export const removeJiraPreviewIssues = async (
-  previewId: number,
-  removeIssuesRequest: RemoveIssuesRequest,
-  options?: Parameters<typeof http>[1],
-): Promise<JiraImportPreviewResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit['headers']>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-  return http<JiraImportPreviewResponse>(getRemoveJiraPreviewIssuesUrl(previewId), {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(removeIssuesRequest),
-  });
-};
-
-export const getRemoveJiraPreviewIssuesMutationKey = () => ['removeJiraPreviewIssues'] as const;
-
-export const getRemoveJiraPreviewIssuesMutationOptions = <
-  TError = ErrorType<ProblemResponse>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof removeJiraPreviewIssues>>,
-    TError,
-    RemoveJiraPreviewIssuesMutationVariables,
-    TContext
-  >;
-  request?: SecondParameter<typeof http>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof removeJiraPreviewIssues>>,
-  TError,
-  RemoveJiraPreviewIssuesMutationVariables,
-  TContext
-> => {
-  const mutationKey = getRemoveJiraPreviewIssuesMutationKey();
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof removeJiraPreviewIssues>>,
-    RemoveJiraPreviewIssuesMutationVariables
-  > = (props) => {
-    const { previewId, data } = props ?? {};
-
-    return removeJiraPreviewIssues(previewId, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type RemoveJiraPreviewIssuesMutationResult = NonNullable<
-  Awaited<ReturnType<typeof removeJiraPreviewIssues>>
->;
-export type RemoveJiraPreviewIssuesMutationBody = RemoveIssuesRequest;
-export type RemoveJiraPreviewIssuesMutationError = ErrorType<ProblemResponse>;
-export type RemoveJiraPreviewIssuesMutationVariables = {
-  previewId: number;
-  data: RemoveIssuesRequest;
-};
-
-/**
- * @summary Deletes issues from a Jira preview; they are not remembered and can be pulled again. Unknown keys are ignored.
- */
-export const useRemoveJiraPreviewIssues = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof removeJiraPreviewIssues>>,
-      TError,
-      RemoveJiraPreviewIssuesMutationVariables,
-      TContext
-    >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof removeJiraPreviewIssues>>,
-  TError,
-  RemoveJiraPreviewIssuesMutationVariables,
-  TContext
-> => {
-  return useMutation(getRemoveJiraPreviewIssuesMutationOptions(options), queryClient);
-};
-export const getFinishJiraImportUrl = (previewId: number) => {
-  return `/api/v1/imports/previews/${previewId}/finish`;
-};
-
-/**
- * @summary Imports every issue of a Jira preview as a Published ticket (MSG32); issues that became tickets since the pull are skipped (MSG38). An issue without a Solution or no issue left = MSG01 (409); Project no longer Active = MSG40 (409); saving failed = MSG33 (500, Failed Import Batch). Finished already = 404.
-
- */
-export const finishJiraImport = async (
-  previewId: number,
-  options?: Parameters<typeof http>[1],
-): Promise<JiraImportResultResponse> => {
-  return http<JiraImportResultResponse>(getFinishJiraImportUrl(previewId), {
-    ...options,
-    method: 'POST',
-  });
-};
-
-export const getFinishJiraImportMutationKey = () => ['finishJiraImport'] as const;
-
-export const getFinishJiraImportMutationOptions = <
-  TError = ErrorType<ProblemResponse>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof finishJiraImport>>,
-    TError,
-    FinishJiraImportMutationVariables,
-    TContext
-  >;
-  request?: SecondParameter<typeof http>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof finishJiraImport>>,
-  TError,
-  FinishJiraImportMutationVariables,
-  TContext
-> => {
-  const mutationKey = getFinishJiraImportMutationKey();
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof finishJiraImport>>,
-    FinishJiraImportMutationVariables
-  > = (props) => {
-    const { previewId } = props ?? {};
-
-    return finishJiraImport(previewId, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type FinishJiraImportMutationResult = NonNullable<
-  Awaited<ReturnType<typeof finishJiraImport>>
->;
-
-export type FinishJiraImportMutationError = ErrorType<ProblemResponse>;
-export type FinishJiraImportMutationVariables = { previewId: number };
-
-/**
- * @summary Imports every issue of a Jira preview as a Published ticket (MSG32); issues that became tickets since the pull are skipped (MSG38). An issue without a Solution or no issue left = MSG01 (409); Project no longer Active = MSG40 (409); saving failed = MSG33 (500, Failed Import Batch). Finished already = 404.
-
- */
-export const useFinishJiraImport = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof finishJiraImport>>,
-      TError,
-      FinishJiraImportMutationVariables,
-      TContext
-    >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof finishJiraImport>>,
-  TError,
-  FinishJiraImportMutationVariables,
-  TContext
-> => {
-  return useMutation(getFinishJiraImportMutationOptions(options), queryClient);
 };
 export const getSaveImportDraftUrl = (previewId: number) => {
   return `/api/v1/imports/previews/${previewId}/draft`;

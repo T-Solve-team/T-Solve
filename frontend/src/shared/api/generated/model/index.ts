@@ -7,7 +7,6 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 
-export * from './applySolutionRequest';
 export * from './approveTicketsRequest';
 export * from './auditAction';
 export * from './auditEntry';
@@ -38,7 +37,6 @@ export * from './getAuditEventsParams';
 export * from './getExpiredTicketIdsParams';
 export * from './getExpiredTicketsParams';
 export * from './getImportPreviewRowsParams';
-export * from './getJiraPreviewIssuesParams';
 export * from './getMySolutionsParams';
 export * from './getReviewHistoryParams';
 export * from './getReviewQueueParams';
@@ -54,19 +52,13 @@ export * from './importPreviewRowResponse';
 export * from './importPreviewRowStatus';
 export * from './importPreviewRowSummary';
 export * from './importResultResponse';
-export * from './importSolution';
 export * from './importSource';
 export * from './importType';
+export * from './issueComment';
 export * from './issueCreatedPayload';
 export * from './issueCreatedPayloadIssue';
 export * from './issueCreatedPayloadIssueFields';
 export * from './issueCreatedPayloadIssueFieldsProject';
-export * from './jiraImportPreviewResponse';
-export * from './jiraImportResultResponse';
-export * from './jiraIssueComment';
-export * from './jiraPreviewIssuePage';
-export * from './jiraPreviewIssueResponse';
-export * from './jiraPreviewIssueSummary';
 export * from './jiraPullRequest';
 export * from './listUnavailableCitedDocumentsParams';
 export * from './messageRef';
@@ -87,7 +79,6 @@ export * from './projectMembership';
 export * from './projectRef';
 export * from './projectRole';
 export * from './rejectTicketsRequest';
-export * from './removeIssuesRequest';
 export * from './removeRowsRequest';
 export * from './requestChangesRequest';
 export * from './reviewDecision';

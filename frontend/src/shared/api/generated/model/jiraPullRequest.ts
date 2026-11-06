@@ -8,7 +8,7 @@
  */
 
 export interface JiraPullRequest {
-  projectId: number;
+  projectId: string;
   /**
    * Vietnam time; null = MSG01.
    * @nullable

@@ -98,8 +98,8 @@ export const handlers: HttpHandler[] = [
     if (!isCurrent(params.previewId)) return problem(404, 'MSG04');
     const { validCount, errorCount, removedCount } = previewResponse(preview);
     if (validCount === 0) return problem(409, 'MSG30', { params: { count: errorCount } });
-    if (preview.fileName.includes('inactive-project')) return problem(409, 'MSG40');
-    if (preview.fileName.includes('import-fails')) return problem(500, 'MSG33');
+    if (preview.fileName?.includes('inactive-project')) return problem(409, 'MSG40');
+    if (preview.fileName?.includes('import-fails')) return problem(500, 'MSG33');
     isConfirmed = true;
     lastBatchId += 1;
     const created = validCount;
