@@ -8,10 +8,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import vn.tsolve.project.service.ProjectService;
+import vn.tsolve.tracker.client.AdfTextExtractor;
 import vn.tsolve.tracker.dto.IssueCreatedPayload;
+import vn.tsolve.tracker.dto.SuggestionJobRequest;
 import vn.tsolve.tracker.entity.SuggestionResult;
 import vn.tsolve.tracker.repository.SuggestionResultRepository;
 import vn.tsolve.tracker.service.IssueCreatedService;
+import vn.tsolve.tracker.service.SuggestionJobQueue;
 
 @Service
 public class IssueCreatedServiceImpl implements IssueCreatedService {
@@ -22,15 +25,20 @@ public class IssueCreatedServiceImpl implements IssueCreatedService {
 
     private final ProjectService projectService;
     private final SuggestionResultRepository suggestionResultRepository;
+    private final SuggestionJobQueue suggestionJobQueue;
 
     public IssueCreatedServiceImpl(
-            ProjectService projectService, SuggestionResultRepository suggestionResultRepository) {
+            ProjectService projectService,
+            SuggestionResultRepository suggestionResultRepository,
+            SuggestionJobQueue suggestionJobQueue) {
         this.projectService = projectService;
         this.suggestionResultRepository = suggestionResultRepository;
+        this.suggestionJobQueue = suggestionJobQueue;
     }
 
     // Not @Transactional: the insert runs in the repository's own transaction, so a duplicate rolls back only
-    // that insert and can still be answered 202 (edge cases 11, 12).
+    // that insert and can still be answered 202 (edge cases 11, 12), and the row is committed before the job is
+    // queued (AC-011.1).
     @Override
     public void receive(IssueCreatedPayload payload) {
         Optional<Long> projectId = projectService.findActiveIdByJiraProjectKey(payload.projectKey());
@@ -47,7 +55,14 @@ public class IssueCreatedServiceImpl implements IssueCreatedService {
                 throw e;
             }
             log.info("Issue created already recorded: {}", payload.issueKey());
+            return;
         }
+        // Labels are not looked at: an issue created by the Chatbot is suggested like any other (AC-011.8).
+        suggestionJobQueue.enqueue(new SuggestionJobRequest(
+                payload.issueKey(),
+                projectId.get(),
+                payload.summary(),
+                AdfTextExtractor.toText(payload.description())));
     }
 
     private static boolean isDuplicate(DataIntegrityViolationException e) {
