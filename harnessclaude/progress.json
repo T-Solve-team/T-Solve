@@ -167,13 +167,13 @@
         "jira-import-preview-page": "pending",
         "jira-import-verify": "pending"
       },
-      "lastUpdated": "2026-11-06T19:09:38.151Z",
+      "lastUpdated": "2026-11-06T19:33:59.835Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "bd98d695db1692403f4b2ac1112fa2dca924b1b8"
+        "default": "3a69ae6f4ae0e356a0dcc3d133718d213df7ad4a"
       }
     },
     "search": {
