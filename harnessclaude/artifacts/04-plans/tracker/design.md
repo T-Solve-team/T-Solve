@@ -196,6 +196,67 @@ no state machine left in receive; 6 Environment — server-to-server; 12 Busines
 
 Open questions for the DB owner: `suggestion_result.answered_at` (AC-010.2).
 
+## STORY-011: Suggestion job (KAN-22, 2026-11-07)
+
+The 01/11 rule "no background job in tracker" was about storing the Jira system token. The suggestion job uses no
+token: it gets the issue text from the event and only calls search. Flow:
+
+```
+Forge trigger → JiraAppEventController → IssueCreatedServiceImpl.receive
+   save(SuggestionResult)                       (repository transaction commits here)
+   → SuggestionJobQueue.enqueue(SuggestionJobRequest)   → 202
+          stand-in: InProcessSuggestionJobQueue → suggestionJobExecutor thread
+          later:    JobRunr adapter (worker KAN-161) → BackgroundJob.enqueue(...)
+   → SuggestionJobService.run(request)
+        load SuggestionResult by issue key; missing or already filled → stop (AC-011.7)
+        SuggestionSearch.suggest(projectId, summary, description)   (KAN-47; stand-in: StubSuggestionSearch)
+        suggestion → SuggestionResult.fill(sources, suggestedSolution) + save   (AC-011.4)
+        none → nothing (AC-011.5) · exception → log issue key + error type, nothing (AC-011.6)
+```
+
+| Decision | Choice | Alternatives Considered | Rationale |
+|----------|--------|------------------------|-----------|
+| Job runner | Port `SuggestionJobQueue`; in-process stand-in on a bounded executor; JobRunr adapter when `worker` KAN-161 lands | `@Async` + `@EnableAsync`; our own job table + `@Scheduled`; install JobRunr in KAN-22 | Infrastructure is Dương's (KAN-161), business logic is ours: no edit to `pom.xml` or JobRunr config, no merge conflict (user, 2026-11-07). A dedicated executor avoids enabling `@Async` for the whole app |
+| "After commit" | Enqueue after `save` returns — `receive` is not `@Transactional`, so the repository's own transaction has committed | `@TransactionalEventListener(AFTER_COMMIT)` | Making `receive` transactional would turn the duplicate-key catch (AC-003.4) into a rollback-only commit failure |
+| Issue text | `summary` and `description` from the event payload; ADF description → plain text with the existing `AdfTextExtractor` | read the issue from Jira in the job; Forge function that reads it first | No token needed (Non-Functional 3); user, 2026-11-07. Confirm `description` is in the real payload with `forge tunnel` before coding — if absent, the job sends summary only and this row is revised |
+| Search port | `SuggestionSearch.suggest(long projectId, String summary, String description) → Optional<IssueSuggestion>` in `tracker/service` | wait for KAN-47's interface | Tracker declares what it needs (spec, Required from other modules); KAN-47 implements it or adapts |
+| Stand-in search | `StubSuggestionSearch`, property `tsolve.stub.suggestion` ← `TSOLVE_STUB_SUGGESTION`: empty = no suggestion, `unavailable` = throws, any other text = that text with no sources | always "no suggestion" | Demo of the whole flow and test of the failure path (user, 2026-11-07); same pattern as the other `TSOLVE_STUB_*` |
+| `sources_used` format | `[{"type": "TICKET" | "WIKI", "id", "title", "similarity"}]` | own format | What triage's `SourcesUsed` already reads (KAN-149) |
+| Double run | Guard in the job (AC-011.7) + conditional update `… WHERE suggested_solution IS NULL` | lock row | A JobRunr retry or a parallel run cannot overwrite a stored suggestion |
+| Tenant | Job runs in the single current DB; with tenancy the JobRunr adapter wraps it in `runInTenant` (KAN-102) | carry tenant now | No tenant routing on `main` yet |
+
+Files (Task 15):
+
+```
+backend/src/main/java/vn/tsolve/tracker/
+├── dto/           IssueCreatedPayload (+ summary, description as JsonNode ADF, labels — all optional),
+│                  SuggestionJobRequest(issueKey, projectId, summary, description),
+│                  IssueSuggestion(List<SuggestionSource> sources, String suggestedSolution), SuggestionSource
+├── entity/        SuggestionResult (+ sources_used JSON string, suggested_solution; fill(...), hasSuggestion())
+├── repository/    SuggestionResultRepository (+ findByJiraIssueKey, conditional fill update)
+├── service/       SuggestionJobQueue, SuggestionSearch, SuggestionJobService
+│   └── impl/      IssueCreatedServiceImpl (enqueue), SuggestionJobServiceImpl, InProcessSuggestionJobQueue,
+│                  StubSuggestionSearch
+└── config/        SuggestionJobConfig (bounded executor `suggestionJobExecutor`)
+backend/src/main/resources/application.yml   (tsolve.stub.suggestion)
+.env.example                                  (TSOLVE_STUB_SUGGESTION)
+frontend/openapi/tsolve-api.yaml              (IssueCreatedPayload: summary, description, labels) + npm run generate:api
+```
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 37 | STORY-011 | Timing | Forge resends the event of an issue already recorded | High | No second job (AC-011.2) | Task 15 |
+| 38 | STORY-011 | Timing | Job runs twice for one issue (retry, parallel) | High | Second run changes nothing (AC-011.7, conditional update) | Task 15 |
+| 39 | STORY-011 | Input extremes | No description, empty ADF, or ADF with only media | Medium | Job runs with an empty description | Task 15 |
+| 40 | STORY-011 | Error cascades | Search throws or times out | High | Row unchanged; log has issue key + error type only (AC-011.6) | Task 15 |
+| 41 | STORY-011 | Error cascades | Executor queue full (burst of new issues) | Medium | Job dropped and logged; row stays without a suggestion — accepted for the stand-in, JobRunr removes it | Task 15 |
+| 42 | STORY-011 | Compliance | Issue text in logs | Critical | Never logged; job argument only | Task 15 |
+| 43 | STORY-011 | Data integrity | Row deleted before the job runs | Low | Job stops (AC-011.7) | Task 15 |
+| 44 | STORY-011 | User types | Issue created by the Chatbot (label `tsolve-chatbot`) | Medium | Same as any issue (AC-011.8) | Task 15 |
+
+Risks: the in-process stand-in loses queued jobs on restart (accepted until KAN-161); with JobRunr the issue text
+is stored as a job argument in the Jobs database (tell the `worker` owner; Non-Functional 4 covers logs only).
+
 ## Risk Review — 2026-10-21 — Verdict: CAUTION (updated 2026-11-01)
 
 Still applies: the FIT chain and its ordering with `identity`'s chain; the new pom dependency; SSRF through the

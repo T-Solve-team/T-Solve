@@ -1,7 +1,7 @@
 ---
 module: tracker
 date: 2026-10-21
-total_tasks: 7
+total_tasks: 8
 owner: Dev
 ---
 
@@ -150,3 +150,25 @@ time in `suggestion_result` (needs `answered_at` from the DB owner), return MSG8
 - Test: `tracker/service/impl/JiraPanelServiceAnswerTest.java`
 **Dependencies:** Task 11
 **Estimated size:** small
+
+---
+
+## Task 15: Suggestion job for a new issue (KAN-22)
+
+**Story:** STORY-011
+**Feature:** suggestion-job
+**Description:** Branch `feat/KAN-22-tracker-suggestion-job`. First confirm with `forge tunnel` that the real
+`avi:jira:created:issue` payload has `issue.fields.summary` and `issue.fields.description` (design, STORY-011).
+OpenAPI `IssueCreatedPayload` gets optional `summary`, `description` (ADF object) and `labels`; run
+`npm run generate:api`. `receive` enqueues one `SuggestionJobRequest` through `SuggestionJobQueue` only after a new
+row is saved (AC-011.1, 011.2, 011.8). `SuggestionJobServiceImpl.run`: guard (AC-011.7), call `SuggestionSearch`
+(AC-011.3), store sources (triage's `sources_used` format) and suggested solution with a conditional update
+(AC-011.4), nothing on no suggestion (AC-011.5) or on failure, logging issue key + error type only (AC-011.6).
+Stand-ins: `InProcessSuggestionJobQueue` on the bounded `suggestionJobExecutor`, `StubSuggestionSearch` from
+`TSOLVE_STUB_SUGGESTION`. No JobRunr, no `pom.xml` change (worker KAN-161). Edge cases 37–44.
+**Files:**
+- Modify: `tracker/dto/IssueCreatedPayload.java`, `tracker/service/impl/IssueCreatedServiceImpl.java`, `tracker/entity/SuggestionResult.java`, `tracker/repository/SuggestionResultRepository.java`, `backend/src/main/resources/application.yml`, `.env.example`, `frontend/openapi/tsolve-api.yaml` (+ generated client)
+- Create: `tracker/dto/SuggestionJobRequest.java`, `tracker/dto/IssueSuggestion.java`, `tracker/dto/SuggestionSource.java`, `tracker/service/SuggestionJobQueue.java`, `tracker/service/SuggestionSearch.java`, `tracker/service/SuggestionJobService.java`, `tracker/service/impl/SuggestionJobServiceImpl.java`, `tracker/service/impl/InProcessSuggestionJobQueue.java`, `tracker/service/impl/StubSuggestionSearch.java`, `tracker/config/SuggestionJobConfig.java`
+- Test: `tracker/service/impl/IssueCreatedServiceImplTest.java` (AC-011.1, 011.2, 011.8), `tracker/service/impl/SuggestionJobServiceImplTest.java` (AC-011.3–011.7), `tracker/service/impl/StubSuggestionSearchTest.java`, `tracker/service/impl/InProcessSuggestionJobQueueTest.java`, `tracker/controller/JiraAppEventControllerTest.java` (payload with the new fields), `tracker/repository/SuggestionResultRepositoryIT.java` (conditional fill)
+**Dependencies:** Task 6 (merged in #98)
+**Estimated size:** medium

@@ -297,9 +297,10 @@
         "issue-panel": "pending",
         "solution-form": "pending",
         "suggestion-answer": "pending",
-        "event-cleanup": "pending"
+        "event-cleanup": "pending",
+        "suggestion-job": "pending"
       },
-      "lastUpdated": "2026-10-30T06:15:48.993Z",
+      "lastUpdated": "2026-11-06T19:04:38.671Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
