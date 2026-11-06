@@ -20,11 +20,14 @@ public interface ImportPreviewRepository extends JpaRepository<ImportPreview, Lo
     @Query("select p from ImportPreview p where p.id = :id and p.owner = :owner")
     Optional<ImportPreview> lockByIdAndOwner(@Param("id") Long id, @Param("owner") String owner);
 
-    // rows go with it through ON DELETE CASCADE
+    /** The caller's open preview, before a new upload or pull; Drafts stay (AC-004.6). Rows go through ON DELETE CASCADE. */
     @Modifying
-    @Query("delete from ImportPreview p where p.owner = :owner")
+    @Query("delete from ImportPreview p where p.owner = :owner and p.draftSavedAt is null")
     int deleteByOwner(@Param("owner") String owner);
 
-    @Query("select p.id from ImportPreview p where p.createdAt < :before")
+    /** Previews for the daily cleanup; Drafts stay (AC-004.6). */
+    @Query("select p.id from ImportPreview p where p.createdAt < :before and p.draftSavedAt is null")
     List<Long> findIdsCreatedBefore(@Param("before") Instant before);
+
+    List<ImportPreview> findByOwnerAndDraftSavedAtIsNotNullOrderByDraftSavedAtDesc(String owner);
 }

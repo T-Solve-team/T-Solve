@@ -61,6 +61,13 @@ public class ImportPreviewRow {
     @Column(nullable = false, updatable = false, columnDefinition = "jsonb")
     private List<RowError> errors;
 
+    @Column(name = "source_url", updatable = false, columnDefinition = "text")
+    private String sourceUrl;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, updatable = false, columnDefinition = "jsonb")
+    private List<IssueComment> comments = List.of();
+
     protected ImportPreviewRow() {}
 
     public ImportPreviewRow(Long previewId, int rowNo, Values values, List<RowError> errors) {
@@ -77,6 +84,16 @@ public class ImportPreviewRow {
         this.workaround = values.workaround();
         this.scope = values.scope();
         this.errors = List.copyOf(errors);
+    }
+
+    /** One pulled Jira issue: the snapshot of AC-001.2, Needs Solution until its Solution is written. */
+    public static ImportPreviewRow jiraIssue(
+            Long previewId, int rowNo, Values values, String sourceUrl, List<IssueComment> comments) {
+        ImportPreviewRow row = new ImportPreviewRow(previewId, rowNo, values, List.of());
+        row.status = PreviewRowStatus.NEEDS_SOLUTION;
+        row.sourceUrl = sourceUrl;
+        row.comments = List.copyOf(comments);
+        return row;
     }
 
     /** The template columns of one row, as written in the file (null when the cell is missing). */
@@ -125,6 +142,14 @@ public class ImportPreviewRow {
                 resolutionSteps,
                 workaround,
                 scope);
+    }
+
+    public String getSourceUrl() {
+        return sourceUrl;
+    }
+
+    public List<IssueComment> getComments() {
+        return comments;
     }
 
     public List<RowError> getErrors() {

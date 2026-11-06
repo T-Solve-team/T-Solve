@@ -73,3 +73,5 @@ tsolve:
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
     inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}
+    # Jira import: "projectId:JIRAKEY,projectId:JIRAKEY". A Project without a key cannot pull from Jira (MSG50).
+    jira-keys: ${TSOLVE_STUB_JIRA_KEYS:}
