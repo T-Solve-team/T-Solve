@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -65,6 +67,24 @@ class TicketDecisionIT {
         reviewerId = jdbc.queryForObject(
                 "insert into app_user (email, status, created_at) values ('pm@example.test', 'ACTIVE', now()) returning id",
                 UUID.class);
+    }
+
+    @Test
+    void recordsNewQueueEntriesButPreservesTheTimeDuringEdits_AC_009_11() {
+        UUID id = ticket("TEST-1", 10, "PENDING_REVIEW", null);
+        OffsetDateTime firstEntry = queueEntryTime(id);
+        assertThat(firstEntry).isNotNull();
+
+        jdbc.update("update ticket set title = 'Updated title', updated_at = now() where ticket_id = ?", id);
+        jdbc.update("update ticket set status = 'PENDING_REVIEW' where ticket_id = ?", id);
+        assertThat(queueEntryTime(id)).isEqualTo(firstEntry);
+
+        service.decide(reviewerId, Set.of(10L), List.of(id), Action.CHANGES_REQUESTED, "Explain the workaround");
+        assertThat(queueEntryTime(id)).isEqualTo(firstEntry);
+        jdbc.update("update ticket set status = 'PENDING_REVIEW' where ticket_id = ?", id);
+        assertThat(queueEntryTime(id)).isAfter(firstEntry);
+        assertThat(jdbc.queryForObject("select review_due_date from ticket where ticket_id = ?", LocalDate.class, id))
+                .isEqualTo(LocalDate.of(2026, 11, 12));
     }
 
     @ParameterizedTest
@@ -216,6 +236,11 @@ class TicketDecisionIT {
 
     private String status(UUID ticketId) {
         return jdbc.queryForObject("select status from ticket where ticket_id = ?", String.class, ticketId);
+    }
+
+    private OffsetDateTime queueEntryTime(UUID ticketId) {
+        return jdbc.queryForObject(
+                "select review_queue_entered_at from ticket where ticket_id = ?", OffsetDateTime.class, ticketId);
     }
 
     private int decisionCount() {

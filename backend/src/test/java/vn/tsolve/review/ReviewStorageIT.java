@@ -2,6 +2,7 @@ package vn.tsolve.review;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import liquibase.Contexts;
 import liquibase.LabelExpression;
@@ -17,7 +18,7 @@ import org.testcontainers.utility.DockerImageName;
 class ReviewStorageIT {
 
     @Test
-    void upgradesExistingTicketsAndLinksReviewRecordsByUuid_AC_009_9_AC_004_13() throws Exception {
+    void upgradesExistingTicketsWithoutInventingQueueEntryTime_AC_009_9_AC_009_11_AC_004_13() throws Exception {
         try (var postgres = new PostgreSQLContainer<>(
                 DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"))) {
             postgres.start();
@@ -40,8 +41,21 @@ class ReviewStorageIT {
                 jdbc.update(
                         "insert into ticket_import_decision (ticket_id, reviewer, decision) values (?, 'legacy-pm', 'APPROVE')",
                         oldId);
+                liquibase.update(1, new Contexts(), new LabelExpression());
+                jdbc.update(
+                        """
+                        insert into ticket (source_ticket_id, project_id, source, status, title, symptoms,
+                                            root_cause, resolution_steps, scope)
+                        values ('TEST-LEGACY', 1, 'SOLUTION_FORM', 'PENDING_REVIEW', 'Old ticket', 'Error',
+                                'Token', 'Restart', 'Users')
+                        """);
                 liquibase.update(new Contexts(), new LabelExpression());
             }
+
+            assertThat(jdbc.queryForObject(
+                            "select review_queue_entered_at from ticket where source_ticket_id = 'TEST-LEGACY'",
+                            OffsetDateTime.class))
+                    .isNull();
 
             UUID ticketId = jdbc.queryForObject(
                     "select ticket_id from ticket where source_ticket_id = 'TEST-1' and resolution_steps = 'Restart'",

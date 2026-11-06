@@ -14,5 +14,6 @@
     <include file="changes/006-identity-app-user.sql" relativeToChangelogFile="true"/>
     <include file="changes/007-identity-hand-off-code.sql" relativeToChangelogFile="true"/>
     <include file="changes/008-review-ticket-storage.sql" relativeToChangelogFile="true"/>
+    <include file="changes/009-review-queue-entry-time.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
