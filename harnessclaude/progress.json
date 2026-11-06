@@ -163,9 +163,10 @@
         "ticket-search-connect": "pending",
         "ticket-feedback-api": "pending",
         "give-feedback-connect": "pending",
-        "ticket-suggestion-api": "pending"
+        "ticket-suggestion-api": "pending",
+        "solution-retrieval": "pending"
       },
-      "lastUpdated": "2026-11-06T14:15:01.547Z",
+      "lastUpdated": "2026-11-06T16:53:41.477Z",
       "branch": "feat/search",
       "repos": [
         "default"
@@ -199,9 +200,14 @@
         "citations": "passing",
         "session-conversations": "passing",
         "ratings": "passing",
-        "uuid-ids": "passing"
+        "uuid-ids": "passing",
+        "chatbot-answer-schema": "pending",
+        "ask-answer-api": "pending",
+        "answer-citations": "pending",
+        "cited-documents": "pending",
+        "follow-up-context": "pending"
       },
-      "lastUpdated": "2026-10-25T18:12:52.131Z",
+      "lastUpdated": "2026-11-06T16:53:40.896Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"

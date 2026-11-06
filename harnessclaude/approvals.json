@@ -175,8 +175,8 @@
     }
   },
   "chatbot": {
-    "specHash": "d946d850ae59cb11fc9a264efba1f324436041acb8c7076b87cca332033499ca",
-    "approvedAt": "2026-10-25T13:11:41.270Z",
+    "specHash": "387eafa27e66b6ef9c4729ff3e3f66c85b783cad0ea73250979e705ce23b15d0",
+    "approvedAt": "2026-11-06T16:53:28.192Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -216,7 +216,29 @@
       "AC-004.3": "IF a question is empty or longer than 1,000 characters, THEN THE mock SHALL answer 400 with a field",
       "AC-004.4": "WHEN the mock is asked which Wiki documents are unavailable, THE mock SHALL list the ids of its",
       "AC-004.5": "WHEN  runs, THE mock SHALL return to its initial data.",
-      "AC-004.6": "WHEN the mock is asked to save a rating, or to remove one, THE mock SHALL answer 204."
+      "AC-004.6": "WHEN the mock is asked to save a rating, or to remove one, THE mock SHALL answer 204.",
+      "AC-005.1": "WHEN a signed-in user sends  with a valid body, THE backend SHALL embed",
+      "AC-005.2": "THE backend SHALL keep at most  (default 5) sources of both kinds together, most",
+      "AC-005.3": "WHEN at least one source is kept, THE backend SHALL call the  module's  once with a",
+      "AC-005.4": "IF no source reaches , THEN THE backend SHALL not call the chat model and",
+      "AC-005.5": "IF the model's text has no  marker of a kept source, THEN THE backend SHALL answer  as",
+      "AC-005.6": "WHEN an answer is returned, THE backend SHALL store one  row (the user's id, the",
+      "AC-005.7": "IF the AI fails or the ask is too slow, THEN THE backend SHALL answer 503 with MSG06, store no row",
+      "AC-005.8": "IF  is missing or blank, THEN THE backend SHALL answer 400 with field error MSG01 on",
+      "AC-005.9": "IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07; every signed-in user",
+      "AC-005.10": "THE backend SHALL accept no Workspace parameter, header or body field and SHALL write neither the",
+      "AC-005.11": "THE chatbot changeset SHALL create  with the columns and constraints of Interface",
+      "AC-006.1": "WHEN an  answer is returned, THE backend SHALL return as  exactly the kept sources",
+      "AC-006.2": "IF the text holds a marker  whose number is no kept source, THEN THE backend SHALL remove that",
+      "AC-006.3": "THE backend SHALL return a ticket source as  with the five sections of",
+      "AC-006.4": "THE backend SHALL return a Wiki source as  with the passage's",
+      "AC-006.5": "WHEN a signed-in user asks which cited documents are unavailable, THE backend SHALL answer",
+      "AC-006.6": "IF  is invalid, THEN THE backend SHALL answer 400 with code MSG06 and no field error",
+      "AC-006.7": "WHILE no module implements , THE stand-in  SHALL return no passage and SHALL",
+      "AC-007.1": "WHEN  is not empty, THE backend SHALL use as retrieval text the trimmed question of the last",
+      "AC-007.2": "THE backend SHALL send the turns of  to the chat model, oldest first, as earlier user and",
+      "AC-007.3": "IF  is missing, holds more than 10 turns, or a turn is too long, THEN THE backend SHALL answer",
+      "AC-007.4": "THE backend SHALL store only the new question in , never the earlier turns."
     }
   },
   "identity": {
@@ -553,8 +575,8 @@
     }
   },
   "search": {
-    "specHash": "fa4353d53ace5d33eb6b0288c2e676bd8cb636800c68d7f5689ee21b45a626d6",
-    "approvedAt": "2026-11-05T17:49:14.212Z",
+    "specHash": "64927cb1a4240a3d0066006a42edcec4586372b910518ce5f4d9fae5ac0bf6bd",
+    "approvedAt": "2026-11-06T16:47:00.297Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -640,7 +662,12 @@
       "AC-009.2": "IF the embedding fails or times out, THEN THE backend SHALL answer 200 from the keyword match of",
       "AC-009.3": "WHEN suggestions are answered, THE backend SHALL write one  row with the user's id, no",
       "AC-009.4": "IF  is missing or blank, THEN THE backend SHALL answer 400 with field error MSG01 on",
-      "AC-009.5": "IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07 (a Forge Invocation"
+      "AC-009.5": "IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07 (a Forge Invocation",
+      "AC-010.1": "WHEN  is called, THE backend SHALL return",
+      "AC-010.2": "THE backend SHALL return each hit with the ticket's Symptoms, Root cause, Resolution steps, Workaround",
+      "AC-010.3": "IF a ticket is unpublished, inactive or too far, THEN THE backend SHALL leave it out (not",
+      "AC-010.5": "IF an argument is out of range, THEN THE service SHALL throw  and SHALL run",
+      "AC-010.4": "THE service SHALL take no user, Workspace or Department argument and SHALL call no"
     }
   },
   "dashboard-audit": {

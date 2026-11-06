@@ -506,3 +506,15 @@ Decided in planning (builder check):
 | 45 | STORY-006 | Security | `SEARCH_DEV_SCOPE` left as `all` on a deployed server | High | Every user sees every Active Department; the startup warning names it; deployment configs never set it; any other value fails closed | Task 9 (AC-006.11, AC-006.12) |
 | 46 | STORY-007 | Data | Ticket with no `resolved_date`; a date at the Vietnam day boundary | Medium | `resolvedAt` null; `2026-10-01T00:00:00+07:00` | Task 13 (AC-007.5) |
 | 47 | STORY-002 | Data | Result with `resolvedAt` null on the card | Medium | "Resolved —" | Task 15 (AC-002.15) |
+
+### Solution retrieval for the Chatbot (STORY-010, change of 2026-11-06)
+
+`vn.tsolve.search.retrieval` exposes `SolutionRetrieval.nearest(queryVector, minSimilarity, limit)` to the `chatbot`
+module (search Task 19). It ranks `ticket_embedding` by cosine distance like STORY-007 but over every Workspace
+Solution (`PUBLISHED`, Department `ACTIVE`), with no `VisibleScope`, no embedding call, no `search_log` row and no
+keyword fallback: the chatbot embeds the question once and shares the vector with its Wiki source, and answers
+`NO_SOURCE` or 503 itself. The query and the edge cases are in the chatbot design ("Backend (change of 2026-11-06)").
+
+| Decision | Chosen | Alternatives | Rationale |
+|----------|--------|--------------|-----------|
+| Chatbot access to Solutions | A search `service/` interface taking a vector | Chatbot reads `ticket_embedding`; reuse `TicketRankingService` | `backend/AGENTS.md` module rule; the chatbot scope is the Workspace, not the user's Departments |
