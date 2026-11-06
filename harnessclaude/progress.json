@@ -153,10 +153,26 @@
       "lastUpdated": "2026-10-22T14:21:22.980Z"
     },
     "ticket-repository": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:23.187Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "jira-import-contract": "in-progress",
+        "jira-import-schema": "pending",
+        "jira-issue-source": "pending",
+        "jira-pull": "pending",
+        "jira-preview": "pending",
+        "jira-finish": "pending",
+        "jira-drafts": "pending",
+        "jira-import-tickets-page": "pending",
+        "jira-import-preview-page": "pending",
+        "jira-import-verify": "pending"
+      },
+      "lastUpdated": "2026-11-06T18:48:06.921Z",
+      "branch": "feat/ticket-repository",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {}
     },
     "search": {
       "status": "implementing",

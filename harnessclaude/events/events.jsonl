@@ -660,3 +660,17 @@
 {"ts":"2026-11-05T11:28:04.199Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"evaluating","to":"passing"}
 {"ts":"2026-11-05T11:28:41.466Z","type":"quick-closed","what":"Test values for OLLAMA_BASE_URL and OLLAMA_CHAT_MODEL so existing Spring contexts start (KAN-139)","files":["backend/src/test/resources/config/application.yml"]}
 {"ts":"2026-11-05T14:10:40.463Z","type":"commit-recorded","module":"triage","repo":"default","sha":"6cefdf9443d81628a7819c855a363f111cc44cf7"}
+{"ts":"2026-11-06T18:44:04.957Z","type":"spec-approved","module":"ticket-repository","specHash":"8468bbe0d83013145fc255a26adcadaf19a74eb27ec9acf24f5462cc44e0a7fb"}
+{"ts":"2026-11-06T18:47:06.616Z","type":"module-status","module":"ticket-repository","from":"decomposed","to":"planned"}
+{"ts":"2026-11-06T18:47:06.906Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-contract","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:07.196Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-schema","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:07.485Z","type":"feature-status","module":"ticket-repository","feature":"jira-issue-source","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:07.774Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:08.062Z","type":"feature-status","module":"ticket-repository","feature":"jira-preview","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:08.351Z","type":"feature-status","module":"ticket-repository","feature":"jira-finish","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:08.635Z","type":"feature-status","module":"ticket-repository","feature":"jira-drafts","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:08.930Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-tickets-page","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:09.218Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-preview-page","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:09.514Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-verify","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:48:06.616Z","type":"module-status","module":"ticket-repository","from":"planned","to":"implementing"}
+{"ts":"2026-11-06T18:48:06.922Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-contract","from":"pending","to":"in-progress"}

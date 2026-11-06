@@ -15,6 +15,9 @@ paths:
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
   - docs/bug-log.md
+  - backend/src/main/java/vn/tsolve/project/service/**
+  - backend/src/main/resources/application.yml
+  - .env.example
 ---
 
 # Module: ticket-repository
