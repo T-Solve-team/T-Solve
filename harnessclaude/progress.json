@@ -162,18 +162,18 @@
         "jira-pull": "evaluating",
         "jira-preview": "pending",
         "jira-finish": "pending",
-        "jira-drafts": "pending",
+        "jira-drafts": "evaluating",
         "jira-import-tickets-page": "pending",
         "jira-import-preview-page": "pending",
         "jira-import-verify": "pending"
       },
-      "lastUpdated": "2026-11-06T20:09:20.995Z",
+      "lastUpdated": "2026-11-06T20:16:13.399Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5281b56dcbffc55b277db70bcb30a29d16e149c4"
+        "default": "d63c015058087febf75f05d0c130b6c83c4b3102"
       }
     },
     "search": {
