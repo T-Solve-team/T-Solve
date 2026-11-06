@@ -741,6 +741,8 @@
       "AC-005.3": "IF the LLM call fails, or the answer leaves empty a section that was filled in the Solution given, or the rewritten sections together are longer than 10,000 characters, THEN THE ai module SHALL throw , which reaches the client as  with   when the caller does not catch it.",
       "AC-005.4": "IF every section of the Solution given is empty, THEN THE ai module SHALL return it unchanged without calling the LLM.",
       "AC-005.5": "THE ai module SHALL only return a draft or a rewrite; it SHALL never save, replace or submit a Solution (the writer reads it and clicks Finish themselves, GBR-12)."
+    }
+  },
   "triage": {
     "specHash": "cf15ceed7867e474f6e446a10b65fa6d5851f5a7a007ada778357f66748b3156",
     "approvedAt": "2026-11-04T10:43:49.142Z",
@@ -776,6 +778,20 @@
       "AC-004.2": "IF the issue has no result, belongs to a Project the caller does not manage, or the caller lacks PROJECT_MANAGER, THEN THE backend SHALL return 404/MSG04 without revealing whether a result exists.",
       "AC-004.3": "THE backend SHALL set  from the wiki module's document-access port for the caller; WHILE the wiki module provides no implementation, THE default SHALL answer false for every document.",
       "AC-004.4": "IF  holds an item it cannot read (unknown  or missing ), THEN THE backend SHALL skip that item in the counts and the list and still return the result."
+    }
+  },
+  "worker": {
+    "specHash": "6d0b11c652fe3181394ea638199d5ac00abbd31ae96e1fdc9df68981adb95e3d",
+    "approvedAt": "2026-11-06T00:57:53.675Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN the caller submits a Reject notification, THE SMTP sender SHALL send a plain-text email to the supplied writer address with a rejection subject, the ticket key and the rejection reason.",
+      "AC-001.2": "WHEN the caller submits a Request Changes notification, THE SMTP sender SHALL send a plain-text email to the supplied writer address with a request-changes subject, the ticket key and the review comment.",
+      "AC-001.3": "IF the supplied recipient does not represent exactly one mailbox, THEN THE SMTP sender SHALL reject the request before attempting delivery.",
+      "AC-001.4": "IF the SMTP server refuses delivery or the send times out, THEN THE SMTP sender SHALL report a delivery failure to the caller after one attempt, with no recipient address, message content or credentials in the reported error.",
+      "AC-001.5": "THE SMTP sender SHALL configure finite SMTP connection, read and write timeouts.",
+      "AC-001.6": "THE SMTP sender SHALL omit recipient addresses, message contents and SMTP credentials from its logs.",
+      "AC-001.7": "WHILE SMTP settings are absent, THE web application SHALL start without an SMTP connection."
     }
   }
 }

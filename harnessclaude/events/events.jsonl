@@ -584,3 +584,10 @@
 {"ts":"2026-11-05T11:28:04.199Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"evaluating","to":"passing"}
 {"ts":"2026-11-05T11:28:41.466Z","type":"quick-closed","what":"Test values for OLLAMA_BASE_URL and OLLAMA_CHAT_MODEL so existing Spring contexts start (KAN-139)","files":["backend/src/test/resources/config/application.yml"]}
 {"ts":"2026-11-05T14:10:40.463Z","type":"commit-recorded","module":"triage","repo":"default","sha":"6cefdf9443d81628a7819c855a363f111cc44cf7"}
+{"ts":"2026-11-06T00:57:53.681Z","type":"spec-approved","module":"worker","specHash":"6d0b11c652fe3181394ea638199d5ac00abbd31ae96e1fdc9df68981adb95e3d"}
+{"ts":"2026-11-06T01:02:18.740Z","type":"module-status","module":"worker","from":"decomposed","to":"planned"}
+{"ts":"2026-11-06T01:02:18.813Z","type":"feature-status","module":"worker","feature":"review-notification-smtp","from":null,"to":"pending"}
+{"ts":"2026-11-06T01:02:18.889Z","type":"module-status","module":"worker","from":"planned","to":"implementing"}
+{"ts":"2026-11-06T01:02:18.963Z","type":"feature-status","module":"worker","feature":"review-notification-smtp","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T12:50:23.485Z","type":"commit-recorded","module":"worker","repo":"default","sha":"c7dd3d10cfad23c2ebc54bdc4e5ad54a4fb974f4"}
+{"ts":"2026-11-06T12:50:23.571Z","type":"feature-status","module":"worker","feature":"review-notification-smtp","from":"in-progress","to":"evaluating"}
