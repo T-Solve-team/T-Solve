@@ -13,5 +13,8 @@
     <include file="changes/005-identity-sign-in-state-binding.sql" relativeToChangelogFile="true"/>
     <include file="changes/006-identity-app-user.sql" relativeToChangelogFile="true"/>
     <include file="changes/007-identity-hand-off-code.sql" relativeToChangelogFile="true"/>
+    <include file="changes/010-platform-tenant-identity.sql" relativeToChangelogFile="true"/>
+    <include file="changes/011-platform-tenant-guard-function.sql" relativeToChangelogFile="true"/>
+    <include file="changes/012-platform-tenant-guard-policies.xml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
