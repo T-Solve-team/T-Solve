@@ -337,6 +337,19 @@ describe('TicketListPage', () => {
     expect(selected('Department')).toBe('All Departments');
   });
 
+  it('AC-001.10 ignores a malformed Department UUID in a shared link (BUG-123)', async () => {
+    const requests = recordRequests();
+    renderApp('/tickets?departmentId=not-a-uuid');
+    await waitFor(() => expect(requests.length).toBeGreaterThan(0));
+    expect(requests[0]?.has('departmentId')).toBe(false);
+  });
+
+  it('AC-001.10 uses the default sort for an unsupported field in a shared link (BUG-123)', async () => {
+    const requests = recordRequests();
+    await openList('/tickets?sort=writer%2Casc');
+    expect(requests[0]?.getAll('sort')).toEqual(['updatedAt,desc']);
+  });
+
   it('AC-001.10 shows an empty page with the filters when a shared link is past the last page (BUG-057)', async () => {
     renderApp('/tickets?status=REJECTED&page=99');
     await findLoadedEmptyList();
