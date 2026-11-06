@@ -7,23 +7,22 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 /** A resolved issue with its Solution (GBR-33). projectId points at the workspace module's Project. */
 @Entity
 @Table(name = "ticket")
 public class Ticket {
 
-    // allocationSize matches INCREMENT BY 50 in 002 so inserts can be batched
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "ticket_seq")
-    @SequenceGenerator(name = "ticket_seq", sequenceName = "ticket_id_seq", allocationSize = 50)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "ticket_id")
+    private UUID id;
 
-    @Column(name = "ticket_id", nullable = false, updatable = false)
+    @Column(name = "source_ticket_id", nullable = false, updatable = false)
     private String ticketId;
 
     @Column(name = "project_id", nullable = false)
@@ -104,7 +103,7 @@ public class Ticket {
     public record Solution(
             String symptoms, String rootCause, String resolutionSteps, String workaround, String scope) {}
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 

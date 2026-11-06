@@ -253,11 +253,11 @@ class ImportConfirmIT {
 
     @Test
     void databaseRejectsADuplicateTicketId() {
-        jdbc.update("insert into ticket (ticket_id, project_id, source, status, title, symptoms, root_cause,"
+        jdbc.update("insert into ticket (source_ticket_id, project_id, source, status, title, symptoms, root_cause,"
                 + " resolution_steps, scope) values ('T-9', 1, 'CSV', 'PUBLISHED', 't', 's', 'r', 'st', 'sc')");
 
         assertThatThrownBy(() -> jdbc.update(
-                        "insert into ticket (ticket_id, project_id, source, status, title, symptoms, root_cause,"
+                        "insert into ticket (source_ticket_id, project_id, source, status, title, symptoms, root_cause,"
                                 + " resolution_steps, scope) values ('T-9', 1, 'CSV', 'PUBLISHED', 't', 's', 'r',"
                                 + " 'st', 'sc')"))
                 .isInstanceOf(DuplicateKeyException.class);
