@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,12 +34,15 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import vn.tsolve.common.config.MethodSecurityConfig;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.ImportResultResponse;
 import vn.tsolve.ticket.dto.MessageRef;
+import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
+import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.exception.ImportFailedException;
 import vn.tsolve.ticket.exception.UploadTooLargeException;
 import vn.tsolve.ticket.service.CsvImportService;
@@ -102,7 +106,10 @@ class ImportControllerTest {
             new MockMultipartFile("file", "tickets.csv", "text/csv", "ticket_id\n".getBytes());
 
     private static ImportPreviewResponse preview() {
-        return ImportPreviewResponse.of(42L, PROJECT, "tickets.csv", 2, 0, 0, new PageImpl<>(List.of()));
+        ImportPreview preview =
+                new ImportPreview("pm@company.vn", PROJECT, TicketSource.CSV, "tickets.csv", Instant.EPOCH);
+        ReflectionTestUtils.setField(preview, "id", 42L);
+        return ImportPreviewResponse.of(preview, 2, 0, 0, 0, new PageImpl<>(List.of()));
     }
 
     @Test

@@ -92,12 +92,11 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
 
     private ImportPreviewResponse summary(ImportPreview preview) {
         return ImportPreviewResponse.of(
-                preview.getId(),
-                preview.getProjectId(),
-                preview.getFileName(),
+                preview,
                 previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.VALID),
                 previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.ERROR),
                 previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.REMOVED),
+                previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.NEEDS_SOLUTION),
                 page(preview.getId(), null, PageRequest.of(0, CsvImportServiceImpl.FIRST_PAGE_SIZE)));
     }
 
