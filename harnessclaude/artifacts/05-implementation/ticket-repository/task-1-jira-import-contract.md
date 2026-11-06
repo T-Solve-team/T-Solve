@@ -2,7 +2,7 @@
 
 **Module:** ticket-repository
 **Assignee:** Đặng Nhật Minh
-**Iteration:** 2
+**Iteration:** 1
 **Status:** in-progress
 
 ## Session 2026-11-07

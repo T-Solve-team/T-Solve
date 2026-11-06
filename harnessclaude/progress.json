@@ -156,8 +156,8 @@
       "status": "implementing",
       "currentPhase": "implement",
       "features": {
-        "jira-import-contract": "in-progress",
-        "jira-import-schema": "pending",
+        "jira-import-contract": "evaluating",
+        "jira-import-schema": "in-progress",
         "jira-issue-source": "pending",
         "jira-pull": "pending",
         "jira-preview": "pending",
@@ -167,7 +167,7 @@
         "jira-import-preview-page": "pending",
         "jira-import-verify": "pending"
       },
-      "lastUpdated": "2026-11-06T19:05:30.988Z",
+      "lastUpdated": "2026-11-06T19:09:38.151Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"

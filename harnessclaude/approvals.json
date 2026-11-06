@@ -797,7 +797,7 @@
       "AC-005.5": "THE ai module SHALL only return a draft or a rewrite; it SHALL never save, replace or submit a Solution (the writer reads it and clicks Finish themselves, GBR-12)."
     }
   },
-      "triage": {
+  "triage": {
     "specHash": "cf15ceed7867e474f6e446a10b65fa6d5851f5a7a007ada778357f66748b3156",
     "approvedAt": "2026-11-04T10:43:49.142Z",
     "by": "user",
@@ -832,6 +832,51 @@
       "AC-004.2": "IF the issue has no result, belongs to a Project the caller does not manage, or the caller lacks PROJECT_MANAGER, THEN THE backend SHALL return 404/MSG04 without revealing whether a result exists.",
       "AC-004.3": "THE backend SHALL set  from the wiki module's document-access port for the caller; WHILE the wiki module provides no implementation, THE default SHALL answer false for every document.",
       "AC-004.4": "IF  holds an item it cannot read (unknown  or missing ), THEN THE backend SHALL skip that item in the counts and the list and still return the result."
+    }
+  },
+  "ticket-repository": {
+    "specHash": "23c7647bedec56ba5cf181f6c42681f4e84a18b07c4c87923d5ce88453547da6",
+    "approvedAt": "2026-11-06T19:22:22.361Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
+      "AC-001.2": "WHEN the Import Preview is created, THE system SHALL store on each row a snapshot of its issue — Ticket ID = Jira key, title = summary, description as plain text, author = assignee display name, resolved date, link to the issue in Jira, and every comment as plain text with its author and date — and SHALL not read the issue from Jira again for this preview.",
+      "AC-001.3": "WHEN more than 100 issues without a Ticket match the date range, THE system SHALL return MSG35 with the preview.",
+      "AC-001.4": "IF Resolved from or Resolved to is missing, THEN THE system SHALL reject the pull with MSG01 and call Jira not at all.",
+      "AC-001.5": "IF Resolved from is after Resolved to, or either date is after today (Vietnam time), THEN THE system SHALL reject the pull with MSG39 and call Jira not at all.",
+      "AC-001.6": "IF no issue without a Ticket matches the date range, THEN THE system SHALL return MSG04 and create no preview.",
+      "AC-001.7": "IF Jira rejects the service account credentials, does not answer within 30 seconds, returns an error, or the Jira connection is not configured, THEN THE system SHALL return MSG50 with an error message that contains no credential, create no preview, and record one Import Batch of source Jira with status Failed and 0 published.",
+      "AC-001.8": "IF the selected Project is not managed by the caller or is not Active, THEN THE system SHALL reject the pull with HTTP 403 (MSG08), call Jira not at all and create no preview.",
+      "AC-001.9": "IF the caller does not have the Project Manager role, THEN THE system SHALL reject the pull with HTTP 403 (MSG08).",
+      "AC-001.10": "WHEN a pull creates a preview, THE system SHALL delete the caller's previous unconfirmed preview that is not a Draft, if any.",
+      "AC-002.1": "WHEN the Project Manager lists the rows of a Jira preview, THE system SHALL return them page by page (at most 100 per page) in row-number order with the Jira key, summary, assignee, resolved date and result (Needs Solution or Valid), and the preview SHALL report its source Jira, its date range, the number of rows and the number of Needs Solution rows.",
+      "AC-002.2": "WHEN the Project Manager opens one row of a Jira preview, THE system SHALL return its full snapshot (AC-001.2) and its Solution, if any.",
+      "AC-002.3": "WHEN the Project Manager fills a Solution into one or several Needs Solution or Valid rows of a Jira preview, THE system SHALL store a separate copy of the Solution on each of those rows, replacing any Solution they had, and mark each of them Valid.",
+      "AC-002.4": "IF a filled Solution lacks Symptoms, Root cause, Resolution steps or Scope (blank after trimming), THEN THE system SHALL reject it with MSG01 naming the missing sections and change no row.",
+      "AC-002.5": "IF the sections of a filled Solution are longer than 10,000 characters in total, THEN THE system SHALL reject it with MSG02 and change no row.",
+      "AC-002.6": "WHEN the Project Manager selects several issues and clicks Fill solution while some of them already have a Solution, THE web app SHALL ask MSG36 with the number of issues that will be overwritten before it applies the Solution.",
+      "AC-002.7": "WHEN the Project Manager removes rows from a Jira preview, THE system SHALL mark them Removed, never save them as Tickets, and keep no record of them after the preview is finished or deleted, so that a later pull can return them again.",
+      "AC-002.8": "IF a preview request names a preview that belongs to another user or does not exist, THEN THE system SHALL reject it with HTTP 404 (MSG04).",
+      "AC-002.9": "IF the preview's Project is no longer managed by the caller, THEN THE system SHALL reject every preview request with HTTP 403 (MSG08).",
+      "AC-002.10": "WHILE at least one row of a Jira preview Needs Solution, or the preview has no Valid row, THE web app SHALL keep Finish disabled.",
+      "AC-002.11": "WHEN the Project Manager cancels or leaves the Import Preview, THE web app SHALL ask MSG37 and, on confirmation, return to Import Tickets without importing and without changing a saved Draft.",
+      "AC-003.1": "WHEN the Project Manager clicks Finish on a Jira preview whose every row is Valid or Removed and at least one row is Valid, THE system SHALL, in one transaction, save each Valid row as a Ticket of the Project with Ticket ID = Jira key, source Jira import, status Published, the snapshot's summary as title, its description, writer and resolved date, and the row's Solution; record an approve decision by the caller for each Ticket; record one Import Batch of source Jira with status Completed and the numbers published, skipped and removed; delete the preview; and return MSG32.",
+      "AC-003.2": "IF a Valid row's Jira key has become a Ticket ID since the pull, THEN THE system SHALL skip that row, import the others, and return MSG38 with the number and keys of the skipped issues together with MSG32.",
+      "AC-003.3": "IF every Valid row of the preview has become a Ticket since the pull, THEN THE system SHALL import nothing, record one Completed Import Batch with 0 published, delete the preview, and return MSG38.",
+      "AC-003.4": "IF the preview's Project is no longer Active at Finish, THEN THE system SHALL reject Finish with HTTP 409 (MSG40), import nothing, keep the preview and record no Import Batch.",
+      "AC-003.5": "IF the preview's Project is Active but the caller no longer manages it, THEN THE system SHALL reject Finish with HTTP 403 (MSG08), import nothing and record no Import Batch. (The MSG40 check of AC-003.4 comes first.)",
+      "AC-003.6": "IF at least one row of the preview Needs Solution, or the preview has no Valid row, THEN THE system SHALL reject Finish with HTTP 409 and  with the number of Needs Solution rows, import nothing and record no Import Batch.",
+      "AC-003.7": "IF saving any Ticket fails, THEN THE system SHALL import no Ticket, keep the preview, return MSG33, and record one Import Batch of source Jira with status Failed, 0 published and an error description that contains no issue content.",
+      "AC-003.8": "IF the same preview is finished again while or after a Finish of it succeeds, THEN THE system SHALL reject the second Finish with HTTP 404 and record no Import Batch for it.",
+      "AC-003.9": "WHEN Finish publishes at least one Ticket, THE system SHALL publish a \"tickets published\" event with the new Ticket ids after the transaction commits.",
+      "AC-003.10": "WHEN Finish succeeds on a preview that was a Draft, THE system SHALL delete the Draft.",
+      "AC-004.1": "WHEN the Project Manager clicks Save as draft on a Jira preview, THE system SHALL mark the preview as a Draft with the save time, keep its rows and their Solutions without validating them, and return MSG41.",
+      "AC-004.2": "WHEN the Project Manager opens Import Tickets, THE system SHALL list only the caller's own Drafts with their type (Jira), Project, number of rows and date saved, newest first.",
+      "AC-004.3": "WHEN the Project Manager reopens a Draft, THE system SHALL return it as an Import Preview with its rows and Solutions as saved, without reading Jira again.",
+      "AC-004.4": "WHEN the Project Manager deletes a Draft after confirming MSG42, THE system SHALL delete the Draft with its rows.",
+      "AC-004.5": "IF the Draft belongs to another user or does not exist, THEN THE system SHALL reject the reopen or delete with HTTP 404 (MSG04).",
+      "AC-004.6": "WHILE a preview is a Draft, THE daily preview cleanup and a new pull or CSV upload by the same user SHALL keep it.",
+      "AC-004.7": "WHEN the Project Manager saves a reopened Draft again, THE system SHALL update that same Draft and its save time instead of creating a second one."
     }
   }
 }

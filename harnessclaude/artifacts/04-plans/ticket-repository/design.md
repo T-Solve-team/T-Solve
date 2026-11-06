@@ -5,166 +5,141 @@ date: 2026-11-07
 
 # Design: ticket-repository
 
-Scope: KAN-45 Jira import (UC-20) with Drafts — spec version 8468bbe0. Builds on the CSV import code of
-`import-ticket-list` in `vn.tsolve.ticket` (same tables, same Import Preview, same Import Batch).
+Scope: KAN-45 Jira import (UC-20) with Drafts. Stacked on PR #110 (KAN-31, `import-ticket-list`): a pulled Jira
+issue is a row of that module's Import Preview (spec D7).
 
 ## Architecture Overview
 
 ```
-web (features/ticket-import)                 backend vn.tsolve.ticket
- Import Tickets: Jira tab + Drafts  ──REST──▶ JiraImportController
- Import Preview (Jira)                         ├─ JiraImportService      pull → preview      (STORY-001)
- Import Ticket Preview popup                   ├─ JiraPreviewService     list/open/solution/remove (STORY-002)
-                                               ├─ JiraFinishService      finish → Tickets    (STORY-003)
-                                               ├─ ImportDraftService     draft save/list/delete (STORY-004)
-                                               │
-                                               ├─ ProjectAccess ──▶ project.ProjectService (Jira key, Active)
-                                               └─ JiraIssueSource (port)
-                                                    └─ JiraRestIssueSource ──HTTPS──▶ Jira Cloud REST v3
-                                                         (site URL, email, API token from env — D2)
+web (features/ticket-import)                    backend vn.tsolve.ticket
+ Import Tickets: Jira tab + Drafts list  ──REST─▶ JiraImportController  POST /imports/jira          (STORY-001)
+ Import Preview (shared with CSV)        ──REST─▶ ImportController      rows, row, fill-solution,   (STORY-002)
+ Import Ticket Preview popup (shared)                                     remove-rows, confirm=Finish (STORY-003)
+                                         ──REST─▶ ImportDraftController draft, drafts, delete       (STORY-004)
+   JiraImportService ─┬─ ProjectAccess (import-ticket-list)       Active + managed
+                      ├─ project.ProjectService.findJiraProjectKey
+                      └─ JiraIssueSource (port) ── JiraRestIssueSource ──HTTPS──▶ Jira Cloud REST v3
+                                                   (site URL, email, API token from env — D2)
+   ImportConfirmServiceImpl: source JIRA_IMPORT → skip taken keys (MSG38) instead of MSG33
+   ImportPreviewServiceImpl / fill-solution: accept a JIRA_IMPORT preview like a WITHOUT_SOLUTION one
 ```
 
-- **Pull** (`POST /imports/jira`): validate dates (MSG01 / MSG39) → `ProjectAccess.managesActive` (403) → Jira key
-  from `ProjectAccess.jiraProjectKey` → `JiraIssueSource.resolvedIssues(key, from, to)` streams issues oldest first →
-  drop keys that are already a `ticket.ticket_id` (one `IN` query per Jira page) → stop at 100 kept; one more kept
-  issue means "more" (MSG35) → none kept: MSG04, no preview → otherwise, in one transaction, delete the caller's
-  non-Draft preview (AC-001.10) and insert the preview with its issues and comments.
-  A `JiraUnavailableException` from the source (credentials, timeout, 4xx/5xx, not configured) → `ImportBatchRecorder`
-  writes a Failed batch of source `JIRA_IMPORT` in its own transaction → MSG50 (502).
-- **Solutions** are written on preview rows; one request may target several Jira keys (Fill solution) — one
-  `UPDATE … WHERE jira_key IN (…)` copies the five sections into each row (AC-002.3).
-- **Finish** follows `ImportConfirmServiceImpl`: checks outside the transaction (404, 409 MSG01 when a row lacks a
-  Solution, 409 MSG40, then 403), then one transaction: lock the preview row (`SELECT … FOR UPDATE`, a second
-  Finish waits and then finds no preview → 404, AC-003.8), find the keys that are now Tickets → skipped (MSG38),
-  insert the other Tickets + APPROVE decisions + Completed batch, delete the preview, publish
-  `TicketsPublishedEvent` after commit (only when ≥ 1 Ticket). Any other failure: rollback, keep the preview, Failed
-  batch through `ImportBatchRecorder`, MSG33 (500).
-- **Draft** = the same preview with `draft_saved_at` set. Saving again updates `draft_saved_at` (AC-004.7).
-  Cleanup job and the "replace my previous preview" step both filter `draft_saved_at IS NULL` (AC-004.6).
+- **Pull** (`POST /imports/jira`): validate dates (MSG01 / MSG39) → `ProjectAccess` (403) → Jira key from
+  `ProjectService.findJiraProjectKey` (none → MSG50 "not connected", Failed batch) →
+  `JiraIssueSource.resolvedIssues(key, from, to)` page by page, oldest first → drop keys already a
+  `ticket.ticket_id` (one `IN` query per Jira page) → stop at 100 kept; one more kept issue = MSG35 → none kept:
+  MSG04, no preview → in one transaction: delete the caller's non-Draft preview (AC-001.10), insert the preview
+  (source `JIRA_IMPORT`, `file_name` NULL, the dates) and one `import_preview_row` per issue, status
+  `NEEDS_SOLUTION`. The Jira calls run before the transaction (AGENTS.md §4).
+  `JiraUnavailableException` → `ImportBatchRecorder` writes a Failed batch of source `JIRA_IMPORT` → MSG50 (502).
+- **Rows, popup, Fill solution, remove-rows**: the `import-ticket-list` code of PR #110 (features
+  `preview-fill-solution`, `row-solution-popup`, `fill-solution-screen`). This module only makes them accept a
+  `JIRA_IMPORT` preview the way they accept a `WITHOUT_SOLUTION` one, and adds `sourceUrl` and `comments` to the
+  row detail.
+- **Finish** = `POST …/confirm` on a Jira preview, in `ImportConfirmServiceImpl` (feature `import-type-confirm`
+  of `import-ticket-list` adds the Needs Solution check, `MSG_NEW_4`). For `JIRA_IMPORT`, inside the locked
+  transaction: Valid rows whose key is now a Ticket are skipped and returned as `notice` MSG38 (AC-003.2/003.3); a
+  unique-key violation on insert re-reads the taken keys and retries once without them (Edge 6). Batch and event
+  as for CSV.
+- **Draft** = the preview with `draft_saved_at` set. Saving again updates it (AC-004.7). The cleanup job, the
+  CSV upload and the pull delete only previews with `draft_saved_at IS NULL` (AC-004.6). Reopen = the existing
+  `GET /imports/previews/{previewId}`.
 
 ## Data Model
 
-Liquibase `008-ticket-jira-import.sql` (author `ticket`), on top of `003-ticket-import-schema.sql`:
+Liquibase `009-ticket-jira-import.sql` (author `ticket`), after PR #110's `008-ticket-import-project-uuid.sql`.
+No new table: both tables are existing ones of `import-ticket-list`, which KAN-248 converts to the AC-001.20
+convention with the other ticket tables.
 
 ```sql
--- import_preview: Jira previews have no file; Drafts survive cleanup and replacement
-ALTER TABLE import_preview ALTER COLUMN file_name DROP NOT NULL;
-ALTER TABLE import_preview ADD COLUMN resolved_from  DATE;          -- Jira only
-ALTER TABLE import_preview ADD COLUMN resolved_to    DATE;          -- Jira only
-ALTER TABLE import_preview ADD COLUMN more_available BOOLEAN NOT NULL DEFAULT false;   -- MSG35
-ALTER TABLE import_preview ADD COLUMN draft_saved_at TIMESTAMPTZ;   -- NULL = not a Draft
+ALTER TABLE import_preview ALTER COLUMN file_name DROP NOT NULL;           -- a Jira preview has no file
+ALTER TABLE import_preview ADD COLUMN resolved_from  DATE;                 -- Jira only
+ALTER TABLE import_preview ADD COLUMN resolved_to    DATE;                 -- Jira only
+ALTER TABLE import_preview ADD COLUMN more_available BOOLEAN NOT NULL DEFAULT false;  -- MSG35
+ALTER TABLE import_preview ADD COLUMN draft_saved_at TIMESTAMPTZ;          -- NULL = not a Draft
 DROP INDEX uq_import_preview_owner;
 CREATE UNIQUE INDEX uq_import_preview_owner_open ON import_preview (owner) WHERE draft_saved_at IS NULL;
 CREATE INDEX idx_import_preview_owner_draft ON import_preview (owner, draft_saved_at DESC)
     WHERE draft_saved_at IS NOT NULL;
 
--- one row per pulled issue; Solution columns NULL until written
-CREATE TABLE import_preview_issue (
-    preview_id        BIGINT       NOT NULL REFERENCES import_preview (id) ON DELETE CASCADE,
-    jira_key          VARCHAR(50)  NOT NULL,
-    position          INT          NOT NULL,     -- resolution-date order, from 1
-    summary           TEXT         NOT NULL,
-    description       TEXT,                      -- plain text from ADF
-    assignee          VARCHAR(100),              -- display name, NULL when unassigned (D4)
-    resolved_at       TIMESTAMPTZ  NOT NULL,
-    source_url        TEXT         NOT NULL,     -- {site}/browse/{key}
-    comments          JSONB        NOT NULL DEFAULT '[]',   -- [{author, created, body}] (D5)
-    symptoms          TEXT,
-    root_cause        TEXT,
-    resolution_steps  TEXT,
-    workaround        TEXT,
-    scope             TEXT,
-    PRIMARY KEY (preview_id, jira_key)
-);
-CREATE INDEX idx_import_preview_issue_order ON import_preview_issue (preview_id, position);
+ALTER TABLE import_preview_row ADD COLUMN source_url TEXT;                 -- Jira only: {site}/browse/{key}
+ALTER TABLE import_preview_row ADD COLUMN comments   JSONB NOT NULL DEFAULT '[]';  -- [{author, created, body}]
 ```
 
-- CSV keeps `import_preview_row`; Jira gets its own table because its rows are edited (Solutions) and keyed by Jira
-  key, while CSV rows are read-only and keyed by row number.
-- `ticket` gets `source = JIRA_IMPORT`, `ticket_id = jira_key`, `title = summary` cut to 200, `writer = assignee`,
-  `resolved_date = resolved_at` in Vietnam time, `import_batch_id`. `uq_ticket_ticket_id` stays the guard against a
-  key that became a Ticket during Finish (caught → that key is skipped, see Edge 6).
-- `import_batch` for Jira: `file_name = NULL`, `published_count`, `removed_count = 0`, `error_count = skipped`.
-- Ids stay `BIGSERIAL`: the UUID switch of KAN-248 (schema alignment) is a separate change that will convert these
-  tables with the others.
+Row mapping of an issue: `row_no` = position (1…100), `ticket_id` = Jira key, `title` = summary (raw; cut to 200
+only on the Ticket), `description` = plain text, `author` = assignee display name or NULL, `resolved_date` =
+`yyyy-MM-dd` in Vietnam time, `errors` = `[]`. `import_batch` for Jira: `file_name` NULL, `error_count` = skipped.
 
 ## Key Decisions
 
 | Decision | Choice | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
 | Jira access (D2, user) | `JiraIssueSource` port in `ticket.service`; `JiraRestIssueSource` reads `tsolve.jira.site-url`, `.email`, `.api-token` (env `JIRA_SITE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, no defaults) | Wait for `workspace` / `project-integration`; per-Project token (SRS GBR-14) | UC-20 ships now; `workspace` replaces only the credential lookup later |
-| Drafts (D3, user) | `import_preview.draft_saved_at` | A separate `import_draft` table with a JSON copy | Draft and preview are the same data; reopen = read the preview |
-| Jira search API | `GET /rest/api/3/search/jql` with `jql=project = "{key}" AND resolved >= "{from}" AND resolved < "{to+1}" ORDER BY resolved ASC, key ASC`, `fields=summary,description,assignee,resolutiondate,comment`, `maxResults=100`, `nextPageToken` | Old `/rest/api/3/search` | The old endpoint is removed by Atlassian; the new one pages by token |
-| Date boundaries | JQL dates as `yyyy-MM-dd`; the service account's Jira time zone must be Asia/Ho_Chi_Minh — `JiraRestIssueSource` also re-checks `resolutiondate` against the range in Vietnam time and drops issues outside it | Convert to UTC instants in JQL | JQL dates follow the account's profile time zone; the re-check keeps AC-001.1 exact even if the profile is wrong |
-| Comments | Use the `comment` field of the search; when `comment.total > comment.comments.length`, page `GET /rest/api/3/issue/{key}/comment` | One comment call for every issue | Most issues have few comments: ~1 search call per 100 issues instead of 101 calls |
-| ADF to text | `ticket.jira.AdfText` — walks `content` arrays, joins `text` nodes, newline per paragraph / list item / heading, `mention` → its text, unknown nodes skipped | Store raw ADF; render ADF in the web app | The popup shows plain text (spec AC-001.2); `tracker.AdfTextExtractor` is empty and can reuse it later |
-| HTTP client | Spring `RestClient` with 10 s connect / 30 s read timeout (AC-001.7), basic auth `email:token` | WebClient, Feign | Already used in `ai` and `identity`; no new dependency |
-| Project data | Add `Optional<String> jiraProjectKey(long projectId)` to `ticket.service.ProjectAccess`; implemented with a new `ProjectService.findJiraProjectKey(long)` in `project` | Read `ProjectRepository` from `ticket` | backend/AGENTS.md: other modules only through `service/` interfaces |
-| Duplicate filter | `TicketRepository.findExistingTicketIds(Collection<String>)` per Jira page | Load every Ticket ID of the Project | Bounded memory; one query per 100 issues |
-| Solution validation | Reuse the CSV rules (required sections trimmed non-blank, ≤ 10,000 characters in total) via a shared `SolutionRules` extracted from `CsvRowValidator` | Copy the checks | One rule, two callers; MSG01 lists missing sections, MSG02 for length |
-| Endpoints | New `JiraImportController` + `ImportDraftController`; `ImportController` (CSV) unchanged | Grow `ImportController` | Keeps the finished CSV module's code and tests untouched |
-
-Decided in planning (minor): previews of source Jira answer only the Jira endpoints (`/issues…`, `/solutions`,
-`/remove-issues`, `/finish`) and CSV previews only the CSV ones; the wrong kind → 404. `/draft` and
-`/imports/drafts` accept both kinds, but only Jira previews can be saved until CSV Drafts are added (a CSV preview
-→ 404).
+| Preview model (D7, user) | Rows of the CSV Import Preview of PR #110 | A separate `import_preview_issue` table and Jira endpoints | One preview flow, one screen; no new table; the Fill solution / popup / Confirm work of KAN-31 is reused |
+| Drafts (D3, user) | `import_preview.draft_saved_at` | A separate `import_draft` table | Draft and preview are the same data |
+| Jira search API | `GET /rest/api/3/search/jql`, `jql=project = "{key}" AND resolved >= "{from}" AND resolved < "{to+1}" ORDER BY resolved ASC, key ASC`, `fields=summary,description,assignee,resolutiondate,comment`, `maxResults=100`, `nextPageToken` | Old `/rest/api/3/search` | The old endpoint is removed by Atlassian |
+| Date boundaries | JQL dates `yyyy-MM-dd`; `JiraRestIssueSource` re-checks `resolutiondate` in Vietnam time and drops issues outside the range | UTC instants in JQL | JQL follows the account's profile time zone; the re-check keeps AC-001.1 exact |
+| Comments | `comment` field of the search; when `comment.total` > returned, page `GET /rest/api/3/issue/{key}/comment` | One comment call per issue | ~1 call per 100 issues instead of 101 |
+| ADF to text | `ticket.jira.AdfText`: `text` nodes joined, newline per paragraph / list item / heading, `mention` → its text, unknown nodes skipped | Store ADF | The popup shows plain text (AC-001.2) |
+| HTTP client | Spring `RestClient`, 10 s connect / 30 s read, basic auth `email:token` | WebClient, Feign | Already used in `ai` and `identity` |
+| Jira key of a Project | New `ProjectService.findJiraProjectKey(UUID)` in `project` | Read `ProjectRepository` from `ticket` | AGENTS.md: other modules only through `service/` |
+| Scan cap | At most 20 Jira pages (2,000 issues) per pull; reaching the cap sets "more available" (MSG35) | No cap | Bounded time when most issues are already Tickets (Edge 3) |
 
 ## File Structure
 ```
-backend/src/main/resources/db/changelog/changes/008-ticket-jira-import.sql          new
+backend/src/main/resources/db/changelog/changes/009-ticket-jira-import.sql          new
 backend/src/main/resources/db/changelog/db.changelog-master.xml                     + include
-backend/src/main/resources/application.yml                                          + tsolve.jira.* (shared file)
-.env.example                                                                         + JIRA_SITE_URL, JIRA_EMAIL, JIRA_API_TOKEN (shared file)
-backend/src/main/java/vn/tsolve/project/service/ProjectService.java                 + findJiraProjectKey (project-integration)
-backend/src/main/java/vn/tsolve/project/service/impl/ProjectServiceImpl.java        + findJiraProjectKey
+backend/src/main/resources/application.yml, .env.example                            + tsolve.jira.* / JIRA_* (shared files)
+backend/src/main/java/vn/tsolve/project/service/ProjectService.java (+ impl)        + findJiraProjectKey
 backend/src/main/java/vn/tsolve/ticket/
-  controller/JiraImportController.java, ImportDraftController.java
-  dto/JiraPullRequest, JiraImportPreviewResponse, JiraPreviewIssueSummary, JiraPreviewIssueResponse,
-      ApplySolutionRequest, RemoveIssuesRequest, JiraImportResultResponse, ImportDraftSummary, DraftSavedResponse
-  entity/ImportPreviewIssue.java (+ ImportPreview: resolvedFrom, resolvedTo, moreAvailable, draftSavedAt)
-  repository/ImportPreviewIssueRepository.java (+ ImportPreviewRepository, TicketRepository queries)
-  service/JiraIssueSource.java, JiraIssue.java (record), JiraImportService, JiraPreviewService,
-          JiraFinishService, ImportDraftService (+ ProjectAccess.jiraProjectKey)
-  service/impl/…Impl for each, SolutionRules.java, ProjectServiceAccess.java (replaces StubProjectAccess for the key)
-  jira/JiraRestIssueSource.java, JiraProperties.java, AdfText.java
-  exception/JiraUnavailableException.java, InvalidDateRangeException.java, SolutionMissingException.java
-backend/src/test/java/vn/tsolve/ticket/…  one test class per service + controller slice tests + JiraRestIssueSource with MockRestServiceServer
-frontend/openapi/tsolve-api.yaml                                                     + endpoints of the spec
-frontend/src/shared/api/generated/**                                                 regenerated
+  controller/JiraImportController.java, ImportDraftController.java                  new
+  dto/JiraPullRequest, ImportDraftSummary, DraftSavedResponse, IssueComment          new
+  dto/ImportPreviewResponse, ImportPreviewRowResponse, ImportResultResponse          + Jira fields
+  entity/ImportPreview (+ dates, moreAvailable, draftSavedAt), ImportPreviewRow (+ sourceUrl, comments)
+  repository/ImportPreviewRepository (Draft-aware queries), TicketRepository
+  service/JiraIssueSource, JiraIssue, JiraImportService, ImportDraftService (+ impls)
+  service/impl/ImportConfirmServiceImpl, ImportPreviewServiceImpl, CsvImportServiceImpl, PreviewCleanupJob  (Jira / Draft branches)
+  jira/JiraRestIssueSource, JiraProperties, AdfText
+  exception/JiraUnavailableException
+backend/src/test/java/vn/tsolve/ticket/…  Jira*Test / Jira*IT / *Draft*Test / jira/** (paths in module.md)
+frontend/openapi/tsolve-api.yaml, frontend/src/shared/api/generated/**
 frontend/src/features/ticket-import/
-  pages/ImportTicketsPage.tsx (Jira tab + Drafts list), pages/ImportPreviewPage.tsx (Jira mode)
-  components/JiraPullForm.tsx, JiraIssuesTable.tsx, ImportTicketPreviewDialog.tsx, SolutionFields.tsx, DraftsList.tsx
-  api/*.ts (TanStack Query hooks over the generated client), mocks/handlers.ts (+ Jira handlers)
+  components/JiraPullForm.tsx, DraftsList.tsx (+ tests)                              new
+  pages/ImportTicketsPage.tsx (Jira tab enabled, Drafts), ImportPreviewPage.tsx (Jira summary, Save as draft, MSG38)
+  components/ImportTicketPreviewModal.tsx (comments + Jira link)                    shared with KAN-31
+  pages/JiraImport*.test.tsx                                                         Jira page tests
 ```
 
 ## External Dependencies
 - Jira Cloud REST API v3 (search/jql, issue comments) — reached with the Workspace service account (D2).
+- `import-ticket-list` features of PR #110 not built yet: `import-type-upload`, `preview-fill-solution`,
+  `import-type-confirm`, `row-solution-popup`, `fill-solution-screen`. Tasks 5, 6 and 9 start after them.
 - No new library.
 
 ## Edge Cases & Risks
 
 | # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
 |---|-------|-----------|----------|----------|-------------------|-----------|
-| 1 | 001 | Security | API token in a log line or MSG50 text (e.g. exception message with the auth header) | Critical | MSG50 carries only HTTP status / error type; token never logged (NFR 2, AC-001.7) | Task 3 |
+| 1 | 001 | Security | API token in a log line or MSG50 text | Critical | MSG50 carries only HTTP status / error type; token never logged (NFR 2, AC-001.7) | Task 3 |
 | 2 | 001 | External | Jira returns 401/403/429/5xx, times out, or env vars are empty | High | MSG50, Failed batch, no preview (AC-001.7) | Task 3, Task 4 |
-| 3 | 001 | Data volume | Range holds 5,000 issues, most already Tickets | High | Pages through Jira until 101 kept issues or the end; cap the scan at 20 pages (2,000 issues) and set "more" if the cap is hit | Task 4 |
-| 4 | 001 | Time | Issue resolved 23:30 on the "to" date in Vietnam, Jira profile in UTC | High | Kept (Vietnam-time re-check, Key Decisions) | Task 3 |
-| 5 | 001 | Data | Issue with no description, no assignee, ADF with tables/mentions/code blocks | Medium | Description empty / writer empty / readable plain text | Task 3 |
-| 6 | 003 | Concurrency | The Solution Form (UC-19) or another Finish creates a Ticket with the same key during Finish | High | Pre-check skips known keys; a unique-key violation on insert → re-read existing keys, retry once without them (MSG38); a second failure → MSG33 | Task 6 |
-| 7 | 003 | Concurrency | Double click on Finish | High | `FOR UPDATE` on the preview; second request → 404, no second batch (AC-003.8) | Task 6 |
-| 8 | 002 | Concurrency | Two tabs: one removes an issue while the other applies a Solution to it | Medium | Solution update ignores keys no longer in the preview; Finish reads the current rows | Task 5 |
-| 9 | 002 | Validation | Solution with only whitespace in a required section; Workaround alone 10,001 characters | Medium | MSG01 / MSG02, no row changed | Task 5 |
-| 10 | 001 | State | PM pulls again while an unsaved preview is open in another tab | Medium | Old non-Draft preview deleted; the old tab gets 404 → web app returns to Import Tickets | Task 4, Task 9 |
+| 3 | 001 | Data volume | Range holds 5,000 issues, most already Tickets | High | Scan cap of 20 pages; "more available" when hit | Task 4 |
+| 4 | 001 | Time | Issue resolved 23:30 on the "to" date in Vietnam, Jira profile in UTC | High | Kept (Vietnam-time re-check) | Task 3 |
+| 5 | 001 | Data | No description, no assignee, ADF with tables/mentions/code blocks | Medium | Empty description / writer; readable plain text | Task 3 |
+| 6 | 003 | Concurrency | The Solution Form (UC-19) or another Finish creates a Ticket with the same key during Finish | High | Pre-check skips known keys; a unique violation → re-read, retry once without them (MSG38); second failure → MSG33 | Task 6 |
+| 7 | 003 | Concurrency | Double click on Finish | High | `FOR UPDATE` on the preview (existing); second → 404, no second batch (AC-003.8) | Task 6 |
+| 8 | 001 | Config | Project has no Jira project key (stub Project ids) | High | MSG50 with "not connected", Failed batch, no Jira call | Task 4 |
+| 9 | 002 | Validation | Whitespace-only required section; 10,001 characters in total | Medium | MSG01 / MSG02, no row changed (existing fill-solution) | Task 5 |
+| 10 | 001 | State | PM pulls again while an unsaved preview is open in another tab | Medium | Old non-Draft preview deleted; old tab gets 404 → web app returns to Import Tickets | Task 4, Task 9 |
 | 11 | 004 | State | Draft reopened after its Project became inactive | Medium | Opens; Finish → MSG40, Draft kept | Task 6 |
-| 12 | 004 | Authorization | User B calls GET/DELETE on user A's Draft id | High | 404 (AC-004.5) | Task 7 |
-| 13 | 003 | Data | Summary longer than 200 characters | Medium | Title cut to 200 characters (`ticket.title` limit); the popup and preview show the full summary | Task 6 |
-| 14 | 001 | Data | Jira key longer than 50 characters | Low | Not possible in Jira (key ≤ 10 + number); stored as is | — |
-| 15 | 004 | Cleanup | Cleanup job runs while a Draft is older than 24 h | High | Kept (AC-004.6) | Task 7 |
-| 16 | 001 | Config | `JIRA_SITE_URL` with a trailing slash or without https | Low | Trailing slash trimmed; non-https rejected at start-up | Task 3 |
+| 12 | 004 | Authorization | User B reads or deletes user A's Draft | High | 404 (AC-004.5) | Task 7 |
+| 13 | 003 | Data | Summary longer than 200 characters | Medium | Ticket title cut to 200; the row keeps the full summary | Task 6 |
+| 14 | 004 | Cleanup | Cleanup job runs while a Draft is older than 24 h | High | Kept (AC-004.6) | Task 2 |
+| 15 | 004 | State | CSV upload or Jira pull while the same PM has a Draft | High | Draft kept, partial unique index allows it (AC-004.6) | Task 2 |
+| 16 | 001 | Config | `JIRA_SITE_URL` with a trailing slash or plain http | Low | Trailing slash trimmed; non-https rejected at start-up | Task 3 |
 
 ## Risks
-- **Schema alignment (KAN-248)** will move ids to UUID and may rename these tables; whoever merges second rebases
-  their migration. Keep `008` small.
+- **Order of PRs:** KAN-45 merges after PR #110. If #110 changes the preview rows or Confirm again, rebase and
+  re-run Tasks 5–6.
+- **Schema alignment (KAN-248)** renames these tables and columns; whoever merges second updates their changeset.
 - **Shared files** (`application.yml`, `.env.example`, `project/service`) need their owners' approval in the PR.
-- **Service account permissions:** the account needs Browse projects on every linked Jira project; a missing
-  permission looks like "no issues" in JQL, not an error. The web app's MSG04 text cannot tell these apart.
+- **Service account permissions:** a missing Browse permission looks like "no issues" (MSG04), not an error.

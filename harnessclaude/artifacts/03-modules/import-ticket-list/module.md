@@ -3,7 +3,38 @@ name: import-ticket-list
 repos: [default]
 dependencies: []
 complexity: large
-paths: [backend/src/main/java/vn/tsolve/ticket/**, backend/src/test/java/vn/tsolve/ticket/**, backend/src/main/resources/db/changelog/changes/*-ticket-import*.sql, backend/src/main/resources/db/changelog/db.changelog-master.xml, frontend/openapi/tsolve-api.yaml, frontend/src/shared/api/generated/**, frontend/src/features/ticket-import/**, frontend/src/shared/ui/CsvUpload/**, frontend/src/shared/ui/DetailModal/**, frontend/src/shared/ui/StatusTag/**, frontend/src/shared/messages/catalog.ts, frontend/src/shared/messages/catalog.test.ts]
+paths:
+  - backend/src/main/java/vn/tsolve/ticket/**
+  - backend/src/test/java/vn/tsolve/ticket/controller/ImportControllerTest.java
+  - backend/src/test/java/vn/tsolve/ticket/csv/**
+  - backend/src/test/java/vn/tsolve/ticket/service/impl/CsvImportServiceImplTest.java
+  - backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmIT.java
+  - backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmServiceImplTest.java
+  - backend/src/test/java/vn/tsolve/ticket/service/impl/ImportPreviewServiceImplTest.java
+  - backend/src/test/java/vn/tsolve/ticket/service/impl/PreviewCleanupJobTest.java
+  - backend/src/test/java/vn/tsolve/ticket/service/impl/StubProjectAccessTest.java
+  - backend/src/main/resources/db/changelog/changes/*-ticket-import*.sql
+  - backend/src/main/resources/db/changelog/db.changelog-master.xml
+  - frontend/openapi/tsolve-api.yaml
+  - frontend/src/shared/api/generated/**
+  - frontend/src/features/ticket-import/index.ts
+  - frontend/src/features/ticket-import/routes.ts
+  - frontend/src/features/ticket-import/hooks/**
+  - frontend/src/features/ticket-import/lib/**
+  - frontend/src/features/ticket-import/mocks/**
+  - frontend/src/features/ticket-import/components/Csv*
+  - frontend/src/features/ticket-import/components/ImportPreviewTable*
+  - frontend/src/features/ticket-import/components/ImportTicketPreviewModal*
+  - frontend/src/features/ticket-import/pages/ImportHistoryPage.tsx
+  - frontend/src/features/ticket-import/pages/ImportPreviewPage.tsx
+  - frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx
+  - frontend/src/features/ticket-import/pages/ImportTicketsPage.tsx
+  - frontend/src/features/ticket-import/pages/ImportTicketsPage.test.tsx
+  - frontend/src/shared/ui/CsvUpload/**
+  - frontend/src/shared/ui/DetailModal/**
+  - frontend/src/shared/ui/StatusTag/**
+  - frontend/src/shared/messages/catalog.ts
+  - frontend/src/shared/messages/catalog.test.ts
 ---
 
 # Module: import-ticket-list

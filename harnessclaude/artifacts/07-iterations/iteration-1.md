@@ -101,6 +101,21 @@ original date window has passed. Spec: `artifacts/03-modules/triage/spec.md`; ac
 | Task | Assignee | Status |
 |------|----------|--------|
 | 1 · Suggestion History list and detail popup, 10.1–10.2 (KAN-149) | Trần Hải Anh | evaluating |
+### ticket-repository (added 2026-11-07)
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · OpenAPI contract for Jira import and Drafts (KAN-45) | Đặng Nhật Minh | pending |
+| 2 · Schema, entities, repositories, Project Jira key (KAN-45) | Đặng Nhật Minh | pending |
+| 3 · Jira client — JiraIssueSource (KAN-45) | Đặng Nhật Minh | pending |
+| 4 · Pull from Jira (KAN-45) | Đặng Nhật Minh | pending |
+| 5 · Preview — Solutions and remove (KAN-45) | Đặng Nhật Minh | pending |
+| 6 · Finish — publish the Tickets (KAN-45) | Đặng Nhật Minh | pending |
+| 7 · Drafts (KAN-45) | Đặng Nhật Minh | pending |
+| 8 · Web — Import Tickets Jira tab and Drafts (KAN-45) | Đặng Nhật Minh | pending |
+| 9 · Web — Import Preview and popup (KAN-45) | Đặng Nhật Minh | pending |
+| 10 · Trace and end-to-end check (KAN-45) | Đặng Nhật Minh | pending |
+
 ## Order — feedback first
 
 1. fe-foundation Task 7 (KAN-204): catalog synced to System_Messages of 25/10; 9.3 Audit Entry Detail removed.

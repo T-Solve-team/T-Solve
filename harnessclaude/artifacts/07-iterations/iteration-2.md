@@ -33,21 +33,6 @@ they plan this iteration.
 | 2 · AI draft of a Solution (KAN-142) | Trần Hải Anh | pending |
 | 3 · AI rewrite of a Solution (KAN-143) | Trần Hải Anh | pending |
 
-### ticket-repository
-
-| Task | Assignee | Status |
-|------|----------|--------|
-| 1 · OpenAPI contract for Jira import and Drafts (KAN-45) | Đặng Nhật Minh | pending |
-| 2 · Schema, entities, repositories, Project Jira key (KAN-45) | Đặng Nhật Minh | pending |
-| 3 · Jira client — JiraIssueSource (KAN-45) | Đặng Nhật Minh | pending |
-| 4 · Pull from Jira (KAN-45) | Đặng Nhật Minh | pending |
-| 5 · Preview — Solutions and remove (KAN-45) | Đặng Nhật Minh | pending |
-| 6 · Finish — publish the Tickets (KAN-45) | Đặng Nhật Minh | pending |
-| 7 · Drafts (KAN-45) | Đặng Nhật Minh | pending |
-| 8 · Web — Import Tickets Jira tab and Drafts (KAN-45) | Đặng Nhật Minh | pending |
-| 9 · Web — Import Preview and popup (KAN-45) | Đặng Nhật Minh | pending |
-| 10 · Trace and end-to-end check (KAN-45) | Đặng Nhật Minh | pending |
-
 ## Demo Script
 
 ### platform
