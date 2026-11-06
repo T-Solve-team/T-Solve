@@ -661,8 +661,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "ee7b222e4b5e768c82849d76a8acb61369acbc989d6520f88d3ebbe51b293bee",
-    "approvedAt": "2026-11-06T13:24:56.944Z",
+    "specHash": "d9ce1478f4fd3c1c949599302bffe9dd2c8a3e3583e1347ca1b5491c3c38fa20",
+    "approvedAt": "2026-11-06T23:44:12.952Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -720,7 +720,9 @@
       "AC-009.7": "IF any decision input is invalid or any selected ticket is missing, outside the caller's scope or no longer eligible, THEN THE API SHALL refuse the entire batch without changing any ticket or recording a decision.",
       "AC-009.8": "WHEN a decision succeeds, THE backend SHALL commit the ticket state and one durable review decision per ticket in the same Workspace transaction, preserving Solution, Evidence and review due date. Each decision SHALL retain the reviewer, action, time and applicable reason or comment.",
       "AC-009.9": "THE production backend SHALL use database/02_tenant.sql as the reference for Review table structure and relationships. THE tenant changelog SHALL use UUID keys under the backend conventions for the shared ticket, evidence and review_decision tables. The Solution fields SHALL remain on ticket.",
-      "AC-009.10": "WHEN the production web application loads or submits a Review action, THE frontend SHALL use the published OpenAPI operations and backend data through the existing generated client."
+      "AC-009.10": "WHEN the production web application loads or submits a Review action, THE frontend SHALL use the published OpenAPI operations and backend data through the existing generated client.",
+      "AC-009.11": "WHEN a Solution Form ticket is first saved as Pending review or transitions back to Pending review, THE tenant database SHALL record that entry time in review_queue_entered_at. WHILE a ticket stays Pending review, THE system SHALL preserve that entry time and SHALL keep the existing review due date rules (GBR-08, GBR-10).",
+      "AC-009.12": "WHEN the Review Queue returns a ticket, THE API SHALL expose the recorded entry time as enteredQueueAt. IF an older ticket has no recorded entry time, THEN THE API SHALL return null for enteredQueueAt and THE frontend SHALL show an empty value indicator."
     }
   },
   "ai": {

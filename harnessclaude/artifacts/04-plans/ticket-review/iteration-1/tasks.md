@@ -1,7 +1,7 @@
 ---
 module: ticket-review
 date: 2026-11-01
-total_tasks: 9
+total_tasks: 10
 owner: Dev
 ---
 
@@ -75,20 +75,29 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Dependencies:** Task 6. Tests implement the trusted Workspace and membership contract against two PostgreSQL databases.
 **Verification:** Check session, role, scope, UUID batch and feedback validation, cross-Workspace denial and committed decisions through HTTP.
 
-## Task 8: Production Review reads and web integration (KAN-24)
+## Task 8: Record Review Queue entry time (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-queue-entry-time
+**Description:** Implement AC-009.11. A tenant migration records when a Solution Form ticket enters Pending review. Keep unknown historical entry times null. Record a new time on a new entry without changing the due date.
+**Files:** Tenant Liquibase changelog and Review storage and transaction integration tests.
+**Dependencies:** Task 5 and approved queue entry time criteria.
+**Verification:** PostgreSQL upgrade and lifecycle tests, backend verification and Spotless.
+
+## Task 9: Production Review reads and web integration (KAN-24)
 
 **Story:** STORY-009
 **Feature:** review-production-api
-**Description:** Implement AC-009.1–009.2 and AC-009.10. Connect queue, eligible IDs and detail to persisted data, and verify the existing web decision callers through the production contract.
+**Description:** Implement AC-009.1–009.2, AC-009.10 and AC-009.12. Connect queue, eligible IDs and detail to persisted data, expose the nullable queue entry time and verify the existing web decision callers through the production contract.
 **Files:** Review controller, services, tests and existing OpenAPI or web Review files where needed.
-**Dependencies:** Task 7 and Workspace-scoped Project metadata including public Project and Department IDs.
+**Dependencies:** Tasks 7 and 8 and Workspace-scoped Project metadata including public Project and Department IDs.
 **Verification:** Backend authorization, concurrency and rollback tests, plus real web API integration.
 
-## Task 9: Request Changes feedback in Jira (KAN-24)
+## Task 10: Request Changes feedback in Jira (KAN-24)
 
 **Story:** STORY-009
 **Feature:** review-jira-feedback
 **Description:** Complete the Jira clause of AC-009.6 and cover R15.
 **Files:** Jira issue panel and Review feedback boundary and tests.
-**Dependencies:** Tasks 7 and 8 and verified Jira issue and writer context.
+**Dependencies:** Task 9 and verified Jira issue and writer context.
 **Verification:** MSG64 for the writer and denial for an unrelated issue, Account or Workspace.

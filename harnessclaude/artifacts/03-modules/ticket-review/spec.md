@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-07 | STORY-009 | Persist the time a ticket entered the Review Queue | Preserve the actual entry time independently of later ticket edits |
 | 2026-11-06 | STORY-009 | Define the production Review backend for KAN-24 using the Workspace schema reference and UUID keys | Complete the Jira story beyond its merged frontend and mocks |
 | 2026-11-01 | STORY-008 | Add KAN-159 read-only Review History frontend and proposed query/MSW contract | Continue remaining frontend work; reuse Department convention and existing decision history |
 | 2026-11-01 | STORY-007 | Add KAN-158 Expired Tickets frontend, API proposal and mock send-back flow | User requested completion of FE today, one Jira branch per task; explicitly permits this branch to depend on KAN-24 |
@@ -130,6 +131,8 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
   - AC-009.8: WHEN a decision succeeds, THE backend SHALL commit the ticket state and one durable review decision per ticket in the same Workspace transaction, preserving Solution, Evidence and review due date. Each decision SHALL retain the reviewer, action, time and applicable reason or comment.
   - AC-009.9: THE production backend SHALL use database/02_tenant.sql as the reference for Review table structure and relationships. THE tenant changelog SHALL use UUID keys under the backend conventions for the shared ticket, evidence and review_decision tables. The Solution fields SHALL remain on ticket.
   - AC-009.10: WHEN the production web application loads or submits a Review action, THE frontend SHALL use the published OpenAPI operations and backend data through the existing generated client.
+  - AC-009.11: WHEN a Solution Form ticket is first saved as Pending review or transitions back to Pending review, THE tenant database SHALL record that entry time in review_queue_entered_at. WHILE a ticket stays Pending review, THE system SHALL preserve that entry time and SHALL keep the existing review due date rules (GBR-08, GBR-10).
+  - AC-009.12: WHEN the Review Queue returns a ticket, THE API SHALL expose the recorded entry time as enteredQueueAt. IF an older ticket has no recorded entry time, THEN THE API SHALL return null for enteredQueueAt and THE frontend SHALL show an empty value indicator.
 
 ## Out of Scope
 
@@ -142,6 +145,7 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
 ### Exposed by this module
 
 - Preserve existing `/api/v1/review-queue`, `/api/v1/review-queue/ticket-ids` and `/api/v1/reviews/{approve,reject,request-changes}` proposal routes. Queue/ids use optional UUID `departmentId`; page/sort conventions stay shared. Every internal ticket/Project id becomes a UUID string, while displayed `sourceTicketId` remains the Jira/source key.
+- Review Queue returns `enteredQueueAt` as a date-time when recorded and `null` for older rows with an unknown entry time. The tenant changelog adds nullable `ticket.review_queue_entered_at` as `TIMESTAMPTZ`.
 - Decision requests: unique `ticketIds` (1–500 UUIDs); Reject adds `reason`, Request Changes adds `comment` (trim-required, at most 1,000 characters). Success returns existing `{ count }`. Use current catalog Problem errors: validation 400, unauthenticated 401, unauthorized 403, missing 404 and stale 409, preserving field errors.
 - Use the generated Ticket Detail query at `/api/v1/tickets/{ticketId}`, reusing existing Ticket source/status/Project/Solution definitions where compatible. Details carry trusted author and manager identity/scope information. The frontend uses account identifiers to determine authorship.
 - MSW fixtures hold ticket states and append-only decision records in memory, reset through the existing mock reset entry point. Invalid batches leave every ticket and history entry unchanged. No production table or second Ticket authority is created.
