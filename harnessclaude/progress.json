@@ -164,15 +164,15 @@
         "ticket-feedback-api": "pending",
         "give-feedback-connect": "pending",
         "ticket-suggestion-api": "pending",
-        "solution-retrieval": "pending"
+        "solution-retrieval": "passing"
       },
-      "lastUpdated": "2026-11-06T16:53:41.477Z",
+      "lastUpdated": "2026-11-06T17:23:51.646Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "198fa83e3ce660d769ab2d12cd2477ed3cda6755"
+        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
       }
     },
     "triage": {
@@ -193,27 +193,27 @@
       }
     },
     "chatbot": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "ask-answer": "passing",
         "citations": "passing",
         "session-conversations": "passing",
         "ratings": "passing",
         "uuid-ids": "passing",
-        "chatbot-answer-schema": "pending",
-        "ask-answer-api": "pending",
+        "chatbot-answer-schema": "passing",
+        "ask-answer-api": "passing",
         "answer-citations": "pending",
         "cited-documents": "pending",
         "follow-up-context": "pending"
       },
-      "lastUpdated": "2026-11-06T16:53:40.896Z",
+      "lastUpdated": "2026-11-06T17:23:52.760Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "3d3c827c8b735482e0f3e8baf0bd182d1ad40166"
+        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
       }
     },
     "jira-app": {
