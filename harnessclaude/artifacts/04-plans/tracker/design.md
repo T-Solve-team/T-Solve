@@ -235,9 +235,11 @@ backend/src/main/java/vn/tsolve/tracker/
 ├── entity/        SuggestionResult (+ sources_used JSON string, suggested_solution; fill(...), hasSuggestion())
 ├── repository/    SuggestionResultRepository (+ findByJiraIssueKey, conditional fill update)
 ├── service/       SuggestionJobQueue, SuggestionSearch, SuggestionJobService
-│   └── impl/      IssueCreatedServiceImpl (enqueue), SuggestionJobServiceImpl, InProcessSuggestionJobQueue,
-│                  StubSuggestionSearch
-└── config/        SuggestionJobConfig (bounded executor `suggestionJobExecutor`)
+│   └── impl/      IssueCreatedServiceImpl (enqueue), SuggestionJobServiceImpl, InProcessSuggestionJobQueue
+│                  (owns its 2-thread pool, queue 100), StubSuggestionSearch
+└── client/        AdfTextExtractor (was an empty placeholder; now ADF → plain text)
+   No `config/SuggestionJobConfig` (changed while implementing, 2026-11-07): an executor *bean* would make Boot drop
+   its own `applicationTaskExecutor` for every module, so the stand-in queue owns its pool instead.
 backend/src/main/resources/application.yml   (tsolve.stub.suggestion)
 .env.example                                  (TSOLVE_STUB_SUGGESTION)
 frontend/openapi/tsolve-api.yaml              (IssueCreatedPayload: summary, description, labels) + npm run generate:api

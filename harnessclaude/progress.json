@@ -298,14 +298,16 @@
         "solution-form": "pending",
         "suggestion-answer": "pending",
         "event-cleanup": "pending",
-        "suggestion-job": "pending"
+        "suggestion-job": "evaluating"
       },
-      "lastUpdated": "2026-11-06T19:04:38.671Z",
+      "lastUpdated": "2026-11-06T19:29:09.337Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
-      "lastCommit": {}
+      "lastCommit": {
+        "default": "c0a220c10e037b29340f192126348881fc8d12d2"
+      }
     },
     "ticket-review": {
       "status": "implementing",
