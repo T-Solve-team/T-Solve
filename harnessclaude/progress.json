@@ -217,8 +217,8 @@
       }
     },
     "platform": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "tenant-context": "pending",
         "tenant-schema": "pending",
@@ -235,7 +235,7 @@
         "local-data-plane": "pending",
         "registry-db": "pending",
         "workspace-catalog": "pending",
-        "row-guard": "pending",
+        "row-guard": "in-progress",
         "tenant-routing": "pending",
         "provisioning-core": "pending",
         "invitation-job-queue": "pending",
@@ -251,7 +251,14 @@
         "load-test": "pending",
         "forge-security-chain": "pending"
       },
-      "lastUpdated": "2026-11-04T13:58:39.188Z"
+      "lastUpdated": "2026-11-06T07:37:52.354Z",
+      "branch": "feat/platform",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "d1f95c7d6af981a66b68c4ef943471ab12bbbaef"
+      }
     },
     "platform-console": {
       "status": "decomposed",
