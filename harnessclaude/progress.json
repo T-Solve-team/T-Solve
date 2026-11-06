@@ -158,7 +158,7 @@
       "features": {
         "jira-import-contract": "evaluating",
         "jira-import-schema": "evaluating",
-        "jira-issue-source": "pending",
+        "jira-issue-source": "evaluating",
         "jira-pull": "pending",
         "jira-preview": "pending",
         "jira-finish": "pending",
@@ -167,13 +167,13 @@
         "jira-import-preview-page": "pending",
         "jira-import-verify": "pending"
       },
-      "lastUpdated": "2026-11-06T19:46:51.325Z",
+      "lastUpdated": "2026-11-06T19:57:49.506Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b0a9ee8172c541616972dfac926788edfdde9dec"
+        "default": "1b9ea284f35d800fe6e045c507a4bbd2ae44a8c2"
       }
     },
     "search": {

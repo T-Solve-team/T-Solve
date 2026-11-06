@@ -683,3 +683,6 @@
 {"ts":"2026-11-06T19:33:59.837Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-contract","from":"fixing","to":"evaluating"}
 {"ts":"2026-11-06T19:46:51.043Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"b0a9ee8172c541616972dfac926788edfdde9dec"}
 {"ts":"2026-11-06T19:46:51.327Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-schema","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T19:50:32.989Z","type":"feature-status","module":"ticket-repository","feature":"jira-issue-source","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T19:57:49.228Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"1b9ea284f35d800fe6e045c507a4bbd2ae44a8c2"}
+{"ts":"2026-11-06T19:57:49.508Z","type":"feature-status","module":"ticket-repository","feature":"jira-issue-source","from":"in-progress","to":"evaluating"}
