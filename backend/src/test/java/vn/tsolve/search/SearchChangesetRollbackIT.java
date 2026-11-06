@@ -20,6 +20,7 @@ class SearchChangesetRollbackIT {
 
     private static final String CHANGELOG = "db/changelog/db.changelog-master.xml";
     private static final List<String> PUBLIC_ID_TABLES = List.of("ticket", "project", "department");
+    private static final List<String> SEARCH_TABLES = List.of("ticket_embedding", "search_log", "ticket_feedback");
     private static final PostgreSQLContainer<?> SERVER = new PostgreSQLContainer<>(
             DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
 
@@ -54,6 +55,11 @@ class SearchChangesetRollbackIT {
             for (String table : PUBLIC_ID_TABLES) {
                 assertThat(columnExists(jdbc, table, "public_id")).as(table).isTrue();
             }
+            for (String table : SEARCH_TABLES) {
+                assertThat(columnExists(jdbc, table, table + "_id"))
+                        .as("table %s exists before rollback", table)
+                        .isTrue();
+            }
 
             liquibase.rollback(searchChangesets, "");
 
@@ -64,9 +70,11 @@ class SearchChangesetRollbackIT {
 
             liquibase.update("");
 
-            assertThat(columnExists(jdbc, "ticket_embedding", "ticket_embedding_id"))
-                    .as("embedding table restored")
-                    .isTrue();
+            for (String table : SEARCH_TABLES) {
+                assertThat(columnExists(jdbc, table, table + "_id"))
+                        .as("table %s restored", table)
+                        .isTrue();
+            }
             for (String table : PUBLIC_ID_TABLES) {
                 assertThat(columnExists(jdbc, table, "public_id"))
                         .as("public id restored on %s", table)
@@ -82,7 +90,7 @@ class SearchChangesetRollbackIT {
                     .isFalse();
         }
         assertThat(columnExists(jdbc, "ticket", "updated_at")).isFalse();
-        for (String table : List.of("ticket_embedding", "search_log", "ticket_feedback")) {
+        for (String table : SEARCH_TABLES) {
             assertThat(jdbc.queryForObject(
                             """
                             SELECT EXISTS (SELECT 1 FROM information_schema.tables

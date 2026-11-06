@@ -16,5 +16,7 @@
     <include file="changes/008-search-public-ids.sql" relativeToChangelogFile="true"/>
     <include file="changes/009-search-ticket-updated-at.sql" relativeToChangelogFile="true"/>
     <include file="changes/010-search-ticket-embedding.sql" relativeToChangelogFile="true"/>
+    <include file="changes/011-search-log.sql" relativeToChangelogFile="true"/>
+    <include file="changes/012-search-ticket-feedback.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
