@@ -4,5 +4,7 @@ public enum TicketStatus {
     PENDING_REVIEW,
     PUBLISHED,
     REJECTED,
-    CHANGES_REQUESTED
+    CHANGES_REQUESTED,
+    UNPUBLISHED,
+    EXPIRED
 }

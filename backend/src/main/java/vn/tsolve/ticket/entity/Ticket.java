@@ -77,6 +77,15 @@ public class Ticket {
     @Column(name = "change_request_comment", columnDefinition = "text")
     private String changeRequestComment;
 
+    @Column(name = "writer_id", insertable = false, updatable = false)
+    private UUID writerId;
+
+    @Column(name = "review_due_date", insertable = false, updatable = false)
+    private LocalDate reviewDueDate;
+
+    @Column(name = "review_queue_entered_at", insertable = false, updatable = false)
+    private Instant reviewQueueEnteredAt;
+
     protected Ticket() {}
 
     /** An imported ticket: brought in by its Project Manager, so it is Published at once (GBR-23). */
@@ -149,6 +158,18 @@ public class Ticket {
 
     public String getWriter() {
         return writer;
+    }
+
+    public UUID getWriterId() {
+        return writerId;
+    }
+
+    public LocalDate getReviewDueDate() {
+        return reviewDueDate;
+    }
+
+    public String getChangeRequestComment() {
+        return changeRequestComment;
     }
 
     public LocalDate getResolvedDate() {

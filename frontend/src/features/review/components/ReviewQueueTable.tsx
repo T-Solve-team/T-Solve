@@ -45,7 +45,7 @@ const COLUMNS: DataTableColumn<ReviewQueueItem>[] = [
     title: 'Entered queue',
     width: 146,
     sortable: true,
-    render: (_, t) => cells.dateTime(t.enteredQueueAt),
+    render: (_, t) => cells.dateTime(t.enteredQueueAt) || '—',
   },
   {
     key: 'reviewDueDate',

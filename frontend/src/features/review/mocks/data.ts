@@ -171,7 +171,7 @@ export function seedReviewQueue(): ReviewQueueItem[] {
 export const REVIEW_WORKSPACE_ID = '00000000-0000-4000-8000-0000000000c1';
 export type MockReviewTicket = ReviewTicketDetail & {
   workspaceId: string;
-  enteredQueueAt: string;
+  enteredQueueAt: string | null;
   jiraStatus: string;
   expiredAt?: string;
   previousStatus?: 'PENDING_REVIEW' | 'CHANGES_REQUESTED';

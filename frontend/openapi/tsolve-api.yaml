@@ -1676,8 +1676,9 @@ components:
           type: [string, 'null']
           description: T-Solve user, or the Jira assignee name; may be empty.
         enteredQueueAt:
-          type: string
+          type: [string, 'null']
           format: date-time
+          description: Null for an older ticket whose entry time was not recorded.
         reviewDueDate:
           type: string
           format: date-time

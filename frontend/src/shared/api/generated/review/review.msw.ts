@@ -126,7 +126,10 @@ export const getGetExpiredTicketsResponseMock = (
           faker.string.alpha({ length: { min: 10, max: 20 } }),
           null,
         ]),
-        enteredQueueAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+        enteredQueueAt: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + 'Z',
+          null,
+        ]),
         reviewDueDate: faker.date.past().toISOString().slice(0, 19) + 'Z',
       },
       ...{
@@ -177,7 +180,10 @@ export const getGetReviewQueueResponseMock = (
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
-      enteredQueueAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+      enteredQueueAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + 'Z',
+        null,
+      ]),
       reviewDueDate: faker.date.past().toISOString().slice(0, 19) + 'Z',
     }),
   ),
