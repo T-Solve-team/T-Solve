@@ -220,3 +220,11 @@ Keep the existing OpenAPI contract and Department filter. Require a trusted Work
 | R15. Jira feedback crosses scope | Show MSG64 only to the verified writer of the associated issue. | Jira issue, Account and Workspace scope tests |
 
 Risk review verdict: CAUTION. Storage can be verified independently. Production activation requires trusted Workspace routing, Project membership and Jira issue identity.
+
+## KAN-159 extension: production Review History (STORY-011)
+
+- **Query** — chosen: two native queries on `review_decision` joined to `ticket` and the reviewer's `app_user`, paged in the database with a count query, one per sort direction; alternatives: in-memory sort like the queue, a JPQL join to the identity `Account` entity. Rationale: history grows without bound, and a JPQL join would reach into another module's entity. The `app_user` join reads only the reviewer name, the same way KAN-24 already stores `project_manager_id`.
+- **Scope** — managed Projects come from `ReviewWorkspaceAccess.readableProjects`, as for the queue; the Department filter narrows that set before the query, so a foreign or unmanaged Department yields an empty page without a query.
+- **Decisions** — storage holds APPROVED, REJECTED and CHANGES_REQUESTED; the API maps them to the contract's APPROVE, REJECT and REQUEST_CHANGES. UNPUBLISH, REPUBLISH and SEND_BACK are valid filters with no stored rows yet, so they return an empty page; unknown values return MSG06.
+- **Dates** — paired yyyy-MM-dd dates become `[from 00:00, to + 1 day 00:00)` in Asia/Ho_Chi_Minh, like Suggestion History; missing bounds use fixed sentinels so no nullable timestamp parameter reaches PostgreSQL.
+- **Names** — actorName is the reviewer's full name, else their email; authorName is `ticket.writer`, as in the Review Queue.

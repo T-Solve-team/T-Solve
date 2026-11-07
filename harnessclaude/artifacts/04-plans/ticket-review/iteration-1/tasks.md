@@ -101,3 +101,12 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** Jira issue panel and Review feedback boundary and tests.
 **Dependencies:** Task 9 and verified Jira issue and writer context.
 **Verification:** MSG64 for the writer and denial for an unrelated issue, Account or Workspace.
+
+## Task 12: Production Review History read API (KAN-159)
+
+**Story:** STORY-011
+**Feature:** review-history-api
+**Description:** Implement AC-011.1–011.6. `GET /api/v1/review-history` in `ReviewReadController` resolves the caller's managed Projects through `ReviewWorkspaceAccess`, and `TicketReviewReadService.history` pages the stored `review_decision` rows joined to ticket and reviewer account in the database, with the Department, decision and Vietnam-time date filters. Invalid dates return MSG39; other invalid values MSG06. The existing generated web hook needs no change.
+**Files:** `review/controller/ReviewReadController.java`, `ticket/service/TicketReviewReadService.java`, `ticket/service/impl/TicketReviewReadServiceImpl.java`, `ticket/repository/ReviewDecisionRecordRepository.java`, `ticket/dto/TicketReviewView.java`, `ticket/exception/InvalidReviewHistoryFilterException.java`, `frontend/openapi/tsolve-api.yaml` (description only), tests in `review/`.
+**Dependencies:** KAN-24 storage and read APIs (PR #137).
+**Verification:** PostgreSQL tests for scope, filters, mapping and paging; HTTP tests for 400/401/403; `mvn verify`.

@@ -783,8 +783,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "d9ce1478f4fd3c1c949599302bffe9dd2c8a3e3583e1347ca1b5491c3c38fa20",
-    "approvedAt": "2026-11-06T23:44:12.952Z",
+    "specHash": "76e5f8b988a6fd869165f96abf6d83067cf14980cf33141cba75ff926001c62e",
+    "approvedAt": "2026-11-07T07:44:18.322Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -844,7 +844,13 @@
       "AC-009.9": "THE production backend SHALL use database/02_tenant.sql as the reference for Review table structure and relationships. THE tenant changelog SHALL use UUID keys under the backend conventions for the shared ticket, evidence and review_decision tables. The Solution fields SHALL remain on ticket.",
       "AC-009.10": "WHEN the production web application loads or submits a Review action, THE frontend SHALL use the published OpenAPI operations and backend data through the existing generated client.",
       "AC-009.11": "WHEN a Solution Form ticket is first saved as Pending review or transitions back to Pending review, THE tenant database SHALL record that entry time in review_queue_entered_at. WHILE a ticket stays Pending review, THE system SHALL preserve that entry time and SHALL keep the existing review due date rules (GBR-08, GBR-10).",
-      "AC-009.12": "WHEN the Review Queue returns a ticket, THE API SHALL expose the recorded entry time as enteredQueueAt. IF an older ticket has no recorded entry time, THEN THE API SHALL return null for enteredQueueAt and THE frontend SHALL show an empty value indicator."
+      "AC-009.12": "WHEN the Review Queue returns a ticket, THE API SHALL expose the recorded entry time as enteredQueueAt. IF an older ticket has no recorded entry time, THEN THE API SHALL return null for enteredQueueAt and THE frontend SHALL show an empty value indicator.",
+      "AC-011.1": "WHEN a Project Manager queries Review History, THE API SHALL use the signed-in Workspace and return only review decisions on tickets of Projects they manage, newest first by default with the decision UUID as tie-breaker, paged with the existing page and size conventions.",
+      "AC-011.2": "WHEN a stored decision is returned, THE API SHALL report Approve, Reject and Request Changes as APPROVE, REJECT and REQUEST_CHANGES, the stored text as reason only for REJECT and as comment only for REQUEST_CHANGES, the reviewer's full name as actorName (the reviewer's email when no name is stored), the ticket writer as authorName, and the ticket's source key, title and Project.",
+      "AC-011.3": "WHEN Department, decision or a paired dateFrom and dateTo are supplied, THE API SHALL filter by them, with both calendar dates inclusive in Vietnam time. IF only one date is supplied, a date is not a yyyy-MM-dd calendar date or dateFrom is after dateTo, THEN THE API SHALL refuse the request with 400 and MSG39. IF the Department has no Project the caller manages, THEN THE API SHALL return an empty page.",
+      "AC-011.4": "IF the sort is anything other than timestamp ascending or descending, or page or size is outside the existing limits, THEN THE API SHALL refuse the request with 400 and MSG06.",
+      "AC-011.5": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the request with 401 or 403 and expose no decision.",
+      "AC-011.6": "WHEN the production web application loads Review History, THE frontend SHALL use the published getReviewHistory operation through the existing generated client."
     }
   },
   "ai": {

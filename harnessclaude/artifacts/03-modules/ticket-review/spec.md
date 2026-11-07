@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-07 | STORY-011 | Serve Review History from the stored review decisions of the production Workspace (KAN-159) | Demo flow scenario 2 step 10; the merged frontend only had mocks |
 | 2026-11-07 | STORY-009 | Persist the time a ticket entered the Review Queue | Preserve the actual entry time independently of later ticket edits |
 | 2026-11-06 | STORY-009 | Define the production Review backend for KAN-24 using the Workspace schema reference and UUID keys | Complete the Jira story beyond its merged frontend and mocks |
 | 2026-11-01 | STORY-008 | Add KAN-159 read-only Review History frontend and proposed query/MSW contract | Continue remaining frontend work; reuse Department convention and existing decision history |
@@ -134,10 +135,21 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
   - AC-009.11: WHEN a Solution Form ticket is first saved as Pending review or transitions back to Pending review, THE tenant database SHALL record that entry time in review_queue_entered_at. WHILE a ticket stays Pending review, THE system SHALL preserve that entry time and SHALL keep the existing review due date rules (GBR-08, GBR-10).
   - AC-009.12: WHEN the Review Queue returns a ticket, THE API SHALL expose the recorded entry time as enteredQueueAt. IF an older ticket has no recorded entry time, THEN THE API SHALL return null for enteredQueueAt and THE frontend SHALL show an empty value indicator.
 
+### STORY-011: Read Review History in the production Workspace (KAN-159)
+
+- As a Project Manager, I want Review History to show the decisions stored for my Projects so that I can check past reviews after the request ends.
+- Acceptance:
+  - AC-011.1: WHEN a Project Manager queries Review History, THE API SHALL use the signed-in Workspace and return only review decisions on tickets of Projects they manage, newest first by default with the decision UUID as tie-breaker, paged with the existing page and size conventions.
+  - AC-011.2: WHEN a stored decision is returned, THE API SHALL report Approve, Reject and Request Changes as APPROVE, REJECT and REQUEST_CHANGES, the stored text as reason only for REJECT and as comment only for REQUEST_CHANGES, the reviewer's full name as actorName (the reviewer's email when no name is stored), the ticket writer as authorName, and the ticket's source key, title and Project.
+  - AC-011.3: WHEN Department, decision or a paired dateFrom and dateTo are supplied, THE API SHALL filter by them, with both calendar dates inclusive in Vietnam time. IF only one date is supplied, a date is not a yyyy-MM-dd calendar date or dateFrom is after dateTo, THEN THE API SHALL refuse the request with 400 and MSG39. IF the Department has no Project the caller manages, THEN THE API SHALL return an empty page.
+  - AC-011.4: IF the sort is anything other than timestamp ascending or descending, or page or size is outside the existing limits, THEN THE API SHALL refuse the request with 400 and MSG06.
+  - AC-011.5: IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the request with 401 or 403 and expose no decision.
+  - AC-011.6: WHEN the production web application loads Review History, THE frontend SHALL use the published getReviewHistory operation through the existing generated client.
+
 ## Out of Scope
 
-- General audit writer, Review History screen and read API, email, notification workers and real-time updates beyond the existing polling convention. STORY-009 stores Review decisions and exposes Request Changes feedback to the writer in Jira.
-- Production send-back processing (KAN-156), JOB-02 (KAN-157) and SSE/WebSocket (KAN-154). KAN-158 and KAN-159 deliver frontend, proposed APIs and in-memory fixtures; they do not implement a real expiry job or backend persistence. KAN-159 displays historical Unpublish/Republish records without adding those mutation workflows.
+- General audit writer, email, notification workers and real-time updates beyond the existing polling convention. STORY-009 stores Review decisions and exposes Request Changes feedback to the writer in Jira.
+- Production send-back processing (KAN-156), JOB-02 (KAN-157) and SSE/WebSocket (KAN-154). KAN-158 delivers frontend, a proposed API and in-memory fixtures; it does not implement a real expiry job or backend persistence. KAN-159 displays historical Unpublish/Republish records without adding those mutation workflows; STORY-011 serves only the stored Approve, Reject and Request Changes decisions, so the other decision filters return an empty page.
 - Importing PR #26 or changing/closing it; creating or pushing the replacement PR still requires the user to request that action.
 
 ## Interface Contracts
