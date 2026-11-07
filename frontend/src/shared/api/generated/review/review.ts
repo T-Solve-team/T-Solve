@@ -227,8 +227,8 @@ export const getGetReviewHistoryUrl = (params?: GetReviewHistoryParams) => {
 };
 
 /**
- * Scope before filtering and pagination. Paired calendar dates are inclusive in Vietnam time. Default timestamp descending, decision UUID tie-breaker; explicit timestamp sorting only. No production persistence is implemented.
- * @summary Read-only decision history of managed Projects (KAN-159 frontend proposal).
+ * Scope before filtering and pagination. Paired calendar dates are inclusive in Vietnam time. Default timestamp descending, decision UUID tie-breaker; explicit timestamp sorting only. Production returns the stored Approve, Reject and Request Changes decisions; the other decision values return an empty page.
+ * @summary Read-only decision history of managed Projects (KAN-159).
  */
 export const getReviewHistory = async (
   params?: GetReviewHistoryParams,
@@ -323,7 +323,7 @@ export function useGetReviewHistory<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Read-only decision history of managed Projects (KAN-159 frontend proposal).
+ * @summary Read-only decision history of managed Projects (KAN-159).
  */
 
 export function useGetReviewHistory<
