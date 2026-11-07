@@ -911,3 +911,7 @@
 {"ts":"2026-11-07T15:41:38.537Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":null,"to":"pending"}
 {"ts":"2026-11-07T15:41:38.606Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T16:19:19.791Z","type":"commit-recorded","module":"identity","repo":"default","sha":"a0f46b9f59de4473abb6eb3ea10c08c9cf63ee9a"}
+{"ts":"2026-11-07T16:27:43.490Z","type":"spec-approved","module":"identity","specHash":"d6851de2aacc2ba989ced1aabfb2e242dc587372a4b1eb7d984cfb6b5f5a3d78"}
+{"ts":"2026-11-07T16:27:43.535Z","type":"feature-status","module":"identity","feature":"add-user-backend","from":null,"to":"pending"}
+{"ts":"2026-11-07T16:27:43.599Z","type":"feature-status","module":"identity","feature":"add-user-backend","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T16:58:04.909Z","type":"commit-recorded","module":"identity","repo":"default","sha":"ab1663f2f60a02ccc70f8ab053af47f027a340ff"}
