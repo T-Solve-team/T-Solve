@@ -11,6 +11,7 @@ import vn.tsolve.tracker.dto.IssueSuggestion;
 import vn.tsolve.tracker.entity.SuggestionResult;
 import vn.tsolve.tracker.exception.SuggestionJobFailedException;
 import vn.tsolve.tracker.repository.SuggestionResultRepository;
+import vn.tsolve.tracker.service.SuggestionCommentService;
 import vn.tsolve.tracker.service.SuggestionJobService;
 import vn.tsolve.tracker.service.SuggestionSearch;
 
@@ -23,11 +24,17 @@ public class SuggestionJobServiceImpl implements SuggestionJobService {
 
     private final SuggestionResultRepository repository;
     private final SuggestionSearch search;
+    private final SuggestionCommentService comments;
     private final ObjectMapper json;
 
-    public SuggestionJobServiceImpl(SuggestionResultRepository repository, SuggestionSearch search, ObjectMapper json) {
+    public SuggestionJobServiceImpl(
+            SuggestionResultRepository repository,
+            SuggestionSearch search,
+            SuggestionCommentService comments,
+            ObjectMapper json) {
         this.repository = repository;
         this.search = search;
+        this.comments = comments;
         this.json = json;
     }
 
@@ -36,8 +43,8 @@ public class SuggestionJobServiceImpl implements SuggestionJobService {
         SuggestionResult result;
         try {
             Optional<SuggestionResult> found = repository.findById(suggestionId);
-            if (found.isEmpty() || found.get().hasSuggestion()) {
-                log.info("Suggestion job skipped, result gone or already filled: {}", suggestionId);
+            if (found.isEmpty()) {
+                log.info("Suggestion job skipped, result gone: {}", suggestionId);
                 return;
             }
             result = found.get();
@@ -45,26 +52,39 @@ public class SuggestionJobServiceImpl implements SuggestionJobService {
             throw failed(String.valueOf(suggestionId), e);
         }
         String issueKey = result.getJiraIssueKey();
+        if (result.hasComment()) {
+            log.info("Suggestion job skipped, comment already posted: {}", issueKey);
+            return;
+        }
         try {
-            suggest(result);
+            // A rerun of a job that stored the suggestion but could not post it only posts it (AC-011.7, AC-012.3).
+            Optional<String> stored =
+                    result.hasSuggestion() ? Optional.of(result.getSuggestedSolution()) : suggest(result);
+            if (stored.isPresent()) {
+                comments.post(suggestionId, issueKey, stored.get());
+            }
         } catch (RuntimeException e) {
             throw failed(issueKey, e);
         }
     }
 
-    private void suggest(SuggestionResult result) {
+    /** The suggestion this run stored, or empty when there is none or another run stored one meanwhile. */
+    private Optional<String> suggest(SuggestionResult result) {
         String issueKey = result.getJiraIssueKey();
         Optional<IssueSuggestion> suggestion = search.suggest(
                 result.getProjectId(), text(result.getIssueSummary()), text(result.getIssueDescription()));
         if (suggestion.isEmpty() || isBlank(suggestion.get().suggestedSolution())) {
             log.info("No suggestion for {}", issueKey);
-            return;
+            return Optional.empty();
         }
-        int changed = repository.fillSuggestion(
-                issueKey, sourcesJson(suggestion.get()), suggestion.get().suggestedSolution());
-        log.info(
-                changed == 1 ? "Suggestion stored: {}" : "Suggestion not stored, result changed meanwhile: {}",
-                issueKey);
+        String suggestedSolution = suggestion.get().suggestedSolution();
+        int changed = repository.fillSuggestion(issueKey, sourcesJson(suggestion.get()), suggestedSolution);
+        if (changed != 1) {
+            log.info("Suggestion not stored, result changed meanwhile: {}", issueKey);
+            return Optional.empty();
+        }
+        log.info("Suggestion stored: {}", issueKey);
+        return Optional.of(suggestedSolution);
     }
 
     // Only the error type, logged and carried: the original message may quote the issue text (Non-Functional 4).

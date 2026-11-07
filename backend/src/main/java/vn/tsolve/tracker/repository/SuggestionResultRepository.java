@@ -1,5 +1,6 @@
 package vn.tsolve.tracker.repository;
 
+import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -26,4 +27,19 @@ public interface SuggestionResultRepository extends JpaRepository<SuggestionResu
             @Param("jiraIssueKey") String jiraIssueKey,
             @Param("sourcesUsed") String sourcesUsed,
             @Param("suggestedSolution") String suggestedSolution);
+
+    /**
+     * Records the MSG80 comment only while the result has none, so a rerun never replaces it (AC-012.3, AC-012.4).
+     * Returns the number of rows changed: 0 when the row is gone or already has a comment.
+     */
+    @Transactional
+    @Modifying
+    @Query(
+            """
+            update SuggestionResult r
+               set r.jiraCommentId = :commentId, r.commentedAt = :commentedAt
+             where r.id = :id and r.jiraCommentId is null
+            """)
+    int markCommented(
+            @Param("id") UUID id, @Param("commentId") String commentId, @Param("commentedAt") Instant commentedAt);
 }
