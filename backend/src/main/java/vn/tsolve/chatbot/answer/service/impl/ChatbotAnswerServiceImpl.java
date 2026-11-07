@@ -110,6 +110,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         // ponytail: Task 10 adds follow-up retrieval and prompt turns; history is accepted but not sent yet.
         float[] vector =
                 callAi(() -> embeddings.embed(List.of(question)), deadline).getFirst();
+        // Fail fast before the vector search if embedding has exhausted the deadline.
         remaining(deadline);
 
         // Keep database access on the request thread so it retains the request's Workspace database.
@@ -162,6 +163,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             remaining(deadline);
             // Flush before checking the deadline so a slow insert can still be rolled back.
             answers.flush();
+            // This check covers the insert and flush; COMMIT itself is not bounded by the ask deadline.
             remaining(deadline);
             return new ChatbotAnswerResponse(saved.getId(), outcome, text, citations);
         });

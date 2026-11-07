@@ -282,7 +282,7 @@ class ChatbotAnswerServiceImplTest {
         "UNCITED, true",
         "ANSWERED, true"
     })
-    void timesOutAndRollsBackSlowPersistence_BUG_137(String outcome, boolean slowFlush) {
+    void timesOutAndRollsBackSlowPersistence_BUG_165(String outcome, boolean slowFlush) {
         service = service(Duration.ofMillis(500), 5);
         when(embeddings.embed(any())).thenReturn(List.of(vector));
         if (!outcome.equals("NO_SOURCE")) {
