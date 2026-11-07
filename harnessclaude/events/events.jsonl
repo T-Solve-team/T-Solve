@@ -927,3 +927,4 @@
 {"ts":"2026-11-07T19:53:05.728Z","type":"feature-status","module":"jira-app","feature":"ask-forge-client","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T19:58:07.223Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"6edc7af1bc2ee61d56ec5e74e6e9b730dcdc8789"}
 {"ts":"2026-11-07T19:58:07.610Z","type":"feature-status","module":"jira-app","feature":"ask-forge-client","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T19:59:36.378Z","type":"feature-status","module":"jira-app","feature":"ask-forge-client","from":"evaluating","to":"passing"}
