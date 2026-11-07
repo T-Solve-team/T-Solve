@@ -387,13 +387,13 @@
         "review-queue-events-web": "passing",
         "review-queue-events-hardening": "evaluating"
       },
-      "lastUpdated": "2026-11-07T12:30:46.221Z",
+      "lastUpdated": "2026-11-07T17:14:30.615Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "974dad1b2539cb959f612c6e1a91c96a18c0af20"
+        "default": "38a0abd9b9a2a0aa0f59ff5132d5a1028c4ef641"
       }
     }
   },

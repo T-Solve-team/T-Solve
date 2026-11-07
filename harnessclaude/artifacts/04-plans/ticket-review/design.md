@@ -271,3 +271,11 @@ Without a production `ReviewWorkspaceAccess` every Review endpoint answers 403. 
 - **Managed Projects re-checked** — chosen: with each heartbeat (25 s) the subscription re-reads `managedProjectIds` for its Account inside the Workspace; Projects no longer managed stop getting events, and a subscription left with none (or an unverified Account) is completed. Alternatives: re-check on every event (one query per stream per event), shorten the emitter timeout. Rationale: AC-012.2 ("whose caller manages that Project") holds within one heartbeat interval at one query per stream per 25 s. Removing the Project Manager role itself takes effect at the next sign-in, as for every other Review endpoint.
 - **Pool use** — each Workspace with an open stream holds one tenant pool connection for its listener; the join barrier briefly uses one more. The per-Workspace pool must keep at least 2 connections above request load; the platform pool sizing (KAN platform module) owns that limit.
 - **Generated client** — orval also emits `useStreamReviewQueueEvents` for the SSE operation; it must not be called (it would wait for a body that never ends). The web app uses `useReviewQueueEvents` only.
+
+### PR #155 second review (review 5813751864, 2026-11-07)
+
+- **Added Project (BUG-169)** — when a heartbeat re-check adds a managed Project, the stream gets one `queue-changed` for it through the coalesced send path, because its queue may have changed before it was added.
+- **Mock mode (BUG-170)** — the web app opens no EventSource while it runs on MSW mocks; the generated SSE mock returns a finite body, and reconnects every ~3 s made polling flap. Mock mode stays on 5 s polling, as the design already intended.
+- **Dead connection (BUG-171)** — EventSource never surfaces `:hb` comments, so a connection cut without a close is invisible. While connected, the queue keeps a 60 s safety refetch; the 5 s polling stays off (AC-012.6).
+- **Subscribe failure (BUG-172)** — anything that throws after the subscription is registered (join barrier, heartbeat scheduling) ends and removes it; the request thread waits at most ~5 s in total.
+- **Changeset number** — main gained `019-tracker-*` and `019-identity-*`; ours stays `019-review-queue-notify.sql` (ids differ by name) and is included last.
