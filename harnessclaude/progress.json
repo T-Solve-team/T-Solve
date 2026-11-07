@@ -316,19 +316,19 @@
         "expired-tickets": "passing",
         "review-history": "passing",
         "review-storage": "evaluating",
-        "review-production-api": "pending",
+        "review-production-api": "evaluating",
         "review-jira-feedback": "pending",
         "review-decision-transaction": "evaluating",
         "review-decision-endpoints": "evaluating",
         "review-queue-entry-time": "evaluating"
       },
-      "lastUpdated": "2026-11-06T23:51:15.395Z",
+      "lastUpdated": "2026-11-07T00:20:47.896Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "82c9bcd29d473ca37e3b4f83825de1fc6827e071"
+        "default": "f7a7357310ad14f162c9934a99a799a9fb0778cf"
       }
     }
   },

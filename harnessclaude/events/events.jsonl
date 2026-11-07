@@ -611,3 +611,6 @@
 {"ts":"2026-11-06T23:45:49.718Z","type":"feature-status","module":"ticket-review","feature":"review-queue-entry-time","from":"pending","to":"in-progress"}
 {"ts":"2026-11-06T23:51:15.325Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"82c9bcd29d473ca37e3b4f83825de1fc6827e071"}
 {"ts":"2026-11-06T23:51:15.396Z","type":"feature-status","module":"ticket-review","feature":"review-queue-entry-time","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T23:54:21.580Z","type":"feature-status","module":"ticket-review","feature":"review-production-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T00:20:47.856Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"f7a7357310ad14f162c9934a99a799a9fb0778cf"}
+{"ts":"2026-11-07T00:20:47.897Z","type":"feature-status","module":"ticket-review","feature":"review-production-api","from":"in-progress","to":"evaluating"}
