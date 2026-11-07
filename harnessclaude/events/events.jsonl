@@ -843,3 +843,7 @@
 {"ts":"2026-11-07T11:03:46.016Z","type":"feature-status","module":"identity","feature":"keycloak-sign-in-start","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T11:03:46.253Z","type":"feature-status","module":"identity","feature":"keycloak-sign-in-start","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T11:03:46.507Z","type":"feature-status","module":"identity","feature":"keycloak-sign-in-start","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T15:08:30.969Z","type":"feature-status","module":"identity","feature":"keycloak-callback","from":null,"to":"pending"}
+{"ts":"2026-11-07T15:08:31.228Z","type":"feature-status","module":"identity","feature":"keycloak-callback","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T15:08:31.479Z","type":"feature-status","module":"identity","feature":"keycloak-callback","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T15:08:31.716Z","type":"feature-status","module":"identity","feature":"keycloak-callback","from":"evaluating","to":"passing"}
