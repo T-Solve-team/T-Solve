@@ -1,6 +1,7 @@
 package vn.tsolve.search.retrieval.service.impl;
 
 import java.util.List;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.search.embedding.repository.PgVector;
@@ -35,7 +36,10 @@ public class SolutionRetrievalImpl implements SolutionRetrieval {
     @Override
     @Transactional(readOnly = true)
     public List<RetrievedTicketSolution> nearestInProjectDepartment(
-            long projectId, float[] queryVector, double minSimilarity, int limit) {
+            UUID projectId, float[] queryVector, double minSimilarity, int limit) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("Invalid retrieval arguments");
+        }
         String vector = checkedVector(queryVector, minSimilarity, limit);
         return repository.nearestInProjectDepartment(projectId, vector, minSimilarity, limit).stream()
                 .map(row -> new RetrievedTicketSolution(

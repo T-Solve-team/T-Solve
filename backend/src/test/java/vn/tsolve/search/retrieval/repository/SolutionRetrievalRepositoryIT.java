@@ -121,12 +121,14 @@ class SolutionRetrievalRepositoryIT {
     @Test
     void returnsNearestOfTheProjectsDepartment_AC_011_1() {
         long department = department("IT", "ACTIVE");
-        long project = project(department, "ITA");
-        long sibling = project(department, "ITB");
+        UUID project = project(department, "ITA");
+        UUID sibling = project(department, "ITB");
         UUID first = ticket(project, "FIRST", "PUBLISHED", 1, 0);
         UUID tie = ticket(sibling, "TIE", "PUBLISHED", 1, 0);
         UUID next = ticket(project, "NEXT", "PUBLISHED", 0.8f, 0.6f);
         ticket(project, "FAR", "PUBLISHED", 0, 1);
+        // A ticket imported before changeset 008 holds the hex form of the internal project id.
+        UUID legacy = ticket(legacyId(project), "LEGACY", "PUBLISHED", 0.75f, 0.6614f);
 
         // Equal similarity: the internal ticket id breaks the tie; the public id is what comes back.
         List<UUID> tieOrder = jdbc.queryForList(
@@ -137,7 +139,7 @@ class SolutionRetrievalRepositoryIT {
         var rows = repository.nearestInProjectDepartment(project, vector(1, 0), 0.7, 5);
         assertThat(rows)
                 .extracting(SolutionRetrievalRepository.TicketSolutionRow::getTicketId)
-                .containsExactly(tieOrder.get(0), tieOrder.get(1), next);
+                .containsExactly(tieOrder.get(0), tieOrder.get(1), next, legacy);
         var top = rows.getFirst();
         assertThat(top.getSimilarity()).isEqualTo(1);
         assertThat(top.getRootCause()).isEqualTo("Root cause");
@@ -150,18 +152,18 @@ class SolutionRetrievalRepositoryIT {
 
     @Test
     void leavesOutOtherDepartmentsUnpublishedInactiveOrFar_AC_011_3() {
-        long project = project(department("IT", "ACTIVE"), "ITA");
+        UUID project = project(department("IT", "ACTIVE"), "ITA");
         ticket(project, "UNPUBLISHED", "UNPUBLISHED", 1, 0);
         ticket(project, "FAR", "PUBLISHED", 0, 1);
         ticket(project(department("HR", "ACTIVE"), "HRA"), "OTHER", "PUBLISHED", 1, 0);
-        long deleted = project(department("OLD", "DELETED"), "OLDA");
+        UUID deleted = project(department("OLD", "DELETED"), "OLDA");
         ticket(deleted, "INACTIVE", "PUBLISHED", 1, 0);
 
         assertThat(repository.nearestInProjectDepartment(project, vector(1, 0), 0.7, 5))
                 .isEmpty();
         assertThat(repository.nearestInProjectDepartment(deleted, vector(1, 0), 0.7, 5))
                 .isEmpty();
-        assertThat(repository.nearestInProjectDepartment(Long.MAX_VALUE, vector(1, 0), 0.7, 5))
+        assertThat(repository.nearestInProjectDepartment(UUID.randomUUID(), vector(1, 0), 0.7, 5))
                 .isEmpty();
     }
 
@@ -170,16 +172,20 @@ class SolutionRetrievalRepositoryIT {
                 "INSERT INTO department(name, status) VALUES (?, ?) RETURNING department_id", Long.class, name, status);
     }
 
-    private long project(long department, String key) {
+    private UUID project(long department, String key) {
         return jdbc.queryForObject(
-                "INSERT INTO project(department_id, jira_project_key) VALUES (?, ?) RETURNING project_id",
-                Long.class,
+                "INSERT INTO project(department_id, jira_project_key) VALUES (?, ?) RETURNING public_id",
+                UUID.class,
                 department,
                 key);
     }
 
-    private UUID ticket(long project, String key, String status, float x, float y) {
-        UUID projectId = jdbc.queryForObject("SELECT public_id FROM project WHERE project_id = ?", UUID.class, project);
+    private UUID legacyId(UUID project) {
+        return jdbc.queryForObject(
+                "SELECT lpad(to_hex(project_id), 32, '0')::uuid FROM project WHERE public_id = ?", UUID.class, project);
+    }
+
+    private UUID ticket(UUID projectId, String key, String status, float x, float y) {
         var ids = jdbc.queryForMap(
                 """
                 INSERT INTO ticket(source_ticket_id, project_id, source, status, title,

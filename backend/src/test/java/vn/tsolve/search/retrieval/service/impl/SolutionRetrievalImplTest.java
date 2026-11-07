@@ -2,9 +2,9 @@ package vn.tsolve.search.retrieval.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -24,6 +24,7 @@ import vn.tsolve.search.retrieval.service.SolutionRetrieval;
 class SolutionRetrievalImplTest {
     private final SolutionRetrievalRepository repository = mock(SolutionRetrievalRepository.class);
     private final SolutionRetrieval retrieval = new SolutionRetrievalImpl(repository);
+    private static final UUID PROJECT = UUID.randomUUID();
 
     @Test
     void rejectsBadArguments_AC_010_5() {
@@ -73,20 +74,22 @@ class SolutionRetrievalImplTest {
 
     @Test
     void rejectsBadDepartmentArguments_AC_011_4() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> retrieval.nearestInProjectDepartment(null, vector(), 0.7, 5));
         for (float[] vector : new float[][] {null, new float[0], new float[1023], new float[1025]}) {
             assertThatIllegalArgumentException()
-                    .isThrownBy(() -> retrieval.nearestInProjectDepartment(1, vector, 0.7, 5));
+                    .isThrownBy(() -> retrieval.nearestInProjectDepartment(PROJECT, vector, 0.7, 5));
         }
         for (double minimum : new double[] {-0.1, 1.1, Double.NaN, Double.POSITIVE_INFINITY}) {
             assertThatIllegalArgumentException()
-                    .isThrownBy(() -> retrieval.nearestInProjectDepartment(1, vector(), minimum, 5));
+                    .isThrownBy(() -> retrieval.nearestInProjectDepartment(PROJECT, vector(), minimum, 5));
         }
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> retrieval.nearestInProjectDepartment(1, vector(), 0.7, 0));
+                .isThrownBy(() -> retrieval.nearestInProjectDepartment(PROJECT, vector(), 0.7, 0));
         float[] nonFinite = vector();
         nonFinite[1] = Float.NaN;
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> retrieval.nearestInProjectDepartment(1, nonFinite, 0.7, 5));
+                .isThrownBy(() -> retrieval.nearestInProjectDepartment(PROJECT, nonFinite, 0.7, 5));
         verifyNoInteractions(repository);
     }
 
@@ -101,15 +104,15 @@ class SolutionRetrievalImplTest {
         when(row.getWorkaround()).thenReturn(" ");
         when(row.getScopeOfApplicability()).thenReturn("scope");
         when(row.getSimilarity()).thenReturn(0.8);
-        when(repository.nearestInProjectDepartment(anyLong(), anyString(), anyDouble(), anyInt()))
+        when(repository.nearestInProjectDepartment(any(UUID.class), anyString(), anyDouble(), anyInt()))
                 .thenReturn(List.of(row));
 
-        assertThat(retrieval.nearestInProjectDepartment(7, vector(), 0.7, 5))
+        assertThat(retrieval.nearestInProjectDepartment(PROJECT, vector(), 0.7, 5))
                 .containsExactly(
                         new RetrievedTicketSolution(ticketId, "symptoms", "cause", "steps", null, "scope", 0.8));
         when(row.getWorkaround()).thenReturn("temporary fix");
         assertThat(retrieval
-                        .nearestInProjectDepartment(7, vector(), 0.7, 5)
+                        .nearestInProjectDepartment(PROJECT, vector(), 0.7, 5)
                         .getFirst()
                         .workaround())
                 .isEqualTo("temporary fix");
@@ -127,12 +130,13 @@ class SolutionRetrievalImplTest {
 
     @Test
     void takesNoUserAndEmbedsNothing_AC_011_5() throws Exception {
-        when(repository.nearestInProjectDepartment(anyLong(), anyString(), anyDouble(), anyInt()))
+        when(repository.nearestInProjectDepartment(any(UUID.class), anyString(), anyDouble(), anyInt()))
                 .thenReturn(List.of());
-        assertThat(retrieval.nearestInProjectDepartment(7, vector(), 0, 1)).isEmpty();
-        verify(repository).nearestInProjectDepartment(7, PgVector.literal(vector()), 0, 1);
+        assertThat(retrieval.nearestInProjectDepartment(PROJECT, vector(), 0, 1))
+                .isEmpty();
+        verify(repository).nearestInProjectDepartment(PROJECT, PgVector.literal(vector()), 0, 1);
         assertThat(SolutionRetrieval.class.getMethod(
-                        "nearestInProjectDepartment", long.class, float[].class, double.class, int.class))
+                        "nearestInProjectDepartment", UUID.class, float[].class, double.class, int.class))
                 .isNotNull();
         assertThat(SolutionRetrieval.class.getDeclaredMethods()).hasSize(2);
         assertThat(SolutionRetrievalImpl.class.getDeclaredFields())

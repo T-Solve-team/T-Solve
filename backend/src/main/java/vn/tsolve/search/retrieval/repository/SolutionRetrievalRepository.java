@@ -28,7 +28,8 @@ public interface SolutionRetrievalRepository extends Repository<SearchTicket, UU
     List<SolutionRow> nearest(
             @Param("vector") String vector, @Param("minSimilarity") double minSimilarity, @Param("limit") int limit);
 
-    // The `nearest` query narrowed to the Department of one Project (AC-011.1, AC-011.3); returns ticket.public_id.
+    // The `nearest` query narrowed to the Department of one Project, by its public_id (AC-011.1, AC-011.3); returns
+    // ticket.public_id.
     @Query(
             value =
                     """
@@ -41,14 +42,14 @@ public interface SolutionRetrievalRepository extends Repository<SearchTicket, UU
                          OR lpad(to_hex(p.project_id), 32, '0')::uuid = t.project_id)
                     JOIN department d ON d.department_id = p.department_id
                     WHERE t.status = 'PUBLISHED' AND d.status = 'ACTIVE'
-                      AND d.department_id = (SELECT department_id FROM project WHERE project_id = :projectId)
+                      AND d.department_id = (SELECT department_id FROM project WHERE public_id = :projectId)
                       AND 1 - (e.embedding <=> CAST(:vector AS vector)) >= :minSimilarity
                     ORDER BY e.embedding <=> CAST(:vector AS vector), t.ticket_id
                     LIMIT :limit
                     """,
             nativeQuery = true)
     List<TicketSolutionRow> nearestInProjectDepartment(
-            @Param("projectId") long projectId,
+            @Param("projectId") UUID projectId,
             @Param("vector") String vector,
             @Param("minSimilarity") double minSimilarity,
             @Param("limit") int limit);
