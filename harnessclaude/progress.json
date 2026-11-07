@@ -237,10 +237,17 @@
       }
     },
     "jira-app": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:24.029Z"
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "ask-forge-spike": "pending",
+        "ask-contract": "pending",
+        "ask-endpoint": "pending",
+        "ask-forge-client": "pending",
+        "ask-conversation-logic": "pending",
+        "ask-page-ui": "pending"
+      },
+      "lastUpdated": "2026-11-07T17:49:34.500Z"
     },
     "dashboard-audit": {
       "status": "implementing",

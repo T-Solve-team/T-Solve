@@ -903,3 +903,12 @@
 {"ts":"2026-11-07T11:40:28.427Z","type":"quick-closed","what":"PR 153 review: stronger BUG-153 tests and log message","files":["backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:43:47.513Z","type":"quick-opened","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:44:28.193Z","type":"quick-closed","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-07T17:28:52.373Z","type":"spec-approved","module":"jira-app","specHash":"3d1bda9727e4d6ee1b84b275e8cc34d3f2a21bd489bad68e07de3700375c540f"}
+{"ts":"2026-11-07T17:49:17.603Z","type":"spec-approved","module":"jira-app","specHash":"5b0840de2c23cddd271c90be44faf086f8c1acad5e8201a429448ed814ba0f42"}
+{"ts":"2026-11-07T17:49:32.324Z","type":"module-status","module":"jira-app","from":"decomposed","to":"planned"}
+{"ts":"2026-11-07T17:49:32.704Z","type":"feature-status","module":"jira-app","feature":"ask-forge-spike","from":null,"to":"pending"}
+{"ts":"2026-11-07T17:49:33.097Z","type":"feature-status","module":"jira-app","feature":"ask-contract","from":null,"to":"pending"}
+{"ts":"2026-11-07T17:49:33.496Z","type":"feature-status","module":"jira-app","feature":"ask-endpoint","from":null,"to":"pending"}
+{"ts":"2026-11-07T17:49:33.855Z","type":"feature-status","module":"jira-app","feature":"ask-forge-client","from":null,"to":"pending"}
+{"ts":"2026-11-07T17:49:34.179Z","type":"feature-status","module":"jira-app","feature":"ask-conversation-logic","from":null,"to":"pending"}
+{"ts":"2026-11-07T17:49:34.500Z","type":"feature-status","module":"jira-app","feature":"ask-page-ui","from":null,"to":"pending"}

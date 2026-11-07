@@ -42,6 +42,9 @@ Master registry of all artifacts in this workspace.
 | — | module | chatbot | draft | artifacts/03-modules/chatbot/module.md |
 | — | module | jira-app | draft | artifacts/03-modules/jira-app/module.md |
 | SPEC-JIRA-APP-294 | spec | jira-app | draft | artifacts/03-modules/jira-app/spec.md |
+| — | design | jira-app | draft | artifacts/04-plans/jira-app/design.md |
+| — | design | jira-app | draft | artifacts/04-plans/jira-app/iteration-1/design.md |
+| — | tasks | jira-app | draft | artifacts/04-plans/jira-app/iteration-1/tasks.md |
 | — | module | dashboard-audit | draft | artifacts/03-modules/dashboard-audit/module.md |
 | — | module | platform | draft | artifacts/03-modules/platform/module.md |
 | — | module | platform-console | cancelled | artifacts/03-modules/platform-console/module.md |

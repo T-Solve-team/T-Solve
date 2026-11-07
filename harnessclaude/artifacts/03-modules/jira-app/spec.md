@@ -19,6 +19,7 @@ STORY-007), SRS System Messages. Terms: **user** = the T-Solve user linked to th
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
 | 2026-11-07 | STORY-010 (new) | Add STORY-010 "Hỏi T-Solve" page (KAN-294): ask the Knowledge Chatbot inside Jira before creating an issue, then "Solved" or a prefilled Jira Create dialog | RESEARCH-004 Option C. User decisions of 07/11: answers come from the `chatbot` module's answer service with the same sources as the web chatbot (all Solutions and Wiki the user may see, not only the open Jira project); only Jira accounts linked to a T-Solve user ask; the Create dialog is prefilled with the questions and what was tried; "Solved" is UI only until chatbot ratings (KAN-182); the created issue gets label `tsolve-asked` so the tracker's suggestion job skips it. Written on its own branch from `main` (user, 07/11): STORY-001..009 stay on KAN-126 |
+| 2026-11-08 | STORY-010 | Add `GET /api/v1/jira-app/questions/eligibility` to the Exposed interfaces; no criterion changes | Planning builder check: AC-010.2 shows MSG62 before any question, which the POST alone cannot tell the page (user chose this over rewording AC-010.2, 08/11) |
 
 ## Requirements
 
@@ -69,6 +70,7 @@ Proposal, added to `frontend/openapi/tsolve-api.yaml` before code; FIT-authentic
 
 | Endpoint | Screen | Story |
 |----------|--------|-------|
+| `GET /api/v1/jira-app/questions/eligibility` (→ `linked`: whether the FIT user is linked to an active T-Solve user; calls no AI) | Hỏi T-Solve (on open, AC-010.2) | 010 |
 | `POST /api/v1/jira-app/questions` (question + history → the chatbot answer: outcome, text, citations) | Hỏi T-Solve | 010 |
 
 Forge: `jira:projectPage` for the page, `invokeRemote` to the endpoint above, and `CreateIssueModal`
