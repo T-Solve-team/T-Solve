@@ -837,3 +837,7 @@
 {"ts":"2026-11-07T10:45:34.686Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"b539777fa821bece687286fe6714e67cb3d458d6"}
 {"ts":"2026-11-07T11:05:37.368Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T11:05:39.976Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"50d2a3f00641f3b9c336a8eeb797debd031f174e"}
+{"ts":"2026-11-07T11:06:05.540Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T11:06:05.695Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T11:22:39.806Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T11:22:39.887Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"evaluating","to":"passing"}

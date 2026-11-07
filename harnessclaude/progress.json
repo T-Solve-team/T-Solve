@@ -373,10 +373,10 @@
         "review-queue-entry-time": "evaluating",
         "review-history-api": "evaluating",
         "review-email-notification": "evaluating",
-        "review-queue-events-api": "in-progress",
-        "review-queue-events-web": "in-progress"
+        "review-queue-events-api": "passing",
+        "review-queue-events-web": "passing"
       },
-      "lastUpdated": "2026-11-07T11:05:39.975Z",
+      "lastUpdated": "2026-11-07T11:22:39.885Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
