@@ -36,4 +36,5 @@
     <!-- Tracker (KAN-22): the suggestion job input, after main's 017 and 018. -->
     <include file="changes/017-tracker-suggestion-job-input.sql" relativeToChangelogFile="true"/>
     <include file="changes/019-tracker-suggestion-uuid-keys.sql" relativeToChangelogFile="true"/>
+    <include file="changes/019-identity-user-role-department.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>
