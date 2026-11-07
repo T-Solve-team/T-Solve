@@ -9,11 +9,13 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
 import { ChatbotAnswerOutcome } from '../model';
 import type {
   ChatbotAnswer,
+  ChatbotQuestion,
+  ChatbotRating,
   TicketSolutionCitation,
   UnavailableDocuments,
   WikiDocumentCitation,
@@ -81,13 +83,13 @@ export const getAskChatbotMockHandler = (
   overrideResponse?:
     | ChatbotAnswer
     | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
+        info: Parameters<HttpResponseResolver<PathParams, ChatbotQuestion>>[0],
       ) => Promise<ChatbotAnswer> | ChatbotAnswer),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<PathParams, ChatbotQuestion>(
     '*/api/v1/chatbot/answers',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, ChatbotQuestion>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -105,13 +107,13 @@ export const getListUnavailableCitedDocumentsMockHandler = (
   overrideResponse?:
     | UnavailableDocuments
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver>[0],
       ) => Promise<UnavailableDocuments> | UnavailableDocuments),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/chatbot/unavailable-documents',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -127,12 +129,15 @@ export const getListUnavailableCitedDocumentsMockHandler = (
 
 export const getRateChatbotAnswerMockHandler = (
   overrideResponse?:
-    void | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<void> | void),
+    | void
+    | ((
+        info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotRating>>[0],
+      ) => Promise<void> | void),
   options?: RequestHandlerOptions,
 ) => {
-  return http.put(
+  return http.put<{ answerId: string }, ChatbotRating>(
     '*/api/v1/chatbot/answers/:answerId/rating',
-    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotRating>>[0]) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
       }
@@ -145,12 +150,13 @@ export const getRateChatbotAnswerMockHandler = (
 
 export const getRemoveChatbotAnswerRatingMockHandler = (
   overrideResponse?:
-    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+    | void
+    | ((info: Parameters<HttpResponseResolver<{ answerId: string }>>[0]) => Promise<void> | void),
   options?: RequestHandlerOptions,
 ) => {
-  return http.delete(
+  return http.delete<{ answerId: string }>(
     '*/api/v1/chatbot/answers/:answerId/rating',
-    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ answerId: string }>>[0]) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
       }

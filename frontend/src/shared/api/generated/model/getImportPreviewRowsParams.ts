@@ -11,9 +11,7 @@ import type { PageParameter } from './pageParameter';
 import type { SizeParameter } from './sizeParameter';
 
 export type GetImportPreviewRowsParams = {
-  /**
-   * Only rows with this result; omitted = all rows.
-   */
+  /** Only rows with this result; omitted = all rows. */
   status?: ImportPreviewRowStatus;
   /**
    * Page number, starting at 0.

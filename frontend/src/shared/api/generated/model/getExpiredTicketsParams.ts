@@ -11,9 +11,7 @@ import type { SizeParameter } from './sizeParameter';
 import type { SortParameter } from './sortParameter';
 
 export type GetExpiredTicketsParams = {
-  /**
-   * One Department; omitted = all Departments of the Project Manager.
-   */
+  /** One Department; omitted = all Departments of the Project Manager. */
   departmentId?: string;
   /**
    * Page number, starting at 0.
@@ -26,8 +24,6 @@ export type GetExpiredTicketsParams = {
    * @maximum 100
    */
   size?: SizeParameter;
-  /**
-   * "field,asc" or "field,desc"; may repeat.
-   */
+  /** "field,asc" or "field,desc"; may repeat. */
   sort?: SortParameter;
 };

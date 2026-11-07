@@ -9,9 +9,9 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
-import type { JiraReviewFeedback, MessageRef } from '../model';
+import type { IssueCreatedPayload, JiraReviewFeedback, MessageRef } from '../model';
 
 export const getGetJiraReviewFeedbackResponseMessageRefMock = (
   overrideResponse: Partial<MessageRef> = {},
@@ -42,13 +42,13 @@ export const getGetJiraReviewFeedbackMockHandler = (
   overrideResponse?:
     | JiraReviewFeedback
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver<{ issueKey: string }>>[0],
       ) => Promise<JiraReviewFeedback> | JiraReviewFeedback),
   options?: RequestHandlerOptions,
 ) => {
-  return http.get(
+  return http.get<{ issueKey: string }>(
     '*/api/v1/jira-app/issues/:issueKey/review-feedback',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ issueKey: string }>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -64,12 +64,15 @@ export const getGetJiraReviewFeedbackMockHandler = (
 
 export const getReceiveIssueCreatedMockHandler = (
   overrideResponse?:
-    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+    | void
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, IssueCreatedPayload>>[0],
+      ) => Promise<void> | void),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<PathParams, IssueCreatedPayload>(
     '*/api/v1/jira-app/events/issue-created',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, IssueCreatedPayload>>[0]) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
       }
