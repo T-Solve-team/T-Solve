@@ -23,12 +23,13 @@ is one row of such a preview.
 | 2026-11-07 | STORY-001..004 | Initial spec for KAN-45 Jira import | — |
 | 2026-11-07 | STORY-001..004 | A pulled issue is a row of the Import Preview of `import-ticket-list` (D7): AC-001.1, AC-001.2, AC-002.1–AC-002.3, AC-002.7, AC-002.10, AC-003.1, AC-003.6 and the Interface Contracts reworded to its rows, Fill solution, remove-rows and Confirm; Project ids are UUIDs; a row still Needs Solution at Finish gives `MSG_NEW_4` as in CSV import | KAN-45 is stacked on PR #110, which already has these parts (user decision 2026-11-07) |
 | 2026-11-07 | STORY-001 | AC-001.3: MSG35 also after the 20-page scan cap, and without a count (D8) | Jira gives no total and counting would need every page (NFR 1); user decision 2026-11-07 |
+| 2026-11-07 | STORY-001 | D2 reworded: scoped API token as Bearer through the Atlassian API gateway (`api.atlassian.com/ex/jira/{cloudId}`), env `JIRA_SITE_URL`, `JIRA_CLOUD_ID`, `JIRA_API_TOKEN`; no email. New AC-001.11 (retry 429/503 with `Retry-After`) and AC-001.12 (gateway + Bearer, link on the site); AC-001.7 reworded to apply after those retries | RESEARCH-003: a service account has only scoped tokens, which get 401 with basic auth on the site URL; user decisions 2026-11-07 (scoped only, retry twice) |
 
 ## Decisions taken while planning (2026-11-07, with the user)
 | # | Question | Decision |
 |---|----------|----------|
 | D1 | Scope of this plan | Only UC-20 (KAN-45). UC-19, UC-22–25 come later through Change Mode. |
-| D2 | How T-Solve reads Jira | The Workspace Jira service account (KAN-45 update of 01/11, DB tables doc 31/10), not a per-Project token (SRS GBR-14 is outdated). The import calls a `JiraIssueSource` interface; until `workspace` stores the service account, the implementation reads the Jira site URL, account email and API token from the environment. |
+| D2 | How T-Solve reads Jira | The Workspace Jira service account (KAN-45 update of 01/11, DB tables doc 31/10), not a per-Project token (SRS GBR-14 is outdated). The import calls a `JiraIssueSource` interface. The credential is a scoped API token (the only kind a service account has), sent as a Bearer token to the Atlassian API gateway `https://api.atlassian.com/ex/jira/{cloudId}`; no email is used. Until `workspace` stores the service account, the implementation reads the Jira site URL (for the issue links), the site's cloud id and the API token from the environment (`JIRA_SITE_URL`, `JIRA_CLOUD_ID`, `JIRA_API_TOKEN`). Classic unscoped tokens with basic auth are not supported (user decision 2026-11-07, RESEARCH-003). |
 | D3 | Drafts | Included. A Draft is an Import Preview marked as a Draft; the daily cleanup skips Drafts. |
 | D4 | Writer of an imported ticket | The Jira assignee's display name at pull time; empty when the issue is unassigned (no Jira ↔ T-Solve account linking yet). |
 | D5 | Comments shown in the popup | Every comment of the issue at pull time, as plain text with author and date. The "mapped resolution comments field" of `project-integration` is not used yet. |
@@ -61,10 +62,12 @@ is one row of such a preview.
   - AC-001.4: IF Resolved from or Resolved to is missing, THEN THE system SHALL reject the pull with MSG01 and call Jira not at all.
   - AC-001.5: IF Resolved from is after Resolved to, or either date is after today (Vietnam time), THEN THE system SHALL reject the pull with MSG39 and call Jira not at all.
   - AC-001.6: IF no issue without a Ticket matches the date range, THEN THE system SHALL return MSG04 and create no preview.
-  - AC-001.7: IF Jira rejects the service account credentials, does not answer within 30 seconds, returns an error, or the Jira connection is not configured, THEN THE system SHALL return MSG50 with an error message that contains no credential, create no preview, and record one Import Batch of source Jira with status Failed and 0 published.
+  - AC-001.7: IF Jira rejects the service account credentials, does not answer within 30 seconds, returns an error (for 429 and 503: after the retries of AC-001.11), or the Jira connection is not configured, THEN THE system SHALL return MSG50 with an error message that contains no credential, create no preview, and record one Import Batch of source Jira with status Failed and 0 published.
   - AC-001.8: IF the selected Project is not managed by the caller or is not Active, THEN THE system SHALL reject the pull with HTTP 403 (MSG08), call Jira not at all and create no preview.
   - AC-001.9: IF the caller does not have the Project Manager role, THEN THE system SHALL reject the pull with HTTP 403 (MSG08).
   - AC-001.10: WHEN a pull creates a preview, THE system SHALL delete the caller's previous unconfirmed preview that is not a Draft, if any.
+  - AC-001.11: IF a Jira call answers HTTP 429, or HTTP 503 with a `Retry-After` header, and `Retry-After` is at most 5 seconds, THEN THE system SHALL wait that many seconds and send the same call again, at most 2 times per call; a missing `Retry-After` on a 429 counts as 1 second, and a `Retry-After` above 5 seconds ends the retries at once.
+  - AC-001.12: WHEN the system calls Jira for a pull, THE system SHALL send the configured API token as `Authorization: Bearer` to `https://api.atlassian.com/ex/jira/{cloudId}` with the configured cloud id, and SHALL build each row's link to the issue as the configured Jira site URL + `/browse/{key}`.
 
 ### STORY-002: Write Solutions on the Import Preview
 - As a Project Manager, I want to write the Solution of each pulled issue, alone or for several issues at once, so that every imported ticket has a reusable Solution.

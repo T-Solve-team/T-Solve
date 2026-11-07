@@ -835,8 +835,8 @@
     }
   },
   "ticket-repository": {
-    "specHash": "1a4fe1d35de951d38cbee2851c2824477e076f91b8632ee0fb09c724e85c5a6e",
-    "approvedAt": "2026-11-07T03:50:19.924Z",
+    "specHash": "409082f84ae18d0241f188eef5b6b2ef3afdb5434f8d63d2cde7ff5a27378f3b",
+    "approvedAt": "2026-11-07T12:25:36.727Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
@@ -845,10 +845,12 @@
       "AC-001.4": "IF Resolved from or Resolved to is missing, THEN THE system SHALL reject the pull with MSG01 and call Jira not at all.",
       "AC-001.5": "IF Resolved from is after Resolved to, or either date is after today (Vietnam time), THEN THE system SHALL reject the pull with MSG39 and call Jira not at all.",
       "AC-001.6": "IF no issue without a Ticket matches the date range, THEN THE system SHALL return MSG04 and create no preview.",
-      "AC-001.7": "IF Jira rejects the service account credentials, does not answer within 30 seconds, returns an error, or the Jira connection is not configured, THEN THE system SHALL return MSG50 with an error message that contains no credential, create no preview, and record one Import Batch of source Jira with status Failed and 0 published.",
+      "AC-001.7": "IF Jira rejects the service account credentials, does not answer within 30 seconds, returns an error (for 429 and 503: after the retries of AC-001.11), or the Jira connection is not configured, THEN THE system SHALL return MSG50 with an error message that contains no credential, create no preview, and record one Import Batch of source Jira with status Failed and 0 published.",
       "AC-001.8": "IF the selected Project is not managed by the caller or is not Active, THEN THE system SHALL reject the pull with HTTP 403 (MSG08), call Jira not at all and create no preview.",
       "AC-001.9": "IF the caller does not have the Project Manager role, THEN THE system SHALL reject the pull with HTTP 403 (MSG08).",
       "AC-001.10": "WHEN a pull creates a preview, THE system SHALL delete the caller's previous unconfirmed preview that is not a Draft, if any.",
+      "AC-001.11": "IF a Jira call answers HTTP 429, or HTTP 503 with a  header, and  is at most 5 seconds, THEN THE system SHALL wait that many seconds and send the same call again, at most 2 times per call; a missing  on a 429 counts as 1 second, and a  above 5 seconds ends the retries at once.",
+      "AC-001.12": "WHEN the system calls Jira for a pull, THE system SHALL send the configured API token as  to  with the configured cloud id, and SHALL build each row's link to the issue as the configured Jira site URL + .",
       "AC-002.1": "WHEN the Project Manager lists the rows of a Jira preview, THE system SHALL return them page by page (at most 100 per page) in row-number order with the Jira key, summary, assignee, resolved date and result (Needs Solution or Valid), and the preview SHALL report its source Jira, its date range, the number of rows and the number of Needs Solution rows.",
       "AC-002.2": "WHEN the Project Manager opens one row of a Jira preview, THE system SHALL return its full snapshot (AC-001.2) and its Solution, if any.",
       "AC-002.3": "WHEN the Project Manager fills a Solution into one or several Needs Solution or Valid rows of a Jira preview, THE system SHALL store a separate copy of the Solution on each of those rows, replacing any Solution they had, and mark each of them Valid.",

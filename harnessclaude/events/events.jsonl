@@ -702,3 +702,9 @@
 {"ts":"2026-11-07T08:20:11.554Z","type":"feature-status","module":"ticket-repository","feature":"jira-preview","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T08:47:54.199Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"791d4ddd0961debb468378a93e3c0d078a735970"}
 {"ts":"2026-11-07T08:47:54.463Z","type":"feature-status","module":"ticket-repository","feature":"jira-preview","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T08:50:43.045Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-preview-page","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T12:23:28.024Z","type":"feature-status","module":"ticket-repository","feature":"jira-gateway-auth","from":null,"to":"pending"}
+{"ts":"2026-11-07T12:25:36.729Z","type":"spec-approved","module":"ticket-repository","specHash":"409082f84ae18d0241f188eef5b6b2ef3afdb5434f8d63d2cde7ff5a27378f3b"}
+{"ts":"2026-11-07T12:27:14.000Z","type":"feature-status","module":"ticket-repository","feature":"jira-gateway-auth","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T13:23:57.145Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"423b8f173d47fce91b5a581e3b026bd9d877039a"}
+{"ts":"2026-11-07T13:23:57.422Z","type":"feature-status","module":"ticket-repository","feature":"jira-gateway-auth","from":"in-progress","to":"evaluating"}

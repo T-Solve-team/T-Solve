@@ -1,7 +1,7 @@
 ---
 module: ticket-repository
 date: 2026-11-07
-total_tasks: 10
+total_tasks: 11
 owner: Dev
 ---
 
@@ -143,8 +143,21 @@ Order: Tasks 1–4 and 7 need nothing else. Tasks 5, 6, 8 and 9 start after the 
 
 **Story:** STORY-001, STORY-002, STORY-003, STORY-004
 **Feature:** jira-import-verify
-**Description:** `bun harnessclaude/hooks/sdd.ts trace ticket-repository` shows a test for every AC; `mvn verify` and the frontend checks pass; one manual run against a real Jira site (service account in `.env`): pull a small range, write a Solution, Finish, and a Draft round trip — recorded in the session log.
+**Description:** `bun harnessclaude/hooks/sdd.ts trace ticket-repository` shows a test for every AC; `mvn verify` and the frontend checks pass; one manual run against a real Jira site (service account scoped token, `JIRA_CLOUD_ID` in `.env`): pull a small range, write a Solution, Finish, and a Draft round trip — recorded in the session log.
 **Files:**
 - Test: none new (fill gaps found by `trace`)
-**Dependencies:** Task 1–9
+**Dependencies:** Task 1–9, Task 11
+**Estimated size:** small
+
+---
+
+## Task 11: Jira client — scoped token through the API gateway, and 429 / 503 retry
+
+**Story:** STORY-001
+**Feature:** jira-gateway-auth
+**Description:** Change D2 of 2026-11-07 (RESEARCH-003). `JiraRestIssueSource`: base URL `https://api.atlassian.com/ex/jira/{cloudId}`, `Authorization: Bearer {token}`, no email; issue link stays `{siteUrl}/browse/{key}` (AC-001.12). Settings `JIRA_SITE_URL` (https only, trailing slash trimmed), `JIRA_CLOUD_ID`, `JIRA_API_TOKEN`; any of them empty → not configured (MSG50). Retry each GET on 429, or 503 with `Retry-After`, waiting `Retry-After` ≤ 5 s (429 without it = 1 s), at most 2 retries; above 5 s or still failing → `JiraUnavailableException` as today (AC-001.11, AC-001.7). Sleep through an injectable hook so tests run without waiting. Replace `JIRA_EMAIL` with `JIRA_CLOUD_ID` in `.env.example` with a comment on where to find the cloud id (`https://<site>.atlassian.net/_edge/tenant_info`). Existing `JiraRestIssueSourceTest` cases move to the gateway URL and Bearer header.
+**Files:**
+- Modify: `T/client/JiraRestIssueSource.java`, `.env.example`
+- Test: `TT/client/JiraRestIssueSourceTest.java` (AC-001.7, AC-001.11, AC-001.12)
+**Dependencies:** Task 3
 **Estimated size:** small
