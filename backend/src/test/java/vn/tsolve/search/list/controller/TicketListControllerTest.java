@@ -1,6 +1,7 @@
 package vn.tsolve.search.list.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -12,6 +13,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -29,9 +32,13 @@ import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.search.list.dto.TicketListQuery;
 import vn.tsolve.search.list.dto.TicketSummaryResponse;
+import vn.tsolve.search.list.mapper.TicketSummaryMapper;
+import vn.tsolve.search.list.repository.TicketListRepository;
 import vn.tsolve.search.list.service.TicketListService;
+import vn.tsolve.search.list.service.impl.TicketListServiceImpl;
 import vn.tsolve.search.scope.dto.TicketDepartmentRef;
 import vn.tsolve.search.scope.dto.TicketProjectRef;
+import vn.tsolve.search.scope.service.VisibleScope;
 
 @WebMvcTest(
         useDefaultFilters = false,
@@ -123,5 +130,35 @@ class TicketListControllerTest {
                 .isEqualTo("00000000-0000-0000-0000-000000000001");
         org.assertj.core.api.Assertions.assertThat(query.getValue())
                 .isEqualTo(new TicketListQuery(null, null, "CSV", null, null, null, null));
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.TICKET_RESOLVER)
+    void acceptsRepeatedSortParameters_BUG_136() throws Exception {
+        delegateToServiceWithEmptyScope();
+        mvc.perform(get(PATH).param("sort", "title,asc", "updatedAt,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.page.size").value(20));
+        ArgumentCaptor<TicketListQuery> query = ArgumentCaptor.forClass(TicketListQuery.class);
+        verify(tickets).list(any(), query.capture());
+        org.assertj.core.api.Assertions.assertThat(query.getValue().sort()).isEqualTo("title,asc,updatedAt,desc");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"writer,asc", "updatedAt,sideways", "reviewDueDate,sideways", "updatedAt", "updatedAt,"})
+    @WithTSolveUser(roles = Role.TICKET_RESOLVER)
+    void rejectsInvalidRepeatedSortParameters_BUG_136(String secondSort) throws Exception {
+        delegateToServiceWithEmptyScope();
+        mvc.perform(get(PATH).param("sort", "title,asc", secondSort))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG06"));
+    }
+
+    private void delegateToServiceWithEmptyScope() {
+        TicketListService service = new TicketListServiceImpl(
+                mock(TicketListRepository.class), user -> VisibleScope.Scope.empty(), mock(TicketSummaryMapper.class));
+        when(tickets.list(any(), any()))
+                .thenAnswer(invocation -> service.list(invocation.getArgument(0), invocation.getArgument(1)));
     }
 }

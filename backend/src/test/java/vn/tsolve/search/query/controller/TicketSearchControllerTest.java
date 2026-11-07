@@ -71,6 +71,56 @@ class TicketSearchControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.TICKET_RESOLVER)
+    void rejectsNulInQBeforeSearching_BUG_135() throws Exception {
+        when(tickets.search(any(), any())).thenReturn(Page.empty(PageRequest.of(0, 20)));
+        for (String q : List.of("a\0b", "\0VPN", "VPN\0", "\0")) {
+            String code = q.equals("\0") ? "MSG01" : "MSG06";
+            mvc.perform(get(PATH).param("q", q))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(code))
+                    .andExpect(jsonPath("$.fieldErrors[0].field").value("q"))
+                    .andExpect(jsonPath("$.fieldErrors[0].code").value(code));
+        }
+        verifyNoInteractions(tickets);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.TICKET_RESOLVER)
+    void rejectsOffsetBeyondIntegerLimitBeforeSearching_BUG_138() throws Exception {
+        when(tickets.search(any(), any())).thenReturn(Page.empty(PageRequest.of(0, 20)));
+        for (String page : List.of("2147483647", "107374183")) {
+            mvc.perform(get(PATH).param("q", "VPN").param("page", page).param("size", "20"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("MSG06"));
+        }
+        verifyNoInteractions(tickets);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.TICKET_RESOLVER)
+    void acceptsOffsetAtIntegerLimit_BUG_138() throws Exception {
+        when(tickets.search(any(), any())).thenReturn(Page.empty(PageRequest.of(Integer.MAX_VALUE, 1)));
+        mvc.perform(get(PATH).param("q", "VPN").param("page", "2147483647").param("size", "1"))
+                .andExpect(status().isOk());
+        ArgumentCaptor<TicketSearchQuery> query = ArgumentCaptor.forClass(TicketSearchQuery.class);
+        verify(tickets).search(any(), query.capture());
+        assertThat(query.getValue().page().getOffset()).isEqualTo(Integer.MAX_VALUE);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.TICKET_RESOLVER)
+    void rejectsYearZeroBeforeSearching_BUG_139() throws Exception {
+        when(tickets.search(any(), any())).thenReturn(Page.empty(PageRequest.of(0, 20)));
+        for (String field : List.of("resolvedFrom", "resolvedTo")) {
+            mvc.perform(get(PATH).param("q", "VPN").param(field, "0000-01-01"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("MSG06"));
+        }
+        verifyNoInteractions(tickets);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.TICKET_RESOLVER)
     void rejectsReversedDates_AC_007_7() throws Exception {
         mvc.perform(get(PATH)
                         .param("q", "VPN")

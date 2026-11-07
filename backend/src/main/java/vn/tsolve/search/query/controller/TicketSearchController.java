@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
@@ -35,7 +36,7 @@ public class TicketSearchController {
     @ApiResponse(responseCode = "400", description = "MSG01, MSG02, MSG06 or MSG39")
     @ApiResponse(responseCode = "403", description = "MSG08")
     public ResponseEntity<PagedModel<TicketSearchResultResponse>> searchTickets(
-            @RequestParam(required = false) @NotBlank @Size(max = 200) String q,
+            @RequestParam(required = false) @NotBlank @Size(max = 200) @Pattern(regexp = "[^\\x00]*") String q,
             @RequestParam(required = false) String departmentId,
             @RequestParam(required = false) String source,
             @RequestParam(required = false) String resolvedFrom,
