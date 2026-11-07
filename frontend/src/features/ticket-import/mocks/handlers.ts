@@ -1,5 +1,6 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import type {
+  DraftSavedResponse,
   FillSolutionRequest,
   ImportDraftSummary,
   ImportPreviewResponse,
@@ -56,6 +57,24 @@ function findPreview(previewId: string | readonly string[] | undefined): MockPre
   return drafts.find((draft) => String(draft.previewId) === previewId);
 }
 
+/** Saves a changed preview where it lives: the open preview or one of the Drafts. */
+function savePreview(next: MockPreview): void {
+  if (next.previewId === preview.previewId) preview = next;
+  else drafts = drafts.map((draft) => (draft.previewId === next.previewId ? next : draft));
+}
+
+/** A new upload or pull replaces the open preview but keeps it when it is a Draft (AC-004.6). */
+function replacePreview(next: MockPreview): void {
+  if (!isConfirmed && preview.draftSavedAt) drafts = [preview, ...drafts];
+  preview = next;
+  isConfirmed = false;
+}
+
+/** Tests: the starting preview becomes a Jira pull of three Needs Solution issues, 2026-10-01 to 2026-10-15. */
+export function seedJiraPreview(): void {
+  preview = seedJiraImport(1, ITSUP_ID, '2026-10-01', '2026-10-15');
+}
+
 /** Tests: the starting preview becomes a file without Solutions (its Valid rows need a Solution). */
 export function seedFileWithoutSolutions(): void {
   preview = seedImport(undefined, undefined, undefined, 'WITHOUT_SOLUTION');
@@ -90,13 +109,14 @@ export const handlers: HttpHandler[] = [
       return problem(400, 'MSG29', { params: { column_names: 'root_cause, scope' } });
     }
     if (fileName.includes('empty')) return problem(400, 'MSG04');
-    preview = seedImport(
-      preview.previewId + 1,
-      typeof projectId === 'string' ? projectId : '',
-      fileName,
-      importType,
+    replacePreview(
+      seedImport(
+        preview.previewId + 1,
+        typeof projectId === 'string' ? projectId : '',
+        fileName,
+        importType,
+      ),
     );
-    isConfirmed = false;
     return HttpResponse.json<ImportPreviewResponse>(previewResponse(preview));
   }),
 
@@ -108,20 +128,17 @@ export const handlers: HttpHandler[] = [
       return problem(400, 'MSG01', { params: { field_name: 'Resolved from' } });
     }
     if (body.projectId === ITNET_ID) return problem(404, 'MSG04');
-    preview = seedJiraImport(
-      preview.previewId + 1,
-      body.projectId,
-      body.resolvedFrom,
-      body.resolvedTo,
+    replacePreview(
+      seedJiraImport(preview.previewId + 1, body.projectId, body.resolvedFrom, body.resolvedTo),
     );
-    isConfirmed = false;
     return HttpResponse.json<ImportPreviewResponse>(previewResponse(preview));
   }),
 
   http.get('*/api/v1/imports/drafts', async () => {
     await delay(MOCK_DELAY_MS);
+    const saved = !isConfirmed && preview.draftSavedAt ? [preview, ...drafts] : drafts;
     return HttpResponse.json<ImportDraftSummary[]>(
-      drafts.map((draft) => ({
+      saved.map((draft) => ({
         previewId: draft.previewId,
         source: draft.source ?? 'CSV',
         projectId: draft.projectId,
@@ -167,34 +184,37 @@ export const handlers: HttpHandler[] = [
   // Valid and Error rows become Removed; unknown row numbers are ignored (AC-003.1).
   http.post('*/api/v1/imports/previews/:previewId/remove-rows', async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
-    if (!isCurrent(params.previewId)) return problem(404, 'MSG04');
+    const found = findPreview(params.previewId);
+    if (!found) return problem(404, 'MSG04');
     const { rowNumbers } = (await request.json()) as RemoveRowsRequest;
-    preview = {
-      ...preview,
-      rows: preview.rows.map((row) =>
+    const next: MockPreview = {
+      ...found,
+      rows: found.rows.map((row) =>
         rowNumbers.includes(row.rowNo) ? { ...row, status: 'REMOVED' } : row,
       ),
     };
-    return HttpResponse.json<ImportPreviewResponse>(previewResponse(preview));
+    savePreview(next);
+    return HttpResponse.json<ImportPreviewResponse>(previewResponse(next));
   }),
 
   // Like the backend (AC-013.1 – AC-013.4): a copy in each row, which becomes Valid; all rows or none.
   http.post('*/api/v1/imports/previews/:previewId/fill-solution', async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
-    if (!isCurrent(params.previewId)) return problem(404, 'MSG04');
+    const found = findPreview(params.previewId);
+    if (!found) return problem(404, 'MSG04');
     const { rowNumbers, ...solution } = (await request.json()) as FillSolutionRequest;
-    const targets = preview.rows.filter((row) => rowNumbers.includes(row.rowNo));
+    const targets = found.rows.filter((row) => rowNumbers.includes(row.rowNo));
     if (targets.length < new Set(rowNumbers).size) return problem(404, 'MSG04');
     if (
-      preview.importType !== 'WITHOUT_SOLUTION' ||
+      found.importType !== 'WITHOUT_SOLUTION' ||
       targets.some((row) => row.status === 'ERROR' || row.status === 'REMOVED')
     ) {
       return problem(409, 'MSG06');
     }
     const trim = (text: string | null | undefined) => text?.trim() || null;
-    preview = {
-      ...preview,
-      rows: preview.rows.map((row) =>
+    const next: MockPreview = {
+      ...found,
+      rows: found.rows.map((row) =>
         rowNumbers.includes(row.rowNo)
           ? {
               ...row,
@@ -208,17 +228,35 @@ export const handlers: HttpHandler[] = [
           : row,
       ),
     };
-    return HttpResponse.json<ImportPreviewResponse>(previewResponse(preview));
+    savePreview(next);
+    return HttpResponse.json<ImportPreviewResponse>(previewResponse(next));
+  }),
+
+  // Save as draft of a Jira preview (AC-004.1, AC-004.7): no validation; a CSV preview has no Draft (404).
+  http.post('*/api/v1/imports/previews/:previewId/draft', async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const found = findPreview(params.previewId);
+    if (found?.source !== 'JIRA_IMPORT') return problem(404, 'MSG04');
+    const savedAt = new Date().toISOString();
+    savePreview({ ...found, draftSavedAt: savedAt });
+    return HttpResponse.json<DraftSavedResponse>({
+      previewId: found.previewId,
+      savedAt,
+      message: { code: 'MSG41', params: {} },
+    });
   }),
 
   http.post('*/api/v1/imports/previews/:previewId/confirm', async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    if (!isCurrent(params.previewId)) return problem(404, 'MSG04');
-    const { validCount, errorCount, removedCount } = previewResponse(preview);
+    const found = findPreview(params.previewId);
+    if (!found) return problem(404, 'MSG04');
+    const { validCount, errorCount, removedCount } = previewResponse(found);
     if (validCount === 0) return problem(409, 'MSG30', { params: { count: errorCount } });
-    if (preview.fileName?.includes('inactive-project')) return problem(409, 'MSG40');
-    if (preview.fileName?.includes('import-fails')) return problem(500, 'MSG33');
-    isConfirmed = true;
+    if (found.fileName?.includes('inactive-project')) return problem(409, 'MSG40');
+    if (found.fileName?.includes('import-fails')) return problem(500, 'MSG33');
+    // A finished Draft is deleted with its preview (AC-003.10).
+    if (found === preview) isConfirmed = true;
+    else drafts = drafts.filter((draft) => draft !== found);
     lastBatchId += 1;
     const created = validCount;
     const skipped = errorCount + removedCount;

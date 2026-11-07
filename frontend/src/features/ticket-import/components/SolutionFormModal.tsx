@@ -3,6 +3,7 @@ import { Descriptions, Flex, Form, Input } from 'antd';
 import { useRef, useState } from 'react';
 import {
   useGetImportPreviewRow,
+  type ApiError,
   type FillSolutionRequest,
   type ImportPreviewRowResponse,
 } from '@/shared/api';
@@ -11,6 +12,7 @@ import { showMessage } from '@/shared/messages';
 import { ConfirmDialog, ErrorState, FormField, FormModal, LoadingState } from '@/shared/ui';
 import { useFillPreviewSolution } from '../hooks/useImportPreview';
 import { SECTIONS } from '../lib/import-row';
+import { jiraSnapshotItems } from './jira-snapshot';
 
 type SolutionValues = Omit<FillSolutionRequest, 'rowNumbers'>;
 
@@ -22,6 +24,8 @@ type SolutionFormModalProps = {
   rowNumbers?: number[];
   replaceCount?: number;
   onSuccess?: () => void;
+  /** After the popup has shown the rejection, e.g. for the page to leave a preview that is gone (design Edge 10). */
+  onError?: (error: ApiError) => void;
   onClose: () => void;
 };
 
@@ -35,6 +39,7 @@ export function SolutionFormModal({
   rowNumbers = [],
   replaceCount = 0,
   onSuccess,
+  onError,
   onClose,
 }: SolutionFormModalProps) {
   const [form] = Form.useForm<SolutionValues>();
@@ -61,6 +66,7 @@ export function SolutionFormModal({
           // The global MSG07 dialog is the one message for a 401 (guideline 06 §6).
           if (error.status === 401) return;
           if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
+          onError?.(error);
         },
       },
     );
@@ -120,6 +126,7 @@ function RowFields({ previewId, rowNo }: { previewId: number; rowNo: number }) {
           { key: 'description', label: 'Description', children: data.description },
           { key: 'author', label: 'Author', children: data.author },
           { key: 'resolvedDate', label: 'Resolved date', children: data.resolvedDate },
+          ...jiraSnapshotItems(data),
         ]}
       />
       {/* Mounted once the row is read, so each field starts from the row's saved section (edge case 51). */}
