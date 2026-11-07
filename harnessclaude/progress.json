@@ -355,15 +355,15 @@
         "suggestion-job": "passing",
         "suggestion-job-worker": "passing",
         "suggestion-uuid-keys": "evaluating",
-        "suggestion-comment": "evaluating"
+        "suggestion-comment": "passing"
       },
-      "lastUpdated": "2026-11-07T16:13:35.622Z",
+      "lastUpdated": "2026-11-07T16:53:12.227Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5eb385d1138b8454bef00ddfa85aa1abfd1583a9"
+        "default": "c8c32eaeede691bd09f0a1e87a669488d3bbb7b5"
       }
     },
     "ticket-review": {
