@@ -37,15 +37,15 @@
         "import-type-confirm": "evaluating",
         "import-type-form": "evaluating",
         "row-solution-popup": "evaluating",
-        "fill-solution-screen": "pending"
+        "fill-solution-screen": "evaluating"
       },
-      "lastUpdated": "2026-11-07T05:05:39.929Z",
+      "lastUpdated": "2026-11-07T05:55:13.022Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "34218f0bf3d36f34b419491312e381493b051840"
+        "default": "d3df9400e6587689b5b58b312c66a99f8d4b406a"
       }
     },
     "be-foundation": {
