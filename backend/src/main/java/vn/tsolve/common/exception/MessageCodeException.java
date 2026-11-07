@@ -12,7 +12,11 @@ public abstract class MessageCodeException extends CodedException {
     private final HttpStatus status;
 
     protected MessageCodeException(HttpStatus status, String code, Map<String, Object> params) {
-        super(code, params, null);
+        this(status, code, params, null);
+    }
+
+    protected MessageCodeException(HttpStatus status, String code, Map<String, Object> params, String field) {
+        super(code, params, field);
         this.status = status;
     }
 

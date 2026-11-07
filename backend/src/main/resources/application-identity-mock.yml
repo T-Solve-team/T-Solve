@@ -2,5 +2,6 @@
 tsolve:
   identity:
     mock:
+      company-domain: ${TSOLVE_IDENTITY_MOCK_COMPANY_DOMAIN:acme.test}
       account-email: ${TSOLVE_IDENTITY_MOCK_ACCOUNT_EMAIL:admin@acme.test}
       workspace-id: ${TSOLVE_IDENTITY_MOCK_WORKSPACE_ID:00000000-0000-4000-8000-0000000000a1}

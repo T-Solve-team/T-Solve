@@ -34,4 +34,5 @@
 
     <include file="changes/018-audit-log-entry.sql" relativeToChangelogFile="true"/>
     <include file="changes/019-identity-user-role-department.sql" relativeToChangelogFile="true"/>
+    <include file="changes/020-identity-space-manager.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>
