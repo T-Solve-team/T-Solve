@@ -701,3 +701,35 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **PR / Jira:** branch `feat/KAN-<n>-identity-keycloak-theme`; Jira to create.
 **Estimated size:** small–medium (5 theme files, no production Java); about 6 tests
 **Verification:** Tests name AC-001.67 and .68; `cd frontend && npm run test -- src/features/auth src/app/dev` stays green for AC-001.40–.43. Targeted: `cd backend && mvn -Dit.test='KeycloakThemeIT,KeycloakFailurePlacementIT' verify`.
+
+## Task 32: User List backend on PostgreSQL — KAN-107
+
+**Story:** STORY-004
+**Feature:** user-list-backend
+**Decisions owned:** KAN-107 Q1–Q4 (Dương, 07/11)
+**Acceptance criteria:** AC-004.9, AC-004.10, AC-004.11, AC-004.12, AC-004.13, AC-004.14, AC-004.15, AC-004.16, AC-004.17, AC-004.18
+**Description:** Design "User List backend — KAN-107, Task 32". `GET /api/v1/users` and `GET /api/v1/users/departments` exactly as `frontend/openapi/tsolve-api.yaml` (no contract change), Admin only through `TSolveUser`, read in the `TenantScope` Workspace; changeset 019 (`user_role`, `app_user.department_id`); the `identity-mock` profile's caller filter and demo seed. Not in scope: a session filter, `/api/v1/me`, KAN-108/110 writes, the frontend MSW pass-through (separate quick change).
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/{controller/UserListController,dto/UserListQuery,dto/UserAccountResponse,dto/DepartmentRefResponse,service/UserListService,service/impl/UserListServiceImpl,repository/UserListRepository}.java`, `backend/src/main/java/vn/tsolve/identity/mock/{MockSignedInCallerFilter,MockIdentityConfiguration,MockIdentityProperties,MockUserListSeeder}.java`, `backend/src/main/resources/db/changelog/changes/019-identity-user-role-department.sql`, `backend/src/main/resources/application-identity-mock.yml`
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`
+- Test: `backend/src/test/java/vn/tsolve/identity/{dto/UserListQueryTest,controller/UserListControllerTest,UserListIT,mock/MockSignedInCallerIT}.java`
+**Dependencies:** none on `main`; Tasks 26a/26b later replace the mock and reuse `user_role`.
+**PR / Jira:** branch `feat/KAN-107-identity-user-list-backend`; Jira KAN-107.
+**Estimated size:** medium (12 production files); about 25 tests
+**Verification:** Tests name AC-004.9 to AC-004.18; `bun harnessclaude/hooks/sdd.ts trace identity STORY-004`; `cd backend && mvn verify`; `cd frontend && npm run generate:api` leaves no diff.
+
+## Task 33: Add user backend on PostgreSQL — KAN-108
+
+**Story:** STORY-005
+**Feature:** add-user-backend
+**Decisions owned:** KAN-108 Q1–Q3 (Dương, 07/11)
+**Acceptance criteria:** AC-005.9, AC-005.10, AC-005.11, AC-005.12, AC-005.13, AC-005.14, AC-005.15, AC-005.16, AC-005.17
+**Description:** Design "Add user backend — KAN-108, Task 33". `POST /api/v1/users` and `GET /api/v1/users/creation-options` exactly as `frontend/openapi/tsolve-api.yaml`; changeset 020 (`space`, `space_manager`); the `WorkspaceEmailRegistry` port; the mock seed's Spaces. Not in scope: invitation email, KAN-110 updates, the frontend MSW pass-through.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/{controller/UserCreationController,dto/CreateUserRequest,dto/UserCreationOptionsResponse,dto/SpaceRefResponse,service/UserCreationService,service/WorkspaceEmailRegistry,service/impl/UserCreationServiceImpl,service/impl/AcceptAllWorkspaceEmailRegistry,repository/UserCreationRepository}.java`, `backend/src/main/resources/db/changelog/changes/020-identity-space-manager.sql`
+- Modify: `db.changelog-master.xml`, `identity/mock/{MockIdentityProperties,MockUserListSeeder}.java`, `application-identity-mock.yml`
+- Test: `backend/src/test/java/vn/tsolve/identity/{service/impl/UserCreationServiceImplTest,controller/UserCreationControllerTest,UserCreationIT}.java`
+**Dependencies:** Task 32 (branch `feat/KAN-107-identity-user-list-backend`, PR #162).
+**PR / Jira:** branch `feat/KAN-108-identity-add-user-api` stacked on KAN-107; Jira KAN-108.
+**Estimated size:** medium (10 production files); about 25 tests
+**Verification:** Tests name AC-005.9 to AC-005.17; `sdd.ts trace identity STORY-005`; `cd backend && mvn verify`; `generate:api` no diff.

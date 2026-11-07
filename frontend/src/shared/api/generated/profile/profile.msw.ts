@@ -9,7 +9,7 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
 
 import { ReviewDecision, TicketStatus } from '../model';
 import type { MySolutionPage, MySolutionSummary, SpaceRef } from '../model';
@@ -77,13 +77,12 @@ export const getGetMySolutionSummaryResponseMock = (
 
 export const getGetMyViewableSpacesMockHandler = (
   overrideResponse?:
-    | SpaceRef[]
-    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<SpaceRef[]> | SpaceRef[]),
+    SpaceRef[] | ((info: Parameters<HttpResponseResolver>[0]) => Promise<SpaceRef[]> | SpaceRef[]),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/me/spaces',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -100,14 +99,12 @@ export const getGetMyViewableSpacesMockHandler = (
 export const getGetMySolutionsMockHandler = (
   overrideResponse?:
     | MySolutionPage
-    | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
-      ) => Promise<MySolutionPage> | MySolutionPage),
+    | ((info: Parameters<HttpResponseResolver>[0]) => Promise<MySolutionPage> | MySolutionPage),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/me/solutions',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -125,13 +122,13 @@ export const getGetMySolutionSummaryMockHandler = (
   overrideResponse?:
     | MySolutionSummary
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver>[0],
       ) => Promise<MySolutionSummary> | MySolutionSummary),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/me/solutions/summary',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'

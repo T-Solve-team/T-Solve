@@ -667,6 +667,22 @@
 {"ts":"2026-11-05T13:14:57.506Z","type":"module-status","module":"ai","from":"implementing","to":"evaluating"}
 {"ts":"2026-11-05T13:15:03.084Z","type":"module-status","module":"ai","from":"evaluating","to":"completed"}
 {"ts":"2026-11-05T14:10:40.463Z","type":"commit-recorded","module":"triage","repo":"default","sha":"6cefdf9443d81628a7819c855a363f111cc44cf7"}
+{"ts":"2026-11-06T19:03:18.221Z","type":"spec-approved","module":"tracker","specHash":"fe6ca58dc58cc41d2a4a4cd643b416a4389c72b8faabca5a7997cab6a1cda40a"}
+{"ts":"2026-11-06T19:04:38.673Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":null,"to":"pending"}
+{"ts":"2026-11-06T19:29:08.409Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T19:29:08.756Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T19:29:09.339Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"c0a220c10e037b29340f192126348881fc8d12d2"}
+{"ts":"2026-11-07T03:54:29.611Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-07T04:07:59.788Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-07T04:08:06.060Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T04:08:06.780Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"a73fdd77e09ad8575590ea082b2ee32b48f7e088"}
+{"ts":"2026-11-06T00:57:53.681Z","type":"spec-approved","module":"worker","specHash":"6d0b11c652fe3181394ea638199d5ac00abbd31ae96e1fdc9df68981adb95e3d"}
+{"ts":"2026-11-06T01:02:18.740Z","type":"module-status","module":"worker","from":"decomposed","to":"planned"}
+{"ts":"2026-11-06T01:02:18.813Z","type":"feature-status","module":"worker","feature":"review-notification-smtp","from":null,"to":"pending"}
+{"ts":"2026-11-06T01:02:18.889Z","type":"module-status","module":"worker","from":"planned","to":"implementing"}
+{"ts":"2026-11-06T01:02:18.963Z","type":"feature-status","module":"worker","feature":"review-notification-smtp","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T12:50:23.485Z","type":"commit-recorded","module":"worker","repo":"default","sha":"c7dd3d10cfad23c2ebc54bdc4e5ad54a4fb974f4"}
+{"ts":"2026-11-06T12:50:23.571Z","type":"feature-status","module":"worker","feature":"review-notification-smtp","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-05T17:49:14.224Z","type":"spec-approved","module":"search","specHash":"fa4353d53ace5d33eb6b0288c2e676bd8cb636800c68d7f5689ee21b45a626d6"}
 {"ts":"2026-11-05T17:49:29.046Z","type":"feature-status","module":"search","feature":"search-public-ids","from":null,"to":"pending"}
 {"ts":"2026-11-05T17:49:29.694Z","type":"feature-status","module":"search","feature":"ticket-updated-at","from":null,"to":"pending"}
@@ -853,6 +869,12 @@
 {"ts":"2026-11-07T05:14:30.770Z","type":"spec-approved","module":"worker","specHash":"7e0c5e3f9cbd6c1066fb73b11e67bfd2703687a2e54764b0918fe34c795cb4bc"}
 {"ts":"2026-11-07T05:16:14.410Z","type":"feature-status","module":"import-ticket-list","feature":"fill-solution-screen","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T05:37:03.836Z","type":"spec-approved","module":"import-ticket-list","specHash":"46ea7e29f7294a9937a9c899c3f2d440a76e73460838fbebcc6e9debd14f991a"}
+{"ts":"2026-11-07T08:13:54.261Z","type":"spec-approved","module":"tracker","specHash":"93a8ed10cb27528dd5e2066f07d8f102c2c2d497479b672779d2f29e9dae6836"}
+{"ts":"2026-11-07T08:14:51.344Z","type":"feature-status","module":"tracker","feature":"suggestion-job-worker","from":null,"to":"pending"}
+{"ts":"2026-11-07T08:14:51.621Z","type":"feature-status","module":"tracker","feature":"suggestion-job-worker","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T08:31:37.098Z","type":"feature-status","module":"tracker","feature":"suggestion-job-worker","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T08:31:37.444Z","type":"feature-status","module":"tracker","feature":"suggestion-job-worker","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T08:31:37.858Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"7ad3be7998c27cf43ff57760f80720215884af87"}
 {"ts":"2026-11-07T05:55:12.764Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"d3df9400e6587689b5b58b312c66a99f8d4b406a"}
 {"ts":"2026-11-07T05:55:13.023Z","type":"feature-status","module":"import-ticket-list","feature":"fill-solution-screen","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T07:24:12.885Z","type":"spec-approved","module":"ticket-review","specHash":"68ced23e3b4a38e51a43201101a37d4331f0739073a7492dd88ff43487173cf3"}
@@ -897,9 +919,54 @@
 {"ts":"2026-11-07T11:03:46.016Z","type":"feature-status","module":"identity","feature":"keycloak-sign-in-start","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T11:03:46.253Z","type":"feature-status","module":"identity","feature":"keycloak-sign-in-start","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T11:03:46.507Z","type":"feature-status","module":"identity","feature":"keycloak-sign-in-start","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T15:08:30.969Z","type":"feature-status","module":"identity","feature":"keycloak-callback","from":null,"to":"pending"}
+{"ts":"2026-11-07T15:08:31.228Z","type":"feature-status","module":"identity","feature":"keycloak-callback","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T15:08:31.479Z","type":"feature-status","module":"identity","feature":"keycloak-callback","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T15:08:31.716Z","type":"feature-status","module":"identity","feature":"keycloak-callback","from":"evaluating","to":"passing"}
 {"ts":"2026-11-07T10:40:00.792Z","type":"quick-opened","what":"BUG-153: review email enqueue has no bound Workspace and does not fail fast","files":["backend/src/main/java/vn/tsolve/worker/service/WorkerTenantService.java","backend/src/main/java/vn/tsolve/worker/service/mock/MockWorkerTenantService.java","backend/src/main/java/vn/tsolve/worker/service/impl/TenantJobServiceImpl.java","backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java"]}
 {"ts":"2026-11-07T10:58:46.345Z","type":"quick-closed","what":"BUG-153: review email enqueue has no bound Workspace and does not fail fast","files":["backend/src/main/java/vn/tsolve/worker/service/WorkerTenantService.java","backend/src/main/java/vn/tsolve/worker/service/mock/MockWorkerTenantService.java","backend/src/main/java/vn/tsolve/worker/service/impl/TenantJobServiceImpl.java","backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java"]}
 {"ts":"2026-11-07T11:26:34.830Z","type":"quick-opened","what":"PR 153 review: stronger BUG-153 tests and log message","files":["backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:40:28.427Z","type":"quick-closed","what":"PR 153 review: stronger BUG-153 tests and log message","files":["backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:43:47.513Z","type":"quick-opened","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:44:28.193Z","type":"quick-closed","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-07T12:56:37.681Z","type":"quick-opened","what":"Identity ITs clean app_user with TRUNCATE CASCADE so rows other ITs leave in the shared tenant databases do not break them (CI on PR 141)","files":["backend/src/test/java/vn/tsolve/identity/account/AccountRepositoryIT.java","backend/src/test/java/vn/tsolve/identity/signin/CallbackAccountIsolationIT.java","docs/bug-log.md"]}
+{"ts":"2026-11-07T13:56:18.826Z","type":"quick-closed","what":"Identity ITs clean app_user with TRUNCATE CASCADE so rows other ITs leave in the shared tenant databases do not break them (CI on PR 141)","files":["backend/src/test/java/vn/tsolve/identity/account/AccountRepositoryIT.java","backend/src/test/java/vn/tsolve/identity/signin/CallbackAccountIsolationIT.java","docs/bug-log.md"]}
+{"ts":"2026-11-07T15:41:24.140Z","type":"spec-approved","module":"identity","specHash":"9d2d992b33b12f700f5e84e4beeec6376ec684ccc9194b26c78e4daa509307e0"}
+{"ts":"2026-11-07T15:41:38.537Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":null,"to":"pending"}
+{"ts":"2026-11-07T15:41:38.606Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T16:19:19.791Z","type":"commit-recorded","module":"identity","repo":"default","sha":"a0f46b9f59de4473abb6eb3ea10c08c9cf63ee9a"}
+{"ts":"2026-11-07T16:27:43.490Z","type":"spec-approved","module":"identity","specHash":"d6851de2aacc2ba989ced1aabfb2e242dc587372a4b1eb7d984cfb6b5f5a3d78"}
+{"ts":"2026-11-07T16:27:43.535Z","type":"feature-status","module":"identity","feature":"add-user-backend","from":null,"to":"pending"}
+{"ts":"2026-11-07T16:27:43.599Z","type":"feature-status","module":"identity","feature":"add-user-backend","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T16:58:04.909Z","type":"commit-recorded","module":"identity","repo":"default","sha":"ab1663f2f60a02ccc70f8ab053af47f027a340ff"}
+{"ts":"2026-11-07T14:10:13.301Z","type":"feature-status","module":"tracker","feature":"suggestion-uuid-keys","from":null,"to":"pending"}
+{"ts":"2026-11-07T14:10:13.766Z","type":"feature-status","module":"tracker","feature":"suggestion-uuid-keys","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T14:35:18.166Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"8becea26b6bb5febddd9ed8b50128b6b4b9b2bad"}
+{"ts":"2026-11-07T14:35:18.434Z","type":"feature-status","module":"tracker","feature":"suggestion-uuid-keys","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T15:51:59.655Z","type":"spec-approved","module":"tracker","specHash":"d6067341599e4132f355e68fff4afb6c15f16dd5ce5c8ca7eb9f66f46d5fbdbf"}
+{"ts":"2026-11-07T15:53:23.461Z","type":"feature-status","module":"tracker","feature":"suggestion-comment","from":null,"to":"pending"}
+{"ts":"2026-11-07T15:56:06.613Z","type":"feature-status","module":"tracker","feature":"suggestion-comment","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T16:13:34.959Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"5eb385d1138b8454bef00ddfa85aa1abfd1583a9"}
+{"ts":"2026-11-07T16:13:35.623Z","type":"feature-status","module":"tracker","feature":"suggestion-comment","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T16:43:55.264Z","type":"feature-status","module":"tracker","feature":"suggestion-comment","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-07T16:53:11.422Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"c8c32eaeede691bd09f0a1e87a669488d3bbb7b5"}
+{"ts":"2026-11-07T16:53:11.775Z","type":"feature-status","module":"tracker","feature":"suggestion-comment","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-07T16:53:12.229Z","type":"feature-status","module":"tracker","feature":"suggestion-comment","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T10:16:20.336Z","type":"spec-approved","module":"ticket-review","specHash":"12189f157d3b550a3e23af078410b0e145d1374e8704fc7c75886caa01222f3b"}
+{"ts":"2026-11-07T10:17:46.896Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":null,"to":"pending"}
+{"ts":"2026-11-07T10:17:46.947Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":null,"to":"pending"}
+{"ts":"2026-11-07T10:45:27.911Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T10:45:34.686Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"b539777fa821bece687286fe6714e67cb3d458d6"}
+{"ts":"2026-11-07T11:05:37.368Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T11:05:39.976Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"50d2a3f00641f3b9c336a8eeb797debd031f174e"}
+{"ts":"2026-11-07T11:06:05.540Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T11:06:05.695Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T11:22:39.806Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T11:22:39.887Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T12:17:08.697Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-hardening","from":null,"to":"pending"}
+{"ts":"2026-11-07T12:17:08.771Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-hardening","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T12:30:45.978Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-hardening","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T12:30:46.222Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"974dad1b2539cb959f612c6e1a91c96a18c0af20"}
+{"ts":"2026-11-07T12:55:27.689Z","type":"quick-opened","what":"PR 155 CI: verify regenerated SSE mock and log API generation drift","files":["frontend/src/shared/api/generated/review/review.msw.ts","docs/bug-log.md"]}
+{"ts":"2026-11-07T13:01:06.083Z","type":"quick-closed","what":"PR 155 CI: verify regenerated SSE mock and log API generation drift","files":["frontend/src/shared/api/generated/review/review.msw.ts","docs/bug-log.md"]}
+{"ts":"2026-11-07T17:14:30.621Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"38a0abd9b9a2a0aa0f59ff5132d5a1028c4ef641"}

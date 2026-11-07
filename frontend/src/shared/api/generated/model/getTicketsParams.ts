@@ -18,9 +18,7 @@ export type GetTicketsParams = {
    * @maxLength 100
    */
   keyword?: string;
-  /**
-   * One Department; omitted = every Department the user may see.
-   */
+  /** One Department; omitted = every Department the user may see. */
   departmentId?: string;
   source?: TicketSource;
   status?: TicketStatus;
@@ -35,8 +33,6 @@ export type GetTicketsParams = {
    * @maximum 100
    */
   size?: SizeParameter;
-  /**
-   * "field,asc" or "field,desc"; may repeat.
-   */
+  /** "field,asc" or "field,desc"; may repeat. */
   sort?: SortParameter;
 };

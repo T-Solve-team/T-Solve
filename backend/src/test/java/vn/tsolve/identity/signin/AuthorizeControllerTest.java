@@ -27,9 +27,11 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -53,6 +55,9 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
 @Import({
     SecurityConfig.class,
     AuthSecurityConfig.class,
+    KeycloakClientRegistrations.class,
+    RedisAuthorizationRequestRepository.class,
+    OidcCallbackHandler.class,
     AuthHosts.class,
     SignInStateService.class,
     SignedToken.class,
@@ -77,6 +82,9 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
         })
 @ExtendWith(OutputCaptureExtension.class)
 class AuthorizeControllerTest {
+
+    @MockBean
+    private StringRedisTemplate redis;
 
     private static final String GOOGLE_AUTHORIZATION_URI = "https://accounts.google.com/o/oauth2/v2/auth";
     private static final String CALLBACK_URI = SignInTestFixtures.LOGIN_ORIGIN + "/api/v1/auth/callback";
@@ -252,7 +260,8 @@ class AuthorizeControllerTest {
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
-    @ValueSource(strings = {"acme.localhost", "admin.localhost"})
+    // A Workspace site's callback now belongs to the Keycloak chain (AC-001.55), so only the admin host stays 404.
+    @ValueSource(strings = {"admin.localhost"})
     @DisplayName("AC-001.5 answers 404 for the callback off login.")
     void answers404ForCallbackOffLogin_AC_001_5(String host) throws Exception {
         String state = states.createForWorkspace(InMemoryWorkspaceLookup.ACME.id(), "/");

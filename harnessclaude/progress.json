@@ -127,15 +127,18 @@
         "keycloak-theme": "pending",
         "keycloak-prerequisites": "passing",
         "keycloak-realm": "passing",
-        "keycloak-sign-in-start": "passing"
+        "keycloak-sign-in-start": "passing",
+        "keycloak-callback": "passing",
+        "user-list-backend": "in-progress",
+        "add-user-backend": "in-progress"
       },
-      "lastUpdated": "2026-11-07T11:03:46.506Z",
+      "lastUpdated": "2026-11-07T16:58:04.886Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5310e2b10093f244440daabf3f3ca7ad14b1d613"
+        "default": "ab1663f2f60a02ccc70f8ab053af47f027a340ff"
       }
     },
     "workspace": {
@@ -351,14 +354,20 @@
         "issue-panel": "pending",
         "solution-form": "pending",
         "suggestion-answer": "pending",
-        "event-cleanup": "pending"
+        "event-cleanup": "pending",
+        "suggestion-job": "passing",
+        "suggestion-job-worker": "passing",
+        "suggestion-uuid-keys": "evaluating",
+        "suggestion-comment": "passing"
       },
-      "lastUpdated": "2026-10-30T06:15:48.993Z",
+      "lastUpdated": "2026-11-07T16:53:12.227Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
-      "lastCommit": {}
+      "lastCommit": {
+        "default": "c8c32eaeede691bd09f0a1e87a669488d3bbb7b5"
+      }
     },
     "ticket-review": {
       "status": "implementing",
@@ -375,15 +384,18 @@
         "review-decision-endpoints": "evaluating",
         "review-queue-entry-time": "evaluating",
         "review-history-api": "evaluating",
-        "review-email-notification": "evaluating"
+        "review-email-notification": "evaluating",
+        "review-queue-events-api": "passing",
+        "review-queue-events-web": "passing",
+        "review-queue-events-hardening": "evaluating"
       },
-      "lastUpdated": "2026-11-07T10:19:16.931Z",
+      "lastUpdated": "2026-11-07T17:14:30.615Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b5e93cde3837c9530db76fa61af55665f3ccc529"
+        "default": "38a0abd9b9a2a0aa0f59ff5132d5a1028c4ef641"
       }
     }
   },

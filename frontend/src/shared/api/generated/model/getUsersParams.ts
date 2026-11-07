@@ -18,9 +18,7 @@ export type GetUsersParams = {
    * @maxLength 100
    */
   q?: string;
-  /**
-   * EMPLOYEE means Employee only; other values mean role membership.
-   */
+  /** EMPLOYEE means Employee only; other values mean role membership. */
   role?: Role;
   status?: UserAccountStatus;
   departmentId?: string;
@@ -35,8 +33,6 @@ export type GetUsersParams = {
    * @maximum 100
    */
   size?: SizeParameter;
-  /**
-   * "field,asc" or "field,desc"; may repeat.
-   */
+  /** "field,asc" or "field,desc"; may repeat. */
   sort?: SortParameter;
 };

@@ -17,18 +17,12 @@ export type SearchTicketsParams = {
    * @maxLength 200
    */
   q: string;
-  /**
-   * One Department; omitted = every Department of the user.
-   */
+  /** One Department; omitted = every Department of the user. */
   departmentId?: string;
   source?: TicketSource;
-  /**
-   * First resolved day, included.
-   */
+  /** First resolved day, included. */
   resolvedFrom?: string;
-  /**
-   * Last resolved day, included.
-   */
+  /** Last resolved day, included. */
   resolvedTo?: string;
   /**
    * Page number, starting at 0.

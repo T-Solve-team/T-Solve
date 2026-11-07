@@ -9,11 +9,14 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
 import { ReviewHistoryDecision, TicketSource, TicketStatus } from '../model';
 import type {
+  ApproveTicketsRequest,
   ExpiredTicketPage,
+  RejectTicketsRequest,
+  RequestChangesRequest,
   ReviewDecisionResult,
   ReviewHistoryPage,
   ReviewQueuePage,
@@ -197,6 +200,8 @@ export const getGetReviewQueueResponseMock = (
   ...overrideResponse,
 });
 
+export const getStreamReviewQueueEventsResponseMock = (): string => faker.word.sample();
+
 export const getGetReviewQueueTicketIdsResponseMock = (
   overrideResponse: Partial<Extract<TicketIdList, object>> = {},
 ): TicketIdList => ({
@@ -222,13 +227,13 @@ export const getGetReviewTicketDetailMockHandler = (
   overrideResponse?:
     | ReviewTicketDetail
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver<{ ticketId: string }>>[0],
       ) => Promise<ReviewTicketDetail> | ReviewTicketDetail),
   options?: RequestHandlerOptions,
 ) => {
-  return http.get(
+  return http.get<{ ticketId: string }>(
     '*/api/v1/tickets/:ticketId',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ ticketId: string }>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -246,13 +251,13 @@ export const getGetReviewHistoryMockHandler = (
   overrideResponse?:
     | ReviewHistoryPage
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver>[0],
       ) => Promise<ReviewHistoryPage> | ReviewHistoryPage),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/review-history',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -270,13 +275,13 @@ export const getGetExpiredTicketsMockHandler = (
   overrideResponse?:
     | ExpiredTicketPage
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver>[0],
       ) => Promise<ExpiredTicketPage> | ExpiredTicketPage),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/expired-tickets',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -293,14 +298,12 @@ export const getGetExpiredTicketsMockHandler = (
 export const getGetExpiredTicketIdsMockHandler = (
   overrideResponse?:
     | TicketIdList
-    | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
-      ) => Promise<TicketIdList> | TicketIdList),
+    | ((info: Parameters<HttpResponseResolver>[0]) => Promise<TicketIdList> | TicketIdList),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/expired-tickets/ticket-ids',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -318,13 +321,13 @@ export const getSendBackTicketsMockHandler = (
   overrideResponse?:
     | ReviewDecisionResult
     | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
+        info: Parameters<HttpResponseResolver<PathParams, ApproveTicketsRequest>>[0],
       ) => Promise<ReviewDecisionResult> | ReviewDecisionResult),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<PathParams, ApproveTicketsRequest>(
     '*/api/v1/reviews/send-back',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, ApproveTicketsRequest>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -341,14 +344,12 @@ export const getSendBackTicketsMockHandler = (
 export const getGetReviewQueueMockHandler = (
   overrideResponse?:
     | ReviewQueuePage
-    | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
-      ) => Promise<ReviewQueuePage> | ReviewQueuePage),
+    | ((info: Parameters<HttpResponseResolver>[0]) => Promise<ReviewQueuePage> | ReviewQueuePage),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/review-queue',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -362,17 +363,40 @@ export const getGetReviewQueueMockHandler = (
   );
 };
 
+export const getStreamReviewQueueEventsMockHandler = (
+  overrideResponse?:
+    string | ((info: Parameters<HttpResponseResolver>[0]) => Promise<string> | string),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/review-queue/events',
+    async (info: Parameters<HttpResponseResolver>[0]) => {
+      const resolvedBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getStreamReviewQueueEventsResponseMock();
+      const textBody =
+        typeof resolvedBody === 'string' ? resolvedBody : JSON.stringify(resolvedBody ?? null);
+      return HttpResponse.text(textBody, {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
+    },
+    options,
+  );
+};
+
 export const getGetReviewQueueTicketIdsMockHandler = (
   overrideResponse?:
     | TicketIdList
-    | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
-      ) => Promise<TicketIdList> | TicketIdList),
+    | ((info: Parameters<HttpResponseResolver>[0]) => Promise<TicketIdList> | TicketIdList),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/review-queue/ticket-ids',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -390,13 +414,13 @@ export const getApproveTicketsMockHandler = (
   overrideResponse?:
     | ReviewDecisionResult
     | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
+        info: Parameters<HttpResponseResolver<PathParams, ApproveTicketsRequest>>[0],
       ) => Promise<ReviewDecisionResult> | ReviewDecisionResult),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<PathParams, ApproveTicketsRequest>(
     '*/api/v1/reviews/approve',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, ApproveTicketsRequest>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -414,13 +438,13 @@ export const getRejectTicketsMockHandler = (
   overrideResponse?:
     | ReviewDecisionResult
     | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
+        info: Parameters<HttpResponseResolver<PathParams, RejectTicketsRequest>>[0],
       ) => Promise<ReviewDecisionResult> | ReviewDecisionResult),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<PathParams, RejectTicketsRequest>(
     '*/api/v1/reviews/reject',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, RejectTicketsRequest>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -438,13 +462,13 @@ export const getRequestTicketChangesMockHandler = (
   overrideResponse?:
     | ReviewDecisionResult
     | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
+        info: Parameters<HttpResponseResolver<PathParams, RequestChangesRequest>>[0],
       ) => Promise<ReviewDecisionResult> | ReviewDecisionResult),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<PathParams, RequestChangesRequest>(
     '*/api/v1/reviews/request-changes',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, RequestChangesRequest>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -464,6 +488,7 @@ export const getReviewMock = () => [
   getGetExpiredTicketIdsMockHandler(),
   getSendBackTicketsMockHandler(),
   getGetReviewQueueMockHandler(),
+  getStreamReviewQueueEventsMockHandler(),
   getGetReviewQueueTicketIdsMockHandler(),
   getApproveTicketsMockHandler(),
   getRejectTicketsMockHandler(),

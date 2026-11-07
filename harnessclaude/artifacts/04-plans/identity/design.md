@@ -1220,3 +1220,62 @@ Add one feature, `space-handover`, to the existing identity iteration 1 after Ta
 Verification: `sdd.ts trace identity STORY-009`; focused users tests; frontend format, lint, typecheck, full tests, build and deterministic API generation; browser-check UC-06 and UC-07 at 1366 × 768. Preserve all AC-006/007/008 behavior. Write the task session log and test/review reports with actual results. Propose one feature commit only after verification and obtain user agreement before committing; push only if requested.
 
 Builder check: proposed Task 20 supplies the callers, models, eligibility rule, payload scope, errors, state invariants, test targets and exclusions. There is no unresolved build decision. The user approved the design and iteration placement on 2026-10-31; Task 20 is appended to iteration 1. Implementation and verification are recorded in its session and evaluation reports.
+
+## User List backend — KAN-107, Task 32 (2026-11-07)
+
+Covers AC-004.9 to AC-004.18. Decisions of the user (Dương, 07/11): Q1–Q4 = recommendation (spec Changelog).
+
+- **Caller.** The endpoints depend only on what `main` already has: `@PreAuthorize("hasRole(ADMIN)")` with the
+  `TSolveUser` in the security context, and `TenantScope.currentWorkspaceId()` for the bound Workspace, like the Review
+  controllers. No session filter, no `identity/session` package, no `WorkspaceSessionBinding`, no `TenantContext`
+  (PR #119's files stay dropped, KAN-275 Q15). Unauthenticated and non-Admin answers come from `SecurityConfig` and
+  `GlobalExceptionHandler` as today (401 MSG07, 403 MSG08).
+- **Interim mock (AC-004.17).** `vn.tsolve.identity.mock`, all `@Profile("identity-mock")`: `MockSignedInCallerFilter`
+  (a servlet filter registered in the web chain before authorization; only when the context holds no authentication,
+  so the owners' `WebSessionFilter` wins once it exists) reads `tsolve.identity.mock.account-email` and
+  `tsolve.identity.mock.workspace-id`, binds the Workspace with `TenantScope.runIn` around the rest of the chain,
+  re-reads the Account and its Roles, and sets a `TSolveUser`; a missing or Deactivated Account leaves the request
+  signed out. `MockUserListSeeder` (AC-004.18) inserts the missing demo rows at start-up inside `runIn`. Javadoc on
+  each: "replace when KAN-275 workspace-session (Tasks 26a/26b) lands". Never in tests' default context or `prod`.
+- **Schema.** Changeset `019-identity-user-role-department.sql` (author `identity`): `user_role` (`id UUID PK
+  DEFAULT gen_random_uuid()`, `user_id UUID NOT NULL → app_user(id) ON DELETE CASCADE`, `role VARCHAR(30)` CHECK in
+  `TICKET_RESOLVER, PROJECT_MANAGER, KNOWLEDGE_MANAGER, ADMIN`, `assigned_at TIMESTAMPTZ NOT NULL`, UNIQUE
+  `(user_id, role)`), and `app_user.department_id BIGINT NULL → department(department_id)` with an index. Baseline
+  names; key types follow `main` (UUID `app_user.id`, BIGINT `department_id` with the UUID `public_id` exposed).
+  Task 26b reuses this table instead of adding its own.
+- **Read.** `UserListService` / `UserListServiceImpl` (read-only transaction) → `UserListRepository`, a native SQL
+  query (count + page) on `app_user` left-joined to `department`, roles aggregated from `user_role`; filters bound as
+  parameters, `q` escaped for `LIKE`; sort whitelist with `lower(...)` and `NULLS FIRST`/`LAST` and `id` tie-break.
+  Departments: `department` where `status = 'ACTIVE'` ordered by `lower(name)`. The service asserts a bound Workspace
+  first (`TenantScope.currentWorkspaceId()` throws → 500 MSG06). Lenient paging like the MSW mock: an unknown sort
+  falls back to the default, `size` is capped at 100.
+- **Tests.** Unit: query parsing (q length/escape, sort whitelist, paging). `@WebMvcTest`-style: 401/403/400.
+  IT with `TwoTenantDatabases`: rows in `tenant_b` never appear for ACME; filters, sort, paging; departments list;
+  mock filter with the profile on (signed in) and off (401); seeder idempotent.
+
+## Add user backend — KAN-108, Task 33 (2026-11-07)
+
+Covers AC-005.9 to AC-005.17; decisions Q1–Q3 of 07/11 (spec Changelog). Builds on Task 32 (same caller, same
+`identity-mock` profile).
+
+- **Schema.** Changeset `020-identity-space-manager.sql` (author `identity`): `space` (`space_id BIGSERIAL PK`,
+  `public_id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()`, `department_id BIGINT NOT NULL UNIQUE → department`,
+  `name VARCHAR(100) NOT NULL`, `status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'` CHECK `ACTIVE, HIDDEN`) and
+  `space_manager` (`space_id BIGINT PRIMARY KEY → space` — the key makes one Knowledge Manager per Space —
+  `user_id UUID NOT NULL → app_user(id) ON DELETE CASCADE`, `assigned_at TIMESTAMPTZ NOT NULL`, index on `user_id`).
+  Key style follows `department` on main; the wiki module reuses both.
+- **Write.** `UserCreationService` / impl, `@Transactional`: validate in the mock's order (email required → length
+  on the raw input → format + company domain → duplicate in this Workspace → roles → Department → Spaces → occupied
+  Space), claim the email in `WorkspaceEmailRegistry`, insert `app_user`, `user_role`, `space_manager`, record the
+  audit event, return the `UserAccount` read back through Task 32's repository mapping. A unique violation on
+  `space_manager` (race) maps to 409 MSG117 and a unique violation on `app_user.email` to 409 MSG11. Field errors
+  use the existing `fieldErrors` Problem shape the frontend reads.
+- **Ports.** `WorkspaceEmailRegistry` (`boolean claim(UUID workspaceId, String email)`, `void release(...)`) in
+  `identity.service`, default bean `AcceptAllWorkspaceEmailRegistry` with javadoc "interim until platform's
+  workspace_email registry (Task 14)". Company domain: `WorkspaceLookup.findById(bound).googleDomain()`, then the
+  `identity-mock` property `tsolve.identity.mock.company-domain` (default `acme.test`).
+- **Seed.** `MockUserListSeeder` also ensures one Active Space per demo Department (and one Knowledge Manager
+  assignment for the seeded Knowledge Manager), so creation-options and MSG117 are visible in the demo.
+- **Tests.** Unit: validation order and codes. MVC: 401/403/400. IT (`TwoTenantDatabases`): creation lands only in
+  `tenant_a`; a duplicate email in `tenant_b` does not block ACME; MSG11/MSG111; MSG117 including two concurrent
+  creations for one Space; registry refusal → MSG155 and nothing saved; creation-options; audit row.
