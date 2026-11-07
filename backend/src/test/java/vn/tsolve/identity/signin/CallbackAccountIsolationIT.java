@@ -81,8 +81,8 @@ class CallbackAccountIsolationIT {
     @BeforeEach
     void reset() {
         FakeGoogleIssuer.reset();
-        TwoTenantDatabases.tenantA().update("DELETE FROM app_user");
-        TwoTenantDatabases.tenantB().update("DELETE FROM app_user");
+        TwoTenantDatabases.tenantA().update("TRUNCATE app_user CASCADE");
+        TwoTenantDatabases.tenantB().update("TRUNCATE app_user CASCADE");
         for (JdbcTemplate db : new JdbcTemplate[] {
             TwoTenantDatabases.main(), TwoTenantDatabases.tenantA(), TwoTenantDatabases.tenantB()
         }) {
