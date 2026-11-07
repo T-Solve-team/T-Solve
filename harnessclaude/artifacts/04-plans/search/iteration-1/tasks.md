@@ -642,12 +642,16 @@ Spec: STORY-005 to STORY-009 · Design: master section "Backend". Rules: `backen
 **Feature:** department-solution-retrieval
 **Jira:** KAN-47 · branch `feat/KAN-47-triage-ai-suggestion` (its first commit; triage Task 4 follows)
 **Description:**
-- `SolutionRetrieval.nearestInProjectDepartment(long projectId, float[] queryVector, double minSimilarity, int limit)`
+- `SolutionRetrieval.nearestInProjectDepartment(UUID projectId, float[] queryVector, double minSimilarity, int limit)`
+  (`projectId` = `project.public_id`, spec change 08/11)
   in `SolutionRetrievalImpl`: the same argument checks as `nearest` (AC-011.4), maps rows to the new record
   `RetrievedTicketSolution(UUID ticketId, …, double similarity)`, blank Workaround → null.
 - `SolutionRetrievalRepository.nearestInProjectDepartment`: the `nearest` query plus
-  `AND d.department_id = (SELECT department_id FROM project WHERE project_id = :projectId)`, selecting
+  `AND d.department_id = (SELECT department_id FROM project WHERE public_id = :projectId)`, selecting
   `t.public_id`; unknown Project → no row.
+- **Fix after review attempt 1 (08/11):** `long projectId` → `UUID projectId` in the interface, impl and repository;
+  AC-011.4 checks also reject a null `projectId`; the IT passes the Project's `public_id` and a random UUID for the
+  unknown Project, and adds one ticket whose `project_id` is the legacy hex form of the internal id (it must come back).
 **Files:**
 - Modify: `backend/src/main/java/vn/tsolve/search/retrieval/service/SolutionRetrieval.java`,
   `…/search/retrieval/service/impl/SolutionRetrievalImpl.java`, `…/search/retrieval/repository/SolutionRetrievalRepository.java`

@@ -640,8 +640,8 @@
     }
   },
   "search": {
-    "specHash": "93281f724dc89e24cfd97fabed6965b6bd6435f08355ccc38c265eb01d268529",
-    "approvedAt": "2026-11-07T14:04:35.860Z",
+    "specHash": "a5a63c6de4269f0a6535e5c37b2c1f21f34f2f2758b35282029a93be35103a95",
+    "approvedAt": "2026-11-07T19:09:11.462Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -733,9 +733,9 @@
       "AC-010.3": "IF a ticket is unpublished, inactive or too far, THEN THE backend SHALL leave it out (not",
       "AC-010.5": "IF an argument is out of range, THEN THE service SHALL throw  and SHALL run",
       "AC-010.4": "THE service SHALL take no user, Workspace or Department argument and SHALL call no",
-      "AC-011.1": "WHEN  is called, THE backend SHALL return at most  Department Solutions of the Project with internal id",
+      "AC-011.1": "WHEN  is called, THE backend SHALL return at most  Department Solutions of the Project whose  is",
       "AC-011.2": "THE backend SHALL return each hit with the ticket's , Symptoms, Root cause, Resolution steps,",
-      "AC-011.3": "IF a ticket is unpublished, of another Department, of an inactive Department or below , THEN THE backend SHALL leave it out, and SHALL return an empty list when no Project has id .",
+      "AC-011.3": "IF a ticket is unpublished, of another Department, of an inactive Department or below , THEN THE backend SHALL leave it out, and SHALL return an empty list when no Project has  .",
       "AC-011.4": "IF an argument is out of range, THEN THE service SHALL throw  and SHALL run",
       "AC-011.5": "THE service SHALL take no user argument and SHALL call no , write no"
     }

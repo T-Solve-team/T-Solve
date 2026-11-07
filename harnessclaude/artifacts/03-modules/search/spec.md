@@ -17,6 +17,7 @@ owner: BA
 | 2026-11-06 | STORY-005, STORY-006, STORY-007 | Builder check (CAUTION) fixes: AC-005.3 reworded (rollback by the count of search changesets; the `vector` extension stays; rollbacks that drop data are for development databases only); AC-005.7 reworded (batch `SEARCH_EMBED_BATCH`, default 4, one batch at a time, so embedding never holds more than one Ollama slot); new AC-005.9 (a ticket id that fails 3 times in a row is skipped until the backend restarts); AC-007.7 reworded (dates only as `yyyy-MM-dd`, BUG-106); `GET /api/v1/tickets` declares `400` in the contract (AC-006.9). Out of Scope: retention and access of `search_log`. No other criterion changes | Fresh builder check of 06/11; user decisions of 06/11: `SEARCH_MIN_SIMILARITY` 0.5 accepted as a tunable default; `search_log` privacy deferred to the dashboard (KAN-150) |
 | 2026-11-06 | STORY-010 (new) | New STORY-010: the in-process `SolutionRetrieval` service the `chatbot` module calls for the Solutions nearest to a query vector, over every Published ticket of the Workspace with an ACTIVE Department (no Department scope, chatbot Requirement 2). Terms gain **Workspace Solution**; Interface Contracts gain the service; Definition of Done covers STORY-010. No other criterion changes | Plan of the chatbot backend (KAN-179): `backend/AGENTS.md` lets `chatbot` use search only through a `service/` interface, never its tables |
 | 2026-11-07 | STORY-011 (new) | New STORY-011: `SolutionRetrieval.nearestInProjectDepartment`, the in-process retrieval the `triage` module calls for the Published tickets of the Department that owns a Project, nearest to a query vector, with the ticket's `public_id`. Terms gain **Department Solution**; Interface Contracts gain the method and `RetrievedTicketSolution`; the KAN-38 Out of Scope line now excludes only Wiki retrieval; Definition of Done covers STORY-011. No other criterion changes | Plan of the AI Solution Suggestion backend (triage STORY-005, KAN-47): sources are the Published tickets of the issue's Department (user, 07/11); `triage` may use search only through a `service/` interface |
+| 2026-11-08 | STORY-011 | AC-011.1, AC-011.3 and the Interface Contract: `projectId` is the Project's `public_id` (`UUID`), not its internal id; AC-011.4 also rejects a null `projectId` | Review of Task 20 (attempt 1): after main's changeset 019 (KAN-22), the only Project id `triage` holds is `suggestion_result.project_id`, a UUID referencing `project.public_id`, and no service maps it to the internal id; `backend/AGENTS.md` makes a reference a `UUID` (user, 08/11) |
 
 ## Requirements
 
@@ -383,15 +384,15 @@ Used by STORY-005 to STORY-009:
 - As the `triage` module, I want the Published Solutions of the issue's Department nearest in meaning to a new Jira
   issue, so that the AI Solution Suggestion uses only that Department's knowledge (KAN-47, triage STORY-005).
 - Acceptance:
-  - AC-011.1: WHEN `nearestInProjectDepartment(projectId, queryVector, minSimilarity, limit)` is called, THE backend SHALL return at most `limit` Department Solutions of the Project with internal id `projectId`
+  - AC-011.1: WHEN `nearestInProjectDepartment(projectId, queryVector, minSimilarity, limit)` is called, THE backend SHALL return at most `limit` Department Solutions of the Project whose `public_id` is `projectId`
     that have a `ticket_embedding` row whose cosine similarity to `queryVector` is at least `minSimilarity`, most
     similar first, the internal ticket id as the tie-breaker.
   - AC-011.2: THE backend SHALL return each hit with the ticket's `public_id`, Symptoms, Root cause, Resolution steps,
     Workaround (null when blank), Scope of applicability and similarity; it SHALL return no title, Jira key,
     Project, Department, writer, snapshot or Evidence.
-  - AC-011.3: IF a ticket is unpublished, of another Department, of an inactive Department or below `minSimilarity`, THEN THE backend SHALL leave it out, and SHALL return an empty list when no Project has id `projectId`.
+  - AC-011.3: IF a ticket is unpublished, of another Department, of an inactive Department or below `minSimilarity`, THEN THE backend SHALL leave it out, and SHALL return an empty list when no Project has `public_id` `projectId`.
   - AC-011.4: IF an argument is out of range, THEN THE service SHALL throw `IllegalArgumentException` and SHALL run
-    no query (`queryVector` without 1024 dimensions, `minSimilarity` outside 0 to 1, or `limit` below 1).
+    no query (`projectId` null, `queryVector` without 1024 dimensions, `minSimilarity` outside 0 to 1, or `limit` below 1).
   - AC-011.5: THE service SHALL take no user argument and SHALL call no `EmbeddingClient`, write no `search_log`
     row and log no Solution text.
 
@@ -575,7 +576,7 @@ Same service, for the `triage` module (STORY-011):
 // vn.tsolve.search.retrieval.service.SolutionRetrieval
     /** Department Solutions of the Project's Department nearest to queryVector, most similar first; AC-011.1 to AC-011.5. */
     List<RetrievedTicketSolution> nearestInProjectDepartment(
-            long projectId, float[] queryVector, double minSimilarity, int limit);
+            UUID projectId, float[] queryVector, double minSimilarity, int limit); // projectId = project.public_id
 // vn.tsolve.search.retrieval.dto
 public record RetrievedTicketSolution(
         UUID ticketId, String symptoms, String rootCause, String resolutionSteps, String workaround,
