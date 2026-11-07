@@ -2,6 +2,9 @@ package vn.tsolve.review;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import liquibase.Contexts;
@@ -9,7 +12,10 @@ import liquibase.LabelExpression;
 import liquibase.Liquibase;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
+import liquibase.resource.CompositeResourceAccessor;
+import liquibase.resource.DirectoryResourceAccessor;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -18,7 +24,58 @@ import org.testcontainers.utility.DockerImageName;
 class ReviewStorageIT {
 
     @Test
-    void upgradesExistingTicketsWithoutInventingQueueEntryTime_AC_009_9_AC_009_11_AC_004_13() throws Exception {
+    void upgradesADatabaseAlreadyRunningReviewWithoutReapplyingStorage_BUG_140(@TempDir Path temporary)
+            throws Exception {
+        String master;
+        try (var input = getClass().getClassLoader().getResourceAsStream("db/changelog/db.changelog-master.xml")) {
+            master = new String(input.readAllBytes(), StandardCharsets.UTF_8)
+                    .replace(
+                            "    <include file=\"changes/008-ticket-import-project-uuid.sql\" relativeToChangelogFile=\"true\"/>",
+                            "");
+        }
+        Path oldMaster = temporary.resolve("db/changelog/review-before-project-uuid.xml");
+        Files.createDirectories(oldMaster.getParent());
+        Files.writeString(oldMaster, master);
+        try (var postgres = new PostgreSQLContainer<>(
+                DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"))) {
+            postgres.start();
+            var dataSource =
+                    new DriverManagerDataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+            var jdbc = new JdbcTemplate(dataSource);
+            try (var resources = new CompositeResourceAccessor(
+                            new DirectoryResourceAccessor(temporary), new ClassLoaderResourceAccessor());
+                    var liquibase = new Liquibase(
+                            "db/changelog/review-before-project-uuid.xml",
+                            resources,
+                            new JdbcConnection(dataSource.getConnection()))) {
+                liquibase.update(new Contexts(), new LabelExpression());
+            }
+            UUID id = jdbc.queryForObject(
+                    """
+                    insert into ticket (source_ticket_id, project_id, source, status, title, symptoms, root_cause,
+                                        resolution_steps, scope)
+                    values ('EXISTING-1', 10, 'SOLUTION_FORM', 'PENDING_REVIEW', 'Old review', 's', 'r', 'st', 'sc')
+                    returning ticket_id
+                    """,
+                    UUID.class);
+            try (var liquibase = new Liquibase(
+                    "db/changelog/db.changelog-master.xml",
+                    new ClassLoaderResourceAccessor(),
+                    new JdbcConnection(dataSource.getConnection()))) {
+                liquibase.update(new Contexts(), new LabelExpression());
+                liquibase.update(new Contexts(), new LabelExpression());
+            }
+            assertThat(jdbc.queryForObject("select project_id from ticket where ticket_id = ?", UUID.class, id))
+                    .isEqualTo(new UUID(0, 10));
+            assertThat(jdbc.queryForObject(
+                            "select count(*) from databasechangelog where id = '008-review-ticket-storage'",
+                            Integer.class))
+                    .isEqualTo(1);
+        }
+    }
+
+    @Test
+    void upgradesExistingTicketsWithoutInventingQueueEntryTime_AC_009_9_AC_009_11_AC_004_13_BUG_140() throws Exception {
         try (var postgres = new PostgreSQLContainer<>(
                 DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"))) {
             postgres.start();
@@ -41,12 +98,12 @@ class ReviewStorageIT {
                 jdbc.update(
                         "insert into ticket_import_decision (ticket_id, reviewer, decision) values (?, 'legacy-pm', 'APPROVE')",
                         oldId);
-                liquibase.update(1, new Contexts(), new LabelExpression());
+                liquibase.update(2, new Contexts(), new LabelExpression());
                 jdbc.update(
                         """
                         insert into ticket (source_ticket_id, project_id, source, status, title, symptoms,
                                             root_cause, resolution_steps, scope)
-                        values ('TEST-LEGACY', 1, 'SOLUTION_FORM', 'PENDING_REVIEW', 'Old ticket', 'Error',
+                        values ('TEST-LEGACY', '00000000-0000-0000-0000-000000000001', 'SOLUTION_FORM', 'PENDING_REVIEW', 'Old ticket', 'Error',
                                 'Token', 'Restart', 'Users')
                         """);
                 liquibase.update(new Contexts(), new LabelExpression());
@@ -61,6 +118,8 @@ class ReviewStorageIT {
                     "select ticket_id from ticket where source_ticket_id = 'TEST-1' and resolution_steps = 'Restart'",
                     UUID.class);
             assertThat(ticketId).isNotNull();
+            assertThat(jdbc.queryForObject("select project_id from ticket where ticket_id = ?", UUID.class, ticketId))
+                    .isEqualTo(new UUID(0, 1));
             assertThat(jdbc.queryForObject(
                             "select ticket_id from ticket_import_decision where reviewer = 'legacy-pm'", UUID.class))
                     .isEqualTo(ticketId);

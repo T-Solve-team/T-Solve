@@ -29,5 +29,6 @@ public interface TicketReviewMapper {
             Project project,
             OffsetDateTime reviewDueDate,
             List<Evidence> evidence,
-            String lastReviewComment);
+            String lastReviewComment,
+            boolean canDecide);
 }

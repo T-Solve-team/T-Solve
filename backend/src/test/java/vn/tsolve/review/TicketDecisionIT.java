@@ -25,6 +25,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.exception.BusinessRuleException;
@@ -79,7 +80,8 @@ class TicketDecisionIT {
         jdbc.update("update ticket set status = 'PENDING_REVIEW' where ticket_id = ?", id);
         assertThat(queueEntryTime(id)).isEqualTo(firstEntry);
 
-        service.decide(reviewerId, Set.of(10L), List.of(id), Action.CHANGES_REQUESTED, "Explain the workaround");
+        service.decide(
+                reviewerId, Set.of(new UUID(0, 10)), List.of(id), Action.CHANGES_REQUESTED, "Explain the workaround");
         assertThat(queueEntryTime(id)).isEqualTo(firstEntry);
         jdbc.update("update ticket set status = 'PENDING_REVIEW' where ticket_id = ?", id);
         assertThat(queueEntryTime(id)).isAfter(firstEntry);
@@ -97,7 +99,7 @@ class TicketDecisionIT {
                 first);
         String feedback = action == Action.APPROVED ? null : "Please check the token";
 
-        assertThat(service.decide(reviewerId, Set.of(10L), List.of(second, first), action, feedback))
+        assertThat(service.decide(reviewerId, Set.of(new UUID(0, 10)), List.of(second, first), action, feedback))
                 .isEqualTo(2);
 
         String expectedStatus = action == Action.APPROVED ? "PUBLISHED" : action.name();
@@ -127,21 +129,21 @@ class TicketDecisionIT {
     }
 
     @Test
-    void refusesInvalidMissingUnmanagedAndStaleBatches_AC_009_7() {
+    void refusesInvalidMissingUnmanagedAndStaleBatches_AC_009_7_BUG_139() {
         UUID pending = ticket("TEST-1", 10, "PENDING_REVIEW", null);
         UUID unmanaged = ticket("TEST-2", 20, "PENDING_REVIEW", null);
         UUID stale = ticket("TEST-3", 10, "REJECTED", null);
         UUID imported = ticket("TEST-4", 10, "PUBLISHED", null);
         jdbc.update("update ticket set source = 'CSV' where ticket_id = ?", imported);
-        var scope = Set.of(10L);
+        var scope = Set.of(new UUID(0, 10));
 
         assertThatThrownBy(() -> service.decide(reviewerId, scope, List.of(pending, pending), Action.APPROVED, null))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ResponseStatusException.class);
         assertThatThrownBy(() -> service.decide(reviewerId, scope, List.of(pending), Action.REJECTED, " "))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ResponseStatusException.class);
         assertThatThrownBy(() ->
                         service.decide(reviewerId, scope, List.of(pending), Action.CHANGES_REQUESTED, "x".repeat(1001)))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ResponseStatusException.class);
         assertThatThrownBy(() ->
                         service.decide(reviewerId, scope, List.of(pending, UUID.randomUUID()), Action.APPROVED, null))
                 .isInstanceOf(NotFoundException.class);
@@ -164,8 +166,8 @@ class TicketDecisionIT {
     void rollsBackTicketStateIfDecisionCannotBeSaved_AC_009_8() {
         UUID pending = ticket("TEST-1", 10, "PENDING_REVIEW", null);
 
-        assertThatThrownBy(
-                        () -> service.decide(UUID.randomUUID(), Set.of(10L), List.of(pending), Action.APPROVED, null))
+        assertThatThrownBy(() -> service.decide(
+                        UUID.randomUUID(), Set.of(new UUID(0, 10)), List.of(pending), Action.APPROVED, null))
                 .isInstanceOf(DataIntegrityViolationException.class);
 
         assertThat(status(pending)).isEqualTo("PENDING_REVIEW");
@@ -182,8 +184,8 @@ class TicketDecisionIT {
                 check (source_ticket_id <> 'TEST-2' or status <> 'PUBLISHED')
                 """);
         try {
-            assertThatThrownBy(() ->
-                            service.decide(reviewerId, Set.of(10L), List.of(first, second), Action.APPROVED, null))
+            assertThatThrownBy(() -> service.decide(
+                            reviewerId, Set.of(new UUID(0, 10)), List.of(first, second), Action.APPROVED, null))
                     .isInstanceOf(DataIntegrityViolationException.class);
 
             assertThat(status(first)).isEqualTo("PENDING_REVIEW");
@@ -201,13 +203,13 @@ class TicketDecisionIT {
         try (var executor = Executors.newFixedThreadPool(2)) {
             var approve = executor.submit(() -> {
                 start.await();
-                return catchThrowable(
-                        () -> service.decide(reviewerId, Set.of(10L), List.of(pending), Action.APPROVED, null));
+                return catchThrowable(() ->
+                        service.decide(reviewerId, Set.of(new UUID(0, 10)), List.of(pending), Action.APPROVED, null));
             });
             var reject = executor.submit(() -> {
                 start.await();
-                return catchThrowable(
-                        () -> service.decide(reviewerId, Set.of(10L), List.of(pending), Action.REJECTED, "Reason"));
+                return catchThrowable(() -> service.decide(
+                        reviewerId, Set.of(new UUID(0, 10)), List.of(pending), Action.REJECTED, "Reason"));
             });
             start.countDown();
             Throwable approved = approve.get(10, TimeUnit.SECONDS);
@@ -229,7 +231,7 @@ class TicketDecisionIT {
                 """,
                 UUID.class,
                 key,
-                projectId,
+                new UUID(0, projectId),
                 status,
                 writerId);
     }

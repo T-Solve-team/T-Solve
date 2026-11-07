@@ -13,6 +13,8 @@
     <include file="changes/005-identity-sign-in-state-binding.sql" relativeToChangelogFile="true"/>
     <include file="changes/006-identity-app-user.sql" relativeToChangelogFile="true"/>
     <include file="changes/007-identity-hand-off-code.sql" relativeToChangelogFile="true"/>
+    <!-- Explicit ordering; reuse the KAN-31 changeset unchanged, including on databases already running Review. -->
+    <include file="changes/008-ticket-import-project-uuid.sql" relativeToChangelogFile="true"/>
     <include file="changes/008-review-ticket-storage.sql" relativeToChangelogFile="true"/>
     <include file="changes/009-review-queue-entry-time.sql" relativeToChangelogFile="true"/>
 

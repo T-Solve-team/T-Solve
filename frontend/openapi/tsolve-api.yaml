@@ -857,8 +857,8 @@ paths:
                   format: binary
                   description: One .csv file, UTF-8, at most 10 MB.
                 projectId:
-                  type: integer
-                  format: int64
+                  type: string
+                  format: uuid
       responses:
         '200':
           description: Preview created.
@@ -2087,6 +2087,9 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ReviewEvidence' }
         lastReviewComment: { type: [string, 'null'] }
+        canDecide:
+          type: boolean
+          description: Whether the current user may decide this pending Solution Form ticket in its managed Project.
     JiraReviewFeedback:
       type: object
       required: [feedback]
@@ -2218,8 +2221,8 @@ components:
           type: integer
           format: int64
         projectId:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
         fileName:
           type: string
         validCount:

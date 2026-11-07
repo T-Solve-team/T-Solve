@@ -18,6 +18,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -43,6 +44,7 @@ import vn.tsolve.ticket.service.ProjectAccess;
 class CsvImportServiceImplTest {
 
     private static final String PM = "pm@company.vn";
+    private static final UUID PROJECT = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final String HEADER = "ticket_id,title,symptoms,root_cause,resolution_steps,scope\n";
     private static final Clock CLOCK =
             Clock.fixed(Instant.parse("2026-10-22T03:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
@@ -64,7 +66,7 @@ class CsvImportServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        when(projects.managesActive(PM, 1L)).thenReturn(true);
+        when(projects.managesActive(PM, PROJECT)).thenReturn(true);
         when(tickets.findExistingTicketIds(anyCollection())).thenReturn(Set.of());
         when(previews.save(any(ImportPreview.class))).thenAnswer(call -> {
             ImportPreview p = call.getArgument(0);
@@ -94,18 +96,18 @@ class CsvImportServiceImplTest {
 
     @Test
     void createsPreviewWithCountsAndFirstPage_AC_001_1() {
-        ImportPreviewResponse response = service.upload(PM, 1L, csv("tickets.csv", rowsOf("T-1", "T-2")));
+        ImportPreviewResponse response = service.upload(PM, PROJECT, csv("tickets.csv", rowsOf("T-1", "T-2")));
 
         ArgumentCaptor<ImportPreview> preview = ArgumentCaptor.forClass(ImportPreview.class);
         verify(previews).save(preview.capture());
         assertThat(preview.getValue().getOwner()).isEqualTo(PM);
-        assertThat(preview.getValue().getProjectId()).isEqualTo(1L);
+        assertThat(preview.getValue().getProjectId()).isEqualTo(PROJECT);
         assertThat(preview.getValue().getSource()).isEqualTo(TicketSource.CSV);
         assertThat(preview.getValue().getFileName()).isEqualTo("tickets.csv");
         assertThat(savedRows()).extracting(ImportPreviewRow::getRowNo).containsExactly(1, 2);
 
         assertThat(response.previewId()).isEqualTo(42L);
-        assertThat(response.projectId()).isEqualTo(1L);
+        assertThat(response.projectId()).isEqualTo(PROJECT);
         assertThat(response.validCount()).isEqualTo(2);
         assertThat(response.errorCount()).isZero();
         assertThat(response.removedCount()).isZero();
@@ -121,7 +123,7 @@ class CsvImportServiceImplTest {
             ids[i] = "T-" + i;
         }
 
-        ImportPreviewResponse response = service.upload(PM, 1L, csv("tickets.csv", rowsOf(ids)));
+        ImportPreviewResponse response = service.upload(PM, PROJECT, csv("tickets.csv", rowsOf(ids)));
 
         assertThat(response.rows().getContent()).hasSize(50);
         assertThat(response.rows().getMetadata().totalElements()).isEqualTo(120);
@@ -132,7 +134,7 @@ class CsvImportServiceImplTest {
     void rejectsFileNotEndingInCsv_AC_001_2() {
         for (String name : new String[] {"tickets.xlsx", "tickets.csv.txt", "tickets", ""}) {
             MessageCodeException e = catchThrowableOfType(
-                    () -> service.upload(PM, 1L, csv(name, rowsOf("T-1"))), MessageCodeException.class);
+                    () -> service.upload(PM, PROJECT, csv(name, rowsOf("T-1"))), MessageCodeException.class);
 
             assertThat(e.getCode()).as(name).isEqualTo("MSG27");
             assertThat(e.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -142,7 +144,7 @@ class CsvImportServiceImplTest {
 
     @Test
     void acceptsUpperCaseExtension_AC_001_2() {
-        service.upload(PM, 1L, csv("TICKETS.CSV", rowsOf("T-1")));
+        service.upload(PM, PROJECT, csv("TICKETS.CSV", rowsOf("T-1")));
 
         verify(previews).save(any(ImportPreview.class));
     }
@@ -152,7 +154,8 @@ class CsvImportServiceImplTest {
         MockMultipartFile big =
                 new MockMultipartFile("file", "tickets.csv", "text/csv", new byte[10 * 1024 * 1024 + 1]);
 
-        MessageCodeException e = catchThrowableOfType(() -> service.upload(PM, 1L, big), MessageCodeException.class);
+        MessageCodeException e =
+                catchThrowableOfType(() -> service.upload(PM, PROJECT, big), MessageCodeException.class);
 
         assertThat(e.getCode()).isEqualTo("MSG28");
         assertThat(e.getStatus()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
@@ -162,7 +165,9 @@ class CsvImportServiceImplTest {
     @Test
     void rejectsProjectTheCallerDoesNotManage_AC_001_9() {
         MessageCodeException e = catchThrowableOfType(
-                () -> service.upload(PM, 2L, csv("tickets.csv", rowsOf("T-1"))), MessageCodeException.class);
+                () -> service.upload(
+                        PM, UUID.fromString("00000000-0000-0000-0000-000000000002"), csv("tickets.csv", rowsOf("T-1"))),
+                MessageCodeException.class);
 
         assertThat(e.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(e.getCode()).isEqualTo("MSG08");
@@ -171,7 +176,7 @@ class CsvImportServiceImplTest {
 
     @Test
     void replacesTheCallersPreviousPreview_AC_001_11() {
-        service.upload(PM, 1L, csv("tickets.csv", rowsOf("T-1")));
+        service.upload(PM, PROJECT, csv("tickets.csv", rowsOf("T-1")));
 
         InOrder order = inOrder(previews);
         order.verify(previews).deleteByOwner(PM);
@@ -180,7 +185,7 @@ class CsvImportServiceImplTest {
 
     @Test
     void rejectedFileKeepsThePreviousPreview_AC_001_11() {
-        catchThrowableOfType(() -> service.upload(PM, 1L, csv("tickets.csv", HEADER)), MessageCodeException.class);
+        catchThrowableOfType(() -> service.upload(PM, PROJECT, csv("tickets.csv", HEADER)), MessageCodeException.class);
 
         verify(previews, never()).deleteByOwner(PM);
     }
@@ -189,7 +194,8 @@ class CsvImportServiceImplTest {
     void reportsErrorRowCountWithMsg30_AC_002_9() {
         when(tickets.findExistingTicketIds(anyCollection())).thenReturn(Set.of("T-2"));
 
-        ImportPreviewResponse response = service.upload(PM, 1L, csv("tickets.csv", rowsOf("T-1", "T-2", "T-3", "T-3")));
+        ImportPreviewResponse response =
+                service.upload(PM, PROJECT, csv("tickets.csv", rowsOf("T-1", "T-2", "T-3", "T-3")));
 
         assertThat(response.validCount()).isEqualTo(1);
         assertThat(response.errorCount()).isEqualTo(3);
@@ -202,7 +208,7 @@ class CsvImportServiceImplTest {
 
     @Test
     void looksUpExistingTicketIdsOnce_AC_002_5() {
-        service.upload(PM, 1L, csv("tickets.csv", rowsOf("T-1", "T-2", "T-1")));
+        service.upload(PM, PROJECT, csv("tickets.csv", rowsOf("T-1", "T-2", "T-1")));
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<java.util.Collection<String>> ids = ArgumentCaptor.forClass(java.util.Collection.class);
@@ -222,7 +228,7 @@ class CsvImportServiceImplTest {
         String longSymptoms = "😀".repeat(250);
         String body = HEADER + "T-1,Login fails," + longSymptoms + ",Bad token,Restart,All users\n";
 
-        ImportPreviewResponse response = service.upload(PM, 1L, csv("tickets.csv", body));
+        ImportPreviewResponse response = service.upload(PM, PROJECT, csv("tickets.csv", body));
 
         String shown = response.rows().getContent().get(0).symptoms();
         assertThat(shown.codePointCount(0, shown.length())).isEqualTo(200);

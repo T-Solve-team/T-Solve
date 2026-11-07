@@ -68,7 +68,7 @@ public class ReviewReadController {
         return reads.detail(projects, actor.id(), actor.roles().contains(Role.PROJECT_MANAGER), ticketId);
     }
 
-    private Map<Long, ProjectAccess> projects(TSolveUser actor) {
+    private Map<UUID, ProjectAccess> projects(TSolveUser actor) {
         if (actor == null) {
             throw new AccessDeniedException("Workspace Account required");
         }

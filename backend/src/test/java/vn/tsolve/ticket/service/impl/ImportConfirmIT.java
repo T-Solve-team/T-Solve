@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -42,7 +43,7 @@ import vn.tsolve.ticket.service.ImportConfirmService;
 @SpringBootTest
 @TestPropertySource(
         properties = {
-            "tsolve.stub.projects=pm-a:1;pm-b:1;boom-pm:1",
+            "tsolve.stub.projects=pm-a:00000000-0000-0000-0000-000000000001;pm-b:00000000-0000-0000-0000-000000000001;boom-pm:00000000-0000-0000-0000-000000000001",
             "tsolve.cors.allowed-origins=http://localhost:5173",
             "server.port=0",
             // the sign-in values the application needs to start (identity)
@@ -136,7 +137,9 @@ class ImportConfirmIT {
         }
         MockMultipartFile file = new MockMultipartFile(
                 "file", "tickets.csv", "text/csv", csv.toString().getBytes(StandardCharsets.UTF_8));
-        return csvImports.upload(user, 1L, file).previewId();
+        return csvImports
+                .upload(user, UUID.fromString("00000000-0000-0000-0000-000000000001"), file)
+                .previewId();
     }
 
     private int count(String table) {
@@ -266,12 +269,13 @@ class ImportConfirmIT {
 
     @Test
     void databaseRejectsADuplicateTicketId() {
-        jdbc.update("insert into ticket (source_ticket_id, project_id, source, status, title, symptoms, root_cause,"
-                + " resolution_steps, scope) values ('T-9', 1, 'CSV', 'PUBLISHED', 't', 's', 'r', 'st', 'sc')");
+        jdbc.update(
+                "insert into ticket (source_ticket_id, project_id, source, status, title, symptoms, root_cause,"
+                        + " resolution_steps, scope) values ('T-9', '00000000-0000-0000-0000-000000000001', 'CSV', 'PUBLISHED', 't', 's', 'r', 'st', 'sc')");
 
         assertThatThrownBy(() -> jdbc.update(
                         "insert into ticket (source_ticket_id, project_id, source, status, title, symptoms, root_cause,"
-                                + " resolution_steps, scope) values ('T-9', 1, 'CSV', 'PUBLISHED', 't', 's', 'r',"
+                                + " resolution_steps, scope) values ('T-9', '00000000-0000-0000-0000-000000000001', 'CSV', 'PUBLISHED', 't', 's', 'r',"
                                 + " 'st', 'sc')"))
                 .isInstanceOf(DuplicateKeyException.class);
     }

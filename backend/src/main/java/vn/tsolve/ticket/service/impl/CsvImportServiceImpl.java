@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -67,7 +68,7 @@ public class CsvImportServiceImpl implements CsvImportService {
 
     @Override
     @Transactional
-    public ImportPreviewResponse upload(String user, long projectId, MultipartFile file) {
+    public ImportPreviewResponse upload(String user, UUID projectId, MultipartFile file) {
         // order (design B6): file type and size, then Project access, then content
         String fileName = file.getOriginalFilename();
         if (fileName == null || !fileName.toLowerCase(Locale.ROOT).endsWith(".csv")) {

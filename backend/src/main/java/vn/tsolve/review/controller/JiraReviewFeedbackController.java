@@ -44,16 +44,10 @@ public class JiraReviewFeedbackController {
                 caller,
                 issueKey,
                 writer -> new FeedbackResponse(reads.jiraFeedback(writer.projectId(), writer.accountId(), issueKey)
-                        .map(feedback -> new Message(
-                                "MSG64",
-                                Map.of(
-                                        "manager_name",
-                                        access.accountName(feedback.reviewerId())
-                                                .filter(name -> !name.isBlank())
-                                                .orElseThrow(
-                                                        () -> new IllegalStateException("Reviewer name unavailable")),
-                                        "comment",
-                                        feedback.comment())))
+                        .flatMap(feedback -> access.accountName(feedback.reviewerId())
+                                .filter(name -> !name.isBlank())
+                                .map(name -> new Message(
+                                        "MSG64", Map.of("manager_name", name, "comment", feedback.comment()))))
                         .orElse(null)));
     }
 

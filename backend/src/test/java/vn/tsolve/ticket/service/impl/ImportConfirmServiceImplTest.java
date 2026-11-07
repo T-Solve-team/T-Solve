@@ -61,7 +61,7 @@ class ImportConfirmServiceImplTest {
 
     private static final String PM = "pm@company.vn";
     private static final long PREVIEW = 42L;
-    private static final long PROJECT = 1L;
+    private static final UUID PROJECT = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     private final ImportPreviewRepository previews = mock(ImportPreviewRepository.class);
     private final ImportPreviewRowRepository rows = mock(ImportPreviewRowRepository.class);

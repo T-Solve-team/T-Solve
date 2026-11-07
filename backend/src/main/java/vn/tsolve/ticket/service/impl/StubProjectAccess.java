@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import vn.tsolve.ticket.service.ProjectAccess;
@@ -12,13 +13,13 @@ import vn.tsolve.ticket.service.ProjectAccess;
  * Stand-in until the workspace module owns Projects; delete it when the real {@link ProjectAccess} lands.
  *
  * <p>Fails closed: a user manages only the Projects listed for them in {@code tsolve.stub.projects} ({@code
- * alice:1,2;bob:3}), so an empty setting lets nobody import.
+ * alice:<uuid>,<uuid>;bob:<uuid>}), so an empty setting lets nobody import.
  */
 @Component
 public class StubProjectAccess implements ProjectAccess {
 
-    private final Map<String, Set<Long>> managed = new HashMap<>();
-    private final Set<Long> inactive = new HashSet<>();
+    private final Map<String, Set<UUID>> managed = new HashMap<>();
+    private final Set<UUID> inactive = new HashSet<>();
 
     public StubProjectAccess(
             @Value("${tsolve.stub.projects:}") String projects,
@@ -33,21 +34,24 @@ public class StubProjectAccess implements ProjectAccess {
     }
 
     @Override
-    public boolean managesActive(String user, long projectId) {
+    public boolean managesActive(String user, UUID projectId) {
         return managed.getOrDefault(user, Set.of()).contains(projectId) && isActive(projectId);
     }
 
     @Override
-    public boolean isActive(long projectId) {
+    public boolean isActive(UUID projectId) {
         return !inactive.contains(projectId);
     }
 
-    private static Set<Long> ids(String list) {
-        Set<Long> ids = new HashSet<>();
+    private static Set<UUID> ids(String list) {
+        Set<UUID> ids = new HashSet<>();
         for (String id : list.split(",")) {
             try {
-                ids.add(Long.parseLong(id.trim()));
-            } catch (NumberFormatException ignored) {
+                UUID uuid = UUID.fromString(id.trim());
+                if (uuid.toString().equalsIgnoreCase(id.trim())) {
+                    ids.add(uuid);
+                }
+            } catch (IllegalArgumentException ignored) {
                 // a malformed id grants nothing
             }
         }

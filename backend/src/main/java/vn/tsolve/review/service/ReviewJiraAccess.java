@@ -18,5 +18,5 @@ public interface ReviewJiraAccess {
     /** Read the stored display name in the currently bound Workspace, including former managers. */
     Optional<String> accountName(UUID accountId);
 
-    record WriterIssue(UUID accountId, long projectId) {}
+    record WriterIssue(UUID accountId, UUID projectId) {}
 }

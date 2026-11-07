@@ -13,12 +13,12 @@ import vn.tsolve.ticket.dto.TicketReviewView.QueueItem;
 
 public interface TicketReviewReadService {
 
-    Page<QueueItem> queue(Map<Long, ProjectAccess> projects, UUID departmentId, Pageable page, List<String> sort);
+    Page<QueueItem> queue(Map<UUID, ProjectAccess> projects, UUID departmentId, Pageable page, List<String> sort);
 
-    List<UUID> eligibleIds(Map<Long, ProjectAccess> projects, UUID departmentId);
+    List<UUID> eligibleIds(Map<UUID, ProjectAccess> projects, UUID departmentId);
 
-    Detail detail(Map<Long, ProjectAccess> projects, UUID accountId, boolean manager, UUID ticketId);
+    Detail detail(Map<UUID, ProjectAccess> projects, UUID accountId, boolean manager, UUID ticketId);
 
     /** Current change request for the verified writer and issue in an already bound Workspace. */
-    Optional<Feedback> jiraFeedback(long projectId, UUID writerId, String issueKey);
+    Optional<Feedback> jiraFeedback(UUID projectId, UUID writerId, String issueKey);
 }

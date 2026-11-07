@@ -13,5 +13,5 @@ public interface TicketDecisionService {
     }
 
     /** The caller supplies a verified Account and its managed Projects in the bound Workspace. */
-    int decide(UUID reviewerId, Set<Long> managedProjectIds, List<UUID> ticketIds, Action action, String feedback);
+    int decide(UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds, Action action, String feedback);
 }

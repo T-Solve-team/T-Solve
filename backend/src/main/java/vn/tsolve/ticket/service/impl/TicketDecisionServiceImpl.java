@@ -9,8 +9,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.entity.ReviewDecisionRecord;
@@ -42,15 +44,15 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
     @Override
     @Transactional
     public int decide(
-            UUID reviewerId, Set<Long> managedProjectIds, List<UUID> ticketIds, Action action, String feedback) {
+            UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds, Action action, String feedback) {
         Objects.requireNonNull(reviewerId, "Verified reviewer is required");
         Objects.requireNonNull(action, "Decision action is required");
         if (ticketIds == null || ticketIds.isEmpty() || ticketIds.size() > MAX_TICKETS) {
-            throw new IllegalArgumentException("A decision requires 1 to 500 ticket IDs");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
         Set<UUID> ids = new HashSet<>(ticketIds);
         if (ids.contains(null) || ids.size() != ticketIds.size()) {
-            throw new IllegalArgumentException("Ticket IDs must be non-null and unique");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
         String text = validatedFeedback(action, feedback);
         if (managedProjectIds.isEmpty()) {
@@ -81,13 +83,13 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
             return null;
         }
         if (feedback == null || feedback.isBlank() || feedback.length() > MAX_FEEDBACK_LENGTH) {
-            throw new IllegalArgumentException("Decision feedback must contain 1 to 1000 characters");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
         return feedback.strip();
     }
 
     private static void validateBatch(
-            List<Ticket> batch, int expectedSize, Set<Long> managedProjectIds, Action action) {
+            List<Ticket> batch, int expectedSize, Set<UUID> managedProjectIds, Action action) {
         if (batch.size() != expectedSize) {
             throw new NotFoundException("MSG04", Map.of());
         }

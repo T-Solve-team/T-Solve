@@ -26,7 +26,7 @@ public class Ticket {
     private String ticketId;
 
     @Column(name = "project_id", nullable = false)
-    private Long projectId;
+    private UUID projectId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, updatable = false)
@@ -91,7 +91,7 @@ public class Ticket {
     /** An imported ticket: brought in by its Project Manager, so it is Published at once (GBR-23). */
     public static Ticket imported(
             String ticketId,
-            Long projectId,
+            UUID projectId,
             TicketSource source,
             Long importBatchId,
             String title,
@@ -136,7 +136,7 @@ public class Ticket {
         return ticketId;
     }
 
-    public Long getProjectId() {
+    public UUID getProjectId() {
         return projectId;
     }
 
@@ -170,6 +170,10 @@ public class Ticket {
 
     public String getChangeRequestComment() {
         return changeRequestComment;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
     }
 
     public LocalDate getResolvedDate() {

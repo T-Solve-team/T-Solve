@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
+import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
@@ -74,7 +75,7 @@ public class ImportController {
     @ApiResponse(responseCode = "403")
     @ApiResponse(responseCode = "413")
     public ResponseEntity<ImportPreviewResponse> uploadCsvImport(
-            @RequestParam("file") MultipartFile file, @RequestParam long projectId, Principal user) {
+            @RequestParam("file") MultipartFile file, @RequestParam UUID projectId, Principal user) {
         return ResponseEntity.ok(csvImports.upload(user.getName(), projectId, file));
     }
 

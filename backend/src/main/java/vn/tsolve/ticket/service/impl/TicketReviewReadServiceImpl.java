@@ -14,8 +14,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.dto.TicketReviewView.Detail;
 import vn.tsolve.ticket.dto.TicketReviewView.Evidence;
@@ -49,7 +51,9 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
 
     @Override
     public Page<QueueItem> queue(
-            Map<Long, ProjectAccess> projects, UUID departmentId, Pageable page, List<String> sort) {
+            Map<UUID, ProjectAccess> projects, UUID departmentId, Pageable page, List<String> sort) {
+        Comparator<QueueItem> order = queueOrder(sort);
+        // ponytail: sorts the managed queue in memory; use database paging when queue volume requires it.
         List<QueueRow> rows = queueRows(projects, departmentId);
         List<QueueItem> items = rows.stream()
                 .map(row -> new QueueItem(
@@ -61,7 +65,7 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
                         row.authorName(),
                         row.enteredQueueAt(),
                         dueAt(row.reviewDueDate())))
-                .sorted(queueOrder(sort))
+                .sorted(order)
                 .skip(page.getOffset())
                 .limit(page.getPageSize())
                 .toList();
@@ -69,7 +73,7 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
     }
 
     @Override
-    public List<UUID> eligibleIds(Map<Long, ProjectAccess> projects, UUID departmentId) {
+    public List<UUID> eligibleIds(Map<UUID, ProjectAccess> projects, UUID departmentId) {
         return queueRows(projects, departmentId).stream()
                 .map(QueueRow::ticketId)
                 .sorted()
@@ -77,7 +81,7 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
     }
 
     @Override
-    public Detail detail(Map<Long, ProjectAccess> projects, UUID accountId, boolean manager, UUID ticketId) {
+    public Detail detail(Map<UUID, ProjectAccess> projects, UUID accountId, boolean manager, UUID ticketId) {
         var ticket = tickets.findById(ticketId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
         var project = projects.get(ticket.getProjectId());
         boolean canReadReview =
@@ -93,17 +97,25 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
                 project.project(),
                 dueAt(ticket.getReviewDueDate()),
                 attachments,
-                canReadReview ? ticket.getChangeRequestComment() : null);
+                canReadReview
+                        ? (ticket.getStatus() == TicketStatus.REJECTED
+                                ? ticket.getRejectionReason()
+                                : ticket.getChangeRequestComment())
+                        : null,
+                manager
+                        && project.managed()
+                        && ticket.getSource() == TicketSource.SOLUTION_FORM
+                        && ticket.getStatus() == TicketStatus.PENDING_REVIEW);
     }
 
     @Override
-    public Optional<Feedback> jiraFeedback(long projectId, UUID writerId, String issueKey) {
+    public Optional<Feedback> jiraFeedback(UUID projectId, UUID writerId, String issueKey) {
         return tickets.findJiraFeedback(projectId, writerId, issueKey, PageRequest.of(0, 1)).stream()
                 .findFirst();
     }
 
-    private List<QueueRow> queueRows(Map<Long, ProjectAccess> projects, UUID departmentId) {
-        List<Long> managed = projects.entrySet().stream()
+    private List<QueueRow> queueRows(Map<UUID, ProjectAccess> projects, UUID departmentId) {
+        List<UUID> managed = projects.entrySet().stream()
                 .filter(project -> project.getValue().managed())
                 .filter(project -> departmentId == null
                         || departmentId.equals(project.getValue().departmentId()))
@@ -126,6 +138,9 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
 
     private static Comparator<QueueItem> sortBy(String sort) {
         String[] parts = sort.split(",", 2);
+        if (parts.length == 2 && !"asc".equalsIgnoreCase(parts[1]) && !"desc".equalsIgnoreCase(parts[1])) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
         boolean descending = parts.length == 2 && "desc".equalsIgnoreCase(parts[1]);
         return switch (parts[0]) {
             case "sourceTicketId" -> compare(QueueItem::sourceTicketId, descending);
@@ -134,7 +149,7 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
             case "authorName" -> compare(QueueItem::authorName, descending);
             case "enteredQueueAt" -> compare(QueueItem::enteredQueueAt, descending);
             case "reviewDueDate" -> compare(QueueItem::reviewDueDate, descending);
-            default -> compare(QueueItem::reviewDueDate, false);
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         };
     }
 

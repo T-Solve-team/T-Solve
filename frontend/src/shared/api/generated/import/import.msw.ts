@@ -41,7 +41,7 @@ export const getUploadCsvImportResponseMock = (
   overrideResponse: Partial<Extract<ImportPreviewResponse, object>> = {},
 ): ImportPreviewResponse => ({
   previewId: faker.number.int(),
-  projectId: faker.number.int(),
+  projectId: faker.string.uuid(),
   fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
   validCount: faker.number.int(),
   errorCount: faker.number.int(),
@@ -257,7 +257,7 @@ export const getRemoveImportPreviewRowsResponseMock = (
   overrideResponse: Partial<Extract<ImportPreviewResponse, object>> = {},
 ): ImportPreviewResponse => ({
   previewId: faker.number.int(),
-  projectId: faker.number.int(),
+  projectId: faker.string.uuid(),
   fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
   validCount: faker.number.int(),
   errorCount: faker.number.int(),

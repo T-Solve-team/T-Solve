@@ -17,7 +17,7 @@ public final class TicketReviewView {
     public record QueueRow(
             UUID ticketId,
             String sourceTicketId,
-            long projectId,
+            UUID projectId,
             String title,
             String authorName,
             Instant enteredQueueAt,
@@ -53,5 +53,6 @@ public final class TicketReviewView {
             OffsetDateTime reviewDueDate,
             Solution solution,
             List<Evidence> evidence,
-            String lastReviewComment) {}
+            String lastReviewComment,
+            boolean canDecide) {}
 }

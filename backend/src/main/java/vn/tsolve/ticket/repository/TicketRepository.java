@@ -31,7 +31,7 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
             from Ticket t
             where t.projectId in :projects and t.status = PENDING_REVIEW and t.source = SOLUTION_FORM
             """)
-    List<QueueRow> findReviewQueue(@Param("projects") Collection<Long> projectIds);
+    List<QueueRow> findReviewQueue(@Param("projects") Collection<UUID> projectIds);
 
     @Query(
             """
@@ -39,11 +39,11 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
             from Ticket t, ReviewDecisionRecord d
             where t.id = d.ticketId and t.projectId = :projectId and t.writerId = :writerId
                 and t.ticketId = :issueKey and t.source = SOLUTION_FORM and t.status = CHANGES_REQUESTED
-                and d.decision = 'CHANGES_REQUESTED' and d.feedback = t.changeRequestComment
+                and d.decision = 'CHANGES_REQUESTED'
             order by d.decidedAt desc, d.id desc
             """)
     List<Feedback> findJiraFeedback(
-            @Param("projectId") long projectId,
+            @Param("projectId") UUID projectId,
             @Param("writerId") UUID writerId,
             @Param("issueKey") String issueKey,
             Pageable page);

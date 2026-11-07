@@ -1,13 +1,14 @@
 package vn.tsolve.ticket.dto;
 
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.web.PagedModel;
 
 /** The Import Preview: counts, MSG30 when some rows are Error, and one page of rows. */
 public record ImportPreviewResponse(
         long previewId,
-        long projectId,
+        UUID projectId,
         String fileName,
         long validCount,
         long errorCount,
@@ -17,7 +18,7 @@ public record ImportPreviewResponse(
 
     public static ImportPreviewResponse of(
             long previewId,
-            long projectId,
+            UUID projectId,
             String fileName,
             long validCount,
             long errorCount,
