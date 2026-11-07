@@ -9,3 +9,7 @@ date: 2026-10-21
 Master: `artifacts/04-plans/import-ticket-list/design.md`
 
 Iteration 1 delivers all of KAN-31 (STORY-001..006, Tasks 1–12). Every section of the master design applies unchanged: architecture, data model, key decisions, file structure, edge cases and risk review. Nothing is deferred to a later iteration.
+
+The change of 2026-11-01 (STORY-007..011, Tasks 15–22) is also in iteration 1: master design, section "Change 2026-11-01".
+
+The change of 2026-11-05 (STORY-012..016, Tasks 23–29) is also in iteration 1: master design, section "Change 2026-11-05".

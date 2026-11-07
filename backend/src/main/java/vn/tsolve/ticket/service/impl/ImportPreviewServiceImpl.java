@@ -44,6 +44,12 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
 
     @Override
     @Transactional(readOnly = true)
+    public ImportPreviewResponse preview(String user, long previewId) {
+        return summary(owned(user, previewId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PagedModel<ImportPreviewRowSummary> rows(
             String user, long previewId, PreviewRowStatus status, Pageable page) {
         ImportPreview preview = owned(user, previewId);
@@ -70,14 +76,7 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
                         .toList())
                 .forEach(ImportPreviewRow::remove);
         previewRows.flush();
-        return ImportPreviewResponse.of(
-                preview.getId(),
-                preview.getProjectId(),
-                preview.getFileName(),
-                previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.VALID),
-                previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.ERROR),
-                previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.REMOVED),
-                page(preview.getId(), null, PageRequest.of(0, CsvImportServiceImpl.FIRST_PAGE_SIZE)));
+        return summary(preview);
     }
 
     /** The caller's own preview of a Project they still manage (AC-003.2, AC-003.4). */
@@ -89,6 +88,19 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
             throw new ProjectAccessDeniedException();
         }
         return preview;
+    }
+
+    private ImportPreviewResponse summary(ImportPreview preview) {
+        return ImportPreviewResponse.of(
+                preview.getId(),
+                preview.getProjectId(),
+                preview.getFileName(),
+                preview.getImportType(),
+                previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.VALID),
+                previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.ERROR),
+                previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.REMOVED),
+                previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.NEEDS_SOLUTION),
+                page(preview.getId(), null, PageRequest.of(0, CsvImportServiceImpl.FIRST_PAGE_SIZE)));
     }
 
     private Page<ImportPreviewRowSummary> page(long previewId, PreviewRowStatus status, Pageable requested) {

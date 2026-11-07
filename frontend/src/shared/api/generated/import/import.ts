@@ -23,6 +23,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  DownloadCsvTemplateParams,
+  FillSolutionRequest,
   GetImportPreviewRowsParams,
   ImportPreviewResponse,
   ImportPreviewRowPage,
@@ -54,39 +56,57 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export const getDownloadCsvTemplateUrl = () => {
-  return `/api/v1/imports/csv/template`;
+export const getDownloadCsvTemplateUrl = (params?: DownloadCsvTemplateParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/imports/csv/template?${stringifiedParams}`
+    : `/api/v1/imports/csv/template`;
 };
 
 /**
- * @summary The CSV template — header row only, UTF-8.
+ * @summary The CSV template of an import type — header row only, UTF-8.
  */
 export const downloadCsvTemplate = async (
+  params?: DownloadCsvTemplateParams,
   options?: Parameters<typeof http>[1],
 ): Promise<string> => {
-  return http<string>(getDownloadCsvTemplateUrl(), {
+  return http<string>(getDownloadCsvTemplateUrl(params), {
     ...options,
     method: 'GET',
   });
 };
 
-export const getDownloadCsvTemplateQueryKey = () => {
-  return [`/api/v1/imports/csv/template`] as const;
+export const getDownloadCsvTemplateQueryKey = (params?: DownloadCsvTemplateParams) => {
+  return [`/api/v1/imports/csv/template`, ...(params ? [params] : [])] as const;
 };
 
 export const getDownloadCsvTemplateQueryOptions = <
   TData = Awaited<ReturnType<typeof downloadCsvTemplate>>,
   TError = ErrorType<ProblemResponse>,
->(options?: {
-  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadCsvTemplate>>, TError, TData>>;
-  request?: SecondParameter<typeof http>;
-}) => {
+>(
+  params?: DownloadCsvTemplateParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCsvTemplate>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getDownloadCsvTemplateQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getDownloadCsvTemplateQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadCsvTemplate>>> = ({ signal }) =>
-    downloadCsvTemplate({ signal, ...requestOptions });
+    downloadCsvTemplate(params, { signal, ...requestOptions });
 
   const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
 
@@ -106,6 +126,7 @@ export function useDownloadCsvTemplate<
   TData = Awaited<ReturnType<typeof downloadCsvTemplate>>,
   TError = ErrorType<ProblemResponse>,
 >(
+  params: undefined | DownloadCsvTemplateParams,
   options: {
     query: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof downloadCsvTemplate>>, TError, TData>
@@ -126,6 +147,7 @@ export function useDownloadCsvTemplate<
   TData = Awaited<ReturnType<typeof downloadCsvTemplate>>,
   TError = ErrorType<ProblemResponse>,
 >(
+  params?: DownloadCsvTemplateParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof downloadCsvTemplate>>, TError, TData>
@@ -146,6 +168,7 @@ export function useDownloadCsvTemplate<
   TData = Awaited<ReturnType<typeof downloadCsvTemplate>>,
   TError = ErrorType<ProblemResponse>,
 >(
+  params?: DownloadCsvTemplateParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof downloadCsvTemplate>>, TError, TData>
@@ -155,13 +178,14 @@ export function useDownloadCsvTemplate<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary The CSV template — header row only, UTF-8.
+ * @summary The CSV template of an import type — header row only, UTF-8.
  */
 
 export function useDownloadCsvTemplate<
   TData = Awaited<ReturnType<typeof downloadCsvTemplate>>,
   TError = ErrorType<ProblemResponse>,
 >(
+  params?: DownloadCsvTemplateParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof downloadCsvTemplate>>, TError, TData>
@@ -170,7 +194,7 @@ export function useDownloadCsvTemplate<
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getDownloadCsvTemplateQueryOptions(options);
+  const queryOptions = getDownloadCsvTemplateQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -193,7 +217,10 @@ export const uploadCsvImport = async (
 ): Promise<ImportPreviewResponse> => {
   const formData = new FormData();
   formData.append(`file`, uploadCsvImportBody.file);
-  formData.append(`projectId`, uploadCsvImportBody.projectId.toString());
+  formData.append(`projectId`, uploadCsvImportBody.projectId);
+  if (uploadCsvImportBody.importType !== undefined) {
+    formData.append(`importType`, uploadCsvImportBody.importType);
+  }
 
   return http<ImportPreviewResponse>(getUploadCsvImportUrl(), {
     ...options,
@@ -270,6 +297,136 @@ export const useUploadCsvImport = <TError = ErrorType<ProblemResponse>, TContext
 > => {
   return useMutation(getUploadCsvImportMutationOptions(options), queryClient);
 };
+export const getGetImportPreviewUrl = (previewId: number) => {
+  return `/api/v1/imports/previews/${previewId}`;
+};
+
+/**
+ * @summary The caller's unconfirmed Import Preview again (counts, MSG30 and the first page of rows), e.g. after a reload. Another user's, a confirmed or a deleted preview = 404; a Project the caller no longer manages = 403 (MSG08).
+
+ */
+export const getImportPreview = async (
+  previewId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ImportPreviewResponse> => {
+  return http<ImportPreviewResponse>(getGetImportPreviewUrl(previewId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetImportPreviewQueryKey = (previewId: number) => {
+  return [`/api/v1/imports/previews/${previewId}`] as const;
+};
+
+export const getGetImportPreviewQueryOptions = <
+  TData = Awaited<ReturnType<typeof getImportPreview>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportPreview>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetImportPreviewQueryKey(previewId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getImportPreview>>> = ({ signal }) =>
+    getImportPreview(previewId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: previewId !== null && previewId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getImportPreview>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetImportPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getImportPreview>>>;
+export type GetImportPreviewQueryError = ErrorType<ProblemResponse>;
+
+export function useGetImportPreview<
+  TData = Awaited<ReturnType<typeof getImportPreview>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportPreview>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImportPreview>>,
+          TError,
+          Awaited<ReturnType<typeof getImportPreview>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetImportPreview<
+  TData = Awaited<ReturnType<typeof getImportPreview>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportPreview>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImportPreview>>,
+          TError,
+          Awaited<ReturnType<typeof getImportPreview>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetImportPreview<
+  TData = Awaited<ReturnType<typeof getImportPreview>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportPreview>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary The caller's unconfirmed Import Preview again (counts, MSG30 and the first page of rows), e.g. after a reload. Another user's, a confirmed or a deleted preview = 404; a Project the caller no longer manages = 403 (MSG08).
+
+ */
+
+export function useGetImportPreview<
+  TData = Awaited<ReturnType<typeof getImportPreview>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportPreview>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetImportPreviewQueryOptions(previewId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getGetImportPreviewRowsUrl = (
   previewId: number,
   params?: GetImportPreviewRowsParams,
@@ -689,12 +846,126 @@ export const useRemoveImportPreviewRows = <TError = ErrorType<ProblemResponse>, 
 > => {
   return useMutation(getRemoveImportPreviewRowsMutationOptions(options), queryClient);
 };
+export const getFillImportPreviewSolutionUrl = (previewId: number) => {
+  return `/api/v1/imports/previews/${previewId}/fill-solution`;
+};
+
+/**
+ * @summary Saves one Solution as a separate copy in each given row of a WITHOUT_SOLUTION preview; each row becomes Valid. An empty required section = MSG01 (400); over 10,000 characters in total = MSG02 (400); a WITH_SOLUTION preview or an Error or Removed row = MSG06 (409); a row number that does not exist = 404. A rejection changes no row.
+
+ */
+export const fillImportPreviewSolution = async (
+  previewId: number,
+  fillSolutionRequest: FillSolutionRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<ImportPreviewResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ImportPreviewResponse>(getFillImportPreviewSolutionUrl(previewId), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(fillSolutionRequest),
+  });
+};
+
+export const getFillImportPreviewSolutionMutationKey = () => ['fillImportPreviewSolution'] as const;
+
+export const getFillImportPreviewSolutionMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof fillImportPreviewSolution>>,
+    TError,
+    FillImportPreviewSolutionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof fillImportPreviewSolution>>,
+  TError,
+  FillImportPreviewSolutionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getFillImportPreviewSolutionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof fillImportPreviewSolution>>,
+    FillImportPreviewSolutionMutationVariables
+  > = (props) => {
+    const { previewId, data } = props ?? {};
+
+    return fillImportPreviewSolution(previewId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type FillImportPreviewSolutionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof fillImportPreviewSolution>>
+>;
+export type FillImportPreviewSolutionMutationBody = FillSolutionRequest;
+export type FillImportPreviewSolutionMutationError = ErrorType<ProblemResponse>;
+export type FillImportPreviewSolutionMutationVariables = {
+  previewId: number;
+  data: FillSolutionRequest;
+};
+
+/**
+ * @summary Saves one Solution as a separate copy in each given row of a WITHOUT_SOLUTION preview; each row becomes Valid. An empty required section = MSG01 (400); over 10,000 characters in total = MSG02 (400); a WITH_SOLUTION preview or an Error or Removed row = MSG06 (409); a row number that does not exist = 404. A rejection changes no row.
+
+ */
+export const useFillImportPreviewSolution = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof fillImportPreviewSolution>>,
+      TError,
+      FillImportPreviewSolutionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof fillImportPreviewSolution>>,
+  TError,
+  FillImportPreviewSolutionMutationVariables,
+  TContext
+> => {
+  return useMutation(getFillImportPreviewSolutionMutationOptions(options), queryClient);
+};
 export const getConfirmImportUrl = (previewId: number) => {
   return `/api/v1/imports/previews/${previewId}/confirm`;
 };
 
 /**
- * @summary Imports the remaining Valid rows as Published tickets (MSG32). No Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
+ * @summary Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
 
  */
 export const confirmImport = async (
@@ -751,7 +1022,7 @@ export type ConfirmImportMutationError = ErrorType<ProblemResponse>;
 export type ConfirmImportMutationVariables = { previewId: number };
 
 /**
- * @summary Imports the remaining Valid rows as Published tickets (MSG32). No Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
+ * @summary Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
 
  */
 export const useConfirmImport = <TError = ErrorType<ProblemResponse>, TContext = unknown>(

@@ -69,7 +69,7 @@ tsolve:
       issuer: https://accounts.google.com
       connect-timeout: 5s
       read-timeout: 10s
-  # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId". Empty = nobody can import.
+  # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId", ids as UUIDs. Empty = nobody can import.
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
     inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}
