@@ -186,9 +186,10 @@
         "ticket-feedback-api": "passing",
         "give-feedback-connect": "evaluating",
         "ticket-suggestion-api": "pending",
-        "solution-retrieval": "passing"
+        "solution-retrieval": "passing",
+        "department-solution-retrieval": "pending"
       },
-      "lastUpdated": "2026-11-06T17:23:51.646Z",
+      "lastUpdated": "2026-11-07T14:05:31.533Z",
       "branch": "feat/search",
       "repos": [
         "default"
@@ -203,9 +204,10 @@
       "features": {
         "suggestion-history": "passing",
         "suggestion-history-contract": "passing",
-        "suggestion-history-api": "passing"
+        "suggestion-history-api": "passing",
+        "suggestion-generation": "pending"
       },
-      "lastUpdated": "2026-11-05T14:10:40.456Z",
+      "lastUpdated": "2026-11-07T14:05:32.095Z",
       "branch": "feat/triage",
       "repos": [
         "default"

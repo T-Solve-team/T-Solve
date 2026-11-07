@@ -197,3 +197,111 @@ Current iteration 1 gets one Jira feature `suggestion-history` (KAN-149) with tw
 stages: Task 1 list/filter/API mocks and Task 2 detail popup/verification. Both stages belong to
 one code commit after the full frontend verify and user agreement. Branch:
 `feature/KAN-149-triage-suggestion-history` from current `main`. No push, merge or PR is authorized.
+
+## AI Solution Suggestion job — 2026-11-07
+
+Spec change of 07/11: STORY-005 (triage), search STORY-011, tracker AC-003.1/003.6/003.9. Backend only; the
+MSG80 comment, the Issue Panel and API-06 stay in tracker / jira-app.
+
+### Flow
+
+```text
+Forge trigger (Jira App reads description via REST v2)
+  -> POST /api/v1/jira-app/events/issue-created          tracker
+       insert suggestion_result (+ issue_summary, issue_description)    commits on its own (not @Transactional)
+       publish IssueRecordedEvent(suggestionId)          try/catch: 202 whatever happens (AC-003.9)
+  -> triage SuggestionJobEnqueuer (@EventListener)        AC-005.1, AC-005.2
+       TenantJobService.enqueue("triage-suggestion", new UUID(0, suggestionId))
+       unbound thread -> WorkerTenantService.enqueueWorkspaceId() + runIn (ReviewNotificationEnqueuer pattern)
+  -> JobRunr -> TenantJobRequestHandler.runInTenant -> SuggestionJobHandler.execute(recordId)
+       SuggestionGenerator.generate(suggestionId)         no transaction around model calls (NF 5)
+         1 read row (SuggestionResultRecord, read-only)   guards AC-005.10
+         2 EmbeddingClient.embed([issueText])             AC-005.3
+         3 SolutionRetrieval.nearestInProjectDepartment(projectId, v, min, 5)
+           WikiSourceRetrieval.nearest(v, min, 5)          merge, sort by similarity desc, keep 5 (AC-005.4)
+         4 none kept -> return (AC-005.7)
+         5 LlmClient.chat(prompt, null); blank -> throw    AC-005.5, AC-005.8
+         6 SuggestionWriter.write(id, sourcesJson, text)  one conditional UPDATE (AC-005.5, AC-005.10)
+```
+
+### Key Decisions
+
+| Decision | Choice | Alternatives | Rationale |
+|----------|--------|--------------|-----------|
+| Issue text for the job | Two nullable columns `issue_summary VARCHAR(255)`, `issue_description TEXT` on `suggestion_result`, written by tracker | Separate temp table; `@Async` in memory | User, 07/11. Worker NF5 forbids content in the job payload; Jira cannot be read later (no stored system token); least code, survives retries and restarts |
+| Description format | Plain string ≤ 32767 or null; the Jira App reads it with REST v2 and forwards it | Accept ADF and extract text; summary only | User, 07/11. Forge's raw `avi:jira:created:issue` payload has no description (Forge events reference); no ADF parser in the backend |
+| Trigger | Tracker publishes `IssueRecordedEvent`; triage listens and enqueues | Tracker calls a triage port; triage polls the table | Tracker stays unaware of triage; same shape as `ReviewFeedbackDecidedEvent` → `ReviewNotificationEnqueuer` |
+| Runner | `worker` tenant job (`TenantJobService`, JobRunr) | Spring `@Async`, scheduler | User, 07/11; retry and Workspace binding come with it |
+| Job record id | `new UUID(0, suggestionId)`; the handler takes `getLeastSignificantBits()` and ignores an id whose high bits are not 0 | Add a UUID column | `TenantJobService` takes a UUID and the table id is BIGINT; same mapping as changeset 010 (`lpad(to_hex(id), 32, '0')::uuid`); no schema change |
+| Sources | Published tickets of the Project's Department (search STORY-011, new method on `SolutionRetrieval`) + Company-wide Wiki through the triage port `WikiSourceRetrieval` (stand-in `NoWikiSources`) | Workspace-wide `nearest`; wait for wiki | User, 07/11; triage may use search only through its `service/` interface (backend AGENTS) |
+| Threshold | `tsolve.triage.min-similarity: ${SUGGESTION_MIN_SIMILARITY:0.7}`, `@Validated` record `TriageProperties` (0..1) ; at most 5 sources, a constant | Hard-coded; per-Project | User, 07/11; tuning on KAN-49 data is a later round |
+| AI failure | Exception leaves the job → JobRunr retries (default policy); after the last retry the row stays NULL/`[]`; WARN log with id, key, error type | Status column; error column | User, 07/11: no schema change for failures |
+| Write | Native `UPDATE suggestion_result SET sources_used = CAST(:json AS jsonb), suggested_solution = :text WHERE suggestion_id = :id AND suggested_solution IS NULL` in a triage repository, its own short transaction | JPA entity update | The triage entity stays `@Immutable`; the `IS NULL` guard makes a repeated or racing job a no-op (AC-005.10) |
+| Ticket privacy | Prompt gets each ticket only as "Solution N" with its five sections; Wiki documents by title; the system prompt asks to name only Wiki titles | Pass ticket keys | GBR-36 / spec: tickets are never linked; ids stay in `sources_used` only (AC-005.6) |
+
+Decided in planning (builder check):
+- Issue text = summary, blank line, description; capped at 8000 characters for both embedding and prompt
+  (`ponytail:` comment; raise when the chat model's context is measured).
+- Prompt language: the system prompt asks the model to answer in the language of the issue.
+- Merge order on equal similarity: tickets before Wiki, each in its retrieval order.
+- Logs: INFO "suggestion stored / no source" with suggestion id + issue key; WARN on failure with
+  `exception.getClass().getSimpleName()`; never text.
+- Plain text by prompt instruction only; no Markdown stripping (builder check).
+- Wiki `content` capped at 2000 characters per document in the prompt; similarity is cosine 0..1 like tickets.
+- The handler logs and rethrows `IllegalStateException("triage-suggestion failed: " + type)` without the cause, so
+  JobRunr's stored failure holds no model or issue text (AC-005.8).
+- A run that found no source succeeds, so JobRunr does not deliver it again; no extra guard.
+- Edge case 38 (high bits set) is a guard with a unit test but no AC of its own.
+- The handler bean is `@ConditionalOnProperty(tsolve.worker.enabled=true)` like `ReviewNotificationJobHandler`, so the
+  API process can check the type when it enqueues.
+
+### File Structure
+
+```text
+backend/src/main/java/vn/tsolve/
+  tracker/dto/IssueCreatedPayload.java                 + summary, description            (tracker Task 14)
+  tracker/entity/SuggestionResult.java                 + issueSummary, issueDescription  (tracker Task 14)
+  tracker/event/IssueRecordedEvent.java                record(long suggestionId)          (tracker Task 14)
+  tracker/service/impl/IssueCreatedServiceImpl.java    store + publish                    (tracker Task 14)
+  search/retrieval/...                                 nearestInProjectDepartment         (search Task 20)
+  triage/config/TriageProperties.java                  min-similarity
+  triage/entity/SuggestionResultRecord.java            + issue_summary, issue_description (read-only)
+  triage/repository/SuggestionWriteRepository.java     conditional UPDATE
+  triage/service/WikiSourceRetrieval.java, dto/WikiSource.java
+  triage/service/impl/NoWikiSources.java
+  triage/service/impl/SuggestionGenerator.java         steps 1-6
+  triage/service/impl/SuggestionJobEnqueuer.java       @EventListener -> TenantJobService
+  triage/service/impl/SuggestionJobHandler.java        TenantJobHandler "triage-suggestion"
+backend/src/main/resources/application.yml             tsolve.triage.min-similarity
+backend/src/main/resources/db/changelog/changes/019-tracker-suggestion-issue-content.sql
+frontend/openapi/tsolve-api.yaml + generated model     IssueCreatedPayload fields (tracker Task 14)
+```
+
+### Edge Cases & Risks
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 25 | STORY-005 | Error cascades | Ollama down for embed or chat | High | Job throws, JobRunr retries; row NULL/`[]` | Task 4 |
+| 26 | STORY-005 | Timing | Job delivered twice / two workers race | High | Second run sees a solution or the `IS NULL` update hits 0 rows; no second model call after a stored one | Task 4 |
+| 27 | STORY-005 | Data integrity | Row from before the change (no `issue_summary`) | Medium | No model call, no change | Task 4 |
+| 28 | STORY-005 | Authorization | Ticket of another Department scores 0.95 | High | Not a source (search AC-011.3) | search Task 20, Task 4 |
+| 29 | STORY-005 | Compliance | Ticket key / title reaches the prompt or the solution | High | Prompt carries sections only; TICKET items have no title | Task 4 |
+| 30 | STORY-005 | Business logic | Best source 0.69 with threshold 0.7; exactly 0.7 | High | 0.69 → no suggestion, no chat call; 0.7 kept | Task 4 |
+| 31 | STORY-005 | Scale | 5 tickets + 5 Wiki above threshold | Medium | Exactly 5 kept, most similar first | Task 4 |
+| 32 | STORY-005 | Error cascades | Worker disabled / enqueue throws in the event request | High | 202, row kept, WARN with id + type | Task 4, tracker Task 14 |
+| 33 | STORY-005 | Multi-tenancy | Event request thread has no bound Workspace | High | `enqueueWorkspaceId` + `runIn`; none (several Workspaces) → WARN, no job — accepted until discovery (user, 07/11) | Task 4 |
+| 34 | STORY-005 | Input extremes | Description null / blank / 32767 chars | Medium | Summary only / first 8000 chars (AC-005.3) | Task 4 |
+| 35 | STORY-005 | Environment | `SUGGESTION_MIN_SIMILARITY=1.5` or `abc` | Medium | Startup fails | Task 4 |
+| 36 | STORY-005 | Integration | LLM answers whitespace | Medium | Job fails and retries | Task 4 |
+| 37 | tracker 003 | Input extremes | `description` sent as an ADF object | Medium | 400 MSG06, nothing stored | tracker Task 14 |
+| 38 | STORY-005 | Integration | Job record id with high bits set | Low | Ignored, logged | Task 4 |
+
+### Risk Review — 2026-11-07 — Verdict: CAUTION
+
+Touches a shared contract (Jira App payload), a migration and a multi-tenant background job.
+- Contract: the payload change ships only with Bình's Jira App change; until then events without `summary` get 400 and
+  Forge retries them. Mitigation: tell Bình before merge; merge both together.
+- Migration: additive nullable columns, rollback drops them; old rows simply get no suggestion (row 27).
+- Tenancy: the job runs only through `TenantJobRequestHandler.runInTenant`; the enqueue copies the reviewed
+  `ReviewNotificationEnqueuer` binding (row 33).
+- Content at rest: the issue text now lives in the tenant database, like ticket content already does; never logged.

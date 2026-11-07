@@ -966,3 +966,7 @@
 {"ts":"2026-11-07T12:55:27.689Z","type":"quick-opened","what":"PR 155 CI: verify regenerated SSE mock and log API generation drift","files":["frontend/src/shared/api/generated/review/review.msw.ts","docs/bug-log.md"]}
 {"ts":"2026-11-07T13:01:06.083Z","type":"quick-closed","what":"PR 155 CI: verify regenerated SSE mock and log API generation drift","files":["frontend/src/shared/api/generated/review/review.msw.ts","docs/bug-log.md"]}
 {"ts":"2026-11-07T17:14:30.621Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"38a0abd9b9a2a0aa0f59ff5132d5a1028c4ef641"}
+{"ts":"2026-11-07T14:04:35.862Z","type":"spec-approved","module":"search","specHash":"93281f724dc89e24cfd97fabed6965b6bd6435f08355ccc38c265eb01d268529"}
+{"ts":"2026-11-07T14:05:27.010Z","type":"spec-approved","module":"triage","specHash":"1a46fdb4855c802bb987d9ea2f33606a5f04c34b5a9335bb3bfb62d8a8f389bc"}
+{"ts":"2026-11-07T14:05:31.535Z","type":"feature-status","module":"search","feature":"department-solution-retrieval","from":null,"to":"pending"}
+{"ts":"2026-11-07T14:05:32.097Z","type":"feature-status","module":"triage","feature":"suggestion-generation","from":null,"to":"pending"}
