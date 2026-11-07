@@ -194,6 +194,19 @@ class ImportConfirmIT {
     }
 
     @Test
+    void anotherProjectManagerCannotConfirmTheOwnersPreview_AC_004_9() {
+        long preview = upload("pm-a", "T-1");
+
+        assertThatThrownBy(() -> confirms.confirm("pm-b", preview)).isInstanceOf(NotFoundException.class);
+        assertThat(count("ticket")).isZero();
+        assertThat(count("import_batch")).isZero();
+        assertThat(published.seen).isEmpty();
+
+        assertThat(confirms.confirm("pm-a", preview).created()).isEqualTo(1);
+        assertThat(count("import_preview")).isZero();
+    }
+
+    @Test
     void secondConfirmOfTheSamePreviewIsNotFound_AC_004_12() throws Exception {
         long preview = upload("pm-a", "T-1", "T-2");
         CountDownLatch start = new CountDownLatch(1);

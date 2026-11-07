@@ -1,6 +1,6 @@
 ---
 project: T-Solve
-date: 2026-11-04
+date: 2026-11-06
 ---
 
 # Architecture Overview
@@ -8,7 +8,8 @@ date: 2026-11-04
 System-level decisions that apply across all modules. Aligned with the multi-tenant high-level architecture
 (drawio, 29/10) on 3/11 (KAN-231 HLA change): the Platform Console on `admin.`, the Platform / Tenant Registry
 database, Redis for sessions; on 4/11 the decisions on Deployment, PII masking, the Jobs database, object storage,
-provisioning and the per-database row guard (HLA Q1–Q6). Rows marked TBD are settled in the decompose phase.
+provisioning and the per-database row guard (HLA Q1–Q6); on 6/11 the HLA items the MVP does not build (Deployment
+Topology, HLA target items). Rows marked TBD are settled in the decompose phase.
 Every backend design and task follows the team's backend conventions in `backend/AGENTS.md` — the one
 source for code structure, naming, layers, API, database, tests and bugs. Every frontend design and task follows
 `frontend/AGENTS.md` and the guidelines it links (`frontend/guidelines/`) — the one source for structure, naming,
@@ -38,11 +39,11 @@ This replaces the pool model of ADR-0001 (24/10) and the single-tenant model of 
 
 | Layer | Decision |
 |-------|----------|
-| Data | Each Workspace has its own PostgreSQL database with the business tables of every module; tables have **no** `workspace_id`. The catalog (Platform / Tenant Registry) database holds only `tenant_workspace` (site name, status, database connection with an encrypted password, the Jira site and its `cloudId`) and `workspace_email` (one email in one Workspace, GBR-16), and no sign-in state (the sign-in is Keycloak's, ADR-0003). No business data is in the catalog (GBR-37). JobRunr's tables are in a separate Jobs database on the same server (Background Jobs). |
+| Data | Each Workspace has its own PostgreSQL database with the business tables of every module; tables have **no** `workspace_id`. The catalog (Platform / Tenant Registry) database holds only `tenant_workspace` (site name, status, database connection with a password encrypted under `CATALOG_SECRET_KEY`, the schema version last applied, the Google domain and Keycloak Organization id, the Jira site and its `cloudId`; platform AC-001.15, AC-001.24, AC-001.34) and `workspace_email` (one email in one Workspace, GBR-16), and no sign-in state (the sign-in is Keycloak's, ADR-0003). No business data is in the catalog (GBR-37). JobRunr's tables are in a separate Jobs database on the same server (Background Jobs). |
 | Database access | `TenantContext` binds a Workspace; one routing `DataSource` sends every JPA and JDBC query to the bound Workspace's database through a lazily opened, bounded pool per Workspace. With no Workspace bound, no tenant database can be reached. Each Workspace database has its own runtime user that can connect only to it; migrations use a separate owner user and the runtime user has no `BYPASSRLS`. |
 | Tenant row guard | The third isolation layer (HLA, 4/11): every Workspace database holds a one-row table with its own tenant id, written at provisioning; every tenant table has a row policy that returns no row unless the transaction's tenant setting (set by the router when it opens the transaction) equals that id, so a misrouted connection sees nothing even if the router has a bug. The convention guard test fails for a tenant table without the policy. The tables still have no `workspace_id`. |
 | Resolution | The Workspace of a request comes **only** from (GBR-37): the host name of a Workspace site `{site name}.tsolve.io.vn` (web request); the `cloudId` of the verified Forge Invocation Token (call from the T-Solve app in Jira, GBR-14, GBR-19); or the job's Workspace (background job). No request can choose or change its Workspace and **no API takes a Workspace from the request**. A site name that belongs to no Workspace → MSG151; a call from a Jira site linked to no Workspace → MSG152. |
-| Platform hosts | `login.`, `api.` and `admin.tsolve.io.vn` have no Workspace of their own. `login.` is Keycloak (realm `tsolve`, ADR-0003); the Workspace is known from the site's own OIDC client: the callback runs on the Workspace site, and the token's Organization and `hd` must match it. `api.` takes it only from the verified `cloudId`. `admin.` is the **Platform Console** (restored 3/11 from the HLA, which reverses the removal of 31/10): a Platform Operator on the allow-list signs in there (D13, D36) and sees no Workspace data. |
+| Platform hosts | `login.`, `api.` and `admin.tsolve.io.vn` have no Workspace of their own. `login.` is Keycloak (realm `tsolve`, ADR-0003); the Workspace is known from the site's own OIDC client: the callback runs on the Workspace site, and the token's Organization and `hd` must match it. The HLA drawing shows no Keycloak (Google OIDC with its callback on `login.`); Google's callback does reach Keycloak on `login.`, so the two agree, but the drawing is to be corrected to show Keycloak. `api.` takes it only from the verified `cloudId`. `admin.` is the **Platform Console** (restored 3/11 from the HLA, which reverses the removal of 31/10): a Platform Operator on the allow-list signs in there (D13, D36) and sees no Workspace data. |
 | Provisioning | A Platform Operator creates, suspends and reactivates a Workspace in the Platform Console and invites its first Admin (HLA, `platform` package): Workspace database and runtime user, migrations, registry row, first-Admin invitation — all or nothing (GBR-24). `infra/ops/workspace.sh` (KAN-240) stays as the hand-run form of the same provisioning service the Console calls (the demo seed uses it before the Console exists); the first Admin is invited, as in the HLA. The Admin then enters the company information, the Jira site and the service account at the first sign-in (UC-10); the Jira site's `cloudId` is recorded in the registry then and cannot change (GBR-14, GBR-24). Nobody deletes a Workspace or reads its data (GBR-38). |
 | Sessions | A Workspace session is valid only on its own Workspace site (GBR-03). Sessions live in **Redis** (the HLA's shared, site-bound session store), so no API replica keeps a session of its own; the session store is kept apart from any eviction cache. |
 | Suspended Workspace | Its Workspace site and sign-in are refused (MSG150), the Jira App's calls are refused; its database is kept; its jobs do not run and JOB-02 skips it; ticket tracker events received meanwhile are dropped and not replayed (D29, GBR-38). |
@@ -91,7 +92,8 @@ dashboard. T-Solve adds, in the `worker` module:
 - every job carries its `workspaceId`, taken from `TenantContext` when it is enqueued;
 - every job runs inside `runInTenant(workspaceId, …)`, so its queries go to its Workspace's database and its
   files are those of its Workspace; JOB-02 runs once per Active Workspace (GBR-37);
-- a job of a Suspended Workspace does not run (GBR-38);
+- a job of a Suspended Workspace does not run (GBR-38). The HLA drawing says "postpone"; GBR-38 and D29 win
+  (decision 6/11) and the drawing is to be corrected;
 - fairness between Workspaces: a configurable cap on the jobs of one Workspace that run at the same time, so one
   company cannot block another (GBR-37; replaces the round-robin of TS-130, D43).
 
@@ -135,6 +137,24 @@ The two servers exist because the models need their own CPU and RAM (D41; Jira K
 developer machine, Docker Compose also runs Redis, Garage and Ollama (every app-level HLA rule — registry, router, Redis sessions, site-bound sessions, row guard — works the same on Compose; the move to Kubernetes is a later step for infra); every environment points the backend at it with
 `OLLAMA_BASE_URL`. Demo data (two Workspaces, created through the provisioning service) is seeded from `infra/seed/` on dev and staging only, never from the
 production configuration (D42, GBR-24).
+
+### HLA target items and the MVP
+
+The HLA drawing (29/10) has these items that the sections above do not decide. Each is part of the target
+architecture; the MVP column says what is built now (decision 6/11). An item marked "not built" has no module spec
+yet; a module that needs it adds it to its spec first.
+
+| HLA item | MVP |
+|----------|-----|
+| Tenant outbox in each Workspace database → dispatcher → job in the Jobs database | Not built: jobs are queued in JobRunr directly (Background Jobs) |
+| HA PgBouncer in front of the Workspace databases: one connection bound across all replicas, timeout and backpressure | Not built: one backend process, a lazily opened pool per Workspace of at most `TENANT_DB_POOL_MAX` connections (platform AC-002.22) |
+| Edge limits: rate per company, per user and per IP; bounded request size and timeout | Caddy: rate per IP and per Workspace site, body size, timeout (platform AC-014.9 to AC-014.11). No rate per user: the edge cannot see the session (platform decision Q8) |
+| Registry: secret reference and routing generation | The password is stored encrypted in the registry (platform AC-001.24), not as a reference to a secret store; no routing generation |
+| Worker: global and per-company concurrency caps, deduplication, finite queue, scale by backlog and oldest job age, AI and database capacity caps | Only the per-Workspace cap (Background Jobs, D43); one worker process |
+| Redis: tenant-scoped cache and quota | Not built: Redis holds sessions only (platform AC-008.10); a cache or quota waits until `ai` or chatbot asks for one |
+| AI runtime: bounded AI concurrency, timeout and fallback | Fallback on an AI failure (GBR-12, `ai` spec); no concurrency cap |
+| 10,000 concurrent users, proved by a load test | Load-test script with a staging target of 500 concurrent users, p95 under 1 s, errors under 1 % (platform AC-014.12, AC-014.13) |
+| Backups + WAL, failover, restore drills; a hot Workspace moved to its own database cluster | Nightly dump per database and per Garage prefix, restore drill of one Workspace to staging (platform AC-014.1 to AC-014.5); no WAL archiving, failover or dedicated cluster |
 
 ## Cross-Cutting Concerns
 
