@@ -7,6 +7,14 @@ import java.util.UUID;
 public interface WorkerTenantService {
     Optional<UUID> currentWorkspaceId();
 
+    /**
+     * Workspace a caller on an unbound thread (an after-commit listener of an HTTP request) may bind with
+     * {@link #runIn} before enqueueing; empty means none can be chosen.
+     */
+    default Optional<UUID> enqueueWorkspaceId() {
+        return Optional.empty();
+    }
+
     boolean isWorkspaceActive(UUID workspaceId);
 
     /** Must reject cross-workspace nesting and restore the prior binding, including on failure. */

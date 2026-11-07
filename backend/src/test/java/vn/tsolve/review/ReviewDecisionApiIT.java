@@ -26,6 +26,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -59,6 +60,8 @@ import vn.tsolve.ticket.dto.TicketReviewView.ProjectAccess;
 @Import({TwoTenantDatabases.class, ReviewDecisionApiIT.WorkspaceAccessConfiguration.class})
 @WithTSolveUser(id = ReviewDecisionApiIT.MANAGER_ID, roles = Role.PROJECT_MANAGER)
 class ReviewDecisionApiIT {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private vn.tsolve.common.audit.AuditService audit;
 
     static final String MANAGER_ID = "f4b304e6-d813-4e47-9b6c-69b7d61cc6cb";
     private static final UUID MANAGER = UUID.fromString(MANAGER_ID);
@@ -127,6 +130,7 @@ class ReviewDecisionApiIT {
         }
 
         @Bean
+        @Primary
         ReviewWorkspaceAccess reviewWorkspaceAccess(TwoTenantDatabases.RoutingTenantScope scope) {
             return new ReviewWorkspaceAccess() {
                 @Override

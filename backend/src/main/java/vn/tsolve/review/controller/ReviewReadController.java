@@ -23,6 +23,8 @@ import vn.tsolve.common.security.Roles;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.review.service.ReviewWorkspaceAccess;
 import vn.tsolve.ticket.dto.TicketReviewView.Detail;
+import vn.tsolve.ticket.dto.TicketReviewView.HistoryFilter;
+import vn.tsolve.ticket.dto.TicketReviewView.HistoryItem;
 import vn.tsolve.ticket.dto.TicketReviewView.ProjectAccess;
 import vn.tsolve.ticket.dto.TicketReviewView.QueueItem;
 import vn.tsolve.ticket.service.TicketReviewReadService;
@@ -58,6 +60,23 @@ public class ReviewReadController {
     public TicketIdList eligibleIds(
             @AuthenticationPrincipal TSolveUser actor, @RequestParam(required = false) UUID departmentId) {
         return new TicketIdList(reads.eligibleIds(projects(actor), departmentId));
+    }
+
+    @GetMapping("/review-history")
+    @Operation(operationId = "getReviewHistory")
+    @PreAuthorize("hasRole('" + Roles.PROJECT_MANAGER + "')")
+    public PagedModel<HistoryItem> history(
+            @AuthenticationPrincipal TSolveUser actor,
+            @RequestParam(required = false) UUID departmentId,
+            @RequestParam(required = false) String decision,
+            @RequestParam(required = false) String dateFrom,
+            @RequestParam(required = false) String dateTo,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam MultiValueMap<String, String> parameters) {
+        var filter = new HistoryFilter(
+                departmentId, decision, dateFrom, dateTo, page, size, parameters.getOrDefault("sort", List.of()));
+        return new PagedModel<>(reads.history(projects(actor), filter));
     }
 
     @GetMapping("/tickets/{ticketId}")

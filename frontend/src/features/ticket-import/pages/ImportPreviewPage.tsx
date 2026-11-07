@@ -7,12 +7,14 @@ import {
   getGetImportPreviewQueryKey,
   getGetImportPreviewRowsQueryKey,
   useGetImportPreview,
+  type ImportPreviewRowSummary,
 } from '@/shared/api';
 import { isMsgCode, msg, showMessage } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { ConfirmDialog, ErrorState, LoadingState, SectionCard, StatCard } from '@/shared/ui';
 import { ImportPreviewTable } from '../components/ImportPreviewTable';
 import { ImportTicketPreviewModal } from '../components/ImportTicketPreviewModal';
+import { SolutionFormModal } from '../components/SolutionFormModal';
 import { useConfirmPreview, useRemovePreviewRows } from '../hooks/useImportPreview';
 
 /** The address keeps the preview id (D11); anything but a positive whole number opens Import Tickets (AC-009.11). */
@@ -29,8 +31,12 @@ function ImportPreview({ previewId }: { previewId: number }) {
   const preview = useGetImportPreview(previewId);
   const remove = useRemovePreviewRows(previewId);
   const confirm = useConfirmPreview();
-  const [selectedRowNos, setSelectedRowNos] = useState<number[]>([]);
-  const [previewRowNo, setPreviewRowNo] = useState<number | null>(null);
+  const [selectedRows, setSelectedRows] = useState<
+    Pick<ImportPreviewRowSummary, 'rowNo' | 'status'>[]
+  >([]);
+  const selectedRowNos = selectedRows.map((row) => row.rowNo);
+  const [isFillOpen, setIsFillOpen] = useState(false);
+  const [previewRow, setPreviewRow] = useState<ImportPreviewRowSummary | null>(null);
 
   // A double click reaches the handler twice before `isPending` renders: one Confirm only (AC-009.8).
   const isConfirming = useRef(false);
@@ -59,7 +65,7 @@ function ImportPreview({ previewId }: { previewId: number }) {
   function handleRemove() {
     remove.mutate(
       { previewId, data: { rowNumbers: selectedRowNos } },
-      { onSuccess: () => setSelectedRowNos([]) },
+      { onSuccess: () => setSelectedRows([]) },
     );
   }
 
@@ -93,7 +99,26 @@ function ImportPreview({ previewId }: { previewId: number }) {
     );
   }
 
-  const { fileName, validCount, errorCount, removedCount, message } = preview.data;
+  const {
+    fileName,
+    importType,
+    validCount,
+    errorCount,
+    removedCount,
+    needsSolutionCount,
+    message,
+  } = preview.data;
+  const isWithoutSolution = importType === 'WITHOUT_SOLUTION';
+  const unreadyCount = needsSolutionCount + errorCount;
+  const isConfirmBlocked = isWithoutSolution && unreadyCount > 0;
+  const canFill =
+    selectedRows.length > 0 &&
+    selectedRows.every((row) => row.status === 'NEEDS_SOLUTION' || row.status === 'VALID');
+  const replaceCount = selectedRows.filter((row) => row.status === 'VALID').length;
+  // A row of a file without Solutions that can take a Solution opens with its sections as fields (AC-015.2).
+  const isWritable =
+    isWithoutSolution &&
+    (previewRow?.status === 'NEEDS_SOLUTION' || previewRow?.status === 'VALID');
   return (
     <Flex vertical gap="middle">
       <SectionCard title="Summary">
@@ -103,15 +128,27 @@ function ImportPreview({ previewId }: { previewId: number }) {
             <StatCard label="Valid" value={validCount} />
             <StatCard label="Error" value={errorCount} />
             <StatCard label="Removed" value={removedCount} />
+            {isWithoutSolution && <StatCard label="Needs Solution" value={needsSolutionCount} />}
           </Flex>
           {message && isMsgCode(message.code) && (
             <Alert type="warning" showIcon title={msg(message.code, message.params)} />
+          )}
+          {isConfirmBlocked && (
+            <Alert type="warning" showIcon title={msg('MSG_NEW_4', { count: unreadyCount })} />
           )}
         </Flex>
       </SectionCard>
       <SectionCard>
         <Flex vertical gap="middle">
           <Flex gap="small">
+            {isWithoutSolution && (
+              <Button
+                disabled={!canFill || remove.isPending || confirm.isPending}
+                onClick={() => setIsFillOpen(true)}
+              >
+                Fill solution
+              </Button>
+            )}
             <Button
               disabled={selectedRowNos.length === 0 || confirm.isPending}
               loading={remove.isPending}
@@ -123,15 +160,17 @@ function ImportPreview({ previewId }: { previewId: number }) {
           <ImportPreviewTable
             previewId={previewId}
             selectedRowNos={selectedRowNos}
-            onSelectionChange={setSelectedRowNos}
-            onPreview={setPreviewRowNo}
+            onSelectionChange={(rows) =>
+              setSelectedRows(rows.map(({ rowNo, status }) => ({ rowNo, status })))
+            }
+            onPreview={setPreviewRow}
           />
           <Flex gap="small" justify="flex-end">
             <Button onClick={() => void navigate(paths.importTickets)}>Cancel</Button>
             <Button
               type="primary"
               // One of Remove and Confirm at a time: a Confirm during a Remove could import a removed row.
-              disabled={validCount === 0 || remove.isPending}
+              disabled={validCount === 0 || isConfirmBlocked || remove.isPending}
               loading={confirm.isPending}
               onClick={handleConfirm}
             >
@@ -142,8 +181,29 @@ function ImportPreview({ previewId }: { previewId: number }) {
       </SectionCard>
       <ImportTicketPreviewModal
         previewId={previewId}
-        rowNo={previewRowNo}
-        onClose={() => setPreviewRowNo(null)}
+        rowNo={isWritable ? null : (previewRow?.rowNo ?? null)}
+        onClose={() => setPreviewRow(null)}
+      />
+      <SolutionFormModal
+        key={isFillOpen ? 'selection' : 'row'}
+        previewId={previewId}
+        rowNo={isWritable ? (previewRow?.rowNo ?? null) : null}
+        rowNumbers={isFillOpen ? selectedRowNos : undefined}
+        replaceCount={isFillOpen ? replaceCount : 0}
+        onSuccess={() => {
+          if (isFillOpen) setSelectedRows([]);
+          else {
+            setSelectedRows((rows) =>
+              rows.map((row) =>
+                row.rowNo === previewRow?.rowNo ? { ...row, status: 'VALID' } : row,
+              ),
+            );
+          }
+        }}
+        onClose={() => {
+          setPreviewRow(null);
+          setIsFillOpen(false);
+        }}
       />
       <ConfirmDialog
         isOpen={blocker.state === 'blocked'}

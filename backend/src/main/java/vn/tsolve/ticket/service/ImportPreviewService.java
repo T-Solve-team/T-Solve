@@ -3,6 +3,7 @@ package vn.tsolve.ticket.service;
 import java.util.Collection;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedModel;
+import vn.tsolve.ticket.dto.FillSolutionRequest;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowSummary;
@@ -21,4 +22,10 @@ public interface ImportPreviewService {
 
     /** Marks the rows Removed (Valid or Error alike); row numbers not in the preview are ignored. */
     ImportPreviewResponse removeRows(String user, long previewId, Collection<Integer> rowNumbers);
+
+    /**
+     * Stores one Solution, trimmed, in each given row of a preview of a file without Solutions; each row becomes
+     * Valid. All rows or none (STORY-013).
+     */
+    ImportPreviewResponse fillSolution(String user, long previewId, FillSolutionRequest solution);
 }

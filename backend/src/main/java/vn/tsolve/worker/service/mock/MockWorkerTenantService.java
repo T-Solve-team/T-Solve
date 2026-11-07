@@ -26,6 +26,13 @@ public class MockWorkerTenantService implements WorkerTenantService {
         return Optional.ofNullable(workspace.get());
     }
 
+    /** Single-Workspace local/demo stacks only; with several Workspaces it refuses, never guesses. */
+    @Override
+    public Optional<UUID> enqueueWorkspaceId() {
+        return currentWorkspaceId()
+                .or(() -> active.size() == 1 ? active.stream().findFirst() : Optional.empty());
+    }
+
     @Override
     public boolean isWorkspaceActive(UUID workspaceId) {
         return active.contains(Objects.requireNonNull(workspaceId, "workspaceId"));

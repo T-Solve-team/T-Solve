@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import vn.tsolve.ticket.dto.FillSolutionRequest;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowSummary;
@@ -121,6 +122,19 @@ public class ImportController {
     public ResponseEntity<ImportPreviewResponse> removeImportPreviewRows(
             @PathVariable long previewId, @Valid @RequestBody RemoveRowsRequest request, Principal user) {
         return ResponseEntity.ok(previews.removeRows(user.getName(), previewId, request.rowNumbers()));
+    }
+
+    @PostMapping("/previews/{previewId}/fill-solution")
+    @Operation(
+            operationId = "fillImportPreviewSolution",
+            summary = "Saves one Solution in each given row of a preview of a file without Solutions.")
+    @ApiResponse(responseCode = "400")
+    @ApiResponse(responseCode = "403")
+    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "409")
+    public ResponseEntity<ImportPreviewResponse> fillImportPreviewSolution(
+            @PathVariable long previewId, @Valid @RequestBody FillSolutionRequest request, Principal user) {
+        return ResponseEntity.ok(previews.fillSolution(user.getName(), previewId, request));
     }
 
     @PostMapping("/previews/{previewId}/confirm")

@@ -8,8 +8,6 @@
  */
 
 export type AuthorizeParams = {
-  /**
-   * Signed state value made by the Workspace site.
-   */
+  /** Signed state value made by the Workspace site. */
   state: string;
 };

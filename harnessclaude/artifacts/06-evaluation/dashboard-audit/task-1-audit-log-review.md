@@ -37,7 +37,7 @@ This is an inline review, not an independent subagent review. Code commit: `85a8
 | AC-001.2 | PASS | Page test verifies 30/10/2026 16:30 for UTC fixture |
 | AC-001.3 | PASS | Page combines Actor/action/from/to and receives four matching entries |
 | AC-001.4 | PASS | Actor search and browser Back restore URL, field and results |
-| AC-001.5 | PASS | Page 2 contains 15 rows; dates retained; date sorting resets page (BUG-068) |
+| AC-001.5 | PASS | Page 2 contains 15 rows; dates retained; date sorting resets page (BUG-159) |
 | AC-001.6 | PASS | Deferred mock response verifies LoadingState before resolution |
 | AC-001.7 | PASS | Nonmatching Actor produces MSG04 |
 | AC-001.8 | PASS | 500 then retry retains the exact request filters |

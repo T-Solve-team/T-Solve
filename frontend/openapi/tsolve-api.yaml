@@ -35,10 +35,10 @@ paths:
     get:
       tags: [audit-log]
       operationId: getAuditEvents
-      summary: Frontend proposal — Admin audit log within the host-resolved Workspace (KAN-153).
+      summary: Admin audit log within the host-resolved Workspace.
       description: >
-        Implemented in MSW only until backend integration. Filters combine with AND. The real backend must
-        enforce Admin access and Workspace isolation; no Workspace parameter or header is accepted.
+        Served by the backend analytics module, Admin only, with Workspace resolved from the request host.
+        Filters combine with AND; no Workspace parameter or header is accepted.
         Default order is createdAt descending with id ascending as a stable tie-breaker.
       parameters:
         - name: actor
@@ -523,8 +523,8 @@ paths:
     get:
       tags: [review]
       operationId: getReviewHistory
-      summary: Read-only decision history of managed Projects (KAN-159 frontend proposal).
-      description: Scope before filtering and pagination. Paired calendar dates are inclusive in Vietnam time. Default timestamp descending, decision UUID tie-breaker; explicit timestamp sorting only. No production persistence is implemented.
+      summary: Read-only decision history of managed Projects (KAN-159).
+      description: Scope before filtering and pagination. Paired calendar dates are inclusive in Vietnam time. Default timestamp descending, decision UUID tie-breaker; explicit timestamp sorting only. Production returns the stored Approve, Reject and Request Changes decisions; the other decision values return an empty page.
       parameters:
         - name: departmentId
           in: query
@@ -1981,7 +1981,7 @@ components:
           maximum: 100
           description: Rounded percent of Helpful Feedback; null = no Feedback yet.
         resolvedAt:
-          type: string
+          type: [string, 'null']
           format: date-time
     TicketSearchResultPage:
       type: object

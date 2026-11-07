@@ -9,7 +9,7 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
 
 import { ProjectRole, Role } from '../model';
 import type { CurrentUser } from '../model';
@@ -60,12 +60,12 @@ export const getAuthCallbackResponseMock = (): string => faker.word.sample();
 export const getGetMeMockHandler = (
   overrideResponse?:
     | CurrentUser
-    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<CurrentUser> | CurrentUser),
+    | ((info: Parameters<HttpResponseResolver>[0]) => Promise<CurrentUser> | CurrentUser),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/me',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -81,12 +81,12 @@ export const getGetMeMockHandler = (
 
 export const getSignInMockHandler = (
   overrideResponse?:
-    unknown | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<unknown> | unknown),
+    unknown | ((info: Parameters<HttpResponseResolver>[0]) => Promise<unknown> | unknown),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/auth/sign-in',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
       }
@@ -99,12 +99,12 @@ export const getSignInMockHandler = (
 
 export const getAuthorizeMockHandler = (
   overrideResponse?:
-    unknown | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<unknown> | unknown),
+    unknown | ((info: Parameters<HttpResponseResolver>[0]) => Promise<unknown> | unknown),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/auth/authorize',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
       }
@@ -117,12 +117,12 @@ export const getAuthorizeMockHandler = (
 
 export const getAuthCallbackMockHandler = (
   overrideResponse?:
-    string | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<string> | string),
+    string | ((info: Parameters<HttpResponseResolver>[0]) => Promise<string> | string),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/auth/callback',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       const resolvedBody =
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -139,12 +139,12 @@ export const getAuthCallbackMockHandler = (
 
 export const getCompleteSignInMockHandler = (
   overrideResponse?:
-    unknown | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<unknown> | unknown),
+    unknown | ((info: Parameters<HttpResponseResolver>[0]) => Promise<unknown> | unknown),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/auth/complete',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
       }
@@ -156,13 +156,12 @@ export const getCompleteSignInMockHandler = (
 };
 
 export const getLogoutMockHandler = (
-  overrideResponse?:
-    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  overrideResponse?: void | ((info: Parameters<HttpResponseResolver>[0]) => Promise<void> | void),
   options?: RequestHandlerOptions,
 ) => {
   return http.post(
     '*/api/v1/auth/logout',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
       }

@@ -39,6 +39,11 @@ spring:
 
 server:
   port: ${SERVER_PORT}
+  # the redirect_uri of the Keycloak sign-in is the public origin behind the proxy. ForwardedHeaderFilter also trusts
+  # the RFC 7239 Forwarded header and X-Forwarded-Prefix, and Caddy passes them through, so the proxy must strip or
+  # overwrite Forwarded, X-Forwarded-* and X-Forwarded-Prefix (Caddy: header_up -Forwarded, header_up -X-Forwarded-Prefix,
+  # and set X-Forwarded-* itself); the backend must be reachable only through it
+  forward-headers-strategy: framework
 
 springdoc:
   swagger-ui:
