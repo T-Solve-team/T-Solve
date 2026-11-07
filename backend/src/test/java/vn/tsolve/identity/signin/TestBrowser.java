@@ -130,7 +130,9 @@ final class TestBrowser {
             throw new IllegalStateException(e);
         }
         Map<String, List<String>> headers = new LinkedHashMap<>();
-        response.headers().map().forEach((name, values) -> headers.put(name.toLowerCase(java.util.Locale.ROOT), values));
+        response.headers()
+                .map()
+                .forEach((name, values) -> headers.put(name.toLowerCase(java.util.Locale.ROOT), values));
         Reply reply = new Reply(response.statusCode(), headers, response.body());
         store(cookieHost, reply.setCookies());
         return reply;
@@ -146,7 +148,8 @@ final class TestBrowser {
             String name = pair.substring(0, eq).trim();
             String value = pair.substring(eq + 1).trim();
             seenCookieNames.add(name);
-            boolean expired = value.isEmpty() || header.toLowerCase(java.util.Locale.ROOT).contains("max-age=0");
+            boolean expired =
+                    value.isEmpty() || header.toLowerCase(java.util.Locale.ROOT).contains("max-age=0");
             if (expired) {
                 jar.computeIfAbsent(host, h -> new LinkedHashMap<>()).remove(name);
             } else {

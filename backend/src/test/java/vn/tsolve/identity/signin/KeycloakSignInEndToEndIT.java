@@ -71,8 +71,7 @@ class KeycloakSignInEndToEndIT {
             .withNetwork(NETWORK)
             .withNetworkAliases("fake-google")
             .withExposedPorts(8080)
-            .withCommand(
-                    "--global-response-templating", "--extensions", "vn.tsolve.fakegoogle.IdTokenExtension")
+            .withCommand("--global-response-templating", "--extensions", "vn.tsolve.fakegoogle.IdTokenExtension")
             .withCopyFileToContainer(
                     MountableFile.forHostPath(FAKE_GOOGLE_DIR.resolve("mappings")), "/home/wiremock/mappings")
             .waitingFor(Wait.forHttp("/__admin/mappings").forPort(8080));
@@ -118,7 +117,8 @@ class KeycloakSignInEndToEndIT {
                         "--REDIS_PORT=" + REDIS.getMappedPort(REDIS_PORT),
                         "--REDIS_PASSWORD=" + REDIS_PASSWORD,
                         "--spring.jmx.enabled=false");
-        backendPort = ((ServletWebServerApplicationContext) backend).getWebServer().getPort();
+        backendPort =
+                ((ServletWebServerApplicationContext) backend).getWebServer().getPort();
         redis = backend.getBean(StringRedisTemplate.class);
     }
 
@@ -204,19 +204,20 @@ class KeycloakSignInEndToEndIT {
         "acme, alice@acme.test, 00000000-0000-4000-8000-0000000000c1",
         "beta, bob@beta.test, 00000000-0000-4000-8000-0000000000c2"
     })
-    @DisplayName("AC-001.53 AC-001.65 edge 122 signs in through Keycloak and the fake Google and shows the verified claims")
+    @DisplayName(
+            "AC-001.53 AC-001.65 edge 122 signs in through Keycloak and the fake Google and shows the verified claims")
     void signsInThroughKeycloakAndShowsTheVerifiedClaims_AC_001_53_AC_001_65_edge122(
             String slug, String email, String organizationId) throws Exception {
         TestBrowser browser = newBrowser();
 
         TestBrowser.Reply start = start(browser, slug);
-        assertThat(start.location())
-                .contains("kc_idp_hint=google-" + slug)
-                .contains("code_challenge_method=S256");
+        assertThat(start.location()).contains("kc_idp_hint=google-" + slug).contains("code_challenge_method=S256");
         TestBrowser.Reply keycloakAnswer = toCallback(browser, slug, start);
         TestBrowser.Reply reply = openCallback(browser, keycloakAnswer);
 
-        assertThat(keycloakAnswer.location().substring(0, keycloakAnswer.location().indexOf('?')))
+        assertThat(keycloakAnswer
+                        .location()
+                        .substring(0, keycloakAnswer.location().indexOf('?')))
                 .isEqualTo(callbackBase(slug));
         assertThat(reply.status()).as("callback status").isEqualTo(200);
         assertThat(reply.location()).as("Location").isNull();
@@ -246,7 +247,9 @@ class KeycloakSignInEndToEndIT {
         assertThat(refused.status()).as("second browser status").isEqualTo(302);
         assertThat(refused.location()).isEqualTo(MSG141);
         assertExpiryCookie(refused);
-        assertThat(accepted.status()).as("first browser status, so the refused callback exchanged nothing").isEqualTo(200);
+        assertThat(accepted.status())
+                .as("first browser status, so the refused callback exchanged nothing")
+                .isEqualTo(200);
         assertThat(accepted.body()).contains("alice@acme.test");
     }
 
@@ -259,7 +262,9 @@ class KeycloakSignInEndToEndIT {
 
         TestBrowser.Reply reply = browser.get(start.location());
 
-        assertThat(reply.status() / 100).as("Keycloak shows an error page, no redirect").isNotEqualTo(3);
+        assertThat(reply.status() / 100)
+                .as("Keycloak shows an error page, no redirect")
+                .isNotEqualTo(3);
         assertThat(reply.location()).isNull();
     }
 
@@ -269,8 +274,8 @@ class KeycloakSignInEndToEndIT {
         TestBrowser browser = newBrowser();
         TestBrowser.Reply start = start(browser, "acme");
         // a fresh browser has no SSO session, so prompt=none makes Keycloak answer login_required
-        TestBrowser.Reply keycloakAnswer = browser.followUntilCallback(
-                browser.get(start.location() + "&prompt=none"), callbackBase("acme"));
+        TestBrowser.Reply keycloakAnswer =
+                browser.followUntilCallback(browser.get(start.location() + "&prompt=none"), callbackBase("acme"));
         assertThat(TestBrowser.param(keycloakAnswer.location(), "error")).isEqualTo("login_required");
 
         TestBrowser.Reply reply = openCallback(browser, keycloakAnswer);
@@ -285,7 +290,8 @@ class KeycloakSignInEndToEndIT {
     @DisplayName("AC-001.64 edge 104 shows no company list and no password form without the hint")
     void showsNoCompanyListAndNoPasswordFormWithoutTheHint_AC_001_64_edge104() {
         TestBrowser browser = newBrowser();
-        String withoutHint = UriComponentsBuilder.fromUriString(start(browser, "acme").location())
+        String withoutHint = UriComponentsBuilder.fromUriString(
+                        start(browser, "acme").location())
                 .replaceQueryParam("kc_idp_hint")
                 .build(true)
                 .toUriString();
@@ -312,26 +318,38 @@ class KeycloakSignInEndToEndIT {
         List<String> stubIds = List.of(
                 addFakeGoogleStub(Map.of(
                         "priority", 0,
-                        "request", Map.of(
-                                "method", "GET",
-                                "urlPath", "/authorize",
-                                "queryParameters", Map.of("hd", Map.of("equalTo", "acme.test"))),
-                        "response", Map.of(
-                                "status", 200,
-                                "headers", Map.of("Content-Type", "text/html; charset=utf-8"),
-                                "transformers", List.of("response-template"),
-                                "body", chooser))),
+                        "request",
+                                Map.of(
+                                        "method", "GET",
+                                        "urlPath", "/authorize",
+                                        "queryParameters", Map.of("hd", Map.of("equalTo", "acme.test"))),
+                        "response",
+                                Map.of(
+                                        "status",
+                                        200,
+                                        "headers",
+                                        Map.of("Content-Type", "text/html; charset=utf-8"),
+                                        "transformers",
+                                        List.of("response-template"),
+                                        "body",
+                                        chooser))),
                 addFakeGoogleStub(Map.of(
                         "priority", 0,
-                        "request", Map.of(
-                                "method", "POST",
-                                "urlPath", "/token",
-                                "bodyPatterns", List.of(Map.of("matches", ".*code=carol\\..*"))),
-                        "response", Map.of(
-                                "status", 200,
-                                "headers", Map.of("Content-Type", "application/json"),
-                                "transformers", List.of("response-template"),
-                                "body", token))));
+                        "request",
+                                Map.of(
+                                        "method", "POST",
+                                        "urlPath", "/token",
+                                        "bodyPatterns", List.of(Map.of("matches", ".*code=carol\\..*"))),
+                        "response",
+                                Map.of(
+                                        "status",
+                                        200,
+                                        "headers",
+                                        Map.of("Content-Type", "application/json"),
+                                        "transformers",
+                                        List.of("response-template"),
+                                        "body",
+                                        token))));
         try {
             TestBrowser browser = newBrowser();
 
@@ -358,10 +376,9 @@ class KeycloakSignInEndToEndIT {
             for (String id : stubIds) {
                 fakeGoogleAdmin("DELETE", "/__admin/mappings/" + id, null);
             }
-            realm().users().searchByEmail("carol@acme.test", true).forEach(user -> realm()
-                    .users()
-                    .delete(user.getId())
-                    .close());
+            realm().users()
+                    .searchByEmail("carol@acme.test", true)
+                    .forEach(user -> realm().users().delete(user.getId()).close());
         }
     }
 
@@ -379,7 +396,9 @@ class KeycloakSignInEndToEndIT {
                 .method(method, publisher)
                 .build();
         HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-        assertThat(response.statusCode() / 100).as("fake Google admin %s %s", method, path).isEqualTo(2);
+        assertThat(response.statusCode() / 100)
+                .as("fake Google admin %s %s", method, path)
+                .isEqualTo(2);
         return response.body();
     }
 }

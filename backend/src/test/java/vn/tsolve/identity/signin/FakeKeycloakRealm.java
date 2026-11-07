@@ -92,8 +92,8 @@ public final class FakeKeycloakRealm {
                                 + "/certs\",\"userinfo_endpoint\":\"" + oidc
                                 + "/userinfo\",\"subject_types_supported\":[\"public\"],"
                                 + "\"id_token_signing_alg_values_supported\":[\"RS256\"]}")));
-        server.stubFor(get(urlPathEqualTo(OIDC + "/certs"))
-                .willReturn(json(200, new JWKSet(key.toPublicJWK()).toString())));
+        server.stubFor(
+                get(urlPathEqualTo(OIDC + "/certs")).willReturn(json(200, new JWKSet(key.toPublicJWK()).toString())));
         server.stubFor(get(urlPathEqualTo(OIDC + "/userinfo"))
                 .willReturn(json(200, "{\"sub\":\"" + SUB + "\",\"email\":\"" + EMAIL + "\"}")));
     }
