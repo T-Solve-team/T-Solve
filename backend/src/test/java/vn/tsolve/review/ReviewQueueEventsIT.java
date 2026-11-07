@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,13 @@ class ReviewQueueEventsIT {
     static final String NO_PROJECT_MANAGER_ID = "9a7e2d40-5b3c-4f18-8e6d-1c4a7b9f2e03";
     private static final UUID MANAGER = UUID.fromString(MANAGER_ID);
     private static final UUID NO_PROJECT_MANAGER = UUID.fromString(NO_PROJECT_MANAGER_ID);
+    static final String REVOCABLE_ID = "5b2d9c61-3e47-4a80-b1f5-7a6c0d3e8f12";
+    static final String REVOCABLE_BETA_ID = "6c3eadb2-4f58-4b91-82a6-8b7d1e4f9a23";
+    private static final UUID REVOCABLE = UUID.fromString(REVOCABLE_ID);
+    private static final UUID REVOCABLE_BETA = UUID.fromString(REVOCABLE_BETA_ID);
+    /** Projects the revocable test accounts still manage; a test removes them to revoke access mid-stream. */
+    private static final Map<UUID, Set<UUID>> REVOCABLE_PROJECTS = new ConcurrentHashMap<>();
+
     private static final UUID OPS = new UUID(0, 710);
     private static final UUID SUPPORT = new UUID(0, 711);
     private static final UUID UNMANAGED = new UUID(0, 712);
@@ -90,6 +98,9 @@ class ReviewQueueEventsIT {
                     if (!verified(accountId)) {
                         return Optional.empty();
                     }
+                    if (accountId.equals(REVOCABLE) || accountId.equals(REVOCABLE_BETA)) {
+                        return Optional.of(REVOCABLE_PROJECTS.getOrDefault(accountId, Set.of()));
+                    }
                     return Optional.of(accountId.equals(MANAGER) ? Set.of(OPS, SUPPORT) : Set.of());
                 }
 
@@ -106,8 +117,14 @@ class ReviewQueueEventsIT {
 
                 private boolean verified(UUID accountId) {
                     try {
-                        return scope.currentWorkspaceId().equals(TwoTenantDatabases.ACME)
-                                && (accountId.equals(MANAGER) || accountId.equals(NO_PROJECT_MANAGER));
+                        UUID current = scope.currentWorkspaceId();
+                        if (accountId.equals(REVOCABLE_BETA)) {
+                            return current.equals(TwoTenantDatabases.BETA);
+                        }
+                        return current.equals(TwoTenantDatabases.ACME)
+                                && (accountId.equals(MANAGER)
+                                        || accountId.equals(NO_PROJECT_MANAGER)
+                                        || accountId.equals(REVOCABLE));
                     } catch (IllegalStateException unbound) {
                         return false;
                     }
@@ -160,14 +177,25 @@ class ReviewQueueEventsIT {
     }
 
     private static void awaitUntil(Condition condition) throws Exception {
-        long deadline = System.currentTimeMillis() + WAIT_MS;
+        awaitUntil(condition, WAIT_MS);
+    }
+
+    private static void awaitUntil(Condition condition, long waitMs) throws Exception {
+        long deadline = System.currentTimeMillis() + waitMs;
         while (System.currentTimeMillis() < deadline) {
             if (condition.holds()) {
                 return;
             }
             Thread.sleep(50);
         }
-        assertThat(condition.holds()).as("condition within %d ms", WAIT_MS).isTrue();
+        assertThat(condition.holds()).as("condition within %d ms", waitMs).isTrue();
+    }
+
+    /** Backends of the database that sit on the Review Queue LISTEN. */
+    private static int listenSessions(JdbcTemplate db) {
+        return db.queryForObject(
+                "select count(*) from pg_stat_activity where datname = current_database() and query = 'LISTEN review_queue'",
+                Integer.class);
     }
 
     /** Opens the stream as the default manager in ACME and waits until the listener is surely attached. */
@@ -315,6 +343,60 @@ class ReviewQueueEventsIT {
                 .doesNotContain("Restart")
                 .doesNotContain(ticket.toString());
         clean(ticket);
+    }
+
+    @Test
+    @WithTSolveUser(id = REVOCABLE_BETA_ID, roles = Role.PROJECT_MANAGER)
+    void edge7_lastUnsubscribeClosesTheListenerConnection_AC_012_1() throws Exception {
+        REVOCABLE_PROJECTS.put(REVOCABLE_BETA, Set.of(OPS));
+        JdbcTemplate beta = TwoTenantDatabases.tenantB();
+        assertThat(listenSessions(beta)).isZero();
+        ResultActions actions = workspace.runIn(TwoTenantDatabases.BETA, () -> {
+            try {
+                return mvc.perform(get("/api/v1/review-queue/events").accept(MediaType.TEXT_EVENT_STREAM));
+            } catch (Exception e) {
+                throw new AssertionError(e);
+            }
+        });
+        actions.andExpect(request().asyncStarted());
+        Stream stream = new Stream(actions.andReturn());
+        stream.awaitHeartbeat();
+        assertThat(listenSessions(beta)).isEqualTo(1);
+
+        REVOCABLE_PROJECTS.remove(REVOCABLE_BETA); // the stream ends at its next heartbeat: last subscriber leaves
+        awaitUntil(() -> listenSessions(beta) == 0);
+    }
+
+    @Test
+    void edge8_listenerReconnectResyncsEveryProjectOfTheStream_AC_012_2() throws Exception {
+        Stream stream = openReady();
+        assertThat(stream.eventNames()).isZero();
+        TwoTenantDatabases.tenantA()
+                .queryForList("select pg_terminate_backend(pid) from pg_stat_activity"
+                        + " where datname = current_database() and query = 'LISTEN review_queue'");
+        awaitUntil(() -> stream.projectIds().containsAll(List.of(OPS.toString(), SUPPORT.toString())), 15_000);
+    }
+
+    @Test
+    @WithTSolveUser(id = REVOCABLE_ID, roles = Role.PROJECT_MANAGER)
+    void edge9_projectNoLongerManagedStopsEventsAfterTheNextHeartbeat_AC_012_3() throws Exception {
+        REVOCABLE_PROJECTS.put(REVOCABLE, Set.of(OPS, SUPPORT));
+        Stream stream = openReady();
+        REVOCABLE_PROJECTS.put(REVOCABLE, Set.of(OPS));
+        int beats = countOf(stream.body(), ":hb");
+        awaitUntil(() -> countOf(stream.body(), ":hb") >= beats + 2); // a heartbeat after the change re-read it
+        UUID gone = ticket(TwoTenantDatabases.tenantA(), SUPPORT, "EVT-RV-" + tag(), "PENDING_REVIEW");
+        UUID sentinel = ticket(TwoTenantDatabases.tenantA(), OPS, "EVT-RVS-" + tag(), "PENDING_REVIEW");
+        stream.awaitEventFor(OPS);
+        assertThat(stream.projectIds()).containsExactly(OPS.toString());
+
+        REVOCABLE_PROJECTS.remove(REVOCABLE);
+        Thread.sleep(2_500); // the stream completes at its next heartbeat and sends nothing after that
+        int atEnd = countOf(stream.body(), ":hb");
+        Thread.sleep(2_500);
+        assertThat(countOf(stream.body(), ":hb")).isEqualTo(atEnd);
+        clean(gone);
+        clean(sentinel);
     }
 
     @Test

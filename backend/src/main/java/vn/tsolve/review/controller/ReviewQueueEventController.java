@@ -42,6 +42,6 @@ public class ReviewQueueEventController {
                 .flatMap(access -> access.managedProjectIds(actor.id()))
                 .filter(projects -> !projects.isEmpty())
                 .orElseThrow(() -> new AccessDeniedException("A managed Project in a verified Workspace is required"));
-        return events.subscribe(tenant.currentWorkspaceId(), managed);
+        return events.subscribe(tenant.currentWorkspaceId(), actor.id(), managed);
     }
 }
