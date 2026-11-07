@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Component;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 
 /**
  * Checks each CSV row against the import rules (UC-21 step 5, spec STORY-002). Every failed rule of a row is
@@ -50,7 +51,7 @@ public class CsvRowValidator {
         return ids;
     }
 
-    public List<Result> validate(List<ParsedCsv.Row> rows, Set<String> existingTicketIds) {
+    public List<Result> validate(List<ParsedCsv.Row> rows, Set<String> existingTicketIds, ImportType importType) {
         Map<String, Integer> idCounts = new HashMap<>();
         for (ParsedCsv.Row row : rows) {
             String id = trim(row.values().ticketId());
@@ -61,17 +62,21 @@ public class CsvRowValidator {
         LocalDate today = LocalDate.now(clock);
         List<Result> results = new ArrayList<>(rows.size());
         for (ParsedCsv.Row row : rows) {
-            results.add(new Result(row, check(row.values(), existingTicketIds, idCounts, today)));
+            results.add(new Result(row, check(row.values(), importType, existingTicketIds, idCounts, today)));
         }
         return results;
     }
 
     private static List<RowError> check(
-            ImportPreviewRow.Values v, Set<String> existing, Map<String, Integer> idCounts, LocalDate today) {
+            ImportPreviewRow.Values v,
+            ImportType importType,
+            Set<String> existing,
+            Map<String, Integer> idCounts,
+            LocalDate today) {
         Map<String, String> cells = cells(v);
         List<RowError> errors = new ArrayList<>();
 
-        for (String column : CsvColumns.REQUIRED) {
+        for (String column : importType.requiredColumns()) {
             if (cells.get(column) == null) {
                 errors.add(new RowError("MSG01", column, Map.of("field_name", column)));
             }

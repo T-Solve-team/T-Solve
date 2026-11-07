@@ -95,9 +95,11 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
                 preview.getId(),
                 preview.getProjectId(),
                 preview.getFileName(),
+                preview.getImportType(),
                 previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.VALID),
                 previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.ERROR),
                 previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.REMOVED),
+                previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.NEEDS_SOLUTION),
                 page(preview.getId(), null, PageRequest.of(0, CsvImportServiceImpl.FIRST_PAGE_SIZE)));
     }
 

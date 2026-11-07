@@ -35,6 +35,7 @@ import vn.tsolve.ticket.dto.ImportPreviewRowSummary;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.mapper.ImportPreviewMapperImpl;
@@ -60,12 +61,14 @@ class ImportPreviewServiceImplTest {
                 rowNo,
                 new ImportPreviewRow.Values(
                         "T-" + rowNo, "Login fails", "Long story", "Anh", null, symptoms, "b", "c", null, "d"),
-                errors);
+                errors,
+                ImportType.WITH_SOLUTION);
     }
 
     @BeforeEach
     void setUp() {
-        ImportPreview preview = new ImportPreview(PM, PROJECT, TicketSource.CSV, "tickets.csv", Instant.EPOCH);
+        ImportPreview preview = new ImportPreview(
+                PM, PROJECT, TicketSource.CSV, ImportType.WITH_SOLUTION, "tickets.csv", Instant.EPOCH);
         ReflectionTestUtils.setField(preview, "id", ID);
         when(previews.findByIdAndOwner(eq(ID), any()))
                 .thenAnswer(call -> PM.equals(call.getArgument(1)) ? Optional.of(preview) : Optional.empty());
@@ -106,6 +109,31 @@ class ImportPreviewServiceImplTest {
         assertThat(page.getContent())
                 .extracting(ImportPreviewRowSummary::status)
                 .containsOnly(PreviewRowStatus.ERROR);
+    }
+
+    @Test
+    void summaryCountsNeedsSolutionRows_AC_012_7() {
+        when(rows.countByIdPreviewIdAndStatus(ID, PreviewRowStatus.NEEDS_SOLUTION))
+                .thenReturn(4L);
+        when(rows.findByIdPreviewIdOrderByIdRowNo(eq(ID), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+
+        ImportPreviewResponse response = service.preview(PM, ID);
+
+        assertThat(response.needsSolutionCount()).isEqualTo(4);
+        assertThat(response.importType()).isEqualTo(ImportType.WITH_SOLUTION);
+    }
+
+    @Test
+    void listsOnlyNeedsSolutionRowsWhenFiltered_AC_012_7() {
+        when(rows.findByIdPreviewIdAndStatusOrderByIdRowNo(
+                        eq(ID), eq(PreviewRowStatus.NEEDS_SOLUTION), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        service.rows(PM, ID, PreviewRowStatus.NEEDS_SOLUTION, PageRequest.of(0, 20));
+
+        verify(rows)
+                .findByIdPreviewIdAndStatusOrderByIdRowNo(
+                        eq(ID), eq(PreviewRowStatus.NEEDS_SOLUTION), any(Pageable.class));
     }
 
     @Test

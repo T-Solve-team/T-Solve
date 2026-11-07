@@ -14,5 +14,6 @@
     <include file="changes/006-identity-app-user.sql" relativeToChangelogFile="true"/>
     <include file="changes/007-identity-hand-off-code.sql" relativeToChangelogFile="true"/>
     <include file="changes/008-ticket-import-project-uuid.sql" relativeToChangelogFile="true"/>
+    <include file="changes/009-ticket-import-type.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

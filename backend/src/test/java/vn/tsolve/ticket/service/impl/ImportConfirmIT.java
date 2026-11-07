@@ -35,6 +35,7 @@ import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.exception.MessageCodeException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.dto.ImportResultResponse;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.service.CsvImportService;
 import vn.tsolve.ticket.service.ImportConfirmService;
@@ -138,8 +139,30 @@ class ImportConfirmIT {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "tickets.csv", "text/csv", csv.toString().getBytes(StandardCharsets.UTF_8));
         return csvImports
-                .upload(user, UUID.fromString("00000000-0000-0000-0000-000000000001"), file)
+                .upload(user, UUID.fromString("00000000-0000-0000-0000-000000000001"), ImportType.WITH_SOLUTION, file)
                 .previewId();
+    }
+
+    @Test
+    void savesAFileWithoutSolutionsWithItsTypeAndNeedsSolutionRows_AC_012_5() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "tickets.csv",
+                "text/csv",
+                "ticket_id,title\nT-1,Login fails\n".getBytes(StandardCharsets.UTF_8));
+
+        long id = csvImports
+                .upload(
+                        "pm-a",
+                        UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                        ImportType.WITHOUT_SOLUTION,
+                        file)
+                .previewId();
+
+        assertThat(jdbc.queryForObject("select import_type from import_preview where id = ?", String.class, id))
+                .isEqualTo("WITHOUT_SOLUTION");
+        assertThat(jdbc.queryForObject("select status from import_preview_row where preview_id = ?", String.class, id))
+                .isEqualTo("NEEDS_SOLUTION");
     }
 
     private int count(String table) {
