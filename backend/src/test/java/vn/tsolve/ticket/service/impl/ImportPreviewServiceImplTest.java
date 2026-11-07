@@ -75,6 +75,8 @@ class ImportPreviewServiceImplTest {
         ReflectionTestUtils.setField(preview, "id", ID);
         when(previews.findByIdAndOwner(eq(ID), any()))
                 .thenAnswer(call -> PM.equals(call.getArgument(1)) ? Optional.of(preview) : Optional.empty());
+        when(previews.lockByIdAndOwner(eq(ID), any()))
+                .thenAnswer(call -> PM.equals(call.getArgument(1)) ? Optional.of(preview) : Optional.empty());
         when(projects.managesActive(PM, PROJECT)).thenReturn(true);
     }
 
@@ -157,6 +159,16 @@ class ImportPreviewServiceImplTest {
         assertThat(response.errorCount()).isEqualTo(1);
         assertThat(response.removedCount()).isEqualTo(2);
         assertThat(response.message()).isEqualTo(new MessageRef("MSG30", Map.of("count", 1L)));
+    }
+
+    @Test
+    void removeWaitsForTheLockAndChangesNoRowOfAPreviewConfirmedMeanwhile_BUG_150() {
+        // the lock Fill solution and Confirm take: a Confirm that ran first has deleted the preview
+        when(previews.lockByIdAndOwner(ID, PM)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.removeRows(PM, ID, List.of(1))).isInstanceOf(NotFoundException.class);
+        verify(previews).lockByIdAndOwner(ID, PM);
+        verify(rows, never()).findAllById(any());
     }
 
     @Test

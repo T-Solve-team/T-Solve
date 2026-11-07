@@ -330,6 +330,21 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void fillSolutionRejectsASectionOfOnlyUnicodeSpacesWithMsg01_BUG_149() throws Exception {
+        // U+3000 and U+2003 are not removed by String.trim (what @NotBlank checks), but are by strip
+        mvc.perform(post("/api/v1/imports/previews/42/fill-solution")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"rowNumbers\":[1],\"symptoms\":\"　 \",\"rootCause\":\"a\","
+                                + "\"resolutionSteps\":\"b\",\"scope\":\"All\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG01"))
+                .andExpect(jsonPath("$.fieldErrors[*].field").value(containsInAnyOrder("symptoms")));
+        verifyNoInteractions(previews);
+    }
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
     void fillSolutionRejectsAnEmptyRowList() throws Exception {
         mvc.perform(post("/api/v1/imports/previews/42/fill-solution")
                         .with(csrf())

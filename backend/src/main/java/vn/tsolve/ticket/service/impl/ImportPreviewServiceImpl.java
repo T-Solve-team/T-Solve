@@ -80,7 +80,10 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
     @Override
     @Transactional
     public ImportPreviewResponse removeRows(String user, long previewId, Collection<Integer> rowNumbers) {
-        ImportPreview preview = owned(user, previewId);
+        owned(user, previewId);
+        // the lock Fill solution and Confirm take, so a removed row cannot be filled or imported meanwhile (BUG-150)
+        ImportPreview preview = previews.lockByIdAndOwner(previewId, user)
+                .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         previewRows
                 .findAllById(rowNumbers.stream()
                         .map(n -> new ImportPreviewRow.Id(preview.getId(), n))
@@ -93,11 +96,12 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
     @Override
     @Transactional
     public ImportPreviewResponse fillSolution(String user, long previewId, FillSolutionRequest solution) {
-        String symptoms = CsvRowValidator.trim(solution.symptoms());
-        String rootCause = CsvRowValidator.trim(solution.rootCause());
-        String resolutionSteps = CsvRowValidator.trim(solution.resolutionSteps());
-        String workaround = CsvRowValidator.trim(solution.workaround());
-        String scope = CsvRowValidator.trim(solution.scope());
+        // the request has stripped its sections already (BUG-149)
+        String symptoms = solution.symptoms();
+        String rootCause = solution.rootCause();
+        String resolutionSteps = solution.resolutionSteps();
+        String workaround = solution.workaround();
+        String scope = solution.scope();
         int length = Stream.of(symptoms, rootCause, resolutionSteps, workaround, scope)
                 .filter(Objects::nonNull)
                 .mapToInt(s -> s.codePointCount(0, s.length()))
