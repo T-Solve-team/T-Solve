@@ -206,3 +206,39 @@ Invalidate generated history query keys after successful existing decisions/send
 Test scoped access before pagination/counting; signed-out/non-PM/foreign Department; all six labels; duplicate ticket decisions and equal timestamps; empty history/filter result; null author/content and HTML-like text; UTC+7 midnight/leap-date/invalid/partial/reversed ranges; URL navigation/page reset; server errors/retry/loading; each successful existing producer appends identity/content and invalidates history; failed decisions leave history unchanged. Reuse existing fixtures and meaningful interaction assertions, without weakening timeouts or regression checks.
 
 Delivery: separate branch feat/KAN-159-review-history currently stacked on committed KAN-158 to reuse SEND_BACK history and KAN-24 detail. Keep the KAN-159 commit distinct; disclose this dependency before any MR. Required checks: named AC-008 tests, trace, full frontend format/lint/typecheck/test/build, deterministic regeneration, independent review and Graphify refresh. User commit checkpoint applies.
+
+## KAN-24 production backend
+
+Evolve the shared ticket table and its existing Solution fields. Apply UUID primary keys through a forward Liquibase migration. Backfill the import decision links before replacing the numeric ticket key. Preserve source keys, imported data and after-commit event behavior. The event carries the new UUIDs. A separate Review ticket table would split Review and Import data.
+
+Keep the existing OpenAPI contract and Department filter. Require a trusted Workspace binding and current Project Manager membership. The import access stub cannot establish either. Validate the complete batch under locks and save state and decisions in one transaction. Jira feedback reads the committed decision under a verified issue and writer identity.
+
+| Risk | Expected behavior | Verification |
+|---|---|---|
+| R13. Upgrade and import integrity | Preserve existing ticket data and decision links. New imports still commit atomically. | PostgreSQL upgrade and import tests |
+| R14. Forged IDs or concurrent decisions | Restrict reads to the Workspace and managed Projects. Refuse invalid or stale batches without partial writes. | API scope, concurrency and rollback tests |
+| R15. Jira feedback crosses scope | Show MSG64 only to the verified writer of the associated issue. | Jira issue, Account and Workspace scope tests |
+
+Risk review verdict: CAUTION. Storage can be verified independently. Production activation requires trusted Workspace routing, Project membership and Jira issue identity.
+
+### Project membership adapter (decision 2026-11-07, user)
+
+Without a production `ReviewWorkspaceAccess` every Review endpoint answers 403. The team's tenant DDL (`database/02_tenant.sql`) decides who manages a Project: `project_membership` with `role_in_project = PROJECT_MANAGER`. The table is not in the changelog yet, so ticket-review adds it as drawn there, with UUID references because `app_user.id` and `project.public_id` are UUIDs: `user_id → app_user(id)`, `project_id → project(public_id)`, composite key, `date_added`. Identity keeps ownership of membership administration (UC-05/UC-16); this changeset only creates the table.
+
+`ProjectMembershipReviewAccess` (in `review/service/impl/`) implements `ReviewWorkspaceAccess` against the bound tenant database: an Account that is missing or not ACTIVE gets empty (fail closed). Readable Projects are the ACTIVE Projects of the Workspace; managed ones carry a PROJECT_MANAGER membership. Each Project is keyed by both ticket-side ids in use, `public_id` and the legacy hex form of `project_id`, the same match the search module uses. The Project name is its Jira key, because `project` has no name column.
+
+## KAN-155 extension: writer email (STORY-010)
+
+- **Delivery** — chosen: a tenant JobRunr job per decision (`TenantJobService.enqueue("review-notification", decisionId)`), enqueued from a `@TransactionalEventListener(phase = AFTER_COMMIT)`; alternatives: direct SMTP after commit, an outbox table. Rationale: the user chose job delivery; JobRunr retries failed deliveries and SMTP never runs inside the decision transaction or the request. An outbox would also survive a crash between commit and enqueue, but it is more than the demo needs.
+- **Event** — `ReviewFeedbackDecidedEvent(List<UUID> decisionIds)` follows `TicketsPublishedEvent`: published inside the transaction and consumed only after commit, so a rollback sends nothing.
+- **Job payload** — only the decision id. The handler re-reads the decision, ticket and writer account inside `runInTenant`, so no email address or feedback is stored in the job table, and a decision that disappears completes without email.
+- **Process split** — the handler bean exists whenever `tsolve.worker.enabled` is true, because `TenantJobServiceImpl` checks the handler type at enqueue time in the API process too. The SMTP sender is only in the `worker` profile; the handler resolves it lazily and fails the job if it is missing.
+- **Disabled queue** — when the API runs without `tsolve.worker.enabled`, there is no `TenantJobService`: the listener skips enqueueing and the decision response is unchanged (AC-010.3).
+
+## KAN-159 extension: production Review History (STORY-011)
+
+- **Query** — chosen: two native queries on `review_decision` joined to `ticket` and the reviewer's `app_user`, paged in the database with a count query, one per sort direction; alternatives: in-memory sort like the queue, a JPQL join to the identity `Account` entity. Rationale: history grows without bound, and a JPQL join would reach into another module's entity. The `app_user` join reads only the reviewer name, the same way KAN-24 already stores `project_manager_id`.
+- **Scope** — managed Projects come from `ReviewWorkspaceAccess.readableProjects`, as for the queue; the Department filter narrows that set before the query, so a foreign or unmanaged Department yields an empty page without a query.
+- **Decisions** — storage holds APPROVED, REJECTED and CHANGES_REQUESTED; the API maps them to the contract's APPROVE, REJECT and REQUEST_CHANGES. UNPUBLISH, REPUBLISH and SEND_BACK are valid filters with no stored rows yet, so they return an empty page; unknown values return MSG06.
+- **Dates** — paired yyyy-MM-dd dates become `[from 00:00, to + 1 day 00:00)` in Asia/Ho_Chi_Minh, like Suggestion History; missing bounds use fixed sentinels so no nullable timestamp parameter reaches PostgreSQL.
+- **Names** — actorName is the reviewer's full name, else their email; authorName is `ticket.writer`, as in the Review Queue.

@@ -93,7 +93,16 @@ class ImportConfirmServiceImplTest {
     };
 
     private final ImportConfirmServiceImpl service = new ImportConfirmServiceImpl(
-            previews, rows, tickets, decisions, batches, recorder, projects, events, txManager);
+            previews,
+            rows,
+            tickets,
+            decisions,
+            batches,
+            recorder,
+            projects,
+            events,
+            txManager,
+            mock(vn.tsolve.common.audit.AuditService.class));
 
     private static ImportPreviewRow row(int rowNo, String ticketId, String author, String date) {
         return new ImportPreviewRow(
@@ -138,7 +147,7 @@ class ImportConfirmServiceImplTest {
         AtomicLong ids = new AtomicLong(100);
         when(tickets.saveAll(anyCollection())).thenAnswer(call -> {
             List<Ticket> saved = new ArrayList<>(call.getArgument(0));
-            saved.forEach(t -> ReflectionTestUtils.setField(t, "id", ids.incrementAndGet()));
+            saved.forEach(t -> ReflectionTestUtils.setField(t, "id", new UUID(0, ids.incrementAndGet())));
             return saved;
         });
     }
@@ -180,7 +189,7 @@ class ImportConfirmServiceImplTest {
         verify(decisions).saveAll(captor.capture());
         assertThat(captor.getValue())
                 .extracting(TicketReviewDecision::getTicketId)
-                .containsExactly(101L, 102L);
+                .containsExactly(new UUID(0, 101), new UUID(0, 102));
         assertThat(captor.getValue())
                 .allMatch(d -> d.getReviewer().equals(PM) && d.getDecision() == ReviewDecision.APPROVE);
     }
@@ -310,7 +319,7 @@ class ImportConfirmServiceImplTest {
 
         service.confirm(PM, PREVIEW);
 
-        verify(events).publishEvent(new TicketsPublishedEvent(List.of(101L, 102L)));
+        verify(events).publishEvent(new TicketsPublishedEvent(List.of(new UUID(0, 101), new UUID(0, 102))));
         assertThat(transactions).containsExactly("event", "commit");
     }
 
@@ -362,5 +371,97 @@ class ImportConfirmServiceImplTest {
         assertThat(e.getCode()).isEqualTo("MSG30");
         verify(tickets, never()).saveAll(anyCollection());
         verify(recorder, never()).recordFailed(any(), any(), anyString());
+    }
+
+    // --- Confirm of a file without Solutions (STORY-014) ---
+
+    /** The preview becomes a file without Solutions; its Error count stays the 2 of setUp unless changed. */
+    private void fileWithoutSolutions() {
+        ImportPreview preview = new ImportPreview(
+                PM, PROJECT, TicketSource.CSV, ImportType.WITHOUT_SOLUTION, "tickets.csv", Instant.EPOCH);
+        ReflectionTestUtils.setField(preview, "id", PREVIEW);
+        when(previews.findByIdAndOwner(PREVIEW, PM)).thenReturn(Optional.of(preview));
+        when(previews.lockByIdAndOwner(PREVIEW, PM)).thenReturn(Optional.of(preview));
+    }
+
+    @Test
+    void rejectsAFileWithoutSolutionsWhoseRowsAreNotReady_AC_014_1() {
+        fileWithoutSolutions();
+        when(rows.countByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.NEEDS_SOLUTION))
+                .thenReturn(3L);
+
+        MessageCodeException e = catchThrowableOfType(() -> service.confirm(PM, PREVIEW), MessageCodeException.class);
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(e.getCode()).isEqualTo("MSG_NEW_4");
+        assertThat(e.getParams()).containsEntry("count", 5L); // 3 Needs Solution + 2 Error
+        verify(tickets, never()).saveAll(anyCollection());
+        verify(batches, never()).save(any());
+        verify(recorder, never()).recordFailed(any(), any(), anyString());
+        assertThat(transactions).isEmpty();
+    }
+
+    @Test
+    void onlyNeedsSolutionRowsAnswerMsgNew4NotMsg30_AC_014_1() {
+        fileWithoutSolutions();
+        when(rows.countByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.ERROR)).thenReturn(0L);
+        when(rows.countByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.NEEDS_SOLUTION))
+                .thenReturn(4L);
+        when(rows.findByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.VALID)).thenReturn(List.of());
+
+        MessageCodeException e = catchThrowableOfType(() -> service.confirm(PM, PREVIEW), MessageCodeException.class);
+
+        assertThat(e.getCode()).isEqualTo("MSG_NEW_4");
+        assertThat(e.getParams()).containsEntry("count", 4L);
+    }
+
+    @Test
+    void rowsThatStopBeingReadyWhileWaitingForTheLockAreCaughtAgain_AC_014_1() {
+        // a remove or fill finished between the first check and the lock: the check runs again inside
+        fileWithoutSolutions();
+        when(rows.countByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.ERROR))
+                .thenReturn(0L)
+                .thenReturn(1L);
+        when(rows.countByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.NEEDS_SOLUTION))
+                .thenReturn(0L);
+
+        MessageCodeException e = catchThrowableOfType(() -> service.confirm(PM, PREVIEW), MessageCodeException.class);
+
+        assertThat(e.getCode()).isEqualTo("MSG_NEW_4");
+        verify(tickets, never()).saveAll(anyCollection());
+        verify(recorder, never()).recordFailed(any(), any(), anyString());
+        assertThat(transactions).containsExactly("rollback");
+    }
+
+    @Test
+    void aFileWithoutSolutionsWithEveryRowRemovedIsMsg30_AC_014_1() {
+        fileWithoutSolutions();
+        when(rows.countByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.ERROR)).thenReturn(0L);
+        when(rows.findByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.VALID)).thenReturn(List.of());
+
+        MessageCodeException e = catchThrowableOfType(() -> service.confirm(PM, PREVIEW), MessageCodeException.class);
+
+        assertThat(e.getCode()).isEqualTo("MSG30");
+    }
+
+    @Test
+    void importsAFileWithoutSolutionsWhoseRowsAreAllValidOrRemoved_AC_014_2() {
+        fileWithoutSolutions();
+        when(rows.countByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.ERROR)).thenReturn(0L);
+
+        ImportResultResponse result = service.confirm(PM, PREVIEW);
+
+        assertThat(result.created()).isEqualTo(2);
+        assertThat(savedTickets()).extracting(Ticket::getStatus).containsOnly(TicketStatus.PUBLISHED);
+        assertThat(transactions).containsExactly("commit");
+    }
+
+    @Test
+    void aFileWithSolutionsStillSkipsItsErrorRows_AC_016_1() {
+        // setUp: a file with Solutions with 2 Error rows; the Needs Solution count is never asked for
+        ImportResultResponse result = service.confirm(PM, PREVIEW);
+
+        assertThat(result.created()).isEqualTo(2);
+        verify(rows, never()).countByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.NEEDS_SOLUTION);
     }
 }

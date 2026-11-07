@@ -1,0 +1,7 @@
+tsolve:
+  worker:
+    enabled: true
+
+jobrunr:
+  background-job-server:
+    enabled: true

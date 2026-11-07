@@ -166,3 +166,93 @@ legacy references to popup 9.3 do not override the approved spec or fe-foundatio
 
 Before coding, use a Jira branch `feat/KAN-153-dashboard-audit-view-filter` from current main following
 the team's branch rule. Preserve existing unrelated changes. No push, merge or PR is authorized.
+
+---
+
+## Change 2026-11-07 — KAN-152: write and serve the audit log (STORY-002, STORY-003)
+
+Decided with the user on 07/11 (spec Changelog): audit review decisions and CSV import only; table
+`audit_log_entry` from the team DDL, adapted; build the backend read API of the existing contract; leave
+be-foundation STORY-004 untouched and retire it later.
+
+### Architecture
+
+```
+ReviewDecisionController → TicketDecisionServiceImpl.decide ─┐  (same @Transactional)
+ImportController → ImportConfirmServiceImpl.importRows ──────┤  (same TransactionTemplate)
+                                                             ▼
+                            common/audit AuditService.record ── JdbcTemplate INSERT ──► audit_log_entry
+                                                                                           ▲
+AuditLogController GET /api/v1/audit-events → AuditLogServiceImpl → AuditLogEntryRepository┘ (analytics, read-only)
+```
+
+- **Writer in `common/audit`** (`AuditAction`, `AuditService`, `impl/AuditServiceImpl`). `common` holds no entity
+  (AGENTS.md §1), so the writer inserts with `JdbcTemplate`, which joins the caller's JPA transaction through the
+  shared `DataSource`. It checks `TransactionSynchronizationManager.isActualTransactionActive()` and
+  `TSolveUser.current()` first and throws `IllegalStateException` without storing anything. `details` is
+  serialised with the Spring `ObjectMapper` and inserted as `?::jsonb`. Time is `Instant.now()` (UTC).
+- **Reader in `analytics`**: `entity/AuditLogEntry` (`@Immutable`, read only, `details` not mapped),
+  `repository/AuditLogEntryRepository` (`JpaRepository` + `JpaSpecificationExecutor`, so optional filters need no
+  null-typed JPQL parameters), `service/AuditLogService` + `impl/AuditLogServiceImpl` (`@Transactional(readOnly)`,
+  filter parsing), `dto/AuditEntryResponse`, `mapper/AuditEntryMapper` (`summary` → `null` constant),
+  `exception/InvalidAuditFilterException` (extends `MessageCodeException`, 400 with MSG39 or MSG06),
+  `controller/AuditLogController` (`@PreAuthorize` ADMIN, returns `PagedModel`).
+- **Filter parsing** mirrors `TicketReviewReadServiceImpl.historyRange` (strict `uuuu-MM-dd`, Vietnam-time
+  `[from, to+1)`), plus "no date after today" using `Clock` in `Asia/Ho_Chi_Minh`. `action` arrives as a `String`
+  and is matched against `AuditAction.valueOf` (unknown → MSG06), so Spring's own enum conversion never answers
+  first. `sort` arrives as the raw list: empty / `createdAt` / `createdAt,asc` / `createdAt,desc`; any other → MSG06.
+  `id` ascending is always appended as tie-breaker.
+- **Callers**: `TicketDecisionServiceImpl.decide` records after `decisions.saveAll(history)` — one entry per ticket
+  (`APPROVED→APPROVE`, `REJECTED→REJECT`, `CHANGES_REQUESTED→REQUEST_CHANGES`, target `TICKET`).
+  `ImportConfirmServiceImpl.importRows` records before returning — `IMPORT`, target `PROJECT` + Project id,
+  details `{importBatchId, created, skipped}`. Both run before the transaction commits, so a later failure rolls
+  the entry back with the action.
+
+### Data model — changeset `018-audit-log-entry.sql` (author `dashboard-audit`)
+
+```sql
+--changeset dashboard-audit:018-audit-log-entry
+DROP TABLE audit_event;                      -- never written; replaced
+CREATE TABLE audit_log_entry (               -- append only
+    audit_log_entry_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    actor_id           UUID,                 -- no FK: dev / Keycloak users are not always in app_user yet
+    actor_email        VARCHAR(254) NOT NULL,
+    action             VARCHAR(50)  NOT NULL,
+    target_type        VARCHAR(50)  NOT NULL,
+    target_id          UUID         NOT NULL,
+    details            JSONB,
+    created_at         TIMESTAMPTZ  NOT NULL,
+    CONSTRAINT ck_audit_log_entry_action CHECK (action IN ('APPROVE', … the ten AuditAction values …))
+);
+CREATE INDEX idx_audit_log_entry_created ON audit_log_entry (created_at);
+
+--changeset dashboard-audit:018-audit-log-entry-append-only splitStatements:false
+-- function + BEFORE UPDATE OR DELETE (row) and BEFORE TRUNCATE (statement) triggers raising an exception
+```
+
+Number 018 because PR #152 takes 017; renumber at merge if needed. The platform convention guard test is checked
+for `audit_event` / the new table and updated if it lists them.
+
+### Edge cases
+
+| # | Story | Case | Expected | Test |
+|---|-------|------|----------|------|
+| 28 | STORY-002 | Batch decision of 500 tickets | 500 entries, one per ticket, same transaction | AuditRecordingIT |
+| 29 | STORY-002 | Decision refused (wrong status, foreign Project, bad feedback) | No entry (thrown before `record`) | AuditRecordingIT |
+| 30 | STORY-002 | Import fails after rows are saved (Ticket ID taken) | Transaction rolls back, no IMPORT entry; Failed batch still recorded | AuditRecordingIT |
+| 31 | STORY-002 | `record` with no transaction / no user | `IllegalStateException`, no row | AuditLogEntryIT |
+| 32 | STORY-002 | UPDATE / DELETE / TRUNCATE on the table | Database error, rows unchanged | AuditLogEntryIT |
+| 33 | STORY-002 | Actor email logged | Never: no log line carries it | review |
+| 34 | STORY-003 | `actor` with `%` or `_` | Matched literally (escaped LIKE) | AuditLogIT |
+| 35 | STORY-003 | Entries at 23:59:59.999 +07:00 on `to` and 00:00 +07:00 the day after | First included, second excluded | AuditLogIT |
+| 36 | STORY-003 | Two entries with the same `created_at` | Ordered by id ascending, stable across pages | AuditLogIT |
+| 37 | STORY-003 | `to` = today in Vietnam while UTC is still yesterday | Accepted (today is computed in Vietnam time) | AuditLogServiceImplTest |
+| 38 | STORY-003 | Non-Admin, or no user | 403 MSG08 / 401 MSG07, no query | AuditLogControllerTest |
+
+### Risks
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| An audit failure blocks the demo's review decisions (no `TSolveUser`, e.g. a Jira App principal) | High | Only `ReviewDecisionController` and `ImportController` reach the two callers today, both with a `TSolveUser`; the IT tests run them as such |
+| Two audit specs (be-foundation STORY-004, this one) | Medium | Spec note + follow-up to retire STORY-004 |
+| Changeset number clash with PR #152 | Low | 018 now; renumber at merge |

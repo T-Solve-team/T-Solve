@@ -23,7 +23,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 class ChatbotSchemaIT {
-    private static final String CHANGELOG = "db/changelog/db.changelog-master.xml";
+    // Review changesets after Chatbot have no rollback; roll back on the isolated Search/Chatbot changelog.
+    private static final String CHANGELOG = "db/changelog/search-only.xml";
     private static final PostgreSQLContainer<?> SERVER = new PostgreSQLContainer<>(
             DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
     private String databaseName;

@@ -4,10 +4,18 @@ Master registry of all artifacts in this workspace.
 
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
+| IMPL-REVIEW-10 | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-10-review-jira-feedback.md |
+| IMPL-REVIEW-9 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-9-review-production-api.md |
+| IMPL-REVIEW-8 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-8-review-queue-entry-time.md |
+| IMPL-REVIEW-7 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-7-review-decision-endpoints.md |
+| IMPL-REVIEW-6 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-6-review-decision-transaction.md |
+| IMPL-REVIEW-5 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-5-review-storage.md |
+| IMPL-IMPORT-15 | session-log | import-ticket-list | evaluating | artifacts/05-implementation/import-ticket-list/task-15-import-ticket-uuid-compatibility.md |
 | IMPL-REVIEW-4 | session-log | ticket-review | passing | artifacts/05-implementation/ticket-review/task-4-review-history.md |
 | TEST-REVIEW-4 | test-report | ticket-review | fail-global-verification | artifacts/06-evaluation/ticket-review/task-4-review-history-test-report.md |
 | REVIEW-REVIEW-4 | review | ticket-review | fail-global-verification | artifacts/06-evaluation/ticket-review/task-4-review-history-review.md |
 | IMPL-IDENTITY-22 | session-log | identity | passing | artifacts/05-implementation/identity/task-22-space-handover.md |
+| IMPL-IDENTITY-23B | session-log | identity | passing | artifacts/05-implementation/identity/task-23b-keycloak-sign-in-start.md |
 | TEST-IDENTITY-22 | test-report | identity | pass-with-open-dev-defect | artifacts/06-evaluation/identity/task-22-space-handover-test-report.md |
 | REVIEW-IDENTITY-22 | review | identity | pass | artifacts/06-evaluation/identity/task-22-space-handover-review.md |
 | ITER-1 | iteration | — | planned | artifacts/07-iterations/iteration-1.md |
@@ -161,6 +169,9 @@ Master registry of all artifacts in this workspace.
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-23a-keycloak-prerequisites.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-23a-keycloak-prerequisites-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-23a-keycloak-prerequisites-test-report.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-23-keycloak-realm.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-23-keycloak-realm-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-23-keycloak-realm-test-report.md |
 | — | spec | dashboard-audit | approved | artifacts/03-modules/dashboard-audit/spec.md |
 | — | spec | triage | approved | artifacts/03-modules/triage/spec.md |
 | — | design | triage | approved | artifacts/04-plans/triage/design.md |
@@ -207,3 +218,10 @@ Master registry of all artifacts in this workspace.
 | — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-2-roles-security-review.md |
 | — | test-report | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-2-roles-security-test-report.md |
 | — | session-log | be-foundation | passing | artifacts/05-implementation/be-foundation/task-2-roles-security.md |
+| SPEC-WORKER-102 | spec | worker | draft | artifacts/03-modules/worker/spec.md |
+| DESIGN-WORKER-102 | design | worker | approved | artifacts/04-plans/worker/design.md |
+| DESIGN-WORKER-102-I1 | design | worker | approved | artifacts/04-plans/worker/iteration-1/design.md |
+| TASKS-WORKER-102-I1 | tasks | worker | approved | artifacts/04-plans/worker/iteration-1/tasks.md |
+| IMPL-WORKER-102 | session-log | worker | passing | artifacts/05-implementation/worker/task-1-tenant-jobs.md |
+| TEST-WORKER-102 | test-report | worker | pass | artifacts/06-evaluation/worker/task-1-tenant-jobs-test-report.md |
+| REVIEW-WORKER-102 | review | worker | pass | artifacts/06-evaluation/worker/task-1-tenant-jobs-review.md |

@@ -54,7 +54,8 @@ public final class SignInTestFixtures {
                 signingKey,
                 "test-client-id",
                 "test-secret",
-                "ops@example.test");
+                "ops@example.test",
+                "test-keycloak-secret");
     }
 
     public static final String SIGN_IN_COOKIE = "__Host-TSOLVE_SIGNIN";
