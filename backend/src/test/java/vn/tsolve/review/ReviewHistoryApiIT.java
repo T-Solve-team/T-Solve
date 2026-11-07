@@ -23,6 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -74,6 +75,7 @@ class ReviewHistoryApiIT {
     static class WorkspaceAccessConfiguration {
 
         @Bean
+        @Primary
         ReviewWorkspaceAccess reviewWorkspaceAccess(TwoTenantDatabases.RoutingTenantScope scope) {
             return new ReviewWorkspaceAccess() {
                 @Override
@@ -93,8 +95,7 @@ class ReviewHistoryApiIT {
                     return Optional.of(Map.of(
                             OPS, new ProjectAccess(new Project(OPS, "Operations"), OPS_DEPARTMENT, true),
                             SUPPORT, new ProjectAccess(new Project(SUPPORT, "Support"), SUPPORT_DEPARTMENT, true),
-                            UNMANAGED,
-                                    new ProjectAccess(new Project(UNMANAGED, "Finance"), OTHER_DEPARTMENT, false)));
+                            UNMANAGED, new ProjectAccess(new Project(UNMANAGED, "Finance"), OTHER_DEPARTMENT, false)));
                 }
             };
         }
@@ -114,15 +115,29 @@ class ReviewHistoryApiIT {
                 "insert into app_user (id, email, status, created_at) values (?, 'nameless-pm@example.test', 'ACTIVE', now())",
                 NAMELESS_MANAGER);
         approved = decision(acme, OPS, "HIS-1", MANAGER, "APPROVED", null, "2026-11-03T09:00:00+07:00");
-        rejected = decision(acme, SUPPORT, "HIS-2", MANAGER, "REJECTED", "Wrong root cause", "2026-11-04T23:30:00+07:00");
+        rejected =
+                decision(acme, SUPPORT, "HIS-2", MANAGER, "REJECTED", "Wrong root cause", "2026-11-04T23:30:00+07:00");
         changesRequested = decision(
-                acme, OPS, "HIS-3", NAMELESS_MANAGER, "CHANGES_REQUESTED", "Add the VPN step", "2026-11-05T00:10:00+07:00");
+                acme,
+                OPS,
+                "HIS-3",
+                NAMELESS_MANAGER,
+                "CHANGES_REQUESTED",
+                "Add the VPN step",
+                "2026-11-05T00:10:00+07:00");
         decision(acme, UNMANAGED, "HIS-4", MANAGER, "REJECTED", "Hidden", "2026-11-05T10:00:00+07:00");
         TwoTenantDatabases.tenantB()
                 .update(
                         "insert into app_user (id, email, full_name, status, created_at) values (?, 'history-pm@example.test', 'Lan Pham', 'ACTIVE', now())",
                         MANAGER);
-        decision(TwoTenantDatabases.tenantB(), OPS, "HIS-5", MANAGER, "REJECTED", "Other company", "2026-11-05T11:00:00+07:00");
+        decision(
+                TwoTenantDatabases.tenantB(),
+                OPS,
+                "HIS-5",
+                MANAGER,
+                "REJECTED",
+                "Other company",
+                "2026-11-05T11:00:00+07:00");
     }
 
     @Test
@@ -187,7 +202,12 @@ class ReviewHistoryApiIT {
 
     @ParameterizedTest
     @CsvSource(
-            value = {"2026-11-04,", ",2026-11-04", "2026-11-05,2026-11-04", "2026-02-30,2026-03-01", "+2026-11-04,2026-11-05"
+            value = {
+                "2026-11-04,",
+                ",2026-11-04",
+                "2026-11-05,2026-11-04",
+                "2026-02-30,2026-03-01",
+                "+2026-11-04,2026-11-05"
             },
             ignoreLeadingAndTrailingWhitespace = false)
     void refusesInvalidDateRangesWithMsg39_AC_011_3(String from, String to) throws Exception {
@@ -198,7 +218,9 @@ class ReviewHistoryApiIT {
         if (to != null) {
             request.param("dateTo", to);
         }
-        inAcme(request).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("MSG39"));
+        inAcme(request)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG39"));
     }
 
     @ParameterizedTest
