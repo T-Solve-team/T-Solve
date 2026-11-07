@@ -297,8 +297,8 @@
     }
   },
   "identity": {
-    "specHash": "398abf5f97b1aaf1bfc816a7b3ad9c10d3b43aec2ea61326754d2ccf207e9a57",
-    "approvedAt": "2026-11-05T15:23:49.458Z",
+    "specHash": "9d2d992b33b12f700f5e84e4beeec6376ec684ccc9194b26c78e4daa509307e0",
+    "approvedAt": "2026-11-07T15:41:24.132Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
@@ -396,6 +396,16 @@
       "AC-004.6": "IF no users match the request, THEN THE frontend SHALL display MSG04.",
       "AC-004.7": "IF the signed-in user lacks the Admin role, THEN THE existing route guard SHALL prevent access to the User List and User Detail routes.",
       "AC-004.8": "IF an Admin submits a search longer than 100 characters after trimming, THEN THE frontend SHALL display MSG02 for Search with a limit of 100 characters, preserve the entered text and leave the current query, URL and displayed results unchanged.",
+      "AC-004.9": "WHEN a signed-in Admin requests , THE backend SHALL return one  of the Accounts in the Workspace bound to the request, each with its UUID ,  (null when empty), ,  (EMPLOYEE plus the Account's  rows, in the  enum order),  ( with the Department's UUID public id and name, or null),  and  (or null).",
+      "AC-004.10": "WHEN , ,  or  is given, THE backend SHALL return only the Accounts matching all of them:  trimmed as a case-insensitive substring of the full name or the email, with ,  and  matched literally;  as Accounts with no  row, any other  as Accounts holding it;  as equal;  as the Department's UUID public id; an empty  as no search.",
+      "AC-004.11": "WHEN  names ,  or  with  or , THE backend SHALL order by that field ignoring case, with a missing value ordered as an empty value (first ascending, last descending) and the Account  as the final tie-breaker; WHEN  is absent or names another field, THE backend SHALL order by .",
+      "AC-004.12": "THE backend SHALL page the result with  from 0 (default 0) and  default 20, a  above 100 read as 100, and SHALL report , ,  and  of the filtered result; a page past the end SHALL return empty  with the same totals.",
+      "AC-004.13": "IF  is longer than 100 characters after trimming, THEN THE backend SHALL answer 400 MSG02 with parameters  and  and read no Account; IF ,  or  is not a valid value, THEN THE backend SHALL answer 400 and read no Account.",
+      "AC-004.14": "WHEN a signed-in Admin requests , THE backend SHALL return the bound Workspace's Active Departments as  records (UUID public id, name), ordered by name ignoring case.",
+      "AC-004.15": "IF a request to  or  is not signed in, THEN THE backend SHALL answer 401 MSG07; IF the signed-in user lacks the Admin role, THEN THE backend SHALL answer 403 MSG08; in both cases it SHALL read no Account or Department.",
+      "AC-004.16": "THE backend SHALL read the Accounts, Roles and Departments of AC-004.9 to AC-004.14 only inside the Workspace bound by , in that Workspace's own database, so an Account of another Workspace is never returned or counted; IF no Workspace is bound, THEN THE backend SHALL answer 500 MSG06 and return no row.",
+      "AC-004.17": "WHILE the  profile is active (interim, until the Workspace session of Tasks 26a and 26b, KAN-275, signs requests in), THE backend SHALL sign each  request that has no authentication yet in as the configured mock Account bound to the configured Workspace, re-reading the Account and its Roles on every request, and SHALL leave the request signed out IF that Account does not exist or is Deactivated; WHILE the profile is not active, THE backend SHALL sign no request in this way.",
+      "AC-004.18": "WHEN the backend starts with the  profile, THE backend SHALL ensure, in the configured Workspace's database, the mock Admin Account, two Active Departments and at least six demo Accounts with mixed Roles, Departments and statuses, adding only the rows that are missing; WHILE the profile is not active, THE backend SHALL seed no such row.",
       "AC-005.1": "WHEN an Admin chooses to add a user, THE frontend SHALL open the creation mode of User Detail at .",
       "AC-005.2": "WHEN an Admin submits a new account, THE frontend SHALL validate required inputs, email format and the SRS email limit of 100 characters using catalog messages.",
       "AC-005.3": "IF an email is outside the Workspace domain or already belongs to an account, THEN THE mock API SHALL reject creation and THE frontend SHALL display the corresponding catalog validation message without losing form input.",

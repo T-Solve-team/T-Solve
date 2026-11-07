@@ -907,3 +907,7 @@
 {"ts":"2026-11-07T11:40:28.427Z","type":"quick-closed","what":"PR 153 review: stronger BUG-153 tests and log message","files":["backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:43:47.513Z","type":"quick-opened","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:44:28.193Z","type":"quick-closed","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-07T15:41:24.140Z","type":"spec-approved","module":"identity","specHash":"9d2d992b33b12f700f5e84e4beeec6376ec684ccc9194b26c78e4daa509307e0"}
+{"ts":"2026-11-07T15:41:38.537Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":null,"to":"pending"}
+{"ts":"2026-11-07T15:41:38.606Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T16:19:19.791Z","type":"commit-recorded","module":"identity","repo":"default","sha":"a0f46b9f59de4473abb6eb3ea10c08c9cf63ee9a"}

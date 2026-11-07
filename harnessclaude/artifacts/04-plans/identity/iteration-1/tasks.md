@@ -701,3 +701,19 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **PR / Jira:** branch `feat/KAN-<n>-identity-keycloak-theme`; Jira to create.
 **Estimated size:** small–medium (5 theme files, no production Java); about 6 tests
 **Verification:** Tests name AC-001.67 and .68; `cd frontend && npm run test -- src/features/auth src/app/dev` stays green for AC-001.40–.43. Targeted: `cd backend && mvn -Dit.test='KeycloakThemeIT,KeycloakFailurePlacementIT' verify`.
+
+## Task 32: User List backend on PostgreSQL — KAN-107
+
+**Story:** STORY-004
+**Feature:** user-list-backend
+**Decisions owned:** KAN-107 Q1–Q4 (Dương, 07/11)
+**Acceptance criteria:** AC-004.9, AC-004.10, AC-004.11, AC-004.12, AC-004.13, AC-004.14, AC-004.15, AC-004.16, AC-004.17, AC-004.18
+**Description:** Design "User List backend — KAN-107, Task 32". `GET /api/v1/users` and `GET /api/v1/users/departments` exactly as `frontend/openapi/tsolve-api.yaml` (no contract change), Admin only through `TSolveUser`, read in the `TenantScope` Workspace; changeset 019 (`user_role`, `app_user.department_id`); the `identity-mock` profile's caller filter and demo seed. Not in scope: a session filter, `/api/v1/me`, KAN-108/110 writes, the frontend MSW pass-through (separate quick change).
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/{controller/UserListController,dto/UserListQuery,dto/UserAccountResponse,dto/DepartmentRefResponse,service/UserListService,service/impl/UserListServiceImpl,repository/UserListRepository}.java`, `backend/src/main/java/vn/tsolve/identity/mock/{MockSignedInCallerFilter,MockIdentityConfiguration,MockIdentityProperties,MockUserListSeeder}.java`, `backend/src/main/resources/db/changelog/changes/019-identity-user-role-department.sql`, `backend/src/main/resources/application-identity-mock.yml`
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`
+- Test: `backend/src/test/java/vn/tsolve/identity/{dto/UserListQueryTest,controller/UserListControllerTest,UserListIT,mock/MockSignedInCallerIT}.java`
+**Dependencies:** none on `main`; Tasks 26a/26b later replace the mock and reuse `user_role`.
+**PR / Jira:** branch `feat/KAN-107-identity-user-list-backend`; Jira KAN-107.
+**Estimated size:** medium (12 production files); about 25 tests
+**Verification:** Tests name AC-004.9 to AC-004.18; `bun harnessclaude/hooks/sdd.ts trace identity STORY-004`; `cd backend && mvn verify`; `cd frontend && npm run generate:api` leaves no diff.
