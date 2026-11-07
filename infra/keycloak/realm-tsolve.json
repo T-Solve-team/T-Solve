@@ -1,0 +1,256 @@
+{
+  "realm": "tsolve",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "ssoSessionMaxLifespan": 28800,
+  "ssoSessionIdleTimeout": 3600,
+  "organizationsEnabled": true,
+  "browserFlow": "tsolve browser",
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"validations\":{\"length\":{\"min\":3,\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"email\",\"validations\":{\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}},{\"name\":\"firstName\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"lastName\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"hd\",\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]}}]}"
+          ]
+        }
+      }
+    ]
+  },
+  "authenticationFlows": [
+    {
+      "alias": "tsolve browser",
+      "description": "Cookie, then the identity provider named by kc_idp_hint; no form of any kind",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "auth-cookie", "authenticatorFlow": false, "requirement": "ALTERNATIVE", "priority": 10, "userSetupAllowed": false },
+        { "authenticator": "identity-provider-redirector", "authenticatorFlow": false, "requirement": "ALTERNATIVE", "priority": 20, "userSetupAllowed": false }
+      ]
+    },
+    {
+      "alias": "tsolve first broker login",
+      "description": "Create the user and add it to the Organization; never review, never link by email",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "idp-create-user-if-unique", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 10, "userSetupAllowed": false },
+        { "authenticator": "idp-add-organization-member", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 20, "userSetupAllowed": false }
+      ]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "email",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": { "user.attribute": "email", "claim.name": "email", "jsonType.label": "String", "id.token.claim": "true", "access.token.claim": "true", "userinfo.token.claim": "true" }
+        },
+        {
+          "name": "email verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": { "user.attribute": "emailVerified", "claim.name": "email_verified", "jsonType.label": "boolean", "id.token.claim": "true", "access.token.claim": "true", "userinfo.token.claim": "true" }
+        }
+      ]
+    },
+    {
+      "name": "profile",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "full name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-full-name-mapper",
+          "consentRequired": false,
+          "config": { "id.token.claim": "true", "access.token.claim": "true", "userinfo.token.claim": "true" }
+        }
+      ]
+    },
+    {
+      "name": "organization",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "organization",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-organization-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "addOrganizationId": "true",
+            "claim.name": "organization",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "tsolve-web",
+      "name": "T-Solve web",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KEYCLOAK_WEB_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://acme.localhost:8080/api/v1/auth/callback",
+        "http://beta.localhost:8080/api/v1/auth/callback"
+      ],
+      "webOrigins": [],
+      "attributes": { "pkce.code.challenge.method": "S256" },
+      "defaultClientScopes": ["email", "profile", "organization"],
+      "protocolMappers": [
+        {
+          "name": "hd",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "hd",
+            "claim.name": "hd",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "google-acme",
+      "displayName": "Google (acme)",
+      "providerId": "oidc",
+      "enabled": true,
+      "hideOnLogin": true,
+      "trustEmail": true,
+      "firstBrokerLoginFlowAlias": "tsolve first broker login",
+      "config": {
+        "authorizationUrl": "http://fake-google.localhost:8181/authorize?hd=acme.test",
+        "tokenUrl": "http://fake-google:8080/token",
+        "jwksUrl": "http://fake-google:8080/jwks",
+        "issuer": "http://fake-google:8080",
+        "useJwksUrl": "true",
+        "validateSignature": "true",
+        "disableUserInfo": "true",
+        "clientAuthMethod": "client_secret_post",
+        "clientId": "fake-google-client",
+        "clientSecret": "fake-google-secret",
+        "defaultScope": "openid email profile",
+        "syncMode": "IMPORT"
+      }
+    },
+    {
+      "alias": "google-beta",
+      "displayName": "Google (beta)",
+      "providerId": "oidc",
+      "enabled": true,
+      "hideOnLogin": true,
+      "trustEmail": true,
+      "firstBrokerLoginFlowAlias": "tsolve first broker login",
+      "config": {
+        "authorizationUrl": "http://fake-google.localhost:8181/authorize?hd=beta.test",
+        "tokenUrl": "http://fake-google:8080/token",
+        "jwksUrl": "http://fake-google:8080/jwks",
+        "issuer": "http://fake-google:8080",
+        "useJwksUrl": "true",
+        "validateSignature": "true",
+        "disableUserInfo": "true",
+        "clientAuthMethod": "client_secret_post",
+        "clientId": "fake-google-client",
+        "clientSecret": "fake-google-secret",
+        "defaultScope": "openid email profile",
+        "syncMode": "IMPORT"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "hd",
+      "identityProviderAlias": "google-acme",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": { "claim": "hd", "user.attribute": "hd", "syncMode": "INHERIT" }
+    },
+    {
+      "name": "hd",
+      "identityProviderAlias": "google-beta",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": { "claim": "hd", "user.attribute": "hd", "syncMode": "INHERIT" }
+    }
+  ],
+  "organizations": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000c1",
+      "name": "acme",
+      "alias": "acme",
+      "enabled": true,
+      "domains": [{ "name": "acme.test", "verified": false }],
+      "identityProviders": [{ "alias": "google-acme", "config": { "kc.org.domain": "acme.test" } }],
+      "members": [{ "username": "alice@acme.test" }]
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000c2",
+      "name": "beta",
+      "alias": "beta",
+      "enabled": true,
+      "domains": [{ "name": "beta.test", "verified": false }],
+      "identityProviders": [{ "alias": "google-beta", "config": { "kc.org.domain": "beta.test" } }],
+      "members": [{ "username": "bob@beta.test" }]
+    }
+  ],
+  "users": [
+    {
+      "username": "alice@acme.test",
+      "email": "alice@acme.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Alice",
+      "lastName": "Acme",
+      "attributes": { "hd": ["acme.test"] },
+      "federatedIdentities": [
+        { "identityProvider": "google-acme", "userId": "fake-google-sub-alice", "userName": "alice@acme.test" }
+      ]
+    },
+    {
+      "username": "bob@beta.test",
+      "email": "bob@beta.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Bob",
+      "lastName": "Beta",
+      "attributes": { "hd": ["beta.test"] },
+      "federatedIdentities": [
+        { "identityProvider": "google-beta", "userId": "fake-google-sub-bob", "userName": "bob@beta.test" }
+      ]
+    }
+  ]
+}

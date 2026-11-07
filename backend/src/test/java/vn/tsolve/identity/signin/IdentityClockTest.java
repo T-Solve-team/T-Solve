@@ -30,7 +30,8 @@ class IdentityClockTest {
                         "tsolve.auth.signing-key=" + SignInTestFixtures.KEY,
                         "tsolve.auth.google-client-id=test-client-id",
                         "tsolve.auth.google-client-secret=test-secret",
-                        "tsolve.auth.operator-emails=ops@example.test")
+                        "tsolve.auth.operator-emails=ops@example.test",
+                        "tsolve.auth.keycloak-web-client-secret=test-secret")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     assertThat(context.getBeansOfType(IdentityClock.class)).hasSize(1);
