@@ -7,6 +7,7 @@ complexity: medium
 paths:
   - backend/src/main/java/vn/tsolve/analytics/**
   - backend/src/test/java/vn/tsolve/analytics/**
+  - backend/src/main/java/vn/tsolve/common/audit/**
   - frontend/src/features/knowledge-dashboard/**
   - frontend/src/features/audit-log/**
   - backend/src/main/resources/db/changelog/**

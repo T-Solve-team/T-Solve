@@ -58,6 +58,8 @@ import vn.tsolve.worker.service.TenantJobService;
 })
 @ExtendWith(OutputCaptureExtension.class)
 class ReviewNotificationIT {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private vn.tsolve.common.audit.AuditService audit;
 
     private static final UUID PROJECT = new UUID(0, 10);
     private static final String WRITER = "writer@example.test";
