@@ -821,6 +821,62 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/questions/eligibility:
+    get:
+      tags: [jira-app]
+      operationId: getJiraAskerEligibility
+      summary: Whether the Jira user may ask T-Solve on the "Hỏi T-Solve" page (STORY-010, AC-010.2).
+      description: >
+        The user comes only from the verified FIT principal. Linked means the Jira account is linked to an active
+        T-Solve user; a FIT without a principal is not linked. Calls no AI.
+      security:
+        - forgeInvocationToken: []
+      responses:
+        '200':
+          description: Whether the user is linked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JiraAskerEligibility'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/questions:
+    post:
+      tags: [jira-app]
+      operationId: askJiraAppQuestion
+      summary: Answers a question from the "Hỏi T-Solve" page with the Knowledge Chatbot (STORY-010).
+      description: >
+        The user comes only from the verified FIT principal. The answer is the Knowledge Chatbot's, with the same
+        sources, citations and outcomes as on the web (AC-010.4); NO_SOURCE is shown as MSG109 by the Jira App.
+        A blank question → 400 MSG01, longer than 1,000 characters → 400 MSG02, more than 10 history turns →
+        400 MSG06 (AC-010.5). A Jira account not linked to an active T-Solve user, or a FIT without a principal →
+        403 MSG62 and no AI call (AC-010.11). The AI unavailable or no answer within the Jira App deadline
+        (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatbotQuestion'
+      responses:
+        '200':
+          description: The answer, or NO_SOURCE.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotAnswer'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
   /api/v1/imports/csv/template:
     get:
       tags: [import]
@@ -2157,6 +2213,13 @@ components:
         canDecide:
           type: boolean
           description: Whether the current user may decide this pending Solution Form ticket in its managed Project.
+    JiraAskerEligibility:
+      type: object
+      required: [linked]
+      properties:
+        linked:
+          type: boolean
+          description: Whether the FIT user is linked to an active T-Solve user (AC-010.2); false shows MSG62.
     JiraReviewFeedback:
       type: object
       required: [feedback]

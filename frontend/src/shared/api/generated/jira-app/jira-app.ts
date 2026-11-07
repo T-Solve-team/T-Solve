@@ -22,7 +22,14 @@ import type {
   UseQueryResult,
 } from '@tanstack/react-query';
 
-import type { IssueCreatedPayload, JiraReviewFeedback, ProblemResponse } from '../model';
+import type {
+  ChatbotAnswer,
+  ChatbotQuestion,
+  IssueCreatedPayload,
+  JiraAskerEligibility,
+  JiraReviewFeedback,
+  ProblemResponse,
+} from '../model';
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
@@ -290,4 +297,239 @@ export const useReceiveIssueCreated = <TError = ErrorType<ProblemResponse>, TCon
   TContext
 > => {
   return useMutation(getReceiveIssueCreatedMutationOptions(options), queryClient);
+};
+export const getGetJiraAskerEligibilityUrl = () => {
+  return `/api/v1/jira-app/questions/eligibility`;
+};
+
+/**
+ * The user comes only from the verified FIT principal. Linked means the Jira account is linked to an active T-Solve user; a FIT without a principal is not linked. Calls no AI.
+ * @summary Whether the Jira user may ask T-Solve on the "Hỏi T-Solve" page (STORY-010, AC-010.2).
+ */
+export const getJiraAskerEligibility = async (
+  options?: Parameters<typeof http>[1],
+): Promise<JiraAskerEligibility> => {
+  return http<JiraAskerEligibility>(getGetJiraAskerEligibilityUrl(), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetJiraAskerEligibilityQueryKey = () => {
+  return [`/api/v1/jira-app/questions/eligibility`] as const;
+};
+
+export const getGetJiraAskerEligibilityQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJiraAskerEligibility>>,
+  TError = ErrorType<ProblemResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getJiraAskerEligibility>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetJiraAskerEligibilityQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJiraAskerEligibility>>> = ({
+    signal,
+  }) => getJiraAskerEligibility({ signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getJiraAskerEligibility>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetJiraAskerEligibilityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getJiraAskerEligibility>>
+>;
+export type GetJiraAskerEligibilityQueryError = ErrorType<ProblemResponse>;
+
+export function useGetJiraAskerEligibility<
+  TData = Awaited<ReturnType<typeof getJiraAskerEligibility>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAskerEligibility>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJiraAskerEligibility>>,
+          TError,
+          Awaited<ReturnType<typeof getJiraAskerEligibility>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetJiraAskerEligibility<
+  TData = Awaited<ReturnType<typeof getJiraAskerEligibility>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAskerEligibility>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJiraAskerEligibility>>,
+          TError,
+          Awaited<ReturnType<typeof getJiraAskerEligibility>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetJiraAskerEligibility<
+  TData = Awaited<ReturnType<typeof getJiraAskerEligibility>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAskerEligibility>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Whether the Jira user may ask T-Solve on the "Hỏi T-Solve" page (STORY-010, AC-010.2).
+ */
+
+export function useGetJiraAskerEligibility<
+  TData = Awaited<ReturnType<typeof getJiraAskerEligibility>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAskerEligibility>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetJiraAskerEligibilityQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getAskJiraAppQuestionUrl = () => {
+  return `/api/v1/jira-app/questions`;
+};
+
+/**
+ * The user comes only from the verified FIT principal. The answer is the Knowledge Chatbot's, with the same sources, citations and outcomes as on the web (AC-010.4); NO_SOURCE is shown as MSG109 by the Jira App. A blank question → 400 MSG01, longer than 1,000 characters → 400 MSG02, more than 10 history turns → 400 MSG06 (AC-010.5). A Jira account not linked to an active T-Solve user, or a FIT without a principal → 403 MSG62 and no AI call (AC-010.11). The AI unavailable or no answer within the Jira App deadline (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
+ * @summary Answers a question from the "Hỏi T-Solve" page with the Knowledge Chatbot (STORY-010).
+ */
+export const askJiraAppQuestion = async (
+  chatbotQuestion: ChatbotQuestion,
+  options?: Parameters<typeof http>[1],
+): Promise<ChatbotAnswer> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ChatbotAnswer>(getAskJiraAppQuestionUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(chatbotQuestion),
+  });
+};
+
+export const getAskJiraAppQuestionMutationKey = () => ['askJiraAppQuestion'] as const;
+
+export const getAskJiraAppQuestionMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof askJiraAppQuestion>>,
+    TError,
+    AskJiraAppQuestionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof askJiraAppQuestion>>,
+  TError,
+  AskJiraAppQuestionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAskJiraAppQuestionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof askJiraAppQuestion>>,
+    AskJiraAppQuestionMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return askJiraAppQuestion(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AskJiraAppQuestionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof askJiraAppQuestion>>
+>;
+export type AskJiraAppQuestionMutationBody = ChatbotQuestion;
+export type AskJiraAppQuestionMutationError = ErrorType<ProblemResponse>;
+export type AskJiraAppQuestionMutationVariables = { data: ChatbotQuestion };
+
+/**
+ * @summary Answers a question from the "Hỏi T-Solve" page with the Knowledge Chatbot (STORY-010).
+ */
+export const useAskJiraAppQuestion = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof askJiraAppQuestion>>,
+      TError,
+      AskJiraAppQuestionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof askJiraAppQuestion>>,
+  TError,
+  AskJiraAppQuestionMutationVariables,
+  TContext
+> => {
+  return useMutation(getAskJiraAppQuestionMutationOptions(options), queryClient);
 };
