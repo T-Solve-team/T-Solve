@@ -16,6 +16,7 @@ owner: BA
 | 2026-11-05 | STORY-002, STORY-006, STORY-007 | Open questions answered: AC-006.6 `project.name` is the Project's `jira_project_key` (a stand-in until project-integration adds a name column; list, search and suggestions); AC-006.7 `reviewDueDate` is always null and its sort key falls back to the tie-breaker; AC-007.5 `resolvedAt` is the start of `resolved_date` in Asia/Ho_Chi_Minh, null without one, and becomes nullable in the contract (`TicketSearchResult`). New AC-002.15 (the card shows "Resolved —" for a null `resolvedAt`). AC-006.2 reworded and new AC-006.11, AC-006.12: a dev-only stand-in `DevAllVisibleScope`, used only when `SEARCH_DEV_SCOPE=all`; otherwise the fail-closed `NoVisibleScope`. Interface Contracts, Out of Scope and Required from other modules follow | User answers of 05/11 (Q1 A, Q2 A, Q3 A) and the user's request for a local demo path like ticket's `StubProjectAccess` |
 | 2026-11-06 | STORY-005, STORY-006, STORY-007 | Builder check (CAUTION) fixes: AC-005.3 reworded (rollback by the count of search changesets; the `vector` extension stays; rollbacks that drop data are for development databases only); AC-005.7 reworded (batch `SEARCH_EMBED_BATCH`, default 4, one batch at a time, so embedding never holds more than one Ollama slot); new AC-005.9 (a ticket id that fails 3 times in a row is skipped until the backend restarts); AC-007.7 reworded (dates only as `yyyy-MM-dd`, BUG-106); `GET /api/v1/tickets` declares `400` in the contract (AC-006.9). Out of Scope: retention and access of `search_log`. No other criterion changes | Fresh builder check of 06/11; user decisions of 06/11: `SEARCH_MIN_SIMILARITY` 0.5 accepted as a tunable default; `search_log` privacy deferred to the dashboard (KAN-150) |
 | 2026-11-06 | STORY-010 (new) | New STORY-010: the in-process `SolutionRetrieval` service the `chatbot` module calls for the Solutions nearest to a query vector, over every Published ticket of the Workspace with an ACTIVE Department (no Department scope, chatbot Requirement 2). Terms gain **Workspace Solution**; Interface Contracts gain the service; Definition of Done covers STORY-010. No other criterion changes | Plan of the chatbot backend (KAN-179): `backend/AGENTS.md` lets `chatbot` use search only through a `service/` interface, never its tables |
+| 2026-11-07 | STORY-005 | New AC-005.10: `project.project_id` becomes a UUID primary key holding the former `public_id`, which is dropped; every `project_id` column and `department.default_project_id` hold that UUID (hex-form values from changeset 010 rewritten); AC-005.1 and Interface Contracts follow. The Department key stays BIGINT | KAN-291 (#147): one Project id type instead of BIGINT keys, `public_id` and hex UUIDs mixed, which needed a two-form join in `SearchTicket` and caused the 32 IT errors of #140 |
 
 ## Requirements
 
@@ -203,7 +204,8 @@ Used by STORY-005 to STORY-009:
   and suggestions find it by meaning (KAN-141).
 - Acceptance:
   - AC-005.1: THE search changesets SHALL add to `ticket`, `project` and `department` a column `public_id UUID NOT
-    NULL` with `DEFAULT gen_random_uuid()` and a unique constraint, giving every existing row its own value, and SHALL
+    NULL` with `DEFAULT gen_random_uuid()` and a unique constraint, giving every existing row its own value (the
+    Project's column becomes its key under AC-005.10), and SHALL
     add to `ticket` a column `updated_at TIMESTAMPTZ NOT NULL` set to `created_at` for existing rows, to the insert
     time for new rows, and to the time of the change on every later `UPDATE` of the row (a database trigger).
   - AC-005.2: THE search changesets SHALL create the tables `ticket_embedding`, `search_log` and `ticket_feedback`
@@ -234,6 +236,12 @@ Used by STORY-005 to STORY-009:
   - AC-005.9: IF the embedding of a ticket id fails 3 times in a row, THEN THE catch-up job SHALL skip that id until the
     backend restarts and SHALL log the skip with the id only; a success SHALL reset the count, and a later
     `TicketsPublishedEvent` for that id SHALL still embed it.
+  - AC-005.10: THE search changesets SHALL make `project.project_id` a `UUID` primary key holding each Project's
+    former `public_id` and drop `project.public_id`; every `project_id` column (`ticket`, `import_batch`,
+    `import_preview`, `suggestion_result`) and `department.default_project_id` SHALL hold that UUID, with a value
+    written as the hex form of the old BIGINT key (changeset `010-ticket-import-project-uuid`) rewritten to the
+    Project's UUID, and the foreign keys to `project` kept; its rollback restores BIGINT keys and `public_id` and is
+    for development databases only (AC-005.3). The Department key stays BIGINT.
 
 ### STORY-006: Serve the Ticket List from the backend
 - As a Ticket Resolver or Project Manager, I want 6.2 Ticket List to show the real tickets I may see, so that I
@@ -409,7 +417,8 @@ Used by STORY-005 to STORY-009:
 
 ### Exposed by this module
 REST, in `frontend/openapi/tsolve-api.yaml`, served by the backend `vn.tsolve.search` (STORY-006 to STORY-009).
-Every id is a UUID string: the `public_id` of the ticket, Project or Department, never the internal BIGINT key.
+Every id is a UUID string: the `public_id` of the ticket or Department and the `project_id` of the Project (AC-005.10),
+never an internal BIGINT key.
 401 answers MSG07, 403 MSG08, 404 MSG04; a field error carries its MSG code (MSG01, MSG02) on the field.
 
 ```yaml
@@ -493,6 +502,8 @@ Search tables (tenant changelog, search-owned changesets; AC-005.1, AC-005.2):
 ```sql
 ticket      + public_id UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE, + updated_at TIMESTAMPTZ NOT NULL (trigger)
 project     + public_id UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE
+            then (AC-005.10) project_id UUID PRIMARY KEY = former public_id; public_id dropped;
+            project_id UUID in ticket, import_batch, import_preview, suggestion_result; department.default_project_id UUID
 department  + public_id UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE
 
 ticket_embedding

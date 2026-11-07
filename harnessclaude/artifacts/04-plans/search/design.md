@@ -272,8 +272,9 @@ databases only and are never run on staging or production; a mistake there is fi
 `SearchChangesetRollbackIT` runs in its own container and rolls back by the count of changesets of author `search`
 (not up to a fixed number), then checks that no search column, table, function or trigger is left (AC-005.3).
 
-The `ticket`, `project` and `department` tables keep their BIGINT keys (other modules map them); `public_id` is
-the id the API shows. The three new tables follow the tenant-table convention (platform AC-001.20, `backend/AGENTS.md`
+The `department` table keeps its BIGINT key (other modules map it), and `ticket` has a UUID key since the
+ticket-review changeset `008-review-ticket-storage.sql`; `public_id` is the id the API shows for both. The Project's key is a UUID since `017-search-project-uuid-key.sql` (AC-005.10, KAN-291): `project.project_id`
+holds the former `public_id`, which is dropped, and every `project_id` column holds that UUID. The three new tables follow the tenant-table convention (platform AC-001.20, `backend/AGENTS.md`
 §7). If the platform's row-policy guard (AC-001.29, AC-001.31) is on `main` when a changeset is written, that
 changeset also enables row-level security and adds the platform's policy to its table; otherwise the platform's
 changeset covers it.
@@ -427,6 +428,7 @@ concurrent PUTs of one user end in one row (AC-008.2). `isHelpful` is `@NotNull 
 | Ranking (user, 05/11) | bge-m3 query embedding, cosine distance on pgvector; keyword fallback on Ollama failure or timeout | Hybrid score (vector + full-text); full-text only | User decision; GBR-12 (AI optional) |
 | Relevance cut-off (accepted by the user, 06/11) | `SEARCH_MIN_SIMILARITY`, default 0.5, configurable, tuned on real data | No cut-off (every ticket is a result); top-k only | Without a cut-off no search ever has 0 results, so the Search Log can never show a knowledge gap (UC-26) |
 | Data (user, 05/11) | Search-owned changesets only; `public_id` UUID on `ticket`, `project`, `department`; `updated_at` on `ticket` | Change the keys to UUID; wait for other modules' columns | User decision; other modules' entities and BIGINT keys stay untouched |
+| Project key (user, 07/11, KAN-291) | `project.project_id` becomes the UUID key holding the former `public_id`, which is dropped; every `project_id` column holds it; Department stays BIGINT | Keep both columns; change the Department too | One Project id type ends the two-form join and the hex ids (#140, #147); supersedes the 05/11 row for the Project only |
 | `updated_at` maintenance | Database trigger `BEFORE UPDATE` | Each writer module sets it in its entity | No other module's Java file changes (NFR 9); a future writer cannot forget it |
 | Visibility (user, 05/11) | Search-owned port `VisibleScope` + fail-closed `NoVisibleScope` | Read `project_membership` directly; wait for identity | Same pattern as triage; no membership table exists |
 | Local demo scope (user, 05/11) | `DevAllVisibleScope` only when `SEARCH_DEV_SCOPE=all`; otherwise `NoVisibleScope` | A per-user list like `TSOLVE_STUB_PROJECTS`; no dev scope | A demo needs data while membership is missing; one exact value keeps the default fail-closed, and the bean does not exist without it |

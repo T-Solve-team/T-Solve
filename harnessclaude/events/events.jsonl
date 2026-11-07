@@ -822,3 +822,9 @@
 {"ts":"2026-11-07T07:24:22.626Z","type":"feature-status","module":"ticket-review","feature":"review-email-notification","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T07:36:19.751Z","type":"feature-status","module":"ticket-review","feature":"review-email-notification","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T07:37:22.595Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"60c0352cdb2942fdf62cae86b74145594c18e1c4"}
+{"ts":"2026-11-07T08:02:35.054Z","type":"spec-approved","module":"search","specHash":"b75f07de2a88ffcb38bc264ded2c871727fe31bcd30e0da659babb21964543fc"}
+{"ts":"2026-11-07T08:03:15.512Z","type":"feature-status","module":"search","feature":"project-uuid-key","from":null,"to":"pending"}
+{"ts":"2026-11-07T08:03:15.922Z","type":"feature-status","module":"search","feature":"project-uuid-key","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T08:51:14.154Z","type":"feature-status","module":"search","feature":"project-uuid-key","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T08:51:14.870Z","type":"feature-status","module":"search","feature":"project-uuid-key","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T08:51:33.358Z","type":"commit-recorded","module":"search","repo":"default","sha":"ad431663f331aef40774f67a7fc9dbcef456d203"}

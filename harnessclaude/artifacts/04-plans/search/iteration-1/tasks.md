@@ -635,3 +635,29 @@ Spec: STORY-005 to STORY-009 · Design: master section "Backend". Rules: `backen
 **Covers:** AC-010.1 – AC-010.5
 **Dependencies:** Task 6 (ticket_embedding)
 **Estimated size:** small
+
+## Task 20: One UUID key for the Project
+
+**Story:** STORY-005
+**Feature:** project-uuid-key
+**Jira:** KAN-291 (#147) · branch `refactor/KAN-291-search-project-uuid`
+**Description:**
+- Changeset `017-search-project-uuid-key.sql` (author `search`, last in the master changelog): rewrite every
+  `project_id` value that is the hex form of a BIGINT key (`lpad(to_hex(project.project_id), 32, '0')::uuid`) to
+  that Project's `public_id` in `ticket`, `import_batch`, `import_preview`; turn `suggestion_result.project_id` and
+  `department.default_project_id` into the Project's `public_id`; make `project.project_id` the UUID primary key
+  holding the former `public_id`, drop `public_id`, keep the foreign keys to `project`. Rollback (development only)
+  restores BIGINT keys and `public_id`.
+- Code: `Project` entity id `UUID`; drop the BIGINT/public-id pairs and conversions (`SearchTicket` two-form join,
+  `ManagedProject`, `HistoryFilter`, `SuggestionResult`, `SuggestionResultRecord`, `IssueCreatedServiceImpl`,
+  `ProjectService`, review and ticket access checks). The API keeps sending Project ids as UUID strings.
+- Tests insert UUID Project ids directly (no `new UUID(0, projectId)`).
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/017-search-project-uuid-key.sql`
+- Modify: `db.changelog-master.xml`, the `project`, `tracker`, `triage`, `search`, `ticket`, `review` classes that
+  hold a Project id, and their tests
+- Test: `…/test/search/SearchSchemaIT.java` (`projectKeyIsTheFormerPublicId_AC_005_10`,
+  `rewritesHexProjectIds_AC_005_10`), `SearchChangesetRollbackIT` still passes
+**Covers:** AC-005.10
+**Dependencies:** Task 1 (public ids)
+**Estimated size:** medium
