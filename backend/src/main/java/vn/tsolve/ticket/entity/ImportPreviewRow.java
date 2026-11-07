@@ -42,19 +42,19 @@ public class ImportPreviewRow {
     @Column(name = "resolved_date", updatable = false, columnDefinition = "text")
     private String resolvedDate;
 
-    @Column(updatable = false, columnDefinition = "text")
+    @Column(columnDefinition = "text")
     private String symptoms;
 
-    @Column(name = "root_cause", updatable = false, columnDefinition = "text")
+    @Column(name = "root_cause", columnDefinition = "text")
     private String rootCause;
 
-    @Column(name = "resolution_steps", updatable = false, columnDefinition = "text")
+    @Column(name = "resolution_steps", columnDefinition = "text")
     private String resolutionSteps;
 
-    @Column(updatable = false, columnDefinition = "text")
+    @Column(columnDefinition = "text")
     private String workaround;
 
-    @Column(updatable = false, columnDefinition = "text")
+    @Column(columnDefinition = "text")
     private String scope;
 
     @JdbcTypeCode(SqlTypes.JSON)
@@ -108,6 +108,17 @@ public class ImportPreviewRow {
             String resolutionSteps,
             String workaround,
             String scope) {}
+
+    /** Stores the Solution written on the preview, replacing any earlier one; the row becomes Valid (AC-013.1). */
+    public void fillSolution(
+            String symptoms, String rootCause, String resolutionSteps, String workaround, String scope) {
+        this.symptoms = symptoms;
+        this.rootCause = rootCause;
+        this.resolutionSteps = resolutionSteps;
+        this.workaround = workaround;
+        this.scope = scope;
+        this.status = PreviewRowStatus.VALID;
+    }
 
     /** Removing applies to Valid and Error rows alike (AC-003.1). */
     public void remove() {

@@ -1,20 +1,31 @@
 package vn.tsolve.ticket.service.impl;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Stream;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.NotFoundException;
+import vn.tsolve.ticket.csv.CsvRowValidator;
+import vn.tsolve.ticket.dto.FillSolutionRequest;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowSummary;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
+import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
+import vn.tsolve.ticket.exception.SolutionTooLongException;
 import vn.tsolve.ticket.mapper.ImportPreviewMapper;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
@@ -75,6 +86,44 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
                         .map(n -> new ImportPreviewRow.Id(preview.getId(), n))
                         .toList())
                 .forEach(ImportPreviewRow::remove);
+        previewRows.flush();
+        return summary(preview);
+    }
+
+    @Override
+    @Transactional
+    public ImportPreviewResponse fillSolution(String user, long previewId, FillSolutionRequest solution) {
+        String symptoms = CsvRowValidator.trim(solution.symptoms());
+        String rootCause = CsvRowValidator.trim(solution.rootCause());
+        String resolutionSteps = CsvRowValidator.trim(solution.resolutionSteps());
+        String workaround = CsvRowValidator.trim(solution.workaround());
+        String scope = CsvRowValidator.trim(solution.scope());
+        int length = Stream.of(symptoms, rootCause, resolutionSteps, workaround, scope)
+                .filter(Objects::nonNull)
+                .mapToInt(s -> s.codePointCount(0, s.length()))
+                .sum();
+        if (length > CsvRowValidator.SOLUTION_MAX_LENGTH) {
+            throw new SolutionTooLongException(CsvRowValidator.SOLUTION_MAX_LENGTH);
+        }
+
+        owned(user, previewId);
+        // Use Confirm's lock: a running Finish completes first, then the preview is gone.
+        ImportPreview preview = previews.lockByIdAndOwner(previewId, user)
+                .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
+        if (preview.getSource() != TicketSource.JIRA_IMPORT) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+        Set<Integer> numbers = new LinkedHashSet<>(solution.rowNumbers());
+        List<ImportPreviewRow> rows = previewRows.findAllById(
+                numbers.stream().map(n -> new ImportPreviewRow.Id(previewId, n)).toList());
+        if (rows.size() < numbers.size()) {
+            throw new NotFoundException("A row of import preview " + previewId);
+        }
+        if (rows.stream()
+                .anyMatch(r -> r.getStatus() == PreviewRowStatus.ERROR || r.getStatus() == PreviewRowStatus.REMOVED)) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+        rows.forEach(r -> r.fillSolution(symptoms, rootCause, resolutionSteps, workaround, scope));
         previewRows.flush();
         return summary(preview);
     }

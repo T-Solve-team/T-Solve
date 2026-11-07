@@ -19,7 +19,7 @@ import vn.tsolve.ticket.entity.ImportPreviewRow;
 @Component
 public class CsvRowValidator {
 
-    static final int SOLUTION_MAX_LENGTH = 10_000;
+    public static final int SOLUTION_MAX_LENGTH = 10_000;
 
     private static final Map<String, Integer> MAX_LENGTH = Map.of(
             CsvColumns.TICKET_ID, 50,
