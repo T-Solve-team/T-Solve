@@ -242,12 +242,12 @@
       "features": {
         "ask-forge-spike": "passing",
         "ask-contract": "passing",
-        "ask-endpoint": "evaluating",
+        "ask-endpoint": "passing",
         "ask-forge-client": "pending",
         "ask-conversation-logic": "pending",
         "ask-page-ui": "pending"
       },
-      "lastUpdated": "2026-11-07T19:51:57.900Z",
+      "lastUpdated": "2026-11-07T19:52:22.314Z",
       "branch": "feat/jira-app",
       "repos": [
         "default"
