@@ -73,3 +73,7 @@ edited in this follow-up, and the redundant proposed patch artifact was removed.
 explicitly report local customization during upgrade. Until then, compare the applied commit
 and rerun hook tests plus a Java STORY trace after every upgrade. This is a local feedback
 record; no external upstream issue or message was sent by the agent.
+
+## 2026-11-07 — Jira branch metadata during worker KAN-102
+
+Project AGENTS.md requires one branch per Jira issue, so actual branch is feat/KAN-102-worker-tenant-context. sdd.ts status worker implementing recorded feat/worker. Statuses were changed only with sdd.ts; no hook or status field was edited to hide this mismatch. sdd.ts commit worker default correctly recorded the code SHA and printed the actual issue branch, but final verification of progress.json showed that its branch field still says feat/worker. Audit therefore adds a missing-module-branch warning after the commit. Suggested upstream improvement: persist the current issue branch at the implementing transition and commit recording when a project overrides the default module branch convention.

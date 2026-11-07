@@ -260,10 +260,19 @@
       "lastUpdated": "2026-10-24T23:56:42.775Z"
     },
     "worker": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-24T23:56:42.970Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "tenant-jobs": "passing"
+      },
+      "lastUpdated": "2026-11-07T05:02:02.604Z",
+      "branch": "feat/worker",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "68bd287b663f5dd4bacb533c5883a981e4abbf11"
+      }
     },
     "ai": {
       "status": "implementing",

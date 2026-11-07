@@ -779,5 +779,28 @@
       "AC-004.3": "THE backend SHALL set  from the wiki module's document-access port for the caller; WHILE the wiki module provides no implementation, THE default SHALL answer false for every document.",
       "AC-004.4": "IF  holds an item it cannot read (unknown  or missing ), THEN THE backend SHALL skip that item in the counts and the list and still return the result."
     }
+  },
+  "worker": {
+    "specHash": "9c160553c38036af3215f3704fa6b1104a079cbf140402b69a7aefa17d8388df",
+    "approvedAt": "2026-11-07T04:29:07.585Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN a caller enqueues a job while a workspace is bound, THE queue SHALL persist that workspace UUID together with the registered handler type and record UUID through JobRunr.",
+      "AC-001.2": "IF enqueue is called with no bound workspace, null record id or an unregistered handler type, THEN THE queue SHALL reject the request without persisting a job.",
+      "AC-001.3": "WHEN JobRunr executes a job for an Active workspace, THE worker SHALL invoke its registered handler inside runInTenant with exactly the workspace UUID stored in that job.",
+      "AC-001.4": "IF the workspace is unknown or Suspended at execution time, THEN THE worker SHALL invoke no business handler and SHALL report a failed execution to JobRunr without binding a workspace (GBR-38).",
+      "AC-001.5": "IF workspace eligibility cannot be checked, THEN THE worker SHALL fail the execution without invoking the handler.",
+      "AC-001.6": "WHEN an action finishes normally or throws, THE runInTenant boundary SHALL restore the calling thread's previous workspace binding and propagate the original action failure.",
+      "AC-001.7": "IF a different workspace is already bound on the executing thread, THEN THE boundary SHALL reject the execution without invoking the action or changing that binding.",
+      "AC-001.8": "WHEN the same workspace is already bound, THE boundary SHALL permit nested execution and preserve the outer binding afterwards.",
+      "AC-001.9": "WHEN jobs for different workspaces run concurrently or sequentially on a reused thread, THE worker SHALL keep their context bindings isolated.",
+      "AC-001.10": "WHEN a handler fails, THE worker SHALL let JobRunr retain and retry the failed job with its original workspace UUID and SHALL recheck workspace eligibility on every attempt.",
+      "AC-001.11": "WHILE the explicit worker-mock profile is active, THE backend SHALL provide a temporary thread-scoped TenantContext mock and a configured allow-list of Active and Suspended workspace UUIDs, treating every unlisted UUID as unknown.",
+      "AC-001.12": "WHILE worker-mock is inactive, THE backend SHALL register no mock platform adapter; IF job processing is enabled without a real adapter, THEN THE backend SHALL fail startup rather than permit jobs using mocked tenancy.",
+      "AC-001.13": "WHEN JobRunr integration is enabled, THE backend SHALL use a dedicated Jobs DataSource configured by environment variables and SHALL never fall back to its business or catalog DataSource.",
+      "AC-001.14": "THE backend SHALL disable job execution and the JobRunr dashboard by default; WHEN the worker profile is enabled with required configuration, THE backend SHALL enable background processing while keeping the dashboard disabled.",
+      "AC-001.15": "IF a persisted job names an unknown handler or has a null workspace or record UUID, THEN THE worker SHALL fail it without invoking a handler.",
+      "AC-001.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked."
+    }
   }
 }
