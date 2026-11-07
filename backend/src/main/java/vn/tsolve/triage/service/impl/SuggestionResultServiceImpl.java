@@ -9,6 +9,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -83,11 +84,11 @@ public class SuggestionResultServiceImpl implements SuggestionResultService {
         String answer = answer(query.answer());
         Range range = range(query.from(), query.to());
 
-        Map<Long, ManagedProject> managed = managedById(user);
-        Set<Long> projectIds = managed.keySet();
+        Map<UUID, ManagedProject> managed = managedById(user);
+        Set<UUID> projectIds = managed.keySet();
         if (query.projectId() != null) {
             ManagedProject chosen = managed.values().stream()
-                    .filter(project -> project.publicId().equals(query.projectId()))
+                    .filter(project -> project.id().toString().equals(query.projectId()))
                     .findFirst()
                     .orElseThrow(ProjectNotManagedException::new);
             projectIds = Set.of(chosen.id());
@@ -113,7 +114,7 @@ public class SuggestionResultServiceImpl implements SuggestionResultService {
     @Override
     @Transactional(readOnly = true)
     public SuggestionResultDetail detail(String user, boolean projectManager, String issueKey) {
-        Map<Long, ManagedProject> managed = projectManager ? managedById(user) : Map.of();
+        Map<UUID, ManagedProject> managed = projectManager ? managedById(user) : Map.of();
         SuggestionResultRecord record = managed.isEmpty()
                 ? null
                 : repository
@@ -138,13 +139,13 @@ public class SuggestionResultServiceImpl implements SuggestionResultService {
                 wikiSources);
     }
 
-    private Map<Long, ManagedProject> managedById(String user) {
+    private Map<UUID, ManagedProject> managedById(String user) {
         return managedProjects.of(user).stream()
                 .collect(Collectors.toMap(ManagedProject::id, Function.identity(), (first, second) -> first));
     }
 
     private static SuggestionProject project(ManagedProject project) {
-        return new SuggestionProject(project.publicId(), project.key());
+        return new SuggestionProject(project.id().toString(), project.key());
     }
 
     // Only an HTTPS site gives a link; the web app checks the scheme again before it renders one.

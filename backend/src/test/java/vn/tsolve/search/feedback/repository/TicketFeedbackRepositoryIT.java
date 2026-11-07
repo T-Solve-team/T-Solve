@@ -93,9 +93,9 @@ class TicketFeedbackRepositoryIT {
                 USER.email());
         department = jdbc.queryForObject(
                 "INSERT INTO department(name,status) VALUES ('IT','ACTIVE') RETURNING department_id", Long.class);
-        long project = jdbc.queryForObject(
+        UUID project = jdbc.queryForObject(
                 "INSERT INTO project(department_id,jira_project_key) VALUES (?,'ITSUP') RETURNING project_id",
-                Long.class,
+                UUID.class,
                 department);
         ticket = jdbc.queryForObject(
                 """
@@ -106,7 +106,7 @@ class TicketFeedbackRepositoryIT {
                 """,
                 UUID.class,
                 publicId,
-                new UUID(0, project));
+                project);
         when(scope.of(any())).thenReturn(new VisibleScope.Scope(Set.of(department), Set.of(), Optional.empty()));
     }
 

@@ -58,7 +58,7 @@ class SearchChangesetRollbackIT {
             }
             assertThat(boundary).isNotNegative();
             for (String table : PUBLIC_ID_TABLES) {
-                assertThat(columnExists(jdbc, table, "public_id")).as(table).isTrue();
+                assertThat(columnExists(jdbc, table, "public_id")).as(table).isEqualTo(!"project".equals(table));
             }
             for (String table : SEARCH_TABLES) {
                 assertThat(columnExists(jdbc, table, table + "_id"))
@@ -87,7 +87,7 @@ class SearchChangesetRollbackIT {
             for (String table : PUBLIC_ID_TABLES) {
                 assertThat(columnExists(jdbc, table, "public_id"))
                         .as("public id restored on %s", table)
-                        .isTrue();
+                        .isEqualTo(!"project".equals(table));
             }
         }
     }

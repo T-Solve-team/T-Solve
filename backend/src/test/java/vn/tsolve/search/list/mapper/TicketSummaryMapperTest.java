@@ -23,7 +23,7 @@ class TicketSummaryMapperTest {
         when(ticket.getTitle()).thenReturn("VPN");
         when(ticket.getSource()).thenReturn("CSV");
         when(ticket.getStatus()).thenReturn("PUBLISHED");
-        when(ticket.getProjectPublicId()).thenReturn(projectId);
+        when(ticket.getProjectId()).thenReturn(projectId);
         when(ticket.getProjectName()).thenReturn("ITSUP");
         when(ticket.getDepartmentPublicId()).thenReturn(departmentId);
         when(ticket.getDepartmentName()).thenReturn("IT");

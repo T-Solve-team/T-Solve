@@ -62,9 +62,10 @@ class ReviewDecisionApiIT {
 
     static final String MANAGER_ID = "f4b304e6-d813-4e47-9b6c-69b7d61cc6cb";
     private static final UUID MANAGER = UUID.fromString(MANAGER_ID);
-    private static final UUID MANAGED_PROJECT = new UUID(0, 10);
+    private static final UUID MANAGED_PROJECT = UUID.randomUUID();
     private static final UUID DEPARTMENT = new UUID(0, 100);
-    private static final UUID PROJECT = new UUID(0, 11);
+    private static final UUID PROJECT = UUID.randomUUID();
+    private static final UUID UNMANAGED_PROJECT = UUID.randomUUID();
     private static final UUID WRITER = new UUID(0, 301);
     private static final UUID OTHER_WRITER = new UUID(0, 302);
 
@@ -133,7 +134,7 @@ class ReviewDecisionApiIT {
                 public Optional<Set<UUID>> managedProjectIds(UUID accountId) {
                     try {
                         return scope.currentWorkspaceId().equals(TwoTenantDatabases.ACME) && accountId.equals(MANAGER)
-                                ? Optional.of(Set.of(MANAGED_PROJECT, new UUID(0, 11)))
+                                ? Optional.of(Set.of(MANAGED_PROJECT, PROJECT))
                                 : Optional.empty();
                     } catch (IllegalStateException unbound) {
                         return Optional.empty();
@@ -146,11 +147,11 @@ class ReviewDecisionApiIT {
                             .map(ignored -> Map.of(
                                     MANAGED_PROJECT,
                                     new ProjectAccess(
-                                            new Project(new UUID(0, 10), "Operations"), new UUID(0, 200), true),
-                                    new UUID(0, 11),
+                                            new Project(MANAGED_PROJECT, "Operations"), new UUID(0, 200), true),
+                                    PROJECT,
                                     new ProjectAccess(new Project(PROJECT, "Support"), DEPARTMENT, true),
-                                    new UUID(0, 20),
-                                    new ProjectAccess(new Project(new UUID(0, 20), "Unmanaged"), DEPARTMENT, false)));
+                                    UNMANAGED_PROJECT,
+                                    new ProjectAccess(new Project(UNMANAGED_PROJECT, "Unmanaged"), DEPARTMENT, false)));
                 }
             };
         }
@@ -230,11 +231,11 @@ class ReviewDecisionApiIT {
     @Test
     void listsScopedQueueAndAllEligibleIdsWithUnknownEntryTime_AC_009_1_AC_009_12() throws Exception {
         var own = TwoTenantDatabases.tenantA();
-        UUID later = pending(own, new UUID(0, 11));
-        UUID first = pending(own, new UUID(0, 11));
+        UUID later = pending(own, PROJECT);
+        UUID first = pending(own, PROJECT);
         pending(own, MANAGED_PROJECT);
-        pending(own, new UUID(0, 20));
-        pending(TwoTenantDatabases.tenantB(), new UUID(0, 11));
+        pending(own, UNMANAGED_PROJECT);
+        pending(TwoTenantDatabases.tenantB(), PROJECT);
         own.update("update ticket set review_due_date = '2026-11-15' where ticket_id = ?", later);
         own.update(
                 "update ticket set review_due_date = '2026-11-12', review_queue_entered_at = null where ticket_id = ?",
@@ -263,7 +264,7 @@ class ReviewDecisionApiIT {
     void readsPersistedSolutionAndEvidenceAndHidesUnmanagedPendingTickets_AC_009_2_AC_009_3() throws Exception {
         var own = TwoTenantDatabases.tenantA();
         UUID ticket = pending(own, MANAGED_PROJECT);
-        UUID unmanaged = pending(own, new UUID(0, 20));
+        UUID unmanaged = pending(own, UNMANAGED_PROJECT);
         UUID foreign = pending(TwoTenantDatabases.tenantB(), MANAGED_PROJECT);
         own.update(
                 "insert into evidence (ticket_id, file_name, file_type, file_size) values (?, 'error.png', 'image/png', 32)",
@@ -338,7 +339,8 @@ class ReviewDecisionApiIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.feedback").value(nullValue()));
         own.update(
-                "update ticket set source = 'SOLUTION_FORM', project_id = '00000000-0000-0000-0000-000000000014' where ticket_id = ?",
+                "update ticket set source = 'SOLUTION_FORM', project_id = ? where ticket_id = ?",
+                UNMANAGED_PROJECT,
                 ticket);
         jiraFeedback("acme-jira", "jira-writer", "OPS-301")
                 .andExpect(status().isOk())
@@ -424,7 +426,7 @@ class ReviewDecisionApiIT {
     @Test
     void deniesUnboundAndUnmanagedRequests_AC_009_3() throws Exception {
         var tenant = TwoTenantDatabases.tenantA();
-        UUID id = pending(tenant, new UUID(0, 20));
+        UUID id = pending(tenant, UNMANAGED_PROJECT);
         request("approve", body(id, "")).andExpect(status().isForbidden());
         inAcme("approve", body(id, ""))
                 .andExpect(status().isForbidden())

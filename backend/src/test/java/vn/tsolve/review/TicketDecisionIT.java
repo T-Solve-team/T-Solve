@@ -43,6 +43,9 @@ import vn.tsolve.ticket.service.impl.TicketDecisionServiceImpl;
 @Import({TicketClockConfig.class, TicketDecisionServiceImpl.class})
 class TicketDecisionIT {
 
+    private static final UUID PROJECT_ID = UUID.randomUUID();
+    private static final UUID OTHER_PROJECT_ID = UUID.randomUUID();
+
     @ServiceConnection
     static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
             DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
@@ -72,7 +75,7 @@ class TicketDecisionIT {
 
     @Test
     void recordsNewQueueEntriesButPreservesTheTimeDuringEdits_AC_009_11() {
-        UUID id = ticket("TEST-1", 10, "PENDING_REVIEW", null);
+        UUID id = ticket("TEST-1", PROJECT_ID, "PENDING_REVIEW", null);
         OffsetDateTime firstEntry = queueEntryTime(id);
         assertThat(firstEntry).isNotNull();
 
@@ -80,8 +83,7 @@ class TicketDecisionIT {
         jdbc.update("update ticket set status = 'PENDING_REVIEW' where ticket_id = ?", id);
         assertThat(queueEntryTime(id)).isEqualTo(firstEntry);
 
-        service.decide(
-                reviewerId, Set.of(new UUID(0, 10)), List.of(id), Action.CHANGES_REQUESTED, "Explain the workaround");
+        service.decide(reviewerId, Set.of(PROJECT_ID), List.of(id), Action.CHANGES_REQUESTED, "Explain the workaround");
         assertThat(queueEntryTime(id)).isEqualTo(firstEntry);
         jdbc.update("update ticket set status = 'PENDING_REVIEW' where ticket_id = ?", id);
         assertThat(queueEntryTime(id)).isAfter(firstEntry);
@@ -92,14 +94,14 @@ class TicketDecisionIT {
     @ParameterizedTest
     @EnumSource(Action.class)
     void commitsDecisionsAndPreservesTicketContent_AC_009_4_AC_009_5_AC_009_6_AC_009_8(Action action) {
-        UUID first = ticket("TEST-1", 10, "PENDING_REVIEW", reviewerId);
-        UUID second = ticket("TEST-2", 10, "PENDING_REVIEW", null);
+        UUID first = ticket("TEST-1", PROJECT_ID, "PENDING_REVIEW", reviewerId);
+        UUID second = ticket("TEST-2", PROJECT_ID, "PENDING_REVIEW", null);
         jdbc.update(
                 "insert into evidence (ticket_id, file_name, file_type, file_size) values (?, 'error.png', 'image/png', 3)",
                 first);
         String feedback = action == Action.APPROVED ? null : "Please check the token";
 
-        assertThat(service.decide(reviewerId, Set.of(new UUID(0, 10)), List.of(second, first), action, feedback))
+        assertThat(service.decide(reviewerId, Set.of(PROJECT_ID), List.of(second, first), action, feedback))
                 .isEqualTo(2);
 
         String expectedStatus = action == Action.APPROVED ? "PUBLISHED" : action.name();
@@ -130,12 +132,12 @@ class TicketDecisionIT {
 
     @Test
     void refusesInvalidMissingUnmanagedAndStaleBatches_AC_009_7_BUG_139() {
-        UUID pending = ticket("TEST-1", 10, "PENDING_REVIEW", null);
-        UUID unmanaged = ticket("TEST-2", 20, "PENDING_REVIEW", null);
-        UUID stale = ticket("TEST-3", 10, "REJECTED", null);
-        UUID imported = ticket("TEST-4", 10, "PUBLISHED", null);
+        UUID pending = ticket("TEST-1", PROJECT_ID, "PENDING_REVIEW", null);
+        UUID unmanaged = ticket("TEST-2", OTHER_PROJECT_ID, "PENDING_REVIEW", null);
+        UUID stale = ticket("TEST-3", PROJECT_ID, "REJECTED", null);
+        UUID imported = ticket("TEST-4", PROJECT_ID, "PUBLISHED", null);
         jdbc.update("update ticket set source = 'CSV' where ticket_id = ?", imported);
-        var scope = Set.of(new UUID(0, 10));
+        var scope = Set.of(PROJECT_ID);
 
         assertThatThrownBy(() -> service.decide(reviewerId, scope, List.of(pending, pending), Action.APPROVED, null))
                 .isInstanceOf(ResponseStatusException.class);
@@ -164,10 +166,10 @@ class TicketDecisionIT {
 
     @Test
     void rollsBackTicketStateIfDecisionCannotBeSaved_AC_009_8() {
-        UUID pending = ticket("TEST-1", 10, "PENDING_REVIEW", null);
+        UUID pending = ticket("TEST-1", PROJECT_ID, "PENDING_REVIEW", null);
 
-        assertThatThrownBy(() -> service.decide(
-                        UUID.randomUUID(), Set.of(new UUID(0, 10)), List.of(pending), Action.APPROVED, null))
+        assertThatThrownBy(() ->
+                        service.decide(UUID.randomUUID(), Set.of(PROJECT_ID), List.of(pending), Action.APPROVED, null))
                 .isInstanceOf(DataIntegrityViolationException.class);
 
         assertThat(status(pending)).isEqualTo("PENDING_REVIEW");
@@ -176,8 +178,8 @@ class TicketDecisionIT {
 
     @Test
     void rollsBackDecisionsIfAnyTicketUpdateFails_AC_009_8() {
-        UUID first = ticket("TEST-1", 10, "PENDING_REVIEW", null);
-        UUID second = ticket("TEST-2", 10, "PENDING_REVIEW", null);
+        UUID first = ticket("TEST-1", PROJECT_ID, "PENDING_REVIEW", null);
+        UUID second = ticket("TEST-2", PROJECT_ID, "PENDING_REVIEW", null);
         jdbc.execute(
                 """
                 alter table ticket add constraint test_reject_publish
@@ -185,7 +187,7 @@ class TicketDecisionIT {
                 """);
         try {
             assertThatThrownBy(() -> service.decide(
-                            reviewerId, Set.of(new UUID(0, 10)), List.of(first, second), Action.APPROVED, null))
+                            reviewerId, Set.of(PROJECT_ID), List.of(first, second), Action.APPROVED, null))
                     .isInstanceOf(DataIntegrityViolationException.class);
 
             assertThat(status(first)).isEqualTo("PENDING_REVIEW");
@@ -198,18 +200,18 @@ class TicketDecisionIT {
 
     @Test
     void commitsOnlyOneOfTwoCompetingDecisions_AC_009_7_AC_009_8() throws Exception {
-        UUID pending = ticket("TEST-1", 10, "PENDING_REVIEW", null);
+        UUID pending = ticket("TEST-1", PROJECT_ID, "PENDING_REVIEW", null);
         var start = new CountDownLatch(1);
         try (var executor = Executors.newFixedThreadPool(2)) {
             var approve = executor.submit(() -> {
                 start.await();
-                return catchThrowable(() ->
-                        service.decide(reviewerId, Set.of(new UUID(0, 10)), List.of(pending), Action.APPROVED, null));
+                return catchThrowable(
+                        () -> service.decide(reviewerId, Set.of(PROJECT_ID), List.of(pending), Action.APPROVED, null));
             });
             var reject = executor.submit(() -> {
                 start.await();
-                return catchThrowable(() -> service.decide(
-                        reviewerId, Set.of(new UUID(0, 10)), List.of(pending), Action.REJECTED, "Reason"));
+                return catchThrowable(() ->
+                        service.decide(reviewerId, Set.of(PROJECT_ID), List.of(pending), Action.REJECTED, "Reason"));
             });
             start.countDown();
             Throwable approved = approve.get(10, TimeUnit.SECONDS);
@@ -221,7 +223,7 @@ class TicketDecisionIT {
         assertThat(decisionCount()).isEqualTo(1);
     }
 
-    private UUID ticket(String key, long projectId, String status, UUID writerId) {
+    private UUID ticket(String key, UUID projectId, String status, UUID writerId) {
         return jdbc.queryForObject(
                 """
                 insert into ticket (source_ticket_id, project_id, source, status, writer_id, title, symptoms,
@@ -231,7 +233,7 @@ class TicketDecisionIT {
                 """,
                 UUID.class,
                 key,
-                new UUID(0, projectId),
+                projectId,
                 status,
                 writerId);
     }

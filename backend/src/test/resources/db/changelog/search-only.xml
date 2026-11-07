@@ -22,4 +22,6 @@
     <include file="changes/012-search-ticket-feedback.sql" relativeToChangelogFile="true"/>
     <include file="changes/013-chatbot-answer.sql" relativeToChangelogFile="true"/>
 
+    <include file="changes/017-search-project-uuid-key.sql" relativeToChangelogFile="true"/>
+
 </databaseChangeLog>

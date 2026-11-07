@@ -61,6 +61,116 @@ class SearchSchemaIT {
     }
 
     @Test
+    void projectKeyIsTheFormerPublicId_AC_005_10() throws Exception {
+        migrateTo(dataSource, "016-review-search-ticket-refs-attach");
+        insertTicketsAndProjects();
+        List<UUID> publicIds = jdbc.queryForList("SELECT public_id FROM project ORDER BY jira_project_key", UUID.class);
+
+        migrateAll(dataSource);
+
+        assertThat(jdbc.queryForList("SELECT project_id FROM project ORDER BY jira_project_key", UUID.class))
+                .isEqualTo(publicIds);
+        assertThat(jdbc.queryForObject(
+                        "SELECT data_type FROM information_schema.columns WHERE table_name = 'project' AND column_name = 'project_id'",
+                        String.class))
+                .isEqualTo("uuid");
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM information_schema.columns WHERE table_name = 'project' AND column_name = 'public_id'",
+                        Integer.class))
+                .isZero();
+        assertThat(jdbc.queryForObject(
+                        "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'project'::regclass AND contype = 'p'",
+                        String.class))
+                .isEqualTo("PRIMARY KEY (project_id)");
+        for (String table : List.of("suggestion_result", "department")) {
+            String column = "department".equals(table) ? "default_project_id" : "project_id";
+            assertThat(jdbc.queryForObject(
+                            "SELECT data_type FROM information_schema.columns WHERE table_name = ? AND column_name = ?",
+                            String.class,
+                            table,
+                            column))
+                    .isEqualTo("uuid");
+            assertThat(jdbc.queryForList(
+                            "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = ?::regclass AND confrelid = 'project'::regclass",
+                            String.class,
+                            table))
+                    .containsExactly("FOREIGN KEY (" + column + ") REFERENCES project(project_id)");
+        }
+        assertThat(jdbc.queryForObject("SELECT to_regclass('project_project_id_seq') IS NULL", Boolean.class))
+                .isTrue();
+        assertThat(jdbc.queryForObject("SELECT to_regclass('idx_suggestion_project') IS NOT NULL", Boolean.class))
+                .isTrue();
+    }
+
+    @Test
+    void rewritesHexProjectIds_AC_005_10() throws Exception {
+        migrateTo(dataSource, "016-review-search-ticket-refs-attach");
+        jdbc.execute("ALTER SEQUENCE project_project_id_seq RESTART WITH 10");
+        insertTicketsAndProjects();
+        UUID projectId =
+                jdbc.queryForObject("SELECT public_id FROM project WHERE jira_project_key = 'SEARCH1'", UUID.class);
+        jdbc.update("UPDATE ticket SET project_id = ? WHERE source_ticket_id = 'SEARCH-2'", projectId);
+        jdbc.update("UPDATE ticket SET updated_at = '2026-01-01T00:00:00Z'::timestamptz");
+        var updatedAt = jdbc.queryForList("SELECT updated_at FROM ticket ORDER BY source_ticket_id");
+        jdbc.update(
+                "UPDATE department SET default_project_id = (SELECT project_id FROM project WHERE jira_project_key = 'SEARCH1') WHERE name = 'Department 1'");
+        jdbc.update(
+                "INSERT INTO suggestion_result (project_id, jira_issue_key) SELECT project_id, 'SEARCH-1' FROM project WHERE jira_project_key = 'SEARCH1'");
+        for (String expression : List.of("lpad(to_hex(project_id), 32, '0')::uuid", "public_id")) {
+            jdbc.update(
+                    "INSERT INTO import_batch (project_id, performed_by, source, published_count, error_count, removed_count, status) SELECT "
+                            + expression
+                            + ", 'pm', 'CSV', 0, 0, 0, 'COMPLETED' FROM project WHERE jira_project_key = 'SEARCH1'");
+            jdbc.update(
+                    "INSERT INTO import_preview (owner, project_id, source, file_name) SELECT ?, " + expression
+                            + ", 'CSV', 'test.csv' FROM project WHERE jira_project_key = 'SEARCH1'",
+                    expression);
+        }
+
+        migrateAll(dataSource);
+
+        for (String table : List.of("ticket", "import_batch", "import_preview", "suggestion_result")) {
+            assertThat(jdbc.queryForList("SELECT project_id FROM " + table, UUID.class))
+                    .containsOnly(projectId);
+        }
+        assertThat(jdbc.queryForList(
+                        "SELECT default_project_id FROM department WHERE name = 'Department 1'", UUID.class))
+                .containsExactly(projectId);
+        assertThat(jdbc.queryForObject(
+                        "SELECT default_project_id IS NULL FROM department WHERE name = 'Department 2'", Boolean.class))
+                .isTrue();
+        assertThat(jdbc.queryForList("SELECT updated_at FROM ticket ORDER BY source_ticket_id"))
+                .isEqualTo(updatedAt);
+
+        try (Connection connection = dataSource.getConnection();
+                ClassLoaderResourceAccessor resources = new ClassLoaderResourceAccessor();
+                Liquibase liquibase = new Liquibase(
+                        CHANGELOG,
+                        resources,
+                        DatabaseFactory.getInstance()
+                                .findCorrectDatabaseImplementation(new JdbcConnection(connection)))) {
+            liquibase.rollback(1, "");
+            assertThat(jdbc.queryForObject(
+                            "SELECT data_type FROM information_schema.columns WHERE table_name = 'project' AND column_name = 'project_id'",
+                            String.class))
+                    .isEqualTo("bigint");
+            assertThat(jdbc.queryForObject(
+                            "SELECT p.public_id FROM suggestion_result s JOIN project p USING (project_id)",
+                            UUID.class))
+                    .isEqualTo(projectId);
+            assertThat(jdbc.queryForObject(
+                            "SELECT p.public_id FROM department d JOIN project p ON d.default_project_id = p.project_id",
+                            UUID.class))
+                    .isEqualTo(projectId);
+            liquibase.update("");
+        }
+        for (String table : List.of("ticket", "import_batch", "import_preview", "suggestion_result")) {
+            assertThat(jdbc.queryForList("SELECT project_id FROM " + table, UUID.class))
+                    .containsOnly(projectId);
+        }
+    }
+
+    @Test
     void givesEveryExistingRowItsOwnPublicId_AC_005_1() throws Exception {
         migrateTo(dataSource, "007-identity-hand-off-code");
         insertTicketsAndProjects();
@@ -68,7 +178,9 @@ class SearchSchemaIT {
         migrateAll(dataSource);
 
         for (String table : PUBLIC_ID_TABLES) {
-            assertThat(jdbc.queryForList("SELECT public_id FROM " + table, UUID.class))
+            assertThat(jdbc.queryForList(
+                            "SELECT " + ("project".equals(table) ? "project_id" : "public_id") + " FROM " + table,
+                            UUID.class))
                     .as("public ids on existing %s rows", table)
                     .hasSize(2)
                     .doesNotContainNull()
@@ -82,16 +194,18 @@ class SearchSchemaIT {
         insertTicketsAndProjects();
 
         for (String table : PUBLIC_ID_TABLES) {
-            List<UUID> publicIds = jdbc.queryForList("SELECT public_id FROM " + table, UUID.class);
+            List<UUID> publicIds = jdbc.queryForList(
+                    "SELECT " + ("project".equals(table) ? "project_id" : "public_id") + " FROM " + table, UUID.class);
             assertThat(publicIds).hasSize(2).doesNotContainNull().doesNotHaveDuplicates();
 
             assertThatThrownBy(() -> jdbc.update(
-                            "UPDATE " + table + " SET public_id = ? WHERE public_id = ?",
+                            "UPDATE " + table + " SET " + ("project".equals(table) ? "project_id" : "public_id")
+                                    + " = ? WHERE " + ("project".equals(table) ? "project_id" : "public_id") + " = ?",
                             publicIds.get(0),
                             publicIds.get(1)))
                     .as("public ids must be unique on %s", table)
                     .isInstanceOf(DataIntegrityViolationException.class)
-                    .hasMessageContaining("uq_" + table + "_public_id");
+                    .hasMessageContaining("project".equals(table) ? "project_pkey" : "uq_" + table + "_public_id");
         }
     }
 
@@ -460,9 +574,9 @@ class SearchSchemaIT {
                     "INSERT INTO department (name) VALUES (?) RETURNING department_id",
                     Long.class,
                     "Department " + index);
-            Long projectId = jdbc.queryForObject(
+            Object projectId = jdbc.queryForObject(
                     "INSERT INTO project (department_id, jira_project_key) VALUES (?, ?) RETURNING project_id",
-                    Long.class,
+                    Object.class,
                     departmentId,
                     "SEARCH" + index);
             boolean canonical = Boolean.TRUE.equals(jdbc.queryForObject(
@@ -476,7 +590,10 @@ class SearchSchemaIT {
                     """
                             .formatted(canonical ? "source_ticket_id" : "ticket_id"),
                     "SEARCH-" + index,
-                    projectIdIsUuid() ? new UUID(0, projectId) : projectId,
+                    projectIdIsUuid() && projectId instanceof Number
+                            ? jdbc.queryForObject(
+                                    "SELECT lpad(to_hex(?::bigint), 32, '0')::uuid", UUID.class, projectId)
+                            : projectId,
                     "Ticket " + index);
         }
     }

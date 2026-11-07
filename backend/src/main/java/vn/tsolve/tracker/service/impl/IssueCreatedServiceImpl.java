@@ -2,6 +2,7 @@ package vn.tsolve.tracker.service.impl;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +34,7 @@ public class IssueCreatedServiceImpl implements IssueCreatedService {
     // that insert and can still be answered 202 (edge cases 11, 12).
     @Override
     public void receive(IssueCreatedPayload payload) {
-        Optional<Long> projectId = projectService.findActiveIdByJiraProjectKey(payload.projectKey());
+        Optional<UUID> projectId = projectService.findActiveIdByJiraProjectKey(payload.projectKey());
         if (projectId.isEmpty()) {
             log.info("Issue created outside T-Solve Projects: {} {}", payload.issueKey(), payload.projectKey());
             return;

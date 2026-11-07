@@ -83,7 +83,7 @@ class TicketListRepositoryIT {
     private final UUID departmentPublicId = UUID.randomUUID();
     private final UUID otherPublicId = UUID.randomUUID();
     private long department;
-    private long managedProject;
+    private UUID managedProject;
     private long ticketSequence;
 
     @BeforeEach
@@ -93,9 +93,9 @@ class TicketListRepositoryIT {
         department = department("IT", "ACTIVE", departmentPublicId);
         long other = department("HR", "ACTIVE", otherPublicId);
         long deleted = department("OLD", "DELETED", UUID.randomUUID());
-        long project = project(department, "ITSUP");
+        UUID project = project(department, "ITSUP");
         managedProject = project(other, "HRHELP");
-        long hiddenProject = project(other, "HRPRIVATE");
+        UUID hiddenProject = project(other, "HRPRIVATE");
         ticket(project, "IT-1", "PUBLISHED", "someone", "VPN 100%_\\fix");
         ticket(project, "IT-2", "REJECTED", "writer", "Own solution");
         ticket(project, "IT-3", "PENDING_REVIEW", "someone", "Other writer");
@@ -104,7 +104,7 @@ class TicketListRepositoryIT {
         ticket(hiddenProject, "HR-3", "CHANGES_REQUESTED", "writer", "Own cross Department ticket");
         ticket(hiddenProject, "HR-4", "PUBLISHED", "writer", "Published outside scope");
         ticket(project(deleted, "OLD"), "OLD-1", "REJECTED", "writer", "Deleted Department");
-        ticket(999999L, "ORPHAN-1", "PUBLISHED", "writer", "No Project");
+        ticket(UUID.randomUUID(), "ORPHAN-1", "PUBLISHED", "writer", "No Project");
         when(scope.of(any()))
                 .thenReturn(new VisibleScope.Scope(Set.of(department), Set.of(managedProject), Optional.of("writer")));
     }
@@ -141,7 +141,7 @@ class TicketListRepositoryIT {
         assertThat(row.project().name()).isEqualTo("ITSUP");
         assertThat(row.project().projectId())
                 .isEqualTo(jdbc.queryForObject(
-                        "SELECT public_id FROM project WHERE jira_project_key='ITSUP'", UUID.class));
+                        "SELECT project_id FROM project WHERE jira_project_key='ITSUP'", UUID.class));
         assertThat(row.department().departmentId()).isEqualTo(departmentPublicId);
         assertThat(row.department().name()).isEqualTo("IT");
         assertThat(row.reviewDueDate()).isNull();
@@ -194,15 +194,15 @@ class TicketListRepositoryIT {
                 id);
     }
 
-    private long project(long departmentId, String key) {
+    private UUID project(long departmentId, String key) {
         return jdbc.queryForObject(
                 "INSERT INTO project(department_id,jira_project_key) VALUES (?,?) RETURNING project_id",
-                Long.class,
+                UUID.class,
                 departmentId,
                 key);
     }
 
-    private void ticket(long projectId, String key, String status, String writer, String title) {
+    private void ticket(UUID projectId, String key, String status, String writer, String title) {
         jdbc.update(
                 """
                 INSERT INTO ticket(ticket_id, source_ticket_id, project_id, source, status, title, writer,
@@ -211,7 +211,7 @@ class TicketListRepositoryIT {
                 """,
                 new UUID(0, ++ticketSequence),
                 key,
-                new UUID(0, projectId),
+                projectId,
                 status,
                 title,
                 writer);

@@ -31,4 +31,6 @@
     <include file="changes/012-review-search-restore-time.sql" relativeToChangelogFile="true"/>
     <include file="changes/016-review-search-ticket-refs-attach.sql" relativeToChangelogFile="true"/>
 
+    <include file="changes/017-search-project-uuid-key.sql" relativeToChangelogFile="true"/>
+
 </databaseChangeLog>

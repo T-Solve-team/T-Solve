@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -46,12 +47,18 @@ class VisibleScopeSelectionTest {
     @Test
     void usesDevScopeOnlyForExactAll_AC_006_11() {
         when(repository.activeDepartments()).thenReturn(Set.of(1L));
-        when(repository.projects()).thenReturn(Set.of(7L, 9L));
+        when(repository.projects())
+                .thenReturn(Set.of(
+                        UUID.fromString("00000000-0000-4000-8000-000000000007"),
+                        UUID.fromString("00000000-0000-4000-8000-000000000009")));
         runner.withPropertyValues("SEARCH_DEV_SCOPE=all").run(context -> {
             assertThat(context).hasSingleBean(VisibleScope.class).doesNotHaveBean(NoVisibleScope.class);
             var scope = context.getBean(VisibleScope.class).of(null);
             assertThat(scope.departmentIds()).containsExactly(1L);
-            assertThat(scope.managedProjectIds()).containsExactlyInAnyOrder(7L, 9L);
+            assertThat(scope.managedProjectIds())
+                    .containsExactlyInAnyOrder(
+                            UUID.fromString("00000000-0000-4000-8000-000000000007"),
+                            UUID.fromString("00000000-0000-4000-8000-000000000009"));
             assertThat(scope.writer()).isEmpty();
         });
     }

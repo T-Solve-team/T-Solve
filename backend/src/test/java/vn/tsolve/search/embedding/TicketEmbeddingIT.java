@@ -131,7 +131,8 @@ class TicketEmbeddingIT {
         jdbc.execute(
                 "TRUNCATE ticket_import_decision, ticket, import_batch, import_preview, project, department CASCADE");
         jdbc.update("INSERT INTO department (department_id, name) VALUES (1, 'Embedding IT')");
-        jdbc.update("INSERT INTO project (project_id, department_id, jira_project_key) VALUES (1, 1, 'EMBED')");
+        jdbc.update(
+                "INSERT INTO project (project_id, department_id, jira_project_key) VALUES ('00000000-0000-0000-0000-000000000001', 1, 'EMBED')");
         client.calls.clear();
         client.called = new CountDownLatch(1);
         client.fail = false;

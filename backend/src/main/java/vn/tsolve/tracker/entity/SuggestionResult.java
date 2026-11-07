@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * The AI Solution Suggestion of one Jira issue; the tracker creates the row when the issue is created (AC-003.1)
@@ -24,7 +25,7 @@ public class SuggestionResult {
 
     // The Project's id; no JPA association across modules (AGENTS §1).
     @Column(name = "project_id", nullable = false, updatable = false)
-    private Long projectId;
+    private UUID projectId;
 
     @Column(name = "jira_issue_key", nullable = false, updatable = false)
     private String jiraIssueKey;
@@ -34,7 +35,7 @@ public class SuggestionResult {
 
     protected SuggestionResult() {}
 
-    public SuggestionResult(Long projectId, String jiraIssueKey, Instant now) {
+    public SuggestionResult(UUID projectId, String jiraIssueKey, Instant now) {
         this.projectId = projectId;
         this.jiraIssueKey = jiraIssueKey;
         this.createdAt = now;
@@ -44,7 +45,7 @@ public class SuggestionResult {
         return id;
     }
 
-    public Long getProjectId() {
+    public UUID getProjectId() {
         return projectId;
     }
 

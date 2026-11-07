@@ -12,7 +12,7 @@ public interface TicketSummaryMapper {
     @Mapping(target = "ticketId", source = "publicId")
     @Mapping(
             target = "project",
-            expression = "java(new TicketProjectRef(ticket.getProjectPublicId(), ticket.getProjectName()))")
+            expression = "java(new TicketProjectRef(ticket.getProjectId(), ticket.getProjectName()))")
     @Mapping(
             target = "department",
             expression = "java(new TicketDepartmentRef(ticket.getDepartmentPublicId(), ticket.getDepartmentName()))")

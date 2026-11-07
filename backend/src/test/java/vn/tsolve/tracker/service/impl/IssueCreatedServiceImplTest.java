@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.sql.SQLException;
 import java.util.Optional;
+import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +29,8 @@ class IssueCreatedServiceImplTest {
     private static final IssueCreatedPayload PAYLOAD = new IssueCreatedPayload(new IssueCreatedPayload.Issue(
             "ITSUP-1", new IssueCreatedPayload.Fields(new IssueCreatedPayload.Project("ITSUP"))));
 
+    private static final UUID PROJECT_ID = UUID.randomUUID();
+
     @Mock
     private ProjectService projectService;
 
@@ -36,20 +39,20 @@ class IssueCreatedServiceImplTest {
 
     @Test
     void storesSuggestionResultForIssueOfActiveProject_AC_003_1() {
-        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(4L));
+        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(PROJECT_ID));
 
         service().receive(PAYLOAD);
 
         ArgumentCaptor<SuggestionResult> saved = ArgumentCaptor.forClass(SuggestionResult.class);
         verify(repository).saveAndFlush(saved.capture());
-        assertThat(saved.getValue().getProjectId()).isEqualTo(4L);
+        assertThat(saved.getValue().getProjectId()).isEqualTo(PROJECT_ID);
         assertThat(saved.getValue().getJiraIssueKey()).isEqualTo("ITSUP-1");
         assertThat(saved.getValue().getCreatedAt()).isNotNull();
     }
 
     @Test
     void acceptsIssueAlreadyStored_AC_003_4() {
-        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(4L));
+        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(PROJECT_ID));
         given(repository.saveAndFlush(any())).willThrow(violation(IssueCreatedServiceImpl.UNIQUE_ISSUE));
 
         assertThatCode(() -> service().receive(PAYLOAD)).doesNotThrowAnyException();
@@ -66,7 +69,7 @@ class IssueCreatedServiceImplTest {
 
     @Test
     void rethrowsOtherIntegrityErrors_AC_003_1() {
-        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(4L));
+        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(PROJECT_ID));
         given(repository.saveAndFlush(any())).willThrow(violation("suggestion_result_project_id_fkey"));
 
         assertThatThrownBy(() -> service().receive(PAYLOAD)).isInstanceOf(DataIntegrityViolationException.class);

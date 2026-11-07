@@ -41,7 +41,11 @@ class TicketListServiceImplTest {
 
     @BeforeEach
     void scope() {
-        when(visibleScope.of(user)).thenReturn(new VisibleScope.Scope(Set.of(1L), Set.of(7L), Optional.of("writer")));
+        when(visibleScope.of(user))
+                .thenReturn(new VisibleScope.Scope(
+                        Set.of(1L),
+                        Set.of(UUID.fromString("00000000-0000-4000-8000-000000000007")),
+                        Optional.of("writer")));
     }
 
     @Test

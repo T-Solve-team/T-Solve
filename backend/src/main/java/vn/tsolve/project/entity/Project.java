@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.UUID;
 
 /**
  * A T-Solve Project linked to one Jira project. Only the columns read so far are mapped; the Project owner adds
@@ -18,9 +19,9 @@ import jakarta.persistence.Table;
 public class Project {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "project_id")
-    private Long id;
+    private UUID id;
 
     @Column(name = "jira_project_key", nullable = false)
     private String jiraProjectKey;
@@ -31,7 +32,7 @@ public class Project {
 
     protected Project() {}
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 

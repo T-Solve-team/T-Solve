@@ -11,5 +11,5 @@ public interface ScopeTicketRepository extends Repository<SearchTicket, UUID> {
     Set<Long> activeDepartments();
 
     @Query("select distinct t.projectId from SearchTicket t")
-    Set<Long> projects();
+    Set<UUID> projects();
 }

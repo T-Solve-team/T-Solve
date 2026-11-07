@@ -17,12 +17,11 @@ import org.hibernate.annotations.Synchronize;
         """
         select t.ticket_id as id, t.public_id, t.source_ticket_id as ticket_id, t.title, t.source, t.status, t.writer,
                t.resolved_date, t.updated_at, t.symptoms, t.root_cause, t.resolution_steps,
-               t.workaround, t.scope, p.project_id, p.public_id as project_public_id,
+               t.workaround, t.scope, p.project_id,
                p.jira_project_key as project_name, d.department_id,
                d.public_id as department_public_id, d.name as department_name,
                d.status as department_status
-          from ticket t join project p on (p.public_id = t.project_id
-               or lpad(to_hex(p.project_id), 32, '0')::uuid = t.project_id)
+          from ticket t join project p on p.project_id = t.project_id
           join department d on d.department_id = p.department_id
         """)
 @Synchronize({"ticket", "project", "department"})
@@ -59,10 +58,7 @@ public class SearchTicket {
     private String scope;
 
     @Column(name = "project_id")
-    private Long projectId;
-
-    @Column(name = "project_public_id")
-    private UUID projectPublicId;
+    private UUID projectId;
 
     @Column(name = "project_name")
     private String projectName;
@@ -137,12 +133,8 @@ public class SearchTicket {
         return scope;
     }
 
-    public Long getProjectId() {
+    public UUID getProjectId() {
         return projectId;
-    }
-
-    public UUID getProjectPublicId() {
-        return projectPublicId;
     }
 
     public String getProjectName() {

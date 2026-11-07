@@ -5,6 +5,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -16,17 +17,19 @@ import vn.tsolve.project.repository.ProjectRepository;
 @ExtendWith(MockitoExtension.class)
 class ProjectServiceImplTest {
 
+    private static final UUID PROJECT_ID = UUID.randomUUID();
+
     @Mock
     private ProjectRepository projectRepository;
 
     @Test
     void findsTheActiveProjectOfAJiraKey_AC_003_1() {
         Project project = mock(Project.class);
-        given(project.getId()).willReturn(4L);
+        given(project.getId()).willReturn(PROJECT_ID);
         given(projectRepository.findByJiraProjectKeyAndStatus("ITSUP", ProjectStatus.ACTIVE))
                 .willReturn(Optional.of(project));
 
-        assertThat(service().findActiveIdByJiraProjectKey("ITSUP")).contains(4L);
+        assertThat(service().findActiveIdByJiraProjectKey("ITSUP")).contains(PROJECT_ID);
     }
 
     @Test

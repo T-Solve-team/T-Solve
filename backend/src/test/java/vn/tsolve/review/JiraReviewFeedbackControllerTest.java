@@ -29,9 +29,9 @@ class JiraReviewFeedbackControllerTest {
         UUID writer = UUID.randomUUID();
         when(access.inWriterIssue(any(), anyString(), any())).thenAnswer(invocation -> {
             Function<WriterIssue, Object> read = invocation.getArgument(2);
-            return read.apply(new WriterIssue(writer, new UUID(0, 10)));
+            return read.apply(new WriterIssue(writer, UUID.fromString("00000000-0000-0000-0000-00000000000a")));
         });
-        when(reads.jiraFeedback(new UUID(0, 10), writer, "OPS-1"))
+        when(reads.jiraFeedback(UUID.fromString("00000000-0000-0000-0000-00000000000a"), writer, "OPS-1"))
                 .thenReturn(Optional.of(new Feedback(UUID.randomUUID(), "Explain the workaround")));
         var controller = new JiraReviewFeedbackController(reads, Optional.of(access));
         assertThat(controller

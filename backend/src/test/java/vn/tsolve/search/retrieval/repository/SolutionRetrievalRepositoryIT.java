@@ -128,9 +128,9 @@ class SolutionRetrievalRepositoryIT {
                 Long.class,
                 key,
                 departmentStatus);
-        Long project = jdbc.queryForObject(
+        UUID project = jdbc.queryForObject(
                 "INSERT INTO project(department_id, jira_project_key) VALUES (?, ?) RETURNING project_id",
-                Long.class,
+                UUID.class,
                 department,
                 key);
         UUID ticket = jdbc.queryForObject(
@@ -142,7 +142,7 @@ class SolutionRetrievalRepositoryIT {
                 """,
                 UUID.class,
                 key,
-                new UUID(0, project),
+                project,
                 ticketStatus,
                 key);
         jdbc.update(

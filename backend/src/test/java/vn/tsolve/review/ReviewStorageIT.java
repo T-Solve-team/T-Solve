@@ -56,7 +56,7 @@ class ReviewStorageIT {
             assertThat(jdbc.queryForObject("select public_id from ticket", UUID.class))
                     .isEqualTo(publicId);
             assertThat(jdbc.queryForObject("select project_id from ticket", UUID.class))
-                    .isEqualTo(new UUID(0, 1));
+                    .isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000001"));
         }
     }
 
@@ -175,7 +175,7 @@ class ReviewStorageIT {
                 liquibase.update(new Contexts(), new LabelExpression());
             }
             assertThat(jdbc.queryForObject("select project_id from ticket where ticket_id = ?", UUID.class, id))
-                    .isEqualTo(new UUID(0, 10));
+                    .isEqualTo(UUID.fromString("00000000-0000-0000-0000-00000000000a"));
             assertThat(jdbc.queryForObject(
                             "select count(*) from databasechangelog where id = '008-review-ticket-storage'",
                             Integer.class))
@@ -239,7 +239,7 @@ class ReviewStorageIT {
                     UUID.class);
             assertThat(ticketId).isNotNull();
             assertThat(jdbc.queryForObject("select project_id from ticket where ticket_id = ?", UUID.class, ticketId))
-                    .isEqualTo(new UUID(0, 1));
+                    .isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000001"));
             assertThat(jdbc.queryForObject(
                             "select ticket_id from ticket_import_decision where reviewer = 'legacy-pm'", UUID.class))
                     .isEqualTo(ticketId);
