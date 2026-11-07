@@ -7,7 +7,7 @@ date: 2026-11-08
 
 # Test report: Task 15, Review Queue event stream hardening (PR #155 reviews)
 
-Independent review: the PR #155 reviews by trhieudev1309 (5812129670, 5812506048, 5813751864); this report records the evidence for the fixes they asked for (BUG-166, BUG-167, BUG-169–BUG-172).
+Independent review: the PR #155 reviews by trhieudev1309 (5812129670, 5812506048, 5813751864); this report records the evidence for the fixes they asked for (BUG-172, BUG-173, BUG-174–BUG-177).
 
 | Check | Result |
 |---|---|

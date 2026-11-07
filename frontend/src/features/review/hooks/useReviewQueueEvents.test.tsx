@@ -70,7 +70,7 @@ describe('useReviewQueueEvents', () => {
     expect(refetchInterval(queryClient)).toBe(REVIEW_QUEUE_SAFETY_REFETCH_MS);
   });
 
-  it('AC-012.6 edge BUG-170 stays on polling without a stream in mock mode', async () => {
+  it('AC-012.6 edge BUG-175 stays on polling without a stream in mock mode', async () => {
     vi.stubEnv('DEV', true);
     vi.stubEnv('VITE_API_MOCKING', 'true');
     const { queryClient } = renderWithProviders(<Probe />);
@@ -79,7 +79,7 @@ describe('useReviewQueueEvents', () => {
     expect(refetchInterval(queryClient)).toBe(REVIEW_QUEUE_POLL_MS);
   });
 
-  it('AC-012.6 edge BUG-171 keeps a 60 s safety refetch while connected', async () => {
+  it('AC-012.6 edge BUG-176 keeps a 60 s safety refetch while connected', async () => {
     const { source, queryClient } = await mount();
     act(() => source.emit('open'));
     await screen.findByText('live');

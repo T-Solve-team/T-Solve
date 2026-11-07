@@ -410,7 +410,7 @@ class ReviewQueueEventsIT {
 
     @Test
     @WithTSolveUser(id = REVOCABLE_ID, roles = Role.PROJECT_MANAGER)
-    void edge11_projectGrantedMidStreamReceivesEvents_AC_012_2_BUG_166() throws Exception {
+    void edge11_projectGrantedMidStreamReceivesEvents_AC_012_2_BUG_172() throws Exception {
         REVOCABLE_PROJECTS.put(REVOCABLE, Set.of(OPS));
         Stream stream = openReady();
         UUID created = null;

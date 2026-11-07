@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -25,8 +27,10 @@ import org.springframework.dao.DataAccessResourceFailureException;
 import vn.tsolve.tracker.dto.IssueSuggestion;
 import vn.tsolve.tracker.dto.SuggestionSource;
 import vn.tsolve.tracker.entity.SuggestionResult;
+import vn.tsolve.tracker.exception.JiraUnavailableException;
 import vn.tsolve.tracker.exception.SuggestionJobFailedException;
 import vn.tsolve.tracker.repository.SuggestionResultRepository;
+import vn.tsolve.tracker.service.SuggestionCommentService;
 import vn.tsolve.tracker.service.SuggestionSearch;
 
 @ExtendWith({MockitoExtension.class, OutputCaptureExtension.class})
@@ -46,6 +50,9 @@ class SuggestionJobServiceImplTest {
 
     @Mock
     private SuggestionSearch search;
+
+    @Mock
+    private SuggestionCommentService comments;
 
     @Test
     void asksSearchWithTheProjectAndTheIssueTextStoredInTheRow_AC_011_3() {
@@ -168,18 +175,84 @@ class SuggestionJobServiceImplTest {
     }
 
     @Test
-    void changesNothingWhenTheResultAlreadyHasASuggestion_AC_011_7() {
+    void postsAMissingCommentWithoutAskingSearchAgain_AC_011_7_AC_012_3() {
         SuggestionResult filled = mock(SuggestionResult.class);
+        given(filled.getJiraIssueKey()).willReturn("ITSUP-1");
         given(filled.hasSuggestion()).willReturn(true);
+        given(filled.getSuggestedSolution()).willReturn("Restart the VPN service.");
         given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(filled));
 
         service().run(SUGGESTION_ID);
 
         verifyNoInteractions(search);
         verify(repository, never()).fillSuggestion(anyString(), anyString(), anyString());
+        verify(comments).post(SUGGESTION_ID, "ITSUP-1", "Restart the VPN service.");
+    }
+
+    @Test
+    void changesNothingWhenTheCommentIsAlreadyPosted_AC_012_4() {
+        SuggestionResult commented = mock(SuggestionResult.class);
+        given(commented.getJiraIssueKey()).willReturn("ITSUP-1");
+        given(commented.hasComment()).willReturn(true);
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(commented));
+
+        service().run(SUGGESTION_ID);
+
+        verifyNoInteractions(search, comments);
+        verify(repository, never()).fillSuggestion(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void postsTheCommentAfterStoringTheSuggestion_AC_012_1() {
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(RESULT));
+        given(search.suggest(any(UUID.class), anyString(), anyString()))
+                .willReturn(Optional.of(new IssueSuggestion(List.of(), "Restart the VPN service.")));
+        given(repository.fillSuggestion(anyString(), anyString(), anyString())).willReturn(1);
+
+        service().run(SUGGESTION_ID);
+
+        verify(comments).post(SUGGESTION_ID, "ITSUP-1", "Restart the VPN service.");
+    }
+
+    @Test
+    void postsNoCommentWhenThereIsNoSuggestion_AC_012_6() {
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(RESULT));
+        given(search.suggest(any(UUID.class), anyString(), anyString())).willReturn(Optional.empty());
+
+        service().run(SUGGESTION_ID);
+
+        verifyNoInteractions(comments);
+    }
+
+    @Test
+    void postsNoCommentWhenAnotherRunStoredTheSuggestionMeanwhile_AC_012_4() {
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(RESULT));
+        given(search.suggest(any(UUID.class), anyString(), anyString()))
+                .willReturn(Optional.of(new IssueSuggestion(List.of(), "Restart the VPN service.")));
+        given(repository.fillSuggestion(anyString(), anyString(), anyString())).willReturn(0);
+
+        service().run(SUGGESTION_ID);
+
+        verifyNoInteractions(comments);
+    }
+
+    @Test
+    void failsForARetryWhenJiraIsUnavailable_AC_012_7(CapturedOutput output) {
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(RESULT));
+        given(search.suggest(any(UUID.class), anyString(), anyString()))
+                .willReturn(Optional.of(new IssueSuggestion(List.of(), "Restart the VPN service.")));
+        given(repository.fillSuggestion(anyString(), anyString(), anyString())).willReturn(1);
+        doThrow(new JiraUnavailableException(503)).when(comments).post(eq(SUGGESTION_ID), eq("ITSUP-1"), anyString());
+
+        assertThatThrownBy(() -> service().run(SUGGESTION_ID))
+                .isInstanceOf(SuggestionJobFailedException.class)
+                .hasNoCause()
+                .hasMessageContaining("ITSUP-1")
+                .hasMessageContaining("JiraUnavailableException");
+        assertThat(output).doesNotContain("Restart the VPN service.");
     }
 
     private SuggestionJobServiceImpl service() {
-        return new SuggestionJobServiceImpl(repository, search, new ObjectMapper());
+        return new SuggestionJobServiceImpl(repository, search, comments, new ObjectMapper());
     }
 }

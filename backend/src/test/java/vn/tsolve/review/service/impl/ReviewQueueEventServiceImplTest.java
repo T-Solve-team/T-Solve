@@ -127,7 +127,7 @@ class ReviewQueueEventServiceImplTest {
     }
 
     @Test
-    void addedProjectGetsQueueChangedAtTheHeartbeat_AC_012_2_BUG_169() throws Exception {
+    void addedProjectGetsQueueChangedAtTheHeartbeat_AC_012_2_BUG_174() throws Exception {
         UUID added = new UUID(0, 5);
         var managed = new AtomicReference<>(Set.of(PROJECT));
         var access = mock(ReviewWorkspaceAccess.class);
@@ -147,7 +147,7 @@ class ReviewQueueEventServiceImplTest {
     }
 
     @Test
-    void subscribeFailureAfterAddRemovesTheSubscription_BUG_172() throws Exception {
+    void subscribeFailureAfterAddRemovesTheSubscription_BUG_177() throws Exception {
         service = serviceWith(List.of(new FakeEmitter(false)), Optional.empty(), Duration.ZERO);
         assertThatThrownBy(() -> service.subscribe(WORKSPACE, new UUID(0, 3), Set.of(PROJECT)))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -155,7 +155,7 @@ class ReviewQueueEventServiceImplTest {
     }
 
     @Test
-    void joiningSubscriptionHasOneFiveSecondWaitBudget_BUG_172() throws Exception {
+    void joiningSubscriptionHasOneFiveSecondWaitBudget_BUG_177() throws Exception {
         service = serviceWith(List.of(new FakeEmitter(false), new FakeEmitter(false)));
         service.subscribe(WORKSPACE, new UUID(0, 3), Set.of(PROJECT));
         var interrupted = new CountDownLatch(1);
@@ -177,7 +177,7 @@ class ReviewQueueEventServiceImplTest {
     }
 
     @Test
-    void joinBarrierFailureRemovesOnlyTheJoiningSubscription_BUG_172() throws Exception {
+    void joinBarrierFailureRemovesOnlyTheJoiningSubscription_BUG_177() throws Exception {
         var original = new FakeEmitter(false);
         service = serviceWith(List.of(original, new FakeEmitter(false)));
         service.subscribe(WORKSPACE, new UUID(0, 3), Set.of(PROJECT));
@@ -194,7 +194,7 @@ class ReviewQueueEventServiceImplTest {
     }
 
     @Test
-    void projectGrantedMidStreamReceivesEvents_AC_012_2_BUG_166() throws Exception {
+    void projectGrantedMidStreamReceivesEvents_AC_012_2_BUG_172() throws Exception {
         UUID second = new UUID(0, 5);
         var managed = new AtomicReference<>(Set.of(PROJECT));
         var access = mock(ReviewWorkspaceAccess.class);
@@ -217,7 +217,7 @@ class ReviewQueueEventServiceImplTest {
     }
 
     @Test
-    void drainRecoversAfterAnUnexpectedError_BUG_167() throws Exception {
+    void drainRecoversAfterAnUnexpectedError_BUG_173() throws Exception {
         var broken = new FakeEmitter(false);
         broken.error = new AssertionError("unexpected send failure");
         var healthy = new FakeEmitter(false);
