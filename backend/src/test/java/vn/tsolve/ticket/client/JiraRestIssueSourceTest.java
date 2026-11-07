@@ -1,23 +1,25 @@
 package vn.tsolve.ticket.client;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.http.Fault;
+import com.sun.net.httpserver.HttpServer;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Base64;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +27,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.ResponseActions;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.util.DefaultUriBuilderFactory;
+import org.springframework.web.util.UriComponentsBuilder;
 import vn.tsolve.ticket.entity.IssueComment;
 import vn.tsolve.ticket.exception.JiraUnavailableException;
 import vn.tsolve.ticket.service.JiraIssue;
@@ -33,26 +42,32 @@ import vn.tsolve.ticket.service.JiraIssuePage;
 @ExtendWith(OutputCaptureExtension.class)
 class JiraRestIssueSourceTest {
 
-    private static final String EMAIL = "svc-jira@example.test";
+    private static final String SITE_URL = "https://example.atlassian.net";
+    private static final String CLOUD_ID = "test-cloud-id";
+    private static final String GATEWAY = "https://api.atlassian.com/ex/jira/" + CLOUD_ID;
+    private static final String SEARCH = GATEWAY + "/rest/api/3/search/jql";
+    private static final String COMMENTS = GATEWAY + "/rest/api/3/issue/KAN-7/comment";
     private static final String TOKEN = "test-token-value";
     private static final LocalDate FROM = LocalDate.parse("2026-10-01");
     private static final LocalDate TO = LocalDate.parse("2026-10-31");
 
-    private final WireMockServer jira = new WireMockServer(options().dynamicPort());
+    private final List<Duration> sleeps = new ArrayList<>();
+    private RestClient.Builder builder;
+    private MockRestServiceServer jira;
 
     @BeforeEach
     void start() {
-        jira.start();
+        builder = RestClient.builder();
+        jira = MockRestServiceServer.bindTo(builder).build();
     }
 
     @AfterEach
     void stop() {
-        jira.stop();
+        jira.verify();
     }
 
     private JiraRestIssueSource source() {
-        return new JiraRestIssueSource(
-                jira.baseUrl() + "/", EMAIL, TOKEN, Duration.ofSeconds(2), Duration.ofSeconds(2));
+        return new JiraRestIssueSource(SITE_URL + "/", CLOUD_ID, TOKEN, builder, sleeps::add);
     }
 
     private static String issue(String key, String resolved, String assignee, String comments) {
@@ -73,40 +88,47 @@ class JiraRestIssueSourceTest {
     private static final String NO_COMMENTS = "{\"comments\":[],\"total\":0,\"startAt\":0,\"maxResults\":5000}";
 
     private void searchReturns(String body) {
-        jira.stubFor(get(urlPathEqualTo("/rest/api/3/search/jql")).willReturn(okJson(body)));
+        searchRequest().andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+    }
+
+    private ResponseActions searchRequest() {
+        return jira.expect(request -> assertThat(request.getURI().toString()).startsWith(SEARCH + "?"))
+                .andExpect(header("Authorization", "Bearer " + TOKEN));
     }
 
     @Test
     void searchesTheProjectsIssuesResolvedInTheRangeOldestFirst_AC_001_1() {
-        searchReturns("{\"issues\":[" + issue("KAN-7", "2026-10-02T10:15:30.000+0700", "Hà", NO_COMMENTS) + "],"
-                + "\"nextPageToken\":\"page-2\",\"isLast\":false}");
+        searchRequest()
+                .andExpect(request -> {
+                    String jql = UriComponentsBuilder.fromUri(request.getURI())
+                            .build()
+                            .getQueryParams()
+                            .getFirst("jql");
+                    assertThat(jql).isNotNull();
+                    assertThat(URLDecoder.decode(jql, StandardCharsets.UTF_8))
+                            .isEqualTo("project = \"KAN\" AND resolved >= \"2026-10-01\" AND resolved < \"2026-11-01\""
+                                    + " ORDER BY resolved ASC, key ASC");
+                })
+                .andExpect(queryParam("fields", "summary,description,assignee,resolutiondate,comment"))
+                .andExpect(queryParam("maxResults", "100"))
+                .andRespond(withSuccess(
+                        "{\"issues\":[" + issue("KAN-7", "2026-10-02T10:15:30.000+0700", "Hà", NO_COMMENTS)
+                                + "],\"nextPageToken\":\"page-2\",\"isLast\":false}",
+                        MediaType.APPLICATION_JSON));
 
         JiraIssuePage page = source().resolvedIssues("KAN", FROM, TO, null);
-
-        jira.verify(getRequestedFor(urlPathEqualTo("/rest/api/3/search/jql"))
-                .withQueryParam(
-                        "jql",
-                        equalTo("project = \"KAN\" AND resolved >= \"2026-10-01\" AND resolved < \"2026-11-01\""
-                                + " ORDER BY resolved ASC, key ASC"))
-                .withQueryParam("fields", equalTo("summary,description,assignee,resolutiondate,comment"))
-                .withQueryParam("maxResults", equalTo("100"))
-                .withHeader(
-                        "Authorization",
-                        equalTo("Basic "
-                                + Base64.getEncoder()
-                                        .encodeToString((EMAIL + ":" + TOKEN).getBytes(StandardCharsets.UTF_8)))));
         assertThat(page.issues()).extracting(JiraIssue::key).containsExactly("KAN-7");
         assertThat(page.nextPageToken()).isEqualTo("page-2");
     }
 
     @Test
     void asksForTheNextPageWithItsTokenAndReportsTheLastPage_AC_001_1() {
-        searchReturns("{\"issues\":[],\"isLast\":true}");
+        searchRequest()
+                .andExpect(queryParam("nextPageToken", "page-2"))
+                .andRespond(withSuccess("{\"issues\":[],\"isLast\":true}", MediaType.APPLICATION_JSON));
 
         JiraIssuePage page = source().resolvedIssues("KAN", FROM, TO, "page-2");
 
-        jira.verify(getRequestedFor(urlPathEqualTo("/rest/api/3/search/jql"))
-                .withQueryParam("nextPageToken", equalTo("page-2")));
         assertThat(page.nextPageToken()).isNull();
     }
 
@@ -142,7 +164,7 @@ class JiraRestIssueSourceTest {
         assertThat(first.description()).isEqualTo("Description of KAN-7");
         assertThat(first.assignee()).isEqualTo("Hà");
         assertThat(first.resolvedAt()).isEqualTo(Instant.parse("2026-10-02T03:15:30Z"));
-        assertThat(first.url()).isEqualTo(jira.baseUrl() + "/browse/KAN-7");
+        assertThat(first.url()).isEqualTo(SITE_URL + "/browse/KAN-7");
         assertThat(first.comments())
                 .containsExactly(
                         new IssueComment("Lan", Instant.parse("2026-10-02T02:00:00Z"), "Restarted the gateway."));
@@ -160,15 +182,19 @@ class JiraRestIssueSourceTest {
                         "{\"comments\":[" + comment("Lan", "2026-10-02T09:00:00.000+0700", "one")
                                 + "],\"total\":3,\"startAt\":0,\"maxResults\":1}")
                 + "],\"isLast\":true}");
-        jira.stubFor(get(urlPathEqualTo("/rest/api/3/issue/KAN-7/comment"))
-                .withQueryParam("startAt", equalTo("0"))
-                .willReturn(okJson("{\"comments\":[" + comment("Lan", "2026-10-02T09:00:00.000+0700", "one") + ","
-                        + comment("Minh", "2026-10-02T09:30:00.000+0700", "two")
-                        + "],\"total\":3,\"startAt\":0,\"maxResults\":2}")));
-        jira.stubFor(get(urlPathEqualTo("/rest/api/3/issue/KAN-7/comment"))
-                .withQueryParam("startAt", equalTo("2"))
-                .willReturn(okJson("{\"comments\":[" + comment("Hà", "2026-10-02T10:00:00.000+0700", "three")
-                        + "],\"total\":3,\"startAt\":2,\"maxResults\":2}")));
+        jira.expect(requestTo(COMMENTS + "?startAt=0&maxResults=100"))
+                .andExpect(header("Authorization", "Bearer " + TOKEN))
+                .andRespond(withSuccess(
+                        "{\"comments\":[" + comment("Lan", "2026-10-02T09:00:00.000+0700", "one") + ","
+                                + comment("Minh", "2026-10-02T09:30:00.000+0700", "two")
+                                + "],\"total\":3,\"startAt\":0,\"maxResults\":2}",
+                        MediaType.APPLICATION_JSON));
+        jira.expect(requestTo(COMMENTS + "?startAt=2&maxResults=100"))
+                .andExpect(header("Authorization", "Bearer " + TOKEN))
+                .andRespond(withSuccess(
+                        "{\"comments\":[" + comment("Hà", "2026-10-02T10:00:00.000+0700", "three")
+                                + "],\"total\":3,\"startAt\":2,\"maxResults\":2}",
+                        MediaType.APPLICATION_JSON));
 
         List<IssueComment> comments =
                 source().resolvedIssues("KAN", FROM, TO, null).issues().get(0).comments();
@@ -177,31 +203,30 @@ class JiraRestIssueSourceTest {
     }
 
     @Test
-    void reportsAJiraErrorWithItsStatusOnlyAndNeverTheCredentials_AC_001_7(CapturedOutput output) {
-        jira.stubFor(get(urlPathEqualTo("/rest/api/3/search/jql"))
-                .willReturn(aResponse().withStatus(401).withBody("{\"errorMessages\":[\"bad " + TOKEN + "\"]}")));
+    void AC_001_7_reportsAJiraErrorWithItsStatusOnlyAndNeverTheToken(CapturedOutput output) {
+        searchRequest()
+                .andRespond(withStatus(HttpStatus.UNAUTHORIZED).body("{\"errorMessages\":[\"bad " + TOKEN + "\"]}"));
 
         assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .hasFieldOrPropertyWithValue("reason", "Jira answered HTTP 401")
+                .hasMessageNotContaining(TOKEN)
                 .hasNoCause();
-        assertThat(output.getAll()).doesNotContain(TOKEN).doesNotContain(EMAIL);
+        assertThat(output.getAll()).doesNotContain(TOKEN);
     }
 
     @Test
     void reportsAServerErrorABrokenAnswerAndAClosedConnection_AC_001_7() {
-        jira.stubFor(get(urlPathEqualTo("/rest/api/3/search/jql"))
-                .willReturn(aResponse().withStatus(503)));
+        searchRequest().andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+        searchRequest().andRespond(withSuccess("{not json", MediaType.APPLICATION_JSON));
+        searchRequest().andRespond(withException(new IOException("Connection reset")));
         assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .hasFieldOrPropertyWithValue("reason", "Jira answered HTTP 503");
 
-        jira.stubFor(get(urlPathEqualTo("/rest/api/3/search/jql")).willReturn(okJson("{not json")));
         assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null))
                 .isInstanceOf(JiraUnavailableException.class);
 
-        jira.stubFor(get(urlPathEqualTo("/rest/api/3/search/jql"))
-                .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
         assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .extracting("reason", STRING)
@@ -210,37 +235,186 @@ class JiraRestIssueSourceTest {
 
     @Test
     void givesUpWhenJiraIsSlowerThanTheReadTimeout_AC_001_7() {
-        jira.stubFor(get(urlPathEqualTo("/rest/api/3/search/jql"))
-                .willReturn(okJson("{\"issues\":[],\"isLast\":true}").withFixedDelay(1500)));
-        JiraRestIssueSource slow =
-                new JiraRestIssueSource(jira.baseUrl(), EMAIL, TOKEN, Duration.ofSeconds(1), Duration.ofMillis(300));
+        searchRequest().andRespond(withException(new SocketTimeoutException("Read timed out")));
 
-        assertThatThrownBy(() -> slow.resolvedIssues("KAN", FROM, TO, null))
+        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .extracting("reason", STRING)
                 .startsWith("Jira did not answer");
     }
 
     @Test
+    void AC_001_7_enforcesTheReadTimeoutAgainstASlowServer() throws IOException {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/rest/api/3/search/jql", exchange -> {
+            try (exchange) {
+                try {
+                    Thread.sleep(1500);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                byte[] body = "{\"issues\":[],\"isLast\":true}".getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, body.length);
+                exchange.getResponseBody().write(body);
+            }
+        });
+        try {
+            server.start();
+            String localUrl = "http://127.0.0.1:" + server.getAddress().getPort();
+            RestClient.Builder realClient = JiraRestIssueSource.clientBuilder(
+                            Duration.ofSeconds(1), Duration.ofMillis(300))
+                    .uriBuilderFactory(new DefaultUriBuilderFactory(localUrl));
+            JiraRestIssueSource slow = new JiraRestIssueSource(SITE_URL, CLOUD_ID, TOKEN, realClient, Thread::sleep);
+
+            assertThatThrownBy(() -> slow.resolvedIssues("KAN", FROM, TO, null))
+                    .isInstanceOf(JiraUnavailableException.class)
+                    .hasFieldOrPropertyWithValue("reason", "Jira did not answer (SocketTimeoutException)");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void reportsAMissingConnectionWithoutCallingJira_AC_001_7() {
-        JiraRestIssueSource unset = new JiraRestIssueSource("", "", "", Duration.ofSeconds(1), Duration.ofSeconds(1));
+        JiraRestIssueSource unset = new JiraRestIssueSource("", "", "", builder, sleeps::add);
 
         assertThatThrownBy(() -> unset.resolvedIssues("KAN", FROM, TO, null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .hasFieldOrPropertyWithValue("reason", "The Jira connection is not configured");
-        assertThat(jira.getAllServeEvents()).isEmpty();
     }
 
     @Test
     void refusesAProjectKeyThatCouldChangeTheQuery_AC_001_7() {
         assertThatThrownBy(() -> source().resolvedIssues("KAN\" OR project = \"OPS", FROM, TO, null))
                 .isInstanceOf(JiraUnavailableException.class);
-        assertThat(jira.getAllServeEvents()).isEmpty();
+    }
+
+    @Test
+    void AC_001_12_sendsBearerToTheGatewayAndBuildsBrowseLinksOnTheSite() {
+        searchReturns("{\"issues\":[" + issue("KAN-7", "2026-10-02T10:15:30.000+0700", null, NO_COMMENTS)
+                + "],\"isLast\":true}");
+
+        assertThat(source().resolvedIssues("KAN", FROM, TO, null).issues())
+                .extracting(JiraIssue::url)
+                .containsExactly(SITE_URL + "/browse/KAN-7");
+        assertThat(sleeps).isEmpty();
+    }
+
+    @Test
+    void AC_001_11_retries429WithoutRetryAfterAfterOneSecond() {
+        searchRequest().andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+        searchReturns("{\"issues\":[],\"isLast\":true}");
+
+        assertThat(source().resolvedIssues("KAN", FROM, TO, null).issues()).isEmpty();
+        assertThat(sleeps).containsExactly(Duration.ofSeconds(1));
+    }
+
+    @Test
+    void AC_001_11_retries503WithRetryAfter() {
+        searchRequest().andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE).header("Retry-After", "5"));
+        searchReturns("{\"issues\":[],\"isLast\":true}");
+
+        assertThat(source().resolvedIssues("KAN", FROM, TO, null).issues()).isEmpty();
+        assertThat(sleeps).containsExactly(Duration.ofSeconds(5));
+    }
+
+    @Test
+    void AC_001_11_fails503WithoutRetryAfterAtOnce() {
+        searchRequest().andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+
+        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null))
+                .isInstanceOf(JiraUnavailableException.class)
+                .hasFieldOrPropertyWithValue("reason", "Jira answered HTTP 503");
+        assertThat(sleeps).isEmpty();
+    }
+
+    @Test
+    void AC_001_11_failsRetryAfterSixSecondsAtOnce() {
+        searchRequest().andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After", "6"));
+
+        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null))
+                .isInstanceOf(JiraUnavailableException.class)
+                .hasFieldOrPropertyWithValue("reason", "Jira answered HTTP 429");
+        assertThat(sleeps).isEmpty();
+    }
+
+    @Test
+    void AC_001_11_failsAfterExactlyThree429Requests(CapturedOutput output) {
+        for (int attempt = 0; attempt < 3; attempt++) {
+            searchRequest()
+                    .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                            .header("Retry-After", "2")
+                            .body(TOKEN));
+        }
+
+        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null))
+                .isInstanceOf(JiraUnavailableException.class)
+                .hasFieldOrPropertyWithValue("reason", "Jira answered HTTP 429")
+                .hasMessageNotContaining(TOKEN)
+                .hasNoCause();
+        assertThat(sleeps).containsExactly(Duration.ofSeconds(2), Duration.ofSeconds(2));
+        assertThat(output.getAll()).doesNotContain(TOKEN);
+    }
+
+    @Test
+    void AC_001_11_retriesEachCommentPageIndependentlyOfSearch() {
+        searchRequest().andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+        searchRequest().andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+        searchReturns("{\"issues\":["
+                + issue("KAN-7", "2026-10-02T10:15:30.000+0700", null, "{\"comments\":[],\"total\":2}")
+                + "],\"isLast\":true}");
+        for (int offset = 0; offset < 2; offset++) {
+            String url = COMMENTS + "?startAt=" + offset + "&maxResults=100";
+            for (int attempt = 0; attempt < 2; attempt++) {
+                jira.expect(requestTo(url))
+                        .andExpect(header("Authorization", "Bearer " + TOKEN))
+                        .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE).header("Retry-After", "0"));
+            }
+            jira.expect(requestTo(url))
+                    .andExpect(header("Authorization", "Bearer " + TOKEN))
+                    .andRespond(withSuccess(
+                            "{\"comments\":[" + comment("Lan", "2026-10-02T09:00:00.000+0700", "comment " + offset)
+                                    + "],\"total\":2}",
+                            MediaType.APPLICATION_JSON));
+        }
+
+        assertThat(source().resolvedIssues("KAN", FROM, TO, null)
+                        .issues()
+                        .get(0)
+                        .comments())
+                .extracting(IssueComment::body)
+                .containsExactly("comment 0", "comment 1");
+        assertThat(sleeps)
+                .containsExactly(
+                        Duration.ofSeconds(1),
+                        Duration.ofSeconds(1),
+                        Duration.ZERO,
+                        Duration.ZERO,
+                        Duration.ZERO,
+                        Duration.ZERO);
+    }
+
+    @Test
+    void AC_001_7_requiresEveryConnectionSetting() {
+        for (String[] settings :
+                List.of(new String[] {" ", CLOUD_ID, TOKEN}, new String[] {SITE_URL, " ", TOKEN}, new String[] {
+                    SITE_URL, CLOUD_ID, " "
+                })) {
+            JiraRestIssueSource unset =
+                    new JiraRestIssueSource(settings[0], settings[1], settings[2], builder, sleeps::add);
+
+            assertThatThrownBy(() -> unset.resolvedIssues("KAN", FROM, TO, null))
+                    .isInstanceOf(JiraUnavailableException.class)
+                    .hasFieldOrPropertyWithValue("reason", "The Jira connection is not configured");
+        }
+        assertThat(sleeps).isEmpty();
     }
 
     @Test
     void refusesAPlainHttpSiteAtStartUp() {
-        assertThatThrownBy(() -> new JiraRestIssueSource("http://example.atlassian.net", EMAIL, TOKEN))
+        assertThatThrownBy(() -> new JiraRestIssueSource("http://example.atlassian.net", CLOUD_ID, TOKEN))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("JIRA_SITE_URL");
         assertThat(new JiraRestIssueSource("", "", "")).isNotNull();

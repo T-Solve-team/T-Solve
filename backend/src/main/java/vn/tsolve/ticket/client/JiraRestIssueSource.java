@@ -1,7 +1,6 @@
 package vn.tsolve.ticket.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -10,7 +9,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -30,8 +28,8 @@ import vn.tsolve.ticket.service.JiraIssuePage;
 import vn.tsolve.ticket.service.JiraIssueSource;
 
 /**
- * {@link JiraIssueSource} over the Jira Cloud REST API v3 with the Workspace service account (email + API token, basic
- * auth). The settings may be empty — the app starts and a pull answers MSG50 (AC-001.7) — but a site URL that is set
+ * {@link JiraIssueSource} over the Jira Cloud REST API v3 with the Workspace service account's scoped API token sent
+ * as Bearer through the Atlassian gateway. The settings may be empty — a pull answers MSG50 (AC-001.7) — but a site URL
  * must be https. Logs and errors carry only the project key, an HTTP status or an error type (NFR 2, 4).
  */
 @Component
@@ -45,23 +43,32 @@ public class JiraRestIssueSource implements JiraIssueSource {
     private static final Pattern PROJECT_KEY = Pattern.compile("[A-Z][A-Z0-9_]*");
     private static final String FIELDS = "summary,description,assignee,resolutiondate,comment";
     private static final int PAGE_SIZE = 100;
+    private static final int MAX_RETRIES = 2;
+    private static final int MAX_RETRY_SECONDS = 5;
 
     private final String siteUrl;
     private final RestClient client;
+    private final Sleeper sleeper;
 
     @Autowired
     public JiraRestIssueSource(
             @Value("${JIRA_SITE_URL:}") String siteUrl,
-            @Value("${JIRA_EMAIL:}") String email,
+            @Value("${JIRA_CLOUD_ID:}") String cloudId,
             @Value("${JIRA_API_TOKEN:}") String apiToken) {
-        this(httpsOnly(siteUrl), email, apiToken, Duration.ofSeconds(10), Duration.ofSeconds(30));
+        this(siteUrl, cloudId, apiToken, clientBuilder(Duration.ofSeconds(10), Duration.ofSeconds(30)), Thread::sleep);
     }
 
-    JiraRestIssueSource(String siteUrl, String email, String apiToken, Duration connectTimeout, Duration readTimeout) {
-        String site = siteUrl == null ? "" : siteUrl.strip().replaceAll("/+$", "");
-        boolean configured = !site.isEmpty() && !isBlank(email) && !isBlank(apiToken);
+    JiraRestIssueSource(String siteUrl, String cloudId, String apiToken, RestClient.Builder builder, Sleeper sleeper) {
+        String site = siteUrl == null ? "" : httpsOnly(siteUrl).strip().replaceAll("/+$", "");
+        boolean configured = !site.isEmpty() && !isBlank(cloudId) && !isBlank(apiToken);
         this.siteUrl = configured ? site : null;
-        this.client = configured ? client(site, email, apiToken, connectTimeout, readTimeout) : null;
+        this.client = configured
+                ? builder.baseUrl("https://api.atlassian.com/ex/jira/" + cloudId.strip())
+                        .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiToken)
+                        .defaultHeader(HttpHeaders.ACCEPT, "application/json")
+                        .build()
+                : null;
+        this.sleeper = sleeper;
     }
 
     private static String httpsOnly(String siteUrl) {
@@ -75,18 +82,11 @@ public class JiraRestIssueSource implements JiraIssueSource {
         return value == null || value.isBlank();
     }
 
-    private static RestClient client(
-            String site, String email, String apiToken, Duration connectTimeout, Duration readTimeout) {
+    static RestClient.Builder clientBuilder(Duration connectTimeout, Duration readTimeout) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(connectTimeout);
         factory.setReadTimeout(readTimeout);
-        String basic = Base64.getEncoder().encodeToString((email + ":" + apiToken).getBytes(StandardCharsets.UTF_8));
-        return RestClient.builder()
-                .baseUrl(site)
-                .requestFactory(factory)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Basic " + basic)
-                .defaultHeader(HttpHeaders.ACCEPT, "application/json")
-                .build();
+        return RestClient.builder().requestFactory(factory);
     }
 
     @Override
@@ -195,25 +195,59 @@ public class JiraRestIssueSource implements JiraIssueSource {
         JsonNode run();
     }
 
+    @FunctionalInterface
+    interface Sleeper {
+        void sleep(Duration delay) throws InterruptedException;
+    }
+
     /** One Jira request; every failure becomes MSG50 with a reason that names no credential or content. */
-    private static JsonNode call(String projectKey, Call call) {
-        try {
-            JsonNode body = call.run();
-            if (body == null || !body.isObject()) {
-                throw new JiraUnavailableException("Jira answered without a usable body");
+    private JsonNode call(String projectKey, Call call) {
+        for (int retries = 0; ; retries++) {
+            try {
+                JsonNode body = call.run();
+                if (body == null || !body.isObject()) {
+                    throw new JiraUnavailableException("Jira answered without a usable body");
+                }
+                return body;
+            } catch (RestClientResponseException e) {
+                long seconds = retrySeconds(e);
+                if (retries < MAX_RETRIES && seconds >= 0 && seconds <= MAX_RETRY_SECONDS) {
+                    try {
+                        sleeper.sleep(Duration.ofSeconds(seconds));
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        throw new JiraUnavailableException("Jira did not answer (InterruptedException)");
+                    }
+                    continue;
+                }
+                log.warn(
+                        "Jira import of project {}: Jira answered HTTP {}",
+                        projectKey,
+                        e.getStatusCode().value());
+                throw new JiraUnavailableException(
+                        "Jira answered HTTP " + e.getStatusCode().value());
+            } catch (RestClientException | DateTimeParseException e) {
+                String type = rootType(e);
+                log.warn("Jira import of project {}: Jira did not answer ({})", projectKey, type);
+                throw new JiraUnavailableException("Jira did not answer (" + type + ")");
             }
-            return body;
-        } catch (RestClientResponseException e) {
-            log.warn(
-                    "Jira import of project {}: Jira answered HTTP {}",
-                    projectKey,
-                    e.getStatusCode().value());
-            throw new JiraUnavailableException(
-                    "Jira answered HTTP " + e.getStatusCode().value());
-        } catch (RestClientException | DateTimeParseException e) {
-            String type = rootType(e);
-            log.warn("Jira import of project {}: Jira did not answer ({})", projectKey, type);
-            throw new JiraUnavailableException("Jira did not answer (" + type + ")");
+        }
+    }
+
+    private static long retrySeconds(RestClientResponseException error) {
+        int status = error.getStatusCode().value();
+        if (status != 429 && status != 503) {
+            return -1;
+        }
+        HttpHeaders headers = error.getResponseHeaders();
+        String retryAfter = headers == null ? null : headers.getFirst(HttpHeaders.RETRY_AFTER);
+        if (retryAfter == null) {
+            return status == 429 ? 1 : -1;
+        }
+        try {
+            return Long.parseLong(retryAfter.strip());
+        } catch (NumberFormatException e) {
+            return -1;
         }
     }
 
