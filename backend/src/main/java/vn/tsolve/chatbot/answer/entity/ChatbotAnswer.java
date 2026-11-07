@@ -9,11 +9,10 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.Immutable;
 import org.hibernate.generator.EventType;
 
+// @Immutable breaks @Generated insert columns in Hibernate 6; columns use updatable = false instead.
 @Entity
-@Immutable
 @Table(name = "chatbot_answer")
 public class ChatbotAnswer {
     @Id
