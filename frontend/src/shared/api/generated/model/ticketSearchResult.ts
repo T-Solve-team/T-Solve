@@ -23,5 +23,6 @@ export interface TicketSearchResult {
    * @nullable
    */
   helpfulRate: number | null;
-  resolvedAt: string;
+  /** @nullable */
+  resolvedAt: string | null;
 }

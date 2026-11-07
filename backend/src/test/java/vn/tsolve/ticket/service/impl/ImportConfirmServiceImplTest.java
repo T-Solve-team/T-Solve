@@ -93,7 +93,16 @@ class ImportConfirmServiceImplTest {
     };
 
     private final ImportConfirmServiceImpl service = new ImportConfirmServiceImpl(
-            previews, rows, tickets, decisions, batches, recorder, projects, events, txManager);
+            previews,
+            rows,
+            tickets,
+            decisions,
+            batches,
+            recorder,
+            projects,
+            events,
+            txManager,
+            mock(vn.tsolve.common.audit.AuditService.class));
 
     private static ImportPreviewRow row(int rowNo, String ticketId, String author, String date) {
         return new ImportPreviewRow(

@@ -9,11 +9,14 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
 import { Role, UserAccountStatus } from '../model';
 import type {
+  CreateUserRequest,
   DepartmentRef,
+  UpdateUserRolesRequest,
+  UpdateUserStatusRequest,
   UserAccount,
   UserAccountPage,
   UserCreationOptions,
@@ -330,13 +333,13 @@ export const getCreateUserMockHandler = (
   overrideResponse?:
     | UserAccount
     | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
+        info: Parameters<HttpResponseResolver<PathParams, CreateUserRequest>>[0],
       ) => Promise<UserAccount> | UserAccount),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<PathParams, CreateUserRequest>(
     '*/api/v1/users',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, CreateUserRequest>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -353,14 +356,12 @@ export const getCreateUserMockHandler = (
 export const getGetUsersMockHandler = (
   overrideResponse?:
     | UserAccountPage
-    | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
-      ) => Promise<UserAccountPage> | UserAccountPage),
+    | ((info: Parameters<HttpResponseResolver>[0]) => Promise<UserAccountPage> | UserAccountPage),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/users',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -377,12 +378,16 @@ export const getGetUsersMockHandler = (
 export const getUpdateUserRolesMockHandler = (
   overrideResponse?:
     | UserDetail
-    | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<UserDetail> | UserDetail),
+    | ((
+        info: Parameters<HttpResponseResolver<{ userId: string }, UpdateUserRolesRequest>>[0],
+      ) => Promise<UserDetail> | UserDetail),
   options?: RequestHandlerOptions,
 ) => {
-  return http.put(
+  return http.put<{ userId: string }, UpdateUserRolesRequest>(
     '*/api/v1/users/:userId',
-    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+    async (
+      info: Parameters<HttpResponseResolver<{ userId: string }, UpdateUserRolesRequest>>[0],
+    ) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -399,12 +404,14 @@ export const getUpdateUserRolesMockHandler = (
 export const getGetUserDetailMockHandler = (
   overrideResponse?:
     | UserDetail
-    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<UserDetail> | UserDetail),
+    | ((
+        info: Parameters<HttpResponseResolver<{ userId: string }>>[0],
+      ) => Promise<UserDetail> | UserDetail),
   options?: RequestHandlerOptions,
 ) => {
-  return http.get(
+  return http.get<{ userId: string }>(
     '*/api/v1/users/:userId',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ userId: string }>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -422,13 +429,13 @@ export const getGetUserHandoverOptionsMockHandler = (
   overrideResponse?:
     | UserHandoverOptions
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver<{ userId: string }>>[0],
       ) => Promise<UserHandoverOptions> | UserHandoverOptions),
   options?: RequestHandlerOptions,
 ) => {
-  return http.get(
+  return http.get<{ userId: string }>(
     '*/api/v1/users/:userId/handover-options',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ userId: string }>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -445,12 +452,16 @@ export const getGetUserHandoverOptionsMockHandler = (
 export const getUpdateUserStatusMockHandler = (
   overrideResponse?:
     | UserDetail
-    | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<UserDetail> | UserDetail),
+    | ((
+        info: Parameters<HttpResponseResolver<{ userId: string }, UpdateUserStatusRequest>>[0],
+      ) => Promise<UserDetail> | UserDetail),
   options?: RequestHandlerOptions,
 ) => {
-  return http.put(
+  return http.put<{ userId: string }, UpdateUserStatusRequest>(
     '*/api/v1/users/:userId/status',
-    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+    async (
+      info: Parameters<HttpResponseResolver<{ userId: string }, UpdateUserStatusRequest>>[0],
+    ) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -468,13 +479,13 @@ export const getGetUserCreationOptionsMockHandler = (
   overrideResponse?:
     | UserCreationOptions
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver>[0],
       ) => Promise<UserCreationOptions> | UserCreationOptions),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/users/creation-options',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -491,14 +502,12 @@ export const getGetUserCreationOptionsMockHandler = (
 export const getGetUserDepartmentsMockHandler = (
   overrideResponse?:
     | DepartmentRef[]
-    | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
-      ) => Promise<DepartmentRef[]> | DepartmentRef[]),
+    | ((info: Parameters<HttpResponseResolver>[0]) => Promise<DepartmentRef[]> | DepartmentRef[]),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/users/departments',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'

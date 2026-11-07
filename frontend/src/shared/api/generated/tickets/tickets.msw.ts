@@ -9,7 +9,7 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
 
 import { TicketSource, TicketStatus } from '../model';
 import type { TicketSummaryPage } from '../model';
@@ -52,13 +52,13 @@ export const getGetTicketsMockHandler = (
   overrideResponse?:
     | TicketSummaryPage
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver>[0],
       ) => Promise<TicketSummaryPage> | TicketSummaryPage),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/tickets',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'

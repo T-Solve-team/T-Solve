@@ -42,6 +42,8 @@ import vn.tsolve.ticket.service.impl.TicketDecisionServiceImpl;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({TicketClockConfig.class, TicketDecisionServiceImpl.class})
 class TicketDecisionIT {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private vn.tsolve.common.audit.AuditService audit;
 
     @ServiceConnection
     static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(

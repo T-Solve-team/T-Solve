@@ -35,7 +35,7 @@ JSON and stderr under ignored node_modules/.cache and passed unchanged source/te
 difference is logged as BUG-070; no failing test was removed, weakened or skipped.
 
 The expected initial AC-001.1 red test failed on the placeholder screen. Later AC-001.5 exposed the
-descending-default sort defect (BUG-068); the local page handler correction made the regression pass.
+descending-default sort defect (BUG-159); the local page handler correction made the regression pass.
 
 ## Coverage
 

@@ -9,7 +9,7 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
 
 import type { SuggestionResultDetail, SuggestionResultPage } from '../model';
 
@@ -84,13 +84,13 @@ export const getGetSuggestionResultsMockHandler = (
   overrideResponse?:
     | SuggestionResultPage
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver>[0],
       ) => Promise<SuggestionResultPage> | SuggestionResultPage),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/suggestion-results',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -108,13 +108,13 @@ export const getGetSuggestionResultMockHandler = (
   overrideResponse?:
     | SuggestionResultDetail
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver<{ issueKey: string }>>[0],
       ) => Promise<SuggestionResultDetail> | SuggestionResultDetail),
   options?: RequestHandlerOptions,
 ) => {
-  return http.get(
+  return http.get<{ issueKey: string }>(
     '*/api/v1/suggestion-results/:issueKey',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ issueKey: string }>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'

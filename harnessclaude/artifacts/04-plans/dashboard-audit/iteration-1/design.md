@@ -25,3 +25,9 @@ Keep filters and pagination in the URL. No new dependency or shared application 
 
 Master rows 1–24 apply. Task 1 covers all High cases with mock, parser, page and integration tests.
 Risk verdict: CAUTION; production Workspace isolation remains a backend integration requirement.
+
+## Change 2026-11-07 — KAN-152
+
+Adds features `audit-writer` (STORY-002, Task 2) and `audit-log-api` (STORY-003, Task 3); master design section
+"Change 2026-11-07" applies unchanged (architecture, changeset 018, edge cases 28–38). Backend only; the frontend
+screen of Task 1 is not changed, only the contract's description text and its regenerated client.

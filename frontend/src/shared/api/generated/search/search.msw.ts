@@ -9,7 +9,7 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
 
 import type { TicketSearchResultPage } from '../model';
 
@@ -30,7 +30,10 @@ export const getSearchTicketsResponseMock = (
       },
       excerpt: faker.string.alpha({ length: { min: 10, max: 20 } }),
       helpfulRate: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
-      resolvedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+      resolvedAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + 'Z',
+        null,
+      ]),
     }),
   ),
   page: {
@@ -46,13 +49,13 @@ export const getSearchTicketsMockHandler = (
   overrideResponse?:
     | TicketSearchResultPage
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver>[0],
       ) => Promise<TicketSearchResultPage> | TicketSearchResultPage),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/search/tickets',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
