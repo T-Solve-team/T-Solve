@@ -161,8 +161,8 @@
         "ticket-ranking": "pending",
         "ticket-search-api": "pending",
         "ticket-search-connect": "pending",
-        "ticket-feedback-api": "pending",
-        "give-feedback-connect": "pending",
+        "ticket-feedback-api": "passing",
+        "give-feedback-connect": "evaluating",
         "ticket-suggestion-api": "pending",
         "solution-retrieval": "passing"
       },
