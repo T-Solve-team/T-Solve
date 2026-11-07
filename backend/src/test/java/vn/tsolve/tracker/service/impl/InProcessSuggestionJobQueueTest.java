@@ -2,11 +2,13 @@ package vn.tsolve.tracker.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -17,19 +19,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import vn.tsolve.tracker.dto.SuggestionJobRequest;
+import vn.tsolve.tracker.exception.SuggestionJobFailedException;
 import vn.tsolve.tracker.service.SuggestionJobService;
 
 @ExtendWith({MockitoExtension.class, OutputCaptureExtension.class})
 class InProcessSuggestionJobQueueTest {
 
-    private static final SuggestionJobRequest REQUEST =
-            new SuggestionJobRequest("ITSUP-1", 4L, "VPN drops every hour", "Reconnect fails.");
+    private static final UUID JOB_REF = UUID.fromString("7f3a2b1c-0000-4000-8000-000000000001");
+    private static final SuggestionJobRequest REQUEST = new SuggestionJobRequest(JOB_REF, "ITSUP-1");
 
     @Mock
     private SuggestionJobService jobService;
 
     @Test
-    void returnsBeforeTheJobFinishesAndRunsItOnItsOwnThread_AC_011_1() throws Exception {
+    void returnsBeforeTheJobFinishesAndRunsItOnItsOwnThread_AC_011_9() throws Exception {
         CountDownLatch release = new CountDownLatch(1);
         CountDownLatch finished = new CountDownLatch(1);
         doAnswer(call -> {
@@ -38,14 +41,14 @@ class InProcessSuggestionJobQueueTest {
                     return null;
                 })
                 .when(jobService)
-                .run(REQUEST);
+                .run(JOB_REF);
         InProcessSuggestionJobQueue queue = new InProcessSuggestionJobQueue(jobService);
         try {
             queue.enqueue(REQUEST);
 
             // enqueue came back while the job is still blocked: the 202 does not wait for it.
             assertThat(finished.getCount()).isEqualTo(1);
-            verify(jobService, timeout(2000)).run(REQUEST);
+            verify(jobService, timeout(2000)).run(JOB_REF);
             release.countDown();
             assertThat(finished.await(2, TimeUnit.SECONDS)).isTrue();
         } finally {
@@ -55,7 +58,20 @@ class InProcessSuggestionJobQueueTest {
     }
 
     @Test
-    void dropsAndLogsAJobItCannotQueueWithoutThrowing_AC_011_1(CapturedOutput output) {
+    void logsAFailedJobWithoutRetryingIt_AC_011_9(CapturedOutput output) {
+        willThrow(new SuggestionJobFailedException("ITSUP-1", "IllegalStateException"))
+                .given(jobService)
+                .run(JOB_REF);
+        InProcessSuggestionJobQueue queue = new InProcessSuggestionJobQueue(jobService, Runnable::run);
+
+        assertThatCode(() -> queue.enqueue(REQUEST)).doesNotThrowAnyException();
+
+        verify(jobService).run(JOB_REF);
+        assertThat(output).contains("ITSUP-1").contains("IllegalStateException");
+    }
+
+    @Test
+    void dropsAndLogsAJobItCannotQueueWithoutThrowing_AC_011_9(CapturedOutput output) {
         InProcessSuggestionJobQueue queue = new InProcessSuggestionJobQueue(jobService, task -> {
             throw new RejectedExecutionException("full");
         });
@@ -63,6 +79,6 @@ class InProcessSuggestionJobQueueTest {
         assertThatCode(() -> queue.enqueue(REQUEST)).doesNotThrowAnyException();
 
         verifyNoInteractions(jobService);
-        assertThat(output).contains("ITSUP-1").doesNotContain("VPN drops");
+        assertThat(output).contains("ITSUP-1");
     }
 }

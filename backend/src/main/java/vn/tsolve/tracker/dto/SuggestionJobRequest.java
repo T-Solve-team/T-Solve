@@ -1,7 +1,9 @@
 package vn.tsolve.tracker.dto;
 
+import java.util.UUID;
+
 /**
- * What one suggestion job needs (AC-011.1). The issue text travels with the job because the job cannot read Jira:
- * the tracker keeps no Jira token (Non-Functional 3). Never log {@code summary} or {@code description}.
+ * One suggestion job (AC-011.1): only a reference to the suggestion result, whose row holds the issue text. The
+ * worker's jobs may carry no ticket content; the issue key is for logs.
  */
-public record SuggestionJobRequest(String issueKey, long projectId, String summary, String description) {}
+public record SuggestionJobRequest(UUID jobRef, String issueKey) {}

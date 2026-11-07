@@ -85,25 +85,31 @@ class IssueCreatedServiceImplTest {
     }
 
     @Test
-    void enqueuesOneJobWithTheIssueTextAfterTheRowIsSaved_AC_011_1() {
+    void storesTheIssueTextAndEnqueuesOnlyAReferenceAfterTheRowIsSaved_AC_011_1() {
         given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(4L));
 
         service().receive(PAYLOAD);
 
+        ArgumentCaptor<SuggestionResult> saved = ArgumentCaptor.forClass(SuggestionResult.class);
         InOrder order = inOrder(repository, jobQueue);
-        order.verify(repository).saveAndFlush(any());
-        order.verify(jobQueue)
-                .enqueue(new SuggestionJobRequest("ITSUP-1", 4L, "VPN drops every hour", "Reconnect fails."));
+        order.verify(repository).saveAndFlush(saved.capture());
+        order.verify(jobQueue).enqueue(new SuggestionJobRequest(saved.getValue().getJobRef(), "ITSUP-1"));
         order.verifyNoMoreInteractions();
+        assertThat(saved.getValue().getJobRef()).isNotNull();
+        assertThat(saved.getValue().getIssueSummary()).isEqualTo("VPN drops every hour");
+        assertThat(saved.getValue().getIssueDescription()).isEqualTo("Reconnect fails.");
     }
 
     @Test
-    void enqueuesAnEmptyDescriptionWhenTheIssueHasNone_AC_011_1() {
+    void storesAnEmptyDescriptionWhenTheIssueHasNone_AC_011_1() {
         given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(4L));
 
         service().receive(payload("VPN drops every hour", null, null));
 
-        verify(jobQueue).enqueue(new SuggestionJobRequest("ITSUP-1", 4L, "VPN drops every hour", ""));
+        ArgumentCaptor<SuggestionResult> saved = ArgumentCaptor.forClass(SuggestionResult.class);
+        verify(repository).saveAndFlush(saved.capture());
+        assertThat(saved.getValue().getIssueDescription()).isEmpty();
+        verify(jobQueue).enqueue(new SuggestionJobRequest(saved.getValue().getJobRef(), "ITSUP-1"));
     }
 
     @Test
@@ -131,8 +137,9 @@ class IssueCreatedServiceImplTest {
 
         service().receive(payload("VPN drops every hour", adf("Reconnect fails."), List.of("tsolve-chatbot")));
 
-        verify(repository).saveAndFlush(any());
-        verify(jobQueue).enqueue(new SuggestionJobRequest("ITSUP-1", 4L, "VPN drops every hour", "Reconnect fails."));
+        ArgumentCaptor<SuggestionResult> saved = ArgumentCaptor.forClass(SuggestionResult.class);
+        verify(repository).saveAndFlush(saved.capture());
+        verify(jobQueue).enqueue(new SuggestionJobRequest(saved.getValue().getJobRef(), "ITSUP-1"));
     }
 
     private IssueCreatedServiceImpl service() {

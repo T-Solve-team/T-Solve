@@ -71,6 +71,9 @@ tsolve:
   tracker:
     jira-app-id: ${TSOLVE_JIRA_APP_ID}
     forge-jwks-uri: ${FORGE_JWKS_URI}
+    # Dev and mock only: the Workspace bound when the worker enqueues a suggestion job and no Workspace is bound yet
+    # (until platform binds the request's Workspace). One of TSOLVE_MOCK_ACTIVE_WORKSPACES. Empty = not bound.
+    dev-workspace-id: ${TSOLVE_TRACKER_DEV_WORKSPACE_ID:}
   # Central sign-in (identity). All from the environment with no default: startup fails while one is missing.
   auth:
     login-origin: ${TSOLVE_LOGIN_ORIGIN}

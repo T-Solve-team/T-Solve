@@ -3,12 +3,13 @@ package vn.tsolve.tracker.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Optional;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import vn.tsolve.tracker.dto.IssueSuggestion;
-import vn.tsolve.tracker.dto.SuggestionJobRequest;
 import vn.tsolve.tracker.entity.SuggestionResult;
+import vn.tsolve.tracker.exception.SuggestionJobFailedException;
 import vn.tsolve.tracker.repository.SuggestionResultRepository;
 import vn.tsolve.tracker.service.SuggestionJobService;
 import vn.tsolve.tracker.service.SuggestionSearch;
@@ -31,42 +32,34 @@ public class SuggestionJobServiceImpl implements SuggestionJobService {
     }
 
     @Override
-    public void run(SuggestionJobRequest request) {
+    public void run(UUID jobRef) {
+        SuggestionResult result;
         try {
-            suggest(request);
+            Optional<SuggestionResult> found = repository.findByJobRef(jobRef);
+            if (found.isEmpty() || found.get().hasSuggestion()) {
+                log.info("Suggestion job skipped, result gone or already filled: {}", jobRef);
+                return;
+            }
+            result = found.get();
         } catch (RuntimeException e) {
-            // A database or JSON error: only the error type, its message may quote stored text (Non-Functional 4).
-            log.warn(
-                    "Suggestion job failed for {}: {}",
-                    request.issueKey(),
-                    e.getClass().getSimpleName());
+            throw failed(String.valueOf(jobRef), e);
+        }
+        String issueKey = result.getJiraIssueKey();
+        try {
+            suggest(result);
+        } catch (RuntimeException e) {
+            throw failed(issueKey, e);
         }
     }
 
-    private void suggest(SuggestionJobRequest request) {
-        String issueKey = request.issueKey();
-        Optional<SuggestionResult> result = repository.findByJiraIssueKey(issueKey);
-        if (result.isEmpty() || result.get().hasSuggestion()) {
-            log.info("Suggestion job skipped, result gone or already filled: {}", issueKey);
-            return;
-        }
-
-        Optional<IssueSuggestion> suggestion;
-        try {
-            suggestion = search.suggest(request.projectId(), request.summary(), request.description());
-        } catch (RuntimeException e) {
-            // Only the error type: the message may quote the issue text (Non-Functional 4).
-            log.warn(
-                    "Suggestion search failed for {}: {}",
-                    issueKey,
-                    e.getClass().getSimpleName());
-            return;
-        }
+    private void suggest(SuggestionResult result) {
+        String issueKey = result.getJiraIssueKey();
+        Optional<IssueSuggestion> suggestion = search.suggest(
+                result.getProjectId(), text(result.getIssueSummary()), text(result.getIssueDescription()));
         if (suggestion.isEmpty() || isBlank(suggestion.get().suggestedSolution())) {
             log.info("No suggestion for {}", issueKey);
             return;
         }
-
         int changed = repository.fillSuggestion(
                 issueKey, sourcesJson(suggestion.get()), suggestion.get().suggestedSolution());
         log.info(
@@ -74,12 +67,24 @@ public class SuggestionJobServiceImpl implements SuggestionJobService {
                 issueKey);
     }
 
+    // Only the error type, logged and carried: the original message may quote the issue text (Non-Functional 4).
+    private static SuggestionJobFailedException failed(String issueKey, RuntimeException e) {
+        String type = e.getClass().getSimpleName();
+        log.warn("Suggestion job failed for {}: {}", issueKey, type);
+        return new SuggestionJobFailedException(issueKey, type);
+    }
+
     private String sourcesJson(IssueSuggestion suggestion) {
         try {
             return json.writeValueAsString(suggestion.sources());
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Suggestion sources are not serializable", e);
+            throw new IllegalStateException("Suggestion sources are not serializable");
         }
+    }
+
+    // Rows recorded before the issue text was stored have none (edge case 48).
+    private static String text(String value) {
+        return value == null ? "" : value;
     }
 
     private static boolean isBlank(String text) {

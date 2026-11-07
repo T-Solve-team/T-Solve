@@ -1,6 +1,7 @@
 package vn.tsolve.tracker.repository;
 
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,7 +11,7 @@ import vn.tsolve.tracker.entity.SuggestionResult;
 
 public interface SuggestionResultRepository extends JpaRepository<SuggestionResult, Long> {
 
-    Optional<SuggestionResult> findByJiraIssueKey(String jiraIssueKey);
+    Optional<SuggestionResult> findByJobRef(UUID jobRef);
 
     /**
      * Stores the suggestion only while the issue has none, so a retried or parallel job never overwrites one

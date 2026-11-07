@@ -46,9 +46,15 @@ public class IssueCreatedServiceImpl implements IssueCreatedService {
             log.info("Issue created outside T-Solve Projects: {} {}", payload.issueKey(), payload.projectKey());
             return;
         }
+        // The issue text is kept in the row; the job carries only its reference (AC-011.1).
+        SuggestionResult result = new SuggestionResult(
+                projectId.get(),
+                payload.issueKey(),
+                payload.summary(),
+                AdfTextExtractor.toText(payload.description()),
+                Instant.now());
         try {
-            suggestionResultRepository.saveAndFlush(
-                    new SuggestionResult(projectId.get(), payload.issueKey(), Instant.now()));
+            suggestionResultRepository.saveAndFlush(result);
             log.info("Issue created recorded: {}", payload.issueKey());
         } catch (DataIntegrityViolationException e) {
             if (!isDuplicate(e)) {
@@ -58,11 +64,7 @@ public class IssueCreatedServiceImpl implements IssueCreatedService {
             return;
         }
         // Labels are not looked at: an issue created by the Chatbot is suggested like any other (AC-011.8).
-        suggestionJobQueue.enqueue(new SuggestionJobRequest(
-                payload.issueKey(),
-                projectId.get(),
-                payload.summary(),
-                AdfTextExtractor.toText(payload.description())));
+        suggestionJobQueue.enqueue(new SuggestionJobRequest(result.getJobRef(), payload.issueKey()));
     }
 
     private static boolean isDuplicate(DataIntegrityViolationException e) {

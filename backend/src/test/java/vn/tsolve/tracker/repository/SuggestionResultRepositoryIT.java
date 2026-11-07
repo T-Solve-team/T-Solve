@@ -54,6 +54,7 @@ class SuggestionResultRepositoryIT {
     private SuggestionResultRepository repository;
 
     private long projectId;
+    private SuggestionResult saved;
 
     @BeforeEach
     void seed() {
@@ -67,7 +68,21 @@ class SuggestionResultRepositoryIT {
                 "INSERT INTO project (department_id, jira_project_key) VALUES (?, 'ITSUP') RETURNING project_id",
                 Long.class,
                 department);
-        repository.saveAndFlush(new SuggestionResult(projectId, "ITSUP-1", Instant.now()));
+        saved = repository.saveAndFlush(
+                new SuggestionResult(projectId, "ITSUP-1", "VPN drops every hour", "Reconnect fails.", Instant.now()));
+    }
+
+    @Test
+    void storesTheIssueTextAndAJobReferenceTheJobFindsItBy_AC_011_1() {
+        Map<String, Object> row = jdbc.queryForMap(
+                "SELECT job_ref, issue_summary, issue_description FROM suggestion_result WHERE jira_issue_key = 'ITSUP-1'");
+
+        assertThat(row.get("job_ref")).isEqualTo(saved.getJobRef());
+        assertThat(row.get("issue_summary")).isEqualTo("VPN drops every hour");
+        assertThat(row.get("issue_description")).isEqualTo("Reconnect fails.");
+        assertThat(repository.findByJobRef(saved.getJobRef()))
+                .map(SuggestionResult::getJiraIssueKey)
+                .contains("ITSUP-1");
     }
 
     @Test
