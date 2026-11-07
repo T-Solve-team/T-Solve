@@ -354,9 +354,10 @@
         "event-cleanup": "pending",
         "suggestion-job": "passing",
         "suggestion-job-worker": "passing",
-        "suggestion-uuid-keys": "evaluating"
+        "suggestion-uuid-keys": "evaluating",
+        "suggestion-comment": "pending"
       },
-      "lastUpdated": "2026-11-07T14:35:18.433Z",
+      "lastUpdated": "2026-11-07T15:53:23.460Z",
       "branch": "feat/tracker",
       "repos": [
         "default"

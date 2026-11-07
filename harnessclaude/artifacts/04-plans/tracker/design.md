@@ -343,6 +343,58 @@ them; triage `entity/SuggestionResultRecord`, `repository/HistoryFilter`, `repos
 | 49 | STORY-003 | Data integrity | Rows recorded before `019` | Medium | Keep their data; get a new UUID key and their Project's `public_id` | Task 17 |
 | 50 | STORY-011 | Data integrity | A job queued before `019` (carries the old `job_ref`) | Low | Finds no row and stops (AC-011.7) — developer databases only | Task 17 |
 
+## STORY-012: Post the suggestion as the MSG80 comment (KAN-131, 2026-11-07)
+
+```
+SuggestionJobHandler / InProcessSuggestionJobQueue → SuggestionJobService.run(suggestionId)
+   load row; gone → stop
+   no suggestion yet → search → fillSuggestion (STORY-011); none → stop (AC-012.6)
+   row has suggestion, jira_comment_id IS NULL → SuggestionCommentService.post(row)          (AC-012.1, 012.3)
+        JiraServiceAccount.current()   empty → log "no service account", stop, no retry   (AC-012.8)
+        TicketTrackerClient.findComment(issueKey, MSG80 prefix, account) → found: store its id   (AC-012.5)
+        else TicketTrackerClient.addComment(issueKey, Msg80.text(suggestion)) → comment id
+        repository.markCommented(id, commentId, now)   … WHERE jira_comment_id IS NULL      (AC-012.3)
+   row has jira_comment_id → stop (AC-012.4)
+   Jira 5xx / 429 / timeout / unreachable → SuggestionJobFailedException → JobRunr retries   (AC-012.7)
+   Jira 401 / 403 / 404 → log key + status, stop without retry                               (AC-012.8)
+```
+
+| Decision | Choice | Alternatives Considered | Rationale |
+|----------|--------|------------------------|-----------|
+| Who posts | The suggestion job, in the backend, with the Workspace's Jira service account (Basic auth: email + API token) | Forge function polling a queue; backend calling a Forge web trigger; the Forge app system token | User, 2026-11-07: a service account is created for every tenant at onboarding (`workspace.service_account_email` / `service_account_token`, DB design 31/10); simplest flow, no token from Forge is stored |
+| Service account source | Port `tracker.service.JiraServiceAccount` → `Optional<JiraAccount(siteUrl, email, apiToken)>`; stand-in `ConfiguredJiraServiceAccount` reads `tsolve.tracker.jira.*` ← `JIRA_SITE_URL`, `JIRA_SERVICE_ACCOUNT_EMAIL`, `JIRA_SERVICE_ACCOUNT_TOKEN` (no defaults; any blank → empty) | read the `workspace` table now | `workspace` (UC-08/09, encryption) is not built; the port is what `workspace` implements later — same pattern as `SuggestionSearch` |
+| Jira HTTP | `JiraClient implements TicketTrackerClient` with Spring `RestClient`, connect 5 s / read 10 s: `POST /rest/api/3/issue/{key}/comment` (ADF body), `GET /rest/api/3/issue/{key}/comment`, `GET /rest/api/3/myself` (the service account's accountId) | WebClient; a Jira SDK | Already chosen for the panel calls (Key Decisions); no new dependency |
+| Comment text | `Msg80`: "T-Solve suggestion: {suggested_solution} Did this solve your problem? Answer in the T-Solve panel of this issue." — one ADF paragraph per line of the suggestion; no "Related documents" sentence | MSG80 with `{wiki_links}` | User, 2026-11-07 (spec AC-012.1, 012.2); text from SRS MSG80 |
+| Find a lost comment | Before adding, list the issue's comments and take one whose author is the service account (`/myself` accountId) and whose text starts with "T-Solve suggestion:" | a Jira comment property; no check | Covers "added but id not stored" (AC-012.5) with two reads, only for a row without `jira_comment_id` |
+| Mark as posted | `@Modifying update … set jiraCommentId, commentedAt where id = :id and jiraCommentId is null` | load and save | A parallel rerun cannot overwrite; same pattern as `fillSuggestion` |
+| Error classes | `JiraUnavailableException` (5xx, 429, I/O, timeout) → the job throws `SuggestionJobFailedException` (retry); `JiraRejectedException` (401, 403, 404) and a missing account → logged, the job ends | retry everything | 401/403/404 do not heal with a retry (AC-012.8) |
+| Logs | Issue key, HTTP status, error type; never the suggestion, the email or the token | — | Non-Functional 4 and 9 |
+
+Changeset `020-tracker-suggestion-comment.sql` (author `tracker`): `ALTER TABLE suggestion_result ADD COLUMN
+jira_comment_id VARCHAR(50), ADD COLUMN commented_at TIMESTAMPTZ;` — tell the DB owner (the DB design has no such
+columns) and Trần Hải Anh (triage's read-only entity does not map them).
+
+Files (Task 18): create `service/JiraServiceAccount`, `dto/JiraAccount`, `service/impl/ConfiguredJiraServiceAccount`,
+`service/SuggestionCommentService`, `service/impl/SuggestionCommentServiceImpl`, `service/impl/Msg80`,
+`exception/JiraUnavailableException`, `exception/JiraRejectedException`, `changes/020-tracker-suggestion-comment.sql`;
+fill `client/TicketTrackerClient` (`findComment`, `addComment`) and `client/JiraClient`; modify
+`entity/SuggestionResult` (+ `jiraCommentId`, `commentedAt`, `hasComment()`), `repository/SuggestionResultRepository`
+(+ `markCommented`), `service/impl/SuggestionJobServiceImpl` (post after the fill, or when filled without a comment),
+`application.yml`, `.env.example`, changelog master. No API change (no endpoint).
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 51 | STORY-012 | Timing | JobRunr reruns the job after the comment was posted and its id stored | High | No second comment (AC-012.4) | Task 18 |
+| 52 | STORY-012 | Error cascades | Comment posted, then storing its id fails | High | The rerun finds the comment, stores its id, posts nothing (AC-012.5) | Task 18 |
+| 53 | STORY-012 | Error cascades | Jira 503 / 429 / timeout | High | The job fails and JobRunr retries; the suggestion is kept (AC-012.7) | Task 18 |
+| 54 | STORY-012 | Authorization | Token revoked (401), no permission in the project (403) or issue deleted (404) | Medium | No comment, no retry, logged (AC-012.8) | Task 18 |
+| 55 | STORY-012 | Environment | No service account configured (local dev) | Medium | Suggestion stored, no comment, logged (AC-012.8) | Task 18 |
+| 56 | STORY-012 | Compliance | A Jira error body or our log line | Critical | Never the suggestion text, the email or the token (Non-Functional 4, 9) | Task 18 |
+| 57 | STORY-012 | Input extremes | A suggested solution with several lines or very long | Low | One ADF paragraph per line; cut with "…" if the comment would pass Jira's 32,767-character limit | Task 18 |
+
+Risk: the service account must be allowed to comment in every T-Solve Project; a missing permission shows only as a
+403 in the log (edge case 54) until `workspace` checks it at onboarding.
+
 ## Risk Review — 2026-10-21 — Verdict: CAUTION (updated 2026-11-01)
 
 Still applies: the FIT chain and its ordering with `identity`'s chain; the new pom dependency; SSRF through the
