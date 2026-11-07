@@ -23,11 +23,13 @@ import vn.tsolve.ticket.entity.ImportPreviewRow;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.Ticket;
 import vn.tsolve.ticket.entity.TicketReviewDecision;
+import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.exception.ImportFailedException;
 import vn.tsolve.ticket.exception.NothingToImportException;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.exception.ProjectNotActiveException;
+import vn.tsolve.ticket.exception.RowsNotReadyException;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
@@ -37,14 +39,16 @@ import vn.tsolve.ticket.service.ImportConfirmService;
 import vn.tsolve.ticket.service.ProjectAccess;
 
 /**
- * Confirm (UC-21 steps 7–9). The import runs in one transaction that locks the preview; when it fails, the Failed
- * Import Batch is written afterwards in a transaction of its own. The "tickets published" event is published inside
- * the import transaction for {@code @TransactionalEventListener(AFTER_COMMIT)} listeners.
+ * Confirm (UC-21 steps 7–9) and Finish of a Jira preview (UC-20). The import runs in one transaction that locks the
+ * preview; when it fails, the Failed Import Batch is written afterwards in a transaction of its own. The "tickets
+ * published" event is published inside the import transaction for {@code @TransactionalEventListener(AFTER_COMMIT)}
+ * listeners.
  */
 @Service
 public class ImportConfirmServiceImpl implements ImportConfirmService {
 
     private static final Logger log = LoggerFactory.getLogger(ImportConfirmServiceImpl.class);
+    private static final int TITLE_MAX = 200;
 
     private final ImportPreviewRepository previews;
     private final ImportPreviewRowRepository previewRows;
@@ -80,7 +84,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
     /** A Ticket ID became an existing Ticket after the preview was made (AC-004.7). */
     private static class TicketIdTakenException extends RuntimeException {}
 
-    private record Imported(long batchId, int created, long skipped) {}
+    /** skippedKeys: Jira issues skipped because they already had a Ticket (MSG38); always empty for CSV. */
+    private record Imported(long batchId, int created, long skipped, List<String> skippedKeys) {}
 
     @Override
     public ImportResultResponse confirm(String user, long previewId) {
@@ -88,11 +93,12 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
-        if (previewRows
-                .findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID)
-                .isEmpty()) {
-            throw new NothingToImportException(errorRows);
-        }
+        requireRowsToImport(
+                preview,
+                previewRows
+                        .findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID)
+                        .isEmpty(),
+                errorRows);
         // rejected before anything starts, so no Import Batch is recorded (design B1, E1): MSG40 first, then 403
         if (!projects.isActive(preview.getProjectId())) {
             throw new ProjectNotActiveException();
@@ -103,8 +109,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
 
         Imported imported;
         try {
-            imported = transaction.execute(status -> importRows(user, previewId));
-        } catch (NotFoundException | NothingToImportException e) {
+            imported = importOrRetry(user, preview);
+        } catch (NotFoundException | NothingToImportException | RowsNotReadyException e) {
             // another Confirm or remove-rows got there first: nothing was attempted (AC-004.12)
             throw e;
         } catch (TicketIdTakenException | DataIntegrityViolationException e) {
@@ -115,11 +121,53 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
             throw new ImportFailedException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
+        List<String> skippedKeys = imported.skippedKeys();
         return new ImportResultResponse(
                 imported.batchId(),
                 imported.created(),
                 imported.skipped(),
-                new MessageRef("MSG32", Map.of("created", imported.created(), "skipped", imported.skipped())));
+                new MessageRef("MSG32", Map.of("created", imported.created(), "skipped", imported.skipped())),
+                skippedKeys.isEmpty()
+                        ? null
+                        : new MessageRef(
+                                "MSG38",
+                                Map.of("count", skippedKeys.size(), "issue_keys", String.join(", ", skippedKeys))));
+    }
+
+    /**
+     * A Jira preview retries once when the unique Ticket ID stops the insert: a Ticket with one of its keys was made
+     * after the keys were read (design Edge 6). The retry reads the taken keys again and skips them (AC-003.2).
+     */
+    private Imported importOrRetry(String user, ImportPreview preview) {
+        try {
+            return transaction.execute(status -> importRows(user, preview.getId()));
+        } catch (DataIntegrityViolationException e) {
+            if (!isJira(preview)) {
+                throw e;
+            }
+            log.info("Finish of Jira preview {} hit a taken Ticket ID; retrying once", preview.getId());
+            return transaction.execute(status -> importRows(user, preview.getId()));
+        }
+    }
+
+    private static boolean isJira(ImportPreview preview) {
+        return preview.getSource() == TicketSource.JIRA_IMPORT;
+    }
+
+    /**
+     * CSV: at least one Valid row (MSG30). Jira: no row still Needs Solution and at least one Valid row (MSG_NEW_4,
+     * AC-003.6).
+     */
+    private void requireRowsToImport(ImportPreview preview, boolean noValidRow, long errorRows) {
+        if (isJira(preview)) {
+            long needsSolution =
+                    previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.NEEDS_SOLUTION);
+            if (needsSolution > 0 || noValidRow) {
+                throw new RowsNotReadyException(needsSolution);
+            }
+        } else if (noValidRow) {
+            throw new NothingToImportException(errorRows);
+        }
     }
 
     /** Records the Failed batch; never lets a recording problem hide the MSG33 answer (design E5, E6). */
@@ -155,37 +203,53 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
         List<ImportPreviewRow> valid = previewRows.findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID);
-        if (valid.isEmpty()) {
-            throw new NothingToImportException(errorRows);
-        }
+        requireRowsToImport(preview, valid.isEmpty(), errorRows);
 
         List<String> ids = valid.stream()
                 .map(r -> CsvRowValidator.trim(r.getValues().ticketId()))
                 .toList();
         Set<String> taken = tickets.findExistingTicketIds(ids);
-        if (!taken.isEmpty()) {
+        if (!taken.isEmpty() && !isJira(preview)) {
             throw new TicketIdTakenException();
         }
+        // Jira: an issue that became a Ticket since the pull is skipped, not an error (AC-003.2, AC-003.3)
+        List<ImportPreviewRow> toImport = valid.stream()
+                .filter(r -> !taken.contains(CsvRowValidator.trim(r.getValues().ticketId())))
+                .toList();
+        List<String> skippedKeys =
+                ids.stream().filter(taken::contains).distinct().toList();
+        long skipped = isJira(preview) ? skippedKeys.size() : errorRows + removedRows;
 
         ImportBatch batch = batches.save(ImportBatch.completed(
                 preview.getProjectId(),
                 user,
                 preview.getSource(),
                 preview.getFileName(),
-                valid.size(),
-                (int) errorRows,
+                toImport.size(),
+                (int) (isJira(preview) ? skipped : errorRows),
                 (int) removedRows));
-        List<Ticket> saved = tickets.saveAll(valid.stream()
+        List<Ticket> saved = tickets.saveAll(toImport.stream()
                 .map(r -> toTicket(r.getValues(), preview, batch.getId()))
                 .toList());
         List<Long> ticketIds = saved.stream().map(Ticket::getId).toList();
         decisions.saveAll(ticketIds.stream()
                 .map(id -> TicketReviewDecision.approve(id, user))
                 .toList());
+        // a Draft is the preview itself, so this also deletes the Draft (AC-003.10)
         previews.deleteById(preview.getId());
-        // inside the transaction: @TransactionalEventListener(AFTER_COMMIT) listeners get it once this commits
-        events.publishEvent(new TicketsPublishedEvent(ticketIds));
-        return new Imported(batch.getId(), valid.size(), errorRows + removedRows);
+        if (!ticketIds.isEmpty()) {
+            // inside the transaction: @TransactionalEventListener(AFTER_COMMIT) listeners get it once this commits
+            events.publishEvent(new TicketsPublishedEvent(ticketIds));
+        }
+        return new Imported(batch.getId(), toImport.size(), skipped, skippedKeys);
+    }
+
+    /** ticket.title is VARCHAR(200); a longer Jira summary is cut on the Ticket only, never inside a character. */
+    private static String cutTitle(String title) {
+        if (title == null || title.codePointCount(0, title.length()) <= TITLE_MAX) {
+            return title;
+        }
+        return title.substring(0, title.offsetByCodePoints(0, TITLE_MAX));
     }
 
     private static Ticket toTicket(ImportPreviewRow.Values v, ImportPreview preview, long batchId) {
@@ -195,7 +259,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 preview.getProjectId(),
                 preview.getSource(),
                 batchId,
-                CsvRowValidator.trim(v.title()),
+                cutTitle(CsvRowValidator.trim(v.title())),
                 CsvRowValidator.trim(v.description()),
                 CsvRowValidator.trim(v.author()),
                 resolved == null ? null : LocalDate.parse(resolved),

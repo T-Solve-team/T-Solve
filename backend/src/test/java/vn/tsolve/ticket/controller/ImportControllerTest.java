@@ -74,7 +74,7 @@ class ImportControllerTest {
     void confirmReturnsTheImportResult_AC_004_4() throws Exception {
         when(confirms.confirm("pm@company.vn", 42L))
                 .thenReturn(new ImportResultResponse(
-                        7L, 2, 3L, new MessageRef("MSG32", Map.of("created", 2, "skipped", 3L))));
+                        7L, 2, 3L, new MessageRef("MSG32", Map.of("created", 2, "skipped", 3L)), null));
 
         mvc.perform(post("/api/v1/imports/previews/42/confirm").with(csrf()))
                 .andExpect(status().isOk())
