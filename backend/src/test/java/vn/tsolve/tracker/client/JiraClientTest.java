@@ -103,6 +103,24 @@ class JiraClientTest {
     }
 
     @Test
+    void treatsACreatedCommentWithoutIdAsUnavailable_AC_012_3_BUG_166() {
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/issue/ITSUP-1/comment"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.addComment(ACCOUNT, "ITSUP-1", List.of("x")))
+                .isInstanceOf(JiraUnavailableException.class);
+    }
+
+    @Test
+    void treatsAServiceAccountWithoutIdAsUnavailable_AC_012_5_BUG_167() {
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/myself"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.findComment(ACCOUNT, "ITSUP-1", "T-Solve suggestion:"))
+                .isInstanceOf(JiraUnavailableException.class);
+    }
+
+    @Test
     void reportsServerErrorsAndRateLimitsAsUnavailable_AC_012_7() {
         jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/issue/ITSUP-1/comment"))
                 .andRespond(withServerError().body("internal: Restart the VPN."));

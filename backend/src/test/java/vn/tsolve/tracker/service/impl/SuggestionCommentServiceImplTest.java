@@ -105,6 +105,23 @@ class SuggestionCommentServiceImplTest {
         verifyNoInteractions(repository);
     }
 
+    @Test
+    void logsTheHttpStatusWhenJiraIsUnavailable_AC_012_7_BUG_165(CapturedOutput output) {
+        given(serviceAccount.current()).willReturn(Optional.of(ACCOUNT));
+        given(jira.findComment(ACCOUNT, "ITSUP-1", Msg80.PREFIX)).willReturn(Optional.empty());
+        given(jira.addComment(any(), anyString(), anyList())).willThrow(new JiraUnavailableException(503));
+
+        assertThatThrownBy(() -> service().post(ID, "ITSUP-1", SUGGESTION))
+                .isInstanceOf(JiraUnavailableException.class);
+
+        assertThat(output)
+                .contains("ITSUP-1")
+                .contains("503")
+                .contains("JiraUnavailableException")
+                .doesNotContain(SUGGESTION)
+                .doesNotContain("secret-token");
+    }
+
     private SuggestionCommentServiceImpl service() {
         return new SuggestionCommentServiceImpl(serviceAccount, jira, repository);
     }

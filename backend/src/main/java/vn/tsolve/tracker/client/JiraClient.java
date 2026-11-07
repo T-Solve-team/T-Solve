@@ -54,17 +54,20 @@ public class JiraClient implements TicketTrackerClient {
                 .body(body)
                 .retrieve()
                 .body(JsonNode.class));
-        return created == null ? "" : created.path("id").asText("");
+        // A success without an id would mark the result as commented with nothing to point at (BUG-166).
+        return requiredText(created, "id");
     }
 
     @Override
     public Optional<String> findComment(JiraAccount account, String issueKey, String textPrefix) {
         RestClient http = http(account);
         JsonNode me = call(() -> http.get().uri("/rest/api/3/myself").retrieve().body(JsonNode.class));
-        String accountId = me == null ? "" : me.path("accountId").asText("");
+        // Without the account id no comment can be recognised as ours, and "not found" would post a second one
+        // (BUG-167).
+        String accountId = requiredText(me, "accountId");
         JsonNode page = call(() -> http.get().uri(COMMENTS, issueKey).retrieve().body(JsonNode.class));
-        if (page == null || accountId.isEmpty()) {
-            return Optional.empty();
+        if (page == null) {
+            throw new JiraUnavailableException(0);
         }
         for (JsonNode comment : page.path("comments")) {
             boolean ours =
@@ -74,6 +77,15 @@ public class JiraClient implements TicketTrackerClient {
             }
         }
         return Optional.empty();
+    }
+
+    // An answer Jira should never give: treated as unavailable so the job retries rather than acting on it.
+    private static String requiredText(JsonNode node, String field) {
+        String value = node == null ? "" : node.path(field).asText("");
+        if (value.isBlank()) {
+            throw new JiraUnavailableException(0);
+        }
+        return value;
     }
 
     private RestClient http(JiraAccount account) {

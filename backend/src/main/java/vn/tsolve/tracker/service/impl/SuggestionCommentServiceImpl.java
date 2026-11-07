@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import vn.tsolve.tracker.client.TicketTrackerClient;
 import vn.tsolve.tracker.dto.JiraAccount;
 import vn.tsolve.tracker.exception.JiraRejectedException;
+import vn.tsolve.tracker.exception.JiraUnavailableException;
 import vn.tsolve.tracker.repository.SuggestionResultRepository;
 import vn.tsolve.tracker.service.JiraServiceAccount;
 import vn.tsolve.tracker.service.SuggestionCommentService;
@@ -45,6 +46,14 @@ public class SuggestionCommentServiceImpl implements SuggestionCommentService {
         } catch (JiraRejectedException e) {
             log.warn("Suggestion comment not posted for {}: Jira answered {}", issueKey, e.getStatus());
             return;
+        } catch (JiraUnavailableException e) {
+            // AC-012.7 asks for the status too; the job's own failure line has only the error type (BUG-165).
+            log.warn(
+                    "Suggestion comment not posted for {}, retried: Jira answered {} ({})",
+                    issueKey,
+                    e.getStatus() == 0 ? "nothing" : e.getStatus(),
+                    e.getClass().getSimpleName());
+            throw e;
         }
         repository.markCommented(suggestionId, commentId, Instant.now());
         log.info("Suggestion comment posted: {}", issueKey);
