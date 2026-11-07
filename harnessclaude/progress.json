@@ -297,10 +297,19 @@
       "lastUpdated": "2026-10-24T23:56:42.775Z"
     },
     "worker": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-24T23:56:42.970Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "review-notification-smtp": "evaluating"
+      },
+      "lastUpdated": "2026-11-06T12:50:23.570Z",
+      "branch": "feat/worker",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "c7dd3d10cfad23c2ebc54bdc4e5ad54a4fb974f4"
+      }
     },
     "ai": {
       "status": "implementing",
