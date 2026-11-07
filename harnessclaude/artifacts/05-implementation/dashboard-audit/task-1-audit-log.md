@@ -17,7 +17,7 @@
 - Implemented OpenAPI getAuditEvents, generated client/models, realistic scoped MSW data, filter/date
   helpers, toolbar and DataTable page. Existing route, UI kit, global auth/site handling and registration reused.
 - Red: the initial AC-001.1 page test failed because no Audit log table existed (placeholder only).
-- Found BUG-068: descending-default sort restored itself when antd emitted a cleared sorter.
+- Found BUG-159: descending-default sort restored itself when antd emitted a cleared sorter.
   AC-001.5 failed before the local page mapping fix; all 33 feature tests passed after it.
 - Trace: `trace dashboard-audit (STORY-001): 17/17 acceptance criteria have a test`.
 - Format, lint, typecheck and build passed. Lint retains one existing TicketListFilters fast-refresh warning.
@@ -58,7 +58,7 @@ about the proposed KAN-153 commit. Do not begin another feature or push/merge/op
 - User approved the proposed commit and explicitly requested push.
 - Code commit: default@85a8aeb, `feat(audit-log): add viewing and filters (KAN-153)`.
 - Gitleaks, lint-staged and commitlint hooks passed; no verification hook was bypassed.
-- BUG-068's Fixed in cell now refers to this feature commit, replacing the pending placeholder.
+- BUG-159's Fixed in cell now refers to this feature commit, replacing the pending placeholder.
 - Recorded the code commit through sdd.ts; feature moved through evaluating to passing after the pass review.
 - A manual filename-pattern scan was rejected by the privacy hook because it interpreted a pattern as
   a sensitive-file access. That command was not retried; the independent mandatory Gitleaks commit hook

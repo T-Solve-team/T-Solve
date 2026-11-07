@@ -110,7 +110,7 @@ class TicketListRepositoryIT {
     }
 
     @Test
-    void returnsOnlyVisibleTicketsAndHidesDeletedOrOrphaned_AC_006_1() {
+    void returnsOnlyVisibleTicketsAndHidesDeletedOrOrphaned_AC_006_1_BUG_153() {
         assertThat(list(null, null, null, null).stream().map(TicketSummaryResponse::sourceTicketId))
                 .containsExactlyInAnyOrder("IT-1", "IT-2", "HR-1", "HR-3");
     }

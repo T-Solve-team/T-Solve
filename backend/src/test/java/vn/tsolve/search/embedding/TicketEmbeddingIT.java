@@ -35,7 +35,7 @@ import vn.tsolve.ticket.service.ImportConfirmService;
 @SpringBootTest
 @TestPropertySource(
         properties = {
-            "tsolve.stub.projects=pm:00000000-0000-0000-0000-000000000001",
+            "tsolve.stub.projects=pm:14400000-0000-0000-0000-000000000001",
             "TSOLVE_LOGIN_ORIGIN=http://login.localhost:8081",
             "TSOLVE_ADMIN_ORIGIN=http://admin.localhost:8081",
             "TSOLVE_SIGNING_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
@@ -222,7 +222,7 @@ class TicketEmbeddingIT {
         }
         return imports.upload(
                         "pm",
-                        UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                        UUID.fromString("14400000-0000-0000-0000-000000000001"),
                         ImportType.WITH_SOLUTION,
                         new MockMultipartFile(
                                 "file",

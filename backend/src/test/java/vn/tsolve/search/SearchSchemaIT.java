@@ -580,7 +580,8 @@ class SearchSchemaIT {
                     departmentId,
                     "SEARCH" + index);
             boolean canonical = Boolean.TRUE.equals(jdbc.queryForObject(
-                    "select exists (select 1 from information_schema.columns where table_name='ticket' and column_name='source_ticket_id')",
+                    "select exists (select 1 from information_schema.columns where table_name='ticket' and"
+                            + " column_name='source_ticket_id')",
                     Boolean.class));
             jdbc.update(
                     """

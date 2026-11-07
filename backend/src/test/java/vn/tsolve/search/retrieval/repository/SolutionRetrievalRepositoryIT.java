@@ -74,7 +74,7 @@ class SolutionRetrievalRepositoryIT {
     }
 
     @Test
-    void returnsNearestAboveCutOff_AC_010_1() {
+    void returnsNearestAboveCutOff_AC_010_1_BUG_153() {
         insert("FIRST", "ACTIVE", "PUBLISHED", 1, 0);
         insert("TIE", "ACTIVE", "PUBLISHED", 1, 0);
         insert("NEXT", "ACTIVE", "PUBLISHED", 0.8f, 0.6f);

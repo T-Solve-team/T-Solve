@@ -57,6 +57,7 @@ public class SearchTicket {
     private String workaround;
     private String scope;
 
+    // Internal Project key for visibility scopes; projectPublicId is the API UUID.
     @Column(name = "project_id")
     private UUID projectId;
 
