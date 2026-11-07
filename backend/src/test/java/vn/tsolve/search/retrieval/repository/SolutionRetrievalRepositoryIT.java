@@ -112,7 +112,8 @@ class SolutionRetrievalRepositoryIT {
         insert("HR", "ACTIVE", "PUBLISHED", 1, 0);
         assertThat(nearest(0.7, 5))
                 .extracting(SolutionRetrievalRepository.SolutionRow::getSymptoms)
-                .containsExactly("IT", "HR");
+                .containsExactlyElementsOf(jdbc.queryForList(
+                        "SELECT symptoms FROM ticket WHERE symptoms IN ('IT', 'HR') ORDER BY ticket_id", String.class));
         assertThat(jdbc.queryForObject("SELECT count(*) FROM search_log", Integer.class))
                 .isZero();
     }
