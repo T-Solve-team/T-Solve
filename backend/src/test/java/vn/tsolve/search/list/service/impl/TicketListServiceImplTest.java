@@ -16,7 +16,9 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -83,6 +85,55 @@ class TicketListServiceImplTest {
         ArgumentCaptor<Pageable> paging = ArgumentCaptor.forClass(Pageable.class);
         verify(repository).findAll(any(Specification.class), paging.capture());
         assertThat(paging.getValue().getSort()).isEqualTo(Sort.by(Sort.Order.desc("id")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validSortEntries")
+    void acceptsSortPairsWithOneFinalIdTieBreaker_BUG_136(String sort, Sort expected) {
+        when(repository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<SearchTicket>(List.of()));
+        service.list(user, query(null, null, null, null, null, null, sort));
+        ArgumentCaptor<Pageable> paging = ArgumentCaptor.forClass(Pageable.class);
+        verify(repository).findAll(any(Specification.class), paging.capture());
+        assertThat(paging.getValue().getSort()).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "title,asc,writer,desc",
+                "title,asc,updatedAt,sideways",
+                "title,ASC,updatedAt,desc",
+                "title,asc,reviewDueDate,sideways",
+                "title,asc,updatedAt",
+                "title,asc,updatedAt,desc,project",
+                "title,asc,,desc",
+                "title,asc,updatedAt,",
+                "title,asc,updatedAt,desc,",
+                "title,asc,id,desc"
+            })
+    void rejectsInvalidSortPairsBeforeScopeOrDatabase_BUG_136(String sort) {
+        assertThatThrownBy(() -> service.list(user, query(null, null, null, null, null, null, sort)))
+                .isInstanceOf(CodedException.class)
+                .satisfies(
+                        error -> assertThat(((CodedException) error).getCode()).isEqualTo("MSG06"));
+        verifyNoInteractions(visibleScope, repository, mapper);
+    }
+
+    private static Stream<Arguments> validSortEntries() {
+        Sort titleUpdated = Sort.by(Sort.Order.asc("title"), Sort.Order.desc("updatedAt"), Sort.Order.desc("id"));
+        return Stream.of(
+                Arguments.of("title,asc,updatedAt,desc", titleUpdated),
+                Arguments.of("title,asc", Sort.by(Sort.Order.asc("title"), Sort.Order.desc("id"))),
+                Arguments.of(
+                        "project,desc,sourceTicketId,asc,title,desc",
+                        Sort.by(
+                                Sort.Order.desc("projectName"), Sort.Order.asc("sourceTicketId"),
+                                Sort.Order.desc("title"), Sort.Order.desc("id"))),
+                Arguments.of("reviewDueDate,desc,title,asc,updatedAt,desc", titleUpdated),
+                Arguments.of("title,asc,reviewDueDate,asc,updatedAt,desc", titleUpdated),
+                Arguments.of("title,asc,updatedAt,desc,reviewDueDate,desc", titleUpdated),
+                Arguments.of("reviewDueDate,asc,reviewDueDate,desc", Sort.by(Sort.Order.desc("id"))));
     }
 
     @ParameterizedTest
