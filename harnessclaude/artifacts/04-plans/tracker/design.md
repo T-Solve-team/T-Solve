@@ -133,7 +133,7 @@ backend/src/main/java/vn/tsolve/common/
                    JiraAppPrincipal(cloudId, accountId), DefaultSecurityConfig  — delete JiraSiteLookup,
                    WorkspaceContext; delete common/config/WorkspaceTenantResolver
 backend/src/main/java/vn/tsolve/project/                                       — new, minimal
-├── service/       ProjectService (Optional<Long> findActiveIdByJiraProjectKey(String))
+├── service/       ProjectService (Optional<UUID> findActivePublicIdByJiraProjectKey(String) — UUID since 2026-11-07)
 │   └── impl/      ProjectServiceImpl
 ├── repository/    ProjectRepository
 └── entity/        Project, ProjectStatus
@@ -275,7 +275,7 @@ SuggestionJobHandler (TenantJobHandler "tracker.suggestion").execute(jobRef) →
 | Decision | Choice | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
 | Issue text | Columns `issue_summary`, `issue_description` on `suggestion_result` | text in the job | Worker rule: a job carries only a record UUID, no ticket content; the Jobs DB is shared by all Workspaces (README-worker) |
-| Record id for the worker | New column `job_ref UUID NOT NULL UNIQUE` | change the BIGSERIAL key to UUID | Triage reads `suggestion_id`; a new column changes nothing for it |
+| Record id for the worker | ~~New column `job_ref UUID NOT NULL UNIQUE`~~ — superseded by "Change 2026-11-07: UUID keys" below: the job carries `suggestion_id` | change the BIGSERIAL key to UUID | Triage reads `suggestion_id`; a new column changes nothing for it |
 | Retries | The job throws on failure; JobRunr's native retries | swallow (old AC-011.6) | User, 2026-11-07; the guard and conditional update make reruns safe |
 | Failure exception | `SuggestionJobFailedException extends CodedException`, message = issue key + error type, **no cause** | rethrow the original | JobRunr stores the exception and its causes in the Jobs DB; a cause message can quote issue text |
 | Workspace at enqueue | Use the bound one; else `tsolve.tracker.dev-workspace-id` (`TSOLVE_TRACKER_DEV_WORKSPACE_ID`) through `WorkerTenantService.runIn` | in-process fallback when unbound | User chose (a), 2026-11-07. Dev/mock only; removed when platform binds the request's Workspace |
@@ -308,6 +308,40 @@ Risks: the in-process stand-in loses queued jobs on restart (accepted while the 
 2026-11-07 the issue text stays in `suggestion_result`; a JobRunr job carries only `job_ref`. If the Jobs database
 is unreachable, enqueue can block the event request for the worker pool's connection timeout (review of Task 16,
 finding 1 — for the `worker` owner).
+
+### Change 2026-11-07: UUID keys for the tracker's table
+
+Team rule (`backend/AGENTS.md`, Naming): a key is `<table>_id UUID DEFAULT gen_random_uuid()`, a reference is a UUID,
+Java type `UUID`. `suggestion_result` still had `BIGSERIAL` / `BIGINT`. Scope chosen by the user (2026-11-07): only
+the tracker's own table; `department` and `project` keep their keys (their owners change them with the team).
+
+| Decision | Choice | Alternatives Considered | Rationale |
+|----------|--------|------------------------|-----------|
+| `suggestion_id` | `UUID PRIMARY KEY DEFAULT gen_random_uuid()`; entity `@GeneratedValue(strategy = UUID)` | keep BIGSERIAL | Team rule (user, 2026-11-07) |
+| `project_id` | `UUID NOT NULL REFERENCES project (public_id)`; `ProjectService` returns the Project's `public_id` | keep `BIGINT` → `project.project_id` | The API already shows a Project by `public_id` (`008-search-public-ids`); user, 2026-11-07 |
+| Job reference | The job carries `suggestion_id`; drop `job_ref` and `findByJobRef` | keep `job_ref` | With a UUID key the extra column says the same thing (user, 2026-11-07) |
+| Migration | New changeset `019-tracker-suggestion-uuid-keys.sql`; `002` and `017` unchanged | rewrite `017` | `017` already ran on developer databases from the pushed branch; editing it breaks their checksum (user, 2026-11-07) |
+| Search port | `SuggestionSearch.suggest(UUID projectId, …)` | keep `long` | The port is tracker's; KAN-47 implements it with the Project UUID |
+| Triage | Its read-only `SuggestionResultRecord` maps both columns as `UUID`; the history keys managed Projects by `publicId` | leave triage on `Long` | Same table — the entity fails `ddl-auto: validate` otherwise. Tell Trần Hải Anh in the PR |
+
+Changeset `019` (author `tracker`), in one transaction, keeping existing rows:
+add `new_id UUID DEFAULT gen_random_uuid()` and `new_project_id UUID`; fill `new_project_id` from
+`project.public_id`; drop the old key, `uq_suggestion_job_ref`, `job_ref`, `idx_suggestion_project`, `project_id`,
+`suggestion_id`; rename the new columns; `NOT NULL`, primary key, foreign key to `project (public_id)`, and recreate
+`idx_suggestion_project (project_id, created_at)`.
+
+Files: `changes/019-tracker-suggestion-uuid-keys.sql`, changelog master; `project/entity/Project` (+ `publicId`),
+`project/service/ProjectService` + impl (`Optional<UUID> findActivePublicIdByJiraProjectKey`),
+`project/repository/ProjectRepository`; tracker `entity/SuggestionResult`, `repository/SuggestionResultRepository`
+(`JpaRepository<SuggestionResult, UUID>`, no `findByJobRef`), `dto/SuggestionJobRequest` (suggestionId, issueKey),
+`service/SuggestionJobService` (`run(UUID suggestionId)`), `service/SuggestionSearch`, `service/impl/*` that use
+them; triage `entity/SuggestionResultRecord`, `repository/HistoryFilter`, `repository/SuggestionResultRecordRepository`,
+`service/impl/SuggestionResultServiceImpl`; their tests.
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 49 | STORY-003 | Data integrity | Rows recorded before `019` | Medium | Keep their data; get a new UUID key and their Project's `public_id` | Task 17 |
+| 50 | STORY-011 | Data integrity | A job queued before `019` (carries the old `job_ref`) | Low | Finds no row and stops (AC-011.7) — developer databases only | Task 17 |
 
 ## Risk Review — 2026-10-21 — Verdict: CAUTION (updated 2026-11-01)
 

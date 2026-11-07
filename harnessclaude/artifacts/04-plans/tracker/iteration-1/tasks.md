@@ -190,3 +190,21 @@ throws; `InProcessSuggestionJobQueue` only while `tsolve.worker.enabled` is fals
 `WorkerSuggestionJobQueueTest`, `InProcessSuggestionJobQueueTest`, `SuggestionResultRepositoryIT`.
 **Dependencies:** Task 15, worker KAN-102 (merged)
 **Estimated size:** medium
+
+## Task 17: UUID keys for suggestion_result (KAN-22)
+
+**Story:** STORY-003, STORY-011
+**Feature:** suggestion-uuid-keys
+**Description:** Changeset `019-tracker-suggestion-uuid-keys`: `suggestion_id` becomes a `UUID` key, `project_id` a
+`UUID` that references `project (public_id)`, `job_ref` is dropped; existing rows keep their data (edge case 49).
+`ProjectService` returns the Project's `public_id`; the suggestion job carries `suggestion_id` and loads the row by it
+(AC-011.1, AC-011.7, edge case 50); `SuggestionSearch.suggest` takes the Project UUID. Triage's read-only
+`SuggestionResultRecord` and its history map the same columns as `UUID`. No acceptance criterion changes.
+**Files:** design "Change 2026-11-07: UUID keys for the tracker's table".
+**Test:** `IssueCreatedServiceImplTest`, `SuggestionJobServiceImplTest`, `SuggestionJobHandlerTest`,
+`SuggestionResultRepositoryIT` (UUID columns and the foreign key to `project (public_id)`), triage
+`SuggestionResultRecordRepositoryIT` and
+`SuggestionResultServiceImplTest`. Edge case 49 (existing rows) checked by running `002`, `008`, `017`, then `019`
+on a scratch PostgreSQL with two rows: both kept their text and suggestion and joined their Project by `public_id`.
+**Dependencies:** Task 16
+**Estimated size:** medium
