@@ -667,6 +667,22 @@
 {"ts":"2026-11-05T13:14:57.506Z","type":"module-status","module":"ai","from":"implementing","to":"evaluating"}
 {"ts":"2026-11-05T13:15:03.084Z","type":"module-status","module":"ai","from":"evaluating","to":"completed"}
 {"ts":"2026-11-05T14:10:40.463Z","type":"commit-recorded","module":"triage","repo":"default","sha":"6cefdf9443d81628a7819c855a363f111cc44cf7"}
+{"ts":"2026-11-06T19:03:18.221Z","type":"spec-approved","module":"tracker","specHash":"fe6ca58dc58cc41d2a4a4cd643b416a4389c72b8faabca5a7997cab6a1cda40a"}
+{"ts":"2026-11-06T19:04:38.673Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":null,"to":"pending"}
+{"ts":"2026-11-06T19:29:08.409Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T19:29:08.756Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T19:29:09.339Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"c0a220c10e037b29340f192126348881fc8d12d2"}
+{"ts":"2026-11-07T03:54:29.611Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-07T04:07:59.788Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-07T04:08:06.060Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T04:08:06.780Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"a73fdd77e09ad8575590ea082b2ee32b48f7e088"}
+{"ts":"2026-11-06T00:57:53.681Z","type":"spec-approved","module":"worker","specHash":"6d0b11c652fe3181394ea638199d5ac00abbd31ae96e1fdc9df68981adb95e3d"}
+{"ts":"2026-11-06T01:02:18.740Z","type":"module-status","module":"worker","from":"decomposed","to":"planned"}
+{"ts":"2026-11-06T01:02:18.813Z","type":"feature-status","module":"worker","feature":"review-notification-smtp","from":null,"to":"pending"}
+{"ts":"2026-11-06T01:02:18.889Z","type":"module-status","module":"worker","from":"planned","to":"implementing"}
+{"ts":"2026-11-06T01:02:18.963Z","type":"feature-status","module":"worker","feature":"review-notification-smtp","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T12:50:23.485Z","type":"commit-recorded","module":"worker","repo":"default","sha":"c7dd3d10cfad23c2ebc54bdc4e5ad54a4fb974f4"}
+{"ts":"2026-11-06T12:50:23.571Z","type":"feature-status","module":"worker","feature":"review-notification-smtp","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-05T17:49:14.224Z","type":"spec-approved","module":"search","specHash":"fa4353d53ace5d33eb6b0288c2e676bd8cb636800c68d7f5689ee21b45a626d6"}
 {"ts":"2026-11-05T17:49:29.046Z","type":"feature-status","module":"search","feature":"search-public-ids","from":null,"to":"pending"}
 {"ts":"2026-11-05T17:49:29.694Z","type":"feature-status","module":"search","feature":"ticket-updated-at","from":null,"to":"pending"}
@@ -853,6 +869,12 @@
 {"ts":"2026-11-07T05:14:30.770Z","type":"spec-approved","module":"worker","specHash":"7e0c5e3f9cbd6c1066fb73b11e67bfd2703687a2e54764b0918fe34c795cb4bc"}
 {"ts":"2026-11-07T05:16:14.410Z","type":"feature-status","module":"import-ticket-list","feature":"fill-solution-screen","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T05:37:03.836Z","type":"spec-approved","module":"import-ticket-list","specHash":"46ea7e29f7294a9937a9c899c3f2d440a76e73460838fbebcc6e9debd14f991a"}
+{"ts":"2026-11-07T08:13:54.261Z","type":"spec-approved","module":"tracker","specHash":"93a8ed10cb27528dd5e2066f07d8f102c2c2d497479b672779d2f29e9dae6836"}
+{"ts":"2026-11-07T08:14:51.344Z","type":"feature-status","module":"tracker","feature":"suggestion-job-worker","from":null,"to":"pending"}
+{"ts":"2026-11-07T08:14:51.621Z","type":"feature-status","module":"tracker","feature":"suggestion-job-worker","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T08:31:37.098Z","type":"feature-status","module":"tracker","feature":"suggestion-job-worker","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T08:31:37.444Z","type":"feature-status","module":"tracker","feature":"suggestion-job-worker","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T08:31:37.858Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"7ad3be7998c27cf43ff57760f80720215884af87"}
 {"ts":"2026-11-07T05:55:12.764Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"d3df9400e6587689b5b58b312c66a99f8d4b406a"}
 {"ts":"2026-11-07T05:55:13.023Z","type":"feature-status","module":"import-ticket-list","feature":"fill-solution-screen","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T07:24:12.885Z","type":"spec-approved","module":"ticket-review","specHash":"68ced23e3b4a38e51a43201101a37d4331f0739073a7492dd88ff43487173cf3"}
@@ -907,3 +929,7 @@
 {"ts":"2026-11-07T11:40:28.427Z","type":"quick-closed","what":"PR 153 review: stronger BUG-153 tests and log message","files":["backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:43:47.513Z","type":"quick-opened","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:44:28.193Z","type":"quick-closed","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-07T14:10:13.301Z","type":"feature-status","module":"tracker","feature":"suggestion-uuid-keys","from":null,"to":"pending"}
+{"ts":"2026-11-07T14:10:13.766Z","type":"feature-status","module":"tracker","feature":"suggestion-uuid-keys","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T14:35:18.166Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"8becea26b6bb5febddd9ed8b50128b6b4b9b2bad"}
+{"ts":"2026-11-07T14:35:18.434Z","type":"feature-status","module":"tracker","feature":"suggestion-uuid-keys","from":"in-progress","to":"evaluating"}
