@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.web.PagedModel;
 import vn.tsolve.ticket.entity.ImportPreview;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.TicketSource;
 
 /**
@@ -17,6 +18,7 @@ public record ImportPreviewResponse(
         long previewId,
         UUID projectId,
         String fileName,
+        ImportType importType,
         TicketSource source,
         LocalDate resolvedFrom,
         LocalDate resolvedTo,
@@ -45,6 +47,7 @@ public record ImportPreviewResponse(
                 preview.getId(),
                 preview.getProjectId(),
                 preview.getFileName(),
+                preview.getImportType(),
                 preview.getSource(),
                 preview.getResolvedFrom(),
                 preview.getResolvedTo(),

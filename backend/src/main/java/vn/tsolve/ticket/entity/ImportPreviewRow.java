@@ -70,9 +70,9 @@ public class ImportPreviewRow {
 
     protected ImportPreviewRow() {}
 
-    public ImportPreviewRow(Long previewId, int rowNo, Values values, List<RowError> errors) {
+    public ImportPreviewRow(Long previewId, int rowNo, Values values, List<RowError> errors, ImportType importType) {
         this.id = new Id(previewId, rowNo);
-        this.status = errors.isEmpty() ? PreviewRowStatus.VALID : PreviewRowStatus.ERROR;
+        this.status = initialStatus(errors, importType);
         this.ticketId = values.ticketId();
         this.title = values.title();
         this.description = values.description();
@@ -89,11 +89,17 @@ public class ImportPreviewRow {
     /** One pulled Jira issue: the snapshot of AC-001.2, Needs Solution until its Solution is written. */
     public static ImportPreviewRow jiraIssue(
             Long previewId, int rowNo, Values values, String sourceUrl, List<IssueComment> comments) {
-        ImportPreviewRow row = new ImportPreviewRow(previewId, rowNo, values, List.of());
-        row.status = PreviewRowStatus.NEEDS_SOLUTION;
+        ImportPreviewRow row = new ImportPreviewRow(previewId, rowNo, values, List.of(), ImportType.WITHOUT_SOLUTION);
         row.sourceUrl = sourceUrl;
         row.comments = List.copyOf(comments);
         return row;
+    }
+
+    private static PreviewRowStatus initialStatus(List<RowError> errors, ImportType importType) {
+        if (!errors.isEmpty()) {
+            return PreviewRowStatus.ERROR;
+        }
+        return importType == ImportType.WITHOUT_SOLUTION ? PreviewRowStatus.NEEDS_SOLUTION : PreviewRowStatus.VALID;
     }
 
     /** The template columns of one row, as written in the file (null when the cell is missing). */
@@ -123,10 +129,6 @@ public class ImportPreviewRow {
     /** Removing applies to Valid and Error rows alike (AC-003.1). */
     public void remove() {
         status = PreviewRowStatus.REMOVED;
-    }
-
-    public boolean isValid() {
-        return status == PreviewRowStatus.VALID;
     }
 
     public Id getId() {

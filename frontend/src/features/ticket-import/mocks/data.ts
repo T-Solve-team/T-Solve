@@ -3,12 +3,16 @@ import type {
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
   ImportPreviewRowSummary,
+  ImportType,
 } from '@/shared/api';
 import { PAGE_SIZE } from '@/shared/lib';
 
 /** The template the backend returns (CsvColumns.TEMPLATE): the header row only. */
 export const CSV_TEMPLATE =
   'ticket_id,title,description,author,resolved_date,symptoms,root_cause,resolution_steps,workaround,scope\n';
+
+/** The template of a file without Solutions: the columns before the Solution sections (AC-012.2). */
+export const CSV_TEMPLATE_WITHOUT_SOLUTION = 'ticket_id,title,description,author,resolved_date\n';
 
 /** Shown only by the Import Ticket Preview popup: the rows list has no Description. */
 const DESCRIPTION = 'Users report the problem after the latest Windows update.';
@@ -113,6 +117,14 @@ function seedRows(): ImportPreviewRowResponse[] {
   ];
 }
 
+const NO_SOLUTION = {
+  symptoms: null,
+  rootCause: null,
+  resolutionSteps: null,
+  workaround: null,
+  scope: null,
+} as const;
+
 /** One unconfirmed preview of the mock backend with every row (the API returns them page by page). */
 export type MockPreview = Pick<
   ImportPreviewResponse,
@@ -128,8 +140,18 @@ export function seedImport(
   previewId = 1,
   projectId = '00000000-0000-4000-8000-000000000101',
   fileName = 'itsup-resolved-2026-09.csv',
+  importType: ImportType = 'WITH_SOLUTION',
 ): MockPreview {
-  return { previewId, projectId, fileName, importType: 'WITH_SOLUTION', rows: seedRows() };
+  // A file without Solutions: its rows without errors need a Solution, and their Solution columns are unread.
+  const rows =
+    importType === 'WITH_SOLUTION'
+      ? seedRows()
+      : seedRows().map((row): ImportPreviewRowResponse =>
+          row.status === 'VALID'
+            ? { ...row, ...NO_SOLUTION, status: 'NEEDS_SOLUTION' }
+            : { ...row, ...NO_SOLUTION },
+        );
+  return { previewId, projectId, fileName, importType, rows };
 }
 
 /** A Jira pull of a few resolved issues, each Needs Solution until its Solution is written (AC-001.1). */

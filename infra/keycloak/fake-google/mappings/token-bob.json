@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/token",
+    "bodyPatterns": [{ "matches": ".*code=bob\\..*" }]
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    "transformers": ["response-template"],
+    "body": "{\"access_token\":\"fake-access-token\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"id_token\":\"{{idtoken iss='http://fake-google:8080' aud='fake-google-client' sub='fake-google-sub-bob' email='bob@beta.test' hd='beta.test' body=request.body}}\"}"
+  }
+}

@@ -13,6 +13,7 @@ paths:
   - backend/src/test/java/vn/tsolve/ticket/service/impl/ImportPreviewServiceImplTest.java
   - backend/src/test/java/vn/tsolve/ticket/service/impl/PreviewCleanupJobTest.java
   - backend/src/test/java/vn/tsolve/ticket/service/impl/StubProjectAccessTest.java
+  - backend/src/test/java/vn/tsolve/review/ReviewStorageIT.java
   - backend/src/main/resources/db/changelog/changes/*-ticket-import*.sql
   - backend/src/main/resources/db/changelog/db.changelog-master.xml
   - frontend/openapi/tsolve-api.yaml
@@ -25,6 +26,7 @@ paths:
   - frontend/src/features/ticket-import/components/Csv*
   - frontend/src/features/ticket-import/components/ImportPreviewTable*
   - frontend/src/features/ticket-import/components/ImportTicketPreviewModal*
+  - frontend/src/features/ticket-import/components/SolutionFormModal*
   - frontend/src/features/ticket-import/pages/ImportHistoryPage.tsx
   - frontend/src/features/ticket-import/pages/ImportPreviewPage.tsx
   - frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx

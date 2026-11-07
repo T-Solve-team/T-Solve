@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 
 class CsvRowValidatorTest {
 
@@ -29,8 +30,56 @@ class CsvRowValidatorTest {
         return new ParsedCsv.Row(rowNo, values);
     }
 
+    private List<CsvRowValidator.Result> validate(List<ParsedCsv.Row> rows, Set<String> existing) {
+        return validator.validate(rows, existing, ImportType.WITH_SOLUTION);
+    }
+
     private List<RowError> errorsOf(ImportPreviewRow.Values values) {
-        return validator.validate(List.of(row(1, values)), Set.of()).get(0).errors();
+        return validate(List.of(row(1, values)), Set.of()).get(0).errors();
+    }
+
+    private List<RowError> errorsWithoutSolutions(ImportPreviewRow.Values values) {
+        return validator
+                .validate(List.of(row(1, values)), Set.of(), ImportType.WITHOUT_SOLUTION)
+                .get(0)
+                .errors();
+    }
+
+    private static ImportPreviewRow.Values noSolution(String ticketId, String title) {
+        return new ImportPreviewRow.Values(ticketId, title, null, null, null, null, null, null, null, null);
+    }
+
+    @Test
+    void rowWithoutSolutionsPassesWithItsIdAndTitle_AC_012_5() {
+        assertThat(errorsWithoutSolutions(noSolution("T-1", "Login fails"))).isEmpty();
+    }
+
+    @Test
+    void rowWithoutSolutionsNeedsTicketIdAndTitle_AC_012_6() {
+        assertThat(errorsWithoutSolutions(noSolution(" ", null)))
+                .extracting(RowError::code, RowError::field)
+                .containsExactlyInAnyOrder(tuple("MSG01", "ticket_id"), tuple("MSG01", "title"));
+    }
+
+    @Test
+    void rowWithoutSolutionsKeepsTheOtherRules_AC_012_5() {
+        ImportPreviewRow.Values tooLong = noSolution("T-1", "x".repeat(201));
+        ImportPreviewRow.Values badDate =
+                new ImportPreviewRow.Values("T-2", "t", null, null, "2026-10-23", null, null, null, null, null);
+        List<ParsedCsv.Row> rows = List.of(
+                row(1, tooLong),
+                row(2, badDate),
+                row(3, noSolution("T-3", "taken")),
+                row(4, noSolution("T-4", "twice")),
+                row(5, noSolution("T-4", "twice")));
+
+        List<CsvRowValidator.Result> results = validator.validate(rows, Set.of("T-3"), ImportType.WITHOUT_SOLUTION);
+
+        assertThat(results.get(0).errors()).extracting(RowError::code).containsExactly("MSG02");
+        assertThat(results.get(1).errors()).extracting(RowError::code).containsExactly("MSG39");
+        assertThat(results.get(2).errors()).extracting(RowError::code).containsExactly("MSG31");
+        assertThat(results.get(3).errors()).extracting(RowError::code).containsExactly("MSG_NEW_3");
+        assertThat(results.get(4).errors()).extracting(RowError::code).containsExactly("MSG_NEW_3");
     }
 
     private static String repeat(String s, int times) {
@@ -147,7 +196,7 @@ class CsvRowValidatorTest {
     @Test
     void existingTicketIdIsMsg31_AC_002_5() {
         List<CsvRowValidator.Result> results =
-                validator.validate(List.of(row(1, valid("T-1")), row(2, valid("T-2"))), Set.of("T-2"));
+                validate(List.of(row(1, valid("T-1")), row(2, valid("T-2"))), Set.of("T-2"));
 
         assertThat(results.get(0).errors()).isEmpty();
         assertThat(results.get(1).errors())
@@ -156,7 +205,7 @@ class CsvRowValidatorTest {
 
     @Test
     void everyRowSharingATicketIdIsMsgNew3_AC_002_6() {
-        List<CsvRowValidator.Result> results = validator.validate(
+        List<CsvRowValidator.Result> results = validate(
                 List.of(row(1, valid("T-1")), row(2, valid("T-2")), row(3, valid("T-1")), row(4, valid("T-1"))),
                 Set.of());
 
@@ -170,7 +219,7 @@ class CsvRowValidatorTest {
     @Test
     void duplicateInFileThatAlsoExistsGetsBothErrors_AC_002_6() {
         List<CsvRowValidator.Result> results =
-                validator.validate(List.of(row(1, valid("T-1")), row(2, valid("T-1"))), Set.of("T-1"));
+                validate(List.of(row(1, valid("T-1")), row(2, valid("T-1"))), Set.of("T-1"));
 
         assertThat(results.get(1).errors()).extracting(RowError::code).containsExactly("MSG31", "MSG_NEW_3");
     }
@@ -193,8 +242,8 @@ class CsvRowValidatorTest {
 
     @Test
     void ticketIdsAreComparedAfterTrimming_AC_002_10() {
-        List<CsvRowValidator.Result> results = validator.validate(
-                List.of(row(1, valid(" T-1")), row(2, valid("T-1 ")), row(3, valid("t-1"))), Set.of());
+        List<CsvRowValidator.Result> results =
+                validate(List.of(row(1, valid(" T-1")), row(2, valid("T-1 ")), row(3, valid("t-1"))), Set.of());
 
         assertThat(results).extracting(r -> r.errors().size()).containsExactly(1, 1, 0);
     }

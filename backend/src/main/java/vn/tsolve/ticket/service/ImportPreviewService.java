@@ -23,6 +23,9 @@ public interface ImportPreviewService {
     /** Marks the rows Removed (Valid or Error alike); row numbers not in the preview are ignored. */
     ImportPreviewResponse removeRows(String user, long previewId, Collection<Integer> rowNumbers);
 
-    /** Stores a trimmed copy of the Solution in each selected Jira row; all rows or none (AC-002.3). */
+    /**
+     * Stores one Solution, trimmed, in each given row of a Jira preview or of a preview of a file without Solutions;
+     * each row becomes Valid. All rows or none (STORY-013, ticket-repository AC-002.3).
+     */
     ImportPreviewResponse fillSolution(String user, long previewId, FillSolutionRequest solution);
 }

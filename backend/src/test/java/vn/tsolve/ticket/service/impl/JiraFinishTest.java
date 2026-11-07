@@ -42,6 +42,7 @@ import vn.tsolve.ticket.entity.ImportBatch;
 import vn.tsolve.ticket.entity.ImportBatchStatus;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.ReviewDecision;
 import vn.tsolve.ticket.entity.Ticket;
@@ -92,7 +93,16 @@ class JiraFinishTest {
     };
 
     private final ImportConfirmServiceImpl service = new ImportConfirmServiceImpl(
-            previews, rows, tickets, decisions, batches, recorder, projects, events, txManager);
+            previews,
+            rows,
+            tickets,
+            decisions,
+            batches,
+            recorder,
+            projects,
+            events,
+            txManager,
+            mock(vn.tsolve.common.audit.AuditService.class));
 
     /** A pulled issue whose Solution was filled in: a Valid row. */
     private static ImportPreviewRow issue(int rowNo, String key, String summary, String assignee) {
@@ -110,7 +120,8 @@ class JiraFinishTest {
                         "Restart",
                         null,
                         "All users"),
-                List.of());
+                List.of(),
+                ImportType.WITH_SOLUTION);
     }
 
     @BeforeEach
@@ -138,7 +149,7 @@ class JiraFinishTest {
         AtomicLong ids = new AtomicLong(100);
         when(tickets.saveAll(anyCollection())).thenAnswer(call -> {
             List<Ticket> saved = new ArrayList<>(call.getArgument(0));
-            saved.forEach(t -> ReflectionTestUtils.setField(t, "id", ids.incrementAndGet()));
+            saved.forEach(t -> ReflectionTestUtils.setField(t, "id", new UUID(0, ids.incrementAndGet())));
             return saved;
         });
     }
@@ -185,7 +196,7 @@ class JiraFinishTest {
         verify(decisions).saveAll(captor.capture());
         assertThat(captor.getValue())
                 .extracting(TicketReviewDecision::getTicketId)
-                .containsExactly(101L, 102L, 103L);
+                .containsExactly(new UUID(0, 101), new UUID(0, 102), new UUID(0, 103));
         assertThat(captor.getValue())
                 .allMatch(d -> d.getReviewer().equals(PM) && d.getDecision() == ReviewDecision.APPROVE);
     }
@@ -391,7 +402,7 @@ class JiraFinishTest {
 
         service.confirm(PM, PREVIEW);
 
-        verify(events).publishEvent(new TicketsPublishedEvent(List.of(101L, 102L)));
+        verify(events).publishEvent(new TicketsPublishedEvent(List.of(new UUID(0, 101), new UUID(0, 102))));
         assertThat(transactions).containsExactly("event", "commit");
     }
 

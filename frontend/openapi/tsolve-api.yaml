@@ -35,10 +35,10 @@ paths:
     get:
       tags: [audit-log]
       operationId: getAuditEvents
-      summary: Frontend proposal — Admin audit log within the host-resolved Workspace (KAN-153).
+      summary: Admin audit log within the host-resolved Workspace.
       description: >
-        Implemented in MSW only until backend integration. Filters combine with AND. The real backend must
-        enforce Admin access and Workspace isolation; no Workspace parameter or header is accepted.
+        Served by the backend analytics module, Admin only, with Workspace resolved from the request host.
+        Filters combine with AND; no Workspace parameter or header is accepted.
         Default order is createdAt descending with id ascending as a stable tie-breaker.
       parameters:
         - name: actor
@@ -523,8 +523,8 @@ paths:
     get:
       tags: [review]
       operationId: getReviewHistory
-      summary: Read-only decision history of managed Projects (KAN-159 frontend proposal).
-      description: Scope before filtering and pagination. Paired calendar dates are inclusive in Vietnam time. Default timestamp descending, decision UUID tie-breaker; explicit timestamp sorting only. No production persistence is implemented.
+      summary: Read-only decision history of managed Projects (KAN-159).
+      description: Scope before filtering and pagination. Paired calendar dates are inclusive in Vietnam time. Default timestamp descending, decision UUID tie-breaker; explicit timestamp sorting only. Production returns the stored Approve, Reject and Request Changes decisions; the other decision values return an empty page.
       parameters:
         - name: departmentId
           in: query
@@ -764,6 +764,40 @@ paths:
         '404':
           $ref: '#/components/responses/Problem'
         '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/issues/{issueKey}/review-feedback:
+    get:
+      tags: [jira-app]
+      operationId: getJiraReviewFeedback
+      summary: Read the latest change request for the verified writer of this issue (MSG64).
+      description: >
+        Requires a verified Forge principal, registered Workspace, linked active Account and authorized issue.
+        The Workspace is resolved only from the verified cloudId. Returns no feedback when the issue has no
+        current Changes requested Solution Form owned by that Account in the verified Project.
+      security:
+        - forgeInvocationToken: []
+      parameters:
+        - name: issueKey
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z][A-Z0-9_]*-[1-9][0-9]*$'
+            maxLength: 50
+      responses:
+        '200':
+          description: Current feedback for this writer, or null when none applies.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JiraReviewFeedback'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
           $ref: '#/components/responses/Problem'
   /api/v1/jira-app/events/issue-created:
     post:
@@ -1237,6 +1271,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TicketSummaryPage'
+        '400':
+          $ref: '#/components/responses/Problem'
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -1828,8 +1864,9 @@ components:
           type: [string, 'null']
           description: T-Solve user, or the Jira assignee name; may be empty.
         enteredQueueAt:
-          type: string
+          type: [string, 'null']
           format: date-time
+          description: Null for an older ticket whose entry time was not recorded.
         reviewDueDate:
           type: string
           format: date-time
@@ -2017,7 +2054,7 @@ components:
           maximum: 100
           description: Rounded percent of Helpful Feedback; null = no Feedback yet.
         resolvedAt:
-          type: string
+          type: [string, 'null']
           format: date-time
     TicketSearchResultPage:
       type: object
@@ -2204,6 +2241,18 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ReviewEvidence' }
         lastReviewComment: { type: [string, 'null'] }
+        canDecide:
+          type: boolean
+          description: Whether the current user may decide this pending Solution Form ticket in its managed Project.
+    JiraReviewFeedback:
+      type: object
+      required: [feedback]
+      properties:
+        feedback:
+          oneOf:
+            - $ref: '#/components/schemas/MessageRef'
+            - type: 'null'
+          description: MSG64 with manager_name and comment from the committed review decision.
     ReviewDecisionResult:
       type: object
       required: [count]

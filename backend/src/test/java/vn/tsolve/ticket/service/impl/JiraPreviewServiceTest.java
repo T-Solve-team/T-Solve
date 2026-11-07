@@ -33,6 +33,7 @@ import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowSummary;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.IssueComment;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.TicketSource;
@@ -120,7 +121,8 @@ class JiraPreviewServiceTest {
                         "Old",
                         "Old",
                         "Old"),
-                List.of());
+                List.of(),
+                ImportType.WITH_SOLUTION);
         fillable(List.of(first, second));
 
         var response = service.fillSolution(PM, ID, solution(List.of(1, 2, 2), "  Error 500 "));
@@ -187,7 +189,8 @@ class JiraPreviewServiceTest {
 
     @Test
     void rejectsCsvFillSolutionWithThePortedGate_AC_002_3() {
-        ImportPreview csv = new ImportPreview(PM, PROJECT, TicketSource.CSV, "tickets.csv", Instant.EPOCH);
+        ImportPreview csv = new ImportPreview(
+                PM, PROJECT, TicketSource.CSV, ImportType.WITH_SOLUTION, "tickets.csv", Instant.EPOCH);
         when(previews.findByIdAndOwner(ID, PM)).thenReturn(Optional.of(csv));
         when(previews.lockByIdAndOwner(ID, PM)).thenReturn(Optional.of(csv));
 
@@ -345,6 +348,8 @@ class JiraPreviewServiceTest {
 
     @Test
     void removesJiraRowsAndUpdatesTheCounts_AC_002_7() {
+        // removeRows takes the preview lock since BUG-152
+        when(previews.lockByIdAndOwner(ID, PM)).thenReturn(Optional.of(preview));
         ImportPreviewRow first = issue(1);
         ImportPreviewRow second = issue(2);
         ReflectionTestUtils.setField(second, "status", PreviewRowStatus.VALID);

@@ -9,7 +9,7 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
 
 import { AuditAction } from '../model';
 import type { AuditEntryPage } from '../model';
@@ -43,14 +43,12 @@ export const getGetAuditEventsResponseMock = (
 export const getGetAuditEventsMockHandler = (
   overrideResponse?:
     | AuditEntryPage
-    | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
-      ) => Promise<AuditEntryPage> | AuditEntryPage),
+    | ((info: Parameters<HttpResponseResolver>[0]) => Promise<AuditEntryPage> | AuditEntryPage),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/audit-events',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'

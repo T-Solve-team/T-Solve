@@ -16,7 +16,8 @@ public record SignInProperties(
         String signingKey,
         String googleClientId,
         String googleClientSecret,
-        String operatorEmails) {
+        String operatorEmails,
+        String keycloakWebClientSecret) {
 
     /** HMAC-SHA256 needs a key of at least as many bytes as the hash is long. */
     static final int MIN_SIGNING_KEY_BYTES = 32;
@@ -28,6 +29,7 @@ public record SignInProperties(
         requireText(googleClientId, "GOOGLE_CLIENT_ID");
         requireText(googleClientSecret, "GOOGLE_CLIENT_SECRET");
         requireText(operatorEmails, "PLATFORM_OPERATOR_EMAILS");
+        requireText(keycloakWebClientSecret, "KEYCLOAK_WEB_CLIENT_SECRET");
     }
 
     private static void requireOrigin(URI origin, String envName) {

@@ -24,12 +24,8 @@ export type GetMySolutionsParams = {
   size?: SizeParameter;
   status?: TicketStatus;
   projectId?: string;
-  /**
-   * First day (inclusive, UTC+7).
-   */
+  /** First day (inclusive, UTC+7). */
   from?: string;
-  /**
-   * Last day (inclusive, UTC+7); not before `from`.
-   */
+  /** Last day (inclusive, UTC+7); not before `from`. */
   to?: string;
 };

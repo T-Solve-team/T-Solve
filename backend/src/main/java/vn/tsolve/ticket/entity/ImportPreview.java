@@ -34,6 +34,10 @@ public class ImportPreview {
     @Column(nullable = false, updatable = false)
     private TicketSource source;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "import_type", nullable = false, updatable = false)
+    private ImportType importType;
+
     @Column(name = "file_name", updatable = false)
     private String fileName;
 
@@ -54,18 +58,29 @@ public class ImportPreview {
 
     protected ImportPreview() {}
 
-    public ImportPreview(String owner, UUID projectId, TicketSource source, String fileName, Instant createdAt) {
+    public ImportPreview(
+            String owner,
+            UUID projectId,
+            TicketSource source,
+            ImportType importType,
+            String fileName,
+            Instant createdAt) {
         this.owner = owner;
         this.projectId = projectId;
         this.source = source;
+        this.importType = importType;
         this.fileName = fileName;
         this.createdAt = createdAt;
     }
 
-    /** A Jira pull: no file; moreAvailable = more issues match the range than were kept (MSG35). */
+    /**
+     * A Jira pull: no file, and no Solutions, so it is handled like a {@code WITHOUT_SOLUTION} file; moreAvailable =
+     * more issues match the range than were kept (MSG35).
+     */
     public static ImportPreview jira(
             String owner, UUID projectId, LocalDate from, LocalDate to, boolean moreAvailable, Instant createdAt) {
-        ImportPreview preview = new ImportPreview(owner, projectId, TicketSource.JIRA_IMPORT, null, createdAt);
+        ImportPreview preview = new ImportPreview(
+                owner, projectId, TicketSource.JIRA_IMPORT, ImportType.WITHOUT_SOLUTION, null, createdAt);
         preview.resolvedFrom = from;
         preview.resolvedTo = to;
         preview.moreAvailable = moreAvailable;
@@ -95,6 +110,10 @@ public class ImportPreview {
 
     public TicketSource getSource() {
         return source;
+    }
+
+    public ImportType getImportType() {
+        return importType;
     }
 
     public String getFileName() {

@@ -1,11 +1,12 @@
 import { useMutation } from '@tanstack/react-query';
-import { Alert, Button, Flex, Form, Select } from 'antd';
+import { Alert, Button, Flex, Form, Radio, Select } from 'antd';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   downloadCsvTemplate,
   useUploadCsvImport,
   type ApiError,
+  type ImportType,
   type UploadCsvImportBody,
 } from '@/shared/api';
 import { rules } from '@/shared/forms';
@@ -17,12 +18,19 @@ import { saveTextFile } from '../lib/save-text-file';
 
 const TEMPLATE_FILE_NAME = 'ticket-import-template.csv';
 
+const IMPORT_TYPES: { value: ImportType; label: string }[] = [
+  { value: 'WITH_SOLUTION', label: 'Tickets with a Solution' },
+  { value: 'WITHOUT_SOLUTION', label: 'Tickets without a Solution' },
+];
+
 /**
- * CSV tab of 5.1 Import Tickets — SRS III.5.1, UC-21 steps 2–4: Project *, Download template, CSV file *, Upload.
+ * CSV tab of 5.1 Import Tickets — SRS III.5.1, UC-21 steps 2–4: Project *, Import type, Download template,
+ * CSV file *, Upload. The template and the upload follow the chosen Import type (AC-015.1).
  * Success opens the Import Preview; a rejected file keeps the chosen Project and file (AC-008.7).
  */
 export function CsvImportForm() {
   const [form] = Form.useForm<UploadCsvImportBody>();
+  const importType = Form.useWatch('importType', form);
   const navigate = useNavigate();
   // An inline code returned by the upload (MSG29, MSG04, MSG08), shown above the form.
   const [rejection, setRejection] = useState<ApiError | null>(null);
@@ -30,7 +38,8 @@ export function CsvImportForm() {
 
   // Errors: the global toast.
   const template = useMutation({
-    mutationFn: () => downloadCsvTemplate(undefined, { headers: { Accept: 'text/csv' } }),
+    mutationFn: (importType: ImportType) =>
+      downloadCsvTemplate({ importType }, { headers: { Accept: 'text/csv' } }),
     onSuccess: (text) => saveTextFile(text, TEMPLATE_FILE_NAME),
   });
 
@@ -74,7 +83,18 @@ export function CsvImportForm() {
         >
           <Select options={projects} virtual={false} />
         </FormField>
-        <Button type="link" loading={template.isPending} onClick={() => template.mutate()}>
+        <FormField<UploadCsvImportBody>
+          name="importType"
+          label="Import type"
+          initialValue="WITH_SOLUTION"
+        >
+          <Radio.Group aria-label="Import type" options={IMPORT_TYPES} />
+        </FormField>
+        <Button
+          type="link"
+          loading={template.isPending}
+          onClick={() => template.mutate(importType ?? 'WITH_SOLUTION')}
+        >
           Download template
         </Button>
         <CsvUpload name="file" label="CSV file" required />

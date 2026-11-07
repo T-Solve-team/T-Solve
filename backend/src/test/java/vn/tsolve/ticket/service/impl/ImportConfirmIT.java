@@ -34,10 +34,16 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.exception.MessageCodeException;
 import vn.tsolve.common.exception.NotFoundException;
+import vn.tsolve.ticket.dto.FillSolutionRequest;
+import vn.tsolve.ticket.dto.ImportPreviewResponse;
+import vn.tsolve.ticket.dto.ImportPreviewRowResponse;
 import vn.tsolve.ticket.dto.ImportResultResponse;
+import vn.tsolve.ticket.entity.ImportType;
+import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.service.CsvImportService;
 import vn.tsolve.ticket.service.ImportConfirmService;
+import vn.tsolve.ticket.service.ImportPreviewService;
 
 /** Confirm against a real PostgreSQL: what mocks cannot prove (rollback, after-commit, unique constraint). */
 @SpringBootTest
@@ -60,6 +66,8 @@ import vn.tsolve.ticket.service.ImportConfirmService;
             "DB_PASSWORD=unused"
         })
 class ImportConfirmIT {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private vn.tsolve.common.audit.AuditService audit;
 
     // started once for the class and stopped by Testcontainers' Ryuk; no org.testcontainers:junit-jupiter needed
     @ServiceConnection
@@ -77,6 +85,9 @@ class ImportConfirmIT {
 
     @Autowired
     private ImportConfirmService confirms;
+
+    @Autowired
+    private ImportPreviewService previewService;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -138,8 +149,145 @@ class ImportConfirmIT {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "tickets.csv", "text/csv", csv.toString().getBytes(StandardCharsets.UTF_8));
         return csvImports
-                .upload(user, UUID.fromString("00000000-0000-0000-0000-000000000001"), file)
+                .upload(user, UUID.fromString("00000000-0000-0000-0000-000000000001"), ImportType.WITH_SOLUTION, file)
                 .previewId();
+    }
+
+    @Test
+    void savesAFileWithoutSolutionsWithItsTypeAndNeedsSolutionRows_AC_012_5() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "tickets.csv",
+                "text/csv",
+                "ticket_id,title\nT-1,Login fails\n".getBytes(StandardCharsets.UTF_8));
+
+        long id = csvImports
+                .upload(
+                        "pm-a",
+                        UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                        ImportType.WITHOUT_SOLUTION,
+                        file)
+                .previewId();
+
+        assertThat(jdbc.queryForObject("select import_type from import_preview where id = ?", String.class, id))
+                .isEqualTo("WITHOUT_SOLUTION");
+        assertThat(jdbc.queryForObject("select status from import_preview_row where preview_id = ?", String.class, id))
+                .isEqualTo("NEEDS_SOLUTION");
+    }
+
+    private long uploadWithoutSolutions(String... ids) {
+        StringBuilder csv = new StringBuilder("ticket_id,title\n");
+        for (String id : ids) {
+            csv.append(id).append(",Login fails\n");
+        }
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "tickets.csv", "text/csv", csv.toString().getBytes(StandardCharsets.UTF_8));
+        return csvImports
+                .upload(
+                        "pm-a",
+                        UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                        ImportType.WITHOUT_SOLUTION,
+                        file)
+                .previewId();
+    }
+
+    private static FillSolutionRequest solution(List<Integer> rowNumbers) {
+        return new FillSolutionRequest(rowNumbers, " Error 500 ", "Bad token", "Restart", null, "All users");
+    }
+
+    @Test
+    void savedSolutionsAreReadBackFromThePreview_AC_013_7() {
+        long id = uploadWithoutSolutions("T-1", "T-2", "T-3");
+
+        ImportPreviewResponse response = previewService.fillSolution("pm-a", id, solution(List.of(1, 3)));
+
+        assertThat(response.validCount()).isEqualTo(2);
+        assertThat(response.needsSolutionCount()).isEqualTo(1);
+        ImportPreviewRowResponse row = previewService.row("pm-a", id, 3);
+        assertThat(row.status()).isEqualTo(PreviewRowStatus.VALID);
+        assertThat(row.symptoms()).isEqualTo("Error 500");
+        assertThat(row.title()).isEqualTo("Login fails");
+        assertThat(previewService.row("pm-a", id, 2).symptoms()).isNull();
+    }
+
+    @Test
+    void fillSolutionWaitsForARunningConfirmThenFindsThePreviewGone_AC_013_4() throws Exception {
+        long id = uploadWithoutSolutions("T-1");
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try (Connection confirm = jdbc.getDataSource().getConnection()) {
+            // stands in for a Confirm that holds the preview lock, then deletes the preview on commit
+            confirm.setAutoCommit(false);
+            confirm.createStatement().execute("select id from import_preview where id = " + id + " for update");
+
+            Future<String> fill = pool.submit(() -> {
+                try {
+                    previewService.fillSolution("pm-a", id, solution(List.of(1)));
+                    return "ok";
+                } catch (NotFoundException e) {
+                    return "404";
+                }
+            });
+            awaitWaitingLock();
+            assertThat(fill.isDone()).isFalse();
+
+            confirm.createStatement().execute("delete from import_preview where id = " + id);
+            confirm.commit();
+
+            assertThat(fill.get()).isEqualTo("404");
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void confirmOfAFileWithoutSolutionsWithANeedsSolutionRowImportsNothing_AC_014_1() {
+        long id = uploadWithoutSolutions("T-1", "T-2");
+        previewService.fillSolution("pm-a", id, solution(List.of(1)));
+
+        MessageCodeException e = catchThrowableOfType(() -> confirms.confirm("pm-a", id), MessageCodeException.class);
+
+        assertThat(e.getCode()).isEqualTo("MSG_NEW_4");
+        assertThat(e.getParams()).containsEntry("count", 1L);
+        assertThat(count("ticket")).isZero();
+        assertThat(count("import_batch")).isZero();
+        assertThat(count("import_preview")).isEqualTo(1);
+    }
+
+    @Test
+    void filledRowsBecomePublishedTicketsWithTheWrittenSolution_AC_014_2() {
+        long id = uploadWithoutSolutions("T-1", "T-2");
+        previewService.fillSolution("pm-a", id, solution(List.of(1, 2)));
+
+        ImportResultResponse result = confirms.confirm("pm-a", id);
+
+        assertThat(result.created()).isEqualTo(2);
+        assertThat(
+                        jdbc.queryForList(
+                                "select status, symptoms, root_cause, workaround, scope from ticket where source_ticket_id = 'T-1'"))
+                .singleElement()
+                .satisfies(row -> {
+                    assertThat(row.get("status")).isEqualTo("PUBLISHED");
+                    assertThat(row.get("symptoms")).isEqualTo("Error 500");
+                    assertThat(row.get("root_cause")).isEqualTo("Bad token");
+                    assertThat(row.get("workaround")).isNull();
+                    assertThat(row.get("scope")).isEqualTo("All users");
+                });
+        assertThat(jdbc.queryForList("select decision from ticket_import_decision", String.class))
+                .containsExactly("APPROVE", "APPROVE");
+        assertThat(published.seen).containsExactly("ids=2 visible=2");
+        assertThat(count("import_preview")).isZero();
+    }
+
+    /** Polls until some session waits for a row lock, so the test does not race the other thread. */
+    private void awaitWaitingLock() throws InterruptedException {
+        for (int i = 0; i < 100; i++) {
+            Integer waiting = jdbc.queryForObject("select count(*) from pg_locks where not granted", Integer.class);
+            if (waiting != null && waiting > 0) {
+                return;
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("fill solution never waited for the preview lock");
     }
 
     private int count(String table) {
@@ -194,6 +342,19 @@ class ImportConfirmIT {
         assertThat(count("ticket")).isEqualTo(2);
         assertThat(jdbc.queryForList("select status from import_batch", String.class))
                 .containsExactly("COMPLETED");
+    }
+
+    @Test
+    void anotherProjectManagerCannotConfirmTheOwnersPreview_AC_004_9() {
+        long preview = upload("pm-a", "T-1");
+
+        assertThatThrownBy(() -> confirms.confirm("pm-b", preview)).isInstanceOf(NotFoundException.class);
+        assertThat(count("ticket")).isZero();
+        assertThat(count("import_batch")).isZero();
+        assertThat(published.seen).isEmpty();
+
+        assertThat(confirms.confirm("pm-a", preview).created()).isEqualTo(1);
+        assertThat(count("import_preview")).isZero();
     }
 
     @Test
@@ -257,11 +418,11 @@ class ImportConfirmIT {
     @Test
     void databaseRejectsADuplicateTicketId() {
         jdbc.update(
-                "insert into ticket (ticket_id, project_id, source, status, title, symptoms, root_cause,"
+                "insert into ticket (source_ticket_id, project_id, source, status, title, symptoms, root_cause,"
                         + " resolution_steps, scope) values ('T-9', '00000000-0000-0000-0000-000000000001', 'CSV', 'PUBLISHED', 't', 's', 'r', 'st', 'sc')");
 
         assertThatThrownBy(() -> jdbc.update(
-                        "insert into ticket (ticket_id, project_id, source, status, title, symptoms, root_cause,"
+                        "insert into ticket (source_ticket_id, project_id, source, status, title, symptoms, root_cause,"
                                 + " resolution_steps, scope) values ('T-9', '00000000-0000-0000-0000-000000000001', 'CSV', 'PUBLISHED', 't', 's', 'r',"
                                 + " 'st', 'sc')"))
                 .isInstanceOf(DuplicateKeyException.class);

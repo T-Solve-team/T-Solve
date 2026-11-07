@@ -9,17 +9,21 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
 import { ImportPreviewRowStatus, ImportSource, ImportType } from '../model';
 import type {
   DraftSavedResponse,
+  FillSolutionRequest,
   ImportDraftSummary,
   ImportPreviewResponse,
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
   ImportResultResponse,
+  JiraPullRequest,
   MessageRef,
+  RemoveRowsRequest,
+  UploadCsvImportBody,
 } from '../model';
 
 export const getDownloadCsvTemplateResponseMock = (): string => faker.word.sample();
@@ -767,12 +771,12 @@ export const getListImportDraftsResponseMock = (): ImportDraftSummary[] =>
 
 export const getDownloadCsvTemplateMockHandler = (
   overrideResponse?:
-    string | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<string> | string),
+    string | ((info: Parameters<HttpResponseResolver>[0]) => Promise<string> | string),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/imports/csv/template',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       const resolvedBody =
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -791,13 +795,13 @@ export const getUploadCsvImportMockHandler = (
   overrideResponse?:
     | ImportPreviewResponse
     | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
+        info: Parameters<HttpResponseResolver<PathParams, UploadCsvImportBody>>[0],
       ) => Promise<ImportPreviewResponse> | ImportPreviewResponse),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<PathParams, UploadCsvImportBody>(
     '*/api/v1/imports/csv',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, UploadCsvImportBody>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -815,13 +819,13 @@ export const getGetImportPreviewMockHandler = (
   overrideResponse?:
     | ImportPreviewResponse
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver<{ previewId: string }>>[0],
       ) => Promise<ImportPreviewResponse> | ImportPreviewResponse),
   options?: RequestHandlerOptions,
 ) => {
-  return http.get(
+  return http.get<{ previewId: string }>(
     '*/api/v1/imports/previews/:previewId',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ previewId: string }>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -839,13 +843,13 @@ export const getGetImportPreviewRowsMockHandler = (
   overrideResponse?:
     | ImportPreviewRowPage
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver<{ previewId: string }>>[0],
       ) => Promise<ImportPreviewRowPage> | ImportPreviewRowPage),
   options?: RequestHandlerOptions,
 ) => {
-  return http.get(
+  return http.get<{ previewId: string }>(
     '*/api/v1/imports/previews/:previewId/rows',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ previewId: string }>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -863,13 +867,13 @@ export const getGetImportPreviewRowMockHandler = (
   overrideResponse?:
     | ImportPreviewRowResponse
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver<{ previewId: string; rowNo: string }>>[0],
       ) => Promise<ImportPreviewRowResponse> | ImportPreviewRowResponse),
   options?: RequestHandlerOptions,
 ) => {
-  return http.get(
+  return http.get<{ previewId: string; rowNo: string }>(
     '*/api/v1/imports/previews/:previewId/rows/:rowNo',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ previewId: string; rowNo: string }>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -887,13 +891,13 @@ export const getRemoveImportPreviewRowsMockHandler = (
   overrideResponse?:
     | ImportPreviewResponse
     | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
+        info: Parameters<HttpResponseResolver<{ previewId: string }, RemoveRowsRequest>>[0],
       ) => Promise<ImportPreviewResponse> | ImportPreviewResponse),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<{ previewId: string }, RemoveRowsRequest>(
     '*/api/v1/imports/previews/:previewId/remove-rows',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ previewId: string }, RemoveRowsRequest>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -911,13 +915,15 @@ export const getFillImportPreviewSolutionMockHandler = (
   overrideResponse?:
     | ImportPreviewResponse
     | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
+        info: Parameters<HttpResponseResolver<{ previewId: string }, FillSolutionRequest>>[0],
       ) => Promise<ImportPreviewResponse> | ImportPreviewResponse),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<{ previewId: string }, FillSolutionRequest>(
     '*/api/v1/imports/previews/:previewId/fill-solution',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (
+      info: Parameters<HttpResponseResolver<{ previewId: string }, FillSolutionRequest>>[0],
+    ) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -935,13 +941,13 @@ export const getConfirmImportMockHandler = (
   overrideResponse?:
     | ImportResultResponse
     | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
+        info: Parameters<HttpResponseResolver<{ previewId: string }>>[0],
       ) => Promise<ImportResultResponse> | ImportResultResponse),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<{ previewId: string }>(
     '*/api/v1/imports/previews/:previewId/confirm',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ previewId: string }>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -959,13 +965,13 @@ export const getPullJiraImportMockHandler = (
   overrideResponse?:
     | ImportPreviewResponse
     | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
+        info: Parameters<HttpResponseResolver<PathParams, JiraPullRequest>>[0],
       ) => Promise<ImportPreviewResponse> | ImportPreviewResponse),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<PathParams, JiraPullRequest>(
     '*/api/v1/imports/jira',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, JiraPullRequest>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -983,13 +989,13 @@ export const getSaveImportDraftMockHandler = (
   overrideResponse?:
     | DraftSavedResponse
     | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
+        info: Parameters<HttpResponseResolver<{ previewId: string }>>[0],
       ) => Promise<DraftSavedResponse> | DraftSavedResponse),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<{ previewId: string }>(
     '*/api/v1/imports/previews/:previewId/draft',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ previewId: string }>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -1007,13 +1013,13 @@ export const getListImportDraftsMockHandler = (
   overrideResponse?:
     | ImportDraftSummary[]
     | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0],
+        info: Parameters<HttpResponseResolver>[0],
       ) => Promise<ImportDraftSummary[]> | ImportDraftSummary[]),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/imports/drafts',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -1029,12 +1035,13 @@ export const getListImportDraftsMockHandler = (
 
 export const getDeleteImportDraftMockHandler = (
   overrideResponse?:
-    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+    | void
+    | ((info: Parameters<HttpResponseResolver<{ previewId: string }>>[0]) => Promise<void> | void),
   options?: RequestHandlerOptions,
 ) => {
-  return http.delete(
+  return http.delete<{ previewId: string }>(
     '*/api/v1/imports/drafts/:previewId',
-    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<{ previewId: string }>>[0]) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
       }

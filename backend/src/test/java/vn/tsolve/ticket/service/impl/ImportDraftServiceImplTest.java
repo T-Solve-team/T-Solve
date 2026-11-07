@@ -28,6 +28,7 @@ import vn.tsolve.ticket.dto.ImportDraftSummary;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
@@ -161,7 +162,8 @@ class ImportDraftServiceImplTest {
     @Test
     void anotherUsersMissingOrCsvDraftIs404_AC_004_5() {
         draft(42L, NOW); // PM's own; another user asks for it
-        ImportPreview csv = new ImportPreview(PM, PROJECT, TicketSource.CSV, "tickets.csv", NOW);
+        ImportPreview csv =
+                new ImportPreview(PM, PROJECT, TicketSource.CSV, ImportType.WITH_SOLUTION, "tickets.csv", NOW);
         ReflectionTestUtils.setField(csv, "id", 7L);
         when(previews.findByIdAndOwner(7L, PM)).thenReturn(Optional.of(csv));
 

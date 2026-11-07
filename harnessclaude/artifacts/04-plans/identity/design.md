@@ -796,7 +796,7 @@ in `identity/session` and `common/tenant/TenantContext`: identity is the code ow
 
 Dimensions analyzed: user types, input extremes, timing, state transitions, environment, error cascades,
 authorization, data integrity, integration, compliance. Skipped: scale (the volume is a few sign-ins per minute per
-company), business logic (no amounts). Rows 103–124; the rows of the older section that this section replaces are
+company), business logic (no amounts). Rows 103–130; the rows of the older section that this section replaces are
 listed in its banner. Every Critical or High row has its test task.
 
 | # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
@@ -813,16 +813,22 @@ listed in its banner. Every Critical or High row has its test task.
 | 112 | STORY-001 | Compliance | A company is removed but its Keycloak users, Organization or IdP remain (R12); PII in Keycloak logs | High | `remove` deletes them (AC-001.62); the runbook's "remove a company"; no email in Keycloak logs | Task 28 |
 | 113 | STORY-001 | Data integrity | A Keycloak user is re-created and gets a new `sub` (R13) | High | MSG09 and a `WARN` with the Account id only (AC-001.56); the runbook rebinds after an identity check | Task 25a |
 | 114 | STORY-001 | User types | A shared computer: the next person clicks "Sign in" while Keycloak's SSO session lives (R14) | Medium | SSO Idle ≤ 60 min and Max ≤ 8 h (AC-001.63); logout ends Keycloak's session (AC-002.1) | Tasks 23, 27 |
-| 115 | STORY-001 | Timing | The callback reaches another API replica than the sign-in start (R15) | High | The request is in Redis, no HTTP session, `NullSecurityContextRepository` (AC-001.55); a two-instance test | Task 23 |
+| 115 | STORY-001 | Timing | The callback reaches another API replica than the sign-in start (R15) | High | The request is in Redis, no HTTP session, `NullSecurityContextRepository` (AC-001.55); a two-instance test | Task 23c |
 | 116 | STORY-002 | Integration | A `fetch` POST cannot follow the redirect to Keycloak's end-session URL (R16) | Medium | The answer is 200 `{ logoutUrl }`; the browser navigates (AC-002.1, AC-002.8) | Task 27 |
 | 117 | STORY-001 | Integration | The platform, `jira-app` or fe-foundation still use the old contract (R17) | High | Change requests sent before the dependent code (this plan, "Platform change requests") | Tasks 28, 30, 27 |
 | 118 | STORY-001 | Environment | Google has not applied the new redirect URI yet, or the client's URI limit is reached (R18) | Medium | Google refuses and the Workspace site shows the normal sign-in error; the runbook does the test sign-in before the company is told, lists the URIs and says to check the limit | Task 28 (runbook) |
 | 119 | STORY-001 | Data integrity | A person's Google email changes (R19) | Low | The Account is found by `sub`; `app_user.email` is unchanged (design decision above) | Task 25a |
 | 120 | STORY-001 | State transitions | A developer database already ran the unreleased `008` and `009` (R20) | Low | `docker compose down -v`; the card notes it | Task 24 |
 | 121 | STORY-001 | Authorization | Jira-link phishing: the victim opens the attacker's link URL and confirms without reading (replaces row 46) | Critical | Mitigated, not closed: single-use 10-minute request, the person's own session, the confirm page names both accounts, CSRF POST; option B (a typed code) stays open (AC-001.69–.72) | Task 30 |
-| 122 | STORY-001 | Authorization | Login CSRF: a callback URL (state and code) of the attacker's own sign-in is opened in the victim's browser (replaces rows 45 and 100) | Critical | The victim's browser has no matching `__Host-TSOLVE_AUTHREQ`: MSG141, no session (AC-001.6, .53) | Task 23 |
+| 122 | STORY-001 | Authorization | Login CSRF: a callback URL (state and code) of the attacker's own sign-in is opened in the victim's browser (replaces rows 45 and 100) | Critical | The victim's browser has no matching `__Host-TSOLVE_AUTHREQ`: MSG141, no session (AC-001.6, .53) | Task 23c |
 | 123 | STORY-001 | Integration | PR #119's `UserListSessionFilter` next to `WebSessionFilter` | High | One session model; the second filter is dropped from identity (Q15) | Task 26a |
 | 124 | STORY-001 | State transitions | Sign-in tried before the test sign-in of the runbook (redirect URI not yet applied) | Medium | Google refuses; the Workspace site shows the normal sign-in error; no data-model gate (AC-001.73 retired) | Task 28 (runbook) |
+| 125 | STORY-001 | Integration | The dev Workspaces resolve: `acme.localhost` and `beta.localhost` each resolve to their dev Workspace | Medium | Each host gives its fixed id, slug and Organization id | Task 23a |
+| 126 | STORY-001 | Input extremes | An unknown host or an unknown id is looked up in the dev Workspaces | Medium | Resolves to nothing (no Workspace, no error) | Task 23a |
+| 127 | STORY-001 | Data integrity | A DevAccount and its dev Workspace disagree on the domain | High | They agree: each DevAccount's email domain equals the Google domain of its Workspace | Task 23a |
+| 128 | STORY-001 | Environment | The app runs without the profile `dev` | High | `DevWorkspaceLookup` exists only with the profile `dev`; otherwise `NoWorkspaceLookup` answers nothing | Task 23a |
+| 129 | STORY-001 | Integration | Redis wiring: the app reaches Redis through `REDIS_HOST`, `REDIS_PORT` and `REDIS_PASSWORD`; a key is stored with a time to live | High | The app connects with those three settings; a key with a time to live expires | Task 23a |
+| 130 | STORY-001 | Error cascades | Redis health: the `redis` health indicator when Redis is up | Medium | The indicator is UP, so `/actuator/health` stays 200 UP | Task 23a |
 
 Open questions for the spec owner: none. Every row is closed by the answers Q1–Q16.
 

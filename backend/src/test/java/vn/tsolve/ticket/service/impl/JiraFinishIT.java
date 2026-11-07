@@ -30,6 +30,7 @@ import vn.tsolve.ticket.dto.ImportResultResponse;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
 import vn.tsolve.ticket.service.ImportConfirmService;
@@ -64,6 +65,10 @@ class JiraFinishIT {
     static {
         DB.start();
     }
+
+    // Finish records an audit event, which needs a signed-in user; this test is about the import itself
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private vn.tsolve.common.audit.AuditService audit;
 
     private static final String PM = "pm-a";
     private static final UUID ACTIVE = UUID.fromString("00000000-0000-0000-0000-000000000001");
@@ -112,13 +117,14 @@ class JiraFinishIT {
                             "Restart",
                             null,
                             "All users"),
-                    List.of()));
+                    List.of(),
+                    ImportType.WITH_SOLUTION));
         }
         return preview.getId();
     }
 
     private static String insertTicket(String key) {
-        return "insert into ticket (ticket_id, project_id, source, status, title, symptoms, root_cause,"
+        return "insert into ticket (source_ticket_id, project_id, source, status, title, symptoms, root_cause,"
                 + " resolution_steps, scope) values ('" + key + "', '" + ACTIVE
                 + "', 'MANUAL', 'PUBLISHED', 't', 's', 'r', 'st', 'sc')";
     }
@@ -148,7 +154,8 @@ class JiraFinishIT {
         assertThat(result.created()).isEqualTo(2);
         assertThat(result.notice()).isEqualTo(new MessageRef("MSG38", Map.of("count", 1, "issue_keys", "KAN-2")));
         assertThat(jdbc.queryForList(
-                        "select ticket_id from ticket where source = 'JIRA_IMPORT' order by ticket_id", String.class))
+                        "select source_ticket_id from ticket where source = 'JIRA_IMPORT' order by source_ticket_id",
+                        String.class))
                 .containsExactly("KAN-1", "KAN-3");
         assertThat(jdbc.queryForList("select status from import_batch", String.class))
                 .containsExactly("COMPLETED");

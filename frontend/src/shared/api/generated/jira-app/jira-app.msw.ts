@@ -6,17 +6,73 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
+import { faker } from '@faker-js/faker';
+
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
+
+import type { IssueCreatedPayload, JiraReviewFeedback, MessageRef } from '../model';
+
+export const getGetJiraReviewFeedbackResponseMessageRefMock = (
+  overrideResponse: Partial<MessageRef> = {},
+): MessageRef => ({
+  ...{
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getGetJiraReviewFeedbackResponseMock = (
+  overrideResponse: Partial<Extract<JiraReviewFeedback, object>> = {},
+): JiraReviewFeedback => ({
+  feedback: faker.helpers.arrayElement([
+    { ...getGetJiraReviewFeedbackResponseMessageRefMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetJiraReviewFeedbackMockHandler = (
+  overrideResponse?:
+    | JiraReviewFeedback
+    | ((
+        info: Parameters<HttpResponseResolver<{ issueKey: string }>>[0],
+      ) => Promise<JiraReviewFeedback> | JiraReviewFeedback),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ issueKey: string }>(
+    '*/api/v1/jira-app/issues/:issueKey/review-feedback',
+    async (info: Parameters<HttpResponseResolver<{ issueKey: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetJiraReviewFeedbackResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 
 export const getReceiveIssueCreatedMockHandler = (
   overrideResponse?:
-    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+    | void
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, IssueCreatedPayload>>[0],
+      ) => Promise<void> | void),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post(
+  return http.post<PathParams, IssueCreatedPayload>(
     '*/api/v1/jira-app/events/issue-created',
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, IssueCreatedPayload>>[0]) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
       }
@@ -26,4 +82,7 @@ export const getReceiveIssueCreatedMockHandler = (
     options,
   );
 };
-export const getJiraAppMock = () => [getReceiveIssueCreatedMockHandler()];
+export const getJiraAppMock = () => [
+  getGetJiraReviewFeedbackMockHandler(),
+  getReceiveIssueCreatedMockHandler(),
+];

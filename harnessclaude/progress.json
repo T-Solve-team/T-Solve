@@ -5,8 +5,8 @@
   "status": "active",
   "modules": {
     "import-ticket-list": {
-      "status": "implementing",
-      "currentPhase": "implement",
+      "status": "completed",
+      "currentPhase": "evaluate",
       "features": {
         "csv-import-contract": "passing",
         "csv-import-schema": "passing",
@@ -22,6 +22,7 @@
         "retire-snapshot-import": "passing",
         "csv-confirm-db-tests": "passing",
         "preview-rows-access": "passing",
+        "import-ticket-uuid-compatibility": "passing",
         "project-uuid": "passing",
         "preview-read": "passing",
         "duplicate-id-code": "passing",
@@ -30,21 +31,21 @@
         "import-preview-screen": "passing",
         "import-preview-actions": "passing",
         "import-ticket-preview-popup": "passing",
-        "import-type-contract": "evaluating",
-        "import-type-upload": "in-progress",
-        "preview-fill-solution": "pending",
-        "import-type-confirm": "pending",
-        "import-type-form": "pending",
-        "row-solution-popup": "pending",
-        "fill-solution-screen": "pending"
+        "import-type-contract": "passing",
+        "import-type-upload": "passing",
+        "preview-fill-solution": "passing",
+        "import-type-confirm": "passing",
+        "import-type-form": "passing",
+        "row-solution-popup": "passing",
+        "fill-solution-screen": "passing"
       },
-      "lastUpdated": "2026-11-05T18:36:20.798Z",
+      "lastUpdated": "2026-11-07T08:33:00.846Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "025794b869adbc64aaafd5eb8e67d47c5632d961"
+        "default": "d3df9400e6587689b5b58b312c66a99f8d4b406a"
       }
     },
     "be-foundation": {
@@ -123,9 +124,12 @@
         "user-role": "pending",
         "logout-rp-initiated": "pending",
         "keycloak-provisioning": "pending",
-        "keycloak-theme": "pending"
+        "keycloak-theme": "pending",
+        "keycloak-prerequisites": "passing",
+        "keycloak-realm": "passing",
+        "keycloak-sign-in-start": "passing"
       },
-      "lastUpdated": "2026-11-05T15:33:35.932Z",
+      "lastUpdated": "2026-11-07T11:03:46.506Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -183,15 +187,31 @@
       "features": {
         "ticket-list": "passing",
         "ticket-search": "passing",
-        "give-feedback": "pending"
+        "give-feedback": "pending",
+        "search-public-ids": "in-progress",
+        "ticket-updated-at": "in-progress",
+        "ticket-embedding-schema": "passing",
+        "search-log-schema": "passing",
+        "ticket-feedback-schema": "passing",
+        "visible-scope": "in-progress",
+        "ticket-embedding-pipeline": "passing",
+        "ticket-list-api": "in-progress",
+        "ticket-list-connect": "in-progress",
+        "ticket-ranking": "passing",
+        "ticket-search-api": "passing",
+        "ticket-search-connect": "pending",
+        "ticket-feedback-api": "passing",
+        "give-feedback-connect": "evaluating",
+        "ticket-suggestion-api": "pending",
+        "solution-retrieval": "passing"
       },
-      "lastUpdated": "2026-10-30T15:41:22.397Z",
+      "lastUpdated": "2026-11-06T17:23:51.646Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "cfdf2de2a8ce09f475abb826f9806268206032c0"
+        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
       }
     },
     "triage": {
@@ -212,22 +232,27 @@
       }
     },
     "chatbot": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "ask-answer": "passing",
         "citations": "passing",
         "session-conversations": "passing",
         "ratings": "passing",
-        "uuid-ids": "passing"
+        "uuid-ids": "passing",
+        "chatbot-answer-schema": "passing",
+        "ask-answer-api": "passing",
+        "answer-citations": "pending",
+        "cited-documents": "pending",
+        "follow-up-context": "pending"
       },
-      "lastUpdated": "2026-10-25T18:12:52.131Z",
+      "lastUpdated": "2026-11-06T17:23:52.760Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "3d3c827c8b735482e0f3e8baf0bd182d1ad40166"
+        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
       }
     },
     "jira-app": {
@@ -240,15 +265,17 @@
       "status": "implementing",
       "currentPhase": "implement",
       "features": {
-        "audit-log": "passing"
+        "audit-log": "passing",
+        "audit-log-api": "evaluating",
+        "audit-writer": "evaluating"
       },
-      "lastUpdated": "2026-10-31T10:34:30.638Z",
+      "lastUpdated": "2026-11-07T11:25:26.357Z",
       "branch": "feat/dashboard-audit",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "85a8aeb11008532979199decd64b362284748a0c"
+        "default": "5a20895a921becc1012424819b25c777b82ee69c"
       }
     },
     "platform": {
@@ -295,20 +322,31 @@
       "lastUpdated": "2026-10-24T23:56:42.775Z"
     },
     "worker": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-24T23:56:42.970Z"
+      "status": "completed",
+      "currentPhase": "evaluate",
+      "features": {
+        "review-notification-smtp": "passing",
+        "tenant-jobs": "passing"
+      },
+      "lastUpdated": "2026-11-07T08:10:50.005Z",
+      "branch": "feat/worker",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "68bd287b663f5dd4bacb533c5883a981e4abbf11"
+      }
     },
     "ai": {
       "status": "implementing",
       "currentPhase": "implement",
       "features": {
         "ollama-clients": "passing",
-        "solution-draft": "pending",
-        "solution-rewrite": "pending"
+        "solution-draft": "passing",
+        "solution-rewrite": "passing",
+        "solution-review-fixes": "passing"
       },
-      "lastUpdated": "2026-11-05T11:28:04.196Z",
+      "lastUpdated": "2026-11-06T12:13:56.733Z",
       "branch": "feat/ai",
       "repos": [
         "default"
@@ -348,15 +386,23 @@
         "review-queue-decisions": "passing",
         "review-ticket-detail": "passing",
         "expired-tickets": "passing",
-        "review-history": "passing"
+        "review-history": "passing",
+        "review-storage": "evaluating",
+        "review-production-api": "evaluating",
+        "review-jira-feedback": "in-progress",
+        "review-decision-transaction": "evaluating",
+        "review-decision-endpoints": "evaluating",
+        "review-queue-entry-time": "evaluating",
+        "review-history-api": "evaluating",
+        "review-email-notification": "evaluating"
       },
-      "lastUpdated": "2026-11-04T14:48:28.461Z",
+      "lastUpdated": "2026-11-07T10:19:16.931Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "57efd3620b4a58678607501aa5dd4c124496ab7e"
+        "default": "b5e93cde3837c9530db76fa61af55665f3ccc529"
       }
     }
   },

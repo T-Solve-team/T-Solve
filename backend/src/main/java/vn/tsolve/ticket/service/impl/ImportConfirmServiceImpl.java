@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -13,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import vn.tsolve.common.audit.AuditAction;
+import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.csv.CsvRowValidator;
 import vn.tsolve.ticket.dto.ImportResultResponse;
@@ -20,6 +23,7 @@ import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportBatch;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.Ticket;
 import vn.tsolve.ticket.entity.TicketReviewDecision;
@@ -59,6 +63,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
     private final ProjectAccess projects;
     private final ApplicationEventPublisher events;
     private final TransactionTemplate transaction;
+    private final AuditService audit;
 
     public ImportConfirmServiceImpl(
             ImportPreviewRepository previews,
@@ -69,7 +74,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
             ImportBatchRecorder recorder,
             ProjectAccess projects,
             ApplicationEventPublisher events,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager,
+            AuditService audit) {
         this.previews = previews;
         this.previewRows = previewRows;
         this.tickets = tickets;
@@ -79,6 +85,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         this.projects = projects;
         this.events = events;
         this.transaction = new TransactionTemplate(transactionManager);
+        this.audit = audit;
     }
 
     /** A Ticket ID became an existing Ticket after the preview was made (AC-004.7). */
@@ -93,6 +100,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
+        // first, so a file with only Needs Solution rows answers MSG_NEW_4, not MSG30 (design, edge case 47)
+        requireRowsReady(preview, errorRows);
         requireRowsToImport(
                 preview,
                 previewRows
@@ -170,6 +179,18 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         }
     }
 
+    /** A file without Solutions is imported only when no row still needs a Solution or has errors (AC-014.1). */
+    private void requireRowsReady(ImportPreview preview, long errorRows) {
+        if (preview.getImportType() != ImportType.WITHOUT_SOLUTION) {
+            return;
+        }
+        long notReady =
+                previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.NEEDS_SOLUTION) + errorRows;
+        if (notReady > 0) {
+            throw new RowsNotReadyException(notReady);
+        }
+    }
+
     /** Records the Failed batch; never lets a recording problem hide the MSG33 answer (design E5, E6). */
     private void fail(ImportPreview preview, long errorRows, long removedRows, String reason, RuntimeException cause) {
         log.warn(
@@ -202,6 +223,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
+        // again under the lock: Remove and Fill solution do not wait for the first check (edge case 48)
+        requireRowsReady(preview, errorRows);
         List<ImportPreviewRow> valid = previewRows.findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID);
         requireRowsToImport(preview, valid.isEmpty(), errorRows);
 
@@ -231,7 +254,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         List<Ticket> saved = tickets.saveAll(toImport.stream()
                 .map(r -> toTicket(r.getValues(), preview, batch.getId()))
                 .toList());
-        List<Long> ticketIds = saved.stream().map(Ticket::getId).toList();
+        List<UUID> ticketIds = saved.stream().map(Ticket::getId).toList();
         decisions.saveAll(ticketIds.stream()
                 .map(id -> TicketReviewDecision.approve(id, user))
                 .toList());
@@ -241,6 +264,11 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
             // inside the transaction: @TransactionalEventListener(AFTER_COMMIT) listeners get it once this commits
             events.publishEvent(new TicketsPublishedEvent(ticketIds));
         }
+        audit.record(
+                AuditAction.IMPORT,
+                "PROJECT",
+                preview.getProjectId(),
+                Map.of("importBatchId", batch.getId(), "created", toImport.size(), "skipped", skipped));
         return new Imported(batch.getId(), toImport.size(), skipped, skippedKeys);
     }
 

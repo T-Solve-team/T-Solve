@@ -14,6 +14,12 @@ paths:
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
   - docs/bug-log.md
+  - backend/src/main/java/vn/tsolve/ticket/event/ReviewFeedbackDecidedEvent.java
+  - backend/src/main/java/vn/tsolve/ticket/dto/ReviewNotification.java
+  - backend/src/main/java/vn/tsolve/ticket/service/ReviewNotificationService.java
+  - backend/src/main/java/vn/tsolve/ticket/service/impl/ReviewNotificationServiceImpl.java
+  - backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotification*.java
+  - backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotification*.java
 ---
 
 # Module: ticket-review

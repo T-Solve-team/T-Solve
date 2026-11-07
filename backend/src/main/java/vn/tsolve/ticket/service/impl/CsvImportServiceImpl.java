@@ -7,13 +7,14 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import vn.tsolve.ticket.csv.CsvColumns;
 import vn.tsolve.ticket.csv.CsvRowValidator;
 import vn.tsolve.ticket.csv.CsvTicketParser;
 import vn.tsolve.ticket.csv.ParsedCsv;
@@ -21,6 +22,8 @@ import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowSummary;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
+import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.exception.CsvFileRejectedException;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
@@ -68,7 +71,7 @@ public class CsvImportServiceImpl implements CsvImportService {
 
     @Override
     @Transactional
-    public ImportPreviewResponse upload(String user, UUID projectId, MultipartFile file) {
+    public ImportPreviewResponse upload(String user, UUID projectId, ImportType importType, MultipartFile file) {
         // order (design B6): file type and size, then Project access, then content
         String fileName = file.getOriginalFilename();
         if (fileName == null || !fileName.toLowerCase(Locale.ROOT).endsWith(".csv")) {
@@ -81,41 +84,42 @@ public class CsvImportServiceImpl implements CsvImportService {
             throw new ProjectAccessDeniedException();
         }
 
-        ParsedCsv csv = parse(file);
-        List<CsvRowValidator.Result> checked =
-                validator.validate(csv.rows(), tickets.findExistingTicketIds(CsvRowValidator.ticketIdsOf(csv.rows())));
+        ParsedCsv csv = parse(file, importType);
+        List<CsvRowValidator.Result> checked = validator.validate(
+                csv.rows(), tickets.findExistingTicketIds(CsvRowValidator.ticketIdsOf(csv.rows())), importType);
 
         previews.deleteByOwner(user);
-        ImportPreview preview =
-                previews.save(new ImportPreview(user, projectId, TicketSource.CSV, fileName, Instant.now(clock)));
+        ImportPreview preview = previews.save(
+                new ImportPreview(user, projectId, TicketSource.CSV, importType, fileName, Instant.now(clock)));
         List<ImportPreviewRow> rows = new ArrayList<>(checked.size());
         for (CsvRowValidator.Result r : checked) {
             rows.add(new ImportPreviewRow(
-                    preview.getId(), r.row().rowNo(), r.row().values(), r.errors()));
+                    preview.getId(), r.row().rowNo(), r.row().values(), r.errors(), importType));
         }
         previewRows.saveAll(rows);
 
-        long valid = rows.stream().filter(ImportPreviewRow::isValid).count();
+        Map<PreviewRowStatus, Long> counts =
+                rows.stream().collect(Collectors.groupingBy(ImportPreviewRow::getStatus, Collectors.counting()));
         List<ImportPreviewRowSummary> firstPage = rows.subList(0, Math.min(FIRST_PAGE_SIZE, rows.size())).stream()
                 .map(mapper::toSummary)
                 .toList();
         return ImportPreviewResponse.of(
                 preview,
-                valid,
-                rows.size() - valid,
+                counts.getOrDefault(PreviewRowStatus.VALID, 0L),
+                counts.getOrDefault(PreviewRowStatus.ERROR, 0L),
                 0,
-                0,
+                counts.getOrDefault(PreviewRowStatus.NEEDS_SOLUTION, 0L),
                 new PageImpl<>(firstPage, PageRequest.of(0, FIRST_PAGE_SIZE), rows.size()));
     }
 
     @Override
-    public String template() {
-        return String.join(",", CsvColumns.TEMPLATE) + "\n";
+    public String template(ImportType importType) {
+        return String.join(",", importType.templateColumns()) + "\n";
     }
 
-    private ParsedCsv parse(MultipartFile file) {
+    private ParsedCsv parse(MultipartFile file, ImportType importType) {
         try (InputStream in = file.getInputStream()) {
-            return parser.parse(in);
+            return parser.parse(in, importType);
         } catch (IOException e) {
             throw new CsvFileRejectedException("MSG27");
         }
