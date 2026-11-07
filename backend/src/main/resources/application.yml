@@ -113,6 +113,6 @@ tsolve:
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
     inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}
-    # Until search builds the AI Solution Suggestion (KAN-47): empty = no suggestion, "unavailable" = search fails,
-    # any other text = that suggested solution for every new issue (tracker STORY-011).
-    suggestion: ${TSOLVE_STUB_SUGGESTION:}
+  triage:
+    # Cosine similarity (0 to 1) a Solution or Wiki document needs to be a source of the AI Solution Suggestion.
+    min-similarity: ${SUGGESTION_MIN_SIMILARITY:0.7}
