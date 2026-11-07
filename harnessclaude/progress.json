@@ -302,15 +302,16 @@
       "status": "implementing",
       "currentPhase": "implement",
       "features": {
-        "review-notification-smtp": "evaluating"
+        "review-notification-smtp": "evaluating",
+        "tenant-jobs": "passing"
       },
-      "lastUpdated": "2026-11-06T12:50:23.570Z",
+      "lastUpdated": "2026-11-07T05:02:02.604Z",
       "branch": "feat/worker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "c7dd3d10cfad23c2ebc54bdc4e5ad54a4fb974f4"
+        "default": "68bd287b663f5dd4bacb533c5883a981e4abbf11"
       }
     },
     "ai": {

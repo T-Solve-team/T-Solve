@@ -916,8 +916,8 @@
     }
   },
   "worker": {
-    "specHash": "6d0b11c652fe3181394ea638199d5ac00abbd31ae96e1fdc9df68981adb95e3d",
-    "approvedAt": "2026-11-06T00:57:53.675Z",
+    "specHash": "7e0c5e3f9cbd6c1066fb73b11e67bfd2703687a2e54764b0918fe34c795cb4bc",
+    "approvedAt": "2026-11-07T05:14:30.768Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the caller submits a Reject notification, THE SMTP sender SHALL send a plain-text email to the supplied writer address with a rejection subject, the ticket key and the rejection reason.",
@@ -926,7 +926,23 @@
       "AC-001.4": "IF the SMTP server refuses delivery or the send times out, THEN THE SMTP sender SHALL report a delivery failure to the caller after one attempt, with no recipient address, message content or credentials in the reported error.",
       "AC-001.5": "THE SMTP sender SHALL configure finite SMTP connection, read and write timeouts.",
       "AC-001.6": "THE SMTP sender SHALL omit recipient addresses, message contents and SMTP credentials from its logs.",
-      "AC-001.7": "WHILE SMTP settings are absent, THE web application SHALL start without an SMTP connection."
+      "AC-001.7": "WHILE SMTP settings are absent, THE web application SHALL start without an SMTP connection.",
+      "AC-002.1": "WHEN a caller enqueues a job while a workspace is bound, THE queue SHALL persist that workspace UUID together with the registered handler type and record UUID through JobRunr.",
+      "AC-002.2": "IF enqueue is called with no bound workspace, null record id or an unregistered handler type, THEN THE queue SHALL reject the request without persisting a job.",
+      "AC-002.3": "WHEN JobRunr executes a job for an Active workspace, THE worker SHALL invoke its registered handler inside runInTenant with exactly the workspace UUID stored in that job.",
+      "AC-002.4": "IF the workspace is unknown or Suspended at execution time, THEN THE worker SHALL invoke no business handler and SHALL report a failed execution to JobRunr without binding a workspace (GBR-38).",
+      "AC-002.5": "IF workspace eligibility cannot be checked, THEN THE worker SHALL fail the execution without invoking the handler.",
+      "AC-002.6": "WHEN an action finishes normally or throws, THE runInTenant boundary SHALL restore the calling thread's previous workspace binding and propagate the original action failure.",
+      "AC-002.7": "IF a different workspace is already bound on the executing thread, THEN THE boundary SHALL reject the execution without invoking the action or changing that binding.",
+      "AC-002.8": "WHEN the same workspace is already bound, THE boundary SHALL permit nested execution and preserve the outer binding afterwards.",
+      "AC-002.9": "WHEN jobs for different workspaces run concurrently or sequentially on a reused thread, THE worker SHALL keep their context bindings isolated.",
+      "AC-002.10": "WHEN a handler fails, THE worker SHALL let JobRunr retain and retry the failed job with its original workspace UUID and SHALL recheck workspace eligibility on every attempt.",
+      "AC-002.11": "WHILE the explicit worker-mock profile is active, THE backend SHALL provide a temporary thread-scoped TenantContext mock and a configured allow-list of Active and Suspended workspace UUIDs, treating every unlisted UUID as unknown.",
+      "AC-002.12": "WHILE worker-mock is inactive, THE backend SHALL register no mock platform adapter; IF job processing is enabled without a real adapter, THEN THE backend SHALL fail startup rather than permit jobs using mocked tenancy.",
+      "AC-002.13": "WHEN JobRunr integration is enabled, THE backend SHALL use a dedicated Jobs DataSource configured by environment variables and SHALL never fall back to its business or catalog DataSource.",
+      "AC-002.14": "THE backend SHALL disable job execution and the JobRunr dashboard by default; WHEN the worker profile is enabled with required configuration, THE backend SHALL enable background processing while keeping the dashboard disabled.",
+      "AC-002.15": "IF a persisted job names an unknown handler or has a null workspace or record UUID, THEN THE worker SHALL fail it without invoking a handler.",
+      "AC-002.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked."
     }
   }
 }

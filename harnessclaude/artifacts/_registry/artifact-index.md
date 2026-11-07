@@ -214,3 +214,10 @@ Master registry of all artifacts in this workspace.
 | — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-2-roles-security-review.md |
 | — | test-report | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-2-roles-security-test-report.md |
 | — | session-log | be-foundation | passing | artifacts/05-implementation/be-foundation/task-2-roles-security.md |
+| SPEC-WORKER-102 | spec | worker | draft | artifacts/03-modules/worker/spec.md |
+| DESIGN-WORKER-102 | design | worker | approved | artifacts/04-plans/worker/design.md |
+| DESIGN-WORKER-102-I1 | design | worker | approved | artifacts/04-plans/worker/iteration-1/design.md |
+| TASKS-WORKER-102-I1 | tasks | worker | approved | artifacts/04-plans/worker/iteration-1/tasks.md |
+| IMPL-WORKER-102 | session-log | worker | passing | artifacts/05-implementation/worker/task-1-tenant-jobs.md |
+| TEST-WORKER-102 | test-report | worker | pass | artifacts/06-evaluation/worker/task-1-tenant-jobs-test-report.md |
+| REVIEW-WORKER-102 | review | worker | pass | artifacts/06-evaluation/worker/task-1-tenant-jobs-review.md |

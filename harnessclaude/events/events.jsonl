@@ -751,6 +751,15 @@
 {"ts":"2026-11-06T12:13:56.735Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":"evaluating","to":"passing"}
 {"ts":"2026-11-07T03:58:20.506Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-upload","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T04:10:50.890Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"f6bb9fa233b63b1951d028f25702969fbb1dcd20"}
+{"ts":"2026-11-07T04:29:07.609Z","type":"spec-approved","module":"worker","specHash":"9c160553c38036af3215f3704fa6b1104a079cbf140402b69a7aefa17d8388df"}
+{"ts":"2026-11-07T04:32:25.063Z","type":"module-status","module":"worker","from":"decomposed","to":"planned"}
+{"ts":"2026-11-07T04:32:25.397Z","type":"feature-status","module":"worker","feature":"tenant-jobs","from":null,"to":"pending"}
+{"ts":"2026-11-07T04:33:32.195Z","type":"module-status","module":"worker","from":"planned","to":"implementing"}
+{"ts":"2026-11-07T04:33:32.325Z","type":"feature-status","module":"worker","feature":"tenant-jobs","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T05:02:02.022Z","type":"commit-recorded","module":"worker","repo":"default","sha":"68bd287b663f5dd4bacb533c5883a981e4abbf11"}
+{"ts":"2026-11-07T05:02:02.541Z","type":"feature-status","module":"worker","feature":"tenant-jobs","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T05:02:02.605Z","type":"feature-status","module":"worker","feature":"tenant-jobs","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T05:14:30.770Z","type":"spec-approved","module":"worker","specHash":"7e0c5e3f9cbd6c1066fb73b11e67bfd2703687a2e54764b0918fe34c795cb4bc"}
 {"ts":"2026-11-07T05:03:16.984Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":null,"to":"pending"}
 {"ts":"2026-11-07T05:03:17.214Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T05:03:17.444Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"in-progress","to":"evaluating"}
