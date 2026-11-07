@@ -7,16 +7,19 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.dto.TicketReviewView.Detail;
 import vn.tsolve.ticket.dto.TicketReviewView.Evidence;
+import vn.tsolve.ticket.dto.TicketReviewView.Feedback;
 import vn.tsolve.ticket.dto.TicketReviewView.ProjectAccess;
 import vn.tsolve.ticket.dto.TicketReviewView.QueueItem;
 import vn.tsolve.ticket.dto.TicketReviewView.QueueRow;
@@ -91,6 +94,12 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
                 dueAt(ticket.getReviewDueDate()),
                 attachments,
                 canReadReview ? ticket.getChangeRequestComment() : null);
+    }
+
+    @Override
+    public Optional<Feedback> jiraFeedback(long projectId, UUID writerId, String issueKey) {
+        return tickets.findJiraFeedback(projectId, writerId, issueKey, PageRequest.of(0, 1)).stream()
+                .findFirst();
     }
 
     private List<QueueRow> queueRows(Map<Long, ProjectAccess> projects, UUID departmentId) {

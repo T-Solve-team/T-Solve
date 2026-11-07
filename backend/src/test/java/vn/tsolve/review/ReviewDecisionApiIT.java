@@ -3,16 +3,19 @@ package vn.tsolve.review;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -24,14 +27,19 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.ResultActions;
+import vn.tsolve.common.security.JiraAppAuthentication;
+import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.signin.port.TenantScope;
+import vn.tsolve.review.service.ReviewJiraAccess;
 import vn.tsolve.review.service.ReviewWorkspaceAccess;
 import vn.tsolve.ticket.dto.TicketReviewView.Project;
 import vn.tsolve.ticket.dto.TicketReviewView.ProjectAccess;
@@ -57,6 +65,8 @@ class ReviewDecisionApiIT {
     private static final long MANAGED_PROJECT = 10L;
     private static final UUID DEPARTMENT = new UUID(0, 100);
     private static final UUID PROJECT = new UUID(0, 11);
+    private static final UUID WRITER = new UUID(0, 301);
+    private static final UUID OTHER_WRITER = new UUID(0, 302);
 
     @Autowired
     private MockMvc mvc;
@@ -66,6 +76,55 @@ class ReviewDecisionApiIT {
 
     @TestConfiguration(proxyBeanMethods = false)
     static class WorkspaceAccessConfiguration {
+
+        @Bean
+        ReviewJiraAccess reviewJiraAccess(TwoTenantDatabases.RoutingTenantScope scope) {
+            return new ReviewJiraAccess() {
+                @Override
+                public <T> T inWriterIssue(JiraAppPrincipal caller, String issueKey, Function<WriterIssue, T> read) {
+                    UUID workspaceId =
+                            switch (caller.cloudId()) {
+                                case "acme-jira" -> TwoTenantDatabases.ACME;
+                                case "beta-jira" -> TwoTenantDatabases.BETA;
+                                default -> throw new AccessDeniedException("Unregistered site");
+                            };
+                    UUID account =
+                            switch (caller.accountId()) {
+                                case "jira-writer" -> WRITER;
+                                case "jira-other" -> OTHER_WRITER;
+                                default -> throw new AccessDeniedException("Unlinked Account");
+                            };
+                    if (!issueKey.startsWith("OPS-")) {
+                        throw new AccessDeniedException("Issue access not verified");
+                    }
+                    return scope.runIn(workspaceId, () -> {
+                        JdbcTemplate db = workspaceId.equals(TwoTenantDatabases.ACME)
+                                ? TwoTenantDatabases.tenantA()
+                                : TwoTenantDatabases.tenantB();
+                        Integer active = db.queryForObject(
+                                "select count(*) from app_user where id = ? and status = 'ACTIVE'",
+                                Integer.class,
+                                account);
+                        if (active == null || active != 1) {
+                            throw new AccessDeniedException("Active linked Account required");
+                        }
+                        return read.apply(new WriterIssue(account, MANAGED_PROJECT));
+                    });
+                }
+
+                @Override
+                public Optional<String> accountName(UUID accountId) {
+                    JdbcTemplate db = scope.currentWorkspaceId().equals(TwoTenantDatabases.ACME)
+                            ? TwoTenantDatabases.tenantA()
+                            : TwoTenantDatabases.tenantB();
+                    return db
+                            .queryForList("select full_name from app_user where id = ?", String.class, accountId)
+                            .stream()
+                            .filter(java.util.Objects::nonNull)
+                            .findFirst();
+                }
+            };
+        }
 
         @Bean
         ReviewWorkspaceAccess reviewWorkspaceAccess(TwoTenantDatabases.RoutingTenantScope scope) {
@@ -103,6 +162,14 @@ class ReviewDecisionApiIT {
                 .update(
                         "insert into app_user (id, email, status, created_at) values (?, 'review-manager@example.test', 'ACTIVE', now())",
                         MANAGER);
+        for (JdbcTemplate db : List.of(TwoTenantDatabases.tenantA(), TwoTenantDatabases.tenantB())) {
+            db.update(
+                    "insert into app_user (id, email, full_name, status, created_at) values (?, 'jira-writer@example.test', 'Writer', 'ACTIVE', now())",
+                    WRITER);
+            db.update(
+                    "insert into app_user (id, email, full_name, status, created_at) values (?, 'jira-other@example.test', 'Other writer', 'ACTIVE', now())",
+                    OTHER_WRITER);
+        }
     }
 
     @Test
@@ -157,6 +224,105 @@ class ReviewDecisionApiIT {
 
         own.update("update ticket set status = 'PUBLISHED' where ticket_id = ?", unmanaged);
         inAcme(get("/api/v1/tickets/{ticketId}", unmanaged)).andExpect(status().isOk());
+    }
+
+    @Test
+    void showsStoredChangesRequestedToTheJiraWriter_AC_009_6() throws Exception {
+        var own = TwoTenantDatabases.tenantA();
+        own.update("update app_user set full_name = 'Review Manager' where id = ?", MANAGER);
+        UUID ticket = pending(own, MANAGED_PROJECT);
+        own.update("update ticket set source_ticket_id = 'OPS-301', writer_id = ? where ticket_id = ?", WRITER, ticket);
+        own.update(
+                "insert into review_decision (ticket_id, project_manager_id, decision, reason_or_comment, decided_at) values (?, ?, 'CHANGES_REQUESTED', 'Explain the workaround', now() - interval '1 day')",
+                ticket,
+                OTHER_WRITER);
+        inAcme("request-changes", body(ticket, ",\"comment\":\"Explain the workaround\""))
+                .andExpect(status().isOk());
+
+        jiraFeedback("acme-jira", "jira-writer", "OPS-301")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback.code").value("MSG64"))
+                .andExpect(jsonPath("$.feedback.params.manager_name").value("Review Manager"))
+                .andExpect(jsonPath("$.feedback.params.comment").value("Explain the workaround"));
+        jiraFeedback("acme-jira", "jira-other", "OPS-301")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback").value(nullValue()));
+        jiraFeedback("acme-jira", "jira-writer", "OPS-9999")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback").value(nullValue()));
+        jiraFeedback("beta-jira", "jira-writer", "OPS-301")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback").value(nullValue()));
+        var beta = TwoTenantDatabases.tenantB();
+        UUID betaTicket = pending(beta, MANAGED_PROJECT);
+        beta.update(
+                "update ticket set source_ticket_id = 'OPS-301', writer_id = ?, status = 'CHANGES_REQUESTED', change_request_comment = 'Beta only' where ticket_id = ?",
+                WRITER,
+                betaTicket);
+        beta.update(
+                "insert into review_decision (ticket_id, project_manager_id, decision, reason_or_comment) values (?, ?, 'CHANGES_REQUESTED', 'Beta only')",
+                betaTicket,
+                OTHER_WRITER);
+        jiraFeedback("beta-jira", "jira-writer", "OPS-301")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback.params.manager_name").value("Other writer"))
+                .andExpect(jsonPath("$.feedback.params.comment").value("Beta only"));
+        assertThat(ticketStatus(own, ticket)).isEqualTo("CHANGES_REQUESTED");
+        assertThat(own.queryForObject(
+                        "select count(*) from review_decision where ticket_id = ?", Integer.class, ticket))
+                .isEqualTo(2);
+        for (String state : List.of("PENDING_REVIEW", "PUBLISHED", "REJECTED", "EXPIRED")) {
+            own.update("update ticket set status = ? where ticket_id = ?", state, ticket);
+            jiraFeedback("acme-jira", "jira-writer", "OPS-301")
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.feedback").value(nullValue()));
+        }
+        own.update(
+                "update ticket set status = 'CHANGES_REQUESTED', source = 'JIRA_IMPORT' where ticket_id = ?", ticket);
+        jiraFeedback("acme-jira", "jira-writer", "OPS-301")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback").value(nullValue()));
+        own.update("update ticket set source = 'SOLUTION_FORM', project_id = 20 where ticket_id = ?", ticket);
+        jiraFeedback("acme-jira", "jira-writer", "OPS-301")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback").value(nullValue()));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"foreign-jira,jira-writer,OPS-301", "acme-jira,unlinked,OPS-301", "acme-jira,jira-writer,OTHER-301"})
+    void refusesUnverifiedJiraScope_AC_009_6(String cloud, String account, String issue) throws Exception {
+        jiraFeedback(cloud, account, issue).andExpect(status().isForbidden());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"ops-1", "OPS-0", "OPS-1x"})
+    void validatesJiraIssueKeys_AC_009_6(String issue) throws Exception {
+        jiraFeedback("acme-jira", "jira-writer", issue).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void refusesJiraProductEventsAndDeactivatedWriters_AC_009_6() throws Exception {
+        jiraFeedback("acme-jira", null, "OPS-301").andExpect(status().isForbidden());
+        var own = TwoTenantDatabases.tenantA();
+        own.update("update app_user set status = 'DEACTIVATED' where id = ?", OTHER_WRITER);
+        try {
+            jiraFeedback("acme-jira", "jira-other", "OPS-301").andExpect(status().isForbidden());
+        } finally {
+            own.update("update app_user set status = 'ACTIVE' where id = ?", OTHER_WRITER);
+        }
+    }
+
+    @Test
+    @WithAnonymousUser
+    void refusesAnonymousJiraFeedback_AC_009_6() throws Exception {
+        mvc.perform(get("/api/v1/jira-app/issues/OPS-301/review-feedback")).andExpect(status().isUnauthorized());
+    }
+
+    private ResultActions jiraFeedback(String cloud, String account, String issue) throws Exception {
+        return mvc.perform(get("/api/v1/jira-app/issues/{issueKey}/review-feedback", issue)
+                .with(authentication(new JiraAppAuthentication(
+                        new JiraAppPrincipal(cloud, account, null),
+                        List.of(new SimpleGrantedAuthority("ROLE_JIRA_APP"))))));
     }
 
     @ParameterizedTest

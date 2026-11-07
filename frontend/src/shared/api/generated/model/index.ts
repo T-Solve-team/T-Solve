@@ -52,6 +52,7 @@ export * from './issueCreatedPayload';
 export * from './issueCreatedPayloadIssue';
 export * from './issueCreatedPayloadIssueFields';
 export * from './issueCreatedPayloadIssueFieldsProject';
+export * from './jiraReviewFeedback';
 export * from './listUnavailableCitedDocumentsParams';
 export * from './messageRef';
 export * from './messageRefParams';

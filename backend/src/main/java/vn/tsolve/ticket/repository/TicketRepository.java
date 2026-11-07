@@ -5,10 +5,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import vn.tsolve.ticket.dto.TicketReviewView.Feedback;
 import vn.tsolve.ticket.dto.TicketReviewView.QueueRow;
 import vn.tsolve.ticket.entity.Ticket;
 
@@ -30,4 +32,19 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
             where t.projectId in :projects and t.status = PENDING_REVIEW and t.source = SOLUTION_FORM
             """)
     List<QueueRow> findReviewQueue(@Param("projects") Collection<Long> projectIds);
+
+    @Query(
+            """
+            select new vn.tsolve.ticket.dto.TicketReviewView$Feedback(d.reviewerId, d.feedback)
+            from Ticket t, ReviewDecisionRecord d
+            where t.id = d.ticketId and t.projectId = :projectId and t.writerId = :writerId
+                and t.ticketId = :issueKey and t.source = SOLUTION_FORM and t.status = CHANGES_REQUESTED
+                and d.decision = 'CHANGES_REQUESTED' and d.feedback = t.changeRequestComment
+            order by d.decidedAt desc, d.id desc
+            """)
+    List<Feedback> findJiraFeedback(
+            @Param("projectId") long projectId,
+            @Param("writerId") UUID writerId,
+            @Param("issueKey") String issueKey,
+            Pageable page);
 }

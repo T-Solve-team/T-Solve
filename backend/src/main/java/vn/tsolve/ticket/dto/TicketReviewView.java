@@ -38,6 +38,8 @@ public final class TicketReviewView {
 
     public record Evidence(UUID id, String filename, long sizeBytes, String url) {}
 
+    public record Feedback(UUID reviewerId, String comment) {}
+
     public record Detail(
             UUID ticketId,
             String sourceTicketId,
