@@ -15,7 +15,7 @@ public interface SolutionRetrievalRepository extends Repository<SearchTicket, Lo
                            t.scope AS "scopeOfApplicability",
                            1 - (e.embedding <=> CAST(:vector AS vector)) AS similarity
                     FROM ticket_embedding e JOIN ticket t ON t.id = e.ticket_id
-                    JOIN project p ON p.project_id = t.project_id
+                    JOIN project p ON t.project_id = lpad(to_hex(p.project_id), 32, '0')::uuid
                     JOIN department d ON d.department_id = p.department_id
                     WHERE t.status = 'PUBLISHED' AND d.status = 'ACTIVE'
                       AND 1 - (e.embedding <=> CAST(:vector AS vector)) >= :minSimilarity

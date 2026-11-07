@@ -1,6 +1,7 @@
 package vn.tsolve.search.scope.repository;
 
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import vn.tsolve.search.scope.entity.SearchTicket;
@@ -10,5 +11,5 @@ public interface ScopeTicketRepository extends Repository<SearchTicket, Long> {
     Set<Long> activeDepartments();
 
     @Query("select distinct t.projectId from SearchTicket t")
-    Set<Long> projects();
+    Set<UUID> projects();
 }

@@ -27,13 +27,15 @@ import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.search.embedding.repository.TicketEmbeddingRepository;
 import vn.tsolve.search.embedding.service.TicketEmbeddingService;
+import vn.tsolve.search.scope.ProjectIds;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.service.CsvImportService;
 import vn.tsolve.ticket.service.ImportConfirmService;
 
 @SpringBootTest
 @TestPropertySource(
         properties = {
-            "tsolve.stub.projects=pm:1",
+            "tsolve.stub.projects=pm:00000000-0000-0000-0000-000000000001",
             "TSOLVE_LOGIN_ORIGIN=http://login.localhost:8081",
             "TSOLVE_ADMIN_ORIGIN=http://admin.localhost:8081",
             "TSOLVE_SIGNING_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
@@ -219,7 +221,8 @@ class TicketEmbeddingIT {
         }
         return imports.upload(
                         "pm",
-                        1L,
+                        ProjectIds.ticketProjectId(1L),
+                        ImportType.WITH_SOLUTION,
                         new MockMultipartFile(
                                 "file",
                                 "tickets.csv",

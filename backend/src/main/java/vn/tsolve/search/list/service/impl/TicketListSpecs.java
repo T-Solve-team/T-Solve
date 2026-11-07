@@ -4,6 +4,7 @@ import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import org.springframework.data.jpa.domain.Specification;
 import vn.tsolve.search.scope.entity.SearchTicket;
 import vn.tsolve.search.scope.service.VisibleScope.Scope;
@@ -21,7 +22,7 @@ final class TicketListSpecs {
             }
             List<Predicate> related = new ArrayList<>();
             if (!scope.managedProjectIds().isEmpty()) {
-                related.add(ticket.get("projectId").in(scope.managedProjectIds()));
+                related.add(ticket.<UUID>get("projectId").in(scope.managedProjectIds()));
             }
             scope.writer().ifPresent(writer -> related.add(builder.equal(ticket.get("writer"), writer)));
             if (!related.isEmpty()) {

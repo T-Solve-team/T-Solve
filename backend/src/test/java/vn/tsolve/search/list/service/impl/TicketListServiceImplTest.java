@@ -29,6 +29,7 @@ import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.search.list.dto.TicketListQuery;
 import vn.tsolve.search.list.mapper.TicketSummaryMapper;
 import vn.tsolve.search.list.repository.TicketListRepository;
+import vn.tsolve.search.scope.ProjectIds;
 import vn.tsolve.search.scope.entity.SearchTicket;
 import vn.tsolve.search.scope.service.VisibleScope;
 
@@ -41,7 +42,9 @@ class TicketListServiceImplTest {
 
     @BeforeEach
     void scope() {
-        when(visibleScope.of(user)).thenReturn(new VisibleScope.Scope(Set.of(1L), Set.of(7L), Optional.of("writer")));
+        when(visibleScope.of(user))
+                .thenReturn(new VisibleScope.Scope(
+                        Set.of(1L), Set.of(ProjectIds.ticketProjectId(7L)), Optional.of("writer")));
     }
 
     @Test

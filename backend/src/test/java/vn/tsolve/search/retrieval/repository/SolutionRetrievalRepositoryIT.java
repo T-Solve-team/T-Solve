@@ -22,6 +22,7 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.search.embedding.repository.PgVector;
+import vn.tsolve.search.scope.ProjectIds;
 
 class SolutionRetrievalRepositoryIT {
     private static final PostgreSQLContainer<?> SERVER = new PostgreSQLContainer<>(
@@ -135,7 +136,7 @@ class SolutionRetrievalRepositoryIT {
                 """,
                 Long.class,
                 key,
-                project,
+                ProjectIds.ticketProjectId(project),
                 ticketStatus,
                 key);
         jdbc.update(

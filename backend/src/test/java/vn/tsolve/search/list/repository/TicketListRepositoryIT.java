@@ -32,6 +32,7 @@ import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.search.list.dto.TicketListQuery;
 import vn.tsolve.search.list.dto.TicketSummaryResponse;
 import vn.tsolve.search.list.service.TicketListService;
+import vn.tsolve.search.scope.ProjectIds;
 import vn.tsolve.search.scope.service.VisibleScope;
 
 /** Exercises the real query, mapper, migrations and HTTP serialization against PostgreSQL. */
@@ -104,7 +105,8 @@ class TicketListRepositoryIT {
         ticket(project(deleted, "OLD"), "OLD-1", "REJECTED", "writer", "Deleted Department");
         ticket(999999L, "ORPHAN-1", "PUBLISHED", "writer", "No Project");
         when(scope.of(any()))
-                .thenReturn(new VisibleScope.Scope(Set.of(department), Set.of(managedProject), Optional.of("writer")));
+                .thenReturn(new VisibleScope.Scope(
+                        Set.of(department), Set.of(ProjectIds.ticketProjectId(managedProject)), Optional.of("writer")));
     }
 
     @Test
@@ -207,7 +209,7 @@ class TicketListRepositoryIT {
                 VALUES (?,?,'CSV',?,?,?,'Symptoms','Root cause','Resolution','Scope', '2026-11-01T00:00:00Z')
                 """,
                 key,
-                projectId,
+                ProjectIds.ticketProjectId(projectId),
                 status,
                 title,
                 writer);

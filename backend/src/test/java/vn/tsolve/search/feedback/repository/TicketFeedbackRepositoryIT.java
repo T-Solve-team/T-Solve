@@ -28,6 +28,7 @@ import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.search.feedback.dto.TicketFeedbackRequest;
 import vn.tsolve.search.feedback.entity.TicketFeedback;
 import vn.tsolve.search.feedback.service.TicketFeedbackService;
+import vn.tsolve.search.scope.ProjectIds;
 import vn.tsolve.search.scope.service.VisibleScope;
 
 @SpringBootTest
@@ -106,7 +107,7 @@ class TicketFeedbackRepositoryIT {
                 """,
                 Long.class,
                 publicId,
-                project);
+                ProjectIds.ticketProjectId(project));
         when(scope.of(any())).thenReturn(new VisibleScope.Scope(Set.of(department), Set.of(), Optional.empty()));
     }
 

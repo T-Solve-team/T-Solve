@@ -21,6 +21,7 @@ import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.search.feedback.dto.TicketFeedbackRequest;
 import vn.tsolve.search.feedback.repository.FeedbackTicketRepository;
 import vn.tsolve.search.feedback.repository.TicketFeedbackRepository;
+import vn.tsolve.search.scope.ProjectIds;
 import vn.tsolve.search.scope.entity.SearchTicket;
 import vn.tsolve.search.scope.service.VisibleScope;
 
@@ -65,9 +66,11 @@ class TicketFeedbackServiceImplTest {
         VisibleScope.Scope scope =
                 switch (scenario) {
                     case "empty" -> VisibleScope.Scope.empty();
-                    case "managedOnly" -> new VisibleScope.Scope(Set.of(), Set.of(7L), Optional.empty());
+                    case "managedOnly" -> new VisibleScope.Scope(
+                            Set.of(), Set.of(ProjectIds.ticketProjectId(7L)), Optional.empty());
                     case "writerOnly" -> new VisibleScope.Scope(Set.of(), Set.of(), Optional.of("resolver"));
-                    default -> new VisibleScope.Scope(Set.of(1L), Set.of(7L), Optional.of("resolver"));
+                    default -> new VisibleScope.Scope(
+                            Set.of(1L), Set.of(ProjectIds.ticketProjectId(7L)), Optional.of("resolver"));
                 };
         when(visibleScope.of(user)).thenReturn(scope);
         if (!"empty".equals(scenario)) {

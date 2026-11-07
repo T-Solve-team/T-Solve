@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.MapPropertySource;
+import vn.tsolve.search.scope.ProjectIds;
 import vn.tsolve.search.scope.repository.ScopeTicketRepository;
 import vn.tsolve.search.scope.service.VisibleScope;
 
@@ -44,14 +45,16 @@ class VisibleScopeSelectionTest {
     }
 
     @Test
-    void usesDevScopeOnlyForExactAll_AC_006_11() {
+    void usesDevScopeOnlyForExactAll_AC_006_11_BUG_140() {
         when(repository.activeDepartments()).thenReturn(Set.of(1L));
-        when(repository.projects()).thenReturn(Set.of(7L, 9L));
+        var firstProject = ProjectIds.ticketProjectId(7L);
+        var secondProject = ProjectIds.ticketProjectId(9L);
+        when(repository.projects()).thenReturn(Set.of(firstProject, secondProject));
         runner.withPropertyValues("SEARCH_DEV_SCOPE=all").run(context -> {
             assertThat(context).hasSingleBean(VisibleScope.class).doesNotHaveBean(NoVisibleScope.class);
             var scope = context.getBean(VisibleScope.class).of(null);
             assertThat(scope.departmentIds()).containsExactly(1L);
-            assertThat(scope.managedProjectIds()).containsExactlyInAnyOrder(7L, 9L);
+            assertThat(scope.managedProjectIds()).containsExactlyInAnyOrder(firstProject, secondProject);
             assertThat(scope.writer()).isEmpty();
         });
     }

@@ -2,13 +2,14 @@ package vn.tsolve.search.scope.service;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import vn.tsolve.common.security.TSolveUser;
 
 /** Membership is supplied by identity/project integration, never by request filters. */
 public interface VisibleScope {
     Scope of(TSolveUser user);
 
-    record Scope(Set<Long> departmentIds, Set<Long> managedProjectIds, Optional<String> writer) {
+    record Scope(Set<Long> departmentIds, Set<UUID> managedProjectIds, Optional<String> writer) {
         public Scope {
             departmentIds = Set.copyOf(departmentIds);
             managedProjectIds = Set.copyOf(managedProjectIds);

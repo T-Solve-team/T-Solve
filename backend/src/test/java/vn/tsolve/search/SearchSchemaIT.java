@@ -22,6 +22,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
+import vn.tsolve.search.scope.ProjectIds;
 
 class SearchSchemaIT {
 
@@ -442,7 +443,7 @@ class SearchSchemaIT {
                     VALUES (?, ?, 'CSV', 'PUBLISHED', ?, 'Symptoms', 'Root cause', 'Resolution', 'Scope')
                     """,
                     "SEARCH-" + index,
-                    projectId,
+                    ProjectIds.ticketProjectId(projectId),
                     "Ticket " + index);
         }
     }
