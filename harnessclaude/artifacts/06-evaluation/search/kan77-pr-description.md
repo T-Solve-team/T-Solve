@@ -20,7 +20,7 @@ Recorded results for the current Ticket List implementation:
 - Fresh whole-backend verification: 553 unit/controller tests and all 53 PostgreSQL integration tests passed. Unit tests run without Ollama system properties; integration tests receive the test settings separately, preserving the negative startup checks.
 - API generation succeeded twice with no generated diff.
 - Frontend format, lint, typecheck and production build passed; one existing Fast Refresh warning remains.
-- Full frontend rerun after test synchronization: 1,354 passed, 2 failed across 75 files. Both failures are unchanged My Solutions tests (BUG-126/127), unable to find the My Solutions table. Chatbot and Review Queue passed. The full suite is not green.
+- Full frontend rerun after test synchronization: 1,354 passed, 2 failed across 75 files. Both failures are unchanged My Solutions tests (BUG-163/127), unable to find the My Solutions table. Chatbot and Review Queue passed. The full suite is not green.
 - Both My Solutions cases passed in an independent recheck (2 passed/46 name-filtered); the recorded full-suite failures remain in the defect log.
 
 Pending checks:

@@ -25,14 +25,14 @@ The user requested implementation in ascending Jira-number order, completing BE/
 - Migration 008 for public UUIDs and migration 009 for trigger-maintained ticket.updated_at; existing changesets untouched. Added application/rollback tests.
 - Default NoVisibleScope and exact-case local-only DevAllVisibleScope, including unset/empty/ALL/true/trailing-space tests. No production login or membership is fabricated.
 - OpenAPI declares GET tickets' 400 response. Existing generated client already uses ApiError for these responses; generated files were restored to HEAD after the blocked generator cleaned its output. No generated file was hand-edited.
-- FE reuses the generated hook. BUG-123 validates a Department UUID and sort field from shared URLs before calling BE; the displayed sort follows the validated request. Both regressions failed before the change and pass afterwards.
-- BUG-124 handles a positive page whose offset exceeds JPA's integer limit: count the matching rows and return an empty page with that total. The regression first failed against the offset-limited query and passes after the fix.
+- FE reuses the generated hook. BUG-161 validates a Department UUID and sort field from shared URLs before calling BE; the displayed sort follows the validated request. Both regressions failed before the change and pass afterwards.
+- BUG-162 handles a positive page whose offset exceeds JPA's integer limit: count the matching rows and return an empty page with that total. The regression first failed against the offset-limited query and passes after the fix.
 
 ### Fresh verification
 
 - Controller red phase: 4 tests, 3 failed with 404 before the endpoint existed; no import/context errors.
 - Service red phase: 19 tests, 15 failed before service behavior was implemented; no errors.
-- FE red phase: the two BUG-123 cases failed with the malformed UUID/unsupported sort sent to the API.
+- FE red phase: the two BUG-161 cases failed with the malformed UUID/unsupported sort sent to the API.
 - Final `mvn -B -o test`: **553 tests, 0 failures/errors/skipped**, BUILD SUCCESS. New Search unit/controller/mapper/provider cases: **25 passing**.
 - Ticket List FE: **37 tests passing** via `npm run test -- src/features/tickets --maxWorkers=2 --pool=threads --configLoader=native --hookTimeout=60000`.
 - `npm run typecheck`: pass. `npm run lint`: pass with one existing TicketListFilters Fast Refresh warning. `npm run format:check`: pass. `npm run build -- --configLoader native`: pass.
@@ -47,7 +47,7 @@ The user requested implementation in ascending Jira-number order, completing BE/
 - `npm run test -- src/features/review/pages/ReviewQueuePage.test.tsx src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx -t 'AC-002.2 / AC-002.5|AC-003.1 shows Helpful and Not helpful' --maxWorkers=2 --pool=threads --configLoader=native --hookTimeout=60000 --reporter=verbose`: **2 passed, 69 excluded by name**, 25.83 s. Rating case 3,769 ms; bulk-confirmation case 9,601 ms.
 - After these test edits: typecheck, format:check and lint passed (same existing Fast Refresh warning). Full FE regression rerun completed: **1,354 passed, 2 failed; 73 passed files, 2 failed; 932.97 s**. Only the unchanged My Solutions initial-table and filter-default cases failed, both unable to find the table named My Solutions. Chatbot and Review Queue, including the two adjusted cases, passed. Output: `frontend/.kan77-fe-regression-after-sync.log`. The full suite is still not green.
 - Keep these verification-only changes separately reviewable from the KAN-77 product implementation; do not include unrelated feature behavior in its eventual commit.
-- At 12:31, the ongoing rerun reported two additional failures in unchanged My Solutions tests (initial table AC-003.11 and filter defaults AC-003.22). Logged as BUG-126/127, owner taken from the existing My Profile bug records. Their full assertions and isolated reproduction are pending; do not describe them as confirmed product defects. Format/lint/typecheck overlapped the beginning of this run, so record that load when comparing results.
+- At 12:31, the ongoing rerun reported two additional failures in unchanged My Solutions tests (initial table AC-003.11 and filter defaults AC-003.22). Logged as BUG-163/127, owner taken from the existing My Profile bug records. Their full assertions and isolated reproduction are pending; do not describe them as confirmed product defects. Format/lint/typecheck overlapped the beginning of this run, so record that load when comparing results.
 - The user explicitly requested retaining bug history for their report. The bug-log instructions now require keeping Fixed/Closed rows and reproduction evidence. No bug row was deleted.
 
 ### Remaining verification and integration

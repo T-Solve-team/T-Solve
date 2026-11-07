@@ -64,7 +64,7 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    void enqueuesOnTheSoleActiveWorkspaceWhenNoneIsBound_BUG_153() {
+    void enqueuesOnTheSoleActiveWorkspaceWhenNoneIsBound_BUG_164() {
         var tenants = new MockWorkerTenantService(Set.of(A), Set.of());
         var jobs = new TenantJobServiceImpl(tenants, scheduler, handler);
         when(scheduler.enqueue(any(TenantJobRequest.class))).thenReturn(new JobId(UUID.randomUUID()));
@@ -77,7 +77,7 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    void refusesWhenSeveralWorkspacesAreActiveAndNoneIsBound_BUG_153() {
+    void refusesWhenSeveralWorkspacesAreActiveAndNoneIsBound_BUG_164() {
         var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of());
         var jobs = new TenantJobServiceImpl(tenants, scheduler, handler);
         assertThat(tenants.enqueueWorkspaceId()).isEmpty();
@@ -93,7 +93,7 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    void directEnqueueStillRejectsAnUnboundThread_AC_002_2_BUG_153() {
+    void directEnqueueStillRejectsAnUnboundThread_AC_002_2_BUG_164() {
         var tenants = new MockWorkerTenantService(Set.of(A), Set.of());
         var jobs = new TenantJobServiceImpl(tenants, scheduler, handler);
 
@@ -105,7 +105,7 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    void prefersTheBoundWorkspace_BUG_153() {
+    void prefersTheBoundWorkspace_BUG_164() {
         var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of());
         var jobs = new TenantJobServiceImpl(tenants, scheduler, handler);
         when(scheduler.enqueue(any(TenantJobRequest.class))).thenReturn(new JobId(UUID.randomUUID()));
@@ -118,7 +118,7 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    void keepsCurrentWorkspaceEmptyOutsideAJob_BUG_153() {
+    void keepsCurrentWorkspaceEmptyOutsideAJob_BUG_164() {
         var tenants = new MockWorkerTenantService(Set.of(A), Set.of());
 
         assertThat(tenants.currentWorkspaceId()).isEmpty();
@@ -127,7 +127,7 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    void stopsAtTheFirstFailedEnqueue_BUG_153() {
+    void stopsAtTheFirstFailedEnqueue_BUG_164() {
         TenantJobService jobs = mock(TenantJobService.class);
         when(jobs.enqueue(anyString(), any(UUID.class))).thenThrow(new IllegalStateException("Jobs DB unavailable"));
         var event = new ReviewFeedbackDecidedEvent(List.of(RECORD_ID, new UUID(0, 4), new UUID(0, 5)));
@@ -138,7 +138,7 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    void logsTheCountAndExceptionClassButNeverTheMessage_BUG_153() {
+    void logsTheCountAndExceptionClassButNeverTheMessage_BUG_164() {
         TenantJobService jobs = mock(TenantJobService.class);
         when(jobs.enqueue(anyString(), any(UUID.class)))
                 .thenThrow(new IllegalStateException("smtp secret writer@example.test"));
@@ -159,7 +159,7 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    void enqueuesDirectlyOnAnAlreadyBoundThread_BUG_153() {
+    void enqueuesDirectlyOnAnAlreadyBoundThread_BUG_164() {
         var tenants = spy(new MockWorkerTenantService(Set.of(A, B), Set.of()));
         var jobs = new TenantJobServiceImpl(tenants, scheduler, handler);
         when(scheduler.enqueue(any(TenantJobRequest.class))).thenReturn(new JobId(UUID.randomUUID()));
@@ -174,7 +174,7 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    void logsWhenBindingTheWorkspaceFails_BUG_153() {
+    void logsWhenBindingTheWorkspaceFails_BUG_164() {
         TenantJobService jobs = mock(TenantJobService.class);
         WorkerTenantService tenants = mock(WorkerTenantService.class);
         when(tenants.currentWorkspaceId()).thenReturn(Optional.empty());

@@ -24,3 +24,16 @@ Production activation requires a Workspace and Project access adapter. The two-W
 ### Next up
 
 Start Task 10 after verifying the Jira issue and writer context.
+
+## Session 2026-11-07 17:10
+
+### Working on: review-production-api (addendum: Project membership adapter)
+
+- Found that no production `ReviewWorkspaceAccess` existed, so every Review endpoint answered 403 outside tests. User decision: follow `database/02_tenant.sql` and add `project_membership` with an adapter over it.
+- Added changeset `017-project-membership` (UUID references to `app_user(id)` and `project(public_id)`, composite key, role check), the read-only `ProjectMembership` entity, `ProjectMembershipRepository` and `ProjectMembershipReviewAccess`. A missing or inactive Account and a foreign Workspace get empty (deny). Projects are keyed by `public_id` and by the legacy hex form of the numeric id.
+- The two API ITs mark their test adapter `@Primary`. New `ProjectMembershipReviewAccessIT` covers AC-009.1, AC-009.2 and AC-009.3 on PostgreSQL; the three Review ITs pass (44 tests).
+- `sdd.ts trace ticket-review STORY-009`: 11/12; AC-009.9 is reported ambiguous with import-ticket-list (same id in two specs), not a missing test.
+
+### Blockers
+
+Membership rows have no admin screen yet (UC-05/UC-16): the demo seed must insert the PM's `project_membership` rows.

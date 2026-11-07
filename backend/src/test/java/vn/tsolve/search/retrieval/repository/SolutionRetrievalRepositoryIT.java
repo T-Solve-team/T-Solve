@@ -74,7 +74,7 @@ class SolutionRetrievalRepositoryIT {
     }
 
     @Test
-    void returnsNearestAboveCutOff_AC_010_1() {
+    void returnsNearestAboveCutOff_AC_010_1_BUG_153() {
         insert("FIRST", "ACTIVE", "PUBLISHED", 1, 0);
         insert("TIE", "ACTIVE", "PUBLISHED", 1, 0);
         insert("NEXT", "ACTIVE", "PUBLISHED", 0.8f, 0.6f);
@@ -128,9 +128,9 @@ class SolutionRetrievalRepositoryIT {
                 Long.class,
                 key,
                 departmentStatus);
-        Long project = jdbc.queryForObject(
-                "INSERT INTO project(department_id, jira_project_key) VALUES (?, ?) RETURNING project_id",
-                Long.class,
+        UUID project = jdbc.queryForObject(
+                "INSERT INTO project(department_id, jira_project_key) VALUES (?, ?) RETURNING public_id",
+                UUID.class,
                 department,
                 key);
         UUID ticket = jdbc.queryForObject(
@@ -142,7 +142,7 @@ class SolutionRetrievalRepositoryIT {
                 """,
                 UUID.class,
                 key,
-                new UUID(0, project),
+                project,
                 ticketStatus,
                 key);
         jdbc.update(
