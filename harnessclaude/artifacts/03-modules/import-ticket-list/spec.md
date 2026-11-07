@@ -14,6 +14,7 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-06 | STORY-004 | Use UUID keys in the after-commit event and preserve existing import data during the shared Ticket upgrade | KAN-24 uses the shared Ticket table and UUID key convention |
 | 2026-10-21 | STORY-001..006 | Initial spec for KAN-31 CSV import | — |
 | 2026-10-21 | STORY-001, STORY-002 | AC-001.1 returns the first page of rows; AC-002.8 lists rows page by page with Solution sections cut to 200 characters; new AC-002.11 (row filter by result) | Risk review: 5,000 rows × 10,000 characters made one response tens of MB |
 | 2026-10-21 | STORY-002..004 | AC-002.1 names AC-002.7; AC-002.7 uses Vietnam time; AC-003.1 allows removing Error rows; AC-003.2 also covers reading rows; AC-004.1 saves description and resolved date and trims values; AC-004.7/004.8 define the Failed batch; status code per rejection | Builder check (user: Failed batch only for the MSG33 cases) |
@@ -122,9 +123,10 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
   - AC-004.7: IF a Valid row's `ticket_id` has become an existing Ticket since the preview was created, THEN THE system SHALL fail the whole Confirm with MSG33, import nothing, and record one Import Batch with status Failed.
   - AC-004.8: IF saving any Ticket fails, THEN THE system SHALL import no Ticket, return MSG33, and still record one Import Batch with status Failed, 0 published, and an error description that contains no row content.
   - AC-004.9: IF the preview belongs to another user or no longer exists, THEN THE system SHALL reject Confirm with HTTP 404.
-  - AC-004.10: WHEN Confirm succeeds, THE system SHALL publish a "tickets published" event with the new Ticket ids after the transaction commits.
+  - AC-004.10: WHEN Confirm succeeds, THE system SHALL publish a "tickets published" event with the UUID keys of the new Ticket rows after the transaction commits.
   - AC-004.11: IF the preview's Project is Active but the caller no longer manages it, THEN THE system SHALL reject Confirm with HTTP 403 (MSG08), import nothing and record no Import Batch. (The MSG40 check of AC-004.6 comes first.)
   - AC-004.12: IF the same preview is confirmed again while or after a Confirm of it succeeds, THEN THE system SHALL reject the second Confirm with HTTP 404, record no Import Batch for it, and leave the first import unchanged.
+  - AC-004.13: WHEN the tenant database upgrades the shared Ticket key to UUID, THE migration SHALL preserve the existing imported tickets, source Ticket IDs, Solution data, and import decision history, with each decision still linked to its original Ticket.
 
 ### STORY-005: Download the CSV template
 - As a Project Manager, I want to download a CSV template so that my file has the right columns.

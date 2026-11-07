@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +52,7 @@ class TicketEmbeddingServiceImplTest {
                     .isTrue();
             assertThat(TransactionSynchronizationManager.isCurrentTransactionReadOnly())
                     .isTrue();
-            List<Long> ids = call.getArgument(0);
+            List<UUID> ids = call.getArgument(0);
             return ids.stream().map(this::ticket).toList();
         });
         when(client.embed(anyList())).thenAnswer(call -> {
@@ -73,11 +74,11 @@ class TicketEmbeddingServiceImplTest {
 
     @Test
     void embedsPublishedTicketsInBatches_AC_005_4() {
-        service.embed(List.of(1L, 2L, 3L, 4L, 5L));
+        service.embed(List.of(id(1), id(2), id(3), id(4), id(5)));
         verify(client, times(2)).embed(List.of("private title", "private title"));
         verify(client).embed(List.of("private title"));
-        for (long id = 1; id <= 5; id++) {
-            verify(embeddings).upsert(eq(id), any(), eq("bge-m3"));
+        for (long n = 1; n <= 5; n++) {
+            verify(embeddings).upsert(eq(id(n)), any(), eq("bge-m3"));
         }
     }
 
@@ -87,26 +88,26 @@ class TicketEmbeddingServiceImplTest {
                 .thenThrow(new AiUnavailableException())
                 .thenThrow(new IllegalStateException("private exception text"))
                 .thenReturn(List.of(new float[1024]));
-        service.embed(List.of(1L, 2L, 3L, 4L, 5L));
-        verify(embeddings, never()).upsert(eq(1L), any(), any());
-        verify(embeddings, never()).upsert(eq(3L), any(), any());
-        verify(embeddings).upsert(eq(5L), any(), any());
+        service.embed(List.of(id(1), id(2), id(3), id(4), id(5)));
+        verify(embeddings, never()).upsert(eq(id(1)), any(), any());
+        verify(embeddings, never()).upsert(eq(id(3)), any(), any());
+        verify(embeddings).upsert(eq(id(5)), any(), any());
         assertThat(output)
                 .contains(
-                        "embedding failed for tickets [1, 2] cause=AiUnavailableException",
-                        "embedding failed for tickets [3, 4] cause=IllegalStateException")
+                        "embedding failed for tickets [" + id(1) + ", " + id(2) + "] cause=AiUnavailableException",
+                        "embedding failed for tickets [" + id(3) + ", " + id(4) + "] cause=IllegalStateException")
                 .doesNotContain("private title", "private exception text");
     }
 
     @Test
     void skipsMissingAndUnpublishedIds_AC_005_8() {
-        doReturn(List.of(ticket(2L))).when(tickets).findByIdInAndStatus(List.of(1L, 2L), "PUBLISHED");
-        doReturn(List.of()).when(tickets).findByIdInAndStatus(List.of(3L), "PUBLISHED");
-        service.embed(List.of(1L, 2L, 3L));
+        doReturn(List.of(ticket(id(2)))).when(tickets).findByIdInAndStatus(List.of(id(1), id(2)), "PUBLISHED");
+        doReturn(List.of()).when(tickets).findByIdInAndStatus(List.of(id(3)), "PUBLISHED");
+        service.embed(List.of(id(1), id(2), id(3)));
         verify(client).embed(List.of("private title"));
-        verify(embeddings).upsert(eq(2L), any(), any());
-        verify(embeddings, never()).upsert(eq(1L), any(), any());
-        verify(embeddings, never()).upsert(eq(3L), any(), any());
+        verify(embeddings).upsert(eq(id(2)), any(), any());
+        verify(embeddings, never()).upsert(eq(id(1)), any(), any());
+        verify(embeddings, never()).upsert(eq(id(3)), any(), any());
     }
 
     @Test
@@ -124,13 +125,13 @@ class TicketEmbeddingServiceImplTest {
             return List.of(new float[1024]);
         });
         try (var pool = Executors.newFixedThreadPool(2)) {
-            var first = pool.submit(() -> service.embed(List.of(1L)));
+            var first = pool.submit(() -> service.embed(List.of(id(1))));
             assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
             CountDownLatch secondStarted = new CountDownLatch(1);
             var second = pool.submit(() -> {
                 secondThread.set(Thread.currentThread());
                 secondStarted.countDown();
-                service.embed(List.of(2L));
+                service.embed(List.of(id(2)));
             });
             try {
                 assertThat(secondStarted.await(5, TimeUnit.SECONDS)).isTrue();
@@ -152,13 +153,13 @@ class TicketEmbeddingServiceImplTest {
     @Test
     void skipsIdAfterThreeFailuresInARow_AC_005_9(CapturedOutput output) {
         when(client.embed(anyList())).thenThrow(new AiUnavailableException());
-        service.embed(List.of(1L));
-        service.embed(List.of(1L));
+        service.embed(List.of(id(1)));
+        service.embed(List.of(id(1)));
         assertThat(service.skippedIds()).isEmpty();
-        service.embed(List.of(1L));
-        service.embed(List.of(1L));
-        assertThat(service.skippedIds()).containsExactly(1L);
-        assertThat(output.toString().split("skipping embedding for ticket 1", -1))
+        service.embed(List.of(id(1)));
+        service.embed(List.of(id(1)));
+        assertThat(service.skippedIds()).containsExactly(id(1));
+        assertThat(output.toString().split("skipping embedding for ticket " + id(1), -1))
                 .hasSize(2);
         assertThat(output).doesNotContain("private title");
     }
@@ -167,24 +168,28 @@ class TicketEmbeddingServiceImplTest {
     void resetsCountOnSuccessAndListenerStillEmbeds_AC_005_9() {
         when(client.embed(anyList())).thenThrow(new AiUnavailableException());
         for (int attempt = 0; attempt < 3; attempt++) {
-            service.embed(List.of(1L));
+            service.embed(List.of(id(1)));
         }
-        assertThat(service.skippedIds()).containsExactly(1L);
+        assertThat(service.skippedIds()).containsExactly(id(1));
         doReturn(List.of(new float[1024])).when(client).embed(anyList());
-        new TicketsPublishedListener(service, Runnable::run).on(new TicketsPublishedEvent(List.of(1L)));
+        new TicketsPublishedListener(service, Runnable::run).on(new TicketsPublishedEvent(List.of(id(1))));
         assertThat(service.skippedIds()).isEmpty();
-        verify(embeddings).upsert(eq(1L), any(), any());
+        verify(embeddings).upsert(eq(id(1)), any(), any());
         doThrow(new AiUnavailableException()).when(client).embed(anyList());
-        service.embed(List.of(1L));
-        service.embed(List.of(1L));
+        service.embed(List.of(id(1)));
+        service.embed(List.of(id(1)));
         assertThat(service.skippedIds()).isEmpty();
     }
 
-    private SearchTicket ticket(long id) {
+    private SearchTicket ticket(UUID id) {
         SearchTicket ticket = mock(SearchTicket.class);
         when(ticket.getId()).thenReturn(id);
         when(ticket.getTitle()).thenReturn("private title");
         return ticket;
+    }
+
+    private static UUID id(long n) {
+        return new UUID(0, n);
     }
 
     private static class Transactions extends AbstractPlatformTransactionManager {

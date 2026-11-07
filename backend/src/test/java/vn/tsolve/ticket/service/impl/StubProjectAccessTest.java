@@ -6,6 +6,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class StubProjectAccessTest {
+    @Test
+    void aShortFormIdGrantsNothing_BUG_140() {
+        var access = new StubProjectAccess("alice:1-1-1-1-1", "");
+        assertThat(access.managesActive("alice", UUID.fromString("00000001-0001-0001-0001-000000000001")))
+                .isFalse();
+    }
 
     private static final String P1 = "00000000-0000-0000-0000-000000000001";
     private static final String P2 = "00000000-0000-0000-0000-000000000002";

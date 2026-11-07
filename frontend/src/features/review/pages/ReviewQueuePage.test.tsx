@@ -87,6 +87,19 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByText('Total 58 items')).toBeInTheDocument();
   });
 
+  it('AC-009.10 AC-009.12 shows a dash when the queue API returns no entry time', async () => {
+    const fixture = reviewStore.tickets.find((ticket) => ticket.sourceTicketId === 'ITSUP-1031');
+    if (!fixture) throw new Error('Expected the queue ticket fixture');
+    server.use(
+      getGetReviewQueueMockHandler({
+        content: [{ ...fixture, enteredQueueAt: null, reviewDueDate: fixture.reviewDueDate ?? '' }],
+        page: { number: 0, size: 20, totalElements: 1, totalPages: 1 },
+      }),
+    );
+    await openQueue();
+    expect(screen.getByRole('row', { name: /ITSUP-1031/ })).toHaveTextContent('—');
+  });
+
   it('AC-001.4 shows MSG13 when no tickets are waiting', async () => {
     server.use(
       getGetReviewQueueMockHandler({

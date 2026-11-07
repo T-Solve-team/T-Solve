@@ -78,3 +78,10 @@ edited in this follow-up, and the redundant proposed patch artifact was removed.
 explicitly report local customization during upgrade. Until then, compare the applied commit
 and rerun hook tests plus a Java STORY trace after every upgrade. This is a local feedback
 record; no external upstream issue or message was sent by the agent.
+
+## 2026-11-06 — malformed approval registry on main (KAN-24)
+
+**Type:** maintenance gap
+**Context:** The user ran `sdd.ts approve ticket-review`. The spec check passed, but the registry failed to parse because the `ai` approval and its `acs` object were still open at the start of `triage`. Inserting the two closing braces before `triage` parsed all 12 existing approvals in memory.
+
+**Suggestion:** Validate `approvals.json` in CI when changes touch it so malformed merges cannot block later approvals.

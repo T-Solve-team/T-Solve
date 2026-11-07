@@ -4,6 +4,13 @@ Master registry of all artifacts in this workspace.
 
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
+| IMPL-REVIEW-10 | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-10-review-jira-feedback.md |
+| IMPL-REVIEW-9 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-9-review-production-api.md |
+| IMPL-REVIEW-8 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-8-review-queue-entry-time.md |
+| IMPL-REVIEW-7 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-7-review-decision-endpoints.md |
+| IMPL-REVIEW-6 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-6-review-decision-transaction.md |
+| IMPL-REVIEW-5 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-5-review-storage.md |
+| IMPL-IMPORT-15 | session-log | import-ticket-list | evaluating | artifacts/05-implementation/import-ticket-list/task-15-import-ticket-uuid-compatibility.md |
 | IMPL-REVIEW-4 | session-log | ticket-review | passing | artifacts/05-implementation/ticket-review/task-4-review-history.md |
 | TEST-REVIEW-4 | test-report | ticket-review | fail-global-verification | artifacts/06-evaluation/ticket-review/task-4-review-history-test-report.md |
 | REVIEW-REVIEW-4 | review | ticket-review | fail-global-verification | artifacts/06-evaluation/ticket-review/task-4-review-history-review.md |
