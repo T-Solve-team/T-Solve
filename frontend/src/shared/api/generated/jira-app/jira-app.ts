@@ -6,20 +6,185 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type {
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
   MutationFunction,
   QueryClient,
+  QueryFunction,
+  QueryKey,
+  UndefinedInitialDataOptions,
   UseMutationOptions,
   UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult,
 } from '@tanstack/react-query';
 
-import type { IssueCreatedPayload, ProblemResponse } from '../model';
+import type { IssueCreatedPayload, JiraReviewFeedback, ProblemResponse } from '../model';
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
+import { withBackgroundMarking } from '../../query-options';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === 'queryKey') continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key],
+    });
+  }
+  return result;
+};
+
+export const getGetJiraReviewFeedbackUrl = (issueKey: string) => {
+  return `/api/v1/jira-app/issues/${issueKey}/review-feedback`;
+};
+
+/**
+ * Requires a verified Forge principal, registered Workspace, linked active Account and authorized issue. The Workspace is resolved only from the verified cloudId. Returns no feedback when the issue has no current Changes requested Solution Form owned by that Account in the verified Project.
+ * @summary Read the latest change request for the verified writer of this issue (MSG64).
+ */
+export const getJiraReviewFeedback = async (
+  issueKey: string,
+  options?: Parameters<typeof http>[1],
+): Promise<JiraReviewFeedback> => {
+  return http<JiraReviewFeedback>(getGetJiraReviewFeedbackUrl(issueKey), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetJiraReviewFeedbackQueryKey = (issueKey: string) => {
+  return [`/api/v1/jira-app/issues/${issueKey}/review-feedback`] as const;
+};
+
+export const getGetJiraReviewFeedbackQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJiraReviewFeedback>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  issueKey: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraReviewFeedback>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetJiraReviewFeedbackQueryKey(issueKey);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJiraReviewFeedback>>> = ({ signal }) =>
+    getJiraReviewFeedback(issueKey, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: issueKey !== null && issueKey !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getJiraReviewFeedback>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetJiraReviewFeedbackQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getJiraReviewFeedback>>
+>;
+export type GetJiraReviewFeedbackQueryError = ErrorType<ProblemResponse>;
+
+export function useGetJiraReviewFeedback<
+  TData = Awaited<ReturnType<typeof getJiraReviewFeedback>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  issueKey: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraReviewFeedback>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJiraReviewFeedback>>,
+          TError,
+          Awaited<ReturnType<typeof getJiraReviewFeedback>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetJiraReviewFeedback<
+  TData = Awaited<ReturnType<typeof getJiraReviewFeedback>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  issueKey: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraReviewFeedback>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJiraReviewFeedback>>,
+          TError,
+          Awaited<ReturnType<typeof getJiraReviewFeedback>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetJiraReviewFeedback<
+  TData = Awaited<ReturnType<typeof getJiraReviewFeedback>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  issueKey: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraReviewFeedback>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Read the latest change request for the verified writer of this issue (MSG64).
+ */
+
+export function useGetJiraReviewFeedback<
+  TData = Awaited<ReturnType<typeof getJiraReviewFeedback>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  issueKey: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraReviewFeedback>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetJiraReviewFeedbackQueryOptions(issueKey, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getReceiveIssueCreatedUrl = () => {
   return `/api/v1/jira-app/events/issue-created`;

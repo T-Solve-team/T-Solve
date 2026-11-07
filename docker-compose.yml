@@ -16,5 +16,85 @@ services:
       timeout: 3s
       retries: 10
 
+  redis:
+    image: redis:7.4-alpine
+    container_name: tsolve-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Creates the Keycloak database and its own user in the existing Postgres (the volume may predate this, so
+  # an init script would not run). Safe to run again.
+  keycloak-db-init:
+    image: pgvector/pgvector:pg16
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      PGHOST: db
+      PGUSER: tsolve
+      PGPASSWORD: tsolve
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD in .env}
+    entrypoint: ["sh", "-ec"]
+    command:
+      - |
+        psql -d tsolve -tAc "SELECT 1 FROM pg_roles WHERE rolname='keycloak'" | grep -q 1 \
+          || psql -d tsolve -v ON_ERROR_STOP=1 -v pw="$$KC_DB_PASSWORD" <<'SQL'
+        CREATE ROLE keycloak LOGIN PASSWORD :'pw';
+        SQL
+        psql -d tsolve -tAc "SELECT 1 FROM pg_database WHERE datname='keycloak'" | grep -q 1 \
+          || psql -d tsolve -v ON_ERROR_STOP=1 -c "CREATE DATABASE keycloak OWNER keycloak"
+
+  # Local Keycloak (dev mode, http). The realm is imported at start; the issuer is ${TSOLVE_LOGIN_ORIGIN}/realms/tsolve.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.7
+    container_name: tsolve-keycloak
+    command: ["start-dev", "--import-realm"]
+    depends_on:
+      keycloak-db-init:
+        condition: service_completed_successfully
+      fake-google:
+        condition: service_started
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_HOSTNAME: "${TSOLVE_LOGIN_ORIGIN:?set TSOLVE_LOGIN_ORIGIN in .env, local value http://localhost:8180}"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      JAVA_OPTS_KC_HEAP: "-Xms256m -Xmx768m"
+      KEYCLOAK_WEB_CLIENT_SECRET: ${KEYCLOAK_WEB_CLIENT_SECRET:?set KEYCLOAK_WEB_CLIENT_SECRET in .env}
+    ports:
+      - "127.0.0.1:8180:8080"
+    volumes:
+      - ./infra/keycloak/realm-tsolve.json:/opt/keycloak/data/import/realm-tsolve.json:ro
+    healthcheck:
+      # The image has no curl: open the management port (9000) and ask /health/ready
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '\"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # Stands in for Google: account chooser, token and keys. The browser reaches it as fake-google.localhost:8181,
+  # Keycloak as fake-google:8080. Dev only.
+  fake-google:
+    build: ./infra/keycloak/fake-google
+    container_name: tsolve-fake-google
+    command: ["--global-response-templating", "--extensions", "vn.tsolve.fakegoogle.IdTokenExtension"]
+    ports:
+      - "127.0.0.1:8181:8080"
+    volumes:
+      - ./infra/keycloak/fake-google/mappings:/home/wiremock/mappings:ro
+
 volumes:
   tsolve-db-data:

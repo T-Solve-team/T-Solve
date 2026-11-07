@@ -19,6 +19,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Component;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.exception.CsvFileRejectedException;
 
 /**
@@ -31,7 +32,7 @@ public class CsvTicketParser {
     private static final CSVFormat FORMAT =
             CSVFormat.RFC4180.builder().setIgnoreEmptyLines(true).build();
 
-    public ParsedCsv parse(InputStream in) {
+    public ParsedCsv parse(InputStream in, ImportType importType) {
         // REPORT instead of the default REPLACE: an ANSI export must fail, not turn into '?' characters
         CharsetDecoder utf8 = StandardCharsets.UTF_8
                 .newDecoder()
@@ -43,7 +44,7 @@ public class CsvTicketParser {
             if (!records.hasNext()) {
                 throw new CsvFileRejectedException("MSG27");
             }
-            Map<String, Integer> columns = headerIndex(records.next());
+            Map<String, Integer> columns = headerIndex(records.next(), importType);
             List<ParsedCsv.Row> rows = new ArrayList<>();
             while (records.hasNext()) {
                 CSVRecord record = records.next();
@@ -59,7 +60,7 @@ public class CsvTicketParser {
         }
     }
 
-    private static Map<String, Integer> headerIndex(CSVRecord header) {
+    private static Map<String, Integer> headerIndex(CSVRecord header, ImportType importType) {
         Map<String, Integer> index = new HashMap<>();
         for (int i = 0; i < header.size(); i++) {
             String name = header.get(i);
@@ -71,11 +72,14 @@ public class CsvTicketParser {
                 throw new CsvFileRejectedException("MSG27");
             }
         }
-        List<String> missing =
-                CsvColumns.REQUIRED.stream().filter(c -> !index.containsKey(c)).toList();
+        List<String> missing = importType.requiredColumns().stream()
+                .filter(c -> !index.containsKey(c))
+                .toList();
         if (!missing.isEmpty()) {
             throw new CsvFileRejectedException("MSG29", Map.of("column_names", String.join(", ", missing)));
         }
+        // what is not in the type's template stays unread: a type 2 file's Solution columns too (AC-012.4)
+        index.keySet().retainAll(importType.templateColumns());
         return index;
     }
 

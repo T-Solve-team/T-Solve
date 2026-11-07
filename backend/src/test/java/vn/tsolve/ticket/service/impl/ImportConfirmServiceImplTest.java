@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,7 @@ import vn.tsolve.ticket.entity.ImportBatch;
 import vn.tsolve.ticket.entity.ImportBatchStatus;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.ReviewDecision;
 import vn.tsolve.ticket.entity.Ticket;
@@ -60,7 +62,7 @@ class ImportConfirmServiceImplTest {
 
     private static final String PM = "pm@company.vn";
     private static final long PREVIEW = 42L;
-    private static final long PROJECT = 1L;
+    private static final UUID PROJECT = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     private final ImportPreviewRepository previews = mock(ImportPreviewRepository.class);
     private final ImportPreviewRowRepository rows = mock(ImportPreviewRowRepository.class);
@@ -108,12 +110,14 @@ class ImportConfirmServiceImplTest {
                         "Restart",
                         null,
                         "All users"),
-                List.of());
+                List.of(),
+                ImportType.WITH_SOLUTION);
     }
 
     @BeforeEach
     void setUp() {
-        ImportPreview preview = new ImportPreview(PM, PROJECT, TicketSource.CSV, "tickets.csv", Instant.EPOCH);
+        ImportPreview preview = new ImportPreview(
+                PM, PROJECT, TicketSource.CSV, ImportType.WITH_SOLUTION, "tickets.csv", Instant.EPOCH);
         ReflectionTestUtils.setField(preview, "id", PREVIEW);
         when(previews.findByIdAndOwner(eq(PREVIEW), anyString()))
                 .thenAnswer(call -> PM.equals(call.getArgument(1)) ? Optional.of(preview) : Optional.empty());
@@ -134,7 +138,7 @@ class ImportConfirmServiceImplTest {
         AtomicLong ids = new AtomicLong(100);
         when(tickets.saveAll(anyCollection())).thenAnswer(call -> {
             List<Ticket> saved = new ArrayList<>(call.getArgument(0));
-            saved.forEach(t -> ReflectionTestUtils.setField(t, "id", ids.incrementAndGet()));
+            saved.forEach(t -> ReflectionTestUtils.setField(t, "id", new UUID(0, ids.incrementAndGet())));
             return saved;
         });
     }
@@ -176,7 +180,7 @@ class ImportConfirmServiceImplTest {
         verify(decisions).saveAll(captor.capture());
         assertThat(captor.getValue())
                 .extracting(TicketReviewDecision::getTicketId)
-                .containsExactly(101L, 102L);
+                .containsExactly(new UUID(0, 101), new UUID(0, 102));
         assertThat(captor.getValue())
                 .allMatch(d -> d.getReviewer().equals(PM) && d.getDecision() == ReviewDecision.APPROVE);
     }
@@ -306,7 +310,7 @@ class ImportConfirmServiceImplTest {
 
         service.confirm(PM, PREVIEW);
 
-        verify(events).publishEvent(new TicketsPublishedEvent(List.of(101L, 102L)));
+        verify(events).publishEvent(new TicketsPublishedEvent(List.of(new UUID(0, 101), new UUID(0, 102))));
         assertThat(transactions).containsExactly("event", "commit");
     }
 

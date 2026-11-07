@@ -53,6 +53,11 @@ Append-only log of framework friction captured during usage.
 **Context:** The user approved the concrete 17-criterion spec in chat, but the PreToolUse hook blocked `sdd.ts approve dashboard-audit` because Codex cannot display the hook confirmation prompt. The hook required the user to run the command themselves. The user did so; `sdd.ts diff dashboard-audit` confirmed the current spec was approved at 2026-10-31T07:28:12.270Z. No retry or approval-file edit was used.
 **Suggestion:** Support a native, reviewable approval action for Codex while preserving the spec-hash gate.
 
+## 2026-11-01 — `sdd.ts trace` misses Java tests (import-ticket-list)
+
+**Type:** bug
+**Context:** `TEST_GLOBS` in `hooks/sdd.ts` is `**/*.{test,spec}.*`, `**/test_*.py`, `**/*_test.*`. JUnit files (`*Test.java`, `*IT.java`) never match, so `trace import-ticket-list STORY-001` reports 0/12 although every `AC_001_*` id is named by a backend test (checked with grep).
+**Suggestion:** Add `**/*Test.java` and `**/*IT.java` (and accept the `AC_001_2` spelling the backend naming rule uses) to the trace globs.
 ## 2026-11-02 — spec approval from Codex (KAN-149)
 
 **Type:** friction
@@ -73,3 +78,13 @@ edited in this follow-up, and the redundant proposed patch artifact was removed.
 explicitly report local customization during upgrade. Until then, compare the applied commit
 and rerun hook tests plus a Java STORY trace after every upgrade. This is a local feedback
 record; no external upstream issue or message was sent by the agent.
+
+## 2026-11-07 — Jira branch metadata during worker KAN-102
+
+Project AGENTS.md requires one branch per Jira issue, so actual branch is feat/KAN-102-worker-tenant-context. sdd.ts status worker implementing recorded feat/worker. Statuses were changed only with sdd.ts; no hook or status field was edited to hide this mismatch. sdd.ts commit worker default correctly recorded the code SHA and printed the actual issue branch, but final verification of progress.json showed that its branch field still says feat/worker. Audit therefore adds a missing-module-branch warning after the commit. Suggested upstream improvement: persist the current issue branch at the implementing transition and commit recording when a project overrides the default module branch convention.
+## 2026-11-06 — malformed approval registry on main (KAN-24)
+
+**Type:** maintenance gap
+**Context:** The user ran `sdd.ts approve ticket-review`. The spec check passed, but the registry failed to parse because the `ai` approval and its `acs` object were still open at the start of `triage`. Inserting the two closing braces before `triage` parsed all 12 existing approvals in memory.
+
+**Suggestion:** Validate `approvals.json` in CI when changes touch it so malformed merges cannot block later approvals.

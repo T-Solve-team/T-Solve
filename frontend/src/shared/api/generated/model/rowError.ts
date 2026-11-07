@@ -9,7 +9,7 @@
 import type { RowErrorParams } from './rowErrorParams';
 
 /**
- * One failed rule of a row (MSG01, MSG02, MSG31, MSG39 or MSG78).
+ * One failed rule of a row (MSG01, MSG02, MSG31, MSG39 or MSG_NEW_3).
  */
 export interface RowError {
   code: string;

@@ -50,6 +50,6 @@ Knowledge Chatbot (UC-51–53, UC-58; KAN-48): answers with citations from the S
 
 ## Related Artifacts
 - Spec: `artifacts/03-modules/chatbot/spec.md`
-- Design: `artifacts/04-plans/chatbot/design.md` · Tasks: `artifacts/04-plans/chatbot/iteration-1/tasks.md`
+- Design: `artifacts/04-plans/chatbot/design.md` · Tasks: `artifacts/04-plans/chatbot/iteration-1/tasks.md` (web app), `artifacts/04-plans/chatbot/iteration-2/tasks.md` (backend)
 - Map: `artifacts/03-modules/module-map.md`
 - Stories: KAN-48, KAN-69…73, KAN-75, KAN-76, KAN-178…183, KAN-199, KAN-241, KAN-242, KAN-243

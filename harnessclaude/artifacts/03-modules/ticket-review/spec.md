@@ -10,6 +10,8 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-07 | STORY-009 | Persist the time a ticket entered the Review Queue | Preserve the actual entry time independently of later ticket edits |
+| 2026-11-06 | STORY-009 | Define the production Review backend for KAN-24 using the Workspace schema reference and UUID keys | Complete the Jira story beyond its merged frontend and mocks |
 | 2026-11-01 | STORY-008 | Add KAN-159 read-only Review History frontend and proposed query/MSW contract | Continue remaining frontend work; reuse Department convention and existing decision history |
 | 2026-11-01 | STORY-007 | Add KAN-158 Expired Tickets frontend, API proposal and mock send-back flow | User requested completion of FE today, one Jira branch per task; explicitly permits this branch to depend on KAN-24 |
 | 2026-11-01 | STORY-001–006 | New-main frontend/MSW delivery contract for KAN-24; UUID ids, Department filter, explicit recovery and atomic mock decisions | User chose a new branch/PR from main, frontend + MSW/OpenAPI first, and Department under current guidelines; PR #26 remains separate |
@@ -25,7 +27,8 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
 1. Complete screens 7.1 Review Queue, 7.2 Request Changes and 7.3 Reject Ticket and their decision controls on 5.5 Ticket Detail using the existing feature and UI kit.
 2. Use generated hooks, UUID ids and mutable Workspace-scoped MSW fixtures to demonstrate complete decisions, failure handling and retained decision history.
 3. Preserve the current Department filter and sortable Project column; no Project filter.
-4. Treat the OpenAPI changes as a proposal awaiting backend integration; no claim of production authorization, transaction durability, audit or Jira delivery.
+4. Treat the OpenAPI changes in STORY-001 through STORY-008 as proposals. STORY-009 covers production integration for the KAN-24 operations.
+5. Implement the production queue, eligible ids, Ticket Detail and three review decisions under STORY-009. Use the Department filter agreed for the merged queue.
 
 ### Non-Functional
 
@@ -114,10 +117,26 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
   - AC-008.6: WHILE initial history loading is pending, THE frontend SHALL show loading; IF the query fails, THEN THE frontend SHALL show its catalog error and retry; IF no records match, THEN THE frontend SHALL show MSG04.
   - AC-008.7: IF the caller is signed out or lacks Project Manager, THEN THE route guard and mock API SHALL deny history access; IF the caller supplies a foreign or unmanaged Department filter, THEN THE mock API SHALL expose no foreign decision or ticket data.
 
+### STORY-009: Review submitted Solutions in the production Workspace (KAN-24)
+
+- As a Project Manager, I want to review Solutions in my own Projects so that decisions and feedback are available after the request ends.
+- Acceptance:
+  - AC-009.1: WHEN a Project Manager queries the Review Queue or its eligible ids, THE API SHALL use the signed-in Workspace and return only pending Solution Form tickets for Projects they manage, with the same Department filter on both endpoints and earliest review due date first by default.
+  - AC-009.2: WHEN a permitted user opens Ticket Detail, THE API SHALL return persisted ticket, Solution and Evidence data and the information the frontend needs to display only the decisions the current user may make.
+  - AC-009.3: IF a caller is unauthenticated or does not manage the target ticket's Project, THEN THE decision API SHALL refuse the request with 401 or 403 respectively and leave the ticket unchanged. IF a ticket id belongs to a different Workspace, THEN THE API SHALL expose no ticket data and perform no write.
+  - AC-009.4: WHEN an authorized Project Manager approves eligible tickets, THE API SHALL publish all selected tickets and remove them from the Review Queue, including when the manager authored an eligible ticket.
+  - AC-009.5: WHEN an authorized Project Manager rejects eligible tickets with one nonblank reason of at most 1,000 characters, THE API SHALL move all selected tickets to the final Rejected state and store that reason for each decision.
+  - AC-009.6: WHEN an authorized Project Manager requests changes to eligible Solution Form tickets with one nonblank comment of at most 1,000 characters, THE API SHALL move all selected tickets to Changes requested and store the same comment for each decision. WHEN the writer opens the associated Jira issue in the T-Solve panel, THE system SHALL show the manager and the comment in MSG64.
+  - AC-009.7: IF any decision input is invalid or any selected ticket is missing, outside the caller's scope or no longer eligible, THEN THE API SHALL refuse the entire batch without changing any ticket or recording a decision.
+  - AC-009.8: WHEN a decision succeeds, THE backend SHALL commit the ticket state and one durable review decision per ticket in the same Workspace transaction, preserving Solution, Evidence and review due date. Each decision SHALL retain the reviewer, action, time and applicable reason or comment.
+  - AC-009.9: THE production backend SHALL use database/02_tenant.sql as the reference for Review table structure and relationships. THE tenant changelog SHALL use UUID keys under the backend conventions for the shared ticket, evidence and review_decision tables. The Solution fields SHALL remain on ticket.
+  - AC-009.10: WHEN the production web application loads or submits a Review action, THE frontend SHALL use the published OpenAPI operations and backend data through the existing generated client.
+  - AC-009.11: WHEN a Solution Form ticket is first saved as Pending review or transitions back to Pending review, THE tenant database SHALL record that entry time in review_queue_entered_at. WHILE a ticket stays Pending review, THE system SHALL preserve that entry time and SHALL keep the existing review due date rules (GBR-08, GBR-10).
+  - AC-009.12: WHEN the Review Queue returns a ticket, THE API SHALL expose the recorded entry time as enteredQueueAt. IF an older ticket has no recorded entry time, THEN THE API SHALL return null for enteredQueueAt and THE frontend SHALL show an empty value indicator.
+
 ## Out of Scope
 
-- Production backend endpoints, identity/Project authorization, canonical Ticket/KAN-137 schema changes, migrations and durable audit/history. KAN-24 backend remains undelivered by this frontend slice.
-- Actual Jira comment delivery (including MSG64 visibility), email, notification workers and real-time updates beyond the existing polling convention. Store the mock comment and proposed contract; do not claim successful external delivery.
+- General audit writer, Review History screen and read API, email, notification workers and real-time updates beyond the existing polling convention. STORY-009 stores Review decisions and exposes Request Changes feedback to the writer in Jira.
 - Production send-back processing (KAN-156), JOB-02 (KAN-157) and SSE/WebSocket (KAN-154). KAN-158 and KAN-159 deliver frontend, proposed APIs and in-memory fixtures; they do not implement a real expiry job or backend persistence. KAN-159 displays historical Unpublish/Republish records without adding those mutation workflows.
 - Importing PR #26 or changing/closing it; creating or pushing the replacement PR still requires the user to request that action.
 
@@ -126,21 +145,25 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
 ### Exposed by this module
 
 - Preserve existing `/api/v1/review-queue`, `/api/v1/review-queue/ticket-ids` and `/api/v1/reviews/{approve,reject,request-changes}` proposal routes. Queue/ids use optional UUID `departmentId`; page/sort conventions stay shared. Every internal ticket/Project id becomes a UUID string, while displayed `sourceTicketId` remains the Jira/source key.
+- Review Queue returns `enteredQueueAt` as a date-time when recorded and `null` for older rows with an unknown entry time. The tenant changelog adds nullable `ticket.review_queue_entered_at` as `TIMESTAMPTZ`.
 - Decision requests: unique `ticketIds` (1–500 UUIDs); Reject adds `reason`, Request Changes adds `comment` (trim-required, at most 1,000 characters). Success returns existing `{ count }`. Use current catalog Problem errors: validation 400, unauthenticated 401, unauthorized 403, missing 404 and stale 409, preserving field errors.
-- Add a proposed generated Ticket Detail query at `/api/v1/tickets/{ticketId}`, reusing existing Ticket source/status/Project/Solution definitions where compatible. Details carry trusted author and manager identity/scope information from the mock/API contract; never infer authorship from display-name text. Do not claim the backend implements the proposal.
+- Use the generated Ticket Detail query at `/api/v1/tickets/{ticketId}`, reusing existing Ticket source/status/Project/Solution definitions where compatible. Details carry trusted author and manager identity/scope information. The frontend uses account identifiers to determine authorship.
 - MSW fixtures hold ticket states and append-only decision records in memory, reset through the existing mock reset entry point. Invalid batches leave every ticket and history entry unchanged. No production table or second Ticket authority is created.
 
 ### Required from other modules
+
+STORY-009 requires a trusted Workspace binding and the authenticated Account's Project membership for Review. Jira panel feedback requires a verified Jira issue and writer identity in that same Workspace. Workspace routing, sign-in and general Project membership administration belong to their respective modules.
 
 KAN-159 proposes GET `/api/v1/review-history`, with optional UUID `departmentId`, optional `decision` enum (APPROVE, REJECT, REQUEST_CHANGES, UNPUBLISH, REPUBLISH, SEND_BACK), optional paired `dateFrom`/`dateTo` ISO calendar dates, and existing page/size/sort conventions. Default sort is timestamp descending with decision UUID as deterministic tie-breaker; supported explicit sorts are timestamp ascending/descending. Response is a generated paginated ReviewHistoryItem collection with decision UUID, ticket UUID/source key/title, Project UUID/name, decision, actor UUID/display name, nullable author name, timestamp, nullable reason and comment. Date boundaries use UTC+07:00, end-exclusive next midnight internally. Validation/authentication/authorization errors follow the existing review Problem contract. Records retain decision actor/time/action/content independently of subsequent ticket status changes; current ticket metadata supplies display/navigation and scope. An empty mock history remains valid until decisions occur; tests may seed all six actions. This contract is a proposal, not an existing production endpoint.
 
 KAN-158 proposes GET `/api/v1/expired-tickets` (optional UUID departmentId, existing page/size/sort conventions), GET `/api/v1/expired-tickets/ticket-ids` (same filter, complete eligible UUID set), and POST `/api/v1/reviews/send-back` (`ticketIds`, 1–500 unique UUIDs, response `{count}`). Add generated ExpiredTicketItem/ExpiredTicketPage schemas carrying expiry and previous status; reuse existing Ticket and decision shapes. Error codes/statuses follow the existing review proposal. Mock expiry fixtures include the Project's current reviewRangeDays; calendar due dates follow the project's existing Vietnam-time convention. SEND_BACK records are session-only and may be consumed by the later KAN-159 slice. The Ticket Detail implementation is inherited from the explicitly approved KAN-24 branch base; this task does not duplicate that feature.
 
-Use existing session roles and UUID Project memberships, catalog messages, shared form/table/error components, feature barrels and TanStack Query conventions from fe-foundation. Preserve all unrelated endpoints when regenerating the client. Future canonical backend integration must supply authoritative actor/Workspace/Project scope, persistence/audit and Jira delivery; this slice explicitly does not implement those seams.
+Use existing session roles and UUID Project memberships, catalog messages, shared form/table/error components, feature barrels and TanStack Query conventions from fe-foundation. Preserve all unrelated endpoints when regenerating the client.
 
 ## Definition of Done
 
 - [ ] Current spec approved; every criterion has meaningful named tests under review feature paths.
 - [ ] All frontend verification commands pass, generation is deterministic, no test timeout/error suppression or skipped regression hides failures.
 - [ ] Automated checks cover queue, Ticket Detail, confirmation, validation, stale/failure/retry and permissions; reports disclose mock-only guarantees and backend dependencies. Manual browser testing is omitted per the user's instruction.
+- [ ] STORY-009 passes backend verification, including PostgreSQL tests for scope, atomic decisions and persistence. Verify queue and detail through the real API and verify MSG64 for the writer in Jira.
 - [ ] Review and test evidence recorded; user approves each feature commit; push/PR only when requested.

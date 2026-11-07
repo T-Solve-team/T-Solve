@@ -14,4 +14,5 @@ export const ImportPreviewRowStatus = {
   VALID: 'VALID',
   ERROR: 'ERROR',
   REMOVED: 'REMOVED',
+  NEEDS_SOLUTION: 'NEEDS_SOLUTION',
 } as const;

@@ -33,4 +33,6 @@ export interface ReviewTicketDetail {
   evidence: ReviewEvidence[];
   /** @nullable */
   lastReviewComment: string | null;
+  /** Whether the current user may decide this pending Solution Form ticket in its managed Project. */
+  canDecide?: boolean;
 }

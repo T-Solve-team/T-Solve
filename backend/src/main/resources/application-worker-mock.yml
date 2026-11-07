@@ -1,0 +1,5 @@
+tsolve:
+  worker:
+    mock:
+      active-workspaces: ${TSOLVE_MOCK_ACTIVE_WORKSPACES:}
+      suspended-workspaces: ${TSOLVE_MOCK_SUSPENDED_WORKSPACES:}

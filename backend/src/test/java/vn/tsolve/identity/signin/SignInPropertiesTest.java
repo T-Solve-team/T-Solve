@@ -45,6 +45,7 @@ class SignInPropertiesTest {
         env.put("GOOGLE_CLIENT_ID", "test-client-id");
         env.put("GOOGLE_CLIENT_SECRET", "test-secret");
         env.put("PLATFORM_OPERATOR_EMAILS", "ops@example.test");
+        env.put("KEYCLOAK_WEB_CLIENT_SECRET", "test-keycloak-secret");
         return env;
     }
 
@@ -107,6 +108,8 @@ class SignInPropertiesTest {
             assertThat(properties.googleClientId()).isEqualTo("test-client-id");
             assertThat(properties.googleClientSecret()).isEqualTo("test-secret");
             assertThat(properties.operatorEmails()).isEqualTo("ops@example.test");
+            assertThat(properties.keycloakWebClientSecret()).isEqualTo("test-keycloak-secret");
+            assertThat(properties.toString()).doesNotContain("test-keycloak-secret");
         });
     }
 
