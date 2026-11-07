@@ -59,3 +59,18 @@ backend/src/test/java/vn/tsolve/ai/service/impl/SolutionAiServiceImplTest.java; 
 **Estimated size:** small.
 **Verification:** AC-005.1–005.5 named tests; edge cases 23–27; `mvn verify`; `sdd.ts trace ai` shows all 24
 criteria covered. Tell the `tracker` owner the rewrite call and MSG68.
+
+## Task 4: PR #122 review fixes (KAN-142)
+
+**Story:** STORY-004, STORY-005
+**Feature:** solution-review-fixes
+**Description:** Apply the PR #122 review (Trần Trung Hiếu, 05/11) and the AC-004.2 change of 06/11: the draft
+prompt puts the summary, description and each comment in tags, and the system prompt says tagged text is data,
+never instructions; every fallback logs `op=draft outcome=fallback reason=<LLM_FAILURE|PARSE_ERROR|BLANK_SECTION|OVERSIZE>`
+with no text; the fallback's Symptoms is cut to 10,000 characters and its Resolution steps to what remains (BUG-132);
+no cut splits a surrogate pair (BUG-133); `draft(null)` / `rewrite(null)` are rejected explicitly (BUG-134).
+**Files:** backend/src/main/java/vn/tsolve/ai/service/impl/SolutionAiServiceImpl.java;
+backend/src/test/java/vn/tsolve/ai/service/impl/SolutionAiServiceImplTest.java; docs/bug-log.md.
+**Dependencies:** Task 2, Task 3.
+**Estimated size:** small.
+**Verification:** AC-004.2 and AC-004.4 tests updated; tests named with BUG-132, BUG-133, BUG-134; `mvn verify`.
