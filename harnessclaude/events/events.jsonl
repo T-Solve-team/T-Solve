@@ -659,6 +659,8 @@
 {"ts":"2026-11-06T17:23:51.650Z","type":"feature-status","module":"search","feature":"solution-retrieval","from":"evaluating","to":"passing"}
 {"ts":"2026-11-06T17:23:52.187Z","type":"feature-status","module":"chatbot","feature":"chatbot-answer-schema","from":"evaluating","to":"passing"}
 {"ts":"2026-11-06T17:23:52.765Z","type":"feature-status","module":"chatbot","feature":"ask-answer-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-06T00:29:47.520Z","type":"quick-opened","what":"KAN-186 verify CSV import preview ownership in PostgreSQL","files":["backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmIT.java"]}
+{"ts":"2026-11-06T00:33:29.931Z","type":"quick-closed","what":"KAN-186 verify CSV import preview ownership in PostgreSQL","files":["backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmIT.java"]}
 {"ts":"2026-11-06T00:05:07.005Z","type":"quick-opened","what":"KAN-117 cover Suggestion History method security with TSolveUser","files":["backend/src/test/java/vn/tsolve/triage/controller/SuggestionResultControllerTest.java"]}
 {"ts":"2026-11-06T00:17:30.307Z","type":"quick-closed","what":"KAN-117 cover Suggestion History method security with TSolveUser","files":["backend/src/test/java/vn/tsolve/triage/controller/SuggestionResultControllerTest.java"]}
 {"ts":"2026-11-06T11:57:13.990Z","type":"spec-approved","module":"ai","specHash":"bd7dbb0f81b7f436d9d60afbc40dd6e6965ab5d189ac8a91dfce8548af0ea181"}
