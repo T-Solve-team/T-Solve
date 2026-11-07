@@ -259,8 +259,9 @@ class ImportConfirmIT {
         ImportResultResponse result = confirms.confirm("pm-a", id);
 
         assertThat(result.created()).isEqualTo(2);
-        assertThat(jdbc.queryForList(
-                        "select status, symptoms, root_cause, workaround, scope from ticket where ticket_id = 'T-1'"))
+        assertThat(
+                        jdbc.queryForList(
+                                "select status, symptoms, root_cause, workaround, scope from ticket where source_ticket_id = 'T-1'"))
                 .singleElement()
                 .satisfies(row -> {
                     assertThat(row.get("status")).isEqualTo("PUBLISHED");
