@@ -35,6 +35,7 @@ import vn.tsolve.ticket.dto.ImportPreviewRowSummary;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.mapper.ImportPreviewMapperImpl;
@@ -60,12 +61,14 @@ class ImportPreviewServiceImplTest {
                 rowNo,
                 new ImportPreviewRow.Values(
                         "T-" + rowNo, "Login fails", "Long story", "Anh", null, symptoms, "b", "c", null, "d"),
-                errors);
+                errors,
+                ImportType.WITH_SOLUTION);
     }
 
     @BeforeEach
     void setUp() {
-        ImportPreview preview = new ImportPreview(PM, PROJECT, TicketSource.CSV, "tickets.csv", Instant.EPOCH);
+        ImportPreview preview = new ImportPreview(
+                PM, PROJECT, TicketSource.CSV, ImportType.WITH_SOLUTION, "tickets.csv", Instant.EPOCH);
         ReflectionTestUtils.setField(preview, "id", ID);
         when(previews.findByIdAndOwner(eq(ID), any()))
                 .thenAnswer(call -> PM.equals(call.getArgument(1)) ? Optional.of(preview) : Optional.empty());
@@ -106,6 +109,31 @@ class ImportPreviewServiceImplTest {
         assertThat(page.getContent())
                 .extracting(ImportPreviewRowSummary::status)
                 .containsOnly(PreviewRowStatus.ERROR);
+    }
+
+    @Test
+    void summaryCountsNeedsSolutionRows_AC_012_7() {
+        when(rows.countByIdPreviewIdAndStatus(ID, PreviewRowStatus.NEEDS_SOLUTION))
+                .thenReturn(4L);
+        when(rows.findByIdPreviewIdOrderByIdRowNo(eq(ID), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+
+        ImportPreviewResponse response = service.preview(PM, ID);
+
+        assertThat(response.needsSolutionCount()).isEqualTo(4);
+        assertThat(response.importType()).isEqualTo(ImportType.WITH_SOLUTION);
+    }
+
+    @Test
+    void listsOnlyNeedsSolutionRowsWhenFiltered_AC_012_7() {
+        when(rows.findByIdPreviewIdAndStatusOrderByIdRowNo(
+                        eq(ID), eq(PreviewRowStatus.NEEDS_SOLUTION), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        service.rows(PM, ID, PreviewRowStatus.NEEDS_SOLUTION, PageRequest.of(0, 20));
+
+        verify(rows)
+                .findByIdPreviewIdAndStatusOrderByIdRowNo(
+                        eq(ID), eq(PreviewRowStatus.NEEDS_SOLUTION), any(Pageable.class));
     }
 
     @Test
@@ -177,6 +205,63 @@ class ImportPreviewServiceImplTest {
             assertThat(e.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
             assertThat(e.getCode()).isEqualTo("MSG08");
         }
+        verifyNoInteractions(rows);
+    }
+
+    @Test
+    void readsTheCallersPreviewWithCountsMessageAndFirstPage_AC_007_1() {
+        when(rows.countByIdPreviewIdAndStatus(ID, PreviewRowStatus.VALID)).thenReturn(3L);
+        when(rows.countByIdPreviewIdAndStatus(ID, PreviewRowStatus.ERROR)).thenReturn(1L);
+        when(rows.countByIdPreviewIdAndStatus(ID, PreviewRowStatus.REMOVED)).thenReturn(2L);
+        when(rows.findByIdPreviewIdOrderByIdRowNo(eq(ID), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(row(1, "a", List.of()))));
+
+        ImportPreviewResponse response = service.preview(PM, ID);
+
+        assertThat(response.previewId()).isEqualTo(ID);
+        assertThat(response.projectId()).isEqualTo(PROJECT);
+        assertThat(response.fileName()).isEqualTo("tickets.csv");
+        assertThat(response.validCount()).isEqualTo(3);
+        assertThat(response.errorCount()).isEqualTo(1);
+        assertThat(response.removedCount()).isEqualTo(2);
+        assertThat(response.message()).isEqualTo(new MessageRef("MSG30", Map.of("count", 1L)));
+        assertThat(response.rows().getContent()).hasSize(1);
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(rows).findByIdPreviewIdOrderByIdRowNo(eq(ID), pageable.capture());
+        assertThat(pageable.getValue().getPageNumber()).isZero();
+        assertThat(pageable.getValue().getPageSize()).isEqualTo(CsvImportServiceImpl.FIRST_PAGE_SIZE);
+    }
+
+    @Test
+    void rejectsReadingAnotherUsersOrAGonePreview_AC_007_2() {
+        assertThatThrownBy(() -> service.preview("other@company.vn", ID)).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.preview(PM, 7L)).isInstanceOf(NotFoundException.class);
+        verifyNoInteractions(rows);
+    }
+
+    @Test
+    void rejectsReadingWhenTheCallerNoLongerManagesTheActiveProject_AC_007_3() {
+        when(projects.managesActive(PM, PROJECT)).thenReturn(false);
+
+        MessageCodeException e = catchThrowableOfType(() -> service.preview(PM, ID), MessageCodeException.class);
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(e.getCode()).isEqualTo("MSG08");
+        verifyNoInteractions(rows);
+    }
+
+    @Test
+    void rejectsReadingWhenTheProjectIsNoLongerActive_AC_007_3() {
+        // The real stub, with the PM's Project listed as inactive: the other half of AC-007.3.
+        ProjectAccess inactive = new StubProjectAccess(PM + ":" + PROJECT, PROJECT.toString());
+        ImportPreviewServiceImpl withInactiveProject =
+                new ImportPreviewServiceImpl(previews, rows, new ImportPreviewMapperImpl(), inactive);
+
+        MessageCodeException e =
+                catchThrowableOfType(() -> withInactiveProject.preview(PM, ID), MessageCodeException.class);
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(e.getCode()).isEqualTo("MSG08");
         verifyNoInteractions(rows);
     }
 }

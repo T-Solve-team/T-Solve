@@ -43,6 +43,7 @@ import vn.tsolve.ticket.entity.ImportBatch;
 import vn.tsolve.ticket.entity.ImportBatchStatus;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.ReviewDecision;
 import vn.tsolve.ticket.entity.Ticket;
@@ -109,12 +110,14 @@ class ImportConfirmServiceImplTest {
                         "Restart",
                         null,
                         "All users"),
-                List.of());
+                List.of(),
+                ImportType.WITH_SOLUTION);
     }
 
     @BeforeEach
     void setUp() {
-        ImportPreview preview = new ImportPreview(PM, PROJECT, TicketSource.CSV, "tickets.csv", Instant.EPOCH);
+        ImportPreview preview = new ImportPreview(
+                PM, PROJECT, TicketSource.CSV, ImportType.WITH_SOLUTION, "tickets.csv", Instant.EPOCH);
         ReflectionTestUtils.setField(preview, "id", PREVIEW);
         when(previews.findByIdAndOwner(eq(PREVIEW), anyString()))
                 .thenAnswer(call -> PM.equals(call.getArgument(1)) ? Optional.of(preview) : Optional.empty());

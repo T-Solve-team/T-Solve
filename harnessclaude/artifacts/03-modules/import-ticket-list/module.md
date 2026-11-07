@@ -3,7 +3,7 @@ name: import-ticket-list
 repos: [default]
 dependencies: []
 complexity: large
-paths: [backend/src/main/java/vn/tsolve/ticket/**, backend/src/test/java/vn/tsolve/ticket/**, backend/src/test/java/vn/tsolve/review/ReviewStorageIT.java, backend/src/main/resources/db/changelog/changes/*-ticket-import*.sql, backend/src/main/resources/db/changelog/db.changelog-master.xml, frontend/openapi/tsolve-api.yaml, frontend/src/shared/api/generated/**, frontend/src/features/ticket-import/**]
+paths: [backend/src/main/java/vn/tsolve/ticket/**, backend/src/test/java/vn/tsolve/ticket/**, backend/src/test/java/vn/tsolve/review/ReviewStorageIT.java, backend/src/main/resources/db/changelog/changes/*-ticket-import*.sql, backend/src/main/resources/db/changelog/db.changelog-master.xml, frontend/openapi/tsolve-api.yaml, frontend/src/shared/api/generated/**, frontend/src/features/ticket-import/**, frontend/src/shared/ui/CsvUpload/**, frontend/src/shared/ui/DetailModal/**, frontend/src/shared/ui/StatusTag/**, frontend/src/shared/messages/catalog.ts, frontend/src/shared/messages/catalog.test.ts]
 ---
 
 # Module: import-ticket-list

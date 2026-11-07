@@ -38,6 +38,7 @@ import vn.tsolve.common.config.MethodSecurityConfig;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.ImportResultResponse;
 import vn.tsolve.ticket.dto.MessageRef;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.exception.ImportFailedException;
 import vn.tsolve.ticket.exception.UploadTooLargeException;
@@ -102,13 +103,27 @@ class ImportControllerTest {
             new MockMultipartFile("file", "tickets.csv", "text/csv", "ticket_id\n".getBytes());
 
     private static ImportPreviewResponse preview() {
-        return ImportPreviewResponse.of(42L, PROJECT, "tickets.csv", 2, 0, 0, new PageImpl<>(List.of()));
+        return ImportPreviewResponse.of(
+                42L, PROJECT, "tickets.csv", ImportType.WITH_SOLUTION, 2, 0, 0, 0, new PageImpl<>(List.of()));
     }
 
     @Test
     @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
-    void uploadPassesUserProjectAndFile() throws Exception {
-        when(csvImports.upload(eq("pm@company.vn"), eq(PROJECT), any())).thenReturn(preview());
+    void readsThePreviewOfTheCaller_AC_007_1() throws Exception {
+        when(previews.preview("pm@company.vn", 42L)).thenReturn(preview());
+
+        mvc.perform(get("/api/v1/imports/previews/42"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.previewId").value(42))
+                .andExpect(jsonPath("$.projectId").value(PROJECT.toString()))
+                .andExpect(jsonPath("$.validCount").value(2));
+    }
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void uploadWithoutATypeIsAFileWithSolutions_AC_012_1() throws Exception {
+        when(csvImports.upload(eq("pm@company.vn"), eq(PROJECT), eq(ImportType.WITH_SOLUTION), any()))
+                .thenReturn(preview());
 
         mvc.perform(multipart("/api/v1/imports/csv")
                         .file(FILE)
@@ -135,6 +150,7 @@ class ImportControllerTest {
     @Test
     @WithMockUser(username = "admin@company.vn", roles = "ADMIN")
     void everyImportEndpointNeedsProjectManagerRole_AC_001_10() throws Exception {
+        mvc.perform(get("/api/v1/imports/previews/42")).andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/imports/previews/42/rows")).andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/imports/previews/42/rows/1")).andExpect(status().isForbidden());
         mvc.perform(post("/api/v1/imports/previews/42/remove-rows")
@@ -152,14 +168,15 @@ class ImportControllerTest {
                         .file(FILE)
                         .param("projectId", "1")
                         .with(csrf()))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").exists());
         verifyNoInteractions(csvImports);
     }
 
     @Test
     @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
     void uploadTooLargeIs413WithMsg28_AC_001_4() throws Exception {
-        when(csvImports.upload(anyString(), any(), any())).thenThrow(new UploadTooLargeException());
+        when(csvImports.upload(anyString(), any(), any(), any())).thenThrow(new UploadTooLargeException());
 
         mvc.perform(multipart("/api/v1/imports/csv")
                         .file(FILE)
@@ -171,8 +188,47 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void uploadPassesTheChosenType_AC_012_1() throws Exception {
+        when(csvImports.upload(eq("pm@company.vn"), eq(PROJECT), eq(ImportType.WITHOUT_SOLUTION), any()))
+                .thenReturn(preview());
+
+        mvc.perform(multipart("/api/v1/imports/csv")
+                        .file(FILE)
+                        .param("projectId", PROJECT.toString())
+                        .param("importType", "WITHOUT_SOLUTION")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.previewId").value(42))
+                .andExpect(jsonPath("$.importType").value("WITH_SOLUTION"))
+                .andExpect(jsonPath("$.needsSolutionCount").value(0));
+    }
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void uploadWithAnUnknownTypeIsRejected_AC_012_1() throws Exception {
+        mvc.perform(multipart("/api/v1/imports/csv")
+                        .file(FILE)
+                        .param("projectId", PROJECT.toString())
+                        .param("importType", "SOMETHING")
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(csvImports);
+    }
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void downloadsTheTemplateOfTheChosenType_AC_012_2() throws Exception {
+        when(csvImports.template(ImportType.WITHOUT_SOLUTION)).thenReturn("ticket_id,title\n");
+
+        mvc.perform(get("/api/v1/imports/csv/template").param("importType", "WITHOUT_SOLUTION"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("ticket_id,title\n"));
+    }
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
     void downloadsTheTemplate_AC_005_1() throws Exception {
-        when(csvImports.template()).thenReturn(HEADER + "\n");
+        when(csvImports.template(ImportType.WITH_SOLUTION)).thenReturn(HEADER + "\n");
 
         mvc.perform(get("/api/v1/imports/csv/template"))
                 .andExpect(status().isOk())

@@ -36,4 +36,25 @@ describe('test setup', () => {
     server.events.removeListener('response:mocked', onMocked);
     expect(mocked).toBe(true);
   });
+
+  it('sends a FormData file with its name and content (BUG-116)', async () => {
+    let body = '';
+    server.use(
+      http.post('*/api/v1/bug-110', async ({ request }) => {
+        body = await request.text();
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    const form = new FormData();
+    form.append('file', new File(['a,b\n'], 'tickets.csv', { type: 'text/csv' }));
+    form.append('projectId', 'p-1');
+
+    const response = await fetch('/api/v1/bug-110', { method: 'POST', body: form });
+
+    expect(response.ok).toBe(true);
+    expect(body).toContain('filename="tickets.csv"');
+    expect(body).toContain('Content-Type: text/csv');
+    expect(body).toContain('a,b\n');
+    expect(body).toContain('p-1');
+  });
 });

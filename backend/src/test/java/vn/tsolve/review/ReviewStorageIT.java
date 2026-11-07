@@ -41,7 +41,7 @@ class ReviewStorageIT {
                     """
                     insert into ticket(ticket_id, project_id, source, status, title, symptoms, root_cause,
                                        resolution_steps, scope, updated_at)
-                    values ('SEARCH-OLD', 1, 'CSV', 'PUBLISHED', 'Old Search', 's', 'r', 'st', 'sc', '2026-11-01T00:00:00Z')
+                    values ('SEARCH-OLD', '00000000-0000-0000-0000-000000000001', 'CSV', 'PUBLISHED', 'Old Search', 's', 'r', 'st', 'sc', '2026-11-01T00:00:00Z')
                     """);
             var before = jdbc.queryForObject("select updated_at from ticket", OffsetDateTime.class);
             var publicId = jdbc.queryForObject("select public_id from ticket", UUID.class);
@@ -61,17 +61,87 @@ class ReviewStorageIT {
     }
 
     @Test
+    void movesSearchEmbeddingAndFeedbackToTheUuidTicketKey_BUG_145(@TempDir Path temporary) throws Exception {
+        String master;
+        try (var input = getClass().getClassLoader().getResourceAsStream("db/changelog/db.changelog-master.xml")) {
+            master = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        // The changelog of main before Review: every changeset except Review's own.
+        master = master.replaceAll(
+                "(?m)^.*<include file=\"changes/(?:0\\d\\d-review-search|008-review|009-review).*\n", "");
+        Path mainMaster = temporary.resolve("db/changelog/main-before-review.xml");
+        Files.createDirectories(mainMaster.getParent());
+        Files.writeString(mainMaster, master);
+        try (var postgres = new PostgreSQLContainer<>(
+                DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"))) {
+            postgres.start();
+            var dataSource =
+                    new DriverManagerDataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+            var jdbc = new JdbcTemplate(dataSource);
+            try (var resources = new CompositeResourceAccessor(
+                            new DirectoryResourceAccessor(temporary), new ClassLoaderResourceAccessor());
+                    var liquibase = new Liquibase(
+                            "db/changelog/main-before-review.xml",
+                            resources,
+                            new JdbcConnection(dataSource.getConnection()))) {
+                liquibase.update(new Contexts(), new LabelExpression());
+            }
+            jdbc.update(
+                    """
+                    insert into ticket(ticket_id, project_id, source, status, title, symptoms, root_cause,
+                                       resolution_steps, scope)
+                    values ('SEARCH-1', '00000000-0000-0000-0000-000000000001', 'CSV', 'PUBLISHED', 'Published',
+                            's', 'r', 'st', 'sc')
+                    """);
+            UUID user = jdbc.queryForObject(
+                    "insert into app_user(email, status, created_at) values ('pm@company.vn', 'ACTIVE', now())"
+                            + " returning id",
+                    UUID.class);
+            jdbc.update("insert into ticket_embedding(ticket_id, embedding, model)"
+                    + " select id, array_fill(0.1::real, ARRAY[1024])::vector, 'bge-m3' from ticket");
+            jdbc.update(
+                    "insert into ticket_feedback(ticket_id, user_id, rating, channel)"
+                            + " select id, ?, 'HELPFUL', 'WEB' from ticket",
+                    user);
+            var publicId = jdbc.queryForObject("select public_id from ticket", UUID.class);
+
+            try (var liquibase = new Liquibase(
+                    "db/changelog/db.changelog-master.xml",
+                    new ClassLoaderResourceAccessor(),
+                    new JdbcConnection(dataSource.getConnection()))) {
+                liquibase.update(new Contexts(), new LabelExpression());
+            }
+
+            UUID ticket =
+                    jdbc.queryForObject("select ticket_id from ticket where source_ticket_id = 'SEARCH-1'", UUID.class);
+            assertThat(jdbc.queryForObject("select ticket_id from ticket_embedding", UUID.class))
+                    .isEqualTo(ticket);
+            assertThat(jdbc.queryForObject("select ticket_id from ticket_feedback where user_id = ?", UUID.class, user))
+                    .isEqualTo(ticket);
+            assertThat(jdbc.queryForObject("select public_id from ticket", UUID.class))
+                    .isEqualTo(publicId);
+            assertThat(jdbc.queryForObject(
+                            "select count(*) from information_schema.columns where table_name = 'ticket'"
+                                    + " and column_name in ('id', 'review_legacy_id')",
+                            Integer.class))
+                    .isZero();
+        }
+    }
+
+    @Test
     void upgradesADatabaseAlreadyRunningReviewWithoutReapplyingStorage_BUG_140(@TempDir Path temporary)
             throws Exception {
         String master;
         try (var input = getClass().getClassLoader().getResourceAsStream("db/changelog/db.changelog-master.xml")) {
             master = new String(input.readAllBytes(), StandardCharsets.UTF_8)
                     .replace(
-                            "    <include file=\"changes/008-ticket-import-project-uuid.sql\" relativeToChangelogFile=\"true\"/>",
+                            "    <include file=\"changes/010-ticket-import-project-uuid.sql\" relativeToChangelogFile=\"true\"/>",
                             "");
         }
         master = master.replaceAll(
-                "(?m)^.*<include file=\"changes/(?:008-search|009-search|01[012]-review-search).*\n", "");
+                "(?m)^.*<include file=\"changes/(?:0\\d\\d-search|0\\d\\d-review-search|013-chatbot|011-ticket-import)"
+                        + ".*\n",
+                "");
         Path oldMaster = temporary.resolve("db/changelog/review-before-project-uuid.xml");
         Files.createDirectories(oldMaster.getParent());
         Files.writeString(oldMaster, master);
@@ -110,6 +180,11 @@ class ReviewStorageIT {
                             "select count(*) from databasechangelog where id = '008-review-ticket-storage'",
                             Integer.class))
                     .isEqualTo(1);
+            assertThat(jdbc.queryForObject(
+                            "select count(*) from information_schema.columns where table_name = 'ticket'"
+                                    + " and column_name in ('id', 'review_legacy_id')",
+                            Integer.class))
+                    .isZero();
         }
     }
 

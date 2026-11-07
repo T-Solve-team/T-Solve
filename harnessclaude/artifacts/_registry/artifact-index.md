@@ -44,6 +44,11 @@ Master registry of all artifacts in this workspace.
 | — | module | platform | draft | artifacts/03-modules/platform/module.md |
 | — | module | platform-console | cancelled | artifacts/03-modules/platform-console/module.md |
 | — | module | worker | draft | artifacts/03-modules/worker/module.md |
+| — | spec | worker | draft | artifacts/03-modules/worker/spec.md |
+| — | design | worker | draft | artifacts/04-plans/worker/design.md |
+| — | design | worker | draft | artifacts/04-plans/worker/iteration-1/design.md |
+| — | tasks | worker | draft | artifacts/04-plans/worker/iteration-1/tasks.md |
+| — | session-log | worker | evaluating | artifacts/05-implementation/worker/task-1-review-notification-smtp.md |
 | — | module | ai | planned | artifacts/03-modules/ai/module.md |
 | — | spec | ai | approved | artifacts/03-modules/ai/spec.md |
 | — | design | ai | approved | artifacts/04-plans/ai/design.md |
@@ -69,6 +74,8 @@ Master registry of all artifacts in this workspace.
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/design.md |
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/iteration-1/design.md |
 | — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-1/tasks.md |
+| — | design | chatbot | draft | artifacts/04-plans/chatbot/iteration-2/design.md |
+| — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-2/tasks.md |
 | — | spec | platform | draft | artifacts/03-modules/platform/spec.md |
 | — | design | platform | draft | artifacts/04-plans/platform/design.md |
 | — | design | platform | draft | artifacts/04-plans/platform/iteration-1/design.md |

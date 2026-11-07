@@ -7,15 +7,18 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 import type { ImportPreviewRowPage } from './importPreviewRowPage';
+import type { ImportType } from './importType';
 import type { MessageRef } from './messageRef';
 
 export interface ImportPreviewResponse {
   previewId: number;
   projectId: string;
   fileName: string;
+  importType: ImportType;
   validCount: number;
   errorCount: number;
   removedCount: number;
+  needsSolutionCount: number;
   /** MSG30 with {count} when at least one row is an Error; otherwise null. */
   message?: MessageRef | null;
   rows: ImportPreviewRowPage;

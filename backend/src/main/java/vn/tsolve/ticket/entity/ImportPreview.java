@@ -30,6 +30,10 @@ public class ImportPreview {
     @Column(nullable = false, updatable = false)
     private TicketSource source;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "import_type", nullable = false, updatable = false)
+    private ImportType importType;
+
     @Column(name = "file_name", nullable = false, updatable = false)
     private String fileName;
 
@@ -38,10 +42,17 @@ public class ImportPreview {
 
     protected ImportPreview() {}
 
-    public ImportPreview(String owner, UUID projectId, TicketSource source, String fileName, Instant createdAt) {
+    public ImportPreview(
+            String owner,
+            UUID projectId,
+            TicketSource source,
+            ImportType importType,
+            String fileName,
+            Instant createdAt) {
         this.owner = owner;
         this.projectId = projectId;
         this.source = source;
+        this.importType = importType;
         this.fileName = fileName;
         this.createdAt = createdAt;
     }
@@ -60,6 +71,10 @@ public class ImportPreview {
 
     public TicketSource getSource() {
         return source;
+    }
+
+    public ImportType getImportType() {
+        return importType;
     }
 
     public String getFileName() {

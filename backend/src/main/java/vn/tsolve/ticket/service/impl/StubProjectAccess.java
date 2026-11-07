@@ -46,9 +46,11 @@ public class StubProjectAccess implements ProjectAccess {
     private static Set<UUID> ids(String list) {
         Set<UUID> ids = new HashSet<>();
         for (String id : list.split(",")) {
+            String trimmed = id.trim();
             try {
-                UUID uuid = UUID.fromString(id.trim());
-                if (uuid.toString().equalsIgnoreCase(id.trim())) {
+                UUID uuid = UUID.fromString(trimmed);
+                // UUID.fromString also takes short forms such as 1-1-1-1-1; only the canonical form counts, in any case
+                if (uuid.toString().equalsIgnoreCase(trimmed)) {
                     ids.add(uuid);
                 }
             } catch (IllegalArgumentException ignored) {

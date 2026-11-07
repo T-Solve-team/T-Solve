@@ -33,6 +33,7 @@ import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.mapper.ImportPreviewMapperImpl;
@@ -96,7 +97,8 @@ class CsvImportServiceImplTest {
 
     @Test
     void createsPreviewWithCountsAndFirstPage_AC_001_1() {
-        ImportPreviewResponse response = service.upload(PM, PROJECT, csv("tickets.csv", rowsOf("T-1", "T-2")));
+        ImportPreviewResponse response =
+                service.upload(PM, PROJECT, ImportType.WITH_SOLUTION, csv("tickets.csv", rowsOf("T-1", "T-2")));
 
         ArgumentCaptor<ImportPreview> preview = ArgumentCaptor.forClass(ImportPreview.class);
         verify(previews).save(preview.capture());
@@ -123,7 +125,8 @@ class CsvImportServiceImplTest {
             ids[i] = "T-" + i;
         }
 
-        ImportPreviewResponse response = service.upload(PM, PROJECT, csv("tickets.csv", rowsOf(ids)));
+        ImportPreviewResponse response =
+                service.upload(PM, PROJECT, ImportType.WITH_SOLUTION, csv("tickets.csv", rowsOf(ids)));
 
         assertThat(response.rows().getContent()).hasSize(50);
         assertThat(response.rows().getMetadata().totalElements()).isEqualTo(120);
@@ -134,7 +137,8 @@ class CsvImportServiceImplTest {
     void rejectsFileNotEndingInCsv_AC_001_2() {
         for (String name : new String[] {"tickets.xlsx", "tickets.csv.txt", "tickets", ""}) {
             MessageCodeException e = catchThrowableOfType(
-                    () -> service.upload(PM, PROJECT, csv(name, rowsOf("T-1"))), MessageCodeException.class);
+                    () -> service.upload(PM, PROJECT, ImportType.WITH_SOLUTION, csv(name, rowsOf("T-1"))),
+                    MessageCodeException.class);
 
             assertThat(e.getCode()).as(name).isEqualTo("MSG27");
             assertThat(e.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -144,7 +148,7 @@ class CsvImportServiceImplTest {
 
     @Test
     void acceptsUpperCaseExtension_AC_001_2() {
-        service.upload(PM, PROJECT, csv("TICKETS.CSV", rowsOf("T-1")));
+        service.upload(PM, PROJECT, ImportType.WITH_SOLUTION, csv("TICKETS.CSV", rowsOf("T-1")));
 
         verify(previews).save(any(ImportPreview.class));
     }
@@ -154,8 +158,8 @@ class CsvImportServiceImplTest {
         MockMultipartFile big =
                 new MockMultipartFile("file", "tickets.csv", "text/csv", new byte[10 * 1024 * 1024 + 1]);
 
-        MessageCodeException e =
-                catchThrowableOfType(() -> service.upload(PM, PROJECT, big), MessageCodeException.class);
+        MessageCodeException e = catchThrowableOfType(
+                () -> service.upload(PM, PROJECT, ImportType.WITH_SOLUTION, big), MessageCodeException.class);
 
         assertThat(e.getCode()).isEqualTo("MSG28");
         assertThat(e.getStatus()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
@@ -166,7 +170,10 @@ class CsvImportServiceImplTest {
     void rejectsProjectTheCallerDoesNotManage_AC_001_9() {
         MessageCodeException e = catchThrowableOfType(
                 () -> service.upload(
-                        PM, UUID.fromString("00000000-0000-0000-0000-000000000002"), csv("tickets.csv", rowsOf("T-1"))),
+                        PM,
+                        UUID.fromString("00000000-0000-0000-0000-000000000002"),
+                        ImportType.WITH_SOLUTION,
+                        csv("tickets.csv", rowsOf("T-1"))),
                 MessageCodeException.class);
 
         assertThat(e.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
@@ -176,7 +183,7 @@ class CsvImportServiceImplTest {
 
     @Test
     void replacesTheCallersPreviousPreview_AC_001_11() {
-        service.upload(PM, PROJECT, csv("tickets.csv", rowsOf("T-1")));
+        service.upload(PM, PROJECT, ImportType.WITH_SOLUTION, csv("tickets.csv", rowsOf("T-1")));
 
         InOrder order = inOrder(previews);
         order.verify(previews).deleteByOwner(PM);
@@ -185,7 +192,9 @@ class CsvImportServiceImplTest {
 
     @Test
     void rejectedFileKeepsThePreviousPreview_AC_001_11() {
-        catchThrowableOfType(() -> service.upload(PM, PROJECT, csv("tickets.csv", HEADER)), MessageCodeException.class);
+        catchThrowableOfType(
+                () -> service.upload(PM, PROJECT, ImportType.WITH_SOLUTION, csv("tickets.csv", HEADER)),
+                MessageCodeException.class);
 
         verify(previews, never()).deleteByOwner(PM);
     }
@@ -194,8 +203,8 @@ class CsvImportServiceImplTest {
     void reportsErrorRowCountWithMsg30_AC_002_9() {
         when(tickets.findExistingTicketIds(anyCollection())).thenReturn(Set.of("T-2"));
 
-        ImportPreviewResponse response =
-                service.upload(PM, PROJECT, csv("tickets.csv", rowsOf("T-1", "T-2", "T-3", "T-3")));
+        ImportPreviewResponse response = service.upload(
+                PM, PROJECT, ImportType.WITH_SOLUTION, csv("tickets.csv", rowsOf("T-1", "T-2", "T-3", "T-3")));
 
         assertThat(response.validCount()).isEqualTo(1);
         assertThat(response.errorCount()).isEqualTo(3);
@@ -208,7 +217,7 @@ class CsvImportServiceImplTest {
 
     @Test
     void looksUpExistingTicketIdsOnce_AC_002_5() {
-        service.upload(PM, PROJECT, csv("tickets.csv", rowsOf("T-1", "T-2", "T-1")));
+        service.upload(PM, PROJECT, ImportType.WITH_SOLUTION, csv("tickets.csv", rowsOf("T-1", "T-2", "T-1")));
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<java.util.Collection<String>> ids = ArgumentCaptor.forClass(java.util.Collection.class);
@@ -217,8 +226,56 @@ class CsvImportServiceImplTest {
     }
 
     @Test
+    void templateWithoutSolutionsHasNoSolutionColumns_AC_012_2() {
+        assertThat(service.template(ImportType.WITHOUT_SOLUTION))
+                .isEqualTo("ticket_id,title,description,author,resolved_date\n");
+    }
+
+    @Test
+    void fileWithoutSolutionsMarksRowsNeedsSolutionOrError_AC_012_5() {
+        String body = "ticket_id,title\nT-1,Login fails\nT-2,\n";
+
+        service.upload(PM, PROJECT, ImportType.WITHOUT_SOLUTION, csv("tickets.csv", body));
+
+        assertThat(savedRows())
+                .extracting(ImportPreviewRow::getStatus)
+                .containsExactly(PreviewRowStatus.NEEDS_SOLUTION, PreviewRowStatus.ERROR);
+    }
+
+    @Test
+    void fileWithoutSolutionsReturnsItsTypeAndCounts_AC_012_7() {
+        String body = "ticket_id,title\nT-1,Login fails\nT-2,Printer\nT-3,\n";
+
+        ImportPreviewResponse response =
+                service.upload(PM, PROJECT, ImportType.WITHOUT_SOLUTION, csv("tickets.csv", body));
+
+        ArgumentCaptor<ImportPreview> preview = ArgumentCaptor.forClass(ImportPreview.class);
+        verify(previews).save(preview.capture());
+        assertThat(preview.getValue().getImportType()).isEqualTo(ImportType.WITHOUT_SOLUTION);
+        assertThat(response.importType()).isEqualTo(ImportType.WITHOUT_SOLUTION);
+        assertThat(response.validCount()).isZero();
+        assertThat(response.needsSolutionCount()).isEqualTo(2);
+        assertThat(response.errorCount()).isEqualTo(1);
+        assertThat(response.message()).isEqualTo(new MessageRef("MSG30", Map.of("count", 1L)));
+    }
+
+    @Test
+    void fileWithSolutionsKeepsItsRules_AC_016_1() {
+        String body = HEADER + "T-1,Login fails,Error 500,Bad token,Restart,All users\nT-2,Printer,,,,\n";
+
+        ImportPreviewResponse response =
+                service.upload(PM, PROJECT, ImportType.WITH_SOLUTION, csv("tickets.csv", body));
+
+        assertThat(savedRows())
+                .extracting(ImportPreviewRow::getStatus)
+                .containsExactly(PreviewRowStatus.VALID, PreviewRowStatus.ERROR);
+        assertThat(response.importType()).isEqualTo(ImportType.WITH_SOLUTION);
+        assertThat(response.needsSolutionCount()).isZero();
+    }
+
+    @Test
     void templateIsTheHeaderRowOnly_AC_005_1() {
-        assertThat(service.template())
+        assertThat(service.template(ImportType.WITH_SOLUTION))
                 .isEqualTo("ticket_id,title,description,author,resolved_date,symptoms,root_cause,"
                         + "resolution_steps,workaround,scope\n");
     }
@@ -228,7 +285,8 @@ class CsvImportServiceImplTest {
         String longSymptoms = "😀".repeat(250);
         String body = HEADER + "T-1,Login fails," + longSymptoms + ",Bad token,Restart,All users\n";
 
-        ImportPreviewResponse response = service.upload(PM, PROJECT, csv("tickets.csv", body));
+        ImportPreviewResponse response =
+                service.upload(PM, PROJECT, ImportType.WITH_SOLUTION, csv("tickets.csv", body));
 
         String shown = response.rows().getContent().get(0).symptoms();
         assertThat(shown.codePointCount(0, shown.length())).isEqualTo(200);
