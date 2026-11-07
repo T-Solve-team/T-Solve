@@ -197,6 +197,8 @@ export const getGetReviewQueueResponseMock = (
   ...overrideResponse,
 });
 
+export const getStreamReviewQueueEventsResponseMock = (): string => faker.word.sample();
+
 export const getGetReviewQueueTicketIdsResponseMock = (
   overrideResponse: Partial<Extract<TicketIdList, object>> = {},
 ): TicketIdList => ({
@@ -362,6 +364,31 @@ export const getGetReviewQueueMockHandler = (
   );
 };
 
+export const getStreamReviewQueueEventsMockHandler = (
+  overrideResponse?:
+    string | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<string> | string),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/review-queue/events',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const resolvedBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getStreamReviewQueueEventsResponseMock();
+      const textBody =
+        typeof resolvedBody === 'string' ? resolvedBody : JSON.stringify(resolvedBody ?? null);
+      return HttpResponse.text(textBody, {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
+    },
+    options,
+  );
+};
+
 export const getGetReviewQueueTicketIdsMockHandler = (
   overrideResponse?:
     | TicketIdList
@@ -464,6 +491,7 @@ export const getReviewMock = () => [
   getGetExpiredTicketIdsMockHandler(),
   getSendBackTicketsMockHandler(),
   getGetReviewQueueMockHandler(),
+  getStreamReviewQueueEventsMockHandler(),
   getGetReviewQueueTicketIdsMockHandler(),
   getApproveTicketsMockHandler(),
   getRejectTicketsMockHandler(),

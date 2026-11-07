@@ -66,6 +66,10 @@ tsolve:
     username: ${JOBS_DB_USER:}
     password: ${JOBS_DB_PASSWORD:}
     worker-count: ${TSOLVE_WORKER_COUNT:4}
+  review:
+    events:
+      # Review Queue event stream: interval of the keep-alive comment (ISO-8601 duration).
+      heartbeat: PT25S
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
   tracker:

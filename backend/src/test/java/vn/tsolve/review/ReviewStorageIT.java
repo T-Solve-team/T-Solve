@@ -139,8 +139,8 @@ class ReviewStorageIT {
                             "");
         }
         master = master.replaceAll(
-                "(?m)^.*<include file=\"changes/(?:0\\d\\d-search|0\\d\\d-review-search|013-chatbot|011-ticket-import)"
-                        + ".*\n",
+                "(?m)^.*<include file=\"changes/(?:0\\d\\d-search|0\\d\\d-review-search|013-chatbot|011-ticket-import"
+                        + "|0\\d\\d-review-queue-notify).*\n",
                 "");
         Path oldMaster = temporary.resolve("db/changelog/review-before-project-uuid.xml");
         Files.createDirectories(oldMaster.getParent());

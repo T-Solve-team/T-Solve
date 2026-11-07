@@ -889,6 +889,137 @@ export function useGetReviewQueue<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getStreamReviewQueueEventsUrl = () => {
+  return `/api/v1/review-queue/events`;
+};
+
+/**
+ * Long-lived `text/event-stream`. Event `queue-changed` carries `{"projectId":"<uuid>"}` only (never ticket
+ * content); a `:hb` comment is sent every 25 seconds. Only Projects the caller manages are signalled, and the
+ * stream ends after 30 minutes (the client reconnects).
+ * @summary Server-sent events telling a Project Manager that the queue of a Project they manage changed.
+ */
+export const streamReviewQueueEvents = async (
+  options?: Parameters<typeof http>[1],
+): Promise<string> => {
+  return http<string>(getStreamReviewQueueEventsUrl(), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getStreamReviewQueueEventsQueryKey = () => {
+  return [`/api/v1/review-queue/events`] as const;
+};
+
+export const getStreamReviewQueueEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof streamReviewQueueEvents>>,
+  TError = ErrorType<ProblemResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof streamReviewQueueEvents>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getStreamReviewQueueEventsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof streamReviewQueueEvents>>> = ({
+    signal,
+  }) => streamReviewQueueEvents({ signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof streamReviewQueueEvents>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type StreamReviewQueueEventsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof streamReviewQueueEvents>>
+>;
+export type StreamReviewQueueEventsQueryError = ErrorType<ProblemResponse>;
+
+export function useStreamReviewQueueEvents<
+  TData = Awaited<ReturnType<typeof streamReviewQueueEvents>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof streamReviewQueueEvents>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof streamReviewQueueEvents>>,
+          TError,
+          Awaited<ReturnType<typeof streamReviewQueueEvents>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useStreamReviewQueueEvents<
+  TData = Awaited<ReturnType<typeof streamReviewQueueEvents>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof streamReviewQueueEvents>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof streamReviewQueueEvents>>,
+          TError,
+          Awaited<ReturnType<typeof streamReviewQueueEvents>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useStreamReviewQueueEvents<
+  TData = Awaited<ReturnType<typeof streamReviewQueueEvents>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof streamReviewQueueEvents>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Server-sent events telling a Project Manager that the queue of a Project they manage changed.
+ */
+
+export function useStreamReviewQueueEvents<
+  TData = Awaited<ReturnType<typeof streamReviewQueueEvents>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof streamReviewQueueEvents>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getStreamReviewQueueEventsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getGetReviewQueueTicketIdsUrl = (params?: GetReviewQueueTicketIdsParams) => {
   const normalizedParams = new URLSearchParams();
 
