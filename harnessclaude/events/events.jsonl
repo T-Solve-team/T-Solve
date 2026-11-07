@@ -934,3 +934,4 @@
 {"ts":"2026-11-07T16:56:35.837Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"e7c6f050a0d339d0d90a49b3e167215d11b14dea"}
 {"ts":"2026-11-07T16:56:36.154Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-preview-page","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T16:57:03.625Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"69f05767eab5d3f08dbca23e4a6925ac41f64e3c"}
+{"ts":"2026-11-07T17:22:40.982Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-preview-page","from":"evaluating","to":"passing"}
