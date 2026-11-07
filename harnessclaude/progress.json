@@ -31,20 +31,20 @@
         "import-preview-actions": "passing",
         "import-ticket-preview-popup": "passing",
         "import-type-contract": "evaluating",
-        "import-type-upload": "in-progress",
+        "import-type-upload": "evaluating",
         "preview-fill-solution": "pending",
         "import-type-confirm": "pending",
         "import-type-form": "pending",
         "row-solution-popup": "pending",
         "fill-solution-screen": "pending"
       },
-      "lastUpdated": "2026-11-05T18:36:20.798Z",
+      "lastUpdated": "2026-11-07T04:10:50.886Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "025794b869adbc64aaafd5eb8e67d47c5632d961"
+        "default": "f6bb9fa233b63b1951d028f25702969fbb1dcd20"
       }
     },
     "be-foundation": {
