@@ -465,8 +465,12 @@ class SearchSchemaIT {
                     Long.class,
                     departmentId,
                     "SEARCH" + index);
+            Object ticketProjectId = projectIdIsUuid()
+                    ? jdbc.queryForObject("SELECT public_id FROM project WHERE project_id = ?", UUID.class, projectId)
+                    : projectId;
             boolean canonical = Boolean.TRUE.equals(jdbc.queryForObject(
-                    "select exists (select 1 from information_schema.columns where table_name='ticket' and column_name='source_ticket_id')",
+                    "select exists (select 1 from information_schema.columns where table_name='ticket' and"
+                            + " column_name='source_ticket_id')",
                     Boolean.class));
             jdbc.update(
                     """
@@ -476,7 +480,7 @@ class SearchSchemaIT {
                     """
                             .formatted(canonical ? "source_ticket_id" : "ticket_id"),
                     "SEARCH-" + index,
-                    projectIdIsUuid() ? new UUID(0, projectId) : projectId,
+                    ticketProjectId,
                     "Ticket " + index);
         }
     }
