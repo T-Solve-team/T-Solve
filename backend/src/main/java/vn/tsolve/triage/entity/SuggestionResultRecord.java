@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -21,10 +22,11 @@ public class SuggestionResultRecord {
 
     @Id
     @Column(name = "suggestion_id")
-    private Long id;
+    private UUID id;
 
     @Column(name = "project_id", nullable = false)
-    private Long projectId;
+    // The Project's public_id (tracker's 019-tracker-suggestion-uuid-keys).
+    private UUID projectId;
 
     @Column(name = "jira_issue_key", nullable = false)
     private String jiraIssueKey;
@@ -44,11 +46,11 @@ public class SuggestionResultRecord {
 
     protected SuggestionResultRecord() {}
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public Long getProjectId() {
+    public UUID getProjectId() {
         return projectId;
     }
 
