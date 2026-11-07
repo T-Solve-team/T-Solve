@@ -256,6 +256,10 @@ frontend/openapi/tsolve-api.yaml              (IssueCreatedPayload: summary, des
 | 43 | STORY-011 | Data integrity | Row deleted before the job runs | Low | Job stops (AC-011.7) | Task 15 |
 | 44 | STORY-011 | User types | Issue created by the Chatbot (label `tsolve-chatbot`) | Medium | Same as any issue (AC-011.8) | Task 15 |
 
+Search timeout: the job sets none of its own; AC-011.6 "does not answer" is met by the `SuggestionSearch`
+implementation timing out (KAN-47, on top of the `ai` client's chat timeout). A search that never returns would hold
+one of the two stand-in threads (review 2026-11-07, accepted).
+
 Risks: the in-process stand-in loses queued jobs on restart (accepted until KAN-161); with JobRunr the issue text
 is stored as a job argument in the Jobs database (tell the `worker` owner; Non-Functional 4 covers logs only).
 
