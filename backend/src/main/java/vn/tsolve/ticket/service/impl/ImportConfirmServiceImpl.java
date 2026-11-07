@@ -21,6 +21,7 @@ import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportBatch;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.Ticket;
 import vn.tsolve.ticket.entity.TicketReviewDecision;
@@ -29,6 +30,7 @@ import vn.tsolve.ticket.exception.ImportFailedException;
 import vn.tsolve.ticket.exception.NothingToImportException;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.exception.ProjectNotActiveException;
+import vn.tsolve.ticket.exception.RowsNotReadyException;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
@@ -89,6 +91,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
+        // first, so a file with only Needs Solution rows answers MSG_NEW_4, not MSG30 (design, edge case 47)
+        requireRowsReady(preview, errorRows);
         if (previewRows
                 .findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID)
                 .isEmpty()) {
@@ -105,7 +109,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         Imported imported;
         try {
             imported = transaction.execute(status -> importRows(user, previewId));
-        } catch (NotFoundException | NothingToImportException e) {
+        } catch (NotFoundException | NothingToImportException | RowsNotReadyException e) {
             // another Confirm or remove-rows got there first: nothing was attempted (AC-004.12)
             throw e;
         } catch (TicketIdTakenException | DataIntegrityViolationException e) {
@@ -121,6 +125,18 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 imported.created(),
                 imported.skipped(),
                 new MessageRef("MSG32", Map.of("created", imported.created(), "skipped", imported.skipped())));
+    }
+
+    /** A file without Solutions is imported only when no row still needs a Solution or has errors (AC-014.1). */
+    private void requireRowsReady(ImportPreview preview, long errorRows) {
+        if (preview.getImportType() != ImportType.WITHOUT_SOLUTION) {
+            return;
+        }
+        long notReady =
+                previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.NEEDS_SOLUTION) + errorRows;
+        if (notReady > 0) {
+            throw new RowsNotReadyException(notReady);
+        }
     }
 
     /** Records the Failed batch; never lets a recording problem hide the MSG33 answer (design E5, E6). */
@@ -155,6 +171,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
+        // again under the lock: Remove and Fill solution do not wait for the first check (edge case 48)
+        requireRowsReady(preview, errorRows);
         List<ImportPreviewRow> valid = previewRows.findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID);
         if (valid.isEmpty()) {
             throw new NothingToImportException(errorRows);

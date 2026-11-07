@@ -144,16 +144,24 @@ describe('message catalog', () => {
     });
   });
 
+  it('AC-015.6 holds MSG_NEW_4 with the spec text as an inline message', () => {
+    expect(entry('MSG_NEW_4')).toEqual({
+      type: 'inline',
+      text: '{count} row(s) still need a Solution or have errors. Write their Solutions or remove them before you confirm.',
+    });
+  });
+
   it('AC-006.3 holds MSG142 and MSG143, the empty-state messages of the identity profile, as inline', () => {
     expect(entry('MSG142')).toEqual({ type: 'inline', text: 'No Spaces found' });
     expect(entry('MSG143')).toEqual({ type: 'inline', text: 'Not a member of any Project.' });
   });
 
-  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2, MSG_NEW_3, MSG142 and MSG143', () => {
+  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2, MSG_NEW_3, MSG_NEW_4, MSG142 and MSG143', () => {
     const expected: string[] = [
       ...webMessages.map(([code]) => code),
       'MSG_NEW_2',
       'MSG_NEW_3',
+      'MSG_NEW_4',
       ...NOT_IN_REPORT3,
     ];
     expect(Object.keys(MESSAGES).sort()).toEqual(expected.sort());

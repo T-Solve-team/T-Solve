@@ -270,6 +270,11 @@ export const MESSAGES = {
     type: 'inline',
     text: 'Ticket ID {ticket_id} appears more than once in this file.',
   },
+  /** Provisional key (import-ticket-list D20) until System_Messages numbers it: type 2 rows not ready to confirm. */
+  MSG_NEW_4: {
+    type: 'inline',
+    text: '{count} row(s) still need a Solution or have errors. Write their Solutions or remove them before you confirm.',
+  },
 } as const satisfies Record<string, MessageDefinition>;
 
 export type MsgCode = keyof typeof MESSAGES;
