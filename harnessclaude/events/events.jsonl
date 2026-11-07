@@ -905,3 +905,7 @@
 {"ts":"2026-11-07T11:06:05.695Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T11:22:39.806Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":"evaluating","to":"passing"}
 {"ts":"2026-11-07T11:22:39.887Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T12:17:08.697Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-hardening","from":null,"to":"pending"}
+{"ts":"2026-11-07T12:17:08.771Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-hardening","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T12:30:45.978Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-hardening","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T12:30:46.222Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"974dad1b2539cb959f612c6e1a91c96a18c0af20"}

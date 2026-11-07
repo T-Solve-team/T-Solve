@@ -375,15 +375,16 @@
         "review-history-api": "evaluating",
         "review-email-notification": "evaluating",
         "review-queue-events-api": "passing",
-        "review-queue-events-web": "passing"
+        "review-queue-events-web": "passing",
+        "review-queue-events-hardening": "evaluating"
       },
-      "lastUpdated": "2026-11-07T11:22:39.885Z",
+      "lastUpdated": "2026-11-07T12:30:46.221Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "50d2a3f00641f3b9c336a8eeb797debd031f174e"
+        "default": "974dad1b2539cb959f612c6e1a91c96a18c0af20"
       }
     }
   },

@@ -146,3 +146,12 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** `frontend/src/features/review/hooks/useReviewQueueEvents.ts` (+ test), `frontend/src/features/review/hooks/useReviewQueue.ts` (+ test), the Review Queue page component that mounts both, `src/shared/api/generated` (regenerated).
 **Dependencies:** Task 13 contract.
 **Verification:** Vitest with a fake EventSource for each criterion; `npm run format:check`, `lint`, `typecheck`, `test`, `build`; `generate:api` leaves no diff.
+
+## Task 15: Review Queue event stream hardening (PR #155 review)
+
+**Story:** STORY-012
+**Feature:** review-queue-events-hardening
+**Description:** Fix AC-012.1–012.3 risks found in review: open the LISTEN connection on the listener thread instead of under the shared lock; move SSE sends to a small send pool with per-subscription coalescing and drop a stream whose send fails; re-check managed Projects with each heartbeat and stop or complete streams that lost them (design "PR #155 review fixes"). Add tests for last-unsubscribe listener close, reconnect resync after a lost listener connection, a lost Project, and a slow stream not delaying another.
+**Files:** `review/service/impl/ReviewQueueEventServiceImpl.java`, `review/service/ReviewQueueEventService.java`, `review/controller/ReviewQueueEventController.java`, `review/ReviewQueueEventsIT.java` (and a unit test under `review/service/impl/` if timing needs fakes).
+**Dependencies:** Task 13.
+**Verification:** `ReviewQueueEventsIT` and the new tests; full `mvn verify`; trace STORY-012.
