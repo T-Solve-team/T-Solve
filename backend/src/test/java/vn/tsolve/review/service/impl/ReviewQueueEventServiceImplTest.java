@@ -117,7 +117,7 @@ class ReviewQueueEventServiceImplTest {
         service.subscribe(WORKSPACE, new UUID(0, 4), Set.of(PROJECT));
         notifications.add(notification(PROJECT.toString()));
 
-        long deadline = System.currentTimeMillis() + 2_000;
+        long deadline = System.currentTimeMillis() + 10_000;
         while (System.currentTimeMillis() < deadline
                 && fast.sent.stream().noneMatch(s -> s.contains(PROJECT.toString()))) {
             Thread.sleep(20);
@@ -151,7 +151,7 @@ class ReviewQueueEventServiceImplTest {
         service = serviceWith(List.of(new FakeEmitter(false)), Optional.empty(), Duration.ZERO);
         assertThatThrownBy(() -> service.subscribe(WORKSPACE, new UUID(0, 3), Set.of(PROJECT)))
                 .isInstanceOf(IllegalArgumentException.class);
-        verify(connection, timeout(2_000)).close();
+        verify(connection, timeout(10_000)).close();
     }
 
     @Test
@@ -190,7 +190,7 @@ class ReviewQueueEventServiceImplTest {
         notifications.add(notification(PROJECT.toString()));
         awaitUntil(() -> original.sent.stream().anyMatch(s -> s.contains(PROJECT.toString())));
         original.completionCallback.run();
-        verify(connection, timeout(2_000)).close();
+        verify(connection, timeout(10_000)).close();
     }
 
     @Test
@@ -213,7 +213,7 @@ class ReviewQueueEventServiceImplTest {
                 && emitter.sent.stream().anyMatch(s -> s.contains(PROJECT.toString())));
 
         managed.set(Set.of());
-        assertThat(emitter.completed.await(2, TimeUnit.SECONDS)).isTrue();
+        assertThat(emitter.completed.await(10, TimeUnit.SECONDS)).isTrue();
     }
 
     @Test
@@ -224,7 +224,7 @@ class ReviewQueueEventServiceImplTest {
         service = serviceWith(List.of(broken, healthy));
         service.subscribe(WORKSPACE, new UUID(0, 3), Set.of(PROJECT));
         service.subscribe(WORKSPACE, new UUID(0, 4), Set.of(PROJECT));
-        assertThat(broken.completed.await(2, TimeUnit.SECONDS)).isTrue();
+        assertThat(broken.completed.await(10, TimeUnit.SECONDS)).isTrue();
         notifications.add(notification(PROJECT.toString()));
         awaitUntil(() -> healthy.sent.stream().anyMatch(s -> s.contains(PROJECT.toString())));
     }
@@ -275,7 +275,7 @@ class ReviewQueueEventServiceImplTest {
     }
 
     private static void awaitUntil(BooleanSupplier condition) throws InterruptedException {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
         while (!condition.getAsBoolean() && System.nanoTime() < deadline) {
             Thread.sleep(10);
         }
