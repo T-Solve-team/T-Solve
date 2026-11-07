@@ -187,15 +187,15 @@
         "give-feedback-connect": "evaluating",
         "ticket-suggestion-api": "pending",
         "solution-retrieval": "passing",
-        "department-solution-retrieval": "pending"
+        "department-solution-retrieval": "evaluating"
       },
-      "lastUpdated": "2026-11-07T14:05:31.533Z",
+      "lastUpdated": "2026-11-07T14:26:12.884Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
+        "default": "53b1e8ca858e76cb3bdc204a4262f5fbab4d2c0a"
       }
     },
     "triage": {
