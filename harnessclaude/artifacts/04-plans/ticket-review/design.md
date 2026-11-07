@@ -236,3 +236,24 @@ Risk review verdict: CAUTION. Storage can be verified independently. Production 
 - **Decisions** — storage holds APPROVED, REJECTED and CHANGES_REQUESTED; the API maps them to the contract's APPROVE, REJECT and REQUEST_CHANGES. UNPUBLISH, REPUBLISH and SEND_BACK are valid filters with no stored rows yet, so they return an empty page; unknown values return MSG06.
 - **Dates** — paired yyyy-MM-dd dates become `[from 00:00, to + 1 day 00:00)` in Asia/Ho_Chi_Minh, like Suggestion History; missing bounds use fixed sentinels so no nullable timestamp parameter reaches PostgreSQL.
 - **Names** — actorName is the reviewer's full name, else their email; authorName is `ticket.writer`, as in the Review Queue.
+
+## KAN-154 extension: real-time Review Queue (STORY-012)
+
+- **Transport** — chosen: Server-Sent Events from Spring MVC `SseEmitter` on GET `/api/v1/review-queue/events`; alternatives: WebSocket/STOMP, keep polling only. Rationale: the queue only needs server → browser signals; SSE is same-origin, carries the session cookie through the Vite proxy and Caddy, and needs no new package on either side.
+- **Event source** — chosen (user, 2026-11-07): a tenant trigger `ticket_notify_review_queue` (AFTER INSERT OR UPDATE OF status, project_id) that calls `pg_notify('review_queue', project_id::text)` when a Solution Form ticket enters Pending review or any ticket leaves it; alternatives: in-process Spring events after commit, Redis pub/sub. Rationale: there is no submit endpoint in the backend yet (the Solution form belongs to jira-app), so only the database sees every entry; NOTIFY is delivered at commit, never after a rollback, and PostgreSQL drops duplicate payloads in one transaction, which gives AC-012.3's one event per Project per transaction.
+- **Signal, not data** — chosen: the event carries only `{"projectId": "<uuid>"}` and the browser refetches the queue it already shows; alternatives: push the changed rows. Rationale: the queue's scope, Department filter, sort and paging stay in one place (STORY-009) and no ticket content travels on the stream.
+- **Listener per Workspace** — `ReviewQueueEventServiceImpl` (review module) keeps the open emitters per Workspace with the caller's managed Project ids taken at subscribe time. While a Workspace has at least one emitter, one daemon thread holds one connection from the routing `DataSource` opened inside `TenantScope.runIn(workspace)`, runs `LISTEN review_queue`, and polls `PGConnection.getNotifications(500 ms)`; the last emitter to leave closes it. Each active Workspace therefore holds one pool connection; a listener whose connection fails is reopened on the next poll cycle after 2 s.
+- **Heartbeat and lifetime** — a scheduled task sends the comment `:hb` every 25 s (AC-012.1). An emitter times out after 30 minutes; the browser's EventSource reconnects by itself, which also picks up Project membership changes made meanwhile (a manager removed from a Project keeps that Project's signals at most until then — signals carry no content).
+- **Frontend** — `useReviewQueueEvents()` in `features/review/hooks` opens `EventSource('/api/v1/review-queue/events', { withCredentials: true })` while the Review Queue page is mounted, invalidates the queue and ticket-ids queries on `queue-changed` and on every (re)open, and reports `connected`; `useReviewQueue` sets `refetchInterval` to `false` while connected and keeps `REVIEW_QUEUE_POLL_MS` otherwise (AC-012.5–012.7). The MSW mock serves no stream, so mock mode keeps polling.
+
+### Edge cases
+
+| Case | Handling |
+|------|----------|
+| Decision batch of 500 tickets in one Project | One NOTIFY payload after commit (PostgreSQL de-duplicates), one event per stream |
+| Decision rolled back (stale batch, AC-009.7) | NOTIFY is transactional — nothing is sent |
+| Ticket moved to another Project while pending | Trigger notifies the new Project (and the old one via `OLD.project_id`) |
+| Caller manages no Project | `managedProjectIds` empty → 403 like the queue, no stream |
+| Workspace unbound or unverified Account | 403, no listener opened |
+| Listener connection dropped | Thread logs once without payload, retries after 2 s; after reopening it sends one `queue-changed` for every Project of its emitters, so changes in the gap are not lost |
+| Browser tab hidden | EventSource stays open; refetch on event is cheap. Polling, when active, still pauses while hidden |

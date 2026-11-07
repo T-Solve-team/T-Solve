@@ -783,8 +783,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "76e5f8b988a6fd869165f96abf6d83067cf14980cf33141cba75ff926001c62e",
-    "approvedAt": "2026-11-07T07:44:18.322Z",
+    "specHash": "12189f157d3b550a3e23af078410b0e145d1374e8704fc7c75886caa01222f3b",
+    "approvedAt": "2026-11-07T10:16:20.325Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -856,7 +856,14 @@
       "AC-011.3": "WHEN Department, decision or a paired dateFrom and dateTo are supplied, THE API SHALL filter by them, with both calendar dates inclusive in Vietnam time. IF only one date is supplied, a date is not a yyyy-MM-dd calendar date or dateFrom is after dateTo, THEN THE API SHALL refuse the request with 400 and MSG39. IF the Department has no Project the caller manages, THEN THE API SHALL return an empty page.",
       "AC-011.4": "IF the sort is anything other than timestamp ascending or descending, or page or size is outside the existing limits, THEN THE API SHALL refuse the request with 400 and MSG06.",
       "AC-011.5": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the request with 401 or 403 and expose no decision.",
-      "AC-011.6": "WHEN the production web application loads Review History, THE frontend SHALL use the published getReviewHistory operation through the existing generated client."
+      "AC-011.6": "WHEN the production web application loads Review History, THE frontend SHALL use the published getReviewHistory operation through the existing generated client.",
+      "AC-012.1": "WHEN a Project Manager with a verified Workspace Account opens GET , THE API SHALL keep a  response open for the signed-in Workspace and SHALL send a heartbeat comment at least every 30 seconds while it stays open.",
+      "AC-012.2": "WHEN a Workspace transaction commits that moves a Solution Form ticket into Pending review, or moves a ticket out of Pending review, THE tenant database SHALL send a NOTIFY carrying only that ticket's Project UUID, and THE API SHALL send one  event with that Project UUID to every open stream of that Workspace whose caller manages that Project, within the existing 5-second Review Queue NFR (FE-10).",
+      "AC-012.3": "THE stream SHALL send no event for a Project the caller does not manage and SHALL carry no ticket content, Solution text, reason or comment. A transaction that changes several tickets of one Project SHALL produce at most one event for that Project per stream.",
+      "AC-012.4": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the stream with 401 or 403 and open no stream.",
+      "AC-012.5": "WHEN the Review Queue screen receives a  event, THE frontend SHALL refetch the queue page and eligible ticket ids it currently shows, keeping the existing selection and stale-data rules (STORY-005).",
+      "AC-012.6": "WHILE the event stream is open, THE frontend SHALL not run the 5-second queue polling. WHILE the stream is closed or failing, THE frontend SHALL keep the existing visible-tab 5-second polling, and WHEN the stream opens again it SHALL refetch the queue once.",
+      "AC-012.7": "WHEN the user leaves the Review Queue screen, THE frontend SHALL close its event stream."
     }
   },
   "ai": {

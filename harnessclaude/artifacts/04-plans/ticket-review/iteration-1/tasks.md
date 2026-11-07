@@ -119,3 +119,21 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** `review/controller/ReviewReadController.java`, `ticket/service/TicketReviewReadService.java`, `ticket/service/impl/TicketReviewReadServiceImpl.java`, `ticket/repository/ReviewDecisionRecordRepository.java`, `ticket/dto/TicketReviewView.java`, `ticket/exception/InvalidReviewHistoryFilterException.java`, `frontend/openapi/tsolve-api.yaml` (description only), tests in `review/`.
 **Dependencies:** KAN-24 storage and read APIs (PR #137).
 **Verification:** PostgreSQL tests for scope, filters, mapping and paging; HTTP tests for 400/401/403; `mvn verify`.
+
+## Task 13: Review Queue event stream (KAN-154)
+
+**Story:** STORY-012
+**Feature:** review-queue-events-api
+**Description:** Implement AC-012.1–012.4. A tenant Liquibase changeset adds `notify_review_queue()` and the trigger that NOTIFYs channel `review_queue` with the Project UUID on entry to or exit from Pending review. `GET /api/v1/review-queue/events` (Project Manager) resolves managed Projects through `ReviewWorkspaceAccess` and registers an `SseEmitter` with `ReviewQueueEventService`, which LISTENs per Workspace, filters by managed Project, de-duplicates nothing itself, and sends `:hb` heartbeats. OpenAPI entry first.
+**Files:** `frontend/openapi/tsolve-api.yaml`, `backend/src/main/resources/db/changelog/changes/0xx-review-queue-notify.sql` + master changelog, `review/controller/ReviewQueueEventController.java`, `review/service/ReviewQueueEventService.java`, `review/service/impl/ReviewQueueEventServiceImpl.java`, tests `review/ReviewQueueEventsIT.java`.
+**Dependencies:** KAN-24 queue and decisions (PR #137), queue entry trigger (Task 8).
+**Verification:** PostgreSQL IT: submit and decide in Workspace ACME → event within 5 s only on the managing stream; nothing for BETA or an unmanaged Project; rollback sends nothing; batch sends one event; 401/403; heartbeat. `mvn verify`.
+
+## Task 14: Review Queue live refresh in the web app (KAN-154)
+
+**Story:** STORY-012
+**Feature:** review-queue-events-web
+**Description:** Implement AC-012.5–012.7. `useReviewQueueEvents` opens the stream while the Review Queue page is mounted, invalidates the queue and ticket-ids queries on `queue-changed` and on (re)open, and closes on unmount; `useReviewQueue` stops 5 s polling while connected.
+**Files:** `frontend/src/features/review/hooks/useReviewQueueEvents.ts` (+ test), `frontend/src/features/review/hooks/useReviewQueue.ts` (+ test), the Review Queue page component that mounts both, `src/shared/api/generated` (regenerated).
+**Dependencies:** Task 13 contract.
+**Verification:** Vitest with a fake EventSource for each criterion; `npm run format:check`, `lint`, `typecheck`, `test`, `build`; `generate:api` leaves no diff.
