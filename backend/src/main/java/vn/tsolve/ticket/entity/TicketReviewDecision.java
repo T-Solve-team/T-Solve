@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 
 /** A review decision on a ticket; review history is permanent, so it is never updated. */
 @Entity
@@ -24,9 +25,9 @@ public class TicketReviewDecision {
             allocationSize = 50)
     private Long id;
 
-    // id of the ticket row (ticket.id), not the business Ticket ID
+    // UUID of the ticket row.
     @Column(name = "ticket_id", nullable = false, updatable = false)
-    private Long ticketId;
+    private UUID ticketId;
 
     @Column(nullable = false, updatable = false)
     private String reviewer;
@@ -43,13 +44,13 @@ public class TicketReviewDecision {
 
     protected TicketReviewDecision() {}
 
-    private TicketReviewDecision(Long ticketId, String reviewer, ReviewDecision decision) {
+    private TicketReviewDecision(UUID ticketId, String reviewer, ReviewDecision decision) {
         this.ticketId = ticketId;
         this.reviewer = reviewer;
         this.decision = decision;
     }
 
-    public static TicketReviewDecision approve(Long ticketId, String reviewer) {
+    public static TicketReviewDecision approve(UUID ticketId, String reviewer) {
         return new TicketReviewDecision(ticketId, reviewer, ReviewDecision.APPROVE);
     }
 
@@ -57,7 +58,7 @@ public class TicketReviewDecision {
         return id;
     }
 
-    public Long getTicketId() {
+    public UUID getTicketId() {
         return ticketId;
     }
 

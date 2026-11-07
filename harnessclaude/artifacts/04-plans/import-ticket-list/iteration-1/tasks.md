@@ -1,7 +1,7 @@
 ---
 module: import-ticket-list
 date: 2026-10-21
-total_tasks: 29
+total_tasks: 30
 owner: Dev
 ---
 
@@ -466,3 +466,14 @@ Design: master design, section "Change 2026-11-01". `F` = `frontend/src/features
 - Test: `F/pages/ImportPreviewPage.test.tsx` (AC-015.4, AC-015.5, AC-015.6; edge case 50)
 **Dependencies:** Task 28
 **Estimated size:** medium
+
+---
+
+## Task 30: Preserve CSV Import through the shared UUID migration (KAN-24)
+
+**Story:** STORY-004
+**Feature:** import-ticket-uuid-compatibility
+**Description:** Coordinate with Review Task 5. Preserve legacy Ticket and import decision links and carry the new UUID in the published event after commit. Keep CSV source IDs, validation, responses and transaction behavior.
+**Files:** Ticket entity and repository, import decision entity, confirm service and published event, tenant changelog, and import and migration tests.
+**Dependencies:** Approved Import and Review specs.
+**Verification:** AC-004.10 and AC-004.13, the existing import regression suite and the Review storage migration test.

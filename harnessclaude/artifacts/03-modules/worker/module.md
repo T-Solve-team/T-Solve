@@ -5,6 +5,12 @@ repos: [default]
 dependencies: [platform]
 complexity: medium
 paths:
+  - backend/pom.xml
+  - backend/README-worker.md
+  - .env.example
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-worker.yml
+  - backend/src/main/resources/application-worker-mock.yml
   - backend/src/main/java/vn/tsolve/worker/**
   - backend/src/test/java/vn/tsolve/worker/**
   - backend/src/main/resources/db/changelog/**

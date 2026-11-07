@@ -7,7 +7,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -18,13 +17,15 @@ import java.util.UUID;
 @Table(name = "ticket")
 public class Ticket {
 
-    // allocationSize matches INCREMENT BY 50 in 002 so inserts can be batched
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "ticket_seq")
-    @SequenceGenerator(name = "ticket_seq", sequenceName = "ticket_id_seq", allocationSize = 50)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "ticket_id")
+    private UUID id;
 
-    @Column(name = "ticket_id", nullable = false, updatable = false)
+    @Column(name = "public_id", insertable = false, updatable = false)
+    private UUID publicId;
+
+    @Column(name = "source_ticket_id", nullable = false, updatable = false)
     private String ticketId;
 
     @Column(name = "project_id", nullable = false)
@@ -70,6 +71,24 @@ public class Ticket {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "updated_at", insertable = false)
+    private Instant updatedAt;
+
+    @Column(name = "rejection_reason", columnDefinition = "text")
+    private String rejectionReason;
+
+    @Column(name = "change_request_comment", columnDefinition = "text")
+    private String changeRequestComment;
+
+    @Column(name = "writer_id", insertable = false, updatable = false)
+    private UUID writerId;
+
+    @Column(name = "review_due_date", insertable = false, updatable = false)
+    private LocalDate reviewDueDate;
+
+    @Column(name = "review_queue_entered_at", insertable = false, updatable = false)
+    private Instant reviewQueueEnteredAt;
+
     protected Ticket() {}
 
     /** An imported ticket: brought in by its Project Manager, so it is Published at once (GBR-23). */
@@ -105,7 +124,14 @@ public class Ticket {
     public record Solution(
             String symptoms, String rootCause, String resolutionSteps, String workaround, String scope) {}
 
-    public Long getId() {
+    public void applyReview(TicketStatus outcome, String feedback, Instant decidedAt) {
+        status = outcome;
+        rejectionReason = outcome == TicketStatus.REJECTED ? feedback : null;
+        changeRequestComment = outcome == TicketStatus.CHANGES_REQUESTED ? feedback : null;
+        updatedAt = decidedAt;
+    }
+
+    public UUID getId() {
         return id;
     }
 
@@ -135,6 +161,22 @@ public class Ticket {
 
     public String getWriter() {
         return writer;
+    }
+
+    public UUID getWriterId() {
+        return writerId;
+    }
+
+    public LocalDate getReviewDueDate() {
+        return reviewDueDate;
+    }
+
+    public String getChangeRequestComment() {
+        return changeRequestComment;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
     }
 
     public LocalDate getResolvedDate() {

@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 import vn.tsolve.search.scope.entity.SearchTicket;
 
 public interface TicketListRepository
-        extends JpaRepository<SearchTicket, Long>, JpaSpecificationExecutor<SearchTicket> {
+        extends JpaRepository<SearchTicket, UUID>, JpaSpecificationExecutor<SearchTicket> {
     @Query("select distinct t.departmentId from SearchTicket t where t.departmentPublicId = :publicId")
     Optional<Long> findDepartmentId(@Param("publicId") UUID publicId);
 }

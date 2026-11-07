@@ -19,7 +19,7 @@ public class TicketEmbedding {
     private UUID id;
 
     @Column(name = "ticket_id", nullable = false, unique = true)
-    private Long ticketId;
+    private UUID ticketId;
 
     @Column(nullable = false, length = 50)
     private String model;
