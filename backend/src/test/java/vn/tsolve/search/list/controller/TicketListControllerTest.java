@@ -134,7 +134,7 @@ class TicketListControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.TICKET_RESOLVER)
-    void acceptsRepeatedSortParameters_BUG_136() throws Exception {
+    void acceptsRepeatedSortParameters_BUG_149() throws Exception {
         delegateToServiceWithEmptyScope();
         mvc.perform(get(PATH).param("sort", "title,asc", "updatedAt,desc"))
                 .andExpect(status().isOk())
@@ -148,7 +148,7 @@ class TicketListControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"writer,asc", "updatedAt,sideways", "reviewDueDate,sideways", "updatedAt", "updatedAt,"})
     @WithTSolveUser(roles = Role.TICKET_RESOLVER)
-    void rejectsInvalidRepeatedSortParameters_BUG_136(String secondSort) throws Exception {
+    void rejectsInvalidRepeatedSortParameters_BUG_149(String secondSort) throws Exception {
         delegateToServiceWithEmptyScope();
         mvc.perform(get(PATH).param("sort", "title,asc", secondSort))
                 .andExpect(status().isBadRequest())

@@ -23,9 +23,10 @@ export function ReviewTicketDetail({ ticketId }: { ticketId: string }) {
   const canDecide =
     !!ticket &&
     !detail.isError &&
-    hasRole('PROJECT_MANAGER') &&
-    isProjectManagerOf(ticket.project.projectId) &&
-    ticket.status === 'PENDING_REVIEW';
+    (ticket.canDecide ??
+      (hasRole('PROJECT_MANAGER') &&
+        isProjectManagerOf(ticket.project.projectId) &&
+        ticket.status === 'PENDING_REVIEW'));
   const canSubmit = canDecide && !detail.isFetching;
 
   function handleApprove() {

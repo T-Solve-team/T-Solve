@@ -89,7 +89,7 @@ class TicketListServiceImplTest {
 
     @ParameterizedTest
     @MethodSource("validSortEntries")
-    void acceptsSortPairsWithOneFinalIdTieBreaker_BUG_136(String sort, Sort expected) {
+    void acceptsSortPairsWithOneFinalIdTieBreaker_BUG_149(String sort, Sort expected) {
         when(repository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<SearchTicket>(List.of()));
         service.list(user, query(null, null, null, null, null, null, sort));
@@ -112,7 +112,7 @@ class TicketListServiceImplTest {
                 "title,asc,updatedAt,desc,",
                 "title,asc,id,desc"
             })
-    void rejectsInvalidSortPairsBeforeScopeOrDatabase_BUG_136(String sort) {
+    void rejectsInvalidSortPairsBeforeScopeOrDatabase_BUG_149(String sort) {
         assertThatThrownBy(() -> service.list(user, query(null, null, null, null, null, null, sort)))
                 .isInstanceOf(CodedException.class)
                 .satisfies(

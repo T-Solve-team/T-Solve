@@ -7,6 +7,7 @@ complexity: large
 paths:
   - backend/src/main/java/vn/tsolve/search/**
   - backend/src/test/java/vn/tsolve/search/**
+  - backend/src/test/resources/db/changelog/search-only.xml
   - frontend/src/features/search/**
   - frontend/src/features/feedback/**
   - frontend/src/features/tickets/pages/TicketListPage*

@@ -78,7 +78,7 @@ class TicketFeedbackRepositoryIT {
     private VisibleScope scope;
 
     private final UUID publicId = UUID.randomUUID();
-    private long ticket;
+    private UUID ticket;
     private long department;
 
     @BeforeEach
@@ -99,14 +99,14 @@ class TicketFeedbackRepositoryIT {
                 department);
         ticket = jdbc.queryForObject(
                 """
-                INSERT INTO ticket(ticket_id, public_id, project_id, source, status, title,
+                INSERT INTO ticket(source_ticket_id, public_id, project_id, source, status, title,
                     symptoms, root_cause, resolution_steps, scope)
                 VALUES ('IT-1', ?, ?, 'CSV', 'PUBLISHED', 'Example', 'Symptoms', 'Cause', 'Steps', 'Scope')
-                RETURNING id
+                RETURNING ticket_id
                 """,
-                Long.class,
+                UUID.class,
                 publicId,
-                project);
+                new UUID(0, project));
         when(scope.of(any())).thenReturn(new VisibleScope.Scope(Set.of(department), Set.of(), Optional.empty()));
     }
 
@@ -184,9 +184,9 @@ class TicketFeedbackRepositoryIT {
 
     @Test
     void answers404ForUnpublishedOrDeletedDepartment_AC_008_3() {
-        jdbc.update("UPDATE ticket SET status = 'UNPUBLISHED' WHERE id = ?", ticket);
+        jdbc.update("UPDATE ticket SET status = 'UNPUBLISHED' WHERE ticket_id = ?", ticket);
         assertNotSearchable();
-        jdbc.update("UPDATE ticket SET status = 'PUBLISHED' WHERE id = ?", ticket);
+        jdbc.update("UPDATE ticket SET status = 'PUBLISHED' WHERE ticket_id = ?", ticket);
         jdbc.update("UPDATE department SET status = 'DELETED' WHERE department_id = ?", department);
         assertNotSearchable();
         assertThat(feedback.count()).isZero();

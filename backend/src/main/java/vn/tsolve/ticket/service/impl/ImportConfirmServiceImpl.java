@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -178,7 +179,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         List<Ticket> saved = tickets.saveAll(valid.stream()
                 .map(r -> toTicket(r.getValues(), preview, batch.getId()))
                 .toList());
-        List<Long> ticketIds = saved.stream().map(Ticket::getId).toList();
+        List<UUID> ticketIds = saved.stream().map(Ticket::getId).toList();
         decisions.saveAll(ticketIds.stream()
                 .map(id -> TicketReviewDecision.approve(id, user))
                 .toList());

@@ -1,0 +1,9 @@
+{
+  "request": { "method": "GET", "urlPath": "/jwks" },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "transformers": ["response-template"],
+    "body": "{\"keys\":[{{jwk}}]}"
+  }
+}

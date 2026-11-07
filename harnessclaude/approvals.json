@@ -75,8 +75,8 @@
     }
   },
   "import-ticket-list": {
-    "specHash": "c4f0244c704c57bf6a672485efd84d49dda922c4a45fd13b9a4a4e9eab64d691",
-    "approvedAt": "2026-11-04T19:31:14.628Z",
+    "specHash": "46ea7e29f7294a9937a9c899c3f2d440a76e73460838fbebcc6e9debd14f991a",
+    "approvedAt": "2026-11-07T05:37:03.832Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager uploads a file with the  extension that is valid UTF-8, at most 10 MB, has every required column and at least one data row, for a Project they manage, THE system SHALL create an Import Preview and return its counts and the first page of its rows.",
@@ -115,9 +115,10 @@
       "AC-004.7": "IF a Valid row's  has become an existing Ticket since the preview was created, THEN THE system SHALL fail the whole Confirm with MSG33, import nothing, and record one Import Batch with status Failed.",
       "AC-004.8": "IF saving any Ticket fails, THEN THE system SHALL import no Ticket, return MSG33, and still record one Import Batch with status Failed, 0 published, and an error description that contains no row content.",
       "AC-004.9": "IF the preview belongs to another user or no longer exists, THEN THE system SHALL reject Confirm with HTTP 404.",
-      "AC-004.10": "WHEN Confirm succeeds, THE system SHALL publish a \"tickets published\" event with the new Ticket ids after the transaction commits.",
+      "AC-004.10": "WHEN Confirm succeeds, THE system SHALL publish a \"tickets published\" event with the UUID keys of the new Ticket rows after the transaction commits.",
       "AC-004.11": "IF the preview's Project is Active but the caller no longer manages it, THEN THE system SHALL reject Confirm with HTTP 403 (MSG08), import nothing and record no Import Batch. (The MSG40 check of AC-004.6 comes first.)",
       "AC-004.12": "IF the same preview is confirmed again while or after a Confirm of it succeeds, THEN THE system SHALL reject the second Confirm with HTTP 404, record no Import Batch for it, and leave the first import unchanged.",
+      "AC-004.13": "WHEN the tenant database upgrades the shared Ticket key to UUID, THE migration SHALL preserve the existing imported tickets, source Ticket IDs, Solution data, and import decision history, with each decision still linked to its original Ticket.",
       "AC-005.1": "WHEN a Project Manager downloads the template of a file with Solutions, THE system SHALL return a UTF-8 CSV file whose header row is  and no data rows.",
       "AC-005.2": "IF the caller does not have the Project Manager role, THEN THE system SHALL reject the download with HTTP 403.",
       "AC-006.1": "WHEN the daily cleanup job runs, THE system SHALL delete every unconfirmed preview created more than 24 hours earlier, with its rows.",
@@ -782,8 +783,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "2088079baf14a1fae32a4d089cecdda21a700fd744541a4f22c238cabf145bfa",
-    "approvedAt": "2026-11-01T12:12:20.499Z",
+    "specHash": "d9ce1478f4fd3c1c949599302bffe9dd2c8a3e3583e1347ca1b5491c3c38fa20",
+    "approvedAt": "2026-11-06T23:44:12.952Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -831,7 +832,19 @@
       "AC-008.4": "WHEN the history contains APPROVE, REJECT, REQUEST_CHANGES, UNPUBLISH, REPUBLISH or SEND_BACK, THE frontend SHALL display its decision label and applicable reason/comment as text, preserving distinct records for repeated decisions on the same ticket; THE frontend SHALL offer no edit, delete or decision mutation controls on this screen.",
       "AC-008.5": "WHEN an existing approve, reject, request-changes or send-back mock mutation succeeds, THE mock API SHALL append a record with a unique decision UUID, actor identity/name, timestamp, ticket and existing decision content, and THE frontend SHALL invalidate Review History queries; IF that mutation fails, THEN THE mock API SHALL append no history record.",
       "AC-008.6": "WHILE initial history loading is pending, THE frontend SHALL show loading; IF the query fails, THEN THE frontend SHALL show its catalog error and retry; IF no records match, THEN THE frontend SHALL show MSG04.",
-      "AC-008.7": "IF the caller is signed out or lacks Project Manager, THEN THE route guard and mock API SHALL deny history access; IF the caller supplies a foreign or unmanaged Department filter, THEN THE mock API SHALL expose no foreign decision or ticket data."
+      "AC-008.7": "IF the caller is signed out or lacks Project Manager, THEN THE route guard and mock API SHALL deny history access; IF the caller supplies a foreign or unmanaged Department filter, THEN THE mock API SHALL expose no foreign decision or ticket data.",
+      "AC-009.1": "WHEN a Project Manager queries the Review Queue or its eligible ids, THE API SHALL use the signed-in Workspace and return only pending Solution Form tickets for Projects they manage, with the same Department filter on both endpoints and earliest review due date first by default.",
+      "AC-009.2": "WHEN a permitted user opens Ticket Detail, THE API SHALL return persisted ticket, Solution and Evidence data and the information the frontend needs to display only the decisions the current user may make.",
+      "AC-009.3": "IF a caller is unauthenticated or does not manage the target ticket's Project, THEN THE decision API SHALL refuse the request with 401 or 403 respectively and leave the ticket unchanged. IF a ticket id belongs to a different Workspace, THEN THE API SHALL expose no ticket data and perform no write.",
+      "AC-009.4": "WHEN an authorized Project Manager approves eligible tickets, THE API SHALL publish all selected tickets and remove them from the Review Queue, including when the manager authored an eligible ticket.",
+      "AC-009.5": "WHEN an authorized Project Manager rejects eligible tickets with one nonblank reason of at most 1,000 characters, THE API SHALL move all selected tickets to the final Rejected state and store that reason for each decision.",
+      "AC-009.6": "WHEN an authorized Project Manager requests changes to eligible Solution Form tickets with one nonblank comment of at most 1,000 characters, THE API SHALL move all selected tickets to Changes requested and store the same comment for each decision. WHEN the writer opens the associated Jira issue in the T-Solve panel, THE system SHALL show the manager and the comment in MSG64.",
+      "AC-009.7": "IF any decision input is invalid or any selected ticket is missing, outside the caller's scope or no longer eligible, THEN THE API SHALL refuse the entire batch without changing any ticket or recording a decision.",
+      "AC-009.8": "WHEN a decision succeeds, THE backend SHALL commit the ticket state and one durable review decision per ticket in the same Workspace transaction, preserving Solution, Evidence and review due date. Each decision SHALL retain the reviewer, action, time and applicable reason or comment.",
+      "AC-009.9": "THE production backend SHALL use database/02_tenant.sql as the reference for Review table structure and relationships. THE tenant changelog SHALL use UUID keys under the backend conventions for the shared ticket, evidence and review_decision tables. The Solution fields SHALL remain on ticket.",
+      "AC-009.10": "WHEN the production web application loads or submits a Review action, THE frontend SHALL use the published OpenAPI operations and backend data through the existing generated client.",
+      "AC-009.11": "WHEN a Solution Form ticket is first saved as Pending review or transitions back to Pending review, THE tenant database SHALL record that entry time in review_queue_entered_at. WHILE a ticket stays Pending review, THE system SHALL preserve that entry time and SHALL keep the existing review due date rules (GBR-08, GBR-10).",
+      "AC-009.12": "WHEN the Review Queue returns a ticket, THE API SHALL expose the recorded entry time as enteredQueueAt. IF an older ticket has no recorded entry time, THEN THE API SHALL return null for enteredQueueAt and THE frontend SHALL show an empty value indicator."
     }
   },
   "ai": {
@@ -903,8 +916,8 @@
     }
   },
   "worker": {
-    "specHash": "6d0b11c652fe3181394ea638199d5ac00abbd31ae96e1fdc9df68981adb95e3d",
-    "approvedAt": "2026-11-06T00:57:53.675Z",
+    "specHash": "7e0c5e3f9cbd6c1066fb73b11e67bfd2703687a2e54764b0918fe34c795cb4bc",
+    "approvedAt": "2026-11-07T05:14:30.768Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the caller submits a Reject notification, THE SMTP sender SHALL send a plain-text email to the supplied writer address with a rejection subject, the ticket key and the rejection reason.",
@@ -913,7 +926,23 @@
       "AC-001.4": "IF the SMTP server refuses delivery or the send times out, THEN THE SMTP sender SHALL report a delivery failure to the caller after one attempt, with no recipient address, message content or credentials in the reported error.",
       "AC-001.5": "THE SMTP sender SHALL configure finite SMTP connection, read and write timeouts.",
       "AC-001.6": "THE SMTP sender SHALL omit recipient addresses, message contents and SMTP credentials from its logs.",
-      "AC-001.7": "WHILE SMTP settings are absent, THE web application SHALL start without an SMTP connection."
+      "AC-001.7": "WHILE SMTP settings are absent, THE web application SHALL start without an SMTP connection.",
+      "AC-002.1": "WHEN a caller enqueues a job while a workspace is bound, THE queue SHALL persist that workspace UUID together with the registered handler type and record UUID through JobRunr.",
+      "AC-002.2": "IF enqueue is called with no bound workspace, null record id or an unregistered handler type, THEN THE queue SHALL reject the request without persisting a job.",
+      "AC-002.3": "WHEN JobRunr executes a job for an Active workspace, THE worker SHALL invoke its registered handler inside runInTenant with exactly the workspace UUID stored in that job.",
+      "AC-002.4": "IF the workspace is unknown or Suspended at execution time, THEN THE worker SHALL invoke no business handler and SHALL report a failed execution to JobRunr without binding a workspace (GBR-38).",
+      "AC-002.5": "IF workspace eligibility cannot be checked, THEN THE worker SHALL fail the execution without invoking the handler.",
+      "AC-002.6": "WHEN an action finishes normally or throws, THE runInTenant boundary SHALL restore the calling thread's previous workspace binding and propagate the original action failure.",
+      "AC-002.7": "IF a different workspace is already bound on the executing thread, THEN THE boundary SHALL reject the execution without invoking the action or changing that binding.",
+      "AC-002.8": "WHEN the same workspace is already bound, THE boundary SHALL permit nested execution and preserve the outer binding afterwards.",
+      "AC-002.9": "WHEN jobs for different workspaces run concurrently or sequentially on a reused thread, THE worker SHALL keep their context bindings isolated.",
+      "AC-002.10": "WHEN a handler fails, THE worker SHALL let JobRunr retain and retry the failed job with its original workspace UUID and SHALL recheck workspace eligibility on every attempt.",
+      "AC-002.11": "WHILE the explicit worker-mock profile is active, THE backend SHALL provide a temporary thread-scoped TenantContext mock and a configured allow-list of Active and Suspended workspace UUIDs, treating every unlisted UUID as unknown.",
+      "AC-002.12": "WHILE worker-mock is inactive, THE backend SHALL register no mock platform adapter; IF job processing is enabled without a real adapter, THEN THE backend SHALL fail startup rather than permit jobs using mocked tenancy.",
+      "AC-002.13": "WHEN JobRunr integration is enabled, THE backend SHALL use a dedicated Jobs DataSource configured by environment variables and SHALL never fall back to its business or catalog DataSource.",
+      "AC-002.14": "THE backend SHALL disable job execution and the JobRunr dashboard by default; WHEN the worker profile is enabled with required configuration, THE backend SHALL enable background processing while keeping the dashboard disabled.",
+      "AC-002.15": "IF a persisted job names an unknown handler or has a null workspace or record UUID, THEN THE worker SHALL fail it without invoking a handler.",
+      "AC-002.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked."
     }
   }
 }
