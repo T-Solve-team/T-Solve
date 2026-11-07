@@ -425,6 +425,13 @@ class SearchSchemaIT {
     }
 
     private void insertTicketsAndProjects() {
+        boolean uuidProjectId = "uuid"
+                .equals(jdbc.queryForObject(
+                        """
+                SELECT udt_name FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = 'ticket' AND column_name = 'project_id'
+                """,
+                        String.class));
         for (int index = 1; index <= 2; index++) {
             Long departmentId = jdbc.queryForObject(
                     "INSERT INTO department (name) VALUES (?) RETURNING department_id",
@@ -435,6 +442,9 @@ class SearchSchemaIT {
                     Long.class,
                     departmentId,
                     "SEARCH" + index);
+            Object ticketProjectId = uuidProjectId
+                    ? jdbc.queryForObject("SELECT public_id FROM project WHERE project_id = ?", UUID.class, projectId)
+                    : projectId;
             jdbc.update(
                     """
                     INSERT INTO ticket (ticket_id, project_id, source, status, title,
@@ -442,7 +452,7 @@ class SearchSchemaIT {
                     VALUES (?, ?, 'CSV', 'PUBLISHED', ?, 'Symptoms', 'Root cause', 'Resolution', 'Scope')
                     """,
                     "SEARCH-" + index,
-                    projectId,
+                    ticketProjectId,
                     "Ticket " + index);
         }
     }

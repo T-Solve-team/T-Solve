@@ -77,7 +77,7 @@ class TicketRankingRepositoryIT {
     private final UUID otherPublicId = UUID.randomUUID();
     private long department;
     private long deletedDepartment;
-    private long project;
+    private UUID project;
     private long best;
     private long tied;
     private long weaker;
@@ -116,6 +116,21 @@ class TicketRankingRepositoryIT {
                     .isFalse();
             return List.of(queryVector());
         });
+    }
+
+    @Test
+    void searchJoinsProjectByPublicId_BUG_140() {
+        var semantic = rank(new RankFilter(null, null, null, null), PageRequest.of(0, 2));
+        assertThat(semantic.getTotalElements()).isEqualTo(4);
+        assertThat(semantic.getContent())
+                .extracting(row -> row.project().projectId())
+                .containsOnly(project);
+        when(embeddings.embed(any())).thenThrow(new AiUnavailableException());
+        var keyword = rank(new RankFilter(null, null, null, null), PageRequest.of(0, 2));
+        assertThat(keyword.getTotalElements()).isEqualTo(6);
+        assertThat(keyword.getContent())
+                .extracting(row -> row.project().projectId())
+                .containsOnly(project);
     }
 
     @Test
@@ -212,9 +227,7 @@ class TicketRankingRepositoryIT {
                 .getContent()
                 .getFirst();
         assertThat(row.project().name()).isEqualTo("ITSUP");
-        assertThat(row.project().projectId())
-                .isEqualTo(
-                        jdbc.queryForObject("SELECT public_id FROM project WHERE project_id = ?", UUID.class, project));
+        assertThat(row.project().projectId()).isEqualTo(project);
         assertThat(row.department().departmentId()).isEqualTo(departmentPublicId);
         assertThat(row.department().name()).isEqualTo("IT");
         assertThat(row.ticketId())
@@ -254,15 +267,15 @@ class TicketRankingRepositoryIT {
                 publicId);
     }
 
-    private long project(long departmentId, String key) {
+    private UUID project(long departmentId, String key) {
         return jdbc.queryForObject(
-                "INSERT INTO project(department_id,jira_project_key) VALUES (?,?) RETURNING project_id",
-                Long.class,
+                "INSERT INTO project(department_id,jira_project_key) VALUES (?,?) RETURNING public_id",
+                UUID.class,
                 departmentId,
                 key);
     }
 
-    private long ticket(long projectId, String title, String status, String date, String symptoms, String source) {
+    private long ticket(UUID projectId, String title, String status, String date, String symptoms, String source) {
         return jdbc.queryForObject(
                 """
                 INSERT INTO ticket(ticket_id, project_id, source, status, title, writer,

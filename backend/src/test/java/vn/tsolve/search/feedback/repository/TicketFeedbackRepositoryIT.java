@@ -93,9 +93,9 @@ class TicketFeedbackRepositoryIT {
                 USER.email());
         department = jdbc.queryForObject(
                 "INSERT INTO department(name,status) VALUES ('IT','ACTIVE') RETURNING department_id", Long.class);
-        long project = jdbc.queryForObject(
-                "INSERT INTO project(department_id,jira_project_key) VALUES (?,'ITSUP') RETURNING project_id",
-                Long.class,
+        UUID project = jdbc.queryForObject(
+                "INSERT INTO project(department_id,jira_project_key) VALUES (?,'ITSUP') RETURNING" + " public_id",
+                UUID.class,
                 department);
         ticket = jdbc.queryForObject(
                 """

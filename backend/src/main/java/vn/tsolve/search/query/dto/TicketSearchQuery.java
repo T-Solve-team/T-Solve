@@ -24,6 +24,9 @@ public record TicketSearchQuery(
             String resolvedTo,
             String page,
             String size) {
+        String query = q == null ? "" : q.trim();
+        if (query.isBlank()) throw InvalidSearchQueryException.requiredQuery();
+        if (query.codePointCount(0, query.length()) > 200) throw InvalidSearchQueryException.queryTooLong();
         UUID department = departmentId(departmentId);
         if (source != null && !SOURCES.contains(source)) throw new InvalidSearchQueryException();
         LocalDate from = date(resolvedFrom);
@@ -34,7 +37,7 @@ public record TicketSearchQuery(
         if (number < 0 || count < 1 || count > 100) throw new InvalidSearchQueryException();
         long offset = (long) number * count;
         if (offset > Integer.MAX_VALUE) throw new InvalidSearchQueryException();
-        return new TicketSearchQuery(q.trim(), department, source, from, to, PageRequest.of(number, count));
+        return new TicketSearchQuery(query, department, source, from, to, PageRequest.of(number, count));
     }
 
     public RankFilter filter() {

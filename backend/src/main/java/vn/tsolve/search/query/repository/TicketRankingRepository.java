@@ -24,7 +24,7 @@ public interface TicketRankingRepository extends JpaRepository<SearchTicket, Lon
     String TABLES =
             """
             FROM ticket t
-            JOIN project p ON p.project_id = t.project_id
+            JOIN project p ON p.public_id = t.project_id
             JOIN department d ON d.department_id = p.department_id
             """;
     String FEEDBACK =

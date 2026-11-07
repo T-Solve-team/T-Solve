@@ -91,24 +91,25 @@ class TicketListRepositoryIT {
         department = department("IT", "ACTIVE", departmentPublicId);
         long other = department("HR", "ACTIVE", otherPublicId);
         long deleted = department("OLD", "DELETED", UUID.randomUUID());
-        long project = project(department, "ITSUP");
-        managedProject = project(other, "HRHELP");
-        long hiddenProject = project(other, "HRPRIVATE");
+        UUID project = project(department, "ITSUP");
+        UUID managed = project(other, "HRHELP");
+        managedProject = jdbc.queryForObject("SELECT project_id FROM project WHERE public_id = ?", Long.class, managed);
+        UUID hiddenProject = project(other, "HRPRIVATE");
         ticket(project, "IT-1", "PUBLISHED", "someone", "VPN 100%_\\fix");
         ticket(project, "IT-2", "REJECTED", "writer", "Own solution");
         ticket(project, "IT-3", "PENDING_REVIEW", "someone", "Other writer");
-        ticket(managedProject, "HR-1", "PENDING_REVIEW", "someone", "Managed ticket");
-        ticket(managedProject, "HR-2", "PUBLISHED", "someone", "Not my Department");
+        ticket(managed, "HR-1", "PENDING_REVIEW", "someone", "Managed ticket");
+        ticket(managed, "HR-2", "PUBLISHED", "someone", "Not my Department");
         ticket(hiddenProject, "HR-3", "CHANGES_REQUESTED", "writer", "Own cross Department ticket");
         ticket(hiddenProject, "HR-4", "PUBLISHED", "writer", "Published outside scope");
         ticket(project(deleted, "OLD"), "OLD-1", "REJECTED", "writer", "Deleted Department");
-        ticket(999999L, "ORPHAN-1", "PUBLISHED", "writer", "No Project");
+        ticket(UUID.randomUUID(), "ORPHAN-1", "PUBLISHED", "writer", "No Project");
         when(scope.of(any()))
                 .thenReturn(new VisibleScope.Scope(Set.of(department), Set.of(managedProject), Optional.of("writer")));
     }
 
     @Test
-    void returnsOnlyVisibleTicketsAndHidesDeletedOrOrphaned_AC_006_1() {
+    void returnsOnlyVisibleTicketsAndHidesDeletedOrOrphaned_AC_006_1_BUG_140() {
         assertThat(list(null, null, null, null).stream().map(TicketSummaryResponse::sourceTicketId))
                 .containsExactlyInAnyOrder("IT-1", "IT-2", "HR-1", "HR-3");
     }
@@ -191,15 +192,15 @@ class TicketListRepositoryIT {
                 id);
     }
 
-    private long project(long departmentId, String key) {
+    private UUID project(long departmentId, String key) {
         return jdbc.queryForObject(
-                "INSERT INTO project(department_id,jira_project_key) VALUES (?,?) RETURNING project_id",
-                Long.class,
+                "INSERT INTO project(department_id,jira_project_key) VALUES (?,?) RETURNING public_id",
+                UUID.class,
                 departmentId,
                 key);
     }
 
-    private void ticket(long projectId, String key, String status, String writer, String title) {
+    private void ticket(UUID projectId, String key, String status, String writer, String title) {
         jdbc.update(
                 """
                 INSERT INTO ticket(ticket_id, project_id, source, status, title, writer,

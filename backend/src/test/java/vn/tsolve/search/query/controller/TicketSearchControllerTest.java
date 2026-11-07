@@ -65,7 +65,43 @@ class TicketSearchControllerTest {
         mvc.perform(get(PATH).param("q", "x".repeat(201)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MSG02"))
-                .andExpect(jsonPath("$.fieldErrors[0].field").value("q"));
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("q"))
+                .andExpect(jsonPath("$.fieldErrors[0].code").value("MSG02"))
+                .andExpect(jsonPath("$.fieldErrors[0].params.field_name").value("q"))
+                .andExpect(jsonPath("$.fieldErrors[0].params.max_length").value(200));
+        verifyNoInteractions(tickets);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.TICKET_RESOLVER)
+    void accepts200CharactersWithTrailingSpaces_BUG_142() throws Exception {
+        String q = "x".repeat(200);
+        when(tickets.search(any(), any())).thenReturn(Page.empty(PageRequest.of(0, 20)));
+        mvc.perform(get(PATH).param("q", q + "   ")).andExpect(status().isOk());
+        ArgumentCaptor<TicketSearchQuery> query = ArgumentCaptor.forClass(TicketSearchQuery.class);
+        verify(tickets).search(any(), query.capture());
+        assertThat(query.getValue().q()).isEqualTo(q);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.TICKET_RESOLVER)
+    void accepts200Emoji_BUG_142() throws Exception {
+        String q = "\uD83D\uDE00".repeat(200);
+        when(tickets.search(any(), any())).thenReturn(Page.empty(PageRequest.of(0, 20)));
+        mvc.perform(get(PATH).param("q", q)).andExpect(status().isOk());
+        ArgumentCaptor<TicketSearchQuery> query = ArgumentCaptor.forClass(TicketSearchQuery.class);
+        verify(tickets).search(any(), query.capture());
+        assertThat(query.getValue().q()).isEqualTo(q);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.TICKET_RESOLVER)
+    void rejects201Emoji_BUG_142() throws Exception {
+        mvc.perform(get(PATH).param("q", "\uD83D\uDE00".repeat(201)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG02"))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("q"))
+                .andExpect(jsonPath("$.fieldErrors[0].code").value("MSG02"));
         verifyNoInteractions(tickets);
     }
 

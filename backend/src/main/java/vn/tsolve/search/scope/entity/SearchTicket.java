@@ -21,7 +21,7 @@ import org.hibernate.annotations.Synchronize;
                p.jira_project_key as project_name, d.department_id,
                d.public_id as department_public_id, d.name as department_name,
                d.status as department_status
-          from ticket t join project p on p.project_id = t.project_id
+          from ticket t join project p on p.public_id = t.project_id
           join department d on d.department_id = p.department_id
         """)
 @Synchronize({"ticket", "project", "department"})
@@ -57,6 +57,7 @@ public class SearchTicket {
     private String workaround;
     private String scope;
 
+    // Internal Project key for visibility scopes; projectPublicId is the API UUID.
     @Column(name = "project_id")
     private Long projectId;
 

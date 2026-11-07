@@ -3,12 +3,14 @@ package vn.tsolve.search.query.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
@@ -18,6 +20,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +42,37 @@ class TicketSearchServiceImplTest {
     private final TSolveUser user =
             new TSolveUser(UUID.randomUUID(), "writer@example.test", "Writer", Set.of(Role.TICKET_RESOLVER));
     private final VisibleScope.Scope scope = new VisibleScope.Scope(Set.of(7L), Set.of(), Optional.empty());
+
+    @Test
+    void returnsResultsWhenSearchLogFailsWithoutLoggingQuery_BUG_143() {
+        String privateQuery = "private-query-8483";
+        Page<TicketSearchResultResponse> page = new PageImpl<>(
+                List.of(new TicketSearchResultResponse(UUID.randomUUID(), "VPN", null, null, "excerpt", null, null)));
+        when(visibleScope.of(user)).thenReturn(scope);
+        when(ranking.rank(any(), any(), any(), any(), any())).thenReturn(new RankedPage(page, false));
+        doThrow(new DataAccessResourceFailureException(privateQuery))
+                .when(logs)
+                .log(user.id(), null, privateQuery, "WEB", 1, false);
+        Logger logger = (Logger) LoggerFactory.getLogger(TicketSearchServiceImpl.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            assertThat(service.search(user, TicketSearchQuery.parse(privateQuery, null, null, null, null, null, null)))
+                    .isSameAs(page);
+            verify(logs).log(user.id(), null, privateQuery, "WEB", 1, false);
+            assertThat(appender.list).singleElement().satisfies(event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.WARN);
+                assertThat(event.getFormattedMessage())
+                        .contains("DataAccessResourceFailureException")
+                        .doesNotContain(privateQuery);
+                assertThat(event.getThrowableProxy()).isNull();
+            });
+        } finally {
+            logger.detachAppender(appender);
+            appender.stop();
+        }
+    }
 
     @Test
     void logsPageZeroOnlyWithFallbackFlag_AC_007_6() {

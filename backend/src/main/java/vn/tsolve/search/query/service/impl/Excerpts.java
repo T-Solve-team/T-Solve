@@ -7,6 +7,6 @@ public final class Excerpts {
         String text = ((symptoms == null ? "" : symptoms) + " " + (resolutionSteps == null ? "" : resolutionSteps))
                 .replaceAll("\\s+", " ")
                 .trim();
-        return text.substring(0, Math.min(200, text.length()));
+        return text.codePointCount(0, text.length()) > 200 ? text.substring(0, text.offsetByCodePoints(0, 200)) : text;
     }
 }

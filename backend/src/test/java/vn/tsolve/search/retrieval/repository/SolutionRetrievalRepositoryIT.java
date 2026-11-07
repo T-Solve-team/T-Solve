@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import jakarta.persistence.EntityManager;
 import java.sql.Connection;
 import java.util.List;
+import java.util.UUID;
 import liquibase.Liquibase;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
@@ -73,7 +74,7 @@ class SolutionRetrievalRepositoryIT {
     }
 
     @Test
-    void returnsNearestAboveCutOff_AC_010_1() {
+    void returnsNearestAboveCutOff_AC_010_1_BUG_140() {
         insert("FIRST", "ACTIVE", "PUBLISHED", 1, 0);
         insert("TIE", "ACTIVE", "PUBLISHED", 1, 0);
         insert("NEXT", "ACTIVE", "PUBLISHED", 0.8f, 0.6f);
@@ -122,9 +123,9 @@ class SolutionRetrievalRepositoryIT {
                 Long.class,
                 key,
                 departmentStatus);
-        Long project = jdbc.queryForObject(
-                "INSERT INTO project(department_id, jira_project_key) VALUES (?, ?) RETURNING project_id",
-                Long.class,
+        UUID project = jdbc.queryForObject(
+                "INSERT INTO project(department_id, jira_project_key) VALUES (?, ?) RETURNING public_id",
+                UUID.class,
                 department,
                 key);
         Long ticket = jdbc.queryForObject(
