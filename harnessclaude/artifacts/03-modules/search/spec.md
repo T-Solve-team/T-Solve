@@ -15,6 +15,7 @@ owner: BA
 | 2026-11-05 | STORY-005..STORY-009 (new) | **Backend change.** New STORY-005 embedding pipeline (KAN-141), STORY-006 Ticket List API (KAN-147), STORY-007 search API with Ollama fallback and Search Log (KAN-144), STORY-008 Feedback API (KAN-148), STORY-009 similar-ticket suggestions (KAN-146). The backend items leave Out of Scope; Requirements 5–7, NFR 1 (Java test names), NFR 4 (contract drift found by the backend may change the feature's hooks and components), NFR 7–10, Interface Contracts (new `POST /api/v1/search/suggestions`, the search tables, the `VisibleScope` port) and Definition of Done updated. STORY-001..STORY-004 criteria unchanged; AC-001.3 and AC-002.7 may be reworded once the open questions on `project.name`, `reviewDueDate` and `resolvedAt` are answered | A task is done only with real backend and frontend (user, 05/11). User decisions of 05/11: bge-m3 query embedding ranked by cosine distance on pgvector, keyword fallback when Ollama fails or times out, a `search_log` row per search; one Feedback per user per ticket, a new one replaces the old; suggestions reuse the search ranking on the web session (Forge token out of scope); search adds its own changesets only (`ticket_embedding`, `search_log`, `ticket_feedback`, `public_id` UUID on `ticket`, `project`, `department`, `updated_at` on `ticket`); visibility through a fail-closed port until identity and project-integration provide membership. No table holds a Project name, a review due date or a resolved time, so those are open questions |
 | 2026-11-05 | STORY-002, STORY-006, STORY-007 | Open questions answered: AC-006.6 `project.name` is the Project's `jira_project_key` (a stand-in until project-integration adds a name column; list, search and suggestions); AC-006.7 `reviewDueDate` is always null and its sort key falls back to the tie-breaker; AC-007.5 `resolvedAt` is the start of `resolved_date` in Asia/Ho_Chi_Minh, null without one, and becomes nullable in the contract (`TicketSearchResult`). New AC-002.15 (the card shows "Resolved —" for a null `resolvedAt`). AC-006.2 reworded and new AC-006.11, AC-006.12: a dev-only stand-in `DevAllVisibleScope`, used only when `SEARCH_DEV_SCOPE=all`; otherwise the fail-closed `NoVisibleScope`. Interface Contracts, Out of Scope and Required from other modules follow | User answers of 05/11 (Q1 A, Q2 A, Q3 A) and the user's request for a local demo path like ticket's `StubProjectAccess` |
 | 2026-11-06 | STORY-005, STORY-006, STORY-007 | Builder check (CAUTION) fixes: AC-005.3 reworded (rollback by the count of search changesets; the `vector` extension stays; rollbacks that drop data are for development databases only); AC-005.7 reworded (batch `SEARCH_EMBED_BATCH`, default 4, one batch at a time, so embedding never holds more than one Ollama slot); new AC-005.9 (a ticket id that fails 3 times in a row is skipped until the backend restarts); AC-007.7 reworded (dates only as `yyyy-MM-dd`, BUG-106); `GET /api/v1/tickets` declares `400` in the contract (AC-006.9). Out of Scope: retention and access of `search_log`. No other criterion changes | Fresh builder check of 06/11; user decisions of 06/11: `SEARCH_MIN_SIMILARITY` 0.5 accepted as a tunable default; `search_log` privacy deferred to the dashboard (KAN-150) |
+| 2026-11-06 | STORY-010 (new) | New STORY-010: the in-process `SolutionRetrieval` service the `chatbot` module calls for the Solutions nearest to a query vector, over every Published ticket of the Workspace with an ACTIVE Department (no Department scope, chatbot Requirement 2). Terms gain **Workspace Solution**; Interface Contracts gain the service; Definition of Done covers STORY-010. No other criterion changes | Plan of the chatbot backend (KAN-179): `backend/AGENTS.md` lets `chatbot` use search only through a `service/` interface, never its tables |
 
 ## Requirements
 
@@ -194,6 +195,8 @@ Used by STORY-005 to STORY-009:
   whose Department is one of the user's Departments (UC-26, GBR-02, D25, D26). An Unpublished ticket or a ticket of a
   deleted Department is never searchable.
 - **Ranking:** STORY-007's way of ordering searchable tickets for a text (AC-007.1, AC-007.2), reused by STORY-009.
+- **Workspace Solution:** the Solution of a ticket whose status is `PUBLISHED` and whose Project's Department has
+  status `ACTIVE`, whatever Department the asking user belongs to (chatbot Requirement 2, GBR-36). Used by STORY-010.
 
 ### STORY-005: Embed Published tickets
 - As a Ticket Resolver or Project Manager, I want every Published ticket to carry a meaning vector, so that search
@@ -355,6 +358,24 @@ Used by STORY-005 to STORY-009:
   - AC-009.5: IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07 (a Forge Invocation
     Token alone does not count); IF the caller holds neither TICKET_RESOLVER nor PROJECT_MANAGER, THEN 403 with MSG08.
 
+### STORY-010: Retrieve Solutions for the Chatbot
+- As the `chatbot` module, I want the Workspace Solutions nearest in meaning to a question, so that the Knowledge
+  Chatbot answers only from Published knowledge (KAN-179, chatbot STORY-005).
+- Acceptance:
+  - AC-010.1: WHEN `SolutionRetrieval.nearest(queryVector, minSimilarity, limit)` is called, THE backend SHALL return
+    at most `limit` Workspace Solutions that have a `ticket_embedding` row whose cosine similarity to `queryVector`
+    is at least `minSimilarity`, most similar first, the internal ticket id as the tie-breaker.
+  - AC-010.2: THE backend SHALL return each hit with the ticket's Symptoms, Root cause, Resolution steps, Workaround
+    (null when blank) and Scope of applicability, and its similarity; it SHALL return no ticket id, title, Project,
+    Department, writer, snapshot or Evidence (GBR-36).
+  - AC-010.3: IF a ticket is unpublished, inactive or too far, THEN THE backend SHALL leave it out (not
+    `PUBLISHED`, its Department not `ACTIVE`, or its similarity below `minSimilarity`) and SHALL return an empty
+    list when none is left.
+  - AC-010.5: IF an argument is out of range, THEN THE service SHALL throw `IllegalArgumentException` and SHALL run
+    no query (`queryVector` without 1024 dimensions, `minSimilarity` outside 0 to 1, or `limit` below 1).
+  - AC-010.4: THE service SHALL take no user, Workspace or Department argument and SHALL call no `EmbeddingClient`
+    (the caller embeds the question), write no `search_log` row and log no Solution text.
+
 ## Out of Scope
 - The membership behind `VisibleScope` (which Departments a user belongs to, which Projects they manage, which
   `ticket.writer` value is theirs): `identity` and `project-integration` implement the port; until then the
@@ -515,6 +536,20 @@ public interface VisibleScope {
 // vn.tsolve.search.scope.service.impl.DevAllVisibleScope: only when SEARCH_DEV_SCOPE=all (local demo; AC-006.11)
 ```
 
+In-process service for the `chatbot` module (STORY-010):
+
+```java
+package vn.tsolve.search.retrieval.service;
+public interface SolutionRetrieval {
+    /** Workspace Solutions nearest to queryVector (bge-m3, 1024 dims), most similar first; AC-010.1 to AC-010.5. */
+    List<RetrievedSolution> nearest(float[] queryVector, double minSimilarity, int limit);
+}
+// vn.tsolve.search.retrieval.dto
+public record RetrievedSolution(
+        String symptoms, String rootCause, String resolutionSteps, String workaround, String scopeOfApplicability,
+        double similarity) {} // workaround null when blank
+```
+
 ### Required from other modules
 - `fe-foundation` (done): routes `/search` and `/tickets` for Ticket Resolver and Project Manager,
   `paths.ticketDetail`, the session `departments`, `DataTable` (loading, error with Try again, empty MSG04,
@@ -536,7 +571,7 @@ public interface VisibleScope {
 - `platform`: `TenantContext` and the tenant row guard; the search tables follow them when they reach `main`.
 
 ## Definition of Done
-- [ ] Every acceptance criterion of STORY-001 to STORY-009 has a test that names its AC id;
+- [ ] Every acceptance criterion of STORY-001 to STORY-010 has a test that names its AC id;
       `sdd.ts trace search` passes
 - [ ] The frontend `verify` passes on each frontend PR; `mvn verify` passes on each backend PR
 - [ ] Each screen runs against the real backend (mock mode off) with the generated client pulled from it

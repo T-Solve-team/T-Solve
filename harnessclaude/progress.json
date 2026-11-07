@@ -167,27 +167,28 @@
         "give-feedback": "pending",
         "search-public-ids": "in-progress",
         "ticket-updated-at": "in-progress",
-        "ticket-embedding-schema": "pending",
-        "search-log-schema": "pending",
-        "ticket-feedback-schema": "pending",
+        "ticket-embedding-schema": "passing",
+        "search-log-schema": "passing",
+        "ticket-feedback-schema": "passing",
         "visible-scope": "in-progress",
-        "ticket-embedding-pipeline": "pending",
+        "ticket-embedding-pipeline": "passing",
         "ticket-list-api": "in-progress",
         "ticket-list-connect": "in-progress",
         "ticket-ranking": "pending",
         "ticket-search-api": "pending",
         "ticket-search-connect": "pending",
-        "ticket-feedback-api": "pending",
-        "give-feedback-connect": "pending",
-        "ticket-suggestion-api": "pending"
+        "ticket-feedback-api": "passing",
+        "give-feedback-connect": "evaluating",
+        "ticket-suggestion-api": "pending",
+        "solution-retrieval": "passing"
       },
-      "lastUpdated": "2026-11-06T07:14:27.729Z",
+      "lastUpdated": "2026-11-06T17:23:51.646Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "13d583a0d92a04bfbc0e9b7724ec60e2432f5c83"
+        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
       }
     },
     "triage": {
@@ -208,22 +209,27 @@
       }
     },
     "chatbot": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "ask-answer": "passing",
         "citations": "passing",
         "session-conversations": "passing",
         "ratings": "passing",
-        "uuid-ids": "passing"
+        "uuid-ids": "passing",
+        "chatbot-answer-schema": "passing",
+        "ask-answer-api": "passing",
+        "answer-citations": "pending",
+        "cited-documents": "pending",
+        "follow-up-context": "pending"
       },
-      "lastUpdated": "2026-10-25T18:12:52.131Z",
+      "lastUpdated": "2026-11-06T17:23:52.760Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "3d3c827c8b735482e0f3e8baf0bd182d1ad40166"
+        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
       }
     },
     "jira-app": {
