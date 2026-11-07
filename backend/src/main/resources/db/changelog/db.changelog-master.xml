@@ -39,4 +39,7 @@
     <include file="changes/020-tracker-suggestion-comment.sql" relativeToChangelogFile="true"/>
     <include file="changes/020-identity-space-manager.sql" relativeToChangelogFile="true"/>
     <include file="changes/019-review-queue-notify.sql" relativeToChangelogFile="true"/>
+    <include file="changes/021-identity-drop-sign-in-states.sql" relativeToChangelogFile="true"/>
+    <include file="changes/022-identity-drop-hand-off-code.sql" relativeToChangelogFile="true"/>
+
 </databaseChangeLog>

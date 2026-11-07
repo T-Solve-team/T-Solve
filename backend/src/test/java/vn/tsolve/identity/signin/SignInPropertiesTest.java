@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -31,8 +30,6 @@ import org.springframework.core.io.ClassPathResource;
  */
 class SignInPropertiesTest {
 
-    private static final String SIGNING_KEY = "TSOLVE_SIGNING_KEY";
-
     @Configuration(proxyBeanMethods = false)
     @EnableConfigurationProperties(SignInProperties.class)
     static class PropertiesConfig {}
@@ -41,9 +38,6 @@ class SignInPropertiesTest {
         Map<String, String> env = new LinkedHashMap<>();
         env.put("TSOLVE_LOGIN_ORIGIN", SignInTestFixtures.LOGIN_ORIGIN);
         env.put("TSOLVE_ADMIN_ORIGIN", SignInTestFixtures.ADMIN_ORIGIN);
-        env.put(SIGNING_KEY, SignInTestFixtures.KEY);
-        env.put("GOOGLE_CLIENT_ID", "test-client-id");
-        env.put("GOOGLE_CLIENT_SECRET", "test-secret");
         env.put("PLATFORM_OPERATOR_EMAILS", "ops@example.test");
         env.put("KEYCLOAK_WEB_CLIENT_SECRET", "test-keycloak-secret");
         return env;
@@ -88,14 +82,6 @@ class SignInPropertiesTest {
         });
     }
 
-    private static String base64OfBytes(int count) {
-        byte[] bytes = new byte[count];
-        for (int i = 0; i < count; i++) {
-            bytes[i] = (byte) ('a' + i % 26);
-        }
-        return Base64.getEncoder().encodeToString(bytes);
-    }
-
     @Test
     @DisplayName("edge 38 starts when every sign-in value is set")
     void startsWhenEverySignInValueIsSet_edge38() {
@@ -104,9 +90,6 @@ class SignInPropertiesTest {
             SignInProperties properties = context.getBean(SignInProperties.class);
             assertThat(properties.loginOrigin()).isEqualTo(URI.create(SignInTestFixtures.LOGIN_ORIGIN));
             assertThat(properties.adminOrigin()).isEqualTo(URI.create(SignInTestFixtures.ADMIN_ORIGIN));
-            assertThat(properties.signingKey()).isEqualTo(SignInTestFixtures.KEY);
-            assertThat(properties.googleClientId()).isEqualTo("test-client-id");
-            assertThat(properties.googleClientSecret()).isEqualTo("test-secret");
             assertThat(properties.operatorEmails()).isEqualTo("ops@example.test");
             assertThat(properties.keycloakWebClientSecret()).isEqualTo("test-keycloak-secret");
             assertThat(properties.toString()).doesNotContain("test-keycloak-secret");
@@ -130,27 +113,6 @@ class SignInPropertiesTest {
         }
 
         assertFailsNaming(env, envName);
-    }
-
-    @Test
-    @DisplayName("edge 38 refuses a signing key shorter than 32 bytes")
-    void refusesSigningKeyShorterThan32Bytes_edge38() {
-        Map<String, String> shortKey = validEnvironment();
-        shortKey.put(SIGNING_KEY, base64OfBytes(31));
-        assertFailsNaming(shortKey, SIGNING_KEY);
-
-        Map<String, String> exactKey = validEnvironment();
-        exactKey.put(SIGNING_KEY, base64OfBytes(32));
-        runner(exactKey).run(context -> assertThat(context).hasNotFailed());
-    }
-
-    @Test
-    @DisplayName("edge 38 refuses a signing key that is not base64")
-    void refusesSigningKeyThatIsNotBase64_edge38() {
-        Map<String, String> env = validEnvironment();
-        env.put(SIGNING_KEY, "not*base64!");
-
-        assertFailsNaming(env, SIGNING_KEY);
     }
 
     @ParameterizedTest(name = "[{index}] {0}={1}")
