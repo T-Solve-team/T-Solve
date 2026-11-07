@@ -432,7 +432,7 @@ export const getAskJiraAppQuestionUrl = () => {
 };
 
 /**
- * The user comes only from the verified FIT principal. The answer is the Knowledge Chatbot's, with the same sources, citations and outcomes as on the web (AC-010.4); NO_SOURCE is shown as MSG109 by the Jira App. A blank question → 400 MSG01, longer than 1,000 characters → 400 MSG02, more than 10 history turns → 400 MSG06 (AC-010.5). A Jira account not linked to an active T-Solve user, or a FIT without a principal → 403 MSG62 and no AI call (AC-010.11). The AI unavailable or no answer within the Jira App deadline (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
+ * The user comes only from the verified FIT principal. The answer is the Knowledge Chatbot's, with the same sources, citations and outcomes as on the web (AC-010.4); NO_SOURCE is shown as MSG109 by the Jira App. A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns → 400 MSG02 (AC-010.5). A Jira account not linked to an active T-Solve user, or a FIT without a principal → 403 MSG62 and no AI call (AC-010.11). The AI unavailable or no answer within the Jira App deadline (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
  * @summary Answers a question from the "Hỏi T-Solve" page with the Knowledge Chatbot (STORY-010).
  */
 export const askJiraAppQuestion = async (
