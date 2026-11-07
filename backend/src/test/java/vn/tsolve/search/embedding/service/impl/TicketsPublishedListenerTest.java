@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.RejectedExecutionException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +27,7 @@ class TicketsPublishedListenerTest {
         TaskExecutor rejected = task -> {
             throw new RejectedExecutionException("queue full");
         };
-        TicketsPublishedEvent event = new TicketsPublishedEvent(List.of(1L));
+        TicketsPublishedEvent event = new TicketsPublishedEvent(List.of(new UUID(0, 1)));
         assertThatCode(() -> new TicketsPublishedListener(service, rejected).on(event))
                 .doesNotThrowAnyException();
 
@@ -37,8 +38,9 @@ class TicketsPublishedListenerTest {
                 .doesNotThrowAnyException();
         assertThat(output)
                 .contains(
-                        "embedding dispatch rejected for tickets [1] cause=RejectedExecutionException",
-                        "embedding failed for tickets [1] cause=IllegalStateException")
+                        "embedding dispatch rejected for tickets [" + new UUID(0, 1)
+                                + "] cause=RejectedExecutionException",
+                        "embedding failed for tickets [" + new UUID(0, 1) + "] cause=IllegalStateException")
                 .doesNotContain("queue full", "sensitive text");
         assertThat(TicketsPublishedListener.class
                         .getDeclaredMethod("on", TicketsPublishedEvent.class)

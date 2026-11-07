@@ -21,6 +21,10 @@ export interface ReviewQueueItem {
    * @nullable
    */
   authorName?: string | null;
-  enteredQueueAt: string;
+  /**
+   * Null for an older ticket whose entry time was not recorded.
+   * @nullable
+   */
+  enteredQueueAt: string | null;
   reviewDueDate: string;
 }

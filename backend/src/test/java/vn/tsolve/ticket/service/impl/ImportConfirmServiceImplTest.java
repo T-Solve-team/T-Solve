@@ -138,7 +138,7 @@ class ImportConfirmServiceImplTest {
         AtomicLong ids = new AtomicLong(100);
         when(tickets.saveAll(anyCollection())).thenAnswer(call -> {
             List<Ticket> saved = new ArrayList<>(call.getArgument(0));
-            saved.forEach(t -> ReflectionTestUtils.setField(t, "id", ids.incrementAndGet()));
+            saved.forEach(t -> ReflectionTestUtils.setField(t, "id", new UUID(0, ids.incrementAndGet())));
             return saved;
         });
     }
@@ -180,7 +180,7 @@ class ImportConfirmServiceImplTest {
         verify(decisions).saveAll(captor.capture());
         assertThat(captor.getValue())
                 .extracting(TicketReviewDecision::getTicketId)
-                .containsExactly(101L, 102L);
+                .containsExactly(new UUID(0, 101), new UUID(0, 102));
         assertThat(captor.getValue())
                 .allMatch(d -> d.getReviewer().equals(PM) && d.getDecision() == ReviewDecision.APPROVE);
     }
@@ -310,7 +310,7 @@ class ImportConfirmServiceImplTest {
 
         service.confirm(PM, PREVIEW);
 
-        verify(events).publishEvent(new TicketsPublishedEvent(List.of(101L, 102L)));
+        verify(events).publishEvent(new TicketsPublishedEvent(List.of(new UUID(0, 101), new UUID(0, 102))));
         assertThat(transactions).containsExactly("event", "commit");
     }
 

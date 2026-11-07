@@ -84,9 +84,11 @@ class TicketListRepositoryIT {
     private final UUID otherPublicId = UUID.randomUUID();
     private long department;
     private long managedProject;
+    private long ticketSequence;
 
     @BeforeEach
     void seed() {
+        ticketSequence = 0;
         jdbc.execute("TRUNCATE ticket_import_decision, ticket, project, department CASCADE");
         department = department("IT", "ACTIVE", departmentPublicId);
         long other = department("HR", "ACTIVE", otherPublicId);
@@ -109,7 +111,7 @@ class TicketListRepositoryIT {
     }
 
     @Test
-    void returnsOnlyVisibleTicketsAndHidesDeletedOrOrphaned_AC_006_1_BUG_140() {
+    void returnsOnlyVisibleTicketsAndHidesDeletedOrOrphaned_AC_006_1_BUG_153() {
         assertThat(list(null, null, null, null).stream().map(TicketSummaryResponse::sourceTicketId))
                 .containsExactlyInAnyOrder("IT-1", "IT-2", "HR-1", "HR-3");
     }
@@ -132,10 +134,11 @@ class TicketListRepositoryIT {
     }
 
     @Test
-    void returnsPublicIdsJiraProjectKeyAndNullReviewDate_AC_006_5_AC_006_6_AC_006_7() {
+    void returnsPublicIdsJiraProjectKeyAndNullReviewDate_AC_006_5_AC_006_6_AC_006_7_BUG_144() {
         var row = list("IT-1", null, null, null).getFirst();
         assertThat(row.ticketId())
-                .isEqualTo(jdbc.queryForObject("SELECT public_id FROM ticket WHERE ticket_id='IT-1'", UUID.class));
+                .isEqualTo(
+                        jdbc.queryForObject("SELECT public_id FROM ticket WHERE source_ticket_id='IT-1'", UUID.class));
         assertThat(row.project().name()).isEqualTo("ITSUP");
         assertThat(row.project().projectId())
                 .isEqualTo(jdbc.queryForObject(
@@ -203,10 +206,11 @@ class TicketListRepositoryIT {
     private void ticket(UUID projectId, String key, String status, String writer, String title) {
         jdbc.update(
                 """
-                INSERT INTO ticket(ticket_id, project_id, source, status, title, writer,
+                INSERT INTO ticket(ticket_id, source_ticket_id, project_id, source, status, title, writer,
                     symptoms, root_cause, resolution_steps, scope, updated_at)
-                VALUES (?,?,'CSV',?,?,?,'Symptoms','Root cause','Resolution','Scope', '2026-11-01T00:00:00Z')
+                VALUES (?,?,?,'CSV',?,?,?,'Symptoms','Root cause','Resolution','Scope', '2026-11-01T00:00:00Z')
                 """,
+                new UUID(0, ++ticketSequence),
                 key,
                 projectId,
                 status,

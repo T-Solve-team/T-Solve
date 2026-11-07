@@ -44,7 +44,7 @@ class TicketSearchServiceImplTest {
     private final VisibleScope.Scope scope = new VisibleScope.Scope(Set.of(7L), Set.of(), Optional.empty());
 
     @Test
-    void returnsResultsWhenSearchLogFailsWithoutLoggingQuery_BUG_143() {
+    void returnsResultsWhenSearchLogFailsWithoutLoggingQuery_BUG_156() {
         String privateQuery = "private-query-8483";
         Page<TicketSearchResultResponse> page = new PageImpl<>(
                 List.of(new TicketSearchResultResponse(UUID.randomUUID(), "VPN", null, null, "excerpt", null, null)));

@@ -42,11 +42,12 @@ class TicketFeedbackServiceImplTest {
         when(ticket.getStatus()).thenReturn("PUBLISHED");
         when(ticket.getDepartmentStatus()).thenReturn("ACTIVE");
         when(ticket.getDepartmentId()).thenReturn(1L);
-        when(ticket.getId()).thenReturn(42L);
+        when(ticket.getId()).thenReturn(new UUID(0, 42));
 
         service.give(user, publicId, new TicketFeedbackRequest(isHelpful, comment));
 
-        verify(feedback).upsert(42L, user.id(), isHelpful ? "HELPFUL" : "NOT_HELPFUL", storedComment, "WEB");
+        verify(feedback)
+                .upsert(new UUID(0, 42), user.id(), isHelpful ? "HELPFUL" : "NOT_HELPFUL", storedComment, "WEB");
     }
 
     static Stream<Arguments> validFeedback() {

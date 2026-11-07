@@ -110,10 +110,10 @@ class SearchSchemaIT {
         migrateAll(dataSource);
         insertTicketsAndProjects();
         var before = jdbc.queryForObject(
-                "SELECT updated_at FROM ticket WHERE ticket_id = 'SEARCH-1'", java.sql.Timestamp.class);
-        jdbc.update("UPDATE ticket SET title = 'Changed' WHERE ticket_id = 'SEARCH-1'");
+                "SELECT updated_at FROM ticket WHERE source_ticket_id = 'SEARCH-1'", java.sql.Timestamp.class);
+        jdbc.update("UPDATE ticket SET title = 'Changed' WHERE source_ticket_id = 'SEARCH-1'");
         var after = jdbc.queryForObject(
-                "SELECT updated_at FROM ticket WHERE ticket_id = 'SEARCH-1'", java.sql.Timestamp.class);
+                "SELECT updated_at FROM ticket WHERE source_ticket_id = 'SEARCH-1'", java.sql.Timestamp.class);
         assertThat(after).isAfter(before);
     }
 
@@ -144,11 +144,12 @@ class SearchSchemaIT {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM pg_extension WHERE extname = 'vector'", Integer.class))
                 .isEqualTo(1);
         assertThatThrownBy(() -> jdbc.update(
-                        "INSERT INTO ticket_embedding (ticket_id, embedding, model) VALUES (-1, CAST(? AS vector),"
+                        "INSERT INTO ticket_embedding (ticket_id, embedding, model) VALUES (?, CAST(? AS vector),"
                                 + " 'bge-m3')",
+                        missingTicketId(),
                         vector(1024)))
                 .isInstanceOf(DataIntegrityViolationException.class);
-        jdbc.update("DELETE FROM ticket WHERE ticket_id = 'SEARCH-1'");
+        jdbc.update("DELETE FROM ticket WHERE " + sourceColumn() + " = 'SEARCH-1'");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM ticket_embedding", Integer.class))
                 .isZero();
     }
@@ -233,7 +234,7 @@ class SearchSchemaIT {
         migrateAll(dataSource);
         insertTicketsAndProjects();
         UUID userId = insertUser("search@example.test");
-        Long ticketId = ticketId("SEARCH-1");
+        Object ticketId = ticketId("SEARCH-1");
 
         assertThatThrownBy(() -> insertSearchLog(userId, null, "UNKNOWN", 0, false))
                 .isInstanceOf(DataIntegrityViolationException.class)
@@ -274,8 +275,8 @@ class SearchSchemaIT {
         insertTicketsAndProjects();
         UUID firstUserId = insertUser("first@example.test");
         UUID secondUserId = insertUser("second@example.test");
-        Long firstTicketId = ticketId("SEARCH-1");
-        Long secondTicketId = ticketId("SEARCH-2");
+        Object firstTicketId = ticketId("SEARCH-1");
+        Object secondTicketId = ticketId("SEARCH-2");
 
         UUID firstFeedbackId = insertFeedback(firstTicketId, firstUserId, "HELPFUL", null, "WEB");
         UUID secondFeedbackId =
@@ -321,7 +322,7 @@ class SearchSchemaIT {
         migrateAll(dataSource);
         insertTicketsAndProjects();
         UUID userId = insertUser("search@example.test");
-        Long ticketId = ticketId("SEARCH-1");
+        Object ticketId = ticketId("SEARCH-1");
         insertFeedback(ticketId, userId, "HELPFUL", null, "WEB");
 
         assertThatThrownBy(() -> insertFeedback(ticketId, userId, "NOT_HELPFUL", "Changed", "ISSUE_PANEL"))
@@ -334,7 +335,7 @@ class SearchSchemaIT {
         migrateAll(dataSource);
         insertTicketsAndProjects();
         UUID userId = insertUser("search@example.test");
-        Long ticketId = ticketId("SEARCH-1");
+        Object ticketId = ticketId("SEARCH-1");
 
         assertThatThrownBy(() -> insertFeedback(ticketId, userId, "HELPFUL", "a".repeat(501), "WEB"))
                 .isInstanceOf(DataIntegrityViolationException.class)
@@ -349,7 +350,7 @@ class SearchSchemaIT {
         migrateAll(dataSource);
         insertTicketsAndProjects();
         UUID userId = insertUser("search@example.test");
-        Long ticketId = ticketId("SEARCH-1");
+        Object ticketId = ticketId("SEARCH-1");
 
         assertThatThrownBy(() -> insertFeedback(ticketId, userId, "UNKNOWN", null, "WEB"))
                 .isInstanceOf(DataIntegrityViolationException.class)
@@ -361,9 +362,9 @@ class SearchSchemaIT {
         migrateAll(dataSource);
         insertTicketsAndProjects();
         UUID userId = insertUser("search@example.test");
-        Long ticketId = ticketId("SEARCH-1");
+        Object ticketId = ticketId("SEARCH-1");
 
-        assertThatThrownBy(() -> insertFeedback(-1L, userId, "HELPFUL", null, "WEB"))
+        assertThatThrownBy(() -> insertFeedback(missingTicketId(), userId, "HELPFUL", null, "WEB"))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("ticket_feedback_ticket_id_fkey");
         assertThatThrownBy(() -> insertFeedback(ticketId, UUID.randomUUID(), "HELPFUL", null, "WEB"))
@@ -378,8 +379,36 @@ class SearchSchemaIT {
                 email);
     }
 
-    private Long ticketId(String sourceId) {
-        return jdbc.queryForObject("SELECT id FROM ticket WHERE ticket_id = ?", Long.class, sourceId);
+    // Before Review the key is the numeric id and the source id is ticket_id; afterwards ticket_id is the UUID key.
+    private boolean canonical() {
+        return Boolean.TRUE.equals(jdbc.queryForObject(
+                "select exists (select 1 from information_schema.columns where table_name='ticket'"
+                        + " and column_name='source_ticket_id')",
+                Boolean.class));
+    }
+
+    private String sourceColumn() {
+        return canonical() ? "source_ticket_id" : "ticket_id";
+    }
+
+    // 010-ticket-import-project-uuid (KAN-31) runs before the Search changesets, so project_id is a UUID there too.
+    private boolean projectIdIsUuid() {
+        return "uuid"
+                .equals(jdbc.queryForObject(
+                        "select data_type from information_schema.columns where table_name='ticket'"
+                                + " and column_name='project_id'",
+                        String.class));
+    }
+
+    private Object missingTicketId() {
+        return canonical() ? UUID.randomUUID() : -1L;
+    }
+
+    private Object ticketId(String sourceId) {
+        return jdbc.queryForObject(
+                "SELECT " + (canonical() ? "ticket_id" : "id") + " FROM ticket WHERE " + sourceColumn() + " = ?",
+                Object.class,
+                sourceId);
     }
 
     private UUID insertSearchLog(UUID userId, Long departmentId, String channel, int resultCount, boolean isFallback) {
@@ -396,7 +425,7 @@ class SearchSchemaIT {
                 isFallback);
     }
 
-    private UUID insertFeedback(Long ticketId, UUID userId, String rating, String comment, String channel) {
+    private UUID insertFeedback(Object ticketId, UUID userId, String rating, String comment, String channel) {
         return jdbc.queryForObject(
                 """
                 INSERT INTO ticket_feedback (ticket_id, user_id, rating, comment, channel)
@@ -412,10 +441,11 @@ class SearchSchemaIT {
 
     private void insertEmbedding(String sourceId, String vector) {
         jdbc.update(
-                """
-                INSERT INTO ticket_embedding (ticket_id, embedding, model)
-                SELECT id, CAST(? AS vector), 'bge-m3' FROM ticket WHERE ticket_id = ?
-                """,
+                "INSERT INTO ticket_embedding (ticket_id, embedding, model) SELECT "
+                        + (canonical() ? "ticket_id" : "id")
+                        + ", CAST(? AS vector), 'bge-m3' FROM ticket WHERE "
+                        + sourceColumn()
+                        + " = ?",
                 vector,
                 sourceId);
     }
@@ -425,13 +455,6 @@ class SearchSchemaIT {
     }
 
     private void insertTicketsAndProjects() {
-        boolean uuidProjectId = "uuid"
-                .equals(jdbc.queryForObject(
-                        """
-                SELECT udt_name FROM information_schema.columns
-                WHERE table_schema = 'public' AND table_name = 'ticket' AND column_name = 'project_id'
-                """,
-                        String.class));
         for (int index = 1; index <= 2; index++) {
             Long departmentId = jdbc.queryForObject(
                     "INSERT INTO department (name) VALUES (?) RETURNING department_id",
@@ -442,15 +465,20 @@ class SearchSchemaIT {
                     Long.class,
                     departmentId,
                     "SEARCH" + index);
-            Object ticketProjectId = uuidProjectId
+            Object ticketProjectId = projectIdIsUuid()
                     ? jdbc.queryForObject("SELECT public_id FROM project WHERE project_id = ?", UUID.class, projectId)
                     : projectId;
+            boolean canonical = Boolean.TRUE.equals(jdbc.queryForObject(
+                    "select exists (select 1 from information_schema.columns where table_name='ticket' and"
+                            + " column_name='source_ticket_id')",
+                    Boolean.class));
             jdbc.update(
                     """
-                    INSERT INTO ticket (ticket_id, project_id, source, status, title,
+                    INSERT INTO ticket (%s, project_id, source, status, title,
                                         symptoms, root_cause, resolution_steps, scope)
                     VALUES (?, ?, 'CSV', 'PUBLISHED', ?, 'Symptoms', 'Root cause', 'Resolution', 'Scope')
-                    """,
+                    """
+                            .formatted(canonical ? "source_ticket_id" : "ticket_id"),
                     "SEARCH-" + index,
                     ticketProjectId,
                     "Ticket " + index);

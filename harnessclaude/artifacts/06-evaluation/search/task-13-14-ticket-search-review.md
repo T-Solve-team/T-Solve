@@ -85,7 +85,7 @@ Low / informational (does not block):
    without a role also sends an invalid `q`. I judged it non-blocking (Low 1), because no data, embedding or log
    row comes out of it.
 3. **Tie-breaker direction.** AC-007.1 says "the internal ticket id as the tie-breaker" without a direction. The
-   code uses ascending (`t.id`). AC-007.2 asks for descending, and the code uses descending there.
+   code uses ascending (`t.ticket_id` after main integration). AC-007.2 asks for descending, and the code uses descending there.
 4. **`q` length on the raw value.** `@Size(max = 200)` counts the untrimmed `q` in UTF-16 units, the same as the
    contract's `maxLength: 200`. A 199-character query with surrounding spaces past 200 is rejected.
 5. **Search Log for an out-of-scope or unknown `departmentId`.** The row names the Department when it exists, and
@@ -119,3 +119,35 @@ None blocking. Low 1-2 and Info 3-5 are under Stage 2.
 - Scope: `git status --porcelain -uall` lists only the `query` main and test files, `.env.example`, the YAML, the
   two generated files, `progress.json`, `events.jsonl` and `frontend/src/features/search/mocks/handlers.ts`. That last
   file is excluded by the dispatcher and was not reviewed.
+
+
+## Main integration for PR #142 (2026-11-07)
+
+This merge preserves the behavior reviewed above while adopting main's Review storage schema (BUG-144,
+BUG-145 and BUG-146). The earlier test totals are historical evidence; they do not verify this merge.
+
+- Ranking repositories now identify SearchTicket by UUID, join embedding and feedback on `ticket.ticket_id`,
+  and use that UUID for deterministic tie-breaks. The API still returns `ticket.public_id`.
+- Ranking, Solution retrieval and SearchTicket use main's Project join: either `project.public_id` or the
+  stable UUID derived from its numeric `project_id` may match `ticket.project_id`.
+- Ranking fixtures use `source_ticket_id` and ordered canonical ticket UUIDs. A regression test covers
+  both semantic and keyword searches over legacy Project UUIDs (`searchJoinsLegacyProjectUuid_BUG_153`).
+  List, feedback and retrieval fixtures bind Project public UUIDs directly. SearchSchemaIT retains main's
+  pre-/post-Review column detection and uses Project public UUIDs when the column is UUID. The embedding
+  grant and import request match the seeded Project public UUID `14400000-0000-0000-0000-000000000001`.
+- SearchLog and its repository already match `011-search-log.sql`: UUID log/user keys and a BIGINT
+  Department reference. They need no schema changes.
+- Search bug references are BUG-150 (NUL), BUG-151 (offset), BUG-152 (year zero), BUG-153 (Project joins),
+  BUG-154 (excerpts), BUG-155 (query length) and BUG-156 (log failure). The bug log retains all rows from
+  both branches, including this branch's unchanged BUG-131, with its seven renumbered rows after main's
+  BUG-149 and their publication references corrected to PR #142.
+
+Validation in this environment:
+- `mvn -q -o compile test-compile` in `backend/`: exit 0; production and test sources compile on Java 21.
+- Scoped `mvn -q -o spotless:apply`: blocked by `Cannot find git repository in any parent directory`
+  in the existing worktree setup. Cached Palantir Java Format 2.39.0 formatted all 12 touched Java files; its subsequent
+  `--dry-run --set-exit-if-changed` exited 0.
+- Docker, integration tests and `mvn verify` are excluded by the task; SQL behavior and the new legacy
+  Project regression test have not been executed against PostgreSQL.
+- Tracking parses as JSON and JSONL without edits. Git index entries remain unmerged because the task
+  prohibits staging; conflict resolution here changes only working-tree file contents.

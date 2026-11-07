@@ -18,6 +18,16 @@ const detailPath = (id = firstId) => `/tickets/${id}`;
 const detailEndpoint = '*/api/v1/tickets/:ticketId';
 
 describe('Ticket Detail review', () => {
+  it('AC-009.2 respects the backend decision permission (BUG-137)', async () => {
+    const record = reviewStore.tickets.find((ticket) => ticket.ticketId === firstId);
+    server.use(http.get(detailEndpoint, () => HttpResponse.json({ ...record, canDecide: false })));
+    renderApp(detailPath());
+    await screen.findByRole('heading', { name: 'ITSUP-1031' }, { timeout: 5000 });
+    for (const name of ['Approve', 'Reject', 'Request Changes']) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+  });
+
   it('AC-006.3 AC-005.5 keeps pending actions mounted and disabled during refetch (BUG-089)', async () => {
     const user = userEvent.setup();
     const { queryClient } = renderApp(detailPath());

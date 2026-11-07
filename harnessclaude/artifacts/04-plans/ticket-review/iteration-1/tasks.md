@@ -1,7 +1,7 @@
 ---
 module: ticket-review
 date: 2026-11-01
-total_tasks: 2
+total_tasks: 10
 owner: Dev
 ---
 
@@ -47,3 +47,57 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** frontend/openapi/tsolve-api.yaml; generated API output; frontend/src/features/review/pages/ReviewHistoryPage*; review feature-local hooks/components/mocks and tests; existing review decision/send-back invalidation callers; docs/bug-log.md only for reproduced defects.
 **Dependencies:** Current STORY-008 spec approval; committed KAN-158 and inherited KAN-24 detail. No backend/SSE/Unpublish mutation delivery.
 **Verification:** AC-008.1–008.7 tests and design edge cases; focused tests, trace, full required frontend checks and deterministic generation. No manual browser testing per user. Review before reporting completion and request agreement for feat(review): add review history (KAN-159).
+
+## Task 5: Shared UUID storage for Review (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-storage
+**Description:** Implement AC-009.9 and R13. Evolve the shared Ticket table, add Evidence and Review decision storage, and preserve import rows and event delivery.
+**Files:** Tenant Liquibase changelog, Ticket entity and repository, import decision entity, import confirmation service and event, affected import tests and Review migration integration test.
+**Dependencies:** Approved STORY-009, current Liquibase baseline and database/02_tenant.sql.
+**Verification:** PostgreSQL upgrade test, import regressions, backend verification and Spotless.
+
+## Task 6: Atomic Review decisions (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-decision-transaction
+**Description:** Implement the transaction for AC-009.4–009.8, covering Approve, Reject and Request Changes. Keep it inside the Ticket service boundary so ticket state and decision history share the same transaction. Accept Account and managed Project scope from a trusted internal caller. Keep HTTP integration in Task 7.
+**Files:** Ticket domain model, repository and decision service; decision history entity and repository; PostgreSQL integration tests in the Review test scope.
+**Dependencies:** Task 5. A scoped PostgreSQL test supplies the authorized Account and Project set.
+**Verification:** Real PostgreSQL tests for decisions, rejection of invalid batches, competing decisions and rollback; run backend verification and Spotless.
+
+## Task 7: Review decision endpoints (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-decision-endpoints
+**Description:** Connect the three existing OpenAPI mutations to Task 6. Use an internal access interface for the verified Workspace Account and managed Projects. Deny access when its production adapter or binding is absent. Cover AC-009.3 and the decision API portion of AC-009.4–009.8.
+**Files:** Review controller, access interface and two-Workspace API integration tests.
+**Dependencies:** Task 6. Tests implement the trusted Workspace and membership contract against two PostgreSQL databases.
+**Verification:** Check session, role, scope, UUID batch and feedback validation, cross-Workspace denial and committed decisions through HTTP.
+
+## Task 8: Record Review Queue entry time (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-queue-entry-time
+**Description:** Implement AC-009.11. A tenant migration records when a Solution Form ticket enters Pending review. Keep unknown historical entry times null. Record a new time on a new entry without changing the due date.
+**Files:** Tenant Liquibase changelog and Review storage and transaction integration tests.
+**Dependencies:** Task 5 and approved queue entry time criteria.
+**Verification:** PostgreSQL upgrade and lifecycle tests, backend verification and Spotless.
+
+## Task 9: Production Review reads and web integration (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-production-api
+**Description:** Implement AC-009.1–009.2, AC-009.10 and AC-009.12. Connect queue, eligible IDs and detail to persisted data, expose the nullable queue entry time and verify the existing web decision callers through the production contract.
+**Files:** Review controller, services, tests and existing OpenAPI or web Review files where needed.
+**Dependencies:** Tasks 7 and 8 and Workspace-scoped Project metadata including public Project and Department IDs.
+**Verification:** Backend authorization, concurrency and rollback tests, plus real web API integration.
+
+## Task 10: Request Changes feedback in Jira (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-jira-feedback
+**Description:** Complete the Jira clause of AC-009.6 and cover R15.
+**Files:** Jira issue panel and Review feedback boundary and tests.
+**Dependencies:** Task 9 and verified Jira issue and writer context.
+**Verification:** MSG64 for the writer and denial for an unrelated issue, Account or Workspace.

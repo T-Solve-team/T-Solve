@@ -22,6 +22,7 @@
         "retire-snapshot-import": "passing",
         "csv-confirm-db-tests": "passing",
         "preview-rows-access": "passing",
+        "import-ticket-uuid-compatibility": "evaluating",
         "project-uuid": "passing",
         "preview-read": "passing",
         "duplicate-id-code": "passing",
@@ -123,9 +124,11 @@
         "user-role": "pending",
         "logout-rp-initiated": "pending",
         "keycloak-provisioning": "pending",
-        "keycloak-theme": "pending"
+        "keycloak-theme": "pending",
+        "keycloak-prerequisites": "passing",
+        "keycloak-realm": "passing"
       },
-      "lastUpdated": "2026-11-05T15:33:35.932Z",
+      "lastUpdated": "2026-11-07T07:29:34.108Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -300,15 +303,16 @@
       "status": "implementing",
       "currentPhase": "implement",
       "features": {
-        "review-notification-smtp": "evaluating"
+        "review-notification-smtp": "evaluating",
+        "tenant-jobs": "passing"
       },
-      "lastUpdated": "2026-11-06T12:50:23.570Z",
+      "lastUpdated": "2026-11-07T05:02:02.604Z",
       "branch": "feat/worker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "c7dd3d10cfad23c2ebc54bdc4e5ad54a4fb974f4"
+        "default": "68bd287b663f5dd4bacb533c5883a981e4abbf11"
       }
     },
     "ai": {
@@ -360,15 +364,21 @@
         "review-queue-decisions": "passing",
         "review-ticket-detail": "passing",
         "expired-tickets": "passing",
-        "review-history": "passing"
+        "review-history": "passing",
+        "review-storage": "evaluating",
+        "review-production-api": "evaluating",
+        "review-jira-feedback": "in-progress",
+        "review-decision-transaction": "evaluating",
+        "review-decision-endpoints": "evaluating",
+        "review-queue-entry-time": "evaluating"
       },
-      "lastUpdated": "2026-11-04T14:48:28.461Z",
+      "lastUpdated": "2026-11-07T04:40:26.723Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "57efd3620b4a58678607501aa5dd4c124496ab7e"
+        "default": "692044af6bba2daf5512618d65aee777f2d13a2a"
       }
     }
   },

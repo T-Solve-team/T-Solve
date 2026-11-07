@@ -500,7 +500,13 @@ class AuthorizeControllerTest {
     }
 
     private static WorkspaceRef withDomain(WorkspaceRef workspace, String domain) {
-        return new WorkspaceRef(workspace.id(), workspace.siteHost(), domain, workspace.status());
+        return new WorkspaceRef(
+                workspace.id(),
+                workspace.siteHost(),
+                domain,
+                workspace.status(),
+                workspace.slug(),
+                workspace.organizationId());
     }
 
     @ParameterizedTest(name = "[{index}] domain=[{0}]")

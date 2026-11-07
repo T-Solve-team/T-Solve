@@ -74,19 +74,23 @@ class SolutionRetrievalRepositoryIT {
     }
 
     @Test
-    void returnsNearestAboveCutOff_AC_010_1_BUG_140() {
+    void returnsNearestAboveCutOff_AC_010_1_BUG_153() {
         insert("FIRST", "ACTIVE", "PUBLISHED", 1, 0);
         insert("TIE", "ACTIVE", "PUBLISHED", 1, 0);
         insert("NEXT", "ACTIVE", "PUBLISHED", 0.8f, 0.6f);
         insert("FAR", "ACTIVE", "PUBLISHED", 0, 1);
 
+        // Equal similarity: the internal ticket id breaks the tie. It is a UUID, so read its order from the database.
+        List<String> tieOrder = jdbc.queryForList(
+                "SELECT symptoms FROM ticket WHERE symptoms IN ('FIRST', 'TIE') ORDER BY ticket_id", String.class);
         assertThat(nearest(0.7, 2))
                 .extracting(SolutionRetrievalRepository.SolutionRow::getSymptoms)
-                .containsExactly("FIRST", "TIE");
+                .containsExactlyElementsOf(tieOrder);
         assertThat(nearest(0.7, 5))
                 .extracting(SolutionRetrievalRepository.SolutionRow::getSymptoms)
-                .containsExactly("FIRST", "TIE", "NEXT");
+                .containsExactly(tieOrder.get(0), tieOrder.get(1), "NEXT");
         var first = nearest(1, 5).getFirst();
+        assertThat(first.getSymptoms()).isEqualTo(tieOrder.getFirst());
         assertThat(first.getSimilarity()).isEqualTo(1);
         assertThat(first.getRootCause()).isEqualTo("Root cause");
         assertThat(first.getResolutionSteps()).isEqualTo("Resolution");
@@ -108,7 +112,8 @@ class SolutionRetrievalRepositoryIT {
         insert("HR", "ACTIVE", "PUBLISHED", 1, 0);
         assertThat(nearest(0.7, 5))
                 .extracting(SolutionRetrievalRepository.SolutionRow::getSymptoms)
-                .containsExactly("IT", "HR");
+                .containsExactlyElementsOf(jdbc.queryForList(
+                        "SELECT symptoms FROM ticket WHERE symptoms IN ('IT', 'HR') ORDER BY ticket_id", String.class));
         assertThat(jdbc.queryForObject("SELECT count(*) FROM search_log", Integer.class))
                 .isZero();
     }
@@ -128,13 +133,14 @@ class SolutionRetrievalRepositoryIT {
                 UUID.class,
                 department,
                 key);
-        Long ticket = jdbc.queryForObject(
+        UUID ticket = jdbc.queryForObject(
                 """
-                INSERT INTO ticket(ticket_id, project_id, source, status, title,
+                INSERT INTO ticket(source_ticket_id, project_id, source, status, title,
                                    symptoms, root_cause, resolution_steps, workaround, scope)
-                VALUES (?, ?, 'CSV', ?, 'Private title', ?, 'Root cause', 'Resolution', '  ', 'Scope') RETURNING id
+                VALUES (?, ?, 'CSV', ?, 'Private title', ?, 'Root cause', 'Resolution', '  ', 'Scope')
+                RETURNING ticket_id
                 """,
-                Long.class,
+                UUID.class,
                 key,
                 project,
                 ticketStatus,

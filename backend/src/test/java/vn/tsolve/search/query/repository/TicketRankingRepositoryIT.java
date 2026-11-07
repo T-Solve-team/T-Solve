@@ -78,14 +78,16 @@ class TicketRankingRepositoryIT {
     private long department;
     private long deletedDepartment;
     private UUID project;
-    private long best;
-    private long tied;
-    private long weaker;
-    private long undated;
+    private long ticketSequence;
+    private UUID best;
+    private UUID tied;
+    private UUID weaker;
+    private UUID undated;
 
     @BeforeEach
     void seed() {
         jdbc.execute("TRUNCATE ticket_import_decision, ticket, project, department CASCADE");
+        ticketSequence = 0;
         department = department("IT", "ACTIVE", departmentPublicId);
         project = project(department, "ITSUP");
         best = ticket(project, "BEST", "PUBLISHED", "2026-10-01", "VPN 50%_off\\", "CSV");
@@ -119,7 +121,18 @@ class TicketRankingRepositoryIT {
     }
 
     @Test
-    void searchJoinsProjectByPublicId_BUG_140() {
+    void searchJoinsProjectByPublicId_BUG_153() {
+        assertProjectJoined();
+    }
+
+    @Test
+    void searchJoinsLegacyProjectUuid_BUG_153() {
+        Long projectId = jdbc.queryForObject("SELECT project_id FROM project WHERE public_id = ?", Long.class, project);
+        jdbc.update("UPDATE ticket SET project_id = ? WHERE project_id = ?", new UUID(0, projectId), project);
+        assertProjectJoined();
+    }
+
+    private void assertProjectJoined() {
         var semantic = rank(new RankFilter(null, null, null, null), PageRequest.of(0, 2));
         assertThat(semantic.getTotalElements()).isEqualTo(4);
         assertThat(semantic.getContent())
@@ -231,7 +244,7 @@ class TicketRankingRepositoryIT {
         assertThat(row.department().departmentId()).isEqualTo(departmentPublicId);
         assertThat(row.department().name()).isEqualTo("IT");
         assertThat(row.ticketId())
-                .isEqualTo(jdbc.queryForObject("SELECT public_id FROM ticket WHERE id = ?", UUID.class, best));
+                .isEqualTo(jdbc.queryForObject("SELECT public_id FROM ticket WHERE ticket_id = ?", UUID.class, best));
     }
 
     private Page<TicketSearchResultResponse> rank(RankFilter filter, PageRequest page) {
@@ -248,7 +261,7 @@ class TicketRankingRepositoryIT {
         return vector;
     }
 
-    private void vector(long ticket, float first, float second) {
+    private void vector(UUID ticket, float first, float second) {
         float[] vector = queryVector();
         vector[0] = first;
         vector[1] = second;
@@ -275,14 +288,15 @@ class TicketRankingRepositoryIT {
                 key);
     }
 
-    private long ticket(UUID projectId, String title, String status, String date, String symptoms, String source) {
+    private UUID ticket(UUID projectId, String title, String status, String date, String symptoms, String source) {
         return jdbc.queryForObject(
                 """
-                INSERT INTO ticket(ticket_id, project_id, source, status, title, writer,
+                INSERT INTO ticket(ticket_id, source_ticket_id, project_id, source, status, title, writer,
                     symptoms, root_cause, resolution_steps, scope, resolved_date)
-                VALUES (?,?,?,?,?,'writer',?,'Root cause',E'  Restart\\nrouter  ','Scope',CAST(? AS date)) RETURNING id
+                VALUES (?,?,?,?,?,?,'writer',?,'Root cause',E'  Restart\\nrouter  ','Scope',CAST(? AS date)) RETURNING ticket_id
                 """,
-                Long.class,
+                UUID.class,
+                new UUID(0, ++ticketSequence),
                 title,
                 projectId,
                 source,
@@ -292,7 +306,7 @@ class TicketRankingRepositoryIT {
                 date);
     }
 
-    private void feedback(long ticket, String rating) {
+    private void feedback(UUID ticket, String rating) {
         UUID user = jdbc.queryForObject(
                 "INSERT INTO app_user(email,status,created_at) VALUES (?,'ACTIVE',now()) RETURNING id",
                 UUID.class,

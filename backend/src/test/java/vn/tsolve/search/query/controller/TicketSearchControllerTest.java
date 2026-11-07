@@ -74,7 +74,7 @@ class TicketSearchControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.TICKET_RESOLVER)
-    void accepts200CharactersWithTrailingSpaces_BUG_142() throws Exception {
+    void accepts200CharactersWithTrailingSpaces_BUG_155() throws Exception {
         String q = "x".repeat(200);
         when(tickets.search(any(), any())).thenReturn(Page.empty(PageRequest.of(0, 20)));
         mvc.perform(get(PATH).param("q", q + "   ")).andExpect(status().isOk());
@@ -85,7 +85,7 @@ class TicketSearchControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.TICKET_RESOLVER)
-    void accepts200Emoji_BUG_142() throws Exception {
+    void accepts200Emoji_BUG_155() throws Exception {
         String q = "\uD83D\uDE00".repeat(200);
         when(tickets.search(any(), any())).thenReturn(Page.empty(PageRequest.of(0, 20)));
         mvc.perform(get(PATH).param("q", q)).andExpect(status().isOk());
@@ -96,7 +96,7 @@ class TicketSearchControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.TICKET_RESOLVER)
-    void rejects201Emoji_BUG_142() throws Exception {
+    void rejects201Emoji_BUG_155() throws Exception {
         mvc.perform(get(PATH).param("q", "\uD83D\uDE00".repeat(201)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MSG02"))
@@ -107,7 +107,7 @@ class TicketSearchControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.TICKET_RESOLVER)
-    void rejectsNulInQBeforeSearching_BUG_135() throws Exception {
+    void rejectsNulInQBeforeSearching_BUG_150() throws Exception {
         when(tickets.search(any(), any())).thenReturn(Page.empty(PageRequest.of(0, 20)));
         for (String q : List.of("a\0b", "\0VPN", "VPN\0", "\0")) {
             String code = q.equals("\0") ? "MSG01" : "MSG06";
@@ -122,7 +122,7 @@ class TicketSearchControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.TICKET_RESOLVER)
-    void rejectsOffsetBeyondIntegerLimitBeforeSearching_BUG_138() throws Exception {
+    void rejectsOffsetBeyondIntegerLimitBeforeSearching_BUG_151() throws Exception {
         when(tickets.search(any(), any())).thenReturn(Page.empty(PageRequest.of(0, 20)));
         for (String page : List.of("2147483647", "107374183")) {
             mvc.perform(get(PATH).param("q", "VPN").param("page", page).param("size", "20"))
@@ -134,7 +134,7 @@ class TicketSearchControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.TICKET_RESOLVER)
-    void acceptsOffsetAtIntegerLimit_BUG_138() throws Exception {
+    void acceptsOffsetAtIntegerLimit_BUG_151() throws Exception {
         when(tickets.search(any(), any())).thenReturn(Page.empty(PageRequest.of(Integer.MAX_VALUE, 1)));
         mvc.perform(get(PATH).param("q", "VPN").param("page", "2147483647").param("size", "1"))
                 .andExpect(status().isOk());
@@ -145,7 +145,7 @@ class TicketSearchControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.TICKET_RESOLVER)
-    void rejectsYearZeroBeforeSearching_BUG_139() throws Exception {
+    void rejectsYearZeroBeforeSearching_BUG_152() throws Exception {
         when(tickets.search(any(), any())).thenReturn(Page.empty(PageRequest.of(0, 20)));
         for (String field : List.of("resolvedFrom", "resolvedTo")) {
             mvc.perform(get(PATH).param("q", "VPN").param(field, "0000-01-01"))

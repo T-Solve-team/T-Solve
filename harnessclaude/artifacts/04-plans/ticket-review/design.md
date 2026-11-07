@@ -206,3 +206,17 @@ Invalidate generated history query keys after successful existing decisions/send
 Test scoped access before pagination/counting; signed-out/non-PM/foreign Department; all six labels; duplicate ticket decisions and equal timestamps; empty history/filter result; null author/content and HTML-like text; UTC+7 midnight/leap-date/invalid/partial/reversed ranges; URL navigation/page reset; server errors/retry/loading; each successful existing producer appends identity/content and invalidates history; failed decisions leave history unchanged. Reuse existing fixtures and meaningful interaction assertions, without weakening timeouts or regression checks.
 
 Delivery: separate branch feat/KAN-159-review-history currently stacked on committed KAN-158 to reuse SEND_BACK history and KAN-24 detail. Keep the KAN-159 commit distinct; disclose this dependency before any MR. Required checks: named AC-008 tests, trace, full frontend format/lint/typecheck/test/build, deterministic regeneration, independent review and Graphify refresh. User commit checkpoint applies.
+
+## KAN-24 production backend
+
+Evolve the shared ticket table and its existing Solution fields. Apply UUID primary keys through a forward Liquibase migration. Backfill the import decision links before replacing the numeric ticket key. Preserve source keys, imported data and after-commit event behavior. The event carries the new UUIDs. A separate Review ticket table would split Review and Import data.
+
+Keep the existing OpenAPI contract and Department filter. Require a trusted Workspace binding and current Project Manager membership. The import access stub cannot establish either. Validate the complete batch under locks and save state and decisions in one transaction. Jira feedback reads the committed decision under a verified issue and writer identity.
+
+| Risk | Expected behavior | Verification |
+|---|---|---|
+| R13. Upgrade and import integrity | Preserve existing ticket data and decision links. New imports still commit atomically. | PostgreSQL upgrade and import tests |
+| R14. Forged IDs or concurrent decisions | Restrict reads to the Workspace and managed Projects. Refuse invalid or stale batches without partial writes. | API scope, concurrency and rollback tests |
+| R15. Jira feedback crosses scope | Show MSG64 only to the verified writer of the associated issue. | Jira issue, Account and Workspace scope tests |
+
+Risk review verdict: CAUTION. Storage can be verified independently. Production activation requires trusted Workspace routing, Project membership and Jira issue identity.

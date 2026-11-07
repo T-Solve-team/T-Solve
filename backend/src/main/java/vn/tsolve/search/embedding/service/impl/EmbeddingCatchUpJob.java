@@ -1,6 +1,7 @@
 package vn.tsolve.search.embedding.service.impl;
 
 import java.util.List;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -27,8 +28,8 @@ public class EmbeddingCatchUpJob {
             fixedDelayString = "#{T(org.springframework.boot.convert.DurationStyle)"
                     + ".detectAndParse('${SEARCH_EMBED_CATCH_UP_DELAY:60s}').toMillis()}")
     public void run() {
-        List<Long> ids = repository.findPublishedWithoutEmbedding(
-                batchSize, service.skippedIds().toArray(Long[]::new));
+        List<UUID> ids = repository.findPublishedWithoutEmbedding(
+                batchSize, service.skippedIds().toArray(UUID[]::new));
         service.embed(ids);
     }
 }

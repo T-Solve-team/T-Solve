@@ -169,7 +169,7 @@ class TicketEmbeddingIT {
         confirms.confirm("pm", upload("EMBED-1", "EMBED-2", "EMBED-3"));
         await().atMost(Duration.ofSeconds(10))
                 .untilAsserted(() -> assertThat(embeddingCount()).isEqualTo(3));
-        List<Long> ids = jdbc.queryForList("SELECT id FROM ticket ORDER BY id", Long.class);
+        List<UUID> ids = jdbc.queryForList("SELECT ticket_id FROM ticket ORDER BY ticket_id", UUID.class);
         var before = jdbc.queryForMap(
                 "SELECT ticket_embedding_id, created_at, updated_at FROM ticket_embedding WHERE ticket_id = ?",
                 ids.getFirst());
@@ -191,11 +191,11 @@ class TicketEmbeddingIT {
                 .isEqualTo(2f);
 
         jdbc.update("DELETE FROM ticket_embedding");
-        assertThat(repository.findPublishedWithoutEmbedding(2, new Long[0])).containsExactly(ids.get(0), ids.get(1));
-        assertThat(repository.findPublishedWithoutEmbedding(2, new Long[] {ids.getFirst()}))
+        assertThat(repository.findPublishedWithoutEmbedding(2, new UUID[0])).containsExactly(ids.get(0), ids.get(1));
+        assertThat(repository.findPublishedWithoutEmbedding(2, new UUID[] {ids.getFirst()}))
                 .containsExactly(ids.get(1), ids.get(2));
-        jdbc.update("UPDATE ticket SET status = 'UNPUBLISHED' WHERE id = ?", ids.get(1));
-        assertThat(repository.findPublishedWithoutEmbedding(2, new Long[] {ids.getFirst()}))
+        jdbc.update("UPDATE ticket SET status = 'UNPUBLISHED' WHERE ticket_id = ?", ids.get(1));
+        assertThat(repository.findPublishedWithoutEmbedding(2, new UUID[] {ids.getFirst()}))
                 .containsExactly(ids.get(2));
     }
 
@@ -214,7 +214,7 @@ class TicketEmbeddingIT {
                     .isEqualTo("COMPLETED");
         });
         client.fail = false;
-        service.embed(repository.findPublishedWithoutEmbedding(4, new Long[0]));
+        service.embed(repository.findPublishedWithoutEmbedding(4, new UUID[0]));
         assertThat(embeddingCount()).isEqualTo(1);
     }
 

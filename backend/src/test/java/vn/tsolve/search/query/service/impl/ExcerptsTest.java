@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 class ExcerptsTest {
     @Test
-    void cutsAt200CodePointsWithoutSplittingEmoji_BUG_141() {
+    void cutsAt200CodePointsWithoutSplittingEmoji_BUG_154() {
         String prefix = "x".repeat(199) + "\uD83D\uDE00";
         String excerpt = Excerpts.of(prefix + "more", null);
         assertThat(excerpt).isEqualTo(prefix);
