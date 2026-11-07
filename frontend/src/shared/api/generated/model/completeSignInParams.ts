@@ -8,8 +8,6 @@
  */
 
 export type CompleteSignInParams = {
-  /**
-   * One-time hand-off code made by the central sign-in site (valid 60 seconds, single use).
-   */
+  /** One-time hand-off code made by the central sign-in site (valid 60 seconds, single use). */
   code: string;
 };
