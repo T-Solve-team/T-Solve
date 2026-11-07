@@ -583,6 +583,14 @@
 {"ts":"2026-11-05T11:28:03.757Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-05T11:28:04.199Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"evaluating","to":"passing"}
 {"ts":"2026-11-05T11:28:41.466Z","type":"quick-closed","what":"Test values for OLLAMA_BASE_URL and OLLAMA_CHAT_MODEL so existing Spring contexts start (KAN-139)","files":["backend/src/test/resources/config/application.yml"]}
+{"ts":"2026-11-05T12:04:02.990Z","type":"feature-status","module":"ai","feature":"solution-draft","from":"pending","to":"in-progress"}
+{"ts":"2026-11-05T12:30:39.959Z","type":"feature-status","module":"ai","feature":"solution-draft","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-05T12:30:40.497Z","type":"feature-status","module":"ai","feature":"solution-draft","from":"evaluating","to":"passing"}
+{"ts":"2026-11-05T12:46:42.932Z","type":"feature-status","module":"ai","feature":"solution-rewrite","from":"pending","to":"in-progress"}
+{"ts":"2026-11-05T13:14:57.110Z","type":"feature-status","module":"ai","feature":"solution-rewrite","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-05T13:14:57.300Z","type":"feature-status","module":"ai","feature":"solution-rewrite","from":"evaluating","to":"passing"}
+{"ts":"2026-11-05T13:14:57.506Z","type":"module-status","module":"ai","from":"implementing","to":"evaluating"}
+{"ts":"2026-11-05T13:15:03.084Z","type":"module-status","module":"ai","from":"evaluating","to":"completed"}
 {"ts":"2026-11-05T14:10:40.463Z","type":"commit-recorded","module":"triage","repo":"default","sha":"6cefdf9443d81628a7819c855a363f111cc44cf7"}
 {"ts":"2026-11-05T17:49:14.224Z","type":"spec-approved","module":"search","specHash":"fa4353d53ace5d33eb6b0288c2e676bd8cb636800c68d7f5689ee21b45a626d6"}
 {"ts":"2026-11-05T17:49:29.046Z","type":"feature-status","module":"search","feature":"search-public-ids","from":null,"to":"pending"}
@@ -627,3 +635,33 @@
 {"ts":"2026-11-06T15:17:32.149Z","type":"commit-recorded","module":"search","repo":"default","sha":"88b225144e391dc613a30b6c2d9048e4b124c96a"}
 {"ts":"2026-11-06T15:17:32.421Z","type":"feature-status","module":"search","feature":"ticket-ranking","from":"evaluating","to":"passing"}
 {"ts":"2026-11-06T15:17:32.705Z","type":"feature-status","module":"search","feature":"ticket-search-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-06T16:46:51.801Z","type":"spec-approved","module":"chatbot","specHash":"e865469ec28510581dcbf5b338453e68ddbf4ef53e6379c3319c629f4e15a89b"}
+{"ts":"2026-11-06T16:47:00.302Z","type":"spec-approved","module":"search","specHash":"64927cb1a4240a3d0066006a42edcec4586372b910518ce5f4d9fae5ac0bf6bd"}
+{"ts":"2026-11-06T16:53:28.194Z","type":"spec-approved","module":"chatbot","specHash":"387eafa27e66b6ef9c4729ff3e3f66c85b783cad0ea73250979e705ce23b15d0"}
+{"ts":"2026-11-06T16:53:38.641Z","type":"feature-status","module":"chatbot","feature":"chatbot-answer-schema","from":null,"to":"pending"}
+{"ts":"2026-11-06T16:53:39.021Z","type":"feature-status","module":"chatbot","feature":"ask-answer-api","from":null,"to":"pending"}
+{"ts":"2026-11-06T16:53:39.734Z","type":"feature-status","module":"chatbot","feature":"answer-citations","from":null,"to":"pending"}
+{"ts":"2026-11-06T16:53:40.333Z","type":"feature-status","module":"chatbot","feature":"cited-documents","from":null,"to":"pending"}
+{"ts":"2026-11-06T16:53:40.898Z","type":"feature-status","module":"chatbot","feature":"follow-up-context","from":null,"to":"pending"}
+{"ts":"2026-11-06T16:53:41.480Z","type":"feature-status","module":"search","feature":"solution-retrieval","from":null,"to":"pending"}
+{"ts":"2026-11-06T16:55:02.430Z","type":"module-status","module":"chatbot","from":"planned","to":"implementing"}
+{"ts":"2026-11-06T16:55:02.893Z","type":"feature-status","module":"search","feature":"solution-retrieval","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T16:55:03.398Z","type":"feature-status","module":"chatbot","feature":"chatbot-answer-schema","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T16:55:03.909Z","type":"feature-status","module":"chatbot","feature":"ask-answer-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T17:23:27.816Z","type":"feature-status","module":"search","feature":"solution-retrieval","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T17:23:28.142Z","type":"feature-status","module":"chatbot","feature":"chatbot-answer-schema","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T17:23:28.492Z","type":"feature-status","module":"chatbot","feature":"ask-answer-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T17:23:50.312Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"7c959dc351e3d03c50b10f277e52f8c8f294e8c0"}
+{"ts":"2026-11-06T17:23:51.077Z","type":"commit-recorded","module":"search","repo":"default","sha":"7c959dc351e3d03c50b10f277e52f8c8f294e8c0"}
+{"ts":"2026-11-06T17:23:51.650Z","type":"feature-status","module":"search","feature":"solution-retrieval","from":"evaluating","to":"passing"}
+{"ts":"2026-11-06T17:23:52.187Z","type":"feature-status","module":"chatbot","feature":"chatbot-answer-schema","from":"evaluating","to":"passing"}
+{"ts":"2026-11-06T17:23:52.765Z","type":"feature-status","module":"chatbot","feature":"ask-answer-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-06T00:05:07.005Z","type":"quick-opened","what":"KAN-117 cover Suggestion History method security with TSolveUser","files":["backend/src/test/java/vn/tsolve/triage/controller/SuggestionResultControllerTest.java"]}
+{"ts":"2026-11-06T00:17:30.307Z","type":"quick-closed","what":"KAN-117 cover Suggestion History method security with TSolveUser","files":["backend/src/test/java/vn/tsolve/triage/controller/SuggestionResultControllerTest.java"]}
+{"ts":"2026-11-06T11:57:13.990Z","type":"spec-approved","module":"ai","specHash":"bd7dbb0f81b7f436d9d60afbc40dd6e6965ab5d189ac8a91dfce8548af0ea181"}
+{"ts":"2026-11-06T12:00:28.658Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":null,"to":"pending"}
+{"ts":"2026-11-06T12:00:29.026Z","type":"module-status","module":"ai","from":"completed","to":"planned"}
+{"ts":"2026-11-06T12:00:29.421Z","type":"module-status","module":"ai","from":"planned","to":"implementing"}
+{"ts":"2026-11-06T12:00:29.808Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T12:13:56.230Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T12:13:56.735Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":"evaluating","to":"passing"}
