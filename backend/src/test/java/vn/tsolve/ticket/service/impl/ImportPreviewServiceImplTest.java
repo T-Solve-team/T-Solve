@@ -162,7 +162,7 @@ class ImportPreviewServiceImplTest {
     }
 
     @Test
-    void removeWaitsForTheLockAndChangesNoRowOfAPreviewConfirmedMeanwhile_BUG_150() {
+    void removeWaitsForTheLockAndChangesNoRowOfAPreviewConfirmedMeanwhile_BUG_152() {
         // the lock Fill solution and Confirm take: a Confirm that ran first has deleted the preview
         when(previews.lockByIdAndOwner(ID, PM)).thenReturn(Optional.empty());
 

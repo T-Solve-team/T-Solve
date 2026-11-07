@@ -81,7 +81,7 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
     @Transactional
     public ImportPreviewResponse removeRows(String user, long previewId, Collection<Integer> rowNumbers) {
         owned(user, previewId);
-        // the lock Fill solution and Confirm take, so a removed row cannot be filled or imported meanwhile (BUG-150)
+        // the lock Fill solution and Confirm take, so a removed row cannot be filled or imported meanwhile (BUG-152)
         ImportPreview preview = previews.lockByIdAndOwner(previewId, user)
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         previewRows
@@ -96,7 +96,7 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
     @Override
     @Transactional
     public ImportPreviewResponse fillSolution(String user, long previewId, FillSolutionRequest solution) {
-        // the request has stripped its sections already (BUG-149)
+        // the request has stripped its sections already (BUG-151)
         String symptoms = solution.symptoms();
         String rootCause = solution.rootCause();
         String resolutionSteps = solution.resolutionSteps();

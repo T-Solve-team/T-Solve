@@ -330,7 +330,7 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
-    void fillSolutionRejectsASectionOfOnlyUnicodeSpacesWithMsg01_BUG_149() throws Exception {
+    void fillSolutionRejectsASectionOfOnlyUnicodeSpacesWithMsg01_BUG_151() throws Exception {
         // U+3000 and U+2003 are not removed by String.trim (what @NotBlank checks), but are by strip
         mvc.perform(post("/api/v1/imports/previews/42/fill-solution")
                         .with(csrf())

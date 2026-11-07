@@ -17,7 +17,7 @@ public record FillSolutionRequest(
         @NotBlank String scope) {
 
     // Sections are stripped here, before validation: @NotBlank checks with String.trim, which keeps Unicode spaces
-    // such as U+3000, so a section of only those would pass and be saved empty (BUG-149).
+    // such as U+3000, so a section of only those would pass and be saved empty (BUG-151).
     public FillSolutionRequest {
         symptoms = CsvRowValidator.trim(symptoms);
         rootCause = CsvRowValidator.trim(rootCause);
