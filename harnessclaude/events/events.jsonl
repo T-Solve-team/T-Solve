@@ -929,6 +929,8 @@
 {"ts":"2026-11-07T11:40:28.427Z","type":"quick-closed","what":"PR 153 review: stronger BUG-153 tests and log message","files":["backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:43:47.513Z","type":"quick-opened","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:44:28.193Z","type":"quick-closed","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-07T12:56:37.681Z","type":"quick-opened","what":"Identity ITs clean app_user with TRUNCATE CASCADE so rows other ITs leave in the shared tenant databases do not break them (CI on PR 141)","files":["backend/src/test/java/vn/tsolve/identity/account/AccountRepositoryIT.java","backend/src/test/java/vn/tsolve/identity/signin/CallbackAccountIsolationIT.java","docs/bug-log.md"]}
+{"ts":"2026-11-07T13:56:18.826Z","type":"quick-closed","what":"Identity ITs clean app_user with TRUNCATE CASCADE so rows other ITs leave in the shared tenant databases do not break them (CI on PR 141)","files":["backend/src/test/java/vn/tsolve/identity/account/AccountRepositoryIT.java","backend/src/test/java/vn/tsolve/identity/signin/CallbackAccountIsolationIT.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T15:41:24.140Z","type":"spec-approved","module":"identity","specHash":"9d2d992b33b12f700f5e84e4beeec6376ec684ccc9194b26c78e4daa509307e0"}
 {"ts":"2026-11-07T15:41:38.537Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":null,"to":"pending"}
 {"ts":"2026-11-07T15:41:38.606Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"pending","to":"in-progress"}
@@ -950,3 +952,21 @@
 {"ts":"2026-11-07T16:53:11.422Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"c8c32eaeede691bd09f0a1e87a669488d3bbb7b5"}
 {"ts":"2026-11-07T16:53:11.775Z","type":"feature-status","module":"tracker","feature":"suggestion-comment","from":"fixing","to":"evaluating"}
 {"ts":"2026-11-07T16:53:12.229Z","type":"feature-status","module":"tracker","feature":"suggestion-comment","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T10:16:20.336Z","type":"spec-approved","module":"ticket-review","specHash":"12189f157d3b550a3e23af078410b0e145d1374e8704fc7c75886caa01222f3b"}
+{"ts":"2026-11-07T10:17:46.896Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":null,"to":"pending"}
+{"ts":"2026-11-07T10:17:46.947Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":null,"to":"pending"}
+{"ts":"2026-11-07T10:45:27.911Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T10:45:34.686Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"b539777fa821bece687286fe6714e67cb3d458d6"}
+{"ts":"2026-11-07T11:05:37.368Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T11:05:39.976Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"50d2a3f00641f3b9c336a8eeb797debd031f174e"}
+{"ts":"2026-11-07T11:06:05.540Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T11:06:05.695Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T11:22:39.806Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T11:22:39.887Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T12:17:08.697Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-hardening","from":null,"to":"pending"}
+{"ts":"2026-11-07T12:17:08.771Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-hardening","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T12:30:45.978Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-hardening","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T12:30:46.222Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"974dad1b2539cb959f612c6e1a91c96a18c0af20"}
+{"ts":"2026-11-07T12:55:27.689Z","type":"quick-opened","what":"PR 155 CI: verify regenerated SSE mock and log API generation drift","files":["frontend/src/shared/api/generated/review/review.msw.ts","docs/bug-log.md"]}
+{"ts":"2026-11-07T13:01:06.083Z","type":"quick-closed","what":"PR 155 CI: verify regenerated SSE mock and log API generation drift","files":["frontend/src/shared/api/generated/review/review.msw.ts","docs/bug-log.md"]}
+{"ts":"2026-11-07T17:14:30.621Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"38a0abd9b9a2a0aa0f59ff5132d5a1028c4ef641"}
