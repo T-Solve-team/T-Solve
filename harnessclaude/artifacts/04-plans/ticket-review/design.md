@@ -242,3 +242,40 @@ Without a production `ReviewWorkspaceAccess` every Review endpoint answers 403. 
 - **Decisions** — storage holds APPROVED, REJECTED and CHANGES_REQUESTED; the API maps them to the contract's APPROVE, REJECT and REQUEST_CHANGES. UNPUBLISH, REPUBLISH and SEND_BACK are valid filters with no stored rows yet, so they return an empty page; unknown values return MSG06.
 - **Dates** — paired yyyy-MM-dd dates become `[from 00:00, to + 1 day 00:00)` in Asia/Ho_Chi_Minh, like Suggestion History; missing bounds use fixed sentinels so no nullable timestamp parameter reaches PostgreSQL.
 - **Names** — actorName is the reviewer's full name, else their email; authorName is `ticket.writer`, as in the Review Queue.
+
+## KAN-154 extension: real-time Review Queue (STORY-012)
+
+- **Transport** — chosen: Server-Sent Events from Spring MVC `SseEmitter` on GET `/api/v1/review-queue/events`; alternatives: WebSocket/STOMP, keep polling only. Rationale: the queue only needs server → browser signals; SSE is same-origin, carries the session cookie through the Vite proxy and Caddy, and needs no new package on either side.
+- **Event source** — chosen (user, 2026-11-07): a tenant trigger `ticket_notify_review_queue` (AFTER INSERT OR UPDATE OF status, project_id) that calls `pg_notify('review_queue', project_id::text)` when a Solution Form ticket enters Pending review or any ticket leaves it; alternatives: in-process Spring events after commit, Redis pub/sub. Rationale: there is no submit endpoint in the backend yet (the Solution form belongs to jira-app), so only the database sees every entry; NOTIFY is delivered at commit, never after a rollback, and PostgreSQL drops duplicate payloads in one transaction, which gives AC-012.3's one event per Project per transaction.
+- **Signal, not data** — chosen: the event carries only `{"projectId": "<uuid>"}` and the browser refetches the queue it already shows; alternatives: push the changed rows. Rationale: the queue's scope, Department filter, sort and paging stay in one place (STORY-009) and no ticket content travels on the stream.
+- **Listener per Workspace** — `ReviewQueueEventServiceImpl` (review module) keeps the open emitters per Workspace with the caller's managed Project ids taken at subscribe time. While a Workspace has at least one emitter, one daemon thread holds one connection from the routing `DataSource` opened inside `TenantScope.runIn(workspace)`, runs `LISTEN review_queue`, and polls `PGConnection.getNotifications(500 ms)`; the last emitter to leave closes it. Each active Workspace therefore holds one pool connection; a listener whose connection fails is reopened on the next poll cycle after 2 s.
+- **Heartbeat and lifetime** — a scheduled task sends the comment `:hb` every 25 s (AC-012.1). An emitter times out after 30 minutes; the browser's EventSource reconnects by itself, which also picks up Project membership changes made meanwhile (a manager removed from a Project keeps that Project's signals at most until then — signals carry no content).
+- **Frontend** — `useReviewQueueEvents()` in `features/review/hooks` opens `EventSource('/api/v1/review-queue/events', { withCredentials: true })` while the Review Queue page is mounted, invalidates the queue and ticket-ids queries on `queue-changed` and on every (re)open, and reports `connected`; `useReviewQueue` sets `refetchInterval` to `false` while connected and keeps `REVIEW_QUEUE_POLL_MS` otherwise (AC-012.5–012.7). The MSW mock serves no stream, so mock mode keeps polling.
+
+### Edge cases
+
+| Case | Handling |
+|------|----------|
+| Decision batch of 500 tickets in one Project | One NOTIFY payload after commit (PostgreSQL de-duplicates), one event per stream |
+| Decision rolled back (stale batch, AC-009.7) | NOTIFY is transactional — nothing is sent |
+| Ticket moved to another Project while pending | Trigger notifies the new Project (and the old one via `OLD.project_id`) |
+| Caller manages no Project | `managedProjectIds` empty → 403 like the queue, no stream |
+| Workspace unbound or unverified Account | 403, no listener opened |
+| Listener connection dropped | Thread logs once without payload, retries after 2 s; after reopening it sends one `queue-changed` for every Project of its emitters, so changes in the gap are not lost |
+| Browser tab hidden | EventSource stays open; refetch on event is cheap. Polling, when active, still pauses while hidden |
+
+### PR #155 review fixes (2026-11-07)
+
+- **Connect off the lock** — chosen: the subscription is registered under the lock with a `Listener` that has no connection yet; the listener thread opens the connection and runs `LISTEN` itself, and the first subscriber waits (bounded, 5 s) for "listening" before its heartbeats start; alternatives: build the Listener outside the lock and race to insert it. Rationale: a pool or database outage can no longer stall every subscribe, unsubscribe and completion callback behind the Hikari timeout.
+- **Sends off the shared threads** — chosen: each subscription coalesces what it still has to send (a set of pending Project ids and a heartbeat flag) and a small shared send pool (4 threads) drains it; the listener and heartbeat threads only enqueue. A subscription whose send fails is completed and removed; one that still has a send in flight when the next heartbeat is due keeps a single pending heartbeat, so a slow client cannot grow a queue or hold another stream's thread. Alternatives: a send timeout per call (SseEmitter has none), one thread per stream.
+- **Managed Projects re-checked** — chosen: with each heartbeat (25 s) the subscription re-reads `managedProjectIds` for its Account inside the Workspace; Projects no longer managed stop getting events, and a subscription left with none (or an unverified Account) is completed. Alternatives: re-check on every event (one query per stream per event), shorten the emitter timeout. Rationale: AC-012.2 ("whose caller manages that Project") holds within one heartbeat interval at one query per stream per 25 s. Removing the Project Manager role itself takes effect at the next sign-in, as for every other Review endpoint.
+- **Pool use** — each Workspace with an open stream holds one tenant pool connection for its listener; the join barrier briefly uses one more. The per-Workspace pool must keep at least 2 connections above request load; the platform pool sizing (KAN platform module) owns that limit.
+- **Generated client** — orval also emits `useStreamReviewQueueEvents` for the SSE operation; it must not be called (it would wait for a body that never ends). The web app uses `useReviewQueueEvents` only.
+
+### PR #155 second review (review 5813751864, 2026-11-07)
+
+- **Added Project (BUG-174)** — when a heartbeat re-check adds a managed Project, the stream gets one `queue-changed` for it through the coalesced send path, because its queue may have changed before it was added.
+- **Mock mode (BUG-175)** — the web app opens no EventSource while it runs on MSW mocks; the generated SSE mock returns a finite body, and reconnects every ~3 s made polling flap. Mock mode stays on 5 s polling, as the design already intended.
+- **Dead connection (BUG-176)** — EventSource never surfaces `:hb` comments, so a connection cut without a close is invisible. While connected, the queue keeps a 60 s safety refetch; the 5 s polling stays off (AC-012.6).
+- **Subscribe failure (BUG-177)** — anything that throws after the subscription is registered (join barrier, heartbeat scheduling) ends and removes it; the request thread waits at most ~5 s in total.
+- **Changeset number** — main gained `019-tracker-*` and `019-identity-*`; ours stays `019-review-queue-notify.sql` (ids differ by name) and is included last.

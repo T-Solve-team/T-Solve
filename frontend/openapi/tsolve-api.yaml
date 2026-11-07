@@ -656,6 +656,26 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/review-queue/events:
+    get:
+      tags: [review]
+      operationId: streamReviewQueueEvents
+      summary: Server-sent events telling a Project Manager that the queue of a Project they manage changed.
+      description: |
+        Long-lived `text/event-stream`. Event `queue-changed` carries `{"projectId":"<uuid>"}` only (never ticket
+        content); a `:hb` comment is sent every 25 seconds. Only Projects the caller manages are signalled, and the
+        stream ends after 30 minutes (the client reconnects).
+      responses:
+        '200':
+          description: The event stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/review-queue/ticket-ids:
     get:
       tags: [review]

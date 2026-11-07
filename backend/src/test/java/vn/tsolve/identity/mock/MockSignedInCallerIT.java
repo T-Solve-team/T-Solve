@@ -49,6 +49,17 @@ class MockSignedInCallerIT {
     private MockIdentityProperties properties;
 
     @Test
+    void seededSpacesAppearInCreationOptions_AC_005_14() throws Exception {
+        mvc.perform(get("/api/v1/users/creation-options"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.companyDomain").value("acme.test"))
+                .andExpect(jsonPath("$.spaces[?(@.name == 'Customer Support Wiki')].spaceId")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.spaces[?(@.name == 'IT Operations Wiki')].spaceId")
+                        .isNotEmpty());
+    }
+
+    @Test
     void signsInFromSeededTenantThroughDefaultSecurityChain_AC_004_17_AC_004_18() throws Exception {
         assertThat(properties.workspaceId()).isEqualTo(TwoTenantDatabases.ACME);
         mvc.perform(get("/api/v1/users").param("q", "@acme.test"))

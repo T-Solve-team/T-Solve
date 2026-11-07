@@ -297,8 +297,8 @@
     }
   },
   "identity": {
-    "specHash": "9d2d992b33b12f700f5e84e4beeec6376ec684ccc9194b26c78e4daa509307e0",
-    "approvedAt": "2026-11-07T15:41:24.132Z",
+    "specHash": "d6851de2aacc2ba989ced1aabfb2e242dc587372a4b1eb7d984cfb6b5f5a3d78",
+    "approvedAt": "2026-11-07T16:27:43.488Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
@@ -414,6 +414,15 @@
       "AC-005.6": "WHEN an Admin assigns Knowledge Manager Spaces, THE frontend SHALL use API-provided options and THE mock API SHALL enforce at most one Knowledge Manager per Space, returning MSG117 for conflicts.",
       "AC-005.7": "WHEN creation succeeds, THE frontend SHALL invalidate affected user queries and display the catalog success feedback.",
       "AC-005.8": "IF the email belongs to a Deactivated account, THEN THE mock API SHALL reject duplicate creation with MSG111 so the Admin can reactivate the existing account.",
+      "AC-005.9": "WHEN a signed-in Admin sends a valid , THE backend SHALL create, in the bound Workspace's database and in one transaction, an Active Account with the trimmed lower-cased email, no full name and no sign-in time, its  rows for the requested Roles other than EMPLOYEE, its Department and its managed Spaces, and SHALL answer 201 with the  (EMPLOYEE always included).",
+      "AC-005.10": "IF the email is missing or blank, THEN THE backend SHALL answer 400 MSG01 (, field ); IF it is longer than 100 characters, THEN 400 MSG02 (, ); IF it is not a valid email or its domain is not the Workspace's company domain (ignoring case), THEN 400 MSG03 (field ); in each case THE backend SHALL create nothing.",
+      "AC-005.11": "IF an Account with that email already exists in the bound Workspace, THEN THE backend SHALL answer 409 with MSG11 (field ) for an Active Account or MSG111 for a Deactivated one, and SHALL create nothing.",
+      "AC-005.12": "IF  is missing or holds a value that is not a Role, THEN THE backend SHALL answer 400 MSG01 (, field ); IF  names no Active Department of the Workspace, or the Roles include PROJECT_MANAGER without a Department, THEN 400 MSG01 (, field ); in each case THE backend SHALL create nothing.",
+      "AC-005.13": "IF  names a Space that is not an Active Space of the Workspace, or the Roles include KNOWLEDGE_MANAGER with no Space, or Spaces are given without KNOWLEDGE_MANAGER, THEN THE backend SHALL answer 400 MSG01 (, field ); IF a requested Space already has a Knowledge Manager, THEN 409 MSG117 with  (field ); in each case THE backend SHALL create nothing, also when two creations race for the same Space.",
+      "AC-005.14": "WHEN a signed-in Admin requests , THE backend SHALL return the Workspace's company domain and its Active Spaces as  (UUID public id, name), occupied ones included, ordered by name ignoring case.",
+      "AC-005.15": "THE backend SHALL take the company domain from  for the bound Workspace; WHILE the  profile is active and the lookup gives no domain, THE backend SHALL use ; IF there is still no domain, THEN THE backend SHALL answer 500 MSG06 and create nothing.",
+      "AC-005.16": "WHEN an Account is created, THE backend SHALL claim its email through the  port before saving and release the claim IF saving fails; IF the registry refuses the email, THEN THE backend SHALL answer 409 MSG155 and create nothing. [Interim, KAN-108 Q2: the only implementation accepts every email until platform's  registry exists.]",
+      "AC-005.17": "IF a creation or creation-options request is not signed in, THEN THE backend SHALL answer 401 MSG07; IF the caller lacks the Admin role, THEN 403 MSG08; WHEN an Account is created, THE backend SHALL record one audit event (, target the new Account, details: Roles, Department, Spaces) through .",
       "AC-006.1": "WHEN an Admin activates a Deactivated account, THE frontend SHALL submit the change and refresh its detail and affected list queries after success.",
       "AC-006.2": "WHEN an Admin deactivates an account with no Active Project or managed Space requiring handover, THE frontend SHALL request confirmation using MSG57 before submitting the change.",
       "AC-006.3": "IF the target is the last Active Admin, THEN THE mock API SHALL reject deactivation and THE frontend SHALL display MSG56.",
@@ -829,8 +838,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "1f372238cc4d394151d1c7d4a1a8ab21cfeb2cbed1e68eb4ef05fd589c36e485",
-    "approvedAt": "2026-11-07T08:55:54.276Z",
+    "specHash": "12189f157d3b550a3e23af078410b0e145d1374e8704fc7c75886caa01222f3b",
+    "approvedAt": "2026-11-07T10:16:20.325Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -902,7 +911,14 @@
       "AC-011.3": "WHEN Department, decision or a paired dateFrom and dateTo are supplied, THE API SHALL filter by them, with both calendar dates inclusive in Vietnam time. IF only one date is supplied, a date is not a yyyy-MM-dd calendar date or dateFrom is after dateTo, THEN THE API SHALL refuse the request with 400 and MSG39. IF the Department has no Project the caller manages, THEN THE API SHALL return an empty page.",
       "AC-011.4": "IF the sort is anything other than timestamp ascending or descending, or page or size is outside the existing limits, THEN THE API SHALL refuse the request with 400 and MSG06.",
       "AC-011.5": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the request with 401 or 403 and expose no decision.",
-      "AC-011.6": "WHEN the production web application loads Review History, THE frontend SHALL use the published getReviewHistory operation through the existing generated client."
+      "AC-011.6": "WHEN the production web application loads Review History, THE frontend SHALL use the published getReviewHistory operation through the existing generated client.",
+      "AC-012.1": "WHEN a Project Manager with a verified Workspace Account opens GET , THE API SHALL keep a  response open for the signed-in Workspace and SHALL send a heartbeat comment at least every 30 seconds while it stays open.",
+      "AC-012.2": "WHEN a Workspace transaction commits that moves a Solution Form ticket into Pending review, or moves a ticket out of Pending review, THE tenant database SHALL send a NOTIFY carrying only that ticket's Project UUID, and THE API SHALL send one  event with that Project UUID to every open stream of that Workspace whose caller manages that Project, within the existing 5-second Review Queue NFR (FE-10).",
+      "AC-012.3": "THE stream SHALL send no event for a Project the caller does not manage and SHALL carry no ticket content, Solution text, reason or comment. A transaction that changes several tickets of one Project SHALL produce at most one event for that Project per stream.",
+      "AC-012.4": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the stream with 401 or 403 and open no stream.",
+      "AC-012.5": "WHEN the Review Queue screen receives a  event, THE frontend SHALL refetch the queue page and eligible ticket ids it currently shows, keeping the existing selection and stale-data rules (STORY-005).",
+      "AC-012.6": "WHILE the event stream is open, THE frontend SHALL not run the 5-second queue polling. WHILE the stream is closed or failing, THE frontend SHALL keep the existing visible-tab 5-second polling, and WHEN the stream opens again it SHALL refetch the queue once.",
+      "AC-012.7": "WHEN the user leaves the Review Queue screen, THE frontend SHALL close its event stream."
     }
   },
   "ai": {
