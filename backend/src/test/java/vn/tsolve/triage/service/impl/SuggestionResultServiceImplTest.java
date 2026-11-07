@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -45,6 +46,9 @@ class SuggestionResultServiceImplTest {
     private static final String PM = "pm@example.test";
     private static final ManagedProject ITSUP = new ManagedProject(4L, "00000000-0000-4000-8000-000000000101", "ITSUP");
     private static final ManagedProject ITNET = new ManagedProject(5L, "00000000-0000-4000-8000-000000000102", "ITNET");
+    // suggestion_result.project_id holds the Project's public_id (tracker's 019-tracker-suggestion-uuid-keys).
+    private static final UUID ITSUP_ID = UUID.fromString(ITSUP.publicId());
+    private static final UUID ITNET_ID = UUID.fromString(ITNET.publicId());
     private static final HistoryQuery ALL = new HistoryQuery(null, null, null, null, null, null, null);
     private static final String SOURCES =
             """
@@ -77,11 +81,11 @@ class SuggestionResultServiceImplTest {
     }
 
     private static SuggestionResultRecord record(
-            long projectId, String key, String sources, String solution, String answer) {
+            UUID projectId, String key, String sources, String solution, String answer) {
         // The entity is read-only (no public constructor), so the test reads it through a subclass.
         return new SuggestionResultRecord() {
             @Override
-            public Long getProjectId() {
+            public UUID getProjectId() {
                 return projectId;
             }
 
@@ -133,11 +137,11 @@ class SuggestionResultServiceImplTest {
     void readsOnlyTheManagedProjectsNewestFirst_AC_003_1() {
         given(managedProjects.of(PM)).willReturn(List.of(ITSUP, ITNET));
         given(repository.search(any(), any()))
-                .willReturn(new PageImpl<>(List.of(record(4L, "ITSUP-1", "[]", null, null))));
+                .willReturn(new PageImpl<>(List.of(record(ITSUP_ID, "ITSUP-1", "[]", null, null))));
 
         Page<SuggestionResultSummary> page = service().history(PM, ALL);
 
-        assertThat(searched().projectIds()).containsExactlyInAnyOrder(4L, 5L);
+        assertThat(searched().projectIds()).containsExactlyInAnyOrder(ITSUP_ID, ITNET_ID);
         ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
         verify(repository).search(any(), pageable.capture());
         assertThat(pageable.getValue().getPageNumber()).isZero();
@@ -166,7 +170,7 @@ class SuggestionResultServiceImplTest {
         service().history(PM, new HistoryQuery(ITNET.publicId(), "NONE", "2026-11-01", "2026-11-02", null, null, null));
 
         HistoryFilter filter = searched();
-        assertThat(filter.projectIds()).containsExactly(5L);
+        assertThat(filter.projectIds()).containsExactly(ITNET_ID);
         assertThat(filter.answer()).isEqualTo("NONE");
         assertThat(filter.start()).isEqualTo(Instant.parse("2026-10-31T17:00:00Z"));
         assertThat(filter.end()).isEqualTo(Instant.parse("2026-11-02T17:00:00Z"));
@@ -234,7 +238,7 @@ class SuggestionResultServiceImplTest {
         given(jiraSite.url()).willReturn(Optional.of("https://acme.atlassian.net/"));
         String solution = "  Check   the VPN\nconfiguration. " + "x".repeat(300);
         given(repository.search(any(), any()))
-                .willReturn(new PageImpl<>(List.of(record(4L, "ITSUP-1", SOURCES, solution, "YES"))));
+                .willReturn(new PageImpl<>(List.of(record(ITSUP_ID, "ITSUP-1", SOURCES, solution, "YES"))));
 
         SuggestionResultSummary row = service().history(PM, ALL).getContent().getFirst();
 
@@ -252,7 +256,7 @@ class SuggestionResultServiceImplTest {
     void returnsANullExcerptWhenNothingWasPosted_AC_003_5() {
         given(managedProjects.of(PM)).willReturn(List.of(ITSUP));
         given(repository.search(any(), any()))
-                .willReturn(new PageImpl<>(List.of(record(4L, "ITSUP-2", "[]", null, null))));
+                .willReturn(new PageImpl<>(List.of(record(ITSUP_ID, "ITSUP-2", "[]", null, null))));
 
         SuggestionResultSummary row = service().history(PM, ALL).getContent().getFirst();
 
@@ -264,7 +268,7 @@ class SuggestionResultServiceImplTest {
     void returnsNoJiraLinkWithoutAnHttpsSite_AC_003_6() {
         given(managedProjects.of(PM)).willReturn(List.of(ITSUP));
         given(repository.search(any(), any()))
-                .willReturn(new PageImpl<>(List.of(record(4L, "ITSUP-1", "[]", null, null))));
+                .willReturn(new PageImpl<>(List.of(record(ITSUP_ID, "ITSUP-1", "[]", null, null))));
 
         given(jiraSite.url()).willReturn(Optional.empty());
         assertThat(service().history(PM, ALL).getContent().getFirst().jiraIssueUrl())
@@ -279,7 +283,7 @@ class SuggestionResultServiceImplTest {
     void returnsTheFullSuggestionAndWikiSourcesButNoTicketDetails_AC_004_1() {
         given(managedProjects.of(PM)).willReturn(List.of(ITSUP));
         given(repository.findByJiraIssueKeyAndProjectIdIn(eq("ITSUP-1"), anyCollection()))
-                .willReturn(Optional.of(record(4L, "ITSUP-1", SOURCES, "Check the VPN configuration.", "NO")));
+                .willReturn(Optional.of(record(ITSUP_ID, "ITSUP-1", SOURCES, "Check the VPN configuration.", "NO")));
         given(wikiDocuments.available(eq(PM), anyCollection())).willReturn(Set.of("a01"));
         given(jiraSite.url()).willReturn(Optional.of("https://acme.atlassian.net"));
 
@@ -307,14 +311,14 @@ class SuggestionResultServiceImplTest {
         given(repository.findByJiraIssueKeyAndProjectIdIn(anyString(), anyCollection()))
                 .willReturn(Optional.empty());
         assertThat(code(() -> service().detail(PM, true, "ITNET-9"))).isEqualTo("MSG04");
-        verify(repository).findByJiraIssueKeyAndProjectIdIn("ITNET-9", Set.of(4L));
+        verify(repository).findByJiraIssueKeyAndProjectIdIn("ITNET-9", Set.of(ITSUP_ID));
     }
 
     @Test
     void marksEveryWikiDocumentUnavailableUntilTheWikiModuleAnswers_AC_004_3() {
         given(managedProjects.of(PM)).willReturn(List.of(ITSUP));
         given(repository.findByJiraIssueKeyAndProjectIdIn(anyString(), anyCollection()))
-                .willReturn(Optional.of(record(4L, "ITSUP-1", SOURCES, null, null)));
+                .willReturn(Optional.of(record(ITSUP_ID, "ITSUP-1", SOURCES, null, null)));
         SuggestionResultServiceImpl service = new SuggestionResultServiceImpl(
                 repository,
                 managedProjects,
@@ -339,8 +343,8 @@ class SuggestionResultServiceImplTest {
                 """;
         given(managedProjects.of(PM)).willReturn(List.of(ITSUP));
         given(repository.findByJiraIssueKeyAndProjectIdIn(anyString(), anyCollection()))
-                .willReturn(Optional.of(record(4L, "ITSUP-1", messy, null, null)))
-                .willReturn(Optional.of(record(4L, "ITSUP-1", "{not json", null, null)));
+                .willReturn(Optional.of(record(ITSUP_ID, "ITSUP-1", messy, null, null)))
+                .willReturn(Optional.of(record(ITSUP_ID, "ITSUP-1", "{not json", null, null)));
 
         SuggestionResultDetail detail = service().detail(PM, true, "ITSUP-1");
         assertThat(detail.ticketSourceCount()).isEqualTo(1);

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -13,9 +14,9 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import vn.tsolve.triage.entity.SuggestionResultRecord;
 
 public interface SuggestionResultRecordRepository
-        extends JpaRepository<SuggestionResultRecord, Long>, JpaSpecificationExecutor<SuggestionResultRecord> {
+        extends JpaRepository<SuggestionResultRecord, UUID>, JpaSpecificationExecutor<SuggestionResultRecord> {
 
-    Optional<SuggestionResultRecord> findByJiraIssueKeyAndProjectIdIn(String jiraIssueKey, Collection<Long> projectIds);
+    Optional<SuggestionResultRecord> findByJiraIssueKeyAndProjectIdIn(String jiraIssueKey, Collection<UUID> projectIds);
 
     /** The rows of {@code filter}; the caller passes a non-empty Project set (an empty one means no rows at all). */
     default Page<SuggestionResultRecord> search(HistoryFilter filter, Pageable pageable) {

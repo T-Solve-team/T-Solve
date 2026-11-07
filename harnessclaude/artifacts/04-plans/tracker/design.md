@@ -133,7 +133,7 @@ backend/src/main/java/vn/tsolve/common/
                    JiraAppPrincipal(cloudId, accountId), DefaultSecurityConfig  — delete JiraSiteLookup,
                    WorkspaceContext; delete common/config/WorkspaceTenantResolver
 backend/src/main/java/vn/tsolve/project/                                       — new, minimal
-├── service/       ProjectService (Optional<Long> findActiveIdByJiraProjectKey(String))
+├── service/       ProjectService (Optional<UUID> findActivePublicIdByJiraProjectKey(String) — UUID since 2026-11-07)
 │   └── impl/      ProjectServiceImpl
 ├── repository/    ProjectRepository
 └── entity/        Project, ProjectStatus
@@ -195,6 +195,153 @@ no state machine left in receive; 6 Environment — server-to-server; 12 Busines
 | 36 | All | Compliance | Jira error body containing ticket text | Critical | Only status code and error type stored or logged | Task 7 |
 
 Open questions for the DB owner: `suggestion_result.answered_at` (AC-010.2).
+
+## STORY-011: Suggestion job (KAN-22, 2026-11-07)
+
+The 01/11 rule "no background job in tracker" was about storing the Jira system token. The suggestion job uses no
+token: it gets the issue text from the event and only calls search. Flow:
+
+```
+Forge trigger → JiraAppEventController → IssueCreatedServiceImpl.receive
+   save(SuggestionResult)                       (repository transaction commits here)
+   → SuggestionJobQueue.enqueue(SuggestionJobRequest)   → 202
+          stand-in: InProcessSuggestionJobQueue → suggestionJobExecutor thread
+          later:    JobRunr adapter (worker KAN-161) → BackgroundJob.enqueue(...)
+   → SuggestionJobService.run(request)
+        load SuggestionResult by issue key; missing or already filled → stop (AC-011.7)
+        SuggestionSearch.suggest(projectId, summary, description)   (KAN-47; stand-in: StubSuggestionSearch)
+        suggestion → SuggestionResult.fill(sources, suggestedSolution) + save   (AC-011.4)
+        none → nothing (AC-011.5) · exception → log issue key + error type, nothing (AC-011.6)
+```
+
+| Decision | Choice | Alternatives Considered | Rationale |
+|----------|--------|------------------------|-----------|
+| Job runner | Port `SuggestionJobQueue`; in-process stand-in on a bounded executor; JobRunr adapter when `worker` KAN-161 lands | `@Async` + `@EnableAsync`; our own job table + `@Scheduled`; install JobRunr in KAN-22 | Infrastructure is Dương's (KAN-161), business logic is ours: no edit to `pom.xml` or JobRunr config, no merge conflict (user, 2026-11-07). A dedicated executor avoids enabling `@Async` for the whole app |
+| "After commit" | Enqueue after `save` returns — `receive` is not `@Transactional`, so the repository's own transaction has committed | `@TransactionalEventListener(AFTER_COMMIT)` | Making `receive` transactional would turn the duplicate-key catch (AC-003.4) into a rollback-only commit failure |
+| Issue text | `summary` and `description` from the event payload; ADF description → plain text with the existing `AdfTextExtractor` | read the issue from Jira in the job; Forge function that reads it first | No token needed (Non-Functional 3); user, 2026-11-07. Confirm `description` is in the real payload with `forge tunnel` before coding — if absent, the job sends summary only and this row is revised |
+| Search port | `SuggestionSearch.suggest(long projectId, String summary, String description) → Optional<IssueSuggestion>` in `tracker/service` | wait for KAN-47's interface | Tracker declares what it needs (spec, Required from other modules); KAN-47 implements it or adapts |
+| Stand-in search | `StubSuggestionSearch`, property `tsolve.stub.suggestion` ← `TSOLVE_STUB_SUGGESTION`: empty = no suggestion, `unavailable` = throws, any other text = that text with no sources | always "no suggestion" | Demo of the whole flow and test of the failure path (user, 2026-11-07); same pattern as the other `TSOLVE_STUB_*` |
+| `sources_used` format | `[{"type": "TICKET" | "WIKI", "id", "title", "similarity"}]` | own format | What triage's `SourcesUsed` already reads (KAN-149) |
+| Double run | Guard in the job (AC-011.7) + conditional update `… WHERE suggested_solution IS NULL` | lock row | A JobRunr retry or a parallel run cannot overwrite a stored suggestion |
+| Tenant | Job runs in the single current DB; with tenancy the JobRunr adapter wraps it in `runInTenant` (KAN-102) | carry tenant now | No tenant routing on `main` yet |
+
+Files (Task 15):
+
+```
+backend/src/main/java/vn/tsolve/tracker/
+├── dto/           IssueCreatedPayload (+ summary, description as JsonNode ADF, labels — all optional),
+│                  SuggestionJobRequest(issueKey, projectId, summary, description),
+│                  IssueSuggestion(List<SuggestionSource> sources, String suggestedSolution), SuggestionSource
+├── entity/        SuggestionResult (+ sources_used JSON string, suggested_solution; fill(...), hasSuggestion())
+├── repository/    SuggestionResultRepository (+ findByJiraIssueKey, conditional fill update)
+├── service/       SuggestionJobQueue, SuggestionSearch, SuggestionJobService
+│   └── impl/      IssueCreatedServiceImpl (enqueue), SuggestionJobServiceImpl, InProcessSuggestionJobQueue
+│                  (owns its 2-thread pool, queue 100), StubSuggestionSearch
+└── client/        AdfTextExtractor (was an empty placeholder; now ADF → plain text)
+   No `config/SuggestionJobConfig` (changed while implementing, 2026-11-07): an executor *bean* would make Boot drop
+   its own `applicationTaskExecutor` for every module, so the stand-in queue owns its pool instead.
+backend/src/main/resources/application.yml   (tsolve.stub.suggestion)
+.env.example                                  (TSOLVE_STUB_SUGGESTION)
+frontend/openapi/tsolve-api.yaml              (IssueCreatedPayload: summary, description, labels) + npm run generate:api
+```
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 37 | STORY-011 | Timing | Forge resends the event of an issue already recorded | High | No second job (AC-011.2) | Task 15 |
+| 38 | STORY-011 | Timing | Job runs twice for one issue (retry, parallel) | High | Second run changes nothing (AC-011.7, conditional update) | Task 15 |
+| 39 | STORY-011 | Input extremes | No description, empty ADF, or ADF with only media | Medium | Job runs with an empty description | Task 15 |
+| 40 | STORY-011 | Error cascades | Search throws or times out | High | Row unchanged; log has issue key + error type only (AC-011.6) | Task 15 |
+| 41 | STORY-011 | Error cascades | Executor queue full (burst of new issues) | Medium | Job dropped and logged; row stays without a suggestion — accepted for the stand-in, JobRunr removes it | Task 15 |
+| 42 | STORY-011 | Compliance | Issue text in logs | Critical | Never logged; job argument only | Task 15 |
+| 43 | STORY-011 | Data integrity | Row deleted before the job runs | Low | Job stops (AC-011.7) | Task 15 |
+| 44 | STORY-011 | User types | Issue created by the Chatbot (label `tsolve-chatbot`) | Medium | Same as any issue (AC-011.8) | Task 15 |
+
+### Change 2026-11-07: run the job on the worker (KAN-102)
+
+```
+receive: saveAndFlush(SuggestionResult with jobRef = random UUID, issueSummary, issueDescription)
+   → SuggestionJobQueue.enqueue(SuggestionJobRequest(jobRef, issueKey))          → 202
+        worker enabled  (tsolve.worker.enabled=true): WorkerSuggestionJobQueue
+            workspace bound? → TenantJobService.enqueue("tracker.suggestion", jobRef)
+            else dev workspace configured? → WorkerTenantService.runIn(devId, enqueue)
+            else / enqueue error → log issue key + error type, job lost (never throws)
+        worker disabled (default): InProcessSuggestionJobQueue (AC-011.9, no retry)
+SuggestionJobHandler (TenantJobHandler "tracker.suggestion").execute(jobRef) → SuggestionJobService.run(jobRef)
+   load by jobRef; gone or already filled → stop (AC-011.7)
+   search(projectId, row.issueSummary, row.issueDescription) → fillSuggestion (AC-011.3..5)
+   failure → log key + type, throw SuggestionJobFailedException (no cause) → JobRunr retries (AC-011.6)
+```
+
+| Decision | Choice | Alternatives Considered | Rationale |
+|----------|--------|------------------------|-----------|
+| Issue text | Columns `issue_summary`, `issue_description` on `suggestion_result` | text in the job | Worker rule: a job carries only a record UUID, no ticket content; the Jobs DB is shared by all Workspaces (README-worker) |
+| Record id for the worker | ~~New column `job_ref UUID NOT NULL UNIQUE`~~ — superseded by "Change 2026-11-07: UUID keys" below: the job carries `suggestion_id` | change the BIGSERIAL key to UUID | Triage reads `suggestion_id`; a new column changes nothing for it |
+| Retries | The job throws on failure; JobRunr's native retries | swallow (old AC-011.6) | User, 2026-11-07; the guard and conditional update make reruns safe |
+| Failure exception | `SuggestionJobFailedException extends CodedException`, message = issue key + error type, **no cause** | rethrow the original | JobRunr stores the exception and its causes in the Jobs DB; a cause message can quote issue text |
+| Workspace at enqueue | Use the bound one; else `tsolve.tracker.dev-workspace-id` (`TSOLVE_TRACKER_DEV_WORKSPACE_ID`) through `WorkerTenantService.runIn` | in-process fallback when unbound | User chose (a), 2026-11-07. Dev/mock only; removed when platform binds the request's Workspace |
+| Which queue | `@ConditionalOnProperty(tsolve.worker.enabled)`: true → `WorkerSuggestionJobQueue`, false/missing → `InProcessSuggestionJobQueue` | `@ConditionalOnBean` | Bean-presence conditions on components depend on registration order |
+| Handler bean | Always registered | only with the worker | Harmless when the worker is off; the worker collects every `TenantJobHandler` |
+
+Changeset `017-tracker-suggestion-job-input.sql` (author `tracker`): add `job_ref` (filled with `gen_random_uuid()`
+for existing rows, then NOT NULL + UNIQUE), `issue_summary TEXT`, `issue_description TEXT`. Tell the DB owner and
+Trần Hải Anh (triage reads the table; its read-only entity does not map the new columns).
+
+Files (Task 16): modify `entity/SuggestionResult`, `repository/SuggestionResultRepository` (+ `findByJobRef`),
+`dto/SuggestionJobRequest` (jobRef, issueKey), `service/SuggestionJobService` (`run(UUID jobRef)`),
+`service/impl/SuggestionJobServiceImpl`, `service/impl/IssueCreatedServiceImpl`,
+`service/impl/InProcessSuggestionJobQueue` (conditional, catches the job's failure), `application.yml`, `.env.example`,
+changelog master; create `service/impl/WorkerSuggestionJobQueue`, `service/impl/SuggestionJobHandler`,
+`exception/SuggestionJobFailedException`, `changes/017-tracker-suggestion-job-input.sql`.
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 45 | STORY-011 | Error cascades | Search keeps failing | Medium | JobRunr retries, then marks the job failed; row unchanged | Task 16 |
+| 46 | STORY-011 | Compliance | Search exception message quotes the issue text | Critical | Stored failure has key + type only (no cause) | Task 16 |
+| 47 | STORY-011 | Environment | Worker on, no Workspace bound, no dev Workspace set | Medium | Logged, 202, no job (never 5xx) | Task 16 |
+| 48 | STORY-011 | Data integrity | Rows created before the changeset | Low | Get a `job_ref`; no text, so a job for them would send empty text | Task 16 |
+
+Search timeout: the job sets none of its own; AC-011.6 "does not answer" is met by the `SuggestionSearch`
+implementation timing out (KAN-47, on top of the `ai` client's chat timeout). A search that never returns would hold
+one of the two stand-in threads (review 2026-11-07, accepted).
+
+Risks: the in-process stand-in loses queued jobs on restart (accepted while the worker is off). Since the change of
+2026-11-07 the issue text stays in `suggestion_result`; a JobRunr job carries only `job_ref`. If the Jobs database
+is unreachable, enqueue can block the event request for the worker pool's connection timeout (review of Task 16,
+finding 1 — for the `worker` owner).
+
+### Change 2026-11-07: UUID keys for the tracker's table
+
+Team rule (`backend/AGENTS.md`, Naming): a key is `<table>_id UUID DEFAULT gen_random_uuid()`, a reference is a UUID,
+Java type `UUID`. `suggestion_result` still had `BIGSERIAL` / `BIGINT`. Scope chosen by the user (2026-11-07): only
+the tracker's own table; `department` and `project` keep their keys (their owners change them with the team).
+
+| Decision | Choice | Alternatives Considered | Rationale |
+|----------|--------|------------------------|-----------|
+| `suggestion_id` | `UUID PRIMARY KEY DEFAULT gen_random_uuid()`; entity `@GeneratedValue(strategy = UUID)` | keep BIGSERIAL | Team rule (user, 2026-11-07) |
+| `project_id` | `UUID NOT NULL REFERENCES project (public_id)`; `ProjectService` returns the Project's `public_id` | keep `BIGINT` → `project.project_id` | The API already shows a Project by `public_id` (`008-search-public-ids`); user, 2026-11-07 |
+| Job reference | The job carries `suggestion_id`; drop `job_ref` and `findByJobRef` | keep `job_ref` | With a UUID key the extra column says the same thing (user, 2026-11-07) |
+| Migration | New changeset `019-tracker-suggestion-uuid-keys.sql`; `002` and `017` unchanged | rewrite `017` | `017` already ran on developer databases from the pushed branch; editing it breaks their checksum (user, 2026-11-07) |
+| Search port | `SuggestionSearch.suggest(UUID projectId, …)` | keep `long` | The port is tracker's; KAN-47 implements it with the Project UUID |
+| Triage | Its read-only `SuggestionResultRecord` maps both columns as `UUID`; the history keys managed Projects by `publicId` | leave triage on `Long` | Same table — the entity fails `ddl-auto: validate` otherwise. Tell Trần Hải Anh in the PR |
+
+Changeset `019` (author `tracker`), in one transaction, keeping existing rows:
+add `new_id UUID DEFAULT gen_random_uuid()` and `new_project_id UUID`; fill `new_project_id` from
+`project.public_id`; drop the old key, `uq_suggestion_job_ref`, `job_ref`, `idx_suggestion_project`, `project_id`,
+`suggestion_id`; rename the new columns; `NOT NULL`, primary key, foreign key to `project (public_id)`, and recreate
+`idx_suggestion_project (project_id, created_at)`.
+
+Files: `changes/019-tracker-suggestion-uuid-keys.sql`, changelog master; `project/entity/Project` (+ `publicId`),
+`project/service/ProjectService` + impl (`Optional<UUID> findActivePublicIdByJiraProjectKey`),
+`project/repository/ProjectRepository`; tracker `entity/SuggestionResult`, `repository/SuggestionResultRepository`
+(`JpaRepository<SuggestionResult, UUID>`, no `findByJobRef`), `dto/SuggestionJobRequest` (suggestionId, issueKey),
+`service/SuggestionJobService` (`run(UUID suggestionId)`), `service/SuggestionSearch`, `service/impl/*` that use
+them; triage `entity/SuggestionResultRecord`, `repository/HistoryFilter`, `repository/SuggestionResultRecordRepository`,
+`service/impl/SuggestionResultServiceImpl`; their tests.
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 49 | STORY-003 | Data integrity | Rows recorded before `019` | Medium | Keep their data; get a new UUID key and their Project's `public_id` | Task 17 |
+| 50 | STORY-011 | Data integrity | A job queued before `019` (carries the old `job_ref`) | Low | Finds no row and stops (AC-011.7) — developer databases only | Task 17 |
 
 ## Risk Review — 2026-10-21 — Verdict: CAUTION (updated 2026-11-01)
 

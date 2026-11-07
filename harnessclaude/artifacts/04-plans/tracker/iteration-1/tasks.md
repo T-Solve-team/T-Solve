@@ -1,7 +1,7 @@
 ---
 module: tracker
 date: 2026-10-21
-total_tasks: 7
+total_tasks: 9
 owner: Dev
 ---
 
@@ -150,3 +150,61 @@ time in `suggestion_result` (needs `answered_at` from the DB owner), return MSG8
 - Test: `tracker/service/impl/JiraPanelServiceAnswerTest.java`
 **Dependencies:** Task 11
 **Estimated size:** small
+
+---
+
+## Task 15: Suggestion job for a new issue (KAN-22)
+
+**Story:** STORY-011
+**Feature:** suggestion-job
+**Description:** Branch `feat/KAN-22-tracker-suggestion-job`. First confirm with `forge tunnel` that the real
+`avi:jira:created:issue` payload has `issue.fields.summary` and `issue.fields.description` (design, STORY-011).
+OpenAPI `IssueCreatedPayload` gets optional `summary`, `description` (ADF object) and `labels`; run
+`npm run generate:api`. `receive` enqueues one `SuggestionJobRequest` through `SuggestionJobQueue` only after a new
+row is saved (AC-011.1, 011.2, 011.8). `SuggestionJobServiceImpl.run`: guard (AC-011.7), call `SuggestionSearch`
+(AC-011.3), store sources (triage's `sources_used` format) and suggested solution with a conditional update
+(AC-011.4), nothing on no suggestion (AC-011.5) or on failure, logging issue key + error type only (AC-011.6).
+Stand-ins: `InProcessSuggestionJobQueue` on its own bounded pool, `StubSuggestionSearch` from
+`TSOLVE_STUB_SUGGESTION`. No JobRunr, no `pom.xml` change (worker KAN-161). Edge cases 37–44.
+**Files:**
+- Modify: `tracker/dto/IssueCreatedPayload.java`, `tracker/service/impl/IssueCreatedServiceImpl.java`, `tracker/entity/SuggestionResult.java`, `tracker/repository/SuggestionResultRepository.java`, `backend/src/main/resources/application.yml`, `.env.example`, `frontend/openapi/tsolve-api.yaml` (+ generated client)
+- Create: `tracker/dto/SuggestionJobRequest.java`, `tracker/dto/IssueSuggestion.java`, `tracker/dto/SuggestionSource.java`, `tracker/service/SuggestionJobQueue.java`, `tracker/service/SuggestionSearch.java`, `tracker/service/SuggestionJobService.java`, `tracker/service/impl/SuggestionJobServiceImpl.java`, `tracker/service/impl/InProcessSuggestionJobQueue.java`, `tracker/service/impl/StubSuggestionSearch.java`; `tracker/client/AdfTextExtractor.java` filled in (was empty). No `SuggestionJobConfig` (design)
+- Test: `tracker/service/impl/IssueCreatedServiceImplTest.java` (AC-011.1, 011.2, 011.8), `tracker/service/impl/SuggestionJobServiceImplTest.java` (AC-011.3–011.7), `tracker/service/impl/StubSuggestionSearchTest.java`, `tracker/service/impl/InProcessSuggestionJobQueueTest.java`, `tracker/controller/JiraAppEventControllerTest.java` (payload with the new fields), `tracker/repository/SuggestionResultRepositoryIT.java` (conditional fill), `tracker/client/AdfTextExtractorTest.java`
+**Dependencies:** Task 6 (merged in #98)
+**Estimated size:** medium
+
+---
+
+## Task 16: Run the suggestion job on the worker (KAN-22, KAN-102)
+
+**Story:** STORY-011
+**Feature:** suggestion-job-worker
+**Description:** Changeset `017-tracker-suggestion-job-input` (job_ref, issue_summary, issue_description). `receive`
+stores the text and a `job_ref`, enqueues `SuggestionJobRequest(jobRef, issueKey)` (AC-011.1). `SuggestionJobService
+.run(jobRef)` reads the text from the row and throws `SuggestionJobFailedException` (key + error type, no cause) on any
+failure (AC-011.6). `SuggestionJobHandler` ("tracker.suggestion") runs it for the worker; `WorkerSuggestionJobQueue`
+enqueues through `TenantJobService`, binding `TSOLVE_TRACKER_DEV_WORKSPACE_ID` when no Workspace is bound, and never
+throws; `InProcessSuggestionJobQueue` only while `tsolve.worker.enabled` is false (AC-011.9). Edge cases 45–48.
+**Files:** design "Change 2026-11-07: run the job on the worker".
+**Test:** `IssueCreatedServiceImplTest`, `SuggestionJobServiceImplTest`, `SuggestionJobHandlerTest`,
+`WorkerSuggestionJobQueueTest`, `InProcessSuggestionJobQueueTest`, `SuggestionResultRepositoryIT`.
+**Dependencies:** Task 15, worker KAN-102 (merged)
+**Estimated size:** medium
+
+## Task 17: UUID keys for suggestion_result (KAN-22)
+
+**Story:** STORY-003, STORY-011
+**Feature:** suggestion-uuid-keys
+**Description:** Changeset `019-tracker-suggestion-uuid-keys`: `suggestion_id` becomes a `UUID` key, `project_id` a
+`UUID` that references `project (public_id)`, `job_ref` is dropped; existing rows keep their data (edge case 49).
+`ProjectService` returns the Project's `public_id`; the suggestion job carries `suggestion_id` and loads the row by it
+(AC-011.1, AC-011.7, edge case 50); `SuggestionSearch.suggest` takes the Project UUID. Triage's read-only
+`SuggestionResultRecord` and its history map the same columns as `UUID`. No acceptance criterion changes.
+**Files:** design "Change 2026-11-07: UUID keys for the tracker's table".
+**Test:** `IssueCreatedServiceImplTest`, `SuggestionJobServiceImplTest`, `SuggestionJobHandlerTest`,
+`SuggestionResultRepositoryIT` (UUID columns and the foreign key to `project (public_id)`), triage
+`SuggestionResultRecordRepositoryIT` and
+`SuggestionResultServiceImplTest`. Edge case 49 (existing rows) checked by running `002`, `008`, `017`, then `019`
+on a scratch PostgreSQL with two rows: both kept their text and suggestion and joined their Project by `public_id`.
+**Dependencies:** Task 16
+**Estimated size:** medium
