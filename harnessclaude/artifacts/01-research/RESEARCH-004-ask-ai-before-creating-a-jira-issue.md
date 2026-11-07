@@ -76,9 +76,32 @@ a vision model to help; `CreateIssueModal` prefill is assumed not to carry attac
 admin scopes, the per-project setup and the second typing of the question; B depends on Rovo being on every
 customer's site. Uninstall `tsolve-create-spike` from `bdang798` and delete its UIM when this is recorded.
 
+## Spike 2 — project page and prefilled Create dialog (KAN-294 Task 1, 2026-11-08)
+Throw-away `jira:projectPage` (UI Kit, `render: native`) in the T-Solve app (`TSolve_JiraApp`, development
+environment, `forge tunnel`) on `bdang798`, tested by the user in team-managed spaces SAM1 (TESTPRJ) and DP
+(Donation Platform). Code not kept; `@forge/jira-bridge ^1.2.0` kept for Task 4.
+
+| Question | Result |
+|----------|--------|
+| Where the page shows | A tab in the space's horizontal navigation, after Summary · List · Board · … · Docs (· Reports); shown in every space of the site; `useProductContext().extension.project` gives `id` and `key` |
+| Space | `context.projectId` opens the dialog on that space ✅ |
+| Work type without `issueTypeId` | Jira picks the space's default (Task) ✅ |
+| Summary | Prefilled, Vietnamese intact ✅ |
+| Labels | `labels: ['tsolve-asked']` prefilled and saved (SAM1-221, DP-117, DP-118) ✅ |
+| Description (ADF) | `{version: 1, type: 'doc', content: [paragraph…]}` — four paragraphs, Vietnamese, prefilled and saved as separate paragraphs (DP-118) ✅ |
+| Description (plain string) | Also prefilled and saved (DP-117) — undocumented (docs require ADF); not relied on |
+| Reporter | The viewing user, not a service account ✅ |
+| `onClose` after Create | `{payload: [{issueId: '11862'}]}` — the numeric id, **not** the key; Jira shows its own "Created Task DP-118" toast with a link |
+| `onClose` after Cancel | Jira first asks "Your changes won't be saved" → Discard; then `payload` is `[]` |
+| Scopes | No new scope: `forge deploy` and `forge lint` passed with only `read:jira-work` |
+| Attachments | The dialog has its own Attachment field (user can add images by hand); prefill of attachments not tried |
+
+Outcome: AC-010.1 and AC-010.9 can be built as written; no spec change.
+
 ## Open Questions
-- Where does `jira:projectPage` render in the new Jira navigation — a tab next to Board/List, or elsewhere?
-- Does `CreateIssueModal` return the created issue key (to attach images or link the chat)?
+- ~~Where does `jira:projectPage` render in the new Jira navigation~~ — a tab in the space navigation (Spike 2).
+- ~~Does `CreateIssueModal` return the created issue key~~ — no, only `issueId` (Spike 2); the key, if ever
+  needed (images later), comes from `GET /rest/api/3/issue/{issueId}`.
 - Owner decided: the story goes into `jira-app` (user, 2026-11-07); it calls the `chatbot` backend (Trần Hải Anh,
   not built yet — MSW mocks only) through a port with a stand-in. Which chatbot API, and how its UC-58 "create a
   Jira issue when no answer is found" (service account) fits with the prefilled Create dialog (user as reporter),

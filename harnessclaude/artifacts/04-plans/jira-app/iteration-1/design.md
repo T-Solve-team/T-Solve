@@ -87,8 +87,11 @@ Stub config (`.env.example`): `TSOLVE_STUB_JIRA_ASKERS=<accountId>=<accountUuid>
 - **Character count** for MSG02 is in code points on both sides (`[...text].length` in JS); the server's `@Size`
   counts UTF-16 units — an emoji-heavy question of ≤ 1,000 code points but > 1,000 units gets MSG02 from the server.
   Accepted (edge case 4).
-- **Description format** for `CreateIssueModal`: plain text with blank lines between questions, then
-  `Đã thử theo T-Solve:` + last answer + `Nguồn:` list. Whether the bridge needs ADF is a spike question (Task 1).
+- **Description format** for `CreateIssueModal`: ADF (`{version: 1, type: "doc", content: [paragraph…]}`), one
+  paragraph per question, then `Đã thử theo T-Solve:`, the last answer and a `Nguồn:` paragraph per source — verified in
+  the Task 1 spike (RESEARCH-004 Spike 2). A plain string also works but is undocumented, so it is not used.
+- **`onClose`** returns only `issueId`s (no key); the page ignores it — Jira shows its own "Created …" toast. Cancel
+  returns `[]` after Jira's own "changes won't be saved" prompt.
 - **Summary** = first question, trimmed, cut to 255 code points.
 
 ## File Structure
@@ -124,8 +127,8 @@ frontend/openapi/tsolve-api.yaml                   two jira-app paths; reuse Cha
 
 ## External Dependencies
 - `@forge/react` (UI Kit), `@forge/bridge` (`invokeRemote`), `@forge/jira-bridge` (`CreateIssueModal`) — new.
-- Scopes: none new expected (`CreateIssueModal` opens Jira's own dialog as the user). Confirmed in the spike; any
-  added scope is justified in the PR (AGENTS rule 3).
+- Scopes: none new — confirmed in the Task 1 spike (`CreateIssueModal` and `jira:projectPage` deploy with only
+  `read:jira-work`). Any added scope is justified in the PR (AGENTS rule 3).
 - Backend: `ChatbotAnswerService` (chatbot, Trần Hải Anh — call agreed before Task 4 is closed), `AccountRepository`
   (identity, read only, in the stub).
 - Test: Jest, babel-jest, React Testing Library, jsdom (devDependencies only).
@@ -148,6 +151,6 @@ integrity, 10 Integration, 11 Compliance · Skipped: 4 Scale (one conversation p
 | 6 | STORY-010 | Timing | Double click on send while asking | Medium | Send disabled while `asking`; one request | Task 6 |
 | 7 | STORY-010 | Data integrity | First question longer than 255 characters → Summary | Medium | Cut to 255 code points, no broken surrogate | Task 5 |
 | 8 | STORY-010 | Compliance | Question or answer text in logs (Forge or backend) | High | Logs carry ids / status / error type only | Task 3, Task 5 |
-| 9 | STORY-010 | Integration | `CreateIssueModal` cannot prefill labels or needs ADF description | High | Spike (Task 1) decides; if labels cannot be set → spec change request before Task 6 | Task 1 |
+| 9 | STORY-010 | Integration | `CreateIssueModal` cannot prefill labels or needs ADF description | High | Spike (Task 1, 08/11): labels and ADF description prefill and save; no new scope — closed | Task 1 |
 | 10 | STORY-010 | User types | Unlinked user | Medium | MSG62 instead of the box; Create button with nothing prefilled | Task 6 |
 | 11 | STORY-010 | Error cascades | Eligibility call fails | Low | Show the question box; POST stays the guard | Task 6 |

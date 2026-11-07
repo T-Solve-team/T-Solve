@@ -237,17 +237,22 @@
       }
     },
     "jira-app": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
-        "ask-forge-spike": "pending",
+        "ask-forge-spike": "passing",
         "ask-contract": "pending",
         "ask-endpoint": "pending",
         "ask-forge-client": "pending",
         "ask-conversation-logic": "pending",
         "ask-page-ui": "pending"
       },
-      "lastUpdated": "2026-11-07T17:49:34.500Z"
+      "lastUpdated": "2026-11-07T18:19:32.858Z",
+      "branch": "feat/jira-app",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {}
     },
     "dashboard-audit": {
       "status": "implementing",
