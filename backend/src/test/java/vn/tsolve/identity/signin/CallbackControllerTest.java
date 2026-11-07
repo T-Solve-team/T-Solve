@@ -29,9 +29,11 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -61,6 +63,9 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
 @Import({
     SecurityConfig.class,
     AuthSecurityConfig.class,
+    KeycloakClientRegistrations.class,
+    RedisAuthorizationRequestRepository.class,
+    OidcCallbackHandler.class,
     AuthHosts.class,
     SignInStateService.class,
     SignedToken.class,
@@ -85,6 +90,9 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
         })
 @ExtendWith(OutputCaptureExtension.class)
 class CallbackControllerTest {
+
+    @MockBean
+    private StringRedisTemplate redis;
 
     private static final String CALLBACK_URL = "http://login.localhost:8081/api/v1/auth/callback";
     private static final String CODE = "4/0A-the-authorization-code";
@@ -919,7 +927,8 @@ class CallbackControllerTest {
 
         assertMsg06(response, ACME);
         assertThat(workspaces.askedIds()).isNotEmpty().containsOnly(ACME.id());
-        assertThat(workspaces.askedHosts()).isEmpty();
+        // The Keycloak chain's matcher looks up the request host (login.); no host from the parameters or cookies.
+        assertThat(workspaces.askedHosts()).doesNotContain("beta.localhost");
     }
 
     @Test
