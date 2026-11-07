@@ -137,7 +137,7 @@ BUG-145 and BUG-146). The earlier test totals are historical evidence; they do n
   grant and import request match the seeded Project public UUID `14400000-0000-0000-0000-000000000001`.
 - SearchLog and its repository already match `011-search-log.sql`: UUID log/user keys and a BIGINT
   Department reference. They need no schema changes.
-- Search bug references are BUG-150 (NUL), BUG-151 (offset), BUG-152 (year zero), BUG-153 (Project joins),
+- Search bug references are BUG-150 (NUL), BUG-157 (offset), BUG-158 (year zero), BUG-153 (Project joins),
   BUG-154 (excerpts), BUG-155 (query length) and BUG-156 (log failure). The bug log retains all rows from
   both branches, including this branch's unchanged BUG-131, with its seven renumbered rows after main's
   BUG-149 and their publication references corrected to PR #142.
