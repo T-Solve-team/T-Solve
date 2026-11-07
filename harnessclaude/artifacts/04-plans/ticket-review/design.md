@@ -221,6 +221,14 @@ Keep the existing OpenAPI contract and Department filter. Require a trusted Work
 
 Risk review verdict: CAUTION. Storage can be verified independently. Production activation requires trusted Workspace routing, Project membership and Jira issue identity.
 
+## KAN-155 extension: writer email (STORY-010)
+
+- **Delivery** — chosen: a tenant JobRunr job per decision (`TenantJobService.enqueue("review-notification", decisionId)`), enqueued from a `@TransactionalEventListener(phase = AFTER_COMMIT)`; alternatives: direct SMTP after commit, an outbox table. Rationale: the user chose job delivery; JobRunr retries failed deliveries and SMTP never runs inside the decision transaction or the request. An outbox would also survive a crash between commit and enqueue, but it is more than the demo needs.
+- **Event** — `ReviewFeedbackDecidedEvent(List<UUID> decisionIds)` follows `TicketsPublishedEvent`: published inside the transaction and consumed only after commit, so a rollback sends nothing.
+- **Job payload** — only the decision id. The handler re-reads the decision, ticket and writer account inside `runInTenant`, so no email address or feedback is stored in the job table, and a decision that disappears completes without email.
+- **Process split** — the handler bean exists whenever `tsolve.worker.enabled` is true, because `TenantJobServiceImpl` checks the handler type at enqueue time in the API process too. The SMTP sender is only in the `worker` profile; the handler resolves it lazily and fails the job if it is missing.
+- **Disabled queue** — when the API runs without `tsolve.worker.enabled`, there is no `TenantJobService`: the listener skips enqueueing and the decision response is unchanged (AC-010.3).
+
 ## KAN-159 extension: production Review History (STORY-011)
 
 - **Query** — chosen: two native queries on `review_decision` joined to `ticket` and the reviewer's `app_user`, paged in the database with a count query, one per sort direction; alternatives: in-memory sort like the queue, a JPQL join to the identity `Account` entity. Rationale: history grows without bound, and a JPQL join would reach into another module's entity. The `app_user` join reads only the reviewer name, the same way KAN-24 already stores `project_manager_id`.

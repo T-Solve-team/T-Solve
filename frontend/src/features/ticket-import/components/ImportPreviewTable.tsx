@@ -5,7 +5,9 @@ import { cells, DataTable, type DataTableColumn } from '@/shared/ui';
 import { useImportPreviewRows } from '../hooks/useImportPreview';
 import { errorText, SECTIONS } from '../lib/import-row';
 
-function columns(onPreview: (rowNo: number) => void): DataTableColumn<ImportPreviewRowSummary>[] {
+function columns(
+  onPreview: (row: ImportPreviewRowSummary) => void,
+): DataTableColumn<ImportPreviewRowSummary>[] {
   return [
     {
       key: 'ticketId',
@@ -61,7 +63,7 @@ function columns(onPreview: (rowNo: number) => void): DataTableColumn<ImportPrev
       title: 'Preview', // SRS 5.2 field "Preview (button)"
       width: 100,
       render: (_, row) => (
-        <Button type="link" onClick={() => onPreview(row.rowNo)}>
+        <Button type="link" onClick={() => onPreview(row)}>
           Preview
         </Button>
       ),
@@ -73,9 +75,9 @@ type ImportPreviewTableProps = {
   previewId: number;
   /** Row numbers of the selected rows, on every page. */
   selectedRowNos: number[];
-  onSelectionChange: (rowNos: number[]) => void;
-  /** Opens the Import Ticket Preview popup of the row (AC-009.4). */
-  onPreview: (rowNo: number) => void;
+  onSelectionChange: (rows: ImportPreviewRowSummary[]) => void;
+  /** Opens the Import Ticket Preview popup of the row (AC-009.4, AC-015.2). */
+  onPreview: (row: ImportPreviewRowSummary) => void;
 };
 
 /** The rows of 5.2 Import Preview (AC-009.2), 20 per page; Removed rows cannot be selected. */
@@ -103,7 +105,7 @@ export function ImportPreviewTable({
         selectedRowKeys: selectedRowNos,
         preserveSelectedRowKeys: true,
         columnWidth: 48,
-        onChange: (keys) => onSelectionChange(keys.map(Number)),
+        onChange: (_, selectedRows) => onSelectionChange(selectedRows),
         getCheckboxProps: (row) => ({
           'aria-label': `Select row ${row.rowNo}`,
           disabled: row.status === 'REMOVED',

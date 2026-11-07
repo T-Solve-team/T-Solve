@@ -81,17 +81,19 @@ public class TicketListServiceImpl implements TicketListService {
         int page = query.page() == null ? 0 : query.page();
         int size = query.size() == null ? 20 : query.size();
         if (page < 0 || size < 1 || size > 100) throw new InvalidListQueryException();
+        // Spring joins repeated sort parameters with commas.
         String[] sort = (query.sort() == null ? "updatedAt,desc" : query.sort()).split(",", -1);
-        if (sort.length != 2 || !("asc".equals(sort[1]) || "desc".equals(sort[1]))) {
-            throw new InvalidListQueryException();
-        }
-        Sort order = Sort.by(Sort.Order.desc("id"));
-        if (!"reviewDueDate".equals(sort[0])) {
-            String property = SORT_KEYS.get(sort[0]);
+        if (sort.length % 2 != 0) throw new InvalidListQueryException();
+        Sort order = Sort.unsorted();
+        for (int i = 0; i < sort.length; i += 2) {
+            if (!("asc".equals(sort[i + 1]) || "desc".equals(sort[i + 1]))) {
+                throw new InvalidListQueryException();
+            }
+            if ("reviewDueDate".equals(sort[i])) continue;
+            String property = SORT_KEYS.get(sort[i]);
             if (property == null) throw new InvalidListQueryException();
-            order = Sort.by(new Sort.Order(Sort.Direction.fromString(sort[1]), property))
-                    .and(order);
+            order = order.and(Sort.by(new Sort.Order(Sort.Direction.fromString(sort[i + 1]), property)));
         }
-        return PageRequest.of(page, size, order);
+        return PageRequest.of(page, size, order.and(Sort.by(Sort.Order.desc("id"))));
     }
 }
