@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -34,6 +35,7 @@ import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.exception.MessageCodeException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.dto.ImportResultResponse;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.service.CsvImportService;
 import vn.tsolve.ticket.service.ImportConfirmService;
@@ -42,7 +44,7 @@ import vn.tsolve.ticket.service.ImportConfirmService;
 @SpringBootTest
 @TestPropertySource(
         properties = {
-            "tsolve.stub.projects=pm-a:1;pm-b:1;boom-pm:1",
+            "tsolve.stub.projects=pm-a:00000000-0000-0000-0000-000000000001;pm-b:00000000-0000-0000-0000-000000000001;boom-pm:00000000-0000-0000-0000-000000000001",
             "tsolve.cors.allowed-origins=http://localhost:5173",
             "server.port=0",
             // the sign-in values the application needs to start (identity)
@@ -136,7 +138,31 @@ class ImportConfirmIT {
         }
         MockMultipartFile file = new MockMultipartFile(
                 "file", "tickets.csv", "text/csv", csv.toString().getBytes(StandardCharsets.UTF_8));
-        return csvImports.upload(user, 1L, file).previewId();
+        return csvImports
+                .upload(user, UUID.fromString("00000000-0000-0000-0000-000000000001"), ImportType.WITH_SOLUTION, file)
+                .previewId();
+    }
+
+    @Test
+    void savesAFileWithoutSolutionsWithItsTypeAndNeedsSolutionRows_AC_012_5() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "tickets.csv",
+                "text/csv",
+                "ticket_id,title\nT-1,Login fails\n".getBytes(StandardCharsets.UTF_8));
+
+        long id = csvImports
+                .upload(
+                        "pm-a",
+                        UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                        ImportType.WITHOUT_SOLUTION,
+                        file)
+                .previewId();
+
+        assertThat(jdbc.queryForObject("select import_type from import_preview where id = ?", String.class, id))
+                .isEqualTo("WITHOUT_SOLUTION");
+        assertThat(jdbc.queryForObject("select status from import_preview_row where preview_id = ?", String.class, id))
+                .isEqualTo("NEEDS_SOLUTION");
     }
 
     private int count(String table) {
@@ -266,12 +292,13 @@ class ImportConfirmIT {
 
     @Test
     void databaseRejectsADuplicateTicketId() {
-        jdbc.update("insert into ticket (ticket_id, project_id, source, status, title, symptoms, root_cause,"
-                + " resolution_steps, scope) values ('T-9', 1, 'CSV', 'PUBLISHED', 't', 's', 'r', 'st', 'sc')");
+        jdbc.update(
+                "insert into ticket (ticket_id, project_id, source, status, title, symptoms, root_cause,"
+                        + " resolution_steps, scope) values ('T-9', '00000000-0000-0000-0000-000000000001', 'CSV', 'PUBLISHED', 't', 's', 'r', 'st', 'sc')");
 
         assertThatThrownBy(() -> jdbc.update(
                         "insert into ticket (ticket_id, project_id, source, status, title, symptoms, root_cause,"
-                                + " resolution_steps, scope) values ('T-9', 1, 'CSV', 'PUBLISHED', 't', 's', 'r',"
+                                + " resolution_steps, scope) values ('T-9', '00000000-0000-0000-0000-000000000001', 'CSV', 'PUBLISHED', 't', 's', 'r',"
                                 + " 'st', 'sc')"))
                 .isInstanceOf(DuplicateKeyException.class);
     }

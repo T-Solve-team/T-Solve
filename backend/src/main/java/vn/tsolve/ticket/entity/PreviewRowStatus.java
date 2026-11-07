@@ -3,5 +3,6 @@ package vn.tsolve.ticket.entity;
 public enum PreviewRowStatus {
     VALID,
     ERROR,
-    REMOVED
+    REMOVED,
+    NEEDS_SOLUTION
 }

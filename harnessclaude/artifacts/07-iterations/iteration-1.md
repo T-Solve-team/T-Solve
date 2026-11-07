@@ -190,3 +190,9 @@ One feature, `audit-log`, implements the frontend-only Audit Log (STORY-001) wit
 OpenAPI contract. Plan: artifacts/04-plans/dashboard-audit/iteration-1/tasks.md. Demo: sign in as Admin,
 open Audit Log, search Actor email, combine action/date filters, paginate and retry a failed query.
 Backend recording and production tenant isolation are not part of this deliverable.
+
+## KAN-162 SMTP delivery addition — approved 2026-11-06
+
+The active HarnessClaude iteration adds one Worker feature, `review-notification-smtp` (STORY-001).
+See [the task](../04-plans/worker/iteration-1/tasks.md). Run the backend integration tests to demonstrate
+both messages in the local SMTP fixture. Worker job wiring and retries follow the queue work.
