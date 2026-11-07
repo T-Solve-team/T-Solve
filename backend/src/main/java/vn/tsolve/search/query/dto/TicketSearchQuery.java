@@ -32,6 +32,8 @@ public record TicketSearchQuery(
         int number = integer(page, 0);
         int count = integer(size, 20);
         if (number < 0 || count < 1 || count > 100) throw new InvalidSearchQueryException();
+        long offset = (long) number * count;
+        if (offset > Integer.MAX_VALUE) throw new InvalidSearchQueryException();
         return new TicketSearchQuery(q.trim(), department, source, from, to, PageRequest.of(number, count));
     }
 
@@ -54,7 +56,9 @@ public record TicketSearchQuery(
         if (value == null) return null;
         if (!value.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}")) throw new InvalidSearchQueryException();
         try {
-            return LocalDate.parse(value, DATE);
+            LocalDate date = LocalDate.parse(value, DATE);
+            if (date.getYear() < 1) throw new InvalidSearchQueryException();
+            return date;
         } catch (DateTimeParseException invalid) {
             throw new InvalidSearchQueryException();
         }
