@@ -228,4 +228,4 @@ Master registry of all artifacts in this workspace.
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-23c-keycloak-callback-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-23c-keycloak-callback-test-report.md |
 | — | session-log | identity | in-progress | artifacts/05-implementation/identity/task-24-remove-custom-sign-in.md |
-| — | review | identity | fail | artifacts/06-evaluation/identity/task-24-remove-custom-sign-in-review.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-24-remove-custom-sign-in-review.md |

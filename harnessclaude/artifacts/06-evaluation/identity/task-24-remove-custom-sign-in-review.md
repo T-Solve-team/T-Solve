@@ -15,7 +15,7 @@ iteration: 1
 
 ## Summary
 Scope: the uncommitted worktree `T-Solve-KAN-295` on `refactor/KAN-295-identity-remove-custom-sign-in` (base
-`a7c7659b`). It has 50 changed files (+110 / −6228) and 3 new untracked files (changesets `020` and `021`,
+`a7c7659b`). It has 50 changed files (+110 / −6228) and 3 new untracked files (changesets `021` and `022`,
 `SignInTablesDroppedIT`). I read the full diff of every file that was not deleted. For the deleted files I read the
 list only, plus the old `SignInStateService.filterReturnTo` and the old `SignInStateServiceTest` AC-001.3 cases, to
 compare them with the moved code.
@@ -30,7 +30,7 @@ The removal itself is clean:
   `NullSecurityContextRepository`, CSRF is off only on the two GET redirect paths (now 2 paths instead of 4), and the
   Workspace host guard, the state/Workspace check and the cookie expiry are untouched.
 - The `admin.` 404 follows Q1. The OpenAPI file drops `authorize`, `complete` and the `login.` servers entry (Q2).
-  `020` and `021` use `DROP TABLE IF EXISTS`, come last in the master changelog, and `004`–`007` are untouched.
+  `021` and `022` use `DROP TABLE IF EXISTS`, come last in the master changelog, and `004`–`007` are untouched.
 
 Verdict: **FAIL (fix first)**, 3 blockers, all small:
 1. `mvn spotless:check` fails on `SignInProperties.java`, so `mvn verify` is not green.
@@ -55,7 +55,7 @@ There are also 7 non-blockers.
 | # | Item | Status | Evidence |
 |---|------|--------|----------|
 | 1 | Delete the 14 classes and 12 tests from the list | PASS | `git status`: all `D`; plus `CallbackAccountIsolationIT` (Q3), `AccountStore`, `FakeGoogleIssuer`, `MutableClock` (orphans, QA Q6 A) |
-| 2 | New changesets drop `sign_in_states`, `hand_off_code`; `004`–`007` unedited | PASS | `changes/020-…sql`, `changes/021-…sql`, master `:40-41`; `SignInTablesDroppedIT` green |
+| 2 | New changesets drop `sign_in_states`, `hand_off_code`; `004`–`007` unedited | PASS | `changes/021-…sql`, `changes/022-…sql`, master `:40-41`; `SignInTablesDroppedIT` green |
 | 3 | `TSOLVE_SIGNING_KEY`, `tsolve.oidc.google.*`, `GOOGLE_*` gone from the web process | PASS | `application.yml:83-87`, `.env.example`, `SignInProperties.java:11-15`; no hit outside tests/ADR/harness |
 | 4 | `authorize`, `complete` gone from OpenAPI; regenerated | PASS | `tsolve-api.yaml`; generated diff = 6 files, only removals plus the callback params |
 | 5 | `AuthHosts` keeps only Workspace site vs `admin.` | PASS | `AuthHosts.java` (`isLoginHost`, `loginHost` removed) |
