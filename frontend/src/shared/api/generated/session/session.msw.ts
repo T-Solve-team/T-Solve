@@ -55,8 +55,6 @@ export const getGetMeResponseMock = (
   ...overrideResponse,
 });
 
-export const getAuthCallbackResponseMock = (): string => faker.word.sample();
-
 export const getGetMeMockHandler = (
   overrideResponse?:
     | CurrentUser
@@ -97,53 +95,13 @@ export const getSignInMockHandler = (
   );
 };
 
-export const getAuthorizeMockHandler = (
-  overrideResponse?:
-    unknown | ((info: Parameters<HttpResponseResolver>[0]) => Promise<unknown> | unknown),
-  options?: RequestHandlerOptions,
-) => {
-  return http.get(
-    '*/api/v1/auth/authorize',
-    async (info: Parameters<HttpResponseResolver>[0]) => {
-      if (typeof overrideResponse === 'function') {
-        await overrideResponse(info);
-      }
-
-      return new HttpResponse(null, { status: 200 });
-    },
-    options,
-  );
-};
-
 export const getAuthCallbackMockHandler = (
   overrideResponse?:
-    string | ((info: Parameters<HttpResponseResolver>[0]) => Promise<string> | string),
+    unknown | ((info: Parameters<HttpResponseResolver>[0]) => Promise<unknown> | unknown),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/auth/callback',
-    async (info: Parameters<HttpResponseResolver>[0]) => {
-      const resolvedBody =
-        overrideResponse !== undefined
-          ? typeof overrideResponse === 'function'
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getAuthCallbackResponseMock();
-      const textBody =
-        typeof resolvedBody === 'string' ? resolvedBody : JSON.stringify(resolvedBody ?? null);
-      return HttpResponse.html(textBody, { status: 200 });
-    },
-    options,
-  );
-};
-
-export const getCompleteSignInMockHandler = (
-  overrideResponse?:
-    unknown | ((info: Parameters<HttpResponseResolver>[0]) => Promise<unknown> | unknown),
-  options?: RequestHandlerOptions,
-) => {
-  return http.get(
-    '*/api/v1/auth/complete',
     async (info: Parameters<HttpResponseResolver>[0]) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
@@ -174,8 +132,6 @@ export const getLogoutMockHandler = (
 export const getSessionMock = () => [
   getGetMeMockHandler(),
   getSignInMockHandler(),
-  getAuthorizeMockHandler(),
   getAuthCallbackMockHandler(),
-  getCompleteSignInMockHandler(),
   getLogoutMockHandler(),
 ];

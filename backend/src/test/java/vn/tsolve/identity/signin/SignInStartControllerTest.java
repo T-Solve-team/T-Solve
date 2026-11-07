@@ -31,11 +31,8 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequ
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.AuthSecurityConfig;
-import vn.tsolve.identity.signin.SignInTestFixtures.StateStore;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
 import vn.tsolve.identity.signin.port.WorkspaceRef;
 
@@ -45,9 +42,6 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
     SecurityConfig.class,
     AuthSecurityConfig.class,
     AuthHosts.class,
-    SignInStateService.class,
-    SignedToken.class,
-    GoogleOidcClient.class,
     SignInTestBeans.class,
     KeycloakAuthorizationRequestResolver.class,
     KeycloakClientRegistrations.class,
@@ -59,20 +53,13 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
         properties = {
             "TSOLVE_LOGIN_ORIGIN=" + SignInTestFixtures.LOGIN_ORIGIN,
             "TSOLVE_ADMIN_ORIGIN=" + SignInTestFixtures.ADMIN_ORIGIN,
-            "TSOLVE_SIGNING_KEY=" + SignInTestFixtures.KEY,
-            "GOOGLE_CLIENT_ID=test-client-id",
-            "GOOGLE_CLIENT_SECRET=test-secret",
             "PLATFORM_OPERATOR_EMAILS=ops@example.test",
+            "KEYCLOAK_WEB_CLIENT_SECRET=test-keycloak-secret",
             "CORS_ALLOWED_ORIGINS=http://localhost:5173",
             "server.port=0"
         })
 @ExtendWith(OutputCaptureExtension.class)
 class SignInStartControllerTest {
-
-    @MockBean
-    private StringRedisTemplate redis;
-
-    private static final String AUTHORIZE_URL = SignInTestFixtures.LOGIN_ORIGIN + "/api/v1/auth/authorize";
 
     private static final String KEYCLOAK_ENDPOINT =
             SignInTestFixtures.LOGIN_ORIGIN + "/realms/tsolve/protocol/openid-connect/auth";
@@ -89,29 +76,22 @@ class SignInStartControllerTest {
         }
     }
 
+    /** Only so the callback chain's Redis repository can be built; sign-in start talks to the recording double. */
+    @MockBean
+    private StringRedisTemplate redis;
+
     @Autowired
     private MockMvc mvc;
 
     @Autowired
-    private StateStore store;
-
-    @Autowired
     private InMemoryWorkspaceLookup workspaces;
-
-    @Autowired
-    private SignedToken signedToken;
-
-    @Autowired
-    private MutableClock clock;
 
     @Autowired
     private RecordingAuthorizationRequestRepository requests;
 
     @BeforeEach
     void reset() {
-        store.reset();
         workspaces.reset();
-        clock.reset();
         requests.reset();
     }
 
@@ -121,18 +101,6 @@ class SignInStartControllerTest {
 
     private MockHttpServletResponse perform(MockHttpServletRequestBuilder request) throws Exception {
         return mvc.perform(request).andReturn().getResponse();
-    }
-
-    /** Asserts a 302 to login.'s authorize with only a state parameter, and returns that state value. */
-    private static String stateOfRedirectToAuthorize(MockHttpServletResponse response) {
-        assertThat(response.getStatus()).as("status").isEqualTo(302);
-        String location = response.getHeader(HttpHeaders.LOCATION);
-        assertThat(location).as("Location").startsWith(AUTHORIZE_URL + "?state=");
-        UriComponents uri = UriComponentsBuilder.fromUriString(location).build();
-        assertThat(uri.getQueryParams().keySet()).as("query parameters").containsExactly("state");
-        String state = uri.getQueryParams().getFirst("state");
-        assertThat(location).isEqualTo(AUTHORIZE_URL + "?state=" + state);
-        return state;
     }
 
     /** Asserts a 302 to Keycloak's authorization endpoint and returns the Location. */
@@ -160,7 +128,6 @@ class SignInStartControllerTest {
         assertThat(location).isEqualTo(saved.getAuthorizationRequestUri());
         assertThat(saved.getAttributes().get(KeycloakAuthorizationRequestResolver.WORKSPACE_ID))
                 .hasToString(workspace.id().toString());
-        assertThat(store.calls("save")).isZero();
     }
 
     @Test
@@ -221,16 +188,13 @@ class SignInStartControllerTest {
     }
 
     @Test
-    @DisplayName("AC-001.28 starts a Platform Console sign-in on admin.")
-    void startsPlatformConsoleSignInOnAdmin_AC_001_28() throws Exception {
+    @DisplayName("AC-001.28 interim answers 404 to a sign-in start on admin. until Task 29")
+    void answersNotFoundToSignInStartOnAdmin_AC_001_28_interim() throws Exception {
         MockHttpServletResponse response = perform(start("admin.localhost"));
 
-        String state = stateOfRedirectToAuthorize(response);
-        SignInState saved = store.onlySaved();
-        assertThat(saved.getTarget()).isEqualTo(SignInState.Target.PLATFORM_CONSOLE);
-        assertThat(saved.getWorkspaceId()).isNull();
-        assertThat(signedToken.verify(state)).contains(saved.getId().toString());
-        assertThat(workspaces.askedHosts()).noneMatch(host -> host.startsWith("admin."));
+        assertThat(response.getStatus()).as("status").isEqualTo(404);
+        assertThat(response.getHeader(HttpHeaders.LOCATION)).as("Location").isNull();
+        assertThat(requests.saved()).as("authorization requests saved").isEmpty();
     }
 
     @Test
@@ -268,8 +232,6 @@ class SignInStartControllerTest {
         MockHttpServletResponse response = perform(start(host));
 
         assertThat(requests.saved()).isEmpty();
-        assertThat(store.calls("save")).isZero();
-        assertThat(store.saved()).isEmpty();
         assertThat(response.getHeaders(HttpHeaders.SET_COOKIE)).isEmpty();
     }
 
@@ -295,8 +257,6 @@ class SignInStartControllerTest {
         MockHttpServletResponse response = perform(start(host));
 
         assertThat(response.getStatus()).isEqualTo(404);
-        assertThat(store.calls("save")).isZero();
-        assertThat(store.saved()).isEmpty();
         assertThat(requests.saved()).isEmpty();
         assertThat(response.getHeaders(HttpHeaders.SET_COOKIE)).isEmpty();
     }

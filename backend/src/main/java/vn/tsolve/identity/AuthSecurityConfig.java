@@ -40,9 +40,7 @@ public class AuthSecurityConfig {
 
     private static final RequestMatcher SIGN_IN_PATHS = new OrRequestMatcher(
             AntPathRequestMatcher.antMatcher("/api/v1/auth/sign-in"),
-            AntPathRequestMatcher.antMatcher("/api/v1/auth/authorize"),
-            AntPathRequestMatcher.antMatcher("/api/v1/auth/callback"),
-            AntPathRequestMatcher.antMatcher("/api/v1/auth/complete"));
+            AntPathRequestMatcher.antMatcher("/api/v1/auth/callback"));
 
     private static final Logger log = LoggerFactory.getLogger(AuthSecurityConfig.class);
     private static final String CALLBACK = "/api/v1/auth/callback";
