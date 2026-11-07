@@ -2,8 +2,8 @@
 module: identity
 feature: keycloak-callback
 task: 23c
-verdict: fail
-attempt: 2
+verdict: pass
+attempt: 3
 date: 2026-11-07
 reviewer: tsolve-code-reviewer (Claude Opus 5.5, independent, read-only)
 iteration: 1
@@ -225,3 +225,33 @@ correct, and AC-001.6 still has its own tests.
 - `mvn -B test -Dtest='AuthSecurityConfigTest#answersMsg06WithOneErrorWhenRedisIsDownDuringTheCallback_edgeQ5B'`: 1/1,
   with one ERROR line in the output.
 - Details are in `task-23c-keycloak-callback-test-report.md`.
+
+---
+
+# Attempt 3 (2026-11-07): verdict re-issued as pass
+
+## Summary (attempt 3)
+Verdict: **pass**. Finding 9 (the only blocker left after attempt 2) is closed by `d8d94a50`. The attempt 2 check
+was a palantir-java-format run on scratch copies, not a `mvn spotless:check` on the committed state. Earlier claims
+were wrong in two ways:
+- The developer's hand-off said finding 9 "did not reproduce". It reproduces on `7f5e87cf`. An earlier format card's
+  `spotless:check` exit 0 ran on a scratch copy that was not the committed state, so it was no evidence for the commit.
+- `.husky/pre-commit` runs only gitleaks and lint-staged (frontend). The earlier commits passing that hook proves
+  nothing about backend formatting.
+
+## Checks (attempt 3)
+A fresh reviewer ran `mvn spotless:check` in `backend` on its own fresh clone (`origin/main` present, ratchet active),
+over the whole backend:
+
+| Commit | Result | Evidence |
+|--------|--------|----------|
+| `7f5e87cf` | exit 1 | lists `TestBrowser`, `KeycloakSignInEndToEndIT`, `FakeKeycloakRealm` (finding 9 reproduced) |
+| `d8d94a50` | exit 0 | 7 s |
+
+Production code was already judged ready in attempt 2; no production file changed in attempt 3, and no code was reviewed
+again.
+
+## Issues (attempt 3)
+- Finding 9: fixed in `d8d94a50`; closed by the `spotless:check` exit 0 above.
+- Notes 7, 8, 10 and 11 stay open as notes. None of them blocks the verdict.
+- Findings 1 to 5 were closed in attempt 2 and are not re-reviewed here.
