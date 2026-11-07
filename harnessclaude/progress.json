@@ -163,15 +163,16 @@
         "ticket-search-connect": "evaluating",
         "ticket-feedback-api": "pending",
         "give-feedback-connect": "pending",
-        "ticket-suggestion-api": "pending"
+        "ticket-suggestion-api": "pending",
+        "solution-retrieval": "passing"
       },
-      "lastUpdated": "2026-11-06T15:47:38.180Z",
+      "lastUpdated": "2026-11-06T17:23:51.646Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "c973207b29a3099ac466ffe777a90fec6696b93c"
+        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
       }
     },
     "triage": {
@@ -192,22 +193,27 @@
       }
     },
     "chatbot": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "ask-answer": "passing",
         "citations": "passing",
         "session-conversations": "passing",
         "ratings": "passing",
-        "uuid-ids": "passing"
+        "uuid-ids": "passing",
+        "chatbot-answer-schema": "passing",
+        "ask-answer-api": "passing",
+        "answer-citations": "pending",
+        "cited-documents": "pending",
+        "follow-up-context": "pending"
       },
-      "lastUpdated": "2026-10-25T18:12:52.131Z",
+      "lastUpdated": "2026-11-06T17:23:52.760Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "3d3c827c8b735482e0f3e8baf0bd182d1ad40166"
+        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
       }
     },
     "jira-app": {
@@ -285,10 +291,11 @@
       "currentPhase": "implement",
       "features": {
         "ollama-clients": "passing",
-        "solution-draft": "pending",
-        "solution-rewrite": "pending"
+        "solution-draft": "passing",
+        "solution-rewrite": "passing",
+        "solution-review-fixes": "passing"
       },
-      "lastUpdated": "2026-11-05T11:28:04.196Z",
+      "lastUpdated": "2026-11-06T12:13:56.733Z",
       "branch": "feat/ai",
       "repos": [
         "default"

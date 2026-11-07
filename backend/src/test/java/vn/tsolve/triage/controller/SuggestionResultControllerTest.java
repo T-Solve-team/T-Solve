@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -23,6 +24,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import vn.tsolve.common.config.MethodSecurityConfig;
 import vn.tsolve.common.exception.NotFoundException;
+import vn.tsolve.common.security.Role;
+import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.triage.dto.HistoryQuery;
 import vn.tsolve.triage.dto.SuggestionProject;
 import vn.tsolve.triage.dto.SuggestionResultSummary;
@@ -37,6 +40,7 @@ class SuggestionResultControllerTest {
 
     private static final String LIST = "/api/v1/suggestion-results";
     private static final String PM = "pm@example.test";
+    private static final String ACCOUNT_ID = "00000000-0000-0000-0000-000000000001";
 
     @Autowired
     private MockMvc mvc;
@@ -68,6 +72,18 @@ class SuggestionResultControllerTest {
                 .andExpect(jsonPath("$.content[0].jiraIssueUrl").isEmpty())
                 .andExpect(jsonPath("$.page.size").value(20))
                 .andExpect(jsonPath("$.page.totalElements").value(1));
+    }
+
+    @Test
+    @WithTSolveUser(
+            id = ACCOUNT_ID,
+            roles = {Role.TICKET_RESOLVER, Role.PROJECT_MANAGER})
+    void allowsTheHistoryListWithCombinedRoles_AC_003_1() throws Exception {
+        when(results.history(eq(ACCOUNT_ID), any(HistoryQuery.class))).thenReturn(Page.empty(PageRequest.of(0, 20)));
+
+        mvc.perform(get(LIST))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.totalElements").value(0));
     }
 
     @Test
@@ -109,10 +125,9 @@ class SuggestionResultControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "resolver@example.test", roles = "TICKET_RESOLVER")
-    void answersEveryDetailMissWithMsg04_AC_004_2() throws Exception {
-        when(results.detail("resolver@example.test", false, "ITSUP-1"))
-                .thenThrow(new NotFoundException("MSG04", Map.of()));
+    @WithTSolveUser(id = ACCOUNT_ID, roles = Role.TICKET_RESOLVER)
+    void masksTheDetailForANonProjectManagerWithMsg04_AC_004_2() throws Exception {
+        when(results.detail(ACCOUNT_ID, false, "ITSUP-1")).thenThrow(new NotFoundException("MSG04", Map.of()));
 
         mvc.perform(get(LIST + "/ITSUP-1"))
                 .andExpect(status().isNotFound())
