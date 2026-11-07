@@ -66,11 +66,12 @@ commit of the PR for secrets. A gitleaks false alarm: add its `Fingerprint:` lin
 ## Run locally
 
 ```bash
-# 0. settings, once: copy the names and fill in the values (DB values = those of the db service in docker-compose.yml)
+# 0. settings, once: copy the names and fill in the values (DB values = those of the db service in docker-compose.yml;
+#    REDIS_HOST, REDIS_PORT and REDIS_PASSWORD too - REDIS_PASSWORD is required, compose stops without it)
 cp .env.example .env
 
-# 1. database
-docker compose up -d db
+# 1. database and Redis (check a wrong password: docker compose exec -e REDISCLI_AUTH= redis redis-cli ping -> NOAUTH)
+docker compose up -d db redis
 
 # 2. backend  (health: /actuator/health on SERVER_PORT; Liquibase applies the changelog on start)
 cd backend
