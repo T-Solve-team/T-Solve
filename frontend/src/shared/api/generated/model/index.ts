@@ -58,6 +58,7 @@ export * from './issueComment';
 export * from './issueCreatedPayload';
 export * from './issueCreatedPayloadIssue';
 export * from './issueCreatedPayloadIssueFields';
+export * from './issueCreatedPayloadIssueFieldsDescription';
 export * from './issueCreatedPayloadIssueFieldsProject';
 export * from './jiraPullRequest';
 export * from './jiraReviewFeedback';

@@ -12,4 +12,5 @@ Iteration 1 implements the whole module (all 14 tasks, the user's choice), so ev
 design applies unchanged: architecture, data model, key decisions, file structure, edge cases, risk review and
 builder check. Read the master; this file only marks the scope.
 
-Scope: STORY-001 … STORY-010 (Tasks 1–14 in `tasks.md`).
+Scope: STORY-001 … STORY-010 (Tasks 1–14 in `tasks.md`), and STORY-011 (Task 15, KAN-22 suggestion job, added
+2026-11-07 — master design "STORY-011: Suggestion job").

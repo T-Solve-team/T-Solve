@@ -1492,6 +1492,20 @@ components:
                     key:
                       type: string
                       description: The Jira project key, e.g. ITSUP.
+                summary:
+                  type: string
+                  description: The issue summary, sent to the suggestion job (STORY-011). Never logged.
+                description:
+                  type: [object, 'null']
+                  additionalProperties: true
+                  description: >
+                    The issue description as Atlassian Document Format (ADF); the tracker turns it into plain text
+                    for the suggestion job (STORY-011). Absent or null when the issue has none. Never logged.
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: The issue labels; `tsolve-chatbot` marks an issue created by the Chatbot (AC-011.8).
     AuditAction:
       type: string
       enum:

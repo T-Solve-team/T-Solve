@@ -33,5 +33,11 @@
     <include file="changes/017-project-membership.sql" relativeToChangelogFile="true"/>
 
     <include file="changes/018-audit-log-entry.sql" relativeToChangelogFile="true"/>
+    <!-- Tracker (KAN-22): the suggestion job input, after main's 017 and 018. -->
+    <include file="changes/017-tracker-suggestion-job-input.sql" relativeToChangelogFile="true"/>
+    <include file="changes/019-tracker-suggestion-uuid-keys.sql" relativeToChangelogFile="true"/>
+    <include file="changes/019-identity-user-role-department.sql" relativeToChangelogFile="true"/>
+    <include file="changes/020-tracker-suggestion-comment.sql" relativeToChangelogFile="true"/>
+    <!-- Jira import (KAN-45): the Draft and Jira columns of the Import Preview, after main's tracker changesets. -->
     <include file="changes/010-ticket-jira-import.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

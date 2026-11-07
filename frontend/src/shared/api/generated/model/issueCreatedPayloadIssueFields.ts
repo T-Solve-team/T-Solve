@@ -6,8 +6,18 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
+import type { IssueCreatedPayloadIssueFieldsDescription } from './issueCreatedPayloadIssueFieldsDescription';
 import type { IssueCreatedPayloadIssueFieldsProject } from './issueCreatedPayloadIssueFieldsProject';
 
 export type IssueCreatedPayloadIssueFields = {
   project: IssueCreatedPayloadIssueFieldsProject;
+  /** The issue summary, sent to the suggestion job (STORY-011). Never logged. */
+  summary?: string;
+  /**
+   * The issue description as Atlassian Document Format (ADF); the tracker turns it into plain text for the suggestion job (STORY-011). Absent or null when the issue has none. Never logged.
+   * @nullable
+   */
+  description?: IssueCreatedPayloadIssueFieldsDescription;
+  /** The issue labels; `tsolve-chatbot` marks an issue created by the Chatbot (AC-011.8). */
+  labels?: string[];
 };

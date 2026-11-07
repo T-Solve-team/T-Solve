@@ -1,0 +1,103 @@
+package vn.tsolve.identity.mock;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.DefaultApplicationArguments;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import vn.tsolve.identity.TwoTenantDatabases;
+
+@SpringBootTest(
+        properties = {
+            "TSOLVE_LOGIN_ORIGIN=http://127.0.0.1:9",
+            "TSOLVE_ADMIN_ORIGIN=http://admin.localhost:8081",
+            "TSOLVE_SIGNING_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            "GOOGLE_CLIENT_ID=test-client-id",
+            "GOOGLE_CLIENT_SECRET=test-secret",
+            "PLATFORM_OPERATOR_EMAILS=ops@example.test",
+            "CORS_ALLOWED_ORIGINS=http://localhost:5173",
+            "server.port=0",
+            "DB_HOST=unused",
+            "DB_PORT=0",
+            "DB_NAME=unused",
+            "DB_USER=unused",
+            "DB_PASSWORD=unused",
+            "tsolve.identity.mock.workspace-id=00000000-0000-4000-8000-00000000000a"
+        })
+@AutoConfigureMockMvc
+@ActiveProfiles("identity-mock")
+@Import(TwoTenantDatabases.class)
+class MockSignedInCallerIT {
+    @Autowired
+    private MockMvc mvc;
+
+    @Autowired
+    private MockUserListSeeder seeder;
+
+    @Autowired
+    private MockIdentityProperties properties;
+
+    @Test
+    void signsInFromSeededTenantThroughDefaultSecurityChain_AC_004_17_AC_004_18() throws Exception {
+        assertThat(properties.workspaceId()).isEqualTo(TwoTenantDatabases.ACME);
+        mvc.perform(get("/api/v1/users").param("q", "@acme.test"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.totalElements").value(7));
+        assertThat(TwoTenantDatabases.tenantB()
+                        .queryForObject("SELECT count(*) FROM app_user WHERE email = 'admin@acme.test'", Integer.class))
+                .isZero();
+    }
+
+    @Test
+    void seedingTwicePreservesRowsAndIds_AC_004_18() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        List<Map<String, Object>> accounts = db.queryForList("SELECT * FROM app_user ORDER BY id");
+        List<Map<String, Object>> roles = db.queryForList("SELECT * FROM user_role ORDER BY id");
+        List<Map<String, Object>> departments = db.queryForList("SELECT * FROM department ORDER BY department_id");
+        seeder.run(new DefaultApplicationArguments());
+        seeder.run(new DefaultApplicationArguments());
+        assertThat(db.queryForList("SELECT * FROM app_user ORDER BY id")).isEqualTo(accounts);
+        assertThat(db.queryForList("SELECT * FROM user_role ORDER BY id")).isEqualTo(roles);
+        assertThat(db.queryForList("SELECT * FROM department ORDER BY department_id"))
+                .isEqualTo(departments);
+    }
+
+    @Test
+    void deactivatedCallerIsNotAuthenticated_AC_004_17() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        db.update("UPDATE app_user SET status = 'DEACTIVATED' WHERE email = ?", properties.accountEmail());
+        try {
+            mvc.perform(get("/api/v1/users"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("MSG07"));
+        } finally {
+            db.update("UPDATE app_user SET status = 'ACTIVE' WHERE email = ?", properties.accountEmail());
+        }
+    }
+
+    @Test
+    void storedRoleChangesApplyOnNextRequest_AC_004_17() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        db.update(
+                "DELETE FROM user_role WHERE user_id = (SELECT id FROM app_user WHERE email = ?) AND role = 'ADMIN'",
+                properties.accountEmail());
+        try {
+            mvc.perform(get("/api/v1/users"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("MSG08"));
+        } finally {
+            seeder.run(new DefaultApplicationArguments());
+        }
+    }
+}

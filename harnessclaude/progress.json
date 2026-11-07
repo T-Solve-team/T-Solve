@@ -127,15 +127,17 @@
         "keycloak-theme": "pending",
         "keycloak-prerequisites": "passing",
         "keycloak-realm": "passing",
-        "keycloak-sign-in-start": "passing"
+        "keycloak-sign-in-start": "passing",
+        "keycloak-callback": "passing",
+        "user-list-backend": "in-progress"
       },
-      "lastUpdated": "2026-11-07T11:03:46.506Z",
+      "lastUpdated": "2026-11-07T16:19:19.786Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5310e2b10093f244440daabf3f3ca7ad14b1d613"
+        "default": "a0f46b9f59de4473abb6eb3ea10c08c9cf63ee9a"
       }
     },
     "workspace": {
@@ -370,14 +372,20 @@
         "issue-panel": "pending",
         "solution-form": "pending",
         "suggestion-answer": "pending",
-        "event-cleanup": "pending"
+        "event-cleanup": "pending",
+        "suggestion-job": "passing",
+        "suggestion-job-worker": "passing",
+        "suggestion-uuid-keys": "evaluating",
+        "suggestion-comment": "passing"
       },
-      "lastUpdated": "2026-10-30T06:15:48.993Z",
+      "lastUpdated": "2026-11-07T16:53:12.227Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
-      "lastCommit": {}
+      "lastCommit": {
+        "default": "c8c32eaeede691bd09f0a1e87a669488d3bbb7b5"
+      }
     },
     "ticket-review": {
       "status": "implementing",

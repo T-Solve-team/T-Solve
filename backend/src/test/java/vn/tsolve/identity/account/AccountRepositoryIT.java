@@ -51,8 +51,8 @@ class AccountRepositoryIT {
 
     @BeforeEach
     void clean() {
-        TwoTenantDatabases.tenantA().update("DELETE FROM app_user");
-        TwoTenantDatabases.tenantB().update("DELETE FROM app_user");
+        TwoTenantDatabases.tenantA().update("TRUNCATE app_user CASCADE");
+        TwoTenantDatabases.tenantB().update("TRUNCATE app_user CASCADE");
     }
 
     private Account account(String email) {
@@ -93,7 +93,7 @@ class AccountRepositoryIT {
 
     @Test
     @DisplayName(
-            "AC-001.12 the table has the Database Tables PDF columns: id (uuid), full_name VARCHAR(100), no user_role")
+            "AC-001.12 the table has the Database Tables PDF columns: id (uuid), full_name VARCHAR(100), department_id; user_role exists")
     void theTableHasThePdfColumns_AC_001_12() {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
 
@@ -101,7 +101,14 @@ class AccountRepositoryIT {
                 "SELECT column_name FROM information_schema.columns WHERE table_name = 'app_user'", String.class);
         assertThat(columns)
                 .containsExactlyInAnyOrder(
-                        "id", "email", "full_name", "status", "first_sign_in_at", "last_sign_in_at", "created_at");
+                        "id",
+                        "email",
+                        "full_name",
+                        "status",
+                        "first_sign_in_at",
+                        "last_sign_in_at",
+                        "created_at",
+                        "department_id");
         assertThat(db.queryForObject(
                         "SELECT data_type FROM information_schema.columns"
                                 + " WHERE table_name = 'app_user' AND column_name = 'id'",
@@ -114,8 +121,8 @@ class AccountRepositoryIT {
                 .isEqualTo(100);
         assertThat(db.queryForObject(
                         "SELECT count(*) FROM information_schema.tables WHERE table_name = 'user_role'", Integer.class))
-                .as("user_role moves to Task 10")
-                .isZero();
+                .as("user_role added by changeset 019 (KAN-107), reused by Task 26b")
+                .isEqualTo(1);
     }
 
     @Test
