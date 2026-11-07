@@ -47,7 +47,7 @@ class TenantJobServiceImplTest {
     }
 
     @Test
-    void persistsCapturedWorkspaceAndRoundTripsPayload_AC_001_1_AC_001_3() {
+    void persistsCapturedWorkspaceAndRoundTripsPayload_AC_002_1_AC_002_3() {
         storage.setJobMapper(mapper);
         var queue = new TenantJobServiceImpl(context, new JobRequestScheduler(storage), handler);
         context.runIn(workspace, () -> {
@@ -64,7 +64,7 @@ class TenantJobServiceImplTest {
     }
 
     @Test
-    void rejectsUnboundAndInvalidEnqueueWithoutPersisting_AC_001_2() {
+    void rejectsUnboundAndInvalidEnqueueWithoutPersisting_AC_002_2() {
         storage.setJobMapper(mapper);
         var queue = new TenantJobServiceImpl(context, new JobRequestScheduler(storage), handler);
         assertThatThrownBy(() -> queue.enqueue("test-record", recordId)).isInstanceOf(IllegalStateException.class);
@@ -77,7 +77,7 @@ class TenantJobServiceImplTest {
     }
 
     @Test
-    void rejectsMalformedPersistedJobs_AC_001_15() {
+    void rejectsMalformedPersistedJobs_AC_002_15() {
         for (TenantJobRequest request : List.of(
                 new TenantJobRequest(null, "test-record", recordId),
                 new TenantJobRequest(workspace, "unknown", recordId),
@@ -89,7 +89,7 @@ class TenantJobServiceImplTest {
     }
 
     @Test
-    void rechecksWorkspaceStatusAndPreservesFailureForRetry_AC_001_10() {
+    void rechecksWorkspaceStatusAndPreservesFailureForRetry_AC_002_10() {
         WorkerTenantService platform = mock(WorkerTenantService.class);
         when(platform.currentWorkspaceId()).thenAnswer(ignored -> context.currentWorkspaceId());
         when(platform.isWorkspaceActive(workspace)).thenReturn(true, false);

@@ -1,0 +1,42 @@
+package vn.tsolve.search.retrieval.repository;
+
+import java.util.List;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.Repository;
+import org.springframework.data.repository.query.Param;
+import vn.tsolve.search.scope.entity.SearchTicket;
+
+public interface SolutionRetrievalRepository extends Repository<SearchTicket, Long> {
+    @Query(
+            value =
+                    """
+                    SELECT t.symptoms AS symptoms, t.root_cause AS "rootCause",
+                           t.resolution_steps AS "resolutionSteps", t.workaround AS workaround,
+                           t.scope AS "scopeOfApplicability",
+                           1 - (e.embedding <=> CAST(:vector AS vector)) AS similarity
+                    FROM ticket_embedding e JOIN ticket t ON t.id = e.ticket_id
+                    JOIN project p ON p.project_id = t.project_id
+                    JOIN department d ON d.department_id = p.department_id
+                    WHERE t.status = 'PUBLISHED' AND d.status = 'ACTIVE'
+                      AND 1 - (e.embedding <=> CAST(:vector AS vector)) >= :minSimilarity
+                    ORDER BY e.embedding <=> CAST(:vector AS vector), t.id
+                    LIMIT :limit
+                    """,
+            nativeQuery = true)
+    List<SolutionRow> nearest(
+            @Param("vector") String vector, @Param("minSimilarity") double minSimilarity, @Param("limit") int limit);
+
+    interface SolutionRow {
+        String getSymptoms();
+
+        String getRootCause();
+
+        String getResolutionSteps();
+
+        String getWorkaround();
+
+        String getScopeOfApplicability();
+
+        double getSimilarity();
+    }
+}

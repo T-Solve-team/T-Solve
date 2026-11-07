@@ -1,0 +1,4 @@
+/* The Solution sections in full: line breaks of the file are kept (AC-010.1). */
+.fullText {
+  white-space: pre-wrap;
+}

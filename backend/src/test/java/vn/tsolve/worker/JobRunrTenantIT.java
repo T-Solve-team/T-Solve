@@ -58,7 +58,7 @@ class JobRunrTenantIT {
 
     @Test
     void
-            persistsAndExecutesAfterContextRestartWithNativeRetry_AC_001_1_AC_001_3_AC_001_10_AC_001_13_AC_001_14_AC_001_16() {
+            persistsAndExecutesAfterContextRestartWithNativeRetry_AC_002_1_AC_002_3_AC_002_10_AC_002_13_AC_002_14_AC_002_16() {
         Observations observations = new Observations();
         AtomicReference<UUID> firstJob = new AtomicReference<>();
         AtomicReference<UUID> secondJob = new AtomicReference<>();

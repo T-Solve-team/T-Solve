@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
+import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
@@ -27,6 +28,7 @@ import vn.tsolve.ticket.dto.ImportPreviewRowResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowSummary;
 import vn.tsolve.ticket.dto.ImportResultResponse;
 import vn.tsolve.ticket.dto.RemoveRowsRequest;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.service.CsvImportService;
 import vn.tsolve.ticket.service.ImportConfirmService;
@@ -56,7 +58,8 @@ public class ImportController {
     @GetMapping("/csv/template")
     @Operation(operationId = "downloadCsvTemplate", summary = "The CSV template — header row only, UTF-8.")
     @ApiResponse(responseCode = "403")
-    public ResponseEntity<String> downloadCsvTemplate() {
+    public ResponseEntity<String> downloadCsvTemplate(
+            @RequestParam(defaultValue = "WITH_SOLUTION") ImportType importType) {
         return ResponseEntity.ok()
                 .contentType(TEXT_CSV)
                 .header(
@@ -65,7 +68,7 @@ public class ImportController {
                                 .filename("ticket-import-template.csv")
                                 .build()
                                 .toString())
-                .body(csvImports.template());
+                .body(csvImports.template(importType));
     }
 
     @PostMapping(path = "/csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -74,8 +77,19 @@ public class ImportController {
     @ApiResponse(responseCode = "403")
     @ApiResponse(responseCode = "413")
     public ResponseEntity<ImportPreviewResponse> uploadCsvImport(
-            @RequestParam("file") MultipartFile file, @RequestParam long projectId, Principal user) {
-        return ResponseEntity.ok(csvImports.upload(user.getName(), projectId, file));
+            @RequestParam("file") MultipartFile file,
+            @RequestParam UUID projectId,
+            @RequestParam(defaultValue = "WITH_SOLUTION") ImportType importType,
+            Principal user) {
+        return ResponseEntity.ok(csvImports.upload(user.getName(), projectId, importType, file));
+    }
+
+    @GetMapping("/previews/{previewId}")
+    @Operation(operationId = "getImportPreview", summary = "The caller's Import Preview again (counts, first page).")
+    @ApiResponse(responseCode = "403")
+    @ApiResponse(responseCode = "404")
+    public ResponseEntity<ImportPreviewResponse> getImportPreview(@PathVariable long previewId, Principal user) {
+        return ResponseEntity.ok(previews.preview(user.getName(), previewId));
     }
 
     @GetMapping("/previews/{previewId}/rows")

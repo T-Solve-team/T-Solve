@@ -16,7 +16,7 @@ class WorkerConfigurationTest {
             .withUserConfiguration(WorkerConfiguration.class, WorkerMockConfiguration.class);
 
     @Test
-    void registersNeitherWorkerNorMockByDefault_AC_001_12_AC_001_14() {
+    void registersNeitherWorkerNorMockByDefault_AC_002_12_AC_002_14() {
         runner.run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context).doesNotHaveBean(JobRunrRuntime.class);
@@ -26,7 +26,7 @@ class WorkerConfigurationTest {
     }
 
     @Test
-    void leavesDisabledWorkerPropertiesUnregisteredDuringApplicationScan_BUG_136_AC_001_14() {
+    void leavesDisabledWorkerPropertiesUnregisteredDuringApplicationScan_BUG_136_AC_002_14() {
         runner.withUserConfiguration(PropertyScan.class).run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context).doesNotHaveBean(WorkerProperties.class);
@@ -38,7 +38,7 @@ class WorkerConfigurationTest {
     static class PropertyScan {}
 
     @Test
-    void refusesEnabledIntegrationWithoutPlatformAdapter_AC_001_12() {
+    void refusesEnabledIntegrationWithoutPlatformAdapter_AC_002_12() {
         runner.withPropertyValues("tsolve.worker.enabled=true").run(context -> {
             assertThat(context).hasFailed();
             assertThat(context.getStartupFailure()).hasStackTraceContaining("WorkerTenantService");
@@ -46,7 +46,7 @@ class WorkerConfigurationTest {
     }
 
     @Test
-    void mockRequiresExplicitProfileAndDeniesUnlistedWorkspaces_AC_001_11() {
+    void mockRequiresExplicitProfileAndDeniesUnlistedWorkspaces_AC_002_11() {
         UUID active = UUID.randomUUID();
         UUID suspended = UUID.randomUUID();
         runner.withPropertyValues(
@@ -64,7 +64,7 @@ class WorkerConfigurationTest {
     }
 
     @Test
-    void acceptsEmptyMockAllowListsAndDeniesEveryWorkspace_BUG_135_AC_001_11() {
+    void acceptsEmptyMockAllowListsAndDeniesEveryWorkspace_BUG_135_AC_002_11() {
         runner.withPropertyValues("spring.profiles.active=worker-mock").run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context.getBean(WorkerTenantService.class).isWorkspaceActive(UUID.randomUUID()))
@@ -73,7 +73,7 @@ class WorkerConfigurationTest {
     }
 
     @Test
-    void rejectsMissingJobsConfigurationInsteadOfFallingBack_AC_001_13() {
+    void rejectsMissingJobsConfigurationInsteadOfFallingBack_AC_002_13() {
         runner.withPropertyValues(
                         "spring.profiles.active=worker-mock",
                         "tsolve.worker.enabled=true",

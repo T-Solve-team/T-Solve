@@ -23,13 +23,13 @@ class TenantExecutionServiceImplTest {
     private final TenantExecutionServiceImpl execution = new TenantExecutionServiceImpl(context);
 
     @Test
-    void bindsOnlyTheJobWorkspace_AC_001_3() {
+    void bindsOnlyTheJobWorkspace_AC_002_3() {
         execution.runInTenant(a, () -> assertThat(context.currentWorkspaceId()).contains(a));
         assertThat(context.currentWorkspaceId()).isEmpty();
     }
 
     @Test
-    void rejectsSuspendedUnknownAndNullWorkspace_AC_001_4_AC_001_11() {
+    void rejectsSuspendedUnknownAndNullWorkspace_AC_002_4_AC_002_11() {
         AtomicInteger calls = new AtomicInteger();
         for (UUID id : new UUID[] {suspended, UUID.randomUUID(), null}) {
             assertThatThrownBy(() -> execution.runInTenant(id, calls::incrementAndGet))
@@ -40,7 +40,7 @@ class TenantExecutionServiceImplTest {
     }
 
     @Test
-    void failsClosedWhenCatalogIsUnavailable_AC_001_5() {
+    void failsClosedWhenCatalogIsUnavailable_AC_002_5() {
         WorkerTenantService unavailable = mock(WorkerTenantService.class);
         when(unavailable.isWorkspaceActive(a)).thenThrow(new IllegalStateException("catalog unavailable"));
         AtomicInteger calls = new AtomicInteger();
@@ -50,7 +50,7 @@ class TenantExecutionServiceImplTest {
     }
 
     @Test
-    void restoresContextAndPreservesOriginalFailure_AC_001_6() {
+    void restoresContextAndPreservesOriginalFailure_AC_002_6() {
         var failure = new IllegalArgumentException("business failure");
         assertThatThrownBy(() -> execution.runInTenant(a, () -> {
                     throw failure;
@@ -62,7 +62,7 @@ class TenantExecutionServiceImplTest {
     }
 
     @Test
-    void rejectsCrossWorkspaceNestingWithoutChangingOuterBinding_AC_001_7() {
+    void rejectsCrossWorkspaceNestingWithoutChangingOuterBinding_AC_002_7() {
         AtomicInteger calls = new AtomicInteger();
         context.runIn(a, () -> {
             assertThatThrownBy(() -> execution.runInTenant(b, calls::incrementAndGet))
@@ -74,7 +74,7 @@ class TenantExecutionServiceImplTest {
     }
 
     @Test
-    void restoresSameWorkspaceNestedScopeIncludingFailure_AC_001_8() {
+    void restoresSameWorkspaceNestedScopeIncludingFailure_AC_002_8() {
         context.runIn(a, () -> {
             execution.runInTenant(
                     a, () -> assertThat(context.currentWorkspaceId()).contains(a));
@@ -88,7 +88,7 @@ class TenantExecutionServiceImplTest {
     }
 
     @Test
-    void isolatesConcurrentAndReusedThreads_AC_001_9() throws Exception {
+    void isolatesConcurrentAndReusedThreads_AC_002_9() throws Exception {
         CountDownLatch entered = new CountDownLatch(2);
         try (var pool = Executors.newFixedThreadPool(2)) {
             var first = pool.submit(() -> execution.runInTenant(a, () -> assertConcurrentScope(a, entered)));

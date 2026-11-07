@@ -3,11 +3,31 @@ module: worker
 date: 2026-11-07
 ---
 
-# Design: worker — KAN-102
+# Design: worker — active iteration
 
 Spec: artifacts/03-modules/worker/spec.md
+Master: artifacts/04-plans/worker/design.md
 
 ## Architecture Overview
+
+Iteration 1 has two slices. STORY-001 delivers the KAN-162 SMTP sender for Reject and Request Changes. A future worker job supplies an address resolved in its Workspace. This slice exposes an internal sender and verifies delivery with a local SMTP fixture.
+
+## Key Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Delivery | One Spring Boot Mail send per call under the worker profile, with a configured SMTP host | Keep SMTP wiring out of the web process and leave retry ownership with the future job |
+| Message | Fixed subjects and UTF-8 plain-text bodies | Keep review feedback out of SMTP headers |
+| Error | Safe delivery exception with no raw transport diagnostic | Avoid exposing recipient or message data |
+| Verification | Mailpit in Testcontainers and focused sender and startup tests | Check actual SMTP delivery to synthetic recipients |
+
+## Edge Cases & Risks
+
+The SMTP delivery task covers rows 1–5 of the master design. Workspace recipient lookup in row 6 belongs to the later job integration.
+
+# STORY-002: tenant-scoped JobRunr jobs (KAN-102)
+
+### Architecture Overview
 
 One feature, tenant-jobs: capture the current workspace at enqueue; persist a small JobRunr request; resolve a registered handler at execution; check workspace eligibility and execute under a restoring tenant boundary. No HTTP endpoint. Existing application startup is unchanged unless worker integration is enabled.
 
@@ -15,11 +35,11 @@ One feature, tenant-jobs: capture the current workspace at enqueue; persist a sm
 
 JobRunr uses explicit core components rather than the starter to avoid auto-detecting the application's tenant DataSource. A lifecycle-managed runtime owns a private Hikari pool, PostgresStorageProvider, JobRequestScheduler and optionally BackgroundJobServer. Its pool is not published as a DataSource bean, preserving Spring Boot's existing business DataSource auto-configuration. Startup failures close partially constructed resources; shutdown stops execution before closing storage and pool.
 
-## Data Model
+### Data Model
 
 TenantJobRequest contains workspace UUID, handler type and record UUID; no entity, content, credentials or tenant connection. JobRunr owns tables in its dedicated PostgreSQL Jobs DB. No tenant or catalog schema changes or Liquibase edits. The mock holds allow-listed Active/Suspended UUIDs and a non-inheritable ThreadLocal binding; no actual tenant data is accessed by the mock.
 
-## Key Decisions
+### Key Decisions
 
 | Decision | Choice | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
@@ -33,7 +53,7 @@ TenantJobRequest contains workspace UUID, handler type and record UUID; no entit
 | Retry | JobRunr native retry behavior | custom retries; exactly-once claims | Failures propagate; consumers supply idempotent business handlers. |
 | Test boundaries | real JobRunr in memory plus real PostgreSQL Testcontainers integration | mocked scheduler only | Exercise serialization, worker dispatch and retry lifecycle; only platform is fake. |
 
-## File Structure
+### File Structure
 
 - backend/pom.xml — pinned JobRunr dependency.
 - backend/src/main/java/vn/tsolve/worker/dto/TenantJobRequest.java.
@@ -46,31 +66,31 @@ TenantJobRequest contains workspace UUID, handler type and record UUID; no entit
 - backend/src/test/java/vn/tsolve/worker/ — boundary, configuration, queue and PostgreSQL execution tests.
 - .env.example and backend/README-worker.md — activation, mock limits, integration contract and Jobs DB setup.
 
-## External Dependencies
+### External Dependencies
 
 JobRunr OSS; existing Hikari, Jackson, PostgreSQL driver, JUnit, Mockito and Testcontainers. Official sources: https://www.jobrunr.io/en/documentation/background-methods/ and https://www.jobrunr.io/en/documentation/configuration/fluent/. JobRunr core avoids starter autoconfiguration; do not call the static global JobRunr configuration singleton.
 
-## Edge Cases & Risks
+### Edge Cases & Risks
 
 Dimensions analyzed: input extremes, timing, scale, state transitions, environment, error cascades, authorization (workspace isolation), data integrity, integration, compliance, business logic. User types skipped: no user-facing endpoint or role-dependent flow.
 
 | # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
 |---|-------|-----------|----------|----------|-------------------|-----------|
-| 1 | STORY-001 | Input extremes | Null workspace/action/record or unknown handler | High | Reject before handler/storage side effect | T1 |
-| 2 | STORY-001 | Timing | A and B execute concurrently; next job reuses a thread after an exception | Critical | Each sees only its workspace, then no binding | T1 |
-| 3 | STORY-001 | Authorization | Job B invoked inside scope A; same-scope nested call | Critical | Reject B without modifying A; permit A and restore | T1 |
-| 4 | STORY-001 | State transitions | Workspace suspended after enqueue; handler fails before retry | Critical | Recheck on each attempt; no suspended handler call | T1 |
-| 5 | STORY-001 | Error cascades | Catalog unavailable; handler throws; storage startup fails | High | Fail closed; propagate failure; clean context/resources | T1 |
-| 6 | STORY-001 | Integration | JSON round trip; unknown handler after deployment | High | Preserve ids; reject unknown type, never arbitrary reflection | T1 |
-| 7 | STORY-001 | Environment | Default app; worker without platform; worker-mock explicitly enabled | Critical | No worker by default; fail without adapter; mock only explicit | T1 |
-| 8 | STORY-001 | Data integrity | Jobs DS config absent; business DataSource present | Critical | No fallback, fail integration startup | T1 |
-| 9 | STORY-001 | Compliance | Jobs storage persists request | High | UUIDs/type only, no content or credentials | T1 |
-| 10 | STORY-001 | Scale | Zero handlers or multiple handlers with same type | High | No unknown jobs accepted; reject ambiguous registration | T1 |
-| 11 | STORY-001 | Business logic | Retry delivers same record more than once | High | Original ids retained; document at-least-once handler contract | T1 |
+| 1 | STORY-002 | Input extremes | Null workspace/action/record or unknown handler | High | Reject before handler/storage side effect | T1 |
+| 2 | STORY-002 | Timing | A and B execute concurrently; next job reuses a thread after an exception | Critical | Each sees only its workspace, then no binding | T1 |
+| 3 | STORY-002 | Authorization | Job B invoked inside scope A; same-scope nested call | Critical | Reject B without modifying A; permit A and restore | T1 |
+| 4 | STORY-002 | State transitions | Workspace suspended after enqueue; handler fails before retry | Critical | Recheck on each attempt; no suspended handler call | T1 |
+| 5 | STORY-002 | Error cascades | Catalog unavailable; handler throws; storage startup fails | High | Fail closed; propagate failure; clean context/resources | T1 |
+| 6 | STORY-002 | Integration | JSON round trip; unknown handler after deployment | High | Preserve ids; reject unknown type, never arbitrary reflection | T1 |
+| 7 | STORY-002 | Environment | Default app; worker without platform; worker-mock explicitly enabled | Critical | No worker by default; fail without adapter; mock only explicit | T1 |
+| 8 | STORY-002 | Data integrity | Jobs DS config absent; business DataSource present | Critical | No fallback, fail integration startup | T1 |
+| 9 | STORY-002 | Compliance | Jobs storage persists request | High | UUIDs/type only, no content or credentials | T1 |
+| 10 | STORY-002 | Scale | Zero handlers or multiple handlers with same type | High | No unknown jobs accepted; reject ambiguous registration | T1 |
+| 11 | STORY-002 | Business logic | Retry delivers same record more than once | High | Original ids retained; document at-least-once handler contract | T1 |
 
 Open questions for the spec owner: none; scope and mocks approved in chat.
 
-## Risk Review — 2026-11-07 — Verdict: CAUTION
+### Risk Review — 2026-11-07 — Verdict: CAUTION
 
 Architect: preserve business datasource auto-configuration; keep platform integration replaceable. Security: the mock does not prove database isolation; explicitly opt in and deny unknown workspace ids. Performance: one dedicated bounded Jobs connection pool and native JobRunr retries suffice; fairness caps stay KAN-161. User: document commands and the mock limitation; never claim production tenancy works. Devil's advocate: a wrapper alone would be smaller, but the user explicitly requested real JobRunr integration; avoid a new queue or broad container work.
 
@@ -82,10 +102,8 @@ Agreements: tenant checks precede business handlers; keep payloads small; defaul
 | Mock mistaken for production tenant routing | High | Explicit worker-mock only; no default adapter; documented replacement contract | T1 |
 | Failed job repeated after suspension | High | Check status each attempt; propagate native failures and retry identity | T1 |
 
-## Verification
+### Verification
 
 Builder check resolved: `tsolve.worker.enabled` activates enqueue/storage; `jobrunr.background-job-server.enabled` activates execution, defaults false and is set true by application-worker.yml. Core runtime explicitly consumes this flag; it does not rely on starter auto-configuration. Module paths include pom, profile/base YAML, environment example and worker documentation.
 
 Focused unit/config tests, PostgreSQL-backed JobRunr serialization and dispatch integration test, then full mvn verify and spotless:check. Report infrastructure or unrelated baseline failures separately; do not weaken checks. One feature commit requires user confirmation.
-
-Master: artifacts/04-plans/worker/design.md

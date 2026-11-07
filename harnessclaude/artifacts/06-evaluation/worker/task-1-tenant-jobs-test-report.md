@@ -11,7 +11,7 @@
 - `mvn -f .kan-102-verify-pom.xml "-DargLine=-Dapi.version=1.44" verify`: BUILD SUCCESS, 193 seconds; 608 unit tests and 40 integration tests; zero failures, errors or skips. Completed at 11:55:45 local time.
 - `mvn -f .kan-102-verify-pom.xml spotless:check`: BUILD SUCCESS, all 17 Java files clean. Completed at 11:56:32.
 - `bun harnessclaude/hooks/sdd.ts check worker`: 1 story, 16 criteria — OK.
-- `bun harnessclaude/hooks/sdd.ts trace worker STORY-001`: 16/16 criteria have a test.
+- `bun harnessclaude/hooks/sdd.ts trace worker STORY-002`: 16/16 criteria have a test.
 - `bun harnessclaude/hooks/sdd.ts audit`: OK, 17 existing/framework warnings; no worker contract error.
 - `git diff --check`: pass.
 - Graphify incremental extraction and subsequent query: updated worker symbols present; 5281 nodes, 15830 edges. SQL parser unavailable; no SQL schema changes in this feature.
@@ -32,22 +32,22 @@ The original JBR 25 could run tests with --release 21 and Byte Buddy's experimen
 
 | AC | Evidence |
 |----|----------|
-| AC-001.1 | TenantJobServiceImplTest payload round trip; JobRunrTenantIT persisted request after context restart |
-| AC-001.2 | rejectsUnboundAndInvalidEnqueueWithoutPersisting_AC_001_2 |
-| AC-001.3 | bindsOnlyTheJobWorkspace_AC_001_3; actual JobRunr dispatch IT |
-| AC-001.4 | rejectsSuspendedUnknownAndNullWorkspace_AC_001_4_AC_001_11 |
-| AC-001.5 | failsClosedWhenCatalogIsUnavailable_AC_001_5 |
-| AC-001.6 | restoresContextAndPreservesOriginalFailure_AC_001_6 |
-| AC-001.7 | rejectsCrossWorkspaceNestingWithoutChangingOuterBinding_AC_001_7 |
-| AC-001.8 | restoresSameWorkspaceNestedScopeIncludingFailure_AC_001_8 |
-| AC-001.9 | isolatesConcurrentAndReusedThreads_AC_001_9 |
-| AC-001.10 | rechecksWorkspaceStatusAndPreservesFailureForRetry_AC_001_10; native retry IT |
-| AC-001.11 | explicit mock profile, unknown/Suspended allow-list and empty-list tests |
-| AC-001.12 | default no mock; enabled integration without platform adapter fails startup |
-| AC-001.13 | missing Jobs settings rejects fallback; IT verifies distinct business DataSource |
-| AC-001.14 | default-disabled configuration/scan regression; actual worker profile starts server in IT |
-| AC-001.15 | rejectsMalformedPersistedJobs_AC_001_15 |
-| AC-001.16 | JobRunrTenantIT uses actual PostgreSQL storage, serialization, server and retries |
+| AC-002.1 | TenantJobServiceImplTest payload round trip; JobRunrTenantIT persisted request after context restart |
+| AC-002.2 | rejectsUnboundAndInvalidEnqueueWithoutPersisting_AC_002_2 |
+| AC-002.3 | bindsOnlyTheJobWorkspace_AC_002_3; actual JobRunr dispatch IT |
+| AC-002.4 | rejectsSuspendedUnknownAndNullWorkspace_AC_002_4_AC_002_11 |
+| AC-002.5 | failsClosedWhenCatalogIsUnavailable_AC_002_5 |
+| AC-002.6 | restoresContextAndPreservesOriginalFailure_AC_002_6 |
+| AC-002.7 | rejectsCrossWorkspaceNestingWithoutChangingOuterBinding_AC_002_7 |
+| AC-002.8 | restoresSameWorkspaceNestedScopeIncludingFailure_AC_002_8 |
+| AC-002.9 | isolatesConcurrentAndReusedThreads_AC_002_9 |
+| AC-002.10 | rechecksWorkspaceStatusAndPreservesFailureForRetry_AC_002_10; native retry IT |
+| AC-002.11 | explicit mock profile, unknown/Suspended allow-list and empty-list tests |
+| AC-002.12 | default no mock; enabled integration without platform adapter fails startup |
+| AC-002.13 | missing Jobs settings rejects fallback; IT verifies distinct business DataSource |
+| AC-002.14 | default-disabled configuration/scan regression; actual worker profile starts server in IT |
+| AC-002.15 | rejectsMalformedPersistedJobs_AC_002_15 |
+| AC-002.16 | JobRunrTenantIT uses actual PostgreSQL storage, serialization, server and retries |
 
 ## Defects discovered and resolved
 

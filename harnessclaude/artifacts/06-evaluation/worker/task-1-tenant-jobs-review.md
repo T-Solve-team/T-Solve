@@ -26,7 +26,7 @@ PASS for the approved KAN-102 scope: JobRunr OSS enqueue/storage/execution with 
 
 ## Traceability
 
-`bun harnessclaude/hooks/sdd.ts trace worker STORY-001`: 16/16 acceptance criteria have a test. Every criterion was also manually reviewed for meaningful assertions; the test report maps all sixteen to evidence.
+`bun harnessclaude/hooks/sdd.ts trace worker STORY-002`: 16/16 acceptance criteria have a test. Every criterion was also manually reviewed for meaningful assertions; the test report maps all sixteen to evidence.
 
 ## Issues
 
