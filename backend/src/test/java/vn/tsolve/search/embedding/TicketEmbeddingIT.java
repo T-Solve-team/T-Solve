@@ -6,6 +6,7 @@ import static org.awaitility.Awaitility.await;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -27,6 +28,7 @@ import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.search.embedding.repository.TicketEmbeddingRepository;
 import vn.tsolve.search.embedding.service.TicketEmbeddingService;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.service.CsvImportService;
 import vn.tsolve.ticket.service.ImportConfirmService;
 
@@ -219,7 +221,8 @@ class TicketEmbeddingIT {
         }
         return imports.upload(
                         "pm",
-                        1L,
+                        UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                        ImportType.WITH_SOLUTION,
                         new MockMultipartFile(
                                 "file",
                                 "tickets.csv",

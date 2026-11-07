@@ -1,7 +1,7 @@
 ---
 module: fe-foundation
 date: 2026-10-22
-total_tasks: 10
+total_tasks: 11
 owner: Dev
 ---
 
@@ -270,4 +270,20 @@ are not part of this task: they belong to `ticket-review` (Phạm Tùng Dương)
 **Dependencies:** ships in one PR with `chatbot` Task 5: the regenerated client makes `session.user.id` a `string`,
 which `features/chatbot` reads, so neither is green alone; before `be-foundation`
 Task 3 serves `/me` (its records use `UUID`)
+**Estimated size:** small
+
+---
+
+## Task 11: MSG_NEW_3 in the catalog
+
+**Story:** STORY-006
+**Feature:** catalog-msg-new-3
+**Description:** Spec change of 2026-11-01 (import-ticket-list D14). Add `MSG_NEW_3` (type inline) with the text
+`Ticket ID {ticket_id} appears more than once in this file.` to `catalog.ts`, next to `MSG_NEW_2` with the same
+"provisional key" comment, and let the AC-006.7 test allow it. The Import Preview shows it as a row error.
+**Files:**
+- Modify: `frontend/src/shared/messages/catalog.ts`
+- Test: `frontend/src/shared/messages/catalog.test.ts`
+**Covers:** AC-006.7, AC-006.9
+**Dependencies:** none (import-ticket-list Task 20 needs it)
 **Estimated size:** small
