@@ -1085,6 +1085,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TicketSummaryPage'
+        '400':
+          $ref: '#/components/responses/Problem'
         '401':
           $ref: '#/components/responses/Problem'
         '403':

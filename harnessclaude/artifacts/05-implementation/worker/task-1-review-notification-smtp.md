@@ -26,3 +26,8 @@ Worker job wiring and retries depend on KAN-161 and KAN-102. KAN-155 supplies th
 ### Next up
 
 Review the verified SMTP slice. Track the job wiring separately.
+
+## PR #131 main integration — 2026-11-07
+
+- Resolved conflicts against main 66613de, retaining both SMTP and Search scope example configuration and both branches' events. approvals.json and progress.json remain valid; no approval or status was hand-edited.
+- Full clean verify used Java 21, Docker Linux pipe and process-local api.version=1.44. PostgreSQL and Mailpit integration tests passed, including the new main Search tests. Spotless passed. No frontend source differs from main.
