@@ -375,15 +375,18 @@
         "review-decision-endpoints": "evaluating",
         "review-queue-entry-time": "evaluating",
         "review-history-api": "evaluating",
-        "review-email-notification": "evaluating"
+        "review-email-notification": "evaluating",
+        "review-queue-events-api": "passing",
+        "review-queue-events-web": "passing",
+        "review-queue-events-hardening": "evaluating"
       },
-      "lastUpdated": "2026-11-07T10:19:16.931Z",
+      "lastUpdated": "2026-11-07T12:30:46.221Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b5e93cde3837c9530db76fa61af55665f3ccc529"
+        "default": "974dad1b2539cb959f612c6e1a91c96a18c0af20"
       }
     }
   },

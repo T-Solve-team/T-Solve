@@ -903,3 +903,20 @@
 {"ts":"2026-11-07T11:40:28.427Z","type":"quick-closed","what":"PR 153 review: stronger BUG-153 tests and log message","files":["backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:43:47.513Z","type":"quick-opened","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:44:28.193Z","type":"quick-closed","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-07T10:16:20.336Z","type":"spec-approved","module":"ticket-review","specHash":"12189f157d3b550a3e23af078410b0e145d1374e8704fc7c75886caa01222f3b"}
+{"ts":"2026-11-07T10:17:46.896Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":null,"to":"pending"}
+{"ts":"2026-11-07T10:17:46.947Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":null,"to":"pending"}
+{"ts":"2026-11-07T10:45:27.911Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T10:45:34.686Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"b539777fa821bece687286fe6714e67cb3d458d6"}
+{"ts":"2026-11-07T11:05:37.368Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T11:05:39.976Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"50d2a3f00641f3b9c336a8eeb797debd031f174e"}
+{"ts":"2026-11-07T11:06:05.540Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T11:06:05.695Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T11:22:39.806Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T11:22:39.887Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-web","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T12:17:08.697Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-hardening","from":null,"to":"pending"}
+{"ts":"2026-11-07T12:17:08.771Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-hardening","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T12:30:45.978Z","type":"feature-status","module":"ticket-review","feature":"review-queue-events-hardening","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T12:30:46.222Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"974dad1b2539cb959f612c6e1a91c96a18c0af20"}
+{"ts":"2026-11-07T12:55:27.689Z","type":"quick-opened","what":"PR 155 CI: verify regenerated SSE mock and log API generation drift","files":["frontend/src/shared/api/generated/review/review.msw.ts","docs/bug-log.md"]}
+{"ts":"2026-11-07T13:01:06.083Z","type":"quick-closed","what":"PR 155 CI: verify regenerated SSE mock and log API generation drift","files":["frontend/src/shared/api/generated/review/review.msw.ts","docs/bug-log.md"]}
