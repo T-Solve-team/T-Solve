@@ -189,13 +189,13 @@
         "solution-retrieval": "passing",
         "department-solution-retrieval": "passing"
       },
-      "lastUpdated": "2026-11-07T19:21:25.221Z",
+      "lastUpdated": "2026-11-07T20:18:43.765Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "a0f9151f43454b477ea1b7dcb5b90456313f5f5e"
+        "default": "0ca1632be60e7c7d1cae03b2fdbf5e3eb2e30a88"
       }
     },
     "triage": {
@@ -207,13 +207,13 @@
         "suggestion-history-api": "passing",
         "suggestion-generation": "passing"
       },
-      "lastUpdated": "2026-11-07T20:01:33.371Z",
+      "lastUpdated": "2026-11-07T20:18:44.302Z",
       "branch": "feat/triage",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "e60a93be81691a2e3eabb0f4f47eca274fd01b87"
+        "default": "55ac18a981b2d10c8feee4a6c0fcfca22dd41aa2"
       }
     },
     "chatbot": {
