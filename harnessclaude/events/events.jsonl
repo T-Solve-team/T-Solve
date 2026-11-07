@@ -764,6 +764,10 @@
 {"ts":"2026-11-07T05:03:17.214Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T05:03:17.444Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T05:03:17.681Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T07:29:33.371Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":null,"to":"pending"}
+{"ts":"2026-11-07T07:29:33.601Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T07:29:33.870Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T07:29:34.109Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":"evaluating","to":"passing"}
 {"ts":"2026-11-06T13:24:56.950Z","type":"spec-approved","module":"ticket-review","specHash":"ee7b222e4b5e768c82849d76a8acb61369acbc989d6520f88d3ebbe51b293bee"}
 {"ts":"2026-11-06T13:29:28.009Z","type":"feature-status","module":"ticket-review","feature":"review-storage","from":null,"to":"pending"}
 {"ts":"2026-11-06T13:29:28.053Z","type":"feature-status","module":"ticket-review","feature":"review-production-api","from":null,"to":"pending"}
