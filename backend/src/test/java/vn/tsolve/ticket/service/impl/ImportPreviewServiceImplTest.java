@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -26,9 +27,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
+import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.MessageCodeException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.csv.RowError;
+import vn.tsolve.ticket.dto.FillSolutionRequest;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowSummary;
@@ -263,5 +266,180 @@ class ImportPreviewServiceImplTest {
         assertThat(e.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(e.getCode()).isEqualTo("MSG08");
         verifyNoInteractions(rows);
+    }
+
+    // --- Fill solution (STORY-013) ---
+
+    private static FillSolutionRequest solution(List<Integer> rowNumbers, String symptoms) {
+        return new FillSolutionRequest(rowNumbers, symptoms, " Bad token ", "Restart", null, "All users");
+    }
+
+    /** A preview of a file without Solutions, found and lockable by its owner. */
+    private void fileWithoutSolutions() {
+        ImportPreview preview = new ImportPreview(
+                PM, PROJECT, TicketSource.CSV, ImportType.WITHOUT_SOLUTION, "tickets.csv", Instant.EPOCH);
+        ReflectionTestUtils.setField(preview, "id", ID);
+        when(previews.findByIdAndOwner(ID, PM)).thenReturn(Optional.of(preview));
+        when(previews.lockByIdAndOwner(ID, PM)).thenReturn(Optional.of(preview));
+        when(rows.findByIdPreviewIdOrderByIdRowNo(eq(ID), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+    }
+
+    private static ImportPreviewRow needsSolution(int rowNo) {
+        return new ImportPreviewRow(
+                ID,
+                rowNo,
+                new ImportPreviewRow.Values(
+                        "T-" + rowNo, "Login fails", null, null, null, null, null, null, null, null),
+                List.of(),
+                ImportType.WITHOUT_SOLUTION);
+    }
+
+    @Test
+    void storesATrimmedCopyOfTheSolutionInEachRowAndMarksThemValid_AC_013_1() {
+        fileWithoutSolutions();
+        ImportPreviewRow first = needsSolution(1);
+        ImportPreviewRow second = needsSolution(2);
+        when(rows.findAllById(any())).thenReturn(List.of(first, second));
+        when(rows.countByIdPreviewIdAndStatus(ID, PreviewRowStatus.VALID)).thenReturn(2L);
+
+        ImportPreviewResponse response = service.fillSolution(PM, ID, solution(List.of(1, 2, 2), "  Error 500 "));
+
+        for (ImportPreviewRow row : List.of(first, second)) {
+            assertThat(row.getStatus()).isEqualTo(PreviewRowStatus.VALID);
+            assertThat(row.getValues().symptoms()).isEqualTo("Error 500");
+            assertThat(row.getValues().rootCause()).isEqualTo("Bad token");
+            assertThat(row.getValues().workaround()).isNull();
+            assertThat(row.getValues().title()).isEqualTo("Login fails");
+        }
+        assertThat(response.validCount()).isEqualTo(2);
+        assertThat(response.importType()).isEqualTo(ImportType.WITHOUT_SOLUTION);
+        // a number given twice is looked up and saved once (edge case 45)
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Iterable<ImportPreviewRow.Id>> ids = ArgumentCaptor.forClass(Iterable.class);
+        verify(rows).findAllById(ids.capture());
+        assertThat(ids.getValue())
+                .containsExactlyInAnyOrder(new ImportPreviewRow.Id(ID, 1), new ImportPreviewRow.Id(ID, 2));
+    }
+
+    @Test
+    void acceptsASolutionOfExactlyTenThousandCharacters_AC_013_2() {
+        fileWithoutSolutions();
+        ImportPreviewRow row = needsSolution(1);
+        when(rows.findAllById(any())).thenReturn(List.of(row));
+        // "Bad token" + "Restart" + "All users" = 25 characters; emoji count once (code points)
+        String symptoms = "😀".repeat(10_000 - 25);
+
+        service.fillSolution(PM, ID, solution(List.of(1), symptoms));
+
+        assertThat(row.getStatus()).isEqualTo(PreviewRowStatus.VALID);
+    }
+
+    @Test
+    void rejectsASolutionOverTenThousandCharactersAndChangesNoRow_AC_013_2() {
+        fileWithoutSolutions();
+
+        MessageCodeException e = catchThrowableOfType(
+                () -> service.fillSolution(PM, ID, solution(List.of(1), "x".repeat(10_000 - 25 + 1))),
+                MessageCodeException.class);
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(e.getCode()).isEqualTo("MSG02");
+        assertThat(e.getParams()).containsEntry("field_name", "Solution").containsEntry("max_length", 10_000);
+        verifyNoInteractions(rows);
+    }
+
+    @Test
+    void rejectsAFileWithSolutions_AC_013_3() {
+        Optional<ImportPreview> withSolutions = previews.findByIdAndOwner(ID, PM); // the preview of setUp
+        when(previews.lockByIdAndOwner(ID, PM)).thenReturn(withSolutions);
+
+        BusinessRuleException e = catchThrowableOfType(
+                () -> service.fillSolution(PM, ID, solution(List.of(1), "Error 500")), BusinessRuleException.class);
+
+        assertThat(e.getCode()).isEqualTo("MSG06");
+        verify(rows, never()).findAllById(any());
+    }
+
+    @Test
+    void rejectsAnErrorOrRemovedRowAndChangesNoRow_AC_013_3() {
+        fileWithoutSolutions();
+        ImportPreviewRow fillable = needsSolution(1);
+        ImportPreviewRow error = new ImportPreviewRow(
+                ID,
+                2,
+                new ImportPreviewRow.Values("T-2", null, null, null, null, null, null, null, null, null),
+                List.of(new RowError("MSG01", "title", Map.of())),
+                ImportType.WITHOUT_SOLUTION);
+        ImportPreviewRow removed = needsSolution(3);
+        removed.remove();
+
+        for (ImportPreviewRow bad : List.of(error, removed)) {
+            when(rows.findAllById(any())).thenReturn(List.of(fillable, bad));
+
+            BusinessRuleException e = catchThrowableOfType(
+                    () -> service.fillSolution(PM, ID, solution(List.of(1, bad.getRowNo()), "Error 500")),
+                    BusinessRuleException.class);
+
+            assertThat(e.getCode()).isEqualTo("MSG06");
+            assertThat(fillable.getStatus()).isEqualTo(PreviewRowStatus.NEEDS_SOLUTION);
+            assertThat(fillable.getValues().symptoms()).isNull();
+        }
+    }
+
+    @Test
+    void rejectsARowNumberNotInThePreviewAndChangesNoRow_AC_013_4() {
+        fileWithoutSolutions();
+        ImportPreviewRow fillable = needsSolution(1);
+        when(rows.findAllById(any())).thenReturn(List.of(fillable));
+
+        assertThatThrownBy(() -> service.fillSolution(PM, ID, solution(List.of(1, 99), "Error 500")))
+                .isInstanceOf(NotFoundException.class);
+        assertThat(fillable.getStatus()).isEqualTo(PreviewRowStatus.NEEDS_SOLUTION);
+    }
+
+    @Test
+    void rejectsAnotherUsersOrAGonePreview_AC_013_4() {
+        assertThatThrownBy(() -> service.fillSolution("other@company.vn", ID, solution(List.of(1), "Error 500")))
+                .isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.fillSolution(PM, 7L, solution(List.of(1), "Error 500")))
+                .isInstanceOf(NotFoundException.class);
+        verifyNoInteractions(rows);
+    }
+
+    @Test
+    void rejectsAPreviewConfirmedWhileWaitingForTheLock_AC_013_4() {
+        fileWithoutSolutions();
+        when(previews.lockByIdAndOwner(ID, PM)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.fillSolution(PM, ID, solution(List.of(1), "Error 500")))
+                .isInstanceOf(NotFoundException.class);
+        verify(rows, never()).findAllById(any());
+    }
+
+    @Test
+    void rejectsWhenTheCallerNoLongerManagesTheActiveProject_AC_013_5() {
+        fileWithoutSolutions();
+        when(projects.managesActive(PM, PROJECT)).thenReturn(false);
+
+        MessageCodeException e = catchThrowableOfType(
+                () -> service.fillSolution(PM, ID, solution(List.of(1), "Error 500")), MessageCodeException.class);
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(e.getCode()).isEqualTo("MSG08");
+        verify(rows, never()).findAllById(any());
+    }
+
+    @Test
+    void replacesTheSolutionOfAValidRow_AC_013_6() {
+        fileWithoutSolutions();
+        ImportPreviewRow row = needsSolution(1);
+        row.fillSolution("Old", "Old", "Old", "Old", "Old");
+        when(rows.findAllById(any())).thenReturn(List.of(row));
+
+        service.fillSolution(PM, ID, solution(List.of(1), "New"));
+
+        assertThat(row.getStatus()).isEqualTo(PreviewRowStatus.VALID);
+        assertThat(row.getValues().symptoms()).isEqualTo("New");
+        assertThat(row.getValues().workaround()).isNull();
     }
 }

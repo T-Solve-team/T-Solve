@@ -1,6 +1,9 @@
 package vn.tsolve.ticket.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -35,6 +38,8 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import vn.tsolve.common.config.MethodSecurityConfig;
+import vn.tsolve.common.exception.BusinessRuleException;
+import vn.tsolve.ticket.dto.FillSolutionRequest;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.ImportResultResponse;
 import vn.tsolve.ticket.dto.MessageRef;
@@ -272,6 +277,90 @@ class ImportControllerTest {
                         .content("{\"rowNumbers\":[]}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MSG01"));
+        verifyNoInteractions(previews);
+    }
+
+    private static final String SOLUTION =
+            "\"symptoms\":\"Error 500\",\"rootCause\":\"Bad token\",\"resolutionSteps\":\"Restart\",\"scope\":\"All\"";
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void fillSolutionPassesTheRequestToTheService_AC_013_1() throws Exception {
+        when(previews.fillSolution(eq("pm@company.vn"), eq(42L), any()))
+                .thenReturn(ImportPreviewResponse.of(
+                        42L,
+                        UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                        "tickets.csv",
+                        ImportType.WITHOUT_SOLUTION,
+                        2,
+                        0,
+                        0,
+                        0,
+                        new PageImpl<>(List.of())));
+
+        mvc.perform(post("/api/v1/imports/previews/42/fill-solution")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"rowNumbers\":[1,2]," + SOLUTION + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.validCount").value(2))
+                .andExpect(jsonPath("$.importType").value("WITHOUT_SOLUTION"));
+
+        ArgumentCaptor<FillSolutionRequest> request = ArgumentCaptor.forClass(FillSolutionRequest.class);
+        verify(previews).fillSolution(eq("pm@company.vn"), eq(42L), request.capture());
+        assertThat(request.getValue().rowNumbers()).containsExactly(1, 2);
+        assertThat(request.getValue().workaround()).isNull();
+    }
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void fillSolutionRejectsEachEmptyRequiredSectionWithMsg01_AC_013_2() throws Exception {
+        mvc.perform(post("/api/v1/imports/previews/42/fill-solution")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(
+                                "{\"rowNumbers\":[1],\"symptoms\":\"   \",\"resolutionSteps\":\"\",\"scope\":\"All\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG01"))
+                .andExpect(jsonPath("$.fieldErrors[*].field")
+                        .value(containsInAnyOrder("symptoms", "rootCause", "resolutionSteps")))
+                .andExpect(jsonPath("$.fieldErrors[*].code").value(everyItem(is("MSG01"))));
+        verifyNoInteractions(previews);
+    }
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void fillSolutionRejectsAnEmptyRowList() throws Exception {
+        mvc.perform(post("/api/v1/imports/previews/42/fill-solution")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"rowNumbers\":[]," + SOLUTION + "}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(previews);
+    }
+
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void fillSolutionThatCannotApplyIs409WithMsg06_AC_013_3() throws Exception {
+        when(previews.fillSolution(eq("pm@company.vn"), eq(42L), any()))
+                .thenThrow(new BusinessRuleException("MSG06", Map.of()));
+
+        mvc.perform(post("/api/v1/imports/previews/42/fill-solution")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"rowNumbers\":[1]," + SOLUTION + "}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("MSG06"));
+    }
+
+    @Test
+    @WithMockUser(username = "staff@company.vn", roles = "STAFF")
+    void fillSolutionNeedsProjectManagerRole_AC_013_5() throws Exception {
+        mvc.perform(post("/api/v1/imports/previews/42/fill-solution")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"rowNumbers\":[1]," + SOLUTION + "}"))
+                .andExpect(status().isForbidden());
         verifyNoInteractions(previews);
     }
 }
