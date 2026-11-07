@@ -614,3 +614,5 @@
 {"ts":"2026-11-06T23:54:21.580Z","type":"feature-status","module":"ticket-review","feature":"review-production-api","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T00:20:47.856Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"f7a7357310ad14f162c9934a99a799a9fb0778cf"}
 {"ts":"2026-11-07T00:20:47.897Z","type":"feature-status","module":"ticket-review","feature":"review-production-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T00:25:50.533Z","type":"feature-status","module":"ticket-review","feature":"review-jira-feedback","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T00:57:25.074Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"0fec48f9974f475854b862c8d363e9988722dc4a"}

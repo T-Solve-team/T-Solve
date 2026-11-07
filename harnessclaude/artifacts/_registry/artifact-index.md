@@ -4,6 +4,7 @@ Master registry of all artifacts in this workspace.
 
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
+| IMPL-REVIEW-10 | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-10-review-jira-feedback.md |
 | IMPL-REVIEW-9 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-9-review-production-api.md |
 | IMPL-REVIEW-8 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-8-review-queue-entry-time.md |
 | IMPL-REVIEW-7 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-7-review-decision-endpoints.md |
