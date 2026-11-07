@@ -105,3 +105,35 @@ QA step 1 of Task 23 asked eight questions; the user answered on 5/11. Each is c
 Non-scope notes (kept out of Task 23): an optional real-Google IdP turned on by `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) for a manual smoke test belongs to the Keycloak provisioning task (Task 28) and the runbook; a real Google Workspace or Cloud Identity domain is a prerequisite of the staging smoke test and of production readiness (`hd` exists only for Workspace domains), not of Task 23; Microsoft Entra ID is NOT in scope and needs a separate Change Mode decision.
 
 Test size: the QA plan has 84 test methods for the old Task 23 against a rule of about 12 per task. Decided 6/11: Task 23 is split into three slices, each with a "Test scope" line, QA step 1 re-run on each: Task 23 (realm, compose, start-up check, 22 tests), Task 23b (sign-in start and the Redis authorization request, 28), Task 23c (callback and the round trip, 34). The boundary moved from the QA proposal: the Redis repository went to the start slice and the end-to-end test, with `AuthSecurityConfig`, to the callback slice; QA answers 2–8 bind the slice named in `tasks.md`.
+
+## User List backend — KAN-107, Task 32 (2026-11-07)
+
+Covers AC-004.9 to AC-004.18. Decisions of the user (Dương, 07/11): Q1–Q4 = recommendation (spec Changelog).
+
+- **Caller.** The endpoints depend only on what `main` already has: `@PreAuthorize("hasRole(ADMIN)")` with the
+  `TSolveUser` in the security context, and `TenantScope.currentWorkspaceId()` for the bound Workspace, like the Review
+  controllers. No session filter, no `identity/session` package, no `WorkspaceSessionBinding`, no `TenantContext`
+  (PR #119's files stay dropped, KAN-275 Q15). Unauthenticated and non-Admin answers come from `SecurityConfig` and
+  `GlobalExceptionHandler` as today (401 MSG07, 403 MSG08).
+- **Interim mock (AC-004.17).** `vn.tsolve.identity.mock`, all `@Profile("identity-mock")`: `MockSignedInCallerFilter`
+  (a servlet filter registered in the web chain before authorization; only when the context holds no authentication,
+  so the owners' `WebSessionFilter` wins once it exists) reads `tsolve.identity.mock.account-email` and
+  `tsolve.identity.mock.workspace-id`, binds the Workspace with `TenantScope.runIn` around the rest of the chain,
+  re-reads the Account and its Roles, and sets a `TSolveUser`; a missing or Deactivated Account leaves the request
+  signed out. `MockUserListSeeder` (AC-004.18) inserts the missing demo rows at start-up inside `runIn`. Javadoc on
+  each: "replace when KAN-275 workspace-session (Tasks 26a/26b) lands". Never in tests' default context or `prod`.
+- **Schema.** Changeset `019-identity-user-role-department.sql` (author `identity`): `user_role` (`id UUID PK
+  DEFAULT gen_random_uuid()`, `user_id UUID NOT NULL → app_user(id) ON DELETE CASCADE`, `role VARCHAR(30)` CHECK in
+  `TICKET_RESOLVER, PROJECT_MANAGER, KNOWLEDGE_MANAGER, ADMIN`, `assigned_at TIMESTAMPTZ NOT NULL`, UNIQUE
+  `(user_id, role)`), and `app_user.department_id BIGINT NULL → department(department_id)` with an index. Baseline
+  names; key types follow `main` (UUID `app_user.id`, BIGINT `department_id` with the UUID `public_id` exposed).
+  Task 26b reuses this table instead of adding its own.
+- **Read.** `UserListService` / `UserListServiceImpl` (read-only transaction) → `UserListRepository`, a native SQL
+  query (count + page) on `app_user` left-joined to `department`, roles aggregated from `user_role`; filters bound as
+  parameters, `q` escaped for `LIKE`; sort whitelist with `lower(...)` and `NULLS FIRST`/`LAST` and `id` tie-break.
+  Departments: `department` where `status = 'ACTIVE'` ordered by `lower(name)`. The service asserts a bound Workspace
+  first (`TenantScope.currentWorkspaceId()` throws → 500 MSG06). Lenient paging like the MSW mock: an unknown sort
+  falls back to the default, `size` is capped at 100.
+- **Tests.** Unit: query parsing (q length/escape, sort whitelist, paging). `@WebMvcTest`-style: 401/403/400.
+  IT with `TwoTenantDatabases`: rows in `tenant_b` never appear for ACME; filters, sort, paging; departments list;
+  mock filter with the profile on (signed in) and off (401); seeder idempotent.

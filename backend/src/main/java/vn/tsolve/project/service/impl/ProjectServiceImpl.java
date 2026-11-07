@@ -1,6 +1,7 @@
 package vn.tsolve.project.service.impl;
 
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.project.entity.Project;
@@ -19,9 +20,9 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Long> findActiveIdByJiraProjectKey(String jiraProjectKey) {
+    public Optional<UUID> findActivePublicIdByJiraProjectKey(String jiraProjectKey) {
         return projectRepository
                 .findByJiraProjectKeyAndStatus(jiraProjectKey, ProjectStatus.ACTIVE)
-                .map(Project::getId);
+                .map(Project::getPublicId);
     }
 }
