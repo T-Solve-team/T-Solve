@@ -10,7 +10,7 @@
 ## Session 2026-11-07
 
 ### Working on: import-type-upload
-- Changeset `009-ticket-import-type.sql`: `import_preview.import_type` (`VARCHAR(20) NOT NULL DEFAULT 'WITH_SOLUTION'`); `import_preview_row.status` widened to `VARCHAR(20)` for `NEEDS_SOLUTION`. Included in `db.changelog-master.xml`.
+- Changeset `011-ticket-import-type.sql`: `import_preview.import_type` (`VARCHAR(20) NOT NULL DEFAULT 'WITH_SOLUTION'`); `import_preview_row.status` widened to `VARCHAR(20)` for `NEEDS_SOLUTION`. Included in `db.changelog-master.xml`.
 - `ImportType` holds each type's required and template columns. `CsvTicketParser.parse(in, type)` checks the type's required columns and keeps only its template columns, so a type 2 file's Solution columns stay unread (AC-012.4). `CsvRowValidator.validate(rows, existing, type)` checks the type's required cells.
 - A row without errors in a `WITHOUT_SOLUTION` file starts as `NEEDS_SOLUTION`. `ImportPreviewRow.isValid()` is removed; upload counts rows by status.
 - Controller: `importType` with default `WITH_SOLUTION` on the upload and the template. `ImportPreviewResponse` and the preview summary carry `importType` and `needsSolutionCount`.
