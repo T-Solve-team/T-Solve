@@ -374,13 +374,13 @@
         "review-history-api": "evaluating",
         "review-email-notification": "evaluating"
       },
-      "lastUpdated": "2026-11-07T08:17:57.559Z",
+      "lastUpdated": "2026-11-07T10:19:16.931Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "89f942f11bb8859e5ee00b1ca316035271186fe6"
+        "default": "b5e93cde3837c9530db76fa61af55665f3ccc529"
       }
     }
   },

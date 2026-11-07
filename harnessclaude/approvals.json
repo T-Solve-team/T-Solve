@@ -783,8 +783,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "76e5f8b988a6fd869165f96abf6d83067cf14980cf33141cba75ff926001c62e",
-    "approvedAt": "2026-11-07T07:44:18.322Z",
+    "specHash": "1f372238cc4d394151d1c7d4a1a8ab21cfeb2cbed1e68eb4ef05fd589c36e485",
+    "approvedAt": "2026-11-07T08:55:54.276Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
