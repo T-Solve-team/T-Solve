@@ -57,7 +57,7 @@ describe('AuditLogPage', () => {
     expect(screen.getByRole('searchbox', { name: 'Actor' })).toHaveValue('former');
   });
 
-  it('AC-001.5 paginates and switches from default descending to ascending (BUG-068)', async () => {
+  it('AC-001.5 paginates and switches from default descending to ascending (BUG-159)', async () => {
     const user = userEvent.setup();
     const { router } = renderApp('/audit-log?from=2026-10-01&to=2026-10-30', { role: 'ADMIN' });
     await screen.findByText('Total 35 items', {}, { timeout: 5000 });

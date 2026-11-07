@@ -13,13 +13,13 @@ function matching(url: URL): MockSearchResult[] {
   const from = params.get('resolvedFrom');
   const to = params.get('resolvedTo');
   return MOCK_SEARCH_RESULTS.filter((t) => {
-    const day = t.resolvedAt.slice(0, 10); // same day in Vietnam time (search-data.ts)
+    const day = t.resolvedAt?.slice(0, 10); // same day in Vietnam time (search-data.ts)
     return (
       [t.title, t.excerpt, t.solution].some((text) => text.toLowerCase().includes(q)) &&
       (!departmentId || t.department.departmentId === departmentId) &&
       (!source || t.source === source) &&
-      (!from || day >= from) &&
-      (!to || day <= to)
+      (!from || (day !== undefined && day >= from)) &&
+      (!to || (day !== undefined && day <= to))
     );
   });
 }

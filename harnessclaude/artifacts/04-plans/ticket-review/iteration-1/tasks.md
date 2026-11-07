@@ -119,3 +119,12 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** `review/controller/ReviewReadController.java`, `ticket/service/TicketReviewReadService.java`, `ticket/service/impl/TicketReviewReadServiceImpl.java`, `ticket/repository/ReviewDecisionRecordRepository.java`, `ticket/dto/TicketReviewView.java`, `ticket/exception/InvalidReviewHistoryFilterException.java`, `frontend/openapi/tsolve-api.yaml` (description only), tests in `review/`.
 **Dependencies:** KAN-24 storage and read APIs (PR #137).
 **Verification:** PostgreSQL tests for scope, filters, mapping and paging; HTTP tests for 400/401/403; `mvn verify`.
+
+## Task 9 addendum: Project membership adapter (KAN-24)
+
+**Story:** STORY-009
+**Feature:** review-production-api
+**Description:** Activate AC-009.1, AC-009.2, AC-009.10 and AC-009.12 outside tests (design: "Project membership adapter"). Add `project_membership` from `database/02_tenant.sql` with UUID references and implement `ReviewWorkspaceAccess` over it, failing closed for a missing or inactive Account.
+**Files:** `db/changelog/changes/017-project-membership.sql`, `db.changelog-master.xml`, `review/entity/ProjectMembership*.java`, `review/repository/ProjectMembershipRepository.java`, `review/service/impl/ProjectMembershipReviewAccess.java`, `review/ProjectMembershipReviewAccessIT.java`; the two API ITs mark their test adapter `@Primary`.
+**Dependencies:** Task 9.
+**Verification:** PostgreSQL test of managed and readable Projects, inactive Account, foreign Project; `mvn verify`.

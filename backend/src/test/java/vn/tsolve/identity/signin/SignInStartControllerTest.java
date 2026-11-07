@@ -6,20 +6,25 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -40,7 +45,10 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
     SignInStateService.class,
     SignedToken.class,
     GoogleOidcClient.class,
-    SignInTestBeans.class
+    SignInTestBeans.class,
+    KeycloakAuthorizationRequestResolver.class,
+    KeycloakClientRegistrations.class,
+    SignInStartControllerTest.RecordingRepositoryConfig.class
 })
 @TestPropertySource(
         properties = {
@@ -58,6 +66,19 @@ class SignInStartControllerTest {
 
     private static final String AUTHORIZE_URL = SignInTestFixtures.LOGIN_ORIGIN + "/api/v1/auth/authorize";
 
+    private static final String KEYCLOAK_ENDPOINT =
+            SignInTestFixtures.LOGIN_ORIGIN + "/realms/tsolve/protocol/openid-connect/auth";
+
+    /** The slice scans no component, so the test supplies the repository double the controller needs. */
+    @TestConfiguration(proxyBeanMethods = false)
+    static class RecordingRepositoryConfig {
+
+        @Bean
+        RecordingAuthorizationRequestRepository recordingAuthorizationRequestRepository() {
+            return new RecordingAuthorizationRequestRepository();
+        }
+    }
+
     @Autowired
     private MockMvc mvc;
 
@@ -73,11 +94,15 @@ class SignInStartControllerTest {
     @Autowired
     private MutableClock clock;
 
+    @Autowired
+    private RecordingAuthorizationRequestRepository requests;
+
     @BeforeEach
     void reset() {
         store.reset();
         workspaces.reset();
         clock.reset();
+        requests.reset();
     }
 
     private static MockHttpServletRequestBuilder start(String host) {
@@ -100,25 +125,32 @@ class SignInStartControllerTest {
         return state;
     }
 
-    @Test
-    @DisplayName("AC-001.1 starts a sign-in for the Workspace of the host and sends it to login.")
-    void startsSignInForTheWorkspaceOfTheHost_AC_001_1() throws Exception {
-        MockHttpServletResponse response = perform(start("acme.localhost"));
-
-        String state = stateOfRedirectToAuthorize(response);
-        SignInState saved = store.onlySaved();
-        assertThat(saved.getTarget()).isEqualTo(SignInState.Target.WORKSPACE);
-        assertThat(saved.getWorkspaceId()).isEqualTo(InMemoryWorkspaceLookup.ACME.id());
-        assertThat(signedToken.verify(state)).contains(saved.getId().toString());
+    /** Asserts a 302 to Keycloak's authorization endpoint and returns the Location. */
+    private static String redirectToKeycloak(MockHttpServletResponse response) {
+        assertThat(response.getStatus()).as("status").isEqualTo(302);
+        String location = response.getHeader(HttpHeaders.LOCATION);
+        assertThat(location).as("Location").startsWith(KEYCLOAK_ENDPOINT + "?");
+        return location;
     }
 
-    @Test
-    @DisplayName("AC-001.1 resolves another Workspace from its own host")
-    void resolvesAnotherWorkspaceFromItsOwnHost_AC_001_1() throws Exception {
-        MockHttpServletResponse response = perform(start("beta.localhost"));
+    static Stream<Arguments> hostsAndWorkspaces() {
+        return Stream.of(
+                Arguments.of("acme.localhost", InMemoryWorkspaceLookup.ACME),
+                Arguments.of("beta.localhost", InMemoryWorkspaceLookup.BETA));
+    }
 
-        stateOfRedirectToAuthorize(response);
-        assertThat(store.onlySaved().getWorkspaceId()).isEqualTo(InMemoryWorkspaceLookup.BETA.id());
+    @ParameterizedTest(name = "[{index}] {0}")
+    @MethodSource("hostsAndWorkspaces")
+    @DisplayName("AC-001.1 starts a sign-in for the Workspace of the host and sends it to Keycloak")
+    void startsSignInForTheWorkspaceOfTheHost_AC_001_1(String host, WorkspaceRef workspace) throws Exception {
+        MockHttpServletResponse response = perform(start(host));
+
+        String location = redirectToKeycloak(response);
+        OAuth2AuthorizationRequest saved = requests.onlySaved();
+        assertThat(location).isEqualTo(saved.getAuthorizationRequestUri());
+        assertThat(saved.getAttributes().get(KeycloakAuthorizationRequestResolver.WORKSPACE_ID))
+                .hasToString(workspace.id().toString());
+        assertThat(store.calls("save")).isZero();
     }
 
     @Test
@@ -126,29 +158,34 @@ class SignInStartControllerTest {
     void takesTheWorkspaceOnlyFromTheHost_AC_001_1() throws Exception {
         UUID betaId = InMemoryWorkspaceLookup.BETA.id();
 
-        MockHttpServletResponse response = perform(
-                start("acme.localhost").param("workspace", betaId.toString()).param("site", "beta.localhost"));
+        MockHttpServletResponse response = perform(start("acme.localhost")
+                .param("workspace", betaId.toString())
+                .param("site", "beta.localhost")
+                .param("kc_idp_hint", "google-beta")
+                .param("redirect_uri", "http://evil.example/"));
 
-        stateOfRedirectToAuthorize(response);
-        assertThat(store.onlySaved().getWorkspaceId()).isEqualTo(InMemoryWorkspaceLookup.ACME.id());
+        String location = redirectToKeycloak(response);
+        assertThat(requests.onlySaved().getAttributes().get(KeycloakAuthorizationRequestResolver.WORKSPACE_ID))
+                .hasToString(InMemoryWorkspaceLookup.ACME.id().toString());
+        assertThat(AuthorizationUris.params(location).get("kc_idp_hint")).containsExactly("google-acme");
+        assertThat(AuthorizationUris.one(location, "redirect_uri"))
+                .isEqualTo("http://acme.localhost:8081/api/v1/auth/callback");
     }
 
-    @Test
-    @DisplayName("AC-001.2 keeps nothing in the browser but the state value")
-    void keepsNothingInTheBrowserButTheState_AC_001_2() throws Exception {
-        for (String host : List.of("acme.localhost", "admin.localhost")) {
-            MockHttpServletResponse response = perform(start(host));
-
-            stateOfRedirectToAuthorize(response);
-            assertThat(response.getHeaders(HttpHeaders.SET_COOKIE))
-                    .as("Set-Cookie on %s", host)
-                    .isEmpty();
-            assertThat(response.getCookies()).as("cookies on %s", host).isEmpty();
-        }
+    static Stream<Arguments> returnTos() {
+        return Stream.of(
+                Arguments.of("/tickets/42", "/tickets/42"),
+                Arguments.of("/tickets/42?tab=1", "/tickets/42?tab=1"),
+                Arguments.of("//evil.example", "/"),
+                Arguments.of("https://evil.example/x", "/"),
+                Arguments.of("evil.example", "/"),
+                Arguments.of("/\\evil.example", "/"),
+                Arguments.of("", "/"),
+                Arguments.of(null, "/"));
     }
 
     @ParameterizedTest(name = "[{index}] {0} -> {1}")
-    @CsvSource({"/tickets/42, /tickets/42", "//evil.example, /", ", /"})
+    @MethodSource("returnTos")
     @DisplayName("AC-001.3 passes returnTo through the filter")
     void passesReturnToThroughTheFilter_AC_001_3(String returnTo, String expected) throws Exception {
         MockHttpServletRequestBuilder request = start("acme.localhost");
@@ -156,8 +193,21 @@ class SignInStartControllerTest {
             request.param("returnTo", returnTo);
         }
 
-        stateOfRedirectToAuthorize(perform(request));
-        assertThat(store.onlySaved().getReturnTo()).isEqualTo(expected);
+        redirectToKeycloak(perform(request));
+        assertThat(requests.onlySaved().getAttributes().get(KeycloakAuthorizationRequestResolver.RETURN_TO))
+                .isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("AC-001.52 sends the client tsolve-web with response type code and scope openid email profile")
+    void sendsClientResponseTypeAndScope_AC_001_52() throws Exception {
+        String location = redirectToKeycloak(perform(start("acme.localhost")));
+
+        assertThat(AuthorizationUris.one(location, "client_id")).isEqualTo("tsolve-web");
+        assertThat(AuthorizationUris.one(location, "response_type")).isEqualTo("code");
+        assertThat(AuthorizationUris.one(location, "scope")).isEqualTo("openid email profile");
+        assertThat(AuthorizationUris.one(location, "state"))
+                .isEqualTo(requests.onlySaved().getState());
     }
 
     @Test
@@ -178,10 +228,9 @@ class SignInStartControllerTest {
     void startsSignInForWorkspaceThatIsNotActive_AC_001_1() throws Exception {
         MockHttpServletResponse response = perform(start("gamma.localhost"));
 
-        stateOfRedirectToAuthorize(response);
-        SignInState saved = store.onlySaved();
-        assertThat(saved.getTarget()).isEqualTo(SignInState.Target.WORKSPACE);
-        assertThat(saved.getWorkspaceId()).isEqualTo(InMemoryWorkspaceLookup.GAMMA.id());
+        redirectToKeycloak(response);
+        assertThat(requests.onlySaved().getAttributes().get(KeycloakAuthorizationRequestResolver.WORKSPACE_ID))
+                .hasToString(InMemoryWorkspaceLookup.GAMMA.id().toString());
     }
 
     private static WorkspaceRef noDomain(String host) {
@@ -204,12 +253,14 @@ class SignInStartControllerTest {
 
     @ParameterizedTest(name = "[{index}] {0}")
     @ValueSource(strings = {"nodomain.localhost", "blankdomain.localhost"})
-    @DisplayName("AC-001.48 creates no state for a Workspace with no Google domain")
-    void createsNoStateForAWorkspaceWithNoGoogleDomain_AC_001_48(String host) throws Exception {
-        perform(start(host));
+    @DisplayName("AC-001.48 creates no authorization request and no cookie for a Workspace with no Google domain")
+    void createsNoAuthorizationRequestForAWorkspaceWithNoGoogleDomain_AC_001_48(String host) throws Exception {
+        MockHttpServletResponse response = perform(start(host));
 
+        assertThat(requests.saved()).isEmpty();
         assertThat(store.calls("save")).isZero();
         assertThat(store.saved()).isEmpty();
+        assertThat(response.getHeaders(HttpHeaders.SET_COOKIE)).isEmpty();
     }
 
     @Test
@@ -236,5 +287,7 @@ class SignInStartControllerTest {
         assertThat(response.getStatus()).isEqualTo(404);
         assertThat(store.calls("save")).isZero();
         assertThat(store.saved()).isEmpty();
+        assertThat(requests.saved()).isEmpty();
+        assertThat(response.getHeaders(HttpHeaders.SET_COOKIE)).isEmpty();
     }
 }
