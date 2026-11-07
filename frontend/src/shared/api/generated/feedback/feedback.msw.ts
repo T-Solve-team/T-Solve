@@ -7,16 +7,23 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 import { HttpResponse, http } from 'msw';
-import type { RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
+
+import type { TicketFeedbackRequest } from '../model';
 
 export const getGiveFeedbackMockHandler = (
   overrideResponse?:
-    void | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<void> | void),
+    | void
+    | ((
+        info: Parameters<HttpResponseResolver<{ ticketId: string }, TicketFeedbackRequest>>[0],
+      ) => Promise<void> | void),
   options?: RequestHandlerOptions,
 ) => {
-  return http.put(
+  return http.put<{ ticketId: string }, TicketFeedbackRequest>(
     '*/api/v1/tickets/:ticketId/feedback',
-    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+    async (
+      info: Parameters<HttpResponseResolver<{ ticketId: string }, TicketFeedbackRequest>>[0],
+    ) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
       }

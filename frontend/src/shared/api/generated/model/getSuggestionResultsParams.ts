@@ -12,21 +12,13 @@ import type { SizeParameter } from './sizeParameter';
 import type { SortParameter } from './sortParameter';
 
 export type GetSuggestionResultsParams = {
-  /**
-   * One managed Project; omitted means every Project managed by this user.
-   */
+  /** One managed Project; omitted means every Project managed by this user. */
   projectId?: string;
-  /**
-   * NONE matches records whose reporterAnswer is null.
-   */
+  /** NONE matches records whose reporterAnswer is null. */
   answer?: GetSuggestionResultsAnswer;
-  /**
-   * First included calendar day in Asia/Ho_Chi_Minh; paired with to.
-   */
+  /** First included calendar day in Asia/Ho_Chi_Minh; paired with to. */
   from?: string;
-  /**
-   * Last included calendar day in Asia/Ho_Chi_Minh; paired with from.
-   */
+  /** Last included calendar day in Asia/Ho_Chi_Minh; paired with from. */
   to?: string;
   /**
    * Page number, starting at 0.
@@ -39,8 +31,6 @@ export type GetSuggestionResultsParams = {
    * @maximum 100
    */
   size?: SizeParameter;
-  /**
-   * "field,asc" or "field,desc"; may repeat.
-   */
+  /** "field,asc" or "field,desc"; may repeat. */
   sort?: SortParameter;
 };
