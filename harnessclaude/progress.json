@@ -187,9 +187,9 @@
         "give-feedback-connect": "evaluating",
         "ticket-suggestion-api": "pending",
         "solution-retrieval": "passing",
-        "department-solution-retrieval": "evaluating"
+        "department-solution-retrieval": "passing"
       },
-      "lastUpdated": "2026-11-07T19:18:25.356Z",
+      "lastUpdated": "2026-11-07T19:21:25.221Z",
       "branch": "feat/search",
       "repos": [
         "default"
