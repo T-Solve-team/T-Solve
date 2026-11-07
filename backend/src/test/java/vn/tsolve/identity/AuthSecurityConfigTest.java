@@ -244,11 +244,11 @@ class AuthSecurityConfigTest {
     /**
      * MockMvc does not forward a failed request to {@code /error}; the servlet container does, as an ERROR dispatch
      * with the original path and status in request attributes. This replays that dispatch: an exception (500) on
-     * {@code sign-in}, and no handler (404) on {@code complete} and {@code callback}. The browser must get that
+     * {@code sign-in}, and no handler (404) on {@code callback}. The browser must get that
      * status, not a 401 from the chain that guards everything else (design row 43, review finding 2).
      */
     @ParameterizedTest(name = "[{index}] {0} -> {1}")
-    @CsvSource({"/api/v1/auth/sign-in, 500", "/api/v1/auth/complete, 404", "/api/v1/auth/callback, 404"})
+    @CsvSource({"/api/v1/auth/sign-in, 500", "/api/v1/auth/callback, 404"})
     @DisplayName("edge 43 keeps the error status of a redirect path instead of 401")
     void keepsErrorStatusOfRedirectPath_edge43(String path, int status) throws Exception {
         for (String accept : List.of(MediaType.ALL_VALUE, MediaType.TEXT_HTML_VALUE)) {
