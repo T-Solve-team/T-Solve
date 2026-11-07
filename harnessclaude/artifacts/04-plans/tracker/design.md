@@ -256,12 +256,58 @@ frontend/openapi/tsolve-api.yaml              (IssueCreatedPayload: summary, des
 | 43 | STORY-011 | Data integrity | Row deleted before the job runs | Low | Job stops (AC-011.7) | Task 15 |
 | 44 | STORY-011 | User types | Issue created by the Chatbot (label `tsolve-chatbot`) | Medium | Same as any issue (AC-011.8) | Task 15 |
 
+### Change 2026-11-07: run the job on the worker (KAN-102)
+
+```
+receive: saveAndFlush(SuggestionResult with jobRef = random UUID, issueSummary, issueDescription)
+   → SuggestionJobQueue.enqueue(SuggestionJobRequest(jobRef, issueKey))          → 202
+        worker enabled  (tsolve.worker.enabled=true): WorkerSuggestionJobQueue
+            workspace bound? → TenantJobService.enqueue("tracker.suggestion", jobRef)
+            else dev workspace configured? → WorkerTenantService.runIn(devId, enqueue)
+            else / enqueue error → log issue key + error type, job lost (never throws)
+        worker disabled (default): InProcessSuggestionJobQueue (AC-011.9, no retry)
+SuggestionJobHandler (TenantJobHandler "tracker.suggestion").execute(jobRef) → SuggestionJobService.run(jobRef)
+   load by jobRef; gone or already filled → stop (AC-011.7)
+   search(projectId, row.issueSummary, row.issueDescription) → fillSuggestion (AC-011.3..5)
+   failure → log key + type, throw SuggestionJobFailedException (no cause) → JobRunr retries (AC-011.6)
+```
+
+| Decision | Choice | Alternatives Considered | Rationale |
+|----------|--------|------------------------|-----------|
+| Issue text | Columns `issue_summary`, `issue_description` on `suggestion_result` | text in the job | Worker rule: a job carries only a record UUID, no ticket content; the Jobs DB is shared by all Workspaces (README-worker) |
+| Record id for the worker | New column `job_ref UUID NOT NULL UNIQUE` | change the BIGSERIAL key to UUID | Triage reads `suggestion_id`; a new column changes nothing for it |
+| Retries | The job throws on failure; JobRunr's native retries | swallow (old AC-011.6) | User, 2026-11-07; the guard and conditional update make reruns safe |
+| Failure exception | `SuggestionJobFailedException extends CodedException`, message = issue key + error type, **no cause** | rethrow the original | JobRunr stores the exception and its causes in the Jobs DB; a cause message can quote issue text |
+| Workspace at enqueue | Use the bound one; else `tsolve.tracker.dev-workspace-id` (`TSOLVE_TRACKER_DEV_WORKSPACE_ID`) through `WorkerTenantService.runIn` | in-process fallback when unbound | User chose (a), 2026-11-07. Dev/mock only; removed when platform binds the request's Workspace |
+| Which queue | `@ConditionalOnProperty(tsolve.worker.enabled)`: true → `WorkerSuggestionJobQueue`, false/missing → `InProcessSuggestionJobQueue` | `@ConditionalOnBean` | Bean-presence conditions on components depend on registration order |
+| Handler bean | Always registered | only with the worker | Harmless when the worker is off; the worker collects every `TenantJobHandler` |
+
+Changeset `017-tracker-suggestion-job-input.sql` (author `tracker`): add `job_ref` (filled with `gen_random_uuid()`
+for existing rows, then NOT NULL + UNIQUE), `issue_summary TEXT`, `issue_description TEXT`. Tell the DB owner and
+Trần Hải Anh (triage reads the table; its read-only entity does not map the new columns).
+
+Files (Task 16): modify `entity/SuggestionResult`, `repository/SuggestionResultRepository` (+ `findByJobRef`),
+`dto/SuggestionJobRequest` (jobRef, issueKey), `service/SuggestionJobService` (`run(UUID jobRef)`),
+`service/impl/SuggestionJobServiceImpl`, `service/impl/IssueCreatedServiceImpl`,
+`service/impl/InProcessSuggestionJobQueue` (conditional, catches the job's failure), `application.yml`, `.env.example`,
+changelog master; create `service/impl/WorkerSuggestionJobQueue`, `service/impl/SuggestionJobHandler`,
+`exception/SuggestionJobFailedException`, `changes/017-tracker-suggestion-job-input.sql`.
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 45 | STORY-011 | Error cascades | Search keeps failing | Medium | JobRunr retries, then marks the job failed; row unchanged | Task 16 |
+| 46 | STORY-011 | Compliance | Search exception message quotes the issue text | Critical | Stored failure has key + type only (no cause) | Task 16 |
+| 47 | STORY-011 | Environment | Worker on, no Workspace bound, no dev Workspace set | Medium | Logged, 202, no job (never 5xx) | Task 16 |
+| 48 | STORY-011 | Data integrity | Rows created before the changeset | Low | Get a `job_ref`; no text, so a job for them would send empty text | Task 16 |
+
 Search timeout: the job sets none of its own; AC-011.6 "does not answer" is met by the `SuggestionSearch`
 implementation timing out (KAN-47, on top of the `ai` client's chat timeout). A search that never returns would hold
 one of the two stand-in threads (review 2026-11-07, accepted).
 
-Risks: the in-process stand-in loses queued jobs on restart (accepted until KAN-161); with JobRunr the issue text
-is stored as a job argument in the Jobs database (tell the `worker` owner; Non-Functional 4 covers logs only).
+Risks: the in-process stand-in loses queued jobs on restart (accepted while the worker is off). Since the change of
+2026-11-07 the issue text stays in `suggestion_result`; a JobRunr job carries only `job_ref`. If the Jobs database
+is unreachable, enqueue can block the event request for the worker pool's connection timeout (review of Task 16,
+finding 1 — for the `worker` owner).
 
 ## Risk Review — 2026-10-21 — Verdict: CAUTION (updated 2026-11-01)
 

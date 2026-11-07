@@ -29,6 +29,7 @@ the request belongs to; **discovery** = finding that database from the request (
 | 2026-11-01 | STORY-007, 010 | AC-007.1 drops "the triage decision" (triage_result removed 29/10); AC-010.1/010.2/010.4 read and record the answer in the issue's `suggestion_result` | DB design 31/10: `suggestion_result` keeps the MSG80 text and the reporter's YES / NO |
 | 2026-11-01 | STORY-003 | AC-003.6 answers 400 with the field codes of the team's `GlobalExceptionHandler` (MSG01 / MSG02 / MSG06) instead of always MSG06 | `main` (KAN-25) renders validation errors per field; modules may not add their own handler (backend AGENTS §5) |
 | 2026-11-07 | STORY-011 | Add STORY-011 (KAN-22): a recorded new issue gets one suggestion job that asks search (KAN-47) and stores its sources and suggested solution in the issue's `suggestion_result`. Functional 2, Out of Scope and "Required from other modules" updated | Jira KAN-22 asks for the suggestion job. The job uses no Jira token and only calls search, so the 01/11 reason for "no background job" no longer applies. Job runner (JobRunr) = `worker` KAN-161 (Dương), search = KAN-47 (Nhat Minh), MSG80 comment = KAN-131; tracker calls them through ports with stand-ins (user, 2026-11-07) |
+| 2026-11-07 | STORY-011 | Run the job on the `worker` module's JobRunr (KAN-102): AC-011.1 stores the issue text in the suggestion result and the job carries only a reference to it; AC-011.6 fails the job so the worker retries it; add AC-011.9 (in-process run while the worker is not enabled). Out of Scope and "Required from other modules" updated | `worker` KAN-102 merged (#139): a job carries only a record UUID and no ticket content, and JobRunr retries a job that fails. User chose retries and, until platform binds the Workspace of a request, a configured dev Workspace (user, 2026-11-07) |
 
 ## Requirements
 
@@ -106,14 +107,15 @@ the request belongs to; **discovery** = finding that database from the request (
 ### STORY-011: Run the suggestion job for a new issue (KAN-22)
 - As the system, I want every new issue of a T-Solve Project handed to the AI Solution Suggestion so that its reporter can get a suggested solution (UC-36, GBR-35).
 - Acceptance:
-  - AC-011.1: WHEN the tracker stores a new suggestion result (AC-003.1), THE tracker SHALL enqueue exactly one suggestion job carrying the issue key, the Project and the issue's summary and description as plain text, after the row is committed, and respond 202 without waiting for the job.
+  - AC-011.1: WHEN the tracker stores a new suggestion result (AC-003.1), THE tracker SHALL store the issue's summary and description as plain text in it, enqueue exactly one suggestion job that carries only a reference to that suggestion result, after the row is committed, and respond 202 without waiting for the job.
   - AC-011.2: IF the event is for an issue already recorded (AC-003.4) or for a project that is not an ACTIVE Project's (AC-003.8), THEN THE tracker SHALL enqueue no suggestion job.
   - AC-011.3: WHEN a suggestion job runs, THE tracker SHALL ask search for a suggestion with the job's Project, summary and description.
   - AC-011.4: WHEN search returns a suggestion, THE tracker SHALL store its sources and its suggested solution in the issue's suggestion result and change no other field.
   - AC-011.5: WHEN search returns no suggestion, THE tracker SHALL leave the issue's suggestion result with no sources and no suggested solution.
-  - AC-011.6: IF search fails or does not answer, THEN THE tracker SHALL leave the issue's suggestion result unchanged and log only the issue key and the error type.
+  - AC-011.6: IF search fails or does not answer, or the suggestion result cannot be read or stored, THEN THE suggestion job SHALL fail so that the job runner retries it, leave the issue's suggestion result unchanged, and log only the issue key and the error type.
   - AC-011.7: IF the issue's suggestion result no longer exists or already has a suggested solution when the job runs, THEN THE tracker SHALL not ask search and SHALL change nothing.
   - AC-011.8: WHERE the new issue has the label `tsolve-chatbot` (created by the Chatbot), THE tracker SHALL record it and enqueue its suggestion job like any other issue (GBR-40).
+  - AC-011.9: WHERE the `worker` job runner is not enabled, THE tracker SHALL run the suggestion job in its own process instead, without retries, and still respond 202 without waiting for it.
 
 ## Out of Scope
 - Discovery: finding the tenant database from the request (catalog `tenant_workspace`, by site name or Jira
@@ -123,7 +125,10 @@ the request belongs to; **discovery** = finding that database from the request (
 - Computing the AI Solution Suggestion (retrieval, relevance threshold, LLM text) — `search` KAN-47; tracker only
   calls it (STORY-011). Posting MSG80 as a Jira comment — `jira-app` KAN-131 (was STORY-004, STORY-005).
 - The job runner: JobRunr, its storage, retries, not running jobs of a Suspended Workspace, the per-Workspace cap
-  — `worker` KAN-161 / KAN-102; tracker enqueues through a port with an in-process stand-in until then.
+  — `worker` KAN-102 (merged) / KAN-161; tracker enqueues through the worker's `TenantJobService` when the worker is
+  enabled, else runs the job in-process (AC-011.9).
+- Binding the request's Workspace: platform / discovery. Until then the tracker binds a configured dev Workspace when
+  it enqueues (design, dev and mock only).
 - Skipping issues of a deleted Department (KAN-22): the `project` module does not map the Department yet; added
   when it does.
 - AI draft Solution when an issue is Done and the "issue updated" event (was STORY-006, AC-003.2, AC-003.3).
@@ -161,7 +166,7 @@ Declared by tracker as service interfaces it calls; the owners implement them (s
 | `project` | Find the ACTIVE T-Solve Project for a Jira project key, or none (a minimal `project` module is added with this change until its owner extends it) |
 | `search` | Compute / store / read suggestions for an issue as a given user |
 | `search` (KAN-47) | Suggest for a new issue: from its Project, summary and description, return the sources used and the suggested solution, or no suggestion (STORY-011; a configured stand-in until KAN-47) |
-| `worker` (KAN-161) | Run a job after the request that enqueued it has committed (STORY-011; an in-process stand-in until KAN-161) |
+| `worker` (KAN-102) | `TenantJobService.enqueue(handlerType, recordId)` and a `TenantJobHandler` the tracker registers; JobRunr runs it in the Workspace and retries a failed run (STORY-011; in-process when the worker is not enabled) |
 | `ticket` | Read the Solution Form state; save draft; submit (incl. empty) |
 | `identity` | Find the T-Solve user (and whether active) for a Jira accountId |
 | discovery | Run each Jira App API request against the tenant database of the FIT's site |

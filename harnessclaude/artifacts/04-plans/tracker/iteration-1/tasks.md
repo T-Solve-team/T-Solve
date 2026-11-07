@@ -1,7 +1,7 @@
 ---
 module: tracker
 date: 2026-10-21
-total_tasks: 8
+total_tasks: 9
 owner: Dev
 ---
 
@@ -171,4 +171,22 @@ Stand-ins: `InProcessSuggestionJobQueue` on its own bounded pool, `StubSuggestio
 - Create: `tracker/dto/SuggestionJobRequest.java`, `tracker/dto/IssueSuggestion.java`, `tracker/dto/SuggestionSource.java`, `tracker/service/SuggestionJobQueue.java`, `tracker/service/SuggestionSearch.java`, `tracker/service/SuggestionJobService.java`, `tracker/service/impl/SuggestionJobServiceImpl.java`, `tracker/service/impl/InProcessSuggestionJobQueue.java`, `tracker/service/impl/StubSuggestionSearch.java`; `tracker/client/AdfTextExtractor.java` filled in (was empty). No `SuggestionJobConfig` (design)
 - Test: `tracker/service/impl/IssueCreatedServiceImplTest.java` (AC-011.1, 011.2, 011.8), `tracker/service/impl/SuggestionJobServiceImplTest.java` (AC-011.3–011.7), `tracker/service/impl/StubSuggestionSearchTest.java`, `tracker/service/impl/InProcessSuggestionJobQueueTest.java`, `tracker/controller/JiraAppEventControllerTest.java` (payload with the new fields), `tracker/repository/SuggestionResultRepositoryIT.java` (conditional fill), `tracker/client/AdfTextExtractorTest.java`
 **Dependencies:** Task 6 (merged in #98)
+**Estimated size:** medium
+
+---
+
+## Task 16: Run the suggestion job on the worker (KAN-22, KAN-102)
+
+**Story:** STORY-011
+**Feature:** suggestion-job-worker
+**Description:** Changeset `017-tracker-suggestion-job-input` (job_ref, issue_summary, issue_description). `receive`
+stores the text and a `job_ref`, enqueues `SuggestionJobRequest(jobRef, issueKey)` (AC-011.1). `SuggestionJobService
+.run(jobRef)` reads the text from the row and throws `SuggestionJobFailedException` (key + error type, no cause) on any
+failure (AC-011.6). `SuggestionJobHandler` ("tracker.suggestion") runs it for the worker; `WorkerSuggestionJobQueue`
+enqueues through `TenantJobService`, binding `TSOLVE_TRACKER_DEV_WORKSPACE_ID` when no Workspace is bound, and never
+throws; `InProcessSuggestionJobQueue` only while `tsolve.worker.enabled` is false (AC-011.9). Edge cases 45–48.
+**Files:** design "Change 2026-11-07: run the job on the worker".
+**Test:** `IssueCreatedServiceImplTest`, `SuggestionJobServiceImplTest`, `SuggestionJobHandlerTest`,
+`WorkerSuggestionJobQueueTest`, `InProcessSuggestionJobQueueTest`, `SuggestionResultRepositoryIT`.
+**Dependencies:** Task 15, worker KAN-102 (merged)
 **Estimated size:** medium

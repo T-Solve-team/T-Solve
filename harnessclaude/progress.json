@@ -349,15 +349,16 @@
         "solution-form": "pending",
         "suggestion-answer": "pending",
         "event-cleanup": "pending",
-        "suggestion-job": "passing"
+        "suggestion-job": "passing",
+        "suggestion-job-worker": "passing"
       },
-      "lastUpdated": "2026-11-07T04:08:06.779Z",
+      "lastUpdated": "2026-11-07T08:31:37.857Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "a73fdd77e09ad8575590ea082b2ee32b48f7e088"
+        "default": "7ad3be7998c27cf43ff57760f80720215884af87"
       }
     },
     "ticket-review": {
