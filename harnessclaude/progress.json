@@ -354,14 +354,19 @@
         "issue-panel": "pending",
         "solution-form": "pending",
         "suggestion-answer": "pending",
-        "event-cleanup": "pending"
+        "event-cleanup": "pending",
+        "suggestion-job": "passing",
+        "suggestion-job-worker": "passing",
+        "suggestion-uuid-keys": "evaluating"
       },
-      "lastUpdated": "2026-10-30T06:15:48.993Z",
+      "lastUpdated": "2026-11-07T14:35:18.433Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
-      "lastCommit": {}
+      "lastCommit": {
+        "default": "8becea26b6bb5febddd9ed8b50128b6b4b9b2bad"
+      }
     },
     "ticket-review": {
       "status": "implementing",

@@ -62,6 +62,26 @@ class JiraAppEventControllerTest {
     }
 
     @Test
+    void passesTheSummaryAdfDescriptionAndLabelsOfTheEventOn_AC_011_1() throws Exception {
+        String body =
+                """
+                {"issue": {"key": "ITSUP-2", "fields": {
+                   "project": {"key": "ITSUP"}, "summary": "VPN drops every hour",
+                   "description": {"type": "doc", "version": 1, "content": [
+                     {"type": "paragraph", "content": [{"type": "text", "text": "Reconnect fails."}]}]},
+                   "labels": ["tsolve-chatbot"]}}}
+                """;
+
+        mvc.perform(fromSite().content(body)).andExpect(status().isAccepted());
+
+        ArgumentCaptor<IssueCreatedPayload> payload = ArgumentCaptor.forClass(IssueCreatedPayload.class);
+        verify(issueCreatedService).receive(payload.capture());
+        assertThat(payload.getValue().summary()).isEqualTo("VPN drops every hour");
+        assertThat(payload.getValue().description().path("type").asText()).isEqualTo("doc");
+        assertThat(payload.getValue().issue().fields().labels()).containsExactly("tsolve-chatbot");
+    }
+
+    @Test
     void rejectsBodyWithoutProjectKey_AC_003_6() throws Exception {
         mvc.perform(fromSite().content("{\"issue\": {\"key\": \"ITSUP-1\", \"fields\": {\"summary\": \"x\"}}}"))
                 .andExpect(status().isBadRequest())
