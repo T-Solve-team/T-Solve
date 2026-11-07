@@ -237,6 +237,44 @@ class ImportConfirmIT {
         }
     }
 
+    @Test
+    void confirmOfAFileWithoutSolutionsWithANeedsSolutionRowImportsNothing_AC_014_1() {
+        long id = uploadWithoutSolutions("T-1", "T-2");
+        previewService.fillSolution("pm-a", id, solution(List.of(1)));
+
+        MessageCodeException e = catchThrowableOfType(() -> confirms.confirm("pm-a", id), MessageCodeException.class);
+
+        assertThat(e.getCode()).isEqualTo("MSG_NEW_4");
+        assertThat(e.getParams()).containsEntry("count", 1L);
+        assertThat(count("ticket")).isZero();
+        assertThat(count("import_batch")).isZero();
+        assertThat(count("import_preview")).isEqualTo(1);
+    }
+
+    @Test
+    void filledRowsBecomePublishedTicketsWithTheWrittenSolution_AC_014_2() {
+        long id = uploadWithoutSolutions("T-1", "T-2");
+        previewService.fillSolution("pm-a", id, solution(List.of(1, 2)));
+
+        ImportResultResponse result = confirms.confirm("pm-a", id);
+
+        assertThat(result.created()).isEqualTo(2);
+        assertThat(jdbc.queryForList(
+                        "select status, symptoms, root_cause, workaround, scope from ticket where ticket_id = 'T-1'"))
+                .singleElement()
+                .satisfies(row -> {
+                    assertThat(row.get("status")).isEqualTo("PUBLISHED");
+                    assertThat(row.get("symptoms")).isEqualTo("Error 500");
+                    assertThat(row.get("root_cause")).isEqualTo("Bad token");
+                    assertThat(row.get("workaround")).isNull();
+                    assertThat(row.get("scope")).isEqualTo("All users");
+                });
+        assertThat(jdbc.queryForList("select decision from ticket_import_decision", String.class))
+                .containsExactly("APPROVE", "APPROVE");
+        assertThat(published.seen).containsExactly("ids=2 visible=2");
+        assertThat(count("import_preview")).isZero();
+    }
+
     /** Polls until some session waits for a row lock, so the test does not race the other thread. */
     private void awaitWaitingLock() throws InterruptedException {
         for (int i = 0; i < 100; i++) {
