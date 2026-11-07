@@ -27,3 +27,15 @@ Production activation requires a ReviewJiraAccess adapter. Its test implementati
 ### Next up
 
 Push the approved commits on feat/KAN-24-review-backend and prepare the PR description. Keep review-jira-feedback in progress until its Jira rendering clause is implemented and verified.
+
+## PR #137 review follow-up — 2026-11-07
+
+- Integrated origin/main with an ordinary merge; retained both branches' HarnessClaude events and validated the JSON/JSONL. Existing local AGENTS.md/database/graphify-out changes remain outside the commits.
+- Addressed BUG-135–140 and BUG-143: Project UUIDs through Review and CSV import; missing manager names produce null feedback; durable decision lookup does not compare comment text; Detail exposes canDecide and rejection feedback; unsupported sorts and service validation return 400; both access methods are mandatory.
+- Reused the exact KAN-31 008-ticket-import-project-uuid SQL, path and changeset identity. The master declares ordering explicitly. Existing applied Review SQL is unchanged. PostgreSQL regressions verify legacy import preservation and upgrade from an already-running Review schema without replaying storage migration, followed by a second no-op update.
+- The user explicitly selected API fixes only. BUG-141 tracks production Workspace/Jira adapters; both endpoints continue to deny unverifiable access. BUG-142 tracks the absent backend CI job (KAN-6). Local verification is not described as backend CI coverage. In-memory queue sorting remains bounded by the managed queue and is documented with its database-paging upgrade point.
+- Missing-name regression first failed with IllegalStateException. Final mvn -B spotless:apply -Dapi.version=1.44 verify passed: 595 unit tests, 71 integration tests, zero failures/errors/skips, Spotless clean. Java 21 and the process-local Docker Linux pipe/API workaround were used; no test was skipped.
+- Frontend format, lint, typecheck and build passed. Lint has the existing TicketListFilters warning. A second API generation was byte-identical. Full frontend test result follows after the active run.
+- Graphify updated the code graph to 8,960 nodes. SQL extraction lacks tree_sitter_sql; migration findings were verified directly against SQL and PostgreSQL tests.
+- Full frontend verification finished: 75 test files and 1,356 tests passed, zero failures, in 437.62 seconds. No assertion, timeout, retry or global setting was changed. STORY-009 trace remains 12/12.
+- Code commit: default@692044a. Conflict integration commit: d268c13. Production adapter and backend CI dependencies remain open; the module is not marked completed.
