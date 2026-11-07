@@ -101,3 +101,12 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** Jira issue panel and Review feedback boundary and tests.
 **Dependencies:** Task 9 and verified Jira issue and writer context.
 **Verification:** MSG64 for the writer and denial for an unrelated issue, Account or Workspace.
+
+## Task 11: Email the writer after Reject or Request Changes (KAN-155)
+
+**Story:** STORY-010
+**Feature:** review-email-notification
+**Description:** Implement AC-010.1–010.6. `TicketDecisionServiceImpl` publishes the saved Reject and Request Changes decision ids inside the decision transaction. An after-commit listener enqueues one `review-notification` tenant job per decision id when `TenantJobService` is available, and logs only a count on failure. The job handler loads the decision, ticket and writer account in the Workspace and calls the KAN-162 `ReviewNotificationSender`; delivery failure fails the job so JobRunr retries it.
+**Files:** `ticket/event/ReviewFeedbackDecidedEvent.java`, `ticket/entity/ReviewDecisionRecord.java` (getters), `ticket/service/impl/TicketDecisionServiceImpl.java`, `review/service/impl/ReviewNotificationEnqueuer.java`, `review/service/impl/ReviewNotificationJobHandler.java`, tests in `review/TicketDecisionIT.java` and `review/service/impl/`.
+**Dependencies:** KAN-24 decisions (PR #137), KAN-102 tenant jobs (PR #139), KAN-162 SMTP sender (PR #131).
+**Verification:** Unit tests for enqueue and job outcomes, a PostgreSQL test that jobs are enqueued only after commit and never after rollback, `mvn verify` with Spotless.
