@@ -12,6 +12,7 @@ import { ReviewQueueToolbar } from '../components/ReviewQueueToolbar';
 import { useQueueTicketIds } from '../hooks/useQueueTicketIds';
 import { useApproveSelectedTickets } from '../hooks/useReviewDecisions';
 import { useReviewQueue } from '../hooks/useReviewQueue';
+import { useReviewQueueEvents } from '../hooks/useReviewQueueEvents';
 import styles from './ReviewQueuePage.module.css';
 import { MAX_REVIEW_SELECTION } from '../review-limits';
 
@@ -34,7 +35,8 @@ export function ReviewQueuePage() {
 function ReviewQueueContent({ departmentId }: { departmentId: string | undefined }) {
   const { session } = useSession();
   const list = useListSearchParams({ field: 'reviewDueDate', order: 'asc' }); // SRS: earliest due first
-  const queue = useReviewQueue({ departmentId, ...list.apiPaging });
+  const { connected } = useReviewQueueEvents();
+  const queue = useReviewQueue({ departmentId, ...list.apiPaging }, { live: connected });
   const approve = useApproveSelectedTickets();
 
   // Selected tickets, across pages. Local state: it belongs to this screen only (guideline 05 C8).

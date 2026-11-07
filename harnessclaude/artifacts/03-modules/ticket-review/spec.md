@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-07 | STORY-012 | Push Review Queue changes to open Review Queue screens over SSE, signalled by a tenant database NOTIFY (KAN-154) | Jira AC asks for SSE or WebSocket; user chose PostgreSQL NOTIFY so submissions from any writer are caught |
 | 2026-11-07 | STORY-011 | Serve Review History from the stored review decisions of the production Workspace (KAN-159) | Demo flow scenario 2 step 10; the merged frontend only had mocks |
 | 2026-11-07 | STORY-010 | Email the writer after a committed Reject or Request Changes decision through a tenant JobRunr job (KAN-155) | Demo flow scenario 2 step 7; user chose job delivery so SMTP failure never affects the decision |
 | 2026-11-07 | STORY-009 | Persist the time a ticket entered the Review Queue | Preserve the actual entry time independently of later ticket edits |
@@ -158,10 +159,22 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
   - AC-011.5: IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the request with 401 or 403 and expose no decision.
   - AC-011.6: WHEN the production web application loads Review History, THE frontend SHALL use the published getReviewHistory operation through the existing generated client.
 
+### STORY-012: See the Review Queue change in real time (KAN-154)
+
+- As a Project Manager, I want the Review Queue to update itself when a ticket is submitted or decided by someone else so that I see waiting tickets without reloading.
+- Acceptance:
+  - AC-012.1: WHEN a Project Manager with a verified Workspace Account opens GET `/api/v1/review-queue/events`, THE API SHALL keep a `text/event-stream` response open for the signed-in Workspace and SHALL send a heartbeat comment at least every 30 seconds while it stays open.
+  - AC-012.2: WHEN a Workspace transaction commits that moves a Solution Form ticket into Pending review, or moves a ticket out of Pending review, THE tenant database SHALL send a NOTIFY carrying only that ticket's Project UUID, and THE API SHALL send one `queue-changed` event with that Project UUID to every open stream of that Workspace whose caller manages that Project, within the existing 5-second Review Queue NFR (FE-10).
+  - AC-012.3: THE stream SHALL send no event for a Project the caller does not manage and SHALL carry no ticket content, Solution text, reason or comment. A transaction that changes several tickets of one Project SHALL produce at most one event for that Project per stream.
+  - AC-012.4: IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the stream with 401 or 403 and open no stream.
+  - AC-012.5: WHEN the Review Queue screen receives a `queue-changed` event, THE frontend SHALL refetch the queue page and eligible ticket ids it currently shows, keeping the existing selection and stale-data rules (STORY-005).
+  - AC-012.6: WHILE the event stream is open, THE frontend SHALL not run the 5-second queue polling. WHILE the stream is closed or failing, THE frontend SHALL keep the existing visible-tab 5-second polling, and WHEN the stream opens again it SHALL refetch the queue once.
+  - AC-012.7: WHEN the user leaves the Review Queue screen, THE frontend SHALL close its event stream.
+
 ## Out of Scope
 
-- General audit writer, notification channels other than STORY-010 email, and real-time updates beyond the existing polling convention. STORY-009 stores Review decisions and exposes Request Changes feedback to the writer in Jira. The KAN-162 retry limit of three attempts in one hour and HTML email are not part of STORY-010.
-- Production send-back processing (KAN-156), JOB-02 (KAN-157) and SSE/WebSocket (KAN-154). KAN-158 delivers frontend, a proposed API and in-memory fixtures; it does not implement a real expiry job or backend persistence. KAN-159 displays historical Unpublish/Republish records without adding those mutation workflows; STORY-011 serves only the stored Approve, Reject and Request Changes decisions, so the other decision filters return an empty page.
+- General audit writer, notification channels other than STORY-010 email, and real-time updates of screens other than the Review Queue (STORY-012). STORY-009 stores Review decisions and exposes Request Changes feedback to the writer in Jira. The KAN-162 retry limit of three attempts in one hour and HTML email are not part of STORY-010.
+- Production send-back processing (KAN-156), JOB-02 (KAN-157) and a WebSocket channel (STORY-012 uses SSE only). KAN-158 delivers frontend, a proposed API and in-memory fixtures; it does not implement a real expiry job or backend persistence. KAN-159 displays historical Unpublish/Republish records without adding those mutation workflows; STORY-011 serves only the stored Approve, Reject and Request Changes decisions, so the other decision filters return an empty page.
 - Importing PR #26 or changing/closing it; creating or pushing the replacement PR still requires the user to request that action.
 
 ## Interface Contracts
@@ -169,6 +182,7 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
 ### Exposed by this module
 
 - Preserve existing `/api/v1/review-queue`, `/api/v1/review-queue/ticket-ids` and `/api/v1/reviews/{approve,reject,request-changes}` proposal routes. Queue/ids use optional UUID `departmentId`; page/sort conventions stay shared. Every internal ticket/Project id becomes a UUID string, while displayed `sourceTicketId` remains the Jira/source key.
+- STORY-012 adds GET `/api/v1/review-queue/events` (`text/event-stream`, Project Manager): events named `queue-changed` with data `{"projectId":"<uuid>"}` and heartbeat comments; the same 401/403 Problem errors as the queue. The tenant changelog adds a trigger that NOTIFYs channel `review_queue` with the Project UUID on entry to or exit from Pending review.
 - Review Queue returns `enteredQueueAt` as a date-time when recorded and `null` for older rows with an unknown entry time. The tenant changelog adds nullable `ticket.review_queue_entered_at` as `TIMESTAMPTZ`.
 - Decision requests: unique `ticketIds` (1–500 UUIDs); Reject adds `reason`, Request Changes adds `comment` (trim-required, at most 1,000 characters). Success returns existing `{ count }`. Use current catalog Problem errors: validation 400, unauthenticated 401, unauthorized 403, missing 404 and stale 409, preserving field errors.
 - Use the generated Ticket Detail query at `/api/v1/tickets/{ticketId}`, reusing existing Ticket source/status/Project/Solution definitions where compatible. Details carry trusted author and manager identity/scope information. The frontend uses account identifiers to determine authorship.
