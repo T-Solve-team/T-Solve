@@ -835,13 +835,13 @@
     }
   },
   "ticket-repository": {
-    "specHash": "23c7647bedec56ba5cf181f6c42681f4e84a18b07c4c87923d5ce88453547da6",
-    "approvedAt": "2026-11-06T19:22:22.361Z",
+    "specHash": "1a4fe1d35de951d38cbee2851c2824477e076f91b8632ee0fb09c724e85c5a6e",
+    "approvedAt": "2026-11-07T03:50:19.924Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
       "AC-001.2": "WHEN the Import Preview is created, THE system SHALL store on each row a snapshot of its issue — Ticket ID = Jira key, title = summary, description as plain text, author = assignee display name, resolved date, link to the issue in Jira, and every comment as plain text with its author and date — and SHALL not read the issue from Jira again for this preview.",
-      "AC-001.3": "WHEN more than 100 issues without a Ticket match the date range, THE system SHALL return MSG35 with the preview.",
+      "AC-001.3": "WHEN more than 100 issues without a Ticket match the date range, or the pull stops after 20 Jira pages with issues left to read, THE system SHALL return MSG35, with no count of the remaining issues (D8), with the preview.",
       "AC-001.4": "IF Resolved from or Resolved to is missing, THEN THE system SHALL reject the pull with MSG01 and call Jira not at all.",
       "AC-001.5": "IF Resolved from is after Resolved to, or either date is after today (Vietnam time), THEN THE system SHALL reject the pull with MSG39 and call Jira not at all.",
       "AC-001.6": "IF no issue without a Ticket matches the date range, THEN THE system SHALL return MSG04 and create no preview.",

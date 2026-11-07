@@ -22,6 +22,7 @@ is one row of such a preview.
 |------|-------|--------|--------|
 | 2026-11-07 | STORY-001..004 | Initial spec for KAN-45 Jira import | — |
 | 2026-11-07 | STORY-001..004 | A pulled issue is a row of the Import Preview of `import-ticket-list` (D7): AC-001.1, AC-001.2, AC-002.1–AC-002.3, AC-002.7, AC-002.10, AC-003.1, AC-003.6 and the Interface Contracts reworded to its rows, Fill solution, remove-rows and Confirm; Project ids are UUIDs; a row still Needs Solution at Finish gives `MSG_NEW_4` as in CSV import | KAN-45 is stacked on PR #110, which already has these parts (user decision 2026-11-07) |
+| 2026-11-07 | STORY-001 | AC-001.3: MSG35 also after the 20-page scan cap, and without a count (D8) | Jira gives no total and counting would need every page (NFR 1); user decision 2026-11-07 |
 
 ## Decisions taken while planning (2026-11-07, with the user)
 | # | Question | Decision |
@@ -33,6 +34,7 @@ is one row of such a preview.
 | D5 | Comments shown in the popup | Every comment of the issue at pull time, as plain text with author and date. The "mapped resolution comments field" of `project-integration` is not used yet. |
 | D6 | Requirements shared with CSV import | Required Solution sections, text limits, preview storage and the "one unconfirmed preview per PM" rule are those of `import-ticket-list` (D1, D7, D8, D9 there). |
 | D7 | Separate Jira preview or the CSV one | The CSV Import Preview of PR #110: one row per issue (Ticket ID = Jira key, result Needs Solution until it has a Solution), with two new row fields, the issue's link and its comments. Rows list, row detail, Fill solution, remove-rows, Confirm and the screens are reused; only the pull and Drafts are new endpoints. |
+| D8 | MSG35's text in Report3 names how many more issues match, but the pull stops at 100 kept issues or 20 Jira pages, and Jira's `search/jql` gives no total | MSG35 names no count. Its Report3 text drops the count parameter (Report3 change by the team; then `report3-messages.json` and the web app's catalog follow). The pull does not count the remaining issues. |
 
 ## Requirements
 
@@ -55,7 +57,7 @@ is one row of such a preview.
 - Acceptance:
   - AC-001.1: WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.
   - AC-001.2: WHEN the Import Preview is created, THE system SHALL store on each row a snapshot of its issue — Ticket ID = Jira key, title = summary, description as plain text, author = assignee display name, resolved date, link to the issue in Jira, and every comment as plain text with its author and date — and SHALL not read the issue from Jira again for this preview.
-  - AC-001.3: WHEN more than 100 issues without a Ticket match the date range, THE system SHALL return MSG35 with the preview.
+  - AC-001.3: WHEN more than 100 issues without a Ticket match the date range, or the pull stops after 20 Jira pages with issues left to read, THE system SHALL return MSG35, with no count of the remaining issues (D8), with the preview.
   - AC-001.4: IF Resolved from or Resolved to is missing, THEN THE system SHALL reject the pull with MSG01 and call Jira not at all.
   - AC-001.5: IF Resolved from is after Resolved to, or either date is after today (Vietnam time), THEN THE system SHALL reject the pull with MSG39 and call Jira not at all.
   - AC-001.6: IF no issue without a Ticket matches the date range, THEN THE system SHALL return MSG04 and create no preview.
