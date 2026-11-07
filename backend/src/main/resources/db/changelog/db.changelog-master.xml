@@ -37,5 +37,6 @@
     <include file="changes/019-tracker-suggestion-uuid-keys.sql" relativeToChangelogFile="true"/>
     <include file="changes/019-identity-user-role-department.sql" relativeToChangelogFile="true"/>
     <include file="changes/020-tracker-suggestion-comment.sql" relativeToChangelogFile="true"/>
+    <include file="changes/020-identity-space-manager.sql" relativeToChangelogFile="true"/>
     <include file="changes/019-review-queue-notify.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

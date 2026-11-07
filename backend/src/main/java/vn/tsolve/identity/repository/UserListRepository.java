@@ -100,6 +100,30 @@ public class UserListRepository {
                 (rs, row) -> new DepartmentRefResponse(rs.getObject("public_id", UUID.class), rs.getString("name")));
     }
 
+    public UserAccountResponse findById(UUID id) {
+        UserAccountResponse row = jdbc.queryForObject(
+                """
+                SELECT u.id, u.full_name, u.email, u.status, u.last_sign_in_at,
+                       d.public_id AS department_public_id, d.name AS department_name
+                """
+                        + FROM + " WHERE u.id = :id",
+                Map.of("id", id),
+                (rs, index) -> account(rs));
+        EnumSet<Role> roles = EnumSet.of(Role.EMPLOYEE);
+        roles.addAll(jdbc.query(
+                "SELECT role FROM user_role WHERE user_id = :id",
+                Map.of("id", id),
+                (rs, index) -> Role.valueOf(rs.getString("role"))));
+        return new UserAccountResponse(
+                row.id(),
+                row.fullName(),
+                row.email(),
+                List.copyOf(roles),
+                row.department(),
+                row.status(),
+                row.lastSignInAt());
+    }
+
     private UserAccountResponse account(ResultSet rs) throws SQLException {
         String name = rs.getString("full_name");
         UUID departmentId = rs.getObject("department_public_id", UUID.class);

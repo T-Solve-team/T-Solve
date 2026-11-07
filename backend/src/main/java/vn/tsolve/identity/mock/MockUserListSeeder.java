@@ -30,11 +30,28 @@ public class MockUserListSeeder implements ApplicationRunner {
                 jdbc.sql("INSERT INTO department (name, status) VALUES (:name, 'ACTIVE') ON CONFLICT (name) DO NOTHING")
                         .param("name", department)
                         .update();
+                jdbc.sql(
+                                """
+                        INSERT INTO space(department_id, name, status)
+                        SELECT department_id, name || ' Wiki', 'ACTIVE' FROM department WHERE name = :name
+                        ON CONFLICT (department_id) DO NOTHING
+                        """)
+                        .param("name", department)
+                        .update();
             }
             account(properties.accountEmail(), "Demo Admin", "ACTIVE", "ADMIN", null);
             account("resolver@acme.test", "Demo Resolver", "ACTIVE", "TICKET_RESOLVER", "Customer Support");
             account("manager@acme.test", "Demo Manager", "ACTIVE", "PROJECT_MANAGER", "IT Operations");
             account("knowledge@acme.test", "Demo Knowledge Manager", "ACTIVE", "KNOWLEDGE_MANAGER", null);
+            jdbc.sql(
+                            """
+                    INSERT INTO space_manager(space_id, user_id, assigned_at)
+                    SELECT s.space_id, u.id, now() FROM space s
+                    JOIN department d ON d.department_id = s.department_id
+                    CROSS JOIN app_user u WHERE d.name = 'Customer Support' AND u.email = 'knowledge@acme.test'
+                    ON CONFLICT (space_id) DO NOTHING
+                    """)
+                    .update();
             account("employee@acme.test", "Demo Employee", "ACTIVE", null, null);
             account("deactivated@acme.test", "Demo Deactivated", "DEACTIVATED", null, null);
             account("nameless@acme.test", null, "ACTIVE", null, null);

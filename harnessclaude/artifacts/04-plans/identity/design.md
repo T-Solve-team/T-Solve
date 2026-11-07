@@ -1252,3 +1252,30 @@ Covers AC-004.9 to AC-004.18. Decisions of the user (Dương, 07/11): Q1–Q4 = 
 - **Tests.** Unit: query parsing (q length/escape, sort whitelist, paging). `@WebMvcTest`-style: 401/403/400.
   IT with `TwoTenantDatabases`: rows in `tenant_b` never appear for ACME; filters, sort, paging; departments list;
   mock filter with the profile on (signed in) and off (401); seeder idempotent.
+
+## Add user backend — KAN-108, Task 33 (2026-11-07)
+
+Covers AC-005.9 to AC-005.17; decisions Q1–Q3 of 07/11 (spec Changelog). Builds on Task 32 (same caller, same
+`identity-mock` profile).
+
+- **Schema.** Changeset `020-identity-space-manager.sql` (author `identity`): `space` (`space_id BIGSERIAL PK`,
+  `public_id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()`, `department_id BIGINT NOT NULL UNIQUE → department`,
+  `name VARCHAR(100) NOT NULL`, `status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'` CHECK `ACTIVE, HIDDEN`) and
+  `space_manager` (`space_id BIGINT PRIMARY KEY → space` — the key makes one Knowledge Manager per Space —
+  `user_id UUID NOT NULL → app_user(id) ON DELETE CASCADE`, `assigned_at TIMESTAMPTZ NOT NULL`, index on `user_id`).
+  Key style follows `department` on main; the wiki module reuses both.
+- **Write.** `UserCreationService` / impl, `@Transactional`: validate in the mock's order (email required → length
+  on the raw input → format + company domain → duplicate in this Workspace → roles → Department → Spaces → occupied
+  Space), claim the email in `WorkspaceEmailRegistry`, insert `app_user`, `user_role`, `space_manager`, record the
+  audit event, return the `UserAccount` read back through Task 32's repository mapping. A unique violation on
+  `space_manager` (race) maps to 409 MSG117 and a unique violation on `app_user.email` to 409 MSG11. Field errors
+  use the existing `fieldErrors` Problem shape the frontend reads.
+- **Ports.** `WorkspaceEmailRegistry` (`boolean claim(UUID workspaceId, String email)`, `void release(...)`) in
+  `identity.service`, default bean `AcceptAllWorkspaceEmailRegistry` with javadoc "interim until platform's
+  workspace_email registry (Task 14)". Company domain: `WorkspaceLookup.findById(bound).googleDomain()`, then the
+  `identity-mock` property `tsolve.identity.mock.company-domain` (default `acme.test`).
+- **Seed.** `MockUserListSeeder` also ensures one Active Space per demo Department (and one Knowledge Manager
+  assignment for the seeded Knowledge Manager), so creation-options and MSG117 are visible in the demo.
+- **Tests.** Unit: validation order and codes. MVC: 401/403/400. IT (`TwoTenantDatabases`): creation lands only in
+  `tenant_a`; a duplicate email in `tenant_b` does not block ACME; MSG11/MSG111; MSG117 including two concurrent
+  creations for one Space; registry refusal → MSG155 and nothing saved; creation-options; audit row.

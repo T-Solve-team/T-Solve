@@ -717,3 +717,19 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **PR / Jira:** branch `feat/KAN-107-identity-user-list-backend`; Jira KAN-107.
 **Estimated size:** medium (12 production files); about 25 tests
 **Verification:** Tests name AC-004.9 to AC-004.18; `bun harnessclaude/hooks/sdd.ts trace identity STORY-004`; `cd backend && mvn verify`; `cd frontend && npm run generate:api` leaves no diff.
+
+## Task 33: Add user backend on PostgreSQL — KAN-108
+
+**Story:** STORY-005
+**Feature:** add-user-backend
+**Decisions owned:** KAN-108 Q1–Q3 (Dương, 07/11)
+**Acceptance criteria:** AC-005.9, AC-005.10, AC-005.11, AC-005.12, AC-005.13, AC-005.14, AC-005.15, AC-005.16, AC-005.17
+**Description:** Design "Add user backend — KAN-108, Task 33". `POST /api/v1/users` and `GET /api/v1/users/creation-options` exactly as `frontend/openapi/tsolve-api.yaml`; changeset 020 (`space`, `space_manager`); the `WorkspaceEmailRegistry` port; the mock seed's Spaces. Not in scope: invitation email, KAN-110 updates, the frontend MSW pass-through.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/{controller/UserCreationController,dto/CreateUserRequest,dto/UserCreationOptionsResponse,dto/SpaceRefResponse,service/UserCreationService,service/WorkspaceEmailRegistry,service/impl/UserCreationServiceImpl,service/impl/AcceptAllWorkspaceEmailRegistry,repository/UserCreationRepository}.java`, `backend/src/main/resources/db/changelog/changes/020-identity-space-manager.sql`
+- Modify: `db.changelog-master.xml`, `identity/mock/{MockIdentityProperties,MockUserListSeeder}.java`, `application-identity-mock.yml`
+- Test: `backend/src/test/java/vn/tsolve/identity/{service/impl/UserCreationServiceImplTest,controller/UserCreationControllerTest,UserCreationIT}.java`
+**Dependencies:** Task 32 (branch `feat/KAN-107-identity-user-list-backend`, PR #162).
+**PR / Jira:** branch `feat/KAN-108-identity-add-user-api` stacked on KAN-107; Jira KAN-108.
+**Estimated size:** medium (10 production files); about 25 tests
+**Verification:** Tests name AC-005.9 to AC-005.17; `sdd.ts trace identity STORY-005`; `cd backend && mvn verify`; `generate:api` no diff.
