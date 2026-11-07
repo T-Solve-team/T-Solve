@@ -15,33 +15,43 @@ public final class InMemoryWorkspaceLookup implements WorkspaceLookup {
             UUID.fromString("00000000-0000-4000-8000-00000000000a"),
             "acme.localhost",
             "acme.example",
-            WorkspaceRef.Status.ACTIVE);
+            WorkspaceRef.Status.ACTIVE,
+            "acme",
+            "10000000-0000-4000-8000-00000000000a");
 
     public static final WorkspaceRef BETA = new WorkspaceRef(
             UUID.fromString("00000000-0000-4000-8000-00000000000b"),
             "beta.localhost",
             "beta.example",
-            WorkspaceRef.Status.ACTIVE);
+            WorkspaceRef.Status.ACTIVE,
+            "beta",
+            "10000000-0000-4000-8000-00000000000b");
 
     public static final WorkspaceRef GAMMA = new WorkspaceRef(
             UUID.fromString("00000000-0000-4000-8000-00000000000c"),
             "gamma.localhost",
             "gamma.example",
-            WorkspaceRef.Status.SUSPENDED);
+            WorkspaceRef.Status.SUSPENDED,
+            "gamma",
+            "10000000-0000-4000-8000-00000000000c");
 
     /** No Google domain set (null). */
     public static final WorkspaceRef NO_DOMAIN = new WorkspaceRef(
             UUID.fromString("00000000-0000-4000-8000-00000000000d"),
             "nodomain.localhost",
             null,
-            WorkspaceRef.Status.ACTIVE);
+            WorkspaceRef.Status.ACTIVE,
+            "nodomain",
+            "10000000-0000-4000-8000-00000000000d");
 
     /** A blank Google domain. */
     public static final WorkspaceRef BLANK_DOMAIN = new WorkspaceRef(
             UUID.fromString("00000000-0000-4000-8000-00000000000e"),
             "blankdomain.localhost",
             "  ",
-            WorkspaceRef.Status.ACTIVE);
+            WorkspaceRef.Status.ACTIVE,
+            "blankdomain",
+            "10000000-0000-4000-8000-00000000000e");
 
     private static final List<WorkspaceRef> ALL = List.of(ACME, BETA, GAMMA, NO_DOMAIN, BLANK_DOMAIN);
 

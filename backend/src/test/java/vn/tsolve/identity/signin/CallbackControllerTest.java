@@ -161,7 +161,13 @@ class CallbackControllerTest {
     }
 
     private void replaceStatus(WorkspaceRef workspace, WorkspaceRef.Status status) {
-        workspaces.replace(new WorkspaceRef(workspace.id(), workspace.siteHost(), workspace.googleDomain(), status));
+        workspaces.replace(new WorkspaceRef(
+                workspace.id(),
+                workspace.siteHost(),
+                workspace.googleDomain(),
+                status,
+                workspace.slug(),
+                workspace.organizationId()));
     }
 
     private static String workspaceSite(WorkspaceRef workspace) {
@@ -522,7 +528,8 @@ class CallbackControllerTest {
         }),
         NO_GOOGLE_DOMAIN(t -> {
             Browser b = t.authorized(ACME);
-            t.workspaces.replace(new WorkspaceRef(ACME.id(), ACME.siteHost(), null, ACME.status()));
+            t.workspaces.replace(new WorkspaceRef(
+                    ACME.id(), ACME.siteHost(), null, ACME.status(), ACME.slug(), ACME.organizationId()));
             return t.callWithCode(b);
         }),
         GOOGLE_ERROR(t -> t.callWithError(t.authorized(ACME), "access_denied")),
@@ -651,7 +658,8 @@ class CallbackControllerTest {
     void refusesAStateWhoseWorkspaceLostItsDomain_AC_001_49(String domain) throws Exception {
         Browser browser = authorized(ACME);
         answerValidToken(browser);
-        workspaces.replace(new WorkspaceRef(ACME.id(), ACME.siteHost(), domain, ACME.status()));
+        workspaces.replace(new WorkspaceRef(
+                ACME.id(), ACME.siteHost(), domain, ACME.status(), ACME.slug(), ACME.organizationId()));
 
         SignInTestFixtures.assertCallbackMsg141Page(callWithCode(browser));
 
@@ -664,7 +672,8 @@ class CallbackControllerTest {
     void refusesAJiraLinkStateWithNoDomain_AC_001_49() throws Exception {
         Browser browser = authorizedJiraLink(ACME);
         answerValidToken(browser);
-        workspaces.replace(new WorkspaceRef(ACME.id(), ACME.siteHost(), null, ACME.status()));
+        workspaces.replace(
+                new WorkspaceRef(ACME.id(), ACME.siteHost(), null, ACME.status(), ACME.slug(), ACME.organizationId()));
 
         SignInTestFixtures.assertCallbackMsg141Page(callWithCode(browser));
 
@@ -1151,7 +1160,8 @@ class CallbackControllerTest {
     void matchesHdAndTheGoogleDomainIgnoringCase_AC_001_11_edge25(String tokenHd, String domain) throws Exception {
         Browser browser = authorized(ACME);
         seedLan(ACME);
-        workspaces.replace(new WorkspaceRef(ACME.id(), ACME.siteHost(), domain, ACME.status()));
+        workspaces.replace(new WorkspaceRef(
+                ACME.id(), ACME.siteHost(), domain, ACME.status(), ACME.slug(), ACME.organizationId()));
         answerToken(browser, claims -> claims.put("hd", tokenHd));
 
         MockHttpServletResponse response = callWithCode(browser);
@@ -1273,7 +1283,8 @@ class CallbackControllerTest {
     void checksTheStatesWorkspaceBeforeWorkspaceActive_AC_001_14() throws Exception {
         Browser browser = authorized(ACME);
         seedLan(ACME);
-        workspaces.replace(new WorkspaceRef(ACME.id(), ACME.siteHost(), null, WorkspaceRef.Status.SUSPENDED));
+        workspaces.replace(new WorkspaceRef(
+                ACME.id(), ACME.siteHost(), null, WorkspaceRef.Status.SUSPENDED, ACME.slug(), ACME.organizationId()));
         answerValidToken(browser);
 
         SignInTestFixtures.assertCallbackMsg141Page(callWithCode(browser));
