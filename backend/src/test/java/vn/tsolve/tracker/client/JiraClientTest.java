@@ -103,7 +103,7 @@ class JiraClientTest {
     }
 
     @Test
-    void treatsACreatedCommentWithoutIdAsUnavailable_AC_012_3_BUG_166() {
+    void treatsACreatedCommentWithoutIdAsUnavailable_AC_012_3_BUG_167() {
         jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/issue/ITSUP-1/comment"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
@@ -112,7 +112,7 @@ class JiraClientTest {
     }
 
     @Test
-    void treatsAServiceAccountWithoutIdAsUnavailable_AC_012_5_BUG_167() {
+    void treatsAServiceAccountWithoutIdAsUnavailable_AC_012_5_BUG_168() {
         jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/myself"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 

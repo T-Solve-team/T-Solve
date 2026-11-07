@@ -54,7 +54,7 @@ public class JiraClient implements TicketTrackerClient {
                 .body(body)
                 .retrieve()
                 .body(JsonNode.class));
-        // A success without an id would mark the result as commented with nothing to point at (BUG-166).
+        // A success without an id would mark the result as commented with nothing to point at (BUG-167).
         return requiredText(created, "id");
     }
 
@@ -63,7 +63,7 @@ public class JiraClient implements TicketTrackerClient {
         RestClient http = http(account);
         JsonNode me = call(() -> http.get().uri("/rest/api/3/myself").retrieve().body(JsonNode.class));
         // Without the account id no comment can be recognised as ours, and "not found" would post a second one
-        // (BUG-167).
+        // (BUG-168).
         String accountId = requiredText(me, "accountId");
         JsonNode page = call(() -> http.get().uri(COMMENTS, issueKey).retrieve().body(JsonNode.class));
         if (page == null) {

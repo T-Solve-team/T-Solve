@@ -47,7 +47,7 @@ public class SuggestionCommentServiceImpl implements SuggestionCommentService {
             log.warn("Suggestion comment not posted for {}: Jira answered {}", issueKey, e.getStatus());
             return;
         } catch (JiraUnavailableException e) {
-            // AC-012.7 asks for the status too; the job's own failure line has only the error type (BUG-165).
+            // AC-012.7 asks for the status too; the job's own failure line has only the error type (BUG-166).
             log.warn(
                     "Suggestion comment not posted for {}, retried: Jira answered {} ({})",
                     issueKey,

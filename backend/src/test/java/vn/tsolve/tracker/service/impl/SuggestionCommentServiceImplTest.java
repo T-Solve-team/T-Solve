@@ -106,7 +106,7 @@ class SuggestionCommentServiceImplTest {
     }
 
     @Test
-    void logsTheHttpStatusWhenJiraIsUnavailable_AC_012_7_BUG_165(CapturedOutput output) {
+    void logsTheHttpStatusWhenJiraIsUnavailable_AC_012_7_BUG_166(CapturedOutput output) {
         given(serviceAccount.current()).willReturn(Optional.of(ACCOUNT));
         given(jira.findComment(ACCOUNT, "ITSUP-1", Msg80.PREFIX)).willReturn(Optional.empty());
         given(jira.addComment(any(), anyString(), anyList())).willThrow(new JiraUnavailableException(503));

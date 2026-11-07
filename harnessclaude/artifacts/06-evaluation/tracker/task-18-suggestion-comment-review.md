@@ -143,9 +143,9 @@ verdict: fail).
 
 | Attempt 1 issue | Status | Evidence |
 |-----------------|--------|----------|
-| 1 — MEDIUM, AC-012.7, no HTTP status in the log (BUG-165) | Fixed | `SuggestionCommentServiceImpl.post` catches `JiraUnavailableException`, logs the issue key, the status ("nothing" for 0) and the error type, then rethrows so the job still fails for a retry. Observed: `Suggestion comment not posted for ITSUP-1, retried: Jira answered 503 (JiraUnavailableException)`. Test `logsTheHttpStatusWhenJiraIsUnavailable_AC_012_7_BUG_165` asserts key, `503`, type, and absence of suggestion text and token. |
-| 2 — LOW, AC-012.3, empty comment id stored (BUG-166) | Fixed | `JiraClient.addComment` uses `requiredText(created, "id")`, so a blank or missing id becomes `JiraUnavailableException(0)` → retry; the rerun recovers the posted comment through `findComment` (AC-012.5). Test `treatsACreatedCommentWithoutIdAsUnavailable_AC_012_3_BUG_166`. |
-| 3 — LOW, AC-012.5, blank `/myself` accountId (BUG-167) | Fixed | `findComment` uses `requiredText(me, "accountId")` and throws `JiraUnavailableException(0)` for a null comment page instead of answering "not found". Test `treatsAServiceAccountWithoutIdAsUnavailable_AC_012_5_BUG_167`. |
+| 1 — MEDIUM, AC-012.7, no HTTP status in the log (BUG-166) | Fixed | `SuggestionCommentServiceImpl.post` catches `JiraUnavailableException`, logs the issue key, the status ("nothing" for 0) and the error type, then rethrows so the job still fails for a retry. Observed: `Suggestion comment not posted for ITSUP-1, retried: Jira answered 503 (JiraUnavailableException)`. Test `logsTheHttpStatusWhenJiraIsUnavailable_AC_012_7_BUG_166` asserts key, `503`, type, and absence of suggestion text and token. |
+| 2 — LOW, AC-012.3, empty comment id stored (BUG-167) | Fixed | `JiraClient.addComment` uses `requiredText(created, "id")`, so a blank or missing id becomes `JiraUnavailableException(0)` → retry; the rerun recovers the posted comment through `findComment` (AC-012.5). Test `treatsACreatedCommentWithoutIdAsUnavailable_AC_012_3_BUG_167`. |
+| 3 — LOW, AC-012.5, blank `/myself` accountId (BUG-168) | Fixed | `findComment` uses `requiredText(me, "accountId")` and throws `JiraUnavailableException(0)` for a null comment page instead of answering "not found". Test `treatsAServiceAccountWithoutIdAsUnavailable_AC_012_5_BUG_168`. |
 | 4 — LOW, find-then-add not atomic | Accepted as is (coordinator) | Unchanged; remains a known risk. |
 | 5 — INFO notes | Accepted as is (coordinator) | Unchanged. |
 
@@ -155,7 +155,7 @@ New observations (INFO, no change required):
 - On a retryable failure two WARN lines are now written (the comment service's line with the status and the job's
   `Suggestion job failed for …: JiraUnavailableException`). Both contain only the key, the status and the error type,
   so Non-Functional 4 and 9 still hold.
-- `docs/bug-log.md` rows BUG-165..167 are present, marked Fixed and name their regression tests, as the project rules
+- `docs/bug-log.md` rows BUG-166..167 are present, marked Fixed and name their regression tests, as the project rules
   require.
 
 No regression: a 401/403/404 still logs and ends without retry (`Jira answered 403` in the run); the
