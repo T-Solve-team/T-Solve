@@ -374,15 +374,15 @@
         "review-history-api": "evaluating",
         "review-email-notification": "evaluating",
         "review-queue-events-api": "in-progress",
-        "review-queue-events-web": "pending"
+        "review-queue-events-web": "in-progress"
       },
-      "lastUpdated": "2026-11-07T10:45:34.685Z",
+      "lastUpdated": "2026-11-07T11:05:39.975Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b539777fa821bece687286fe6714e67cb3d458d6"
+        "default": "50d2a3f00641f3b9c336a8eeb797debd031f174e"
       }
     }
   },
