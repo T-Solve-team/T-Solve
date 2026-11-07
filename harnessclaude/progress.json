@@ -169,10 +169,10 @@
         "jira-drafts": "passing",
         "jira-import-tickets-page": "passing",
         "jira-import-preview-page": "passing",
-        "jira-import-verify": "evaluating",
+        "jira-import-verify": "passing",
         "jira-gateway-auth": "passing"
       },
-      "lastUpdated": "2026-11-07T18:10:43.309Z",
+      "lastUpdated": "2026-11-07T18:40:42.422Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
