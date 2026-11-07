@@ -1,7 +1,7 @@
 ---
 module: search
 date: 2026-11-05
-total_tasks: 18
+total_tasks: 19
 owner: Dev
 ---
 
@@ -610,4 +610,28 @@ Spec: STORY-005 to STORY-009 · Design: master section "Backend". Rules: `backen
   `logsIssuePanelRowWithReturnedCount_AC_009_3`)
 **Covers:** AC-009.1 – AC-009.5, AC-006.10 (edge cases #29, #39, #40)
 **Dependencies:** Tasks 13, 14
+**Estimated size:** small
+
+---
+
+## Task 19: Solution retrieval for the Chatbot
+
+**Story:** STORY-010
+**Feature:** solution-retrieval
+**Jira:** KAN-179 · branch `feat/KAN-179-chatbot-answers` (the chatbot backend's first commit; chatbot iteration 2)
+**Description:**
+- `SolutionRetrieval` / `SolutionRetrievalImpl.nearest(queryVector, minSimilarity, limit)`: argument checks
+  (1024 dimensions, 0 ≤ minSimilarity ≤ 1, limit ≥ 1, else `IllegalArgumentException`, no query); maps rows to
+  `RetrievedSolution`, blank Workaround → null.
+- `SolutionRetrievalRepository`: the native query of the chatbot design ("Data"), vector through
+  `PgVector.literal` and `CAST(:vector AS vector)`, interface projection; no Department or user filter.
+**Files:**
+- Create: `…/search/retrieval/service/SolutionRetrieval.java`, `…/search/retrieval/service/impl/SolutionRetrievalImpl.java`,
+  `…/search/retrieval/repository/SolutionRetrievalRepository.java`, `…/search/retrieval/dto/RetrievedSolution.java`
+- Test: `…/test/search/retrieval/service/impl/SolutionRetrievalImplTest.java` (`rejectsBadArguments_AC_010_5`,
+  `returnsSectionsWithoutTicketDetails_AC_010_2`, `takesNoUserAndEmbedsNothing_AC_010_4`),
+  `…/test/search/retrieval/repository/SolutionRetrievalRepositoryIT.java` (`returnsNearestAboveCutOff_AC_010_1`,
+  `leavesOutUnpublishedInactiveOrFar_AC_010_3`, `ignoresTheUsersDepartments_AC_010_1`)
+**Covers:** AC-010.1 – AC-010.5
+**Dependencies:** Task 6 (ticket_embedding)
 **Estimated size:** small

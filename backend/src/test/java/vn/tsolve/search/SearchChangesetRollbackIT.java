@@ -48,10 +48,15 @@ class SearchChangesetRollbackIT {
                         DatabaseFactory.getInstance()
                                 .findCorrectDatabaseImplementation(new JdbcConnection(connection)))) {
             liquibase.update("");
-            int searchChangesets = (int) liquibase.getDatabaseChangeLog().getChangeSets().stream()
-                    .filter(changeset -> "search".equals(changeset.getAuthor()))
-                    .count();
-            assertThat(searchChangesets).isPositive();
+            var changesets = liquibase.getDatabaseChangeLog().getChangeSets();
+            int boundary = -1;
+            for (int index = 0; index < changesets.size(); index++) {
+                if ("008-search-public-ids".equals(changesets.get(index).getId())) {
+                    boundary = index;
+                    break;
+                }
+            }
+            assertThat(boundary).isNotNegative();
             for (String table : PUBLIC_ID_TABLES) {
                 assertThat(columnExists(jdbc, table, "public_id")).as(table).isTrue();
             }
@@ -61,15 +66,19 @@ class SearchChangesetRollbackIT {
                         .isTrue();
             }
 
-            liquibase.rollback(searchChangesets, "");
+            liquibase.rollback(changesets.size() - boundary, "");
 
             assertNoSearchArtifacts(jdbc);
+            assertThat(columnExists(jdbc, "chatbot_answer", "chatbot_answer_id"))
+                    .isFalse();
             assertThat(jdbc.queryForObject("SELECT count(*) FROM pg_extension WHERE extname = 'vector'", Integer.class))
                     .as("vector extension survives rollback")
                     .isEqualTo(1);
 
             liquibase.update("");
 
+            assertThat(columnExists(jdbc, "chatbot_answer", "chatbot_answer_id"))
+                    .isTrue();
             for (String table : SEARCH_TABLES) {
                 assertThat(columnExists(jdbc, table, table + "_id"))
                         .as("table %s restored", table)

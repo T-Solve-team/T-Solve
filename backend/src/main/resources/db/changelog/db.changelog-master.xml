@@ -18,5 +18,6 @@
     <include file="changes/010-search-ticket-embedding.sql" relativeToChangelogFile="true"/>
     <include file="changes/011-search-log.sql" relativeToChangelogFile="true"/>
     <include file="changes/012-search-ticket-feedback.sql" relativeToChangelogFile="true"/>
+    <include file="changes/013-chatbot-answer.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
