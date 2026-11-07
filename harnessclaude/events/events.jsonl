@@ -931,3 +931,6 @@
 {"ts":"2026-11-07T11:43:47.513Z","type":"quick-opened","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:44:28.193Z","type":"quick-closed","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T15:29:26.533Z","type":"spec-approved","module":"import-ticket-list","specHash":"ed6e2613d6a321dc8f8066573942c55aaf83be8e14661e28e10d8d85c8e9542e"}
+{"ts":"2026-11-07T16:56:35.837Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"e7c6f050a0d339d0d90a49b3e167215d11b14dea"}
+{"ts":"2026-11-07T16:56:36.154Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-preview-page","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T16:57:03.625Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"69f05767eab5d3f08dbca23e4a6925ac41f64e3c"}
