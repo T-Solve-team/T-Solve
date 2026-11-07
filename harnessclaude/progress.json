@@ -205,9 +205,9 @@
         "suggestion-history": "passing",
         "suggestion-history-contract": "passing",
         "suggestion-history-api": "passing",
-        "suggestion-generation": "evaluating"
+        "suggestion-generation": "passing"
       },
-      "lastUpdated": "2026-11-07T19:52:03.061Z",
+      "lastUpdated": "2026-11-07T20:01:33.371Z",
       "branch": "feat/triage",
       "repos": [
         "default"
