@@ -66,6 +66,8 @@ import vn.tsolve.ticket.service.ImportPreviewService;
             "DB_PASSWORD=unused"
         })
 class ImportConfirmIT {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private vn.tsolve.common.audit.AuditService audit;
 
     // started once for the class and stopped by Testcontainers' Ryuk; no org.testcontainers:junit-jupiter needed
     @ServiceConnection

@@ -59,6 +59,8 @@ import vn.tsolve.ticket.dto.TicketReviewView.ProjectAccess;
 @Import({TwoTenantDatabases.class, ReviewDecisionApiIT.WorkspaceAccessConfiguration.class})
 @WithTSolveUser(id = ReviewDecisionApiIT.MANAGER_ID, roles = Role.PROJECT_MANAGER)
 class ReviewDecisionApiIT {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private vn.tsolve.common.audit.AuditService audit;
 
     static final String MANAGER_ID = "f4b304e6-d813-4e47-9b6c-69b7d61cc6cb";
     private static final UUID MANAGER = UUID.fromString(MANAGER_ID);

@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import vn.tsolve.common.audit.AuditAction;
+import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.csv.CsvRowValidator;
 import vn.tsolve.ticket.dto.ImportResultResponse;
@@ -58,6 +60,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
     private final ProjectAccess projects;
     private final ApplicationEventPublisher events;
     private final TransactionTemplate transaction;
+    private final AuditService audit;
 
     public ImportConfirmServiceImpl(
             ImportPreviewRepository previews,
@@ -68,7 +71,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
             ImportBatchRecorder recorder,
             ProjectAccess projects,
             ApplicationEventPublisher events,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager,
+            AuditService audit) {
         this.previews = previews;
         this.previewRows = previewRows;
         this.tickets = tickets;
@@ -78,6 +82,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         this.projects = projects;
         this.events = events;
         this.transaction = new TransactionTemplate(transactionManager);
+        this.audit = audit;
     }
 
     /** A Ticket ID became an existing Ticket after the preview was made (AC-004.7). */
@@ -204,6 +209,11 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         previews.deleteById(preview.getId());
         // inside the transaction: @TransactionalEventListener(AFTER_COMMIT) listeners get it once this commits
         events.publishEvent(new TicketsPublishedEvent(ticketIds));
+        audit.record(
+                AuditAction.IMPORT,
+                "PROJECT",
+                preview.getProjectId(),
+                Map.of("importBatchId", batch.getId(), "created", valid.size(), "skipped", errorRows + removedRows));
         return new Imported(batch.getId(), valid.size(), errorRows + removedRows);
     }
 

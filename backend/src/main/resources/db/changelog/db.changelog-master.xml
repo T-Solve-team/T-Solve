@@ -31,4 +31,5 @@
     <include file="changes/012-review-search-restore-time.sql" relativeToChangelogFile="true"/>
     <include file="changes/016-review-search-ticket-refs-attach.sql" relativeToChangelogFile="true"/>
 
+    <include file="changes/018-audit-log-entry.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>
