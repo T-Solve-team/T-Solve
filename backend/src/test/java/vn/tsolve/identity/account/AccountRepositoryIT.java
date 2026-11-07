@@ -51,8 +51,8 @@ class AccountRepositoryIT {
 
     @BeforeEach
     void clean() {
-        TwoTenantDatabases.tenantA().update("DELETE FROM app_user");
-        TwoTenantDatabases.tenantB().update("DELETE FROM app_user");
+        TwoTenantDatabases.tenantA().update("TRUNCATE app_user CASCADE");
+        TwoTenantDatabases.tenantB().update("TRUNCATE app_user CASCADE");
     }
 
     private Account account(String email) {

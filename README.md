@@ -62,6 +62,9 @@ skips the hooks but not CI. Rules: `commitlint.config.mjs`, `lint-staged.config.
 
 On GitHub, the **PR checks** workflow re-checks the PR title (it becomes the commit on `main`) and scans every
 commit of the PR for secrets. A gitleaks false alarm: add its `Fingerprint:` line to `.gitleaksignore`.
+The **CI** workflow runs `frontend` (format, lint, typecheck, tests, `generate:api` diff, build) when `frontend/`
+changed and `backend` (`mvn -B verify`: unit tests, Testcontainers integration tests, Spotless) when `backend/`
+changed. A job skipped this way reports success, so all of them can be required checks.
 
 ## Run locally
 
