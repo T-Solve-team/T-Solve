@@ -84,6 +84,24 @@ class JiraPreviewControllerTest {
         verifyNoInteractions(previews);
     }
 
+    @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void fillSolutionRejectsSectionsOfUnicodeSpacesOnly_AC_002_4_BUG_165() throws Exception {
+        mvc.perform(
+                        post("/api/v1/imports/previews/42/fill-solution")
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                {"rowNumbers":[1],"symptoms":"\\u3000","rootCause":"Bad token",
+                                 "resolutionSteps":"Restart","scope":" \\u2003 "}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG01"))
+                .andExpect(jsonPath("$.fieldErrors[*].field").value(containsInAnyOrder("symptoms", "scope")));
+        verifyNoInteractions(previews);
+    }
+
     private static final String SOLUTION =
             """
             "symptoms":"Error 500","rootCause":"Bad token","resolutionSteps":"Restart","scope":"All"
