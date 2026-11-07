@@ -365,12 +365,12 @@ export const getGetReviewQueueMockHandler = (
 
 export const getStreamReviewQueueEventsMockHandler = (
   overrideResponse?:
-    string | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<string> | string),
+    string | ((info: Parameters<HttpResponseResolver>[0]) => Promise<string> | string),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/review-queue/events',
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+    async (info: Parameters<HttpResponseResolver>[0]) => {
       const resolvedBody =
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
