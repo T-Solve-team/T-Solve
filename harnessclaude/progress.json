@@ -126,9 +126,10 @@
         "keycloak-provisioning": "pending",
         "keycloak-theme": "pending",
         "keycloak-prerequisites": "passing",
-        "keycloak-realm": "passing"
+        "keycloak-realm": "passing",
+        "keycloak-sign-in-start": "passing"
       },
-      "lastUpdated": "2026-11-07T07:29:34.108Z",
+      "lastUpdated": "2026-11-07T11:03:46.506Z",
       "branch": "feat/identity",
       "repos": [
         "default"
