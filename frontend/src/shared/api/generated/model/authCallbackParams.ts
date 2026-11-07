@@ -8,16 +8,10 @@
  */
 
 export type AuthCallbackParams = {
-  /**
-   * The Google authorization code.
-   */
+  /** The Google authorization code. */
   code?: string;
-  /**
-   * Set by Google when the user cancels or denies access (for example `access_denied`); the site then redirects to `/login?error=MSG06` (AC-001.8).
-   */
+  /** Set by Google when the user cancels or denies access (for example `access_denied`); the site then redirects to `/login?error=MSG06` (AC-001.8). */
   error?: string;
-  /**
-   * The signed state value.
-   */
+  /** The signed state value. */
   state: string;
 };

@@ -12,18 +12,12 @@ import type { SizeParameter } from './sizeParameter';
 import type { SortParameter } from './sortParameter';
 
 export type GetAuditEventsParams = {
-  /**
-   * Trimmed, case-insensitive substring of actor email; empty means all actors.
-   */
+  /** Trimmed, case-insensitive substring of actor email; empty means all actors. */
   actor?: string;
   action?: AuditAction;
-  /**
-   * First included calendar day in Asia/Ho_Chi_Minh; paired with to, not in the future.
-   */
+  /** First included calendar day in Asia/Ho_Chi_Minh; paired with to, not in the future. */
   from?: string;
-  /**
-   * Last included calendar day in Asia/Ho_Chi_Minh; paired with from, not before from or in the future.
-   */
+  /** Last included calendar day in Asia/Ho_Chi_Minh; paired with from, not before from or in the future. */
   to?: string;
   /**
    * Page number, starting at 0.
@@ -36,8 +30,6 @@ export type GetAuditEventsParams = {
    * @maximum 100
    */
   size?: SizeParameter;
-  /**
-   * "field,asc" or "field,desc"; may repeat.
-   */
+  /** "field,asc" or "field,desc"; may repeat. */
   sort?: SortParameter;
 };
