@@ -635,6 +635,9 @@
 {"ts":"2026-11-06T15:17:32.149Z","type":"commit-recorded","module":"search","repo":"default","sha":"88b225144e391dc613a30b6c2d9048e4b124c96a"}
 {"ts":"2026-11-06T15:17:32.421Z","type":"feature-status","module":"search","feature":"ticket-ranking","from":"evaluating","to":"passing"}
 {"ts":"2026-11-06T15:17:32.705Z","type":"feature-status","module":"search","feature":"ticket-search-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-06T15:18:33.197Z","type":"feature-status","module":"search","feature":"ticket-search-connect","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T15:47:37.280Z","type":"feature-status","module":"search","feature":"ticket-search-connect","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T15:47:38.181Z","type":"commit-recorded","module":"search","repo":"default","sha":"c973207b29a3099ac466ffe777a90fec6696b93c"}
 {"ts":"2026-11-06T16:46:51.801Z","type":"spec-approved","module":"chatbot","specHash":"e865469ec28510581dcbf5b338453e68ddbf4ef53e6379c3319c629f4e15a89b"}
 {"ts":"2026-11-06T16:47:00.302Z","type":"spec-approved","module":"search","specHash":"64927cb1a4240a3d0066006a42edcec4586372b910518ce5f4d9fae5ac0bf6bd"}
 {"ts":"2026-11-06T16:53:28.194Z","type":"spec-approved","module":"chatbot","specHash":"387eafa27e66b6ef9c4729ff3e3f66c85b783cad0ea73250979e705ce23b15d0"}

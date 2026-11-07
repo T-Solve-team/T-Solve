@@ -160,7 +160,7 @@
         "ticket-list-connect": "in-progress",
         "ticket-ranking": "passing",
         "ticket-search-api": "passing",
-        "ticket-search-connect": "pending",
+        "ticket-search-connect": "evaluating",
         "ticket-feedback-api": "pending",
         "give-feedback-connect": "pending",
         "ticket-suggestion-api": "pending",
