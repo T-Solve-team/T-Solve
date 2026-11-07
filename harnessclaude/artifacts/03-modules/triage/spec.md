@@ -15,6 +15,7 @@ owner: BA
 | 2026-11-04 | STORY-001..STORY-004 | Ids in the API follow the team's shared id type (today the session `ProjectMembership.projectId`) instead of int64 | The session `/me` contract still uses UUID; a triage-only int64 would not match the Project filter. The team decides the id type for all tables and APIs (user, 04/11) |
 | 2026-11-04 | STORY-003..STORY-004 | "Required from other modules" names the triage ports `ManagedProjects`, `WikiDocumentAccess` and `JiraSite` and their fail-closed stand-ins; the backend no longer waits for KAN-117 | User chose on 04/11 to build the backend now with ports; neither `main` nor KAN-117 has `project_membership` or `jira_site_url`. No acceptance criterion changes |
 | 2026-11-07 | STORY-005 (new) | **Backend.** New STORY-005: a `triage-suggestion` tenant job, queued when the tracker records a new issue, embeds the issue summary and description, retrieves the Published tickets of the Project's Department (search STORY-011) and Company-wide Wiki documents (port `WikiSourceRetrieval`, stand-in `NoWikiSources`), keeps at most 5 sources at or above `SUGGESTION_MIN_SIMILARITY` (default 0.7) and fills the existing `suggestion_result` row. Builder check: issue text capped at 8000 characters, AC-005.6/005.9 worded on what a test can see, single-Workspace queueing until Jira App requests are bound to a Workspace (user, 07/11). Functional 5, Non-Functional 4 and 5, Out of Scope, Interface Contracts and Required from other modules follow | KAN-47 backend service only (user, 07/11): API-06 is in tracker (KAN-22); tuning the threshold on KAN-49 data is a later round; on AI failure JobRunr retries and the row stays NULL/[] with a log, no status column |
+| 2026-11-08 | STORY-005 | **Triage builds the suggestion; the tracker runs the job.** Triage implements the tracker's port `SuggestionSearch.suggest(projectId, summary, description)` and returns an `IssueSuggestion`; it queues, reads and writes nothing. Removed AC-005.1, AC-005.2, AC-005.9 and AC-005.10 (covered by tracker AC-011.1, 011.2, 011.6, 011.7, 011.9). Reworded AC-005.3 to AC-005.8 to the port (`projectId` is the Project's `public_id`; sources as `SuggestionSource`; failures throw without text). Added AC-005.13 (blank summary, no model call) and AC-005.14 (the only `SuggestionSearch` bean; the tracker's stand-in `StubSuggestionSearch` and `TSOLVE_STUB_SUGGESTION` are deleted). Functional 5, Non-Functional 4 and 5, Out of Scope, Interface Contracts, Required from other modules and Definition of Done follow | main already has the job (KAN-22, #160): it stores the issue text, queues the job on the worker, stores the answer and posts it (KAN-131), and declares `SuggestionSearch` for KAN-47 with a stand-in; the planned `IssueRecordedEvent` and triage job would duplicate it (user, 08/11) |
 
 ## Requirements
 
@@ -23,14 +24,14 @@ owner: BA
 2. A Project Manager opens a result in the read-only 10.2 detail popup, including its suggested solution, source summary and reporter answer.
 3. History and detail use the existing Workspace site and role model. The server decides Project access; the web app never supplies a Workspace selector.
 4. The backend serves the history and detail from the tenant `suggestion_result` table, scoped to the Projects the signed-in user manages.
-5. When the tracker records a new Jira issue, a background job writes the AI Solution Suggestion into that issue's existing `suggestion_result` row, from the Published tickets of the Project's Department and Company-wide Wiki documents that pass the relevance threshold; otherwise the row stays without a suggestion (STORY-005).
+5. When the tracker's suggestion job asks for the AI Solution Suggestion of a new Jira issue (tracker STORY-011), the backend builds it from the Published tickets of the Project's Department and Company-wide Wiki documents that pass the relevance threshold and returns it for the tracker to store; otherwise it returns none (STORY-005).
 
 ### Non-Functional
 1. Each acceptance criterion has a test named with its id, and `sdd.ts trace triage` passes.
 2. The frontend checks `format:check`, `lint`, `typecheck`, `test`, `build` and deterministic `generate:api` pass; the backend `mvn verify` (tests and `spotless:check`) passes.
 3. Use the existing UI kit, generated API client, TanStack Query and MSW; add no npm dependency or shared/app source edit.
-4. The backend code lives in `vn.tsolve.triage` and adds no Maven dependency. It never changes the tracker's entity or table; its only write is STORY-005's update of `sources_used` and `suggested_solution` on an existing row.
-5. STORY-005 calls the embedding and chat models outside any database transaction, runs only as a `worker` job, and never logs or puts in a job payload the issue text, source text or suggested solution.
+4. The backend code lives in `vn.tsolve.triage` and adds no Maven dependency. It never changes the tracker's entity or table, and STORY-005 writes nothing: it returns the suggestion and the tracker stores it.
+5. STORY-005 calls the embedding and chat models outside any database transaction, runs only inside the tracker's suggestion job, and never logs, or puts in an exception message, the issue text, source text or suggested solution.
 
 ## User Stories
 
@@ -83,25 +84,22 @@ owner: BA
 ### STORY-005: Generate the suggestion for a new issue
 - As a reporter, I want T-Solve to prepare a suggested solution from the knowledge of my Department when I create an issue, so that I may solve it without waiting for Staff (KAN-47, UC-36).
 - Acceptance:
-  - AC-005.1: WHEN the tracker publishes `IssueRecordedEvent`, THE backend SHALL queue one tenant job of type `triage-suggestion` for that `suggestion_id` through `TenantJobService`, in the Workspace bound to the request or, when none is bound, the one `WorkerTenantService.enqueueWorkspaceId()` names.
-  - AC-005.2: IF jobs are disabled in the process, no Workspace can be bound, or the job cannot be queued, THEN THE backend SHALL log the suggestion id and the error type, leave the row unchanged and let the event still be answered 202.
-  - AC-005.3: WHEN the job runs for a row that has an `issue_summary` and no `suggested_solution`, THE backend SHALL embed the issue text: the summary, a blank line and the description (summary alone when the description is null or blank), cut to its first 8000 characters.
-  - AC-005.4: WHEN the issue is embedded, THE backend SHALL retrieve the Department Solutions of the row's Project through `SolutionRetrieval.nearestInProjectDepartment` and the Company-wide Wiki documents through `WikiSourceRetrieval`, each at or above `SUGGESTION_MIN_SIMILARITY`, and SHALL keep at most 5 of them together, most similar first.
-  - AC-005.5: WHEN at least one source is kept, THE backend SHALL ask the chat model for a plain-text suggested solution built only from the issue text of AC-005.3 and the kept sources, and SHALL store it as `suggested_solution` and the kept sources as `sources_used` in one update.
-  - AC-005.6: THE backend SHALL write each kept ticket as `{"type": "TICKET", "id": <ticket public_id>, "similarity": <s>}` and each kept Wiki document as `{"type": "WIKI", "id": <document id>, "title": <title>, "similarity": <s>}`, and SHALL give the chat model no ticket id, ticket Jira key or ticket title (only the five Solution sections), and Wiki documents by title only.
-  - AC-005.7: IF no source reaches `SUGGESTION_MIN_SIMILARITY`, THEN THE backend SHALL call no chat model and leave `suggested_solution` NULL and `sources_used` `[]`.
-  - AC-005.8: IF the embedding or chat model fails or answers a blank text, THEN THE job SHALL fail so that JobRunr retries it, and SHALL log only the suggestion id, the issue key and the error type.
-  - AC-005.9: IF a run fails, THEN THE job SHALL write nothing to the row, so that after the last JobRunr retry it keeps `suggested_solution` NULL and `sources_used` `[]`, with no new column or status.
-  - AC-005.10: IF the row no longer exists, already has a `suggested_solution`, or has no `issue_summary` (recorded before this change), THEN THE job SHALL change nothing and call no model.
+  - AC-005.3: WHEN the tracker asks `SuggestionSearch.suggest(projectId, summary, description)` with a non-blank summary, THE backend SHALL embed the issue text: the summary, a blank line and the description (summary alone when the description is blank), cut to its first 8000 characters.
+  - AC-005.4: WHEN the issue is embedded, THE backend SHALL retrieve the Department Solutions of the Project whose `public_id` is `projectId` through `SolutionRetrieval.nearestInProjectDepartment` and the Company-wide Wiki documents through `WikiSourceRetrieval`, each at or above `SUGGESTION_MIN_SIMILARITY`, and SHALL keep at most 5 of them together, most similar first.
+  - AC-005.5: WHEN at least one source is kept, THE backend SHALL ask the chat model for a plain-text suggested solution built only from the issue text of AC-005.3 and the kept sources, and SHALL return the kept sources and that text as the `IssueSuggestion`.
+  - AC-005.6: THE backend SHALL return each kept ticket as `SuggestionSource("TICKET", <ticket public_id>, null, <s>)` and each kept Wiki document as `SuggestionSource("WIKI", <document id>, <title>, <s>)`, and SHALL give the chat model no ticket id, ticket Jira key or ticket title (only the five Solution sections), and Wiki documents by title only.
+  - AC-005.7: IF no source reaches `SUGGESTION_MIN_SIMILARITY`, THEN THE backend SHALL call no chat model and return no suggestion.
+  - AC-005.8: IF the embedding or chat model fails or answers a blank text, THEN THE backend SHALL throw an exception whose message holds no issue, source or model text, so that the tracker's job fails and is retried (tracker AC-011.6).
   - AC-005.11: THE backend SHALL read `SUGGESTION_MIN_SIMILARITY` (default 0.7); IF it is not a number from 0 to 1, THEN THE backend SHALL fail to start.
   - AC-005.12: WHILE the wiki module provides no `WikiSourceRetrieval`, THE stand-in `NoWikiSources` SHALL return no document, so the sources are tickets only.
+  - AC-005.13: IF the summary is blank (a result recorded before the issue text was stored), THEN THE backend SHALL call no model and return no suggestion.
+  - AC-005.14: THE backend SHALL provide the only `SuggestionSearch` bean; the tracker's stand-in `StubSuggestionSearch` and its setting `TSOLVE_STUB_SUGGESTION` SHALL no longer exist.
 
 ## Out of Scope
-- Posting the MSG80 comment to Jira, the Issue Panel, recomputing suggestions (API-06, tracker KAN-22) and recording the reporter answer (KAN-131).
+- Queueing, running, retrying and storing the suggestion job, posting the MSG80 comment, the Issue Panel, recomputing suggestions (API-06) and recording the reporter answer: the tracker (KAN-22, KAN-131).
 - Tuning `SUGGESTION_MIN_SIMILARITY` on the KAN-49 data: a later round; until then the default 0.7 stands.
 - Wiki retrieval itself (the wiki module) and a retry limit other than JobRunr's default (`worker`, KAN-162).
-- Generating a suggestion for an issue recorded before this change (no `issue_summary`), or regenerating one.
-- Queueing the job with several Workspaces active: until discovery/platform binds a Jira App request to its Workspace, only `enqueueWorkspaceId()` (one active Workspace) works; otherwise AC-005.2 applies (user, 07/11).
+- Generating a suggestion for an issue recorded before the issue text was stored (blank summary), or regenerating one.
 - The users, roles and `project_membership` tables and the method security that back PROJECT_MANAGER (KAN-117).
 - The Jira issue summary and a Project display name: no table stores them.
 - The old SRS class, reason, Sensitive, route-to-handler and correction controls, removed by the current AI Suggestion decision on 29/10 and the KAN-149 update on 01/11.
@@ -127,7 +125,7 @@ Both endpoints use same-origin relative paths with no Workspace query or header.
 In-process (STORY-005), in `vn.tsolve.triage`:
 
 ```java
-// worker job: a TenantJobHandler whose handlerType() is "triage-suggestion"; recordId = new UUID(0, suggestionId)
+// implements the tracker's port vn.tsolve.tracker.service.SuggestionSearch (service/impl/SuggestionGenerator), the only bean
 // port in service/, implemented later by the wiki module; stand-in service/impl/NoWikiSources returns List.of()
 public interface WikiSourceRetrieval {
     /** Company-wide Wiki documents nearest to queryVector (cosine, 0..1, same scale as tickets), most similar first. */
@@ -141,10 +139,9 @@ Configuration: `tsolve.triage.min-similarity` from `SUGGESTION_MIN_SIMILARITY`, 
 
 ### Required from other modules
 - fe-foundation: route/role guard, session managed Projects, URL state, UI kit, message catalog, generated transport and MSW registration.
-- tracker: one `suggestion_result` row per Jira issue with `issue_summary` and `issue_description`, and `IssueRecordedEvent` after a new row (tracker AC-003.1, AC-003.9); later the posted comment and the reporter answer (KAN-131).
+- tracker: the port `SuggestionSearch` with `IssueSuggestion` and `SuggestionSource`, called by its suggestion job with the result's Project `public_id`, summary and description; the job stores the answer, retries on an exception and posts the comment (tracker STORY-011, STORY-012).
 - search: `SolutionRetrieval.nearestInProjectDepartment` (search STORY-011).
 - ai: `EmbeddingClient` (bge-m3), `LlmClient` and `AiUnavailableException`.
-- worker: `TenantJobService`, `TenantJobHandler` and the bound Workspace (`WorkerTenantService`).
 - wiki: `WikiSourceRetrieval`; until the wiki module implements it, `NoWikiSources` answers none (AC-005.12).
 - identity: the signed-in user and the PROJECT_MANAGER role (KAN-117), and the Projects the user manages in `project_membership`, through the triage port `ManagedProjects`. Until identity implements it, the stand-in `NoManagedProjects` answers no Project, so the list is empty and every detail is 404/MSG04.
 - wiki: the triage port `WikiDocumentAccess`, answering for the caller whether a Wiki document id is available; until the wiki module implements it, `NoWikiDocumentAccess` answers none (AC-004.3).
@@ -155,6 +152,6 @@ Configuration: `tsolve.triage.min-similarity` from `SUGGESTION_MIN_SIMILARITY`, 
 - [ ] Every acceptance criterion has a behavior test whose name starts with its id; `sdd.ts trace triage` passes.
 - [ ] All required frontend checks and deterministic API generation pass, and the backend `mvn verify` passes.
 - [ ] The frontend calls the real backend endpoints; the MSW handler matches the backend contract.
-- [ ] STORY-005 is tested with fake models and retrieval, plus one Testcontainers test of the conditional update.
+- [ ] STORY-005 is tested with fake models and retrieval.
 - [ ] A browser check at 1366 × 768 covers filters, a suggestion detail and a no-suggestion detail.
 - [ ] The feature, changed files, checks and proposed Jira commit message are reported before the feature commit.

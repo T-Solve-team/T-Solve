@@ -43,3 +43,8 @@ KAN-117 is on `main`. Master design "Backend history API" and rows 19–24 apply
 
 Task 4 (KAN-47) adds the `triage-suggestion` worker job of STORY-005. It needs search Task 20 and tracker
 Task 14 on the same branch. Master design "AI Solution Suggestion job — 2026-11-07" and rows 25–38 apply.
+
+## Change 2026-11-08 — triage implements `SuggestionSearch`
+
+Task 4 is re-planned: `main` already runs the suggestion job (KAN-22), so triage implements the tracker's port
+`SuggestionSearch` and deletes its stand-in. Master design "AI Solution Suggestion — 2026-11-08" applies.

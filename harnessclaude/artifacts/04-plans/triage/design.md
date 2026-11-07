@@ -305,3 +305,59 @@ Touches a shared contract (Jira App payload), a migration and a multi-tenant bac
 - Tenancy: the job runs only through `TenantJobRequestHandler.runInTenant`; the enqueue copies the reviewed
   `ReviewNotificationEnqueuer` binding (row 33).
 - Content at rest: the issue text now lives in the tenant database, like ticket content already does; never logged.
+
+## AI Solution Suggestion — 2026-11-08 (supersedes the job design above)
+
+Spec change of 08/11: `main` already runs the suggestion job (tracker STORY-011, KAN-22 #160) and declares the port
+`SuggestionSearch` for KAN-47 with a stand-in. Triage now only implements that port. From the 07/11 section, the
+Flow, the rows "Issue text for the job", "Description format", "Trigger", "Runner", "Job record id", "AI failure" and
+"Write", the job-handler and enqueue items of "Decided in planning" and the File Structure no longer apply.
+
+### Flow
+
+```text
+tracker SuggestionJobServiceImpl.run(suggestionId)        worker job, or in-process (tracker AC-011.9)
+  -> SuggestionSearch.suggest(projectId, summary, description)   projectId = project.public_id
+       triage SuggestionGenerator (@Service, the only bean; StubSuggestionSearch deleted)   AC-005.14
+         blank summary -> Optional.empty(), no model call                       AC-005.13
+         1 EmbeddingClient.embed([issueText])                                   AC-005.3
+         2 SolutionRetrieval.nearestInProjectDepartment(projectId, v, min, 5)
+           WikiSourceRetrieval.nearest(v, min, 5)  merge, similarity desc, keep 5   AC-005.4, AC-005.12
+         3 none kept -> Optional.empty()                                        AC-005.7
+         4 LlmClient.chat([system, user], null); blank -> IllegalStateException AC-005.5, AC-005.8
+         5 return IssueSuggestion(sources, text)                                AC-005.6
+  <- tracker stores it (fillSuggestion, IS NULL guard), posts MSG80; an exception fails the job -> retry
+```
+
+### Key Decisions
+
+| Decision | Choice | Alternatives | Rationale |
+|----------|--------|--------------|-----------|
+| Owner of the port | Triage implements tracker's `SuggestionSearch` | Search implements it; triage keeps its own job | User, 08/11: STORY-005 and its approved criteria already live in triage; the tracker job already queues, retries, stores and posts |
+| Stand-in | Delete `StubSuggestionSearch`, its test, `tsolve.stub.suggestion` and `TSOLVE_STUB_SUGGESTION` | Keep it behind a flag; `@Primary` | User, 08/11; its own Javadoc says to delete it with KAN-47; two beans would stop the app starting |
+| Failure | Let `AiUnavailableException` pass; a blank answer throws `IllegalStateException("Blank suggested solution")` | Catch and return empty | The tracker job turns any exception into a retry and logs only key + type (tracker AC-011.6); neither message holds text |
+
+Kept from 07/11: Sources, Threshold (`TriageProperties`), Ticket privacy, issue text 8000 cap, prompt language, merge
+order on ties (tickets first), plain text by prompt only, Wiki `content` capped at 2000 characters.
+
+Decided in planning: triage logs nothing in `SuggestionGenerator` (the tracker logs key + error type); each retrieval
+asks for 5 so the merged top 5 is exact.
+
+### File Structure
+
+```text
+backend/src/main/java/vn/tsolve/
+  common/config/TriageProperties.java                  min-similarity (0..1, default 0.7; AGENTS §1)
+  triage/service/WikiSourceRetrieval.java, triage/dto/WikiSource.java
+  triage/service/impl/NoWikiSources.java
+  triage/service/impl/SuggestionGenerator.java         implements tracker.service.SuggestionSearch
+  tracker/service/impl/StubSuggestionSearch.java       deleted (+ its test)
+backend/src/main/resources/application.yml             + tsolve.triage.min-similarity; - tsolve.stub.suggestion
+.env.example                                           + SUGGESTION_MIN_SIMILARITY; - TSOLVE_STUB_SUGGESTION
+```
+
+### Edge Cases & Risks (changes)
+
+Rows 25, 28–31, 34–36 stand, with "job throws" read as "`suggest` throws, the tracker job retries". Row 26 (double
+delivery) and row 32/33 (enqueue, Workspace binding) are the tracker's (AC-011.6, 011.7, 011.9). Row 27 is AC-005.13.
+Row 37 and 38 no longer apply (main reads ADF; no BIGINT record id).

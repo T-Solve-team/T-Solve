@@ -7,6 +7,8 @@ complexity: medium
 paths:
   - backend/src/main/java/vn/tsolve/triage/**
   - backend/src/test/java/vn/tsolve/triage/**
+  - backend/src/main/java/vn/tsolve/common/config/TriageProperties.java
+  - backend/src/test/java/vn/tsolve/common/config/TriagePropertiesTest.java
   - frontend/src/features/triage/**
   - backend/src/main/resources/db/changelog/**
   - frontend/openapi/**

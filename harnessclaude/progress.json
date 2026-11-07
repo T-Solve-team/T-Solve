@@ -205,15 +205,15 @@
         "suggestion-history": "passing",
         "suggestion-history-contract": "passing",
         "suggestion-history-api": "passing",
-        "suggestion-generation": "pending"
+        "suggestion-generation": "evaluating"
       },
-      "lastUpdated": "2026-11-07T14:05:32.095Z",
+      "lastUpdated": "2026-11-07T19:52:03.061Z",
       "branch": "feat/triage",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "6cefdf9443d81628a7819c855a363f111cc44cf7"
+        "default": "e60a93be81691a2e3eabb0f4f47eca274fd01b87"
       }
     },
     "chatbot": {

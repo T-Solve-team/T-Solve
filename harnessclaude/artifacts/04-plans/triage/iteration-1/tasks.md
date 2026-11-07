@@ -95,32 +95,28 @@ commit after user agreement.
 
 **Story:** STORY-005
 **Feature:** suggestion-generation
-**Jira:** KAN-47 · branch `feat/KAN-47-triage-ai-suggestion` from an up-to-date `main` (also carries search Task 20 and tracker Task 14, one commit each)
-**Description:** Master design "AI Solution Suggestion job — 2026-11-07". Test-first, each test named with its AC id:
-- `TriageProperties` (`tsolve.triage.min-similarity`, default 0.7, 0..1 validated) and its `application.yml` line.
-- `SuggestionResultRecord` reads `issue_summary`, `issue_description` (still `@Immutable`).
+**Jira:** KAN-47 · branch `feat/KAN-47-triage-ai-suggestion` (after search Task 20)
+**Description:** Master design "AI Solution Suggestion — 2026-11-08". Re-planned 08/11: triage implements the
+tracker's `SuggestionSearch` instead of its own job. Test-first, each test named with its AC id:
+- `TriageProperties` (`tsolve.triage.min-similarity` ← `SUGGESTION_MIN_SIMILARITY`, default 0.7, 0..1 validated),
+  its `application.yml` line and `.env.example` entry.
 - `WikiSourceRetrieval` + `WikiSource` + stand-in `NoWikiSources`.
-- `SuggestionJobEnqueuer`: `@EventListener` on `IssueRecordedEvent`; `ObjectProvider<TenantJobService>`; Workspace
-  binding as in `ReviewNotificationEnqueuer`; catches every `RuntimeException` (WARN id + type).
-- `SuggestionJobHandler` ("triage-suggestion", `@ConditionalOnProperty tsolve.worker.enabled`): decodes the UUID,
-  calls `SuggestionGenerator`, logs and rethrows failures.
-- `SuggestionGenerator`: guards, embed (summary + blank line + description, cap 8000), retrieve both, merge to 5,
-  prompt (tickets as "Solution N" sections, Wiki by title, answer in the issue's language, name only Wiki titles),
-  chat, blank → fail, write.
-- `SuggestionWriteRepository`: the conditional native UPDATE.
-Cover edge cases 25–27, 29–36, 38.
+- `SuggestionGenerator implements SuggestionSearch`: blank summary → empty; embed (summary + blank line +
+  description, cap 8000); retrieve both at the threshold, 5 each; merge to 5 (similarity desc, tickets first on ties);
+  none → empty; prompt (tickets as "Solution N" with five sections, Wiki by title + content ≤ 2000, plain text, the
+  issue's language, name only Wiki titles); chat; blank → `IllegalStateException`; return `IssueSuggestion`.
+- Delete `tracker/service/impl/StubSuggestionSearch.java`, its test, `tsolve.stub.suggestion` and `TSOLVE_STUB_SUGGESTION`.
+Cover edge cases 25, 27, 29–31, 34–36.
 **Files:**
-- Create: `backend/src/main/java/vn/tsolve/triage/config/TriageProperties.java`
+- Create: `backend/src/main/java/vn/tsolve/common/config/TriageProperties.java` (AGENTS §1: properties records live in `common/config`)
 - Create: `backend/src/main/java/vn/tsolve/triage/service/WikiSourceRetrieval.java`, `…/triage/dto/WikiSource.java`
-- Create: `backend/src/main/java/vn/tsolve/triage/service/impl/NoWikiSources.java`, `SuggestionGenerator.java`,
-  `SuggestionJobEnqueuer.java`, `SuggestionJobHandler.java`
-- Create: `backend/src/main/java/vn/tsolve/triage/repository/SuggestionWriteRepository.java`
-- Modify: `backend/src/main/java/vn/tsolve/triage/entity/SuggestionResultRecord.java`, `backend/src/main/resources/application.yml`
+- Create: `backend/src/main/java/vn/tsolve/triage/service/impl/NoWikiSources.java`, `SuggestionGenerator.java`
+- Delete: `backend/src/main/java/vn/tsolve/tracker/service/impl/StubSuggestionSearch.java`,
+  `backend/src/test/java/vn/tsolve/tracker/service/impl/StubSuggestionSearchTest.java`
+- Modify: `backend/src/main/resources/application.yml`, `.env.example`
 - Test: `backend/src/test/java/vn/tsolve/triage/service/impl/SuggestionGeneratorTest.java` (fake `EmbeddingClient`,
-  `LlmClient`, `SolutionRetrieval`, `WikiSourceRetrieval`: AC-005.3–005.8, 005.10, 005.12),
-  `SuggestionJobEnqueuerTest.java` (AC-005.1, 005.2), `SuggestionJobHandlerTest.java` (AC-005.8, row 38),
-  `…/triage/config/TriagePropertiesTest.java` (AC-005.11),
-  `…/triage/repository/SuggestionWriteRepositoryIT.java` (Testcontainers: AC-005.5, 005.9, 005.10 race)
-**Dependencies:** search Task 20 (`nearestInProjectDepartment`), tracker Task 14 (columns + `IssueRecordedEvent`); worker (done); ai (done).
-**Estimated size:** medium
+  `LlmClient`, `SolutionRetrieval`, `WikiSourceRetrieval`: AC-005.3–005.8, 005.12, 005.13),
+  `…/common/config/TriagePropertiesTest.java` (AC-005.11); AC-005.14 by a classpath scan in `SuggestionGeneratorTest`
+**Dependencies:** search Task 20 (`nearestInProjectDepartment`, `UUID` Project id); tracker suggestion job (on main); ai (done).
+**Estimated size:** small
 **Verification:** `bun harnessclaude/hooks/sdd.ts trace triage`; in `backend/`, `mvn verify`. Report files, results and the proposed commit before committing.
