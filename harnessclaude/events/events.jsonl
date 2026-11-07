@@ -760,3 +760,7 @@
 {"ts":"2026-11-07T05:02:02.541Z","type":"feature-status","module":"worker","feature":"tenant-jobs","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T05:02:02.605Z","type":"feature-status","module":"worker","feature":"tenant-jobs","from":"evaluating","to":"passing"}
 {"ts":"2026-11-07T05:14:30.770Z","type":"spec-approved","module":"worker","specHash":"7e0c5e3f9cbd6c1066fb73b11e67bfd2703687a2e54764b0918fe34c795cb4bc"}
+{"ts":"2026-11-07T05:03:16.984Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":null,"to":"pending"}
+{"ts":"2026-11-07T05:03:17.214Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T05:03:17.444Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T05:03:17.681Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"evaluating","to":"passing"}

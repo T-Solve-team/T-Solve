@@ -35,7 +35,7 @@ Maven. One deployable: a modular monolith.
 
 | Command | What it does |
 |---|---|
-| `mvn spring-boot:run` | Runs the app. Needs `../.env` and the database (`docker compose up -d db` in the repo root). Health: `/actuator/health`. |
+| `mvn spring-boot:run` | Runs the app. Needs `../.env` (with `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`; the password is required) and the database and Redis (`docker compose up -d db redis` in the repo root). Health: `/actuator/health`. |
 | `mvn verify` | Tests + Spotless format check. Must pass before a PR. |
 | `mvn spotless:apply` | Formats the files changed since `origin/main`. |
 | `mvn test -Dtest=SolutionServiceImplTest` | Runs one test class. |
