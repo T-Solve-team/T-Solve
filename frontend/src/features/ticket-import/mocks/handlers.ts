@@ -1,26 +1,56 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import type {
+  ImportDraftSummary,
   ImportPreviewResponse,
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
   ImportResultResponse,
+  JiraPullRequest,
   RemoveRowsRequest,
 } from '@/shared/api';
 import { getDownloadCsvTemplateMockHandler } from '@/shared/api/generated/import/import.msw';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
-import { CSV_TEMPLATE, previewResponse, rowPage, seedImport, type MockPreview } from './data';
+import {
+  CSV_TEMPLATE,
+  previewResponse,
+  rowPage,
+  seedImport,
+  seedJiraImport,
+  type MockPreview,
+} from './data';
+
+const ITSUP_ID = '00000000-0000-4000-8000-000000000101';
+const ITNET_ID = '00000000-0000-4000-8000-000000000102';
+
+/** The PM's Drafts (AC-004.2): kept by a new upload or pull (AC-004.6). */
+function seedDrafts(): MockPreview[] {
+  return [
+    {
+      ...seedJiraImport(900, ITSUP_ID, '2026-10-01', '2026-10-15'),
+      draftSavedAt: '2026-10-16T02:30:00Z',
+    },
+  ];
+}
 
 /** The PM's unconfirmed preview of the mock backend. An upload replaces it, like the real one (spec D9). */
 let preview: MockPreview = seedImport();
 /** A confirmed preview is gone: every later read answers 404 (AC-004.12). */
 let isConfirmed = false;
 let lastBatchId = 0;
+let drafts: MockPreview[] = seedDrafts();
 
 /** Back to the starting preview — called after every test (src/test/setup.ts). */
 export function resetMockData(): void {
   preview = seedImport();
   isConfirmed = false;
   lastBatchId = 0;
+  drafts = seedDrafts();
+}
+
+/** The open preview or one of the Drafts, for the read endpoints (a reopened Draft, AC-004.3). */
+function findPreview(previewId: string | readonly string[] | undefined): MockPreview | undefined {
+  if (isCurrent(previewId)) return preview;
+  return drafts.find((draft) => String(draft.previewId) === previewId);
 }
 
 /** Another user's, a confirmed or a deleted preview: 404 with MSG04, like the backend (AC-007.2). */
@@ -55,26 +85,66 @@ export const handlers: HttpHandler[] = [
     return HttpResponse.json<ImportPreviewResponse>(previewResponse(preview));
   }),
 
+  // ITNET has no issue left without a Ticket: MSG04. Jira failures (MSG50) are set per test.
+  http.post('*/api/v1/imports/jira', async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    const body = (await request.json()) as JiraPullRequest;
+    if (!body.resolvedFrom || !body.resolvedTo) {
+      return problem(400, 'MSG01', { params: { field_name: 'Resolved from' } });
+    }
+    if (body.projectId === ITNET_ID) return problem(404, 'MSG04');
+    preview = seedJiraImport(
+      preview.previewId + 1,
+      body.projectId,
+      body.resolvedFrom,
+      body.resolvedTo,
+    );
+    isConfirmed = false;
+    return HttpResponse.json<ImportPreviewResponse>(previewResponse(preview));
+  }),
+
+  http.get('*/api/v1/imports/drafts', async () => {
+    await delay(MOCK_DELAY_MS);
+    return HttpResponse.json<ImportDraftSummary[]>(
+      drafts.map((draft) => ({
+        previewId: draft.previewId,
+        source: draft.source ?? 'CSV',
+        projectId: draft.projectId,
+        rowCount: draft.rows.filter((row) => row.status !== 'REMOVED').length,
+        savedAt: draft.draftSavedAt ?? '',
+      })),
+    );
+  }),
+
+  http.delete('*/api/v1/imports/drafts/:previewId', async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    if (!drafts.some((draft) => String(draft.previewId) === params.previewId)) {
+      return problem(404, 'MSG04');
+    }
+    drafts = drafts.filter((draft) => String(draft.previewId) !== params.previewId);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.get('*/api/v1/imports/previews/:previewId', async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    if (!isCurrent(params.previewId)) return problem(404, 'MSG04');
-    return HttpResponse.json<ImportPreviewResponse>(previewResponse(preview));
+    const found = findPreview(params.previewId);
+    if (!found) return problem(404, 'MSG04');
+    return HttpResponse.json<ImportPreviewResponse>(previewResponse(found));
   }),
 
   http.get('*/api/v1/imports/previews/:previewId/rows', async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
-    if (!isCurrent(params.previewId)) return problem(404, 'MSG04');
+    const found = findPreview(params.previewId);
+    if (!found) return problem(404, 'MSG04');
     const url = new URL(request.url);
     const page = Number(url.searchParams.get('page')) || 0;
     const size = Number(url.searchParams.get('size')) || undefined;
-    return HttpResponse.json<ImportPreviewRowPage>(rowPage(preview.rows, page, size));
+    return HttpResponse.json<ImportPreviewRowPage>(rowPage(found.rows, page, size));
   }),
 
   http.get('*/api/v1/imports/previews/:previewId/rows/:rowNo', async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    const row = isCurrent(params.previewId)
-      ? preview.rows.find((r) => String(r.rowNo) === params.rowNo)
-      : undefined;
+    const row = findPreview(params.previewId)?.rows.find((r) => String(r.rowNo) === params.rowNo);
     if (!row) return problem(404, 'MSG04');
     return HttpResponse.json<ImportPreviewRowResponse>(row);
   }),
