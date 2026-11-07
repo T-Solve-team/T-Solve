@@ -659,6 +659,21 @@
 {"ts":"2026-11-05T11:28:03.757Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-05T11:28:04.199Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":"evaluating","to":"passing"}
 {"ts":"2026-11-05T11:28:41.466Z","type":"quick-closed","what":"Test values for OLLAMA_BASE_URL and OLLAMA_CHAT_MODEL so existing Spring contexts start (KAN-139)","files":["backend/src/test/resources/config/application.yml"]}
+{"ts":"2026-11-05T12:04:02.990Z","type":"feature-status","module":"ai","feature":"solution-draft","from":"pending","to":"in-progress"}
+{"ts":"2026-11-05T12:30:39.959Z","type":"feature-status","module":"ai","feature":"solution-draft","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-05T12:30:40.497Z","type":"feature-status","module":"ai","feature":"solution-draft","from":"evaluating","to":"passing"}
+{"ts":"2026-11-05T12:46:42.932Z","type":"feature-status","module":"ai","feature":"solution-rewrite","from":"pending","to":"in-progress"}
+{"ts":"2026-11-05T13:14:57.110Z","type":"feature-status","module":"ai","feature":"solution-rewrite","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-05T13:14:57.300Z","type":"feature-status","module":"ai","feature":"solution-rewrite","from":"evaluating","to":"passing"}
+{"ts":"2026-11-05T13:14:57.506Z","type":"module-status","module":"ai","from":"implementing","to":"evaluating"}
+{"ts":"2026-11-05T13:15:03.084Z","type":"module-status","module":"ai","from":"evaluating","to":"completed"}
 {"ts":"2026-11-05T14:10:40.463Z","type":"commit-recorded","module":"triage","repo":"default","sha":"6cefdf9443d81628a7819c855a363f111cc44cf7"}
+{"ts":"2026-11-06T11:57:13.990Z","type":"spec-approved","module":"ai","specHash":"bd7dbb0f81b7f436d9d60afbc40dd6e6965ab5d189ac8a91dfce8548af0ea181"}
+{"ts":"2026-11-06T12:00:28.658Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":null,"to":"pending"}
+{"ts":"2026-11-06T12:00:29.026Z","type":"module-status","module":"ai","from":"completed","to":"planned"}
+{"ts":"2026-11-06T12:00:29.421Z","type":"module-status","module":"ai","from":"planned","to":"implementing"}
+{"ts":"2026-11-06T12:00:29.808Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T12:13:56.230Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T12:13:56.735Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":"evaluating","to":"passing"}
 {"ts":"2026-11-07T03:58:20.506Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-upload","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T04:10:50.890Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"f6bb9fa233b63b1951d028f25702969fbb1dcd20"}

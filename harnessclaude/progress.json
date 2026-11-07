@@ -286,10 +286,11 @@
       "currentPhase": "implement",
       "features": {
         "ollama-clients": "passing",
-        "solution-draft": "pending",
-        "solution-rewrite": "pending"
+        "solution-draft": "passing",
+        "solution-rewrite": "passing",
+        "solution-review-fixes": "passing"
       },
-      "lastUpdated": "2026-11-05T11:28:04.196Z",
+      "lastUpdated": "2026-11-06T12:13:56.733Z",
       "branch": "feat/ai",
       "repos": [
         "default"
