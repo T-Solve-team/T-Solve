@@ -134,7 +134,7 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Story:** STORY-012
 **Feature:** review-queue-events-api
 **Description:** Implement AC-012.1–012.4. A tenant Liquibase changeset adds `notify_review_queue()` and the trigger that NOTIFYs channel `review_queue` with the Project UUID on entry to or exit from Pending review. `GET /api/v1/review-queue/events` (Project Manager) resolves managed Projects through `ReviewWorkspaceAccess` and registers an `SseEmitter` with `ReviewQueueEventService`, which LISTENs per Workspace, filters by managed Project, de-duplicates nothing itself, and sends `:hb` heartbeats. OpenAPI entry first.
-**Files:** `frontend/openapi/tsolve-api.yaml`, `backend/src/main/resources/db/changelog/changes/018-review-queue-notify.sql` + master changelog, `review/controller/ReviewQueueEventController.java`, `review/service/ReviewQueueEventService.java`, `review/service/impl/ReviewQueueEventServiceImpl.java`, tests `review/ReviewQueueEventsIT.java`.
+**Files:** `frontend/openapi/tsolve-api.yaml`, `backend/src/main/resources/db/changelog/changes/019-review-queue-notify.sql` + master changelog, `review/controller/ReviewQueueEventController.java`, `review/service/ReviewQueueEventService.java`, `review/service/impl/ReviewQueueEventServiceImpl.java`, tests `review/ReviewQueueEventsIT.java`.
 **Dependencies:** KAN-24 queue and decisions (PR #137), queue entry trigger (Task 8).
 **Verification:** PostgreSQL IT: submit and decide in Workspace ACME → event within 5 s only on the managing stream; nothing for BETA or an unmanaged Project; rollback sends nothing; batch sends one event; 401/403; heartbeat. `mvn verify`.
 
