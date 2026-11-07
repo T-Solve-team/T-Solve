@@ -273,7 +273,7 @@ describe('Review Queue decision recovery', () => {
       release?.();
     }
   });
-  it('AC-001.6 / AC-005.5 marks bulk confirmation busy until refreshed eligibility is accepted (BUG-100)', async () => {
+  it('AC-001.6 / AC-005.5 marks bulk confirmation busy until refreshed eligibility is accepted (BUG-100, BUG-113)', async () => {
     let holdIds = false;
     let release: (() => void) | undefined;
     let started: (() => void) | undefined;
@@ -317,7 +317,7 @@ describe('Review Queue decision recovery', () => {
         refresh = queryClient.refetchQueries({ queryKey: getGetReviewQueueTicketIdsQueryKey() });
         await idsStarted;
       });
-      expect(ok).toHaveClass('ant-btn-loading');
+      await waitFor(() => expect(ok).toHaveClass('ant-btn-loading'));
       fireEvent.click(ok);
       expect(calls).toBe(0);
       expect(screen.getByText('2 selected')).toBeInTheDocument();

@@ -11,6 +11,7 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 /** A resolved issue with its Solution (GBR-33). projectId points at the workspace module's Project. */
 @Entity
@@ -27,7 +28,7 @@ public class Ticket {
     private String ticketId;
 
     @Column(name = "project_id", nullable = false)
-    private Long projectId;
+    private UUID projectId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, updatable = false)
@@ -74,7 +75,7 @@ public class Ticket {
     /** An imported ticket: brought in by its Project Manager, so it is Published at once (GBR-23). */
     public static Ticket imported(
             String ticketId,
-            Long projectId,
+            UUID projectId,
             TicketSource source,
             Long importBatchId,
             String title,
@@ -112,7 +113,7 @@ public class Ticket {
         return ticketId;
     }
 
-    public Long getProjectId() {
+    public UUID getProjectId() {
         return projectId;
     }
 

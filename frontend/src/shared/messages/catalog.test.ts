@@ -137,15 +137,23 @@ describe('message catalog', () => {
     });
   });
 
+  it('AC-006.9 holds MSG_NEW_3, a duplicate Ticket ID inside one CSV file, until System_Messages numbers it', () => {
+    expect(MESSAGES.MSG_NEW_3).toEqual({
+      type: 'inline',
+      text: 'Ticket ID {ticket_id} appears more than once in this file.',
+    });
+  });
+
   it('AC-006.3 holds MSG142 and MSG143, the empty-state messages of the identity profile, as inline', () => {
     expect(entry('MSG142')).toEqual({ type: 'inline', text: 'No Spaces found' });
     expect(entry('MSG143')).toEqual({ type: 'inline', text: 'Not a member of any Project.' });
   });
 
-  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2, MSG142 and MSG143', () => {
+  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2, MSG_NEW_3, MSG142 and MSG143', () => {
     const expected: string[] = [
       ...webMessages.map(([code]) => code),
       'MSG_NEW_2',
+      'MSG_NEW_3',
       ...NOT_IN_REPORT3,
     ];
     expect(Object.keys(MESSAGES).sort()).toEqual(expected.sort());

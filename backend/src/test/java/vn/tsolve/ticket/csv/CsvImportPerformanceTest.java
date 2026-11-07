@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import vn.tsolve.ticket.entity.ImportType;
 
 /** NFR 1: a 10 MB file of about 5,000 rows is checked well inside the 60 s preview budget (edge case 27). */
 class CsvImportPerformanceTest {
@@ -56,9 +57,9 @@ class CsvImportPerformanceTest {
         assertThat(file.length).isBetween(9_000_000, 10 * 1024 * 1024);
 
         long start = System.nanoTime();
-        ParsedCsv csv = new CsvTicketParser().parse(new ByteArrayInputStream(file));
+        ParsedCsv csv = new CsvTicketParser().parse(new ByteArrayInputStream(file), ImportType.WITH_SOLUTION);
         List<CsvRowValidator.Result> results =
-                new CsvRowValidator(Clock.systemUTC()).validate(csv.rows(), Set.of("PERF-7"));
+                new CsvRowValidator(Clock.systemUTC()).validate(csv.rows(), Set.of("PERF-7"), ImportType.WITH_SOLUTION);
         Duration took = Duration.ofNanos(System.nanoTime() - start);
 
         assertThat(results).hasSize(ROWS);

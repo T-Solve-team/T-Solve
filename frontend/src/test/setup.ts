@@ -39,6 +39,36 @@ if (!window.ResizeObserver) {
   };
 }
 
+// BUG-116: Node 24's fetch (undici 7) builds and parses forms with the global File, which jsdom replaces, so an
+// upload is rejected (UND_ERR_REQ_CONTENT_LENGTH_MISMATCH → MSG06) and request.formData() throws. Node 22 only loses
+// the file name. Tests use Node's File and FormData, like the fetch they call. An empty urlencoded body gives a
+// FormData of Node's: no Node module exports that class.
+globalThis.File = (await vi.importActual<{ File: typeof File }>('node:buffer')).File;
+globalThis.FormData = (
+  await new Response('', {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  }).formData()
+).constructor as typeof FormData;
+
+// BUG-112: antd leaves timers running after a component unmounts (Upload's list item waits 300 ms, rc-util's
+// useDelayState has no cleanup). One that fires after jsdom is torn down sets React state, and React's "window is not
+// defined" fails the whole run although every test passed. So the last afterAll below cancels what a file left.
+const nativeSetTimeout = globalThis.setTimeout;
+const nativeClearTimeout = globalThis.clearTimeout;
+const runningTimers = new Set<ReturnType<typeof setTimeout>>();
+globalThis.setTimeout = ((
+  callback: (...args: unknown[]) => void,
+  delay?: number,
+  ...args: unknown[]
+) => {
+  const timer = nativeSetTimeout(() => {
+    runningTimers.delete(timer);
+    callback(...args);
+  }, delay);
+  runningTimers.add(timer);
+  return timer;
+}) as typeof setTimeout;
+
 const FETCH_ID = 'x-test-fetch-id';
 
 /**
@@ -118,6 +148,7 @@ afterEach(() => {
 });
 afterAll(() => {
   app?.server.close();
+  runningTimers.forEach((timer) => nativeClearTimeout(timer));
 });
 
 beforeEach(() => {

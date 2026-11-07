@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 
 /** One import (UC-21): recorded once, Completed or Failed, never updated or deleted. */
 @Entity
@@ -20,7 +21,7 @@ public class ImportBatch {
     private Long id;
 
     @Column(name = "project_id", nullable = false, updatable = false)
-    private Long projectId;
+    private UUID projectId;
 
     @Column(name = "performed_by", nullable = false, updatable = false)
     private String performedBy;
@@ -54,7 +55,7 @@ public class ImportBatch {
     protected ImportBatch() {}
 
     private ImportBatch(
-            Long projectId,
+            UUID projectId,
             String performedBy,
             TicketSource source,
             String fileName,
@@ -75,7 +76,7 @@ public class ImportBatch {
     }
 
     public static ImportBatch completed(
-            Long projectId,
+            UUID projectId,
             String performedBy,
             TicketSource source,
             String fileName,
@@ -95,7 +96,7 @@ public class ImportBatch {
     }
 
     public static ImportBatch failed(
-            Long projectId,
+            UUID projectId,
             String performedBy,
             TicketSource source,
             String fileName,
@@ -110,7 +111,7 @@ public class ImportBatch {
         return id;
     }
 
-    public Long getProjectId() {
+    public UUID getProjectId() {
         return projectId;
     }
 

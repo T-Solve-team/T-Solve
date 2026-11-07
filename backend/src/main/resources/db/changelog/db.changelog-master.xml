@@ -15,5 +15,7 @@
     <include file="changes/007-identity-hand-off-code.sql" relativeToChangelogFile="true"/>
     <include file="changes/008-search-public-ids.sql" relativeToChangelogFile="true"/>
     <include file="changes/009-search-ticket-updated-at.sql" relativeToChangelogFile="true"/>
+    <include file="changes/010-ticket-import-project-uuid.sql" relativeToChangelogFile="true"/>
+    <include file="changes/011-ticket-import-type.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

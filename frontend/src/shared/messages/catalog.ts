@@ -17,6 +17,7 @@ type MessageDefinition = {
  * Left out: the Jira App's messages (tracker panel, tracker comment); the Retired codes (Context "Retired");
  * the Platform Console codes MSG125-MSG133 and MSG135-MSG140 (their own module); MSG20 and MSG70 (decision D2: a Solution is
  * never empty); MSG58 and MSG79 (decision D3: the Hand Over popup with MSG_NEW_2 replaces them).
+ * MSG_NEW_3 (import-ticket-list D14): MSG78, asked for by the CSV import, was given to another message in v3460.
  * Toast level: error when the action failed (MSG06, MSG33, MSG69), success otherwise.
  */
 export const MESSAGES = {
@@ -263,6 +264,11 @@ export const MESSAGES = {
   MSG_NEW_2: {
     type: 'inline',
     text: '{user_name} is responsible for the {responsibilities} below. Choose who takes over each one before {action}.',
+  },
+  /** Provisional key (import-ticket-list D14) until System_Messages numbers it: a Ticket ID twice in one CSV file. */
+  MSG_NEW_3: {
+    type: 'inline',
+    text: 'Ticket ID {ticket_id} appears more than once in this file.',
   },
 } as const satisfies Record<string, MessageDefinition>;
 

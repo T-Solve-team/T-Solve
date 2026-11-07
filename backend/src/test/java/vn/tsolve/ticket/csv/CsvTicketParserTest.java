@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
+import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.exception.CsvFileRejectedException;
 
 class CsvTicketParserTest {
@@ -17,7 +18,7 @@ class CsvTicketParserTest {
     private final CsvTicketParser parser = new CsvTicketParser();
 
     private ParsedCsv parse(String text) {
-        return parser.parse(new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)));
+        return parser.parse(new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)), ImportType.WITH_SOLUTION);
     }
 
     private static CsvFileRejectedException rejected(Runnable call) {
@@ -48,7 +49,8 @@ class CsvTicketParserTest {
     void rejectsNonUtf8File_AC_001_3() {
         byte[] windows1258 = (HEADER + "\nT-1,Lỗi đăng nhập,a,b,c,d\n").getBytes(Charset.forName("windows-1258"));
 
-        CsvFileRejectedException e = rejected(() -> parser.parse(new ByteArrayInputStream(windows1258)));
+        CsvFileRejectedException e =
+                rejected(() -> parser.parse(new ByteArrayInputStream(windows1258), ImportType.WITH_SOLUTION));
 
         assertThat(e.getCode()).isEqualTo("MSG27");
     }
@@ -69,6 +71,51 @@ class CsvTicketParserTest {
     void rejectsDuplicateHeaderName_AC_001_3() {
         assertThat(rejected(() -> parse(HEADER + ",Title\nT-1,a,b,c,d,e,f\n")).getCode())
                 .isEqualTo("MSG27");
+    }
+
+    private ParsedCsv parseWithoutSolutions(String text) {
+        return parser.parse(
+                new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)), ImportType.WITHOUT_SOLUTION);
+    }
+
+    @Test
+    void fileWithoutSolutionsNeedsOnlyTicketIdAndTitle_AC_012_3() {
+        ParsedCsv csv = parseWithoutSolutions("ticket_id,title\nT-1,Login fails\n");
+
+        assertThat(csv.rows()).hasSize(1);
+        assertThat(csv.rows().get(0).values().title()).isEqualTo("Login fails");
+    }
+
+    @Test
+    void fileWithoutSolutionsListsEveryMissingColumn_AC_012_3() {
+        CsvFileRejectedException e = rejected(() -> parseWithoutSolutions("description\nx\n"));
+
+        assertThat(e.getCode()).isEqualTo("MSG29");
+        assertThat(e.getParams()).isEqualTo(Map.of("column_names", "ticket_id, title"));
+    }
+
+    @Test
+    void fileWithoutSolutionsIgnoresSolutionColumns_AC_012_4() {
+        ParsedCsv csv = parseWithoutSolutions(
+                "ticket_id,title,description,author,resolved_date,symptoms,root_cause,resolution_steps,workaround,scope\n"
+                        + "T-1,Login fails,Long story,Anh,2026-10-01,a,b,c,d,e\n");
+
+        ImportPreviewRow.Values v = csv.rows().get(0).values();
+        assertThat(v.description()).isEqualTo("Long story");
+        assertThat(v.author()).isEqualTo("Anh");
+        assertThat(v.resolvedDate()).isEqualTo("2026-10-01");
+        assertThat(v.symptoms()).isNull();
+        assertThat(v.rootCause()).isNull();
+        assertThat(v.resolutionSteps()).isNull();
+        assertThat(v.workaround()).isNull();
+        assertThat(v.scope()).isNull();
+    }
+
+    @Test
+    void templateWithoutSolutionsUploadedAsWithSolutionsIsMsg29_AC_016_1() {
+        CsvFileRejectedException e = rejected(() -> parse("ticket_id,title\nT-1,Login fails\n"));
+
+        assertThat(e.getCode()).isEqualTo("MSG29");
     }
 
     @Test

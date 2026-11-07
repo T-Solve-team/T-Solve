@@ -63,9 +63,9 @@ public class ImportPreviewRow {
 
     protected ImportPreviewRow() {}
 
-    public ImportPreviewRow(Long previewId, int rowNo, Values values, List<RowError> errors) {
+    public ImportPreviewRow(Long previewId, int rowNo, Values values, List<RowError> errors, ImportType importType) {
         this.id = new Id(previewId, rowNo);
-        this.status = errors.isEmpty() ? PreviewRowStatus.VALID : PreviewRowStatus.ERROR;
+        this.status = initialStatus(errors, importType);
         this.ticketId = values.ticketId();
         this.title = values.title();
         this.description = values.description();
@@ -77,6 +77,13 @@ public class ImportPreviewRow {
         this.workaround = values.workaround();
         this.scope = values.scope();
         this.errors = List.copyOf(errors);
+    }
+
+    private static PreviewRowStatus initialStatus(List<RowError> errors, ImportType importType) {
+        if (!errors.isEmpty()) {
+            return PreviewRowStatus.ERROR;
+        }
+        return importType == ImportType.WITHOUT_SOLUTION ? PreviewRowStatus.NEEDS_SOLUTION : PreviewRowStatus.VALID;
     }
 
     /** The template columns of one row, as written in the file (null when the cell is missing). */
@@ -95,10 +102,6 @@ public class ImportPreviewRow {
     /** Removing applies to Valid and Error rows alike (AC-003.1). */
     public void remove() {
         status = PreviewRowStatus.REMOVED;
-    }
-
-    public boolean isValid() {
-        return status == PreviewRowStatus.VALID;
     }
 
     public Id getId() {
