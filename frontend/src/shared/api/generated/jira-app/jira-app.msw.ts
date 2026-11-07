@@ -6,8 +6,61 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
+import { faker } from '@faker-js/faker';
+
 import { HttpResponse, http } from 'msw';
 import type { RequestHandlerOptions } from 'msw';
+
+import type { JiraReviewFeedback, MessageRef } from '../model';
+
+export const getGetJiraReviewFeedbackResponseMessageRefMock = (
+  overrideResponse: Partial<MessageRef> = {},
+): MessageRef => ({
+  ...{
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getGetJiraReviewFeedbackResponseMock = (
+  overrideResponse: Partial<Extract<JiraReviewFeedback, object>> = {},
+): JiraReviewFeedback => ({
+  feedback: faker.helpers.arrayElement([
+    { ...getGetJiraReviewFeedbackResponseMessageRefMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetJiraReviewFeedbackMockHandler = (
+  overrideResponse?:
+    | JiraReviewFeedback
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<JiraReviewFeedback> | JiraReviewFeedback),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/jira-app/issues/:issueKey/review-feedback',
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetJiraReviewFeedbackResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 
 export const getReceiveIssueCreatedMockHandler = (
   overrideResponse?:
@@ -26,4 +79,7 @@ export const getReceiveIssueCreatedMockHandler = (
     options,
   );
 };
-export const getJiraAppMock = () => [getReceiveIssueCreatedMockHandler()];
+export const getJiraAppMock = () => [
+  getGetJiraReviewFeedbackMockHandler(),
+  getReceiveIssueCreatedMockHandler(),
+];

@@ -1,7 +1,9 @@
-# Dependabot opens weekly update PRs (DevOps design §2, guideline 11 §5).
-# Minor and patch updates come grouped in one PR per folder; majors come one by one, so the owner can
-# check them first. PR titles look like "chore(deps): bump …": no Jira key, which the PR-title check
-# allows for Dependabot.
+# Dependabot: security updates only (DevOps design §2, guideline 11 §5).
+# Versions are locked: `open-pull-requests-limit: 0` on every entry turns off routine version-update PRs,
+# while Dependabot security updates (a repo setting: Settings → Advanced Security) still open a PR when
+# a dependency has a known vulnerability. Do not add `ignore: "*"` — ignore rules also block security
+# updates. PR titles look like "chore(deps): bump …": no Jira key, which the PR-title check allows for
+# Dependabot.
 # Ecosystems are added when their files exist: docker for /backend with the backend Dockerfile (KAN-9).
 version: 2
 updates:
@@ -13,12 +15,10 @@ updates:
       day: monday
       time: "07:00"
       timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 0
     commit-message:
       prefix: chore
       include: scope
-    groups:
-      repo-tools:
-        update-types: [minor, patch]
 
   # ---- frontend: npm packages ----
   - package-ecosystem: npm
@@ -28,12 +28,10 @@ updates:
       day: monday
       time: "07:00"
       timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 0
     commit-message:
       prefix: chore
       include: scope
-    groups:
-      frontend-minor-and-patch:
-        update-types: [minor, patch]
     ignore:
       # TypeScript stays on ~6.0: typescript-eslint supports TS < 6.1 (FE decision log).
       - dependency-name: typescript
@@ -47,6 +45,7 @@ updates:
       day: monday
       time: "07:00"
       timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 0
     commit-message:
       prefix: chore
       include: scope
@@ -63,18 +62,16 @@ updates:
       day: monday
       time: "07:00"
       timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 0
     commit-message:
       prefix: chore
       include: scope
-    groups:
-      backend-minor-and-patch:
-        update-types: [minor, patch]
     ignore:
       # Moving to Spring Boot 4 is a team decision (backend baseline), not an automatic bump.
       - dependency-name: "org.springframework.boot:*"
         update-types: ["version-update:semver-major"]
 
-  # ---- GitHub Actions used by .github/workflows (pinned by commit SHA; Dependabot updates the SHA) ----
+  # ---- GitHub Actions used by .github/workflows (pinned by commit SHA) ----
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -82,9 +79,7 @@ updates:
       day: monday
       time: "07:00"
       timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 0
     commit-message:
       prefix: ci
       include: scope
-    groups:
-      actions:
-        update-types: [minor, patch]

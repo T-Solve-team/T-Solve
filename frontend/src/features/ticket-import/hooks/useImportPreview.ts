@@ -1,8 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetImportPreviewQueryKey,
+  getGetImportPreviewRowQueryKey,
   getGetImportPreviewRowsQueryKey,
   useConfirmImport,
+  useFillImportPreviewSolution,
   useGetImportPreviewRows,
   useRemoveImportPreviewRows,
 } from '@/shared/api';
@@ -24,6 +26,30 @@ export function useRemovePreviewRows(previewId: number) {
           queryClient.invalidateQueries({ queryKey: getGetImportPreviewQueryKey(previewId) }),
           // Without params the key is the prefix of every page's key.
           queryClient.invalidateQueries({ queryKey: getGetImportPreviewRowsQueryKey(previewId) }),
+        ]),
+    },
+  });
+}
+
+/**
+ * Fill solution (AC-015.2): refetches the Summary and every page of rows. The popup handles its own errors, so a
+ * rejected Solution stays in the form (AC-015.3).
+ */
+export function useFillPreviewSolution(previewId: number) {
+  const queryClient = useQueryClient();
+  return useFillImportPreviewSolution({
+    mutation: {
+      meta: { handlesOwnErrors: true },
+      onSuccess: (_, { data }) =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: getGetImportPreviewQueryKey(previewId) }),
+          queryClient.invalidateQueries({ queryKey: getGetImportPreviewRowsQueryKey(previewId) }),
+          // The popup reads one row: a saved row shows its Solution when opened again.
+          ...data.rowNumbers.map((rowNo) =>
+            queryClient.invalidateQueries({
+              queryKey: getGetImportPreviewRowQueryKey(previewId, rowNo),
+            }),
+          ),
         ]),
     },
   });

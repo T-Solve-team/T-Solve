@@ -796,7 +796,7 @@ in `identity/session` and `common/tenant/TenantContext`: identity is the code ow
 
 Dimensions analyzed: user types, input extremes, timing, state transitions, environment, error cascades,
 authorization, data integrity, integration, compliance. Skipped: scale (the volume is a few sign-ins per minute per
-company), business logic (no amounts). Rows 103–124; the rows of the older section that this section replaces are
+company), business logic (no amounts). Rows 103–130; the rows of the older section that this section replaces are
 listed in its banner. Every Critical or High row has its test task.
 
 | # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
@@ -823,6 +823,12 @@ listed in its banner. Every Critical or High row has its test task.
 | 122 | STORY-001 | Authorization | Login CSRF: a callback URL (state and code) of the attacker's own sign-in is opened in the victim's browser (replaces rows 45 and 100) | Critical | The victim's browser has no matching `__Host-TSOLVE_AUTHREQ`: MSG141, no session (AC-001.6, .53) | Task 23c |
 | 123 | STORY-001 | Integration | PR #119's `UserListSessionFilter` next to `WebSessionFilter` | High | One session model; the second filter is dropped from identity (Q15) | Task 26a |
 | 124 | STORY-001 | State transitions | Sign-in tried before the test sign-in of the runbook (redirect URI not yet applied) | Medium | Google refuses; the Workspace site shows the normal sign-in error; no data-model gate (AC-001.73 retired) | Task 28 (runbook) |
+| 125 | STORY-001 | Integration | The dev Workspaces resolve: `acme.localhost` and `beta.localhost` each resolve to their dev Workspace | Medium | Each host gives its fixed id, slug and Organization id | Task 23a |
+| 126 | STORY-001 | Input extremes | An unknown host or an unknown id is looked up in the dev Workspaces | Medium | Resolves to nothing (no Workspace, no error) | Task 23a |
+| 127 | STORY-001 | Data integrity | A DevAccount and its dev Workspace disagree on the domain | High | They agree: each DevAccount's email domain equals the Google domain of its Workspace | Task 23a |
+| 128 | STORY-001 | Environment | The app runs without the profile `dev` | High | `DevWorkspaceLookup` exists only with the profile `dev`; otherwise `NoWorkspaceLookup` answers nothing | Task 23a |
+| 129 | STORY-001 | Integration | Redis wiring: the app reaches Redis through `REDIS_HOST`, `REDIS_PORT` and `REDIS_PASSWORD`; a key is stored with a time to live | High | The app connects with those three settings; a key with a time to live expires | Task 23a |
+| 130 | STORY-001 | Error cascades | Redis health: the `redis` health indicator when Redis is up | Medium | The indicator is UP, so `/actuator/health` stays 200 UP | Task 23a |
 
 Open questions for the spec owner: none. Every row is closed by the answers Q1–Q16.
 

@@ -73,8 +73,8 @@ export const getGetAuditEventsUrl = (params?: GetAuditEventsParams) => {
 };
 
 /**
- * Implemented in MSW only until backend integration. Filters combine with AND. The real backend must enforce Admin access and Workspace isolation; no Workspace parameter or header is accepted. Default order is createdAt descending with id ascending as a stable tie-breaker.
- * @summary Frontend proposal — Admin audit log within the host-resolved Workspace (KAN-153).
+ * Served by the backend analytics module, Admin only, with Workspace resolved from the request host. Filters combine with AND; no Workspace parameter or header is accepted. Default order is createdAt descending with id ascending as a stable tie-breaker.
+ * @summary Admin audit log within the host-resolved Workspace.
  */
 export const getAuditEvents = async (
   params?: GetAuditEventsParams,
@@ -169,7 +169,7 @@ export function useGetAuditEvents<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Frontend proposal — Admin audit log within the host-resolved Workspace (KAN-153).
+ * @summary Admin audit log within the host-resolved Workspace.
  */
 
 export function useGetAuditEvents<

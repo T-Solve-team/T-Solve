@@ -15,19 +15,20 @@ import org.hibernate.annotations.Synchronize;
 @Immutable
 @Subselect(
         """
-        select t.id, t.public_id, t.ticket_id, t.title, t.source, t.status, t.writer,
+        select t.ticket_id as id, t.public_id, t.source_ticket_id as ticket_id, t.title, t.source, t.status, t.writer,
                t.resolved_date, t.updated_at, t.symptoms, t.root_cause, t.resolution_steps,
                t.workaround, t.scope, p.project_id, p.public_id as project_public_id,
                p.jira_project_key as project_name, d.department_id,
                d.public_id as department_public_id, d.name as department_name,
                d.status as department_status
-          from ticket t join project p on p.project_id = t.project_id
+          from ticket t join project p on (p.public_id = t.project_id
+               or lpad(to_hex(p.project_id), 32, '0')::uuid = t.project_id)
           join department d on d.department_id = p.department_id
         """)
 @Synchronize({"ticket", "project", "department"})
 public class SearchTicket {
     @Id
-    private Long id;
+    private UUID id;
 
     @Column(name = "public_id")
     private UUID publicId;
@@ -57,6 +58,7 @@ public class SearchTicket {
     private String workaround;
     private String scope;
 
+    // Internal Project key for visibility scopes; projectPublicId is the API UUID.
     @Column(name = "project_id")
     private Long projectId;
 
@@ -80,7 +82,7 @@ public class SearchTicket {
 
     protected SearchTicket() {}
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 

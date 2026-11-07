@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,7 @@ public class TicketEmbeddingServiceImpl implements TicketEmbeddingService {
     private final TransactionTemplate outsideTransaction;
     private final int batchSize;
     private final String model;
-    private final Map<Long, Integer> failures = new HashMap<>();
+    private final Map<UUID, Integer> failures = new HashMap<>();
 
     public TicketEmbeddingServiceImpl(
             EmbeddingTicketRepository tickets,
@@ -59,15 +60,15 @@ public class TicketEmbeddingServiceImpl implements TicketEmbeddingService {
     }
 
     @Override
-    public void embed(List<Long> ids) {
-        List<Long> distinct = ids.stream().distinct().toList();
+    public void embed(List<UUID> ids) {
+        List<UUID> distinct = ids.stream().distinct().toList();
         for (int start = 0; start < distinct.size(); start += batchSize) {
             embedBatch(distinct.subList(start, Math.min(start + batchSize, distinct.size())));
         }
     }
 
     @Override
-    public synchronized Set<Long> skippedIds() {
+    public synchronized Set<UUID> skippedIds() {
         return failures.entrySet().stream()
                 .filter(entry -> entry.getValue() >= MAX_FAILURES)
                 .map(Map.Entry::getKey)
@@ -75,8 +76,8 @@ public class TicketEmbeddingServiceImpl implements TicketEmbeddingService {
     }
 
     // ponytail: this lock is per process; each API replica runs its own batch (one replica today).
-    private synchronized void embedBatch(List<Long> ids) {
-        List<Long> attempted = ids;
+    private synchronized void embedBatch(List<UUID> ids) {
+        List<UUID> attempted = ids;
         try {
             List<SearchTicket> published = read.execute(status -> tickets.findByIdInAndStatus(ids, "PUBLISHED"));
             if (published.isEmpty()) {
@@ -100,7 +101,7 @@ public class TicketEmbeddingServiceImpl implements TicketEmbeddingService {
                     "embedding failed for tickets {} cause={}",
                     attempted,
                     exception.getClass().getSimpleName());
-            for (Long id : attempted) {
+            for (UUID id : attempted) {
                 int previous = failures.getOrDefault(id, 0);
                 failures.put(id, Math.min(previous + 1, MAX_FAILURES));
                 if (previous == MAX_FAILURES - 1) {

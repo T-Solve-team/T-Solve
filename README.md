@@ -69,11 +69,12 @@ changed. A job skipped this way reports success, so all of them can be required 
 ## Run locally
 
 ```bash
-# 0. settings, once: copy the names and fill in the values (DB values = those of the db service in docker-compose.yml)
+# 0. settings, once: copy the names and fill in the values (DB values = those of the db service in docker-compose.yml;
+#    REDIS_HOST, REDIS_PORT and REDIS_PASSWORD too - REDIS_PASSWORD is required, compose stops without it)
 cp .env.example .env
 
-# 1. database
-docker compose up -d db
+# 1. database and Redis (check a wrong password: docker compose exec -e REDISCLI_AUTH= redis redis-cli ping -> NOAUTH)
+docker compose up -d db redis
 
 # 2. backend  (health: /actuator/health on SERVER_PORT; Liquibase applies the changelog on start)
 cd backend
@@ -86,6 +87,13 @@ npm run dev
 ```
 
 The frontend also runs without the backend (mock mode); see `frontend/README.md`.
+
+Sign-in runs on Keycloak. Besides the DB values, `.env` needs: `REDIS_PASSWORD` (password of the Redis service),
+`KEYCLOAK_DB_PASSWORD` (password of the Keycloak database user), `KEYCLOAK_WEB_CLIENT_SECRET` (secret of the Keycloak
+client `tsolve-web`; Keycloak and the backend read the same value) and `TSOLVE_LOGIN_ORIGIN` (locally
+`http://localhost:8180`, the Keycloak origin). Start the local stack with `docker compose up -d keycloak fake-google`
+(fake Google included) and try it at `http://localhost:8180/realms/tsolve/protocol/openid-connect/auth` with the
+organization `acme` (the acme chooser); see `.env.example`.
 
 ## AI context (Claude Code)
 

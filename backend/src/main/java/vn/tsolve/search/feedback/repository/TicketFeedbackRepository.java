@@ -20,7 +20,7 @@ public interface TicketFeedbackRepository extends JpaRepository<TicketFeedback, 
                     """,
             nativeQuery = true)
     void upsert(
-            @Param("ticketId") Long ticketId,
+            @Param("ticketId") UUID ticketId,
             @Param("userId") UUID userId,
             @Param("rating") String rating,
             @Param("comment") String comment,

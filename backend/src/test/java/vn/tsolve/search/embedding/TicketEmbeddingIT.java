@@ -35,7 +35,7 @@ import vn.tsolve.ticket.service.ImportConfirmService;
 @SpringBootTest
 @TestPropertySource(
         properties = {
-            "tsolve.stub.projects=pm:1",
+            "tsolve.stub.projects=pm:14400000-0000-0000-0000-000000000001",
             "TSOLVE_LOGIN_ORIGIN=http://login.localhost:8081",
             "TSOLVE_ADMIN_ORIGIN=http://admin.localhost:8081",
             "TSOLVE_SIGNING_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
@@ -57,6 +57,9 @@ import vn.tsolve.ticket.service.ImportConfirmService;
             "SEARCH_EMBED_CATCH_UP_DELAY=24h"
         })
 class TicketEmbeddingIT {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private vn.tsolve.common.audit.AuditService audit;
+
     @ServiceConnection
     static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
             DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
@@ -131,7 +134,11 @@ class TicketEmbeddingIT {
         jdbc.execute(
                 "TRUNCATE ticket_import_decision, ticket, import_batch, import_preview, project, department CASCADE");
         jdbc.update("INSERT INTO department (department_id, name) VALUES (1, 'Embedding IT')");
-        jdbc.update("INSERT INTO project (project_id, department_id, jira_project_key) VALUES (1, 1, 'EMBED')");
+        jdbc.update(
+                """
+                INSERT INTO project (project_id, public_id, department_id, jira_project_key)
+                VALUES (1, '14400000-0000-0000-0000-000000000001', 1, 'EMBED')
+                """);
         client.calls.clear();
         client.called = new CountDownLatch(1);
         client.fail = false;
@@ -165,7 +172,7 @@ class TicketEmbeddingIT {
         confirms.confirm("pm", upload("EMBED-1", "EMBED-2", "EMBED-3"));
         await().atMost(Duration.ofSeconds(10))
                 .untilAsserted(() -> assertThat(embeddingCount()).isEqualTo(3));
-        List<Long> ids = jdbc.queryForList("SELECT id FROM ticket ORDER BY id", Long.class);
+        List<UUID> ids = jdbc.queryForList("SELECT ticket_id FROM ticket ORDER BY ticket_id", UUID.class);
         var before = jdbc.queryForMap(
                 "SELECT ticket_embedding_id, created_at, updated_at FROM ticket_embedding WHERE ticket_id = ?",
                 ids.getFirst());
@@ -187,11 +194,11 @@ class TicketEmbeddingIT {
                 .isEqualTo(2f);
 
         jdbc.update("DELETE FROM ticket_embedding");
-        assertThat(repository.findPublishedWithoutEmbedding(2, new Long[0])).containsExactly(ids.get(0), ids.get(1));
-        assertThat(repository.findPublishedWithoutEmbedding(2, new Long[] {ids.getFirst()}))
+        assertThat(repository.findPublishedWithoutEmbedding(2, new UUID[0])).containsExactly(ids.get(0), ids.get(1));
+        assertThat(repository.findPublishedWithoutEmbedding(2, new UUID[] {ids.getFirst()}))
                 .containsExactly(ids.get(1), ids.get(2));
-        jdbc.update("UPDATE ticket SET status = 'UNPUBLISHED' WHERE id = ?", ids.get(1));
-        assertThat(repository.findPublishedWithoutEmbedding(2, new Long[] {ids.getFirst()}))
+        jdbc.update("UPDATE ticket SET status = 'UNPUBLISHED' WHERE ticket_id = ?", ids.get(1));
+        assertThat(repository.findPublishedWithoutEmbedding(2, new UUID[] {ids.getFirst()}))
                 .containsExactly(ids.get(2));
     }
 
@@ -210,7 +217,7 @@ class TicketEmbeddingIT {
                     .isEqualTo("COMPLETED");
         });
         client.fail = false;
-        service.embed(repository.findPublishedWithoutEmbedding(4, new Long[0]));
+        service.embed(repository.findPublishedWithoutEmbedding(4, new UUID[0]));
         assertThat(embeddingCount()).isEqualTo(1);
     }
 
@@ -221,7 +228,7 @@ class TicketEmbeddingIT {
         }
         return imports.upload(
                         "pm",
-                        UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                        UUID.fromString("14400000-0000-0000-0000-000000000001"),
                         ImportType.WITH_SOLUTION,
                         new MockMultipartFile(
                                 "file",

@@ -66,7 +66,7 @@ const SORT_VALUE: Record<string, (t: ReviewQueueItem) => string> = {
   title: (t) => t.title,
   project: (t) => t.project.name,
   authorName: (t) => t.authorName ?? '',
-  enteredQueueAt: (t) => t.enteredQueueAt,
+  enteredQueueAt: (t) => t.enteredQueueAt ?? '',
   reviewDueDate: (t) => t.reviewDueDate,
 };
 

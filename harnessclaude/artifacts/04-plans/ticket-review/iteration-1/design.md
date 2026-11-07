@@ -45,3 +45,7 @@ Invalidate generated history query keys after successful existing decisions/send
 Test scoped access before pagination/counting; signed-out/non-PM/foreign Department; all six labels; duplicate ticket decisions and equal timestamps; empty history/filter result; null author/content and HTML-like text; UTC+7 midnight/leap-date/invalid/partial/reversed ranges; URL navigation/page reset; server errors/retry/loading; each successful existing producer appends identity/content and invalidates history; failed decisions leave history unchanged. Reuse existing fixtures and meaningful interaction assertions, without weakening timeouts or regression checks.
 
 Delivery: separate branch feat/KAN-159-review-history currently stacked on committed KAN-158 to reuse SEND_BACK history and KAN-24 detail. Keep the KAN-159 commit distinct; disclose this dependency before any MR. Required checks: named AC-008 tests, trace, full frontend format/lint/typecheck/test/build, deterministic regeneration, independent review and Graphify refresh. User commit checkpoint applies.
+
+## KAN-24 production backend
+
+Start with the shared UUID storage and import migration (master design R13). Follow with the Workspace-scoped queue, detail and decision API (R14), then verified Jira feedback (R15). Pause at each verified commit checkpoint.

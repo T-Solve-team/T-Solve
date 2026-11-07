@@ -23,9 +23,15 @@
         <commons-csv.version>1.12.0</commons-csv.version>
         <spotless.version>2.43.0</spotless.version>
         <wiremock.version>3.9.2</wiremock.version>
+        <jobrunr.version>8.6.0</jobrunr.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.jobrunr</groupId>
+            <artifactId>jobrunr</artifactId>
+            <version>${jobrunr.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -48,12 +54,21 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
         <!-- Verifies the Forge Invocation Token (FIT) on /api/v1/jira-app/** (tracker design, Key Decisions) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+        <!-- Spring's authorization-request resolver and repository for the Keycloak sign-in start (KAN-288) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
         </dependency>
         <dependency>
             <!-- NimbusJwtDecoder for Google's ID token (identity callback); version from the Spring Boot BOM -->
@@ -112,6 +127,13 @@
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock-standalone</artifactId>
             <version>${wiremock.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- A real Keycloak 26.x in Docker for the sign-in ITs; brings keycloak-admin-client; not in the Spring Boot BOM -->
+        <dependency>
+            <groupId>com.github.dasniko</groupId>
+            <artifactId>testcontainers-keycloak</artifactId>
+            <version>3.9.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
