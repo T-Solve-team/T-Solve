@@ -129,6 +129,28 @@ class SuggestionResultRepositoryIT {
     }
 
     @Test
+    void recordsTheCommentOnceAndNeverReplacesIt_AC_012_3_AC_012_4() {
+        Instant first = Instant.parse("2026-11-07T10:00:00Z");
+
+        int changed = repository.markCommented(saved.getId(), "10042", first);
+        int again = repository.markCommented(saved.getId(), "10099", Instant.parse("2026-11-07T11:00:00Z"));
+
+        assertThat(changed).isEqualTo(1);
+        assertThat(again).isZero();
+        assertThat(repository.findById(saved.getId())).hasValueSatisfying(result -> {
+            assertThat(result.hasComment()).isTrue();
+            assertThat(result.getJiraCommentId()).isEqualTo("10042");
+            assertThat(result.getCommentedAt()).isEqualTo(first);
+        });
+    }
+
+    @Test
+    void insertsANewResultWithNoComment_AC_012_3() {
+        assertThat(repository.findById(saved.getId()))
+                .hasValueSatisfying(result -> assertThat(result.hasComment()).isFalse());
+    }
+
+    @Test
     void keysTheTableByUuidAndReferencesTheProjectsPublicId_AC_003_1() {
         assertThat(jdbc.queryForList(
                         """
