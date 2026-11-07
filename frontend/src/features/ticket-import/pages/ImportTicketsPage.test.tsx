@@ -111,6 +111,67 @@ describe('ImportTicketsPage', () => {
     await waitFor(() => expect(revoke).toHaveBeenCalledWith('blob:template'));
   });
 
+  it('AC-015.1 shows the Import type choice with Tickets with a Solution selected', async () => {
+    await openImport();
+
+    const group = screen.getByRole('radiogroup', { name: 'Import type' });
+    expect(within(group).getByRole('radio', { name: 'Tickets with a Solution' })).toBeChecked();
+    expect(
+      within(group).getByRole('radio', { name: 'Tickets without a Solution' }),
+    ).not.toBeChecked();
+  });
+
+  it('AC-015.1 downloads the template of the chosen import type', async () => {
+    const asked: (string | null)[] = [];
+    server.events.on('request:start', ({ request }) => {
+      const url = new URL(request.url);
+      if (url.pathname === '/api/v1/imports/csv/template') {
+        asked.push(url.searchParams.get('importType'));
+      }
+    });
+    const saved: { name?: string; blob?: Blob } = {};
+    URL.createObjectURL = vi.fn((blob: Blob) => {
+      saved.blob = blob;
+      return 'blob:template';
+    });
+    URL.revokeObjectURL = vi.fn();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      saved.name = this.download;
+    });
+    const { user } = await openImport();
+
+    await user.click(screen.getByRole('radio', { name: 'Tickets without a Solution' }));
+    await user.click(screen.getByRole('button', { name: 'Download template' }));
+
+    await waitFor(() => expect(click).toHaveBeenCalledOnce());
+    expect(asked).toEqual(['WITHOUT_SOLUTION']);
+    expect(saved.name).toBe('ticket-import-template.csv');
+    expect(await saved.blob?.text()).toBe('ticket_id,title,description,author,resolved_date\n');
+  });
+
+  it('AC-015.1 sends the chosen import type with the upload and keeps the file when the type changes', async () => {
+    const sent: (FormDataEntryValue | null)[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.method !== 'POST' || !request.url.endsWith('/api/v1/imports/csv')) return;
+      void request
+        .clone()
+        .formData()
+        .then((form) => sent.push(form.get('importType')));
+    });
+    const { user, router } = await openImport();
+    await chooseProject(user, 'ITSUP · IT');
+    await user.upload(fileInput(), csvFile());
+
+    await user.click(screen.getByRole('radio', { name: 'Tickets without a Solution' }));
+    expect(screen.getByText('tickets.csv')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Upload' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/import/preview'));
+    await waitFor(() => expect(sent).toEqual(['WITHOUT_SOLUTION']));
+  });
+
   it('keeps the template URL alive until the download has started (BUG-126)', async () => {
     URL.createObjectURL = vi.fn(() => 'blob:template');
     const revoke = vi.fn();

@@ -4,11 +4,19 @@ import type {
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
   ImportResultResponse,
+  ImportType,
   RemoveRowsRequest,
 } from '@/shared/api';
 import { getDownloadCsvTemplateMockHandler } from '@/shared/api/generated/import/import.msw';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
-import { CSV_TEMPLATE, previewResponse, rowPage, seedImport, type MockPreview } from './data';
+import {
+  CSV_TEMPLATE,
+  CSV_TEMPLATE_WITHOUT_SOLUTION,
+  previewResponse,
+  rowPage,
+  seedImport,
+  type MockPreview,
+} from './data';
 
 /** The PM's unconfirmed preview of the mock backend. An upload replaces it, like the real one (spec D9). */
 let preview: MockPreview = seedImport();
@@ -34,13 +42,19 @@ function isCurrent(previewId: string | readonly string[] | undefined): boolean {
  * "import-fails" → MSG33 on Confirm. Any other file gets the seed rows.
  */
 export const handlers: HttpHandler[] = [
-  getDownloadCsvTemplateMockHandler(CSV_TEMPLATE),
+  getDownloadCsvTemplateMockHandler(({ request }) =>
+    new URL(request.url).searchParams.get('importType') === 'WITHOUT_SOLUTION'
+      ? CSV_TEMPLATE_WITHOUT_SOLUTION
+      : CSV_TEMPLATE,
+  ),
 
   http.post('*/api/v1/imports/csv', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const form = await request.formData();
     const file = form.get('file');
     const projectId = form.get('projectId');
+    const importType: ImportType =
+      form.get('importType') === 'WITHOUT_SOLUTION' ? 'WITHOUT_SOLUTION' : 'WITH_SOLUTION';
     const fileName = file instanceof File ? file.name : '';
     if (fileName.includes('missing-columns')) {
       return problem(400, 'MSG29', { params: { column_names: 'root_cause, scope' } });
@@ -50,6 +64,7 @@ export const handlers: HttpHandler[] = [
       preview.previewId + 1,
       typeof projectId === 'string' ? projectId : '',
       fileName,
+      importType,
     );
     isConfirmed = false;
     return HttpResponse.json<ImportPreviewResponse>(previewResponse(preview));

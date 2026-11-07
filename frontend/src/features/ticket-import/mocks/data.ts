@@ -3,12 +3,16 @@ import type {
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
   ImportPreviewRowSummary,
+  ImportType,
 } from '@/shared/api';
 import { PAGE_SIZE } from '@/shared/lib';
 
 /** The template the backend returns (CsvColumns.TEMPLATE): the header row only. */
 export const CSV_TEMPLATE =
   'ticket_id,title,description,author,resolved_date,symptoms,root_cause,resolution_steps,workaround,scope\n';
+
+/** The template of a file without Solutions: the columns before the Solution sections (AC-012.2). */
+export const CSV_TEMPLATE_WITHOUT_SOLUTION = 'ticket_id,title,description,author,resolved_date\n';
 
 /** Shown only by the Import Ticket Preview popup: the rows list has no Description. */
 const DESCRIPTION = 'Users report the problem after the latest Windows update.';
@@ -125,8 +129,9 @@ export function seedImport(
   previewId = 1,
   projectId = '00000000-0000-4000-8000-000000000101',
   fileName = 'itsup-resolved-2026-09.csv',
+  importType: ImportType = 'WITH_SOLUTION',
 ): MockPreview {
-  return { previewId, projectId, fileName, importType: 'WITH_SOLUTION', rows: seedRows() };
+  return { previewId, projectId, fileName, importType, rows: seedRows() };
 }
 
 /** One page of rows (`page` from 0), as `GET /imports/previews/{id}/rows` returns it. */
