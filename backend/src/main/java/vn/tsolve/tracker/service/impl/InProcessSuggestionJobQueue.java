@@ -57,7 +57,7 @@ public class InProcessSuggestionJobQueue implements SuggestionJobQueue, Disposab
     // The job already logged its failure (key and error type); without the worker there is no retry.
     private void runOnce(SuggestionJobRequest request) {
         try {
-            jobService.run(request.jobRef());
+            jobService.run(request.suggestionId());
         } catch (RuntimeException e) {
             String reason = e instanceof SuggestionJobFailedException
                     ? e.getMessage()

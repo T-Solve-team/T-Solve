@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +17,9 @@ import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.identity.signin.SignInTestFixtures;
 import vn.tsolve.tracker.entity.SuggestionResult;
 
-/** What only PostgreSQL can show: the JSONB write and the conditional update that guards a second run. */
+/**
+ * What only PostgreSQL can show: the UUID keys, the JSONB write and the conditional update that guards a second run.
+ */
 @SpringBootTest
 @TestPropertySource(
         properties = {
@@ -53,7 +56,7 @@ class SuggestionResultRepositoryIT {
     @Autowired
     private SuggestionResultRepository repository;
 
-    private long projectId;
+    private UUID projectId;
     private SuggestionResult saved;
 
     @BeforeEach
@@ -65,22 +68,27 @@ class SuggestionResultRepositoryIT {
         long department =
                 jdbc.queryForObject("INSERT INTO department (name) VALUES ('IT') RETURNING department_id", Long.class);
         projectId = jdbc.queryForObject(
-                "INSERT INTO project (department_id, jira_project_key) VALUES (?, 'ITSUP') RETURNING project_id",
-                Long.class,
+                "INSERT INTO project (department_id, jira_project_key) VALUES (?, 'ITSUP') RETURNING public_id",
+                UUID.class,
                 department);
         saved = repository.saveAndFlush(
                 new SuggestionResult(projectId, "ITSUP-1", "VPN drops every hour", "Reconnect fails.", Instant.now()));
     }
 
     @Test
-    void storesTheIssueTextAndAJobReferenceTheJobFindsItBy_AC_011_1() {
+    void storesTheIssueTextUnderAUuidKeyTheJobFindsItBy_AC_011_1() {
         Map<String, Object> row = jdbc.queryForMap(
-                "SELECT job_ref, issue_summary, issue_description FROM suggestion_result WHERE jira_issue_key = 'ITSUP-1'");
+                """
+                SELECT suggestion_id, project_id, issue_summary, issue_description
+                  FROM suggestion_result WHERE jira_issue_key = 'ITSUP-1'
+                """);
 
-        assertThat(row.get("job_ref")).isEqualTo(saved.getJobRef());
+        assertThat(saved.getId()).isNotNull();
+        assertThat(row.get("suggestion_id")).isEqualTo(saved.getId());
+        assertThat(row.get("project_id")).isEqualTo(projectId);
         assertThat(row.get("issue_summary")).isEqualTo("VPN drops every hour");
         assertThat(row.get("issue_description")).isEqualTo("Reconnect fails.");
-        assertThat(repository.findByJobRef(saved.getJobRef()))
+        assertThat(repository.findById(saved.getId()))
                 .map(SuggestionResult::getJiraIssueKey)
                 .contains("ITSUP-1");
     }
@@ -118,6 +126,26 @@ class SuggestionResultRepositoryIT {
     void changesNothingForAnIssueWithNoResult_AC_011_7() {
         assertThat(repository.fillSuggestion("ITSUP-404", SOURCES, "Update the VPN client to 5.2."))
                 .isZero();
+    }
+
+    @Test
+    void keysTheTableByUuidAndReferencesTheProjectsPublicId_AC_003_1() {
+        assertThat(jdbc.queryForList(
+                        """
+                        SELECT column_name || ':' || data_type FROM information_schema.columns
+                         WHERE table_name = 'suggestion_result' AND column_name IN ('suggestion_id', 'project_id', 'job_ref')
+                        """,
+                        String.class))
+                .containsExactlyInAnyOrder("suggestion_id:uuid", "project_id:uuid");
+        assertThat(jdbc.queryForObject(
+                        """
+                        SELECT ccu.column_name FROM information_schema.table_constraints tc
+                          JOIN information_schema.constraint_column_usage ccu USING (constraint_name)
+                         WHERE tc.table_name = 'suggestion_result' AND tc.constraint_type = 'FOREIGN KEY'
+                           AND ccu.table_name = 'project'
+                        """,
+                        String.class))
+                .isEqualTo("public_id");
     }
 
     private Map<String, Object> row() {

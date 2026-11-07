@@ -41,9 +41,9 @@ public class WorkerSuggestionJobQueue implements SuggestionJobQueue {
     public void enqueue(SuggestionJobRequest request) {
         try {
             if (tenants.currentWorkspaceId().isPresent()) {
-                jobs.enqueue(SuggestionJobHandler.TYPE, request.jobRef());
+                jobs.enqueue(SuggestionJobHandler.TYPE, request.suggestionId());
             } else if (devWorkspaceId != null) {
-                tenants.runIn(devWorkspaceId, () -> jobs.enqueue(SuggestionJobHandler.TYPE, request.jobRef()));
+                tenants.runIn(devWorkspaceId, () -> jobs.enqueue(SuggestionJobHandler.TYPE, request.suggestionId()));
             } else {
                 log.warn("Suggestion job not queued, no Workspace bound: {}", request.issueKey());
             }

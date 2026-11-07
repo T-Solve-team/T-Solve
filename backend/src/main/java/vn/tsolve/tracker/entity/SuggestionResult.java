@@ -13,7 +13,7 @@ import org.hibernate.type.SqlTypes;
 
 /**
  * The AI Solution Suggestion of one Jira issue; the tracker creates the row when the issue is created (AC-003.1)
- * with the issue text and a job reference (AC-011.1); its suggestion job fills sources and suggested solution with a
+ * with the issue text; its suggestion job carries only the row's id (AC-011.1); its suggestion job fills sources and suggested solution with a
  * conditional update (AC-011.4,
  * {@code SuggestionResultRepository.fillSuggestion}). {@code reporter_answer} is not mapped yet, so the insert leaves
  * it NULL.
@@ -25,12 +25,13 @@ public class SuggestionResult {
     static final String NO_SOURCES = "[]";
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "suggestion_id")
-    private Long id;
+    private UUID id;
 
+    // The Project's public_id (019-tracker-suggestion-uuid-keys).
     @Column(name = "project_id", nullable = false, updatable = false)
-    private Long projectId;
+    private UUID projectId;
 
     @Column(name = "jira_issue_key", nullable = false, updatable = false)
     private String jiraIssueKey;
@@ -42,10 +43,6 @@ public class SuggestionResult {
 
     @Column(name = "suggested_solution", columnDefinition = "text")
     private String suggestedSolution;
-
-    // What the worker's job carries instead of the issue text (AC-011.1).
-    @Column(name = "job_ref", nullable = false, updatable = false, unique = true)
-    private UUID jobRef;
 
     @Column(name = "issue_summary", columnDefinition = "text", updatable = false)
     private String issueSummary;
@@ -59,10 +56,9 @@ public class SuggestionResult {
     protected SuggestionResult() {}
 
     public SuggestionResult(
-            Long projectId, String jiraIssueKey, String issueSummary, String issueDescription, Instant now) {
+            UUID projectId, String jiraIssueKey, String issueSummary, String issueDescription, Instant now) {
         this.projectId = projectId;
         this.jiraIssueKey = jiraIssueKey;
-        this.jobRef = UUID.randomUUID();
         this.issueSummary = issueSummary;
         this.issueDescription = issueDescription;
         this.createdAt = now;
@@ -72,20 +68,16 @@ public class SuggestionResult {
         return suggestedSolution != null;
     }
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public Long getProjectId() {
+    public UUID getProjectId() {
         return projectId;
     }
 
     public String getJiraIssueKey() {
         return jiraIssueKey;
-    }
-
-    public UUID getJobRef() {
-        return jobRef;
     }
 
     public String getIssueSummary() {

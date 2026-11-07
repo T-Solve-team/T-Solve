@@ -2,7 +2,7 @@ package vn.tsolve.tracker.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
@@ -32,13 +32,14 @@ import vn.tsolve.tracker.service.SuggestionSearch;
 @ExtendWith({MockitoExtension.class, OutputCaptureExtension.class})
 class SuggestionJobServiceImplTest {
 
+    private static final UUID PROJECT = UUID.fromString("5b0e7a1c-3f2d-4e8b-9c11-2a7d4f6e8b01");
+    private static final UUID SUGGESTION_ID = UUID.fromString("0c9f3e52-6a41-4d7b-8e2f-91b3c5d7a640");
     private static final SuggestionResult RESULT = new SuggestionResult(
-            4L,
+            PROJECT,
             "ITSUP-1",
             "VPN drops every hour",
             "Reconnect fails after sleep.",
             Instant.parse("2026-11-07T01:00:00Z"));
-    private static final UUID JOB_REF = RESULT.getJobRef();
 
     @Mock
     private SuggestionResultRepository repository;
@@ -48,30 +49,32 @@ class SuggestionJobServiceImplTest {
 
     @Test
     void asksSearchWithTheProjectAndTheIssueTextStoredInTheRow_AC_011_3() {
-        given(repository.findByJobRef(JOB_REF)).willReturn(Optional.of(RESULT));
-        given(search.suggest(4L, "VPN drops every hour", "Reconnect fails after sleep."))
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(RESULT));
+        given(search.suggest(PROJECT, "VPN drops every hour", "Reconnect fails after sleep."))
                 .willReturn(Optional.empty());
 
-        service().run(JOB_REF);
+        service().run(SUGGESTION_ID);
 
-        verify(search).suggest(4L, "VPN drops every hour", "Reconnect fails after sleep.");
+        verify(search).suggest(PROJECT, "VPN drops every hour", "Reconnect fails after sleep.");
     }
 
     @Test
     void asksSearchWithEmptyTextForARowRecordedBeforeTheTextWasStored_AC_011_3() {
-        SuggestionResult older = new SuggestionResult(4L, "ITSUP-2", null, null, Instant.parse("2026-11-01T01:00:00Z"));
-        given(repository.findByJobRef(older.getJobRef())).willReturn(Optional.of(older));
-        given(search.suggest(4L, "", "")).willReturn(Optional.empty());
+        UUID olderId = UUID.fromString("7e21a4b8-0d5c-4f39-a6e1-c48b2d9f0e17");
+        SuggestionResult older =
+                new SuggestionResult(PROJECT, "ITSUP-2", null, null, Instant.parse("2026-11-01T01:00:00Z"));
+        given(repository.findById(olderId)).willReturn(Optional.of(older));
+        given(search.suggest(PROJECT, "", "")).willReturn(Optional.empty());
 
-        service().run(older.getJobRef());
+        service().run(olderId);
 
-        verify(search).suggest(4L, "", "");
+        verify(search).suggest(PROJECT, "", "");
     }
 
     @Test
     void storesTheSourcesAndTheSuggestedSolution_AC_011_4() {
-        given(repository.findByJobRef(JOB_REF)).willReturn(Optional.of(RESULT));
-        given(search.suggest(anyLong(), anyString(), anyString()))
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(RESULT));
+        given(search.suggest(any(UUID.class), anyString(), anyString()))
                 .willReturn(Optional.of(new IssueSuggestion(
                         List.of(
                                 new SuggestionSource("TICKET", "ITSUP-7", "VPN reconnect loop", 0.91),
@@ -79,7 +82,7 @@ class SuggestionJobServiceImplTest {
                         "Update the VPN client to 5.2 and turn off Wi-Fi power saving.")));
         given(repository.fillSuggestion(anyString(), anyString(), anyString())).willReturn(1);
 
-        service().run(JOB_REF);
+        service().run(SUGGESTION_ID);
 
         verify(repository)
                 .fillSuggestion(
@@ -91,32 +94,32 @@ class SuggestionJobServiceImplTest {
 
     @Test
     void storesNothingWhenSearchHasNoSuggestion_AC_011_5() {
-        given(repository.findByJobRef(JOB_REF)).willReturn(Optional.of(RESULT));
-        given(search.suggest(anyLong(), anyString(), anyString())).willReturn(Optional.empty());
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(RESULT));
+        given(search.suggest(any(UUID.class), anyString(), anyString())).willReturn(Optional.empty());
 
-        service().run(JOB_REF);
+        service().run(SUGGESTION_ID);
 
         verify(repository, never()).fillSuggestion(anyString(), anyString(), anyString());
     }
 
     @Test
     void storesNothingWhenTheSuggestedSolutionIsBlank_AC_011_5() {
-        given(repository.findByJobRef(JOB_REF)).willReturn(Optional.of(RESULT));
-        given(search.suggest(anyLong(), anyString(), anyString()))
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(RESULT));
+        given(search.suggest(any(UUID.class), anyString(), anyString()))
                 .willReturn(Optional.of(new IssueSuggestion(List.of(), "   ")));
 
-        service().run(JOB_REF);
+        service().run(SUGGESTION_ID);
 
         verify(repository, never()).fillSuggestion(anyString(), anyString(), anyString());
     }
 
     @Test
     void failsForARetryWithOnlyKeyAndErrorTypeWhenSearchFails_AC_011_6(CapturedOutput output) {
-        given(repository.findByJobRef(JOB_REF)).willReturn(Optional.of(RESULT));
-        given(search.suggest(anyLong(), anyString(), anyString()))
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(RESULT));
+        given(search.suggest(any(UUID.class), anyString(), anyString()))
                 .willThrow(new IllegalStateException("model said: VPN drops every hour"));
 
-        assertThatThrownBy(() -> service().run(JOB_REF))
+        assertThatThrownBy(() -> service().run(SUGGESTION_ID))
                 .isInstanceOf(SuggestionJobFailedException.class)
                 .hasNoCause()
                 .hasMessageContaining("ITSUP-1")
@@ -128,10 +131,10 @@ class SuggestionJobServiceImplTest {
 
     @Test
     void failsForARetryWhenTheResultCannotBeRead_AC_011_6() {
-        given(repository.findByJobRef(JOB_REF))
+        given(repository.findById(SUGGESTION_ID))
                 .willThrow(new DataAccessResourceFailureException("connection lost while reading VPN drops"));
 
-        assertThatThrownBy(() -> service().run(JOB_REF))
+        assertThatThrownBy(() -> service().run(SUGGESTION_ID))
                 .isInstanceOf(SuggestionJobFailedException.class)
                 .hasNoCause()
                 .hasMessageContaining("DataAccessResourceFailureException")
@@ -141,13 +144,13 @@ class SuggestionJobServiceImplTest {
 
     @Test
     void failsForARetryWhenTheSuggestionCannotBeStored_AC_011_6() {
-        given(repository.findByJobRef(JOB_REF)).willReturn(Optional.of(RESULT));
-        given(search.suggest(anyLong(), anyString(), anyString()))
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(RESULT));
+        given(search.suggest(any(UUID.class), anyString(), anyString()))
                 .willReturn(Optional.of(new IssueSuggestion(List.of(), "Restart the VPN service.")));
         given(repository.fillSuggestion(anyString(), anyString(), anyString()))
                 .willThrow(new DataAccessResourceFailureException("could not store: Restart the VPN service."));
 
-        assertThatThrownBy(() -> service().run(JOB_REF))
+        assertThatThrownBy(() -> service().run(SUGGESTION_ID))
                 .isInstanceOf(SuggestionJobFailedException.class)
                 .hasNoCause()
                 .hasMessageContaining("ITSUP-1")
@@ -156,9 +159,9 @@ class SuggestionJobServiceImplTest {
 
     @Test
     void changesNothingWhenTheResultNoLongerExists_AC_011_7() {
-        given(repository.findByJobRef(JOB_REF)).willReturn(Optional.empty());
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.empty());
 
-        service().run(JOB_REF);
+        service().run(SUGGESTION_ID);
 
         verifyNoInteractions(search);
         verify(repository, never()).fillSuggestion(anyString(), anyString(), anyString());
@@ -168,9 +171,9 @@ class SuggestionJobServiceImplTest {
     void changesNothingWhenTheResultAlreadyHasASuggestion_AC_011_7() {
         SuggestionResult filled = mock(SuggestionResult.class);
         given(filled.hasSuggestion()).willReturn(true);
-        given(repository.findByJobRef(JOB_REF)).willReturn(Optional.of(filled));
+        given(repository.findById(SUGGESTION_ID)).willReturn(Optional.of(filled));
 
-        service().run(JOB_REF);
+        service().run(SUGGESTION_ID);
 
         verifyNoInteractions(search);
         verify(repository, never()).fillSuggestion(anyString(), anyString(), anyString());

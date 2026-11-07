@@ -32,17 +32,17 @@ public class SuggestionJobServiceImpl implements SuggestionJobService {
     }
 
     @Override
-    public void run(UUID jobRef) {
+    public void run(UUID suggestionId) {
         SuggestionResult result;
         try {
-            Optional<SuggestionResult> found = repository.findByJobRef(jobRef);
+            Optional<SuggestionResult> found = repository.findById(suggestionId);
             if (found.isEmpty() || found.get().hasSuggestion()) {
-                log.info("Suggestion job skipped, result gone or already filled: {}", jobRef);
+                log.info("Suggestion job skipped, result gone or already filled: {}", suggestionId);
                 return;
             }
             result = found.get();
         } catch (RuntimeException e) {
-            throw failed(String.valueOf(jobRef), e);
+            throw failed(String.valueOf(suggestionId), e);
         }
         String issueKey = result.getJiraIssueKey();
         try {

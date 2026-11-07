@@ -2,6 +2,7 @@ package vn.tsolve.tracker.service.impl;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import vn.tsolve.tracker.dto.IssueSuggestion;
@@ -24,7 +25,7 @@ public class StubSuggestionSearch implements SuggestionSearch {
     }
 
     @Override
-    public Optional<IssueSuggestion> suggest(long projectId, String summary, String description) {
+    public Optional<IssueSuggestion> suggest(UUID projectId, String summary, String description) {
         if (configured.isEmpty()) {
             return Optional.empty();
         }

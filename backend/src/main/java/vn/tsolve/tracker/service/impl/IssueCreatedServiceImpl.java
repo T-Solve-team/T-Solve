@@ -2,6 +2,7 @@ package vn.tsolve.tracker.service.impl;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,20 +42,21 @@ public class IssueCreatedServiceImpl implements IssueCreatedService {
     // queued (AC-011.1).
     @Override
     public void receive(IssueCreatedPayload payload) {
-        Optional<Long> projectId = projectService.findActiveIdByJiraProjectKey(payload.projectKey());
+        Optional<UUID> projectId = projectService.findActivePublicIdByJiraProjectKey(payload.projectKey());
         if (projectId.isEmpty()) {
             log.info("Issue created outside T-Solve Projects: {} {}", payload.issueKey(), payload.projectKey());
             return;
         }
-        // The issue text is kept in the row; the job carries only its reference (AC-011.1).
+        // The issue text is kept in the row; the job carries only the row's id (AC-011.1).
         SuggestionResult result = new SuggestionResult(
                 projectId.get(),
                 payload.issueKey(),
                 payload.summary(),
                 AdfTextExtractor.toText(payload.description()),
                 Instant.now());
+        SuggestionResult saved;
         try {
-            suggestionResultRepository.saveAndFlush(result);
+            saved = suggestionResultRepository.saveAndFlush(result);
             log.info("Issue created recorded: {}", payload.issueKey());
         } catch (DataIntegrityViolationException e) {
             if (!isDuplicate(e)) {
@@ -64,7 +66,7 @@ public class IssueCreatedServiceImpl implements IssueCreatedService {
             return;
         }
         // Labels are not looked at: an issue created by the Chatbot is suggested like any other (AC-011.8).
-        suggestionJobQueue.enqueue(new SuggestionJobRequest(result.getJobRef(), payload.issueKey()));
+        suggestionJobQueue.enqueue(new SuggestionJobRequest(saved.getId(), payload.issueKey()));
     }
 
     private static boolean isDuplicate(DataIntegrityViolationException e) {

@@ -11,5 +11,5 @@ public interface SuggestionJobService {
      * (AC-011.5, AC-011.7). Any failure throws {@code SuggestionJobFailedException} so the worker retries the job
      * (AC-011.6).
      */
-    void run(UUID jobRef);
+    void run(UUID suggestionId);
 }

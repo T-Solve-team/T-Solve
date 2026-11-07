@@ -1,6 +1,7 @@
 package vn.tsolve.tracker.service;
 
 import java.util.Optional;
+import java.util.UUID;
 import vn.tsolve.tracker.dto.IssueSuggestion;
 
 /**
@@ -14,5 +15,5 @@ public interface SuggestionSearch {
      * A suggestion for the issue, or empty when no source passes the relevance threshold. Throws when search fails
      * or does not answer in time.
      */
-    Optional<IssueSuggestion> suggest(long projectId, String summary, String description);
+    Optional<IssueSuggestion> suggest(UUID projectId, String summary, String description);
 }

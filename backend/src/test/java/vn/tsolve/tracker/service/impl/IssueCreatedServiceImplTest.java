@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -14,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +35,8 @@ import vn.tsolve.tracker.service.SuggestionJobQueue;
 class IssueCreatedServiceImplTest {
 
     private static final ObjectMapper JSON = new ObjectMapper();
+    private static final UUID PROJECT = UUID.fromString("5b0e7a1c-3f2d-4e8b-9c11-2a7d4f6e8b01");
+    private static final UUID SUGGESTION_ID = UUID.fromString("0c9f3e52-6a41-4d7b-8e2f-91b3c5d7a640");
 
     private static final IssueCreatedPayload PAYLOAD = payload("VPN drops every hour", adf("Reconnect fails."), null);
 
@@ -47,20 +51,21 @@ class IssueCreatedServiceImplTest {
 
     @Test
     void storesSuggestionResultForIssueOfActiveProject_AC_003_1() {
-        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(4L));
+        given(projectService.findActivePublicIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(PROJECT));
+        savesRowWithId(SUGGESTION_ID);
 
         service().receive(PAYLOAD);
 
         ArgumentCaptor<SuggestionResult> saved = ArgumentCaptor.forClass(SuggestionResult.class);
         verify(repository).saveAndFlush(saved.capture());
-        assertThat(saved.getValue().getProjectId()).isEqualTo(4L);
+        assertThat(saved.getValue().getProjectId()).isEqualTo(PROJECT);
         assertThat(saved.getValue().getJiraIssueKey()).isEqualTo("ITSUP-1");
         assertThat(saved.getValue().getCreatedAt()).isNotNull();
     }
 
     @Test
     void acceptsIssueAlreadyStored_AC_003_4() {
-        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(4L));
+        given(projectService.findActivePublicIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(PROJECT));
         given(repository.saveAndFlush(any())).willThrow(violation(IssueCreatedServiceImpl.UNIQUE_ISSUE));
 
         assertThatCode(() -> service().receive(PAYLOAD)).doesNotThrowAnyException();
@@ -68,7 +73,7 @@ class IssueCreatedServiceImplTest {
 
     @Test
     void storesNothingForIssueOfNoActiveProject_AC_003_8() {
-        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.empty());
+        given(projectService.findActivePublicIdByJiraProjectKey("ITSUP")).willReturn(Optional.empty());
 
         service().receive(PAYLOAD);
 
@@ -77,7 +82,7 @@ class IssueCreatedServiceImplTest {
 
     @Test
     void rethrowsOtherIntegrityErrors_AC_003_1() {
-        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(4L));
+        given(projectService.findActivePublicIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(PROJECT));
         given(repository.saveAndFlush(any())).willThrow(violation("suggestion_result_project_id_fkey"));
 
         assertThatThrownBy(() -> service().receive(PAYLOAD)).isInstanceOf(DataIntegrityViolationException.class);
@@ -85,36 +90,37 @@ class IssueCreatedServiceImplTest {
     }
 
     @Test
-    void storesTheIssueTextAndEnqueuesOnlyAReferenceAfterTheRowIsSaved_AC_011_1() {
-        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(4L));
+    void storesTheIssueTextAndEnqueuesOnlyTheRowIdAfterTheRowIsSaved_AC_011_1() {
+        given(projectService.findActivePublicIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(PROJECT));
+        savesRowWithId(SUGGESTION_ID);
 
         service().receive(PAYLOAD);
 
         ArgumentCaptor<SuggestionResult> saved = ArgumentCaptor.forClass(SuggestionResult.class);
         InOrder order = inOrder(repository, jobQueue);
         order.verify(repository).saveAndFlush(saved.capture());
-        order.verify(jobQueue).enqueue(new SuggestionJobRequest(saved.getValue().getJobRef(), "ITSUP-1"));
+        order.verify(jobQueue).enqueue(new SuggestionJobRequest(SUGGESTION_ID, "ITSUP-1"));
         order.verifyNoMoreInteractions();
-        assertThat(saved.getValue().getJobRef()).isNotNull();
         assertThat(saved.getValue().getIssueSummary()).isEqualTo("VPN drops every hour");
         assertThat(saved.getValue().getIssueDescription()).isEqualTo("Reconnect fails.");
     }
 
     @Test
     void storesAnEmptyDescriptionWhenTheIssueHasNone_AC_011_1() {
-        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(4L));
+        given(projectService.findActivePublicIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(PROJECT));
+        savesRowWithId(SUGGESTION_ID);
 
         service().receive(payload("VPN drops every hour", null, null));
 
         ArgumentCaptor<SuggestionResult> saved = ArgumentCaptor.forClass(SuggestionResult.class);
         verify(repository).saveAndFlush(saved.capture());
         assertThat(saved.getValue().getIssueDescription()).isEmpty();
-        verify(jobQueue).enqueue(new SuggestionJobRequest(saved.getValue().getJobRef(), "ITSUP-1"));
+        verify(jobQueue).enqueue(new SuggestionJobRequest(SUGGESTION_ID, "ITSUP-1"));
     }
 
     @Test
     void enqueuesNoJobForAnIssueAlreadyRecorded_AC_011_2() {
-        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(4L));
+        given(projectService.findActivePublicIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(PROJECT));
         given(repository.saveAndFlush(any())).willThrow(violation(IssueCreatedServiceImpl.UNIQUE_ISSUE));
 
         service().receive(PAYLOAD);
@@ -124,7 +130,7 @@ class IssueCreatedServiceImplTest {
 
     @Test
     void enqueuesNoJobForAnIssueOfNoActiveProject_AC_011_2() {
-        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.empty());
+        given(projectService.findActivePublicIdByJiraProjectKey("ITSUP")).willReturn(Optional.empty());
 
         service().receive(PAYLOAD);
 
@@ -133,13 +139,21 @@ class IssueCreatedServiceImplTest {
 
     @Test
     void enqueuesTheJobOfAnIssueCreatedByTheChatbotLikeAnyOther_AC_011_8() {
-        given(projectService.findActiveIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(4L));
+        given(projectService.findActivePublicIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(PROJECT));
+        savesRowWithId(SUGGESTION_ID);
 
         service().receive(payload("VPN drops every hour", adf("Reconnect fails."), List.of("tsolve-chatbot")));
 
         ArgumentCaptor<SuggestionResult> saved = ArgumentCaptor.forClass(SuggestionResult.class);
         verify(repository).saveAndFlush(saved.capture());
-        verify(jobQueue).enqueue(new SuggestionJobRequest(saved.getValue().getJobRef(), "ITSUP-1"));
+        verify(jobQueue).enqueue(new SuggestionJobRequest(SUGGESTION_ID, "ITSUP-1"));
+    }
+
+    // The database gives the row its UUID key on insert; the job is queued with that id.
+    private void savesRowWithId(UUID id) {
+        SuggestionResult row = mock(SuggestionResult.class);
+        given(row.getId()).willReturn(id);
+        given(repository.saveAndFlush(any())).willReturn(row);
     }
 
     private IssueCreatedServiceImpl service() {

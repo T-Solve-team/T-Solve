@@ -6,6 +6,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,9 +57,9 @@ class SuggestionResultRecordRepositoryIT {
     @Autowired
     private SuggestionResultRecordRepository repository;
 
-    private long itsup;
-    private long itnet;
-    private long hrhelp;
+    private UUID itsup;
+    private UUID itnet;
+    private UUID hrhelp;
 
     @BeforeEach
     void seed() {
@@ -81,15 +82,16 @@ class SuggestionResultRecordRepositoryIT {
         result(hrhelp, "HRHELP-1", "2026-11-02T10:00:00Z", "YES");
     }
 
-    private long project(long department, String key) {
+    // suggestion_result.project_id holds the Project's public_id (tracker's 019-tracker-suggestion-uuid-keys).
+    private UUID project(long department, String key) {
         return jdbc.queryForObject(
-                "INSERT INTO project (department_id, jira_project_key) VALUES (?, ?) RETURNING project_id",
-                Long.class,
+                "INSERT INTO project (department_id, jira_project_key) VALUES (?, ?) RETURNING public_id",
+                UUID.class,
                 department,
                 key);
     }
 
-    private void result(long project, String key, String createdAt, String answer) {
+    private void result(UUID project, String key, String createdAt, String answer) {
         jdbc.update(
                 "INSERT INTO suggestion_result (project_id, jira_issue_key, sources_used, suggested_solution,"
                         + " reporter_answer, created_at) VALUES (?, ?, '[{\"type\": \"TICKET\", \"id\": 1}]'::jsonb,"

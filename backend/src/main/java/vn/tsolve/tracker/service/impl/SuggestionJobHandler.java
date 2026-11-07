@@ -7,7 +7,7 @@ import vn.tsolve.worker.service.TenantJobHandler;
 
 /**
  * Runs the suggestion job for the worker (KAN-102): the worker calls it inside the job's Workspace with the
- * suggestion result's job reference. A failure propagates so JobRunr retries the job (AC-011.6); reruns are safe
+ * suggestion result's id. A failure propagates so JobRunr retries the job (AC-011.6); reruns are safe
  * because the job skips a result that is already filled (AC-011.7).
  */
 @Component
