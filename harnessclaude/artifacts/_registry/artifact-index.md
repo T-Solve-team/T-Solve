@@ -161,6 +161,9 @@ Master registry of all artifacts in this workspace.
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-23a-keycloak-prerequisites.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-23a-keycloak-prerequisites-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-23a-keycloak-prerequisites-test-report.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-23-keycloak-realm.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-23-keycloak-realm-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-23-keycloak-realm-test-report.md |
 | — | spec | dashboard-audit | approved | artifacts/03-modules/dashboard-audit/spec.md |
 | — | spec | triage | approved | artifacts/03-modules/triage/spec.md |
 | — | design | triage | approved | artifacts/04-plans/triage/design.md |

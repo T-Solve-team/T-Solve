@@ -755,3 +755,7 @@
 {"ts":"2026-11-07T05:03:17.214Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T05:03:17.444Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T05:03:17.681Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T07:29:33.371Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":null,"to":"pending"}
+{"ts":"2026-11-07T07:29:33.601Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T07:29:33.870Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T07:29:34.109Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":"evaluating","to":"passing"}
