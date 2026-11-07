@@ -34,7 +34,7 @@ and raise a spec change before Task 6.
 **Story:** STORY-010
 **Feature:** ask-contract
 **Description:** Add `POST /api/v1/jira-app/questions` (request: question + history ≤ 10; responses 200
-`ChatbotAnswerResponse`, 400 MSG01/MSG02/MSG06, 401 MSG08, 403 MSG62, 503 MSG06) and
+`ChatbotAnswerResponse`, 400 MSG01/MSG02, 401 MSG08, 403 MSG62, 503 MSG06) and
 `GET /api/v1/jira-app/questions/eligibility` (200 `{linked}`) to the OpenAPI file, tag `jira-app`; run
 `npm run generate:api`. Add `TSOLVE_STUB_JIRA_ASKERS` and `JIRA_APP_ASK_TIMEOUT` to `.env.example`.
 **Files:**

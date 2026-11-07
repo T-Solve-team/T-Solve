@@ -242,18 +242,18 @@
       "features": {
         "ask-forge-spike": "passing",
         "ask-contract": "passing",
-        "ask-endpoint": "pending",
+        "ask-endpoint": "evaluating",
         "ask-forge-client": "pending",
         "ask-conversation-logic": "pending",
         "ask-page-ui": "pending"
       },
-      "lastUpdated": "2026-11-07T19:28:15.447Z",
+      "lastUpdated": "2026-11-07T19:51:57.900Z",
       "branch": "feat/jira-app",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b9701ea79955d09630c240bb8261b2239cb0327d"
+        "default": "e945af3c076e017c6c1ddc0b9b2da73094ef52a9"
       }
     },
     "dashboard-audit": {

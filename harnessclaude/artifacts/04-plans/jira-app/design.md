@@ -81,7 +81,8 @@ Stub config (`.env.example`): `TSOLVE_STUB_JIRA_ASKERS=<accountId>=<accountUuid>
   page shows the question box and the POST stays the guard). Spec re-approved as 5b0840de.
 
 ### Decided in planning (builder check)
-- **History over 10 items** sent to the server → 400 (Problem, code MSG06), no AI call. The page never sends more.
+- **History over 10 items** sent to the server → 400 MSG02, no AI call (the global handler gives every `@Size` over its max
+  MSG02 — Task 3). The page never sends more.
 - **Stub user roles**: `TSolveUser(account.id, email, fullName, {})` → EMPLOYEE only, until identity gives roles.
   Wiki access uses `NoWikiSources` today anyway.
 - **Character count** for MSG02 is in code points on both sides (`[...text].length` in JS); the server's `@Size`
@@ -147,7 +148,7 @@ integrity, 10 Integration, 11 Compliance · Skipped: 4 Scale (one conversation p
 | 2 | STORY-010 | Integration | FIT without `principal` (product event token) on the POST | High | 403 MSG62 (treated as not linked), no AI call | Task 3 |
 | 3 | STORY-010 | Error cascades | Chatbot slower than 18 s, or AI down | High | 503 MSG06 within ~18 s; page shows MSG06, keeps the question, keeps "Chưa được, tạo ticket" | Task 3, Task 5 |
 | 4 | STORY-010 | Input extremes | Exactly 1,000 code points; 1,001; only spaces/newlines; emoji | Medium | 1,000 sent; 1,001 MSG02; blank MSG01; nothing sent | Task 5 |
-| 5 | STORY-010 | Input extremes | Conversation longer than 10 turns | Medium | Only the last 10 earlier turns sent; server rejects > 10 with 400 | Task 3, Task 5 |
+| 5 | STORY-010 | Input extremes | Conversation longer than 10 turns | Medium | Only the last 10 earlier turns sent; server rejects > 10 with 400 MSG02 | Task 3, Task 5 |
 | 6 | STORY-010 | Timing | Double click on send while asking | Medium | Send disabled while `asking`; one request | Task 6 |
 | 7 | STORY-010 | Data integrity | First question longer than 255 characters → Summary | Medium | Cut to 255 code points, no broken surrogate | Task 5 |
 | 8 | STORY-010 | Compliance | Question or answer text in logs (Forge or backend) | High | Logs carry ids / status / error type only | Task 3, Task 5 |

@@ -920,3 +920,6 @@
 {"ts":"2026-11-07T19:26:46.518Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"b9701ea79955d09630c240bb8261b2239cb0327d"}
 {"ts":"2026-11-07T19:26:46.823Z","type":"feature-status","module":"jira-app","feature":"ask-contract","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T19:28:15.448Z","type":"feature-status","module":"jira-app","feature":"ask-contract","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T19:29:55.851Z","type":"feature-status","module":"jira-app","feature":"ask-endpoint","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T19:51:57.553Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"e945af3c076e017c6c1ddc0b9b2da73094ef52a9"}
+{"ts":"2026-11-07T19:51:57.902Z","type":"feature-status","module":"jira-app","feature":"ask-endpoint","from":"in-progress","to":"evaluating"}
