@@ -82,3 +82,9 @@ record; no external upstream issue or message was sent by the agent.
 ## 2026-11-07 — Jira branch metadata during worker KAN-102
 
 Project AGENTS.md requires one branch per Jira issue, so actual branch is feat/KAN-102-worker-tenant-context. sdd.ts status worker implementing recorded feat/worker. Statuses were changed only with sdd.ts; no hook or status field was edited to hide this mismatch. sdd.ts commit worker default correctly recorded the code SHA and printed the actual issue branch, but final verification of progress.json showed that its branch field still says feat/worker. Audit therefore adds a missing-module-branch warning after the commit. Suggested upstream improvement: persist the current issue branch at the implementing transition and commit recording when a project overrides the default module branch convention.
+## 2026-11-06 — malformed approval registry on main (KAN-24)
+
+**Type:** maintenance gap
+**Context:** The user ran `sdd.ts approve ticket-review`. The spec check passed, but the registry failed to parse because the `ai` approval and its `acs` object were still open at the start of `triage`. Inserting the two closing braces before `triage` parsed all 12 existing approvals in memory.
+
+**Suggestion:** Validate `approvals.json` in CI when changes touch it so malformed merges cannot block later approvals.

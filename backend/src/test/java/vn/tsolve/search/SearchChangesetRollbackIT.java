@@ -18,7 +18,7 @@ import org.testcontainers.utility.DockerImageName;
 
 class SearchChangesetRollbackIT {
 
-    private static final String CHANGELOG = "db/changelog/db.changelog-master.xml";
+    private static final String CHANGELOG = "db/changelog/search-only.xml";
     private static final List<String> PUBLIC_ID_TABLES = List.of("ticket", "project", "department");
     private static final List<String> SEARCH_TABLES = List.of("ticket_embedding", "search_log", "ticket_feedback");
     private static final PostgreSQLContainer<?> SERVER = new PostgreSQLContainer<>(

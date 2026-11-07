@@ -19,7 +19,7 @@ public class TicketFeedback {
     private UUID id;
 
     @Column(name = "ticket_id", nullable = false)
-    private Long ticketId;
+    private UUID ticketId;
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
@@ -45,7 +45,7 @@ public class TicketFeedback {
         return id;
     }
 
-    public Long getTicketId() {
+    public UUID getTicketId() {
         return ticketId;
     }
 

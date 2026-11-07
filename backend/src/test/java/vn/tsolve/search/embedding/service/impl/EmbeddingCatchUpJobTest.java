@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import vn.tsolve.search.config.SearchSchedulingConfig;
@@ -19,15 +20,15 @@ class EmbeddingCatchUpJobTest {
     void embedsLowestIdsWithoutVector_AC_005_7() {
         TicketEmbeddingRepository repository = mock(TicketEmbeddingRepository.class);
         TicketEmbeddingService service = mock(TicketEmbeddingService.class);
-        when(service.skippedIds()).thenReturn(Set.of(1L));
-        when(repository.findPublishedWithoutEmbedding(eq(4), aryEq(new Long[] {1L})))
-                .thenReturn(List.of(2L, 3L));
+        when(service.skippedIds()).thenReturn(Set.of(new UUID(0, 1)));
+        when(repository.findPublishedWithoutEmbedding(eq(4), aryEq(new UUID[] {new UUID(0, 1)})))
+                .thenReturn(List.of(new UUID(0, 2), new UUID(0, 3)));
 
         EmbeddingCatchUpJob job = new EmbeddingCatchUpJob(repository, service, 4);
         job.run();
 
-        verify(repository).findPublishedWithoutEmbedding(eq(4), aryEq(new Long[] {1L}));
-        verify(service).embed(List.of(2L, 3L));
+        verify(repository).findPublishedWithoutEmbedding(eq(4), aryEq(new UUID[] {new UUID(0, 1)}));
+        verify(service).embed(List.of(new UUID(0, 2), new UUID(0, 3)));
 
         try (var context = new AnnotationConfigApplicationContext()) {
             context.register(SearchSchedulingConfig.class);
