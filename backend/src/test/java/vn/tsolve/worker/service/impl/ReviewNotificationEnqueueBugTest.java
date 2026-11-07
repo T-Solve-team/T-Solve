@@ -5,19 +5,30 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.jobrunr.jobs.JobId;
 import org.jobrunr.scheduling.JobRequestScheduler;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import vn.tsolve.ticket.event.ReviewFeedbackDecidedEvent;
 import vn.tsolve.worker.dto.TenantJobRequest;
@@ -33,6 +44,24 @@ class ReviewNotificationEnqueueBugTest {
 
     private final JobRequestScheduler scheduler = mock(JobRequestScheduler.class);
     private final TenantJobRequestHandler handler = mock(TenantJobRequestHandler.class);
+    private final Logger enqueuerLogger = (Logger) LoggerFactory.getLogger(ReviewNotificationEnqueuer.class);
+    private final ListAppender<ILoggingEvent> enqueuerLog = new ListAppender<>();
+    private Level previousLevel;
+
+    @BeforeEach
+    void setUp() {
+        previousLevel = enqueuerLogger.getLevel();
+        enqueuerLog.start();
+        enqueuerLogger.addAppender(enqueuerLog);
+        enqueuerLogger.setLevel(Level.DEBUG);
+    }
+
+    @AfterEach
+    void tearDown() {
+        enqueuerLogger.detachAppender(enqueuerLog);
+        enqueuerLog.stop();
+        enqueuerLogger.setLevel(previousLevel);
+    }
 
     @Test
     void enqueuesOnTheSoleActiveWorkspaceWhenNoneIsBound_BUG_153() {
@@ -51,14 +80,20 @@ class ReviewNotificationEnqueueBugTest {
     void refusesWhenSeveralWorkspacesAreActiveAndNoneIsBound_BUG_153() {
         var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of());
         var jobs = new TenantJobServiceImpl(tenants, scheduler, handler);
+        assertThat(tenants.enqueueWorkspaceId()).isEmpty();
 
         enqueuer(jobs, tenants).onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID)));
 
         verifyNoInteractions(scheduler);
+        assertThat(enqueuerLog.list)
+                .filteredOn(entry -> entry.getLevel() == Level.WARN)
+                .singleElement()
+                .satisfies(
+                        entry -> assertThat(entry.getFormattedMessage()).contains("(no Workspace to bind)", "1 of 1"));
     }
 
     @Test
-    void directEnqueueStillRejectsAnUnboundThread_BUG_153_AC_002_2() {
+    void directEnqueueStillRejectsAnUnboundThread_AC_002_2_BUG_153() {
         var tenants = new MockWorkerTenantService(Set.of(A), Set.of());
         var jobs = new TenantJobServiceImpl(tenants, scheduler, handler);
 
@@ -100,6 +135,60 @@ class ReviewNotificationEnqueueBugTest {
         enqueuer(jobs, null).onDecided(event);
 
         verify(jobs, times(1)).enqueue(eq(ReviewNotificationJobHandler.TYPE), any(UUID.class));
+    }
+
+    @Test
+    void logsTheCountAndExceptionClassButNeverTheMessage_BUG_153() {
+        TenantJobService jobs = mock(TenantJobService.class);
+        when(jobs.enqueue(anyString(), any(UUID.class)))
+                .thenThrow(new IllegalStateException("smtp secret writer@example.test"));
+        var event = new ReviewFeedbackDecidedEvent(List.of(RECORD_ID, new UUID(0, 4), new UUID(0, 5)));
+
+        enqueuer(jobs, null).onDecided(event);
+
+        verify(jobs).enqueue(ReviewNotificationJobHandler.TYPE, RECORD_ID);
+        assertThat(enqueuerLog.list)
+                .filteredOn(entry -> entry.getLevel() == Level.WARN)
+                .singleElement()
+                .satisfies(
+                        entry -> assertThat(entry.getFormattedMessage()).contains("3 of 3", "IllegalStateException"));
+        assertThat(enqueuerLog.list).allSatisfy(entry -> {
+            assertThat(entry.getFormattedMessage()).doesNotContain("writer@example.test", "smtp secret");
+            assertThat(entry.getThrowableProxy()).isNull();
+        });
+    }
+
+    @Test
+    void enqueuesDirectlyOnAnAlreadyBoundThread_BUG_153() {
+        var tenants = spy(new MockWorkerTenantService(Set.of(A, B), Set.of()));
+        var jobs = new TenantJobServiceImpl(tenants, scheduler, handler);
+        when(scheduler.enqueue(any(TenantJobRequest.class))).thenReturn(new JobId(UUID.randomUUID()));
+
+        tenants.runIn(B, () -> enqueuer(jobs, tenants).onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID))));
+
+        ArgumentCaptor<TenantJobRequest> request = ArgumentCaptor.forClass(TenantJobRequest.class);
+        verify(scheduler).enqueue(request.capture());
+        assertThat(request.getValue().workspaceId()).isEqualTo(B);
+        verify(tenants, never()).enqueueWorkspaceId();
+        verify(tenants).runIn(any(UUID.class), any(Runnable.class));
+    }
+
+    @Test
+    void logsWhenBindingTheWorkspaceFails_BUG_153() {
+        TenantJobService jobs = mock(TenantJobService.class);
+        WorkerTenantService tenants = mock(WorkerTenantService.class);
+        when(tenants.currentWorkspaceId()).thenReturn(Optional.empty());
+        when(tenants.enqueueWorkspaceId()).thenReturn(Optional.of(A));
+        doThrow(new IllegalStateException("x")).when(tenants).runIn(eq(A), any(Runnable.class));
+
+        enqueuer(jobs, tenants).onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID, new UUID(0, 4))));
+
+        verifyNoInteractions(jobs);
+        assertThat(enqueuerLog.list)
+                .filteredOn(entry -> entry.getLevel() == Level.WARN)
+                .singleElement()
+                .satisfies(
+                        entry -> assertThat(entry.getFormattedMessage()).contains("2 of 2", "IllegalStateException"));
     }
 
     @SuppressWarnings("unchecked")

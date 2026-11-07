@@ -48,11 +48,8 @@ public class ReviewNotificationEnqueuer {
             } else {
                 var workspaceId = context.enqueueWorkspaceId();
                 if (workspaceId.isEmpty()) {
-                    LOG.warn(
-                            "Could not queue {} of {} review notification jobs ({})",
-                            event.decisionIds().size(),
-                            event.decisionIds().size(),
-                            "NoWorkspace");
+                    int total = event.decisionIds().size();
+                    LOG.warn("Could not queue {} of {} review notification jobs (no Workspace to bind)", total, total);
                     return;
                 }
                 context.runIn(workspaceId.get(), enqueue);
