@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Liquibase entry point. Add each new changeset file below, in order; never edit an applied one. -->
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <include file="changes/001-init-core-schema.sql" relativeToChangelogFile="true"/>
+    <include file="changes/002-tenant-project-suggestion.sql" relativeToChangelogFile="true"/>
+    <include file="changes/003-ticket-import-schema.sql" relativeToChangelogFile="true"/>
+    <include file="changes/004-identity-sign-in-states.sql" relativeToChangelogFile="true"/>
+    <include file="changes/005-identity-sign-in-state-binding.sql" relativeToChangelogFile="true"/>
+    <include file="changes/006-identity-app-user.sql" relativeToChangelogFile="true"/>
+    <include file="changes/007-identity-hand-off-code.sql" relativeToChangelogFile="true"/>
+    <include file="changes/008-search-public-ids.sql" relativeToChangelogFile="true"/>
+    <include file="changes/009-search-ticket-updated-at.sql" relativeToChangelogFile="true"/>
+
+</databaseChangeLog>

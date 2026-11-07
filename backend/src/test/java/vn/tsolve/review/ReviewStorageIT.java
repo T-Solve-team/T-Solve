@@ -24,6 +24,43 @@ import org.testcontainers.utility.DockerImageName;
 class ReviewStorageIT {
 
     @Test
+    void upgradesAlreadyRunningSearchAndPreservesItsTimestamp_BUG_144() throws Exception {
+        try (var postgres = new PostgreSQLContainer<>(
+                DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"))) {
+            postgres.start();
+            var source =
+                    new DriverManagerDataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+            try (var liquibase = new Liquibase(
+                    "db/changelog/search-only.xml",
+                    new ClassLoaderResourceAccessor(),
+                    new JdbcConnection(source.getConnection()))) {
+                liquibase.update(new Contexts(), new LabelExpression());
+            }
+            var jdbc = new JdbcTemplate(source);
+            jdbc.update(
+                    """
+                    insert into ticket(ticket_id, project_id, source, status, title, symptoms, root_cause,
+                                       resolution_steps, scope, updated_at)
+                    values ('SEARCH-OLD', 1, 'CSV', 'PUBLISHED', 'Old Search', 's', 'r', 'st', 'sc', '2026-11-01T00:00:00Z')
+                    """);
+            var before = jdbc.queryForObject("select updated_at from ticket", OffsetDateTime.class);
+            var publicId = jdbc.queryForObject("select public_id from ticket", UUID.class);
+            try (var liquibase = new Liquibase(
+                    "db/changelog/db.changelog-master.xml",
+                    new ClassLoaderResourceAccessor(),
+                    new JdbcConnection(source.getConnection()))) {
+                liquibase.update(new Contexts(), new LabelExpression());
+            }
+            assertThat(jdbc.queryForObject("select updated_at from ticket", OffsetDateTime.class))
+                    .isEqualTo(before);
+            assertThat(jdbc.queryForObject("select public_id from ticket", UUID.class))
+                    .isEqualTo(publicId);
+            assertThat(jdbc.queryForObject("select project_id from ticket", UUID.class))
+                    .isEqualTo(new UUID(0, 1));
+        }
+    }
+
+    @Test
     void upgradesADatabaseAlreadyRunningReviewWithoutReapplyingStorage_BUG_140(@TempDir Path temporary)
             throws Exception {
         String master;
@@ -33,6 +70,8 @@ class ReviewStorageIT {
                             "    <include file=\"changes/008-ticket-import-project-uuid.sql\" relativeToChangelogFile=\"true\"/>",
                             "");
         }
+        master = master.replaceAll(
+                "(?m)^.*<include file=\"changes/(?:008-search|009-search|01[012]-review-search).*\n", "");
         Path oldMaster = temporary.resolve("db/changelog/review-before-project-uuid.xml");
         Files.createDirectories(oldMaster.getParent());
         Files.writeString(oldMaster, master);
@@ -98,7 +137,13 @@ class ReviewStorageIT {
                 jdbc.update(
                         "insert into ticket_import_decision (ticket_id, reviewer, decision) values (?, 'legacy-pm', 'APPROVE')",
                         oldId);
-                liquibase.update(2, new Contexts(), new LabelExpression());
+                var pending = liquibase.listUnrunChangeSets(new Contexts(), new LabelExpression());
+                int count = 0;
+                for (var change : pending) {
+                    count++;
+                    if (change.getId().equals("008-review-ticket-storage")) break;
+                }
+                liquibase.update(count, new Contexts(), new LabelExpression());
                 jdbc.update(
                         """
                         insert into ticket (source_ticket_id, project_id, source, status, title, symptoms,

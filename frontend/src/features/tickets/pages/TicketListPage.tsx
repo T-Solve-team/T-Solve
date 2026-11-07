@@ -2,11 +2,16 @@
 import { Flex } from 'antd';
 import { TicketSource, TicketStatus } from '@/shared/api';
 import { useSession } from '@/shared/auth';
+import type { TableSort } from '@/shared/lib';
 import { useListSearchParams } from '@/shared/routing';
 import { KEYWORD_MAX, TicketListFilters } from '../components/TicketListFilters';
 import { TicketListTable } from '../components/TicketListTable';
 import { useTicketList } from '../hooks/useTicketList';
 import styles from './TicketListPage.module.css';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SORT_FIELDS = new Set(['sourceTicketId', 'title', 'project', 'reviewDueDate', 'updatedAt']);
+const DEFAULT_SORT: TableSort = { field: 'updatedAt', order: 'desc' };
 
 /** A URL value that is one of `allowed`; anything else → undefined ("All"), so the API never gets an invalid value. */
 function oneOf<T extends string>(allowed: Record<string, T>, value: string | null): T | undefined {
@@ -15,11 +20,14 @@ function oneOf<T extends string>(allowed: Record<string, T>, value: string | nul
 
 export function TicketListPage() {
   const { session } = useSession();
-  const list = useListSearchParams({ field: 'updatedAt', order: 'desc' }); // newest first
+  const list = useListSearchParams(DEFAULT_SORT);
   // A hand-edited link must not make every request a 400: trim and cap the keyword, drop an empty Department
   // (BUG-061). A Department id is a string (UUID); the backend refuses one the user may not see.
   const keyword = list.getFilter('keyword')?.trim().slice(0, KEYWORD_MAX) ?? '';
-  const departmentId = list.getFilter('departmentId') || undefined;
+  const departmentFilter = list.getFilter('departmentId');
+  const departmentId =
+    departmentFilter && UUID.test(departmentFilter) ? departmentFilter : undefined;
+  const sort = SORT_FIELDS.has(list.sort.field) ? list.sort : DEFAULT_SORT;
   const source = oneOf(TicketSource, list.getFilter('source'));
   const status = oneOf(TicketStatus, list.getFilter('status'));
   const tickets = useTicketList({
@@ -28,6 +36,7 @@ export function TicketListPage() {
     source,
     status,
     ...list.apiPaging,
+    sort: [`${sort.field},${sort.order}`],
   });
 
   return (
@@ -49,7 +58,7 @@ export function TicketListPage() {
           onRetry={() => void tickets.refetch()}
           page={list.page}
           onPageChange={list.setPage}
-          sort={list.sort}
+          sort={sort}
           onSortChange={list.setSort}
         />
       </div>

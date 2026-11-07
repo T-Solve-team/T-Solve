@@ -82,14 +82,14 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
 
     @Override
     public Detail detail(Map<UUID, ProjectAccess> projects, UUID accountId, boolean manager, UUID ticketId) {
-        var ticket = tickets.findById(ticketId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+        var ticket = tickets.findForReviewDetail(ticketId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
         var project = projects.get(ticket.getProjectId());
         boolean canReadReview =
                 Objects.equals(ticket.getWriterId(), accountId) || (manager && project != null && project.managed());
         if (project == null || (ticket.getStatus() != TicketStatus.PUBLISHED && !canReadReview)) {
             throw new NotFoundException("MSG04", Map.of());
         }
-        List<Evidence> attachments = evidence.findByTicketIdOrderById(ticketId).stream()
+        List<Evidence> attachments = evidence.findByTicketIdOrderById(ticket.getId()).stream()
                 .map(mapper::evidence)
                 .toList();
         return mapper.detail(

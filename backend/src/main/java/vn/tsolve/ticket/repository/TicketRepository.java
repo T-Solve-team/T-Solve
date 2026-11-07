@@ -3,6 +3,7 @@ package vn.tsolve.ticket.repository;
 import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
@@ -21,8 +22,11 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
     Set<String> findExistingTicketIds(@Param("ticketIds") Collection<String> ticketIds);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select t from Ticket t where t.id in :ids order by t.id")
+    @Query("select t from Ticket t where t.id in :ids or t.publicId in :ids order by t.id")
     List<Ticket> lockForReview(@Param("ids") Collection<UUID> ids);
+
+    @Query("select t from Ticket t where t.id = :id or t.publicId = :id")
+    Optional<Ticket> findForReviewDetail(@Param("id") UUID id);
 
     @Query(
             """

@@ -173,6 +173,27 @@ class ReviewDecisionApiIT {
     }
 
     @Test
+    void acceptsSearchPublicIdsWithoutDuplicatingDecisions_BUG_144() throws Exception {
+        var db = TwoTenantDatabases.tenantA();
+        UUID ticket = pending(db, MANAGED_PROJECT);
+        UUID publicId = db.queryForObject("select public_id from ticket where ticket_id = ?", UUID.class, ticket);
+        db.update(
+                "insert into evidence(ticket_id,file_name,file_type,file_size) values (?, 'search.png','image/png',1)",
+                ticket);
+        inAcme(get("/api/v1/tickets/{ticketId}", publicId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ticketId").value(ticket.toString()))
+                .andExpect(jsonPath("$.evidence[0].filename").value("search.png"));
+        inAcme("approve", "{\"ticketIds\":[\"" + ticket + "\",\"" + publicId + "\"]}")
+                .andExpect(status().isNotFound());
+        assertThat(ticketStatus(db, ticket)).isEqualTo("PENDING_REVIEW");
+        inAcme("approve", body(publicId, "")).andExpect(status().isOk());
+        assertThat(ticketStatus(db, ticket)).isEqualTo("PUBLISHED");
+        assertThat(db.queryForObject("select count(*) from review_decision where ticket_id = ?", Integer.class, ticket))
+                .isEqualTo(1);
+    }
+
+    @Test
     void rejectsUnsupportedQueueSort_BUG_138() throws Exception {
         inAcme(get("/api/v1/review-queue").param("sort", "unknown,asc")).andExpect(status().isBadRequest());
         inAcme(get("/api/v1/review-queue").param("sort", "title,sideways")).andExpect(status().isBadRequest());

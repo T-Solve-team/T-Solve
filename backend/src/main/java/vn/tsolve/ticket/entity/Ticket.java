@@ -22,6 +22,9 @@ public class Ticket {
     @Column(name = "ticket_id")
     private UUID id;
 
+    @Column(name = "public_id", insertable = false, updatable = false)
+    private UUID publicId;
+
     @Column(name = "source_ticket_id", nullable = false, updatable = false)
     private String ticketId;
 
