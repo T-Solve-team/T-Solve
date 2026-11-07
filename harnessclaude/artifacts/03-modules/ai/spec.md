@@ -11,6 +11,7 @@ owner: BA
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
 | 2026-11-05 | STORY-001..STORY-005 | Initial spec: the Ollama chat and embedding clients with their limits (KAN-139), the AI draft (KAN-142) and the AI rewrite (KAN-143) of a Solution as a Java service | Plan the `ai` module (KAN-139, KAN-142, KAN-143). Hải Anh 05/11: one spec for all three (Q1); plain `RestClient` to Ollama's own API, no Spring AI (Q2); draft and rewrite are a Java service that `tracker` calls from its FIT-secured Jira App endpoints, `ai` has no REST of its own (Q3); connect 2 s, chat 60 s, embed 10 s, one retry on a connection error or 5xx only, 2 calls at a time per process with a 1 s wait for a slot, failures thrown as an unchecked exception that ends as 503 MSG06 when nobody catches it (Q4) |
+| 2026-11-06 | STORY-004 | AC-004.2 reworded: the fallback draft's Symptoms is cut to 10,000 characters and its Resolution steps to what remains of the 10,000, without splitting a character, so the fallback fits the Solution template | PR #122 review (Trần Trung Hiếu, 05/11): a description over 10,000 characters made a fallback the Solution form rejects (GBR-33), breaking AC-004.3 at the caller; Hải Anh 06/11 chose one 10,000 total, Symptoms first |
 
 ## Sources
 
@@ -78,7 +79,7 @@ cancelled on 29/10 (KAN-138): the SRS lines that still say "PII masked" are supe
   instead of writing it from nothing.
 - Acceptance:
   - AC-004.1: WHEN a caller asks `SolutionAiService` to draft a Solution from an issue's summary, description and comments, THE ai module SHALL ask the LLM for the five sections of the Solution template (Symptoms, Root cause, Resolution steps, Workaround, Scope of applicability; GBR-33) as a JSON object and SHALL return them with `isAiDraft` true.
-  - AC-004.2: IF the LLM call fails, or the answer leaves Symptoms, Root cause, Resolution steps or Scope of applicability empty, or the five sections together are longer than 10,000 characters, THEN THE ai module SHALL return the fallback draft — Symptoms is the issue's description, Resolution steps is the issue's last comment, the other sections are empty — with `isAiDraft` false, so the caller shows MSG67 (UC-19 Step 3).
+  - AC-004.2: IF the LLM call fails, or the answer leaves Symptoms, Root cause, Resolution steps or Scope of applicability empty, or the five sections together are longer than 10,000 characters, THEN THE ai module SHALL return the fallback draft — Symptoms is the issue's description cut to 10,000 characters, Resolution steps is the issue's last comment cut to the characters that remain of the 10,000, the other sections are empty, and no cut splits a character — with `isAiDraft` false, so the caller shows MSG67 (UC-19 Step 3).
   - AC-004.3: THE `draft` operation SHALL never throw because of an AI failure; its only failure result is the fallback draft of AC-004.2.
   - AC-004.4: WHEN the description and the comments together are longer than 12,000 characters, THE ai module SHALL send the summary, the description cut to 12,000 characters and then, newest first, only the comments that still fit in 12,000 characters in all.
   - AC-004.5: IF the issue has no description, or has no comment, THEN THE fallback draft SHALL leave Symptoms, or Resolution steps, empty.

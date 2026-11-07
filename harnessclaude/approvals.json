@@ -781,8 +781,8 @@
     }
   },
   "ai": {
-    "specHash": "ad7e0d13621067934ecc9d3e20cdb2c6a766646173980bf68965215599e3f650",
-    "approvedAt": "2026-11-05T06:18:59.919Z",
+    "specHash": "bd7dbb0f81b7f436d9d60afbc40dd6e6965ab5d189ac8a91dfce8548af0ea181",
+    "approvedAt": "2026-11-06T11:57:13.982Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a caller asks  for a chat completion with a list of messages (each with the role ,  or  and its text), THE ai module SHALL send them in one  with the model  and , and SHALL return the text of the answer's message.",
@@ -800,7 +800,7 @@
       "AC-003.7": "WHEN the backend starts while Ollama cannot be reached, THE backend SHALL start and serve the requests that need no AI.",
       "AC-003.8": "IF an  is not caught by its caller and reaches the global error handler, THEN THE backend SHALL answer  with a  whose  is .",
       "AC-004.1": "WHEN a caller asks  to draft a Solution from an issue's summary, description and comments, THE ai module SHALL ask the LLM for the five sections of the Solution template (Symptoms, Root cause, Resolution steps, Workaround, Scope of applicability; GBR-33) as a JSON object and SHALL return them with  true.",
-      "AC-004.2": "IF the LLM call fails, or the answer leaves Symptoms, Root cause, Resolution steps or Scope of applicability empty, or the five sections together are longer than 10,000 characters, THEN THE ai module SHALL return the fallback draft — Symptoms is the issue's description, Resolution steps is the issue's last comment, the other sections are empty — with  false, so the caller shows MSG67 (UC-19 Step 3).",
+      "AC-004.2": "IF the LLM call fails, or the answer leaves Symptoms, Root cause, Resolution steps or Scope of applicability empty, or the five sections together are longer than 10,000 characters, THEN THE ai module SHALL return the fallback draft — Symptoms is the issue's description cut to 10,000 characters, Resolution steps is the issue's last comment cut to the characters that remain of the 10,000, the other sections are empty, and no cut splits a character — with  false, so the caller shows MSG67 (UC-19 Step 3).",
       "AC-004.3": "THE  operation SHALL never throw because of an AI failure; its only failure result is the fallback draft of AC-004.2.",
       "AC-004.4": "WHEN the description and the comments together are longer than 12,000 characters, THE ai module SHALL send the summary, the description cut to 12,000 characters and then, newest first, only the comments that still fit in 12,000 characters in all.",
       "AC-004.5": "IF the issue has no description, or has no comment, THEN THE fallback draft SHALL leave Symptoms, or Resolution steps, empty.",
