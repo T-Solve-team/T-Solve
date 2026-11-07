@@ -30,7 +30,10 @@ export const getSearchTicketsResponseMock = (
       },
       excerpt: faker.string.alpha({ length: { min: 10, max: 20 } }),
       helpfulRate: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
-      resolvedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+      resolvedAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + 'Z',
+        null,
+      ]),
     }),
   ),
   page: {

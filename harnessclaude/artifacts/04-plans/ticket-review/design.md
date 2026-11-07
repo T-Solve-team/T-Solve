@@ -221,6 +221,12 @@ Keep the existing OpenAPI contract and Department filter. Require a trusted Work
 
 Risk review verdict: CAUTION. Storage can be verified independently. Production activation requires trusted Workspace routing, Project membership and Jira issue identity.
 
+### Project membership adapter (decision 2026-11-07, user)
+
+Without a production `ReviewWorkspaceAccess` every Review endpoint answers 403. The team's tenant DDL (`database/02_tenant.sql`) decides who manages a Project: `project_membership` with `role_in_project = PROJECT_MANAGER`. The table is not in the changelog yet, so ticket-review adds it as drawn there, with UUID references because `app_user.id` and `project.public_id` are UUIDs: `user_id → app_user(id)`, `project_id → project(public_id)`, composite key, `date_added`. Identity keeps ownership of membership administration (UC-05/UC-16); this changeset only creates the table.
+
+`ProjectMembershipReviewAccess` (in `review/service/impl/`) implements `ReviewWorkspaceAccess` against the bound tenant database: an Account that is missing or not ACTIVE gets empty (fail closed). Readable Projects are the ACTIVE Projects of the Workspace; managed ones carry a PROJECT_MANAGER membership. Each Project is keyed by both ticket-side ids in use, `public_id` and the legacy hex form of `project_id`, the same match the search module uses. The Project name is its Jira key, because `project` has no name column.
+
 ## KAN-155 extension: writer email (STORY-010)
 
 - **Delivery** — chosen: a tenant JobRunr job per decision (`TenantJobService.enqueue("review-notification", decisionId)`), enqueued from a `@TransactionalEventListener(phase = AFTER_COMMIT)`; alternatives: direct SMTP after commit, an outbox table. Rationale: the user chose job delivery; JobRunr retries failed deliveries and SMTP never runs inside the decision transaction or the request. An outbox would also survive a crash between commit and enqueue, but it is more than the demo needs.
