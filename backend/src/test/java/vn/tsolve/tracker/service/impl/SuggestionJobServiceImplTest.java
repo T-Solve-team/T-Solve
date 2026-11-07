@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -19,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import vn.tsolve.tracker.dto.IssueSuggestion;
 import vn.tsolve.tracker.dto.SuggestionJobRequest;
 import vn.tsolve.tracker.dto.SuggestionSource;
@@ -105,6 +107,32 @@ class SuggestionJobServiceImplTest {
     }
 
     @Test
+    void neverThrowsAndLogsOnlyKeyAndErrorTypeWhenTheResultCannotBeRead_AC_011_6(CapturedOutput output) {
+        given(repository.findByJiraIssueKey("ITSUP-1"))
+                .willThrow(new DataAccessResourceFailureException("connection lost while reading VPN drops"));
+
+        assertThatCode(() -> service().run(REQUEST)).doesNotThrowAnyException();
+
+        verifyNoInteractions(search);
+        assertThat(output).contains("ITSUP-1").contains("DataAccessResourceFailureException");
+        assertThat(output).doesNotContain("VPN drops");
+    }
+
+    @Test
+    void neverThrowsAndLogsOnlyKeyAndErrorTypeWhenTheSuggestionCannotBeStored_AC_011_6(CapturedOutput output) {
+        given(repository.findByJiraIssueKey("ITSUP-1")).willReturn(Optional.of(newResult()));
+        given(search.suggest(anyLong(), anyString(), anyString()))
+                .willReturn(Optional.of(new IssueSuggestion(List.of(), "Restart the VPN service.")));
+        given(repository.fillSuggestion(anyString(), anyString(), anyString()))
+                .willThrow(new DataAccessResourceFailureException("could not store: Restart the VPN service."));
+
+        assertThatCode(() -> service().run(REQUEST)).doesNotThrowAnyException();
+
+        assertThat(output).contains("ITSUP-1").contains("DataAccessResourceFailureException");
+        assertThat(output).doesNotContain("Restart the VPN service");
+    }
+
+    @Test
     void changesNothingWhenTheResultNoLongerExists_AC_011_7() {
         given(repository.findByJiraIssueKey("ITSUP-1")).willReturn(Optional.empty());
 
@@ -116,8 +144,8 @@ class SuggestionJobServiceImplTest {
 
     @Test
     void changesNothingWhenTheResultAlreadyHasASuggestion_AC_011_7() {
-        SuggestionResult filled = newResult();
-        filled.fill("[]", "Restart the VPN service.");
+        SuggestionResult filled = mock(SuggestionResult.class);
+        given(filled.hasSuggestion()).willReturn(true);
         given(repository.findByJiraIssueKey("ITSUP-1")).willReturn(Optional.of(filled));
 
         service().run(REQUEST);

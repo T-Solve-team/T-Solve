@@ -32,6 +32,18 @@ public class SuggestionJobServiceImpl implements SuggestionJobService {
 
     @Override
     public void run(SuggestionJobRequest request) {
+        try {
+            suggest(request);
+        } catch (RuntimeException e) {
+            // A database or JSON error: only the error type, its message may quote stored text (Non-Functional 4).
+            log.warn(
+                    "Suggestion job failed for {}: {}",
+                    request.issueKey(),
+                    e.getClass().getSimpleName());
+        }
+    }
+
+    private void suggest(SuggestionJobRequest request) {
         String issueKey = request.issueKey();
         Optional<SuggestionResult> result = repository.findByJiraIssueKey(issueKey);
         if (result.isEmpty() || result.get().hasSuggestion()) {

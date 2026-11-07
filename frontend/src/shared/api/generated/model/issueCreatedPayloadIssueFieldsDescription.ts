@@ -9,5 +9,6 @@
 
 /**
  * The issue description as Atlassian Document Format (ADF); the tracker turns it into plain text for the suggestion job (STORY-011). Absent or null when the issue has none. Never logged.
+ * @nullable
  */
-export type IssueCreatedPayloadIssueFieldsDescription = { [key: string]: unknown };
+export type IssueCreatedPayloadIssueFieldsDescription = { [key: string]: unknown } | null;

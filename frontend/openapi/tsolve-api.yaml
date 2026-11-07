@@ -1308,7 +1308,7 @@ components:
                   type: string
                   description: The issue summary, sent to the suggestion job (STORY-011). Never logged.
                 description:
-                  type: object
+                  type: [object, 'null']
                   additionalProperties: true
                   description: >
                     The issue description as Atlassian Document Format (ADF); the tracker turns it into plain text
