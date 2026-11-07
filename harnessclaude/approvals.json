@@ -75,8 +75,8 @@
     }
   },
   "import-ticket-list": {
-    "specHash": "c4f0244c704c57bf6a672485efd84d49dda922c4a45fd13b9a4a4e9eab64d691",
-    "approvedAt": "2026-11-04T19:31:14.628Z",
+    "specHash": "6064b8535efc95294c3ee48ad5fe128353803d86f1398b39940011b26faeb3f5",
+    "approvedAt": "2026-11-07T14:06:32.236Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager uploads a file with the  extension that is valid UTF-8, at most 10 MB, has every required column and at least one data row, for a Project they manage, THE system SHALL create an Import Preview and return its counts and the first page of its rows.",
@@ -126,7 +126,7 @@
       "AC-007.1": "WHEN a Project Manager reads their unconfirmed preview, THE system SHALL return its Project, file name, Valid, Error and Removed counts, MSG30 when at least one row is Error, and the first page of its rows, as in AC-001.1.",
       "AC-007.2": "IF the preview belongs to another user, has been confirmed, or no longer exists, THEN THE system SHALL reject the read with HTTP 404.",
       "AC-007.3": "IF the caller no longer manages the preview's Project or the Project is no longer Active, THEN THE system SHALL reject the read with HTTP 403 (MSG08).",
-      "AC-008.1": "WHEN a Project Manager opens Import Tickets, THE web app SHALL show the tabs Jira, CSV and Manual entry with CSV selected, and Jira and Manual entry disabled.",
+      "AC-008.1": "WHEN a Project Manager opens Import Tickets, THE web app SHALL show the tabs Jira, CSV and Manual entry with CSV selected and Manual entry disabled; the Jira tab and the Drafts list behave as  STORY-001 and STORY-004 say.",
       "AC-008.2": "THE web app SHALL offer in the Project drop-down only the Projects of the signed-in user whose role in the Project is Project Manager, each shown with its Jira project key and Department name.",
       "AC-008.3": "WHEN the Project Manager clicks Download template, THE web app SHALL save the file returned by the template endpoint as .",
       "AC-008.4": "IF the Project Manager clicks Upload without a Project or without a file, THEN THE web app SHALL show MSG01 at each missing field and send nothing.",
