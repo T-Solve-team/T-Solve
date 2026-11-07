@@ -57,6 +57,9 @@ import vn.tsolve.ticket.service.ImportConfirmService;
             "SEARCH_EMBED_CATCH_UP_DELAY=24h"
         })
 class TicketEmbeddingIT {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private vn.tsolve.common.audit.AuditService audit;
+
     @ServiceConnection
     static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
             DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
