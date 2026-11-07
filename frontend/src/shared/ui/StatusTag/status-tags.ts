@@ -22,6 +22,8 @@ export const STATUS_TAGS = {
   FAILED: { label: 'Failed', color: 'red' },
   VALID: { label: 'Valid', color: 'green' },
   ERROR: { label: 'Error', color: 'red' },
+  // Colour is a placeholder until the Figma kit sets it, like the triage classes below.
+  NEEDS_SOLUTION: { label: 'Needs Solution', color: 'orange' },
   // AI Ticket Triage class (GBR-35). Colours are placeholders until the Figma kit sets them (design).
   SIMPLE: { label: 'Simple', color: 'green' },
   COMPLEX: { label: 'Complex', color: 'orange' },

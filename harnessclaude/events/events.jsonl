@@ -509,7 +509,66 @@
 {"ts":"2026-11-03T17:18:57.553Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"pending","to":"in-progress"}
 {"ts":"2026-11-03T17:18:57.815Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-03T17:18:58.087Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"evaluating","to":"passing"}
+{"ts":"2026-11-01T04:29:54.629Z","type":"spec-approved","module":"import-ticket-list","specHash":"095da14b5400c699aa7d47a02777066d979727271d50d81bbb9c75d1fc590303"}
+{"ts":"2026-11-01T04:34:32.098Z","type":"spec-approved","module":"fe-foundation","specHash":"ae8a1d9a48fa3c8e31630c592b9c1a0edb65dd8707d6406d50f26465fdf1f128"}
+{"ts":"2026-11-01T04:34:37.805Z","type":"feature-status","module":"import-ticket-list","feature":"project-uuid","from":null,"to":"pending"}
+{"ts":"2026-11-01T04:34:38.078Z","type":"feature-status","module":"import-ticket-list","feature":"preview-read","from":null,"to":"pending"}
+{"ts":"2026-11-01T04:34:38.355Z","type":"feature-status","module":"import-ticket-list","feature":"duplicate-id-code","from":null,"to":"pending"}
+{"ts":"2026-11-01T04:34:38.632Z","type":"feature-status","module":"import-ticket-list","feature":"csv-upload-kit","from":null,"to":"pending"}
+{"ts":"2026-11-01T04:34:38.902Z","type":"feature-status","module":"import-ticket-list","feature":"import-tickets-screen","from":null,"to":"pending"}
+{"ts":"2026-11-01T04:34:39.176Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-screen","from":null,"to":"pending"}
+{"ts":"2026-11-01T04:34:39.452Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-actions","from":null,"to":"pending"}
+{"ts":"2026-11-01T04:34:39.729Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-preview-popup","from":null,"to":"pending"}
+{"ts":"2026-11-01T04:34:40.001Z","type":"feature-status","module":"fe-foundation","feature":"catalog-msg-new-3","from":null,"to":"pending"}
+{"ts":"2026-11-01T04:34:40.277Z","type":"module-status","module":"import-ticket-list","from":"completed","to":"planned"}
+{"ts":"2026-11-01T04:34:59.305Z","type":"module-status","module":"import-ticket-list","from":"planned","to":"implementing"}
+{"ts":"2026-11-01T04:34:59.585Z","type":"feature-status","module":"import-ticket-list","feature":"project-uuid","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T05:25:21.073Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"c4f39009aa43872e595f17ff5ca28a95c31084d0"}
+{"ts":"2026-11-01T05:25:21.349Z","type":"feature-status","module":"import-ticket-list","feature":"project-uuid","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-01T05:25:58.175Z","type":"feature-status","module":"import-ticket-list","feature":"preview-read","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T05:35:59.921Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"6bb02d7e813ca4fbbe107888439016e0ab339206"}
+{"ts":"2026-11-01T05:36:00.207Z","type":"feature-status","module":"import-ticket-list","feature":"preview-read","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-01T05:37:56.057Z","type":"feature-status","module":"import-ticket-list","feature":"duplicate-id-code","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T05:45:03.075Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"da595643101cf9c8c815341c57f6ca095942fd8b"}
+{"ts":"2026-11-01T05:45:03.344Z","type":"feature-status","module":"import-ticket-list","feature":"duplicate-id-code","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-01T05:45:33.680Z","type":"module-status","module":"fe-foundation","from":"planned","to":"implementing"}
+{"ts":"2026-11-01T05:45:33.974Z","type":"feature-status","module":"fe-foundation","feature":"catalog-msg-new-3","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T05:52:43.755Z","type":"commit-recorded","module":"fe-foundation","repo":"default","sha":"795acef4a663e2f6bdcf56f8ac701c94fc5560d3"}
+{"ts":"2026-11-01T05:52:44.077Z","type":"feature-status","module":"fe-foundation","feature":"catalog-msg-new-3","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-01T05:53:16.993Z","type":"feature-status","module":"import-ticket-list","feature":"csv-upload-kit","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T06:10:51.319Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"09ab2ee908091e017d127a7d0755f388ce08a4eb"}
+{"ts":"2026-11-01T06:10:51.622Z","type":"feature-status","module":"import-ticket-list","feature":"csv-upload-kit","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-01T06:15:00.780Z","type":"feature-status","module":"import-ticket-list","feature":"import-tickets-screen","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T06:26:07.952Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"9e8aacb9e258ad90914fd7600df6365a944aba10"}
+{"ts":"2026-11-01T06:26:24.192Z","type":"feature-status","module":"import-ticket-list","feature":"import-tickets-screen","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-01T06:26:56.356Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-screen","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T06:40:11.339Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"84adf7ecdb077412bb6b7e5ac995f48dc5e78164"}
+{"ts":"2026-11-01T06:40:28.679Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-screen","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-01T06:41:15.542Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-actions","from":"pending","to":"in-progress"}
+{"ts":"2026-11-01T07:32:01.573Z","type":"quick-opened","what":"Demo: Wiki Home and Wiki Document show the chatbot's mock Wiki documents","files":["frontend/src/features/wiki/pages/WikiHomePage.tsx","frontend/src/features/wiki/pages/WikiDocumentPage.tsx","frontend/src/features/wiki/components/WikiReader.tsx","frontend/src/features/wiki/components/WikiReader.module.css","frontend/src/app/router/route-table.test.tsx"]}
+{"ts":"2026-11-02T20:00:46.828Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"55a1ee6ec40a9756571b81dbca052f0fec0a38bd"}
+{"ts":"2026-11-02T20:00:49.664Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-actions","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-03T07:26:09.918Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-preview-popup","from":"pending","to":"in-progress"}
+{"ts":"2026-11-03T15:38:18.261Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"1b6bef51e3bebf41193c9903a3c39380b9e2e306"}
+{"ts":"2026-11-03T15:38:18.598Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-preview-popup","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-03T16:00:37.011Z","type":"feature-status","module":"import-ticket-list","feature":"csv-upload-kit","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:00:37.291Z","type":"feature-status","module":"import-ticket-list","feature":"import-tickets-screen","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:00:43.278Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-screen","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:00:43.552Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-actions","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:00:43.826Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-preview-popup","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:02:46.319Z","type":"feature-status","module":"import-ticket-list","feature":"project-uuid","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:02:46.594Z","type":"feature-status","module":"import-ticket-list","feature":"preview-read","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T16:02:46.871Z","type":"feature-status","module":"import-ticket-list","feature":"duplicate-id-code","from":"evaluating","to":"passing"}
+{"ts":"2026-11-03T17:16:21.038Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"9bcfddfcc113f945d76c519af16bd5a924ad3ac9"}
+{"ts":"2026-11-03T17:24:23.956Z","type":"module-status","module":"import-ticket-list","from":"implementing","to":"evaluating"}
+{"ts":"2026-11-03T17:24:24.236Z","type":"module-status","module":"import-ticket-list","from":"evaluating","to":"completed"}
+{"ts":"2026-11-03T18:47:41.106Z","type":"quick-opened","what":"Publish the local Docker database on DB_PORT from .env (default 5432), set 5433 here because a Windows PostgreSQL holds 5432","files":["docker-compose.yml",".env"]}
+{"ts":"2026-11-03T18:49:40.345Z","type":"quick-closed","what":"Publish the local Docker database on DB_PORT from .env (default 5432), set 5433 here because a Windows PostgreSQL holds 5432","files":["docker-compose.yml",".env"]}
+{"ts":"2026-11-03T19:28:32.021Z","type":"quick-opened","what":"BUG-110: send jsdom FormData uploads as Node forms in the test fetch so CI passes on Node 24","files":["frontend/src/test/setup.ts","frontend/src/test/setup.test.ts","frontend/src/features/ticket-import/pages/ImportTicketsPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-03T19:45:05.937Z","type":"quick-closed","what":"BUG-110: send jsdom FormData uploads as Node forms in the test fetch so CI passes on Node 24","files":["frontend/src/test/setup.ts","frontend/src/test/setup.test.ts","frontend/src/features/ticket-import/pages/ImportTicketsPage.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-11-03T17:59:45.096Z","type":"spec-approved","module":"identity","specHash":"5a0b213bea1cb3bbf4c97da21f250bb727a0414388a66d07927100c24cca99dd"}
+{"ts":"2026-11-04T08:22:28.258Z","type":"quick-opened","what":"BUG-112: cancel timers a test file leaves running so they cannot fire after jsdom is torn down","files":["frontend/src/test/setup.ts","frontend/src/test/setup-teardown.test.ts","docs/bug-log.md"]}
+{"ts":"2026-11-04T19:03:49.667Z","type":"quick-closed","what":"BUG-112: cancel timers a test file leaves running so they cannot fire after jsdom is torn down","files":["frontend/src/test/setup.ts","frontend/src/test/setup-teardown.test.ts","docs/bug-log.md"]}
 {"ts":"2026-11-02T12:58:28.366Z","type":"spec-approved","module":"triage","specHash":"f89248b2b780db18b2da123dbfedb0b2781eb33728fefd65a1e45fcab4babd86"}
 {"ts":"2026-11-02T12:59:04.385Z","type":"module-status","module":"triage","from":"decomposed","to":"planned"}
 {"ts":"2026-11-02T12:59:07.659Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":null,"to":"pending"}
@@ -572,6 +631,23 @@
 {"ts":"2026-11-04T15:51:40.834Z","type":"feature-status","module":"identity","feature":"account-checks","from":"pending","to":"in-progress"}
 {"ts":"2026-11-04T15:51:41.101Z","type":"feature-status","module":"identity","feature":"account-checks","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-04T15:51:41.366Z","type":"feature-status","module":"identity","feature":"account-checks","from":"evaluating","to":"passing"}
+{"ts":"2026-11-04T19:20:18.632Z","type":"quick-opened","what":"Renumber KAN-31 bug ids that collide with main: BUG-104 to BUG-114, BUG-109 to BUG-115, BUG-110 to BUG-116","files":["frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/test/setup.test.ts","frontend/src/test/setup.ts","backend/src/test/java/vn/tsolve/ticket/service/impl/StubProjectAccessTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-04T19:31:14.630Z","type":"spec-approved","module":"import-ticket-list","specHash":"c4f0244c704c57bf6a672485efd84d49dda922c4a45fd13b9a4a4e9eab64d691"}
+{"ts":"2026-11-04T19:33:20.314Z","type":"quick-closed","what":"Renumber KAN-31 bug ids that collide with main: BUG-104 to BUG-114, BUG-109 to BUG-115, BUG-110 to BUG-116","files":["frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/test/setup.test.ts","frontend/src/test/setup.ts","backend/src/test/java/vn/tsolve/ticket/service/impl/StubProjectAccessTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-04T19:33:49.369Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-contract","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:49.677Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-upload","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:49.982Z","type":"feature-status","module":"import-ticket-list","feature":"preview-fill-solution","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:50.280Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-confirm","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:50.586Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-form","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:50.884Z","type":"feature-status","module":"import-ticket-list","feature":"row-solution-popup","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:51.186Z","type":"feature-status","module":"import-ticket-list","feature":"fill-solution-screen","from":null,"to":"pending"}
+{"ts":"2026-11-04T19:33:51.486Z","type":"module-status","module":"import-ticket-list","from":"completed","to":"planned"}
+{"ts":"2026-11-04T19:35:44.780Z","type":"module-status","module":"import-ticket-list","from":"planned","to":"implementing"}
+{"ts":"2026-11-04T19:35:45.205Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-contract","from":"pending","to":"in-progress"}
+{"ts":"2026-11-05T05:22:16.990Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"0526620ad325f10b1f653a980937f86acf138db6"}
+{"ts":"2026-11-05T05:22:17.278Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-contract","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-05T05:22:46.496Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-upload","from":"pending","to":"in-progress"}
+{"ts":"2026-11-05T18:36:20.804Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"025794b869adbc64aaafd5eb8e67d47c5632d961"}
 {"ts":"2026-11-05T06:18:59.925Z","type":"spec-approved","module":"ai","specHash":"ad7e0d13621067934ecc9d3e20cdb2c6a766646173980bf68965215599e3f650"}
 {"ts":"2026-11-05T06:19:04.963Z","type":"module-status","module":"ai","from":"decomposed","to":"planned"}
 {"ts":"2026-11-05T06:19:05.231Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":null,"to":"pending"}
@@ -625,3 +701,5 @@
 {"ts":"2026-11-06T12:00:29.808Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":"pending","to":"in-progress"}
 {"ts":"2026-11-06T12:13:56.230Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-06T12:13:56.735Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T03:58:20.506Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-upload","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T04:10:50.890Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"f6bb9fa233b63b1951d028f25702969fbb1dcd20"}

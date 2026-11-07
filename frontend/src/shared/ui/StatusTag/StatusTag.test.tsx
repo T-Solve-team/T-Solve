@@ -3,8 +3,8 @@ import { StatusTag } from './StatusTag';
 import { STATUS_TAGS, type StatusTagStatus } from './status-tags';
 
 describe('StatusTag', () => {
-  it('has exactly 17 statuses (the Figma kit plus the triage classes), without the retired ones', () => {
-    expect(Object.keys(STATUS_TAGS)).toHaveLength(17);
+  it('has exactly 18 statuses (the Figma kit, the triage classes and Needs Solution), without the retired ones', () => {
+    expect(Object.keys(STATUS_TAGS)).toHaveLength(18);
     expect(Object.values(STATUS_TAGS).map((s) => s.label)).not.toContain('Deferred');
   });
 

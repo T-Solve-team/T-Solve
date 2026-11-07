@@ -5,8 +5,8 @@
   "status": "active",
   "modules": {
     "import-ticket-list": {
-      "status": "completed",
-      "currentPhase": "evaluate",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "csv-import-contract": "passing",
         "csv-import-schema": "passing",
@@ -21,15 +21,30 @@
         "csv-import-performance": "passing",
         "retire-snapshot-import": "passing",
         "csv-confirm-db-tests": "passing",
-        "preview-rows-access": "passing"
+        "preview-rows-access": "passing",
+        "project-uuid": "passing",
+        "preview-read": "passing",
+        "duplicate-id-code": "passing",
+        "csv-upload-kit": "passing",
+        "import-tickets-screen": "passing",
+        "import-preview-screen": "passing",
+        "import-preview-actions": "passing",
+        "import-ticket-preview-popup": "passing",
+        "import-type-contract": "evaluating",
+        "import-type-upload": "evaluating",
+        "preview-fill-solution": "pending",
+        "import-type-confirm": "pending",
+        "import-type-form": "pending",
+        "row-solution-popup": "pending",
+        "fill-solution-screen": "pending"
       },
-      "lastUpdated": "2026-10-22T13:51:10.073Z",
+      "lastUpdated": "2026-11-07T04:10:50.886Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "58e0a0674251e929d2c38e31b8eacb78f861e984"
+        "default": "f6bb9fa233b63b1951d028f25702969fbb1dcd20"
       }
     },
     "be-foundation": {
@@ -51,8 +66,8 @@
       }
     },
     "fe-foundation": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "roles-session": "passing",
         "guards-menus": "passing",
@@ -63,15 +78,16 @@
         "catalog-sync": "passing",
         "site-sign-in": "passing",
         "host-routes": "passing",
-        "uuid-ids": "passing"
+        "uuid-ids": "passing",
+        "catalog-msg-new-3": "evaluating"
       },
-      "lastUpdated": "2026-10-28T14:17:22.890Z",
+      "lastUpdated": "2026-11-01T05:52:44.075Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "507955c893cd293983fbf2d04714bf4a921324f7"
+        "default": "795acef4a663e2f6bdcf56f8ac701c94fc5560d3"
       }
     },
     "identity": {
