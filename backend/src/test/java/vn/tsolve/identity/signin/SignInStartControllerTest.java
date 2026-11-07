@@ -18,10 +18,13 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
@@ -48,6 +51,8 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
     SignInTestBeans.class,
     KeycloakAuthorizationRequestResolver.class,
     KeycloakClientRegistrations.class,
+    RedisAuthorizationRequestRepository.class,
+    OidcCallbackHandler.class,
     SignInStartControllerTest.RecordingRepositoryConfig.class
 })
 @TestPropertySource(
@@ -64,6 +69,9 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
 @ExtendWith(OutputCaptureExtension.class)
 class SignInStartControllerTest {
 
+    @MockBean
+    private StringRedisTemplate redis;
+
     private static final String AUTHORIZE_URL = SignInTestFixtures.LOGIN_ORIGIN + "/api/v1/auth/authorize";
 
     private static final String KEYCLOAK_ENDPOINT =
@@ -73,7 +81,9 @@ class SignInStartControllerTest {
     @TestConfiguration(proxyBeanMethods = false)
     static class RecordingRepositoryConfig {
 
+        // Primary: the controller records into this one; the callback chain takes the Redis one by its own type.
         @Bean
+        @Primary
         RecordingAuthorizationRequestRepository recordingAuthorizationRequestRepository() {
             return new RecordingAuthorizationRequestRepository();
         }

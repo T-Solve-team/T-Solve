@@ -53,6 +53,13 @@ public class SuggestionResult {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    // The MSG80 comment (STORY-012), set only by SuggestionResultRepository.markCommented.
+    @Column(name = "jira_comment_id", insertable = false, updatable = false)
+    private String jiraCommentId;
+
+    @Column(name = "commented_at", insertable = false, updatable = false)
+    private Instant commentedAt;
+
     protected SuggestionResult() {}
 
     public SuggestionResult(
@@ -66,6 +73,22 @@ public class SuggestionResult {
 
     public boolean hasSuggestion() {
         return suggestedSolution != null;
+    }
+
+    public boolean hasComment() {
+        return jiraCommentId != null;
+    }
+
+    public String getSuggestedSolution() {
+        return suggestedSolution;
+    }
+
+    public String getJiraCommentId() {
+        return jiraCommentId;
+    }
+
+    public Instant getCommentedAt() {
+        return commentedAt;
     }
 
     public UUID getId() {

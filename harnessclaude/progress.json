@@ -357,15 +357,16 @@
         "event-cleanup": "pending",
         "suggestion-job": "passing",
         "suggestion-job-worker": "passing",
-        "suggestion-uuid-keys": "evaluating"
+        "suggestion-uuid-keys": "evaluating",
+        "suggestion-comment": "passing"
       },
-      "lastUpdated": "2026-11-07T14:35:18.433Z",
+      "lastUpdated": "2026-11-07T16:53:12.227Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "8becea26b6bb5febddd9ed8b50128b6b4b9b2bad"
+        "default": "c8c32eaeede691bd09f0a1e87a669488d3bbb7b5"
       }
     },
     "ticket-review": {
