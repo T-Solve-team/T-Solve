@@ -26,7 +26,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongFunction;
-import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import org.postgresql.PGConnection;
 import org.postgresql.PGNotification;
@@ -51,6 +50,7 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
     private static final long RETRY_MS = 2_000;
     private static final long BARRIER_WAIT_MS = 2_000;
     private static final long LISTEN_WAIT_MS = 5_000;
+    // SseEmitter has no write timeout; the servlet container's connection timeout bounds stuck socket writes.
     private static final int SEND_THREADS = 4;
 
     private final DataSource dataSource;
@@ -72,6 +72,11 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
             thread.setDaemon(true);
             return thread;
         }
+    });
+    private final ExecutorService accessChecks = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "review-queue-access");
+        thread.setDaemon(true);
+        return thread;
     });
     private final Object lock = new Object();
     private final Map<UUID, Listener> listeners = new HashMap<>();
@@ -129,7 +134,7 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
         subscription.emitter.onTimeout(() -> subscription.end(false));
         subscription.emitter.onError(error -> subscription.end(false));
         subscription.heartbeat = heartbeats.scheduleWithFixedDelay(
-                subscription::enqueueHeartbeat, heartbeat.toMillis(), heartbeat.toMillis(), TimeUnit.MILLISECONDS);
+                subscription::checkAccess, heartbeat.toMillis(), heartbeat.toMillis(), TimeUnit.MILLISECONDS);
         // commits the response headers (text/event-stream) as soon as the stream opens
         subscription.enqueueOpen();
         return subscription.emitter;
@@ -150,6 +155,7 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
     @PreDestroy
     void shutdown() {
         heartbeats.shutdownNow();
+        accessChecks.shutdownNow();
         sends.shutdownNow();
         synchronized (lock) {
             listeners.values().forEach(Listener::close);
@@ -172,6 +178,7 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
         private boolean pendingOpen;
         private boolean pendingHeartbeat;
         private boolean draining;
+        private boolean checkingAccess;
 
         Subscription(UUID workspaceId, UUID accountId, SseEmitter emitter, Set<UUID> projects) {
             this.workspaceId = workspaceId;
@@ -205,6 +212,42 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
             schedule();
         }
 
+        void checkAccess() {
+            if (workspaceAccess.isEmpty()) {
+                enqueueHeartbeat();
+                return;
+            }
+            synchronized (this) {
+                if (ended || checkingAccess) {
+                    return;
+                }
+                checkingAccess = true;
+            }
+            try {
+                accessChecks.execute(() -> {
+                    try {
+                        if (stillManaged()) {
+                            enqueueHeartbeat();
+                        } else {
+                            end(true);
+                        }
+                    } catch (Throwable unexpected) {
+                        end(true);
+                        throw unexpected;
+                    } finally {
+                        synchronized (this) {
+                            checkingAccess = false;
+                        }
+                    }
+                });
+            } catch (RejectedExecutionException shuttingDown) {
+                synchronized (this) {
+                    checkingAccess = false;
+                }
+                end(true);
+            }
+        }
+
         void enqueueOpen() {
             synchronized (this) {
                 if (ended) {
@@ -225,43 +268,56 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
             try {
                 sends.execute(this::drain);
             } catch (RejectedExecutionException shuttingDown) {
+                synchronized (this) {
+                    draining = false;
+                }
                 end(true);
             }
         }
 
         private void drain() {
-            while (true) {
-                boolean open;
-                boolean beat;
-                List<UUID> changed;
-                synchronized (this) {
-                    if (ended || (!pendingOpen && !pendingHeartbeat && pending.isEmpty())) {
+            boolean idle = false;
+            try {
+                while (true) {
+                    boolean open;
+                    boolean beat;
+                    List<UUID> changed;
+                    synchronized (this) {
+                        if (ended || (!pendingOpen && !pendingHeartbeat && pending.isEmpty())) {
+                            draining = false;
+                            idle = true;
+                            return;
+                        }
+                        open = pendingOpen;
+                        beat = pendingHeartbeat;
+                        changed = List.copyOf(pending);
+                        pendingOpen = false;
+                        pendingHeartbeat = false;
+                        pending.clear();
+                    }
+                    if (open && !send(SseEmitter.event().comment("open"))) {
+                        return;
+                    }
+                    if (beat) {
+                        if (!send(SseEmitter.event().comment("hb"))) {
+                            return;
+                        }
+                    }
+                    for (UUID project : changed) {
+                        if (projects.contains(project)
+                                && !send(SseEmitter.event().name(EVENT).data("{\"projectId\":\"" + project + "\"}"))) {
+                            return;
+                        }
+                    }
+                }
+            } catch (Throwable unexpected) {
+                end(true);
+                throw unexpected;
+            } finally {
+                // The idle branch releases ownership atomically with checking pending work.
+                if (!idle) {
+                    synchronized (this) {
                         draining = false;
-                        return;
-                    }
-                    open = pendingOpen;
-                    beat = pendingHeartbeat;
-                    changed = List.copyOf(pending);
-                    pendingOpen = false;
-                    pendingHeartbeat = false;
-                    pending.clear();
-                }
-                if (open && !send(SseEmitter.event().comment("open"))) {
-                    return;
-                }
-                if (beat) {
-                    if (!stillManaged()) {
-                        end(true);
-                        return;
-                    }
-                    if (!send(SseEmitter.event().comment("hb"))) {
-                        return;
-                    }
-                }
-                for (UUID project : changed) {
-                    if (projects.contains(project)
-                            && !send(SseEmitter.event().name(EVENT).data("{\"projectId\":\"" + project + "\"}"))) {
-                        return;
                     }
                 }
             }
@@ -292,12 +348,8 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
             if (managed.isEmpty()) {
                 return false;
             }
-            Set<UUID> kept = projects.stream().filter(managed.get()::contains).collect(Collectors.toUnmodifiableSet());
-            if (kept.isEmpty()) {
-                return false;
-            }
-            projects = kept;
-            return true;
+            projects = Set.copyOf(managed.get());
+            return !projects.isEmpty();
         }
 
         void end(boolean complete) {

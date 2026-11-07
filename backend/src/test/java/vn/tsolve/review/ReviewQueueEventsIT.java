@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.mock.web.MockAsyncContext;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -160,6 +162,13 @@ class ReviewQueueEventsIT {
 
         void awaitHeartbeat() throws Exception {
             awaitUntil(() -> body().contains(":hb"));
+        }
+
+        void awaitCompleted() throws Exception {
+            // MockMvc dispatches the async result on completion; it does not automatically clear asyncStarted.
+            var dispatched = new CountDownLatch(1);
+            ((MockAsyncContext) result.getRequest().getAsyncContext()).addDispatchHandler(dispatched::countDown);
+            awaitUntil(() -> dispatched.getCount() == 0);
         }
 
         void awaitEventFor(UUID project) throws Exception {
@@ -391,12 +400,33 @@ class ReviewQueueEventsIT {
         assertThat(stream.projectIds()).containsExactly(OPS.toString());
 
         REVOCABLE_PROJECTS.remove(REVOCABLE);
-        Thread.sleep(2_500); // the stream completes at its next heartbeat and sends nothing after that
+        stream.awaitCompleted();
         int atEnd = countOf(stream.body(), ":hb");
-        Thread.sleep(2_500);
+        Thread.sleep(100);
         assertThat(countOf(stream.body(), ":hb")).isEqualTo(atEnd);
         clean(gone);
         clean(sentinel);
+    }
+
+    @Test
+    @WithTSolveUser(id = REVOCABLE_ID, roles = Role.PROJECT_MANAGER)
+    void edge11_projectGrantedMidStreamReceivesEvents_AC_012_2_BUG_166() throws Exception {
+        REVOCABLE_PROJECTS.put(REVOCABLE, Set.of(OPS));
+        Stream stream = openReady();
+        UUID created = null;
+        try {
+            REVOCABLE_PROJECTS.put(REVOCABLE, Set.of(OPS, SUPPORT));
+            int beats = countOf(stream.body(), ":hb");
+            awaitUntil(() -> countOf(stream.body(), ":hb") >= beats + 2);
+            created = ticket(TwoTenantDatabases.tenantA(), SUPPORT, "EVT-GRANT-" + tag(), "PENDING_REVIEW");
+            stream.awaitEventFor(SUPPORT);
+        } finally {
+            REVOCABLE_PROJECTS.remove(REVOCABLE);
+            stream.awaitCompleted();
+            if (created != null) {
+                clean(created);
+            }
+        }
     }
 
     @Test

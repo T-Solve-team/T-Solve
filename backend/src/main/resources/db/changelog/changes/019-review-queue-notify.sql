@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset review:018-review-queue-notify splitStatements:false
+--changeset review:019-review-queue-notify splitStatements:false
 
 -- Tells the Review Queue event stream that a Project's queue changed. The payload is only the Project id; NOTIFY is
 -- transactional (a rollback sends nothing) and de-duplicates identical payloads inside one transaction.
