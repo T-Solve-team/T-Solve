@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-07 | STORY-010 | Email the writer after a committed Reject or Request Changes decision through a tenant JobRunr job (KAN-155) | Demo flow scenario 2 step 7; user chose job delivery so SMTP failure never affects the decision |
 | 2026-11-07 | STORY-009 | Persist the time a ticket entered the Review Queue | Preserve the actual entry time independently of later ticket edits |
 | 2026-11-06 | STORY-009 | Define the production Review backend for KAN-24 using the Workspace schema reference and UUID keys | Complete the Jira story beyond its merged frontend and mocks |
 | 2026-11-01 | STORY-008 | Add KAN-159 read-only Review History frontend and proposed query/MSW contract | Continue remaining frontend work; reuse Department convention and existing decision history |
@@ -134,9 +135,20 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
   - AC-009.11: WHEN a Solution Form ticket is first saved as Pending review or transitions back to Pending review, THE tenant database SHALL record that entry time in review_queue_entered_at. WHILE a ticket stays Pending review, THE system SHALL preserve that entry time and SHALL keep the existing review due date rules (GBR-08, GBR-10).
   - AC-009.12: WHEN the Review Queue returns a ticket, THE API SHALL expose the recorded entry time as enteredQueueAt. IF an older ticket has no recorded entry time, THEN THE API SHALL return null for enteredQueueAt and THE frontend SHALL show an empty value indicator.
 
+### STORY-010: Email the writer about Reject and Request Changes (KAN-155)
+
+- As a ticket writer, I want an email with the review decision and its reason or comment so that I learn about it without opening T-Solve.
+- Acceptance:
+  - AC-010.1: WHEN a Reject or Request Changes decision commits, THE backend SHALL enqueue, after the commit, one review notification job per decided ticket in the decision's Workspace, identified by that ticket's review decision id. WHEN an Approve decision commits, THE backend SHALL enqueue no notification job.
+  - AC-010.2: WHEN a review notification job runs, THE worker SHALL load the review decision, its ticket and the writer's account in that Workspace and send one plain-text email through the KAN-162 SMTP sender to the writer's account email, with the matching decision subject, the ticket's source ticket key and the stored reason or comment.
+  - AC-010.3: IF enqueueing a notification job fails or job queueing is disabled in the API process, THEN THE decision SHALL stay committed and THE API SHALL return the same success response without sending an email.
+  - AC-010.4: IF SMTP delivery fails while a job runs, THEN THE worker SHALL fail that job so the job queue retries it, and THE committed decision SHALL be unaffected.
+  - AC-010.5: IF the decision no longer exists, is an Approve decision, or its ticket has no writer account, THEN THE job SHALL complete without sending an email.
+  - AC-010.6: THE notification enqueue and job SHALL not write the recipient address, reason or comment to application logs.
+
 ## Out of Scope
 
-- General audit writer, Review History screen and read API, email, notification workers and real-time updates beyond the existing polling convention. STORY-009 stores Review decisions and exposes Request Changes feedback to the writer in Jira.
+- General audit writer, Review History screen and read API, notification channels other than STORY-010 email, and real-time updates beyond the existing polling convention. STORY-009 stores Review decisions and exposes Request Changes feedback to the writer in Jira. The KAN-162 retry limit of three attempts in one hour and HTML email are not part of STORY-010.
 - Production send-back processing (KAN-156), JOB-02 (KAN-157) and SSE/WebSocket (KAN-154). KAN-158 and KAN-159 deliver frontend, proposed APIs and in-memory fixtures; they do not implement a real expiry job or backend persistence. KAN-159 displays historical Unpublish/Republish records without adding those mutation workflows.
 - Importing PR #26 or changing/closing it; creating or pushing the replacement PR still requires the user to request that action.
 

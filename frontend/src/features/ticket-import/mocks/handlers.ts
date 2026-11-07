@@ -1,14 +1,23 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import type {
+  FillSolutionRequest,
   ImportPreviewResponse,
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
   ImportResultResponse,
+  ImportType,
   RemoveRowsRequest,
 } from '@/shared/api';
 import { getDownloadCsvTemplateMockHandler } from '@/shared/api/generated/import/import.msw';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
-import { CSV_TEMPLATE, previewResponse, rowPage, seedImport, type MockPreview } from './data';
+import {
+  CSV_TEMPLATE,
+  CSV_TEMPLATE_WITHOUT_SOLUTION,
+  previewResponse,
+  rowPage,
+  seedImport,
+  type MockPreview,
+} from './data';
 
 /** The PM's unconfirmed preview of the mock backend. An upload replaces it, like the real one (spec D9). */
 let preview: MockPreview = seedImport();
@@ -23,6 +32,11 @@ export function resetMockData(): void {
   lastBatchId = 0;
 }
 
+/** Tests: the starting preview becomes a file without Solutions (its Valid rows need a Solution). */
+export function seedFileWithoutSolutions(): void {
+  preview = seedImport(undefined, undefined, undefined, 'WITHOUT_SOLUTION');
+}
+
 /** Another user's, a confirmed or a deleted preview: 404 with MSG04, like the backend (AC-007.2). */
 function isCurrent(previewId: string | readonly string[] | undefined): boolean {
   return !isConfirmed && previewId === String(preview.previewId);
@@ -34,13 +48,19 @@ function isCurrent(previewId: string | readonly string[] | undefined): boolean {
  * "import-fails" → MSG33 on Confirm. Any other file gets the seed rows.
  */
 export const handlers: HttpHandler[] = [
-  getDownloadCsvTemplateMockHandler(CSV_TEMPLATE),
+  getDownloadCsvTemplateMockHandler(({ request }) =>
+    new URL(request.url).searchParams.get('importType') === 'WITHOUT_SOLUTION'
+      ? CSV_TEMPLATE_WITHOUT_SOLUTION
+      : CSV_TEMPLATE,
+  ),
 
   http.post('*/api/v1/imports/csv', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const form = await request.formData();
     const file = form.get('file');
     const projectId = form.get('projectId');
+    const importType: ImportType =
+      form.get('importType') === 'WITHOUT_SOLUTION' ? 'WITHOUT_SOLUTION' : 'WITH_SOLUTION';
     const fileName = file instanceof File ? file.name : '';
     if (fileName.includes('missing-columns')) {
       return problem(400, 'MSG29', { params: { column_names: 'root_cause, scope' } });
@@ -50,6 +70,7 @@ export const handlers: HttpHandler[] = [
       preview.previewId + 1,
       typeof projectId === 'string' ? projectId : '',
       fileName,
+      importType,
     );
     isConfirmed = false;
     return HttpResponse.json<ImportPreviewResponse>(previewResponse(preview));
@@ -88,6 +109,39 @@ export const handlers: HttpHandler[] = [
       ...preview,
       rows: preview.rows.map((row) =>
         rowNumbers.includes(row.rowNo) ? { ...row, status: 'REMOVED' } : row,
+      ),
+    };
+    return HttpResponse.json<ImportPreviewResponse>(previewResponse(preview));
+  }),
+
+  // Like the backend (AC-013.1 – AC-013.4): a copy in each row, which becomes Valid; all rows or none.
+  http.post('*/api/v1/imports/previews/:previewId/fill-solution', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    if (!isCurrent(params.previewId)) return problem(404, 'MSG04');
+    const { rowNumbers, ...solution } = (await request.json()) as FillSolutionRequest;
+    const targets = preview.rows.filter((row) => rowNumbers.includes(row.rowNo));
+    if (targets.length < new Set(rowNumbers).size) return problem(404, 'MSG04');
+    if (
+      preview.importType !== 'WITHOUT_SOLUTION' ||
+      targets.some((row) => row.status === 'ERROR' || row.status === 'REMOVED')
+    ) {
+      return problem(409, 'MSG06');
+    }
+    const trim = (text: string | null | undefined) => text?.trim() || null;
+    preview = {
+      ...preview,
+      rows: preview.rows.map((row) =>
+        rowNumbers.includes(row.rowNo)
+          ? {
+              ...row,
+              symptoms: trim(solution.symptoms),
+              rootCause: trim(solution.rootCause),
+              resolutionSteps: trim(solution.resolutionSteps),
+              workaround: trim(solution.workaround),
+              scope: trim(solution.scope),
+              status: 'VALID',
+            }
+          : row,
       ),
     };
     return HttpResponse.json<ImportPreviewResponse>(previewResponse(preview));

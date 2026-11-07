@@ -43,4 +43,8 @@ public class ReviewDecisionRecord {
         this.feedback = feedback;
         this.decidedAt = decidedAt;
     }
+
+    public UUID getId() {
+        return id;
+    }
 }
