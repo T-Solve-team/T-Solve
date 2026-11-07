@@ -6,6 +6,7 @@ import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 import { seedPreview } from '../mocks/data';
+import { seedFileWithoutSolutions } from '../mocks/handlers';
 
 /** The seed preview of the mock backend: 25 rows, 20 Valid, 4 Error, 1 Removed (mocks/data.ts). */
 const PATH = '/import/preview?previewId=1';
@@ -17,7 +18,7 @@ function rowOf(rowNo: number): HTMLElement {
 }
 
 /** The Summary's StatCard with this label. */
-function statCard(label: 'Valid' | 'Error' | 'Removed'): HTMLElement {
+function statCard(label: 'Valid' | 'Error' | 'Removed' | 'Needs Solution'): HTMLElement {
   const card = screen.getByText(label, { selector: '.ant-typography' }).closest('.ant-card');
   if (!(card instanceof HTMLElement)) throw new Error(`no ${label} card`);
   return card;
@@ -461,6 +462,119 @@ describe('ImportPreviewPage', () => {
       // findByText: the MSG32 toast is also an alert.
       expect(await screen.findByText(msg('MSG04'), {}, { timeout: 5000 })).toBeInTheDocument();
       expect(screen.queryByText('itsup-resolved-2026-09.csv')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('a file without Solutions', () => {
+    beforeEach(() => {
+      // 20 Needs Solution, 4 Error and 1 Removed row; Solution columns empty
+      seedFileWithoutSolutions();
+    });
+
+    async function openSolutionPopup(rowNo: number) {
+      const view = await openPreview();
+      await view.user.click(within(rowOf(rowNo)).getByRole('button', { name: 'Preview' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Import Ticket Preview' });
+      await within(dialog).findByText('ITSUP-0871');
+      return { ...view, dialog };
+    }
+
+    async function writeSolution(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) {
+      for (const [label, text] of [
+        ['Symptoms', 'Outlook asks for the password'],
+        ['Root cause', 'Stale cached credentials'],
+        ['Resolution steps', 'Recreate the Outlook profile'],
+        ['Scope', 'Outlook 2019 users'],
+      ] as const) {
+        const field = within(dialog).getByRole('textbox', { name: label });
+        await user.clear(field);
+        await user.type(field, text);
+      }
+    }
+
+    it('AC-015.7 shows the Needs Solution count in the Summary and Needs Solution as a Result', async () => {
+      await openPreview();
+      expect(statCard('Needs Solution')).toHaveTextContent('20');
+      expect(statCard('Valid')).toHaveTextContent('0');
+      expect(within(rowOf(1)).getByText('Needs Solution')).toBeInTheDocument();
+    });
+
+    it('AC-015.7 shows no Needs Solution count for a file with Solutions', async () => {
+      server.use(http.get('*/api/v1/imports/previews/1', () => Response.json(seedPreview())));
+      await openPreview();
+      expect(screen.queryByText('Needs Solution', { selector: '.ant-typography' })).toBeNull();
+    });
+
+    it('AC-015.2 opens a Needs Solution row with editable Solution sections and Apply', async () => {
+      const { dialog } = await openSolutionPopup(1);
+
+      expect(
+        within(dialog).getByText('Outlook keeps asking for password after M365 migration'),
+      ).toBeInTheDocument();
+      for (const label of ['Symptoms', 'Root cause', 'Resolution steps', 'Workaround', 'Scope']) {
+        expect(within(dialog).getByRole('textbox', { name: label })).toHaveValue('');
+      }
+      expect(within(dialog).getByRole('button', { name: 'Apply' })).toBeEnabled();
+    });
+
+    it('AC-015.2 saves the Solution on Apply, closes the popup and refreshes the Summary and rows', async () => {
+      const { user, dialog } = await openSolutionPopup(1);
+      await writeSolution(user, dialog);
+
+      await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+
+      // jsdom runs no CSS animation, so antd's fade-out never ends and the popup stays in the DOM, closing.
+      await waitFor(() => expect(dialog).toHaveClass('ant-zoom-leave'));
+      await waitFor(() => expect(statCard('Valid')).toHaveTextContent('1'));
+      expect(statCard('Needs Solution')).toHaveTextContent('19');
+      await waitFor(() => expect(within(rowOf(1)).getByText('Valid')).toBeInTheDocument());
+    });
+
+    it('AC-015.2 shows the saved Solution again after a reload (edge case 51)', async () => {
+      const first = await openSolutionPopup(1);
+      await writeSolution(first.user, first.dialog);
+      await first.user.click(within(first.dialog).getByRole('button', { name: 'Apply' }));
+      await waitFor(() => expect(statCard('Valid')).toHaveTextContent('1'));
+      first.unmount();
+
+      const { dialog } = await openSolutionPopup(1);
+
+      expect(within(dialog).getByRole('textbox', { name: 'Symptoms' })).toHaveValue(
+        'Outlook asks for the password',
+      );
+      expect(within(dialog).getByRole('button', { name: 'Apply' })).toBeInTheDocument();
+    });
+
+    it('AC-015.3 shows the backend message at its field and keeps the popup open with what was written', async () => {
+      server.use(
+        http.post('*/api/v1/imports/previews/1/fill-solution', () =>
+          problem(400, 'MSG01', {
+            fieldErrors: [{ field: 'scope', code: 'MSG01', params: { field_name: 'Scope' } }],
+          }),
+        ),
+      );
+      const { user, dialog } = await openSolutionPopup(1);
+      await writeSolution(user, dialog);
+
+      await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+
+      expect(
+        await within(dialog).findByText(msg('MSG01', { field_name: 'Scope' })),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Import Ticket Preview' })).toBeInTheDocument();
+      expect(within(dialog).getByRole('textbox', { name: 'Symptoms' })).toHaveValue(
+        'Outlook asks for the password',
+      );
+    });
+
+    it('AC-015.2 keeps an Error row read-only', async () => {
+      const view = await openPreview();
+      await view.user.click(within(rowOf(2)).getByRole('button', { name: 'Preview' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Import Ticket Preview' });
+
+      await within(dialog).findByText('ITSUP-0872');
+      expect(within(dialog).queryByRole('button', { name: 'Apply' })).toBeNull();
+      expect(within(dialog).queryByRole('textbox')).toBeNull();
     });
   });
 });

@@ -7,12 +7,14 @@ import {
   getGetImportPreviewQueryKey,
   getGetImportPreviewRowsQueryKey,
   useGetImportPreview,
+  type ImportPreviewRowSummary,
 } from '@/shared/api';
 import { isMsgCode, msg, showMessage } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { ConfirmDialog, ErrorState, LoadingState, SectionCard, StatCard } from '@/shared/ui';
 import { ImportPreviewTable } from '../components/ImportPreviewTable';
 import { ImportTicketPreviewModal } from '../components/ImportTicketPreviewModal';
+import { SolutionFormModal } from '../components/SolutionFormModal';
 import { useConfirmPreview, useRemovePreviewRows } from '../hooks/useImportPreview';
 
 /** The address keeps the preview id (D11); anything but a positive whole number opens Import Tickets (AC-009.11). */
@@ -30,7 +32,7 @@ function ImportPreview({ previewId }: { previewId: number }) {
   const remove = useRemovePreviewRows(previewId);
   const confirm = useConfirmPreview();
   const [selectedRowNos, setSelectedRowNos] = useState<number[]>([]);
-  const [previewRowNo, setPreviewRowNo] = useState<number | null>(null);
+  const [previewRow, setPreviewRow] = useState<ImportPreviewRowSummary | null>(null);
 
   // A double click reaches the handler twice before `isPending` renders: one Confirm only (AC-009.8).
   const isConfirming = useRef(false);
@@ -93,7 +95,20 @@ function ImportPreview({ previewId }: { previewId: number }) {
     );
   }
 
-  const { fileName, validCount, errorCount, removedCount, message } = preview.data;
+  const {
+    fileName,
+    importType,
+    validCount,
+    errorCount,
+    removedCount,
+    needsSolutionCount,
+    message,
+  } = preview.data;
+  const isWithoutSolution = importType === 'WITHOUT_SOLUTION';
+  // A row of a file without Solutions that can take a Solution opens with its sections as fields (AC-015.2).
+  const isWritable =
+    isWithoutSolution &&
+    (previewRow?.status === 'NEEDS_SOLUTION' || previewRow?.status === 'VALID');
   return (
     <Flex vertical gap="middle">
       <SectionCard title="Summary">
@@ -103,6 +118,7 @@ function ImportPreview({ previewId }: { previewId: number }) {
             <StatCard label="Valid" value={validCount} />
             <StatCard label="Error" value={errorCount} />
             <StatCard label="Removed" value={removedCount} />
+            {isWithoutSolution && <StatCard label="Needs Solution" value={needsSolutionCount} />}
           </Flex>
           {message && isMsgCode(message.code) && (
             <Alert type="warning" showIcon title={msg(message.code, message.params)} />
@@ -124,7 +140,7 @@ function ImportPreview({ previewId }: { previewId: number }) {
             previewId={previewId}
             selectedRowNos={selectedRowNos}
             onSelectionChange={setSelectedRowNos}
-            onPreview={setPreviewRowNo}
+            onPreview={setPreviewRow}
           />
           <Flex gap="small" justify="flex-end">
             <Button onClick={() => void navigate(paths.importTickets)}>Cancel</Button>
@@ -142,8 +158,13 @@ function ImportPreview({ previewId }: { previewId: number }) {
       </SectionCard>
       <ImportTicketPreviewModal
         previewId={previewId}
-        rowNo={previewRowNo}
-        onClose={() => setPreviewRowNo(null)}
+        rowNo={isWritable ? null : (previewRow?.rowNo ?? null)}
+        onClose={() => setPreviewRow(null)}
+      />
+      <SolutionFormModal
+        previewId={previewId}
+        rowNo={isWritable ? (previewRow?.rowNo ?? null) : null}
+        onClose={() => setPreviewRow(null)}
       />
       <ConfirmDialog
         isOpen={blocker.state === 'blocked'}

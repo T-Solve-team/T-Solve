@@ -117,6 +117,14 @@ function seedRows(): ImportPreviewRowResponse[] {
   ];
 }
 
+const NO_SOLUTION = {
+  symptoms: null,
+  rootCause: null,
+  resolutionSteps: null,
+  workaround: null,
+  scope: null,
+} as const;
+
 /** One unconfirmed preview of the mock backend with every row (the API returns them page by page). */
 export type MockPreview = Pick<
   ImportPreviewResponse,
@@ -131,7 +139,16 @@ export function seedImport(
   fileName = 'itsup-resolved-2026-09.csv',
   importType: ImportType = 'WITH_SOLUTION',
 ): MockPreview {
-  return { previewId, projectId, fileName, importType, rows: seedRows() };
+  // A file without Solutions: its rows without errors need a Solution, and their Solution columns are unread.
+  const rows =
+    importType === 'WITH_SOLUTION'
+      ? seedRows()
+      : seedRows().map((row): ImportPreviewRowResponse =>
+          row.status === 'VALID'
+            ? { ...row, ...NO_SOLUTION, status: 'NEEDS_SOLUTION' }
+            : { ...row, ...NO_SOLUTION },
+        );
+  return { previewId, projectId, fileName, importType, rows };
 }
 
 /** One page of rows (`page` from 0), as `GET /imports/previews/{id}/rows` returns it. */
