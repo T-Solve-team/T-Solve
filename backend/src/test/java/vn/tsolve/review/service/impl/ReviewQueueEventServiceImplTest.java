@@ -1,12 +1,15 @@
 package vn.tsolve.review.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -42,6 +45,8 @@ class ReviewQueueEventServiceImplTest {
     private final BlockingQueue<PGNotification> notifications = new LinkedBlockingQueue<>();
     private final CountDownLatch release = new CountDownLatch(1);
     private ReviewQueueEventServiceImpl service;
+    private Connection connection;
+    private DataSource dataSource;
 
     @AfterEach
     void stop() {
@@ -59,6 +64,7 @@ class ReviewQueueEventServiceImplTest {
         private final CountDownLatch completed = new CountDownLatch(1);
         private boolean failOnRelease;
         private Error error;
+        private Runnable completionCallback = () -> {};
 
         FakeEmitter(boolean blocking) {
             super(0L);
@@ -88,6 +94,12 @@ class ReviewQueueEventServiceImplTest {
         }
 
         @Override
+        public void onCompletion(Runnable callback) {
+            completionCallback = callback;
+            super.onCompletion(callback);
+        }
+
+        @Override
         public void complete() {
             completed.countDown();
             super.complete();
@@ -112,6 +124,73 @@ class ReviewQueueEventServiceImplTest {
         }
         assertThat(fast.sent).anyMatch(s -> s.contains(PROJECT.toString()));
         assertThat(slow.sent).isEmpty();
+    }
+
+    @Test
+    void addedProjectGetsQueueChangedAtTheHeartbeat_AC_012_2_BUG_169() throws Exception {
+        UUID added = new UUID(0, 5);
+        var managed = new AtomicReference<>(Set.of(PROJECT));
+        var access = mock(ReviewWorkspaceAccess.class);
+        when(access.managedProjectIds(any(UUID.class))).thenAnswer(call -> Optional.of(managed.get()));
+        var emitter = new FakeEmitter(false);
+        service = serviceWith(List.of(emitter), Optional.of(access), Duration.ofMillis(100));
+        service.subscribe(WORKSPACE, new UUID(0, 3), Set.of(PROJECT));
+        awaitUntil(() -> heartbeatCount(emitter) > 0);
+
+        managed.set(Set.of(PROJECT, added));
+        awaitUntil(() -> emitter.sent.stream().anyMatch(s -> s.contains(added.toString())));
+        int beats = heartbeatCount(emitter);
+        awaitUntil(() -> heartbeatCount(emitter) >= beats + 2);
+        assertThat(emitter.sent.stream().filter(s -> s.contains(added.toString())))
+                .hasSize(1);
+        assertThat(emitter.sent).noneMatch(s -> s.contains(PROJECT.toString()));
+    }
+
+    @Test
+    void subscribeFailureAfterAddRemovesTheSubscription_BUG_172() throws Exception {
+        service = serviceWith(List.of(new FakeEmitter(false)), Optional.empty(), Duration.ZERO);
+        assertThatThrownBy(() -> service.subscribe(WORKSPACE, new UUID(0, 3), Set.of(PROJECT)))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(connection, timeout(2_000)).close();
+    }
+
+    @Test
+    void joiningSubscriptionHasOneFiveSecondWaitBudget_BUG_172() throws Exception {
+        service = serviceWith(List.of(new FakeEmitter(false), new FakeEmitter(false)));
+        service.subscribe(WORKSPACE, new UUID(0, 3), Set.of(PROJECT));
+        var interrupted = new CountDownLatch(1);
+        when(dataSource.getConnection()).thenAnswer(call -> {
+            try {
+                release.await();
+                return connection;
+            } catch (InterruptedException cancellation) {
+                interrupted.countDown();
+                throw new java.sql.SQLException(cancellation);
+            }
+        });
+
+        long started = System.nanoTime();
+        service.subscribe(WORKSPACE, new UUID(0, 4), Set.of(PROJECT));
+        assertThat(Duration.ofNanos(System.nanoTime() - started))
+                .isBetween(Duration.ofSeconds(4), Duration.ofSeconds(6));
+        assertThat(interrupted.await(1, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    void joinBarrierFailureRemovesOnlyTheJoiningSubscription_BUG_172() throws Exception {
+        var original = new FakeEmitter(false);
+        service = serviceWith(List.of(original, new FakeEmitter(false)));
+        service.subscribe(WORKSPACE, new UUID(0, 3), Set.of(PROJECT));
+        when(dataSource.getConnection()).thenThrow(new java.sql.SQLException("barrier unavailable"));
+
+        assertThatThrownBy(() -> service.subscribe(WORKSPACE, new UUID(0, 4), Set.of(PROJECT)))
+                .isInstanceOf(IllegalStateException.class);
+        // The original stream still receives events and owns the listener.
+        verify(connection, org.mockito.Mockito.never()).close();
+        notifications.add(notification(PROJECT.toString()));
+        awaitUntil(() -> original.sent.stream().anyMatch(s -> s.contains(PROJECT.toString())));
+        original.completionCallback.run();
+        verify(connection, timeout(2_000)).close();
     }
 
     @Test
@@ -209,7 +288,7 @@ class ReviewQueueEventServiceImplTest {
 
     private ReviewQueueEventServiceImpl serviceWith(
             List<FakeEmitter> emitters, Optional<ReviewWorkspaceAccess> access, Duration heartbeat) throws Exception {
-        var connection = mock(Connection.class);
+        connection = mock(Connection.class);
         var pg = mock(PGConnection.class);
         var statement = mock(Statement.class);
         var prepared = mock(PreparedStatement.class);
@@ -232,7 +311,7 @@ class ReviewQueueEventServiceImplTest {
             PGNotification next = notifications.poll(50, TimeUnit.MILLISECONDS);
             return next == null ? null : new PGNotification[] {next};
         });
-        var dataSource = mock(DataSource.class);
+        dataSource = mock(DataSource.class);
         when(dataSource.getConnection()).thenReturn(connection);
         TenantScope tenant = new TenantScope() {
             @Override

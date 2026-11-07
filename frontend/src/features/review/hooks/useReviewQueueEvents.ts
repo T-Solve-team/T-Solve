@@ -6,7 +6,7 @@ const EVENTS_URL = '/api/v1/review-queue/events';
 
 /**
  * Keeps the Review Queue fresh from the server-sent event stream. `connected` is true while the stream is
- * open; the queue stops polling then and falls back to polling when the stream fails (EventSource retries itself).
+ * open; the queue uses a slow safety refetch then and falls back to 5 s polling when the stream fails.
  * EventSource is not fetch, so it lives here, same-origin, with the session cookie.
  */
 export function useReviewQueueEvents(): { connected: boolean } {
@@ -14,6 +14,7 @@ export function useReviewQueueEvents(): { connected: boolean } {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
+    if (import.meta.env.DEV && import.meta.env.VITE_API_MOCKING === 'true') return;
     if (typeof EventSource === 'undefined') return;
     const source = new EventSource(EVENTS_URL, { withCredentials: true });
     const refresh = () => {

@@ -4,7 +4,11 @@ import type { QueryClient } from '@tanstack/react-query';
 import { getGetReviewQueueQueryKey, getGetReviewQueueTicketIdsQueryKey } from '@/shared/api';
 import { renderWithProviders } from '@/test/render';
 import { FakeEventSource } from '../mocks/fake-event-source';
-import { REVIEW_QUEUE_POLL_MS, useReviewQueue } from './useReviewQueue';
+import {
+  REVIEW_QUEUE_POLL_MS,
+  REVIEW_QUEUE_SAFETY_REFETCH_MS,
+  useReviewQueue,
+} from './useReviewQueue';
 import { useReviewQueueEvents } from './useReviewQueueEvents';
 
 function Probe() {
@@ -32,10 +36,14 @@ const invalidatedKeys = (spy: MockInstance<QueryClient['invalidateQueries']>) =>
   spy.mock.calls.map(([filters]) => JSON.stringify(filters?.queryKey));
 
 describe('useReviewQueueEvents', () => {
-  beforeEach(() => FakeEventSource.install());
+  beforeEach(() => {
+    vi.stubEnv('VITE_API_MOCKING', 'false');
+    FakeEventSource.install();
+  });
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   it('AC-012.5 opens the credentialed stream and invalidates queue and ticket-ids on queue-changed', async () => {
@@ -59,7 +67,23 @@ describe('useReviewQueueEvents', () => {
     expect(refetchInterval(queryClient)).toBe(REVIEW_QUEUE_POLL_MS);
     act(() => source.emit('open'));
     await screen.findByText('live');
-    expect(refetchInterval(queryClient)).toBe(false);
+    expect(refetchInterval(queryClient)).toBe(REVIEW_QUEUE_SAFETY_REFETCH_MS);
+  });
+
+  it('AC-012.6 edge BUG-170 stays on polling without a stream in mock mode', async () => {
+    vi.stubEnv('DEV', true);
+    vi.stubEnv('VITE_API_MOCKING', 'true');
+    const { queryClient } = renderWithProviders(<Probe />);
+    await screen.findByText('polling');
+    expect(FakeEventSource.instances).toHaveLength(0);
+    expect(refetchInterval(queryClient)).toBe(REVIEW_QUEUE_POLL_MS);
+  });
+
+  it('AC-012.6 edge BUG-171 keeps a 60 s safety refetch while connected', async () => {
+    const { source, queryClient } = await mount();
+    act(() => source.emit('open'));
+    await screen.findByText('live');
+    expect(refetchInterval(queryClient)).toBe(60_000);
   });
 
   it('AC-012.6 polls every 5 s again after the stream fails', async () => {

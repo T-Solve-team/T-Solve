@@ -17,13 +17,16 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongFunction;
 import javax.sql.DataSource;
@@ -79,6 +82,8 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
         return thread;
     });
     private final Object lock = new Object();
+    private final ExecutorService joins = Executors.newThreadPerTaskExecutor(
+            Thread.ofVirtual().name("review-queue-join-", 0).factory());
     private final Map<UUID, Listener> listeners = new HashMap<>();
 
     @Autowired
@@ -105,39 +110,64 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
 
     @Override
     public SseEmitter subscribe(UUID workspaceId, UUID accountId, Set<UUID> managedProjectIds) {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(LISTEN_WAIT_MS);
         var subscription = new Subscription(
                 workspaceId, accountId, emitters.apply(EMITTER_TIMEOUT_MS), Set.copyOf(managedProjectIds));
         Listener listener;
         boolean joined;
         // no JDBC call under the lock: the listener thread opens its own connection
-        synchronized (lock) {
-            listener = listeners.get(workspaceId);
-            joined = listener != null;
-            if (!joined) {
-                listener = new Listener(workspaceId);
-                listeners.put(workspaceId, listener);
-                subscription.active = true;
+        try {
+            synchronized (lock) {
+                listener = listeners.get(workspaceId);
+                joined = listener != null;
+                if (!joined) {
+                    listener = new Listener(workspaceId);
+                    listeners.put(workspaceId, listener);
+                    subscription.active = true;
+                }
+                subscription.listener = listener;
+                listener.add(subscription);
+                if (!joined) {
+                    listener.start();
+                }
             }
-            subscription.listener = listener;
-            listener.add(subscription);
-            if (!joined) {
-                listener.start();
+            awaitReady(listener, subscription, joined, deadline);
+            subscription.emitter.onCompletion(() -> subscription.end(false));
+            subscription.emitter.onTimeout(() -> subscription.end(false));
+            subscription.emitter.onError(error -> subscription.end(false));
+            subscription.heartbeat = heartbeats.scheduleWithFixedDelay(
+                    subscription::checkAccess, heartbeat.toMillis(), heartbeat.toMillis(), TimeUnit.MILLISECONDS);
+            // commits the response headers (text/event-stream) as soon as the stream opens
+            subscription.enqueueOpen();
+            return subscription.emitter;
+        } catch (RuntimeException | Error failure) {
+            subscription.end(false);
+            throw failure;
+        }
+    }
+
+    /** JDBC pool acquisition and the join barrier share the request's single five-second budget. */
+    private void awaitReady(Listener listener, Subscription subscription, boolean joined, long deadline) {
+        Future<?> wait = joins.submit(() -> {
+            if (joined) {
+                listener.awaitBarrier(subscription);
+            } else {
+                listener.awaitListening();
             }
+        });
+        try {
+            wait.get(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+        } catch (TimeoutException timeout) {
+            // A reconnect resync and the browser's opening refetch cover the missed join boundary.
+            subscription.active = true;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Review Queue subscription interrupted", interrupted);
+        } catch (ExecutionException failure) {
+            throw new IllegalStateException("Review Queue subscription failed", failure.getCause());
+        } finally {
+            wait.cancel(true);
         }
-        if (joined) {
-            listener.awaitBarrier(subscription);
-        } else {
-            // the first heartbeat only comes after the LISTEN is attached
-            listener.awaitListening();
-        }
-        subscription.emitter.onCompletion(() -> subscription.end(false));
-        subscription.emitter.onTimeout(() -> subscription.end(false));
-        subscription.emitter.onError(error -> subscription.end(false));
-        subscription.heartbeat = heartbeats.scheduleWithFixedDelay(
-                subscription::checkAccess, heartbeat.toMillis(), heartbeat.toMillis(), TimeUnit.MILLISECONDS);
-        // commits the response headers (text/event-stream) as soon as the stream opens
-        subscription.enqueueOpen();
-        return subscription.emitter;
     }
 
     private void unsubscribe(Subscription subscription) {
@@ -154,6 +184,7 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
 
     @PreDestroy
     void shutdown() {
+        joins.shutdownNow();
         heartbeats.shutdownNow();
         accessChecks.shutdownNow();
         sends.shutdownNow();
@@ -348,7 +379,13 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
             if (managed.isEmpty()) {
                 return false;
             }
+            Set<UUID> previous = projects;
             projects = Set.copyOf(managed.get());
+            for (UUID project : projects) {
+                if (!previous.contains(project)) {
+                    enqueueProject(project);
+                }
+            }
             return !projects.isEmpty();
         }
 
@@ -436,8 +473,6 @@ public class ReviewQueueEventServiceImpl implements ReviewQueueEventService {
                 subscription.ready.await(BARRIER_WAIT_MS, TimeUnit.MILLISECONDS);
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
-            } catch (RuntimeException unavailable) {
-                // the listener is reconnecting; its resync below covers this subscription
             } finally {
                 barriers.remove(token);
                 subscription.active = true;
