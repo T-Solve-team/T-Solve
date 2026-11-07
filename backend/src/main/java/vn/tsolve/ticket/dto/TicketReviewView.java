@@ -40,6 +40,24 @@ public final class TicketReviewView {
 
     public record Feedback(UUID reviewerId, String comment) {}
 
+    /** Review History query parameters as received; the service validates them (STORY-011). */
+    public record HistoryFilter(
+            UUID departmentId, String decision, String dateFrom, String dateTo, int page, int size, List<String> sort) {}
+
+    public record HistoryItem(
+            UUID decisionId,
+            UUID ticketId,
+            String sourceTicketId,
+            String title,
+            Project project,
+            String decision,
+            UUID actorId,
+            String actorName,
+            String authorName,
+            Instant timestamp,
+            String reason,
+            String comment) {}
+
     public record Detail(
             UUID ticketId,
             String sourceTicketId,
