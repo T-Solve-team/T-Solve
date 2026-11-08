@@ -86,7 +86,7 @@ class JiraPreviewControllerTest {
 
     @Test
     @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
-    void fillSolutionRejectsSectionsOfUnicodeSpacesOnly_AC_002_4_BUG_173() throws Exception {
+    void fillSolutionRejectsSectionsOfUnicodeSpacesOnly_AC_002_4_BUG_187() throws Exception {
         mvc.perform(
                         post("/api/v1/imports/previews/42/fill-solution")
                                 .with(csrf())

@@ -13,6 +13,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -232,6 +233,34 @@ class JiraFinishTest {
         String title = savedTickets().get(0).getTitle();
         assertThat(title.codePointCount(0, title.length())).isEqualTo(200);
         assertThat(title).endsWith("😀");
+    }
+
+    @Test
+    void cutsAnAssigneeLongerThan100CharactersOnTheTicket_AC_003_1_BUG_190() {
+        // ticket.writer is VARCHAR(100); a Jira display name can be longer
+        String assignee = "b".repeat(99) + "😀" + "tail";
+        when(rows.findByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.VALID))
+                .thenReturn(List.of(issue(1, "KAN-1", "Login fails", assignee)));
+
+        service.confirm(PM, PREVIEW);
+
+        String writer = savedTickets().get(0).getWriter();
+        assertThat(writer.codePointCount(0, writer.length())).isEqualTo(100);
+        assertThat(writer).endsWith("😀");
+    }
+
+    @Test
+    void aFailedBatchNamesTheRealReasonWhenItIsNotATakenTicketId_AC_003_7_BUG_190() {
+        when(tickets.saveAll(anyCollection()))
+                .thenThrow(new DataIntegrityViolationException(
+                        "value too long", new SQLException("value too long for type character varying(100)", "22001")));
+
+        MessageCodeException e = catchThrowableOfType(() -> service.confirm(PM, PREVIEW), MessageCodeException.class);
+
+        assertThat(e.getCode()).isEqualTo("MSG33");
+        ArgumentCaptor<String> error = ArgumentCaptor.forClass(String.class);
+        verify(recorder).recordFailed(any(ImportPreview.class), any(), error.capture());
+        assertThat(error.getValue()).isEqualTo("DataIntegrityViolationException: MSG33");
     }
 
     @Test

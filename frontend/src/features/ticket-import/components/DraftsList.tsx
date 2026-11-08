@@ -27,6 +27,14 @@ export function DraftsList() {
   const drafts = useListImportDrafts();
   const [toDelete, setToDelete] = useState<ImportDraftSummary | null>(null);
 
+  const projectLabel = (draft: ImportDraftSummary) =>
+    projects.find((project) => project.value === draft.projectId)?.label;
+  // a Draft of a Project the user no longer manages cannot be opened (AC-002.9): hide it (BUG-195)
+  const rows = drafts.data?.filter((draft) => projectLabel(draft) !== undefined);
+  // one name per row, so a screen reader can tell the buttons apart (BUG-194)
+  const draftName = (draft: ImportDraftSummary) =>
+    `Draft ${projectLabel(draft) ?? ''}, saved ${cells.dateTime(draft.savedAt)}`;
+
   // Errors: the global toast.
   const remove = useDeleteImportDraft({
     mutation: {
@@ -42,8 +50,7 @@ export function DraftsList() {
       title: 'Project',
       // no title attribute: the Project options of the import forms are found by their title
       ellipsis: { showTitle: false },
-      render: (_, draft) =>
-        projects.find((project) => project.value === draft.projectId)?.label ?? draft.projectId,
+      render: (_, draft) => projectLabel(draft),
     },
     { key: 'rowCount', title: 'Rows', dataIndex: 'rowCount' },
     { key: 'savedAt', title: 'Date saved', render: (_, draft) => cells.dateTime(draft.savedAt) },
@@ -54,11 +61,17 @@ export function DraftsList() {
         <Flex gap="small">
           <Button
             type="link"
+            aria-label={`Open ${draftName(draft)}`}
             onClick={() => void navigate(`${paths.importPreview}?previewId=${draft.previewId}`)}
           >
             Open
           </Button>
-          <Button type="link" danger onClick={() => setToDelete(draft)}>
+          <Button
+            type="link"
+            danger
+            aria-label={`Delete ${draftName(draft)}`}
+            onClick={() => setToDelete(draft)}
+          >
             Delete
           </Button>
         </Flex>
@@ -72,7 +85,7 @@ export function DraftsList() {
       <DataTable<ImportDraftSummary>
         label="Drafts"
         columns={columns}
-        rows={drafts.data}
+        rows={rows}
         rowKey={(draft) => draft.previewId}
         loading={drafts.isPending}
         error={drafts.error}

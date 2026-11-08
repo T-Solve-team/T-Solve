@@ -53,6 +53,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
 
     private static final Logger log = LoggerFactory.getLogger(ImportConfirmServiceImpl.class);
     private static final int TITLE_MAX = 200;
+    private static final int WRITER_MAX = 100;
+    private static final String UNIQUE_VIOLATION = "23505";
 
     private final ImportPreviewRepository previews;
     private final ImportPreviewRowRepository previewRows;
@@ -122,9 +124,14 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         } catch (NotFoundException | NothingToImportException | RowsNotReadyException e) {
             // another Confirm or remove-rows got there first: nothing was attempted (AC-004.12)
             throw e;
-        } catch (TicketIdTakenException | DataIntegrityViolationException e) {
+        } catch (TicketIdTakenException e) {
             fail(preview, errorRows, removedRows, "TicketIdTaken", e);
             throw new ImportFailedException(HttpStatus.CONFLICT);
+        } catch (DataIntegrityViolationException e) {
+            // only a unique violation is a taken Ticket ID; a value too long or a NOT NULL names itself (BUG-190)
+            boolean taken = UNIQUE_VIOLATION.equals(sqlState(e));
+            fail(preview, errorRows, removedRows, taken ? "TicketIdTaken" : e.getClass().getSimpleName(), e);
+            throw new ImportFailedException(taken ? HttpStatus.CONFLICT : HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (RuntimeException e) {
             fail(preview, errorRows, removedRows, e.getClass().getSimpleName(), e);
             throw new ImportFailedException(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -272,12 +279,15 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         return new Imported(batch.getId(), toImport.size(), skipped, skippedKeys);
     }
 
-    /** ticket.title is VARCHAR(200); a longer Jira summary is cut on the Ticket only, never inside a character. */
-    private static String cutTitle(String title) {
-        if (title == null || title.codePointCount(0, title.length()) <= TITLE_MAX) {
-            return title;
+    /**
+     * ticket.title is VARCHAR(200) and ticket.writer VARCHAR(100); a longer Jira summary or assignee is cut on the
+     * Ticket only, never inside a character (BUG-190).
+     */
+    private static String cut(String text, int max) {
+        if (text == null || text.codePointCount(0, text.length()) <= max) {
+            return text;
         }
-        return title.substring(0, title.offsetByCodePoints(0, TITLE_MAX));
+        return text.substring(0, text.offsetByCodePoints(0, max));
     }
 
     private static Ticket toTicket(ImportPreviewRow.Values v, ImportPreview preview, long batchId) {
@@ -287,9 +297,9 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 preview.getProjectId(),
                 preview.getSource(),
                 batchId,
-                cutTitle(CsvRowValidator.trim(v.title())),
+                cut(CsvRowValidator.trim(v.title()), TITLE_MAX),
                 CsvRowValidator.trim(v.description()),
-                CsvRowValidator.trim(v.author()),
+                cut(CsvRowValidator.trim(v.author()), WRITER_MAX),
                 resolved == null ? null : LocalDate.parse(resolved),
                 new Ticket.Solution(
                         CsvRowValidator.trim(v.symptoms()),

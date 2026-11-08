@@ -1,6 +1,7 @@
 package vn.tsolve.ticket.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -49,16 +50,25 @@ public class JiraRestIssueSource implements JiraIssueSource {
     private final String siteUrl;
     private final RestClient client;
     private final Sleeper sleeper;
+    private final Clock clock;
 
     @Autowired
     public JiraRestIssueSource(
             @Value("${JIRA_SITE_URL:}") String siteUrl,
             @Value("${JIRA_CLOUD_ID:}") String cloudId,
-            @Value("${JIRA_API_TOKEN:}") String apiToken) {
-        this(siteUrl, cloudId, apiToken, clientBuilder(Duration.ofSeconds(10), Duration.ofSeconds(30)), Thread::sleep);
+            @Value("${JIRA_API_TOKEN:}") String apiToken,
+            Clock clock) {
+        this(
+                siteUrl,
+                cloudId,
+                apiToken,
+                clientBuilder(Duration.ofSeconds(10), Duration.ofSeconds(30)),
+                Thread::sleep,
+                clock);
     }
 
-    JiraRestIssueSource(String siteUrl, String cloudId, String apiToken, RestClient.Builder builder, Sleeper sleeper) {
+    JiraRestIssueSource(
+            String siteUrl, String cloudId, String apiToken, RestClient.Builder builder, Sleeper sleeper, Clock clock) {
         String site = siteUrl == null ? "" : httpsOnly(siteUrl).strip().replaceAll("/+$", "");
         boolean configured = !site.isEmpty() && !isBlank(cloudId) && !isBlank(apiToken);
         this.siteUrl = configured ? site : null;
@@ -69,6 +79,7 @@ public class JiraRestIssueSource implements JiraIssueSource {
                         .build()
                 : null;
         this.sleeper = sleeper;
+        this.clock = clock;
     }
 
     private static String httpsOnly(String siteUrl) {
@@ -90,16 +101,19 @@ public class JiraRestIssueSource implements JiraIssueSource {
     }
 
     @Override
-    public JiraIssuePage resolvedIssues(String projectKey, LocalDate from, LocalDate to, String pageToken) {
+    public JiraIssuePage resolvedIssues(
+            String projectKey, LocalDate from, LocalDate to, String pageToken, Instant deadline) {
         if (client == null) {
             throw new JiraUnavailableException("The Jira connection is not configured");
         }
         if (projectKey == null || !PROJECT_KEY.matcher(projectKey).matches()) {
             throw new JiraUnavailableException("The Project's Jira key is not valid");
         }
-        String jql = "project = \"" + projectKey + "\" AND resolved >= \"" + from + "\" AND resolved < \""
-                + to.plusDays(1) + "\" ORDER BY resolved ASC, key ASC";
-        JsonNode page = call(projectKey, () -> client.get()
+        // JQL dates follow the account's profile time zone, at most 19 h away from Vietnam time: ask for a day more on
+        // each side and keep only the Vietnam-time range below (AC-001.1, BUG-188)
+        String jql = "project = \"" + projectKey + "\" AND resolved >= \"" + from.minusDays(1) + "\" AND resolved < \""
+                + to.plusDays(2) + "\" ORDER BY resolved ASC, key ASC";
+        JsonNode page = call(projectKey, deadline, () -> client.get()
                 .uri(uri -> {
                     uri.path("/rest/api/3/search/jql")
                             .queryParam("jql", "{jql}")
@@ -115,9 +129,8 @@ public class JiraRestIssueSource implements JiraIssueSource {
 
         List<JiraIssue> issues = new ArrayList<>();
         for (JsonNode issue : page.path("issues")) {
-            JiraIssue read = issue(projectKey, issue);
+            JiraIssue read = issue(projectKey, issue, deadline);
             LocalDate resolvedDay = read.resolvedAt().atZone(VIETNAM).toLocalDate();
-            // JQL dates follow the account's profile time zone; the range is in Vietnam time (AC-001.1)
             if (!resolvedDay.isBefore(from) && !resolvedDay.isAfter(to)) {
                 issues.add(read);
             }
@@ -127,7 +140,7 @@ public class JiraRestIssueSource implements JiraIssueSource {
                 issues, last ? null : page.path("nextPageToken").asText());
     }
 
-    private JiraIssue issue(String projectKey, JsonNode issue) {
+    private JiraIssue issue(String projectKey, JsonNode issue, Instant deadline) {
         String key = issue.path("key").asText();
         JsonNode fields = issue.path("fields");
         JsonNode assignee = fields.path("assignee");
@@ -138,11 +151,11 @@ public class JiraRestIssueSource implements JiraIssueSource {
                 assignee.hasNonNull("displayName") ? assignee.get("displayName").asText() : null,
                 time(fields.path("resolutiondate").asText(null)),
                 siteUrl + "/browse/" + key,
-                comments(projectKey, key, fields.path("comment")));
+                comments(projectKey, key, fields.path("comment"), deadline));
     }
 
     /** The comments the search returned, and the rest from the comment endpoint when the search left some out. */
-    private List<IssueComment> comments(String projectKey, String issueKey, JsonNode fromSearch) {
+    private List<IssueComment> comments(String projectKey, String issueKey, JsonNode fromSearch, Instant deadline) {
         JsonNode inSearch = fromSearch.path("comments");
         if (fromSearch.path("total").asInt(inSearch.size()) <= inSearch.size()) {
             return readComments(inSearch);
@@ -151,7 +164,7 @@ public class JiraRestIssueSource implements JiraIssueSource {
         int startAt = 0;
         while (true) {
             int offset = startAt;
-            JsonNode page = call(projectKey, () -> client.get()
+            JsonNode page = call(projectKey, deadline, () -> client.get()
                     .uri(uri -> uri.path("/rest/api/3/issue/{key}/comment")
                             .queryParam("startAt", offset)
                             .queryParam("maxResults", PAGE_SIZE)
@@ -187,7 +200,12 @@ public class JiraRestIssueSource implements JiraIssueSource {
         try {
             return OffsetDateTime.parse(jiraTime, JIRA_TIME).toInstant();
         } catch (DateTimeParseException e) {
-            return OffsetDateTime.parse(jiraTime).toInstant();
+            try {
+                return OffsetDateTime.parse(jiraTime).toInstant();
+            } catch (DateTimeParseException unreadable) {
+                // MSG50, not a 500 (AC-001.7, BUG-191)
+                throw new JiraUnavailableException("Jira answered a date that cannot be read");
+            }
         }
     }
 
@@ -200,9 +218,15 @@ public class JiraRestIssueSource implements JiraIssueSource {
         void sleep(Duration delay) throws InterruptedException;
     }
 
-    /** One Jira request; every failure becomes MSG50 with a reason that names no credential or content. */
-    private JsonNode call(String projectKey, Call call) {
+    /**
+     * One Jira request; every failure becomes MSG50 with a reason that names no credential or content. Neither the
+     * request nor a retry wait starts past the pull's deadline (AC-001.13).
+     */
+    // ponytail: a request already running when the deadline passes still ends at its 30 s read timeout, so a pull
+    // can answer up to ~40 s late; a per-request timeout cut to the time left would close that gap
+    private JsonNode call(String projectKey, Instant deadline, Call call) {
         for (int retries = 0; ; retries++) {
+            requireBefore(projectKey, deadline, clock.instant());
             try {
                 JsonNode body = call.run();
                 if (body == null || !body.isObject()) {
@@ -212,6 +236,7 @@ public class JiraRestIssueSource implements JiraIssueSource {
             } catch (RestClientResponseException e) {
                 long seconds = retrySeconds(e);
                 if (retries < MAX_RETRIES && seconds >= 0 && seconds <= MAX_RETRY_SECONDS) {
+                    requireBefore(projectKey, deadline, clock.instant().plusSeconds(seconds));
                     try {
                         sleeper.sleep(Duration.ofSeconds(seconds));
                     } catch (InterruptedException interrupted) {
@@ -231,6 +256,13 @@ public class JiraRestIssueSource implements JiraIssueSource {
                 log.warn("Jira import of project {}: Jira did not answer ({})", projectKey, type);
                 throw new JiraUnavailableException("Jira did not answer (" + type + ")");
             }
+        }
+    }
+
+    private static void requireBefore(String projectKey, Instant deadline, Instant at) {
+        if (at.isAfter(deadline)) {
+            log.warn("Jira import of project {}: the pull took more than 60 seconds", projectKey);
+            throw new JiraUnavailableException("The pull took more than 60 seconds");
         }
     }
 

@@ -1,6 +1,7 @@
 package vn.tsolve.ticket.service.impl;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -11,6 +12,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -40,6 +42,8 @@ public class JiraImportServiceImpl implements JiraImportService {
     static final int MAX_ISSUES = 100;
     /** At most 20 Jira pages (2,000 issues) per pull, so a range of mostly imported issues stays fast (Edge 3). */
     static final int MAX_PAGES = 20;
+    /** Every Jira call of one pull, retries included, together (AC-001.13). */
+    static final Duration PULL_BUDGET = Duration.ofSeconds(60);
 
     private static final Logger log = LoggerFactory.getLogger(JiraImportServiceImpl.class);
     private static final ZoneId VIETNAM = ZoneId.of("Asia/Ho_Chi_Minh");
@@ -97,7 +101,14 @@ public class JiraImportServiceImpl implements JiraImportService {
             throw new NotFoundException("MSG04", Map.of());
         }
         // the Jira calls are done; only the database writes share a transaction (AGENTS.md §4)
-        return transaction.execute(status -> save(user, projectId, from, to, pulled));
+        try {
+            return transaction.execute(status -> save(user, projectId, from, to, pulled));
+        } catch (DataIntegrityViolationException e) {
+            // a parallel pull of this user saved its open preview first (uq_import_preview_owner_open): saving again
+            // deletes it, so the later pull wins as AC-001.10 asks (BUG-193)
+            log.info("Jira pull of project {} met a parallel pull of the same user; saving again", projectId);
+            return transaction.execute(status -> save(user, projectId, from, to, pulled));
+        }
     }
 
     private record Pulled(List<JiraIssue> issues, boolean moreAvailable) {}
@@ -108,11 +119,12 @@ public class JiraImportServiceImpl implements JiraImportService {
             if (key == null) {
                 throw new JiraUnavailableException("not connected");
             }
+            Instant deadline = Instant.now(clock).plus(PULL_BUDGET);
             List<JiraIssue> kept = new ArrayList<>();
             String token = null;
             int pages = 0;
             do {
-                JiraIssuePage page = jira.resolvedIssues(key, from, to, token);
+                JiraIssuePage page = jira.resolvedIssues(key, from, to, token, deadline);
                 pages++;
                 Set<String> taken = tickets.findExistingTicketIds(
                         page.issues().stream().map(JiraIssue::key).toList());
@@ -131,7 +143,15 @@ public class JiraImportServiceImpl implements JiraImportService {
             return new Pulled(kept, token != null);
         } catch (JiraUnavailableException e) {
             log.warn("Jira pull failed project={} jiraKey={} reason={}", projectId, key, e.getReason());
-            recorder.recordJiraFailed(projectId, user, JiraUnavailableException.class.getSimpleName() + " MSG50");
+            try {
+                recorder.recordJiraFailed(projectId, user, JiraUnavailableException.class.getSimpleName() + " MSG50");
+            } catch (RuntimeException recordError) {
+                // never let a recording problem hide the MSG50 answer (BUG-192)
+                log.error(
+                        "Could not record the Failed Jira Import Batch of project {}: {}",
+                        projectId,
+                        recordError.getClass().getSimpleName());
+            }
             throw e;
         }
     }

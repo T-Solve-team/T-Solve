@@ -8,6 +8,10 @@ import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 
 /** Import Tickets as the mock Project Manager; resolves once the seed Draft (ITSUP, 3 rows) is listed. */
+const SAVED = formatDateTime('2026-10-16T02:30:00Z');
+const OPEN = `Open Draft ITSUP · IT, saved ${SAVED}`;
+const DELETE = `Delete Draft ITSUP · IT, saved ${SAVED}`;
+
 async function openDrafts() {
   const user = userEvent.setup();
   const view = renderApp('/import', { role: 'PROJECT_MANAGER' });
@@ -39,10 +43,45 @@ describe('DraftsList', () => {
     expect(await within(table).findByText(msg('MSG04'))).toBeInTheDocument();
   });
 
+  it('names each Open and Delete button after its Draft (BUG-194)', async () => {
+    const { table } = await openDrafts();
+
+    expect(within(table).getByRole('button', { name: OPEN })).toBeInTheDocument();
+    expect(within(table).getByRole('button', { name: DELETE })).toBeInTheDocument();
+  });
+
+  it('AC-004.2 hides a Draft whose Project the user no longer manages (BUG-195)', async () => {
+    const unmanaged = '00000000-0000-4000-8000-000000000999';
+    server.use(
+      http.get('*/api/v1/imports/drafts', () =>
+        Response.json([
+          {
+            previewId: 900,
+            source: 'JIRA_IMPORT',
+            projectId: '00000000-0000-4000-8000-000000000101',
+            rowCount: 3,
+            savedAt: '2026-10-16T02:30:00Z',
+          },
+          {
+            previewId: 901,
+            source: 'JIRA_IMPORT',
+            projectId: unmanaged,
+            rowCount: 2,
+            savedAt: '2026-10-17T02:30:00Z',
+          },
+        ]),
+      ),
+    );
+    const { table } = await openDrafts();
+
+    expect(within(table).queryByText(unmanaged)).not.toBeInTheDocument();
+    expect(within(table).getAllByRole('button', { name: /^Open Draft/ })).toHaveLength(1);
+  });
+
   it('AC-004.3 Open goes to the Import Preview of the Draft', async () => {
     const { user, table, router } = await openDrafts();
 
-    await user.click(within(table).getByRole('button', { name: 'Open' }));
+    await user.click(within(table).getByRole('button', { name: OPEN }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/import/preview'));
     expect(router.state.location.search).toBe('?previewId=900');
@@ -51,7 +90,7 @@ describe('DraftsList', () => {
   it('AC-004.4 Delete asks MSG42 and removes the Draft once confirmed', async () => {
     const { user, table } = await openDrafts();
 
-    await user.click(within(table).getByRole('button', { name: 'Delete' }));
+    await user.click(within(table).getByRole('button', { name: DELETE }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent(msg('MSG42'));
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
@@ -62,7 +101,7 @@ describe('DraftsList', () => {
   it('AC-004.4 Cancel keeps the Draft', async () => {
     const { user, table } = await openDrafts();
 
-    await user.click(within(table).getByRole('button', { name: 'Delete' }));
+    await user.click(within(table).getByRole('button', { name: DELETE }));
     await user.click(
       within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }),
     );
@@ -74,7 +113,7 @@ describe('DraftsList', () => {
     server.use(http.delete('*/api/v1/imports/drafts/:previewId', () => problem(404, 'MSG04')));
     const { user, table } = await openDrafts();
 
-    await user.click(within(table).getByRole('button', { name: 'Delete' }));
+    await user.click(within(table).getByRole('button', { name: DELETE }));
     await user.click(
       within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }),
     );
