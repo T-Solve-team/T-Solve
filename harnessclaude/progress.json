@@ -245,9 +245,9 @@
         "ask-endpoint": "passing",
         "ask-forge-client": "passing",
         "ask-conversation-logic": "passing",
-        "ask-page-ui": "evaluating"
+        "ask-page-ui": "passing"
       },
-      "lastUpdated": "2026-11-08T03:06:58.775Z",
+      "lastUpdated": "2026-11-08T03:57:43.554Z",
       "branch": "feat/jira-app",
       "repos": [
         "default"
