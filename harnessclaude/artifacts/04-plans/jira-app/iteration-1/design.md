@@ -164,3 +164,20 @@ integrity, 10 Integration, 11 Compliance · Skipped: 4 Scale (one conversation p
 | 9 | STORY-010 | Integration | `CreateIssueModal` cannot prefill labels or needs ADF description | High | Spike (Task 1, 08/11): labels and ADF description prefill and save; no new scope — closed | Task 1 |
 | 10 | STORY-010 | User types | Unlinked user | Medium | MSG62 instead of the box; Create button with nothing prefilled | Task 6 |
 | 11 | STORY-010 | Error cascades | Eligibility call fails | Low | Show the question box; POST stays the guard | Task 6 |
+
+## Dev-site check — Task 6 (2026-11-08, `forge tunnel`, site bdang798, space SAM1)
+
+Backend on port 8090 with a fresh database `tsolve_kan294` (the shared dev database had another branch's schema;
+port 8080 was taken), ngrok to the remote baseUrl, stub link to a test Account.
+
+| Check | Result |
+|-------|--------|
+| AC-010.1 tab "Ask T-Solve" in the space navigation, title once | ✅ (BUG-182 found and fixed) |
+| AC-010.2 not linked → MSG62, no box, Create dialog with nothing prefilled | ✅ |
+| AC-010.1 linked → box, "Gửi", note | ✅ |
+| AC-010.8 question with the AI unreachable (no Ollama on this machine) → MSG06, question kept, Create button | ✅ (cause not read in the backend log) |
+| AC-010.9 Create after a failed question → Summary and Description = the question, label `tsolve-asked` | ✅ |
+| AC-010.6 / .7 answer with sources or MSG109, AC-010.10 "Đã giải quyết", "Đã thử theo T-Solve" part | ⏭ not checked — needs a reachable Ollama; covered by automated tests only |
+| AC-010.11 POST 403 MSG62 reaching the page through Forge (`application/problem+json`) | ⏭ not checked (the user reloaded, so MSG62 came from eligibility). If Forge rejects problem+json the page shows MSG06 and the POST still refuses — fails safe |
+
+Skipped by the user's choice (08/11); re-check both open rows when Ollama is reachable.
