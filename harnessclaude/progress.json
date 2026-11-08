@@ -241,10 +241,24 @@
       }
     },
     "jira-app": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:24.029Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "ask-forge-spike": "passing",
+        "ask-contract": "passing",
+        "ask-endpoint": "passing",
+        "ask-forge-client": "passing",
+        "ask-conversation-logic": "passing",
+        "ask-page-ui": "passing"
+      },
+      "lastUpdated": "2026-11-08T04:25:18.975Z",
+      "branch": "feat/jira-app",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "ac7d5c2bb6a89afc0c41b913c57ed2639457009e"
+      }
     },
     "dashboard-audit": {
       "status": "implementing",

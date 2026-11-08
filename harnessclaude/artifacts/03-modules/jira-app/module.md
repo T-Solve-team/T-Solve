@@ -6,6 +6,8 @@ dependencies: [project-integration, ticket-repository, search, triage, ai]
 complexity: large
 paths:
   - jira-app/**
+  - backend/src/main/java/vn/tsolve/jiraapp/**
+  - backend/src/test/java/vn/tsolve/jiraapp/**
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
   - docs/bug-log.md
