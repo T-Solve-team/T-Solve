@@ -2,7 +2,7 @@
 
 **Module:** chatbot
 **Assignee:** bluebearccc
-**Status:** evaluating
+**Status:** passing
 **Iteration:** 2
 
 ---
@@ -52,3 +52,19 @@ trace chatbot (STORY-006): 7/7 acceptance criteria have a test
 
 ### Next up
 Review of Task 9; then Task 10 `follow-up-context` (KAN-181, its own branch).
+
+## Session 2026-11-08 (review)
+
+### Review attempt 1: pass
+- `06-evaluation/chatbot/task-9-cited-documents-review.md` (harnessclaude-reviewer, on a19abbb): verdict pass;
+  `mvn verify` 953 unit + 297 IT (BUG-186 IT passed this run), trace 7/7.
+- Finding 1 (warning) for Task 10 and the spec owner: the 50-id limit is only in the backend. The yaml has no
+  `maxItems: 50`, and `ConversationThread` `citedWikiDocumentIds` sends every distinct cited Wiki id, so a conversation
+  citing more than 50 Wiki documents gets 400 and never shows MSG110. Not reachable while `NoWikiSources` returns no
+  passages. Open spec question: cap or split the ids in the web app, or raise the limit.
+- Findings 2 and 3 (info): `/v3/api-docs` shows an optional string array, unlike the yaml (keep the yaml); a single
+  comma-joined value is split by Spring and checked the same way.
+- Status: passing.
+
+### Next up
+Task 10 `follow-up-context` (KAN-181, its own branch), including the contract check above.

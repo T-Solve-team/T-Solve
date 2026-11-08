@@ -228,10 +228,10 @@
         "chatbot-answer-schema": "passing",
         "ask-answer-api": "passing",
         "answer-citations": "passing",
-        "cited-documents": "evaluating",
+        "cited-documents": "passing",
         "follow-up-context": "pending"
       },
-      "lastUpdated": "2026-11-08T07:22:24.028Z",
+      "lastUpdated": "2026-11-08T07:38:30.920Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
