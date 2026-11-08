@@ -24,6 +24,7 @@ is one row of such a preview.
 | 2026-11-07 | STORY-001..004 | A pulled issue is a row of the Import Preview of `import-ticket-list` (D7): AC-001.1, AC-001.2, AC-002.1–AC-002.3, AC-002.7, AC-002.10, AC-003.1, AC-003.6 and the Interface Contracts reworded to its rows, Fill solution, remove-rows and Confirm; Project ids are UUIDs; a row still Needs Solution at Finish gives `MSG_NEW_4` as in CSV import | KAN-45 is stacked on PR #110, which already has these parts (user decision 2026-11-07) |
 | 2026-11-07 | STORY-001 | AC-001.3: MSG35 also after the 20-page scan cap, and without a count (D8) | Jira gives no total and counting would need every page (NFR 1); user decision 2026-11-07 |
 | 2026-11-07 | STORY-001 | D2 reworded: scoped API token as Bearer through the Atlassian API gateway (`api.atlassian.com/ex/jira/{cloudId}`), env `JIRA_SITE_URL`, `JIRA_CLOUD_ID`, `JIRA_API_TOKEN`; no email. New AC-001.11 (retry 429/503 with `Retry-After`) and AC-001.12 (gateway + Bearer, link on the site); AC-001.7 reworded to apply after those retries | RESEARCH-003: a service account has only scoped tokens, which get 401 with basic auth on the site URL; user decisions 2026-11-07 (scoped only, retry twice) |
+| 2026-11-08 | STORY-001 | New AC-001.13: a pull stops reading Jira after 60 seconds in total and answers MSG50 as in AC-001.7 | PR #166 review (trhieudev1309), BUG-189: up to 20 pages plus comment calls, each with a 30 s timeout and 2 retries, could hold a request thread for minutes; user decision 2026-11-08 |
 
 ## Decisions taken while planning (2026-11-07, with the user)
 | # | Question | Decision |
@@ -68,6 +69,7 @@ is one row of such a preview.
   - AC-001.10: WHEN a pull creates a preview, THE system SHALL delete the caller's previous unconfirmed preview that is not a Draft, if any.
   - AC-001.11: IF a Jira call answers HTTP 429, or HTTP 503 with a `Retry-After` header, and `Retry-After` is at most 5 seconds, THEN THE system SHALL wait that many seconds and send the same call again, at most 2 times per call; a missing `Retry-After` on a 429 counts as 1 second, and a `Retry-After` above 5 seconds ends the retries at once.
   - AC-001.12: WHEN the system calls Jira for a pull, THE system SHALL send the configured API token as `Authorization: Bearer` to `https://api.atlassian.com/ex/jira/{cloudId}` with the configured cloud id, and SHALL build each row's link to the issue as the configured Jira site URL + `/browse/{key}`.
+  - AC-001.13: IF reading Jira for one pull — every page, comment call and retry together — takes more than 60 seconds, THEN THE system SHALL stop reading and answer as in AC-001.7: MSG50 with an error message that contains no credential, no preview, and one Import Batch of source Jira with status Failed and 0 published.
 
 ### STORY-002: Write Solutions on the Import Preview
 - As a Project Manager, I want to write the Solution of each pulled issue, alone or for several issues at once, so that every imported ticket has a reusable Solution.

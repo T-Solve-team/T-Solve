@@ -161,3 +161,14 @@ Order: Tasks 1–4 and 7 need nothing else. Tasks 5, 6, 8 and 9 start after the 
 - Test: `TT/client/JiraRestIssueSourceTest.java` (AC-001.7, AC-001.11, AC-001.12)
 **Dependencies:** Task 3
 **Estimated size:** small
+
+## Task 12: Pull deadline — 60 s for every Jira call of one pull
+
+**Story:** STORY-001
+**Feature:** jira-pull-deadline
+**Description:** Change of 2026-11-08 (PR #166 review, BUG-189). `JiraImportServiceImpl.read` sets one deadline, now + 60 s, and passes it with every page to `JiraIssueSource.resolvedIssues`. `JiraRestIssueSource` (now given the `Clock`) starts no request and waits for no retry past it, and throws `JiraUnavailableException("The pull took more than 60 seconds")`, so the pull answers MSG50 with a Failed batch as in AC-001.7 (AC-001.13). A request already running at the deadline still ends at its read timeout.
+**Files:**
+- Modify: `T/service/JiraIssueSource.java`, `T/client/JiraRestIssueSource.java`, `T/service/impl/JiraImportServiceImpl.java`
+- Test: `TT/client/JiraRestIssueSourceTest.java`, `TT/service/impl/JiraImportServiceImplTest.java` (AC-001.13)
+**Dependencies:** Task 11
+**Estimated size:** small
