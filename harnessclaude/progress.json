@@ -245,15 +245,15 @@
         "ask-endpoint": "passing",
         "ask-forge-client": "passing",
         "ask-conversation-logic": "passing",
-        "ask-page-ui": "pending"
+        "ask-page-ui": "evaluating"
       },
-      "lastUpdated": "2026-11-08T02:59:11.436Z",
+      "lastUpdated": "2026-11-08T03:06:58.775Z",
       "branch": "feat/jira-app",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "43dc152a25caeabcbdd5fd31a0ad9dbd27f459f9"
+        "default": "7cf18d9264823859ecf1a00b3be6868977923a56"
       }
     },
     "dashboard-audit": {
