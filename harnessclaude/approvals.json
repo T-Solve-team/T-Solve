@@ -977,11 +977,11 @@
     }
   },
   "jira-app": {
-    "specHash": "cdcc0180292636a43ceb87a560dc5db7ab8bf8de024a4fec78dff9e1c0dcb7b0",
-    "approvedAt": "2026-11-08T02:54:56.214Z",
+    "specHash": "3a593a33dcb6dfb1a6f4d48aa552a22636c1e12f36172c963fef22cd68614a5e",
+    "approvedAt": "2026-11-08T03:51:28.791Z",
     "by": "user",
     "acs": {
-      "AC-010.1": "THE Jira App SHALL show a project page titled \"Hỏi T-Solve\" in every Jira project of the site, with a question box, a send button and the note \"Trả lời từ Solution và Wiki của T-Solve\".",
+      "AC-010.1": "THE Jira App SHALL show a project page titled \"Ask T-Solve\" in every Jira project of the site, with a question box, a send button and the note \"Trả lời từ Solution và Wiki của T-Solve\".",
       "AC-010.2": "IF the Jira account is not linked to an active T-Solve user, THEN THE page SHALL show MSG62 instead of the question box and SHALL still show \"Chưa được, tạo ticket\", which opens the Create dialog of AC-010.9 with nothing prefilled.",
       "AC-010.3": "WHEN the user sends a question, THE Jira App SHALL call  with the question and, as history, the earlier turns of the conversation — at most the last 10.",
       "AC-010.4": "WHEN the server receives a valid question from a linked user, THE server SHALL return the chatbot answer for that user — the same sources, citations and outcomes as the web Knowledge Chatbot, from every Solution and Wiki document the user may see.",

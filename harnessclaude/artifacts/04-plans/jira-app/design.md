@@ -91,6 +91,8 @@ Stub config (`.env.example`): `TSOLVE_STUB_JIRA_ASKERS=<accountId>=<accountUuid>
 - **Description format** for `CreateIssueModal`: ADF (`{version: 1, type: "doc", content: [paragraph…]}`), one
   paragraph per question, then `Đã thử theo T-Solve:`, the last answer and a `Nguồn:` paragraph per source — verified in
   the Task 1 spike (RESEARCH-004 Spike 2). A plain string also works but is undocumented, so it is not used.
+- **Page title** "Ask T-Solve" (spec AC-010.1, re-approved 3a593a33; was "Hỏi T-Solve"): set only in `manifest.yml` — Jira
+  prints it, the page has no heading (BUG-182). Other labels stay Vietnamese.
 - **Page labels** (Task 6): send button "Gửi" (user, 2026-11-08); a ticket source lists its Solution with the web chatbot's
   section names (Symptoms, Root cause, Resolution steps, Workaround when present, Scope of applicability). The page
   calls `invokeRemote` through the endpoint `tsolve-ui-endpoint` (remote `tsolve-backend`, no route: the path comes

@@ -21,11 +21,12 @@ STORY-007), SRS System Messages. Terms: **user** = the T-Solve user linked to th
 | 2026-11-07 | STORY-010 (new) | Add STORY-010 "Hỏi T-Solve" page (KAN-294): ask the Knowledge Chatbot inside Jira before creating an issue, then "Solved" or a prefilled Jira Create dialog | RESEARCH-004 Option C. User decisions of 07/11: answers come from the `chatbot` module's answer service with the same sources as the web chatbot (all Solutions and Wiki the user may see, not only the open Jira project); only Jira accounts linked to a T-Solve user ask; the Create dialog is prefilled with the questions and what was tried; "Solved" is UI only until chatbot ratings (KAN-182); the created issue gets label `tsolve-asked` so the tracker's suggestion job skips it. Written on its own branch from `main` (user, 07/11): STORY-001..009 stay on KAN-126 |
 | 2026-11-08 | STORY-010 | Add `GET /api/v1/jira-app/questions/eligibility` to the Exposed interfaces; no criterion changes | Planning builder check: AC-010.2 shows MSG62 before any question, which the POST alone cannot tell the page (user chose this over rewording AC-010.2, 08/11) |
 | 2026-11-08 | STORY-010 | AC-010.6 reworded: sources shown like the web chatbot — "[n] <title> · Wiki document", "[n] Solution from a ticket" with its Solution, no ticket id, link or Project. AC-010.9: the sources in the Create dialog use the same labels, without Solution text | Task 5 found that AC-010.6 ("Ticket ID and title of each Solution") contradicts GBR-36 and AC-010.4: a `TicketSolutionCitation` carries only the Solution. User chose to match the web (08/11) |
+| 2026-11-08 | STORY-010 | AC-010.1: the page title is "Ask T-Solve" (was "Hỏi T-Solve"); requirement 5, the terms and the Exposed table follow. The other page labels stay Vietnamese | User decision in the Task 6 dev-site check (08/11) |
 
 ## Requirements
 
 ### Functional
-5. A "Hỏi T-Solve" page in each Jira project lets a linked user ask the Knowledge Chatbot before creating an issue;
+5. An "Ask T-Solve" page in each Jira project lets a linked user ask the Knowledge Chatbot before creating an issue;
    "Chưa được, tạo ticket" opens Jira's Create dialog prefilled with the conversation (STORY-010). Requirements 1
    to 4 belong to KAN-126.
 
@@ -40,9 +41,9 @@ STORY-007), SRS System Messages. Terms: **user** = the T-Solve user linked to th
 
 ### STORY-010: Ask T-Solve before creating an issue
 - As an Employee, I want to ask T-Solve about my problem inside Jira before I create an issue, so that I fix it myself when a known Solution exists and, when not, the issue I create says what I already tried.
-- Terms: **page** = the "Hỏi T-Solve" Jira project page; **conversation** = the questions and answers on the page since it was opened; **chatbot answer** = the answer of the `chatbot` module's answer service (chatbot STORY-005 to STORY-007).
+- Terms: **page** = the "Ask T-Solve" Jira project page; **conversation** = the questions and answers on the page since it was opened; **chatbot answer** = the answer of the `chatbot` module's answer service (chatbot STORY-005 to STORY-007).
 - Acceptance:
-  - AC-010.1: THE Jira App SHALL show a project page titled "Hỏi T-Solve" in every Jira project of the site, with a question box, a send button and the note "Trả lời từ Solution và Wiki của T-Solve".
+  - AC-010.1: THE Jira App SHALL show a project page titled "Ask T-Solve" in every Jira project of the site, with a question box, a send button and the note "Trả lời từ Solution và Wiki của T-Solve".
   - AC-010.2: IF the Jira account is not linked to an active T-Solve user, THEN THE page SHALL show MSG62 instead of the question box and SHALL still show "Chưa được, tạo ticket", which opens the Create dialog of AC-010.9 with nothing prefilled.
   - AC-010.3: WHEN the user sends a question, THE Jira App SHALL call `POST /api/v1/jira-app/questions` with the question and, as history, the earlier turns of the conversation — at most the last 10.
   - AC-010.4: WHEN the server receives a valid question from a linked user, THE server SHALL return the chatbot answer for that user — the same sources, citations and outcomes as the web Knowledge Chatbot, from every Solution and Wiki document the user may see.
@@ -71,8 +72,8 @@ Proposal, added to `frontend/openapi/tsolve-api.yaml` before code; FIT-authentic
 
 | Endpoint | Screen | Story |
 |----------|--------|-------|
-| `GET /api/v1/jira-app/questions/eligibility` (→ `linked`: whether the FIT user is linked to an active T-Solve user; calls no AI) | Hỏi T-Solve (on open, AC-010.2) | 010 |
-| `POST /api/v1/jira-app/questions` (question + history → the chatbot answer: outcome, text, citations) | Hỏi T-Solve | 010 |
+| `GET /api/v1/jira-app/questions/eligibility` (→ `linked`: whether the FIT user is linked to an active T-Solve user; calls no AI) | Ask T-Solve (on open, AC-010.2) | 010 |
+| `POST /api/v1/jira-app/questions` (question + history → the chatbot answer: outcome, text, citations) | Ask T-Solve | 010 |
 
 Forge: `jira:projectPage` for the page, `invokeRemote` to the endpoint above, and `CreateIssueModal`
 (`@forge/jira-bridge`) for the prefilled Create dialog — whether it can prefill labels and where the page shows in
