@@ -854,8 +854,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "12189f157d3b550a3e23af078410b0e145d1374e8704fc7c75886caa01222f3b",
-    "approvedAt": "2026-11-07T10:16:20.325Z",
+    "specHash": "c4a0fab338ac82d440d6cee3208109bc62daa15713df1758066f6585cc4b201d",
+    "approvedAt": "2026-11-08T07:34:40.923Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -934,7 +934,16 @@
       "AC-012.4": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the stream with 401 or 403 and open no stream.",
       "AC-012.5": "WHEN the Review Queue screen receives a  event, THE frontend SHALL refetch the queue page and eligible ticket ids it currently shows, keeping the existing selection and stale-data rules (STORY-005).",
       "AC-012.6": "WHILE the event stream is open, THE frontend SHALL not run the 5-second queue polling. WHILE the stream is closed or failing, THE frontend SHALL keep the existing visible-tab 5-second polling, and WHEN the stream opens again it SHALL refetch the queue once.",
-      "AC-012.7": "WHEN the user leaves the Review Queue screen, THE frontend SHALL close its event stream."
+      "AC-012.7": "WHEN the user leaves the Review Queue screen, THE frontend SHALL close its event stream.",
+      "AC-013.1": "WHEN a Project Manager queries GET , THE API SHALL use the signed-in Workspace and the Projects they manage through the Review Workspace access and return only EXPIRED Solution Form tickets of those Projects, each with ticket UUID, source key, title, Project, source, writer name, enteredQueueAt, reviewDueDate, expiredAt and previousStatus, paged with the existing page and size conventions, latest expiredAt first by default with the ticket UUID as tie-breaker.",
+      "AC-013.2": "WHEN a Project Manager queries GET , THE API SHALL return the UUIDs of every ticket the Expired list returns for the same Department filter across all pages. WHEN departmentId is supplied, both endpoints SHALL return only tickets of that Department's Projects. IF that Department has no Project the caller manages, THEN THE API SHALL return an empty page and an empty id list.",
+      "AC-013.3": "WHEN the API returns an Expired ticket, THE API SHALL report previousStatus as PENDING_REVIEW and expiredAt as 00:00 Vietnam time (UTC+07:00) on the calendar day after the ticket's review due date, without storing either value.",
+      "AC-013.4": "WHEN the Expired list is sorted by expiredAt, sourceTicketId, title or project, ascending or descending, THE API SHALL apply that order. IF the sort names any other field or direction, or page or size is outside the existing limits, THEN THE API SHALL refuse the request with 400 and MSG06.",
+      "AC-013.5": "WHEN a Project Manager sends back 1 to 500 unique UUIDs through POST  and every ticket is an EXPIRED Solution Form ticket of a Project they manage, THE backend SHALL in one Workspace transaction change every ticket to PENDING_REVIEW, set its review_queue_entered_at to the send-back time, set its review due date to the send-back calendar date in Vietnam time plus its Project's review_range days (3 days when review_range is null or not positive) (GBR-10), keep its Solution and Evidence unchanged, and record one SEND_BACK review decision per ticket with the caller, the send-back time and no reason or comment; THE API SHALL return the number of tickets sent back as count and SHALL enqueue no review notification job.",
+      "AC-013.6": "IF ticketIds is empty, holds more than 500 entries, holds a duplicate or holds a value that is not a UUID, THEN THE API SHALL refuse the batch with 400. IF any ticket does not exist in the signed-in Workspace, THEN THE API SHALL refuse the batch with 404 and expose no ticket data. IF any ticket belongs to a Project the caller does not manage, THEN THE API SHALL refuse the batch with 403. IF any ticket is no longer EXPIRED or is not a Solution Form ticket, THEN THE API SHALL refuse the batch with 409. In every refused case THE backend SHALL change no ticket and record no review decision.",
+      "AC-013.7": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the Expired list, the Expired ticket ids and send-back with 401 or 403 and expose no ticket.",
+      "AC-013.8": "WHEN Review History returns a stored SEND_BACK decision, THE API SHALL report it as SEND_BACK with null reason and null comment, with the same actor, author, ticket and Project fields as AC-011.2; WHEN the decision filter is SEND_BACK, THE API SHALL return those decisions.",
+      "AC-013.9": "WHEN the production web application loads Expired Tickets or sends tickets back, THE frontend SHALL use the published getExpiredTickets, getExpiredTicketIds and sendBackTickets operations through the existing generated client, and the OpenAPI contract SHALL describe them as production operations."
     }
   },
   "ai": {

@@ -279,3 +279,28 @@ Without a production `ReviewWorkspaceAccess` every Review endpoint answers 403. 
 - **Dead connection (BUG-176)** — EventSource never surfaces `:hb` comments, so a connection cut without a close is invisible. While connected, the queue keeps a 60 s safety refetch; the 5 s polling stays off (AC-012.6).
 - **Subscribe failure (BUG-177)** — anything that throws after the subscription is registered (join barrier, heartbeat scheduling) ends and removes it; the request thread waits at most ~5 s in total.
 - **Changeset number** — main gained `019-tracker-*` and `019-identity-*`; ours stays `019-review-queue-notify.sql` (ids differ by name) and is included last.
+
+## KAN-156 extension: production Expired tickets and send-back (STORY-013)
+
+Decided with the user on 2026-11-08, before the spec: SEND_BACK is stored in `review_decision`; Review History returns it; `previousStatus` and `expiredAt` are derived, not stored; the review range is `project.review_range` with a 3-day fallback.
+
+- **Storage** — chosen: changeset `024-review-send-back-decision.sql` (author `review`) drops and re-adds `ck_review_decision` with `SEND_BACK` added; the stored-decision enum gains SEND_BACK. Alternatives: `audit_log_entry`, a new `send_back` table. Rationale: the schema reference already lists SEND_BACK in `review_decision`, and Review History reads one table.
+- **Reads** — `GET /api/v1/expired-tickets` and `/ticket-ids` in `ReviewReadController` (Project Manager) resolve managed Projects through `ReviewWorkspaceAccess` as the queue does, narrow them by Department, then new `TicketReviewReadService` methods load EXPIRED Solution Form tickets of those Projects and page them in memory in the queue's comparator style (same data scale as the queue). Sort keys `expiredAt`, `sourceTicketId`, `title`, `project`; default `expiredAt,desc`, then ticket UUID. An unknown key or direction, or page/size outside the limits, is the MSG06 400 that history uses (AC-013.4).
+- **Derived fields** — `previousStatus` is always PENDING_REVIEW (user decision, AC-013.3). Known limitation: KAN-157 (JOB-02, STORY-014) chose on 2026-11-08 to also expire Changes requested tickets and to store `ticket.expired_at` and `ticket.status_before_expiry` (changeset 025); once both branches are on main, a change request on STORY-013 switches these reads to the stored columns so CHANGES_REQUESTED shows correctly. `expiredAt` is 00:00 Asia/Ho_Chi_Minh on `review_due_date + 1 day`, so sorting by `expiredAt` is sorting by the due date. JOB-02 expires a ticket only because of its due date, so an EXPIRED ticket always has one; a legacy EXPIRED row with a null due date falls back to `updated_at` for `expiredAt` (sorted the same way) rather than failing the page.
+- **Send-back** — `POST /api/v1/reviews/send-back` in `ReviewDecisionController` calls a new `TicketDecisionService.sendBack(...)`, one `@Transactional` method in `TicketDecisionServiceImpl`. Order mirrors the three decisions (AC-009.7): request shape 400 (empty, more than 500, duplicate, non-UUID — the existing ticket-ids request validation); lock the rows (`FOR UPDATE`); any id missing in this Workspace → 404 MSG04 with no data; any Project not managed → 403; any status other than EXPIRED or source other than SOLUTION_FORM → 409. Only then one native update sets status PENDING_REVIEW, `review_due_date = :today + range` where range is `project.review_range` when positive, else 3, and `updated_at = :now`, joined to `project` on `project_id`; then one `review_decision` row per ticket (SEND_BACK, caller, `:now`, null text). `:today` is the Vietnam calendar date of `:now` from the injected `Clock`. Solution, Evidence and feedback columns are untouched. `review_due_date` is read-only on the entity, hence the native update.
+- **Queue entry and events** — the existing trigger of AC-009.11 sets `review_queue_entered_at` on the transition to PENDING_REVIEW (the transaction time), and the STORY-012 trigger NOTIFYs the Project; no code needed, the IT asserts the entry time.
+- **No email** — the STORY-010 enqueue runs only for Reject and Request Changes; `sendBack` never calls it (asserted with the notifier).
+- **History** — SEND_BACK moves out of the history-only filter list; stored SEND_BACK maps to SEND_BACK with null reason and comment (AC-013.8).
+- **Contract and web** — the three operations keep their shapes; `tsolve-api.yaml` drops the "frontend proposal" wording and documents sorts, 404/409 and the derived fields; then `npm run generate:api`. The web hooks already call the generated `getExpiredTickets`, `getExpiredTicketIds` and `sendBackTickets` through `@/shared/api`; a page test named AC-013.9 proves the requests go through them. MSW handlers stay for mock mode.
+
+### Edge cases
+
+| Case | Handling |
+|------|----------|
+| Same batch sent twice (double click, two managers) | Row locks serialise; the second sees PENDING_REVIEW → 409, nothing written |
+| One batch over two Projects with different ranges | Each ticket uses its own Project's range |
+| `review_range` null, 0 or negative | 3 days |
+| Send-back at 23:30 UTC (06:30 next day in Vietnam) | Due date counts from the Vietnam date; fixed-Clock test at the boundary |
+| Ticket id of another Workspace | Not in this tenant database → 404, nothing exposed |
+| Department with no managed Project | Empty page and empty ids, no query |
+| Imported (non Solution Form) EXPIRED ticket | Not listed; send-back 409 |
