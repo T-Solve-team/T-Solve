@@ -2,7 +2,7 @@
 
 **Module:** chatbot
 **Assignee:** bluebearccc
-**Status:** evaluating
+**Status:** passing
 **Iteration:** 2
 
 ---
@@ -47,3 +47,22 @@ AC-006.5 – AC-006.7 are Task 9 (`cited-documents`).
 
 ### Next up
 Review of Task 8, then Task 9 `cited-documents` on the same branch (KAN-180).
+
+## Session 2026-11-08 (review and fix)
+
+### Review attempt 1: pass
+- `06-evaluation/chatbot/task-8-answer-citations-review.md` (harnessclaude-reviewer, on 88a434b): verdict pass, three
+  informational findings, `mvn verify` 939 unit + 297 IT.
+- Finding 1 fixed by the user's choice: BUG-185, array indexing such as `args[9]` was removed as an unknown marker and
+  `args[1]` counted as citing source 1. A `[n]` right after a letter, digit or underscore is no longer a marker
+  (lookbehind `(?<![\p{L}\p{N}_])`); `[1][2]` still counts as two. This narrows the design's marker form
+  (`\[([1-9]\d?)\]`); design.md is not changed here.
+- Findings 2 (a stray leading space when the first word is a removed marker) and 3 (no controller test for
+  `"workaround": null`) are left open.
+- Test: `CitationsTest` `leavesIndexingAfterAWordAsText_BUG_185` (4 cases; 3 failed before the fix).
+- Verify: `mvn -B -Dapi.version=1.44 verify`: BUILD SUCCESS, 943 unit + 297 integration tests, Spotless check.
+- Commit: default@cd5cc85 `fix(chatbot): leave code indexing like args[1] out of the citations (KAN-180)`.
+- The fix was not reviewed again; the user moved the feature to passing on review attempt 1 plus this verify.
+
+### Next up
+Task 9 `cited-documents` on the same branch (KAN-180).
