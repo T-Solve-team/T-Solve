@@ -67,6 +67,24 @@ class CitationsTest {
         assertThat(citations.text()).isEqualTo("Unknown only.");
     }
 
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "Read args[1] first.|Read args[1] first.|''",
+                "Use args[9] here [1].|Use args[9] here [1].|1",
+                "Set list_[2] and map2[3], see [3].|Set list_[2] and map2[3], see [3].|3",
+                "Both [1][2] and (see [3]).|Both [1][2] and (see [3]).|1 2 3"
+            })
+    void leavesIndexingAfterAWordAsText_BUG_185(String text, String expected, String numbers) {
+        var citations = Citations.of(text, kept);
+
+        assertThat(citations.text()).isEqualTo(expected);
+        assertThat(citations.citations())
+                .extracting(citation -> String.valueOf(citation.number()))
+                .containsExactly(numbers.isEmpty() ? new String[0] : numbers.split(" "));
+    }
+
     @Test
     void mapsTicketSourceToFiveSections_AC_006_3() {
         var citation = (TicketSolutionCitation)

@@ -7,8 +7,9 @@ import vn.tsolve.chatbot.answer.dto.ChatbotCitation;
 
 /** The model's text with unknown {@code [n]} markers removed, and the kept sources it cites, in number order. */
 record Citations(String text, List<ChatbotCitation> citations) {
-    // Only a single integer 1..99 is a marker: [01], [ 1 ], [0] and [1, 2] stay plain text.
-    private static final Pattern MARKER = Pattern.compile("\\[([1-9]\\d?)\\]");
+    // Only a single integer 1..99 is a marker: [01], [ 1 ], [0] and [1, 2] stay plain text. Right after a letter,
+    // digit or underscore it is indexing in code (args[1]), not a marker (BUG-185); [1][2] still counts as two.
+    private static final Pattern MARKER = Pattern.compile("(?<![\\p{L}\\p{N}_])\\[([1-9]\\d?)\\]");
     private static final String WORD_END = " \n.,;:!?)";
 
     static Citations of(String text, List<ChatbotSource> kept) {
