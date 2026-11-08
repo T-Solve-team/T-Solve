@@ -7,7 +7,7 @@ const run = (...actions) => actions.reduce(conversationReducer, initialConversat
 
 describe('conversation', () => {
   it('starts idle with nothing asked', () => {
-    expect(initialConversation).toEqual({ status: 'idle', turns: [], pending: null, error: null });
+    expect(initialConversation).toEqual({ status: 'idle', turns: [], pending: null, error: null, asked: [] });
     expect(canSend(initialConversation)).toBe(true);
   });
 
@@ -27,6 +27,7 @@ describe('conversation', () => {
       turns: [{ question: 'VPN fails', answer: ANSWERED }],
       pending: null,
       error: null,
+      asked: ['VPN fails'],
     });
     expect(canSend(state)).toBe(true);
   });
@@ -84,10 +85,33 @@ describe('conversation', () => {
     expect(questions(state)).toEqual(['q1', 'q2']);
   });
 
+  it('AC-010.9 keeps a failed question when a different one follows (BUG-184)', () => {
+    const state = run(
+      { type: 'send', question: 'q1' },
+      { type: 'fail', code: 'MSG06' },
+      { type: 'send', question: 'q2' },
+      { type: 'answer', answer: ANSWERED },
+    );
+
+    expect(questions(state)).toEqual(['q1', 'q2']);
+    expect(history(state)).toEqual([{ question: 'q2', answer: 'Restart the VPN [1]' }]);
+  });
+
+  it('AC-010.9 lists a failed question sent again only once (BUG-184)', () => {
+    const state = run(
+      { type: 'send', question: 'q1' },
+      { type: 'fail', code: 'MSG06' },
+      { type: 'send', question: 'q1' },
+      { type: 'answer', answer: ANSWERED },
+    );
+
+    expect(questions(state)).toEqual(['q1']);
+  });
+
   it('AC-010.10 ends the conversation when solved and allows no more questions', () => {
     const state = run({ type: 'send', question: 'q1' }, { type: 'answer', answer: ANSWERED }, { type: 'solve' });
 
-    expect(state).toEqual({ status: 'solved', turns: [], pending: null, error: null });
+    expect(state).toEqual({ status: 'solved', turns: [], pending: null, error: null, asked: [] });
     expect(canSend(state)).toBe(false);
   });
 

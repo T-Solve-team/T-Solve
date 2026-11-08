@@ -304,7 +304,7 @@ export const getGetJiraAskerEligibilityUrl = () => {
 
 /**
  * The user comes only from the verified FIT principal. Linked means the Jira account is linked to an active T-Solve user; a FIT without a principal is not linked. Calls no AI.
- * @summary Whether the Jira user may ask T-Solve on the "Hỏi T-Solve" page (STORY-010, AC-010.2).
+ * @summary Whether the Jira user may ask T-Solve on the "Ask T-Solve" page (STORY-010, AC-010.2).
  */
 export const getJiraAskerEligibility = async (
   options?: Parameters<typeof http>[1],
@@ -403,7 +403,7 @@ export function useGetJiraAskerEligibility<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Whether the Jira user may ask T-Solve on the "Hỏi T-Solve" page (STORY-010, AC-010.2).
+ * @summary Whether the Jira user may ask T-Solve on the "Ask T-Solve" page (STORY-010, AC-010.2).
  */
 
 export function useGetJiraAskerEligibility<
@@ -433,7 +433,7 @@ export const getAskJiraAppQuestionUrl = () => {
 
 /**
  * The user comes only from the verified FIT principal. The answer is the Knowledge Chatbot's, with the same sources, citations and outcomes as on the web (AC-010.4); NO_SOURCE is shown as MSG109 by the Jira App. A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns → 400 MSG02 (AC-010.5). A Jira account not linked to an active T-Solve user, or a FIT without a principal → 403 MSG62 and no AI call (AC-010.11). The AI unavailable or no answer within the Jira App deadline (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
- * @summary Answers a question from the "Hỏi T-Solve" page with the Knowledge Chatbot (STORY-010).
+ * @summary Answers a question from the "Ask T-Solve" page with the Knowledge Chatbot (STORY-010).
  */
 export const askJiraAppQuestion = async (
   chatbotQuestion: ChatbotQuestion,
@@ -512,7 +512,7 @@ export type AskJiraAppQuestionMutationError = ErrorType<ProblemResponse>;
 export type AskJiraAppQuestionMutationVariables = { data: ChatbotQuestion };
 
 /**
- * @summary Answers a question from the "Hỏi T-Solve" page with the Knowledge Chatbot (STORY-010).
+ * @summary Answers a question from the "Ask T-Solve" page with the Knowledge Chatbot (STORY-010).
  */
 export const useAskJiraAppQuestion = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
   options?: {

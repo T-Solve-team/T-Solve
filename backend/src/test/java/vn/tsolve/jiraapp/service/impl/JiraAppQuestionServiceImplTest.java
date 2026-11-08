@@ -8,17 +8,24 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Constructor;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
@@ -50,6 +57,61 @@ class JiraAppQuestionServiceImplTest {
     @AfterEach
     void stopExecutor() {
         executor.shutdownNow();
+    }
+
+    @Test
+    void asksOnItsOwnPoolNotTheSharedTaskExecutor_BUG_183() {
+        Constructor<?> springConstructor = Arrays.stream(JiraAppQuestionServiceImpl.class.getConstructors())
+                .filter(constructor -> constructor.isAnnotationPresent(Autowired.class))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(springConstructor.getParameterTypes()).doesNotContain(Executor.class);
+    }
+
+    @Test
+    void buildsABoundedPoolThatRefusesWhenFull_BUG_183() {
+        ThreadPoolExecutor pool = JiraAppQuestionServiceImpl.askPool(3);
+        try {
+            assertThat(pool.getCorePoolSize()).isEqualTo(3);
+            assertThat(pool.getMaximumPoolSize()).isEqualTo(3);
+            assertThat(pool.getQueue().remainingCapacity()).isEqualTo(3);
+            assertThat(pool.getRejectedExecutionHandler()).isInstanceOf(ThreadPoolExecutor.AbortPolicy.class);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void answersMsg06AtOnceWhenItsPoolIsFull_BUG_183() throws Exception {
+        ThreadPoolExecutor one = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new SynchronousQueue<>());
+        CountDownLatch release = new CountDownLatch(1);
+        when(askers.find("cloud-1", "jira-1")).thenReturn(Optional.of(USER));
+        when(answers.ask(any(), any())).thenAnswer(call -> {
+            release.await(5, TimeUnit.SECONDS);
+            return ANSWER;
+        });
+        JiraAppQuestionServiceImpl service =
+                new JiraAppQuestionServiceImpl(askers, answers, one, Duration.ofSeconds(5));
+        try {
+            CompletableFuture<ChatbotAnswerResponse> first = CompletableFuture.supplyAsync(
+                    () -> service.ask(CALLER, new JiraAppQuestionRequest("q1", List.of())));
+            long waitUntil = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+            while (one.getActiveCount() < 1 && System.nanoTime() < waitUntil) {
+                Thread.onSpinWait();
+            }
+
+            long start = System.nanoTime();
+            assertThatThrownBy(() -> service.ask(CALLER, new JiraAppQuestionRequest("q2", List.of())))
+                    .isInstanceOf(AiUnavailableException.class);
+            assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(1));
+
+            release.countDown();
+            assertThat(first.get(5, TimeUnit.SECONDS)).isSameAs(ANSWER);
+        } finally {
+            release.countDown();
+            one.shutdownNow();
+        }
     }
 
     @Test

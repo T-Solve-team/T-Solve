@@ -1,17 +1,21 @@
 package vn.tsolve.jiraapp.service.impl;
 
+import jakarta.annotation.PreDestroy;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.convert.DurationStyle;
 import org.springframework.stereotype.Service;
@@ -37,13 +41,43 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
     private final Executor executor;
     private final long timeoutNanos;
 
+    // Its own pool, not the shared applicationTaskExecutor: a Jira question waiting there would hold a thread the
+    // chatbot's own AI calls need, and enough of them would starve the web chatbot too (BUG-183). Not a bean, so
+    // Spring Boot still creates its applicationTaskExecutor.
     @Autowired
     public JiraAppQuestionServiceImpl(
             JiraAskerLookup askers,
             ChatbotAnswerService answers,
-            @Qualifier("applicationTaskExecutor") Executor executor,
+            @Value("${JIRA_APP_ASK_THREADS:8}") int threads,
             @Value("${JIRA_APP_ASK_TIMEOUT:18s}") String timeout) {
-        this(askers, answers, executor, DurationStyle.detectAndParse(timeout));
+        this(askers, answers, askPool(threads), DurationStyle.detectAndParse(timeout));
+    }
+
+    /** At most {@code threads} questions at once and as many waiting; any more answer MSG06 at once (BUG-183). */
+    static ThreadPoolExecutor askPool(int threads) {
+        if (threads < 1) {
+            throw new IllegalArgumentException("JIRA_APP_ASK_THREADS must be positive");
+        }
+        AtomicInteger number = new AtomicInteger();
+        return new ThreadPoolExecutor(
+                threads,
+                threads,
+                0,
+                TimeUnit.SECONDS,
+                new ArrayBlockingQueue<>(threads),
+                work -> {
+                    Thread thread = new Thread(work, "jira-app-ask-" + number.incrementAndGet());
+                    thread.setDaemon(true);
+                    return thread;
+                },
+                new ThreadPoolExecutor.AbortPolicy());
+    }
+
+    @PreDestroy
+    void stop() {
+        if (executor instanceof ExecutorService pool) {
+            pool.shutdownNow();
+        }
     }
 
     JiraAppQuestionServiceImpl(

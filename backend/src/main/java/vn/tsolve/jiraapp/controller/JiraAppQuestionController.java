@@ -39,7 +39,7 @@ public class JiraAppQuestionController {
 
     @PostMapping
     @PreAuthorize("hasRole('" + Roles.JIRA_APP + "')")
-    @Operation(operationId = "askJiraAppQuestion", summary = "Answer a question from the Hỏi T-Solve page")
+    @Operation(operationId = "askJiraAppQuestion", summary = "Answer a question from the Ask T-Solve page")
     @ApiResponse(responseCode = "400", description = "MSG01 or MSG02")
     @ApiResponse(responseCode = "403", description = "MSG62")
     @ApiResponse(responseCode = "503", description = "MSG06")

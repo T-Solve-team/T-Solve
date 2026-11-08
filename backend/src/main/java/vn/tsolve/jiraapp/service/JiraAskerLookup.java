@@ -4,7 +4,7 @@ import java.util.Optional;
 import vn.tsolve.common.security.TSolveUser;
 
 /**
- * The T-Solve user linked to a Jira account of a site — the asker of the "Hỏi T-Solve" page. Replaced by identity's
+ * The T-Solve user linked to a Jira account of a site — the asker of the "Ask T-Solve" page. Replaced by identity's
  * JiraAccountLinkLookup (identity AC-001.69 to AC-001.71) when it exists.
  */
 public interface JiraAskerLookup {

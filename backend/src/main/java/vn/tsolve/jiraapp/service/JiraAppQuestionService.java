@@ -5,7 +5,7 @@ import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionRequest;
 import vn.tsolve.jiraapp.dto.JiraAskerEligibility;
 
-/** The questions of the "Hỏi T-Solve" Jira project page (STORY-010). */
+/** The questions of the "Ask T-Solve" Jira project page (STORY-010). */
 public interface JiraAppQuestionService {
 
     /** Whether the caller may ask; calls no AI (AC-010.2). */

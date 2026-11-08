@@ -825,7 +825,7 @@ paths:
     get:
       tags: [jira-app]
       operationId: getJiraAskerEligibility
-      summary: Whether the Jira user may ask T-Solve on the "Hỏi T-Solve" page (STORY-010, AC-010.2).
+      summary: Whether the Jira user may ask T-Solve on the "Ask T-Solve" page (STORY-010, AC-010.2).
       description: >
         The user comes only from the verified FIT principal. Linked means the Jira account is linked to an active
         T-Solve user; a FIT without a principal is not linked. Calls no AI.
@@ -846,7 +846,7 @@ paths:
     post:
       tags: [jira-app]
       operationId: askJiraAppQuestion
-      summary: Answers a question from the "Hỏi T-Solve" page with the Knowledge Chatbot (STORY-010).
+      summary: Answers a question from the "Ask T-Solve" page with the Knowledge Chatbot (STORY-010).
       description: >
         The user comes only from the verified FIT principal. The answer is the Knowledge Chatbot's, with the same
         sources, citations and outcomes as on the web (AC-010.4); NO_SOURCE is shown as MSG109 by the Jira App.
