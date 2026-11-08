@@ -62,12 +62,12 @@ describe('AskTsolvePage', () => {
     expect(screen.getByText('Trả lời từ Solution và Wiki của T-Solve')).toBeInTheDocument();
   });
 
-  it('AC-010.1 titles the project page "Hỏi T-Solve" through the manifest, once (BUG-182)', async () => {
+  it('AC-010.1 titles the project page "Ask T-Solve" through the manifest, once (BUG-182)', async () => {
     const manifest = fs.readFileSync(path.join(__dirname, '../../../manifest.yml'), 'utf8');
     await renderLinked();
 
-    expect(manifest).toMatch(/jira:projectPage:\n\s+- key: tsolve-ask-page[\s\S]*?title: Hỏi T-Solve\n/);
-    expect(screen.queryByRole('heading', { name: 'Hỏi T-Solve' })).not.toBeInTheDocument();
+    expect(manifest).toMatch(/jira:projectPage:\n\s+- key: tsolve-ask-page[\s\S]*?title: Ask T-Solve\n/);
+    expect(screen.queryByRole('heading', { name: 'Ask T-Solve' })).not.toBeInTheDocument();
   });
 
   it('AC-010.2 shows MSG62 instead of the box and a Create button with nothing prefilled', async () => {

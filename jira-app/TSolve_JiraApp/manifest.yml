@@ -5,7 +5,7 @@ modules:
       resolver:
         endpoint: tsolve-ui-endpoint
       render: native
-      title: Hỏi T-Solve
+      title: Ask T-Solve
   jira:issuePanel:
     - key: tsolve-jiraapp-hello-world-issue-panel
       resource: main

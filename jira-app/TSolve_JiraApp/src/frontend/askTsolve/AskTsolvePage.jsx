@@ -1,4 +1,4 @@
-// "Hỏi T-Solve" — the Jira project page that asks the Knowledge Chatbot before an issue is created (STORY-010).
+// "Ask T-Solve" — the Jira project page that asks the Knowledge Chatbot before an issue is created (STORY-010).
 import React, { useEffect, useReducer, useState } from 'react';
 import {
   Button,
@@ -20,7 +20,7 @@ import { canSend, conversationReducer, history, initialConversation, lastAnswer,
 import { createIssueContext, sourceLabel } from './prefill';
 import { validateQuestion } from './validation';
 
-// The page's own labels (spec AC-010.1, AC-010.6 to AC-010.10; "Gửi": user, 2026-11-08). The title "Hỏi T-Solve" is
+// The page's own labels (spec AC-010.1, AC-010.6 to AC-010.10; "Gửi": user, 2026-11-08). The title "Ask T-Solve" is
 // the manifest's: Jira prints it above the page, so the page shows no heading of its own (BUG-182).
 const NOTE = 'Trả lời từ Solution và Wiki của T-Solve';
 const SEND = 'Gửi';

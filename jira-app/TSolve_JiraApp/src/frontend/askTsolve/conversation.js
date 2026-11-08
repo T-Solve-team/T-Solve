@@ -1,4 +1,4 @@
-// The "Hỏi T-Solve" conversation, held only in the page's React state (AC-010.12): nothing here stores or logs.
+// The "Ask T-Solve" conversation, held only in the page's React state (AC-010.12): nothing here stores or logs.
 //   idle → asking → answered | failed → asking … ; any → solved (the end, AC-010.10)
 
 export const initialConversation = { status: 'idle', turns: [], pending: null, error: null };
