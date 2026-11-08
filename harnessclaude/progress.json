@@ -247,13 +247,13 @@
         "ask-conversation-logic": "passing",
         "ask-page-ui": "passing"
       },
-      "lastUpdated": "2026-11-08T03:57:43.554Z",
+      "lastUpdated": "2026-11-08T04:25:18.975Z",
       "branch": "feat/jira-app",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "7cf18d9264823859ecf1a00b3be6868977923a56"
+        "default": "ac7d5c2bb6a89afc0c41b913c57ed2639457009e"
       }
     },
     "dashboard-audit": {
