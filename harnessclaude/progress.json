@@ -244,10 +244,10 @@
         "ask-contract": "passing",
         "ask-endpoint": "passing",
         "ask-forge-client": "passing",
-        "ask-conversation-logic": "pending",
+        "ask-conversation-logic": "in-progress",
         "ask-page-ui": "pending"
       },
-      "lastUpdated": "2026-11-07T19:59:36.376Z",
+      "lastUpdated": "2026-11-07T20:00:15.031Z",
       "branch": "feat/jira-app",
       "repos": [
         "default"

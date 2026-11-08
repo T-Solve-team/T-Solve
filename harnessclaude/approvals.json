@@ -977,8 +977,8 @@
     }
   },
   "jira-app": {
-    "specHash": "5b0840de2c23cddd271c90be44faf086f8c1acad5e8201a429448ed814ba0f42",
-    "approvedAt": "2026-11-07T17:49:17.600Z",
+    "specHash": "cdcc0180292636a43ceb87a560dc5db7ab8bf8de024a4fec78dff9e1c0dcb7b0",
+    "approvedAt": "2026-11-08T02:54:56.214Z",
     "by": "user",
     "acs": {
       "AC-010.1": "THE Jira App SHALL show a project page titled \"Hỏi T-Solve\" in every Jira project of the site, with a question box, a send button and the note \"Trả lời từ Solution và Wiki của T-Solve\".",
@@ -986,10 +986,10 @@
       "AC-010.3": "WHEN the user sends a question, THE Jira App SHALL call  with the question and, as history, the earlier turns of the conversation — at most the last 10.",
       "AC-010.4": "WHEN the server receives a valid question from a linked user, THE server SHALL return the chatbot answer for that user — the same sources, citations and outcomes as the web Knowledge Chatbot, from every Solution and Wiki document the user may see.",
       "AC-010.5": "IF the question is empty or only white space, THEN THE Jira App SHALL show MSG01 under the box and send nothing; IF it is longer than 1,000 characters, THEN THE Jira App SHALL show MSG02 and send nothing; THE server SHALL answer 400 with the same codes whatever the Jira App checked.",
-      "AC-010.6": "WHEN the answer has outcome , THE page SHALL show its text, its sources (Ticket ID and title of each Solution, title of each Wiki document) and the buttons \"Đã giải quyết\" and \"Chưa được, tạo ticket\".",
+      "AC-010.6": "WHEN the answer has outcome , THE page SHALL show its text, its sources in number order — a Wiki document as \"[n] <title> · Wiki document\", a ticket source as \"[n] Solution from a ticket\" with its Solution, never the ticket's id, link or Project (GBR-36) — and the buttons \"Đã giải quyết\" and \"Chưa được, tạo ticket\".",
       "AC-010.7": "WHEN the answer has outcome , THE page SHALL show MSG109 and the buttons \"Đã giải quyết\" and \"Chưa được, tạo ticket\".",
       "AC-010.8": "IF the answer request fails, does not answer within 20 seconds, or the server answers 5xx, THEN THE page SHALL show MSG06, keep the question in the box and still show \"Chưa được, tạo ticket\" (GBR-12).",
-      "AC-010.9": "WHEN the user clicks \"Chưa được, tạo ticket\", THE Jira App SHALL open Jira's Create issue dialog for the open Jira project with Summary = the first question of the conversation cut to 255 characters, Description = every question of the conversation followed by a part \"Đã thử theo T-Solve\" with the last answer and its sources, and the label ; the user can change every field before clicking Create.",
+      "AC-010.9": "WHEN the user clicks \"Chưa được, tạo ticket\", THE Jira App SHALL open Jira's Create issue dialog for the open Jira project with Summary = the first question of the conversation cut to 255 characters, Description = every question of the conversation followed by a part \"Đã thử theo T-Solve\" with the last answer and its sources labelled as in AC-010.6 (no Solution text), and the label ; the user can change every field before clicking Create.",
       "AC-010.10": "WHEN the user clicks \"Đã giải quyết\", THE page SHALL end the conversation, show the text \"Vấn đề đã được giải quyết. Cảm ơn bạn!\" (a Jira App label, not an SRS message — user, 2026-11-07), create no issue and store nothing.",
       "AC-010.11": "IF the FIT user is not linked to an active T-Solve user, THEN THE server SHALL answer  with 403 MSG62 and call no AI.",
       "AC-010.12": "THE Jira App SHALL keep the conversation only while the page is open; it SHALL store no question or answer itself and SHALL log no question or answer text."
