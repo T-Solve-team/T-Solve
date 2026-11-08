@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useProductContext } from '@forge/react';
@@ -53,12 +55,19 @@ async function renderLinked() {
 }
 
 describe('AskTsolvePage', () => {
-  it('AC-010.1 shows the title, the question box, the send button and the note', async () => {
+  it('AC-010.1 shows the question box, the send button and the note', async () => {
     await renderLinked();
 
-    expect(screen.getByRole('heading', { name: 'Hỏi T-Solve' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Gửi' })).toBeEnabled();
     expect(screen.getByText('Trả lời từ Solution và Wiki của T-Solve')).toBeInTheDocument();
+  });
+
+  it('AC-010.1 titles the project page "Hỏi T-Solve" through the manifest, once (BUG-182)', async () => {
+    const manifest = fs.readFileSync(path.join(__dirname, '../../../manifest.yml'), 'utf8');
+    await renderLinked();
+
+    expect(manifest).toMatch(/jira:projectPage:\n\s+- key: tsolve-ask-page[\s\S]*?title: Hỏi T-Solve\n/);
+    expect(screen.queryByRole('heading', { name: 'Hỏi T-Solve' })).not.toBeInTheDocument();
   });
 
   it('AC-010.2 shows MSG62 instead of the box and a Create button with nothing prefilled', async () => {

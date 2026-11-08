@@ -4,7 +4,6 @@ import {
   Button,
   ButtonGroup,
   ErrorMessage,
-  Heading,
   List,
   ListItem,
   SectionMessage,
@@ -21,8 +20,8 @@ import { canSend, conversationReducer, history, initialConversation, lastAnswer,
 import { createIssueContext, sourceLabel } from './prefill';
 import { validateQuestion } from './validation';
 
-// The page's own labels (spec AC-010.1, AC-010.6 to AC-010.10; "Gửi": user, 2026-11-08).
-const TITLE = 'Hỏi T-Solve';
+// The page's own labels (spec AC-010.1, AC-010.6 to AC-010.10; "Gửi": user, 2026-11-08). The title "Hỏi T-Solve" is
+// the manifest's: Jira prints it above the page, so the page shows no heading of its own (BUG-182).
 const NOTE = 'Trả lời từ Solution và Wiki của T-Solve';
 const SEND = 'Gửi';
 const SOLVED = 'Đã giải quyết';
@@ -109,7 +108,6 @@ export function AskTsolvePage() {
 
   return (
     <Stack space="space.200">
-      <Heading as="h2">{TITLE}</Heading>
       {access === 'checking' && <Spinner label="loading" />}
       {access === 'unlinked' && (
         <Stack space="space.200">
