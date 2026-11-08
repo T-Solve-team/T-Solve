@@ -111,4 +111,33 @@ class MockSignedInCallerIT {
             seeder.run(new DefaultApplicationArguments());
         }
     }
+
+    @Test
+    void seedsProjectHandoverAndMembershipScenariosOnlyOnce_AC_007_23() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        List<Map<String, Object>> projects = db.queryForList(
+                "SELECT * FROM project WHERE jira_project_key IN ('SUP', 'OPS', 'OLD') ORDER BY jira_project_key");
+        List<Map<String, Object>> memberships = db.queryForList(
+                "SELECT m.* FROM project_membership m JOIN project p ON p.public_id = m.project_id WHERE p.jira_project_key IN ('SUP', 'OPS', 'OLD') ORDER BY m.user_id, m.project_id");
+        assertThat(projects).hasSize(3);
+        assertThat(projects.stream().map(row -> row.get("status"))).containsExactly("REMOVED", "ACTIVE", "ACTIVE");
+        assertThat(memberships).hasSize(6);
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM app_user u JOIN user_role r ON r.user_id = u.id JOIN department d ON d.department_id = u.department_id WHERE u.email = 'manager-replacement@roles-demo.test' AND u.status = 'ACTIVE' AND r.role = 'PROJECT_MANAGER' AND d.name = 'Customer Support'",
+                        Integer.class))
+                .isEqualTo(1);
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM app_user u JOIN user_role r ON r.user_id = u.id JOIN department d ON d.department_id = u.department_id WHERE u.email <> 'manager@acme.test' AND u.status = 'ACTIVE' AND r.role = 'PROJECT_MANAGER' AND d.name = 'IT Operations'",
+                        Integer.class))
+                .isZero();
+        seeder.run(new DefaultApplicationArguments());
+        assertThat(
+                        db.queryForList(
+                                "SELECT * FROM project WHERE jira_project_key IN ('SUP', 'OPS', 'OLD') ORDER BY jira_project_key"))
+                .isEqualTo(projects);
+        assertThat(
+                        db.queryForList(
+                                "SELECT m.* FROM project_membership m JOIN project p ON p.public_id = m.project_id WHERE p.jira_project_key IN ('SUP', 'OPS', 'OLD') ORDER BY m.user_id, m.project_id"))
+                .isEqualTo(memberships);
+    }
 }

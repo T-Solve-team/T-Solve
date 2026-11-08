@@ -69,7 +69,7 @@ class ProjectMembershipReviewAccessIT {
         db.update(
                 "insert into project_membership (user_id, project_id, role_in_project) values (?, ?, 'PROJECT_MANAGER')",
                 INACTIVE,
-                MANAGED);
+                OTHER);
     }
 
     private static long project(JdbcTemplate db, Long department, String key, UUID publicId, String status) {
