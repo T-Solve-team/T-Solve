@@ -387,9 +387,9 @@
         "review-email-notification": "evaluating",
         "review-queue-events-api": "passing",
         "review-queue-events-web": "passing",
-        "review-queue-events-hardening": "evaluating"
+        "review-queue-events-hardening": "passing"
       },
-      "lastUpdated": "2026-11-07T17:14:30.615Z",
+      "lastUpdated": "2026-11-08T01:43:44.892Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
