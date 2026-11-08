@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.convert.DurationStyle;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
@@ -39,6 +41,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
     private final SolutionRetrieval solutions;
     private final WikiSources wiki;
     private final ChatbotAnswerRepository answers;
+    private final TransactionTemplate transaction;
     private final Executor executor;
     private final double minSimilarity;
     private final int sourceLimit;
@@ -51,6 +54,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             SolutionRetrieval solutions,
             WikiSources wiki,
             ChatbotAnswerRepository answers,
+            PlatformTransactionManager transactionManager,
             @Qualifier("applicationTaskExecutor") Executor executor,
             @Value("${CHATBOT_MIN_SIMILARITY:0.7}") double minSimilarity,
             @Value("${CHATBOT_SOURCE_LIMIT:5}") int sourceLimit,
@@ -61,6 +65,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                 solutions,
                 wiki,
                 answers,
+                transactionManager,
                 executor,
                 minSimilarity,
                 sourceLimit,
@@ -73,6 +78,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             SolutionRetrieval solutions,
             WikiSources wiki,
             ChatbotAnswerRepository answers,
+            PlatformTransactionManager transactionManager,
             Executor executor,
             double minSimilarity,
             int sourceLimit,
@@ -90,6 +96,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         this.solutions = solutions;
         this.wiki = wiki;
         this.answers = answers;
+        this.transaction = new TransactionTemplate(transactionManager);
         this.executor = executor;
         this.minSimilarity = minSimilarity;
         this.sourceLimit = sourceLimit;
@@ -103,6 +110,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         // ponytail: Task 10 adds follow-up retrieval and prompt turns; history is accepted but not sent yet.
         float[] vector =
                 callAi(() -> embeddings.embed(List.of(question)), deadline).getFirst();
+        // Fail fast before the vector search if embedding has exhausted the deadline.
         remaining(deadline);
 
         // Keep database access on the request thread so it retains the request's Workspace database.
@@ -124,13 +132,13 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         remaining(deadline);
 
         if (kept.isEmpty()) {
-            return save(user, question, Outcome.NO_SOURCE, "", List.of());
+            return save(user, question, Outcome.NO_SOURCE, "", List.of(), deadline);
         }
         var messages = AnswerPrompt.messages(question, kept);
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
         if (!hasKeptMarker(text, kept.size())) {
-            return save(user, question, Outcome.NO_SOURCE, "", List.of());
+            return save(user, question, Outcome.NO_SOURCE, "", List.of(), deadline);
         }
         // ponytail: Task 8 filters citations and removes unknown markers; Task 7 returns every kept source.
         return save(
@@ -138,13 +146,27 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                 question,
                 Outcome.ANSWERED,
                 text,
-                kept.stream().map(ChatbotSource::citation).toList());
+                kept.stream().map(ChatbotSource::citation).toList(),
+                deadline);
     }
 
     private ChatbotAnswerResponse save(
-            TSolveUser user, String question, Outcome outcome, String text, List<ChatbotCitation> citations) {
-        ChatbotAnswer saved = answers.save(new ChatbotAnswer(user.id(), question, outcome.name(), text));
-        return new ChatbotAnswerResponse(saved.getId(), outcome, text, citations);
+            TSolveUser user,
+            String question,
+            Outcome outcome,
+            String text,
+            List<ChatbotCitation> citations,
+            long deadline) {
+        return transaction.execute(status -> {
+            remaining(deadline);
+            ChatbotAnswer saved = answers.save(new ChatbotAnswer(user.id(), question, outcome.name(), text));
+            remaining(deadline);
+            // Flush before checking the deadline so a slow insert can still be rolled back.
+            answers.flush();
+            // This check covers the insert and flush; COMMIT itself is not bounded by the ask deadline.
+            remaining(deadline);
+            return new ChatbotAnswerResponse(saved.getId(), outcome, text, citations);
+        });
     }
 
     private static boolean hasKeptMarker(String text, int count) {

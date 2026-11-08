@@ -230,3 +230,9 @@ Master registry of all artifacts in this workspace.
 | IMPL-WORKER-102 | session-log | worker | passing | artifacts/05-implementation/worker/task-1-tenant-jobs.md |
 | TEST-WORKER-102 | test-report | worker | pass | artifacts/06-evaluation/worker/task-1-tenant-jobs-test-report.md |
 | REVIEW-WORKER-102 | review | worker | pass | artifacts/06-evaluation/worker/task-1-tenant-jobs-review.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-23c-keycloak-callback-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-23c-keycloak-callback-test-report.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-34-user-roles-backend-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-34-user-roles-backend-test-report.md |
+| — | session-log | identity | in-progress | artifacts/05-implementation/identity/task-24-remove-custom-sign-in.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-24-remove-custom-sign-in-review.md |
