@@ -930,3 +930,5 @@
 {"ts":"2026-11-07T19:59:36.378Z","type":"feature-status","module":"jira-app","feature":"ask-forge-client","from":"evaluating","to":"passing"}
 {"ts":"2026-11-07T20:00:15.032Z","type":"feature-status","module":"jira-app","feature":"ask-conversation-logic","from":"pending","to":"in-progress"}
 {"ts":"2026-11-08T02:54:56.219Z","type":"spec-approved","module":"jira-app","specHash":"cdcc0180292636a43ceb87a560dc5db7ab8bf8de024a4fec78dff9e1c0dcb7b0"}
+{"ts":"2026-11-08T02:58:47.519Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"43dc152a25caeabcbdd5fd31a0ad9dbd27f459f9"}
+{"ts":"2026-11-08T02:58:47.825Z","type":"feature-status","module":"jira-app","feature":"ask-conversation-logic","from":"in-progress","to":"evaluating"}

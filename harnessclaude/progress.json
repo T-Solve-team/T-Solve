@@ -244,16 +244,16 @@
         "ask-contract": "passing",
         "ask-endpoint": "passing",
         "ask-forge-client": "passing",
-        "ask-conversation-logic": "in-progress",
+        "ask-conversation-logic": "evaluating",
         "ask-page-ui": "pending"
       },
-      "lastUpdated": "2026-11-07T20:00:15.031Z",
+      "lastUpdated": "2026-11-08T02:58:47.824Z",
       "branch": "feat/jira-app",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "6edc7af1bc2ee61d56ec5e74e6e9b730dcdc8789"
+        "default": "43dc152a25caeabcbdd5fd31a0ad9dbd27f459f9"
       }
     },
     "dashboard-audit": {

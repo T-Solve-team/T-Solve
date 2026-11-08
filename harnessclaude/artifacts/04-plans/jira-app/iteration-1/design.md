@@ -91,6 +91,9 @@ Stub config (`.env.example`): `TSOLVE_STUB_JIRA_ASKERS=<accountId>=<accountUuid>
 - **Description format** for `CreateIssueModal`: ADF (`{version: 1, type: "doc", content: [paragraph…]}`), one
   paragraph per question, then `Đã thử theo T-Solve:`, the last answer and a `Nguồn:` paragraph per source — verified in
   the Task 1 spike (RESEARCH-004 Spike 2). A plain string also works but is undocumented, so it is not used.
+- **Source labels** (spec AC-010.6, re-approved cdcc0180): `[n] <title> · Wiki document` and `[n] Solution from a ticket`
+  (GBR-36: no ticket id, link or Project). The Create-dialog `Nguồn:` lines use the same labels without Solution text;
+  a NO_SOURCE answer is written as MSG109. A question with no answer (failed) is listed without "Đã thử" (Task 5).
 - **`onClose`** returns only `issueId`s (no key); the page ignores it — Jira shows its own "Created …" toast. Cancel
   returns `[]` after Jira's own "changes won't be saved" prompt.
 - **Summary** = first question, trimmed, cut to 255 code points.
