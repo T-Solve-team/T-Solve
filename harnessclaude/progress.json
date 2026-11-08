@@ -131,9 +131,9 @@
         "keycloak-callback": "passing",
         "user-list-backend": "in-progress",
         "add-user-backend": "in-progress",
-        "user-roles-backend": "in-progress"
+        "user-roles-backend": "passing"
       },
-      "lastUpdated": "2026-11-08T01:57:02.159Z",
+      "lastUpdated": "2026-11-08T02:06:54.487Z",
       "branch": "feat/identity",
       "repos": [
         "default"
