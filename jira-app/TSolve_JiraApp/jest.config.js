@@ -15,5 +15,10 @@ module.exports = {
       },
     ],
   },
+  moduleNameMapper: {
+    '^@forge/react$': '<rootDir>/test/forge-react.jsx',
+    // The package has no "main"; tests mock it, Jest only needs a file to resolve.
+    '^@forge/jira-bridge$': '<rootDir>/node_modules/@forge/jira-bridge/out/index.js',
+  },
   setupFilesAfterEnv: ['@testing-library/jest-dom'],
 };

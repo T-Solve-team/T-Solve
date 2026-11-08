@@ -1,4 +1,11 @@
 modules:
+  jira:projectPage:
+    - key: tsolve-ask-page
+      resource: ask-tsolve
+      resolver:
+        endpoint: tsolve-ui-endpoint
+      render: native
+      title: Hỏi T-Solve
   jira:issuePanel:
     - key: tsolve-jiraapp-hello-world-issue-panel
       resource: main
@@ -19,6 +26,8 @@ modules:
       remote: tsolve-backend
       route:
         path: /api/v1/jira-app/events/issue-created
+    - key: tsolve-ui-endpoint
+      remote: tsolve-backend
   function:
     - key: resolver
       handler: index.handler
@@ -28,6 +37,8 @@ remotes:
 resources:
   - key: main
     path: src/frontend/index.jsx
+  - key: ask-tsolve
+    path: src/frontend/askTsolve/index.jsx
 permissions:
   scopes:
     - read:jira-work
