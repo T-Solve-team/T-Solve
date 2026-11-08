@@ -22,14 +22,7 @@ import type {
   UseQueryResult,
 } from '@tanstack/react-query';
 
-import type {
-  AuthCallbackParams,
-  AuthorizeParams,
-  CompleteSignInParams,
-  CurrentUser,
-  ProblemResponse,
-  SignInParams,
-} from '../model';
+import type { AuthCallbackParams, CurrentUser, ProblemResponse, SignInParams } from '../model';
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
@@ -180,8 +173,8 @@ export const getSignInUrl = (params?: SignInParams) => {
 };
 
 /**
- * The web app navigates the whole page here from the Login screen. The server makes the OAuth state value, redirects (302) to the central sign-in site and, after the identity callback, redirects back to the Workspace site: to `returnTo` on success, or to `/login?error=MSGxx` (MSG122 adds `google_domain`). The Workspace is decided by the Host of the request, so there is no Workspace or site parameter.
- * @summary Starts the central Google sign-in; the browser opens it as a page (never a fetch call).
+ * The web app navigates the whole page here from the Login screen. The server saves the sign-in request and redirects (302) to Keycloak; after the callback it redirects to the Workspace site's `/login?error=MSGxx` on a failure (MSG122 adds `google_domain`). The Workspace is decided by the Host of the request, so there is no Workspace or site parameter.
+ * @summary Starts the Keycloak sign-in; the browser opens it as a page (never a fetch call).
  */
 export const signIn = async (
   params?: SignInParams,
@@ -265,7 +258,7 @@ export function useSignIn<TData = Awaited<ReturnType<typeof signIn>>, TError = E
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Starts the central Google sign-in; the browser opens it as a page (never a fetch call).
+ * @summary Starts the Keycloak sign-in; the browser opens it as a page (never a fetch call).
  */
 
 export function useSignIn<TData = Awaited<ReturnType<typeof signIn>>, TError = ErrorType<void>>(
@@ -285,141 +278,7 @@ export function useSignIn<TData = Awaited<ReturnType<typeof signIn>>, TError = E
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-export const getAuthorizeUrl = (params: AuthorizeParams) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value));
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0
-    ? `/api/v1/auth/authorize?${stringifiedParams}`
-    : `/api/v1/auth/authorize`;
-};
-
-/**
- * The central sign-in site checks the signed state value and redirects (302) to Google. The web app never calls it.
- * @summary Central sign-in site step; the browser follows it as a page (never a fetch call).
- */
-export const authorize = async (
-  params: AuthorizeParams,
-  options?: Parameters<typeof http>[1],
-): Promise<unknown> => {
-  return http<unknown>(getAuthorizeUrl(params), {
-    ...options,
-    method: 'GET',
-  });
-};
-
-export const getAuthorizeQueryKey = (params?: AuthorizeParams) => {
-  return [`/api/v1/auth/authorize`, ...(params ? [params] : [])] as const;
-};
-
-export const getAuthorizeQueryOptions = <
-  TData = Awaited<ReturnType<typeof authorize>>,
-  TError = ErrorType<void | string>,
->(
-  params: AuthorizeParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof authorize>>, TError, TData>>;
-    request?: SecondParameter<typeof http>;
-  },
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey = queryOptions?.queryKey ?? getAuthorizeQueryKey(params);
-
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof authorize>>> = ({ signal }) =>
-    authorize(params, { signal, ...requestOptions });
-
-  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
-
-  return customOptions as UseQueryOptions<Awaited<ReturnType<typeof authorize>>, TError, TData> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-};
-
-export type AuthorizeQueryResult = NonNullable<Awaited<ReturnType<typeof authorize>>>;
-export type AuthorizeQueryError = ErrorType<void | string>;
-
-export function useAuthorize<
-  TData = Awaited<ReturnType<typeof authorize>>,
-  TError = ErrorType<void | string>,
->(
-  params: AuthorizeParams,
-  options: {
-    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof authorize>>, TError, TData>> &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof authorize>>,
-          TError,
-          Awaited<ReturnType<typeof authorize>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useAuthorize<
-  TData = Awaited<ReturnType<typeof authorize>>,
-  TError = ErrorType<void | string>,
->(
-  params: AuthorizeParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof authorize>>, TError, TData>> &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof authorize>>,
-          TError,
-          Awaited<ReturnType<typeof authorize>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useAuthorize<
-  TData = Awaited<ReturnType<typeof authorize>>,
-  TError = ErrorType<void | string>,
->(
-  params: AuthorizeParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof authorize>>, TError, TData>>;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-/**
- * @summary Central sign-in site step; the browser follows it as a page (never a fetch call).
- */
-
-export function useAuthorize<
-  TData = Awaited<ReturnType<typeof authorize>>,
-  TError = ErrorType<void | string>,
->(
-  params: AuthorizeParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof authorize>>, TError, TData>>;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getAuthorizeQueryOptions(params, options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-export const getAuthCallbackUrl = (params: AuthCallbackParams) => {
+export const getAuthCallbackUrl = (params?: AuthCallbackParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -436,14 +295,14 @@ export const getAuthCallbackUrl = (params: AuthCallbackParams) => {
 };
 
 /**
- * The central sign-in site reads the Google answer and redirects (302) to the Workspace site's complete step with a one-time hand-off code. When Google or the check fails, it redirects to the Workspace site's `/login?error=` with one of MSG06, MSG09, MSG10, MSG120 or MSG122 (adds `google_domain`) (on the `admin.` site: MSG06 or MSG135). When the state value is missing, wrong, expired or used, the browser has no sign-in cookie or another browser's (AC-001.46), the Workspace has no Google domain (AC-001.49) or the Workspace no longer exists (AC-001.50), it answers 400 with a minimal page showing MSG141 and no redirect. Every answer expires the sign-in cookie (AC-001.47). The web app never calls it.
- * @summary Google redirects here after sign-in; the browser follows it as a page (never a fetch call).
+ * The Workspace site checks the Keycloak answer. When it fails it redirects (302) to the Workspace site's `/login?error=` with MSG06 (Keycloak or the token check failed) or MSG141 (the saved sign-in request does not match: missing, wrong state, unknown client). The web app never calls it.
+ * @summary Keycloak redirects here after sign-in, on the Workspace site; the browser follows it as a page (never a fetch call).
  */
 export const authCallback = async (
-  params: AuthCallbackParams,
+  params?: AuthCallbackParams,
   options?: Parameters<typeof http>[1],
-): Promise<string> => {
-  return http<string>(getAuthCallbackUrl(params), {
+): Promise<unknown> => {
+  return http<unknown>(getAuthCallbackUrl(params), {
     ...options,
     method: 'GET',
   });
@@ -455,9 +314,9 @@ export const getAuthCallbackQueryKey = (params?: AuthCallbackParams) => {
 
 export const getAuthCallbackQueryOptions = <
   TData = Awaited<ReturnType<typeof authCallback>>,
-  TError = ErrorType<void | string>,
+  TError = ErrorType<void>,
 >(
-  params: AuthCallbackParams,
+  params?: AuthCallbackParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof authCallback>>, TError, TData>>;
     request?: SecondParameter<typeof http>;
@@ -480,13 +339,13 @@ export const getAuthCallbackQueryOptions = <
 };
 
 export type AuthCallbackQueryResult = NonNullable<Awaited<ReturnType<typeof authCallback>>>;
-export type AuthCallbackQueryError = ErrorType<void | string>;
+export type AuthCallbackQueryError = ErrorType<void>;
 
 export function useAuthCallback<
   TData = Awaited<ReturnType<typeof authCallback>>,
-  TError = ErrorType<void | string>,
+  TError = ErrorType<void>,
 >(
-  params: AuthCallbackParams,
+  params: undefined | AuthCallbackParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof authCallback>>, TError, TData>> &
       Pick<
@@ -503,9 +362,9 @@ export function useAuthCallback<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useAuthCallback<
   TData = Awaited<ReturnType<typeof authCallback>>,
-  TError = ErrorType<void | string>,
+  TError = ErrorType<void>,
 >(
-  params: AuthCallbackParams,
+  params?: AuthCallbackParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof authCallback>>, TError, TData>> &
       Pick<
@@ -522,9 +381,9 @@ export function useAuthCallback<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useAuthCallback<
   TData = Awaited<ReturnType<typeof authCallback>>,
-  TError = ErrorType<void | string>,
+  TError = ErrorType<void>,
 >(
-  params: AuthCallbackParams,
+  params?: AuthCallbackParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof authCallback>>, TError, TData>>;
     request?: SecondParameter<typeof http>;
@@ -532,14 +391,14 @@ export function useAuthCallback<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Google redirects here after sign-in; the browser follows it as a page (never a fetch call).
+ * @summary Keycloak redirects here after sign-in, on the Workspace site; the browser follows it as a page (never a fetch call).
  */
 
 export function useAuthCallback<
   TData = Awaited<ReturnType<typeof authCallback>>,
-  TError = ErrorType<void | string>,
+  TError = ErrorType<void>,
 >(
-  params: AuthCallbackParams,
+  params?: AuthCallbackParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof authCallback>>, TError, TData>>;
     request?: SecondParameter<typeof http>;
@@ -547,142 +406,6 @@ export function useAuthCallback<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getAuthCallbackQueryOptions(params, options);
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-export const getCompleteSignInUrl = (params: CompleteSignInParams) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value));
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0
-    ? `/api/v1/auth/complete?${stringifiedParams}`
-    : `/api/v1/auth/complete`;
-};
-
-/**
- * The Workspace site sets the session cookie and redirects (302) to `returnTo` or the landing page, or to `/login?error=MSGxx` (MSG122 adds `google_domain`). The web app never calls it.
- * @summary Ends the sign-in on the Workspace site; the browser follows it as a page (never a fetch call).
- */
-export const completeSignIn = async (
-  params: CompleteSignInParams,
-  options?: Parameters<typeof http>[1],
-): Promise<unknown> => {
-  return http<unknown>(getCompleteSignInUrl(params), {
-    ...options,
-    method: 'GET',
-  });
-};
-
-export const getCompleteSignInQueryKey = (params?: CompleteSignInParams) => {
-  return [`/api/v1/auth/complete`, ...(params ? [params] : [])] as const;
-};
-
-export const getCompleteSignInQueryOptions = <
-  TData = Awaited<ReturnType<typeof completeSignIn>>,
-  TError = ErrorType<void>,
->(
-  params: CompleteSignInParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof completeSignIn>>, TError, TData>>;
-    request?: SecondParameter<typeof http>;
-  },
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey = queryOptions?.queryKey ?? getCompleteSignInQueryKey(params);
-
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof completeSignIn>>> = ({ signal }) =>
-    completeSignIn(params, { signal, ...requestOptions });
-
-  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
-
-  return customOptions as UseQueryOptions<
-    Awaited<ReturnType<typeof completeSignIn>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type CompleteSignInQueryResult = NonNullable<Awaited<ReturnType<typeof completeSignIn>>>;
-export type CompleteSignInQueryError = ErrorType<void>;
-
-export function useCompleteSignIn<
-  TData = Awaited<ReturnType<typeof completeSignIn>>,
-  TError = ErrorType<void>,
->(
-  params: CompleteSignInParams,
-  options: {
-    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof completeSignIn>>, TError, TData>> &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof completeSignIn>>,
-          TError,
-          Awaited<ReturnType<typeof completeSignIn>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useCompleteSignIn<
-  TData = Awaited<ReturnType<typeof completeSignIn>>,
-  TError = ErrorType<void>,
->(
-  params: CompleteSignInParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof completeSignIn>>, TError, TData>> &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof completeSignIn>>,
-          TError,
-          Awaited<ReturnType<typeof completeSignIn>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useCompleteSignIn<
-  TData = Awaited<ReturnType<typeof completeSignIn>>,
-  TError = ErrorType<void>,
->(
-  params: CompleteSignInParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof completeSignIn>>, TError, TData>>;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-/**
- * @summary Ends the sign-in on the Workspace site; the browser follows it as a page (never a fetch call).
- */
-
-export function useCompleteSignIn<
-  TData = Awaited<ReturnType<typeof completeSignIn>>,
-  TError = ErrorType<void>,
->(
-  params: CompleteSignInParams,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof completeSignIn>>, TError, TData>>;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getCompleteSignInQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

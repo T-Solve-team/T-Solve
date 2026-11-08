@@ -118,7 +118,7 @@
         "my-solutions-counters": "pending",
         "my-solutions-filters": "pending",
         "keycloak-sign-in": "pending",
-        "remove-custom-sign-in": "pending",
+        "remove-custom-sign-in": "passing",
         "account-sub-binding": "pending",
         "callback-workspace-checks": "pending",
         "user-role": "pending",
@@ -130,15 +130,16 @@
         "keycloak-sign-in-start": "passing",
         "keycloak-callback": "passing",
         "user-list-backend": "in-progress",
-        "add-user-backend": "in-progress"
+        "add-user-backend": "in-progress",
+        "user-roles-backend": "passing"
       },
-      "lastUpdated": "2026-11-07T16:58:04.886Z",
+      "lastUpdated": "2026-11-08T02:06:54.487Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "ab1663f2f60a02ccc70f8ab053af47f027a340ff"
+        "default": "37289e7d2dd38b882c9c644cc47f87e83059b255"
       }
     },
     "workspace": {
@@ -259,10 +260,24 @@
       }
     },
     "jira-app": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:24.029Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "ask-forge-spike": "passing",
+        "ask-contract": "passing",
+        "ask-endpoint": "passing",
+        "ask-forge-client": "passing",
+        "ask-conversation-logic": "passing",
+        "ask-page-ui": "passing"
+      },
+      "lastUpdated": "2026-11-08T04:25:18.975Z",
+      "branch": "feat/jira-app",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "ac7d5c2bb6a89afc0c41b913c57ed2639457009e"
+      }
     },
     "dashboard-audit": {
       "status": "implementing",
@@ -406,9 +421,9 @@
         "review-email-notification": "evaluating",
         "review-queue-events-api": "passing",
         "review-queue-events-web": "passing",
-        "review-queue-events-hardening": "evaluating"
+        "review-queue-events-hardening": "passing"
       },
-      "lastUpdated": "2026-11-07T17:14:30.615Z",
+      "lastUpdated": "2026-11-08T01:43:44.892Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
