@@ -55,8 +55,52 @@ public class MockUserListSeeder implements ApplicationRunner {
             account("employee@acme.test", "Demo Employee", "ACTIVE", null, null);
             account("deactivated@acme.test", "Demo Deactivated", "DEACTIVATED", null, null);
             account("nameless@acme.test", null, "ACTIVE", null, null);
+            account(
+                    "manager-replacement@roles-demo.test",
+                    "Demo Replacement Manager",
+                    "ACTIVE",
+                    "PROJECT_MANAGER",
+                    "Customer Support");
+            project("SUP", "Customer Support", "ACTIVE");
+            project("OPS", "IT Operations", "ACTIVE");
+            project("OLD", "IT Operations", "REMOVED");
             return null;
         });
+    }
+
+    private void project(String key, String department, String status) {
+        jdbc.sql(
+                        """
+                INSERT INTO project (department_id, jira_project_key, status)
+                SELECT department_id, :key, :status FROM department WHERE name = :department
+                ON CONFLICT (jira_project_key) DO NOTHING
+                """)
+                .param("key", key)
+                .param("department", department)
+                .param("status", status)
+                .update();
+        jdbc.sql(
+                        """
+                INSERT INTO project_membership (user_id, project_id, role_in_project)
+                SELECT u.id, p.public_id, 'PROJECT_MANAGER'
+                FROM app_user u CROSS JOIN project p
+                WHERE u.email = 'manager@acme.test' AND p.jira_project_key = :key
+                  AND NOT EXISTS (SELECT 1 FROM project_membership m
+                                  WHERE m.project_id = p.public_id AND m.role_in_project = 'PROJECT_MANAGER')
+                ON CONFLICT (user_id, project_id) DO NOTHING
+                """)
+                .param("key", key)
+                .update();
+        jdbc.sql(
+                        """
+                INSERT INTO project_membership (user_id, project_id, role_in_project)
+                SELECT u.id, p.public_id, 'MEMBER'
+                FROM app_user u CROSS JOIN project p
+                WHERE u.email = 'resolver@acme.test' AND p.jira_project_key = :key
+                ON CONFLICT (user_id, project_id) DO NOTHING
+                """)
+                .param("key", key)
+                .update();
     }
 
     private void account(String email, String name, String status, String role, String department) {
