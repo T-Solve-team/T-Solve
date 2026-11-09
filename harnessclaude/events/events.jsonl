@@ -1100,3 +1100,5 @@
 {"ts":"2026-11-09T19:31:08.679Z","type":"quick-closed","what":"KAN-305 split the backend CI job into unit tests, Keycloak integration tests and the other integration tests","files":[".github/workflows/ci.yml"]}
 {"ts":"2026-11-09T19:47:37.042Z","type":"quick-opened","what":"KAN-305 fix the it-other test filter and split the Keycloak integration tests into two parallel parts","files":[".github/workflows/ci.yml"]}
 {"ts":"2026-11-09T19:53:07.473Z","type":"quick-closed","what":"KAN-305 fix the it-other test filter and split the Keycloak integration tests into two parallel parts","files":[".github/workflows/ci.yml"]}
+{"ts":"2026-11-09T20:18:12.131Z","type":"quick-opened","what":"KAN-305 write down the rules that keep CI fast: backend IT rules, frontend test rules, CI time budget and job timeouts","files":["backend/AGENTS.md","frontend/guidelines/10-testing.md",".github/workflows/ci.yml"]}
+{"ts":"2026-11-09T20:19:56.651Z","type":"quick-closed","what":"KAN-305 write down the rules that keep CI fast: backend IT rules, frontend test rules, CI time budget and job timeouts","files":["backend/AGENTS.md","frontend/guidelines/10-testing.md",".github/workflows/ci.yml"]}
