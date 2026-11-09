@@ -1018,3 +1018,11 @@
 {"ts":"2026-11-08T03:51:28.798Z","type":"spec-approved","module":"jira-app","specHash":"3a593a33dcb6dfb1a6f4d48aa552a22636c1e12f36172c963fef22cd68614a5e"}
 {"ts":"2026-11-08T03:57:43.563Z","type":"feature-status","module":"jira-app","feature":"ask-page-ui","from":"evaluating","to":"passing"}
 {"ts":"2026-11-08T04:25:18.980Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"ac7d5c2bb6a89afc0c41b913c57ed2639457009e"}
+{"ts":"2026-11-09T02:58:22.610Z","type":"feature-status","module":"chatbot","feature":"answer-citations","from":"pending","to":"in-progress"}
+{"ts":"2026-11-09T03:16:08.273Z","type":"feature-status","module":"chatbot","feature":"cited-documents","from":"pending","to":"in-progress"}
+{"ts":"2026-11-09T03:58:09.136Z","type":"feature-status","module":"chatbot","feature":"answer-citations","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-09T03:58:10.796Z","type":"feature-status","module":"chatbot","feature":"cited-documents","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-09T04:05:09.650Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"f8ad03dd3a316f8d2aa9da9b8dcb3a816ef995e8"}
+{"ts":"2026-11-09T04:28:13.144Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"c97fb0e14f5e4b4dc34d551affc35943e42ceb73"}
+{"ts":"2026-11-09T04:28:13.903Z","type":"feature-status","module":"chatbot","feature":"answer-citations","from":"evaluating","to":"passing"}
+{"ts":"2026-11-09T04:28:14.656Z","type":"feature-status","module":"chatbot","feature":"cited-documents","from":"evaluating","to":"passing"}
