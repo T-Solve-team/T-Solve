@@ -2,7 +2,7 @@
 # One workflow, one job per part of the repo. The `changes` job looks at which folders changed and the
 # other jobs run only when their folder changed. A job skipped this way still reports success, so it
 # can be a required check without blocking PRs that don't touch its folder.
-# Jobs: frontend (KAN-4), backend (KAN-6).
+# Jobs: frontend (KAN-4; checks and four test shards since KAN-305), backend (KAN-6).
 name: CI
 
 on:
@@ -45,8 +45,41 @@ jobs:
               - 'infra/postgres/**' # database init scripts (planned) that the integration tests will use
               - '.github/workflows/ci.yml'
 
-  frontend:
-    name: frontend
+  # The frontend runs as parallel jobs (KAN-305): the Vitest suite is the slow part, so it is split over four
+  # shards and the quick checks run beside it. The job called `frontend` further down is the one the branch
+  # ruleset requires; it only waits for these two and reports their result.
+  frontend-tests:
+    name: frontend-tests (${{ matrix.shard }}/4)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false # a failing shard must not hide the result of the others
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install (npm ci)
+        run: npm ci --no-audit --no-fund
+
+      - name: Tests (Vitest, shard ${{ matrix.shard }}/4)
+        run: npx vitest run --shard=${{ matrix.shard }}/4
+
+  frontend-checks:
+    name: frontend-checks
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
@@ -65,7 +98,7 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      # The commands and their order come from frontend guideline 11 §5.
+      # The commands and their order come from frontend guideline 11 §5 (the tests run in frontend-tests).
       - name: Install (npm ci)
         run: npm ci --no-audit --no-fund
 
@@ -78,9 +111,6 @@ jobs:
       - name: Types (tsc)
         run: npm run typecheck
 
-      - name: Tests (Vitest)
-        run: npm run test
-
       - name: Generated API client matches openapi/tsolve-api.yaml
         run: |
           npm run generate:api
@@ -91,6 +121,24 @@ jobs:
 
       - name: Build (Vite)
         run: npm run build
+
+  # The required check (branch ruleset): green only when the checks and every test shard are green. When the
+  # folder did not change, both are skipped and this job still reports success.
+  frontend:
+    name: frontend
+    needs: [changes, frontend-checks, frontend-tests]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require the checks and the test shards
+        env:
+          RESULTS: ${{ needs.changes.result }} ${{ needs.frontend-checks.result }} ${{ needs.frontend-tests.result }}
+        run: |
+          echo "changes / frontend-checks / frontend-tests: $RESULTS"
+          case "$RESULTS" in
+            *failure*|*cancelled*) echo "::error::A frontend job did not succeed."; exit 1 ;;
+          esac
 
   backend:
     name: backend
