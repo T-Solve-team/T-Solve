@@ -22,13 +22,16 @@ class AccountSignInServiceNameTest {
     private static final int COLUMN = 100;
 
     private final AccountRepository accounts = mock(AccountRepository.class);
-    private final AccountSignInService service =
-            new AccountSignInService(accounts, new IdentityClock(Clock.fixed(NOW, java.time.ZoneOffset.UTC)));
+    private final AccountSignInService service = new AccountSignInService(
+            accounts,
+            new IdentityClock(Clock.fixed(NOW, java.time.ZoneOffset.UTC)),
+            org.springframework.transaction.support.TransactionOperations.withoutTransaction());
 
     private Account signInWithName(String name) {
         Account lan = new Account("lan@acme.example", "Old Name", AccountStatus.ACTIVE, NOW.minusSeconds(60));
         when(accounts.findByEmail(any())).thenReturn(Optional.of(lan));
-        AccountSignInService.Result result = service.signIn("lan@acme.example", name);
+        when(accounts.bindKeycloakSub(any(), any())).thenReturn(1);
+        AccountSignInService.Result result = service.signIn("kc-sub-1", "lan@acme.example", name);
         assertThat(result.status()).isEqualTo(AccountSignInService.Status.SIGNED_IN);
         return lan;
     }
