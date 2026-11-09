@@ -271,6 +271,45 @@ class ReviewHistoryApiIT {
         TwoTenantDatabases.tenantA().update("delete from ticket where ticket_id = ?", ticket);
     }
 
+    @Test
+    void returnsStoredSendBackAndFiltersIt_AC_013_8() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        UUID ticket = ticket(db, OPS, "HIS-SEND-BACK", "PENDING_REVIEW");
+        UUID decision = db.queryForObject(
+                """
+                insert into review_decision (ticket_id, project_manager_id, decision, decided_at)
+                values (?, ?, 'SEND_BACK', now()) returning review_decision_id
+                """,
+                UUID.class,
+                ticket,
+                MANAGER);
+        try {
+            for (var request : java.util.List.of(
+                    get("/api/v1/review-history"), get("/api/v1/review-history").param("decision", "SEND_BACK"))) {
+                inAcme(request)
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.content[0].decisionId").value(decision.toString()))
+                        .andExpect(jsonPath("$.content[0].ticketId").value(ticket.toString()))
+                        .andExpect(jsonPath("$.content[0].decision").value("SEND_BACK"))
+                        .andExpect(jsonPath("$.content[0].actorId").value(MANAGER.toString()))
+                        .andExpect(jsonPath("$.content[0].actorName").value("Lan Pham"))
+                        .andExpect(jsonPath("$.content[0].authorName").value("Minh Tran"))
+                        .andExpect(jsonPath("$.content[0].sourceTicketId").value("HIS-SEND-BACK"))
+                        .andExpect(jsonPath("$.content[0].title").value("Login fails"))
+                        .andExpect(jsonPath("$.content[0].project.projectId").value(OPS.toString()))
+                        .andExpect(jsonPath("$.content[0].reason").value(nullValue()))
+                        .andExpect(jsonPath("$.content[0].comment").value(nullValue()));
+            }
+            inAcme(get("/api/v1/review-history").param("decision", "SEND_BACK"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[*].decisionId").value(contains(decision.toString())))
+                    .andExpect(jsonPath("$.page.totalElements").value(1));
+        } finally {
+            db.update("delete from review_decision where review_decision_id = ?", decision);
+            db.update("delete from ticket where ticket_id = ?", ticket);
+        }
+    }
+
     private ResultActions inAcme(RequestBuilder request) {
         return workspace.runIn(TwoTenantDatabases.ACME, () -> {
             try {

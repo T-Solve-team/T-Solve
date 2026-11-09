@@ -34,6 +34,11 @@ public class MockWorkerTenantService implements WorkerTenantService {
     }
 
     @Override
+    public Set<UUID> activeWorkspaceIds() {
+        return active;
+    }
+
+    @Override
     public boolean isWorkspaceActive(UUID workspaceId) {
         return active.contains(Objects.requireNonNull(workspaceId, "workspaceId"));
     }
