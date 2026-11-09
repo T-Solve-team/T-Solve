@@ -19,6 +19,10 @@ public class ReviewExpiryDispatchHandler implements JobRequestHandler<ReviewExpi
         this.runtime = runtime;
     }
 
+    /**
+     * Keeps JobRunr's default retries: a retry after a partial failure may enqueue a Workspace twice, which is
+     * harmless because the expiry job is idempotent within one calendar day (AC-014.4).
+     */
     @Override
     public void run(ReviewExpiryDispatchRequest request) {
         tenants.activeWorkspaceIds().forEach(id -> runtime.scheduler().enqueue(new ReviewExpiryJobRequest(id, 1)));
