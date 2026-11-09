@@ -68,8 +68,7 @@ class ProvisioningRaceIT {
 
     @ParameterizedTest(name = "[{index}] {0}")
     @EnumSource(Second.class)
-    @DisplayName(
-            "AC-001.59 edge 107 provision and remove run one at a time, and two slugs at once keep all four URIs")
+    @DisplayName("AC-001.59 edge 107 provision and remove run one at a time, and two slugs at once keep all four URIs")
     void runsOneAtATimeAndKeepsAllFourUris_AC_001_59_edge107(Second second) throws Exception {
         String slugA = newSlug();
         String slugB = newSlug();
@@ -99,7 +98,9 @@ class ProvisioningRaceIT {
         armed.set(true);
         CompletableFuture<?> first =
                 CompletableFuture.runAsync(() -> provisioner.provision(idA, slugA, domainOf(slugA)), executor);
-        assertThat(entered.await(60, TimeUnit.SECONDS)).as("the first call reached its URI write").isTrue();
+        assertThat(entered.await(60, TimeUnit.SECONDS))
+                .as("the first call reached its URI write")
+                .isTrue();
         long writesWhenPaused = mutatingCalls(client);
 
         CompletableFuture<?> secondCall = CompletableFuture.runAsync(
@@ -218,7 +219,9 @@ class ProvisioningRaceIT {
                     .isInstanceOf(IllegalStateException.class)
                     .satisfies(e -> assertThat(String.valueOf(e.getMessage())).doesNotContain(ADMIN_SECRET));
 
-            assertThat(fixture.redirectUris()).as("the lost URI is not put back").doesNotContain(ACME_CALLBACK);
+            assertThat(fixture.redirectUris())
+                    .as("the lost URI is not put back")
+                    .doesNotContain(ACME_CALLBACK);
             assertThat(logs.lines(Level.ERROR))
                     .as("one ERROR that names the lost URI")
                     .hasSize(1)
@@ -263,7 +266,9 @@ class ProvisioningRaceIT {
                     .hasMessage("simulated failure after the URI write");
 
             assertThat(writes.get()).as("the undo wrote the URI list").isEqualTo(2);
-            assertThat(fixture.identityProvider("google-" + slug)).as("the undo went on to the IdP").isEmpty();
+            assertThat(fixture.identityProvider("google-" + slug))
+                    .as("the undo went on to the IdP")
+                    .isEmpty();
             assertThat(fixture.organizationsWithDomain(domain))
                     .as("the undo went on to the Organization")
                     .isEmpty();

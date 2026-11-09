@@ -98,7 +98,8 @@ public class KeycloakWorkspaceSignInProvisioner implements WorkspaceSignInProvis
                 organizationId = existing.get().id();
             } else {
                 // no Organization, so a tagged identity provider is a leftover that nothing links to a new one
-                if (client.findIdentityProviderAlias(workspaceId, Optional.empty()).isPresent()) {
+                if (client.findIdentityProviderAlias(workspaceId, Optional.empty())
+                        .isPresent()) {
                     throw new IllegalStateException(
                             "The Workspace has an identity provider but no Organization; remove it first");
                 }
@@ -161,7 +162,9 @@ public class KeycloakWorkspaceSignInProvisioner implements WorkspaceSignInProvis
         ClientUris after = client.readWebClientUris();
         Set<String> lost = new LinkedHashSet<>();
         writtenRedirect.stream().filter(u -> !after.redirectUris().contains(u)).forEach(lost::add);
-        writtenLogout.stream().filter(u -> !after.postLogoutRedirectUris().contains(u)).forEach(lost::add);
+        writtenLogout.stream()
+                .filter(u -> !after.postLogoutRedirectUris().contains(u))
+                .forEach(lost::add);
         if (!lost.isEmpty()) {
             LOG.error(
                     "tsolve-web lost URIs after a write for the Workspace {} and they are not put back: {}",
@@ -194,7 +197,8 @@ public class KeycloakWorkspaceSignInProvisioner implements WorkspaceSignInProvis
         String callback = callbackUri(slug);
         String logout = logoutUri(slug);
         ClientUris current = client.readWebClientUris();
-        if (!current.redirectUris().contains(callback) && !current.postLogoutRedirectUris().contains(logout)) {
+        if (!current.redirectUris().contains(callback)
+                && !current.postLogoutRedirectUris().contains(logout)) {
             return Set.of();
         }
         List<String> redirect = new ArrayList<>(current.redirectUris());

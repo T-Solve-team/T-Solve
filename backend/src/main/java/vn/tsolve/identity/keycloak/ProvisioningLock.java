@@ -94,7 +94,9 @@ public class ProvisioningLock {
         try {
             connection.abort(Runnable::run);
         } catch (SQLException | RuntimeException e) {
-            LOG.warn("Aborting the provisioning lock connection failed ({})", e.getClass().getSimpleName());
+            LOG.warn(
+                    "Aborting the provisioning lock connection failed ({})",
+                    e.getClass().getSimpleName());
         }
     }
 
@@ -102,7 +104,9 @@ public class ProvisioningLock {
         try {
             connection.close();
         } catch (SQLException | RuntimeException e) {
-            LOG.warn("Closing the provisioning lock connection failed ({})", e.getClass().getSimpleName());
+            LOG.warn(
+                    "Closing the provisioning lock connection failed ({})",
+                    e.getClass().getSimpleName());
         }
     }
 }

@@ -35,17 +35,20 @@ class KeycloakAdminClientTest {
     private static final String TOKEN_PATH = "/realms/tsolve/protocol/openid-connect/token";
     private static final String ADMIN = "/admin/realms/tsolve";
     private static final UUID WORKSPACE = UUID.fromString("11111111-2222-3333-4444-555555555555");
-    private static final String WEB_CLIENT_JSON = """
+    private static final String WEB_CLIENT_JSON =
+            """
             [{"id":"web-uuid","clientId":"tsolve-web",
               "redirectUris":["http://acme.localhost:8080/api/v1/auth/callback"],
               "attributes":{"post.logout.redirect.uris":"http://acme.localhost:8080/login"}}]
             """;
-    private static final String ORGANIZATION_JSON = """
+    private static final String ORGANIZATION_JSON =
+            """
             {"id":"org-1","alias":"acme","enabled":true,
              "attributes":{"tsolve.workspace-id":["11111111-2222-3333-4444-555555555555"]},
              "domains":[{"name":"acme.test","verified":false}]}
             """;
-    private static final String IDP_JSON = """
+    private static final String IDP_JSON =
+            """
             {"alias":"google-acme","providerId":"google",
              "config":{"tsolve.workspace-id":"11111111-2222-3333-4444-555555555555"}}
             """;
@@ -141,7 +144,8 @@ class KeycloakAdminClientTest {
     @DisplayName("AC-001.58 N8 an Organization answer without a Location header is an error, not an empty id")
     void createOrganizationWithoutLocationThrows_AC_001_58_N8() {
         stubToken();
-        keycloak.stubFor(post(urlPathEqualTo(ADMIN + "/organizations")).willReturn(aResponse().withStatus(201)));
+        keycloak.stubFor(post(urlPathEqualTo(ADMIN + "/organizations"))
+                .willReturn(aResponse().withStatus(201)));
 
         assertThatThrownBy(() -> client().createOrganization(WORKSPACE, "acme", "acme.test"))
                 .isInstanceOf(IllegalStateException.class)
@@ -188,13 +192,13 @@ class KeycloakAdminClientTest {
                 .willReturn(aResponse().withStatus(204)));
         keycloak.stubFor(put(ADMIN + "/clients/web-uuid").willReturn(aResponse().withStatus(204)));
         stubJson(get(urlPathEqualTo(ADMIN + "/organizations/org-1/members")), "[]");
-        keycloak.stubFor(delete(ADMIN + "/organizations/org-1").willReturn(aResponse().withStatus(204)));
+        keycloak.stubFor(
+                delete(ADMIN + "/organizations/org-1").willReturn(aResponse().withStatus(204)));
 
         adapter().remove(WORKSPACE);
 
         verifyNoUnpagedIdpList();
-        keycloak.verify(
-                1, deleteRequestedFor(urlPathEqualTo(ADMIN + "/identity-provider/instances/google-acme")));
+        keycloak.verify(1, deleteRequestedFor(urlPathEqualTo(ADMIN + "/identity-provider/instances/google-acme")));
         keycloak.verify(1, deleteRequestedFor(urlPathEqualTo(ADMIN + "/organizations/org-1")));
     }
 

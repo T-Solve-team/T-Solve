@@ -53,7 +53,8 @@ public class KeycloakAdminClient {
     public record OrganizationRef(String id, String alias, List<String> domains) {}
 
     private final KeycloakProvisioningProperties properties;
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
+    private final HttpClient http =
+            HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
     private String token;
     private Instant tokenExpiry = Instant.MIN;
 
@@ -71,9 +72,10 @@ public class KeycloakAdminClient {
         ObjectNode client = webClient();
         ArrayNode redirect = client.putArray("redirectUris");
         uris.redirectUris().forEach(redirect::add);
-        ObjectNode attributes = client.has("attributes") && client.get("attributes").isObject()
-                ? (ObjectNode) client.get("attributes")
-                : client.putObject("attributes");
+        ObjectNode attributes =
+                client.has("attributes") && client.get("attributes").isObject()
+                        ? (ObjectNode) client.get("attributes")
+                        : client.putObject("attributes");
         attributes.put(LOGOUT_URIS_ATTRIBUTE, String.join("##", uris.postLogoutRedirectUris()));
         send("PUT", admin("/clients/" + enc(client.get("id").asText())), client.toString(), 204);
     }
@@ -100,12 +102,17 @@ public class KeycloakAdminClient {
         JsonNode found = read(admin("/organizations?q=" + enc(WORKSPACE_TAG + ":" + workspaceId)));
         for (JsonNode listed : found) {
             // the list answer holds no attributes: read the Organization to confirm the tag
-            JsonNode organization = read(admin("/organizations/" + enc(listed.path("id").asText())));
+            JsonNode organization =
+                    read(admin("/organizations/" + enc(listed.path("id").asText())));
             if (organization.path("attributes").path(WORKSPACE_TAG).toString().contains(workspaceId.toString())) {
                 List<String> domains = new ArrayList<>();
-                organization.path("domains").forEach(d -> domains.add(d.path("name").asText()));
+                organization
+                        .path("domains")
+                        .forEach(d -> domains.add(d.path("name").asText()));
                 return Optional.of(new OrganizationRef(
-                        organization.path("id").asText(), organization.path("alias").asText(), domains));
+                        organization.path("id").asText(),
+                        organization.path("alias").asText(),
+                        domains));
             }
         }
         return Optional.empty();
@@ -177,7 +184,9 @@ public class KeycloakAdminClient {
     }
 
     private static boolean isTagged(JsonNode idp, UUID workspaceId) {
-        return workspaceId.toString().equals(idp.path("config").path(WORKSPACE_TAG).asText());
+        return workspaceId
+                .toString()
+                .equals(idp.path("config").path(WORKSPACE_TAG).asText());
     }
 
     /** Creates the Google identity provider, its {@code hd} mapper and its link to the Organization. */
@@ -271,21 +280,23 @@ public class KeycloakAdminClient {
         }
         String form = "grant_type=client_credentials&client_id=" + PROVISIONER_CLIENT_ID + "&client_secret="
                 + URLEncoder.encode(properties.adminClientSecret(), StandardCharsets.UTF_8);
-        HttpRequest request = HttpRequest.newBuilder(URI.create(trimmedBaseUrl() + "/realms/"
-                        + enc(properties.realm()) + "/protocol/openid-connect/token"))
+        HttpRequest request = HttpRequest.newBuilder(URI.create(
+                        trimmedBaseUrl() + "/realms/" + enc(properties.realm()) + "/protocol/openid-connect/token"))
                 .timeout(TIMEOUT)
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .POST(HttpRequest.BodyPublishers.ofString(form))
                 .build();
         HttpResponse<String> response = execute(request);
         if (response.statusCode() != 200) {
-            throw new IllegalStateException("Keycloak refused the " + PROVISIONER_CLIENT_ID + " token request ("
-                    + response.statusCode() + ")");
+            throw new IllegalStateException(
+                    "Keycloak refused the " + PROVISIONER_CLIENT_ID + " token request (" + response.statusCode() + ")");
         }
         try {
             JsonNode answer = JSON.readTree(response.body());
             token = answer.get("access_token").asText();
-            tokenExpiry = Instant.now().plusSeconds(answer.path("expires_in").asLong(60)).minus(TOKEN_SKEW);
+            tokenExpiry = Instant.now()
+                    .plusSeconds(answer.path("expires_in").asLong(60))
+                    .minus(TOKEN_SKEW);
             return token;
         } catch (IOException | RuntimeException e) {
             throw new IllegalStateException("Keycloak answered the token request without a usable token");
@@ -296,7 +307,8 @@ public class KeycloakAdminClient {
         try {
             return http.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (IOException e) {
-            throw new IllegalStateException("Keycloak could not be reached (" + e.getClass().getSimpleName() + ")");
+            throw new IllegalStateException(
+                    "Keycloak could not be reached (" + e.getClass().getSimpleName() + ")");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted while waiting for Keycloak");

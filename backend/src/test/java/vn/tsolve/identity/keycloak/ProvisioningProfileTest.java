@@ -49,7 +49,8 @@ class ProvisioningProfileTest {
             excludeFilters = {
                 @ComponentScan.Filter(
                         type = FilterType.REGEX,
-                        pattern = ".*\\.(NoWorkspaceLookup|LocalTenantScope|InMemoryWorkspaceLookup|FakeWorkspaceSignInProvisioner|KeycloakProvisioningFixture.*|.*Test|.*IT)"),
+                        pattern =
+                                ".*\\.(NoWorkspaceLookup|LocalTenantScope|InMemoryWorkspaceLookup|FakeWorkspaceSignInProvisioner|KeycloakProvisioningFixture.*|.*Test|.*IT)"),
             })
     @ConfigurationPropertiesScan("vn.tsolve.identity.keycloak")
     static class ProvisioningPackages {}
@@ -111,7 +112,10 @@ class ProvisioningProfileTest {
                         .as("start-up with %s = %s", bad.variable(), bad.value())
                         .isNotNull();
                 String messages = messagesOf(context.getStartupFailure());
-                assertThat(messages).contains(bad.variable()).doesNotContain(SECRET).doesNotContain(GOOGLE_SECRET);
+                assertThat(messages)
+                        .contains(bad.variable())
+                        .doesNotContain(SECRET)
+                        .doesNotContain(GOOGLE_SECRET);
                 if (bad.leaked() != null) {
                     assertThat(messages).as("the message holds no value").doesNotContain(bad.leaked());
                 }
@@ -128,7 +132,9 @@ class ProvisioningProfileTest {
             Map<String, String> env = allThree();
             env.put(LOGIN_ORIGIN_ENV, accepted);
             runner(env, "ops").run(context -> {
-                assertThat(context.getStartupFailure()).as("start-up with %s", accepted).isNull();
+                assertThat(context.getStartupFailure())
+                        .as("start-up with %s", accepted)
+                        .isNull();
                 assertThat(context.getBeansOfType(WorkspaceSignInProvisioner.class))
                         .hasSize(1)
                         .allSatisfy((name, bean) ->
@@ -139,7 +145,9 @@ class ProvisioningProfileTest {
             Map<String, String> env = allThree();
             env.put(LOGIN_ORIGIN_ENV, refused);
             runner(env, "ops").run(context -> {
-                assertThat(context.getStartupFailure()).as("start-up with %s", refused).isNotNull();
+                assertThat(context.getStartupFailure())
+                        .as("start-up with %s", refused)
+                        .isNotNull();
                 assertThat(messagesOf(context.getStartupFailure()))
                         .contains(LOGIN_ORIGIN_ENV)
                         .doesNotContain(SECRET)
@@ -226,8 +234,8 @@ class ProvisioningProfileTest {
             assertThat(context.getStartupFailure()).isNull();
             assertThat(context.getBeansOfType(WorkspaceSignInProvisioner.class))
                     .hasSize(1)
-                    .allSatisfy((name, bean) ->
-                            assertThat(bean).isInstanceOf(KeycloakWorkspaceSignInProvisioner.class));
+                    .allSatisfy(
+                            (name, bean) -> assertThat(bean).isInstanceOf(KeycloakWorkspaceSignInProvisioner.class));
             KeycloakProvisioningProperties properties = context.getBean(KeycloakProvisioningProperties.class);
             assertThat(properties.adminClientSecret()).isEqualTo(SECRET);
             assertThat(properties.googleClientId()).isEqualTo(GOOGLE_ID);
@@ -240,7 +248,9 @@ class ProvisioningProfileTest {
             env.remove(missing);
             try (KeycloakProvisioningFixture.CapturedLogs logs = new KeycloakProvisioningFixture.CapturedLogs()) {
                 runner(env, "ops").run(context -> {
-                    assertThat(context.getStartupFailure()).as("start-up without " + missing).isNull();
+                    assertThat(context.getStartupFailure())
+                            .as("start-up without " + missing)
+                            .isNull();
                     assertThat(context.getBeansOfType(WorkspaceSignInProvisioner.class))
                             .hasSize(1)
                             .allSatisfy((name, bean) ->

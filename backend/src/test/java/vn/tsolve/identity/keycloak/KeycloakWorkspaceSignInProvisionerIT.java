@@ -100,10 +100,15 @@ class KeycloakWorkspaceSignInProvisionerIT {
         assertThat(organization.getId()).isEqualTo(organizationId);
         assertThat(organization.getAlias()).isEqualTo(slug);
         assertThat(organization.getDomains()).extracting(d -> d.getName()).containsExactly(domain);
-        assertThat(fixture.realm().organizations().get(organizationId).toRepresentation().getAttributes())
+        assertThat(fixture.realm()
+                        .organizations()
+                        .get(organizationId)
+                        .toRepresentation()
+                        .getAttributes())
                 .containsEntry(TAG, List.of(workspaceId.toString()));
 
-        IdentityProviderRepresentation idp = fixture.identityProvider("google-" + slug).orElseThrow();
+        IdentityProviderRepresentation idp =
+                fixture.identityProvider("google-" + slug).orElseThrow();
         assertThat(idp.getProviderId()).isEqualTo("google");
         assertThat(idp.isHideOnLogin()).isTrue();
         assertThat(idp.getOrganizationId()).isEqualTo(organizationId);
@@ -271,10 +276,17 @@ class KeycloakWorkspaceSignInProvisionerIT {
                 .findByClientId("realm-management")
                 .get(0)
                 .getId();
-        Set<String> roles = fixture.realm().users().get(serviceAccountUserId).roles().clientLevel(realmManagementId)
-                .listAll().stream()
-                .map(RoleRepresentation::getName)
-                .collect(Collectors.toSet());
+        Set<String> roles =
+                fixture
+                        .realm()
+                        .users()
+                        .get(serviceAccountUserId)
+                        .roles()
+                        .clientLevel(realmManagementId)
+                        .listAll()
+                        .stream()
+                        .map(RoleRepresentation::getName)
+                        .collect(Collectors.toSet());
         assertThat(roles).containsExactlyInAnyOrderElementsOf(PROVISIONER_ROLES);
         assertThat(roles).doesNotContain("realm-admin", "view-events", "manage-events", "manage-authorization");
         assertThat(fixture.realm()

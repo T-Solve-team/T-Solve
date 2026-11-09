@@ -63,8 +63,7 @@ final class KeycloakProvisioningFixture implements AutoCloseable {
                 DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
         keycloak.start();
         postgres.start();
-        dataSource = new DriverManagerDataSource(
-                postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+        dataSource = new DriverManagerDataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
     }
 
     @Override
