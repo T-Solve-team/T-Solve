@@ -124,13 +124,14 @@
         "user-role": "pending",
         "logout-rp-initiated": "pending",
         "keycloak-provisioning": "passing",
-        "keycloak-theme": "pending",
+        "keycloak-theme": "passing",
         "keycloak-prerequisites": "passing",
         "keycloak-realm": "passing",
         "keycloak-sign-in-start": "passing",
         "keycloak-callback": "passing",
         "user-list-backend": "in-progress",
-        "add-user-backend": "in-progress"
+        "add-user-backend": "in-progress",
+        "user-roles-backend": "passing"
       },
       "lastUpdated": "2026-11-09T16:53:52.926Z",
       "branch": "feat/identity",
@@ -138,7 +139,7 @@
         "default"
       ],
       "lastCommit": {
-        "default": "ab1663f2f60a02ccc70f8ab053af47f027a340ff"
+        "default": "37289e7d2dd38b882c9c644cc47f87e83059b255"
       }
     },
     "workspace": {
@@ -186,16 +187,16 @@
         "ticket-search-connect": "pending",
         "ticket-feedback-api": "passing",
         "give-feedback-connect": "evaluating",
-        "ticket-suggestion-api": "pending",
+        "ticket-suggestion-api": "passing",
         "solution-retrieval": "passing"
       },
-      "lastUpdated": "2026-11-06T17:23:51.646Z",
+      "lastUpdated": "2026-11-09T04:05:02.373Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
+        "default": "7a51712dc7528024cb627f5a39324001e16e9ce7"
       }
     },
     "triage": {
@@ -226,24 +227,40 @@
         "uuid-ids": "passing",
         "chatbot-answer-schema": "passing",
         "ask-answer-api": "passing",
-        "answer-citations": "pending",
-        "cited-documents": "pending",
-        "follow-up-context": "pending"
+        "answer-citations": "passing",
+        "cited-documents": "passing",
+        "follow-up-context": "pending",
+        "answer-rating-schema": "passing",
+        "answer-rating-api": "passing"
       },
-      "lastUpdated": "2026-11-06T17:23:52.760Z",
+      "lastUpdated": "2026-11-09T05:15:45.201Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
+        "default": "6555ebac926abf92fd8ee0a100ac980beaedf901"
       }
     },
     "jira-app": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:24.029Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "ask-forge-spike": "passing",
+        "ask-contract": "passing",
+        "ask-endpoint": "passing",
+        "ask-forge-client": "passing",
+        "ask-conversation-logic": "passing",
+        "ask-page-ui": "passing"
+      },
+      "lastUpdated": "2026-11-08T04:25:18.975Z",
+      "branch": "feat/jira-app",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "ac7d5c2bb6a89afc0c41b913c57ed2639457009e"
+      }
     },
     "dashboard-audit": {
       "status": "implementing",
@@ -310,15 +327,16 @@
       "currentPhase": "evaluate",
       "features": {
         "review-notification-smtp": "passing",
-        "tenant-jobs": "passing"
+        "tenant-jobs": "passing",
+        "active-workspaces": "passing"
       },
-      "lastUpdated": "2026-11-07T08:10:50.005Z",
+      "lastUpdated": "2026-11-08T08:11:10.600Z",
       "branch": "feat/worker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "68bd287b663f5dd4bacb533c5883a981e4abbf11"
+        "default": "41a1cf7a49021519da485b155111e098ad07796a"
       }
     },
     "ai": {
@@ -387,15 +405,17 @@
         "review-email-notification": "evaluating",
         "review-queue-events-api": "passing",
         "review-queue-events-web": "passing",
-        "review-queue-events-hardening": "evaluating"
+        "review-queue-events-hardening": "passing",
+        "review-send-back-api": "passing",
+        "review-expiry-job": "passing"
       },
-      "lastUpdated": "2026-11-07T17:14:30.615Z",
+      "lastUpdated": "2026-11-08T08:31:30.173Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "38a0abd9b9a2a0aa0f59ff5132d5a1028c4ef641"
+        "default": "8805eceac580d3de971a4b3aef9a208c90558a18"
       }
     }
   },

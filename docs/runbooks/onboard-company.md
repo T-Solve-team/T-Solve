@@ -1,6 +1,6 @@
 # Runbook: onboard a company, and remove a company
 
-For the T-Solve operations team and the Platform Operator. Background: ADR-0003 (`docs/adr/0003-keycloak-sign-in.md`).
+For the T-Solve operations team and the Platform Operator. Background: ADR-0003 (`docs/adr/0003-keycloak-sign-in.md`) and the authentication guide (`docs/authentication.md`).
 `<slug>` is the Workspace's site name (the first label of `<slug>.tsolve.io.vn`); `<domain>` is the company's Google
 domain. Never paste a secret into a ticket or a chat.
 
@@ -93,7 +93,7 @@ The provisioning runs only in the `ops` process (profile `ops`); a Workspace web
    `<domain>`. A Google page that says `redirect_uri_mismatch` means step 3 is not applied yet (or has a typo): wait,
    or compare the URI character by character. Expected: the Admin lands in the Workspace.
 6. **Tell the company.** Only after the test passes, send the company the site address. If anyone tries to sign in
-   before Google has applied the redirect URI, Google refuses and the Workspace site shows the normal sign-in error.
+   before Google has applied the redirect URI, Google refuses on its own `redirect_uri_mismatch` page; no T-Solve page shows it, which is why step 5 comes first.
 
 If the Admin gets MSG122 (wrong domain), check the `hostedDomain` of the identity provider and the Organization's
 domain. If MSG09, the Account's email is not the Google account's email.

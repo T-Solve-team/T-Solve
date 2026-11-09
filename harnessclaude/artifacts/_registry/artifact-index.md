@@ -41,6 +41,10 @@ Master registry of all artifacts in this workspace.
 | — | module | triage | draft | artifacts/03-modules/triage/module.md |
 | — | module | chatbot | draft | artifacts/03-modules/chatbot/module.md |
 | — | module | jira-app | draft | artifacts/03-modules/jira-app/module.md |
+| SPEC-JIRA-APP-294 | spec | jira-app | draft | artifacts/03-modules/jira-app/spec.md |
+| — | design | jira-app | draft | artifacts/04-plans/jira-app/design.md |
+| — | design | jira-app | draft | artifacts/04-plans/jira-app/iteration-1/design.md |
+| — | tasks | jira-app | draft | artifacts/04-plans/jira-app/iteration-1/tasks.md |
 | — | module | dashboard-audit | draft | artifacts/03-modules/dashboard-audit/module.md |
 | — | module | platform | draft | artifacts/03-modules/platform/module.md |
 | — | module | platform-console | cancelled | artifacts/03-modules/platform-console/module.md |
@@ -193,6 +197,7 @@ Master registry of all artifacts in this workspace.
 | — | design | tracker | draft | artifacts/04-plans/tracker/iteration-1/design.md |
 | — | tasks | tracker | draft | artifacts/04-plans/tracker/iteration-1/tasks.md |
 | RESEARCH-002 | research | tracker | in-progress | artifacts/01-research/RESEARCH-002-servicenow-and-zendesk-trackers.md |
+| RESEARCH-004 | research | jira-app | complete | artifacts/01-research/RESEARCH-004-ask-ai-before-creating-a-jira-issue.md |
 | MODULE-REVIEW-24 | module | ticket-review | decomposed | artifacts/03-modules/ticket-review/module.md |
 | SPEC-REVIEW-24 | spec | ticket-review | approved | artifacts/03-modules/ticket-review/spec.md |
 | DESIGN-REVIEW-24 | design | ticket-review | approved | artifacts/04-plans/ticket-review/design.md |
@@ -227,6 +232,11 @@ Master registry of all artifacts in this workspace.
 | REVIEW-WORKER-102 | review | worker | pass | artifacts/06-evaluation/worker/task-1-tenant-jobs-review.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-23c-keycloak-callback-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-23c-keycloak-callback-test-report.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-34-user-roles-backend-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-34-user-roles-backend-test-report.md |
 | — | session-log | identity | in-progress | artifacts/05-implementation/identity/task-24-remove-custom-sign-in.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-24-remove-custom-sign-in-review.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-28-keycloak-provisioning.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-31-keycloak-theme.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-31-keycloak-theme-test-report.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-31-keycloak-theme-review.md |

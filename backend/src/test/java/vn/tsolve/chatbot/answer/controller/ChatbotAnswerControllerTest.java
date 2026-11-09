@@ -129,6 +129,36 @@ class ChatbotAnswerControllerTest {
 
     @Test
     @WithTSolveUser
+    void writesCitationTypeDiscriminator_AC_006_1() throws Exception {
+        UUID document = UUID.fromString("80000000-0000-0000-0000-000000000001");
+        when(answers.ask(any(), any()))
+                .thenReturn(new ChatbotAnswerResponse(
+                        ANSWER_ID,
+                        Outcome.ANSWERED,
+                        "Policy [1] and fix [3]",
+                        List.of(
+                                new WikiDocumentCitation(1, document, "Policy"),
+                                new TicketSolutionCitation(
+                                        3, new CitedSolution("symptoms", "cause", "steps", "workaround", "scope")))));
+        mvc.perform(post(PATH)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\"question\",\"history\":[]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.citations.length()").value(2))
+                .andExpect(jsonPath("$.citations[0].type").value("WIKI_DOCUMENT"))
+                .andExpect(jsonPath("$.citations[0].number").value(1))
+                .andExpect(jsonPath("$.citations[0].wikiDocumentId").value(document.toString()))
+                .andExpect(jsonPath("$.citations[0].title").value("Policy"))
+                .andExpect(jsonPath("$.citations[1].type").value("TICKET_SOLUTION"))
+                .andExpect(jsonPath("$.citations[1].number").value(3))
+                .andExpect(jsonPath("$.citations[1].solution.workaround").value("workaround"))
+                .andExpect(jsonPath("$.citations[1].ticketId").doesNotExist())
+                .andExpect(jsonPath("$.citations[1].title").doesNotExist());
+    }
+
+    @Test
+    @WithTSolveUser
     void ignoresWorkspaceParameter_AC_005_10() throws Exception {
         when(answers.ask(any(), any()))
                 .thenReturn(new ChatbotAnswerResponse(ANSWER_ID, Outcome.NO_SOURCE, "", List.of()));

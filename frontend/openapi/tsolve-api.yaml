@@ -454,6 +454,13 @@ paths:
       tags: [review]
       operationId: getExpiredTickets
       summary: Expired tickets of the Projects the user is Project Manager of (SRS 7.5).
+      description: |
+        Production Workspace data: only EXPIRED Solution Form tickets of Projects the caller manages.
+        An optional Department narrows those Projects; a Department without a managed Project returns an empty page.
+        Sort by expiredAt (default descending), sourceTicketId, title or project, ascending or descending,
+        with ticket UUID as tie-breaker. Unknown sort fields or directions, negative page or size outside 1–100
+        return 400 MSG06. previousStatus is always PENDING_REVIEW. expiredAt is derived as midnight in
+        Asia/Ho_Chi_Minh on the day after reviewDueDate, falling back to updated_at for legacy rows without a due date.
       parameters:
         - name: departmentId
           in: query
@@ -471,6 +478,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExpiredTicketPage'
+        '400':
+          $ref: '#/components/responses/Problem'
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -480,6 +489,10 @@ paths:
       tags: [review]
       operationId: getExpiredTicketIds
       summary: Ids of every Expired ticket, for "Select all" (all pages, not only the one shown).
+      description: |
+        Production Workspace data: every EXPIRED Solution Form ticket in Projects the caller manages,
+        across all pages, using the same optional Department filter as getExpiredTickets.
+        A Department without a managed Project returns an empty id list.
       parameters:
         - name: departmentId
           in: query
@@ -501,8 +514,16 @@ paths:
     post:
       tags: [review]
       operationId: sendBackTickets
-      summary: Sends Expired tickets back to the queue (MSG25); frontend proposal.
-      description: Frontend proposal. Validate and authorize the entire unique 1–500 UUID batch before sending back; retain mock history and immutable Ticket content, reset due dates using current Project review ranges.
+      summary: Sends Expired tickets back to the Review Queue (MSG25).
+      description: |
+        Production operation: validate and authorize the entire unique 1–500 UUID batch in the signed-in Workspace.
+        Only EXPIRED Solution Form tickets of Projects the caller manages are eligible. Atomically set PENDING_REVIEW,
+        record the new queue entry time, and reset each review due date to the send-back calendar date in
+        Asia/Ho_Chi_Minh plus its Project review_range days (3 days when the range is null or not positive).
+        Preserve Solution, Evidence and feedback; store one SEND_BACK review decision per ticket with the caller,
+        send-back time and no reason or comment. Enqueue no review notification job. Invalid shapes return 400,
+        a missing Workspace ticket returns 404 MSG04, an unmanaged Project returns 403, and a stale status or
+        non-Solution-Form source returns 409; every refused batch leaves all tickets and decisions unchanged.
       requestBody:
         required: true
         content:
@@ -736,6 +757,62 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
         '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/questions/eligibility:
+    get:
+      tags: [jira-app]
+      operationId: getJiraAskerEligibility
+      summary: Whether the Jira user may ask T-Solve on the "Ask T-Solve" page (STORY-010, AC-010.2).
+      description: >
+        The user comes only from the verified FIT principal. Linked means the Jira account is linked to an active
+        T-Solve user; a FIT without a principal is not linked. Calls no AI.
+      security:
+        - forgeInvocationToken: []
+      responses:
+        '200':
+          description: Whether the user is linked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JiraAskerEligibility'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/questions:
+    post:
+      tags: [jira-app]
+      operationId: askJiraAppQuestion
+      summary: Answers a question from the "Ask T-Solve" page with the Knowledge Chatbot (STORY-010).
+      description: >
+        The user comes only from the verified FIT principal. The answer is the Knowledge Chatbot's, with the same
+        sources, citations and outcomes as on the web (AC-010.4); NO_SOURCE is shown as MSG109 by the Jira App.
+        A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns →
+        400 MSG02 (AC-010.5). A Jira account not linked to an active T-Solve user, or a FIT without a principal →
+        403 MSG62 and no AI call (AC-010.11). The AI unavailable or no answer within the Jira App deadline
+        (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatbotQuestion'
+      responses:
+        '200':
+          description: The answer, or NO_SOURCE.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotAnswer'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '503':
           $ref: '#/components/responses/Problem'
   /api/v1/imports/csv/template:
     get:
@@ -1151,6 +1228,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TicketSearchResultPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/search/suggestions:
+    post:
+      tags: [search]
+      operationId: suggestTickets
+      summary: Suggest similar Published tickets for a Jira issue (UC-26, KAN-146).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketSuggestionRequest'
+      responses:
+        '200':
+          description: At most 5 items, most similar first; empty array when none.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 5
+                items:
+                  $ref: '#/components/schemas/TicketSearchResult'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -1975,6 +2079,19 @@ components:
         comment:
           type: [string, 'null']
           maxLength: 500
+    TicketSuggestionRequest:
+      type: object
+      required: [summary]
+      properties:
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: The Jira issue summary.
+        description:
+          type: [string, 'null']
+          maxLength: 32767
+          description: The Jira issue description as plain text.
     TicketIdList:
       type: object
       required: [ticketIds]
@@ -2087,6 +2204,13 @@ components:
         canDecide:
           type: boolean
           description: Whether the current user may decide this pending Solution Form ticket in its managed Project.
+    JiraAskerEligibility:
+      type: object
+      required: [linked]
+      properties:
+        linked:
+          type: boolean
+          description: Whether the FIT user is linked to an active T-Solve user (AC-010.2); false shows MSG62.
     JiraReviewFeedback:
       type: object
       required: [feedback]

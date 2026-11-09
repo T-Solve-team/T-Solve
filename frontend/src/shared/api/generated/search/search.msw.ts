@@ -9,9 +9,9 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
-import type { TicketSearchResultPage } from '../model';
+import type { TicketSearchResult, TicketSearchResultPage, TicketSuggestionRequest } from '../model';
 
 export const getSearchTicketsResponseMock = (
   overrideResponse: Partial<Extract<TicketSearchResultPage, object>> = {},
@@ -45,6 +45,26 @@ export const getSearchTicketsResponseMock = (
   ...overrideResponse,
 });
 
+export const getSuggestTicketsResponseMock = (): TicketSearchResult[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, (_, i) => i + 1).map(() => ({
+    ticketId: faker.string.uuid(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    project: {
+      projectId: faker.string.uuid(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    department: {
+      departmentId: faker.string.uuid(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    excerpt: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    helpfulRate: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
+    resolvedAt: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + 'Z',
+      null,
+    ]),
+  }));
+
 export const getSearchTicketsMockHandler = (
   overrideResponse?:
     | TicketSearchResultPage
@@ -68,4 +88,28 @@ export const getSearchTicketsMockHandler = (
     options,
   );
 };
-export const getSearchMock = () => [getSearchTicketsMockHandler()];
+
+export const getSuggestTicketsMockHandler = (
+  overrideResponse?:
+    | TicketSearchResult[]
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, TicketSuggestionRequest>>[0],
+      ) => Promise<TicketSearchResult[]> | TicketSearchResult[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, TicketSuggestionRequest>(
+    '*/api/v1/search/suggestions',
+    async (info: Parameters<HttpResponseResolver<PathParams, TicketSuggestionRequest>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSuggestTicketsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+export const getSearchMock = () => [getSearchTicketsMockHandler(), getSuggestTicketsMockHandler()];

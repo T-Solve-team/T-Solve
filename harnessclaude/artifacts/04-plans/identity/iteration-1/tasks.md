@@ -692,15 +692,16 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **Feature:** keycloak-theme
 **Decisions owned:** K13, Q6
 **Acceptance criteria:** AC-001.67, AC-001.68. Verifies the unchanged AC-001.40, .41, .42 and .43 (their tests from Task 7 stay green).
-**Description:** The minimal T-Solve theme `infra/keycloak/themes/tsolve/login/` (logo, colours, no external resource, no script) on Keycloak's login and error pages; the error page shows the exact Report3 text of MSG06 and a "Back to sign-in" link to the base URL of the client that started the request; the realm import sets the theme. The tests (Task 23's Keycloak container) trigger each failure Keycloak cannot hand back (`redirect_uri_mismatch` from the fake upstream, an expired login session, an unknown `kc_idp_hint`, an internal error) and record which land on the themed page and which reach `/login?error=` (Q6). The mock sign-in page and `startSignIn` stay. The last card of the item, a `tsolve-doc-writer` card, updates the authentication guide to this design and links ADR-0003 and the runbook.
+**Description:** The minimal T-Solve theme `infra/keycloak/themes/tsolve/login/` (logo, colours, no external resource, no script) on Keycloak's login and error pages; the error page shows the MSG06 text "Something went wrong. Please try again later." and a "Back to sign-in" link to `client.baseUrl` (falling back to a neutral URL kept in `theme.properties`); the logo is an inline SVG in `template.ftl`; the realm import sets `loginTheme: tsolve` and `tsolve-web.baseUrl` (dev `http://localhost:5173/`, prod `https://tsolve.io.vn/`). The tests (Task 23's Keycloak container) trigger each failure Keycloak cannot hand back (an expired login session, made by shortening `accessCodeLifespanLogin` to 2 s through the admin client and restoring it; an unknown `kc_idp_hint`; an internal error, made by the fake token endpoint answering 500, a test-only stub; the person cancelling at Google, made by sending `error=access_denied` to Keycloak's broker endpoint) and record which land on the themed page and which reach `/login?error=` (Q6). The fake Google copies Google's `redirect_uri_mismatch` (a 400 on its own host) and the test records it as "upstream page"; the Google cancel (`access_denied`) does not reach the callback: Keycloak 26.4.7 shows its own 400 page, so T8 checks that the themed page shows the MSG06 text and the "Back to sign-in" link. The callback side of AC-001.8 is pinned by the existing `prompt=none` test in `KeycloakSignInEndToEndIT`, not by a control row here. The mock sign-in page and `startSignIn` stay. The last card of the item, a `tsolve-doc-writer` card, updates the authentication guide to this design and links ADR-0003 and the runbook.
 **What Hiếu can see or try:** a screenshot of Keycloak's login (when the hint is wrong), error and logout pages in the T-Solve theme; the failure table in the test output.
 **Files:**
 - Create: `infra/keycloak/themes/tsolve/login/{theme.properties,template.ftl,error.ftl,messages/messages_en.properties,resources/css/tsolve.css}`
-- Modify: `infra/keycloak/realm-tsolve.json` (the theme), `docker-compose.yml` (the theme mount)
+- Modify: `infra/keycloak/realm-tsolve.json` (`loginTheme: tsolve`, `tsolve-web.baseUrl`), `docker-compose.yml` (the theme mount), `backend/src/test/java/vn/tsolve/identity/signin/KeycloakSignInEndToEndIT.java` (the theme mount only)
+- Create (test-only helpers): `KeycloakItStack` (one singleton stack holder for both new ITs), `ThemePageScan`, `TestBrowser.followUntilSettled`, under `backend/src/test/java/vn/tsolve/identity/signin/`
 - Test: `backend/src/test/java/vn/tsolve/identity/signin/KeycloakThemeIT.java`, `backend/src/test/java/vn/tsolve/identity/signin/KeycloakFailurePlacementIT.java`
 **Dependencies:** Task 23 merged; Task 28 not required.
 **PR / Jira:** branch `feat/KAN-300-identity-keycloak-theme`; Jira KAN-300.
-**Estimated size:** small–medium (5 theme files, no production Java); about 6 tests
+**Estimated size:** small–medium (5 theme files, no production Java; test helpers); 8 tests (T1-T3 theme, T4 the upstream-page recording, T5-T8 themed-page failures incl. the Google cancel); no control row
 **Verification:** Tests name AC-001.67 and .68; `cd frontend && npm run test -- src/features/auth src/app/dev` stays green for AC-001.40–.43. Targeted: `cd backend && mvn -Dit.test='KeycloakThemeIT,KeycloakFailurePlacementIT' verify`.
 
 ## Task 32: User List backend on PostgreSQL — KAN-107
@@ -734,3 +735,18 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **PR / Jira:** branch `feat/KAN-108-identity-add-user-api` stacked on KAN-107; Jira KAN-108.
 **Estimated size:** medium (10 production files); about 25 tests
 **Verification:** Tests name AC-005.9 to AC-005.17; `sdd.ts trace identity STORY-005`; `cd backend && mvn verify`; `generate:api` no diff.
+## Task 34: Update roles, Department and Spaces backend — KAN-110
+
+**Story:** STORY-007
+**Feature:** user-roles-backend
+**Decisions owned:** KAN-110 Q1–Q10 (Dương, 07/11: all recommendations)
+**Acceptance criteria:** AC-007.8, AC-007.9, AC-007.10, AC-007.11, AC-007.12, AC-007.13, AC-007.14, AC-007.15, AC-007.16, AC-007.17, AC-007.18, AC-007.19, AC-007.20, AC-007.21, AC-007.22, AC-007.23
+**Description:** Design "Update roles backend — KAN-110, Task 34". `GET /api/v1/users/{userId}`, `GET /api/v1/users/{userId}/handover-options` and `PUT /api/v1/users/{userId}` exactly as `frontend/openapi/tsolve-api.yaml` and the MSW mock; changeset 023 (one Project Manager per Project); the mock seed's Projects. Not in scope: KAN-109 `PUT /users/{id}/status` (next feature), history tables, the frontend MSW pass-through.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/{controller/UserDetailController,dto/UserDetailResponse,dto/UserProjectResponse,dto/UserHandoverOptionsResponse,dto/UpdateUserRolesRequest,service/UserDetailService,service/UserRoleUpdateService,service/impl/UserDetailServiceImpl,service/impl/UserRoleUpdateServiceImpl,repository/UserDetailRepository,repository/UserRoleUpdateRepository}.java`, `backend/src/main/resources/db/changelog/changes/023-identity-one-project-manager.sql`
+- Modify: `db.changelog-master.xml`, `identity/mock/MockUserListSeeder.java`
+- Test: `backend/src/test/java/vn/tsolve/identity/{service/impl/UserRoleUpdateServiceImplTest,controller/UserDetailControllerTest,UserDetailIT,UserRoleUpdateIT}.java`
+**Dependencies:** Task 32 (PR #162) and Task 33 (`feat/KAN-108-identity-add-user-api`: `space`, `space_manager`); this branch is rebased onto Task 33 before its ITs run.
+**PR / Jira:** branch `feat/KAN-110-identity-user-roles-backend` stacked on KAN-108; Jira KAN-110.
+**Estimated size:** large (13 production files); about 40 tests
+**Verification:** Tests name AC-007.8 to AC-007.23; `sdd.ts trace identity STORY-007`; `cd backend && mvn verify`; `generate:api` no diff.

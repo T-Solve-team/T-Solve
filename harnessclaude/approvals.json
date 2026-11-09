@@ -230,8 +230,8 @@
     }
   },
   "chatbot": {
-    "specHash": "387eafa27e66b6ef9c4729ff3e3f66c85b783cad0ea73250979e705ce23b15d0",
-    "approvedAt": "2026-11-06T16:53:28.192Z",
+    "specHash": "ecbccd305941158a3919d4b2a346a4dd22b18320e08e111cae98a7433b59ca75",
+    "approvedAt": "2026-11-09T03:54:35.734Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -293,19 +293,25 @@
       "AC-007.1": "WHEN  is not empty, THE backend SHALL use as retrieval text the trimmed question of the last",
       "AC-007.2": "THE backend SHALL send the turns of  to the chat model, oldest first, as earlier user and",
       "AC-007.3": "IF  is missing, holds more than 10 turns, or a turn is too long, THEN THE backend SHALL answer",
-      "AC-007.4": "THE backend SHALL store only the new question in , never the earlier turns."
+      "AC-007.4": "THE backend SHALL store only the new question in , never the earlier turns.",
+      "AC-008.1": "WHEN a signed-in user rates an answer of their own, THE backend SHALL store the rating and the",
+      "AC-008.2": "WHEN a signed-in user removes the rating of an answer of their own, THE backend SHALL clear the rating",
+      "AC-008.3": "IF the answer id is unknown, THEN THE backend SHALL answer 404 with MSG04 and change nothing",
+      "AC-008.4": "IF the rating body is missing or its rating is missing or unknown, THEN THE backend SHALL answer 400",
+      "AC-008.5": "IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07; every signed-in user",
+      "AC-008.6": "THE chatbot changeset SHALL add to  the nullable columns  ( or"
     }
   },
   "identity": {
-    "specHash": "b36d3c7a0b8b96ad09f43822f79c68f743381aa61685dd48a3d8adee9066c66e",
-    "approvedAt": "2026-11-09T16:05:39.138Z",
+    "specHash": "4930629625c56462914d96601fcd1bef9edef412d957292fe2c968c3ede0def6",
+    "approvedAt": "2026-11-09T16:14:46.703Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
       "AC-001.3": "WHERE  is given to the sign-in start, THE backend SHALL keep it only if it is a relative path of the same site (one leading , not , no scheme, no host) and SHALL use  otherwise.",
       "AC-001.6": "IF the callback on a Workspace site gets no  cookie, or a cookie or  value that matches no saved authorization request (unknown, expired, already used, or another browser's), or a saved request whose Workspace is not the Workspace of the callback's host, THEN THE backend SHALL redirect to  on that site, create no session, change no Account and record no Jira account link (GBR-03).",
       "AC-001.7": "THE callback SHALL take the target Workspace only from the Workspace that the platform resolved from the host and the saved authorization request, and SHALL ignore every other parameter, header or cookie that names a Workspace or a site (GBR-03, GBR-37).",
-      "AC-001.8": "IF Keycloak returns an  to the callback (for example the person cancelled at Google), with a valid saved authorization request, THEN THE backend SHALL redirect to  on that Workspace site and create no session.",
+      "AC-001.8": "IF Keycloak returns an  to the callback (for example  finding no Keycloak session), with a valid saved authorization request, THEN THE backend SHALL redirect to  on that Workspace site and create no session.",
       "AC-001.9": "IF the code exchange with Keycloak fails, or the ID token fails verification (signature, issuer equal to the realm , audience , expiry, nonce, or  not true), THEN THE backend SHALL redirect to  on the Workspace site and create no session.",
       "AC-001.10": "IF the callback's Workspace is not Active, THEN THE backend SHALL redirect to  on its Workspace site and create no session.",
       "AC-001.11": "IF the ID token's  claim does not name the Keycloak Organization of the callback's Workspace, or its  claim is missing or differs (ignoring case) from the Workspace's Google domain, THEN THE backend SHALL redirect to  on its Workspace site and create no session (GBR-03, D22); both claims are required.",
@@ -351,7 +357,7 @@
       "AC-001.64": "THE Keycloak realm  SHALL allow no self-registration and no username and password form, SHALL hide every identity provider on its login page, SHALL use a first-broker-login flow that creates the user automatically, shows no profile review and never links to an existing user by email, SHALL add each new user to the Organization of the identity provider, and SHALL have brute-force detection on; WHEN the authorization request has no , THE login page SHALL list no identity provider and no form (K13, Q13).",
       "AC-001.65": "THE Keycloak client  SHALL be confidential, SHALL require PKCE , and SHALL map the Organization ( claim) and the Google  attribute into the ID token, so that a token without them is refused by AC-001.11 (K5, Q10).",
       "AC-001.66": "THE Keycloak realm  SHALL have one Google identity provider without , no tenant identity provider, no self-registration, a required second factor (TOTP or WebAuthn) for every user, and the confidential client  with PKCE  and the exact redirect URI  +  (Q1).",
-      "AC-001.67": "THE Keycloak login and error pages SHALL use the minimal T-Solve theme, and WHERE Keycloak cannot hand a failure back to the callback (Google , an expired Keycloak login session, an unknown identity provider hint, a Keycloak internal error), THE themed page SHALL show the exact Report3 text of MSG06 and a \"Back to sign-in\" link to the base URL of the client that started the request (K13, Q6).",
+      "AC-001.67": "THE Keycloak login and error pages SHALL use the minimal T-Solve theme, and WHERE Keycloak cannot hand a failure back to the callback (an expired Keycloak login session, an unknown identity provider hint, a Keycloak internal error, the person cancelled at Google), THE themed page SHALL show the MSG06 text \"Something went wrong. Please try again later.\" and a \"Back to sign-in\" link to the base URL of the client that started the request, or to the neutral T-Solve base URL kept in the theme when Keycloak does not know the client (K13, Q6). Google's own  page is never reached by Keycloak or the callback and is not a themed-page case.",
       "AC-001.68": "THE Keycloak theme SHALL load no script and no resource from a host other than Keycloak's own and SHALL show no link to any Workspace site except that \"Back to sign-in\" link (K13).",
       "AC-001.69": "WHEN  asks  for a link with a Workspace and a ticket tracker account taken from a verified Forge Invocation Token, THE backend SHALL store a link request in Redis (random 32-byte id, 10 minutes, usable once) holding both values and return  (GBR-19, D1, Q2).",
       "AC-001.70": "WHEN a browser opens  on that Workspace site and has no session, THE web app SHALL send the person through the sign-in of AC-001.1 with that URL as ; WHEN the person is signed in as an Account of that Workspace, THE web app SHALL show \"Link Jira user X (site S) to your account Y?\" with a \"Link\" button and a \"Cancel\" button, and SHALL record nothing.",
@@ -438,6 +444,22 @@
       "AC-007.5": "WHEN removing a Ticket Resolver role affects Project membership, THE frontend SHALL request confirmation with MSG78 before submitting the change.",
       "AC-007.6": "WHEN a role update succeeds, THE frontend SHALL invalidate affected list, detail and session queries so subsequent mock requests use the updated permissions.",
       "AC-007.7": "IF updating roles or assignments fails, THEN THE frontend SHALL preserve the unsaved form and display the API's catalog error without committing partial changes.",
+      "AC-007.8": "WHEN a signed-in Admin requests  for an Account of the bound Workspace, THE backend SHALL return its : the  fields of AC-004.9;  (true when the Account is the caller);  (the Projects where the Account is a , only WHILE it holds TICKET_RESOLVER, else empty);  (each Project with a  row of the Account and a Project Manager, as  with the Project's UUID public id, its Jira project key as , its ,  = status , and its Project Manager's id; a Project without a Project Manager is left out);  (the Spaces it manages, as ).",
+      "AC-007.9": "WHEN a signed-in Admin requests , THE backend SHALL return one  entry per Active Project the Account manages, whose  are the other Active Accounts holding PROJECT_MANAGER in that Project's Department, and one  entry per Space the Account manages, whose  are the other Active Accounts holding KNOWLEDGE_MANAGER; entries and recipients ordered by name ignoring case.",
+      "AC-007.10": "WHEN a signed-in Admin sends a valid , THE backend SHALL, in one transaction in the bound Workspace's database, replace the Account's  rows with the requested Roles other than EMPLOYEE, set its Department to  as sent, set its managed Spaces to , apply the handovers and membership changes of AC-007.19, and answer 200 with the updated  (EMPLOYEE always included).",
+      "AC-007.11": "IF a request to , its  or  is not signed in, THEN THE backend SHALL answer 401 MSG07; IF the caller lacks the Admin role, THEN 403 MSG08; IF  is not a UUID or names no Account of the bound Workspace, THEN 404 MSG04; in each case it SHALL change nothing.",
+      "AC-007.12": "IF the  body is not a JSON object, THEN THE backend SHALL answer 400 MSG06 and change nothing; IF  is present and not a boolean, or  /  is present and not a list of  strings, THEN THE backend SHALL answer 400 MSG06 and change nothing, checked after AC-007.15 and before AC-007.16, as the MSW mock does.",
+      "AC-007.13": "IF  is missing or holds a value that is not a Role, THEN THE backend SHALL answer 400 MSG01 (, field ); IF  is missing, is not null and names no Active Department of the Workspace, or the Roles include PROJECT_MANAGER with a null , THEN 400 MSG01 (, field ); in each case it SHALL change nothing.",
+      "AC-007.14": "IF  names a Space of no Workspace Space, names a HIDDEN Space the Account does not already manage, repeats a Space, is empty while the Roles include KNOWLEDGE_MANAGER, or is not empty while they do not, THEN THE backend SHALL answer 400 MSG01 (, field ); IF a requested Space is managed by another Account, THEN 409 MSG117 with  (field ), also when two updates race for it; in each case it SHALL change nothing.",
+      "AC-007.15": "IF the request removes ADMIN from the Workspace's only Active Admin, THEN THE backend SHALL answer 409 MSG56; otherwise, IF it removes ADMIN from the caller's own Account, THEN 409 MSG113; in both cases it SHALL change nothing, also when two Admins remove each other's Admin role at the same time (the Admin rows are locked in the transaction).",
+      "AC-007.16": "THE backend SHALL treat as affected every Active Project the Account manages WHEN the request drops PROJECT_MANAGER or changes the Department, and every Space the Account manages that is not in .",
+      "AC-007.17": "IF an affected Project has no eligible recipient under AC-007.9 at submission, THEN THE backend SHALL answer 409 MSG59 with that Project's ; IF an affected Space has none, THEN 409 MSG118; IF  /  do not name each affected Project / Space exactly once with a currently eligible recipient, or name anything else, THEN 400 MSG01 (); in each case it SHALL change nothing.",
+      "AC-007.18": "IF the Account holds TICKET_RESOLVER, the request drops it and at least one current Project membership would be removed (its  Projects plus the handed-over Projects), THEN WHILE  is not true THE backend SHALL answer 409 MSG78 with  (full name, else email) and , and change nothing.",
+      "AC-007.19": "WHEN the update is applied, THE backend SHALL make each Project recipient that Project's  (adding or upgrading its membership), give each Space recipient that Space, remove the Account's  rows WHEN TICKET_RESOLVER is dropped, turn the Account's row of a handed-over Project into  WHEN it holds TICKET_RESOLVER after the update and otherwise remove it, and keep its  rows of non-Active Projects and of Projects it still manages; at most one  row per Project SHALL exist, enforced by the database.",
+      "AC-007.20": "THE backend SHALL check, in this order, AC-007.11, the JSON-object check of AC-007.12, AC-007.13, AC-007.14, AC-007.15, the confirmation and handover shape checks of AC-007.12, then AC-007.16 to AC-007.18, answer with the first failure, and commit nothing unless all pass; a database failure after the first write SHALL roll back the whole update.",
+      "AC-007.21": "WHEN an update is applied, THE backend SHALL record one  audit event through  (target the Account; details: Roles, Department and Spaces before and after, the Project and Space handovers with their recipients, and the removed memberships), which is the only kept history of former managers and memberships.",
+      "AC-007.22": "THE backend SHALL read and write the rows of AC-007.8 to AC-007.21 only in the Workspace bound by , so a recipient, Project or Space of another Workspace is never offered or accepted; IF no Workspace is bound, THEN 500 MSG06.",
+      "AC-007.23": "WHEN the backend starts with the  profile, THE backend SHALL ensure in the configured Workspace's database at least two Active Projects and one non-Active Project of a demo Department managed by a seeded Project Manager, a second eligible Project Manager for one of them only, and  rows for a seeded Ticket Resolver, adding only the missing rows.",
       "AC-008.1": "WHEN an Admin deactivates a user who manages Active Projects, THE frontend SHALL open the existing Hand Over Responsibilities popup for those Projects before submitting the deactivation, through the KAN-109 flow.",
       "AC-008.2": "WHEN an Admin removes the Project Manager role or changes the Department of a user who manages Active Projects, THE frontend SHALL require handover of those Projects in their existing Departments before submitting the role or Department change, through the KAN-110 flow.",
       "AC-008.3": "WHEN Project handover choices are loaded, THE frontend and mock API SHALL offer only other Active accounts of the current Workspace that hold Project Manager and belong to the respective Project's Department, excluding the outgoing manager.",
@@ -838,8 +860,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "12189f157d3b550a3e23af078410b0e145d1374e8704fc7c75886caa01222f3b",
-    "approvedAt": "2026-11-07T10:16:20.325Z",
+    "specHash": "6856d0978fb84b748c2eaaf44f7cd32d5d930d02c1a7952786d81c28925ca918",
+    "approvedAt": "2026-11-08T08:10:16.478Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -918,7 +940,24 @@
       "AC-012.4": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the stream with 401 or 403 and open no stream.",
       "AC-012.5": "WHEN the Review Queue screen receives a  event, THE frontend SHALL refetch the queue page and eligible ticket ids it currently shows, keeping the existing selection and stale-data rules (STORY-005).",
       "AC-012.6": "WHILE the event stream is open, THE frontend SHALL not run the 5-second queue polling. WHILE the stream is closed or failing, THE frontend SHALL keep the existing visible-tab 5-second polling, and WHEN the stream opens again it SHALL refetch the queue once.",
-      "AC-012.7": "WHEN the user leaves the Review Queue screen, THE frontend SHALL close its event stream."
+      "AC-012.7": "WHEN the user leaves the Review Queue screen, THE frontend SHALL close its event stream.",
+      "AC-013.1": "WHEN a Project Manager queries GET , THE API SHALL use the signed-in Workspace and the Projects they manage through the Review Workspace access and return only EXPIRED Solution Form tickets of those Projects, each with ticket UUID, source key, title, Project, source, writer name, enteredQueueAt, reviewDueDate, expiredAt and previousStatus, paged with the existing page and size conventions, latest expiredAt first by default with the ticket UUID as tie-breaker.",
+      "AC-013.2": "WHEN a Project Manager queries GET , THE API SHALL return the UUIDs of every ticket the Expired list returns for the same Department filter across all pages. WHEN departmentId is supplied, both endpoints SHALL return only tickets of that Department's Projects. IF that Department has no Project the caller manages, THEN THE API SHALL return an empty page and an empty id list.",
+      "AC-013.3": "WHEN the API returns an Expired ticket, THE API SHALL report previousStatus as PENDING_REVIEW and expiredAt as 00:00 Vietnam time (UTC+07:00) on the calendar day after the ticket's review due date, without storing either value.",
+      "AC-013.4": "WHEN the Expired list is sorted by expiredAt, sourceTicketId, title or project, ascending or descending, THE API SHALL apply that order. IF the sort names any other field or direction, or page or size is outside the existing limits, THEN THE API SHALL refuse the request with 400 and MSG06.",
+      "AC-013.5": "WHEN a Project Manager sends back 1 to 500 unique UUIDs through POST  and every ticket is an EXPIRED Solution Form ticket of a Project they manage, THE backend SHALL in one Workspace transaction change every ticket to PENDING_REVIEW, set its review_queue_entered_at to the send-back time, set its review due date to the send-back calendar date in Vietnam time plus its Project's review_range days (3 days when review_range is null or not positive) (GBR-10), keep its Solution and Evidence unchanged, and record one SEND_BACK review decision per ticket with the caller, the send-back time and no reason or comment; THE API SHALL return the number of tickets sent back as count and SHALL enqueue no review notification job.",
+      "AC-013.6": "IF ticketIds is empty, holds more than 500 entries, holds a duplicate or holds a value that is not a UUID, THEN THE API SHALL refuse the batch with 400. IF any ticket does not exist in the signed-in Workspace, THEN THE API SHALL refuse the batch with 404 and expose no ticket data. IF any ticket belongs to a Project the caller does not manage, THEN THE API SHALL refuse the batch with 403. IF any ticket is no longer EXPIRED or is not a Solution Form ticket, THEN THE API SHALL refuse the batch with 409. In every refused case THE backend SHALL change no ticket and record no review decision.",
+      "AC-013.7": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the Expired list, the Expired ticket ids and send-back with 401 or 403 and expose no ticket.",
+      "AC-013.8": "WHEN Review History returns a stored SEND_BACK decision, THE API SHALL report it as SEND_BACK with null reason and null comment, with the same actor, author, ticket and Project fields as AC-011.2; WHEN the decision filter is SEND_BACK, THE API SHALL return those decisions.",
+      "AC-013.9": "WHEN the production web application loads Expired Tickets or sends tickets back, THE frontend SHALL use the published getExpiredTickets, getExpiredTicketIds and sendBackTickets operations through the existing generated client, and the OpenAPI contract SHALL describe them as production operations.",
+      "AC-014.1": "WHEN a backend process starts with the worker integration enabled, THE backend SHALL register the JOB-02 recurring job under one fixed id with the schedule every day at 00:00 in the Asia/Ho_Chi_Minh time zone (UTC+7), so that several processes keep a single registration.",
+      "AC-014.2": "WHEN JOB-02 runs, THE worker SHALL enqueue one expiry job, with attempt number 1, for each Workspace the worker tenant port lists as Active at that moment, and none for a Suspended or unknown Workspace (GBR-38).",
+      "AC-014.3": "WHEN an expiry job runs for an Active Workspace, THE worker SHALL, inside runInTenant for that Workspace and in one transaction, set to EXPIRED every ticket in PENDING_REVIEW or CHANGES_REQUESTED whose review_due_date is before the current calendar date in Vietnam time and whose Project's Department is not deleted, and SHALL store for each ticket the expiry time in expired_at and its previous status in status_before_expiry.",
+      "AC-014.4": "THE expiry job SHALL leave unchanged every ticket whose review_due_date is today or later or not set, every ticket in another status, every ticket of a deleted Department, and the Solution, Evidence, review_due_date and review decisions of the tickets it expires. WHEN the expiry job runs again on the same calendar date, THE worker SHALL change no ticket.",
+      "AC-014.5": "WHEN the expiry transaction commits, THE expired tickets SHALL no longer appear in the Review Queue or its eligible ids, and THE worker SHALL log one line per Project with expired tickets, carrying only the Workspace UUID, the Project UUID and the count. IF no ticket is overdue, THEN THE worker SHALL end without changing any ticket.",
+      "AC-014.6": "IF the expiry transaction fails, THEN THE worker SHALL roll back every ticket change of that attempt, log the failure without ticket content, and schedule another expiry job for that Workspace 15 minutes later with the next attempt number. IF attempt 3 fails, THEN THE worker SHALL schedule no further attempt and the overdue tickets SHALL wait for the next 00:00 run.",
+      "AC-014.7": "IF the Workspace is Suspended or unknown when an expiry job runs, THEN THE worker SHALL change no ticket and schedule no further attempt (GBR-38).",
+      "AC-014.8": "THE expiry job payload SHALL hold only the Workspace UUID and the attempt number, and JOB-02 SHALL record no review decision and no audit entry. THE tenant changelog SHALL add nullable ticket.expired_at as TIMESTAMPTZ and nullable ticket.status_before_expiry as VARCHAR(20) limited to PENDING_REVIEW and CHANGES_REQUESTED."
     }
   },
   "ai": {
@@ -990,8 +1029,8 @@
     }
   },
   "worker": {
-    "specHash": "7e0c5e3f9cbd6c1066fb73b11e67bfd2703687a2e54764b0918fe34c795cb4bc",
-    "approvedAt": "2026-11-07T05:14:30.768Z",
+    "specHash": "621fd5d26ab4f777ec03557dbd1dbd707c5fa44f0a3850b98e9d29c3f1303ed9",
+    "approvedAt": "2026-11-08T07:39:07.938Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the caller submits a Reject notification, THE SMTP sender SHALL send a plain-text email to the supplied writer address with a rejection subject, the ticket key and the rejection reason.",
@@ -1016,7 +1055,28 @@
       "AC-002.13": "WHEN JobRunr integration is enabled, THE backend SHALL use a dedicated Jobs DataSource configured by environment variables and SHALL never fall back to its business or catalog DataSource.",
       "AC-002.14": "THE backend SHALL disable job execution and the JobRunr dashboard by default; WHEN the worker profile is enabled with required configuration, THE backend SHALL enable background processing while keeping the dashboard disabled.",
       "AC-002.15": "IF a persisted job names an unknown handler or has a null workspace or record UUID, THEN THE worker SHALL fail it without invoking a handler.",
-      "AC-002.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked."
+      "AC-002.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked.",
+      "AC-003.1": "WHEN a caller asks the worker tenant port for the Active Workspaces, THE port SHALL return the UUIDs of the Workspaces that are Active at that moment, without binding a Workspace on the calling thread.",
+      "AC-003.2": "WHILE the worker-mock profile is active, THE mock SHALL return exactly its configured Active allow-list and no Suspended or unlisted Workspace."
+    }
+  },
+  "jira-app": {
+    "specHash": "3a593a33dcb6dfb1a6f4d48aa552a22636c1e12f36172c963fef22cd68614a5e",
+    "approvedAt": "2026-11-08T03:51:28.791Z",
+    "by": "user",
+    "acs": {
+      "AC-010.1": "THE Jira App SHALL show a project page titled \"Ask T-Solve\" in every Jira project of the site, with a question box, a send button and the note \"Trả lời từ Solution và Wiki của T-Solve\".",
+      "AC-010.2": "IF the Jira account is not linked to an active T-Solve user, THEN THE page SHALL show MSG62 instead of the question box and SHALL still show \"Chưa được, tạo ticket\", which opens the Create dialog of AC-010.9 with nothing prefilled.",
+      "AC-010.3": "WHEN the user sends a question, THE Jira App SHALL call  with the question and, as history, the earlier turns of the conversation — at most the last 10.",
+      "AC-010.4": "WHEN the server receives a valid question from a linked user, THE server SHALL return the chatbot answer for that user — the same sources, citations and outcomes as the web Knowledge Chatbot, from every Solution and Wiki document the user may see.",
+      "AC-010.5": "IF the question is empty or only white space, THEN THE Jira App SHALL show MSG01 under the box and send nothing; IF it is longer than 1,000 characters, THEN THE Jira App SHALL show MSG02 and send nothing; THE server SHALL answer 400 with the same codes whatever the Jira App checked.",
+      "AC-010.6": "WHEN the answer has outcome , THE page SHALL show its text, its sources in number order — a Wiki document as \"[n] <title> · Wiki document\", a ticket source as \"[n] Solution from a ticket\" with its Solution, never the ticket's id, link or Project (GBR-36) — and the buttons \"Đã giải quyết\" and \"Chưa được, tạo ticket\".",
+      "AC-010.7": "WHEN the answer has outcome , THE page SHALL show MSG109 and the buttons \"Đã giải quyết\" and \"Chưa được, tạo ticket\".",
+      "AC-010.8": "IF the answer request fails, does not answer within 20 seconds, or the server answers 5xx, THEN THE page SHALL show MSG06, keep the question in the box and still show \"Chưa được, tạo ticket\" (GBR-12).",
+      "AC-010.9": "WHEN the user clicks \"Chưa được, tạo ticket\", THE Jira App SHALL open Jira's Create issue dialog for the open Jira project with Summary = the first question of the conversation cut to 255 characters, Description = every question of the conversation followed by a part \"Đã thử theo T-Solve\" with the last answer and its sources labelled as in AC-010.6 (no Solution text), and the label ; the user can change every field before clicking Create.",
+      "AC-010.10": "WHEN the user clicks \"Đã giải quyết\", THE page SHALL end the conversation, show the text \"Vấn đề đã được giải quyết. Cảm ơn bạn!\" (a Jira App label, not an SRS message — user, 2026-11-07), create no issue and store nothing.",
+      "AC-010.11": "IF the FIT user is not linked to an active T-Solve user, THEN THE server SHALL answer  with 403 MSG62 and call no AI.",
+      "AC-010.12": "THE Jira App SHALL keep the conversation only while the page is open; it SHALL store no question or answer itself and SHALL log no question or answer text."
     }
   }
 }

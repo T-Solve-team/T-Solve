@@ -2,6 +2,7 @@
   "realm": "tsolve",
   "enabled": true,
   "sslRequired": "none",
+  "loginTheme": "tsolve",
   "registrationAllowed": false,
   "resetPasswordAllowed": false,
   "rememberMe": false,
@@ -110,6 +111,7 @@
     {
       "clientId": "tsolve-web",
       "name": "T-Solve web",
+      "baseUrl": "${TSOLVE_WEB_BASE_URL:http://localhost:5173/}",
       "protocol": "openid-connect",
       "enabled": true,
       "publicClient": false,
