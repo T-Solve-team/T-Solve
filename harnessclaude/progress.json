@@ -229,9 +229,11 @@
         "ask-answer-api": "passing",
         "answer-citations": "pending",
         "cited-documents": "pending",
-        "follow-up-context": "pending"
+        "follow-up-context": "pending",
+        "answer-rating-schema": "pending",
+        "answer-rating-api": "pending"
       },
-      "lastUpdated": "2026-11-06T17:23:52.760Z",
+      "lastUpdated": "2026-11-09T03:56:38.532Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"

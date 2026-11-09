@@ -230,8 +230,8 @@
     }
   },
   "chatbot": {
-    "specHash": "387eafa27e66b6ef9c4729ff3e3f66c85b783cad0ea73250979e705ce23b15d0",
-    "approvedAt": "2026-11-06T16:53:28.192Z",
+    "specHash": "ecbccd305941158a3919d4b2a346a4dd22b18320e08e111cae98a7433b59ca75",
+    "approvedAt": "2026-11-09T03:54:35.734Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -293,7 +293,13 @@
       "AC-007.1": "WHEN  is not empty, THE backend SHALL use as retrieval text the trimmed question of the last",
       "AC-007.2": "THE backend SHALL send the turns of  to the chat model, oldest first, as earlier user and",
       "AC-007.3": "IF  is missing, holds more than 10 turns, or a turn is too long, THEN THE backend SHALL answer",
-      "AC-007.4": "THE backend SHALL store only the new question in , never the earlier turns."
+      "AC-007.4": "THE backend SHALL store only the new question in , never the earlier turns.",
+      "AC-008.1": "WHEN a signed-in user rates an answer of their own, THE backend SHALL store the rating and the",
+      "AC-008.2": "WHEN a signed-in user removes the rating of an answer of their own, THE backend SHALL clear the rating",
+      "AC-008.3": "IF the answer id is unknown, THEN THE backend SHALL answer 404 with MSG04 and change nothing",
+      "AC-008.4": "IF the rating body is missing or its rating is missing or unknown, THEN THE backend SHALL answer 400",
+      "AC-008.5": "IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07; every signed-in user",
+      "AC-008.6": "THE chatbot changeset SHALL add to  the nullable columns  ( or"
     }
   },
   "identity": {

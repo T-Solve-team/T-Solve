@@ -17,6 +17,7 @@ owner: BA
 | 2026-10-25 | — (Requirements) | Requirements 2, 4 and 7 reworded and Requirement 8 added: Workspace scope decided by the server, knowledge gap, stored records carry their Workspace, Ollama on the T-Solve AI server with graceful failure; Out of Scope and Definition of Done point to the backend change; Interface Contracts: no endpoint takes a Workspace, `platform` and `ai` required. No acceptance criterion added, reworded or removed | Change request KAN-199 (GBR-12, GBR-36, GBR-37, D3, D28, D41); the user, 25/10: the server-side criteria are written by Hải Anh in her backend change (KAN-179…183) |
 | 2026-10-25 | STORY-002 | New AC-002.12: Wiki document ids and the user id are UUID strings; conversations stored with numeric ids are dropped. Interface Contracts: `wikiDocumentId` and `wikiDocumentIds` are `string` with `format: uuid` | Change request KAN-196 Q2 (the user, 25/10): UUID primary keys in every module, so ids are UUID strings in the contract (Phan_cong v6 §1); SPEC-P1-7 |
 | 2026-11-06 | STORY-005..STORY-007 (new) | **Backend change.** New STORY-005 answer a question from Workspace Solutions and Wiki passages (KAN-179), STORY-006 cite the sources and check cited documents (KAN-180), STORY-007 follow-up questions with the conversation as context (KAN-181). Requirements 7 and 8 reworded: no PII masking (cancelled 29/10, KAN-138) and the end-of-session deletion waits for an identity logout event; Requirement 9 added (answer table). Out of Scope, Interface Contracts (the `chatbot_answer` table, the chatbot-owned `WikiSources` port, search's `SolutionRetrieval`), Required from other modules and Definition of Done follow. STORY-001..STORY-004 criteria unchanged | User decisions of 06/11: Wiki through a fail-closed `WikiSources` port until wiki KAN-169 (chunking and embedding are Minh's); a follow-up is retrieved with the previous question prepended (no extra LLM call); 400 for a bad `history` or `wikiDocumentIds` is code MSG06 with no field error (builder check); no deletion job until identity has a logout event; `CHATBOT_MIN_SIMILARITY` defaults to 0.7, set by the operator in `.env` (a user-chosen threshold on screen 12.1 later). Since 25/10: one database per Workspace (KAN-98), so singular table names and no `workspace_id` |
+| 2026-11-09 | STORY-008 (new) | **Backend change.** New STORY-008 rate an answer on the backend (KAN-182): the latest rating and its time as two nullable columns on `chatbot_answer`, own answers only, 404 MSG04 otherwise, 400 MSG06 for a bad body. Out of Scope: no conversation API (KAN-183); no cross-user rating, comment or rating history. Interface Contracts (table columns, rating errors) and Definition of Done follow. Earlier criteria unchanged | User decisions of 09/11: KAN-183 builds no backend API, the conversations stay in `sessionStorage` and KAN-183 is checked end to end; ratings are columns on `chatbot_answer` (one answer has one asker), not a separate table |
 
 ## Requirements
 
@@ -233,8 +234,31 @@ owner: BA
     answer over 10,000 characters); the web app shows it as MSG06 (AC-001.13).
   - AC-007.4: THE backend SHALL store only the new question in `chatbot_answer`, never the earlier turns.
 
+### STORY-008: Rate an answer on the backend
+- As an Employee, I want my Helpful or Not helpful rating saved, so that weak answers and missing knowledge can be
+  counted on the Knowledge Dashboard (KAN-182, UC-53, GBR-36).
+- Acceptance:
+  - AC-008.1: WHEN a signed-in user rates an answer of their own, THE backend SHALL store the rating and the
+    current time on that `chatbot_answer` row, replacing any earlier rating, and answer 204 (`rateChatbotAnswer`
+    with `HELPFUL` or `NOT_HELPFUL`; `ANSWERED` and `NO_SOURCE` answers alike).
+  - AC-008.2: WHEN a signed-in user removes the rating of an answer of their own, THE backend SHALL clear the rating
+    and its time and answer 204, also when the answer has no rating (`removeChatbotAnswerRating`).
+  - AC-008.3: IF the answer id is unknown, THEN THE backend SHALL answer 404 with MSG04 and change nothing
+    (unknown: not a UUID, no such answer, or an answer of another user).
+  - AC-008.4: IF the rating body is missing or its rating is missing or unknown, THEN THE backend SHALL answer 400
+    with code MSG06 and no field error, and change nothing.
+  - AC-008.5: IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07; every signed-in user
+    may rate their own answers, whatever their roles.
+  - AC-008.6: THE chatbot changeset SHALL add to `chatbot_answer` the nullable columns `rating` (`HELPFUL` or
+    `NOT_HELPFUL`) and `rated_at` (`TIMESTAMPTZ`), with a check that both are null or both are set, and a
+    `--rollback` that drops both columns.
+
 ## Out of Scope
-- Storing ratings on the backend (KAN-182, STORY-003 server side) and the session history API (KAN-183).
+- A conversation or session history API (KAN-183, user 09/11): the conversations of the session stay in
+  `sessionStorage` only (AC-002.7), so the backend stores no conversation; KAN-183 is the end-to-end check of
+  STORY-002 on the real backend.
+- Rating another user's answer, a rating comment, and a history of rating changes (STORY-008 keeps the latest
+  rating only).
 - Deleting unrated `ANSWERED` answers at the end of the session: waits for a logout event from `identity`
   (user, 06/11); until then every answer is kept (Requirement 7).
 - The real Wiki passages: chunking, embedding and visibility of Wiki documents are the `wiki` module's (KAN-169);
@@ -319,7 +343,11 @@ chatbot_answer
   outcome           VARCHAR(20) NOT NULL CHECK IN ('ANSWERED', 'NO_SOURCE')
   answer_text       TEXT NOT NULL                          -- empty for NO_SOURCE
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+  rating            VARCHAR(20) NULL CHECK IN ('HELPFUL', 'NOT_HELPFUL')   -- STORY-008 (AC-008.6)
+  rated_at          TIMESTAMPTZ NULL                       -- set with rating, cleared with it
 ```
+
+Rating errors (STORY-008): 400 code MSG06 with no field error, 401 MSG07, 404 MSG04.
 
 Chatbot-owned port, implemented later by `wiki` (KAN-169; AC-006.7):
 
@@ -361,3 +389,7 @@ Backend settings (`.env.example`): `CHATBOT_MIN_SIMILARITY=0.7`, `CHATBOT_SOURCE
       `sdd.ts trace chatbot STORY-005 STORY-006 STORY-007` passes
 - [ ] The backend `mvn verify` passes; the frontend calls the real `askChatbot` and
       `listUnavailableCitedDocuments` with `VITE_API_MOCKING=false` once identity provides a web session
+- [ ] Every acceptance criterion of STORY-008 has a backend test named with its id; `sdd.ts trace chatbot STORY-008`
+      passes; with `VITE_API_MOCKING=false` a rating is saved, replaced and removed on the real backend (KAN-182)
+- [ ] KAN-183: with `VITE_API_MOCKING=false`, the session conversations (STORY-002) are listed, reopened and
+      continued on the real backend and are gone after logout

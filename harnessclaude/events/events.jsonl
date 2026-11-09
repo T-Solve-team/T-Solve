@@ -1018,3 +1018,6 @@
 {"ts":"2026-11-08T03:51:28.798Z","type":"spec-approved","module":"jira-app","specHash":"3a593a33dcb6dfb1a6f4d48aa552a22636c1e12f36172c963fef22cd68614a5e"}
 {"ts":"2026-11-08T03:57:43.563Z","type":"feature-status","module":"jira-app","feature":"ask-page-ui","from":"evaluating","to":"passing"}
 {"ts":"2026-11-08T04:25:18.980Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"ac7d5c2bb6a89afc0c41b913c57ed2639457009e"}
+{"ts":"2026-11-09T03:54:35.760Z","type":"spec-approved","module":"chatbot","specHash":"ecbccd305941158a3919d4b2a346a4dd22b18320e08e111cae98a7433b59ca75"}
+{"ts":"2026-11-09T03:56:37.469Z","type":"feature-status","module":"chatbot","feature":"answer-rating-schema","from":null,"to":"pending"}
+{"ts":"2026-11-09T03:56:38.535Z","type":"feature-status","module":"chatbot","feature":"answer-rating-api","from":null,"to":"pending"}
