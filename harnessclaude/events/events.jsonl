@@ -1081,3 +1081,4 @@
 {"ts":"2026-11-09T05:14:46.167Z","type":"feature-status","module":"chatbot","feature":"answer-rating-schema","from":"evaluating","to":"passing"}
 {"ts":"2026-11-09T05:15:45.202Z","type":"feature-status","module":"chatbot","feature":"answer-rating-api","from":"evaluating","to":"passing"}
 {"ts":"2026-11-09T16:14:46.706Z","type":"spec-approved","module":"identity","specHash":"4930629625c56462914d96601fcd1bef9edef412d957292fe2c968c3ede0def6"}
+{"ts":"2026-11-09T17:12:45.253Z","type":"spec-approved","module":"identity","specHash":"eba98dc9b616f51a8f51cf5ce0e7c65b362c8b1c8a67049ddfbc16c7f9094ebb"}
