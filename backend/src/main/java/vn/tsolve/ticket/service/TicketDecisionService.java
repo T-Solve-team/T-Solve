@@ -12,6 +12,8 @@ public interface TicketDecisionService {
         CHANGES_REQUESTED
     }
 
+    int sendBack(UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds);
+
     /** The caller supplies a verified Account and its managed Projects in the bound Workspace. */
     int decide(UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds, Action action, String feedback);
 }

@@ -1,6 +1,7 @@
 package vn.tsolve.worker.service;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /** Platform integration port; the mock supplies context propagation, not database routing. */
@@ -16,6 +17,9 @@ public interface WorkerTenantService {
     }
 
     boolean isWorkspaceActive(UUID workspaceId);
+
+    /** Returns the Workspaces Active at the moment of the call; binds nothing on the calling thread. */
+    Set<UUID> activeWorkspaceIds();
 
     /** Must reject cross-workspace nesting and restore the prior binding, including on failure. */
     void runIn(UUID workspaceId, Runnable action);
