@@ -975,3 +975,6 @@
 {"ts":"2026-11-07T21:31:55.863Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"evaluating","to":"passing"}
 {"ts":"2026-11-09T14:49:11.956Z","type":"spec-approved","module":"identity","specHash":"8521c0b48fe3c1525b56051012c5bbfc3f714b37199346fa6a7812e7aa470bd2"}
 {"ts":"2026-11-09T15:07:45.558Z","type":"spec-approved","module":"identity","specHash":"78d39fd38f3642ceef6c08d2c5eef3e0a25e46508f2bfb323a6ebe119b45ac16"}
+{"ts":"2026-11-09T15:54:08.638Z","type":"feature-status","module":"identity","feature":"keycloak-theme","from":"pending","to":"in-progress"}
+{"ts":"2026-11-09T15:54:14.163Z","type":"feature-status","module":"identity","feature":"keycloak-theme","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-09T15:54:14.871Z","type":"feature-status","module":"identity","feature":"keycloak-theme","from":"evaluating","to":"passing"}

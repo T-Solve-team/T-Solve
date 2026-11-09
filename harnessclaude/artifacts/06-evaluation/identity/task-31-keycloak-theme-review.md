@@ -171,3 +171,17 @@ See `task-31-keycloak-theme-test-report.md`:
 - The card accepts the prod gap. I judged its documentation insufficient (S1) but did not make it a blocker.
 - Proposed feature status: keep `keycloak-theme` where it is until B1 is fixed, then `passing`. I did not run
   `sdd.ts feature`, because the card does not ask for it.
+
+## Resolution (orchestrator, 2026-11-09)
+- B1 fixed: the 123-column line was reformatted; `mvn spotless:check` exit 0 on a scratch git copy of the 4 new test files (commit `4ca2c98f`). The `TestBrowser` and `KeycloakSignInEndToEndIT` edits are not spotless-checked individually.
+- S1 fixed: `TSOLVE_WEB_BASE_URL` is read by the theme and by the realm (commit `e075a0c6`).
+- S2 fixed: an unknown-client test was added (the Keycloak test instance gets `TSOLVE_WEB_BASE_URL=http://fallback.it.test/`; the unknown-client page shows the fallback URL, the known-client pages show the client URL).
+- N1 fixed: the `JSESSIONID` assertions were removed.
+- N2 fixed: `ThemePageScan` compares the full origin.
+- N3 fixed: `template.ftl` has the `noindex, nofollow` meta.
+- N4 open: `tasks.md` Files list lacks `login.ftl`, `login-page-expired.ftl`, `logout-confirm.ftl`.
+- N5 open: the theme must stay off realm `tsolve-ops`; not yet recorded in `theme.properties` or the design.
+- Test results after the fixes: `KeycloakThemeIT` 3 run / 0 failures; `KeycloakFailurePlacementIT` 6 run / 0 failures; `KeycloakSignInEndToEndIT` 7 run / 0 failures.
+- The reviewer said no full re-review is needed after the format fix; the orchestrator accepted this, so `passing` stands.
+- The verdict above (`fail`, attempt 1) is kept unchanged as history. The feature `keycloak-theme` is now `passing`.
+- Open for deploy: production `TSOLVE_WEB_BASE_URL=https://tsolve.io.vn/` must be set.
