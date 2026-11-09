@@ -266,9 +266,14 @@
       "features": {
         "audit-log": "passing",
         "audit-log-api": "evaluating",
-        "audit-writer": "evaluating"
+        "audit-writer": "evaluating",
+        "dashboard-api": "pending",
+        "dashboard-outcomes": "pending",
+        "dashboard-reuse-gaps": "pending",
+        "dashboard-page": "pending",
+        "dashboard-sections": "pending"
       },
-      "lastUpdated": "2026-11-07T11:25:26.357Z",
+      "lastUpdated": "2026-11-09T05:27:53.237Z",
       "branch": "feat/dashboard-audit",
       "repos": [
         "default"
