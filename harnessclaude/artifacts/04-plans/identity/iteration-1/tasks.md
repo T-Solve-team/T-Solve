@@ -647,7 +647,8 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 - Test: `backend/src/test/java/vn/tsolve/identity/keycloak/{KeycloakWorkspaceSignInProvisionerIT,ProvisioningRaceIT,ProvisioningUndoIT,KeycloakAdminClientTest,ProvisioningProfileTest,NoopWorkspaceSignInProvisionerTest,FakeWorkspaceSignInProvisioner}.java`
 **Dependencies:** Task 23 (Keycloak in compose and Testcontainers); the platform's `WorkspaceProvisioning` only for the real call (Task 14).
 **PR / Jira:** branch `feat/KAN-299-identity-keycloak-provisioning`; Jira KAN-299.
-**Estimated size:** medium (8 production files); about 9 tests
+**Changed expectations (QA Q1–Q8, 9/11; details in design "Rules", Provisioning):** `check`/`remove` find objects by the `tsolve.workspace-id` tag (the port is unchanged); `ops` with all three credentials wires the adapter, with one missing the no-op and one WARN; no command runner in this task; `ops` only (the Console profile is Task 29); `tsolve-provisioner` has an explicit minimal role list and a 403 test; the IdP copies `google-acme`'s broker settings; the URI origin comes from `TSOLVE_SITE_ORIGIN_TEMPLATE` (new value in `.env.example`, dev `http://{slug}.localhost:8080`, no new file); a lost URI means throw, undo own objects, ERROR, no repair; a different domain or slug for a provisioned Workspace throws.
+**Estimated size:** medium (about 8 production files, no more); about 12 tests (the QA plan: 5 + 1 + 2 + 1 + 2 + 1)
 **Verification:** Tests name AC-001.57–.62; design risk rows 107–109, 112, 118. Targeted: `cd backend && mvn -Dtest='KeycloakAdminClientTest,ProvisioningProfileTest,NoopWorkspaceSignInProvisionerTest' -Dit.test='KeycloakWorkspaceSignInProvisionerIT,ProvisioningRaceIT,ProvisioningUndoIT' verify`; full `mvn verify`.
 
 ## Task 29: Platform Console Operators on `tsolve-ops` — KAN-233 (re-scoped)
