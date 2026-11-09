@@ -208,8 +208,7 @@ class AccountRepositoryIT {
     }
 
     @Test
-    @DisplayName(
-            "AC-001.16 a sign-in with a null name claim keeps the stored full name, against real PostgreSQL")
+    @DisplayName("AC-001.16 a sign-in with a null name claim keeps the stored full name, against real PostgreSQL")
     void aSignInWithANullNameKeepsTheStoredFullName_AC_001_16() {
         scope.runIn(TwoTenantDatabases.ACME, () -> accounts.save(account("lan@acme.example")));
         JdbcTemplate db = TwoTenantDatabases.tenantA();
@@ -227,8 +226,8 @@ class AccountRepositoryIT {
 
         // by-sub path
         db.update("UPDATE app_user SET last_sign_in_at = NULL");
-        AccountSignInService.Result later =
-                scope.runIn(TwoTenantDatabases.ACME, () -> signInService.signIn("kc-sub-1", "other@acme.example", null));
+        AccountSignInService.Result later = scope.runIn(
+                TwoTenantDatabases.ACME, () -> signInService.signIn("kc-sub-1", "other@acme.example", null));
 
         assertThat(later.status()).isEqualTo(AccountSignInService.Status.SIGNED_IN);
         assertThat(db.queryForObject("SELECT full_name FROM app_user", String.class))
