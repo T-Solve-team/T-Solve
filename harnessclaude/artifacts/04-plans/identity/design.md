@@ -674,6 +674,7 @@ factor) and ends in an Operator session after the allow-list check (AC-001.28–
 | `PLATFORM_OPERATOR_EMAILS` | allow-list, second check after Keycloak (Q1) | a developer's email |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | as Task 10 | compose Redis |
 | `KEYCLOAK_ADMIN_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | only the profiles that create or remove Workspaces (AC-001.61); absent elsewhere | a placeholder; the dev fake Google ignores them |
+| `TSOLVE_SITE_ORIGIN_TEMPLATE` | origin of a Workspace site for the two `tsolve-web` URIs (AC-001.58, Task 28 Q6); `{slug}` is replaced; read only by the `ops` adapter | `http://{slug}.localhost:8080` (production `https://{slug}.tsolve.io.vn`) |
 | removed | `TSOLVE_SIGNING_KEY`, `tsolve.oidc.google.*` | |
 
 The backend reaches Keycloak at the issuer it expects in tokens (the Docker network name and `KC_HOSTNAME` are set
@@ -705,7 +706,7 @@ together; a start-up check reads both discovery documents, R11).
 - **Operators (Q1 = B).** A separate realm and client, a Google IdP without `hd`, TOTP or WebAuthn required, the
   allow-list as the backend's second check. A mistake in a tenant IdP can never grant the Console.
 - **Failures (Q6 = A).** Failures that reach the callback go to `/login?error=` on the site. The others show on
-  Keycloak's themed page (AC-001.67); which case lands where is fixed by the Testcontainers tests of Task 23 (K14).
+  Keycloak's themed page (AC-001.67); which case lands where is fixed by the Testcontainers tests of Tasks 23 and 31 (K14). Google's own `redirect_uri_mismatch` page is not among them: Google never redirects back. A cancel at Google (`error=access_denied`) is a themed-page case too: Keycloak 26.4.7 does not return it to the callback but shows its own 400 page, which the theme replaces with the MSG06 text; the callback side of AC-001.8 is pinned by the `prompt=none` test (probe, Task 31 QA 2). The themed page's "Back to sign-in" link uses `client.baseUrl` (the realm sets `tsolve-web.baseUrl` to one neutral T-Solve URL: dev `http://localhost:5173/`, prod `https://tsolve.io.vn/`) and falls back to the same URL, kept in `theme.properties`, when Keycloak does not know the client (K13).
   The error list of the Login screen does not change (Q11 = A adds no message).
 - **Keycloak hardening (Q13 = A).** Realm import: registration off, no password form, IdPs hidden on the login page,
   a custom first-broker-login flow, brute-force detection on (AC-001.64); the provisioning adapter sets
@@ -717,6 +718,35 @@ together; a start-up check reads both discovery documents, R11).
   connection, creates Organization → IdP → client URIs, re-reads the client and checks that the earlier URIs are all
   still there, and on any failure deletes in reverse order, idempotent by alias. The adapter's credentials are only
   in the `ops` and Console profiles. Until the platform exists the no-op bean answers (AC-001.60).
+  Decided in Task 28 QA (KAN-299, Hiếu, 9/11, all option A):
+  - Q1: `check` and `remove` get only the Workspace id. `provision` tags the Organization (attribute
+    `tsolve.workspace-id`) and the IdP (config key `tsolve.workspace-id`); they are found by that tag; the Organization
+    alias is the slug; the port's `siteName` is the slug. The port's signatures do not change.
+  - Q2: `ops` + provisioner secret + `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` all set wires the Keycloak adapter;
+    any missing wires the no-op and logs one WARN naming the variable; a Workspace web profile always gets the no-op.
+    No command runner in Task 28 (it comes with Task 14 or the runbook task); the ITs are the demonstration.
+  - Q3: Task 28 covers `ops` only. The Console process profile is decided and tested in Task 29. Because AC-001.61
+    forbids a Workspace web process to hold the credentials, the Console needs its own process (note in architecture.md).
+  - Q4: the `tsolve-provisioner` test asserts an explicit minimal role list (`manage-identity-providers`,
+    `view-identity-providers`, `manage-clients`, `view-clients`, `manage-users`, `view-users`, `query-users`, plus what
+    Organizations need) and a 403 on a call outside it. If a spike shows `manage-realm` is needed, the 403 case uses a
+    call that role does not grant and the risk goes into row 109. The spike's result is not decided here.
+  - Q5: the IdP copies `google-acme`'s broker settings (type `google`, flow `tsolve first broker login`, the `hd`
+    mapper, `trustEmail` true, `syncMode` IMPORT).
+  - Q6: the origin of the two URIs comes from `TSOLVE_SITE_ORIGIN_TEMPLATE` (see Configuration).
+  - Q7: a lost earlier URI found by the re-read: throw, delete this Workspace's own objects, one ERROR naming the lost
+    URIs, no repair; the runbook restores them. The re-read follows every write the adapter makes to `tsolve-web`
+    (review of Task 28, B1): in `remove` a lost earlier URI gives one ERROR naming the lost URIs, no repair, and the
+    call throws; in the undo the ERROR is logged and the remaining undo steps still run. `remove` and the undo find
+    the IdP by the tag `tsolve.workspace-id`, not by the alias.
+  - Q8: `provision` for an already-provisioned Workspace with another Google domain or slug throws and changes
+    nothing; there is no update path.
+  - S6 (review of Task 28): when the Organization is absent but the tagged IdP `google-<slug>` exists, `provision`
+    reads the IdP and throws, changing nothing, if its `hostedDomain` differs from the requested domain or it is not
+    linked to an Organization of this Workspace (same rule as Q8).
+  - S5 (review of Task 28): in `ops`, when the three secrets are set, `base-url` and `TSOLVE_SITE_ORIGIN_TEMPLATE`
+    (which must contain `{slug}`) are validated at start-up; if either is empty or invalid the start-up fails with a
+    message naming the variable (never its value).
 - **Jira link (Q2 = A).** `jira-app` calls `JiraLinkRequestService` after verifying the Forge token; the person
   confirms on the Workspace site. The confirm page is a web-app route (`/jira-link`); the POST needs CSRF and a
   Workspace session. Design row 46 changes from Open to mitigated: a victim who confirms without reading the page is
@@ -807,7 +837,7 @@ listed in its banner. Every Critical or High row has its test task.
 | 106 | STORY-001 | Authorization | The hint is edited to Workspace B's IdP on A's site (R6) | High | The token's Organization is B's: MSG122 (AC-001.11); two-Workspace test | Task 25b |
 | 107 | STORY-001 | Timing | Two Workspace creations at once rewrite `tsolve-web`'s redirect list (R7) | High | One at a time; every earlier URI is still there after each write (AC-001.59) | Task 28 |
 | 108 | STORY-001 | Error cascades | `provision` fails after the Organization exists, or the platform undoes the Workspace (R8) | High | The objects created are deleted in reverse order; a repeated call is harmless (AC-001.59, .62) | Task 28 |
-| 109 | STORY-001 | Authorization | The Admin API credentials are read from a Workspace web replica (R9) | High | Not loaded there; least roles in the profiles that have them (AC-001.61) | Task 28 |
+| 109 | STORY-001 | Authorization | The Admin API credentials are read from a Workspace web replica (R9) | High | Not loaded there; least roles in the profiles that have them (AC-001.61); Keycloak 26.4 answers 403 on every Organization call (even a read) without `manage-realm`, so `tsolve-provisioner` holds it too, which also lets a leaked secret change realm settings: keep the secret to `ops` and rotate it on any doubt (Task 28 spike). If Keycloak imports the realm without `KEYCLOAK_ADMIN_CLIENT_SECRET` in its environment, the `tsolve-provisioner` client may keep the public placeholder as its secret while holding `manage-realm`; compose therefore refuses to start without the variable, and the production runbook has a step that sets it and checks it | Task 28 |
 | 110 | STORY-001 | Error cascades | Keycloak is down (R10) | Medium | Nobody can start a sign-in; signed-in sessions in Redis continue; compose and Caddy health check; ADR-0003 upgrade note | Task 23 |
 | 111 | STORY-001 | Environment | The backend reaches Keycloak at a name that differs from the token issuer (R11) | Medium | The start-up check refuses to start and names the issuer (NFR 4) | Task 23 |
 | 112 | STORY-001 | Compliance | A company is removed but its Keycloak users, Organization or IdP remain (R12); PII in Keycloak logs | High | `remove` deletes them (AC-001.62); the runbook's "remove a company"; no email in Keycloak logs | Task 28 |
@@ -816,7 +846,7 @@ listed in its banner. Every Critical or High row has its test task.
 | 115 | STORY-001 | Timing | The callback reaches another API replica than the sign-in start (R15) | High | The request is in Redis, no HTTP session, `NullSecurityContextRepository` (AC-001.55); a two-instance test | Task 23c |
 | 116 | STORY-002 | Integration | A `fetch` POST cannot follow the redirect to Keycloak's end-session URL (R16) | Medium | The answer is 200 `{ logoutUrl }`; the browser navigates (AC-002.1, AC-002.8) | Task 27 |
 | 117 | STORY-001 | Integration | The platform, `jira-app` or fe-foundation still use the old contract (R17) | High | Change requests sent before the dependent code (this plan, "Platform change requests") | Tasks 28, 30, 27 |
-| 118 | STORY-001 | Environment | Google has not applied the new redirect URI yet, or the client's URI limit is reached (R18) | Medium | Google refuses and the Workspace site shows the normal sign-in error; the runbook does the test sign-in before the company is told, lists the URIs and says to check the limit | Task 28 (runbook) |
+| 118 | STORY-001 | Environment | Google has not applied the new redirect URI yet, or the client's URI limit is reached (R18) | Medium | Google refuses on its own `redirect_uri_mismatch` page and never redirects back, so neither Keycloak, the callback nor the Workspace site shows it (not a themed-page case, AC-001.67); the protection is the runbook's test sign-in before the company is told with the registered redirect URIs, which lists the URIs and says to check the limit | Task 28 (runbook) |
 | 119 | STORY-001 | Data integrity | A person's Google email changes (R19) | Low | The Account is found by `sub`; `app_user.email` is unchanged (design decision above) | Task 25a |
 | 120 | STORY-001 | State transitions | A developer database already ran the unreleased `008` and `009` (R20) | Low | `docker compose down -v`; the card notes it | Task 24 |
 | 121 | STORY-001 | Authorization | Jira-link phishing: the victim opens the attacker's link URL and confirms without reading (replaces row 46) | Critical | Mitigated, not closed: single-use 10-minute request, the person's own session, the confirm page names both accounts, CSRF POST; option B (a typed code) stays open (AC-001.69–.72) | Task 30 |

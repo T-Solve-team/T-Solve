@@ -973,6 +973,16 @@
 {"ts":"2026-11-07T20:25:00.860Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T21:31:55.552Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T21:31:55.863Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"evaluating","to":"passing"}
+{"ts":"2026-11-09T14:51:37.708Z","type":"spec-approved","module":"identity","specHash":"9acb02ec5d35d97449edf84a5c7029d6dac0133a97a9ef79853b6cafc7069b8e"}
+{"ts":"2026-11-09T16:05:39.291Z","type":"spec-approved","module":"identity","specHash":"b36d3c7a0b8b96ad09f43822f79c68f743381aa61685dd48a3d8adee9066c66e"}
+{"ts":"2026-11-09T16:53:49.281Z","type":"feature-status","module":"identity","feature":"keycloak-provisioning","from":"pending","to":"in-progress"}
+{"ts":"2026-11-09T16:53:51.827Z","type":"feature-status","module":"identity","feature":"keycloak-provisioning","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-09T16:53:52.928Z","type":"feature-status","module":"identity","feature":"keycloak-provisioning","from":"evaluating","to":"passing"}
+{"ts":"2026-11-09T14:49:11.956Z","type":"spec-approved","module":"identity","specHash":"8521c0b48fe3c1525b56051012c5bbfc3f714b37199346fa6a7812e7aa470bd2"}
+{"ts":"2026-11-09T15:07:45.558Z","type":"spec-approved","module":"identity","specHash":"78d39fd38f3642ceef6c08d2c5eef3e0a25e46508f2bfb323a6ebe119b45ac16"}
+{"ts":"2026-11-09T15:54:08.638Z","type":"feature-status","module":"identity","feature":"keycloak-theme","from":"pending","to":"in-progress"}
+{"ts":"2026-11-09T15:54:14.163Z","type":"feature-status","module":"identity","feature":"keycloak-theme","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-09T15:54:14.871Z","type":"feature-status","module":"identity","feature":"keycloak-theme","from":"evaluating","to":"passing"}
 {"ts":"2026-11-07T16:37:39.807Z","type":"spec-approved","module":"identity","specHash":"901593ef2ad01190f625c891c74097971933f152f06eabcc6841dc7168364304"}
 {"ts":"2026-11-07T16:37:39.868Z","type":"feature-status","module":"identity","feature":"user-roles-backend","from":null,"to":"pending"}
 {"ts":"2026-11-07T16:37:39.933Z","type":"feature-status","module":"identity","feature":"user-roles-backend","from":"pending","to":"in-progress"}
@@ -1074,3 +1084,5 @@
 {"ts":"2026-11-09T17:17:05.165Z","type":"quick-closed","what":"KAN-305 split KnowledgeChatbotPage.test.tsx into three files (conversations, ratings) with shared helpers","files":["frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.conversations.test.tsx","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.ratings.test.tsx","frontend/src/features/chatbot/pages/chatbotTestUtils.tsx"]}
 {"ts":"2026-11-09T17:21:20.279Z","type":"quick-opened","what":"KAN-305 split ImportPreviewPage.test.tsx into two files so they run on two workers","files":["frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.popups.test.tsx"]}
 {"ts":"2026-11-09T17:33:25.895Z","type":"quick-closed","what":"KAN-305 split ImportPreviewPage.test.tsx into two files so they run on two workers","files":["frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.popups.test.tsx"]}
+{"ts":"2026-11-09T16:14:46.706Z","type":"spec-approved","module":"identity","specHash":"4930629625c56462914d96601fcd1bef9edef412d957292fe2c968c3ede0def6"}
+{"ts":"2026-11-09T17:12:45.253Z","type":"spec-approved","module":"identity","specHash":"eba98dc9b616f51a8f51cf5ce0e7c65b362c8b1c8a67049ddfbc16c7f9094ebb"}
