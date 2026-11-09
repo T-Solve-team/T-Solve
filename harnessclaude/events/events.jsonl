@@ -973,6 +973,11 @@
 {"ts":"2026-11-07T20:25:00.860Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T21:31:55.552Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T21:31:55.863Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"evaluating","to":"passing"}
+{"ts":"2026-11-09T14:49:11.956Z","type":"spec-approved","module":"identity","specHash":"8521c0b48fe3c1525b56051012c5bbfc3f714b37199346fa6a7812e7aa470bd2"}
+{"ts":"2026-11-09T15:07:45.558Z","type":"spec-approved","module":"identity","specHash":"78d39fd38f3642ceef6c08d2c5eef3e0a25e46508f2bfb323a6ebe119b45ac16"}
+{"ts":"2026-11-09T15:54:08.638Z","type":"feature-status","module":"identity","feature":"keycloak-theme","from":"pending","to":"in-progress"}
+{"ts":"2026-11-09T15:54:14.163Z","type":"feature-status","module":"identity","feature":"keycloak-theme","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-09T15:54:14.871Z","type":"feature-status","module":"identity","feature":"keycloak-theme","from":"evaluating","to":"passing"}
 {"ts":"2026-11-07T16:37:39.807Z","type":"spec-approved","module":"identity","specHash":"901593ef2ad01190f625c891c74097971933f152f06eabcc6841dc7168364304"}
 {"ts":"2026-11-07T16:37:39.868Z","type":"feature-status","module":"identity","feature":"user-roles-backend","from":null,"to":"pending"}
 {"ts":"2026-11-07T16:37:39.933Z","type":"feature-status","module":"identity","feature":"user-roles-backend","from":"pending","to":"in-progress"}
@@ -1070,3 +1075,4 @@
 {"ts":"2026-11-09T05:07:57.145Z","type":"feature-status","module":"chatbot","feature":"answer-rating-api","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-09T05:14:46.167Z","type":"feature-status","module":"chatbot","feature":"answer-rating-schema","from":"evaluating","to":"passing"}
 {"ts":"2026-11-09T05:15:45.202Z","type":"feature-status","module":"chatbot","feature":"answer-rating-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-09T16:14:46.706Z","type":"spec-approved","module":"identity","specHash":"4930629625c56462914d96601fcd1bef9edef412d957292fe2c968c3ede0def6"}
