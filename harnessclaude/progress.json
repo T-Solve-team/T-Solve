@@ -269,17 +269,17 @@
         "audit-writer": "evaluating",
         "dashboard-api": "passing",
         "dashboard-outcomes": "passing",
-        "dashboard-reuse-gaps": "in-progress",
+        "dashboard-reuse-gaps": "passing",
         "dashboard-page": "pending",
         "dashboard-sections": "pending"
       },
-      "lastUpdated": "2026-11-09T08:26:59.416Z",
+      "lastUpdated": "2026-11-09T08:44:58.678Z",
       "branch": "feat/dashboard-audit",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "2cc0e415b27c2c8d7d26009590a709bd465a9fcb"
+        "default": "9f778b98f5b4a9f26db62b8cd0eb71bfccb83de4"
       }
     },
     "platform": {
