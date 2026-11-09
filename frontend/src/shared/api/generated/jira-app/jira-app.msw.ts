@@ -11,7 +11,17 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
-import type { IssueCreatedPayload, JiraReviewFeedback, MessageRef } from '../model';
+import { ChatbotAnswerOutcome } from '../model';
+import type {
+  ChatbotAnswer,
+  ChatbotQuestion,
+  IssueCreatedPayload,
+  JiraAskerEligibility,
+  JiraReviewFeedback,
+  MessageRef,
+  TicketSolutionCitation,
+  WikiDocumentCitation,
+} from '../model';
 
 export const getGetJiraReviewFeedbackResponseMessageRefMock = (
   overrideResponse: Partial<MessageRef> = {},
@@ -35,6 +45,58 @@ export const getGetJiraReviewFeedbackResponseMock = (
     { ...getGetJiraReviewFeedbackResponseMessageRefMock() },
     null,
   ]),
+  ...overrideResponse,
+});
+
+export const getGetJiraAskerEligibilityResponseMock = (
+  overrideResponse: Partial<Extract<JiraAskerEligibility, object>> = {},
+): JiraAskerEligibility => ({ linked: faker.datatype.boolean(), ...overrideResponse });
+
+export const getAskJiraAppQuestionResponseWikiDocumentCitationMock = (
+  overrideResponse: Partial<WikiDocumentCitation> = {},
+): WikiDocumentCitation => ({
+  ...{
+    number: faker.number.int(),
+    type: faker.helpers.arrayElement(['WIKI_DOCUMENT'] as const),
+    wikiDocumentId: faker.string.uuid(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getAskJiraAppQuestionResponseTicketSolutionCitationMock = (
+  overrideResponse: Partial<TicketSolutionCitation> = {},
+): TicketSolutionCitation => ({
+  ...{
+    number: faker.number.int(),
+    type: faker.helpers.arrayElement(['TICKET_SOLUTION'] as const),
+    solution: {
+      symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      workaround: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      scopeOfApplicability: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getAskJiraAppQuestionResponseMock = (
+  overrideResponse: Partial<Extract<ChatbotAnswer, object>> = {},
+): ChatbotAnswer => ({
+  answerId: faker.string.uuid(),
+  outcome: faker.helpers.arrayElement(Object.values(ChatbotAnswerOutcome)),
+  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  citations: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () =>
+      faker.helpers.arrayElement([
+        { ...getAskJiraAppQuestionResponseWikiDocumentCitationMock() },
+        { ...getAskJiraAppQuestionResponseTicketSolutionCitationMock() },
+      ]),
+  ),
   ...overrideResponse,
 });
 
@@ -82,7 +144,57 @@ export const getReceiveIssueCreatedMockHandler = (
     options,
   );
 };
+
+export const getGetJiraAskerEligibilityMockHandler = (
+  overrideResponse?:
+    | JiraAskerEligibility
+    | ((
+        info: Parameters<HttpResponseResolver>[0],
+      ) => Promise<JiraAskerEligibility> | JiraAskerEligibility),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/jira-app/questions/eligibility',
+    async (info: Parameters<HttpResponseResolver>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetJiraAskerEligibilityResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getAskJiraAppQuestionMockHandler = (
+  overrideResponse?:
+    | ChatbotAnswer
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, ChatbotQuestion>>[0],
+      ) => Promise<ChatbotAnswer> | ChatbotAnswer),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, ChatbotQuestion>(
+    '*/api/v1/jira-app/questions',
+    async (info: Parameters<HttpResponseResolver<PathParams, ChatbotQuestion>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAskJiraAppQuestionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getJiraAppMock = () => [
   getGetJiraReviewFeedbackMockHandler(),
   getReceiveIssueCreatedMockHandler(),
+  getGetJiraAskerEligibilityMockHandler(),
+  getAskJiraAppQuestionMockHandler(),
 ];

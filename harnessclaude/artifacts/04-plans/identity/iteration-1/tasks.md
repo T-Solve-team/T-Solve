@@ -734,3 +734,18 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **PR / Jira:** branch `feat/KAN-108-identity-add-user-api` stacked on KAN-107; Jira KAN-108.
 **Estimated size:** medium (10 production files); about 25 tests
 **Verification:** Tests name AC-005.9 to AC-005.17; `sdd.ts trace identity STORY-005`; `cd backend && mvn verify`; `generate:api` no diff.
+## Task 34: Update roles, Department and Spaces backend — KAN-110
+
+**Story:** STORY-007
+**Feature:** user-roles-backend
+**Decisions owned:** KAN-110 Q1–Q10 (Dương, 07/11: all recommendations)
+**Acceptance criteria:** AC-007.8, AC-007.9, AC-007.10, AC-007.11, AC-007.12, AC-007.13, AC-007.14, AC-007.15, AC-007.16, AC-007.17, AC-007.18, AC-007.19, AC-007.20, AC-007.21, AC-007.22, AC-007.23
+**Description:** Design "Update roles backend — KAN-110, Task 34". `GET /api/v1/users/{userId}`, `GET /api/v1/users/{userId}/handover-options` and `PUT /api/v1/users/{userId}` exactly as `frontend/openapi/tsolve-api.yaml` and the MSW mock; changeset 023 (one Project Manager per Project); the mock seed's Projects. Not in scope: KAN-109 `PUT /users/{id}/status` (next feature), history tables, the frontend MSW pass-through.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/{controller/UserDetailController,dto/UserDetailResponse,dto/UserProjectResponse,dto/UserHandoverOptionsResponse,dto/UpdateUserRolesRequest,service/UserDetailService,service/UserRoleUpdateService,service/impl/UserDetailServiceImpl,service/impl/UserRoleUpdateServiceImpl,repository/UserDetailRepository,repository/UserRoleUpdateRepository}.java`, `backend/src/main/resources/db/changelog/changes/023-identity-one-project-manager.sql`
+- Modify: `db.changelog-master.xml`, `identity/mock/MockUserListSeeder.java`
+- Test: `backend/src/test/java/vn/tsolve/identity/{service/impl/UserRoleUpdateServiceImplTest,controller/UserDetailControllerTest,UserDetailIT,UserRoleUpdateIT}.java`
+**Dependencies:** Task 32 (PR #162) and Task 33 (`feat/KAN-108-identity-add-user-api`: `space`, `space_manager`); this branch is rebased onto Task 33 before its ITs run.
+**PR / Jira:** branch `feat/KAN-110-identity-user-roles-backend` stacked on KAN-108; Jira KAN-110.
+**Estimated size:** large (13 production files); about 40 tests
+**Verification:** Tests name AC-007.8 to AC-007.23; `sdd.ts trace identity STORY-007`; `cd backend && mvn verify`; `generate:api` no diff.

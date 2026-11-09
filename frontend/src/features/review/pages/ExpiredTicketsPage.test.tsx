@@ -64,6 +64,52 @@ function SendBackAction() {
 }
 
 describe('Expired Tickets', () => {
+  it('AC-013.9 loads expired pages and all ids and sends back through the generated production requests', async () => {
+    const ticket = reviewStore.tickets.find((item) => item.ticketId === ticketUuid(323));
+    if (!ticket) throw new Error('Missing expired fixture');
+    const listUrls: URL[] = [];
+    const idUrls: URL[] = [];
+    const sends: { url: URL; body: unknown }[] = [];
+    server.use(
+      http.get('*/api/v1/expired-tickets', ({ request }) => {
+        listUrls.push(new URL(request.url));
+        return HttpResponse.json({
+          content: sends.length ? [] : [{ ...ticket, previousStatus: 'PENDING_REVIEW' }],
+          page: {
+            size: 20,
+            number: 0,
+            totalElements: sends.length ? 0 : 1,
+            totalPages: sends.length ? 0 : 1,
+          },
+        });
+      }),
+      http.get('*/api/v1/expired-tickets/ticket-ids', ({ request }) => {
+        idUrls.push(new URL(request.url));
+        return HttpResponse.json({ ticketIds: sends.length ? [] : [ticket.ticketId] });
+      }),
+      http.post('*/api/v1/reviews/send-back', async ({ request }) => {
+        sends.push({ url: new URL(request.url), body: await request.json() });
+        return HttpResponse.json({ count: 1 });
+      }),
+    );
+    const view = renderApp('/expired-tickets');
+    await screen.findByRole('link', { name: 'EXP-323' }, { timeout: 5000 });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }));
+    const button = screen.getByRole('button', { name: 'Send back to queue' });
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(listUrls[0]?.pathname).toBe('/api/v1/expired-tickets');
+    expect(listUrls[0]?.searchParams.get('page')).toBe('0');
+    expect(listUrls[0]?.searchParams.get('size')).toBe('20');
+    expect(listUrls[0]?.searchParams.getAll('sort')).toEqual(['expiredAt,desc']);
+    expect(idUrls.length).toBeGreaterThan(0);
+    expect(idUrls.every((url) => url.pathname === '/api/v1/expired-tickets/ticket-ids')).toBe(true);
+    expect(idUrls.every((url) => !url.searchParams.has('page'))).toBe(true);
+    await submitAndAwaitMutation(view.queryClient, button);
+    expect(sends).toHaveLength(1);
+    expect(sends[0]?.url.pathname).toBe('/api/v1/reviews/send-back');
+    expect(sends[0]?.body).toEqual({ ticketIds: [ticket.ticketId] });
+    expect(await screen.findByText(msg('MSG25', { count: 1 }))).toBeInTheDocument();
+  });
   it('AC-007.2 BUG-095 switches the default expiry sort to ascending', async () => {
     const view = renderApp('/expired-tickets');
     await screen.findByRole('link', { name: 'EXP-323' }, { timeout: 5000 });

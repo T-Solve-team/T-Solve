@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |---|---|---|---|
+| 2026-11-08 | STORY-003 | The tenant port lists the Active Workspaces, for JOB-02's per-Workspace fan-out (KAN-157) | ticket-review STORY-014; user chose a worker change request over claiming the port in ticket-review |
 | 2026-11-06 | STORY-001 | Define the SMTP delivery slice of KAN-162 | Verify review email delivery before the job queue is available |
 | 2026-11-07 | STORY-002 | Add the KAN-102 contract including JobRunr integration and temporary TenantContext mock | User requested KAN-102, explicitly added JobRunr and requested mocked TenantContext |
 | 2026-11-07 | STORY-002 | Renumber KAN-102 from STORY-001 / AC-001.x to STORY-002 / AC-002.x when merging main | KAN-162 merged first with STORY-001; ids must stay unique within the module |
@@ -68,11 +69,18 @@ owner: BA
   - AC-002.15: IF a persisted job names an unknown handler or has a null workspace or record UUID, THEN THE worker SHALL fail it without invoking a handler.
   - AC-002.16: THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked.
 
+### STORY-003: List the Active Workspaces for recurring jobs (KAN-157)
+
+- As a recurring job such as JOB-02, I want the Workspaces that are Active right now so that I run once in each of them and in no Suspended one (GBR-37, GBR-38).
+- Acceptance:
+  - AC-003.1: WHEN a caller asks the worker tenant port for the Active Workspaces, THE port SHALL return the UUIDs of the Workspaces that are Active at that moment, without binding a Workspace on the calling thread.
+  - AC-003.2: WHILE the worker-mock profile is active, THE mock SHALL return exactly its configured Active allow-list and no Suspended or unlisted Workspace.
+
 ## Out of Scope
 
 - STORY-001: a later KAN-162 change covers retry policy and job delivery, including the limit of three retries in one hour. KAN-155 owns the trigger after a committed review decision; its integration verifies that email failure cannot roll back the decision. The job integration owns recipient lookup in the current Workspace; this slice uses only synthetic recipients in local tests. First Admin invitation, production SMTP provider setup and HTML email are outside this slice.
 - STORY-002: real platform TenantContext, catalog persistence, tenant database routing and row guards (KAN-99 / platform). The mock proves context propagation only, not physical database isolation.
-- STORY-002: production container provisioning, dashboard rollout, recurring JOB-02 registration and per-workspace concurrency caps (KAN-161).
+- STORY-002: production container provisioning, dashboard rollout, per-Workspace recurring job registration on provisioning and per-workspace concurrency caps (KAN-161). JOB-02 itself (one recurring job fanning out per Active Workspace) is ticket-review STORY-014.
 - STORY-002: wiring the SMTP sender and first-Admin invitation as job handlers (KAN-162 follow-up).
 - REST endpoints, frontend changes, changes to tenant business tables and a new custom queue implementation.
 - Exactly-once delivery: handlers must tolerate JobRunr retries; this module does not add a distributed transaction between business writes and job enqueue.
@@ -85,6 +93,7 @@ owner: BA
 - `TenantJobService.enqueue(String handlerType, UUID recordId)` (STORY-002): returns the JobRunr job id; captures the bound workspace rather than accepting a caller-supplied workspace.
 - `TenantExecutionService.runInTenant(UUID workspaceId, Runnable action)` (STORY-002): checked workspace scope; no transaction is held across workspace selection.
 - `TenantJobHandler` (STORY-002): registered handler type plus execution of a record UUID under the job workspace; production business handlers are supplied by consuming modules.
+- `WorkerTenantService.activeWorkspaceIds()` (STORY-003): the UUIDs of the Active Workspaces at the time of the call; the platform adapter implements it from the catalog later.
 - JobRunr execution entry point (STORY-002): workspace UUID, handler type and record UUID only; no HTTP surface.
 
 ### Required from other modules

@@ -1279,3 +1279,37 @@ Covers AC-005.9 to AC-005.17; decisions Q1–Q3 of 07/11 (spec Changelog). Build
 - **Tests.** Unit: validation order and codes. MVC: 401/403/400. IT (`TwoTenantDatabases`): creation lands only in
   `tenant_a`; a duplicate email in `tenant_b` does not block ACME; MSG11/MSG111; MSG117 including two concurrent
   creations for one Space; registry refusal → MSG155 and nothing saved; creation-options; audit row.
+## Update roles backend — KAN-110, Task 34 (2026-11-07)
+
+Covers AC-007.8 to AC-007.23; the user's ten decisions of 07/11 (spec Changelog). Builds on Task 32 (caller,
+`identity-mock` profile, `user_role`, `app_user.department_id`) and Task 33 (`space`, `space_manager`, changeset 020,
+arriving by rebase onto `feat/KAN-108-identity-add-user-api`).
+
+- **Endpoints.** `GET /api/v1/users/{userId}` (`getUserDetail`), `GET /api/v1/users/{userId}/handover-options`
+  (`getUserHandoverOptions`), `PUT /api/v1/users/{userId}` (`updateUserRoles`), all `@PreAuthorize` ADMIN. `{userId}`
+  is matched as a UUID pattern so `/departments` (Task 32) and `/creation-options` (Task 33) keep their mappings; a
+  non-UUID or unknown id is 404 MSG04. Contract and MSW behaviour: `frontend/openapi/tsolve-api.yaml` and
+  `frontend/src/features/users/mocks/{roles-handler,handover,state}.ts` (research note
+  `kan-110-research.md`, file:line references).
+- **Schema.** Changeset `023-identity-one-project-manager.sql` (author `identity`): partial unique index
+  `uq_membership_one_manager ON project_membership (project_id) WHERE role_in_project = 'PROJECT_MANAGER'`
+  (baseline rule; enforces AC-007.19). No history tables: former managers and memberships are kept in the
+  `ROLE_CHANGE` audit details only.
+- **Read.** `UserDetail` = Task 32's `UserAccount` row + `isCurrentUser` + `ticketResolverProjectIds` + `projects`
+  (`UserProject.name` = `project.jira_project_key`; Projects without a Project Manager row are left out) +
+  `managedSpaces`. Handover options: eligible recipients computed by one query per responsibility kind.
+- **Write.** `UserRoleUpdateService` / impl in one `@Transactional` method, checks in the AC-007.20 order. Locks:
+  `SELECT … FOR UPDATE` on the target `app_user` row; WHEN ADMIN is removed, on every Active Admin's `app_user` row
+  (ordered by id to avoid deadlocks) before counting; on the recipients' rows before re-checking eligibility; on the
+  requested `space` rows before the MSG117 check. A unique violation on `space_manager` maps to 409 MSG117; a
+  violation of the one-Project-Manager index (only reachable by two concurrent handovers of the same Project) rolls
+  the whole update back and answers 500 MSG06, logged. Apply: roles, Department
+  (stored as sent, also for a non-PM), Spaces, handovers, membership changes (AC-007.19), one audit event.
+- **Seed.** `MockUserListSeeder` adds, idempotently, Projects of a demo Department (two `ACTIVE`, one non-Active)
+  managed by the seeded Project Manager, a second Project Manager eligible for one Department only (so one Project
+  shows MSG59), and `MEMBER` rows for the seeded Ticket Resolver (MSG78).
+- **Tests.** Unit: each check, its order, codes, params. MVC: 401/403/404/400 MSG06. IT (`TwoTenantDatabases`):
+  detail and handover options; a full update with Project and Space handovers; MSG117, MSG56, MSG113, MSG59,
+  MSG118, Hand Over Responsibilities MSG01, MSG78 with and without confirmation; rollback leaves every row unchanged;
+  a BETA recipient/Project/Space is never offered or accepted; two Admins removing each other's Admin role at once →
+  exactly one succeeds; two updates racing for one Space → one 409 MSG117.

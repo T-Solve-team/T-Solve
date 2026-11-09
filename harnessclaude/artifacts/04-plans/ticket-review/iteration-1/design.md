@@ -49,3 +49,11 @@ Delivery: separate branch feat/KAN-159-review-history currently stacked on commi
 ## KAN-24 production backend
 
 Start with the shared UUID storage and import migration (master design R13). Follow with the Workspace-scoped queue, detail and decision API (R14), then verified Jira feedback (R15). Pause at each verified commit checkpoint.
+
+## KAN-156 extension: production Expired tickets and send-back (STORY-013)
+
+The master section "KAN-156 extension" holds the decisions. Backend first: changeset 024 widens `ck_review_decision` with SEND_BACK; Expired list and ids in `TicketReviewReadService`, scoped through `ReviewWorkspaceAccess`; `TicketDecisionService.sendBack` locks and validates the whole batch (400/404/403/409), then one native update recalculates the due date from `project.review_range` (fallback 3) and one SEND_BACK decision is stored per ticket; History maps SEND_BACK. Then the OpenAPI wording, the regenerated client and a page test for AC-013.9. Test fixtures insert EXPIRED tickets directly, so nothing depends on JOB-02 (KAN-157). Branch `feat/KAN-156-review-send-back`; one feature commit plus its harness commit after the user agrees.
+
+## KAN-157 extension: JOB-02 (STORY-014)
+
+Follow the master's "KAN-157 extension". One feature, `review-expiry-job` (Task 17): the changelog with `expired_at` and `status_before_expiry`; one JobRunr recurring job at 00:00 Asia/Ho_Chi_Minh that enqueues one `ReviewExpiryJobRequest(workspaceId, attempt)` per Active Workspace; a per-Workspace handler that skips non-Active Workspaces, runs one transactional UPDATE inside `runInTenant`, logs counts per Project, and on failure schedules attempt n+1 fifteen minutes later up to attempt 3 (JobRunr retries off). Depends on worker Task 3 (`activeWorkspaceIds()`); both are committed on `feat/KAN-157-review-expiry-job`.

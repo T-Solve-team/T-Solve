@@ -2,7 +2,7 @@
 module: chatbot
 date: 2026-11-06
 iteration: 2
-total_tasks: 5
+total_tasks: 7
 owner: Dev
 ---
 
@@ -140,4 +140,48 @@ Order: search Task 19 → Task 6 → Task 7 → Task 8 → Task 9 → Task 10.
   (`rejectsBadHistory_AC_007_3`)
 **Covers:** AC-007.1 – AC-007.4 (edge cases B8, B9)
 **Dependencies:** Tasks 8, 9
+**Estimated size:** small
+
+---
+
+## Task 11: Rating columns
+
+**Story:** STORY-008
+**Feature:** answer-rating-schema
+**Jira:** KAN-182 · branch `feat/KAN-182-chatbot-rating-api` (from `main`, independent of KAN-180/181)
+**Description:**
+- Changeset `024-chatbot-answer-rating.sql` as in the design "Backend ratings": two nullable columns, two checks,
+  `--rollback`; included in `db.changelog-master.xml`; `ChatbotAnswer` gains `rating` and `ratedAt`.
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/024-chatbot-answer-rating.sql`,
+  `…/chatbot/rating/entity/ChatbotRating.java` (enum)
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `…/chatbot/answer/entity/ChatbotAnswer.java`
+- Test: `…/test/chatbot/rating/ChatbotRatingSchemaIT.java` (`addsNullableRatingColumnsWithChecks_AC_008_6`,
+  `rollsBackTheColumns_AC_008_6`)
+**Covers:** AC-008.6 (edge case R4)
+**Dependencies:** none (KAN-179 is on `main`)
+**Estimated size:** small
+
+---
+
+## Task 12: Rating API
+
+**Story:** STORY-008
+**Feature:** answer-rating-api
+**Jira:** KAN-182 · branch `feat/KAN-182-chatbot-rating-api`
+**Description:**
+- `ChatbotRatingController` `PUT` / `DELETE /api/v1/chatbot/answers/{answerId}/rating` (`authenticated()`) and the
+  service with the owner-scoped update of the design: 204, 404 MSG04, 400 MSG06, 401 MSG07.
+- No frontend change: the contract exists. With `VITE_API_MOCKING=false` the KAN-76 buttons save, replace and remove
+  a rating on the real backend — checked by hand and noted in the PR.
+**Files:**
+- Create: `…/chatbot/rating/controller/ChatbotRatingController.java`, `…/chatbot/rating/dto/ChatbotRatingRequest.java`,
+  `…/chatbot/rating/service/ChatbotRatingService.java`, `…/chatbot/rating/service/impl/ChatbotRatingServiceImpl.java`
+- Modify: `…/chatbot/answer/repository/ChatbotAnswerRepository.java`
+- Test: `…/test/chatbot/rating/controller/ChatbotRatingControllerTest.java` (`savesRating_AC_008_1`,
+  `removesRating_AC_008_2`, `answers404ForUnknownOrOthersAnswer_AC_008_3`, `rejectsBadBody_AC_008_4`,
+  `answers401WithoutSession_AC_008_5`), `…/test/chatbot/rating/ChatbotRatingIT.java`
+  (`replacesRatingOnOwnAnswerOnly_AC_008_1`, `clearsRatingAndTime_AC_008_2`, `leavesOthersAnswerUnchanged_AC_008_3`)
+**Covers:** AC-008.1 – AC-008.5 (edge cases R1–R3)
+**Dependencies:** Task 11
 **Estimated size:** small
