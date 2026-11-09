@@ -42,4 +42,6 @@
     <include file="changes/021-identity-drop-sign-in-states.sql" relativeToChangelogFile="true"/>
     <include file="changes/022-identity-drop-hand-off-code.sql" relativeToChangelogFile="true"/>
     <include file="changes/023-identity-one-project-manager.sql" relativeToChangelogFile="true"/>
+    <include file="changes/024-review-send-back-decision.sql" relativeToChangelogFile="true"/>
+    <include file="changes/025-review-ticket-expiry.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

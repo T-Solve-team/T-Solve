@@ -879,8 +879,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "12189f157d3b550a3e23af078410b0e145d1374e8704fc7c75886caa01222f3b",
-    "approvedAt": "2026-11-07T10:16:20.325Z",
+    "specHash": "6856d0978fb84b748c2eaaf44f7cd32d5d930d02c1a7952786d81c28925ca918",
+    "approvedAt": "2026-11-08T08:10:16.478Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -959,7 +959,24 @@
       "AC-012.4": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the stream with 401 or 403 and open no stream.",
       "AC-012.5": "WHEN the Review Queue screen receives a  event, THE frontend SHALL refetch the queue page and eligible ticket ids it currently shows, keeping the existing selection and stale-data rules (STORY-005).",
       "AC-012.6": "WHILE the event stream is open, THE frontend SHALL not run the 5-second queue polling. WHILE the stream is closed or failing, THE frontend SHALL keep the existing visible-tab 5-second polling, and WHEN the stream opens again it SHALL refetch the queue once.",
-      "AC-012.7": "WHEN the user leaves the Review Queue screen, THE frontend SHALL close its event stream."
+      "AC-012.7": "WHEN the user leaves the Review Queue screen, THE frontend SHALL close its event stream.",
+      "AC-013.1": "WHEN a Project Manager queries GET , THE API SHALL use the signed-in Workspace and the Projects they manage through the Review Workspace access and return only EXPIRED Solution Form tickets of those Projects, each with ticket UUID, source key, title, Project, source, writer name, enteredQueueAt, reviewDueDate, expiredAt and previousStatus, paged with the existing page and size conventions, latest expiredAt first by default with the ticket UUID as tie-breaker.",
+      "AC-013.2": "WHEN a Project Manager queries GET , THE API SHALL return the UUIDs of every ticket the Expired list returns for the same Department filter across all pages. WHEN departmentId is supplied, both endpoints SHALL return only tickets of that Department's Projects. IF that Department has no Project the caller manages, THEN THE API SHALL return an empty page and an empty id list.",
+      "AC-013.3": "WHEN the API returns an Expired ticket, THE API SHALL report previousStatus as PENDING_REVIEW and expiredAt as 00:00 Vietnam time (UTC+07:00) on the calendar day after the ticket's review due date, without storing either value.",
+      "AC-013.4": "WHEN the Expired list is sorted by expiredAt, sourceTicketId, title or project, ascending or descending, THE API SHALL apply that order. IF the sort names any other field or direction, or page or size is outside the existing limits, THEN THE API SHALL refuse the request with 400 and MSG06.",
+      "AC-013.5": "WHEN a Project Manager sends back 1 to 500 unique UUIDs through POST  and every ticket is an EXPIRED Solution Form ticket of a Project they manage, THE backend SHALL in one Workspace transaction change every ticket to PENDING_REVIEW, set its review_queue_entered_at to the send-back time, set its review due date to the send-back calendar date in Vietnam time plus its Project's review_range days (3 days when review_range is null or not positive) (GBR-10), keep its Solution and Evidence unchanged, and record one SEND_BACK review decision per ticket with the caller, the send-back time and no reason or comment; THE API SHALL return the number of tickets sent back as count and SHALL enqueue no review notification job.",
+      "AC-013.6": "IF ticketIds is empty, holds more than 500 entries, holds a duplicate or holds a value that is not a UUID, THEN THE API SHALL refuse the batch with 400. IF any ticket does not exist in the signed-in Workspace, THEN THE API SHALL refuse the batch with 404 and expose no ticket data. IF any ticket belongs to a Project the caller does not manage, THEN THE API SHALL refuse the batch with 403. IF any ticket is no longer EXPIRED or is not a Solution Form ticket, THEN THE API SHALL refuse the batch with 409. In every refused case THE backend SHALL change no ticket and record no review decision.",
+      "AC-013.7": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the Expired list, the Expired ticket ids and send-back with 401 or 403 and expose no ticket.",
+      "AC-013.8": "WHEN Review History returns a stored SEND_BACK decision, THE API SHALL report it as SEND_BACK with null reason and null comment, with the same actor, author, ticket and Project fields as AC-011.2; WHEN the decision filter is SEND_BACK, THE API SHALL return those decisions.",
+      "AC-013.9": "WHEN the production web application loads Expired Tickets or sends tickets back, THE frontend SHALL use the published getExpiredTickets, getExpiredTicketIds and sendBackTickets operations through the existing generated client, and the OpenAPI contract SHALL describe them as production operations.",
+      "AC-014.1": "WHEN a backend process starts with the worker integration enabled, THE backend SHALL register the JOB-02 recurring job under one fixed id with the schedule every day at 00:00 in the Asia/Ho_Chi_Minh time zone (UTC+7), so that several processes keep a single registration.",
+      "AC-014.2": "WHEN JOB-02 runs, THE worker SHALL enqueue one expiry job, with attempt number 1, for each Workspace the worker tenant port lists as Active at that moment, and none for a Suspended or unknown Workspace (GBR-38).",
+      "AC-014.3": "WHEN an expiry job runs for an Active Workspace, THE worker SHALL, inside runInTenant for that Workspace and in one transaction, set to EXPIRED every ticket in PENDING_REVIEW or CHANGES_REQUESTED whose review_due_date is before the current calendar date in Vietnam time and whose Project's Department is not deleted, and SHALL store for each ticket the expiry time in expired_at and its previous status in status_before_expiry.",
+      "AC-014.4": "THE expiry job SHALL leave unchanged every ticket whose review_due_date is today or later or not set, every ticket in another status, every ticket of a deleted Department, and the Solution, Evidence, review_due_date and review decisions of the tickets it expires. WHEN the expiry job runs again on the same calendar date, THE worker SHALL change no ticket.",
+      "AC-014.5": "WHEN the expiry transaction commits, THE expired tickets SHALL no longer appear in the Review Queue or its eligible ids, and THE worker SHALL log one line per Project with expired tickets, carrying only the Workspace UUID, the Project UUID and the count. IF no ticket is overdue, THEN THE worker SHALL end without changing any ticket.",
+      "AC-014.6": "IF the expiry transaction fails, THEN THE worker SHALL roll back every ticket change of that attempt, log the failure without ticket content, and schedule another expiry job for that Workspace 15 minutes later with the next attempt number. IF attempt 3 fails, THEN THE worker SHALL schedule no further attempt and the overdue tickets SHALL wait for the next 00:00 run.",
+      "AC-014.7": "IF the Workspace is Suspended or unknown when an expiry job runs, THEN THE worker SHALL change no ticket and schedule no further attempt (GBR-38).",
+      "AC-014.8": "THE expiry job payload SHALL hold only the Workspace UUID and the attempt number, and JOB-02 SHALL record no review decision and no audit entry. THE tenant changelog SHALL add nullable ticket.expired_at as TIMESTAMPTZ and nullable ticket.status_before_expiry as VARCHAR(20) limited to PENDING_REVIEW and CHANGES_REQUESTED."
     }
   },
   "ai": {
@@ -1031,8 +1048,8 @@
     }
   },
   "worker": {
-    "specHash": "7e0c5e3f9cbd6c1066fb73b11e67bfd2703687a2e54764b0918fe34c795cb4bc",
-    "approvedAt": "2026-11-07T05:14:30.768Z",
+    "specHash": "621fd5d26ab4f777ec03557dbd1dbd707c5fa44f0a3850b98e9d29c3f1303ed9",
+    "approvedAt": "2026-11-08T07:39:07.938Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the caller submits a Reject notification, THE SMTP sender SHALL send a plain-text email to the supplied writer address with a rejection subject, the ticket key and the rejection reason.",
@@ -1057,7 +1074,9 @@
       "AC-002.13": "WHEN JobRunr integration is enabled, THE backend SHALL use a dedicated Jobs DataSource configured by environment variables and SHALL never fall back to its business or catalog DataSource.",
       "AC-002.14": "THE backend SHALL disable job execution and the JobRunr dashboard by default; WHEN the worker profile is enabled with required configuration, THE backend SHALL enable background processing while keeping the dashboard disabled.",
       "AC-002.15": "IF a persisted job names an unknown handler or has a null workspace or record UUID, THEN THE worker SHALL fail it without invoking a handler.",
-      "AC-002.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked."
+      "AC-002.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked.",
+      "AC-003.1": "WHEN a caller asks the worker tenant port for the Active Workspaces, THE port SHALL return the UUIDs of the Workspaces that are Active at that moment, without binding a Workspace on the calling thread.",
+      "AC-003.2": "WHILE the worker-mock profile is active, THE mock SHALL return exactly its configured Active allow-list and no Suspended or unlisted Workspace."
     }
   },
   "jira-app": {

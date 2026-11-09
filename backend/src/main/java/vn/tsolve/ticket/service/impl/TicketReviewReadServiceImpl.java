@@ -26,6 +26,8 @@ import org.springframework.web.server.ResponseStatusException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.dto.TicketReviewView.Detail;
 import vn.tsolve.ticket.dto.TicketReviewView.Evidence;
+import vn.tsolve.ticket.dto.TicketReviewView.ExpiredItem;
+import vn.tsolve.ticket.dto.TicketReviewView.ExpiredRow;
 import vn.tsolve.ticket.dto.TicketReviewView.Feedback;
 import vn.tsolve.ticket.dto.TicketReviewView.HistoryFilter;
 import vn.tsolve.ticket.dto.TicketReviewView.HistoryItem;
@@ -58,10 +60,17 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
     private static final Instant NO_UPPER_BOUND = Instant.parse("9999-01-01T00:00:00Z");
 
     /** Contract decision value → stored review_decision.decision. Other contract values have no stored rows. */
-    private static final Map<String, String> STORED_DECISION =
-            Map.of("APPROVE", "APPROVED", "REJECT", "REJECTED", "REQUEST_CHANGES", "CHANGES_REQUESTED");
+    private static final Map<String, String> STORED_DECISION = Map.of(
+            "APPROVE",
+            "APPROVED",
+            "REJECT",
+            "REJECTED",
+            "REQUEST_CHANGES",
+            "CHANGES_REQUESTED",
+            "SEND_BACK",
+            "SEND_BACK");
 
-    private static final List<String> HISTORY_ONLY_DECISIONS = List.of("UNPUBLISH", "REPUBLISH", "SEND_BACK");
+    private static final List<String> HISTORY_ONLY_DECISIONS = List.of("UNPUBLISH", "REPUBLISH");
 
     private final TicketRepository tickets;
     private final TicketEvidenceRepository evidence;
@@ -135,6 +144,73 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
     }
 
     @Override
+    public Page<ExpiredItem> expired(
+            Map<UUID, ProjectAccess> projects, UUID departmentId, int page, int size, List<String> sort) {
+        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+            throw new InvalidReviewHistoryFilterException(INVALID_FILTER);
+        }
+        Comparator<ExpiredItem> order = expiredOrder(sort);
+        Pageable paging = PageRequest.of(page, size);
+        List<ExpiredRow> rows = expiredRows(projects, departmentId);
+        List<ExpiredItem> items = rows.stream()
+                .map(row -> new ExpiredItem(
+                        row.ticketId(),
+                        row.sourceTicketId(),
+                        row.title(),
+                        projects.get(row.projectId()).project(),
+                        TicketSource.SOLUTION_FORM.name(),
+                        row.authorName(),
+                        row.enteredQueueAt(),
+                        dueAt(row.reviewDueDate()),
+                        row.reviewDueDate() == null
+                                ? row.updatedAt().atZone(REVIEW_ZONE).toOffsetDateTime()
+                                : dueAt(row.reviewDueDate().plusDays(1)),
+                        TicketStatus.PENDING_REVIEW.name()))
+                .sorted(order)
+                .skip(paging.getOffset())
+                .limit(size)
+                .toList();
+        return new PageImpl<>(items, paging, rows.size());
+    }
+
+    @Override
+    public List<UUID> expiredIds(Map<UUID, ProjectAccess> projects, UUID departmentId) {
+        return expiredRows(projects, departmentId).stream()
+                .map(ExpiredRow::ticketId)
+                .sorted()
+                .toList();
+    }
+
+    private List<ExpiredRow> expiredRows(Map<UUID, ProjectAccess> projects, UUID departmentId) {
+        List<UUID> managed = managedProjects(projects, departmentId);
+        return managed.isEmpty() ? List.of() : tickets.findExpiredTickets(managed);
+    }
+
+    private static Comparator<ExpiredItem> expiredOrder(List<String> sort) {
+        return (sort == null || sort.isEmpty() ? List.of("expiredAt,desc") : sort)
+                .stream()
+                        .map(TicketReviewReadServiceImpl::expiredSortBy)
+                        .reduce(Comparator::thenComparing)
+                        .orElseThrow()
+                        .thenComparing(ExpiredItem::ticketId);
+    }
+
+    private static Comparator<ExpiredItem> expiredSortBy(String sort) {
+        String[] parts = sort.split(",", -1);
+        if (parts.length > 2 || (parts.length == 2 && !parts[1].equals("asc") && !parts[1].equals("desc"))) {
+            throw new InvalidReviewHistoryFilterException(INVALID_FILTER);
+        }
+        boolean descending = parts.length == 2 && parts[1].equals("desc");
+        return switch (parts[0]) {
+            case "expiredAt" -> compare(ExpiredItem::expiredAt, descending);
+            case "sourceTicketId" -> compare(ExpiredItem::sourceTicketId, descending);
+            case "title" -> compare(ExpiredItem::title, descending);
+            case "project" -> compare((ExpiredItem item) -> item.project().name(), descending);
+            default -> throw new InvalidReviewHistoryFilterException(INVALID_FILTER);
+        };
+    }
+
+    @Override
     public Detail detail(Map<UUID, ProjectAccess> projects, UUID accountId, boolean manager, UUID ticketId) {
         var ticket = tickets.findForReviewDetail(ticketId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
         var project = projects.get(ticket.getProjectId());
@@ -169,13 +245,17 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
     }
 
     private List<QueueRow> queueRows(Map<UUID, ProjectAccess> projects, UUID departmentId) {
-        List<UUID> managed = projects.entrySet().stream()
+        List<UUID> managed = managedProjects(projects, departmentId);
+        return managed.isEmpty() ? List.of() : tickets.findReviewQueue(managed);
+    }
+
+    private static List<UUID> managedProjects(Map<UUID, ProjectAccess> projects, UUID departmentId) {
+        return projects.entrySet().stream()
                 .filter(project -> project.getValue().managed())
                 .filter(project -> departmentId == null
                         || departmentId.equals(project.getValue().departmentId()))
                 .map(Map.Entry::getKey)
                 .toList();
-        return managed.isEmpty() ? List.of() : tickets.findReviewQueue(managed);
     }
 
     private static HistoryItem historyItem(HistoryRow row, Map<UUID, ProjectAccess> projects) {
@@ -184,6 +264,7 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
                     case "APPROVED" -> "APPROVE";
                     case "REJECTED" -> "REJECT";
                     case "CHANGES_REQUESTED" -> "REQUEST_CHANGES";
+                    case "SEND_BACK" -> "SEND_BACK";
                     default -> throw new IllegalStateException("Unknown stored review decision");
                 };
         return new HistoryItem(
@@ -290,8 +371,7 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
         };
     }
 
-    private static <T extends Comparable<? super T>> Comparator<QueueItem> compare(
-            Function<QueueItem, T> key, boolean descending) {
+    private static <I, T extends Comparable<? super T>> Comparator<I> compare(Function<I, T> key, boolean descending) {
         Comparator<T> order = descending ? Comparator.reverseOrder() : Comparator.naturalOrder();
         return Comparator.comparing(key, Comparator.nullsLast(order));
     }
