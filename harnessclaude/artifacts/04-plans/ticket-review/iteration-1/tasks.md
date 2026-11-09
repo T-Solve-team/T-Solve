@@ -155,3 +155,12 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** `review/service/impl/ReviewQueueEventServiceImpl.java`, `review/service/ReviewQueueEventService.java`, `review/controller/ReviewQueueEventController.java`, `review/ReviewQueueEventsIT.java` (and a unit test under `review/service/impl/` if timing needs fakes).
 **Dependencies:** Task 13.
 **Verification:** `ReviewQueueEventsIT` and the new tests; full `mvn verify`; trace STORY-012.
+
+## Task 17: JOB-02 expires overdue tickets (KAN-157)
+
+**Story:** STORY-014
+**Feature:** review-expiry-job
+**Description:** Implement AC-014.1–014.8 as in the master's "KAN-157 extension". Changelog `025-review-ticket-expiry.sql`; `ReviewExpiryService` + impl with one `UPDATE … RETURNING project_id` for PENDING_REVIEW and CHANGES_REQUESTED tickets due before today (Vietnam), skipping deleted Departments, plus a per-Project log line; `ReviewExpiryDispatchHandler`, `ReviewExpiryJobHandler` (`@Job(retries = 0)`, own 15-minute retry up to 3 attempts, skips non-Active Workspaces) and `ReviewExpiryRegistration` (recurring id `review-job-02-expire-overdue`, `0 0 * * *`, Asia/Ho_Chi_Minh), all only with `tsolve.worker.enabled=true`. Test first.
+**Files:** `backend/src/main/resources/db/changelog/changes/025-review-ticket-expiry.sql` + `db.changelog-master.xml`; `review/dto/ReviewExpiry{Dispatch,Job}Request.java`; `review/service/ReviewExpiryService.java`; `review/service/impl/ReviewExpiry{ServiceImpl,DispatchHandler,JobHandler,Registration}.java`; `review/repository/ReviewExpiryRepository.java`; tests `review/ReviewExpiryIT.java`, `review/service/impl/ReviewExpiry{JobHandler,DispatchHandler,Registration}Test.java`.
+**Dependencies:** worker Task 3 (`WorkerTenantService.activeWorkspaceIds()`); STORY-012 trigger (Task 13); tenant ticket storage (Task 5).
+**Verification:** named AC-014 tests; PostgreSQL IT for the UPDATE, dates around VN midnight, Department, columns, queue and eligible ids, idempotence, rollback; `mvn verify` (tests + spotless); `sdd.ts trace ticket-review STORY-014`.

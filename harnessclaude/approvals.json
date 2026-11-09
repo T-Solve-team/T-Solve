@@ -854,8 +854,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "12189f157d3b550a3e23af078410b0e145d1374e8704fc7c75886caa01222f3b",
-    "approvedAt": "2026-11-07T10:16:20.325Z",
+    "specHash": "6856d0978fb84b748c2eaaf44f7cd32d5d930d02c1a7952786d81c28925ca918",
+    "approvedAt": "2026-11-08T08:10:16.478Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -934,7 +934,15 @@
       "AC-012.4": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the stream with 401 or 403 and open no stream.",
       "AC-012.5": "WHEN the Review Queue screen receives a  event, THE frontend SHALL refetch the queue page and eligible ticket ids it currently shows, keeping the existing selection and stale-data rules (STORY-005).",
       "AC-012.6": "WHILE the event stream is open, THE frontend SHALL not run the 5-second queue polling. WHILE the stream is closed or failing, THE frontend SHALL keep the existing visible-tab 5-second polling, and WHEN the stream opens again it SHALL refetch the queue once.",
-      "AC-012.7": "WHEN the user leaves the Review Queue screen, THE frontend SHALL close its event stream."
+      "AC-012.7": "WHEN the user leaves the Review Queue screen, THE frontend SHALL close its event stream.",
+      "AC-014.1": "WHEN a backend process starts with the worker integration enabled, THE backend SHALL register the JOB-02 recurring job under one fixed id with the schedule every day at 00:00 in the Asia/Ho_Chi_Minh time zone (UTC+7), so that several processes keep a single registration.",
+      "AC-014.2": "WHEN JOB-02 runs, THE worker SHALL enqueue one expiry job, with attempt number 1, for each Workspace the worker tenant port lists as Active at that moment, and none for a Suspended or unknown Workspace (GBR-38).",
+      "AC-014.3": "WHEN an expiry job runs for an Active Workspace, THE worker SHALL, inside runInTenant for that Workspace and in one transaction, set to EXPIRED every ticket in PENDING_REVIEW or CHANGES_REQUESTED whose review_due_date is before the current calendar date in Vietnam time and whose Project's Department is not deleted, and SHALL store for each ticket the expiry time in expired_at and its previous status in status_before_expiry.",
+      "AC-014.4": "THE expiry job SHALL leave unchanged every ticket whose review_due_date is today or later or not set, every ticket in another status, every ticket of a deleted Department, and the Solution, Evidence, review_due_date and review decisions of the tickets it expires. WHEN the expiry job runs again on the same calendar date, THE worker SHALL change no ticket.",
+      "AC-014.5": "WHEN the expiry transaction commits, THE expired tickets SHALL no longer appear in the Review Queue or its eligible ids, and THE worker SHALL log one line per Project with expired tickets, carrying only the Workspace UUID, the Project UUID and the count. IF no ticket is overdue, THEN THE worker SHALL end without changing any ticket.",
+      "AC-014.6": "IF the expiry transaction fails, THEN THE worker SHALL roll back every ticket change of that attempt, log the failure without ticket content, and schedule another expiry job for that Workspace 15 minutes later with the next attempt number. IF attempt 3 fails, THEN THE worker SHALL schedule no further attempt and the overdue tickets SHALL wait for the next 00:00 run.",
+      "AC-014.7": "IF the Workspace is Suspended or unknown when an expiry job runs, THEN THE worker SHALL change no ticket and schedule no further attempt (GBR-38).",
+      "AC-014.8": "THE expiry job payload SHALL hold only the Workspace UUID and the attempt number, and JOB-02 SHALL record no review decision and no audit entry. THE tenant changelog SHALL add nullable ticket.expired_at as TIMESTAMPTZ and nullable ticket.status_before_expiry as VARCHAR(20) limited to PENDING_REVIEW and CHANGES_REQUESTED."
     }
   },
   "ai": {
@@ -1006,8 +1014,8 @@
     }
   },
   "worker": {
-    "specHash": "7e0c5e3f9cbd6c1066fb73b11e67bfd2703687a2e54764b0918fe34c795cb4bc",
-    "approvedAt": "2026-11-07T05:14:30.768Z",
+    "specHash": "621fd5d26ab4f777ec03557dbd1dbd707c5fa44f0a3850b98e9d29c3f1303ed9",
+    "approvedAt": "2026-11-08T07:39:07.938Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the caller submits a Reject notification, THE SMTP sender SHALL send a plain-text email to the supplied writer address with a rejection subject, the ticket key and the rejection reason.",
@@ -1032,7 +1040,9 @@
       "AC-002.13": "WHEN JobRunr integration is enabled, THE backend SHALL use a dedicated Jobs DataSource configured by environment variables and SHALL never fall back to its business or catalog DataSource.",
       "AC-002.14": "THE backend SHALL disable job execution and the JobRunr dashboard by default; WHEN the worker profile is enabled with required configuration, THE backend SHALL enable background processing while keeping the dashboard disabled.",
       "AC-002.15": "IF a persisted job names an unknown handler or has a null workspace or record UUID, THEN THE worker SHALL fail it without invoking a handler.",
-      "AC-002.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked."
+      "AC-002.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked.",
+      "AC-003.1": "WHEN a caller asks the worker tenant port for the Active Workspaces, THE port SHALL return the UUIDs of the Workspaces that are Active at that moment, without binding a Workspace on the calling thread.",
+      "AC-003.2": "WHILE the worker-mock profile is active, THE mock SHALL return exactly its configured Active allow-list and no Suspended or unlisted Workspace."
     }
   },
   "jira-app": {

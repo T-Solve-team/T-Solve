@@ -49,3 +49,7 @@ Delivery: separate branch feat/KAN-159-review-history currently stacked on commi
 ## KAN-24 production backend
 
 Start with the shared UUID storage and import migration (master design R13). Follow with the Workspace-scoped queue, detail and decision API (R14), then verified Jira feedback (R15). Pause at each verified commit checkpoint.
+
+## KAN-157 extension: JOB-02 (STORY-014)
+
+Follow the master's "KAN-157 extension". One feature, `review-expiry-job` (Task 17): the changelog with `expired_at` and `status_before_expiry`; one JobRunr recurring job at 00:00 Asia/Ho_Chi_Minh that enqueues one `ReviewExpiryJobRequest(workspaceId, attempt)` per Active Workspace; a per-Workspace handler that skips non-Active Workspaces, runs one transactional UPDATE inside `runInTenant`, logs counts per Project, and on failure schedules attempt n+1 fifteen minutes later up to attempt 3 (JobRunr retries off). Depends on worker Task 3 (`activeWorkspaceIds()`); both are committed on `feat/KAN-157-review-expiry-job`.
