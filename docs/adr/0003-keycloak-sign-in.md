@@ -34,8 +34,9 @@ bindings, an OIDC client) was security code we had to write, test and keep corre
   each request). Keycloak SSO Session Max is at most 8 h and Idle at most 60 min.
 - **K10** Logout ends the Redis session and does OIDC RP-initiated logout (`id_token_hint` kept in the session).
 - **K11** Tenant isolation unchanged: one database per company, `TenantScope.runIn`, no `workspace_id`.
-- **K12** The custom sign-in classes, tables (`sign_in_states`, `hand_off_code`), cookies, `TSOLVE_SIGNING_KEY` and the
-  cleanup job are deleted; tables go by new changesets only.
+- **K12** The custom sign-in classes, cookies, `TSOLVE_SIGNING_KEY` and the cleanup job are deleted. The tables
+  `sign_in_states` and `hand_off_code` no longer exist: new changesets dropped them (`021-identity-drop-sign-in-states.sql`,
+  `022-identity-drop-hand-off-code.sql`), never an edit of the old ones.
 - **K13** Keycloak's login and error pages get a minimal T-Solve theme.
 - **K14** Local dev: Keycloak in Docker Compose with a realm import; tests: `testcontainers-keycloak` brokering to
   the WireMock fake issuer. CI never calls Google.
