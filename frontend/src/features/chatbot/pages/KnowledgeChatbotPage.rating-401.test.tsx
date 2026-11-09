@@ -20,7 +20,10 @@ describe('KnowledgeChatbotPage rating, session expired', () => {
     const user = userEvent.setup();
     renderApp('/chatbot', { role: 'EMPLOYEE' });
     const box = await screen.findByRole('textbox', { name: 'Question' }, { timeout: 5000 });
-    await user.type(box, 'How do I connect to the VPN from home?{Enter}');
+    // One paste, not per-character typing: antd autoSize measures on every input event (KAN-305).
+    await user.click(box);
+    await user.paste('How do I connect to the VPN from home?');
+    await user.keyboard('{Enter}');
     const helpful = await screen.findByRole('button', { name: 'Helpful' });
     await waitFor(() => expect(helpful).toBeEnabled());
     // The session expires on the server: every request now answers 401.
