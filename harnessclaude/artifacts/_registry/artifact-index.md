@@ -236,3 +236,7 @@ Master registry of all artifacts in this workspace.
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-34-user-roles-backend-test-report.md |
 | — | session-log | identity | in-progress | artifacts/05-implementation/identity/task-24-remove-custom-sign-in.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-24-remove-custom-sign-in-review.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-28-keycloak-provisioning.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-31-keycloak-theme.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-31-keycloak-theme-test-report.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-31-keycloak-theme-review.md |
