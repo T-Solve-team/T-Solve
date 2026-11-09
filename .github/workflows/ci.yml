@@ -3,6 +3,12 @@
 # other jobs run only when their folder changed. A job skipped this way still reports success, so it
 # can be a required check without blocking PRs that don't touch its folder.
 # Jobs: frontend (KAN-4; checks and four test shards since KAN-305), backend (KAN-6; unit tests and two integration-test parts since KAN-305).
+#
+# Time budget (KAN-305): the whole run takes ~4 min (it was ~9). Keep every frontend shard and every backend part
+# under ~4 min. When one goes over: frontend, raise the shard count (matrix.shard and the /4 in two places);
+# backend, move test classes between the it-keycloak-a / it-keycloak-b / it-other lists or add a part. Do not raise
+# the job timeouts: they are 2-3 times the normal time, so a hang or a creeping test fails visibly. Rules for new
+# tests: backend/AGENTS.md section 8 and frontend/guidelines/10-testing.md T7.
 name: CI
 
 on:
@@ -53,7 +59,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 10 # a shard takes ~2 min; see the time budget at the top
     strategy:
       fail-fast: false # a failing shard must not hide the result of the others
       matrix:
@@ -149,7 +155,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 12 # a part takes 1.5-4 min; see the time budget at the top
     strategy:
       fail-fast: false # a failing part must not hide the result of the others
       matrix:
