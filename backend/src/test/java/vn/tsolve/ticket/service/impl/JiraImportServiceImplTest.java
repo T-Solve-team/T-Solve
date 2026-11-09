@@ -128,8 +128,10 @@ class JiraImportServiceImplTest {
 
     @Test
     void keepsIssuesWithoutTicketOldestFirstAsNeedsSolutionRows_AC_001_1() {
-        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any())).thenReturn(new JiraIssuePage(issues(1, 3), "p2"));
-        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), eq("p2"), any())).thenReturn(new JiraIssuePage(issues(4, 5), null));
+        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any()))
+                .thenReturn(new JiraIssuePage(issues(1, 3), "p2"));
+        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), eq("p2"), any()))
+                .thenReturn(new JiraIssuePage(issues(4, 5), null));
         when(tickets.findExistingTicketIds(List.of("SUP-1", "SUP-2", "SUP-3"))).thenReturn(Set.of("SUP-2"));
 
         ImportPreviewResponse response = service.pull(PM, PROJECT, FROM, TO);
@@ -149,7 +151,8 @@ class JiraImportServiceImplTest {
 
     @Test
     void storesASnapshotOfEachIssue_AC_001_2() {
-        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any())).thenReturn(new JiraIssuePage(issues(1, 1), null));
+        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any()))
+                .thenReturn(new JiraIssuePage(issues(1, 1), null));
 
         service.pull(PM, PROJECT, FROM, TO);
 
@@ -171,8 +174,10 @@ class JiraImportServiceImplTest {
 
     @Test
     void keepsAtMost100AndReturnsMsg35WhenMoreMatch_AC_001_3() {
-        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any())).thenReturn(new JiraIssuePage(issues(1, 100), "p2"));
-        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), eq("p2"), any())).thenReturn(new JiraIssuePage(issues(101, 101), null));
+        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any()))
+                .thenReturn(new JiraIssuePage(issues(1, 100), "p2"));
+        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), eq("p2"), any()))
+                .thenReturn(new JiraIssuePage(issues(101, 101), null));
 
         ImportPreviewResponse response = service.pull(PM, PROJECT, FROM, TO);
 
@@ -185,7 +190,8 @@ class JiraImportServiceImplTest {
 
     @Test
     void exactly100IssuesIsNotMsg35_AC_001_3() {
-        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any())).thenReturn(new JiraIssuePage(issues(1, 100), null));
+        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any()))
+                .thenReturn(new JiraIssuePage(issues(1, 100), null));
 
         assertThat(service.pull(PM, PROJECT, FROM, TO).message()).isNull();
     }
@@ -228,14 +234,16 @@ class JiraImportServiceImplTest {
 
     @Test
     void todayIsAValidEndDate_AC_001_5() {
-        when(jira.resolvedIssues(eq(KEY), eq(TO), eq(TO), isNull(), any())).thenReturn(new JiraIssuePage(issues(1, 1), null));
+        when(jira.resolvedIssues(eq(KEY), eq(TO), eq(TO), isNull(), any()))
+                .thenReturn(new JiraIssuePage(issues(1, 1), null));
 
         assertThat(service.pull(PM, PROJECT, TO, TO).needsSolutionCount()).isEqualTo(1);
     }
 
     @Test
     void noIssueWithoutTicketIsMsg04AndNoPreview_AC_001_6() {
-        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any())).thenReturn(new JiraIssuePage(issues(1, 2), null));
+        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any()))
+                .thenReturn(new JiraIssuePage(issues(1, 2), null));
         when(tickets.findExistingTicketIds(anyCollection())).thenReturn(Set.of("SUP-1", "SUP-2"));
 
         NotFoundException e = catchThrowableOfType(() -> service.pull(PM, PROJECT, FROM, TO), NotFoundException.class);
@@ -247,7 +255,8 @@ class JiraImportServiceImplTest {
 
     @Test
     void jiraFailureIsMsg50WithAFailedBatchAndNoPreview_AC_001_7() {
-        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any())).thenThrow(new JiraUnavailableException("HTTP 401"));
+        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any()))
+                .thenThrow(new JiraUnavailableException("HTTP 401"));
 
         assertCode(() -> service.pull(PM, PROJECT, FROM, TO), HttpStatus.BAD_GATEWAY, "MSG50");
 
@@ -272,7 +281,8 @@ class JiraImportServiceImplTest {
 
     @Test
     void aFailedBatchThatCannotBeRecordedStillAnswersMsg50_AC_001_7_BUG_192() {
-        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any())).thenThrow(new JiraUnavailableException("HTTP 401"));
+        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any()))
+                .thenThrow(new JiraUnavailableException("HTTP 401"));
         doThrow(new DataAccessResourceFailureException("database down"))
                 .when(recorder)
                 .recordJiraFailed(any(), anyString(), anyString());
@@ -282,7 +292,8 @@ class JiraImportServiceImplTest {
 
     @Test
     void aParallelPullOfTheSameUserIsSavedAgainAndWins_AC_001_10_BUG_193() {
-        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any())).thenReturn(new JiraIssuePage(issues(1, 1), null));
+        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any()))
+                .thenReturn(new JiraIssuePage(issues(1, 1), null));
         // the other pull's open preview takes uq_import_preview_owner_open first
         when(previews.save(any(ImportPreview.class)))
                 .thenThrow(new DataIntegrityViolationException("uq_import_preview_owner_open"))
@@ -319,7 +330,8 @@ class JiraImportServiceImplTest {
 
     @Test
     void replacesThePreviousOpenPreviewOnlyAfterJira_AC_001_10() {
-        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any())).thenReturn(new JiraIssuePage(issues(1, 1), null));
+        when(jira.resolvedIssues(eq(KEY), eq(FROM), eq(TO), isNull(), any()))
+                .thenReturn(new JiraIssuePage(issues(1, 1), null));
 
         service.pull(PM, PROJECT, FROM, TO);
 

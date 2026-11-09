@@ -130,7 +130,12 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         } catch (DataIntegrityViolationException e) {
             // only a unique violation is a taken Ticket ID; a value too long or a NOT NULL names itself (BUG-190)
             boolean taken = UNIQUE_VIOLATION.equals(sqlState(e));
-            fail(preview, errorRows, removedRows, taken ? "TicketIdTaken" : e.getClass().getSimpleName(), e);
+            fail(
+                    preview,
+                    errorRows,
+                    removedRows,
+                    taken ? "TicketIdTaken" : e.getClass().getSimpleName(),
+                    e);
             throw new ImportFailedException(taken ? HttpStatus.CONFLICT : HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (RuntimeException e) {
             fail(preview, errorRows, removedRows, e.getClass().getSimpleName(), e);

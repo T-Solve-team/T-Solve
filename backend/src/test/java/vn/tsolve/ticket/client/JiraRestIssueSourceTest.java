@@ -16,11 +16,11 @@ import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.time.ZoneOffset;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -161,8 +161,7 @@ class JiraRestIssueSourceTest {
 
     @Test
     void doesNotWaitForARetryThatWouldEndAfterTheDeadline_AC_001_13_BUG_189() {
-        searchRequest()
-                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After", "5"));
+        searchRequest().andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After", "5"));
 
         assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null, NOW.plusSeconds(3)))
                 .isInstanceOf(JiraUnavailableException.class)
@@ -215,7 +214,8 @@ class JiraRestIssueSourceTest {
                                 + "],\"total\":1,\"startAt\":0,\"maxResults\":5000}")
                 + "," + issue("KAN-8", "2026-10-03T10:00:00.000+0700", null, NO_COMMENTS) + "],\"isLast\":true}");
 
-        List<JiraIssue> issues = source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues();
+        List<JiraIssue> issues =
+                source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues();
 
         JiraIssue first = issues.get(0);
         assertThat(first.summary()).isEqualTo("Summary of KAN-7");
@@ -254,8 +254,10 @@ class JiraRestIssueSourceTest {
                                 + "],\"total\":3,\"startAt\":2,\"maxResults\":2}",
                         MediaType.APPLICATION_JSON));
 
-        List<IssueComment> comments =
-                source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues().get(0).comments();
+        List<IssueComment> comments = source().resolvedIssues("KAN", FROM, TO, null, DEADLINE)
+                .issues()
+                .get(0)
+                .comments();
 
         assertThat(comments).extracting(IssueComment::body).containsExactly("one", "two", "three");
     }
@@ -324,7 +326,8 @@ class JiraRestIssueSourceTest {
             RestClient.Builder realClient = JiraRestIssueSource.clientBuilder(
                             Duration.ofSeconds(1), Duration.ofMillis(300))
                     .uriBuilderFactory(new DefaultUriBuilderFactory(localUrl));
-            JiraRestIssueSource slow = new JiraRestIssueSource(SITE_URL, CLOUD_ID, TOKEN, realClient, Thread::sleep, clock);
+            JiraRestIssueSource slow =
+                    new JiraRestIssueSource(SITE_URL, CLOUD_ID, TOKEN, realClient, Thread::sleep, clock);
 
             assertThatThrownBy(() -> slow.resolvedIssues("KAN", FROM, TO, null, DEADLINE))
                     .isInstanceOf(JiraUnavailableException.class)
@@ -365,7 +368,8 @@ class JiraRestIssueSourceTest {
         searchRequest().andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
         searchReturns("{\"issues\":[],\"isLast\":true}");
 
-        assertThat(source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues()).isEmpty();
+        assertThat(source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues())
+                .isEmpty();
         assertThat(sleeps).containsExactly(Duration.ofSeconds(1));
     }
 
@@ -374,7 +378,8 @@ class JiraRestIssueSourceTest {
         searchRequest().andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE).header("Retry-After", "5"));
         searchReturns("{\"issues\":[],\"isLast\":true}");
 
-        assertThat(source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues()).isEmpty();
+        assertThat(source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues())
+                .isEmpty();
         assertThat(sleeps).containsExactly(Duration.ofSeconds(5));
     }
 
