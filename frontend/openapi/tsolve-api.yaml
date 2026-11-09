@@ -1213,6 +1213,33 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/search/suggestions:
+    post:
+      tags: [search]
+      operationId: suggestTickets
+      summary: Suggest similar Published tickets for a Jira issue (UC-26, KAN-146).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketSuggestionRequest'
+      responses:
+        '200':
+          description: At most 5 items, most similar first; empty array when none.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 5
+                items:
+                  $ref: '#/components/schemas/TicketSearchResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/suggestion-results:
     get:
       tags: [triage]
@@ -2031,6 +2058,19 @@ components:
         comment:
           type: [string, 'null']
           maxLength: 500
+    TicketSuggestionRequest:
+      type: object
+      required: [summary]
+      properties:
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: The Jira issue summary.
+        description:
+          type: [string, 'null']
+          maxLength: 32767
+          description: The Jira issue description as plain text.
     TicketIdList:
       type: object
       required: [ticketIds]
