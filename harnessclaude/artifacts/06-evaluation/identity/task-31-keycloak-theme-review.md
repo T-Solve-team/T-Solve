@@ -2,14 +2,16 @@
 module: identity
 feature: keycloak-theme
 task: 31
-verdict: fail
-attempt: 1
+verdict: pass (attempt 2)
+attempt: 2
 date: 2026-11-09
-reviewer: tsolve-code-reviewer (Claude Opus 5.5, independent, read-only)
+reviewer: tsolve-code-reviewer (Claude Opus 5.5, independent, read-only; attempt 2 by Sonnet 5.5)
 iteration: 1
 ---
 
 # Review: identity — Task 31: keycloak-theme (KAN-300)
+
+Attempt 1 verdict was `fail`; the text below is kept as history. The attempt 2 result is in the last section.
 
 ## Summary
 Scope: the uncommitted worktree `T-Solve-KAN-300` on `feat/KAN-300-identity-keycloak-theme` (base `f70247a7`):
@@ -77,7 +79,7 @@ Stage 1 rows:
 | 4 | AC-001.67 internal error → MSG06 + Back | PASS | `…internalErrorLandsOnTheThemedErrorPageWithMsg06_AC_001_67` |
 | 5 | AC-001.67 cancel at Google → MSG06 + Back | PASS | `…cancelAtGoogleLandsOnTheThemedPageWithMsg06_AC_001_67` |
 | 6 | AC-001.67 Back to `client.baseUrl` | PASS | `assertThemedFailurePage` href = `http://localhost:5173/` |
-| 7 | AC-001.67 fallback to the theme URL when the client is unknown | PASS in code, no test | live probe only (S2) |
+| 7 | AC-001.67 fallback to the theme URL when the client is unknown | PASS in code, no test (attempt 1) | live probe only (S2); a test exists since attempt 2 |
 | 8 | AC-001.67 `redirect_uri_mismatch` is not a themed case | PASS | `…redirectUriMismatchStaysOnTheUpstreamPage…` |
 | 9 | AC-001.68 no script, no foreign resource | PASS | `themedPagesLoadNoScriptAndNoForeignResource_AC_001_68` |
 | 10 | AC-001.68 no Workspace link except Back | PASS | `themedPagesLinkToNoWorkspaceSiteExceptBackToSignIn_AC_001_68` |
@@ -134,8 +136,8 @@ Stage 1 rows:
 8. **N5** `login.ftl` replaces every login form with the MSG06 page. The theme must stay off realm `tsolve-ops`,
    whose AC-001.66 TOTP/WebAuthn forms would break.
    - Fix: add one line to `theme.properties` or the design.
-   - Fix (optional): also pin `"frontchannelLogout": false` on `tsolve-web`. The base `frontchannel-logout.ftl` has
-     an inline script, so if a later client change enabled front-channel logout, AC-001.68 would silently stop
+   - Fix (optional): also pin `"frontchannelLogout": false` on `tsolve-web`. The base `frontchannel-logout.ftl`
+     has an inline script, so if a later client change enabled front-channel logout, AC-001.68 would silently stop
      holding.
 
 ## Security Review — identity / Task 31 — 2026-11-09
@@ -185,3 +187,21 @@ See `task-31-keycloak-theme-test-report.md`:
 - The reviewer said no full re-review is needed after the format fix; the orchestrator accepted this, so `passing` stands.
 - The verdict above (`fail`, attempt 1) is kept unchanged as history. The feature `keycloak-theme` is now `passing`.
 - Open for deploy: production `TSOLVE_WEB_BASE_URL=https://tsolve.io.vn/` must be set.
+
+## Attempt 2 (re-review of the fixes, 2026-11-09)
+Scope: commits `4ca2c98f` (tests) and `e075a0c6` (theme), HEAD `1f1e0b15`. The frontmatter now reads `verdict: pass (attempt 2)`; attempt 1 was `fail`.
+
+| Item | Result | Evidence |
+|---|---|---|
+| B1 line length | fixed | No line over 120 columns in `KeycloakThemeIT`, `KeycloakFailurePlacementIT`, `KeycloakItStack`, `ThemePageScan` (awk check). The developer's `spotless:check` exit 0 was on a scratch git copy; I did not re-run it. |
+| S1 prod URL | fixed | `theme.properties:9` `${env.TSOLVE_WEB_BASE_URL:http://localhost:5173/}`; `realm-tsolve.json:114` `${TSOLVE_WEB_BASE_URL:http://localhost:5173/}`; `docker-compose.yml` keycloak env `TSOLVE_WEB_BASE_URL: ${TSOLVE_WEB_BASE_URL:-http://localhost:5173/}`. |
+| S2 fallback test | fixed | `KeycloakFailurePlacementIT.java:225-242`: `client_id=unknown`, themed page, MSG06 once, Back href equals `KeycloakItStack.FALLBACK_URL` (`http://fallback.it.test/`, set as the test Keycloak env at `KeycloakItStack.java:86`). Line 238 asserts it differs from the client URL. |
+| N1 JSESSIONID | fixed | No `JSESSIONID` left in `KeycloakFailurePlacementIT`; the remaining hits are in other tests. |
+| N2 origin compare | fixed | `ThemePageScan.java:127-142` requires `/`, `?`, `#` or the end after the origin; `KeycloakThemeIT.java:121` asserts `origin + ".evil.test/x"` is rejected. |
+| N3 robots meta | fixed | `template.ftl:7` `<meta name="robots" content="noindex">`. The orchestrator's note says `noindex, nofollow`, but the file has `noindex` only; accepted, since the card names `noindex`. |
+
+Not vacuous: the S2 test asserts the href equals the fallback value, which differs from the client `baseUrl`. A link taken from `client.baseUrl` would fail it.
+
+Remaining (non-blocking): N4 (`tasks.md` file list) and N5 (keep the theme off realm `tsolve-ops`) stay doc notes. The theme default is tested only with the variable set, as the card accepted. The PR text must say production needs `TSOLVE_WEB_BASE_URL=https://tsolve.io.vn/`.
+
+Tests: not re-run (card: the developer's results stand; HEAD equals the verified tree). Trace STORY-001: AC-001.67 and AC-001.68 are covered; 24/56 for the whole story, unchanged.

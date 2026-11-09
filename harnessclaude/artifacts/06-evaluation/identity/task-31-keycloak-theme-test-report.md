@@ -1,5 +1,19 @@
 # Test Report: identity — Task 31: keycloak-theme (KAN-300)
 
+## Attempt 2 update (2026-11-09, HEAD `1f1e0b15`, fixes in `4ca2c98f` and `e075a0c6`)
+The attempt 1 text below is kept as history. These results replace the ones it names:
+- Developer's runs after the fixes (not re-run by the reviewer, per the card): `KeycloakThemeIT` 3 run / 0 failures;
+  `KeycloakFailurePlacementIT` 6 / 0 (the new unknown-client test is the sixth); `KeycloakSignInEndToEndIT` 7 / 0;
+  frontend `npm run test -- src/features/auth src/app/dev` 48 passed.
+- Format check: the 123-column line is fixed. Reviewer awk check: no line over 120 columns in the 4 new Java files.
+  The developer's `mvn spotless:check` exit 0 was on a scratch git copy of the 4 new test files; the `TestBrowser` and
+  `KeycloakSignInEndToEndIT` edits were not checked on their own.
+- Trace STORY-001 (reviewer, fresh): AC-001.67 and AC-001.68 have tests; 24/56 for the story, unchanged.
+- The "Notes" item about the missing fallback test is closed: `KeycloakFailurePlacementIT.unknownClientFallsBackToTheThemeUrl_AC_001_67`
+  uses a fallback URL (`http://fallback.it.test/`) that differs from the client URL.
+
+---
+
 **Date:** 2026-11-09
 **Scope:** the uncommitted worktree `T-Solve-KAN-300`, branch `feat/KAN-300-identity-keycloak-theme`, base `f70247a7`.
 **Commands:** `cd backend && mvn -Dit.test='KeycloakThemeIT,KeycloakFailurePlacementIT' verify` (developer) ·
