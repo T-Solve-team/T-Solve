@@ -177,13 +177,13 @@
         "jira-gateway-auth": "passing",
         "jira-pull-deadline": "evaluating"
       },
-      "lastUpdated": "2026-11-08T13:13:14.538Z",
+      "lastUpdated": "2026-11-09T17:11:49.645Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "3b36f7ea9aea4fa195af945f2b2178acbf384098"
+        "default": "125f4e28d12316d33b41f00d02e21e6fbc05df64"
       }
     },
     "search": {
