@@ -124,7 +124,7 @@ class ChatbotAnswerServiceImplTest {
         when(solutions.nearest(vector, 0.7, 3))
                 .thenReturn(List.of(solution("best", 0.99), solution("tie", 0.9), solution("low", 0.8)));
         when(wiki.nearest(USER, vector, 0.7, 3)).thenReturn(List.of(new WikiPassage(document, "Wiki", "passage", 0.9)));
-        when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
+        when(llm.chat(any(), isNull())).thenReturn("Answer [1][2][3]");
 
         var response = service.ask(USER, question());
 
@@ -200,6 +200,21 @@ class ChatbotAnswerServiceImplTest {
         verify(answers).flush();
         verify(transactions).commit(any());
         verify(transactions, never()).rollback(any());
+    }
+
+    @Test
+    void storesCleanedText_AC_006_2() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn("  Answer [9] here [1]\nNext line  ");
+
+        var response = service.ask(USER, question());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
+        assertThat(response.text()).isEqualTo("  Answer here [1]\nNext line  ");
+        assertThat(response.citations()).hasSize(1);
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getAnswerText()).isEqualTo(response.text());
     }
 
     @ParameterizedTest

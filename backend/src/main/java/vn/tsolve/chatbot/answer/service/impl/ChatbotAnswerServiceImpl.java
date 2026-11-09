@@ -10,7 +10,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,7 +34,6 @@ import vn.tsolve.search.retrieval.service.SolutionRetrieval;
 
 @Service
 public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
-    private static final Pattern MARKER = Pattern.compile("\\[([1-9]\\d?)\\]");
     private final EmbeddingClient embeddings;
     private final LlmClient llm;
     private final SolutionRetrieval solutions;
@@ -137,17 +135,11 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         var messages = AnswerPrompt.messages(question, kept);
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
-        if (!hasKeptMarker(text, kept.size())) {
+        var result = Citations.parse(text, kept);
+        if (result.citations().isEmpty()) {
             return save(user, question, Outcome.NO_SOURCE, "", List.of(), deadline);
         }
-        // ponytail: Task 8 filters citations and removes unknown markers; Task 7 returns every kept source.
-        return save(
-                user,
-                question,
-                Outcome.ANSWERED,
-                text,
-                kept.stream().map(ChatbotSource::citation).toList(),
-                deadline);
+        return save(user, question, Outcome.ANSWERED, result.text(), result.citations(), deadline);
     }
 
     private ChatbotAnswerResponse save(
@@ -167,16 +159,6 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             remaining(deadline);
             return new ChatbotAnswerResponse(saved.getId(), outcome, text, citations);
         });
-    }
-
-    private static boolean hasKeptMarker(String text, int count) {
-        var matcher = MARKER.matcher(text);
-        while (matcher.find()) {
-            if (Integer.parseInt(matcher.group(1)) <= count) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private <T> T callAi(Supplier<T> call, long deadline) {

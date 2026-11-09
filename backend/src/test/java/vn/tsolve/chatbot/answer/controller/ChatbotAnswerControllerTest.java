@@ -1,6 +1,9 @@
 package vn.tsolve.chatbot.answer.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -125,6 +128,41 @@ class ChatbotAnswerControllerTest {
                 .andExpect(jsonPath("$.citations[0].solution.workaround").isEmpty())
                 .andExpect(jsonPath("$.citations[1].type").value("WIKI_DOCUMENT"));
         verify(answers).ask(eq(user), any());
+    }
+
+    @Test
+    @WithTSolveUser
+    void writesCitationTypeDiscriminator_AC_006_1() throws Exception {
+        UUID documentId = UUID.fromString("70000000-0000-0000-0000-000000000002");
+        when(answers.ask(any(), any()))
+                .thenReturn(new ChatbotAnswerResponse(
+                        ANSWER_ID,
+                        Outcome.ANSWERED,
+                        "Answer [1][2]",
+                        List.of(
+                                new TicketSolutionCitation(
+                                        1, new CitedSolution("symptoms", "cause", "steps", null, "scope")),
+                                new WikiDocumentCitation(2, documentId, "Policy"))));
+
+        mvc.perform(post(PATH)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\"question\",\"history\":[]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.citations[0].type").value("TICKET_SOLUTION"))
+                .andExpect(jsonPath("$.citations[0].number").value(1))
+                .andExpect(jsonPath("$.citations[0].solution.symptoms").value("symptoms"))
+                .andExpect(jsonPath("$.citations[0]").value(aMapWithSize(3)))
+                .andExpect(jsonPath("$.citations[0].solution").value(aMapWithSize(5)))
+                .andExpect(jsonPath("$.citations[0].solution").value(hasKey("workaround")))
+                .andExpect(jsonPath("$.citations[0].solution.workaround").value(nullValue()))
+                .andExpect(jsonPath("$.citations[0].ticketId").doesNotExist())
+                .andExpect(jsonPath("$.citations[0].id").doesNotExist())
+                .andExpect(jsonPath("$.citations[0].title").doesNotExist())
+                .andExpect(jsonPath("$.citations[1].type").value("WIKI_DOCUMENT"))
+                .andExpect(jsonPath("$.citations[1].number").value(2))
+                .andExpect(jsonPath("$.citations[1].wikiDocumentId").value(documentId.toString()))
+                .andExpect(jsonPath("$.citations[1].title").value("Policy"));
     }
 
     @Test
