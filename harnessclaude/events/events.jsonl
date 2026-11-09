@@ -1018,7 +1018,10 @@
 {"ts":"2026-11-08T03:51:28.798Z","type":"spec-approved","module":"jira-app","specHash":"3a593a33dcb6dfb1a6f4d48aa552a22636c1e12f36172c963fef22cd68614a5e"}
 {"ts":"2026-11-08T03:57:43.563Z","type":"feature-status","module":"jira-app","feature":"ask-page-ui","from":"evaluating","to":"passing"}
 {"ts":"2026-11-08T04:25:18.980Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"ac7d5c2bb6a89afc0c41b913c57ed2639457009e"}
+{"ts":"2026-11-08T07:34:40.934Z","type":"spec-approved","module":"ticket-review","specHash":"c4a0fab338ac82d440d6cee3208109bc62daa15713df1758066f6585cc4b201d"}
 {"ts":"2026-11-08T07:36:24.161Z","type":"spec-approved","module":"ticket-review","specHash":"307716965b64ef1adc10ac692529740e8e9558746f09731cc2b1b2b286317733"}
+{"ts":"2026-11-08T07:36:26.692Z","type":"feature-status","module":"ticket-review","feature":"review-send-back-api","from":null,"to":"pending"}
+{"ts":"2026-11-08T07:36:26.737Z","type":"feature-status","module":"ticket-review","feature":"review-send-back-api","from":"pending","to":"in-progress"}
 {"ts":"2026-11-08T07:36:33.137Z","type":"spec-approved","module":"worker","specHash":"5810c19e5e59893a8f4b0898839d061a186171607d600df9f84c22715b37b839"}
 {"ts":"2026-11-08T07:39:07.940Z","type":"spec-approved","module":"worker","specHash":"621fd5d26ab4f777ec03557dbd1dbd707c5fa44f0a3850b98e9d29c3f1303ed9"}
 {"ts":"2026-11-08T07:39:26.379Z","type":"module-status","module":"worker","from":"completed","to":"planned"}
@@ -1036,3 +1039,6 @@
 {"ts":"2026-11-08T08:11:10.518Z","type":"commit-recorded","module":"worker","repo":"default","sha":"41a1cf7a49021519da485b155111e098ad07796a"}
 {"ts":"2026-11-08T08:11:10.559Z","type":"module-status","module":"worker","from":"implementing","to":"evaluating"}
 {"ts":"2026-11-08T08:11:10.601Z","type":"module-status","module":"worker","from":"evaluating","to":"completed"}
+{"ts":"2026-11-08T08:30:18.878Z","type":"feature-status","module":"ticket-review","feature":"review-send-back-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-08T08:30:18.918Z","type":"feature-status","module":"ticket-review","feature":"review-send-back-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-08T08:31:30.173Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"8805eceac580d3de971a4b3aef9a208c90558a18"}

@@ -2,6 +2,8 @@ package vn.tsolve.ticket.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -14,6 +16,13 @@ import java.util.UUID;
 @Table(name = "review_decision")
 public class ReviewDecisionRecord {
 
+    public enum Decision {
+        APPROVED,
+        REJECTED,
+        CHANGES_REQUESTED,
+        SEND_BACK
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "review_decision_id")
@@ -25,8 +34,9 @@ public class ReviewDecisionRecord {
     @Column(name = "project_manager_id", nullable = false, updatable = false)
     private UUID reviewerId;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, updatable = false, length = 20)
-    private String decision;
+    private Decision decision;
 
     @Column(name = "reason_or_comment", updatable = false, columnDefinition = "text")
     private String feedback;
@@ -39,7 +49,7 @@ public class ReviewDecisionRecord {
     public ReviewDecisionRecord(UUID ticketId, UUID reviewerId, String decision, String feedback, Instant decidedAt) {
         this.ticketId = ticketId;
         this.reviewerId = reviewerId;
-        this.decision = decision;
+        this.decision = Decision.valueOf(decision);
         this.feedback = feedback;
         this.decidedAt = decidedAt;
     }

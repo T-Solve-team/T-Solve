@@ -1,7 +1,7 @@
 ---
 module: ticket-review
 date: 2026-11-01
-total_tasks: 10
+total_tasks: 11
 owner: Dev
 ---
 
@@ -155,6 +155,15 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** `review/service/impl/ReviewQueueEventServiceImpl.java`, `review/service/ReviewQueueEventService.java`, `review/controller/ReviewQueueEventController.java`, `review/ReviewQueueEventsIT.java` (and a unit test under `review/service/impl/` if timing needs fakes).
 **Dependencies:** Task 13.
 **Verification:** `ReviewQueueEventsIT` and the new tests; full `mvn verify`; trace STORY-012.
+
+## Task 16: Production Expired tickets and send-back (KAN-156)
+
+**Story:** STORY-013
+**Feature:** review-send-back-api
+**Description:** Implement AC-013.1–013.9 (design "KAN-156 extension"). Changeset `024-review-send-back-decision.sql` widens `ck_review_decision` with SEND_BACK. `GET /api/v1/expired-tickets` and `/ticket-ids` (Project Manager) list EXPIRED Solution Form tickets of managed Projects with the Department filter, sorts and derived `expiredAt`/`previousStatus`. `POST /api/v1/reviews/send-back` validates the whole batch, then moves the tickets to PENDING_REVIEW with the recalculated due date and one SEND_BACK `review_decision` each, in one transaction and without a notification job. Review History returns SEND_BACK. OpenAPI wording first; client regenerated.
+**Files:** `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated` (regenerated), `backend/src/main/resources/db/changelog/changes/024-review-send-back-decision.sql` + master changelog, `review/controller/ReviewReadController.java`, `review/controller/ReviewDecisionController.java`, the stored-decision enum in `ticket/entity/`, `ticket/service/TicketReviewReadService.java` + impl, `ticket/service/TicketDecisionService.java` + impl, `ticket/repository/TicketRepository.java`, `ticket/dto/TicketReviewView.java`; tests `review/ExpiredTicketsApiIT.java`, `review/SendBackApiIT.java`, `review/ReviewHistoryApiIT.java`, `frontend/src/features/review/pages/ExpiredTicketsPage.test.tsx`.
+**Dependencies:** KAN-24 storage, decisions and membership (Tasks 5–9), queue entry trigger (Task 8), History API (Task 12).
+**Verification:** PostgreSQL ITs for scope, filter, sorts, derived fields, the atomic batch, due date with two ranges and the Vietnam day boundary, kept Solution/Evidence, SEND_BACK rows, 400/401/403/404/409 and History SEND_BACK; `mvn verify`; frontend `format:check`, `lint`, `typecheck`, `test`, `build`, `generate:api` with no diff; `sdd.ts trace ticket-review STORY-013`.
 
 ## Task 17: JOB-02 expires overdue tickets (KAN-157)
 
