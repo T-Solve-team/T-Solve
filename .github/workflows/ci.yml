@@ -158,14 +158,20 @@ jobs:
           - part: unit
             fetch-depth: 0
             mvn-args: -DskipITs
-          # only the Keycloak integration tests (Failsafe); no unit tests, no Spotless
-          - part: it-keycloak
+          # The Keycloak integration tests (Failsafe), in two parts of about the same length (each class starts
+          # its own Keycloak, 30-70 s); no unit tests, no Spotless.
+          - part: it-keycloak-a
             fetch-depth: 1
-            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=Keycloak*IT,Provisioning*IT,RealmImportIT
-          # every other integration test (Failsafe); no unit tests, no Spotless
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=KeycloakThemeIT,ProvisioningRaceIT,KeycloakFailurePlacementIT
+          - part: it-keycloak-b
+            fetch-depth: 1
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=KeycloakWorkspaceSignInProvisionerIT,KeycloakSignInEndToEndIT,RealmImportIT,ProvisioningUndoIT
+          # Every other integration test (Failsafe); no unit tests, no Spotless. `*IT` must be listed: a filter
+          # with only `!` patterns would replace Failsafe's default include and run the unit tests again. A new
+          # Keycloak IT is not in the lists above, so it runs here until it is added to one of them.
           - part: it-other
             fetch-depth: 1
-            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=!Keycloak*IT,!Provisioning*IT,!RealmImportIT
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=*IT,!KeycloakThemeIT,!ProvisioningRaceIT,!KeycloakFailurePlacementIT,!KeycloakWorkspaceSignInProvisionerIT,!KeycloakSignInEndToEndIT,!RealmImportIT,!ProvisioningUndoIT
     defaults:
       run:
         working-directory: backend
