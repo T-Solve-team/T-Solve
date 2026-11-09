@@ -57,8 +57,6 @@ export default defineConfig({
     testTimeout: 15_000,
     // Half the CPU cores run test files at once (default: all). With every core busy, a page's first render could
     // pass its 5 s findBy wait (BUG-004); fewer parallel files keep each render fast without longer timeouts.
-    // CI (KAN-305): an experiment on the 4-core runner, measured in the PR. On a 12-core laptop '100%' timed out
-    // 17 test files (BUG-004 again), so do not use it there. If it fails in CI, use '75%' or '50%'.
-    maxWorkers: process.env.CI ? '100%' : '50%',
+    maxWorkers: '50%',
   },
 });
