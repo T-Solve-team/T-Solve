@@ -227,17 +227,17 @@
         "uuid-ids": "passing",
         "chatbot-answer-schema": "passing",
         "ask-answer-api": "passing",
-        "answer-citations": "pending",
-        "cited-documents": "pending",
+        "answer-citations": "passing",
+        "cited-documents": "passing",
         "follow-up-context": "pending"
       },
-      "lastUpdated": "2026-11-06T17:23:52.760Z",
+      "lastUpdated": "2026-11-08T07:38:30.920Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
+        "default": "b1b39c47ebf332cc70e1f49d41777876962d61f3"
       }
     },
     "jira-app": {
