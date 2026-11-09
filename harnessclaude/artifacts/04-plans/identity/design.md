@@ -859,6 +859,8 @@ listed in its banner. Every Critical or High row has its test task.
 | 128 | STORY-001 | Environment | The app runs without the profile `dev` | High | `DevWorkspaceLookup` exists only with the profile `dev`; otherwise `NoWorkspaceLookup` answers nothing | Task 23a |
 | 129 | STORY-001 | Integration | Redis wiring: the app reaches Redis through `REDIS_HOST`, `REDIS_PORT` and `REDIS_PASSWORD`; a key is stored with a time to live | High | The app connects with those three settings; a key with a time to live expires | Task 23a |
 | 130 | STORY-001 | Error cascades | Redis health: the `redis` health indicator when Redis is up | Medium | The indicator is UP, so `/actuator/health` stays 200 UP | Task 23a |
+| 131 | STORY-001 | Timing, Data integrity | Two subs do a first sign-in on one sub-less Account at once | High | The later one is refused (MSG09, one WARN with the Account id); the Account keeps the first sub (AC-001.56; conditional bind) | Task 25a |
+| 132 | STORY-001 | State transitions | A Deactivated Account on its first sign-in | Medium | Refused as MSG10; the sub is not bound (AC-001.13, AC-001.16) | Task 25a |
 
 Open questions for the spec owner: none. Every row is closed by the answers Q1–Q16.
 
