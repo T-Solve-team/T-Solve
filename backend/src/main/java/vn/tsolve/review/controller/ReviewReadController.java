@@ -1,6 +1,7 @@
 package vn.tsolve.review.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.List;
@@ -23,6 +24,7 @@ import vn.tsolve.common.security.Roles;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.review.service.ReviewWorkspaceAccess;
 import vn.tsolve.ticket.dto.TicketReviewView.Detail;
+import vn.tsolve.ticket.dto.TicketReviewView.ExpiredItem;
 import vn.tsolve.ticket.dto.TicketReviewView.HistoryFilter;
 import vn.tsolve.ticket.dto.TicketReviewView.HistoryItem;
 import vn.tsolve.ticket.dto.TicketReviewView.ProjectAccess;
@@ -60,6 +62,30 @@ public class ReviewReadController {
     public TicketIdList eligibleIds(
             @AuthenticationPrincipal TSolveUser actor, @RequestParam(required = false) UUID departmentId) {
         return new TicketIdList(reads.eligibleIds(projects(actor), departmentId));
+    }
+
+    @GetMapping("/expired-tickets")
+    @Operation(operationId = "getExpiredTickets", summary = "List expired tickets of managed Projects")
+    @ApiResponse(responseCode = "400")
+    @ApiResponse(responseCode = "403")
+    @PreAuthorize("hasRole('" + Roles.PROJECT_MANAGER + "')")
+    public PagedModel<ExpiredItem> expired(
+            @AuthenticationPrincipal TSolveUser actor,
+            @RequestParam(required = false) UUID departmentId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam MultiValueMap<String, String> parameters) {
+        return new PagedModel<>(
+                reads.expired(projects(actor), departmentId, page, size, parameters.getOrDefault("sort", List.of())));
+    }
+
+    @GetMapping("/expired-tickets/ticket-ids")
+    @Operation(operationId = "getExpiredTicketIds", summary = "List every eligible expired ticket id")
+    @ApiResponse(responseCode = "403")
+    @PreAuthorize("hasRole('" + Roles.PROJECT_MANAGER + "')")
+    public TicketIdList expiredIds(
+            @AuthenticationPrincipal TSolveUser actor, @RequestParam(required = false) UUID departmentId) {
+        return new TicketIdList(reads.expiredIds(projects(actor), departmentId));
     }
 
     @GetMapping("/review-history")

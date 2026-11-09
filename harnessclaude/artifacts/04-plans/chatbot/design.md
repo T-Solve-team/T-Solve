@@ -375,3 +375,34 @@ Decided in planning (builder check, 06/11):
 | B9 | Huge history (10 × 10,000 chars) slows the chat | Medium | Accepted inside the cap; the 60 s budget bounds it | — |
 | B10 | Question text in logs | High | No log line carries content (AC-005.10) | `OutputCaptureExtension` test |
 | B11 | `wikiDocumentIds` repeated or > 50 | Low | Set semantics; > 50 → 400 (AC-006.6) | controller test |
+
+## Backend ratings (change of 2026-11-09, STORY-008, KAN-182)
+
+- **Data:** changeset `024-chatbot-answer-rating.sql` (author `chatbot`): `ALTER TABLE chatbot_answer ADD COLUMN
+  rating VARCHAR(20) NULL, ADD COLUMN rated_at TIMESTAMPTZ NULL`, `ck_chatbot_answer_rating` (`rating IN ('HELPFUL',
+  'NOT_HELPFUL')`) and `ck_chatbot_answer_rated` (`(rating IS NULL) = (rated_at IS NULL)`); `--rollback` drops both
+  constraints and columns. `ChatbotAnswer` gains `rating` (enum `ChatbotRating`, stored as a string) and `ratedAt`.
+- **API:** a new `ChatbotRatingController` (`rateChatbotAnswer`, `removeChatbotAnswerRating`, `authenticated()`)
+  beside `ChatbotAnswerController`, so KAN-180/181 and KAN-182 touch different files; `ChatbotRatingService` /
+  `ChatbotRatingServiceImpl` in `chatbot/rating/`.
+- **Write:** one `@Modifying` JPQL update per call, scoped to the owner:
+  `UPDATE ChatbotAnswer a SET a.rating = :rating, a.ratedAt = :now WHERE a.id = :id AND a.userId = :userId`
+  (removal sets both to null). Zero rows updated → `NotFoundException` MSG04 (AC-008.3): an unknown id and another
+  user's answer look the same. The same rating twice → 204 again.
+- **Errors:** a path id that is not a UUID → 404 MSG04 (taken as `String`, parsed in the service); a missing body or
+  a missing or unknown `rating` → `MessageCodeException` 400 MSG06 with no field error (AC-008.4).
+- **Contract:** `rateChatbotAnswer`, `removeChatbotAnswerRating` and `ChatbotRating` already exist in
+  `frontend/openapi/tsolve-api.yaml`; no frontend change (Non-Functional 4).
+
+| Decision | Chosen | Alternatives | Rationale |
+|----------|--------|--------------|-----------|
+| Rating storage | Two nullable columns on `chatbot_answer` | Table `chatbot_rating` | User 09/11: one answer has one asker and only they rate it; the dashboard counts one table |
+| Conversation history (KAN-183) | None on the backend; `sessionStorage` stays | API with a `conversation_id` | User 09/11: UC-52 is met by AC-002.7; the backend has no session notion or logout deletion yet |
+| Ownership check | In the update's `WHERE` | Load, compare, save | One statement, no read-then-write race, a 404 never reveals another user's answer |
+
+| # | Case | Severity | Handling | Test |
+|---|------|----------|----------|------|
+| R1 | Another user's `answerId` | High | 404 MSG04, row unchanged (AC-008.3) | `ChatbotRatingIT` |
+| R2 | Rating sent twice, or crossing a removal | Low | Last write wins, both 204 | controller test |
+| R3 | Rating a `NO_SOURCE` answer | Low | Allowed (AC-003.1, AC-008.1) | controller test |
+| R4 | `rated_at` without `rating` | Medium | DB check `ck_chatbot_answer_rated` | `ChatbotRatingSchemaIT` |
