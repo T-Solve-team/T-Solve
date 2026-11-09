@@ -325,15 +325,16 @@
       "currentPhase": "evaluate",
       "features": {
         "review-notification-smtp": "passing",
-        "tenant-jobs": "passing"
+        "tenant-jobs": "passing",
+        "active-workspaces": "passing"
       },
-      "lastUpdated": "2026-11-07T08:10:50.005Z",
+      "lastUpdated": "2026-11-08T08:11:10.600Z",
       "branch": "feat/worker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "68bd287b663f5dd4bacb533c5883a981e4abbf11"
+        "default": "41a1cf7a49021519da485b155111e098ad07796a"
       }
     },
     "ai": {
@@ -403,7 +404,8 @@
         "review-queue-events-api": "passing",
         "review-queue-events-web": "passing",
         "review-queue-events-hardening": "passing",
-        "review-send-back-api": "passing"
+        "review-send-back-api": "passing",
+        "review-expiry-job": "passing"
       },
       "lastUpdated": "2026-11-08T08:31:30.173Z",
       "branch": "feat/ticket-review",

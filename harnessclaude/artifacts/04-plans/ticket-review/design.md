@@ -293,6 +293,23 @@ Decided with the user on 2026-11-08, before the spec: SEND_BACK is stored in `re
 - **History** — SEND_BACK moves out of the history-only filter list; stored SEND_BACK maps to SEND_BACK with null reason and comment (AC-013.8).
 - **Contract and web** — the three operations keep their shapes; `tsolve-api.yaml` drops the "frontend proposal" wording and documents sorts, 404/409 and the derived fields; then `npm run generate:api`. The web hooks already call the generated `getExpiredTickets`, `getExpiredTicketIds` and `sendBackTickets` through `@/shared/api`; a page test named AC-013.9 proves the requests go through them. MSW handlers stay for mock mode.
 
+## KAN-157 extension: JOB-02 expires overdue tickets (STORY-014)
+
+Decisions (user, 2026-11-08): JobRunr fan-out; ticket columns plus a per-Project log line, no review decision or audit row; fixed 15-minute retry, 3 attempts per night; the Active-Workspace list is a worker change request (worker STORY-003).
+
+- **Registration (AC-014.1)** — chosen: `ReviewExpiryRegistration` listens for `ApplicationReadyEvent` and calls `JobRunrRuntime.scheduler().scheduleRecurrently("review-job-02-expire-overdue", "0 0 * * *", ZoneId.of("Asia/Ho_Chi_Minh"), new ReviewExpiryDispatchRequest())`, only when `tsolve.worker.enabled=true`. JobRunr keys recurring jobs by id, so every process re-registering keeps one, and one BackgroundJobServer runs each occurrence. Alternatives: Spring `@Scheduled` (runs in every process); per-Workspace recurring jobs on provisioning (needs platform hooks, KAN-161).
+- **Fan-out (AC-014.2)** — `ReviewExpiryDispatchHandler` (`JobRequestHandler<ReviewExpiryDispatchRequest>`, a Spring bean so the JobActivator finds it) calls `WorkerTenantService.activeWorkspaceIds()` and enqueues `ReviewExpiryJobRequest(workspaceId, 1)` for each. If the list cannot be read, the occurrence fails (JobRunr records it) and the next night catches up.
+- **Per-Workspace job (AC-014.3–014.7)** — `ReviewExpiryJobHandler.run(request)`, annotated `@Job(retries = 0)` so JobRunr's exponential retry never doubles ours:
+  1. If `tenants.isWorkspaceActive(ws)` is false → log that the Workspace was skipped and return: no change, no retry (AC-014.7).
+  2. `today = LocalDate.now(clock.withZone(Asia/Ho_Chi_Minh))`, once per attempt.
+  3. `execution.runInTenant(ws, () -> expiry.expireOverdue(today))`.
+  4. On a `RuntimeException`: log the attempt number, Workspace UUID and exception class only (not its message, which may quote SQL values). If `n < 3`, `scheduler.schedule(now + 15 min, new ReviewExpiryJobRequest(ws, n + 1))`; then return normally. If scheduling the retry itself throws, rethrow so JobRunr marks the job failed.
+- **Expiry (AC-014.3–014.5)** — `ReviewExpiryService.expireOverdue(LocalDate today)` in `ReviewExpiryServiceImpl`, `@Transactional`, runs one statement through `ReviewExpiryRepository` (JdbcClient): `UPDATE ticket t SET status_before_expiry = t.status, status = 'EXPIRED', expired_at = statement_timestamp() FROM project p JOIN department d ON d.department_id = p.department_id WHERE <p's UUID key> = t.project_id AND d.status <> 'DELETED' AND t.status IN ('PENDING_REVIEW', 'CHANGES_REQUESTED') AND t.review_due_date < :today RETURNING t.project_id`. The service groups the returned Project UUIDs into counts and logs one line per Project with Workspace UUID, Project UUID and count (AC-014.5). One statement is all or nothing, so no batching is needed. A concurrent decision on the same row waits for the row lock: if the decision commits first, the ticket no longer matches and is skipped; if JOB-02 commits first, the decision's status guard refuses it (409, the existing stale path).
+- **Queue and stream** — the status leaves PENDING_REVIEW, so the queue and eligible ids drop the ticket, and the STORY-012 trigger sends one NOTIFY per Project (de-duplicated in the transaction). CHANGES_REQUESTED → EXPIRED is not a queue change, so no NOTIFY is sent for it.
+- **Changelog (AC-014.8)** — `025-review-ticket-expiry.sql`, changeset `review:025-review-ticket-expiry`: nullable `ticket.expired_at TIMESTAMPTZ`, nullable `ticket.status_before_expiry VARCHAR(20)` with a CHECK for NULL, PENDING_REVIEW or CHANGES_REQUESTED, and a partial index on `review_due_date` for the two expirable statuses. It is included last in the master changelog. KAN-156 (STORY-013) derives the Expired list without these columns, as approved there (previous status always PENDING_REVIEW, expiry at 00:00 VN after the due date). The user chose (2026-11-08) to keep them anyway, as the only record of a Changes requested ticket's previous status and of the real expiry time; switching the Expired list to read them is a follow-up change request on STORY-013 after both branches merge. KAN-156 owns changeset 024.
+- **Payloads (AC-014.8)** — `ReviewExpiryDispatchRequest()` has no fields; `ReviewExpiryJobRequest(UUID workspaceId, int attempt)` has only those. Both are records in `review/dto` implementing `JobRequest`.
+- **Vietnam date** — `today` comes from the shared `Clock` bean in Asia/Ho_Chi_Minh, never `CURRENT_DATE` in the session time zone. A ticket due yesterday (VN) expires at 00:00 VN; one due today stays (GBR-10: the due date has passed).
+
 ### Edge cases
 
 | Case | Handling |
@@ -304,3 +321,15 @@ Decided with the user on 2026-11-08, before the spec: SEND_BACK is stored in `re
 | Ticket id of another Workspace | Not in this tenant database → 404, nothing exposed |
 | Department with no managed Project | Empty page and empty ids, no query |
 | Imported (non Solution Form) EXPIRED ticket | Not listed; send-back 409 |
+| Worker down at 00:00 | The next occurrence or retry uses `< today`, so missed tickets expire then |
+| Run twice the same day | Second run matches no row (AC-014.4) |
+| Workspace suspended between fan-out and run | Step 1 skips it; if suspended between step 1 and `runInTenant`, runInTenant throws → failure → the 15-min retry skips it |
+| `review_due_date` null (older rows) | `NULL < :today` is not true → never expired |
+| Deleted Department restored later | Its overdue tickets expire on the next run after restoration |
+| Other statuses (PUBLISHED, REJECTED, UNPUBLISHED, EXPIRED) | Not matched |
+| DB error mid-statement | Transaction rolls back; no per-Project log; retry scheduled (AC-014.6) |
+| JobRunr default retries | Off on the expiry handler (`@Job(retries = 0)`); the dispatch handler keeps the default (it only enqueues) |
+
+### Files
+
+`backend/src/main/resources/db/changelog/changes/025-review-ticket-expiry.sql` + master changelog; `review/dto/ReviewExpiry{Dispatch,Job}Request.java`; `review/service/ReviewExpiryService.java`; `review/service/impl/ReviewExpiry{ServiceImpl,DispatchHandler,JobHandler,Registration}.java`; `review/repository/ReviewExpiryRepository.java`. Tests: `review/ReviewExpiryIT.java` (PostgreSQL), `review/service/impl/ReviewExpiry{JobHandler,DispatchHandler,Registration}Test.java`.
