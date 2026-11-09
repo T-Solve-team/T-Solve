@@ -2,7 +2,7 @@
 # One workflow, one job per part of the repo. The `changes` job looks at which folders changed and the
 # other jobs run only when their folder changed. A job skipped this way still reports success, so it
 # can be a required check without blocking PRs that don't touch its folder.
-# Jobs: frontend (KAN-4; checks and four test shards since KAN-305), backend (KAN-6).
+# Jobs: frontend (KAN-4; checks and four test shards since KAN-305), backend (KAN-6; unit tests and two integration-test parts since KAN-305).
 name: CI
 
 on:
@@ -140,21 +140,41 @@ jobs:
             *failure*|*cancelled*) echo "::error::A frontend job did not succeed."; exit 1 ;;
           esac
 
-  backend:
-    name: backend
+  # The backend runs as three parallel parts (KAN-305); together they run exactly what `mvn verify` runs on a
+  # laptop (backend/AGENTS.md). The Keycloak integration tests are the slowest, so they get a part of their own.
+  # The two IT parts use complementary class-name patterns (include / exclude the same three), so no IT is
+  # skipped and none runs twice, and a new IT with another name runs in `it-other`.
+  backend-tests:
+    name: backend-tests (${{ matrix.part }})
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false # a failing part must not hide the result of the others
+      matrix:
+        include:
+          # compile, unit tests (Surefire) and the Spotless check; no integration tests
+          - part: unit
+            fetch-depth: 0
+            mvn-args: -DskipITs
+          # only the Keycloak integration tests (Failsafe); no unit tests, no Spotless
+          - part: it-keycloak
+            fetch-depth: 1
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=Keycloak*IT,Provisioning*IT,RealmImportIT
+          # every other integration test (Failsafe); no unit tests, no Spotless
+          - part: it-other
+            fetch-depth: 1
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=!Keycloak*IT,!Provisioning*IT,!RealmImportIT
     defaults:
       run:
         working-directory: backend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Spotless checks only the files changed since origin/main (ratchetFrom in pom.xml), so it needs
-          # main and the history back to the merge base.
-          fetch-depth: 0
+          # Spotless checks only the files changed since origin/main (ratchetFrom in pom.xml), so the part
+          # that runs it needs main and the history back to the merge base.
+          fetch-depth: ${{ matrix.fetch-depth }}
           persist-credentials: false
 
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
@@ -164,8 +184,29 @@ jobs:
           cache: maven
           cache-dependency-path: backend/pom.xml
 
-      # Same command as on a laptop (backend/AGENTS.md): compile, unit tests (Surefire), the *IT classes
-      # with Testcontainers on the runner's Docker (Failsafe), then spotless:check. No Maven wrapper yet,
-      # so this uses the runner's Maven.
-      - name: Verify (mvn -B verify)
-        run: mvn -B -ntp verify
+      # Integration tests use Testcontainers on the runner's Docker (Failsafe). No Maven wrapper yet, so this
+      # uses the runner's Maven. `set -f` keeps the shell from expanding the * in the test patterns.
+      - name: Verify (mvn -B verify, ${{ matrix.part }})
+        env:
+          MVN_ARGS: ${{ matrix.mvn-args }}
+        run: |
+          set -f
+          mvn -B -ntp verify $MVN_ARGS
+
+  # Keeps the check name `backend`: green only when every part is green; skipped parts (folder unchanged) count
+  # as success.
+  backend:
+    name: backend
+    needs: [changes, backend-tests]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every backend part
+        env:
+          RESULTS: ${{ needs.changes.result }} ${{ needs.backend-tests.result }}
+        run: |
+          echo "changes / backend-tests: $RESULTS"
+          case "$RESULTS" in
+            *failure*|*cancelled*) echo "::error::A backend job did not succeed."; exit 1 ;;
+          esac
