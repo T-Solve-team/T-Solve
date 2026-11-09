@@ -73,10 +73,13 @@ services:
       KC_HEALTH_ENABLED: "true"
       JAVA_OPTS_KC_HEAP: "-Xms256m -Xmx768m"
       KEYCLOAK_WEB_CLIENT_SECRET: ${KEYCLOAK_WEB_CLIENT_SECRET:?set KEYCLOAK_WEB_CLIENT_SECRET in .env}
+      # "Back to sign-in" target (client baseUrl and theme fallback); production: https://tsolve.io.vn/
+      TSOLVE_WEB_BASE_URL: ${TSOLVE_WEB_BASE_URL:-http://localhost:5173/}
     ports:
       - "127.0.0.1:8180:8080"
     volumes:
       - ./infra/keycloak/realm-tsolve.json:/opt/keycloak/data/import/realm-tsolve.json:ro
+      - ./infra/keycloak/themes/tsolve:/opt/keycloak/themes/tsolve:ro
     healthcheck:
       # The image has no curl: open the management port (9000) and ask /health/ready
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '\"UP\"' <&3"]

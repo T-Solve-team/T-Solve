@@ -49,7 +49,7 @@ import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.search.retrieval.service.SolutionRetrieval;
 
 class ChatbotAnswerTimeoutIT {
-    private static final String CHANGELOG = "db/changelog/search-only.xml";
+    private static final String CHANGELOG = "db/changelog/db.changelog-master.xml";
     private static final String ASK_TIMEOUT = "3s";
     private static final long SLOW_SAVE_DELAY_MILLIS = 3500;
     private static final PostgreSQLContainer<?> SERVER = new PostgreSQLContainer<>(

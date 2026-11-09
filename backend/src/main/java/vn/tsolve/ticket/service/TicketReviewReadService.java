@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import vn.tsolve.ticket.dto.TicketReviewView.Detail;
+import vn.tsolve.ticket.dto.TicketReviewView.ExpiredItem;
 import vn.tsolve.ticket.dto.TicketReviewView.Feedback;
 import vn.tsolve.ticket.dto.TicketReviewView.HistoryFilter;
 import vn.tsolve.ticket.dto.TicketReviewView.HistoryItem;
@@ -18,6 +19,11 @@ public interface TicketReviewReadService {
     Page<QueueItem> queue(Map<UUID, ProjectAccess> projects, UUID departmentId, Pageable page, List<String> sort);
 
     List<UUID> eligibleIds(Map<UUID, ProjectAccess> projects, UUID departmentId);
+
+    Page<ExpiredItem> expired(
+            Map<UUID, ProjectAccess> projects, UUID departmentId, int page, int size, List<String> sort);
+
+    List<UUID> expiredIds(Map<UUID, ProjectAccess> projects, UUID departmentId);
 
     Detail detail(Map<UUID, ProjectAccess> projects, UUID accountId, boolean manager, UUID ticketId);
 

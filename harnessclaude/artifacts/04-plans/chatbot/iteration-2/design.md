@@ -11,3 +11,10 @@ Master: `artifacts/04-plans/chatbot/design.md`
 Iteration 2 builds the backend of STORY-005 to STORY-007 (KAN-179, KAN-180, KAN-181) as the master section "Backend
 (change of 2026-11-06)" says, in full. It needs the search `SolutionRetrieval` (search Task 19) first. The
 frontend of iteration 1 stays as it is; Task 10 only checks the contract against the backend.
+
+## Backend ratings (change of 2026-11-09, STORY-008, KAN-182)
+
+Master: `artifacts/04-plans/chatbot/design.md`, section "Backend ratings (change of 2026-11-09…)". Two nullable
+columns `rating`, `rated_at` on `chatbot_answer` (changeset 024); `ChatbotRatingController` and a `chatbot/rating/`
+service; one owner-scoped `@Modifying` update, zero rows → 404 MSG04; a bad body → 400 MSG06. KAN-183: no backend
+change.

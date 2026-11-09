@@ -156,3 +156,7 @@ Agreements: tenant checks precede business handlers; keep payloads small; defaul
 Builder check resolved: `tsolve.worker.enabled` activates enqueue/storage; `jobrunr.background-job-server.enabled` activates execution, defaults false and is set true by application-worker.yml. Core runtime explicitly consumes this flag; it does not rely on starter auto-configuration. Module paths include pom, profile/base YAML, environment example and worker documentation.
 
 Focused unit/config tests, PostgreSQL-backed JobRunr serialization and dispatch integration test, then full mvn verify and spotless:check. Report infrastructure or unrelated baseline failures separately; do not weaken checks. One feature commit requires user confirmation.
+
+## STORY-003: Active Workspaces for recurring jobs (KAN-157)
+
+`WorkerTenantService` gains `Set<UUID> activeWorkspaceIds()`. It is abstract, so the future platform adapter must implement it from the catalog, and it binds nothing on the calling thread (AC-003.1). `MockWorkerTenantService` returns an unmodifiable copy of its configured Active allow-list, never a Suspended or unlisted UUID (AC-003.2). The only consumer is ticket-review's JOB-02 fan-out (STORY-014). No payload, runtime or storage change.
