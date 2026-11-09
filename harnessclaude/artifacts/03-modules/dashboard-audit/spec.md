@@ -16,6 +16,7 @@ status: draft
 | 2026-10-31 | STORY-001 | Finalize the inclusive Vietnam-time date range with no default range and no future dates; complete filter semantics | User chose option 1 for the final date-range decision |
 | 2026-11-07 | STORY-002, STORY-003 | New STORY-002 (write audit entries for review decisions and CSV import through `AuditService.record` into a new append-only `audit_log_entry` table that replaces `audit_event`) and STORY-003 (the backend serves `GET /api/v1/audit-events` of the contract); Out of Scope and Interface Contracts updated; supersedes be-foundation STORY-004 | KAN-152, demo 08/11. The user, 07/11: actions = review decisions + import (no user/role backend exists yet); table = `audit_log_entry` from the team DDL `02_tenant.sql`, adapted to UUID keys and the contract's target fields; build the read API; be-foundation's spec is left untouched for now with a follow-up to retire its STORY-004 |
 | 2026-11-09 | STORY-004, STORY-005 (new) | New STORY-004 Knowledge Dashboard figures API (KAN-150) and STORY-005 screen 9.1 (KAN-151); Requirements 6-7, Out of Scope, Interface Contracts (`getKnowledgeDashboard`, `KnowledgeDashboard`), Sources and Definition of Done follow; STORY-001..003 unchanged | User decisions 09/11: the five groups of SRS 9.1 from stored data without ticket views; one endpoint for all groups; knowledge gaps counted by the asker's Department; charts with antd and CSS, no new dependency. Planning call: the filter options come in the response because no Department or Project list API exists |
+| 2026-11-09 | STORY-004, STORY-005 | AC-004.7: an Admin's `projectId` outside the given `departmentId` answers 400 MSG06; AC-004.10: "given in the period" is the time of the latest rating (`ticket_feedback.updated_at`) and the 5 lowest leave out the 5 highest; new AC-005.11: the page says that Knowledge gaps ignore the chosen Project | Review of PR #178 (trhieudev1309) and the user's decisions 09/11: "400 MSG06", "Loại trùng", "updated_at", and a note on the page for Project-independent gaps |
 
 ## Requirements
 
@@ -128,7 +129,8 @@ status: draft
   - AC-004.6: WHILE the user is an Admin, THE backend SHALL count the whole Workspace, or one Department with
     `departmentId`, or one Project with `projectId`.
   - AC-004.7: IF `departmentId` or `projectId` is not a UUID, THEN THE backend SHALL answer 400 with MSG06; IF it
-    names no Department or Project, THEN 404 with MSG04.
+    names no Department or Project, THEN 404 with MSG04; IF an Admin sends a `projectId` whose Project is not in the
+    given `departmentId`, THEN 400 with MSG06.
   - AC-004.8: THE backend SHALL return as Solution outcomes, for the period and scope: the APPROVED, REJECTED and
     CHANGES_REQUESTED review decisions, plus as approved the tickets imported or created manually in the period
     (source other than the Solution Form, by `created_at`); the same per day (every day of the period, zeros
@@ -137,8 +139,10 @@ status: draft
   - AC-004.9: THE backend SHALL return as Knowledge coverage the current numbers of Published tickets and of all
     tickets of the scope, the Published share (null when there is no ticket), and the same per Department.
   - AC-004.10: THE backend SHALL return as Reuse & feedback the Helpful and Not helpful feedback given in the period
-    on tickets of the scope, the helpful rate (null when none), and the 5 highest and the 5 lowest rated tickets by
-    helpful rate among the tickets with feedback in the period (ties: more feedback first, then title).
+    (by the time of each user's latest rating, `ticket_feedback.updated_at`) on tickets of the scope, the helpful
+    rate (null when none), and the 5 highest and the 5 lowest rated tickets by helpful rate among the tickets with
+    feedback in the period (ties: more feedback first, then title); the 5 lowest SHALL leave out the tickets already
+    among the 5 highest.
   - AC-004.11: THE backend SHALL return as Knowledge gaps the 10 most frequent searches of the period with no result
     (query trimmed and grouped case-insensitively, every channel) and the number and the 10 most frequent questions
     of Knowledge Chatbot answers with outcome `NO_SOURCE` in the period; a Department scope counts by the asker's
@@ -180,6 +184,8 @@ status: draft
   - AC-005.10: WHEN mock mode is on, THE feature's MSW handler SHALL answer `getKnowledgeDashboard` with data for
     every section, the requested period and 400 MSG39 for an invalid range; with `VITE_API_MOCKING=false` the page
     SHALL work against the real backend with no change in the feature other than its `mocks/` folder.
+  - AC-005.11: WHERE a Project is chosen, THE web app SHALL say in the Knowledge gaps section that its figures count
+    the whole Department, or the whole Workspace when no Department is chosen (AC-004.11).
 
 ## Out of Scope
 - Frontend changes: the screen of STORY-001 already calls the contract; it reads the backend once mocks are off.
