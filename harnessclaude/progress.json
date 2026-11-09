@@ -187,16 +187,16 @@
         "ticket-search-connect": "pending",
         "ticket-feedback-api": "passing",
         "give-feedback-connect": "evaluating",
-        "ticket-suggestion-api": "pending",
+        "ticket-suggestion-api": "passing",
         "solution-retrieval": "passing"
       },
-      "lastUpdated": "2026-11-06T17:23:51.646Z",
+      "lastUpdated": "2026-11-09T04:05:02.373Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
+        "default": "7a51712dc7528024cb627f5a39324001e16e9ce7"
       }
     },
     "triage": {
