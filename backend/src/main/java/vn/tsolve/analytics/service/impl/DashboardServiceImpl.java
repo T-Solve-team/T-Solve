@@ -11,12 +11,9 @@ import vn.tsolve.analytics.dto.KnowledgeDashboardResponse;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.Coverage;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.DayOutcome;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.DepartmentCoverage;
-import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.Feedback;
-import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.Gaps;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.Outcomes;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.Period;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.ProjectOutcome;
-import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.Suggestions;
 import vn.tsolve.analytics.repository.DashboardRepository;
 import vn.tsolve.analytics.repository.DashboardRepository.OutcomeCount;
 import vn.tsolve.analytics.repository.DashboardRepository.TicketStatusCount;
@@ -52,9 +49,9 @@ public class DashboardServiceImpl implements DashboardService {
                 options,
                 outcomes(period, outcomeCounts, statusCounts),
                 coverage(statusCounts),
-                new Feedback(0, 0, null, List.of(), List.of()),
-                new Gaps(List.of(), 0, List.of()),
-                new Suggestions(0, 0, null));
+                repository.findFeedback(scope.departments(), scope.projectId(), period.start(), period.end()),
+                repository.findGaps(scope.departments(), period.start(), period.end()),
+                repository.findSuggestions(scope.departments(), scope.projectId(), period.start(), period.end()));
     }
 
     private Outcomes outcomes(DashboardPeriod period, List<OutcomeCount> counts, List<TicketStatusCount> statuses) {

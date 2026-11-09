@@ -24,7 +24,7 @@ public class DashboardController {
     }
 
     @GetMapping("/api/v1/dashboard")
-    @Operation(operationId = "getKnowledgeDashboard")
+    @Operation(operationId = "getKnowledgeDashboard", summary = "Knowledge Dashboard figures for a period and scope")
     @ApiResponse(responseCode = "400", description = "Invalid filters")
     @ApiResponse(responseCode = "403", description = "Access denied")
     @ApiResponse(responseCode = "404", description = "Unknown Department or Project")

@@ -47,7 +47,7 @@ public record KnowledgeDashboardResponse(
             List<TicketFeedback> topRated,
             List<TicketFeedback> lowestRated) {}
 
-    public record TicketFeedback(UUID ticketId, String title, long helpful, long notHelpful, Double helpfulRate) {}
+    public record TicketFeedback(UUID ticketId, String title, long helpful, long notHelpful, double helpfulRate) {}
 
     public record Gaps(
             List<NoResultSearch> noResultSearches, long chatbotNoSource, List<ChatbotQuestion> chatbotQuestions) {}

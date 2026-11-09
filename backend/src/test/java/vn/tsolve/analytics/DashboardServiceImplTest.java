@@ -130,6 +130,14 @@ class DashboardServiceImplTest {
 
     @Test
     void returnsZeroFiguresAndNullRates_AC_004_1() {
+        var start = Instant.parse("2026-11-06T17:00:00Z");
+        var end = Instant.parse("2026-11-07T17:00:00Z");
+        when(repository.findFeedback(null, null, start, end))
+                .thenReturn(new KnowledgeDashboardResponse.Feedback(0, 0, null, List.of(), List.of()));
+        when(repository.findGaps(null, start, end))
+                .thenReturn(new KnowledgeDashboardResponse.Gaps(List.of(), 0, List.of()));
+        when(repository.findSuggestions(null, null, start, end))
+                .thenReturn(new KnowledgeDashboardResponse.Suggestions(0, 0, null));
         var result = service.dashboard(ADMIN, "2026-11-07", "2026-11-07", null, null);
         assertThat(result.outcomes())
                 .isEqualTo(new KnowledgeDashboardResponse.Outcomes(

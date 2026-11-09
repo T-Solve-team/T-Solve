@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import vn.tsolve.analytics.controller.DashboardController;
@@ -90,8 +91,7 @@ class DashboardControllerTest {
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
     void rendersOutOfScopeDenial_AC_004_5() throws Exception {
-        when(service.dashboard(any(), any(), any(), any(), any()))
-                .thenThrow(new org.springframework.security.access.AccessDeniedException("MSG08"));
+        when(service.dashboard(any(), any(), any(), any(), any())).thenThrow(new AccessDeniedException("MSG08"));
         mvc.perform(get("/api/v1/dashboard"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("MSG08"));
