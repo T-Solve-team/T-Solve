@@ -104,3 +104,21 @@ tsolve:
     # Until search builds the AI Solution Suggestion (KAN-47): empty = no suggestion, "unavailable" = search fails,
     # any other text = that suggested solution for every new issue (tracker STORY-011).
     suggestion: ${TSOLVE_STUB_SUGGESTION:}
+
+---
+# Keycloak provisioning of a Workspace's sign-in (AC-001.58, .60, .61). This document is active only in the `ops`
+# profile, so the keys do not exist in a Workspace web process, whatever its environment holds. Empty defaults (a
+# deviation from "no default", AC-001.60): with one of the three secrets empty the no-op bean is wired and one WARN
+# names the missing variable; with all three set, TSOLVE_LOGIN_ORIGIN and TSOLVE_SITE_ORIGIN_TEMPLATE are validated.
+spring:
+  config:
+    activate:
+      on-profile: ops
+tsolve:
+  keycloak-provisioning:
+    base-url: ${TSOLVE_LOGIN_ORIGIN:}
+    realm: tsolve
+    admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
+    google-client-id: ${GOOGLE_CLIENT_ID:}
+    google-client-secret: ${GOOGLE_CLIENT_SECRET:}
+    site-origin-template: ${TSOLVE_SITE_ORIGIN_TEMPLATE:}

@@ -143,6 +143,22 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "tsolve-provisioner",
+      "name": "T-Solve provisioner",
+      "description": "Creates and removes the Organization, the Google identity provider and the tsolve-web URIs of a Workspace (Admin API, service account only)",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KEYCLOAK_ADMIN_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "redirectUris": [],
+      "webOrigins": []
     }
   ],
   "identityProviders": [
@@ -228,6 +244,23 @@
     }
   ],
   "users": [
+    {
+      "username": "service-account-tsolve-provisioner",
+      "enabled": true,
+      "serviceAccountClientId": "tsolve-provisioner",
+      "clientRoles": {
+        "realm-management": [
+          "manage-identity-providers",
+          "view-identity-providers",
+          "manage-clients",
+          "view-clients",
+          "manage-users",
+          "view-users",
+          "query-users",
+          "manage-realm"
+        ]
+      }
+    },
     {
       "username": "alice@acme.test",
       "email": "alice@acme.test",
