@@ -114,6 +114,7 @@ export * from './ticketSolutionCitation';
 export * from './ticketSolutionCitationType';
 export * from './ticketSource';
 export * from './ticketStatus';
+export * from './ticketSuggestionRequest';
 export * from './ticketSummary';
 export * from './ticketSummaryPage';
 export * from './unavailableDocuments';
