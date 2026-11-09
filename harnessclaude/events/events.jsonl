@@ -1096,3 +1096,5 @@
 {"ts":"2026-11-09T18:37:00.921Z","type":"quick-closed","what":"KAN-305 fill the chatbot question box with one paste instead of typing every character, to cut test time","files":["frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.rating-401.test.tsx"]}
 {"ts":"2026-11-09T18:49:58.396Z","type":"quick-opened","what":"KAN-305 use four test shards instead of three to even out the frontend CI jobs","files":[".github/workflows/ci.yml"]}
 {"ts":"2026-11-09T18:54:13.282Z","type":"quick-closed","what":"KAN-305 use four test shards instead of three to even out the frontend CI jobs","files":[".github/workflows/ci.yml"]}
+{"ts":"2026-11-09T19:28:15.751Z","type":"quick-opened","what":"KAN-305 split the backend CI job into unit tests, Keycloak integration tests and the other integration tests","files":[".github/workflows/ci.yml"]}
+{"ts":"2026-11-09T19:31:08.679Z","type":"quick-closed","what":"KAN-305 split the backend CI job into unit tests, Keycloak integration tests and the other integration tests","files":[".github/workflows/ci.yml"]}
