@@ -973,3 +973,8 @@
 {"ts":"2026-11-07T20:25:00.860Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T21:31:55.552Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T21:31:55.863Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"evaluating","to":"passing"}
+{"ts":"2026-11-09T14:51:37.708Z","type":"spec-approved","module":"identity","specHash":"9acb02ec5d35d97449edf84a5c7029d6dac0133a97a9ef79853b6cafc7069b8e"}
+{"ts":"2026-11-09T16:05:39.291Z","type":"spec-approved","module":"identity","specHash":"b36d3c7a0b8b96ad09f43822f79c68f743381aa61685dd48a3d8adee9066c66e"}
+{"ts":"2026-11-09T16:53:49.281Z","type":"feature-status","module":"identity","feature":"keycloak-provisioning","from":"pending","to":"in-progress"}
+{"ts":"2026-11-09T16:53:51.827Z","type":"feature-status","module":"identity","feature":"keycloak-provisioning","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-09T16:53:52.928Z","type":"feature-status","module":"identity","feature":"keycloak-provisioning","from":"evaluating","to":"passing"}

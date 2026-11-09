@@ -28,6 +28,7 @@ database finds it (ADR-0002, GBR-37). The HLA names the catalog database the **P
 database**. The same jar runs as three processes: the web process (REST API for the Workspace sites, the Platform
 Console and the Jira App), the background worker (profile `worker`, no web server, its own container; see Background
 Jobs) and the ops script (profile `ops`, the hand-run form of the same provisioning service the Platform Console calls).
+Note (KAN-299 Q3, 9/11): identity AC-001.61 forbids a Workspace web process to hold the Keycloak provisioning and Google credentials, so the Platform Console needs its own process (its profile is decided in identity Task 29); it cannot share the Workspace web process.
 **Rationale:** one team, one deployable; module boundaries live in packages, not services. A three-person ops
 budget (one application VPS plus one AI VPS) cannot run one server per company, while a database per company keeps
 each company's data behind a database boundary and lets it be backed up and restored on its own (ADR-0002, 29/10).

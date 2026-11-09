@@ -123,7 +123,7 @@
         "callback-workspace-checks": "pending",
         "user-role": "pending",
         "logout-rp-initiated": "pending",
-        "keycloak-provisioning": "pending",
+        "keycloak-provisioning": "passing",
         "keycloak-theme": "pending",
         "keycloak-prerequisites": "passing",
         "keycloak-realm": "passing",
@@ -132,7 +132,7 @@
         "user-list-backend": "in-progress",
         "add-user-backend": "in-progress"
       },
-      "lastUpdated": "2026-11-07T21:31:55.861Z",
+      "lastUpdated": "2026-11-09T16:53:52.926Z",
       "branch": "feat/identity",
       "repos": [
         "default"
