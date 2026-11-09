@@ -229,15 +229,17 @@
         "ask-answer-api": "passing",
         "answer-citations": "passing",
         "cited-documents": "passing",
-        "follow-up-context": "pending"
+        "follow-up-context": "pending",
+        "answer-rating-schema": "passing",
+        "answer-rating-api": "passing"
       },
-      "lastUpdated": "2026-11-08T07:38:30.920Z",
+      "lastUpdated": "2026-11-09T05:15:45.201Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b1b39c47ebf332cc70e1f49d41777876962d61f3"
+        "default": "6555ebac926abf92fd8ee0a100ac980beaedf901"
       }
     },
     "jira-app": {
