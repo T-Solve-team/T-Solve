@@ -129,12 +129,12 @@
         "keycloak-realm": "passing",
         "keycloak-sign-in-start": "passing",
         "keycloak-callback": "passing",
-        "user-list-backend": "in-progress",
-        "add-user-backend": "in-progress",
+        "user-list-backend": "passing",
+        "add-user-backend": "passing",
         "user-roles-backend": "passing",
         "user-status-backend": "passing"
       },
-      "lastUpdated": "2026-11-10T01:22:54.868Z",
+      "lastUpdated": "2026-11-10T02:31:07.442Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -396,14 +396,14 @@
         "review-ticket-detail": "passing",
         "expired-tickets": "passing",
         "review-history": "passing",
-        "review-storage": "evaluating",
-        "review-production-api": "evaluating",
+        "review-storage": "passing",
+        "review-production-api": "passing",
         "review-jira-feedback": "in-progress",
-        "review-decision-transaction": "evaluating",
-        "review-decision-endpoints": "evaluating",
-        "review-queue-entry-time": "evaluating",
-        "review-history-api": "evaluating",
-        "review-email-notification": "evaluating",
+        "review-decision-transaction": "passing",
+        "review-decision-endpoints": "passing",
+        "review-queue-entry-time": "passing",
+        "review-history-api": "passing",
+        "review-email-notification": "passing",
         "review-queue-events-api": "passing",
         "review-queue-events-web": "passing",
         "review-queue-events-hardening": "passing",
@@ -411,7 +411,7 @@
         "review-expiry-job": "passing",
         "review-expired-stored-columns": "passing"
       },
-      "lastUpdated": "2026-11-10T01:18:52.713Z",
+      "lastUpdated": "2026-11-10T02:14:00.291Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
