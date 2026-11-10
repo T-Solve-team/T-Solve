@@ -27,6 +27,8 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
@@ -124,6 +126,12 @@ class KeycloakSignInEndToEndIT {
         backendPort =
                 ((ServletWebServerApplicationContext) backend).getWebServer().getPort();
         redis = backend.getBean(StringRedisTemplate.class);
+        // Task 25b: the callback checks the Account; DevAccountSeeder only comes in Task 26b
+        SignInTestFixtures.seedDevAccounts(db());
+    }
+
+    private static JdbcTemplate db() {
+        return new JdbcTemplate(new DriverManagerDataSource(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword()));
     }
 
     @AfterAll
@@ -354,6 +362,7 @@ class KeycloakSignInEndToEndIT {
                                         List.of("response-template"),
                                         "body",
                                         token))));
+        SignInTestFixtures.seedAccount(db(), "carol@acme.test", "Carol Acme");
         try {
             TestBrowser browser = newBrowser();
 
@@ -380,6 +389,7 @@ class KeycloakSignInEndToEndIT {
             for (String id : stubIds) {
                 fakeGoogleAdmin("DELETE", "/__admin/mappings/" + id, null);
             }
+            db().update("DELETE FROM app_user WHERE email = 'carol@acme.test'");
             realm().users()
                     .searchByEmail("carol@acme.test", true)
                     .forEach(user -> realm().users().delete(user.getId()).close());

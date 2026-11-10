@@ -33,6 +33,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.AuthSecurityConfig;
+import vn.tsolve.identity.account.AccountSignInService;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
 import vn.tsolve.identity.signin.port.WorkspaceRef;
 
@@ -79,6 +80,10 @@ class SignInStartControllerTest {
     /** Only so the callback chain's Redis repository can be built; sign-in start talks to the recording double. */
     @MockBean
     private StringRedisTemplate redis;
+
+    /** The callback handler's Account step (Task 25b); sign-in start never reaches it. */
+    @MockBean
+    private AccountSignInService accountSignInService;
 
     @Autowired
     private MockMvc mvc;
@@ -207,10 +212,6 @@ class SignInStartControllerTest {
                 .hasToString(InMemoryWorkspaceLookup.GAMMA.id().toString());
     }
 
-    private static WorkspaceRef noDomain(String host) {
-        return host.startsWith("nodomain") ? InMemoryWorkspaceLookup.NO_DOMAIN : InMemoryWorkspaceLookup.BLANK_DOMAIN;
-    }
-
     @ParameterizedTest(name = "[{index}] {0}")
     @ValueSource(strings = {"nodomain.localhost", "blankdomain.localhost"})
     @DisplayName("AC-001.48 refuses sign-in start for a Workspace with no Google domain")
@@ -226,28 +227,58 @@ class SignInStartControllerTest {
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
-    @ValueSource(strings = {"nodomain.localhost", "blankdomain.localhost"})
-    @DisplayName("AC-001.48 creates no authorization request and no cookie for a Workspace with no Google domain")
-    void createsNoAuthorizationRequestForAWorkspaceWithNoGoogleDomain_AC_001_48(String host) throws Exception {
+    @ValueSource(strings = {"noorg.localhost", "blankorg.localhost"})
+    @DisplayName("AC-001.48 refuses sign-in start for a Workspace with no Organization id")
+    void refusesSignInStartForAWorkspaceWithNoOrganizationId_AC_001_48(String host) throws Exception {
+        MockHttpServletResponse response = perform(start(host));
+
+        assertThat(response.getStatus()).as("status").isEqualTo(302);
+        String location = response.getHeader(HttpHeaders.LOCATION);
+        assertThat(location).as("Location").isNotNull();
+        URI resolved =
+                URI.create("http://" + host + ":8081/api/v1/auth/sign-in").resolve(location);
+        assertThat(resolved.toString()).isEqualTo("http://" + host + ":8081/login?error=MSG141");
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @ValueSource(strings = {"nodomain.localhost", "blankdomain.localhost", "noorg.localhost", "blankorg.localhost"})
+    @DisplayName(
+            "AC-001.48 creates no authorization request and no cookie for a Workspace with no Google domain or no Organization id")
+    void createsNoAuthorizationRequestForAWorkspaceWithNoGoogleDomainOrOrganizationId_AC_001_48(String host)
+            throws Exception {
         MockHttpServletResponse response = perform(start(host));
 
         assertThat(requests.saved()).isEmpty();
         assertThat(response.getHeaders(HttpHeaders.SET_COOKIE)).isEmpty();
     }
 
-    @Test
-    @DisplayName("AC-001.48 logs one WARN that names only the Workspace id")
-    void logsOneWarnThatNamesOnlyTheWorkspaceId_AC_001_48(CapturedOutput output) throws Exception {
-        perform(start("nodomain.localhost").param("returnTo", "/secret-return-path"));
+    static Stream<Arguments> unreadyWorkspaces() {
+        return Stream.of(
+                Arguments.of("nodomain.localhost", InMemoryWorkspaceLookup.NO_DOMAIN),
+                Arguments.of("noorg.localhost", InMemoryWorkspaceLookup.NO_ORGANIZATION));
+    }
 
-        String id = noDomain("nodomain").id().toString();
+    @ParameterizedTest(name = "[{index}] {0}")
+    @MethodSource("unreadyWorkspaces")
+    @DisplayName("AC-001.48 logs one WARN that names only the Workspace id")
+    void logsOneWarnThatNamesOnlyTheWorkspaceId_AC_001_48(String host, WorkspaceRef workspace, CapturedOutput output)
+            throws Exception {
+        perform(start(host).param("returnTo", "/secret-return-path"));
+
+        String id = workspace.id().toString();
         List<String> warnLines = output.getAll()
                 .lines()
                 .filter(line -> line.contains(" WARN "))
                 .filter(line -> line.contains(id))
                 .toList();
         assertThat(warnLines).hasSize(1);
-        assertThat(warnLines.get(0)).doesNotContain("nodomain.localhost").doesNotContain("secret-return-path");
+        assertThat(warnLines.get(0))
+                .doesNotContain(host)
+                .doesNotContain("secret-return-path")
+                .doesNotContain(workspace.slug());
+        if (workspace.googleDomain() != null) {
+            assertThat(warnLines.get(0)).doesNotContain(workspace.googleDomain());
+        }
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
