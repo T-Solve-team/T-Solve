@@ -40,6 +40,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.common.security.SecurityConfig;
+import vn.tsolve.identity.account.AccountSignInService;
 import vn.tsolve.identity.signin.AuthHosts;
 import vn.tsolve.identity.signin.KeycloakClientRegistrations;
 import vn.tsolve.identity.signin.OidcCallbackHandler;
@@ -98,6 +99,10 @@ class AuthSecurityConfigTest {
     /** The Redis the callback's repository reads; no test here talks to a real one. */
     @MockBean
     private StringRedisTemplate redis;
+
+    /** The callback handler's Account step (Task 25b); the chain tests here never reach it. */
+    @MockBean
+    private AccountSignInService accountSignInService;
 
     private ValueOperations<String, String> values;
 

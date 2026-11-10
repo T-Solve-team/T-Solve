@@ -29,6 +29,8 @@ import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
 import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.testcontainers.containers.GenericContainer;
@@ -78,6 +80,9 @@ class TwoInstanceCallbackIT {
         portA = portOf(instanceA);
         portB = portOf(instanceB);
         redis = instanceA.getBean(StringRedisTemplate.class);
+        // Task 25b: the callback checks the Account; DevAccountSeeder only comes in Task 26b
+        SignInTestFixtures.seedDevAccounts(
+                new JdbcTemplate(new DriverManagerDataSource(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword())));
     }
 
     @AfterAll

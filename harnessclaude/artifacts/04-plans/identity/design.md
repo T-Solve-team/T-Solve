@@ -861,6 +861,7 @@ listed in its banner. Every Critical or High row has its test task.
 | 130 | STORY-001 | Error cascades | Redis health: the `redis` health indicator when Redis is up | Medium | The indicator is UP, so `/actuator/health` stays 200 UP | Task 23a |
 | 131 | STORY-001 | Timing, Data integrity | Two subs do a first sign-in on one sub-less Account at once | High | The later one is refused (MSG09, one WARN with the Account id); the Account keeps the first sub (AC-001.56; conditional bind) | Task 25a |
 | 132 | STORY-001 | State transitions | A Deactivated Account on its first sign-in | Medium | Refused as MSG10; the sub is not bound (AC-001.13, AC-001.16) | Task 25a |
+| 133 | STORY-001 | Error cascades | The Account step fails itself at the callback: the database is down, `signIn` throws, or the token has `email_verified` true but no `email` (it would be an NPE in `signIn`) | High | 302 `/login?error=MSG06`, the sign-in cookie expired, no session, one `ERROR` with only the Workspace id (no email, `sub` or name), never a 500 (AC-001.74; AC-001.14 order unchanged) | Task 25b |
 
 Open questions for the spec owner: none. Every row is closed by the answers Q1–Q16.
 

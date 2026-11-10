@@ -1,11 +1,19 @@
 package vn.tsolve.identity.signin;
 
 import java.net.URI;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpHeaders;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import vn.tsolve.identity.dev.DevAccounts;
 
 /** Shared values and helpers for the sign-in tests. */
 public final class SignInTestFixtures {
@@ -21,7 +29,37 @@ public final class SignInTestFixtures {
      */
     public static final String KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
+    public static final String ID_TOKEN_VALUE = "id-token-value-should-never-appear";
+    public static final String NONCE_VALUE = "nonce-value-should-never-appear";
+
     private SignInTestFixtures() {}
+
+    /** A signed-in token holding these ID token claims (iss, aud and nonce are added when absent). */
+    public static OAuth2AuthenticationToken signedIn(Map<String, Object> claims) {
+        Map<String, Object> all = new HashMap<>(claims);
+        all.putIfAbsent("iss", "http://login.localhost:8080/realms/tsolve");
+        all.putIfAbsent("aud", List.of("tsolve-web"));
+        all.putIfAbsent("nonce", NONCE_VALUE);
+        Instant now = Instant.now();
+        OidcIdToken idToken = new OidcIdToken(ID_TOKEN_VALUE, now, now.plusSeconds(300), all);
+        DefaultOidcUser user = new DefaultOidcUser(List.of(new SimpleGrantedAuthority("OIDC_USER")), idToken);
+        return new OAuth2AuthenticationToken(user, user.getAuthorities(), KeycloakClientRegistrations.REGISTRATION_ID);
+    }
+
+    /** Test-only: the {@link DevAccounts} as Active, sub-less {@code app_user} rows (DevAccountSeeder is Task 26b). */
+    public static void seedDevAccounts(JdbcTemplate jdbc) {
+        for (DevAccounts.DevAccount account : DevAccounts.all()) {
+            seedAccount(jdbc, account.email(), account.displayName());
+        }
+    }
+
+    public static void seedAccount(JdbcTemplate jdbc, String email, String fullName) {
+        jdbc.update(
+                "INSERT INTO app_user (email, full_name, status, created_at) VALUES (?, ?, 'ACTIVE', now())"
+                        + " ON CONFLICT (email) DO NOTHING",
+                email,
+                fullName);
+    }
 
     public static SignInProperties properties() {
         return new SignInProperties(
