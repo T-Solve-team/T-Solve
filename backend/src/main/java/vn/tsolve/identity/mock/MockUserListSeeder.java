@@ -43,6 +43,12 @@ public class MockUserListSeeder implements ApplicationRunner {
             account("resolver@acme.test", "Demo Resolver", "ACTIVE", "TICKET_RESOLVER", "Customer Support");
             account("manager@acme.test", "Demo Manager", "ACTIVE", "PROJECT_MANAGER", "IT Operations");
             account("knowledge@acme.test", "Demo Knowledge Manager", "ACTIVE", "KNOWLEDGE_MANAGER", null);
+            account(
+                    "knowledge-replacement@roles-demo.test",
+                    "Demo Replacement Knowledge Manager",
+                    "ACTIVE",
+                    "KNOWLEDGE_MANAGER",
+                    null);
             jdbc.sql(
                             """
                     INSERT INTO space_manager(space_id, user_id, assigned_at)

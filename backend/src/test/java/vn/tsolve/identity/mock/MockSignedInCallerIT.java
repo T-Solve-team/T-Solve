@@ -49,6 +49,31 @@ class MockSignedInCallerIT {
     private MockIdentityProperties properties;
 
     @Test
+    void seedsSecondKnowledgeManagerWithoutDepartmentOrSpace_AC_006_19() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        var row = db.queryForMap(
+                "SELECT id, full_name, status, department_id FROM app_user WHERE email = 'knowledge-replacement@roles-demo.test'");
+        assertThat(row.get("full_name")).isEqualTo("Demo Replacement Knowledge Manager");
+        assertThat(row.get("status")).isEqualTo("ACTIVE");
+        assertThat(row.get("department_id")).isNull();
+        assertThat(db.queryForList("SELECT role FROM user_role WHERE user_id = ?", String.class, row.get("id")))
+                .containsExactly("KNOWLEDGE_MANAGER");
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM space_manager WHERE user_id = ?", Integer.class, row.get("id")))
+                .isZero();
+        seeder.run(new DefaultApplicationArguments());
+        assertThat(
+                        db.queryForMap(
+                                "SELECT id, full_name, status, department_id FROM app_user WHERE email = 'knowledge-replacement@roles-demo.test'"))
+                .isEqualTo(row);
+        assertThat(TwoTenantDatabases.tenantB()
+                        .queryForObject(
+                                "SELECT count(*) FROM app_user WHERE email = 'knowledge-replacement@roles-demo.test'",
+                                Integer.class))
+                .isZero();
+    }
+
+    @Test
     void seededSpacesAppearInCreationOptions_AC_005_14() throws Exception {
         mvc.perform(get("/api/v1/users/creation-options"))
                 .andExpect(status().isOk())

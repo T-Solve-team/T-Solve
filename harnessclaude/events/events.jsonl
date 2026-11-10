@@ -1103,6 +1103,13 @@
 {"ts":"2026-11-09T19:53:07.473Z","type":"quick-closed","what":"KAN-305 fix the it-other test filter and split the Keycloak integration tests into two parallel parts","files":[".github/workflows/ci.yml"]}
 {"ts":"2026-11-09T20:18:12.131Z","type":"quick-opened","what":"KAN-305 write down the rules that keep CI fast: backend IT rules, frontend test rules, CI time budget and job timeouts","files":["backend/AGENTS.md","frontend/guidelines/10-testing.md",".github/workflows/ci.yml"]}
 {"ts":"2026-11-09T20:19:56.651Z","type":"quick-closed","what":"KAN-305 write down the rules that keep CI fast: backend IT rules, frontend test rules, CI time budget and job timeouts","files":["backend/AGENTS.md","frontend/guidelines/10-testing.md",".github/workflows/ci.yml"]}
+{"ts":"2026-11-10T00:37:28.805Z","type":"spec-approved","module":"identity","specHash":"acd078a53297938b6304c5bfa6bdbac0e9f05d33b84c1f810a4fd98ecea40076"}
+{"ts":"2026-11-10T00:38:06.601Z","type":"feature-status","module":"identity","feature":"user-status-backend","from":null,"to":"pending"}
+{"ts":"2026-11-10T00:38:06.649Z","type":"feature-status","module":"identity","feature":"user-status-backend","from":"pending","to":"in-progress"}
+{"ts":"2026-11-10T01:13:37.685Z","type":"commit-recorded","module":"identity","repo":"default","sha":"2432988d63db1dd87d464af1628d849a909e19dd"}
+{"ts":"2026-11-10T01:15:36.003Z","type":"feature-status","module":"identity","feature":"user-status-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T01:20:05.701Z","type":"feature-status","module":"identity","feature":"user-status-backend","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T01:22:54.870Z","type":"commit-recorded","module":"identity","repo":"default","sha":"5302d0d38123e26c638dbf094340b41a0e13651d"}
 {"ts":"2026-11-10T00:35:58.832Z","type":"spec-approved","module":"ticket-review","specHash":"864f785fff2912eb947c374a573532baac0a7d2e0915caaf4d06b20269b87d50"}
 {"ts":"2026-11-10T00:36:49.064Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":null,"to":"pending"}
 {"ts":"2026-11-10T00:36:49.103Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"pending","to":"in-progress"}

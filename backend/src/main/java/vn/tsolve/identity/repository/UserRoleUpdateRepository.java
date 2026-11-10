@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.security.Role;
+import vn.tsolve.identity.account.AccountStatus;
 
 @Repository
 public class UserRoleUpdateRepository {
@@ -130,6 +131,11 @@ public class UserRoleUpdateRepository {
         jdbc.update(
                 "DELETE FROM project_membership WHERE user_id = :user AND role_in_project = 'MEMBER'",
                 Map.of("user", userId));
+    }
+
+    public void updateStatus(UUID userId, AccountStatus status) {
+        jdbc.update(
+                "UPDATE app_user SET status = :status WHERE id = :id", Map.of("id", userId, "status", status.name()));
     }
 
     public void replaceAssignments(UUID userId, Collection<Role> roles, Long departmentId, Collection<UUID> spaces) {
