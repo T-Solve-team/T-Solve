@@ -162,10 +162,14 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
                         row.authorName(),
                         row.enteredQueueAt(),
                         dueAt(row.reviewDueDate()),
-                        row.reviewDueDate() == null
-                                ? row.updatedAt().atZone(REVIEW_ZONE).toOffsetDateTime()
-                                : dueAt(row.reviewDueDate().plusDays(1)),
-                        TicketStatus.PENDING_REVIEW.name()))
+                        row.expiredAt() != null
+                                ? row.expiredAt().atZone(REVIEW_ZONE).toOffsetDateTime()
+                                : row.reviewDueDate() == null
+                                        ? row.updatedAt().atZone(REVIEW_ZONE).toOffsetDateTime()
+                                        : dueAt(row.reviewDueDate().plusDays(1)),
+                        row.statusBeforeExpiry() != null
+                                ? row.statusBeforeExpiry().name()
+                                : TicketStatus.PENDING_REVIEW.name()))
                 .sorted(order)
                 .skip(paging.getOffset())
                 .limit(size)

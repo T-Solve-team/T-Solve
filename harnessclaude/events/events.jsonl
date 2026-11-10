@@ -1103,3 +1103,9 @@
 {"ts":"2026-11-09T19:53:07.473Z","type":"quick-closed","what":"KAN-305 fix the it-other test filter and split the Keycloak integration tests into two parallel parts","files":[".github/workflows/ci.yml"]}
 {"ts":"2026-11-09T20:18:12.131Z","type":"quick-opened","what":"KAN-305 write down the rules that keep CI fast: backend IT rules, frontend test rules, CI time budget and job timeouts","files":["backend/AGENTS.md","frontend/guidelines/10-testing.md",".github/workflows/ci.yml"]}
 {"ts":"2026-11-09T20:19:56.651Z","type":"quick-closed","what":"KAN-305 write down the rules that keep CI fast: backend IT rules, frontend test rules, CI time budget and job timeouts","files":["backend/AGENTS.md","frontend/guidelines/10-testing.md",".github/workflows/ci.yml"]}
+{"ts":"2026-11-10T00:35:58.832Z","type":"spec-approved","module":"ticket-review","specHash":"864f785fff2912eb947c374a573532baac0a7d2e0915caaf4d06b20269b87d50"}
+{"ts":"2026-11-10T00:36:49.064Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":null,"to":"pending"}
+{"ts":"2026-11-10T00:36:49.103Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"pending","to":"in-progress"}
+{"ts":"2026-11-10T01:12:00.122Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T01:14:37.208Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"53eb36fe9e99b6243ab77c0709c36579831f5794"}
+{"ts":"2026-11-10T01:18:52.713Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"evaluating","to":"passing"}
