@@ -129,12 +129,12 @@
         "keycloak-realm": "passing",
         "keycloak-sign-in-start": "passing",
         "keycloak-callback": "passing",
-        "user-list-backend": "in-progress",
-        "add-user-backend": "in-progress",
+        "user-list-backend": "passing",
+        "add-user-backend": "passing",
         "user-roles-backend": "passing",
         "user-status-backend": "passing"
       },
-      "lastUpdated": "2026-11-10T01:22:54.868Z",
+      "lastUpdated": "2026-11-10T02:31:07.442Z",
       "branch": "feat/identity",
       "repos": [
         "default"

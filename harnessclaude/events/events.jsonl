@@ -1116,6 +1116,10 @@
 {"ts":"2026-11-10T01:12:00.122Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-10T01:14:37.208Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"53eb36fe9e99b6243ab77c0709c36579831f5794"}
 {"ts":"2026-11-10T01:18:52.713Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:31:07.183Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T02:31:07.259Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:31:07.351Z","type":"feature-status","module":"identity","feature":"add-user-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T02:31:07.443Z","type":"feature-status","module":"identity","feature":"add-user-backend","from":"evaluating","to":"passing"}
 {"ts":"2026-11-10T02:13:59.701Z","type":"feature-status","module":"ticket-review","feature":"review-storage","from":"evaluating","to":"passing"}
 {"ts":"2026-11-10T02:13:59.780Z","type":"feature-status","module":"ticket-review","feature":"review-decision-transaction","from":"evaluating","to":"passing"}
 {"ts":"2026-11-10T02:13:59.884Z","type":"feature-status","module":"ticket-review","feature":"review-decision-endpoints","from":"evaluating","to":"passing"}
