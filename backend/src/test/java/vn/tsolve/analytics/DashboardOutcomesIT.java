@@ -149,8 +149,16 @@ class DashboardOutcomesIT {
                         List.of(new ProjectOutcome(app, "APP", 3, 2, 1))));
         assertThat(dashboard(Role.PROJECT_MANAGER, alpha, app).outcomes()).isEqualTo(project);
 
-        var disjoint = dashboard(Role.ADMIN, alpha, otherProject).outcomes();
-        assertThat(disjoint).isEqualTo(new Outcomes(0, 0, 0, null, 0, 0, emptyDays(1), List.of()));
+        var empty = dashboard(Role.ADMIN, alpha, emptyProject).outcomes();
+        assertThat(empty).isEqualTo(new Outcomes(0, 0, 0, null, 0, 0, emptyDays(1), List.of()));
+    }
+
+    @Test
+    void ignoresSendBackDecisions_AC_004_8() {
+        UUID sentBack = insertTicket(emptyProject, false, "SOLUTION_FORM", "UNPUBLISHED", OLD);
+        insertDecision(sentBack, "SEND_BACK", START);
+        assertThat(dashboard(Role.ADMIN, alpha, emptyProject).outcomes())
+                .isEqualTo(new Outcomes(0, 0, 0, null, 0, 0, emptyDays(1), List.of()));
     }
 
     @Test
@@ -192,7 +200,7 @@ class DashboardOutcomesIT {
         var project = new Coverage(2, 2, 1.0, List.of(new DepartmentCoverage(alpha, "Alpha", 2, 2, 1.0)));
         assertThat(dashboard(Role.ADMIN, null, app).coverage()).isEqualTo(project);
         assertThat(dashboard(Role.PROJECT_MANAGER, alpha, app).coverage()).isEqualTo(project);
-        assertThat(dashboard(Role.ADMIN, alpha, otherProject).coverage())
+        assertThat(dashboard(Role.ADMIN, alpha, emptyProject).coverage())
                 .isEqualTo(new Coverage(0, 0, null, List.of()));
     }
 

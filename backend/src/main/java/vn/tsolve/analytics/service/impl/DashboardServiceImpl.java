@@ -11,14 +11,15 @@ import vn.tsolve.analytics.dto.KnowledgeDashboardResponse;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.Coverage;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.DayOutcome;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.DepartmentCoverage;
+import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.Feedback;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.Outcomes;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.Period;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.ProjectOutcome;
+import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.Suggestions;
 import vn.tsolve.analytics.repository.DashboardRepository;
 import vn.tsolve.analytics.repository.DashboardRepository.OutcomeCount;
 import vn.tsolve.analytics.repository.DashboardRepository.TicketStatusCount;
 import vn.tsolve.analytics.service.DashboardService;
-import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
 
 @Service
@@ -37,21 +38,27 @@ public class DashboardServiceImpl implements DashboardService {
             TSolveUser user, String from, String to, String departmentId, String projectId) {
         DashboardPeriod period = DashboardPeriod.parse(from, to, clock);
         DashboardScope scope = DashboardScope.resolve(user, departmentId, projectId, repository);
-        Long ownDepartment = user.roles().contains(Role.ADMIN)
-                ? null
-                : scope.departments().iterator().next();
-        var options = repository.findOptions(ownDepartment);
-        var outcomeCounts =
-                repository.findOutcomeCounts(scope.departments(), scope.projectId(), period.start(), period.end());
-        var statusCounts = repository.findTicketStatusCounts(scope.departments(), scope.projectId());
+        var options = repository.findOptions(scope.ownDepartment());
+        var ticketProjects = repository.findTicketProjectIds(scope.departments(), scope.projectId());
+        // A scope without any Project has no ticket or suggestion to count, and SQL has no empty "in ()".
+        boolean hasProjects = !ticketProjects.isEmpty();
+        var outcomeCounts = hasProjects
+                ? repository.findOutcomeCounts(ticketProjects, period.start(), period.end())
+                : List.<OutcomeCount>of();
+        var statusCounts =
+                hasProjects ? repository.findTicketStatusCounts(ticketProjects) : List.<TicketStatusCount>of();
         return new KnowledgeDashboardResponse(
                 new Period(period.from(), period.to()),
                 options,
                 outcomes(period, outcomeCounts, statusCounts),
                 coverage(statusCounts),
-                repository.findFeedback(scope.departments(), scope.projectId(), period.start(), period.end()),
+                hasProjects
+                        ? repository.findFeedback(ticketProjects, period.start(), period.end())
+                        : new Feedback(0, 0, null, List.of(), List.of()),
                 repository.findGaps(scope.departments(), period.start(), period.end()),
-                repository.findSuggestions(scope.departments(), scope.projectId(), period.start(), period.end()));
+                hasProjects
+                        ? repository.findSuggestions(ticketProjects, period.start(), period.end())
+                        : new Suggestions(0, 0, null));
     }
 
     private Outcomes outcomes(DashboardPeriod period, List<OutcomeCount> counts, List<TicketStatusCount> statuses) {

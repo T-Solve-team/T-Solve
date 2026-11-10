@@ -95,7 +95,7 @@ class DashboardReuseGapsIT {
 
         var result = dashboard(Role.ADMIN, null, null).feedback();
         var rated = new TicketFeedback(publicTicketId(ticket), "Rated ticket", 2, 1, 2.0 / 3);
-        assertThat(result).isEqualTo(new Feedback(2, 1, 2.0 / 3, List.of(rated), List.of(rated)));
+        assertThat(result).isEqualTo(new Feedback(2, 1, 2.0 / 3, List.of(rated), List.of()));
         assertThat(service.dashboard(user(Role.ADMIN), "2026-11-05", "2026-11-07", null, null)
                         .feedback())
                 .isEqualTo(new Feedback(0, 0, null, List.of(), List.of()));
@@ -108,7 +108,7 @@ class DashboardReuseGapsIT {
         var beta = ratedTicket("Beta", 2, 0, false, UUID.randomUUID());
         var tieFirst = ratedTicket("Tie", 2, 0, false, UUID.fromString("00000000-0000-0000-0000-000000000001"));
         var tieLast = ratedTicket("Tie", 2, 0, false, UUID.fromString("00000000-0000-0000-0000-000000000002"));
-        ratedTicket("Small", 1, 0, false, UUID.randomUUID());
+        var small = ratedTicket("Small", 1, 0, false, UUID.randomUUID());
         var medium = ratedTicket("Medium", 1, 1, false, UUID.randomUUID());
         var low = ratedTicket("Low", 0, 2, false, UUID.randomUUID());
 
@@ -117,7 +117,39 @@ class DashboardReuseGapsIT {
         assertThat(result.notHelpful()).isEqualTo(3);
         assertThat(result.helpfulRate()).isEqualTo(13.0 / 16);
         assertThat(result.topRated()).containsExactly(zulu, alpha, beta, tieFirst, tieLast);
-        assertThat(result.lowestRated()).containsExactly(low, medium, zulu, alpha, beta);
+        assertThat(result.lowestRated()).containsExactly(low, medium, small);
+    }
+
+    @Test
+    void ranksOnlyRemainingTwoOfSevenRatedTicketsAsLowest_AC_004_10() {
+        var first = ratedTicket("First", 5, 0, true, UUID.randomUUID());
+        var second = ratedTicket("Second", 4, 0, false, UUID.randomUUID());
+        var third = ratedTicket("Third", 3, 0, false, UUID.randomUUID());
+        var fourth = ratedTicket("Fourth", 2, 0, false, UUID.randomUUID());
+        var fifth = ratedTicket("Fifth", 1, 0, false, UUID.randomUUID());
+        var medium = ratedTicket("Medium", 1, 1, false, UUID.randomUUID());
+        var low = ratedTicket("Low", 0, 2, false, UUID.randomUUID());
+
+        var result = dashboard(Role.ADMIN, null, null).feedback();
+        assertThat(result.helpful()).isEqualTo(16);
+        assertThat(result.notHelpful()).isEqualTo(3);
+        assertThat(result.helpfulRate()).isEqualTo(16.0 / 19);
+        assertThat(result.topRated()).containsExactly(first, second, third, fourth, fifth);
+        assertThat(result.lowestRated()).containsExactly(low, medium);
+        assertThat(result.lowestRated())
+                .extracting(TicketFeedback::ticketId)
+                .doesNotContainAnyElementsOf(
+                        result.topRated().stream().map(TicketFeedback::ticketId).toList());
+    }
+
+    @Test
+    void returnsThreeTopTicketsAndNoLowestWhenOnlyThreeAreRated_AC_004_10() {
+        var high = ratedTicket("High", 1, 0, true, UUID.randomUUID());
+        var medium = ratedTicket("Medium", 1, 1, false, UUID.randomUUID());
+        var low = ratedTicket("Low", 0, 1, false, UUID.randomUUID());
+
+        var result = dashboard(Role.ADMIN, null, null).feedback();
+        assertThat(result).isEqualTo(new Feedback(2, 2, 0.5, List.of(high, medium, low), List.of()));
     }
 
     @Test
@@ -143,8 +175,6 @@ class DashboardReuseGapsIT {
         assertThat(selected.topRated()).extracting(TicketFeedback::ticketId).containsExactly(publicTicketId(own));
         assertThat(dashboard(Role.ADMIN, null, project).feedback()).isEqualTo(selected);
         assertThat(dashboard(Role.PROJECT_MANAGER, null, project).feedback()).isEqualTo(selected);
-        assertThat(dashboard(Role.ADMIN, department, otherProject).feedback())
-                .isEqualTo(new Feedback(0, 0, null, List.of(), List.of()));
         assertThat(dashboard(Role.ADMIN, null, emptyProject).feedback())
                 .isEqualTo(new Feedback(0, 0, null, List.of(), List.of()));
     }
@@ -170,7 +200,7 @@ class DashboardReuseGapsIT {
                         new NoResultSearch("Beta", 1));
         assertThat(dashboard(Role.PROJECT_MANAGER, null, null).gaps()).isEqualTo(scoped);
         assertThat(dashboard(Role.PROJECT_MANAGER, null, emptyProject).gaps()).isEqualTo(scoped);
-        assertThat(dashboard(Role.ADMIN, department, otherProject).gaps()).isEqualTo(scoped);
+        assertThat(dashboard(Role.ADMIN, department, emptyProject).gaps()).isEqualTo(scoped);
         var workspace = dashboard(Role.ADMIN, null, null).gaps();
         assertThat(workspace.noResultSearches())
                 .containsExactly(
@@ -205,7 +235,7 @@ class DashboardReuseGapsIT {
                         new ChatbotQuestion("Beta", 1));
         assertThat(dashboard(Role.ADMIN, department, null).gaps()).isEqualTo(scoped);
         assertThat(dashboard(Role.PROJECT_MANAGER, null, emptyProject).gaps()).isEqualTo(scoped);
-        assertThat(dashboard(Role.ADMIN, department, otherProject).gaps()).isEqualTo(scoped);
+        assertThat(dashboard(Role.ADMIN, department, emptyProject).gaps()).isEqualTo(scoped);
         var workspace = dashboard(Role.ADMIN, null, project).gaps();
         assertThat(workspace.chatbotNoSource()).isEqualTo(7);
         assertThat(workspace.chatbotQuestions())
@@ -278,8 +308,6 @@ class DashboardReuseGapsIT {
         assertThat(dashboard(Role.ADMIN, null, project).suggestions()).isEqualTo(selected);
         assertThat(dashboard(Role.PROJECT_MANAGER, department, project).suggestions())
                 .isEqualTo(selected);
-        assertThat(dashboard(Role.ADMIN, department, otherProject).suggestions())
-                .isEqualTo(new Suggestions(0, 0, null));
         assertThat(dashboard(Role.ADMIN, null, emptyProject).suggestions()).isEqualTo(new Suggestions(0, 0, null));
     }
 

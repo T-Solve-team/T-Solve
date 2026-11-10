@@ -21,6 +21,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import vn.tsolve.analytics.dto.KnowledgeDashboardResponse;
 import vn.tsolve.analytics.exception.InvalidDashboardFilterException;
@@ -132,12 +133,8 @@ class DashboardServiceImplTest {
     void returnsZeroFiguresAndNullRates_AC_004_1() {
         var start = Instant.parse("2026-11-06T17:00:00Z");
         var end = Instant.parse("2026-11-07T17:00:00Z");
-        when(repository.findFeedback(null, null, start, end))
-                .thenReturn(new KnowledgeDashboardResponse.Feedback(0, 0, null, List.of(), List.of()));
         when(repository.findGaps(null, start, end))
                 .thenReturn(new KnowledgeDashboardResponse.Gaps(List.of(), 0, List.of()));
-        when(repository.findSuggestions(null, null, start, end))
-                .thenReturn(new KnowledgeDashboardResponse.Suggestions(0, 0, null));
         var result = service.dashboard(ADMIN, "2026-11-07", "2026-11-07", null, null);
         assertThat(result.outcomes())
                 .isEqualTo(new KnowledgeDashboardResponse.Outcomes(
@@ -161,9 +158,10 @@ class DashboardServiceImplTest {
         when(repository.findUserDepartment(PM.id())).thenReturn(Optional.of(7L));
         when(repository.findDepartment(DEPARTMENT)).thenReturn(Optional.of(new Department(7, DEPARTMENT, "Own")));
         when(repository.findProject(PROJECT)).thenReturn(Optional.of(new Project(PROJECT, 7)));
-        assertThat(DashboardScope.resolve(PM, null, null, repository)).isEqualTo(new DashboardScope(Set.of(7L), null));
+        assertThat(DashboardScope.resolve(PM, null, null, repository))
+                .isEqualTo(new DashboardScope(Set.of(7L), null, 7L));
         assertThat(DashboardScope.resolve(PM, DEPARTMENT.toString(), PROJECT.toString(), repository))
-                .isEqualTo(new DashboardScope(Set.of(7L), PROJECT));
+                .isEqualTo(new DashboardScope(Set.of(7L), PROJECT, 7L));
         service.dashboard(PM, null, null, DEPARTMENT.toString(), null);
         verify(repository).findOptions(7L);
     }
@@ -193,14 +191,15 @@ class DashboardServiceImplTest {
     @Test
     void allowsAdminWorkspaceDepartmentAndProjectScopes_AC_004_6() {
         when(repository.findDepartment(DEPARTMENT)).thenReturn(Optional.of(new Department(7, DEPARTMENT, "Chosen")));
-        when(repository.findProject(PROJECT)).thenReturn(Optional.of(new Project(PROJECT, 8)));
-        assertThat(DashboardScope.resolve(ADMIN, null, null, repository)).isEqualTo(new DashboardScope(null, null));
+        when(repository.findProject(PROJECT)).thenReturn(Optional.of(new Project(PROJECT, 7)));
+        assertThat(DashboardScope.resolve(ADMIN, null, null, repository))
+                .isEqualTo(new DashboardScope(null, null, null));
         assertThat(DashboardScope.resolve(ADMIN, DEPARTMENT.toString(), null, repository))
-                .isEqualTo(new DashboardScope(Set.of(7L), null));
+                .isEqualTo(new DashboardScope(Set.of(7L), null, null));
         assertThat(DashboardScope.resolve(ADMIN, null, PROJECT.toString(), repository))
-                .isEqualTo(new DashboardScope(null, PROJECT));
+                .isEqualTo(new DashboardScope(null, PROJECT, null));
         assertThat(DashboardScope.resolve(ADMIN, DEPARTMENT.toString(), PROJECT.toString(), repository))
-                .isEqualTo(new DashboardScope(Set.of(7L), PROJECT));
+                .isEqualTo(new DashboardScope(Set.of(7L), PROJECT, null));
         service.dashboard(ADMIN, null, null, DEPARTMENT.toString(), PROJECT.toString());
         verify(repository).findOptions(null);
     }
@@ -208,7 +207,8 @@ class DashboardServiceImplTest {
     @Test
     void prioritizesAdminRoleOverPmWithoutDepartment_AC_004_6() {
         var both = new TSolveUser(PM.id(), PM.email(), PM.fullName(), Set.of(Role.ADMIN, Role.PROJECT_MANAGER));
-        assertThat(DashboardScope.resolve(both, null, null, repository)).isEqualTo(new DashboardScope(null, null));
+        assertThat(DashboardScope.resolve(both, null, null, repository))
+                .isEqualTo(new DashboardScope(null, null, null));
         verifyNoInteractions(repository);
     }
 
@@ -230,6 +230,17 @@ class DashboardServiceImplTest {
                 .isInstanceOfSatisfying(InvalidDashboardFilterException.class, e -> assertThat(e.getCode())
                         .isEqualTo("MSG06"));
         verifyNoInteractions(repository);
+    }
+
+    @Test
+    void rejectsAdminProjectOutsideSelectedDepartmentWithBadRequest_AC_004_7() {
+        when(repository.findDepartment(DEPARTMENT)).thenReturn(Optional.of(new Department(7, DEPARTMENT, "Chosen")));
+        when(repository.findProject(PROJECT)).thenReturn(Optional.of(new Project(PROJECT, 8)));
+        assertThatThrownBy(() -> service.dashboard(ADMIN, null, null, DEPARTMENT.toString(), PROJECT.toString()))
+                .isInstanceOfSatisfying(InvalidDashboardFilterException.class, e -> {
+                    assertThat(e.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+                    assertThat(e.getCode()).isEqualTo("MSG06");
+                });
     }
 
     @Test

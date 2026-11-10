@@ -46,4 +46,5 @@
     <include file="changes/025-review-ticket-expiry.sql" relativeToChangelogFile="true"/>
     <include file="changes/024-chatbot-answer-rating.sql" relativeToChangelogFile="true"/>
     <include file="changes/026-identity-app-user-keycloak-sub.sql" relativeToChangelogFile="true"/>
+    <include file="changes/027-dashboard-period-indexes.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

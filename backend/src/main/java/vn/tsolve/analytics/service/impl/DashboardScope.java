@@ -11,7 +11,7 @@ import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
 
 /** Null departments means the whole Workspace; projectId is always a public id. */
-public record DashboardScope(Set<Long> departments, UUID projectId) {
+public record DashboardScope(Set<Long> departments, UUID projectId, Long ownDepartment) {
     public static DashboardScope resolve(
             TSolveUser user, String departmentId, String projectId, DashboardRepository repository) {
         UUID departmentPublicId = parseId(departmentId);
@@ -25,7 +25,10 @@ public record DashboardScope(Set<Long> departments, UUID projectId) {
                 ? null
                 : repository.findProject(projectPublicId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
         if (user.roles().contains(Role.ADMIN)) {
-            return new DashboardScope(department == null ? null : Set.of(department.id()), projectPublicId);
+            if (department != null && project != null && project.departmentId() != department.id()) {
+                throw new InvalidDashboardFilterException("MSG06");
+            }
+            return new DashboardScope(department == null ? null : Set.of(department.id()), projectPublicId, null);
         }
         long ownDepartment =
                 repository.findUserDepartment(user.id()).orElseThrow(() -> new AccessDeniedException("MSG08"));
@@ -33,7 +36,7 @@ public record DashboardScope(Set<Long> departments, UUID projectId) {
                 || (project != null && project.departmentId() != ownDepartment)) {
             throw new AccessDeniedException("MSG08");
         }
-        return new DashboardScope(Set.of(ownDepartment), projectPublicId);
+        return new DashboardScope(Set.of(ownDepartment), projectPublicId, ownDepartment);
     }
 
     private static UUID parseId(String raw) {

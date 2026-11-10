@@ -26,8 +26,13 @@ import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.TicketFeedback;
 public class DashboardRepository {
     private static final String TICKET_SCOPE_JOINS =
             """
-            join project p on (p.public_id = t.project_id
-                or lpad(to_hex(p.project_id), 32, '0')::uuid = t.project_id)
+            join (
+                select project_id, public_id as ticket_project_id from project
+                union all
+                select project_id, lpad(to_hex(project_id), 32, '0')::uuid from project
+                where public_id <> lpad(to_hex(project_id), 32, '0')::uuid
+            ) pk on pk.ticket_project_id = t.project_id
+            join project p on p.project_id = pk.project_id
             join department d on d.department_id = p.department_id
             """;
     private final NamedParameterJdbcTemplate jdbc;
@@ -96,18 +101,38 @@ public class DashboardRepository {
         return new Options(departments, projects);
     }
 
-    public List<OutcomeCount> findOutcomeCounts(Set<Long> departments, UUID projectId, Instant start, Instant end) {
-        var parameters = scopeParameters(departments, projectId)
+    /**
+     * The values {@code ticket.project_id} may hold for the Projects of the scope: each Project's public id and its
+     * legacy id. Resolved once per request so the ticket queries filter {@code t.project_id in (...)} on an index.
+     */
+    public List<UUID> findTicketProjectIds(Set<Long> departments, UUID projectId) {
+        return jdbc.query(
+                "select public_id, lpad(to_hex(project_id), 32, '0')::uuid as legacy_id from project p where true"
+                        + scopeFilter(departments, projectId),
+                scopeParameters(departments, projectId),
+                (row, index) -> List.of(row.getObject("public_id", UUID.class), row.getObject("legacy_id", UUID.class)))
+                .stream()
+                .flatMap(List::stream)
+                .distinct()
+                .toList();
+    }
+
+    /** {@code ticketProjects} must not be empty. */
+    public List<OutcomeCount> findOutcomeCounts(List<UUID> ticketProjects, Instant start, Instant end) {
+        var parameters = new MapSqlParameterSource("ticketProjects", ticketProjects)
                 .addValue("start", Timestamp.from(start))
                 .addValue("end", Timestamp.from(end));
-        String filter = scopeFilter(departments, projectId);
+        String filter = " and t.project_id in (:ticketProjects)";
         String decisions =
                 """
                 select (r.decided_at at time zone 'Asia/Ho_Chi_Minh')::date as day,
                     p.project_id, p.public_id, p.jira_project_key, r.decision
                 from review_decision r join ticket t on t.ticket_id = r.ticket_id
                 """
-                        + TICKET_SCOPE_JOINS + " where r.decided_at >= :start and r.decided_at < :end" + filter;
+                        + TICKET_SCOPE_JOINS
+                        + " where r.decided_at >= :start and r.decided_at < :end"
+                        + " and r.decision in ('APPROVED', 'REJECTED', 'CHANGES_REQUESTED')"
+                        + filter;
         String imports =
                 """
                 select (t.created_at at time zone 'Asia/Ho_Chi_Minh')::date as day,
@@ -141,18 +166,19 @@ public class DashboardRepository {
                         row.getLong("changes_requested")));
     }
 
-    public List<TicketStatusCount> findTicketStatusCounts(Set<Long> departments, UUID projectId) {
+    /** {@code ticketProjects} must not be empty. */
+    public List<TicketStatusCount> findTicketStatusCounts(List<UUID> ticketProjects) {
         return jdbc.query(
                 """
                 select d.public_id, d.name, t.status, count(*) as total
                 from ticket t
                 """
-                        + TICKET_SCOPE_JOINS + " where true" + scopeFilter(departments, projectId)
+                        + TICKET_SCOPE_JOINS + " where t.project_id in (:ticketProjects)"
                         + """
                  group by d.department_id, d.public_id, d.name, t.status
                  order by lower(d.name), d.department_id, t.status
                 """,
-                scopeParameters(departments, projectId),
+                Map.of("ticketProjects", ticketProjects),
                 (row, index) -> new TicketStatusCount(
                         row.getObject("public_id", UUID.class),
                         row.getString("name"),
@@ -160,8 +186,9 @@ public class DashboardRepository {
                         row.getLong("total")));
     }
 
-    public Feedback findFeedback(Set<Long> departments, UUID projectId, Instant start, Instant end) {
-        var parameters = scopeParameters(departments, projectId)
+    /** {@code ticketProjects} must not be empty. */
+    public Feedback findFeedback(List<UUID> ticketProjects, Instant start, Instant end) {
+        var parameters = new MapSqlParameterSource("ticketProjects", ticketProjects)
                 .addValue("start", Timestamp.from(start))
                 .addValue("end", Timestamp.from(end));
         var rows = jdbc.query(
@@ -175,20 +202,23 @@ public class DashboardRepository {
                     from ticket_feedback f join ticket t on t.ticket_id = f.ticket_id
                 """
                         + TICKET_SCOPE_JOINS
-                        + " where f.updated_at >= :start and f.updated_at < :end"
-                        + scopeFilter(departments, projectId)
+                        + " where f.updated_at >= :start and f.updated_at < :end and t.project_id in (:ticketProjects)"
                         + """
                     group by t.ticket_id, t.public_id, t.title
                 ), ranked as (
                     select *,
                         row_number() over (order by rate desc, total desc, title, public_id) as top_rank,
-                        row_number() over (order by rate asc, total desc, title, public_id) as lowest_rank,
                         sum(helpful) over () as all_helpful,
                         sum(not_helpful) over () as all_not_helpful,
                         sum(helpful) over () / sum(total) over () as all_rate
                     from rated
+                ), lowest as (
+                    select public_id,
+                        row_number() over (order by rate asc, total desc, title, public_id) as lowest_rank
+                    from ranked where top_rank > 5
                 )
-                select * from ranked where top_rank <= 5 or lowest_rank <= 5 order by top_rank
+                select ranked.*, lowest.lowest_rank from ranked left join lowest using (public_id)
+                where top_rank <= 5 or lowest_rank <= 5 order by top_rank
                 """,
                 parameters,
                 (row, index) -> new RankedFeedback(
@@ -212,7 +242,7 @@ public class DashboardRepository {
                 .map(RankedFeedback::ticket)
                 .toList();
         var lowestRated = rows.stream()
-                .filter(row -> row.lowestRank() <= 5)
+                .filter(row -> row.topRank() > 5 && row.lowestRank() <= 5)
                 .sorted(Comparator.comparingLong(RankedFeedback::lowestRank))
                 .map(RankedFeedback::ticket)
                 .toList();
@@ -267,17 +297,17 @@ public class DashboardRepository {
                 questions.stream().map(QuestionCount::question).toList());
     }
 
-    public Suggestions findSuggestions(Set<Long> departments, UUID projectId, Instant start, Instant end) {
+    /** {@code ticketProjects} must not be empty; {@code suggestion_result.project_id} holds the public id. */
+    public Suggestions findSuggestions(List<UUID> ticketProjects, Instant start, Instant end) {
         return jdbc.queryForObject(
                 """
                 select count(*) as posted,
                     count(*) filter (where s.reporter_answer = 'YES') as solved,
                     (count(*) filter (where s.reporter_answer = 'YES'))::numeric / nullif(count(*), 0) as solved_share
-                from suggestion_result s join project p on p.public_id = s.project_id
-                where s.commented_at >= :start and s.commented_at < :end
-                """
-                        + scopeFilter(departments, projectId),
-                scopeParameters(departments, projectId)
+                from suggestion_result s
+                where s.commented_at >= :start and s.commented_at < :end and s.project_id in (:ticketProjects)
+                """,
+                new MapSqlParameterSource("ticketProjects", ticketProjects)
                         .addValue("start", Timestamp.from(start))
                         .addValue("end", Timestamp.from(end)),
                 (row, index) -> {
