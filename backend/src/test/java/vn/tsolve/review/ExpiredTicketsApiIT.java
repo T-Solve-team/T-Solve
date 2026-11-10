@@ -1,5 +1,6 @@
 package vn.tsolve.review;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
@@ -100,6 +101,7 @@ class ExpiredTicketsApiIT {
     private static UUID first;
     private static UUID second;
     private static UUID legacy;
+    private static UUID stored;
 
     @BeforeAll
     static void seedExpiredTickets() {
@@ -107,6 +109,16 @@ class ExpiredTicketsApiIT {
         first = ticket(db, OPS, "EXP-1", "Alpha", "EXPIRED", "SOLUTION_FORM", "2026-11-03");
         second = ticket(db, SUPPORT, "EXP-2", "Beta", "EXPIRED", "SOLUTION_FORM", "2026-11-04");
         legacy = ticket(db, OPS, "EXP-3", "Gamma", "EXPIRED", "SOLUTION_FORM", null);
+        stored = ticket(
+                db,
+                OPS,
+                "EXP-8",
+                "Delta",
+                "EXPIRED",
+                "SOLUTION_FORM",
+                "2026-11-02",
+                "2026-11-07T17:00:00Z",
+                "CHANGES_REQUESTED");
         ticket(db, UNMANAGED, "EXP-4", "Hidden", "EXPIRED", "SOLUTION_FORM", "2026-11-05");
         ticket(db, OPS, "EXP-5", "Pending", "PENDING_REVIEW", "SOLUTION_FORM", "2026-11-05");
         ticket(db, OPS, "EXP-6", "Imported", "EXPIRED", "CSV", "2026-11-05");
@@ -117,29 +129,30 @@ class ExpiredTicketsApiIT {
     void listsOnlyManagedExpiredTickets_AC_013_1() throws Exception {
         inAcme(get("/api/v1/expired-tickets"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.page.totalElements").value(3))
+                .andExpect(jsonPath("$.page.totalElements").value(4))
                 .andExpect(jsonPath("$.content[*].ticketId")
-                        .value(contains(legacy.toString(), second.toString(), first.toString())))
-                .andExpect(jsonPath("$.content[2].sourceTicketId").value("EXP-1"))
-                .andExpect(jsonPath("$.content[2].title").value("Alpha"))
-                .andExpect(jsonPath("$.content[2].project.projectId").value(OPS.toString()))
-                .andExpect(jsonPath("$.content[2].project.name").value("Operations"))
-                .andExpect(jsonPath("$.content[2].source").value("SOLUTION_FORM"))
-                .andExpect(jsonPath("$.content[2].authorName").value("Minh Tran"))
-                .andExpect(jsonPath("$.content[2].enteredQueueAt").value("2026-11-01T01:00:00Z"))
-                .andExpect(jsonPath("$.content[2].reviewDueDate").value("2026-11-03T00:00:00+07:00"));
+                        .value(contains(stored.toString(), legacy.toString(), second.toString(), first.toString())))
+                .andExpect(jsonPath("$.content[3].sourceTicketId").value("EXP-1"))
+                .andExpect(jsonPath("$.content[3].title").value("Alpha"))
+                .andExpect(jsonPath("$.content[3].project.projectId").value(OPS.toString()))
+                .andExpect(jsonPath("$.content[3].project.name").value("Operations"))
+                .andExpect(jsonPath("$.content[3].source").value("SOLUTION_FORM"))
+                .andExpect(jsonPath("$.content[3].authorName").value("Minh Tran"))
+                .andExpect(jsonPath("$.content[3].enteredQueueAt").value("2026-11-01T01:00:00Z"))
+                .andExpect(jsonPath("$.content[3].reviewDueDate").value("2026-11-03T00:00:00+07:00"));
     }
 
     @Test
     void returnsEveryIdAcrossPagesAndNarrowsByDepartment_AC_013_2() throws Exception {
         inAcme(get("/api/v1/expired-tickets").param("size", "1").param("page", "1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[*].ticketId").value(contains(second.toString())))
-                .andExpect(jsonPath("$.page.totalPages").value(3));
+                .andExpect(jsonPath("$.content[*].ticketId").value(contains(legacy.toString())))
+                .andExpect(jsonPath("$.page.totalPages").value(4));
         inAcme(get("/api/v1/expired-tickets/ticket-ids"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ticketIds")
-                        .value(containsInAnyOrder(first.toString(), second.toString(), legacy.toString())));
+                        .value(containsInAnyOrder(
+                                first.toString(), second.toString(), legacy.toString(), stored.toString())));
         inAcme(get("/api/v1/expired-tickets").param("departmentId", SUPPORT_DEPARTMENT.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[*].ticketId").value(contains(second.toString())));
@@ -156,22 +169,66 @@ class ExpiredTicketsApiIT {
     }
 
     @Test
-    void derivesVietnamExpiryAndPreviousStatusWithLegacyFallback_AC_013_3() throws Exception {
+    void reportsStoredExpiryTimeAndPreviousStatus_AC_013_3() throws Exception {
+        inAcme(get("/api/v1/expired-tickets"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].ticketId").value(stored.toString()))
+                .andExpect(jsonPath("$.content[0].expiredAt").value("2026-11-08T00:00:00+07:00"))
+                .andExpect(jsonPath("$.content[0].previousStatus").value("CHANGES_REQUESTED"));
+    }
+
+    @Test
+    void fallsBackToDerivedValuesWhenColumnsAreNull_AC_013_3() throws Exception {
         inAcme(get("/api/v1/expired-tickets").param("sort", "expiredAt,asc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].expiredAt").value("2026-11-04T00:00:00+07:00"))
                 .andExpect(jsonPath("$.content[1].expiredAt").value("2026-11-05T00:00:00+07:00"))
                 .andExpect(jsonPath("$.content[2].expiredAt").value("2026-11-06T07:00:00+07:00"))
-                .andExpect(jsonPath("$.content[*].previousStatus")
+                .andExpect(jsonPath("$.content[0:3].previousStatus")
                         .value(contains("PENDING_REVIEW", "PENDING_REVIEW", "PENDING_REVIEW")));
+        var columns = TwoTenantDatabases.tenantA()
+                .queryForMap("select expired_at, status_before_expiry from ticket where ticket_id = ?", first);
+        assertThat(columns.get("expired_at")).isNull();
+        assertThat(columns.get("status_before_expiry")).isNull();
+    }
+
+    @Test
+    void sortsExpiredAtByStoredTimeBeforeDerived_AC_013_4() throws Exception {
+        inAcme(get("/api/v1/expired-tickets").param("sort", "expiredAt,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].sourceTicketId").value(contains("EXP-1", "EXP-2", "EXP-3", "EXP-8")));
+        inAcme(get("/api/v1/expired-tickets").param("sort", "expiredAt,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].sourceTicketId").value(contains("EXP-8", "EXP-3", "EXP-2", "EXP-1")));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "2026-11-09T17:00:00Z,,2026-11-10T00:00:00+07:00,PENDING_REVIEW",
+        ",CHANGES_REQUESTED,2026-12-02T00:00:00+07:00,CHANGES_REQUESTED"
+    })
+    void fallsBackForEachMissingColumnIndependently_AC_013_3(
+            String expiredAt, String previousStatus, String expectedExpiry, String expectedStatus) throws Exception {
+        var db = TwoTenantDatabases.tenantA();
+        UUID partial = ticket(
+                db, OPS, "EXP-PARTIAL", "Partial", "EXPIRED", "SOLUTION_FORM", "2026-12-01", expiredAt, previousStatus);
+        try {
+            inAcme(get("/api/v1/expired-tickets"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].ticketId").value(partial.toString()))
+                    .andExpect(jsonPath("$.content[0].expiredAt").value(expectedExpiry))
+                    .andExpect(jsonPath("$.content[0].previousStatus").value(expectedStatus));
+        } finally {
+            db.update("delete from ticket where ticket_id = ?", partial);
+        }
     }
 
     @ParameterizedTest
     @CsvSource({
         "expiredAt,asc,EXP-1",
-        "expiredAt,desc,EXP-3",
+        "expiredAt,desc,EXP-8",
         "sourceTicketId,asc,EXP-1",
-        "sourceTicketId,desc,EXP-3",
+        "sourceTicketId,desc,EXP-8",
         "title,asc,EXP-1",
         "title,desc,EXP-3",
         "project,asc,Operations",
@@ -267,10 +324,23 @@ class ExpiredTicketsApiIT {
 
     private static UUID ticket(
             JdbcTemplate db, UUID project, String key, String title, String status, String source, String due) {
+        return ticket(db, project, key, title, status, source, due, null, null);
+    }
+
+    private static UUID ticket(
+            JdbcTemplate db,
+            UUID project,
+            String key,
+            String title,
+            String status,
+            String source,
+            String due,
+            String expiredAt,
+            String statusBeforeExpiry) {
         return db.queryForObject(
                 """
-                insert into ticket (source_ticket_id, project_id, source, status, writer, title, symptoms, root_cause, resolution_steps, scope, review_due_date, updated_at, review_queue_entered_at)
-                values (?, ?, ?, ?, 'Minh Tran', ?, 'Error', 'Token', 'Restart', 'Users', cast(? as date), '2026-11-06T00:00:00Z', '2026-11-01T01:00:00Z') returning ticket_id
+                insert into ticket (source_ticket_id, project_id, source, status, writer, title, symptoms, root_cause, resolution_steps, scope, review_due_date, updated_at, review_queue_entered_at, expired_at, status_before_expiry)
+                values (?, ?, ?, ?, 'Minh Tran', ?, 'Error', 'Token', 'Restart', 'Users', cast(? as date), '2026-11-06T00:00:00Z', '2026-11-01T01:00:00Z', cast(? as timestamptz), ?) returning ticket_id
                 """,
                 UUID.class,
                 key,
@@ -278,6 +348,8 @@ class ExpiredTicketsApiIT {
                 source,
                 status,
                 title,
-                due);
+                due,
+                expiredAt,
+                statusBeforeExpiry);
     }
 }

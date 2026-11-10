@@ -1,7 +1,7 @@
 ---
 module: ticket-review
 date: 2026-11-01
-total_tasks: 11
+total_tasks: 18
 owner: Dev
 ---
 
@@ -173,3 +173,12 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** `backend/src/main/resources/db/changelog/changes/025-review-ticket-expiry.sql` + `db.changelog-master.xml`; `review/dto/ReviewExpiry{Dispatch,Job}Request.java`; `review/service/ReviewExpiryService.java`; `review/service/impl/ReviewExpiry{ServiceImpl,DispatchHandler,JobHandler,Registration}.java`; `review/repository/ReviewExpiryRepository.java`; tests `review/ReviewExpiryIT.java`, `review/service/impl/ReviewExpiry{JobHandler,DispatchHandler,Registration}Test.java`.
 **Dependencies:** worker Task 3 (`WorkerTenantService.activeWorkspaceIds()`); STORY-012 trigger (Task 13); tenant ticket storage (Task 5).
 **Verification:** named AC-014 tests; PostgreSQL IT for the UPDATE, dates around VN midnight, Department, columns, queue and eligible ids, idempotence, rollback; `mvn verify` (tests + spotless); `sdd.ts trace ticket-review STORY-014`.
+
+## Task 18: Expired list reads the stored expiry columns (KAN-307)
+
+**Story:** STORY-013
+**Feature:** review-expired-stored-columns
+**Description:** Implement the changed AC-013.3 and AC-013.4 (master "KAN-307 change"). Map `ticket.expired_at` and `ticket.status_before_expiry` read-only on `Ticket`; `findExpiredTickets` returns them; the Expired list reports the stored expiry time and previous status, falling back per column to the KAN-156 derived values (00:00 VN after the due date, else `updated_at`; PENDING_REVIEW) when null; the expiredAt sort orders the reported value. OpenAPI description updated; client regenerated. Test first.
+**Files:** `backend/src/main/java/vn/tsolve/ticket/entity/Ticket.java`, `ticket/repository/TicketRepository.java`, `ticket/dto/TicketReviewView.java`, `ticket/service/impl/TicketReviewReadServiceImpl.java`; `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated` (regenerated); tests `review/ExpiredTicketsApiIT.java`.
+**Dependencies:** Task 16 (Expired list), Task 17 (changeset 025 and JOB-02).
+**Verification:** `ExpiredTicketsApiIT` tests named AC-013.3/AC-013.4 for a CHANGES_REQUESTED ticket with stored columns, a null-columns ticket and the expiredAt sort across both; `mvn verify`; `generate:api` with no diff after regeneration; `sdd.ts trace ticket-review STORY-013`.

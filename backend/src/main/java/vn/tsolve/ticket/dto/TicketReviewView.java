@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import vn.tsolve.ticket.entity.TicketStatus;
 
 public final class TicketReviewView {
 
@@ -41,7 +42,9 @@ public final class TicketReviewView {
             String authorName,
             Instant enteredQueueAt,
             LocalDate reviewDueDate,
-            Instant updatedAt) {}
+            Instant updatedAt,
+            Instant expiredAt,
+            TicketStatus statusBeforeExpiry) {}
 
     public record ExpiredItem(
             UUID ticketId,

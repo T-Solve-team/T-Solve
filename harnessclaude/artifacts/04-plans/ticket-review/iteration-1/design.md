@@ -57,3 +57,7 @@ The master section "KAN-156 extension" holds the decisions. Backend first: chang
 ## KAN-157 extension: JOB-02 (STORY-014)
 
 Follow the master's "KAN-157 extension". One feature, `review-expiry-job` (Task 17): the changelog with `expired_at` and `status_before_expiry`; one JobRunr recurring job at 00:00 Asia/Ho_Chi_Minh that enqueues one `ReviewExpiryJobRequest(workspaceId, attempt)` per Active Workspace; a per-Workspace handler that skips non-Active Workspaces, runs one transactional UPDATE inside `runInTenant`, logs counts per Project, and on failure schedules attempt n+1 fifteen minutes later up to attempt 3 (JobRunr retries off). Depends on worker Task 3 (`activeWorkspaceIds()`); both are committed on `feat/KAN-157-review-expiry-job`.
+
+## KAN-307 change: stored expiry columns in the Expired list (STORY-013)
+
+Follow the master's "KAN-307 change". One feature, `review-expired-stored-columns` (Task 18): map `expired_at` and `status_before_expiry` read-only on `Ticket`, read them in `findExpiredTickets`, report them with a per-column fallback to the KAN-156 derived values, update the OpenAPI description and regenerate the client. Branch `feat/KAN-307-review-expired-stored-columns`.
