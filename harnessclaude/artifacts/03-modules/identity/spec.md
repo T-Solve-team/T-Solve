@@ -14,6 +14,7 @@ UC-04…07 (KAN-107…110, owner Phạm Tùng Dương) are the frontend/MSW deli
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
 | 2026-11-10 | STORY-001 | **Add AC-001.74 (KAN-297, Task 25b QA Q3).** When the Account step of the callback itself fails (the database is down, `AccountSignInService.signIn` throws, or the verified token has `email_verified` true but no `email`), the callback redirects to `/login?error=MSG06`, expires the sign-in cookie, creates no session and logs one ERROR naming only the Workspace id; it never answers 500. AC-001.14 order unchanged. No other criterion changed | Task 25b QA Q3, user decision A |
+| 2026-11-10 | new STORY-011 | **Shared scope checks (KAN-118).** New STORY-011 with AC-011.1 to AC-011.11: the `ScopeAccessService` port (`canAccessDepartment`, `canAccessProject`, `canAccessSpace` and their `require…` forms), the rules per Role (Project Manager: own Department and its Space, Projects as Project Manager; Ticket Resolver: Projects as member, their Departments and Spaces; Knowledge Manager: managed Spaces; Admin and Employee: nothing implicit), deleted Department / Hidden Space / Deactivated Account refused, tenant isolation, 403 MSG08. Interface Contracts `Services` names the port; Out of Scope adds the migration of the per-module ports and Space permissions. No existing criterion changed | User (Dương), 10/11: Q1 port in `identity`, not in `@PreAuthorize`; Q2 the rules per Role as proposed; Q3 only the helpers before the code freeze of 12/11; Q4 403 MSG08 also for an unknown id |
 | 2026-11-10 | STORY-006 | **Account status backend (KAN-109).** New AC-006.9 to AC-006.19: `PUT /api/v1/users/{userId}/status` on PostgreSQL, mirroring the MSW mock's checks and their order (404, MSG06, MSG56/MSG112, MSG59/MSG118, MSG01), the required Project and Space handovers with the eligibility of AC-007.9, activation, the account and history kept, audit, tenant isolation and a demo seed of a second Knowledge Manager. Contract unchanged; AC-006.1 to .8 unchanged | User (Dương), 10/11: audit as `ROLE_CHANGE`; keep Roles, Department and `MEMBER` rows on deactivation (the handed-over Project row as in AC-007.19); seed a second Knowledge Manager |
 | 2026-11-10 | STORY-001 | **Reword AC-001.56 (KAN-296, Task 25a QA Q2, Q3, Q7).** Clause 1 no longer refuses a `sub` already bound to Account X when the token email matches a sub-less Account Y (the `sub` wins, Y is not modified); it applies only when binding a `sub` fails (different `sub` held, or the unique index); the bind is a conditional update, the later of two racing sign-ins loses; the WARN names the email-matched Account | Task 25a QA, user decisions A |
 | 2026-11-09 | STORY-001 | Task 28 review (KAN-299): AC-001.59 (undo and `remove` find the IdP by the tag `tsolve.workspace-id`; the re-read covers every write to `tsolve-web`, with the `remove` and undo outcomes); AC-001.61 (names `manage-realm`) | Review of Task 28 (B1, N2, judgment call a); Hiếu accepted |
@@ -381,6 +382,32 @@ Planning note, 2026-10-29: the user selected waiting for KAN-109 and KAN-110 to 
   - AC-010.7: THE identity module SHALL create no password, token, link or other credential for the first Admin, and SHALL log neither the email nor the Account's name: the Admin signs in with Google under AC-001.11 to AC-001.13 like any Account, and the invitation email and its job belong to `platform` and `worker` (platform AC-013.17, AC-013.18).
   - AC-010.8: THE identity module SHALL offer `createFirstAdmin` as a Spring bean implementing the `platform` port `FirstAdminCreator` in every profile that serves a Workspace creation (`ops` and the one that serves the Platform Console), so that the backend does not refuse to start (platform AC-013.15).
 
+### STORY-011: Shared Department, Project and Space scope checks (KAN-118 / E05 Authorization)
+- As a developer of any T-Solve module, I want one identity service that says whether an Account may act in a
+  Department, a Project or a Space, so that every module applies the same scope rules of the Permission Matrix.
+- Sources: Jira KAN-118 ("helpers `canAccessDepartment / canAccessProject / canAccessSpace` shared by every package";
+  "a Ticket Resolver belongs to the Departments of the Projects they are a member of"); Report3 v3460 §4.4 Permission
+  Matrix footnotes ¹, ², ⁴, ⁸; GBR-16, GBR-17, GBR-20, GBR-28, GBR-30. User decisions of 10/11 (Q1–Q4, all
+  recommendations): a port in `identity`, called from code and not from `@PreAuthorize`; the rules below, with no
+  implicit access for Admin or Employee; only the helpers now, the existing per-module ports are not migrated; a
+  refusal is 403 MSG08, also for an unknown id.
+- Terms: the Account's *Projects as Project Manager* are its `project_membership` rows with `PROJECT_MANAGER`, counted
+  only WHILE it holds the Role PROJECT_MANAGER; its *Projects as Ticket Resolver* are its `MEMBER` rows, counted only
+  WHILE it holds TICKET_RESOLVER (as AC-007.8); its *Projects* are both; a Project counts whether it is `ACTIVE` or
+  `REMOVED`. Every id is the public UUID (`department.public_id`, `project.public_id`, `space.public_id`).
+- Acceptance:
+  - AC-011.1: THE identity module SHALL offer every module the Spring bean `ScopeAccessService` (interface in `vn.tsolve.identity.service`) with `boolean canAccessDepartment(UUID accountId, UUID departmentId)`, `boolean canAccessProject(UUID accountId, UUID projectId)` and `boolean canAccessSpace(UUID accountId, UUID spaceId)`, and the matching `requireDepartment`, `requireProject` and `requireSpace`, which return nothing when the check is true.
+  - AC-011.2: WHEN `canAccessDepartment` is called, THE service SHALL return true only WHEN the Department is the Account's own Department (`app_user.department_id`) WHILE the Account holds PROJECT_MANAGER, or the Department of one of its Projects.
+  - AC-011.3: WHEN an Account holding TICKET_RESOLVER is a `MEMBER` of Projects of several Departments, THE service SHALL return true from `canAccessDepartment` for each of those Departments and false for every other Department (GBR-16, footnote ⁴).
+  - AC-011.4: WHEN `canAccessProject` is called, THE service SHALL return true only WHEN the Project is one of the Account's Projects.
+  - AC-011.5: WHEN `canAccessSpace` is called, THE service SHALL return true only WHEN the Account manages the Space (`space_manager`) WHILE it holds KNOWLEDGE_MANAGER, or the Space's Department is one for which `canAccessDepartment` is true (GBR-30: a Project Manager's own Department, a Ticket Resolver's Departments of their Projects).
+  - AC-011.6: THE service SHALL grant nothing for the Roles ADMIN and EMPLOYEE alone: an Account whose only Roles are ADMIN and EMPLOYEE gets false from the three checks (the Admin's Department administration is guarded by its Role on the endpoint, not here).
+  - AC-011.7: IF the Account is not `ACTIVE`, the Department is not `ACTIVE` (deleted, GBR-17), the Project's or Space's Department is not `ACTIVE`, or the Space is `HIDDEN`, THEN THE service SHALL return false.
+  - AC-011.8: IF an argument is null or names no Account, Department, Project or Space of the bound Workspace, THEN THE service SHALL return false and not throw.
+  - AC-011.9: THE service SHALL read only the database of the Workspace bound by `TenantScope`, so an Account, Department, Project or Space of another Workspace is never found; IF no Workspace is bound, THEN it SHALL throw the exception `TenantScope` throws (rendered 500 MSG06) and return no answer.
+  - AC-011.10: IF a `require…` check is false, THEN THE service SHALL throw `ScopeAccessDeniedException` (in `vn.tsolve.identity.exception`, extending `MessageCodeException`), rendered 403 with `code` MSG08, the same for an unknown id as for a refused one.
+  - AC-011.11: THE service SHALL only read: it SHALL change no row, record no audit event and log no Account, Department, Project or Space id.
+
 ## Retired ids
 
 These acceptance-criterion ids are retired and never reused. STORY-001: AC-001.2, AC-001.4, AC-001.5, AC-001.17, AC-001.19, AC-001.35, AC-001.36, AC-001.37, AC-001.39, AC-001.44, AC-001.45, AC-001.46, AC-001.47, AC-001.49, AC-001.50, AC-001.51 (K1–K14, Changelog 2026-11-05), AC-001.73 (Q4 revised: a Workspace is Active at creation; no `PENDING_SIGN_IN` status).
@@ -411,6 +438,11 @@ These acceptance-criterion ids are retired and never reused. STORY-001: AC-001.2
   backend deletes on `SessionEnded` → `chatbot` (Trần Hải Anh).
 - Which Tickets count as written by the user, and the GBR-02 visibility of each row → `ticket-repository` (the
   written-ticket lookup). Which Spaces a user can view → `wiki` (the viewable Space lookup).
+- For STORY-011 (KAN-118, decision Q3 of 10/11): replacing the per-module access ports with `ScopeAccessService` —
+  `ticket` `ProjectAccess` / `StubProjectAccess`, `review` `ReviewWorkspaceAccess`, `triage` `ManagedProjects`, `search`
+  `VisibleScope` — is a follow-up of each module; View granted on a Space to a Department or a user by its Knowledge
+  Manager (GBR-30), and the Company-wide documents of every Space, → `wiki` (no Space permission table exists yet);
+  using the checks inside `@PreAuthorize`.
 - Recording sign-ins in the audit log (decision Q15). Sign-in is not an `AuditAction` of be-foundation.
 - Signing the user out of Google; self-registration; any identity provider other than Google (Keycloak is the broker,
   not a second provider); any sign-in with a password; an Admin button that resets a person's `sub` (Q11: a runbook
@@ -494,6 +526,9 @@ These acceptance-criterion ids are retired and never reused. STORY-001: AC-001.2
   workspaceId, String email)`, called by `platform`'s `WorkspaceProvisioning` inside `TenantContext.runIn(workspaceId)`
   after the email is claimed (platform AC-013.14, AC-013.19). It creates the Account Active with the Role Admin and
   returns its id; the id is the only thing the invitation job carries besides the Workspace id.
+- `ScopeAccessService` (STORY-011): `canAccessDepartment`, `canAccessProject`, `canAccessSpace` (Account id and the
+  public UUID of the Department, Project or Space; boolean) and `requireDepartment`, `requireProject`, `requireSpace`
+  (throw `ScopeAccessDeniedException`, 403 MSG08), in the Workspace bound by `TenantScope`.
 - The Department lookup of be-foundation (`common`): the Department of a Project Manager.
 - `SessionEnded` (Spring application event): Account id, Workspace id, session id, reason `LOGOUT` /
   `EXPIRED` / `DEACTIVATED`.

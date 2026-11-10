@@ -767,3 +767,18 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **PR / Jira:** branch `feat/KAN-109-identity-account-status-backend` from main; Jira KAN-109.
 **Estimated size:** medium (3 new, 4 modified production files); about 25 tests
 **Verification:** Tests name AC-006.9 to AC-006.19; `sdd.ts trace identity STORY-006`; `cd backend && mvn verify`; `generate:api` no diff.
+
+## Task 36: Scope checks — KAN-118
+
+**Story:** STORY-011
+**Feature:** scope-checks
+**Decisions owned:** KAN-118 Q1–Q4 (Dương, 10/11: all recommendations)
+**Acceptance criteria:** AC-011.1, AC-011.2, AC-011.3, AC-011.4, AC-011.5, AC-011.6, AC-011.7, AC-011.8, AC-011.9, AC-011.10, AC-011.11
+**Description:** Design "Scope checks — KAN-118, Task 36". The `ScopeAccessService` port with its JDBC reads and `ScopeAccessDeniedException` (403 MSG08). Not in scope: migrating `ticket`/`review`/`triage`/`search` ports, Space permissions (`wiki`), `@PreAuthorize` use, schema or API changes.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/{service/ScopeAccessService,service/impl/ScopeAccessServiceImpl,repository/ScopeAccessRepository,exception/ScopeAccessDeniedException}.java`
+- Test: `backend/src/test/java/vn/tsolve/identity/{service/impl/ScopeAccessServiceImplTest,ScopeAccessIT}.java`
+**Dependencies:** Tasks 32–35 (on main: `user_role`, `department_id`, `space`, `space_manager`, `project_membership`).
+**PR / Jira:** branch `feat/KAN-118-identity-scope-checks` from main; Jira KAN-118.
+**Estimated size:** small (4 production files); about 25 tests
+**Verification:** Tests name AC-011.1 to AC-011.11; `sdd.ts trace identity STORY-011`; `cd backend && mvn verify`; `generate:api` no diff.

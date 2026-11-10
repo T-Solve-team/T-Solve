@@ -132,15 +132,16 @@
         "user-list-backend": "passing",
         "add-user-backend": "passing",
         "user-roles-backend": "passing",
-        "user-status-backend": "passing"
+        "user-status-backend": "passing",
+        "scope-checks": "passing"
       },
-      "lastUpdated": "2026-11-10T17:09:03.665Z",
+      "lastUpdated": "2026-11-10T17:19:55.177Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5302d0d38123e26c638dbf094340b41a0e13651d"
+        "default": "ab7e954b31a9ef70bb74ee1d394440064744b01b"
       }
     },
     "workspace": {
