@@ -198,3 +198,34 @@ arriving by rebase onto `feat/KAN-108-identity-add-user-api`).
   MSG118, Hand Over Responsibilities MSG01, MSG78 with and without confirmation; rollback leaves every row unchanged;
   a BETA recipient/Project/Space is never offered or accepted; two Admins removing each other's Admin role at once →
   exactly one succeeds; two updates racing for one Space → one 409 MSG117.
+
+## Account status backend — KAN-109, Task 35 (2026-11-10)
+
+Covers AC-006.9 to AC-006.19; the user's three decisions of 10/11 (spec Changelog: audit as `ROLE_CHANGE`; Roles,
+Department and `MEMBER` rows kept; seed a second Knowledge Manager). Builds on Task 34 (KAN-110, PR #170): its
+`UserDetailRepository.handoverOptions`, `UserRoleUpdateRepository` locks and transfers, `UserDetailService.getDetail`.
+
+- **Endpoint.** `PUT /api/v1/users/{userId}/status` (`updateUserStatus`) on `UserDetailController`, `@PreAuthorize`
+  ADMIN, `{userId}` matched as a UUID; the controller's invalid-id mapping also covers `/{invalid}/status` (404 MSG04).
+  Contract and MSW behaviour: `frontend/openapi/tsolve-api.yaml` (`UpdateUserStatusRequest`) and
+  `frontend/src/features/users/mocks/{status-handlers,handover,state}.ts`. No contract change.
+- **Schema.** None. `app_user.status` exists (changeset 006); the one-Project-Manager index is changeset 023.
+- **Write.** `UserStatusUpdateService` / impl, one `@Transactional` method, checks in the AC-006.16 order (404 → MSG06
+  shape → MSG56 → MSG112 → MSG59 → MSG118 → MSG01). It takes the same advisory lock as the role update
+  (`serializeUpdates`), so status and role updates of one Workspace never interleave (AC-006.13), then the target row,
+  the Active Admin rows (only for a deactivation of an Active Admin) and the recipients' rows before reading
+  `handoverOptions` again. Apply: `transferProject(user, project, recipient, retainMember = holds TICKET_RESOLVER)`,
+  `transferSpace`, then the new `UserRoleUpdateRepository.updateStatus`; nothing else of the Account is touched.
+  The one-Project-Manager violation rolls back and answers 500 MSG06 as in Task 34.
+- **Reuse.** The handover-list parsing (`Choice`, shape check → MSG06) and matching (→ MSG01 Hand Over
+  Responsibilities) move from `UserRoleUpdateServiceImpl` into a package-private `HandoverChoices` helper used by both
+  services; Task 34's behaviour and tests stay unchanged.
+- **Audit.** One `ROLE_CHANGE` event (target `USER`, the Account) with `statusBefore`, `statusAfter`,
+  `projectHandovers`, `spaceHandovers`; none when the status is unchanged and no handover applies.
+- **Seed.** `MockUserListSeeder` adds, idempotently, `knowledge-replacement@roles-demo.test` (Active, KNOWLEDGE_MANAGER,
+  no Space).
+- **Tests.** Unit: each check, its order, codes, params, no-op without audit. MVC: 401/403/404/400 MSG06 and the
+  `/status` invalid-id route. IT `UserStatusIT` (`TwoTenantDatabases`): deactivate with Project and Space handovers
+  (memberships per AC-006.15, Account and Roles kept, audit row); activate; MSG56, MSG112, MSG59, MSG118, MSG01;
+  rollback leaves every row unchanged; a BETA recipient is never accepted; two Admins deactivating each other at once →
+  exactly one succeeds; the mock seed row.

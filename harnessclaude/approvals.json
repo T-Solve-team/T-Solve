@@ -303,8 +303,8 @@
     }
   },
   "identity": {
-    "specHash": "32cd1c6998e978c4f083c7706006c3a6702f17a0a96ebfe2091ac06160ec7c95",
-    "approvedAt": "2026-11-09T18:17:59.234Z",
+    "specHash": "acd078a53297938b6304c5bfa6bdbac0e9f05d33b84c1f810a4fd98ecea40076",
+    "approvedAt": "2026-11-10T00:37:28.803Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
@@ -437,6 +437,17 @@
       "AC-006.6": "IF no eligible replacement exists, THEN THE frontend SHALL block completion and display MSG59 for Project Managers or MSG118 for Knowledge Managers.",
       "AC-006.7": "WHEN deactivation succeeds, THE mock API SHALL retain the account and its responsibility/history references rather than delete the user.",
       "AC-006.8": "IF a status update fails or is cancelled, THEN THE frontend SHALL retain the last confirmed status and allow retry without reporting success.",
+      "AC-006.9": "WHEN a signed-in Admin sends a valid  with  , THE backend SHALL, in one transaction in the bound Workspace's database, set the Account's status to , apply the handovers of AC-006.15, keep the Account, its  rows, its Department and its other  rows (never deleting the Account or its history), and answer 200 with the updated  of AC-007.8.",
+      "AC-006.10": "WHEN a signed-in Admin sends a valid  with  , THE backend SHALL set the Account's status to , keep its Roles, Department and memberships, give back no Project or Space handed over earlier, and answer 200 with the updated .",
+      "AC-006.11": "IF the request is not signed in, THEN THE backend SHALL answer 401 MSG07; IF the caller lacks the Admin role, THEN 403 MSG08; IF  is not a UUID or names no Account of the bound Workspace, THEN 404 MSG04; in each case it SHALL change nothing.",
+      "AC-006.12": "IF the body is not a JSON object,  is missing or is neither  nor ,  /  is present and not a list of  strings, or  is  and either list is not empty, THEN THE backend SHALL answer 400 MSG06 and change nothing.",
+      "AC-006.13": "IF the request deactivates the Workspace's only Active Admin, THEN THE backend SHALL answer 409 MSG56; otherwise, IF it deactivates the caller's own Account, THEN 409 MSG112; in both cases it SHALL change nothing, also when two Admins deactivate each other, or one deactivates while another removes an Admin Role under AC-007.15, at the same time (status and role updates are serialized and the Admin rows are locked in the transaction).",
+      "AC-006.14": "WHEN  is , THE backend SHALL treat as affected every Active Project the Account manages and every Space it manages; IF an affected Project has no eligible recipient under AC-007.9 at submission, THEN it SHALL answer 409 MSG59 with that Project's ; IF an affected Space has none, THEN 409 MSG118; IF  /  do not name each affected Project / Space exactly once with a currently eligible recipient, or name anything else, THEN 400 MSG01 (); in each case it SHALL change nothing.",
+      "AC-006.15": "WHEN a deactivation is applied, THE backend SHALL make each Project recipient that Project's  (adding or upgrading its membership), turn the Account's row of each handed-over Project into  WHEN the Account holds TICKET_RESOLVER and otherwise remove it, give each Space recipient that Space, and keep the Account's  rows of non-Active Projects; at most one  row per Project SHALL exist, enforced by the database.",
+      "AC-006.16": "THE backend SHALL check, in this order, AC-006.11, AC-006.12, then for a deactivation AC-006.13 and AC-006.14, answer with the first failure, and commit nothing unless all pass; a database failure after the first write SHALL roll back the whole change. WHEN the Account already has the requested status and no handover is due, THE backend SHALL answer 200 with its  and change nothing.",
+      "AC-006.17": "WHEN a request changes the status or applies a handover, THE backend SHALL record one  audit event through  (target the Account; details: the status before and after, and the Project and Space handovers with their recipients), which is the only kept history of the former manager; a request that changes nothing SHALL record no event.",
+      "AC-006.18": "THE backend SHALL read and write the rows of AC-006.9 to AC-006.17 only in the Workspace bound by , so a recipient, Project or Space of another Workspace is never accepted; IF no Workspace is bound, THEN 500 MSG06.",
+      "AC-006.19": "WHEN the backend starts with the  profile, THE backend SHALL ensure in the configured Workspace's database a second Active Knowledge Manager who manages no Space, so the seeded Knowledge Manager can be deactivated with a Space handover, adding only the missing rows.",
       "AC-007.1": "WHEN an Admin opens an existing User Detail, THE frontend SHALL load the selected user's roles, status, Department and managed Spaces from the API.",
       "AC-007.2": "WHEN an Admin saves role and assignment changes, THE mock API SHALL retain Employee, require a Department for Project Managers and enforce one Knowledge Manager per Space.",
       "AC-007.3": "WHEN a role or assignment change removes managed responsibilities, THE frontend SHALL require the existing D3 handover flow before submitting the completed change.",

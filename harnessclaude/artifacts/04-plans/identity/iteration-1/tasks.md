@@ -750,3 +750,19 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **PR / Jira:** branch `feat/KAN-110-identity-user-roles-backend` stacked on KAN-108; Jira KAN-110.
 **Estimated size:** large (13 production files); about 40 tests
 **Verification:** Tests name AC-007.8 to AC-007.23; `sdd.ts trace identity STORY-007`; `cd backend && mvn verify`; `generate:api` no diff.
+
+## Task 35: Account status backend — KAN-109
+
+**Story:** STORY-006
+**Feature:** user-status-backend
+**Decisions owned:** KAN-109 Q1–Q3 (Dương, 10/11: all recommendations)
+**Acceptance criteria:** AC-006.9, AC-006.10, AC-006.11, AC-006.12, AC-006.13, AC-006.14, AC-006.15, AC-006.16, AC-006.17, AC-006.18, AC-006.19
+**Description:** Design "Account status backend — KAN-109, Task 35". `PUT /api/v1/users/{userId}/status` exactly as `frontend/openapi/tsolve-api.yaml` and the MSW mock, reusing Task 34's handover reads, locks and transfers; the mock seed's second Knowledge Manager. Not in scope: ending sessions and refusing sign-in (AC-001.13, AC-001.27), KAN-111/112 standalone handovers, the frontend MSW pass-through, schema changes.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/{service/UserStatusUpdateService,service/impl/UserStatusUpdateServiceImpl,service/impl/HandoverChoices}.java`
+- Modify: `identity/controller/UserDetailController.java`, `identity/service/impl/UserRoleUpdateServiceImpl.java` (use `HandoverChoices`), `identity/repository/UserRoleUpdateRepository.java` (`updateStatus`), `identity/mock/MockUserListSeeder.java`
+- Test: `backend/src/test/java/vn/tsolve/identity/{service/impl/UserStatusUpdateServiceImplTest,controller/UserDetailControllerTest,UserStatusIT,mock/MockSignedInCallerIT}.java`
+**Dependencies:** Task 34 (PR #170, on main).
+**PR / Jira:** branch `feat/KAN-109-identity-account-status-backend` from main; Jira KAN-109.
+**Estimated size:** medium (3 new, 4 modified production files); about 25 tests
+**Verification:** Tests name AC-006.9 to AC-006.19; `sdd.ts trace identity STORY-006`; `cd backend && mvn verify`; `generate:api` no diff.
