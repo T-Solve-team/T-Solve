@@ -127,7 +127,8 @@ public class ImportController {
     @PostMapping("/previews/{previewId}/fill-solution")
     @Operation(
             operationId = "fillImportPreviewSolution",
-            summary = "Saves one Solution in each given row of a preview of a file without Solutions.")
+            summary =
+                    "Saves one Solution in each given row of a Jira preview or of a preview of a file without Solutions.")
     @ApiResponse(responseCode = "400")
     @ApiResponse(responseCode = "403")
     @ApiResponse(responseCode = "404")

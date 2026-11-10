@@ -24,12 +24,15 @@ import type {
 
 import type {
   DownloadCsvTemplateParams,
+  DraftSavedResponse,
   FillSolutionRequest,
   GetImportPreviewRowsParams,
+  ImportDraftSummary,
   ImportPreviewResponse,
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
   ImportResultResponse,
+  JiraPullRequest,
   ProblemResponse,
   RemoveRowsRequest,
   UploadCsvImportBody,
@@ -965,7 +968,7 @@ export const getConfirmImportUrl = (previewId: number) => {
 };
 
 /**
- * @summary Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
+ * @summary Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500). A Jira preview (source JIRA_IMPORT, Finish) instead skips rows whose key became a ticket and returns notice MSG38.
 
  */
 export const confirmImport = async (
@@ -1022,7 +1025,7 @@ export type ConfirmImportMutationError = ErrorType<ProblemResponse>;
 export type ConfirmImportMutationVariables = { previewId: number };
 
 /**
- * @summary Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
+ * @summary Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500). A Jira preview (source JIRA_IMPORT, Finish) instead skips rows whose key became a ticket and returns notice MSG38.
 
  */
 export const useConfirmImport = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
@@ -1043,4 +1046,392 @@ export const useConfirmImport = <TError = ErrorType<ProblemResponse>, TContext =
   TContext
 > => {
   return useMutation(getConfirmImportMutationOptions(options), queryClient);
+};
+export const getPullJiraImportUrl = () => {
+  return `/api/v1/imports/jira`;
+};
+
+/**
+ * @summary Pulls the resolved Jira issues of one Project that have no Ticket yet (at most 100, oldest first, GBR-15) and returns their Import Preview: source JIRA_IMPORT, import type WITHOUT_SOLUTION, one Needs Solution row per issue. Replaces the caller's previous preview that is not a Draft. Missing date = MSG01, invalid range = MSG39 (400); no issue = MSG04 (404); Jira failed = MSG50 (502, Failed Import Batch).
+
+ */
+export const pullJiraImport = async (
+  jiraPullRequest: JiraPullRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<ImportPreviewResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ImportPreviewResponse>(getPullJiraImportUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(jiraPullRequest),
+  });
+};
+
+export const getPullJiraImportMutationKey = () => ['pullJiraImport'] as const;
+
+export const getPullJiraImportMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof pullJiraImport>>,
+    TError,
+    PullJiraImportMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof pullJiraImport>>,
+  TError,
+  PullJiraImportMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPullJiraImportMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof pullJiraImport>>,
+    PullJiraImportMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return pullJiraImport(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PullJiraImportMutationResult = NonNullable<Awaited<ReturnType<typeof pullJiraImport>>>;
+export type PullJiraImportMutationBody = JiraPullRequest;
+export type PullJiraImportMutationError = ErrorType<ProblemResponse>;
+export type PullJiraImportMutationVariables = { data: JiraPullRequest };
+
+/**
+ * @summary Pulls the resolved Jira issues of one Project that have no Ticket yet (at most 100, oldest first, GBR-15) and returns their Import Preview: source JIRA_IMPORT, import type WITHOUT_SOLUTION, one Needs Solution row per issue. Replaces the caller's previous preview that is not a Draft. Missing date = MSG01, invalid range = MSG39 (400); no issue = MSG04 (404); Jira failed = MSG50 (502, Failed Import Batch).
+
+ */
+export const usePullJiraImport = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof pullJiraImport>>,
+      TError,
+      PullJiraImportMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof pullJiraImport>>,
+  TError,
+  PullJiraImportMutationVariables,
+  TContext
+> => {
+  return useMutation(getPullJiraImportMutationOptions(options), queryClient);
+};
+export const getSaveImportDraftUrl = (previewId: number) => {
+  return `/api/v1/imports/previews/${previewId}/draft`;
+};
+
+/**
+ * @summary Saves the preview as a Draft without validating it (MSG41, GBR-26); saving again updates the same Draft.
+ */
+export const saveImportDraft = async (
+  previewId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<DraftSavedResponse> => {
+  return http<DraftSavedResponse>(getSaveImportDraftUrl(previewId), {
+    ...options,
+    method: 'POST',
+  });
+};
+
+export const getSaveImportDraftMutationKey = () => ['saveImportDraft'] as const;
+
+export const getSaveImportDraftMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveImportDraft>>,
+    TError,
+    SaveImportDraftMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveImportDraft>>,
+  TError,
+  SaveImportDraftMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSaveImportDraftMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveImportDraft>>,
+    SaveImportDraftMutationVariables
+  > = (props) => {
+    const { previewId } = props ?? {};
+
+    return saveImportDraft(previewId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveImportDraftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveImportDraft>>
+>;
+
+export type SaveImportDraftMutationError = ErrorType<ProblemResponse>;
+export type SaveImportDraftMutationVariables = { previewId: number };
+
+/**
+ * @summary Saves the preview as a Draft without validating it (MSG41, GBR-26); saving again updates the same Draft.
+ */
+export const useSaveImportDraft = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof saveImportDraft>>,
+      TError,
+      SaveImportDraftMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof saveImportDraft>>,
+  TError,
+  SaveImportDraftMutationVariables,
+  TContext
+> => {
+  return useMutation(getSaveImportDraftMutationOptions(options), queryClient);
+};
+export const getListImportDraftsUrl = () => {
+  return `/api/v1/imports/drafts`;
+};
+
+/**
+ * @summary The caller's own import Drafts, newest first. Reopen one through the preview endpoints.
+ */
+export const listImportDrafts = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ImportDraftSummary[]> => {
+  return http<ImportDraftSummary[]>(getListImportDraftsUrl(), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getListImportDraftsQueryKey = () => {
+  return [`/api/v1/imports/drafts`] as const;
+};
+
+export const getListImportDraftsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listImportDrafts>>,
+  TError = ErrorType<ProblemResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listImportDrafts>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListImportDraftsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listImportDrafts>>> = ({ signal }) =>
+    listImportDrafts({ signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof listImportDrafts>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListImportDraftsQueryResult = NonNullable<Awaited<ReturnType<typeof listImportDrafts>>>;
+export type ListImportDraftsQueryError = ErrorType<ProblemResponse>;
+
+export function useListImportDrafts<
+  TData = Awaited<ReturnType<typeof listImportDrafts>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listImportDrafts>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listImportDrafts>>,
+          TError,
+          Awaited<ReturnType<typeof listImportDrafts>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListImportDrafts<
+  TData = Awaited<ReturnType<typeof listImportDrafts>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listImportDrafts>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listImportDrafts>>,
+          TError,
+          Awaited<ReturnType<typeof listImportDrafts>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListImportDrafts<
+  TData = Awaited<ReturnType<typeof listImportDrafts>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listImportDrafts>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary The caller's own import Drafts, newest first. Reopen one through the preview endpoints.
+ */
+
+export function useListImportDrafts<
+  TData = Awaited<ReturnType<typeof listImportDrafts>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listImportDrafts>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListImportDraftsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDeleteImportDraftUrl = (previewId: number) => {
+  return `/api/v1/imports/drafts/${previewId}`;
+};
+
+/**
+ * @summary Deletes one of the caller's Drafts with its items (after MSG42 in the web app).
+ */
+export const deleteImportDraft = async (
+  previewId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteImportDraftUrl(previewId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getDeleteImportDraftMutationKey = () => ['deleteImportDraft'] as const;
+
+export const getDeleteImportDraftMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteImportDraft>>,
+    TError,
+    DeleteImportDraftMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteImportDraft>>,
+  TError,
+  DeleteImportDraftMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteImportDraftMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteImportDraft>>,
+    DeleteImportDraftMutationVariables
+  > = (props) => {
+    const { previewId } = props ?? {};
+
+    return deleteImportDraft(previewId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteImportDraftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteImportDraft>>
+>;
+
+export type DeleteImportDraftMutationError = ErrorType<ProblemResponse>;
+export type DeleteImportDraftMutationVariables = { previewId: number };
+
+/**
+ * @summary Deletes one of the caller's Drafts with its items (after MSG42 in the web app).
+ */
+export const useDeleteImportDraft = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteImportDraft>>,
+      TError,
+      DeleteImportDraftMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteImportDraft>>,
+  TError,
+  DeleteImportDraftMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteImportDraftMutationOptions(options), queryClient);
 };

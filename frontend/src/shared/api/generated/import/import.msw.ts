@@ -11,13 +11,16 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
-import { ImportPreviewRowStatus, ImportType } from '../model';
+import { ImportPreviewRowStatus, ImportSource, ImportType } from '../model';
 import type {
+  DraftSavedResponse,
   FillSolutionRequest,
+  ImportDraftSummary,
   ImportPreviewResponse,
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
   ImportResultResponse,
+  JiraPullRequest,
   MessageRef,
   RemoveRowsRequest,
   UploadCsvImportBody,
@@ -45,8 +48,21 @@ export const getUploadCsvImportResponseMock = (
 ): ImportPreviewResponse => ({
   previewId: faker.number.int(),
   projectId: faker.string.uuid(),
-  fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  fileName: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   importType: faker.helpers.arrayElement(Object.values(ImportType)),
+  source: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ImportSource)),
+    undefined,
+  ]),
+  resolvedFrom: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  resolvedTo: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  draftSavedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    null,
+  ]),
   validCount: faker.number.int(),
   errorCount: faker.number.int(),
   removedCount: faker.number.int(),
@@ -140,8 +156,21 @@ export const getGetImportPreviewResponseMock = (
 ): ImportPreviewResponse => ({
   previewId: faker.number.int(),
   projectId: faker.string.uuid(),
-  fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  fileName: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   importType: faker.helpers.arrayElement(Object.values(ImportType)),
+  source: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ImportSource)),
+    undefined,
+  ]),
+  resolvedFrom: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  resolvedTo: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  draftSavedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    null,
+  ]),
   validCount: faker.number.int(),
   errorCount: faker.number.int(),
   removedCount: faker.number.int(),
@@ -335,6 +364,18 @@ export const getGetImportPreviewRowResponseMock = (
       },
     }),
   ),
+  sourceUrl: faker.helpers.arrayElement([faker.internet.url(), null]),
+  comments: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      author: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      created: faker.date.past().toISOString().slice(0, 19) + 'Z',
+      body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -358,8 +399,21 @@ export const getRemoveImportPreviewRowsResponseMock = (
 ): ImportPreviewResponse => ({
   previewId: faker.number.int(),
   projectId: faker.string.uuid(),
-  fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  fileName: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   importType: faker.helpers.arrayElement(Object.values(ImportType)),
+  source: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ImportSource)),
+    undefined,
+  ]),
+  resolvedFrom: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  resolvedTo: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  draftSavedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    null,
+  ]),
   validCount: faker.number.int(),
   errorCount: faker.number.int(),
   removedCount: faker.number.int(),
@@ -456,8 +510,21 @@ export const getFillImportPreviewSolutionResponseMock = (
 ): ImportPreviewResponse => ({
   previewId: faker.number.int(),
   projectId: faker.string.uuid(),
-  fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  fileName: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   importType: faker.helpers.arrayElement(Object.values(ImportType)),
+  source: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ImportSource)),
+    undefined,
+  ]),
+  resolvedFrom: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  resolvedTo: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  draftSavedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    null,
+  ]),
   validCount: faker.number.int(),
   errorCount: faker.number.int(),
   removedCount: faker.number.int(),
@@ -534,6 +601,21 @@ export const getFillImportPreviewSolutionResponseMock = (
   ...overrideResponse,
 });
 
+export const getConfirmImportResponseMessageRefMock = (
+  overrideResponse: Partial<MessageRef> = {},
+): MessageRef => ({
+  ...{
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
 export const getConfirmImportResponseMock = (
   overrideResponse: Partial<Extract<ImportResultResponse, object>> = {},
 ): ImportResultResponse => ({
@@ -549,8 +631,143 @@ export const getConfirmImportResponseMock = (
       ]),
     },
   },
+  notice: faker.helpers.arrayElement([{ ...getConfirmImportResponseMessageRefMock() }, null]),
   ...overrideResponse,
 });
+
+export const getPullJiraImportResponseMessageRefMock = (
+  overrideResponse: Partial<MessageRef> = {},
+): MessageRef => ({
+  ...{
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getPullJiraImportResponseMock = (
+  overrideResponse: Partial<Extract<ImportPreviewResponse, object>> = {},
+): ImportPreviewResponse => ({
+  previewId: faker.number.int(),
+  projectId: faker.string.uuid(),
+  fileName: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  importType: faker.helpers.arrayElement(Object.values(ImportType)),
+  source: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ImportSource)),
+    undefined,
+  ]),
+  resolvedFrom: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  resolvedTo: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  draftSavedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    null,
+  ]),
+  validCount: faker.number.int(),
+  errorCount: faker.number.int(),
+  removedCount: faker.number.int(),
+  needsSolutionCount: faker.number.int(),
+  message: faker.helpers.arrayElement([{ ...getPullJiraImportResponseMessageRefMock() }, null]),
+  rows: {
+    content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        rowNo: faker.number.int(),
+        ticketId: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        title: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        author: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        resolvedDate: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        symptoms: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        rootCause: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        resolutionSteps: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        workaround: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        scope: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        status: faker.helpers.arrayElement(Object.values(ImportPreviewRowStatus)),
+        errors: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+          () => ({
+            code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            field: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            params: {
+              [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+                faker.string.alpha({ length: { min: 10, max: 20 } }),
+                faker.number.float({ fractionDigits: 2 }),
+              ]),
+            },
+          }),
+        ),
+      }),
+    ),
+    page: {
+      size: faker.number.int(),
+      number: faker.number.int(),
+      totalElements: faker.number.int(),
+      totalPages: faker.number.int(),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getSaveImportDraftResponseMock = (
+  overrideResponse: Partial<Extract<DraftSavedResponse, object>> = {},
+): DraftSavedResponse => ({
+  previewId: faker.number.int(),
+  savedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  message: {
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getListImportDraftsResponseMock = (): ImportDraftSummary[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    previewId: faker.number.int(),
+    source: faker.helpers.arrayElement(Object.values(ImportSource)),
+    projectId: faker.string.uuid(),
+    rowCount: faker.number.int(),
+    savedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  }));
 
 export const getDownloadCsvTemplateMockHandler = (
   overrideResponse?:
@@ -743,6 +960,97 @@ export const getConfirmImportMockHandler = (
     options,
   );
 };
+
+export const getPullJiraImportMockHandler = (
+  overrideResponse?:
+    | ImportPreviewResponse
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, JiraPullRequest>>[0],
+      ) => Promise<ImportPreviewResponse> | ImportPreviewResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, JiraPullRequest>(
+    '*/api/v1/imports/jira',
+    async (info: Parameters<HttpResponseResolver<PathParams, JiraPullRequest>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPullJiraImportResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSaveImportDraftMockHandler = (
+  overrideResponse?:
+    | DraftSavedResponse
+    | ((
+        info: Parameters<HttpResponseResolver<{ previewId: string }>>[0],
+      ) => Promise<DraftSavedResponse> | DraftSavedResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ previewId: string }>(
+    '*/api/v1/imports/previews/:previewId/draft',
+    async (info: Parameters<HttpResponseResolver<{ previewId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSaveImportDraftResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListImportDraftsMockHandler = (
+  overrideResponse?:
+    | ImportDraftSummary[]
+    | ((
+        info: Parameters<HttpResponseResolver>[0],
+      ) => Promise<ImportDraftSummary[]> | ImportDraftSummary[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/imports/drafts',
+    async (info: Parameters<HttpResponseResolver>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListImportDraftsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteImportDraftMockHandler = (
+  overrideResponse?:
+    | void
+    | ((info: Parameters<HttpResponseResolver<{ previewId: string }>>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete<{ previewId: string }>(
+    '*/api/v1/imports/drafts/:previewId',
+    async (info: Parameters<HttpResponseResolver<{ previewId: string }>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
 export const getImportMock = () => [
   getDownloadCsvTemplateMockHandler(),
   getUploadCsvImportMockHandler(),
@@ -752,4 +1060,8 @@ export const getImportMock = () => [
   getRemoveImportPreviewRowsMockHandler(),
   getFillImportPreviewSolutionMockHandler(),
   getConfirmImportMockHandler(),
+  getPullJiraImportMockHandler(),
+  getSaveImportDraftMockHandler(),
+  getListImportDraftsMockHandler(),
+  getDeleteImportDraftMockHandler(),
 ];

@@ -1,10 +1,12 @@
 package vn.tsolve.ticket.service.impl;
 
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.ticket.entity.ImportBatch;
 import vn.tsolve.ticket.entity.ImportPreview;
+import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
 
 /**
@@ -33,5 +35,11 @@ public class ImportBatchRecorder {
                 (int) counts.errorRows(),
                 (int) counts.removedRows(),
                 error));
+    }
+
+    /** A Jira pull that got no usable answer (AC-001.7): no preview exists yet, so nothing was published or removed. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordJiraFailed(UUID projectId, String user, String error) {
+        batches.save(ImportBatch.failed(projectId, user, TicketSource.JIRA_IMPORT, null, 0, 0, error));
     }
 }

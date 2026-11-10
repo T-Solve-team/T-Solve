@@ -14,6 +14,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -264,7 +265,9 @@ class ImportConfirmServiceImplTest {
 
     @Test
     void uniqueConstraintOnTicketIdIsAlsoATakenId_AC_004_7() {
-        when(tickets.saveAll(anyCollection())).thenThrow(new DataIntegrityViolationException("uq_ticket_ticket_id"));
+        when(tickets.saveAll(anyCollection()))
+                .thenThrow(new DataIntegrityViolationException(
+                        "uq_ticket_ticket_id", new SQLException("duplicate key value", "23505")));
 
         MessageCodeException e = catchThrowableOfType(() -> service.confirm(PM, PREVIEW), MessageCodeException.class);
 
