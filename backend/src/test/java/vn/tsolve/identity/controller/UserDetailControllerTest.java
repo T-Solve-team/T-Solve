@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,10 +34,14 @@ import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.common.security.WithTSolveUser;
+import vn.tsolve.identity.account.AccountStatus;
+import vn.tsolve.identity.dto.UserAccountResponse;
+import vn.tsolve.identity.dto.UserDetailResponse;
 import vn.tsolve.identity.dto.UserHandoverOptionsResponse;
 import vn.tsolve.identity.service.UserDetailService;
 import vn.tsolve.identity.service.UserListService;
 import vn.tsolve.identity.service.UserRoleUpdateService;
+import vn.tsolve.identity.service.UserStatusUpdateService;
 
 @WebMvcTest(
         useDefaultFilters = false,
@@ -59,7 +64,83 @@ class UserDetailControllerTest {
     private UserRoleUpdateService updateService;
 
     @MockBean
+    private UserStatusUpdateService statusService;
+
+    @MockBean
     private UserListService listService;
+
+    @Test
+    void rejectsAnonymousStatus_AC_006_11() throws Exception {
+        mvc.perform(put(PATH + "/status")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("MSG07"));
+        verifyNoInteractions(statusService);
+    }
+
+    @Test
+    @WithTSolveUser
+    void rejectsNonAdminStatus_AC_006_11() throws Exception {
+        mvc.perform(put(PATH + "/status")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MSG08"));
+        verifyNoInteractions(statusService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"not-a-uuid", "123", "00000000-0000-0000-0000-00000000001z"})
+    @WithTSolveUser(roles = Role.ADMIN)
+    void rejectsInvalidStatusId_AC_006_11(String id) throws Exception {
+        mvc.perform(put("/api/v1/users/" + id + "/status")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[]"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MSG04"));
+        verifyNoInteractions(statusService);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.ADMIN)
+    void delegatesStatusAndReturnsDetail_AC_006_11() throws Exception {
+        var response = UserDetailResponse.from(
+                new UserAccountResponse(
+                        USER,
+                        "Target",
+                        "target@example.test",
+                        List.of(Role.EMPLOYEE),
+                        null,
+                        AccountStatus.DEACTIVATED,
+                        null),
+                false,
+                List.of(),
+                List.of(),
+                List.of());
+        when(statusService.update(eq(USER), any(), any())).thenReturn(response);
+        mvc.perform(put(PATH + "/status")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"DEACTIVATED\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(USER.toString()))
+                .andExpect(jsonPath("$.status").value("DEACTIVATED"));
+        verify(statusService).update(eq(USER), eq(new ObjectMapper().readTree("{\"status\":\"DEACTIVATED\"}")), any());
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.ADMIN)
+    void passesAbsentStatusBodyToService_AC_006_12_AC_006_16() throws Exception {
+        when(statusService.update(eq(USER), any(), any())).thenThrow(new NotFoundException("MSG04", Map.of()));
+        mvc.perform(put(PATH + "/status").with(csrf()).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MSG04"));
+        verify(statusService).update(eq(USER), eq(null), any());
+    }
 
     @ParameterizedTest
     @ValueSource(strings = {"", "/handover-options"})
