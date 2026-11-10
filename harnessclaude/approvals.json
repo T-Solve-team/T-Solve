@@ -303,8 +303,8 @@
     }
   },
   "identity": {
-    "specHash": "acd078a53297938b6304c5bfa6bdbac0e9f05d33b84c1f810a4fd98ecea40076",
-    "approvedAt": "2026-11-10T00:37:28.803Z",
+    "specHash": "c1fc47868e29267223fe0999e200e0751df74e9956d8ca87a4357478ad8f1fc7",
+    "approvedAt": "2026-11-10T14:17:34.523Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
@@ -496,7 +496,18 @@
       "AC-010.5": "IF the Workspace's database already has an Account with that email (compared in lower case), THEN THE identity module SHALL throw a  with the field  and create nothing, and THE exception SHALL reach the provisioning service unchanged so that it undoes the creation (platform AC-013.16).",
       "AC-010.6": "THE identity module SHALL NOT call  from , because the email is claimed for the new Workspace at step 4 of platform AC-013.1, before the call, and a lost race ends there (platform AC-013.19).",
       "AC-010.7": "THE identity module SHALL create no password, token, link or other credential for the first Admin, and SHALL log neither the email nor the Account's name: the Admin signs in with Google under AC-001.11 to AC-001.13 like any Account, and the invitation email and its job belong to  and  (platform AC-013.17, AC-013.18).",
-      "AC-010.8": "THE identity module SHALL offer  as a Spring bean implementing the  port  in every profile that serves a Workspace creation ( and the one that serves the Platform Console), so that the backend does not refuse to start (platform AC-013.15)."
+      "AC-010.8": "THE identity module SHALL offer  as a Spring bean implementing the  port  in every profile that serves a Workspace creation ( and the one that serves the Platform Console), so that the backend does not refuse to start (platform AC-013.15).",
+      "AC-011.1": "THE identity module SHALL offer every module the Spring bean  (interface in ) with ,  and , and the matching ,  and , which return nothing when the check is true.",
+      "AC-011.2": "WHEN  is called, THE service SHALL return true only WHEN the Department is the Account's own Department () WHILE the Account holds PROJECT_MANAGER, or the Department of one of its Projects.",
+      "AC-011.3": "WHEN an Account holding TICKET_RESOLVER is a  of Projects of several Departments, THE service SHALL return true from  for each of those Departments and false for every other Department (GBR-16, footnote ⁴).",
+      "AC-011.4": "WHEN  is called, THE service SHALL return true only WHEN the Project is one of the Account's Projects.",
+      "AC-011.5": "WHEN  is called, THE service SHALL return true only WHEN the Account manages the Space () WHILE it holds KNOWLEDGE_MANAGER, or the Space's Department is one for which  is true (GBR-30: a Project Manager's own Department, a Ticket Resolver's Departments of their Projects).",
+      "AC-011.6": "THE service SHALL grant nothing for the Roles ADMIN and EMPLOYEE alone: an Account whose only Roles are ADMIN and EMPLOYEE gets false from the three checks (the Admin's Department administration is guarded by its Role on the endpoint, not here).",
+      "AC-011.7": "IF the Account is not , the Department is not  (deleted, GBR-17), the Project's or Space's Department is not , or the Space is , THEN THE service SHALL return false.",
+      "AC-011.8": "IF an argument is null or names no Account, Department, Project or Space of the bound Workspace, THEN THE service SHALL return false and not throw.",
+      "AC-011.9": "THE service SHALL read only the database of the Workspace bound by , so an Account, Department, Project or Space of another Workspace is never found; IF no Workspace is bound, THEN it SHALL throw the exception  throws (rendered 500 MSG06) and return no answer.",
+      "AC-011.10": "IF a  check is false, THEN THE service SHALL throw  (in , extending ), rendered 403 with  MSG08, the same for an unknown id as for a refused one.",
+      "AC-011.11": "THE service SHALL only read: it SHALL change no row, record no audit event and log no Account, Department, Project or Space id."
     }
   },
   "platform": {
