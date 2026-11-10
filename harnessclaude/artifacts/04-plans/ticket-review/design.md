@@ -333,3 +333,13 @@ Decisions (user, 2026-11-08): JobRunr fan-out; ticket columns plus a per-Project
 ### Files
 
 `backend/src/main/resources/db/changelog/changes/025-review-ticket-expiry.sql` + master changelog; `review/dto/ReviewExpiry{Dispatch,Job}Request.java`; `review/service/ReviewExpiryService.java`; `review/service/impl/ReviewExpiry{ServiceImpl,DispatchHandler,JobHandler,Registration}.java`; `review/repository/ReviewExpiryRepository.java`. Tests: `review/ReviewExpiryIT.java` (PostgreSQL), `review/service/impl/ReviewExpiry{JobHandler,DispatchHandler,Registration}Test.java`.
+
+## KAN-307 change: Expired list reads the stored expiry columns (STORY-013)
+
+Decided with the user on 2026-11-10: read `ticket.expired_at` and `ticket.status_before_expiry` (written by JOB-02, changeset 025) and keep the KAN-156 derived values only where a column is null; no backfill changeset (AC-013.3, AC-013.4).
+
+- **Entity** — `Ticket` maps both columns read-only (`insertable = false, updatable = false`): `expiredAt` as `Instant`, `statusBeforeExpiry` as `TicketStatus` (`EnumType.STRING`). Only JOB-02's native UPDATE writes them; send-back leaves them as they are (they are read only for EXPIRED tickets, and the next expiry overwrites both).
+- **Read** — `findExpiredTickets` adds `t.expiredAt` and `t.statusBeforeExpiry` to `ExpiredRow`. `TicketReviewReadServiceImpl.expired` reports `expiredAt` = stored instant in Asia/Ho_Chi_Minh offset, else the KAN-156 fallback (00:00 VN on `review_due_date + 1`, else `updated_at`); `previousStatus` = stored status, else PENDING_REVIEW. Each column falls back on its own.
+- **Sort** — unchanged code: the in-memory comparator already orders `ExpiredItem::expiredAt`, which is now the reported value, so stored and fallback rows sort together (AC-013.4).
+- **Contract** — the `getExpiredTickets` description drops "previousStatus is always PENDING_REVIEW" and describes the stored values with the fallback; shapes unchanged; regenerate the client. The web page already shows CHANGES_REQUESTED (enum has it).
+- **Tests** — `ExpiredTicketsApiIT`: a ticket expired from CHANGES_REQUESTED with a stored `expired_at` that differs from its due date reports both stored values; a null-columns ticket keeps the derived values; `sort=expiredAt` orders by the stored time across both kinds.

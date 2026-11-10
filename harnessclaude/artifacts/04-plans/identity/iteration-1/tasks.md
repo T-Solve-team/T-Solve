@@ -647,7 +647,8 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 - Test: `backend/src/test/java/vn/tsolve/identity/keycloak/{KeycloakWorkspaceSignInProvisionerIT,ProvisioningRaceIT,ProvisioningUndoIT,KeycloakAdminClientTest,ProvisioningProfileTest,NoopWorkspaceSignInProvisionerTest,FakeWorkspaceSignInProvisioner}.java`
 **Dependencies:** Task 23 (Keycloak in compose and Testcontainers); the platform's `WorkspaceProvisioning` only for the real call (Task 14).
 **PR / Jira:** branch `feat/KAN-299-identity-keycloak-provisioning`; Jira KAN-299.
-**Estimated size:** medium (8 production files); about 9 tests
+**Changed expectations (QA Q1–Q8, 9/11; details in design "Rules", Provisioning):** `check`/`remove` find objects by the `tsolve.workspace-id` tag (the port is unchanged); `ops` with all three credentials wires the adapter, with one missing the no-op and one WARN; no command runner in this task; `ops` only (the Console profile is Task 29); `tsolve-provisioner` has an explicit minimal role list and a 403 test; the IdP copies `google-acme`'s broker settings; the URI origin comes from `TSOLVE_SITE_ORIGIN_TEMPLATE` (new value in `.env.example`, dev `http://{slug}.localhost:8080`, no new file); a lost URI means throw, undo own objects, ERROR, no repair; a different domain or slug for a provisioned Workspace throws.
+**Estimated size:** medium (about 8 production files, no more); about 12 tests (the QA plan: 5 + 1 + 2 + 1 + 2 + 1)
 **Verification:** Tests name AC-001.57–.62; design risk rows 107–109, 112, 118. Targeted: `cd backend && mvn -Dtest='KeycloakAdminClientTest,ProvisioningProfileTest,NoopWorkspaceSignInProvisionerTest' -Dit.test='KeycloakWorkspaceSignInProvisionerIT,ProvisioningRaceIT,ProvisioningUndoIT' verify`; full `mvn verify`.
 
 ## Task 29: Platform Console Operators on `tsolve-ops` — KAN-233 (re-scoped)
@@ -749,3 +750,19 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **PR / Jira:** branch `feat/KAN-110-identity-user-roles-backend` stacked on KAN-108; Jira KAN-110.
 **Estimated size:** large (13 production files); about 40 tests
 **Verification:** Tests name AC-007.8 to AC-007.23; `sdd.ts trace identity STORY-007`; `cd backend && mvn verify`; `generate:api` no diff.
+
+## Task 35: Account status backend — KAN-109
+
+**Story:** STORY-006
+**Feature:** user-status-backend
+**Decisions owned:** KAN-109 Q1–Q3 (Dương, 10/11: all recommendations)
+**Acceptance criteria:** AC-006.9, AC-006.10, AC-006.11, AC-006.12, AC-006.13, AC-006.14, AC-006.15, AC-006.16, AC-006.17, AC-006.18, AC-006.19
+**Description:** Design "Account status backend — KAN-109, Task 35". `PUT /api/v1/users/{userId}/status` exactly as `frontend/openapi/tsolve-api.yaml` and the MSW mock, reusing Task 34's handover reads, locks and transfers; the mock seed's second Knowledge Manager. Not in scope: ending sessions and refusing sign-in (AC-001.13, AC-001.27), KAN-111/112 standalone handovers, the frontend MSW pass-through, schema changes.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/{service/UserStatusUpdateService,service/impl/UserStatusUpdateServiceImpl,service/impl/HandoverChoices}.java`
+- Modify: `identity/controller/UserDetailController.java`, `identity/service/impl/UserRoleUpdateServiceImpl.java` (use `HandoverChoices`), `identity/repository/UserRoleUpdateRepository.java` (`updateStatus`), `identity/mock/MockUserListSeeder.java`
+- Test: `backend/src/test/java/vn/tsolve/identity/{service/impl/UserStatusUpdateServiceImplTest,controller/UserDetailControllerTest,UserStatusIT,mock/MockSignedInCallerIT}.java`
+**Dependencies:** Task 34 (PR #170, on main).
+**PR / Jira:** branch `feat/KAN-109-identity-account-status-backend` from main; Jira KAN-109.
+**Estimated size:** medium (3 new, 4 modified production files); about 25 tests
+**Verification:** Tests name AC-006.9 to AC-006.19; `sdd.ts trace identity STORY-006`; `cd backend && mvn verify`; `generate:api` no diff.

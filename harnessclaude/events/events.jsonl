@@ -1008,6 +1008,11 @@
 {"ts":"2026-11-07T20:25:00.860Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T21:31:55.552Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T21:31:55.863Z","type":"feature-status","module":"identity","feature":"remove-custom-sign-in","from":"evaluating","to":"passing"}
+{"ts":"2026-11-09T14:51:37.708Z","type":"spec-approved","module":"identity","specHash":"9acb02ec5d35d97449edf84a5c7029d6dac0133a97a9ef79853b6cafc7069b8e"}
+{"ts":"2026-11-09T16:05:39.291Z","type":"spec-approved","module":"identity","specHash":"b36d3c7a0b8b96ad09f43822f79c68f743381aa61685dd48a3d8adee9066c66e"}
+{"ts":"2026-11-09T16:53:49.281Z","type":"feature-status","module":"identity","feature":"keycloak-provisioning","from":"pending","to":"in-progress"}
+{"ts":"2026-11-09T16:53:51.827Z","type":"feature-status","module":"identity","feature":"keycloak-provisioning","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-09T16:53:52.928Z","type":"feature-status","module":"identity","feature":"keycloak-provisioning","from":"evaluating","to":"passing"}
 {"ts":"2026-11-09T14:49:11.956Z","type":"spec-approved","module":"identity","specHash":"8521c0b48fe3c1525b56051012c5bbfc3f714b37199346fa6a7812e7aa470bd2"}
 {"ts":"2026-11-09T15:07:45.558Z","type":"spec-approved","module":"identity","specHash":"78d39fd38f3642ceef6c08d2c5eef3e0a25e46508f2bfb323a6ebe119b45ac16"}
 {"ts":"2026-11-09T15:54:08.638Z","type":"feature-status","module":"identity","feature":"keycloak-theme","from":"pending","to":"in-progress"}
@@ -1110,6 +1115,13 @@
 {"ts":"2026-11-09T05:07:57.145Z","type":"feature-status","module":"chatbot","feature":"answer-rating-api","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-09T05:14:46.167Z","type":"feature-status","module":"chatbot","feature":"answer-rating-schema","from":"evaluating","to":"passing"}
 {"ts":"2026-11-09T05:15:45.202Z","type":"feature-status","module":"chatbot","feature":"answer-rating-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-09T16:12:56.091Z","type":"quick-opened","what":"KAN-305 split KnowledgeChatbotPage.test.tsx into three files (conversations, ratings) with shared helpers","files":["frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.conversations.test.tsx","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.ratings.test.tsx","frontend/src/features/chatbot/pages/chatbotTestUtils.tsx"]}
+{"ts":"2026-11-09T17:17:05.165Z","type":"quick-closed","what":"KAN-305 split KnowledgeChatbotPage.test.tsx into three files (conversations, ratings) with shared helpers","files":["frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.conversations.test.tsx","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.ratings.test.tsx","frontend/src/features/chatbot/pages/chatbotTestUtils.tsx"]}
+{"ts":"2026-11-09T17:21:20.279Z","type":"quick-opened","what":"KAN-305 split ImportPreviewPage.test.tsx into two files so they run on two workers","files":["frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.popups.test.tsx"]}
+{"ts":"2026-11-09T17:33:25.895Z","type":"quick-closed","what":"KAN-305 split ImportPreviewPage.test.tsx into two files so they run on two workers","files":["frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.popups.test.tsx"]}
+{"ts":"2026-11-09T17:55:53.581Z","type":"quick-opened","what":"KAN-305 revert the maxWorkers change and the two test-file splits, which did not speed up CI","files":["frontend/vite.config.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.conversations.test.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.popups.test.tsx"]}
+{"ts":"2026-11-09T17:57:32.548Z","type":"quick-closed","what":"KAN-305 revert the maxWorkers change and the two test-file splits, which did not speed up CI","files":["frontend/vite.config.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.conversations.test.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.popups.test.tsx"]}
+{"ts":"2026-11-09T17:59:41.249Z","type":"quick-opened","what":"KAN-305 shard the frontend tests over 3 CI jobs and keep frontend as the required gate job","files":[".github/workflows/ci.yml"]}
 {"ts":"2026-11-09T16:14:46.706Z","type":"spec-approved","module":"identity","specHash":"4930629625c56462914d96601fcd1bef9edef412d957292fe2c968c3ede0def6"}
 {"ts":"2026-11-08T12:52:06.896Z","type":"spec-approved","module":"ticket-repository","specHash":"9fe7731752092de0e9518f178b30256a340a942603f70ee75c6b5553ad5adf95"}
 {"ts":"2026-11-08T12:55:26.342Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull-deadline","from":null,"to":"pending"}
@@ -1118,3 +1130,44 @@
 {"ts":"2026-11-08T13:13:14.541Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"3b36f7ea9aea4fa195af945f2b2178acbf384098"}
 {"ts":"2026-11-09T17:11:32.674Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"68cf0a2da76866f899a655ae4ad92ed44abf44a9"}
 {"ts":"2026-11-09T17:11:49.648Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"125f4e28d12316d33b41f00d02e21e6fbc05df64"}
+{"ts":"2026-11-09T17:12:45.253Z","type":"spec-approved","module":"identity","specHash":"eba98dc9b616f51a8f51cf5ce0e7c65b362c8b1c8a67049ddfbc16c7f9094ebb"}
+{"ts":"2026-11-09T18:17:59.236Z","type":"spec-approved","module":"identity","specHash":"32cd1c6998e978c4f083c7706006c3a6702f17a0a96ebfe2091ac06160ec7c95"}
+{"ts":"2026-11-09T18:05:38.595Z","type":"quick-closed","what":"KAN-305 shard the frontend tests over 3 CI jobs and keep frontend as the required gate job","files":[".github/workflows/ci.yml"]}
+{"ts":"2026-11-09T18:19:38.431Z","type":"quick-opened","what":"KAN-305 fill the chatbot question box with one paste instead of typing every character, to cut test time","files":["frontend/src/features/chatbot/frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx","frontend/src/features/chatbot/frontend/src/features/chatbot/pages/KnowledgeChatbotPage.rating-401.test.tsx"]}
+{"ts":"2026-11-09T18:19:44.417Z","type":"quick-closed","what":"KAN-305 fill the chatbot question box with one paste instead of typing every character, to cut test time","files":["frontend/src/features/chatbot/frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx","frontend/src/features/chatbot/frontend/src/features/chatbot/pages/KnowledgeChatbotPage.rating-401.test.tsx"]}
+{"ts":"2026-11-09T18:20:14.703Z","type":"quick-opened","what":"KAN-305 fill the chatbot question box with one paste instead of typing every character, to cut test time","files":["frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.rating-401.test.tsx"]}
+{"ts":"2026-11-09T18:37:00.921Z","type":"quick-closed","what":"KAN-305 fill the chatbot question box with one paste instead of typing every character, to cut test time","files":["frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.rating-401.test.tsx"]}
+{"ts":"2026-11-09T18:49:58.396Z","type":"quick-opened","what":"KAN-305 use four test shards instead of three to even out the frontend CI jobs","files":[".github/workflows/ci.yml"]}
+{"ts":"2026-11-09T18:54:13.282Z","type":"quick-closed","what":"KAN-305 use four test shards instead of three to even out the frontend CI jobs","files":[".github/workflows/ci.yml"]}
+{"ts":"2026-11-09T19:28:15.751Z","type":"quick-opened","what":"KAN-305 split the backend CI job into unit tests, Keycloak integration tests and the other integration tests","files":[".github/workflows/ci.yml"]}
+{"ts":"2026-11-09T19:31:08.679Z","type":"quick-closed","what":"KAN-305 split the backend CI job into unit tests, Keycloak integration tests and the other integration tests","files":[".github/workflows/ci.yml"]}
+{"ts":"2026-11-09T19:47:37.042Z","type":"quick-opened","what":"KAN-305 fix the it-other test filter and split the Keycloak integration tests into two parallel parts","files":[".github/workflows/ci.yml"]}
+{"ts":"2026-11-09T19:53:07.473Z","type":"quick-closed","what":"KAN-305 fix the it-other test filter and split the Keycloak integration tests into two parallel parts","files":[".github/workflows/ci.yml"]}
+{"ts":"2026-11-09T20:18:12.131Z","type":"quick-opened","what":"KAN-305 write down the rules that keep CI fast: backend IT rules, frontend test rules, CI time budget and job timeouts","files":["backend/AGENTS.md","frontend/guidelines/10-testing.md",".github/workflows/ci.yml"]}
+{"ts":"2026-11-09T20:19:56.651Z","type":"quick-closed","what":"KAN-305 write down the rules that keep CI fast: backend IT rules, frontend test rules, CI time budget and job timeouts","files":["backend/AGENTS.md","frontend/guidelines/10-testing.md",".github/workflows/ci.yml"]}
+{"ts":"2026-11-10T00:37:28.805Z","type":"spec-approved","module":"identity","specHash":"acd078a53297938b6304c5bfa6bdbac0e9f05d33b84c1f810a4fd98ecea40076"}
+{"ts":"2026-11-10T00:38:06.601Z","type":"feature-status","module":"identity","feature":"user-status-backend","from":null,"to":"pending"}
+{"ts":"2026-11-10T00:38:06.649Z","type":"feature-status","module":"identity","feature":"user-status-backend","from":"pending","to":"in-progress"}
+{"ts":"2026-11-10T01:13:37.685Z","type":"commit-recorded","module":"identity","repo":"default","sha":"2432988d63db1dd87d464af1628d849a909e19dd"}
+{"ts":"2026-11-10T01:15:36.003Z","type":"feature-status","module":"identity","feature":"user-status-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T01:20:05.701Z","type":"feature-status","module":"identity","feature":"user-status-backend","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T01:22:54.870Z","type":"commit-recorded","module":"identity","repo":"default","sha":"5302d0d38123e26c638dbf094340b41a0e13651d"}
+{"ts":"2026-11-10T00:35:58.832Z","type":"spec-approved","module":"ticket-review","specHash":"864f785fff2912eb947c374a573532baac0a7d2e0915caaf4d06b20269b87d50"}
+{"ts":"2026-11-10T00:36:49.064Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":null,"to":"pending"}
+{"ts":"2026-11-10T00:36:49.103Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"pending","to":"in-progress"}
+{"ts":"2026-11-10T01:12:00.122Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T01:14:37.208Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"53eb36fe9e99b6243ab77c0709c36579831f5794"}
+{"ts":"2026-11-10T01:18:52.713Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:32:16.568Z","type":"feature-status","module":"dashboard-audit","feature":"audit-writer","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:32:16.650Z","type":"feature-status","module":"dashboard-audit","feature":"audit-log-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:31:07.183Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T02:31:07.259Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:31:07.351Z","type":"feature-status","module":"identity","feature":"add-user-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T02:31:07.443Z","type":"feature-status","module":"identity","feature":"add-user-backend","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:13:59.701Z","type":"feature-status","module":"ticket-review","feature":"review-storage","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:13:59.780Z","type":"feature-status","module":"ticket-review","feature":"review-decision-transaction","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:13:59.884Z","type":"feature-status","module":"ticket-review","feature":"review-decision-endpoints","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:13:59.974Z","type":"feature-status","module":"ticket-review","feature":"review-queue-entry-time","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:14:00.091Z","type":"feature-status","module":"ticket-review","feature":"review-production-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:14:00.175Z","type":"feature-status","module":"ticket-review","feature":"review-email-notification","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:14:00.293Z","type":"feature-status","module":"ticket-review","feature":"review-history-api","from":"evaluating","to":"passing"}

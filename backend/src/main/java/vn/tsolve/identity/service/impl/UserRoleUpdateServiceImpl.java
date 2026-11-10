@@ -1,5 +1,10 @@
 package vn.tsolve.identity.service.impl;
 
+import static vn.tsolve.identity.service.impl.HandoverChoices.choices;
+import static vn.tsolve.identity.service.impl.HandoverChoices.matchesProjects;
+import static vn.tsolve.identity.service.impl.HandoverChoices.matchesSpaces;
+import static vn.tsolve.identity.service.impl.HandoverChoices.uuid;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -35,6 +40,7 @@ import vn.tsolve.identity.repository.UserRoleUpdateRepository;
 import vn.tsolve.identity.repository.UserRoleUpdateRepository.Space;
 import vn.tsolve.identity.service.UserDetailService;
 import vn.tsolve.identity.service.UserRoleUpdateService;
+import vn.tsolve.identity.service.impl.HandoverChoices.Choice;
 import vn.tsolve.identity.signin.port.TenantScope;
 
 @Service
@@ -246,53 +252,6 @@ public class UserRoleUpdateServiceImpl implements UserRoleUpdateService {
         }
         if (roles.contains(Role.KNOWLEDGE_MANAGER) == selected.isEmpty()) throw required("spaceIds", "Spaces");
         return selected;
-    }
-
-    private record Choice(String id, String recipientId) {}
-
-    private static List<Choice> choices(JsonNode node, String idKey) {
-        if (node == null) return List.of();
-        if (!node.isArray()) throw malformed();
-        List<Choice> result = new ArrayList<>();
-        for (JsonNode item : node) {
-            if (!item.isObject()
-                    || !item.path(idKey).isTextual()
-                    || !item.path("recipientId").isTextual()) throw malformed();
-            result.add(new Choice(
-                    item.get(idKey).textValue(), item.get("recipientId").textValue()));
-        }
-        return result;
-    }
-
-    private static boolean matchesProjects(List<ProjectOption> options, List<Choice> choices) {
-        return choices.size() == options.size()
-                && distinct(choices)
-                && options.stream().allMatch(option -> choices.stream()
-                        .anyMatch(choice ->
-                                option.project().projectId().toString().equals(choice.id())
-                                        && option.recipients().stream()
-                                                .anyMatch(user ->
-                                                        user.id().toString().equals(choice.recipientId()))));
-    }
-
-    private static boolean matchesSpaces(List<SpaceOption> options, List<Choice> choices) {
-        return choices.size() == options.size()
-                && distinct(choices)
-                && options.stream().allMatch(option -> choices.stream()
-                        .anyMatch(choice -> option.space().spaceId().toString().equals(choice.id())
-                                && option.recipients().stream()
-                                        .anyMatch(user -> user.id().toString().equals(choice.recipientId()))));
-    }
-
-    private static boolean distinct(List<Choice> choices) {
-        return choices.stream().map(Choice::id).distinct().count() == choices.size();
-    }
-
-    private static UUID uuid(String value) {
-        if (value == null
-                || !value.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"))
-            return null;
-        return UUID.fromString(value);
     }
 
     private static FieldMessageCodeException malformed() {

@@ -123,23 +123,24 @@
         "callback-workspace-checks": "pending",
         "user-role": "pending",
         "logout-rp-initiated": "pending",
-        "keycloak-provisioning": "pending",
+        "keycloak-provisioning": "passing",
         "keycloak-theme": "passing",
         "keycloak-prerequisites": "passing",
         "keycloak-realm": "passing",
         "keycloak-sign-in-start": "passing",
         "keycloak-callback": "passing",
-        "user-list-backend": "in-progress",
-        "add-user-backend": "in-progress",
-        "user-roles-backend": "passing"
+        "user-list-backend": "passing",
+        "add-user-backend": "passing",
+        "user-roles-backend": "passing",
+        "user-status-backend": "passing"
       },
-      "lastUpdated": "2026-11-09T15:54:14.868Z",
+      "lastUpdated": "2026-11-10T02:31:07.442Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "37289e7d2dd38b882c9c644cc47f87e83059b255"
+        "default": "5302d0d38123e26c638dbf094340b41a0e13651d"
       }
     },
     "workspace": {
@@ -287,10 +288,10 @@
       "currentPhase": "implement",
       "features": {
         "audit-log": "passing",
-        "audit-log-api": "evaluating",
-        "audit-writer": "evaluating"
+        "audit-log-api": "passing",
+        "audit-writer": "passing"
       },
-      "lastUpdated": "2026-11-07T11:25:26.357Z",
+      "lastUpdated": "2026-11-10T02:32:16.649Z",
       "branch": "feat/dashboard-audit",
       "repos": [
         "default"
@@ -415,27 +416,28 @@
         "review-ticket-detail": "passing",
         "expired-tickets": "passing",
         "review-history": "passing",
-        "review-storage": "evaluating",
-        "review-production-api": "evaluating",
+        "review-storage": "passing",
+        "review-production-api": "passing",
         "review-jira-feedback": "in-progress",
-        "review-decision-transaction": "evaluating",
-        "review-decision-endpoints": "evaluating",
-        "review-queue-entry-time": "evaluating",
-        "review-history-api": "evaluating",
-        "review-email-notification": "evaluating",
+        "review-decision-transaction": "passing",
+        "review-decision-endpoints": "passing",
+        "review-queue-entry-time": "passing",
+        "review-history-api": "passing",
+        "review-email-notification": "passing",
         "review-queue-events-api": "passing",
         "review-queue-events-web": "passing",
         "review-queue-events-hardening": "passing",
         "review-send-back-api": "passing",
-        "review-expiry-job": "passing"
+        "review-expiry-job": "passing",
+        "review-expired-stored-columns": "passing"
       },
-      "lastUpdated": "2026-11-08T08:31:30.173Z",
+      "lastUpdated": "2026-11-10T02:14:00.291Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "8805eceac580d3de971a4b3aef9a208c90558a18"
+        "default": "53eb36fe9e99b6243ab77c0709c36579831f5794"
       }
     }
   },

@@ -376,8 +376,9 @@ export const getGetExpiredTicketsUrl = (params?: GetExpiredTicketsParams) => {
  * An optional Department narrows those Projects; a Department without a managed Project returns an empty page.
  * Sort by expiredAt (default descending), sourceTicketId, title or project, ascending or descending,
  * with ticket UUID as tie-breaker. Unknown sort fields or directions, negative page or size outside 1–100
- * return 400 MSG06. previousStatus is always PENDING_REVIEW. expiredAt is derived as midnight in
- * Asia/Ho_Chi_Minh on the day after reviewDueDate, falling back to updated_at for legacy rows without a due date.
+ * return 400 MSG06. expiredAt and previousStatus are the expiry time and previous status stored by JOB-02.
+ * For tickets expired before they were stored, expiredAt falls back to midnight in Asia/Ho_Chi_Minh on the
+ * day after reviewDueDate (or updated_at without a due date) and previousStatus to PENDING_REVIEW.
  * @summary Expired tickets of the Projects the user is Project Manager of (SRS 7.5).
  */
 export const getExpiredTickets = async (

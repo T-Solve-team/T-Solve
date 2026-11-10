@@ -21,6 +21,7 @@ import vn.tsolve.identity.dto.UserDetailResponse;
 import vn.tsolve.identity.dto.UserHandoverOptionsResponse;
 import vn.tsolve.identity.service.UserDetailService;
 import vn.tsolve.identity.service.UserRoleUpdateService;
+import vn.tsolve.identity.service.UserStatusUpdateService;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -31,10 +32,15 @@ public class UserDetailController {
     private static final String USER_PATH = "/{userId:" + UUID_PATTERN + "}";
     private final UserDetailService detailService;
     private final UserRoleUpdateService updateService;
+    private final UserStatusUpdateService statusService;
 
-    public UserDetailController(UserDetailService detailService, UserRoleUpdateService updateService) {
+    public UserDetailController(
+            UserDetailService detailService,
+            UserRoleUpdateService updateService,
+            UserStatusUpdateService statusService) {
         this.detailService = detailService;
         this.updateService = updateService;
+        this.statusService = statusService;
     }
 
     @GetMapping(USER_PATH)
@@ -61,11 +67,24 @@ public class UserDetailController {
         return updateService.update(userId, body, caller);
     }
 
+    @PutMapping(USER_PATH + "/status")
+    @Operation(
+            operationId = "updateUserStatus",
+            summary = "Atomically change account status with the required handovers")
+    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+    public UserDetailResponse updateStatus(
+            @PathVariable UUID userId,
+            @RequestBody(required = false) JsonNode body,
+            @AuthenticationPrincipal TSolveUser caller) {
+        return statusService.update(userId, body, caller);
+    }
+
     // Disjoint from USER_PATH; static routes such as /departments retain precedence.
     @RequestMapping(
             value = {
                 "/{invalidUserId:(?!" + UUID_PATTERN + "$).+}",
-                "/{invalidUserId:(?!" + UUID_PATTERN + "$).+}/handover-options"
+                "/{invalidUserId:(?!" + UUID_PATTERN + "$).+}/handover-options",
+                "/{invalidUserId:(?!" + UUID_PATTERN + "$).+}/status"
             },
             method = {RequestMethod.GET, RequestMethod.PUT})
     @PreAuthorize("hasRole('" + Roles.ADMIN + "')")

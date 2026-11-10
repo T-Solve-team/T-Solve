@@ -44,6 +44,9 @@ public class Account {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(name = "keycloak_sub", length = 64, updatable = false)
+    private String keycloakSub;
+
     protected Account() {}
 
     public Account(String email, String fullName, AccountStatus status, Instant createdAt) {
@@ -65,6 +68,16 @@ public class Account {
             firstSignInAt = now;
         }
         lastSignInAt = now;
+    }
+
+    /** The Keycloak subject bound to this Account, or null before the first sign-in. */
+    public String getKeycloakSub() {
+        return keycloakSub;
+    }
+
+    /** Mirrors a sub bound in the database by {@code AccountRepository.bindKeycloakSub}; save never writes it. */
+    void bindKeycloakSub(String sub) {
+        this.keycloakSub = sub;
     }
 
     public UUID getId() {
