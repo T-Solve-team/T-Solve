@@ -132,15 +132,15 @@
         "user-list-backend": "in-progress",
         "add-user-backend": "in-progress",
         "user-roles-backend": "passing",
-        "user-status-backend": "in-progress"
+        "user-status-backend": "passing"
       },
-      "lastUpdated": "2026-11-10T01:13:37.684Z",
+      "lastUpdated": "2026-11-10T01:22:54.868Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "2432988d63db1dd87d464af1628d849a909e19dd"
+        "default": "5302d0d38123e26c638dbf094340b41a0e13651d"
       }
     },
     "workspace": {
