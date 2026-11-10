@@ -778,8 +778,8 @@
     }
   },
   "dashboard-audit": {
-    "specHash": "f99005f5e53ff03676e24cb351c366948c037ee7e0950012f83dc22cba152f7b",
-    "approvedAt": "2026-11-09T05:26:53.209Z",
+    "specHash": "8230a62f2bf6eb17748c0aab0f9de65fc80edd56b10fe6dc9ce5585588dc8db6",
+    "approvedAt": "2026-11-10T10:44:40.345Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN an Admin opens , THE frontend SHALL show screen 9.2 with the columns , , ,  and .",
@@ -842,7 +842,8 @@
       "AC-005.7": "WHILE the request is pending, THE web app SHALL show the existing LoadingState; IF it fails, THEN THE",
       "AC-005.8": "IF a section has nothing to show for the period, THEN THE web app SHALL show MSG04 in that section.",
       "AC-005.9": "WHERE the user is a Project Manager, THE web app SHALL open the Ticket Detail when a ticket of the top or",
-      "AC-005.10": "WHEN mock mode is on, THE feature's MSW handler SHALL answer  with data for"
+      "AC-005.10": "WHEN mock mode is on, THE feature's MSW handler SHALL answer  with data for",
+      "AC-005.11": "WHERE a Project is chosen, THE web app SHALL say in the Knowledge gaps section that its figures count"
     }
   },
   "tracker": {
