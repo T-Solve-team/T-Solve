@@ -24,6 +24,7 @@
         <spotless.version>2.43.0</spotless.version>
         <wiremock.version>3.9.2</wiremock.version>
         <jobrunr.version>8.6.0</jobrunr.version>
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencies>
