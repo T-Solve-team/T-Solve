@@ -1108,3 +1108,4 @@
 {"ts":"2026-11-10T00:36:49.103Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"pending","to":"in-progress"}
 {"ts":"2026-11-10T01:12:00.122Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-10T01:14:37.208Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"53eb36fe9e99b6243ab77c0709c36579831f5794"}
+{"ts":"2026-11-10T01:18:52.713Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"evaluating","to":"passing"}

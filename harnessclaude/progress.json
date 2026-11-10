@@ -408,9 +408,9 @@
         "review-queue-events-hardening": "passing",
         "review-send-back-api": "passing",
         "review-expiry-job": "passing",
-        "review-expired-stored-columns": "evaluating"
+        "review-expired-stored-columns": "passing"
       },
-      "lastUpdated": "2026-11-10T01:14:37.207Z",
+      "lastUpdated": "2026-11-10T01:18:52.713Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
