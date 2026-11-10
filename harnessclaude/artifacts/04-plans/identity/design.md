@@ -1376,3 +1376,45 @@ Department and `MEMBER` rows kept; seed a second Knowledge Manager). Builds on T
   (memberships per AC-006.15, Account and Roles kept, audit row); activate; MSG56, MSG112, MSG59, MSG118, MSG01;
   rollback leaves every row unchanged; a BETA recipient is never accepted; two Admins deactivating each other at once →
   exactly one succeeds; the mock seed row.
+
+## Scope checks — KAN-118, Task 36 (2026-11-10)
+
+Covers AC-011.1 to AC-011.11; the user's four decisions of 10/11 (spec Changelog: a port in `identity` called from
+code, the rules per Role, only the helpers before the code freeze, 403 MSG08 also for an unknown id).
+
+- **Port.** `vn.tsolve.identity.service.ScopeAccessService` (`canAccessDepartment`, `canAccessProject`,
+  `canAccessSpace`, `requireDepartment`, `requireProject`, `requireSpace`); impl
+  `service/impl/ScopeAccessServiceImpl` (`@Service`, `@Transactional(readOnly = true)`), which calls
+  `TenantScope.currentWorkspaceId()` first (unbound → `IllegalStateException`, 500 MSG06, AC-011.9) and returns false
+  for a null argument without a query (AC-011.8). `require…` throws `identity/exception/ScopeAccessDeniedException`
+  (`MessageCodeException`, 403, MSG08, no params) — the same shape as `ticket`'s `ProjectAccessDeniedException`.
+- **Reads.** `repository/ScopeAccessRepository` (`NamedParameterJdbcTemplate`, like `UserDetailRepository`): three
+  `SELECT EXISTS (…)` queries on the bound database. A common CTE-free fragment `scoped departments` of an Active
+  Account:
+  - own Department: `app_user.department_id` WHERE a `user_role` row `PROJECT_MANAGER` exists;
+  - Departments of its Projects: `project_membership` → `project.department_id`, a `PROJECT_MANAGER` row only with the
+    Role PROJECT_MANAGER, a `MEMBER` row only with TICKET_RESOLVER; Project status not filtered (ACTIVE and REMOVED).
+  - `canAccessDepartment`: the Department is `ACTIVE` and in the fragment.
+  - `canAccessProject`: a counted membership row of that Project, and the Project's Department `ACTIVE`.
+  - `canAccessSpace`: the Space is `ACTIVE`, its Department `ACTIVE`, and either a `space_manager` row of the Account
+    with the Role KNOWLEDGE_MANAGER, or the Space's Department in the fragment.
+  - Every query also requires `app_user.status = 'ACTIVE'` (AC-011.7). ADMIN and EMPLOYEE appear in no predicate
+    (AC-011.6). No write, no audit, no log line (AC-011.11).
+- **Not changed.** `ticket` `ProjectAccess`, `review` `ReviewWorkspaceAccess`, `triage` `ManagedProjects`, `search`
+  `VisibleScope` and their tests (spec Out of Scope). No schema change, no endpoint, no contract change.
+- **Tests.** Unit `ScopeAccessServiceImplTest` (Mockito): null arguments → false with no query; `require…` throws
+  MSG08 / 403 on false and passes on true; unbound scope propagates. IT `ScopeAccessIT` (`TwoTenantDatabases`, the same
+  `@SpringBootTest` properties as `UserDetailIT` so the cached context is reused; ids `new UUID(118, n)`): each rule of
+  AC-011.2 to AC-011.7 with a positive and a negative case — a Project Manager refused another Department, a Ticket
+  Resolver with Projects in two Departments allowed both and refused a third, a member refused another Project, a
+  Knowledge Manager refused a Space it does not manage, Admin-only refused, the Role removed while the row stays,
+  deleted Department, Hidden Space, Deactivated Account, REMOVED Project still allowed; an id of tenant B is refused
+  in tenant A and the same ids answer from B only when bound to B (AC-011.9); unknown ids → false (AC-011.8).
+
+### Edge cases — STORY-011
+- Stale rows after a Role change (AC-007.19 keeps `PROJECT_MANAGER` rows of non-Active Projects): counted only with the
+  Role, so a former Project Manager gets nothing from them.
+- A Project Manager whose `department_id` is null (data from before AC-007.13): only its Projects count.
+- `space.department_id` is unique (one Space per Department); a Space of a deleted Department is refused even if its
+  own status is still `ACTIVE`.
+- Several Roles: the union of the rules (GBR-28), e.g. a Knowledge Manager who is also a Ticket Resolver.
