@@ -106,11 +106,13 @@ public class DashboardRepository {
      * legacy id. Resolved once per request so the ticket queries filter {@code t.project_id in (...)} on an index.
      */
     public List<UUID> findTicketProjectIds(Set<Long> departments, UUID projectId) {
-        return jdbc.query(
-                "select public_id, lpad(to_hex(project_id), 32, '0')::uuid as legacy_id from project p where true"
-                        + scopeFilter(departments, projectId),
-                scopeParameters(departments, projectId),
-                (row, index) -> List.of(row.getObject("public_id", UUID.class), row.getObject("legacy_id", UUID.class)))
+        return jdbc
+                .query(
+                        "select public_id, lpad(to_hex(project_id), 32, '0')::uuid as legacy_id from project p where true"
+                                + scopeFilter(departments, projectId),
+                        scopeParameters(departments, projectId),
+                        (row, index) ->
+                                List.of(row.getObject("public_id", UUID.class), row.getObject("legacy_id", UUID.class)))
                 .stream()
                 .flatMap(List::stream)
                 .distinct()
