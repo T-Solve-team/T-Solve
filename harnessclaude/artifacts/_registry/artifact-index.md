@@ -240,3 +240,7 @@ Master registry of all artifacts in this workspace.
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-31-keycloak-theme.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-31-keycloak-theme-test-report.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-31-keycloak-theme-review.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-25b-callback-workspace-checks.md |
+| — | review | identity | fail | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-review.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-review2.md |
+| — | test-report | identity | pass-with-open-format | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-test-report.md |
