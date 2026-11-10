@@ -61,6 +61,8 @@ final class TestBrowser {
 
     private final List<String> pagesShown = new ArrayList<>();
 
+    private String lastUrl;
+
     /** @param hostRewrites {@code host:port} the browser is asked for -> {@code host:port} it really connects to */
     TestBrowser(Map<String, String> hostRewrites) {
         this.hostRewrites = Map.copyOf(hostRewrites);
@@ -74,6 +76,7 @@ final class TestBrowser {
 
     /** A request to any URL (Keycloak, the fake Google); the cookies are those of the URL's host name. */
     Reply get(String url) {
+        lastUrl = url;
         URI uri = URI.create(url);
         String hostPort = uri.getHost() + (uri.getPort() < 0 ? "" : ":" + uri.getPort());
         String real = hostRewrites.get(hostPort);
@@ -192,6 +195,42 @@ final class TestBrowser {
     }
 
     // ---- driving a sign-in
+
+    /** The URL of the last request made with {@link #get(String)}. */
+    String lastUrl() {
+        return lastUrl;
+    }
+
+    /**
+     * Test-only (Task 31): follows 3xx and stops at the first answer that is not a 3xx, whatever its status (Keycloak
+     * error pages are often 400), or at a 302 to {@code callbackPrefix}. A 200 page of the fake Google (a host name that
+     * starts with {@code fake-google}) is passed on by clicking its first link only if {@code clickChooser}; any other
+     * page is never clicked. {@link #lastUrl()} then holds the URL that gave the returned answer.
+     */
+    Reply followUntilSettled(Reply first, String callbackPrefix, boolean clickChooser) {
+        Reply reply = first;
+        for (int hop = 0; hop < 25; hop++) {
+            String location = reply.location();
+            if (reply.status() / 100 == 3 && location != null) {
+                if (location.startsWith(callbackPrefix)) {
+                    return reply;
+                }
+                reply = get(location);
+            } else if (clickChooser
+                    && reply.status() == 200
+                    && lastUrl != null
+                    && URI.create(lastUrl).getHost().startsWith("fake-google")) {
+                Matcher link = HREF.matcher(reply.body());
+                if (!link.find()) {
+                    return reply;
+                }
+                reply = get(link.group(1).replace("&amp;", "&"));
+            } else {
+                return reply;
+            }
+        }
+        throw new IllegalStateException("No settled page after 25 hops");
+    }
 
     /**
      * Follows redirects and clicks the one link of a chooser page until Keycloak answers 302 to a URL that starts

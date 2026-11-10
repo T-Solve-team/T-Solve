@@ -91,6 +91,20 @@ looks for that id, in the test files under the module's `paths`. A bug fix ends 
 `it('keeps the selection after Approve (BUG-004)')`.
 `vi.mock`/`vi.hoisted`, if ever needed, go at the top level of the file (Vitest 5 requirement).
 
+### T7 — Keep the suite fast (CI splits it by file).
+CI runs the suite as four shards, and Vitest splits them by file, not by duration. The check finishes when the
+slowest shard does (KAN-305: ~450 s in one job, ~125 s as shards). Three things made single files slow:
+- **Fill a text area with one `user.paste`, not `user.type`.** antd's `autoSize` measures the box with
+  `getComputedStyle` on every input event (~100 ms in jsdom), so typing one question took 4–5 s. Use `user.type`
+  only when the typing itself is what the test checks (Shift+Enter, a whitespace-only value).
+- **Do not call `getAllByRole` / `getByRole(…, { name })` over a big table inside `waitFor`.** Each call walks the DOM
+  with `getComputedStyle`. Find the row once, then read its cells with `{ hidden: true }`.
+- **Keep a page test file under ~30 tests or ~40 s.** One big file makes one shard the slow one
+  (`ImportPreviewPage.test.tsx`, ~65 s, is the example). Split it by `describe` into two files; only
+  `*.test.ts(x)` files may import the mock server and `renderApp`, so each file keeps its own small helpers.
+When the slowest shard goes over ~3 min, raise the shard count in `.github/workflows/ci.yml` (`matrix.shard` and the
+`/4` in two places) before touching timeouts.
+
 ## 4. Example — a page test
 
 ```tsx
@@ -197,6 +211,7 @@ more is doing too much; split it.
 - [ ] Queries by role/label/text; MSG texts via `msg()`; no `vi.mock` of API hooks.
 - [ ] With a HarnessClaude spec: every acceptance criterion has a test that names its id (`sdd.ts trace` passes).
 - [ ] `npm run test` passes locally.
+- [ ] No long `user.type` into a text area (T7), and the test file stays under ~30 tests.
 
 ---
 *Last verified against code: 2026-10-23, KAN-63 — screens, roles, paths and MSG codes checked against the Report3 foundation (`src/test/guidelines.test.ts`).*

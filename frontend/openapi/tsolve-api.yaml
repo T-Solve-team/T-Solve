@@ -503,8 +503,9 @@ paths:
         An optional Department narrows those Projects; a Department without a managed Project returns an empty page.
         Sort by expiredAt (default descending), sourceTicketId, title or project, ascending or descending,
         with ticket UUID as tie-breaker. Unknown sort fields or directions, negative page or size outside 1–100
-        return 400 MSG06. previousStatus is always PENDING_REVIEW. expiredAt is derived as midnight in
-        Asia/Ho_Chi_Minh on the day after reviewDueDate, falling back to updated_at for legacy rows without a due date.
+        return 400 MSG06. expiredAt and previousStatus are the expiry time and previous status stored by JOB-02.
+        For tickets expired before they were stored, expiredAt falls back to midnight in Asia/Ho_Chi_Minh on the
+        day after reviewDueDate (or updated_at without a due date) and previousStatus to PENDING_REVIEW.
       parameters:
         - name: departmentId
           in: query
@@ -1272,6 +1273,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TicketSearchResultPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/search/suggestions:
+    post:
+      tags: [search]
+      operationId: suggestTickets
+      summary: Suggest similar Published tickets for a Jira issue (UC-26, KAN-146).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketSuggestionRequest'
+      responses:
+        '200':
+          description: At most 5 items, most similar first; empty array when none.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 5
+                items:
+                  $ref: '#/components/schemas/TicketSearchResult'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -2245,6 +2273,19 @@ components:
         comment:
           type: [string, 'null']
           maxLength: 500
+    TicketSuggestionRequest:
+      type: object
+      required: [summary]
+      properties:
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: The Jira issue summary.
+        description:
+          type: [string, 'null']
+          maxLength: 32767
+          description: The Jira issue description as plain text.
     TicketIdList:
       type: object
       required: [ticketIds]

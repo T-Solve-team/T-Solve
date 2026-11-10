@@ -59,7 +59,8 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
     @Query(
             """
             select new vn.tsolve.ticket.dto.TicketReviewView$ExpiredRow(
-                t.id, t.ticketId, t.projectId, t.title, t.writer, t.reviewQueueEnteredAt, t.reviewDueDate, t.updatedAt)
+                t.id, t.ticketId, t.projectId, t.title, t.writer, t.reviewQueueEnteredAt, t.reviewDueDate, t.updatedAt,
+                t.expiredAt, t.statusBeforeExpiry)
             from Ticket t
             where t.projectId in :projects and t.status = EXPIRED and t.source = SOLUTION_FORM
             """)

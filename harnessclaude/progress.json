@@ -123,23 +123,24 @@
         "callback-workspace-checks": "pending",
         "user-role": "pending",
         "logout-rp-initiated": "pending",
-        "keycloak-provisioning": "pending",
-        "keycloak-theme": "pending",
+        "keycloak-provisioning": "passing",
+        "keycloak-theme": "passing",
         "keycloak-prerequisites": "passing",
         "keycloak-realm": "passing",
         "keycloak-sign-in-start": "passing",
         "keycloak-callback": "passing",
         "user-list-backend": "in-progress",
         "add-user-backend": "in-progress",
-        "user-roles-backend": "passing"
+        "user-roles-backend": "passing",
+        "user-status-backend": "passing"
       },
-      "lastUpdated": "2026-11-08T02:06:54.487Z",
+      "lastUpdated": "2026-11-10T01:22:54.868Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "37289e7d2dd38b882c9c644cc47f87e83059b255"
+        "default": "5302d0d38123e26c638dbf094340b41a0e13651d"
       }
     },
     "workspace": {
@@ -187,16 +188,16 @@
         "ticket-search-connect": "pending",
         "ticket-feedback-api": "passing",
         "give-feedback-connect": "evaluating",
-        "ticket-suggestion-api": "pending",
+        "ticket-suggestion-api": "passing",
         "solution-retrieval": "passing"
       },
-      "lastUpdated": "2026-11-06T17:23:51.646Z",
+      "lastUpdated": "2026-11-09T04:05:02.373Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
+        "default": "7a51712dc7528024cb627f5a39324001e16e9ce7"
       }
     },
     "triage": {
@@ -227,17 +228,19 @@
         "uuid-ids": "passing",
         "chatbot-answer-schema": "passing",
         "ask-answer-api": "passing",
-        "answer-citations": "pending",
-        "cited-documents": "pending",
-        "follow-up-context": "pending"
+        "answer-citations": "passing",
+        "cited-documents": "passing",
+        "follow-up-context": "pending",
+        "answer-rating-schema": "passing",
+        "answer-rating-api": "passing"
       },
-      "lastUpdated": "2026-11-06T17:23:52.760Z",
+      "lastUpdated": "2026-11-09T05:15:45.201Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "7c959dc351e3d03c50b10f277e52f8c8f294e8c0"
+        "default": "6555ebac926abf92fd8ee0a100ac980beaedf901"
       }
     },
     "jira-app": {
@@ -410,15 +413,16 @@
         "review-queue-events-web": "passing",
         "review-queue-events-hardening": "passing",
         "review-send-back-api": "passing",
-        "review-expiry-job": "passing"
+        "review-expiry-job": "passing",
+        "review-expired-stored-columns": "passing"
       },
-      "lastUpdated": "2026-11-08T08:31:30.173Z",
+      "lastUpdated": "2026-11-10T01:18:52.713Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "8805eceac580d3de971a4b3aef9a208c90558a18"
+        "default": "53eb36fe9e99b6243ab77c0709c36579831f5794"
       }
     }
   },

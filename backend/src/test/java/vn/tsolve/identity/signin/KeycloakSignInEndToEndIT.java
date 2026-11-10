@@ -94,6 +94,10 @@ class KeycloakSignInEndToEndIT {
                 .withEnv("KEYCLOAK_WEB_CLIENT_SECRET", WEB_CLIENT_SECRET)
                 .withCopyFileToContainer(
                         MountableFile.forHostPath(REALM_FILE), "/opt/keycloak/data/import/realm-tsolve.json");
+        if (java.nio.file.Files.isDirectory(KeycloakItStack.THEME_DIR)) { // Task 31: the realm sets loginTheme
+            keycloak.withCopyFileToContainer(
+                    MountableFile.forHostPath(KeycloakItStack.THEME_DIR), KeycloakItStack.THEME_MOUNT);
+        }
         keycloak.start();
         loginOrigin = trimSlash(keycloak.getAuthServerUrl());
         backend = new SpringApplicationBuilder(TSolveApplication.class)
