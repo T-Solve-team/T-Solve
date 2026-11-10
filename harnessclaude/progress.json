@@ -407,15 +407,16 @@
         "review-queue-events-web": "passing",
         "review-queue-events-hardening": "passing",
         "review-send-back-api": "passing",
-        "review-expiry-job": "passing"
+        "review-expiry-job": "passing",
+        "review-expired-stored-columns": "evaluating"
       },
-      "lastUpdated": "2026-11-08T08:31:30.173Z",
+      "lastUpdated": "2026-11-10T01:14:37.207Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "8805eceac580d3de971a4b3aef9a208c90558a18"
+        "default": "53eb36fe9e99b6243ab77c0709c36579831f5794"
       }
     }
   },
