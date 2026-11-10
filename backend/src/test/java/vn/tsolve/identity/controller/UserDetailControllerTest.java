@@ -134,7 +134,7 @@ class UserDetailControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    void passesAbsentStatusBodyToService_AC_006_12_AC_006_16() throws Exception {
+    void passesAnAbsentStatusBodyToTheServiceAsNull_AC_006_12() throws Exception {
         when(statusService.update(eq(USER), any(), any())).thenThrow(new NotFoundException("MSG04", Map.of()));
         mvc.perform(put(PATH + "/status").with(csrf()).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
