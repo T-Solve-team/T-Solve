@@ -204,10 +204,11 @@ class UserListIT {
         Comparator<Row> order =
                 switch (field) {
                     case "email" -> Comparator.comparing(row -> row.email().toLowerCase(Locale.ROOT));
-                    case "lastSignInAt" -> Comparator.comparing(
-                            Row::signedIn, Comparator.nullsFirst(Comparator.naturalOrder()));
-                    default -> Comparator.comparing(
-                            row -> row.name() == null ? "" : row.name().toLowerCase(Locale.ROOT));
+                    case "lastSignInAt" ->
+                        Comparator.comparing(Row::signedIn, Comparator.nullsFirst(Comparator.naturalOrder()));
+                    default ->
+                        Comparator.comparing(
+                                row -> row.name() == null ? "" : row.name().toLowerCase(Locale.ROOT));
                 };
         if (direction.equals("desc")) {
             order = order.reversed();

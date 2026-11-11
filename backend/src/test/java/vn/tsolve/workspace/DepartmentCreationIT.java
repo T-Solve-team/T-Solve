@@ -81,19 +81,15 @@ class DepartmentCreationIT {
                 List.of(TwoTenantDatabases.tenantA(), TwoTenantDatabases.tenantB(), TwoTenantDatabases.main())) {
             new TransactionTemplate(new DataSourceTransactionManager(db.getDataSource())).executeWithoutResult(tx -> {
                 db.execute("ALTER TABLE audit_log_entry DISABLE TRIGGER audit_log_entry_no_update_delete");
-                db.update(
-                        """
+                db.update("""
                         DELETE FROM audit_log_entry WHERE target_type = 'DEPARTMENT'
                         AND target_id IN (SELECT public_id FROM department WHERE lower(name) LIKE lower(?))
-                        """,
-                        prefix + "%");
+                        """, prefix + "%");
                 db.execute("ALTER TABLE audit_log_entry ENABLE TRIGGER audit_log_entry_no_update_delete");
-                db.update(
-                        """
+                db.update("""
                         DELETE FROM space
                         WHERE department_id IN (SELECT department_id FROM department WHERE lower(name) LIKE lower(?))
-                        """,
-                        prefix + "%");
+                        """, prefix + "%");
                 db.update("DELETE FROM department WHERE lower(name) LIKE lower(?)", prefix + "%");
             });
         }
@@ -149,14 +145,12 @@ class DepartmentCreationIT {
                                         + " ?",
                                 departmentId))
                         .isEqualTo(1);
-                var audit = db.queryForMap(
-                        """
+                var audit = db.queryForMap("""
                         SELECT action, target_type, target_id, actor_id, actor_email,
                                details ->> 'operation' AS operation, details ->> 'name' AS name,
                                details ->> 'spaceId' AS space_id
                         FROM audit_log_entry WHERE target_type = 'DEPARTMENT' AND target_id = ?
-                        """,
-                        departmentId);
+                        """, departmentId);
                 assertThat(audit)
                         .containsEntry("action", "DEPARTMENT_CHANGE")
                         .containsEntry("target_type", "DEPARTMENT")
@@ -226,14 +220,10 @@ class DepartmentCreationIT {
                 .isEqualTo(1);
         assertThat(count(db, "SELECT count(*) FROM space WHERE lower(name) LIKE lower(?)", prefix + "%"))
                 .isEqualTo(1);
-        assertThat(count(
-                        db,
-                        """
+        assertThat(count(db, """
                         SELECT count(*) FROM audit_log_entry WHERE target_type = 'DEPARTMENT'
                         AND lower(details ->> 'name') LIKE lower(?)
-                        """,
-                        prefix + "%"))
-                .isEqualTo(1);
+                        """, prefix + "%")).isEqualTo(1);
     }
 
     @Test
@@ -257,14 +247,10 @@ class DepartmentCreationIT {
                 .isEqualTo("DELETED");
         assertThat(count(db, "SELECT count(*) FROM space WHERE lower(name) LIKE lower(?)", prefix + "%"))
                 .isZero();
-        assertThat(count(
-                        db,
-                        """
+        assertThat(count(db, """
                         SELECT count(*) FROM audit_log_entry WHERE target_type = 'DEPARTMENT'
                         AND lower(details ->> 'name') LIKE lower(?)
-                        """,
-                        prefix + "%"))
-                .isZero();
+                        """, prefix + "%")).isZero();
     }
 
     @Test
@@ -281,14 +267,10 @@ class DepartmentCreationIT {
                             .isEqualTo(1);
                     assertThat(count(db, "SELECT count(*) FROM space WHERE lower(name) = lower(?)", name))
                             .isEqualTo(1);
-                    assertThat(count(
-                                    db,
-                                    """
+                    assertThat(count(db, """
                                     SELECT count(*) FROM audit_log_entry WHERE target_type = 'DEPARTMENT'
                                     AND lower(details ->> 'name') = lower(?)
-                                    """,
-                                    name))
-                            .isEqualTo(1);
+                                    """, name)).isEqualTo(1);
                 }
                 return null;
             } catch (Exception e) {
@@ -345,14 +327,10 @@ class DepartmentCreationIT {
                 .isEqualTo(1);
         assertThat(count(db, "SELECT count(*) FROM space WHERE lower(name) LIKE lower(?)", prefix + "%"))
                 .isEqualTo(1);
-        assertThat(count(
-                        db,
-                        """
+        assertThat(count(db, """
                         SELECT count(*) FROM audit_log_entry WHERE target_type = 'DEPARTMENT'
                         AND lower(details ->> 'name') LIKE lower(?)
-                        """,
-                        prefix + "%"))
-                .isEqualTo(1);
+                        """, prefix + "%")).isEqualTo(1);
     }
 
     @Test
@@ -372,14 +350,10 @@ class DepartmentCreationIT {
                 .isZero();
         assertThat(count(db, "SELECT count(*) FROM space WHERE lower(name) LIKE lower(?)", prefix + "%"))
                 .isZero();
-        assertThat(count(
-                        db,
-                        """
+        assertThat(count(db, """
                         SELECT count(*) FROM audit_log_entry WHERE target_type = 'DEPARTMENT'
                         AND lower(details ->> 'name') LIKE lower(?)
-                        """,
-                        prefix + "%"))
-                .isZero();
+                        """, prefix + "%")).isZero();
     }
 
     @Test
@@ -429,14 +403,10 @@ class DepartmentCreationIT {
                     .isZero();
             assertThat(count(db, "SELECT count(*) FROM space WHERE lower(name) LIKE lower(?)", prefix + "%"))
                     .isZero();
-            assertThat(count(
-                            db,
-                            """
+            assertThat(count(db, """
                             SELECT count(*) FROM audit_log_entry WHERE target_type = 'DEPARTMENT'
                             AND lower(details ->> 'name') LIKE lower(?)
-                            """,
-                            prefix + "%"))
-                    .isZero();
+                            """, prefix + "%")).isZero();
         }
     }
 }

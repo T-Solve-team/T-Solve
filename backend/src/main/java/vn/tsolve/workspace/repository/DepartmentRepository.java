@@ -32,12 +32,9 @@ public class DepartmentRepository {
     }
 
     public UUID insertSpace(long departmentId, String name) {
-        return jdbc.queryForObject(
-                """
+        return jdbc.queryForObject("""
                 INSERT INTO space (department_id, name) VALUES (:departmentId, :name)
                 RETURNING public_id
-                """,
-                Map.of("departmentId", departmentId, "name", name),
-                UUID.class);
+                """, Map.of("departmentId", departmentId, "name", name), UUID.class);
     }
 }
