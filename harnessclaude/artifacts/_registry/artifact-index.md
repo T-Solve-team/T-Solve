@@ -245,4 +245,5 @@ Master registry of all artifacts in this workspace.
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-review2.md |
 | — | test-report | identity | pass-with-open-format | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-test-report.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-26a-web-session.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-26b-user-role.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-30a-jira-link-sign-in.md |
