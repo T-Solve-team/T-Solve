@@ -47,10 +47,28 @@ public class InProcessSuggestionJobQueue implements SuggestionJobQueue, Disposab
 
     @Override
     public void enqueue(SuggestionJobRequest request) {
+        // The task only describes the work; execute() puts it on the pool's queue and returns at once, and a
+        // suggestion-job-* thread runs it, so the request is answered without waiting for the job (AC-011.9).
+        Runnable task = new SuggestionTask(request);
         try {
-            executor.execute(() -> runOnce(request));
+            executor.execute(task);
         } catch (RejectedExecutionException e) {
             log.warn("Suggestion job dropped, queue full: {}", request.issueKey());
+        }
+    }
+
+    /** One suggestion job, run by a pool thread rather than the thread that queued it. */
+    private final class SuggestionTask implements Runnable {
+
+        private final SuggestionJobRequest request;
+
+        private SuggestionTask(SuggestionJobRequest request) {
+            this.request = request;
+        }
+
+        @Override
+        public void run() {
+            runOnce(request);
         }
     }
 
