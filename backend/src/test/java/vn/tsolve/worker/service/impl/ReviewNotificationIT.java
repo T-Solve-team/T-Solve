@@ -29,13 +29,13 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
+import vn.tsolve.testsupport.SharedPostgres;
 import vn.tsolve.ticket.config.TicketClockConfig;
 import vn.tsolve.ticket.service.ReviewNotificationService;
 import vn.tsolve.ticket.service.TicketDecisionService;
@@ -65,12 +65,11 @@ class ReviewNotificationIT {
     private static final String WRITER = "writer@example.test";
     private static final String FEEDBACK = "private-review-feedback";
 
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+    private static final SharedPostgres.Db DB = SharedPostgres.migratedDatabase();
 
-    static {
-        DB.start();
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        DB.register(registry);
     }
 
     @Autowired
@@ -200,17 +199,11 @@ class ReviewNotificationIT {
     }
 
     private UUID ticket(String key, String status, UUID writer) {
-        return jdbc.queryForObject(
-                """
+        return jdbc.queryForObject("""
                 insert into ticket (source_ticket_id, project_id, source, status, writer_id, title, symptoms,
                                     root_cause, resolution_steps, scope, review_due_date)
                 values (?, ?, 'SOLUTION_FORM', ?, ?, 'Login fails', 'Error', 'Token', 'Restart', 'Users', '2026-11-12')
                 returning ticket_id
-                """,
-                UUID.class,
-                key,
-                PROJECT,
-                status,
-                writer);
+                """, UUID.class, key, PROJECT, status, writer);
     }
 }

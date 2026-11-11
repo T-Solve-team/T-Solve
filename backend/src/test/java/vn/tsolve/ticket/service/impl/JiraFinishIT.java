@@ -19,13 +19,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.exception.MessageCodeException;
 import vn.tsolve.common.exception.NotFoundException;
+import vn.tsolve.testsupport.SharedPostgres;
 import vn.tsolve.ticket.dto.ImportResultResponse;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportPreview;
@@ -58,12 +58,11 @@ import vn.tsolve.ticket.service.ImportConfirmService;
         })
 class JiraFinishIT {
 
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+    private static final SharedPostgres.Db DB = SharedPostgres.migratedDatabase();
 
-    static {
-        DB.start();
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        DB.register(registry);
     }
 
     // Finish records an audit event, which needs a signed-in user; this test is about the import itself

@@ -10,27 +10,26 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import vn.tsolve.analytics.dto.AuditEntryResponse;
 import vn.tsolve.analytics.mapper.AuditEntryMapperImpl;
 import vn.tsolve.analytics.service.AuditLogService;
 import vn.tsolve.analytics.service.impl.AuditLogServiceImpl;
 import vn.tsolve.common.audit.AuditAction;
+import vn.tsolve.testsupport.SharedPostgres;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({AuditLogServiceImpl.class, AuditEntryMapperImpl.class})
 class AuditLogIT {
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+    private static final SharedPostgres.Db DB = SharedPostgres.migratedDatabase();
 
-    static {
-        DB.start();
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        DB.register(registry);
     }
 
     @Autowired

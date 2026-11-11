@@ -13,20 +13,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.review.repository.ReviewExpiryRepository;
 import vn.tsolve.review.service.ReviewExpiryService;
 import vn.tsolve.review.service.impl.ReviewExpiryServiceImpl;
+import vn.tsolve.testsupport.SharedPostgres;
 import vn.tsolve.ticket.dto.TicketReviewView.Project;
 import vn.tsolve.ticket.dto.TicketReviewView.ProjectAccess;
 import vn.tsolve.ticket.mapper.TicketReviewMapperImpl;
@@ -44,12 +44,11 @@ import vn.tsolve.ticket.service.impl.TicketReviewReadServiceImpl;
     ReviewExpiryIT.JdbcConfiguration.class
 })
 class ReviewExpiryIT {
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+    private static final SharedPostgres.Db DB = SharedPostgres.migratedDatabase();
 
-    static {
-        DB.start();
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        DB.register(registry);
     }
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -219,18 +218,12 @@ class ReviewExpiryIT {
     }
 
     private UUID ticket(UUID project, String status, LocalDate due) {
-        return jdbc.queryForObject(
-                """
+        return jdbc.queryForObject("""
                 insert into ticket(source_ticket_id, project_id, source, status, title, symptoms, root_cause,
                                    resolution_steps, workaround, scope, review_due_date)
                 values (?, ?, 'SOLUTION_FORM', ?, 'Expiry test', 'Symptom', 'Cause', 'Restart', 'Workaround', 'Scope', ?)
                 returning ticket_id
-                """,
-                UUID.class,
-                UUID.randomUUID().toString(),
-                project,
-                status,
-                due);
+                """, UUID.class, UUID.randomUUID().toString(), project, status, due);
     }
 
     private Map<String, Object> row(UUID id) {

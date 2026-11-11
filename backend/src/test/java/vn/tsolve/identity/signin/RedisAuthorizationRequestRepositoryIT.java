@@ -31,7 +31,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -47,9 +46,9 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
+import vn.tsolve.testsupport.SharedPostgres;
 
 /**
  * Task 23b: the start stores the authorization request in a real Redis under a cookie. The login origin points at a
@@ -83,21 +82,19 @@ class RedisAuthorizationRequestRepositoryIT {
     private static final String COOKIE = RedisAuthorizationRequestRepository.COOKIE_NAME;
     private static final String KEY_PREFIX = RedisAuthorizationRequestRepository.KEY_PREFIX;
 
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+    private static final SharedPostgres.Db DB = SharedPostgres.migratedDatabase();
 
     static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:7.4-alpine"))
             .withCommand("redis-server", "--requirepass", REDIS_PASSWORD)
             .withExposedPorts(REDIS_PORT);
 
     static {
-        DB.start();
         REDIS.start();
     }
 
     @DynamicPropertySource
     static void redisProperties(DynamicPropertyRegistry registry) {
+        DB.register(registry);
         registry.add("REDIS_HOST", REDIS::getHost);
         registry.add("REDIS_PORT", () -> REDIS.getMappedPort(REDIS_PORT));
         registry.add("REDIS_PASSWORD", () -> REDIS_PASSWORD);

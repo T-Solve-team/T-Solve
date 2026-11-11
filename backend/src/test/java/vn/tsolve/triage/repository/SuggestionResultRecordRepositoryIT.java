@@ -11,14 +11,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.identity.signin.SignInTestFixtures;
+import vn.tsolve.testsupport.SharedPostgres;
 import vn.tsolve.triage.entity.SuggestionResultRecord;
 
 /** What only PostgreSQL can show for the history query: the filters, the Vietnam day bounds and the order. */
@@ -41,12 +41,11 @@ import vn.tsolve.triage.entity.SuggestionResultRecord;
         })
 class SuggestionResultRecordRepositoryIT {
 
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+    private static final SharedPostgres.Db DB = SharedPostgres.migratedDatabase();
 
-    static {
-        DB.start();
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        DB.register(registry);
     }
 
     private static final Sort ORDER = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.asc("jiraIssueKey"));

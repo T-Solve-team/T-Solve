@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -18,8 +17,8 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
+import vn.tsolve.testsupport.SharedPostgres;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -40,9 +39,7 @@ import org.testcontainers.utility.DockerImageName;
             "DB_PASSWORD=unused"
         })
 class SecurityConfigIT {
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+    private static final SharedPostgres.Db DB = SharedPostgres.migratedDatabase();
 
     private static final String REDIS_PASSWORD = UUID.randomUUID().toString();
 
@@ -51,12 +48,12 @@ class SecurityConfigIT {
             .withExposedPorts(6379);
 
     static {
-        DB.start();
         REDIS.start();
     }
 
     @DynamicPropertySource
     static void redisProperties(DynamicPropertyRegistry registry) {
+        DB.register(registry);
         registry.add("REDIS_HOST", REDIS::getHost);
         registry.add("REDIS_PORT", () -> REDIS.getMappedPort(6379));
         registry.add("REDIS_PASSWORD", () -> REDIS_PASSWORD);

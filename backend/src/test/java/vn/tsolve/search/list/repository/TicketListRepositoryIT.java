@@ -20,12 +20,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.common.security.WithTSolveUser;
@@ -33,6 +32,7 @@ import vn.tsolve.search.list.dto.TicketListQuery;
 import vn.tsolve.search.list.dto.TicketSummaryResponse;
 import vn.tsolve.search.list.service.TicketListService;
 import vn.tsolve.search.scope.service.VisibleScope;
+import vn.tsolve.testsupport.SharedPostgres;
 
 /** Exercises the real query, mapper, migrations and HTTP serialization against PostgreSQL. */
 @SpringBootTest
@@ -57,12 +57,11 @@ import vn.tsolve.search.scope.service.VisibleScope;
             "SEARCH_DEV_SCOPE="
         })
 class TicketListRepositoryIT {
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+    private static final SharedPostgres.Db DB = SharedPostgres.migratedDatabase();
 
-    static {
-        DB.start();
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        DB.register(registry);
     }
 
     private static final TSolveUser USER =
@@ -204,17 +203,10 @@ class TicketListRepositoryIT {
     }
 
     private void ticket(UUID projectId, String key, String status, String writer, String title) {
-        jdbc.update(
-                """
+        jdbc.update("""
                 INSERT INTO ticket(ticket_id, source_ticket_id, project_id, source, status, title, writer,
                     symptoms, root_cause, resolution_steps, scope, updated_at)
                 VALUES (?,?,?,'CSV',?,?,?,'Symptoms','Root cause','Resolution','Scope', '2026-11-01T00:00:00Z')
-                """,
-                new UUID(0, ++ticketSequence),
-                key,
-                projectId,
-                status,
-                title,
-                writer);
+                """, new UUID(0, ++ticketSequence), key, projectId, status, title, writer);
     }
 }

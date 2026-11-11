@@ -15,19 +15,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.search.embedding.repository.TicketEmbeddingRepository;
 import vn.tsolve.search.embedding.service.TicketEmbeddingService;
+import vn.tsolve.testsupport.SharedPostgres;
 import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.service.CsvImportService;
 import vn.tsolve.ticket.service.ImportConfirmService;
@@ -60,12 +60,11 @@ class TicketEmbeddingIT {
     @org.springframework.boot.test.mock.mockito.MockBean
     private vn.tsolve.common.audit.AuditService audit;
 
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+    private static final SharedPostgres.Db DB = SharedPostgres.migratedDatabase();
 
-    static {
-        DB.start();
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        DB.register(registry);
     }
 
     @Autowired
@@ -134,8 +133,7 @@ class TicketEmbeddingIT {
         jdbc.execute(
                 "TRUNCATE ticket_import_decision, ticket, import_batch, import_preview, project, department CASCADE");
         jdbc.update("INSERT INTO department (department_id, name) VALUES (1, 'Embedding IT')");
-        jdbc.update(
-                """
+        jdbc.update("""
                 INSERT INTO project (project_id, public_id, department_id, jira_project_key)
                 VALUES (1, '14400000-0000-0000-0000-000000000001', 1, 'EMBED')
                 """);

@@ -17,11 +17,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
@@ -29,6 +28,7 @@ import vn.tsolve.search.feedback.dto.TicketFeedbackRequest;
 import vn.tsolve.search.feedback.entity.TicketFeedback;
 import vn.tsolve.search.feedback.service.TicketFeedbackService;
 import vn.tsolve.search.scope.service.VisibleScope;
+import vn.tsolve.testsupport.SharedPostgres;
 
 @SpringBootTest
 @TestPropertySource(
@@ -54,12 +54,11 @@ import vn.tsolve.search.scope.service.VisibleScope;
             "SEARCH_EMBED_CATCH_UP_DELAY=1h"
         })
 class TicketFeedbackRepositoryIT {
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+    private static final SharedPostgres.Db DB = SharedPostgres.migratedDatabase();
 
-    static {
-        DB.start();
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        DB.register(registry);
     }
 
     private static final TSolveUser USER =
@@ -84,48 +83,35 @@ class TicketFeedbackRepositoryIT {
     @BeforeEach
     void seed() {
         jdbc.execute("TRUNCATE ticket_feedback, ticket, project, department CASCADE");
-        jdbc.update(
-                """
+        jdbc.update("""
                 INSERT INTO app_user(id, email, full_name, status, created_at)
                 VALUES (?, ?, 'Resolver', 'ACTIVE', now()) ON CONFLICT (id) DO NOTHING
-                """,
-                USER.id(),
-                USER.email());
+                """, USER.id(), USER.email());
         department = jdbc.queryForObject(
                 "INSERT INTO department(name,status) VALUES ('IT','ACTIVE') RETURNING department_id", Long.class);
         UUID project = jdbc.queryForObject(
                 "INSERT INTO project(department_id,jira_project_key) VALUES (?,'ITSUP') RETURNING public_id",
                 UUID.class,
                 department);
-        ticket = jdbc.queryForObject(
-                """
+        ticket = jdbc.queryForObject("""
                 INSERT INTO ticket(source_ticket_id, public_id, project_id, source, status, title,
                     symptoms, root_cause, resolution_steps, scope)
                 VALUES ('IT-1', ?, ?, 'CSV', 'PUBLISHED', 'Example', 'Symptoms', 'Cause', 'Steps', 'Scope')
                 RETURNING ticket_id
-                """,
-                UUID.class,
-                publicId,
-                project);
+                """, UUID.class, publicId, project);
         when(scope.of(any())).thenReturn(new VisibleScope.Scope(Set.of(department), Set.of(), Optional.empty()));
     }
 
     @Test
     void replacesFeedbackOfSameUser_AC_008_2() {
         UUID otherUser = UUID.randomUUID();
-        jdbc.update(
-                """
+        jdbc.update("""
                 INSERT INTO app_user(id, email, status, created_at) VALUES (?, ?, 'ACTIVE', now())
-                """,
-                otherUser,
-                otherUser + "@example.test");
-        jdbc.update(
-                """
+                """, otherUser, otherUser + "@example.test");
+        jdbc.update("""
                 INSERT INTO ticket_feedback(ticket_id, user_id, rating, comment, channel, created_at, updated_at)
                 VALUES (?, ?, 'HELPFUL', 'Earlier', 'ISSUE_PANEL', '2020-01-01T00:00:00Z', '2020-01-01T00:00:00Z')
-                """,
-                ticket,
-                USER.id());
+                """, ticket, USER.id());
         TicketFeedback original = ownFeedback();
         service.give(USER, publicId, new TicketFeedbackRequest(false, "  Replaced  "));
 

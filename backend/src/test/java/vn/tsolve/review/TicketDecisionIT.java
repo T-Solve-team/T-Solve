@@ -19,17 +19,17 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.NotFoundException;
+import vn.tsolve.testsupport.SharedPostgres;
 import vn.tsolve.ticket.config.TicketClockConfig;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.exception.ReviewSourceNotEligibleException;
@@ -45,12 +45,11 @@ class TicketDecisionIT {
     @org.springframework.boot.test.mock.mockito.MockBean
     private vn.tsolve.common.audit.AuditService audit;
 
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+    private static final SharedPostgres.Db DB = SharedPostgres.migratedDatabase();
 
-    static {
-        DB.start();
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        DB.register(registry);
     }
 
     @Autowired
@@ -106,13 +105,11 @@ class TicketDecisionIT {
 
         String expectedStatus = action == Action.APPROVED ? "PUBLISHED" : action.name();
         for (UUID ticketId : List.of(first, second)) {
-            assertThat(jdbc.queryForMap(
-                            """
+            assertThat(jdbc.queryForMap("""
                     select status, resolution_steps, review_due_date::text as due,
                            rejection_reason, change_request_comment
                     from ticket where ticket_id = ?
-                    """,
-                            ticketId))
+                    """, ticketId))
                     .containsEntry("status", expectedStatus)
                     .containsEntry("resolution_steps", "Restart")
                     .containsEntry("due", "2026-11-12")
@@ -180,8 +177,7 @@ class TicketDecisionIT {
     void rollsBackDecisionsIfAnyTicketUpdateFails_AC_009_8() {
         UUID first = ticket("TEST-1", 10, "PENDING_REVIEW", null);
         UUID second = ticket("TEST-2", 10, "PENDING_REVIEW", null);
-        jdbc.execute(
-                """
+        jdbc.execute("""
                 alter table ticket add constraint test_reject_publish
                 check (source_ticket_id <> 'TEST-2' or status <> 'PUBLISHED')
                 """);
@@ -224,18 +220,12 @@ class TicketDecisionIT {
     }
 
     private UUID ticket(String key, long projectId, String status, UUID writerId) {
-        return jdbc.queryForObject(
-                """
+        return jdbc.queryForObject("""
                 insert into ticket (source_ticket_id, project_id, source, status, writer_id, title, symptoms,
                                     root_cause, resolution_steps, scope, review_due_date)
                 values (?, ?, 'SOLUTION_FORM', ?, ?, 'Login fails', 'Error', 'Token', 'Restart', 'Users', '2026-11-12')
                 returning ticket_id
-                """,
-                UUID.class,
-                key,
-                new UUID(0, projectId),
-                status,
-                writerId);
+                """, UUID.class, key, new UUID(0, projectId), status, writerId);
     }
 
     private String status(UUID ticketId) {

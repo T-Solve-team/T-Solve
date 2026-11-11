@@ -9,12 +9,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.identity.signin.SignInTestFixtures;
+import vn.tsolve.testsupport.SharedPostgres;
 import vn.tsolve.tracker.entity.SuggestionResult;
 
 /**
@@ -39,12 +39,11 @@ import vn.tsolve.tracker.entity.SuggestionResult;
         })
 class SuggestionResultRepositoryIT {
 
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+    private static final SharedPostgres.Db DB = SharedPostgres.migratedDatabase();
 
-    static {
-        DB.start();
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        DB.register(registry);
     }
 
     private static final String SOURCES =
@@ -77,8 +76,7 @@ class SuggestionResultRepositoryIT {
 
     @Test
     void storesTheIssueTextUnderAUuidKeyTheJobFindsItBy_AC_011_1() {
-        Map<String, Object> row = jdbc.queryForMap(
-                """
+        Map<String, Object> row = jdbc.queryForMap("""
                 SELECT suggestion_id, project_id, issue_summary, issue_description
                   FROM suggestion_result WHERE jira_issue_key = 'ITSUP-1'
                 """);
@@ -152,27 +150,21 @@ class SuggestionResultRepositoryIT {
 
     @Test
     void keysTheTableByUuidAndReferencesTheProjectsPublicId_AC_003_1() {
-        assertThat(jdbc.queryForList(
-                        """
+        assertThat(jdbc.queryForList("""
                         SELECT column_name || ':' || data_type FROM information_schema.columns
                          WHERE table_name = 'suggestion_result' AND column_name IN ('suggestion_id', 'project_id', 'job_ref')
-                        """,
-                        String.class))
+                        """, String.class))
                 .containsExactlyInAnyOrder("suggestion_id:uuid", "project_id:uuid");
-        assertThat(jdbc.queryForObject(
-                        """
+        assertThat(jdbc.queryForObject("""
                         SELECT ccu.column_name FROM information_schema.table_constraints tc
                           JOIN information_schema.constraint_column_usage ccu USING (constraint_name)
                          WHERE tc.table_name = 'suggestion_result' AND tc.constraint_type = 'FOREIGN KEY'
                            AND ccu.table_name = 'project'
-                        """,
-                        String.class))
-                .isEqualTo("public_id");
+                        """, String.class)).isEqualTo("public_id");
     }
 
     private Map<String, Object> row() {
-        return jdbc.queryForMap(
-                """
+        return jdbc.queryForMap("""
                 SELECT sources_used::text AS sources, sources_used -> 0 ->> 'type' AS first_type,
                        suggested_solution, reporter_answer
                   FROM suggestion_result WHERE jira_issue_key = 'ITSUP-1'
