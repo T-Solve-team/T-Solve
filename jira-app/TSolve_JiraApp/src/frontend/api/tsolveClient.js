@@ -1,22 +1,38 @@
 // The only place the Jira App talks to the T-Solve backend (jira-app/AGENTS.md rule 5). Calls go through the
-// manifest's endpoint to the tsolve-backend remote; Forge adds the FIT. Nothing here logs: questions and answers
-// are personal text (AC-010.12).
+// manifest's endpoint to the tsolve-backend remote; Forge adds the FIT. Nothing here logs: questions, answers, issue
+// text and Solutions are personal text (AC-010.12, NF 3).
 import { invokeRemote } from '@forge/bridge';
 
-/** The page gives up after this long and shows MSG06 (AC-010.8); the backend stops at 18 s. */
+/** A UI call gives up after this long and shows MSG06 (AC-010.8, NF 2); the backend stops at 18 s. */
 export const ASK_TIMEOUT_MS = 20000;
 
 /** The earlier turns sent with a question (AC-010.3). */
 export const MAX_HISTORY = 10;
 
-const QUESTIONS = '/api/v1/jira-app/questions';
+/** Waits before the 3 automatic retries of a Solution submission (AC-004.4). */
+export const SUBMIT_RETRY_DELAYS_MS = [1000, 2000, 4000];
 
-/** A failure the page shows as one SRS message: MSG01, MSG02, MSG62 or MSG06. */
+const QUESTIONS = '/api/v1/jira-app/questions';
+const JIRA_APP = '/api/v1/jira-app';
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
+
+/**
+ * A failure shown as one SRS message. `status` is the HTTP status (0 when T-Solve could not be reached), `field`
+ * the form field of a field error (MSG01), `params` the message's values.
+ */
 export class TsolveError extends Error {
-  constructor(code) {
+  constructor(code, { status = 0, field = null, params = {} } = {}) {
     super(code);
     this.name = 'TsolveError';
     this.code = code;
+    this.status = status;
+    this.field = field;
+    this.params = params;
+  }
+
+  /** T-Solve could not be reached or failed itself: worth another try (AC-004.4). A 4xx never is. */
+  get retryable() {
+    return this.status === 0 || this.status >= 500;
   }
 }
 
@@ -34,10 +50,102 @@ export async function askQuestion(question, history = []) {
   const response = await call({
     path: QUESTIONS,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: JSON_HEADERS,
     body: { question, history: history.slice(-MAX_HISTORY) },
   });
   return response.body;
+}
+
+/** Whether the Solution Form may open for the issue and its content `{mayOpen, origin, sections, message}`. */
+export async function openSolutionForm(issueKey, { summary, description }) {
+  const response = await call({
+    path: `${JIRA_APP}/issues/${encodeURIComponent(issueKey)}/solution-form`,
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: { summary, description },
+  });
+  return response.body;
+}
+
+/**
+ * Finish or Close: creates the issue's ticket `{id, ticketId, status}`. Retries 3 times when T-Solve cannot be
+ * reached or fails, then gives MSG69 (AC-004.4). A 409 after a retry means an earlier try got through.
+ */
+export async function submitSolution(issueKey, { summary, sections }, { sleep = wait } = {}) {
+  const request = {
+    path: `${JIRA_APP}/issues/${encodeURIComponent(issueKey)}/solution`,
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: { summary, sections },
+  };
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return (await call(request)).body;
+    } catch (failure) {
+      if (attempt > 0 && failure.status === 409) {
+        return { ticketId: issueKey, status: 'PENDING_REVIEW' };
+      }
+      if (!failure.retryable) {
+        throw failure;
+      }
+      if (attempt === SUBMIT_RETRY_DELAYS_MS.length) {
+        throw new TsolveError('MSG69', { status: failure.status });
+      }
+      await sleep(SUBMIT_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+}
+
+/** Save as draft (AC-005.1). */
+export async function saveSolutionDraft(issueKey, sections) {
+  await call({
+    path: `${JIRA_APP}/issues/${encodeURIComponent(issueKey)}/solution-draft`,
+    method: 'PUT',
+    headers: JSON_HEADERS,
+    body: sections,
+  });
+}
+
+/** The AI rewrite of the five sections (AC-007.1); MSG68 when it fails (AC-007.4). */
+export async function rewriteSolution(sections) {
+  const response = await call({
+    path: `${JIRA_APP}/solution-rewrites`,
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: sections,
+  });
+  return response.body;
+}
+
+/** What the Issue Panel shows `{linked, ticketStatus, hasDraft, mayOpenForm, canSearch}` (STORY-001, STORY-008). */
+export async function getIssuePanel(issueKey) {
+  const response = await call({ path: `${JIRA_APP}/issues/${encodeURIComponent(issueKey)}/panel`, method: 'GET' });
+  return response.body;
+}
+
+/** A Project Manager's change request on the viewer's ticket as `{code, params}` (MSG64), or null (AC-008.7). */
+export async function getReviewFeedback(issueKey) {
+  const response = await call({
+    path: `${JIRA_APP}/issues/${encodeURIComponent(issueKey)}/review-feedback`,
+    method: 'GET',
+  });
+  return response.body?.feedback ?? null;
+}
+
+/** Published tickets of the viewer's Departments `[{id, ticketId, title, departmentName}]` (AC-008.4). */
+export async function searchTickets(q) {
+  const response = await call({ path: `${JIRA_APP}/tickets/search?q=${encodeURIComponent(q)}`, method: 'GET' });
+  return response.body ?? [];
+}
+
+/** One Published ticket for the preview (AC-009.1). */
+export async function getTicket(id) {
+  const response = await call({ path: `${JIRA_APP}/tickets/${encodeURIComponent(id)}`, method: 'GET' });
+  return response.body;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function call(request) {
@@ -57,16 +165,17 @@ async function call(request) {
   if (response.status >= 200 && response.status < 300) {
     return response;
   }
-  throw new TsolveError(codeOf(response));
+  throw errorOf(response);
 }
 
-function codeOf(response) {
-  const code = response.body?.code;
-  if (response.status === 400 && (code === 'MSG01' || code === 'MSG02')) {
-    return code;
-  }
-  if (response.status === 403 && code === 'MSG62') {
-    return code;
-  }
-  return 'MSG06';
+// A refusal keeps its SRS code (MSG01, MSG02, MSG08, MSG62, MSG68 …); anything else is MSG06.
+function errorOf(response) {
+  const body = response.body ?? {};
+  const known = typeof body.code === 'string' && /^MSG\d+$/.test(body.code);
+  const keep = known && (response.status < 500 || body.code === 'MSG68');
+  return new TsolveError(keep ? body.code : 'MSG06', {
+    status: response.status,
+    field: body.fieldErrors?.[0]?.field ?? body.field ?? null,
+    params: body.params ?? {},
+  });
 }
