@@ -13,12 +13,12 @@ modules:
         endpoint: tsolve-ui-endpoint
       render: native
   jira:issuePanel:
-    - key: tsolve-jiraapp-hello-world-issue-panel
-      resource: main
+    - key: tsolve-issue-panel
+      resource: issue-panel
       resolver:
-        function: resolver
+        endpoint: tsolve-ui-endpoint
       render: native
-      title: TSolve
+      title: T-Solve
       icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
   trigger:
     - key: tsolve-issue-created-trigger
@@ -34,15 +34,12 @@ modules:
         path: /api/v1/jira-app/events/issue-created
     - key: tsolve-ui-endpoint
       remote: tsolve-backend
-  function:
-    - key: resolver
-      handler: index.handler
 remotes:
   - key: tsolve-backend
     baseUrl: https://resigned-ladle-saggy.ngrok-free.dev
 resources:
-  - key: main
-    path: src/frontend/index.jsx
+  - key: issue-panel
+    path: src/frontend/panel/index.jsx
   - key: ask-tsolve
     path: src/frontend/askTsolve/index.jsx
   - key: solution-form-watch
