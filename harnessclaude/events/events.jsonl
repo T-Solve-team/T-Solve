@@ -1189,3 +1189,4 @@
 {"ts":"2026-11-11T09:02:23.254Z","type":"feature-status","module":"chatbot","feature":"follow-up-context","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-11T09:02:23.786Z","type":"feature-status","module":"chatbot","feature":"follow-up-context","from":"evaluating","to":"passing"}
 {"ts":"2026-11-11T09:02:24.626Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"0e250a6df1826245c5b34dc36faed36e2baa80e4"}
+{"ts":"2026-11-11T14:07:47.562Z","type":"spec-approved","module":"jira-app","specHash":"8281a56c93976e2540bea627acd9d1426c3a8677ebcaba7bd1605bdd5c87bade"}
