@@ -1185,3 +1185,7 @@
 {"ts":"2026-11-10T17:19:54.930Z","type":"feature-status","module":"identity","feature":"callback-workspace-checks","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-10T17:19:55.179Z","type":"feature-status","module":"identity","feature":"callback-workspace-checks","from":"evaluating","to":"passing"}
 {"ts":"2026-11-10T17:21:50.901Z","type":"spec-approved","module":"identity","specHash":"e6974c2f3d4b0d2cc3cec74d1d8d6710bb17507ef22d1743de60bf995bc7d668"}
+{"ts":"2026-11-11T07:40:07.704Z","type":"feature-status","module":"chatbot","feature":"follow-up-context","from":"pending","to":"in-progress"}
+{"ts":"2026-11-11T09:02:23.254Z","type":"feature-status","module":"chatbot","feature":"follow-up-context","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-11T09:02:23.786Z","type":"feature-status","module":"chatbot","feature":"follow-up-context","from":"evaluating","to":"passing"}
+{"ts":"2026-11-11T09:02:24.626Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"0e250a6df1826245c5b34dc36faed36e2baa80e4"}
