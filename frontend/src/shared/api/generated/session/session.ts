@@ -22,7 +22,15 @@ import type {
   UseQueryResult,
 } from '@tanstack/react-query';
 
-import type { AuthCallbackParams, CurrentUser, ProblemResponse, SignInParams } from '../model';
+import type {
+  AuthCallbackParams,
+  CurrentUser,
+  JiraLinkConfirmRequest,
+  JiraLinkConfirmed,
+  JiraLinkRequestInfo,
+  ProblemResponse,
+  SignInParams,
+} from '../model';
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
@@ -466,4 +474,243 @@ export const useLogout = <TError = ErrorType<unknown>, TContext = unknown>(
   queryClient?: QueryClient,
 ): UseMutationResult<Awaited<ReturnType<typeof logout>>, TError, void, TContext> => {
   return useMutation(getLogoutMutationOptions(options), queryClient);
+};
+export const getGetJiraLinkRequestUrl = (requestId: string) => {
+  return `/api/v1/auth/jira-link/${requestId}`;
+};
+
+/**
+ * Needs a signed-in person of the Workspace. 400 MSG141 when the request is missing, expired, already used or made for another Workspace (AC-001.72); 401 MSG07 without a session.
+ * @summary Reads a Jira link request for the confirm page; does not consume it (AC-001.75).
+ */
+export const getJiraLinkRequest = async (
+  requestId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<JiraLinkRequestInfo> => {
+  return http<JiraLinkRequestInfo>(getGetJiraLinkRequestUrl(requestId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetJiraLinkRequestQueryKey = (requestId: string) => {
+  return [`/api/v1/auth/jira-link/${requestId}`] as const;
+};
+
+export const getGetJiraLinkRequestQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJiraLinkRequest>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  requestId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getJiraLinkRequest>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetJiraLinkRequestQueryKey(requestId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJiraLinkRequest>>> = ({ signal }) =>
+    getJiraLinkRequest(requestId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: requestId !== null && requestId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getJiraLinkRequest>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetJiraLinkRequestQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getJiraLinkRequest>>
+>;
+export type GetJiraLinkRequestQueryError = ErrorType<ProblemResponse>;
+
+export function useGetJiraLinkRequest<
+  TData = Awaited<ReturnType<typeof getJiraLinkRequest>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  requestId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getJiraLinkRequest>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJiraLinkRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getJiraLinkRequest>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetJiraLinkRequest<
+  TData = Awaited<ReturnType<typeof getJiraLinkRequest>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  requestId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraLinkRequest>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJiraLinkRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getJiraLinkRequest>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetJiraLinkRequest<
+  TData = Awaited<ReturnType<typeof getJiraLinkRequest>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  requestId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getJiraLinkRequest>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Reads a Jira link request for the confirm page; does not consume it (AC-001.75).
+ */
+
+export function useGetJiraLinkRequest<
+  TData = Awaited<ReturnType<typeof getJiraLinkRequest>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  requestId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getJiraLinkRequest>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetJiraLinkRequestQueryOptions(requestId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getConfirmJiraLinkUrl = () => {
+  return `/api/v1/auth/jira-link/confirm`;
+};
+
+/**
+ * Needs a signed-in person of the Workspace and a CSRF token (header `X-XSRF-TOKEN`). The answers are checked in the order session (401 MSG07), CSRF token (403), link request (400 MSG141). Until the account link is recorded (Task 30b) a valid request answers 501.
+ * @summary Confirms a Jira link request; consumes it whatever the outcome (AC-001.71, AC-001.72).
+ */
+export const confirmJiraLink = async (
+  jiraLinkConfirmRequest: JiraLinkConfirmRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<JiraLinkConfirmed> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<JiraLinkConfirmed>(getConfirmJiraLinkUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(jiraLinkConfirmRequest),
+  });
+};
+
+export const getConfirmJiraLinkMutationKey = () => ['confirmJiraLink'] as const;
+
+export const getConfirmJiraLinkMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmJiraLink>>,
+    TError,
+    ConfirmJiraLinkMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmJiraLink>>,
+  TError,
+  ConfirmJiraLinkMutationVariables,
+  TContext
+> => {
+  const mutationKey = getConfirmJiraLinkMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmJiraLink>>,
+    ConfirmJiraLinkMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return confirmJiraLink(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmJiraLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmJiraLink>>
+>;
+export type ConfirmJiraLinkMutationBody = JiraLinkConfirmRequest;
+export type ConfirmJiraLinkMutationError = ErrorType<ProblemResponse>;
+export type ConfirmJiraLinkMutationVariables = { data: JiraLinkConfirmRequest };
+
+/**
+ * @summary Confirms a Jira link request; consumes it whatever the outcome (AC-001.71, AC-001.72).
+ */
+export const useConfirmJiraLink = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof confirmJiraLink>>,
+      TError,
+      ConfirmJiraLinkMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof confirmJiraLink>>,
+  TError,
+  ConfirmJiraLinkMutationVariables,
+  TContext
+> => {
+  return useMutation(getConfirmJiraLinkMutationOptions(options), queryClient);
 };
