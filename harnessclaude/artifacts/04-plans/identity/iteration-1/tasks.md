@@ -221,7 +221,7 @@ runs before `WebSessionFilter`).
 
 ## Task 12: Jira account link as a sign-in target — KAN-234
 
-> **Superseded 2026-11-05 (KAN-275).** Replaced by Task 30: a link request and a confirm page, no sign-in state (Q2 = A; design row 46 becomes row 121).
+> **Superseded 2026-11-05 (KAN-275).** Replaced by Tasks 30a and 30b: a link request and a confirm page, no sign-in state (Q2 = A; design row 46 becomes row 121).
 
 **Story:** STORY-001
 **Feature:** jira-link-sign-in
@@ -422,7 +422,7 @@ Every code card's "Read first" carries the K-ids and AC ids of its task in full 
 run Opus, high (auth).
 
 **Jira and the old tasks (Q5 = A).** KAN-229, 230, 231 and 235 stay Done (their code is removed by Task 24). KAN-232 is
-re-scoped to Tasks 26a and 26b, KAN-233 to Task 29, KAN-234 to Task 30, KAN-106 to Task 27; KAN-247 keeps the platform adapters
+re-scoped to Tasks 26a and 26b, KAN-233 to Task 29, KAN-234 to Task 30a (Task 30b is a new Subtask of KAN-234), KAN-106 to Task 27; KAN-247 keeps the platform adapters
 and the `FirstAdminCreator` (Task 14). Task 23 is KAN-276; Task 23b is KAN-288 and Task 23c is KAN-289 (Subtasks of KAN-275); Task 23a is KAN-287 (a Subtask of the Story KAN-275, a sibling of KAN-276; already created in Jira); new issues are still to be created for Tasks 24, 28 and 31. Salvage of the uncommitted Task 10 tree (61 files on `feat/KAN-232-identity-workspace-session`):
 save it as a patch outside the repo (do not revert, stash or commit it); Tasks 26a and 26b re-apply, on a new branch from
 `main`, `identity/session` without `CompleteController`, `AccountRole*`, the `user_role` changeset, Redis in compose,
@@ -669,23 +669,42 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **Estimated size:** medium (about 8 production files); about 8 tests
 **Verification:** Tests name AC-001.28–.34 and .66; AC-001.32 is a two-Workspace test; design older rows 29, 35, 36. Targeted: `cd backend && mvn -Dtest='OperatorSignInTest,OperatorSessionTest' -Dit.test=OpsRealmImportIT verify`; full `mvn verify`.
 
-## Task 30: Jira account link with a confirm page — KAN-234 (re-scoped)
+## Task 30a: Jira link request, confirm page and the confirm failures — KAN-234 (re-scoped; split from Task 30)
+
+> **Split 2026-11-11 (Hiếu, option A).** Task 30 is now 30a and 30b: the Workspace database binding after `WebSessionFilter` is owned by Task 26b (KAN-298, not merged) and Task 30 must not fake it. 30a keeps KAN-234; 30b is a new Subtask of KAN-234.
 
 **Story:** STORY-001
 **Feature:** jira-link-sign-in
 **Decisions owned:** Q2 (A), K5, K7, K8, K9
-**Acceptance criteria:** AC-001.38, AC-001.69, AC-001.70, AC-001.71, AC-001.72
-**Description:** `JiraLinkRequestService` (a single-use request in Redis, 10 minutes, holding the Workspace and the tracker account from the verified Forge token) for `jira-app`; the web-app route `/jira-link` with the confirm page "Link Jira user X (site S) to your account Y?" (it sends a signed-out person through the sign-in of Task 23c with that URL as `returnTo`); `POST /api/v1/auth/jira-link/confirm` with CSRF and a Workspace session, which consumes the request, records the link in the Workspace's database (`jira_account_links`, replacing an earlier link of the same tracker account) and answers MSG75. Failures as AC-001.72. Design row 121 stays "mitigated"; option B (a typed code) is documented in the design if the team wants the Critical row closed.
-**What Hiếu can see or try:** a dev call of `JiraLinkRequestService` prints the URL; opened signed out it goes through Keycloak and back to the confirm page; "Link" shows MSG75 and the link row exists; a second open of the same URL, a URL made for `beta`, or a POST with no CSRF token records nothing.
+**Acceptance criteria:** AC-001.38, AC-001.69, AC-001.70, AC-001.72, AC-001.75 (new, the GET; AC-001.71 is in Task 30b)
+**Description:** `JiraLinkRequestService` (a single-use request in Redis under `tsolve:jiralink:<SHA-256 hex of the id>`, 10 minutes, holding the Workspace, the tracker account, the Jira display name and the Jira site name from the verified Forge token; the URL origin comes from `TSOLVE_SITE_ORIGIN_TEMPLATE`) for `jira-app`; a non-consuming `GET /api/v1/auth/jira-link/{requestId}` in `JiraLinkController` that returns `{ jiraUserName, jiraSiteName }` (AC-001.75); the web-app route `/jira-link` (its own route in `routes.tsx`, outside `GuestOnly`, `RequireAuth` and `RequireWorkspace`) and `JiraLinkPage` with the confirm page "Link Jira user X (site S) to your account Y?" (X and S from the GET, Y from the session; "Cancel" goes to `/`; a bad `request` shows MSG141 with no Link button; on 401 it calls `startSignIn` again with the same `returnTo`, on 403 it shows MSG06 and offers "Link" again after the CSRF cookie is refreshed; it sends a signed-out person through the sign-in of Task 23c with that URL as `returnTo`), built first on mocks; the OpenAPI contract for the GET and for `POST /api/v1/auth/jira-link/confirm` (the 200 answer `{ code: MSG75 }` is defined now so the client is generated once; the page's MSG75 display and its test belong to Task 30b) and the regenerated client; and `JiraLinkController` with the failure answers that need only Redis, the session and CSRF (AC-001.72: 400 MSG141 for a missing, expired, used or other-Workspace request, on the GET and the POST, 401 MSG07, 403; order 401 > 403 > 400). `SecurityConfig` (a be-foundation file) moves `WebSessionFilter` before `CsrfFilter` so a signed-in POST with no CSRF token answers 403; Task 26b (KAN-298) edits `WebSessionFilter` in parallel, and this change must not touch it. The confirm POST reads and deletes the request in one step whatever the outcome (another Workspace's request is burned; a second POST answers 400 MSG141). The Workspace and tracker account come only from the stored request (AC-001.38). The success path (consume, record, MSG75) is not built: for a valid request the controller consumes the request and then answers 501 until Task 30b. No `jira_account_links` table, no `JiraAccountLink`, no repository, no changeset in this task. Design row 121 stays "mitigated"; option B (a typed code) is documented in the design if the team wants the Critical row closed.
+**What Hiếu can see or try:** a dev call of `JiraLinkRequestService` prints the URL; opened signed out it goes through Keycloak and back to the confirm page, which names the Jira user and the site (from the GET) and the person's own account; "Cancel" records nothing and goes to `/`; a bad or missing `request` shows MSG141 with no Link button; a second open of the same URL, a URL made for `beta`, or a POST with no CSRF token answers the failure and records nothing.
 **Files:**
-- Create: `backend/src/main/java/vn/tsolve/identity/jiralink/{JiraLinkRequestService,JiraLinkController,JiraAccountLink,JiraAccountLinkRepository}.java`, `backend/src/main/resources/db/changelog/changes/<next>-identity-jira-account-links.sql`, `frontend/src/features/auth/pages/JiraLinkPage.tsx`
-- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `frontend/src/app/router/routes.tsx`, `frontend/openapi/tsolve-api.yaml`
+- Create: `backend/src/main/java/vn/tsolve/identity/jiralink/{JiraLinkRequestService,JiraLinkController}.java` (the controller has the GET handler and the confirm POST; add a `JiraLinkRequest` record if the service returns one), `frontend/src/features/auth/pages/JiraLinkPage.tsx`
+- Modify: `frontend/src/app/router/routes.tsx`, `frontend/openapi/tsolve-api.yaml` (the GET and the POST), `backend/src/main/java/vn/tsolve/common/security/SecurityConfig.java` (session filter before `CsrfFilter`; do not touch `WebSessionFilter`)
 - Generate only: `frontend/src/shared/api/generated/**`
-- Test: `backend/src/test/java/vn/tsolve/identity/jiralink/{JiraLinkRequestServiceTest,JiraLinkControllerTest,JiraAccountLinkRepositoryIT}.java`, `frontend/src/features/auth/pages/JiraLinkPage.test.tsx`
+- Test: `backend/src/test/java/vn/tsolve/identity/jiralink/{JiraLinkRequestServiceTest,JiraLinkControllerTest}.java` (failures only, the GET's 200 and its non-consuming rule; the 501 after the request is consumed), `frontend/src/features/auth/pages/JiraLinkPage.test.tsx`
 **Dependencies:** Task 26a merged (the Workspace session and CSRF); `jira-app` (KAN-124) calls the service once it exists.
-**PR / Jira:** branch `feat/KAN-234-identity-jira-link-confirm`; Jira KAN-234.
-**Estimated size:** medium (8 production files incl. frontend); about 9 tests
-**Verification:** Tests name AC-001.38 and .69–.72; design row 121. Targeted: `cd backend && mvn -Dtest='JiraLinkRequestServiceTest,JiraLinkControllerTest' -Dit.test=JiraAccountLinkRepositoryIT verify`; frontend `npm run test -- src/features/auth`, then `generate:api` with no diff; full verify of both sides.
+**PR / Jira:** branch `feat/KAN-234-identity-jira-account-link`; Jira KAN-234.
+**Estimated size:** small to medium (6 production files incl. frontend and `SecurityConfig`, plus the generated client); about 13 tests (the QA plan had 12; the GET adds one, 13 accepted)
+**Verification:** Tests name AC-001.38, .69, .70, .72 and .75; design row 121; a `SecurityConfig` test shows a signed-in POST with no CSRF token answers 403. Targeted: `cd backend && mvn -Dtest='JiraLinkRequestServiceTest,JiraLinkControllerTest' verify`; frontend `npm run test -- src/features/auth`, then `generate:api` with no diff; full verify of both sides.
+
+## Task 30b: Record the Jira account link — new Subtask of KAN-234 (split from Task 30)
+
+**Story:** STORY-001
+**Feature:** jira-link-record
+**Decisions owned:** K8
+**Acceptance criteria:** AC-001.71
+**Description:** `JiraAccountLink`, `JiraAccountLinkRepository`, the changeset `<next>-identity-jira-account-links.sql` with its `db.changelog-master.xml` include, and the real confirm in `JiraLinkController`: consume the link request, record the link between the request's tracker account and the session's Account in the Workspace database (replacing an earlier link of the same tracker account), answer MSG75 (`{tracker_name}` = Jira), create no new session. This replaces the 501 of Task 30a. The 200 answer of the confirm is already in the contract (generated once in Task 30a); the page's MSG75 display and its test belong to this task. The changeset number is the next free number on `origin/main` when the 30b dev card starts.
+**What Hiếu can see or try:** "Link" on the confirm page shows MSG75 and the `jira_account_links` row exists; linking the same tracker account again from another Account replaces the earlier row; the request URL does not work a second time.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/jiralink/{JiraAccountLink,JiraAccountLinkRepository}.java`, `backend/src/main/resources/db/changelog/changes/<next>-identity-jira-account-links.sql`
+- Modify: `backend/src/main/java/vn/tsolve/identity/jiralink/JiraLinkController.java`, `backend/src/main/resources/db/changelog/db.changelog-master.xml`
+- Test: `backend/src/test/java/vn/tsolve/identity/jiralink/JiraAccountLinkRepositoryIT.java`; the success cases added to `backend/src/test/java/vn/tsolve/identity/jiralink/JiraLinkControllerTest.java`
+**Dependencies:** Task 30a merged; Task 26b merged (the Workspace database binding).
+**PR / Jira:** branch `feat/KAN-234-identity-jira-account-link-record`; a new Jira Subtask of KAN-234 (to be created).
+**Estimated size:** small (4 production files incl. the changeset); about 4 tests
+**Verification:** Tests name AC-001.71; design row 121. Targeted: `cd backend && mvn -Dtest=JiraLinkControllerTest -Dit.test=JiraAccountLinkRepositoryIT verify`; full `mvn verify`.
 
 ## Task 31: Keycloak theme, failure pages and the Login screen check — Jira KAN-300 (Subtask of KAN-275)
 
