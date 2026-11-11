@@ -61,10 +61,11 @@ public class SignInStartController {
             return ResponseEntity.notFound().build();
         }
         String domain = workspace.get().googleDomain();
-        if (domain == null || domain.isBlank()) {
+        String organizationId = workspace.get().organizationId();
+        if (domain == null || domain.isBlank() || organizationId == null || organizationId.isBlank()) {
             // AC-001.48: no state, no Google; the Workspace's own Login page shows MSG141. Only the id is logged.
             log.warn(
-                    "Sign-in refused: Workspace {} has no Google domain",
+                    "Sign-in refused: Workspace {} has no Google domain or Organization",
                     workspace.get().id());
             return ResponseEntity.status(HttpStatus.FOUND)
                     .location(URI.create("/login?error=MSG141"))

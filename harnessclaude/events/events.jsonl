@@ -520,7 +520,6 @@
 {"ts":"2026-11-01T09:32:10.534Z","type":"feature-status","module":"ticket-review","feature":"review-ticket-detail","from":"evaluating","to":"passing"}
 {"ts":"2026-11-01T09:36:45.955Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"47c23557c3c71f269a7232c6a0ff7477eedd8ca9"}
 {"ts":"2026-11-01T10:06:32.976Z","type":"spec-approved","module":"identity","specHash":"97b326a64c8075b18ddd986f171951fc76c6f4dc2eb7bb37ad2869639a32256a"}
-{"ts":"2026-11-01T10:06:32.976Z","type":"spec-approved","module":"identity","specHash":"97b326a64c8075b18ddd986f171951fc76c6f4dc2eb7bb37ad2869639a32256a"}
 {"ts":"2026-11-01T10:07:45.918Z","type":"spec-approved","module":"ticket-review","specHash":"52faf1d9cd258fce25e10db736fe84b3a8e49a892e2a2e70fb4c70c88b72fda3"}
 {"ts":"2026-11-01T10:08:20.558Z","type":"feature-status","module":"ticket-review","feature":"expired-tickets","from":null,"to":"pending"}
 {"ts":"2026-11-01T10:08:20.596Z","type":"feature-status","module":"ticket-review","feature":"expired-tickets","from":"pending","to":"in-progress"}
@@ -536,19 +535,13 @@
 {"ts":"2026-11-01T15:14:17.840Z","type":"quick-closed","what":"Fix PR102 queue confirmation and account-status test synchronization","files":["frontend/src/features/review/pages/ReviewQueuePage.tsx","frontend/src/features/review/pages/ReviewQueuePage.test.tsx","frontend/src/features/review/pages/ReviewQueueRecovery.test.tsx","frontend/src/features/users/pages/UserStatusPage.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-11-01T15:14:30.383Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"8ddf0e8493b2e373a530b7118913f4b875f22bea"}
 {"ts":"2026-11-01T16:58:56.931Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"43e4e07dd42c09ca53d67e13bc1f3ec7123efa59"}
-{"ts":"2026-11-02T12:58:28.366Z","type":"spec-approved","module":"triage","specHash":"f89248b2b780db18b2da123dbfedb0b2781eb33728fefd65a1e45fcab4babd86"}
-{"ts":"2026-11-02T12:59:04.385Z","type":"module-status","module":"triage","from":"decomposed","to":"planned"}
-{"ts":"2026-11-02T12:59:07.659Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":null,"to":"pending"}
-{"ts":"2026-11-02T12:59:24.984Z","type":"module-status","module":"triage","from":"planned","to":"implementing"}
-{"ts":"2026-11-02T12:59:30.585Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":"pending","to":"in-progress"}
-{"ts":"2026-11-02T17:56:45.204Z","type":"commit-recorded","module":"triage","repo":"default","sha":"4440072cedbf7081edd6274ae82b89dcd67e221e"}
-{"ts":"2026-11-02T17:57:04.854Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-02T18:57:24.209Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"c4312ee127e58cfb155baea2055dc8604fd319e8"}
 {"ts":"2026-11-02T18:57:24.246Z","type":"feature-status","module":"ticket-review","feature":"review-history","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-02T18:57:24.273Z","type":"feature-status","module":"ticket-review","feature":"review-history","from":"evaluating","to":"passing"}
-{"ts":"2026-11-02T19:18:24.846Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":"pending","to":"in-progress"}
-{"ts":"2026-11-02T19:36:19.211Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"673f3abcfd893c972558b3e8630b9e2bba859bac"}
-{"ts":"2026-11-02T19:36:20.126Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-03T16:05:24.857Z","type":"spec-approved","module":"identity","specHash":"b1a21ad0f5d8c89a41efa789e2d662430a39e5ad8b1d8cd4ced0c1acd709e7a4"}
+{"ts":"2026-11-03T17:18:57.553Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"pending","to":"in-progress"}
+{"ts":"2026-11-03T17:18:57.815Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-03T17:18:58.087Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"evaluating","to":"passing"}
 {"ts":"2026-11-02T20:00:46.828Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"55a1ee6ec40a9756571b81dbca052f0fec0a38bd"}
 {"ts":"2026-11-02T20:00:49.664Z","type":"feature-status","module":"import-ticket-list","feature":"import-preview-actions","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-03T07:26:09.918Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-preview-popup","from":"pending","to":"in-progress"}
@@ -562,18 +555,26 @@
 {"ts":"2026-11-03T16:02:46.319Z","type":"feature-status","module":"import-ticket-list","feature":"project-uuid","from":"evaluating","to":"passing"}
 {"ts":"2026-11-03T16:02:46.594Z","type":"feature-status","module":"import-ticket-list","feature":"preview-read","from":"evaluating","to":"passing"}
 {"ts":"2026-11-03T16:02:46.871Z","type":"feature-status","module":"import-ticket-list","feature":"duplicate-id-code","from":"evaluating","to":"passing"}
-{"ts":"2026-11-03T16:05:24.857Z","type":"spec-approved","module":"identity","specHash":"b1a21ad0f5d8c89a41efa789e2d662430a39e5ad8b1d8cd4ced0c1acd709e7a4"}
 {"ts":"2026-11-03T17:16:21.038Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"9bcfddfcc113f945d76c519af16bd5a924ad3ac9"}
-{"ts":"2026-11-03T17:18:57.553Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"pending","to":"in-progress"}
-{"ts":"2026-11-03T17:18:57.815Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-03T17:18:58.087Z","type":"feature-status","module":"identity","feature":"sign-in-callback","from":"evaluating","to":"passing"}
 {"ts":"2026-11-03T17:24:23.956Z","type":"module-status","module":"import-ticket-list","from":"implementing","to":"evaluating"}
 {"ts":"2026-11-03T17:24:24.236Z","type":"module-status","module":"import-ticket-list","from":"evaluating","to":"completed"}
-{"ts":"2026-11-03T17:59:45.096Z","type":"spec-approved","module":"identity","specHash":"5a0b213bea1cb3bbf4c97da21f250bb727a0414388a66d07927100c24cca99dd"}
 {"ts":"2026-11-03T18:47:41.106Z","type":"quick-opened","what":"Publish the local Docker database on DB_PORT from .env (default 5432), set 5433 here because a Windows PostgreSQL holds 5432","files":["docker-compose.yml",".env"]}
 {"ts":"2026-11-03T18:49:40.345Z","type":"quick-closed","what":"Publish the local Docker database on DB_PORT from .env (default 5432), set 5433 here because a Windows PostgreSQL holds 5432","files":["docker-compose.yml",".env"]}
 {"ts":"2026-11-03T19:28:32.021Z","type":"quick-opened","what":"BUG-110: send jsdom FormData uploads as Node forms in the test fetch so CI passes on Node 24","files":["frontend/src/test/setup.ts","frontend/src/test/setup.test.ts","frontend/src/features/ticket-import/pages/ImportTicketsPage.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-11-03T19:45:05.937Z","type":"quick-closed","what":"BUG-110: send jsdom FormData uploads as Node forms in the test fetch so CI passes on Node 24","files":["frontend/src/test/setup.ts","frontend/src/test/setup.test.ts","frontend/src/features/ticket-import/pages/ImportTicketsPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-03T17:59:45.096Z","type":"spec-approved","module":"identity","specHash":"5a0b213bea1cb3bbf4c97da21f250bb727a0414388a66d07927100c24cca99dd"}
+{"ts":"2026-11-04T08:22:28.258Z","type":"quick-opened","what":"BUG-112: cancel timers a test file leaves running so they cannot fire after jsdom is torn down","files":["frontend/src/test/setup.ts","frontend/src/test/setup-teardown.test.ts","docs/bug-log.md"]}
+{"ts":"2026-11-04T19:03:49.667Z","type":"quick-closed","what":"BUG-112: cancel timers a test file leaves running so they cannot fire after jsdom is torn down","files":["frontend/src/test/setup.ts","frontend/src/test/setup-teardown.test.ts","docs/bug-log.md"]}
+{"ts":"2026-11-02T12:58:28.366Z","type":"spec-approved","module":"triage","specHash":"f89248b2b780db18b2da123dbfedb0b2781eb33728fefd65a1e45fcab4babd86"}
+{"ts":"2026-11-02T12:59:04.385Z","type":"module-status","module":"triage","from":"decomposed","to":"planned"}
+{"ts":"2026-11-02T12:59:07.659Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":null,"to":"pending"}
+{"ts":"2026-11-02T12:59:24.984Z","type":"module-status","module":"triage","from":"planned","to":"implementing"}
+{"ts":"2026-11-02T12:59:30.585Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":"pending","to":"in-progress"}
+{"ts":"2026-11-02T17:56:45.204Z","type":"commit-recorded","module":"triage","repo":"default","sha":"4440072cedbf7081edd6274ae82b89dcd67e221e"}
+{"ts":"2026-11-02T17:57:04.854Z","type":"feature-status","module":"triage","feature":"suggestion-history","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-02T19:18:24.846Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":"pending","to":"in-progress"}
+{"ts":"2026-11-02T19:36:19.211Z","type":"commit-recorded","module":"be-foundation","repo":"default","sha":"673f3abcfd893c972558b3e8630b9e2bba859bac"}
+{"ts":"2026-11-02T19:36:20.126Z","type":"feature-status","module":"be-foundation","feature":"roles-security","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-03T19:46:40.160Z","type":"quick-opened","what":"Align the database conventions in AGENTS.md with the DDL and ADR-0002: singular tables, <table>_id UUID keys, no workspace_id or row-level security","files":["backend/AGENTS.md"]}
 {"ts":"2026-11-04T03:14:57.195Z","type":"quick-closed","what":"Align the database conventions in AGENTS.md with the DDL and ADR-0002: singular tables, <table>_id UUID keys, no workspace_id or row-level security","files":["backend/AGENTS.md"]}
 {"ts":"2026-11-04T07:48:08.026Z","type":"spec-approved","module":"triage","specHash":"9e1ada09f381e554981143da69c9268e656f0507f0163b60ac0b3cf8e6245db1"}
@@ -582,7 +583,6 @@
 {"ts":"2026-11-04T07:49:06.572Z","type":"feature-status","module":"triage","feature":"suggestion-history-contract","from":"pending","to":"in-progress"}
 {"ts":"2026-11-04T07:52:13.300Z","type":"spec-approved","module":"triage","specHash":"24d4a988954dec938ba4129c93b47fbd740282d95913759ef8b13582d38e7f10"}
 {"ts":"2026-11-04T08:15:44.697Z","type":"quick-opened","what":"Remove the 10.1 Triage History placeholder row now that KAN-149 builds the screen (BUG-104)","files":["frontend/src/app/router/route-table.test.tsx"]}
-{"ts":"2026-11-04T08:22:28.258Z","type":"quick-opened","what":"BUG-112: cancel timers a test file leaves running so they cannot fire after jsdom is torn down","files":["frontend/src/test/setup.ts","frontend/src/test/setup-teardown.test.ts","docs/bug-log.md"]}
 {"ts":"2026-11-04T08:52:29.572Z","type":"commit-recorded","module":"triage","repo":"default","sha":"bef50724d203826ef7fed7f65152c7430012efd9"}
 {"ts":"2026-11-04T08:52:30.497Z","type":"feature-status","module":"triage","feature":"suggestion-history-contract","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-04T08:52:37.567Z","type":"quick-closed","what":"Remove the 10.1 Triage History placeholder row now that KAN-149 builds the screen (BUG-104)","files":["frontend/src/app/router/route-table.test.tsx"]}
@@ -630,7 +630,6 @@
 {"ts":"2026-11-04T15:51:40.834Z","type":"feature-status","module":"identity","feature":"account-checks","from":"pending","to":"in-progress"}
 {"ts":"2026-11-04T15:51:41.101Z","type":"feature-status","module":"identity","feature":"account-checks","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-04T15:51:41.366Z","type":"feature-status","module":"identity","feature":"account-checks","from":"evaluating","to":"passing"}
-{"ts":"2026-11-04T19:03:49.667Z","type":"quick-closed","what":"BUG-112: cancel timers a test file leaves running so they cannot fire after jsdom is torn down","files":["frontend/src/test/setup.ts","frontend/src/test/setup-teardown.test.ts","docs/bug-log.md"]}
 {"ts":"2026-11-04T19:20:18.632Z","type":"quick-opened","what":"Renumber KAN-31 bug ids that collide with main: BUG-104 to BUG-114, BUG-109 to BUG-115, BUG-110 to BUG-116","files":["frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/test/setup.test.ts","frontend/src/test/setup.ts","backend/src/test/java/vn/tsolve/ticket/service/impl/StubProjectAccessTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-04T19:31:14.630Z","type":"spec-approved","module":"import-ticket-list","specHash":"c4f0244c704c57bf6a672485efd84d49dda922c4a45fd13b9a4a4e9eab64d691"}
 {"ts":"2026-11-04T19:33:20.314Z","type":"quick-closed","what":"Renumber KAN-31 bug ids that collide with main: BUG-104 to BUG-114, BUG-109 to BUG-115, BUG-110 to BUG-116","files":["frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/test/setup.test.ts","frontend/src/test/setup.ts","backend/src/test/java/vn/tsolve/ticket/service/impl/StubProjectAccessTest.java","docs/bug-log.md"]}
@@ -647,6 +646,7 @@
 {"ts":"2026-11-05T05:22:16.990Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"0526620ad325f10b1f653a980937f86acf138db6"}
 {"ts":"2026-11-05T05:22:17.278Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-contract","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-05T05:22:46.496Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-upload","from":"pending","to":"in-progress"}
+{"ts":"2026-11-05T18:36:20.804Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"025794b869adbc64aaafd5eb8e67d47c5632d961"}
 {"ts":"2026-11-05T06:18:59.925Z","type":"spec-approved","module":"ai","specHash":"ad7e0d13621067934ecc9d3e20cdb2c6a766646173980bf68965215599e3f650"}
 {"ts":"2026-11-05T06:19:04.963Z","type":"module-status","module":"ai","from":"decomposed","to":"planned"}
 {"ts":"2026-11-05T06:19:05.231Z","type":"feature-status","module":"ai","feature":"ollama-clients","from":null,"to":"pending"}
@@ -667,6 +667,69 @@
 {"ts":"2026-11-05T13:14:57.506Z","type":"module-status","module":"ai","from":"implementing","to":"evaluating"}
 {"ts":"2026-11-05T13:15:03.084Z","type":"module-status","module":"ai","from":"evaluating","to":"completed"}
 {"ts":"2026-11-05T14:10:40.463Z","type":"commit-recorded","module":"triage","repo":"default","sha":"6cefdf9443d81628a7819c855a363f111cc44cf7"}
+{"ts":"2026-11-06T18:44:04.957Z","type":"spec-approved","module":"ticket-repository","specHash":"8468bbe0d83013145fc255a26adcadaf19a74eb27ec9acf24f5462cc44e0a7fb"}
+{"ts":"2026-11-06T18:47:06.616Z","type":"module-status","module":"ticket-repository","from":"decomposed","to":"planned"}
+{"ts":"2026-11-06T18:47:06.906Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-contract","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:07.196Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-schema","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:07.485Z","type":"feature-status","module":"ticket-repository","feature":"jira-issue-source","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:07.774Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:08.062Z","type":"feature-status","module":"ticket-repository","feature":"jira-preview","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:08.351Z","type":"feature-status","module":"ticket-repository","feature":"jira-finish","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:08.635Z","type":"feature-status","module":"ticket-repository","feature":"jira-drafts","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:08.930Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-tickets-page","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:09.218Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-preview-page","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:47:09.514Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-verify","from":null,"to":"pending"}
+{"ts":"2026-11-06T18:48:06.616Z","type":"module-status","module":"ticket-repository","from":"planned","to":"implementing"}
+{"ts":"2026-11-06T18:48:06.922Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-contract","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T19:05:30.991Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"bd98d695db1692403f4b2ac1112fa2dca924b1b8"}
+{"ts":"2026-11-06T19:09:26.780Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-contract","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T19:09:38.153Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-schema","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T19:22:22.363Z","type":"spec-approved","module":"ticket-repository","specHash":"23c7647bedec56ba5cf181f6c42681f4e84a18b07c4c87923d5ce88453547da6"}
+{"ts":"2026-11-06T19:23:34.841Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-contract","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-06T19:33:59.561Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"3a69ae6f4ae0e356a0dcc3d133718d213df7ad4a"}
+{"ts":"2026-11-06T19:33:59.837Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-contract","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-06T19:46:51.043Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"b0a9ee8172c541616972dfac926788edfdde9dec"}
+{"ts":"2026-11-06T19:46:51.327Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-schema","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T19:50:32.989Z","type":"feature-status","module":"ticket-repository","feature":"jira-issue-source","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T19:57:49.228Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"1b9ea284f35d800fe6e045c507a4bbd2ae44a8c2"}
+{"ts":"2026-11-06T19:57:49.508Z","type":"feature-status","module":"ticket-repository","feature":"jira-issue-source","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T20:00:40.812Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T20:05:14.757Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T20:09:20.998Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"5281b56dcbffc55b277db70bcb30a29d16e149c4"}
+{"ts":"2026-11-06T20:10:38.434Z","type":"feature-status","module":"ticket-repository","feature":"jira-drafts","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T20:14:58.413Z","type":"feature-status","module":"ticket-repository","feature":"jira-drafts","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-06T20:16:13.402Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"d63c015058087febf75f05d0c130b6c83c4b3102"}
+{"ts":"2026-11-06T20:16:46.244Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-tickets-page","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T20:33:35.287Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-tickets-page","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T03:40:24.131Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"0de9c9f807185ec1283b657cdc66799eeb7cbbe3"}
+{"ts":"2026-11-07T03:50:19.927Z","type":"spec-approved","module":"ticket-repository","specHash":"1a4fe1d35de951d38cbee2851c2824477e076f91b8632ee0fb09c724e85c5a6e"}
+{"ts":"2026-11-07T08:05:49.884Z","type":"feature-status","module":"ticket-repository","feature":"jira-finish","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T08:18:14.063Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"b23bf842d9edd45a2c4c3da919eecebdaa41657c"}
+{"ts":"2026-11-07T08:18:14.327Z","type":"feature-status","module":"ticket-repository","feature":"jira-finish","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T08:20:11.554Z","type":"feature-status","module":"ticket-repository","feature":"jira-preview","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T08:47:54.199Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"791d4ddd0961debb468378a93e3c0d078a735970"}
+{"ts":"2026-11-07T08:47:54.463Z","type":"feature-status","module":"ticket-repository","feature":"jira-preview","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T08:50:43.045Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-preview-page","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T12:23:28.024Z","type":"feature-status","module":"ticket-repository","feature":"jira-gateway-auth","from":null,"to":"pending"}
+{"ts":"2026-11-07T12:25:36.729Z","type":"spec-approved","module":"ticket-repository","specHash":"409082f84ae18d0241f188eef5b6b2ef3afdb5434f8d63d2cde7ff5a27378f3b"}
+{"ts":"2026-11-07T12:27:14.000Z","type":"feature-status","module":"ticket-repository","feature":"jira-gateway-auth","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T13:23:57.145Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"423b8f173d47fce91b5a581e3b026bd9d877039a"}
+{"ts":"2026-11-07T13:23:57.422Z","type":"feature-status","module":"ticket-repository","feature":"jira-gateway-auth","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T14:00:25.828Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-contract","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T14:00:26.148Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-schema","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T14:00:26.459Z","type":"feature-status","module":"ticket-repository","feature":"jira-issue-source","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T14:00:26.756Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T14:00:27.049Z","type":"feature-status","module":"ticket-repository","feature":"jira-finish","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T14:00:27.341Z","type":"feature-status","module":"ticket-repository","feature":"jira-drafts","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T14:00:27.635Z","type":"feature-status","module":"ticket-repository","feature":"jira-gateway-auth","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T14:00:27.936Z","type":"feature-status","module":"ticket-repository","feature":"jira-preview","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-07T14:00:28.264Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-tickets-page","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-07T14:06:32.239Z","type":"spec-approved","module":"import-ticket-list","specHash":"6064b8535efc95294c3ee48ad5fe128353803d86f1398b39940011b26faeb3f5"}
+{"ts":"2026-11-07T14:10:38.912Z","type":"feature-status","module":"ticket-repository","feature":"jira-preview","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-07T14:10:39.217Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-tickets-page","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-07T14:18:02.312Z","type":"feature-status","module":"ticket-repository","feature":"jira-preview","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T14:18:02.631Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-tickets-page","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T14:18:56.483Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"0fc629f37c89ae464ad2a6a1f651f59000d46b9b"}
 {"ts":"2026-11-06T19:03:18.221Z","type":"spec-approved","module":"tracker","specHash":"fe6ca58dc58cc41d2a4a4cd643b416a4389c72b8faabca5a7997cab6a1cda40a"}
 {"ts":"2026-11-06T19:04:38.673Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":null,"to":"pending"}
 {"ts":"2026-11-06T19:29:08.409Z","type":"feature-status","module":"tracker","feature":"suggestion-job","from":"pending","to":"in-progress"}
@@ -699,7 +762,6 @@
 {"ts":"2026-11-05T17:49:36.373Z","type":"feature-status","module":"search","feature":"ticket-feedback-api","from":null,"to":"pending"}
 {"ts":"2026-11-05T17:49:37.165Z","type":"feature-status","module":"search","feature":"give-feedback-connect","from":null,"to":"pending"}
 {"ts":"2026-11-05T17:49:38.171Z","type":"feature-status","module":"search","feature":"ticket-suggestion-api","from":null,"to":"pending"}
-{"ts":"2026-11-05T18:36:20.804Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"025794b869adbc64aaafd5eb8e67d47c5632d961"}
 {"ts":"2026-11-06T00:05:07.005Z","type":"quick-opened","what":"KAN-117 cover Suggestion History method security with TSolveUser","files":["backend/src/test/java/vn/tsolve/triage/controller/SuggestionResultControllerTest.java"]}
 {"ts":"2026-11-06T00:17:30.307Z","type":"quick-closed","what":"KAN-117 cover Suggestion History method security with TSolveUser","files":["backend/src/test/java/vn/tsolve/triage/controller/SuggestionResultControllerTest.java"]}
 {"ts":"2026-11-06T00:29:47.520Z","type":"quick-opened","what":"KAN-186 verify CSV import preview ownership in PostgreSQL","files":["backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmIT.java"]}
@@ -807,22 +869,6 @@
 {"ts":"2026-11-07T07:29:33.601Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T07:29:33.870Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T07:29:34.109Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":"evaluating","to":"passing"}
-{"ts":"2026-11-06T13:24:56.950Z","type":"spec-approved","module":"ticket-review","specHash":"ee7b222e4b5e768c82849d76a8acb61369acbc989d6520f88d3ebbe51b293bee"}
-{"ts":"2026-11-06T13:29:28.009Z","type":"feature-status","module":"ticket-review","feature":"review-storage","from":null,"to":"pending"}
-{"ts":"2026-11-06T13:29:28.053Z","type":"feature-status","module":"ticket-review","feature":"review-production-api","from":null,"to":"pending"}
-{"ts":"2026-11-06T13:29:28.094Z","type":"feature-status","module":"ticket-review","feature":"review-jira-feedback","from":null,"to":"pending"}
-{"ts":"2026-11-06T13:29:28.141Z","type":"feature-status","module":"ticket-review","feature":"review-storage","from":"pending","to":"in-progress"}
-{"ts":"2026-11-06T13:33:33.226Z","type":"spec-approved","module":"import-ticket-list","specHash":"6e1831be5dc824ede9ec0877e9a67e1e04642acdc22bf563cb02d33c0ad63540"}
-{"ts":"2026-11-06T13:34:11.991Z","type":"module-status","module":"import-ticket-list","from":"completed","to":"planned"}
-{"ts":"2026-11-06T13:34:12.025Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-uuid-compatibility","from":null,"to":"pending"}
-{"ts":"2026-11-06T13:34:12.064Z","type":"module-status","module":"import-ticket-list","from":"planned","to":"implementing"}
-{"ts":"2026-11-06T13:34:12.101Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-uuid-compatibility","from":"pending","to":"in-progress"}
-{"ts":"2026-11-06T13:42:35.304Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"dbfaea6041929a88c4c0c5236ebced8a2a1a5491"}
-{"ts":"2026-11-06T13:42:35.577Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"dbfaea6041929a88c4c0c5236ebced8a2a1a5491"}
-{"ts":"2026-11-06T13:42:35.614Z","type":"feature-status","module":"ticket-review","feature":"review-storage","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-06T13:42:35.650Z","type":"feature-status","module":"import-ticket-list","feature":"import-ticket-uuid-compatibility","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-06T13:54:54.625Z","type":"feature-status","module":"ticket-review","feature":"review-decision-transaction","from":null,"to":"pending"}
-{"ts":"2026-11-06T13:54:54.665Z","type":"feature-status","module":"ticket-review","feature":"review-decision-transaction","from":"pending","to":"in-progress"}
 {"ts":"2026-11-06T23:22:03.220Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"32918fb8117f8ea4b849ea342d7382d8cc7c68ea"}
 {"ts":"2026-11-06T23:22:03.281Z","type":"feature-status","module":"ticket-review","feature":"review-decision-transaction","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-06T23:30:35.619Z","type":"feature-status","module":"ticket-review","feature":"review-decision-endpoints","from":null,"to":"pending"}
@@ -839,34 +885,19 @@
 {"ts":"2026-11-07T00:20:47.897Z","type":"feature-status","module":"ticket-review","feature":"review-production-api","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T00:25:50.533Z","type":"feature-status","module":"ticket-review","feature":"review-jira-feedback","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T00:57:25.074Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"0fec48f9974f475854b862c8d363e9988722dc4a"}
-{"ts":"2026-11-07T03:58:20.506Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-upload","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-07T04:10:50.890Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"f6bb9fa233b63b1951d028f25702969fbb1dcd20"}
 {"ts":"2026-11-07T04:12:45.083Z","type":"feature-status","module":"import-ticket-list","feature":"preview-fill-solution","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T04:19:41.874Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"9204467ffa284159360398fb32193e8ce2a046bb"}
 {"ts":"2026-11-07T04:19:47.536Z","type":"feature-status","module":"import-ticket-list","feature":"preview-fill-solution","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T04:22:35.818Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-confirm","from":"pending","to":"in-progress"}
-{"ts":"2026-11-07T04:29:07.609Z","type":"spec-approved","module":"worker","specHash":"9c160553c38036af3215f3704fa6b1104a079cbf140402b69a7aefa17d8388df"}
-{"ts":"2026-11-07T04:32:25.063Z","type":"module-status","module":"worker","from":"decomposed","to":"planned"}
-{"ts":"2026-11-07T04:32:25.397Z","type":"feature-status","module":"worker","feature":"tenant-jobs","from":null,"to":"pending"}
 {"ts":"2026-11-07T04:32:50.509Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"a1093d8fd55c93d948563c967e653735ce30f063"}
 {"ts":"2026-11-07T04:32:50.818Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-confirm","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-07T04:33:32.195Z","type":"module-status","module":"worker","from":"planned","to":"implementing"}
-{"ts":"2026-11-07T04:33:32.325Z","type":"feature-status","module":"worker","feature":"tenant-jobs","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T04:37:34.669Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-form","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T04:40:26.730Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"692044af6bba2daf5512618d65aee777f2d13a2a"}
 {"ts":"2026-11-07T04:45:00.582Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"ff90aa708d54c352049233610fa82f5e5ed4c1ac"}
 {"ts":"2026-11-07T04:45:00.875Z","type":"feature-status","module":"import-ticket-list","feature":"import-type-form","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T04:57:44.514Z","type":"feature-status","module":"import-ticket-list","feature":"row-solution-popup","from":"pending","to":"in-progress"}
-{"ts":"2026-11-07T05:02:02.022Z","type":"commit-recorded","module":"worker","repo":"default","sha":"68bd287b663f5dd4bacb533c5883a981e4abbf11"}
-{"ts":"2026-11-07T05:02:02.541Z","type":"feature-status","module":"worker","feature":"tenant-jobs","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-07T05:02:02.605Z","type":"feature-status","module":"worker","feature":"tenant-jobs","from":"evaluating","to":"passing"}
-{"ts":"2026-11-07T05:03:16.984Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":null,"to":"pending"}
-{"ts":"2026-11-07T05:03:17.214Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"pending","to":"in-progress"}
-{"ts":"2026-11-07T05:03:17.444Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-07T05:03:17.681Z","type":"feature-status","module":"identity","feature":"keycloak-prerequisites","from":"evaluating","to":"passing"}
 {"ts":"2026-11-07T05:05:34.023Z","type":"feature-status","module":"import-ticket-list","feature":"row-solution-popup","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T05:05:39.932Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"34218f0bf3d36f34b419491312e381493b051840"}
-{"ts":"2026-11-07T05:14:30.770Z","type":"spec-approved","module":"worker","specHash":"7e0c5e3f9cbd6c1066fb73b11e67bfd2703687a2e54764b0918fe34c795cb4bc"}
 {"ts":"2026-11-07T05:16:14.410Z","type":"feature-status","module":"import-ticket-list","feature":"fill-solution-screen","from":"pending","to":"in-progress"}
 {"ts":"2026-11-07T05:37:03.836Z","type":"spec-approved","module":"import-ticket-list","specHash":"46ea7e29f7294a9937a9c899c3f2d440a76e73460838fbebcc6e9debd14f991a"}
 {"ts":"2026-11-07T08:13:54.261Z","type":"spec-approved","module":"tracker","specHash":"93a8ed10cb27528dd5e2066f07d8f102c2c2d497479b672779d2f29e9dae6836"}
@@ -880,10 +911,6 @@
 {"ts":"2026-11-07T07:24:12.885Z","type":"spec-approved","module":"ticket-review","specHash":"68ced23e3b4a38e51a43201101a37d4331f0739073a7492dd88ff43487173cf3"}
 {"ts":"2026-11-07T07:24:22.579Z","type":"feature-status","module":"ticket-review","feature":"review-email-notification","from":null,"to":"pending"}
 {"ts":"2026-11-07T07:24:22.626Z","type":"feature-status","module":"ticket-review","feature":"review-email-notification","from":"pending","to":"in-progress"}
-{"ts":"2026-11-07T07:29:33.371Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":null,"to":"pending"}
-{"ts":"2026-11-07T07:29:33.601Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":"pending","to":"in-progress"}
-{"ts":"2026-11-07T07:29:33.870Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-07T07:29:34.109Z","type":"feature-status","module":"identity","feature":"keycloak-realm","from":"evaluating","to":"passing"}
 {"ts":"2026-11-07T07:36:19.751Z","type":"feature-status","module":"ticket-review","feature":"review-email-notification","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-07T07:37:22.595Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"60c0352cdb2942fdf62cae86b74145594c18e1c4"}
 {"ts":"2026-11-07T07:44:18.329Z","type":"spec-approved","module":"ticket-review","specHash":"76e5f8b988a6fd869165f96abf6d83067cf14980cf33141cba75ff926001c62e"}
@@ -929,6 +956,14 @@
 {"ts":"2026-11-07T11:40:28.427Z","type":"quick-closed","what":"PR 153 review: stronger BUG-153 tests and log message","files":["backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:43:47.513Z","type":"quick-opened","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T11:44:28.193Z","type":"quick-closed","what":"Rename review email bug BUG-153 to BUG-164 after merging main (id taken by search)","files":["backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueueBugTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-07T15:29:26.533Z","type":"spec-approved","module":"import-ticket-list","specHash":"ed6e2613d6a321dc8f8066573942c55aaf83be8e14661e28e10d8d85c8e9542e"}
+{"ts":"2026-11-07T16:56:35.837Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"e7c6f050a0d339d0d90a49b3e167215d11b14dea"}
+{"ts":"2026-11-07T16:56:36.154Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-preview-page","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T16:57:03.625Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"69f05767eab5d3f08dbca23e4a6925ac41f64e3c"}
+{"ts":"2026-11-07T17:22:40.982Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-preview-page","from":"evaluating","to":"passing"}
+{"ts":"2026-11-07T18:10:42.886Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-verify","from":"pending","to":"in-progress"}
+{"ts":"2026-11-07T18:10:43.311Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-verify","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-07T18:40:42.424Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-verify","from":"evaluating","to":"passing"}
 {"ts":"2026-11-07T12:56:37.681Z","type":"quick-opened","what":"Identity ITs clean app_user with TRUNCATE CASCADE so rows other ITs leave in the shared tenant databases do not break them (CI on PR 141)","files":["backend/src/test/java/vn/tsolve/identity/account/AccountRepositoryIT.java","backend/src/test/java/vn/tsolve/identity/signin/CallbackAccountIsolationIT.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T13:56:18.826Z","type":"quick-closed","what":"Identity ITs clean app_user with TRUNCATE CASCADE so rows other ITs leave in the shared tenant databases do not break them (CI on PR 141)","files":["backend/src/test/java/vn/tsolve/identity/account/AccountRepositoryIT.java","backend/src/test/java/vn/tsolve/identity/signin/CallbackAccountIsolationIT.java","docs/bug-log.md"]}
 {"ts":"2026-11-07T15:41:24.140Z","type":"spec-approved","module":"identity","specHash":"9d2d992b33b12f700f5e84e4beeec6376ec684ccc9194b26c78e4daa509307e0"}
@@ -1106,6 +1141,13 @@
 {"ts":"2026-11-09T17:57:32.548Z","type":"quick-closed","what":"KAN-305 revert the maxWorkers change and the two test-file splits, which did not speed up CI","files":["frontend/vite.config.ts","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx","frontend/src/features/chatbot/pages/KnowledgeChatbotPage.conversations.test.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.popups.test.tsx"]}
 {"ts":"2026-11-09T17:59:41.249Z","type":"quick-opened","what":"KAN-305 shard the frontend tests over 3 CI jobs and keep frontend as the required gate job","files":[".github/workflows/ci.yml"]}
 {"ts":"2026-11-09T16:14:46.706Z","type":"spec-approved","module":"identity","specHash":"4930629625c56462914d96601fcd1bef9edef412d957292fe2c968c3ede0def6"}
+{"ts":"2026-11-08T12:52:06.896Z","type":"spec-approved","module":"ticket-repository","specHash":"9fe7731752092de0e9518f178b30256a340a942603f70ee75c6b5553ad5adf95"}
+{"ts":"2026-11-08T12:55:26.342Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull-deadline","from":null,"to":"pending"}
+{"ts":"2026-11-08T12:55:26.642Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull-deadline","from":"pending","to":"in-progress"}
+{"ts":"2026-11-08T13:09:35.386Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull-deadline","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-08T13:13:14.541Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"3b36f7ea9aea4fa195af945f2b2178acbf384098"}
+{"ts":"2026-11-09T17:11:32.674Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"68cf0a2da76866f899a655ae4ad92ed44abf44a9"}
+{"ts":"2026-11-09T17:11:49.648Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"125f4e28d12316d33b41f00d02e21e6fbc05df64"}
 {"ts":"2026-11-09T17:12:45.253Z","type":"spec-approved","module":"identity","specHash":"eba98dc9b616f51a8f51cf5ce0e7c65b362c8b1c8a67049ddfbc16c7f9094ebb"}
 {"ts":"2026-11-09T18:17:59.236Z","type":"spec-approved","module":"identity","specHash":"32cd1c6998e978c4f083c7706006c3a6702f17a0a96ebfe2091ac06160ec7c95"}
 {"ts":"2026-11-09T18:05:38.595Z","type":"quick-closed","what":"KAN-305 shard the frontend tests over 3 CI jobs and keep frontend as the required gate job","files":[".github/workflows/ci.yml"]}
@@ -1134,6 +1176,12 @@
 {"ts":"2026-11-10T01:12:00.122Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-10T01:14:37.208Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"53eb36fe9e99b6243ab77c0709c36579831f5794"}
 {"ts":"2026-11-10T01:18:52.713Z","type":"feature-status","module":"ticket-review","feature":"review-expired-stored-columns","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:32:16.568Z","type":"feature-status","module":"dashboard-audit","feature":"audit-writer","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:32:16.650Z","type":"feature-status","module":"dashboard-audit","feature":"audit-log-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:31:07.183Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T02:31:07.259Z","type":"feature-status","module":"identity","feature":"user-list-backend","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T02:31:07.351Z","type":"feature-status","module":"identity","feature":"add-user-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T02:31:07.443Z","type":"feature-status","module":"identity","feature":"add-user-backend","from":"evaluating","to":"passing"}
 {"ts":"2026-11-10T10:44:40.361Z","type":"spec-approved","module":"dashboard-audit","specHash":"8230a62f2bf6eb17748c0aab0f9de65fc80edd56b10fe6dc9ce5585588dc8db6"}
 {"ts":"2026-11-10T02:13:59.701Z","type":"feature-status","module":"ticket-review","feature":"review-storage","from":"evaluating","to":"passing"}
 {"ts":"2026-11-10T02:13:59.780Z","type":"feature-status","module":"ticket-review","feature":"review-decision-transaction","from":"evaluating","to":"passing"}
@@ -1142,3 +1190,17 @@
 {"ts":"2026-11-10T02:14:00.091Z","type":"feature-status","module":"ticket-review","feature":"review-production-api","from":"evaluating","to":"passing"}
 {"ts":"2026-11-10T02:14:00.175Z","type":"feature-status","module":"ticket-review","feature":"review-email-notification","from":"evaluating","to":"passing"}
 {"ts":"2026-11-10T02:14:00.293Z","type":"feature-status","module":"ticket-review","feature":"review-history-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T14:17:34.536Z","type":"spec-approved","module":"identity","specHash":"c1fc47868e29267223fe0999e200e0751df74e9956d8ca87a4357478ad8f1fc7"}
+{"ts":"2026-11-10T14:18:22.833Z","type":"feature-status","module":"identity","feature":"scope-checks","from":null,"to":"pending"}
+{"ts":"2026-11-10T14:18:22.917Z","type":"feature-status","module":"identity","feature":"scope-checks","from":"pending","to":"in-progress"}
+{"ts":"2026-11-10T14:57:51.663Z","type":"spec-approved","module":"identity","specHash":"041cc02fb81f66316f3239fe8e8e5aa655a662608976a51601a27b5a3343d8cc"}
+{"ts":"2026-11-10T15:01:32.810Z","type":"feature-status","module":"identity","feature":"scope-checks","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T15:01:32.852Z","type":"feature-status","module":"identity","feature":"scope-checks","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T15:04:38.472Z","type":"commit-recorded","module":"identity","repo":"default","sha":"ab7e954b31a9ef70bb74ee1d394440064744b01b"}
+{"ts":"2026-11-10T17:09:00.533Z","type":"feature-status","module":"identity","feature":"callback-workspace-checks","from":"pending","to":"in-progress"}
+{"ts":"2026-11-10T17:09:03.425Z","type":"feature-status","module":"identity","feature":"callback-workspace-checks","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T17:09:03.666Z","type":"feature-status","module":"identity","feature":"callback-workspace-checks","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T17:19:54.633Z","type":"feature-status","module":"identity","feature":"callback-workspace-checks","from":"pending","to":"in-progress"}
+{"ts":"2026-11-10T17:19:54.930Z","type":"feature-status","module":"identity","feature":"callback-workspace-checks","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-10T17:19:55.179Z","type":"feature-status","module":"identity","feature":"callback-workspace-checks","from":"evaluating","to":"passing"}
+{"ts":"2026-11-10T17:21:50.901Z","type":"spec-approved","module":"identity","specHash":"e6974c2f3d4b0d2cc3cec74d1d8d6710bb17507ef22d1743de60bf995bc7d668"}

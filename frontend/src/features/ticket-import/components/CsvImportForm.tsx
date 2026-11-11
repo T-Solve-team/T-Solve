@@ -9,11 +9,11 @@ import {
   type ImportType,
   type UploadCsvImportBody,
 } from '@/shared/api';
-import { useSession } from '@/shared/auth';
 import { rules } from '@/shared/forms';
 import { MESSAGES, msg } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { AppForm, CsvUpload, FormField } from '@/shared/ui';
+import { useManagedProjectOptions } from '../hooks/useManagedProjects';
 import { saveTextFile } from '../lib/save-text-file';
 
 const TEMPLATE_FILE_NAME = 'ticket-import-template.csv';
@@ -32,16 +32,9 @@ export function CsvImportForm() {
   const [form] = Form.useForm<UploadCsvImportBody>();
   const importType = Form.useWatch('importType', form);
   const navigate = useNavigate();
-  const { session } = useSession();
   // An inline code returned by the upload (MSG29, MSG04, MSG08), shown above the form.
   const [rejection, setRejection] = useState<ApiError | null>(null);
-
-  const projects = (session?.projects ?? [])
-    .filter((project) => project.roleInProject === 'PROJECT_MANAGER')
-    .map((project) => ({
-      value: project.projectId,
-      label: `${project.jiraProjectKey} · ${project.departmentName}`,
-    }));
+  const projects = useManagedProjectOptions();
 
   // Errors: the global toast.
   const template = useMutation({

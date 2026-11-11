@@ -1065,7 +1065,8 @@ paths:
       summary: >
         Imports the remaining Valid rows as Published tickets (MSG32). A WITHOUT_SOLUTION preview with a Needs Solution
         or Error row = MSG_NEW_4 (409); no Valid row left = MSG30 (409); Project no longer Active = MSG40 (409); a
-        Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500).
+        Ticket ID taken since the preview = MSG33 (409); saving failed = MSG33 (500). A Jira preview (source
+        JIRA_IMPORT, Finish) instead skips rows whose key became a ticket and returns notice MSG38.
       parameters:
         - $ref: '#/components/parameters/PreviewId'
       responses:
@@ -1084,6 +1085,92 @@ paths:
         '409':
           $ref: '#/components/responses/Problem'
         '500':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/jira:
+    post:
+      tags: [import]
+      operationId: pullJiraImport
+      summary: >
+        Pulls the resolved Jira issues of one Project that have no Ticket yet (at most 100, oldest first, GBR-15) and
+        returns their Import Preview: source JIRA_IMPORT, import type WITHOUT_SOLUTION, one Needs Solution row per
+        issue. Replaces the caller's previous preview that is not a Draft. Missing date = MSG01,
+        invalid range = MSG39 (400); no issue = MSG04 (404); Jira failed = MSG50 (502, Failed Import Batch).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JiraPullRequest'
+      responses:
+        '200':
+          description: Preview created (message MSG35 when more issues match the range).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '502':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/draft:
+    post:
+      tags: [import]
+      operationId: saveImportDraft
+      summary: Saves the preview as a Draft without validating it (MSG41, GBR-26); saving again updates the same Draft.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '200':
+          description: Draft saved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftSavedResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/drafts:
+    get:
+      tags: [import]
+      operationId: listImportDrafts
+      summary: The caller's own import Drafts, newest first. Reopen one through the preview endpoints.
+      responses:
+        '200':
+          description: The Drafts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImportDraftSummary'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/drafts/{previewId}:
+    delete:
+      tags: [import]
+      operationId: deleteImportDraft
+      summary: Deletes one of the caller's Drafts with its items (after MSG42 in the web app).
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '204':
+          description: Deleted.
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
           $ref: '#/components/responses/Problem'
   /api/v1/chatbot/answers:
     post:
@@ -2491,7 +2578,7 @@ components:
             $ref: '#/components/schemas/RowError'
     ImportPreviewRowResponse:
       type: object
-      description: One preview row in full, read-only.
+      description: One preview row in full.
       required: [rowNo, status, errors]
       properties:
         rowNo:
@@ -2522,6 +2609,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RowError'
+        sourceUrl:
+          type: [string, 'null']
+          format: uri
+          description: Jira only — the issue in Jira.
+        comments:
+          type: array
+          description: Jira only — the comments at pull time; empty for CSV.
+          items:
+            $ref: '#/components/schemas/IssueComment'
     ImportPreviewRowPage:
       type: object
       required: [content, page]
@@ -2544,9 +2640,26 @@ components:
           type: string
           format: uuid
         fileName:
-          type: string
+          type: [string, 'null']
+          description: Null for a Jira preview.
         importType:
           $ref: '#/components/schemas/ImportType'
+        source:
+          description: Omitted = CSV.
+          allOf:
+            - $ref: '#/components/schemas/ImportSource'
+        resolvedFrom:
+          type: [string, 'null']
+          format: date
+          description: Jira only.
+        resolvedTo:
+          type: [string, 'null']
+          format: date
+          description: Jira only.
+        draftSavedAt:
+          type: [string, 'null']
+          format: date-time
+          description: Null when the preview is not a Draft.
         validCount:
           type: integer
         errorCount:
@@ -2556,7 +2669,9 @@ components:
         needsSolutionCount:
           type: integer
         message:
-          description: MSG30 with {count} when at least one row is an Error; otherwise null.
+          description: >
+            MSG30 with {count} when at least one row is an Error (CSV); MSG35 when more Jira issues match the date
+            range; otherwise null.
           oneOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
@@ -2604,7 +2719,72 @@ components:
           description: Tickets published.
         skipped:
           type: integer
-          description: Error rows plus Removed rows.
+          description: Error rows plus Removed rows (CSV); issues skipped because they already had a ticket (Jira).
+        message:
+          $ref: '#/components/schemas/MessageRef'
+        notice:
+          description: Jira only — MSG38 with {count} and {issue_keys} when issues were skipped; otherwise null.
+          oneOf:
+            - $ref: '#/components/schemas/MessageRef'
+            - type: 'null'
+    JiraPullRequest:
+      type: object
+      required: [projectId, resolvedFrom, resolvedTo]
+      properties:
+        projectId:
+          type: string
+          format: uuid
+        resolvedFrom:
+          type: [string, 'null']
+          format: date
+          description: Vietnam time; null = MSG01.
+        resolvedTo:
+          type: [string, 'null']
+          format: date
+          description: Vietnam time, not before resolvedFrom and not in the future (MSG39).
+    IssueComment:
+      type: object
+      description: A Jira comment as it was at pull time.
+      required: [author, created, body]
+      properties:
+        author:
+          type: [string, 'null']
+        created:
+          type: string
+          format: date-time
+        body:
+          type: string
+          description: Plain text.
+    ImportSource:
+      type: string
+      enum: [JIRA_IMPORT, CSV]
+    ImportDraftSummary:
+      type: object
+      required: [previewId, source, projectId, rowCount, savedAt]
+      properties:
+        previewId:
+          type: integer
+          format: int64
+        source:
+          $ref: '#/components/schemas/ImportSource'
+        projectId:
+          type: string
+          format: uuid
+        rowCount:
+          type: integer
+        savedAt:
+          type: string
+          format: date-time
+    DraftSavedResponse:
+      type: object
+      required: [previewId, savedAt, message]
+      properties:
+        previewId:
+          type: integer
+          format: int64
+        savedAt:
+          type: string
+          format: date-time
         message:
           $ref: '#/components/schemas/MessageRef'
     ChatbotQuestion:

@@ -1,12 +1,16 @@
 package vn.tsolve.identity.signin;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +34,9 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
+import vn.tsolve.identity.signin.port.RecordingTenantScope;
 
 /**
  * Task 23c: the end of the Keycloak code exchange. Plain unit tests on a Workspace host ({@code acme.localhost}); the
@@ -44,14 +51,25 @@ class OidcCallbackHandlerTest {
     private static final String EMAIL = "alice@acme.test";
     private static final String SUB = "kc-sub-7f3a9c52";
     private static final String ID_TOKEN_VALUE = "id-token-value-should-never-appear";
-    private static final Map<String, Object> ORGANIZATION = Map.of("acme", Map.of("id", "org-id-acme"));
+    private static final Map<String, Object> ORGANIZATION =
+            Map.of("acme", Map.of("id", InMemoryWorkspaceLookup.ACME.organizationId()));
+    private static final String HD = InMemoryWorkspaceLookup.ACME.googleDomain();
 
+    /** Task 25b wiring: the Account step answers SIGNED_IN, so the forward and WARN tests keep their meaning. */
     private static OidcCallbackHandler handler(boolean dev) {
         MockEnvironment environment = new MockEnvironment();
         if (dev) {
             environment.setActiveProfiles("dev");
         }
-        return new OidcCallbackHandler(environment);
+        AccountSignInService accounts = mock(AccountSignInService.class);
+        when(accounts.signIn(any(), any(), any()))
+                .thenReturn(new AccountSignInService.Result(AccountSignInService.Status.SIGNED_IN, UUID.randomUUID()));
+        return new OidcCallbackHandler(
+                environment,
+                new InMemoryWorkspaceLookup(),
+                new AuthHosts(SignInTestFixtures.properties()),
+                new RecordingTenantScope(),
+                accounts);
     }
 
     private static MockHttpServletRequest request() {
@@ -89,7 +107,7 @@ class OidcCallbackHandlerTest {
         claims.put("email", EMAIL);
         claims.put("email_verified", true);
         claims.put("organization", ORGANIZATION);
-        claims.put("hd", "acme.test");
+        claims.put("hd", HD);
         return claims;
     }
 
@@ -262,7 +280,7 @@ class OidcCallbackHandlerTest {
                             .containsEntry("sub", SUB)
                             .containsEntry("email", EMAIL)
                             .containsEntry("organization", ORGANIZATION)
-                            .containsEntry("hd", "acme.test");
+                            .containsEntry("hd", HD);
                     assertThat(claims.toString())
                             .doesNotContain(ID_TOKEN_VALUE)
                             .doesNotContain("nonce-value-should-never-appear");

@@ -24,6 +24,7 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
 | 2026-11-01 | STORY-008..010 | New STORY-008 (Import Tickets screen, CSV tab), STORY-009 (Import Preview screen), STORY-010 (Import Ticket Preview popup); the shared `CsvUpload` kit component (D12) | KAN-31 had no web screens; the user asked for the CSV screens with the Jira and Manual entry tabs shown disabled (user decision 2026-11-01) |
 | 2026-11-01 | STORY-002 | AC-002.6 uses `MSG_NEW_3` instead of MSG78 (D14); New messages lists `MSG_NEW_3` | System_Messages v3460 gave MSG78 to another message, so the Import Preview would show the wrong text (user decision 2026-11-01) |
 | 2026-11-05 | STORY-012..016 | New import type: a file of tickets without a Solution, whose Solutions the Project Manager writes on the Import Preview (D15–D20); new row result Needs Solution; AC-002.1, AC-002.2, AC-003.3, AC-005.1 and AC-010.1 limited to the file type they apply to; Out of Scope updated; `MSG_NEW_4` | The user wants to choose between importing tickets that have a Solution and tickets that do not (user decision 2026-11-05) |
+| 2026-11-07 | STORY-008 | AC-008.1 and D13: the Jira tab works and the Drafts list is shown, as `ticket-repository` STORY-001 and STORY-004 say; only Manual entry stays disabled; Out of Scope updated | KAN-45 (`ticket-repository`) builds the Jira tab and the Drafts list on this screen; its evaluation found AC-008.1 contradicting the code (user decision 2026-11-07) |
 
 ## Decisions taken while planning (2026-10-21, with the user)
 | # | Question | Decision |
@@ -44,7 +45,7 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
 | D10 | Project id type (`int64` in the import, UUID in the session) | UUID everywhere: the API `projectId` fields, `ProjectAccess`, the stub setting (`user:<uuid>,<uuid>`) and the `project_id` columns (new changeset; the applied one is not edited). |
 | D11 | Import Preview after a reload | New endpoint `GET /imports/previews/{previewId}` returns the same `ImportPreviewResponse`; the screen keeps the preview id in its URL (`/import/preview?previewId=<id>`). |
 | D12 | File picker (raw antd `Upload` is banned outside `shared/ui`; the kit's `CsvUpload` was not built) | This change adds `CsvUpload` to `src/shared/ui/` (Figma "Web/Upload": Idle / Dragging / File listed / File error; .csv and 10 MB checks with MSG27 / MSG28). The FE Lead reviews the `shared/` part of the pull request. |
-| D13 | Scope of the Import Tickets screen | Tabs Jira, CSV and Manual entry are shown; only CSV works, Jira and Manual entry are disabled. No Drafts list and no "Save as draft" (no backend yet). |
+| D13 | Scope of the Import Tickets screen | Tabs Jira, CSV and Manual entry are shown; Manual entry is disabled. The Jira tab and the Drafts list come from `ticket-repository` (KAN-45). No "Save as draft" for a CSV preview. |
 | D14 | Code of the duplicate-in-file error (System_Messages v3460 gave MSG78 to another message) | `MSG_NEW_3` until System_Messages numbers it, like `MSG_NEW_2` (fe-foundation AC-006.9). A bad `resolved_date` keeps MSG39 (its date-range text is shown as it is). |
 
 ## Decisions taken for the import type (2026-11-05, with the user)
@@ -151,7 +152,7 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
 ### STORY-008: Import Tickets screen — CSV tab (web app, III.5.1)
 - As a Project Manager, I want a screen to pick my Project and a CSV file so that I can start an import without calling the API.
 - Acceptance:
-  - AC-008.1: WHEN a Project Manager opens Import Tickets, THE web app SHALL show the tabs Jira, CSV and Manual entry with CSV selected, and Jira and Manual entry disabled.
+  - AC-008.1: WHEN a Project Manager opens Import Tickets, THE web app SHALL show the tabs Jira, CSV and Manual entry with CSV selected and Manual entry disabled; the Jira tab and the Drafts list behave as `ticket-repository` STORY-001 and STORY-004 say.
   - AC-008.2: THE web app SHALL offer in the Project drop-down only the Projects of the signed-in user whose role in the Project is Project Manager, each shown with its Jira project key and Department name.
   - AC-008.3: WHEN the Project Manager clicks Download template, THE web app SHALL save the file returned by the template endpoint as `ticket-import-template.csv`.
   - AC-008.4: IF the Project Manager clicks Upload without a Project or without a file, THEN THE web app SHALL show MSG01 at each missing field and send nothing.
@@ -245,7 +246,7 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
 - Search indexing of new tickets — the search module consumes the "tickets published" event.
 - Auto-detecting `;` as a delimiter.
 - The real `project` table, Department and Google OIDC sign-in (workspace / identity modules).
-- On the web screens: the Jira and Manual entry tab contents, the Drafts list, "Save as draft", the Import History screen (5.4), a result filter on the Import Preview, and asking MSG37 when the browser tab is closed or reloaded (AC-009.10 covers moves inside the web app only).
+- On the web screens: the Manual entry tab contents, "Save as draft" of a CSV preview (the Jira tab and the Drafts list are `ticket-repository`), the Import History screen (5.4), a result filter on the Import Preview, and asking MSG37 when the browser tab is closed or reloaded (AC-009.10 covers moves inside the web app only).
 
 ## Interface Contracts
 

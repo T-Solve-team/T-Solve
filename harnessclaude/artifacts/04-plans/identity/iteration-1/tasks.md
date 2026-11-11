@@ -569,17 +569,18 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **Story:** STORY-001
 **Feature:** callback-workspace-checks
 **Decisions owned:** K2, K11, Q10
-**Acceptance criteria:** AC-001.7, AC-001.10, AC-001.11, AC-001.14, AC-001.48
+**Acceptance criteria:** AC-001.7, AC-001.10, AC-001.11, AC-001.14, AC-001.48, AC-001.74
 **Description:** The `slug`, the Organization id and `DevWorkspaceLookup` come from Task 23a (KAN-287); this task uses them. `OidcCallbackHandler` runs the AC-001.14 order inside `TenantScope.runIn`: Organization and `hd` (both) → Workspace Active → Account (Task 25a) → Account Active; only the first failure is reported. `SignInStartController` refuses a Workspace with no Google domain or no Organization id (AC-001.48). There is no status gate: a Workspace is Active at creation; if Google has not got the redirect URI yet, Google refuses and the Workspace site shows the normal sign-in error (runbook).
 **What Hiếu can see or try:** locally, the dev claims page of Task 23c now ends in each outcome: `beta`'s Google user on `acme` → `/login?error=MSG122`; a user with no Account → MSG09; a Deactivated Account → MSG10; a suspended Workspace → MSG120; a Workspace with no Organization id → MSG141 at sign-in start.
 **Files:**
-- Modify: `backend/src/main/java/vn/tsolve/identity/signin/port/{WorkspaceLookup,NoWorkspaceLookup}.java`, `backend/src/main/java/vn/tsolve/identity/signin/{OidcCallbackHandler,SignInStartController}.java`
-- Used, not modified (done in Task 23a): `WorkspaceRef` (`slug`, `organizationId`), `identity/dev/DevWorkspaceLookup.java`, `identity/dev/DevAccounts.java`
-- Test: `backend/src/test/java/vn/tsolve/identity/signin/CallbackAccountChecksTest.java`, `backend/src/test/java/vn/tsolve/identity/signin/port/InMemoryWorkspaceLookup.java` (modify), `SignInStartControllerTest` (modify)
+- Modify: `backend/src/main/java/vn/tsolve/identity/signin/{OidcCallbackHandler,SignInStartController}.java`, `backend/src/main/java/vn/tsolve/identity/mock/MockSignedInCallerFilter.java` (approved Minor 6 fix; another owner's mock code)
+- Used, not modified (done in Task 23a): `WorkspaceLookup`, `WorkspaceRef` (`slug`, `organizationId`), `NoWorkspaceLookup`, `identity/dev/DevWorkspaceLookup.java`, `identity/dev/DevAccounts.java`
+- Test: `backend/src/test/java/vn/tsolve/identity/signin/CallbackAccountChecksTest.java` (new), `backend/src/test/java/vn/tsolve/identity/signin/{SignInStartControllerTest,OidcCallbackHandlerTest,CallbackAccountIsolationIT,KeycloakSignInEndToEndIT,TwoInstanceCallbackIT,SignInTestFixtures}.java`, `backend/src/test/java/vn/tsolve/identity/signin/port/InMemoryWorkspaceLookup.java`, `backend/src/test/java/vn/tsolve/identity/AuthSecurityConfigTest.java`, `backend/src/test/java/vn/tsolve/identity/mock/MockSignedInCallerFilterTest.java`
+- Build: `backend/pom.xml` (Testcontainers 1.21.4, approved out-of-scope change for Docker 29)
 **Dependencies:** Task 25a merged; the platform change requests sent (the real lookup waits for them; the dev and in-memory lookups do not).
 **PR / Jira:** branch `feat/KAN-297-identity-callback-workspace-checks`; Jira KAN-297.
-**Estimated size:** small (4 production files); about 8 tests
-**Verification:** Tests name AC-001.7, .10, .11, .14, .48; design risk rows 103, 106, 124. Targeted: `cd backend && mvn -Dtest='CallbackAccountChecksTest,SignInStartControllerTest' verify`; full `mvn verify`.
+**Estimated size:** small (4 production files); about 9 tests
+**Verification:** Tests name AC-001.7, .10, .11, .14, .48, .74; design risk rows 103, 106, 124, 133. Targeted: `cd backend && mvn -Dtest='CallbackAccountChecksTest,SignInStartControllerTest' verify`; full `mvn verify`.
 
 ## Task 26a: Redis session and `WebSessionFilter` — KAN-232 (re-scoped)
 
@@ -766,3 +767,18 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **PR / Jira:** branch `feat/KAN-109-identity-account-status-backend` from main; Jira KAN-109.
 **Estimated size:** medium (3 new, 4 modified production files); about 25 tests
 **Verification:** Tests name AC-006.9 to AC-006.19; `sdd.ts trace identity STORY-006`; `cd backend && mvn verify`; `generate:api` no diff.
+
+## Task 36: Scope checks — KAN-118
+
+**Story:** STORY-011
+**Feature:** scope-checks
+**Decisions owned:** KAN-118 Q1–Q4 (Dương, 10/11: all recommendations)
+**Acceptance criteria:** AC-011.1, AC-011.2, AC-011.3, AC-011.4, AC-011.5, AC-011.6, AC-011.7, AC-011.8, AC-011.9, AC-011.10, AC-011.11
+**Description:** Design "Scope checks — KAN-118, Task 36". The `ScopeAccessService` port with its JDBC reads and `ScopeAccessDeniedException` (403 MSG08). Not in scope: migrating `ticket`/`review`/`triage`/`search` ports, Space permissions (`wiki`), `@PreAuthorize` use, schema or API changes.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/{service/ScopeAccessService,service/impl/ScopeAccessServiceImpl,repository/ScopeAccessRepository,exception/ScopeAccessDeniedException}.java`
+- Test: `backend/src/test/java/vn/tsolve/identity/{service/impl/ScopeAccessServiceImplTest,ScopeAccessIT}.java`
+**Dependencies:** Tasks 32–35 (on main: `user_role`, `department_id`, `space`, `space_manager`, `project_membership`).
+**PR / Jira:** branch `feat/KAN-118-identity-scope-checks` from main; Jira KAN-118.
+**Estimated size:** small (4 production files); about 25 tests
+**Verification:** Tests name AC-011.1 to AC-011.11; `sdd.ts trace identity STORY-011`; `cd backend && mvn verify`; `generate:api` no diff.

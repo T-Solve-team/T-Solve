@@ -3,6 +3,7 @@ import { Descriptions, Flex, Typography } from 'antd';
 import { useGetImportPreviewRow } from '@/shared/api';
 import { DetailModal, ErrorState, LoadingState, StatusTag } from '@/shared/ui';
 import { errorText, SECTIONS } from '../lib/import-row';
+import { jiraSnapshotItems } from './jira-snapshot';
 import styles from './ImportTicketPreviewModal.module.css';
 
 type ImportTicketPreviewModalProps = {
@@ -48,6 +49,7 @@ function RowDetail({ previewId, rowNo }: { previewId: number; rowNo: number }) {
         { key: 'description', label: 'Description', children: data.description },
         { key: 'author', label: 'Author', children: data.author },
         { key: 'resolvedDate', label: 'Resolved date', children: data.resolvedDate },
+        ...jiraSnapshotItems(data),
         ...SECTIONS.map(([label, field]) => ({
           key: field,
           label,

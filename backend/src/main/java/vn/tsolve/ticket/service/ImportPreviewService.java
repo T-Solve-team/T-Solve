@@ -24,8 +24,8 @@ public interface ImportPreviewService {
     ImportPreviewResponse removeRows(String user, long previewId, Collection<Integer> rowNumbers);
 
     /**
-     * Stores one Solution, trimmed, in each given row of a preview of a file without Solutions; each row becomes
-     * Valid. All rows or none (STORY-013).
+     * Stores one Solution, trimmed, in each given row of a Jira preview or of a preview of a file without Solutions;
+     * each row becomes Valid. All rows or none (STORY-013, ticket-repository AC-002.3).
      */
     ImportPreviewResponse fillSolution(String user, long previewId, FillSolutionRequest solution);
 }

@@ -75,8 +75,8 @@
     }
   },
   "import-ticket-list": {
-    "specHash": "46ea7e29f7294a9937a9c899c3f2d440a76e73460838fbebcc6e9debd14f991a",
-    "approvedAt": "2026-11-07T05:37:03.832Z",
+    "specHash": "ed6e2613d6a321dc8f8066573942c55aaf83be8e14661e28e10d8d85c8e9542e",
+    "approvedAt": "2026-11-07T15:29:26.530Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager uploads a file with the  extension that is valid UTF-8, at most 10 MB, has every required column and at least one data row, for a Project they manage, THE system SHALL create an Import Preview and return its counts and the first page of its rows.",
@@ -127,7 +127,7 @@
       "AC-007.1": "WHEN a Project Manager reads their unconfirmed preview, THE system SHALL return its Project, file name, Valid, Error and Removed counts, MSG30 when at least one row is Error, and the first page of its rows, as in AC-001.1.",
       "AC-007.2": "IF the preview belongs to another user, has been confirmed, or no longer exists, THEN THE system SHALL reject the read with HTTP 404.",
       "AC-007.3": "IF the caller no longer manages the preview's Project or the Project is no longer Active, THEN THE system SHALL reject the read with HTTP 403 (MSG08).",
-      "AC-008.1": "WHEN a Project Manager opens Import Tickets, THE web app SHALL show the tabs Jira, CSV and Manual entry with CSV selected, and Jira and Manual entry disabled.",
+      "AC-008.1": "WHEN a Project Manager opens Import Tickets, THE web app SHALL show the tabs Jira, CSV and Manual entry with CSV selected and Manual entry disabled; the Jira tab and the Drafts list behave as  STORY-001 and STORY-004 say.",
       "AC-008.2": "THE web app SHALL offer in the Project drop-down only the Projects of the signed-in user whose role in the Project is Project Manager, each shown with its Jira project key and Department name.",
       "AC-008.3": "WHEN the Project Manager clicks Download template, THE web app SHALL save the file returned by the template endpoint as .",
       "AC-008.4": "IF the Project Manager clicks Upload without a Project or without a file, THEN THE web app SHALL show MSG01 at each missing field and send nothing.",
@@ -303,8 +303,8 @@
     }
   },
   "identity": {
-    "specHash": "acd078a53297938b6304c5bfa6bdbac0e9f05d33b84c1f810a4fd98ecea40076",
-    "approvedAt": "2026-11-10T00:37:28.803Z",
+    "specHash": "e6974c2f3d4b0d2cc3cec74d1d8d6710bb17507ef22d1743de60bf995bc7d668",
+    "approvedAt": "2026-11-10T17:21:50.838Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
@@ -347,6 +347,7 @@
       "AC-001.54": "THE backend SHALL send and accept, as the redirect URI of a Workspace sign-in, only  of the Workspace site that started it (the site's own origin, exact match, no wildcard), and SHALL answer 404 to the callback path on any host that is neither a Workspace site nor the Platform Console origin (K5).",
       "AC-001.55": "THE sign-in start and the callback SHALL create no replica-local HTTP session and keep no  outside Redis, so that any API replica can answer the callback (K7).",
       "AC-001.56": "IF binding the token's  to the Account matched by email fails, because that Account already holds a different  or the  is already held by another row (the unique index), THEN THE backend SHALL redirect to  on its Workspace site, create no session, change no Account, and log one  entry that names only the Account id the bind was tried on; the bind is a conditional update (), so of two racing first sign-ins the later loses; when the token's  is already bound to an Account, the user signs in as that Account and an Account with the same email and no  is not modified (K8, Q11).",
+      "AC-001.74": "IF the Account step of the callback fails itself (the database is unavailable,  throws, or the verified ID token has  true but no ), THEN THE callback SHALL redirect to  on its Workspace site, expire the sign-in cookie (AC-001.53), create no session, log one  entry that names only the Workspace id (no email, no , no name) and never answer with a 500; the order and the first-failure rule of AC-001.14 are unchanged.",
       "AC-001.57": "THE identity module SHALL declare the port  with , which returns the Keycloak Organization id, , which reports which of the four Keycloak objects of AC-001.58 exist, and , which the platform's  calls when it creates, checks, undoes or removes a Workspace (K6);  is the  of AC-001.58, and  and  take only the Workspace id and find the Organization and the identity provider by the tag that  put on them (AC-001.58).",
       "AC-001.58": "WHEN  runs, THE Keycloak adapter SHALL create through the Keycloak Admin REST API, in the realm : one Organization whose domain is the Workspace's Google domain; one Google identity provider with the alias , the Google client id and secret of the provisioning profile,  set to the Workspace's Google domain and the link to that Organization, hidden on the login page; and, in the client , the exact redirect URI of AC-001.54 and the post-logout redirect URI  (K2, K3, K5). The Organization alias SHALL be the ; the Organization SHALL carry the attribute  and the identity provider SHALL carry the config key , both set to the Workspace id. The identity provider SHALL copy the broker settings of : type , first-broker-login flow , the  identity provider mapper,  true and  IMPORT (AC-001.64, AC-001.65). The origin  of the two URIs SHALL come from the configured template  (production ; dev and tests ). WHEN  runs for a Workspace that is already provisioned with a different Google domain or slug, THE adapter SHALL throw and change nothing (no update path).",
       "AC-001.59": "THE Keycloak adapter SHALL run  and  one at a time (an advisory lock), SHALL read the client  again after each write to its redirect URI list and verify that every earlier URI is still there, and IF a step fails THEN SHALL delete the objects it created in reverse order and throw, each delete idempotent and finding the identity provider by its tag  (the Workspace id), not by the alias , so that the platform can undo the Workspace (K6, Q12). IF the re-read finds an earlier URI missing, THEN THE adapter SHALL throw, delete only this Workspace's own objects, log one ERROR that names the lost URIs, and SHALL NOT put them back (the runbook restores them). \"Each write to its redirect URI list\" covers every write the adapter makes to , including those of  and of the undo: IF the re-read after a write of  finds an earlier URI missing, THEN THE adapter SHALL log one ERROR that names the lost URIs, SHALL NOT repair them, and SHALL throw; IF the re-read after a write of the undo finds one missing, THEN THE adapter SHALL log the ERROR and SHALL still run the remaining undo steps.",
@@ -496,7 +497,18 @@
       "AC-010.5": "IF the Workspace's database already has an Account with that email (compared in lower case), THEN THE identity module SHALL throw a  with the field  and create nothing, and THE exception SHALL reach the provisioning service unchanged so that it undoes the creation (platform AC-013.16).",
       "AC-010.6": "THE identity module SHALL NOT call  from , because the email is claimed for the new Workspace at step 4 of platform AC-013.1, before the call, and a lost race ends there (platform AC-013.19).",
       "AC-010.7": "THE identity module SHALL create no password, token, link or other credential for the first Admin, and SHALL log neither the email nor the Account's name: the Admin signs in with Google under AC-001.11 to AC-001.13 like any Account, and the invitation email and its job belong to  and  (platform AC-013.17, AC-013.18).",
-      "AC-010.8": "THE identity module SHALL offer  as a Spring bean implementing the  port  in every profile that serves a Workspace creation ( and the one that serves the Platform Console), so that the backend does not refuse to start (platform AC-013.15)."
+      "AC-010.8": "THE identity module SHALL offer  as a Spring bean implementing the  port  in every profile that serves a Workspace creation ( and the one that serves the Platform Console), so that the backend does not refuse to start (platform AC-013.15).",
+      "AC-011.1": "THE identity module SHALL offer every module the Spring bean  (interface in ) with ,  and , and the matching ,  and , which return nothing when the check is true.",
+      "AC-011.2": "WHEN  is called, THE service SHALL return true only WHEN the Department is the Account's own Department () WHILE the Account holds PROJECT_MANAGER, or the Department of one of its Projects.",
+      "AC-011.3": "WHEN an Account holding TICKET_RESOLVER is a  of Projects of several Departments, THE service SHALL return true from  for each of those Departments and false for every other Department (GBR-16, footnote ⁴).",
+      "AC-011.4": "WHEN  is called, THE service SHALL return true only WHEN the Project is one of the Account's Projects.",
+      "AC-011.5": "WHEN  is called, THE service SHALL return true only WHEN the Account manages the Space () WHILE it holds KNOWLEDGE_MANAGER, or the Space's Department is one for which  is true (GBR-30: a Project Manager's own Department, a Ticket Resolver's Departments of their Projects).",
+      "AC-011.6": "THE service SHALL grant nothing for the Roles ADMIN and EMPLOYEE alone: an Account whose only Roles are ADMIN and EMPLOYEE gets false from the three checks (the Admin's Department administration is guarded by its Role on the endpoint, not here).",
+      "AC-011.7": "IF the Account is not , the Department is not  (deleted, GBR-17), the Project's or Space's Department is not , or the Space is , THEN THE service SHALL return false.",
+      "AC-011.8": "IF an argument is null or names no Account, Department, Project or Space of the bound Workspace, THEN THE service SHALL return false and not throw.",
+      "AC-011.9": "THE service SHALL read only the database of the Workspace bound by , so an Account, Department, Project or Space of another Workspace is never found; IF no Workspace is bound, THEN it SHALL throw the exception  throws (rendered 500 MSG06) and return no answer.",
+      "AC-011.10": "IF a  check is false, THEN THE service SHALL throw  (in , extending ), rendered 403 with  MSG08, the same for an unknown id as for a refused one.",
+      "AC-011.11": "THE service SHALL only read: it SHALL change no row, record no audit event and log no Account, Department, Project or Space id."
     }
   },
   "platform": {
@@ -1095,6 +1107,54 @@
       "AC-002.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked.",
       "AC-003.1": "WHEN a caller asks the worker tenant port for the Active Workspaces, THE port SHALL return the UUIDs of the Workspaces that are Active at that moment, without binding a Workspace on the calling thread.",
       "AC-003.2": "WHILE the worker-mock profile is active, THE mock SHALL return exactly its configured Active allow-list and no Suspended or unlisted Workspace."
+    }
+  },
+  "ticket-repository": {
+    "specHash": "9fe7731752092de0e9518f178b30256a340a942603f70ee75c6b5553ad5adf95",
+    "approvedAt": "2026-11-08T12:52:06.892Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
+      "AC-001.2": "WHEN the Import Preview is created, THE system SHALL store on each row a snapshot of its issue — Ticket ID = Jira key, title = summary, description as plain text, author = assignee display name, resolved date, link to the issue in Jira, and every comment as plain text with its author and date — and SHALL not read the issue from Jira again for this preview.",
+      "AC-001.3": "WHEN more than 100 issues without a Ticket match the date range, or the pull stops after 20 Jira pages with issues left to read, THE system SHALL return MSG35, with no count of the remaining issues (D8), with the preview.",
+      "AC-001.4": "IF Resolved from or Resolved to is missing, THEN THE system SHALL reject the pull with MSG01 and call Jira not at all.",
+      "AC-001.5": "IF Resolved from is after Resolved to, or either date is after today (Vietnam time), THEN THE system SHALL reject the pull with MSG39 and call Jira not at all.",
+      "AC-001.6": "IF no issue without a Ticket matches the date range, THEN THE system SHALL return MSG04 and create no preview.",
+      "AC-001.7": "IF Jira rejects the service account credentials, does not answer within 30 seconds, returns an error (for 429 and 503: after the retries of AC-001.11), or the Jira connection is not configured, THEN THE system SHALL return MSG50 with an error message that contains no credential, create no preview, and record one Import Batch of source Jira with status Failed and 0 published.",
+      "AC-001.8": "IF the selected Project is not managed by the caller or is not Active, THEN THE system SHALL reject the pull with HTTP 403 (MSG08), call Jira not at all and create no preview.",
+      "AC-001.9": "IF the caller does not have the Project Manager role, THEN THE system SHALL reject the pull with HTTP 403 (MSG08).",
+      "AC-001.10": "WHEN a pull creates a preview, THE system SHALL delete the caller's previous unconfirmed preview that is not a Draft, if any.",
+      "AC-001.11": "IF a Jira call answers HTTP 429, or HTTP 503 with a  header, and  is at most 5 seconds, THEN THE system SHALL wait that many seconds and send the same call again, at most 2 times per call; a missing  on a 429 counts as 1 second, and a  above 5 seconds ends the retries at once.",
+      "AC-001.12": "WHEN the system calls Jira for a pull, THE system SHALL send the configured API token as  to  with the configured cloud id, and SHALL build each row's link to the issue as the configured Jira site URL + .",
+      "AC-001.13": "IF reading Jira for one pull — every page, comment call and retry together — takes more than 60 seconds, THEN THE system SHALL stop reading and answer as in AC-001.7: MSG50 with an error message that contains no credential, no preview, and one Import Batch of source Jira with status Failed and 0 published.",
+      "AC-002.1": "WHEN the Project Manager lists the rows of a Jira preview, THE system SHALL return them page by page (at most 100 per page) in row-number order with the Jira key, summary, assignee, resolved date and result (Needs Solution or Valid), and the preview SHALL report its source Jira, its date range, the number of rows and the number of Needs Solution rows.",
+      "AC-002.2": "WHEN the Project Manager opens one row of a Jira preview, THE system SHALL return its full snapshot (AC-001.2) and its Solution, if any.",
+      "AC-002.3": "WHEN the Project Manager fills a Solution into one or several Needs Solution or Valid rows of a Jira preview, THE system SHALL store a separate copy of the Solution on each of those rows, replacing any Solution they had, and mark each of them Valid.",
+      "AC-002.4": "IF a filled Solution lacks Symptoms, Root cause, Resolution steps or Scope (blank after trimming), THEN THE system SHALL reject it with MSG01 naming the missing sections and change no row.",
+      "AC-002.5": "IF the sections of a filled Solution are longer than 10,000 characters in total, THEN THE system SHALL reject it with MSG02 and change no row.",
+      "AC-002.6": "WHEN the Project Manager selects several issues and clicks Fill solution while some of them already have a Solution, THE web app SHALL ask MSG36 with the number of issues that will be overwritten before it applies the Solution.",
+      "AC-002.7": "WHEN the Project Manager removes rows from a Jira preview, THE system SHALL mark them Removed, never save them as Tickets, and keep no record of them after the preview is finished or deleted, so that a later pull can return them again.",
+      "AC-002.8": "IF a preview request names a preview that belongs to another user or does not exist, THEN THE system SHALL reject it with HTTP 404 (MSG04).",
+      "AC-002.9": "IF the preview's Project is no longer managed by the caller, THEN THE system SHALL reject every preview request with HTTP 403 (MSG08).",
+      "AC-002.10": "WHILE at least one row of a Jira preview Needs Solution, or the preview has no Valid row, THE web app SHALL keep Finish disabled.",
+      "AC-002.11": "WHEN the Project Manager cancels or leaves the Import Preview, THE web app SHALL ask MSG37 and, on confirmation, return to Import Tickets without importing and without changing a saved Draft.",
+      "AC-003.1": "WHEN the Project Manager clicks Finish on a Jira preview whose every row is Valid or Removed and at least one row is Valid, THE system SHALL, in one transaction, save each Valid row as a Ticket of the Project with Ticket ID = Jira key, source Jira import, status Published, the snapshot's summary as title, its description, writer and resolved date, and the row's Solution; record an approve decision by the caller for each Ticket; record one Import Batch of source Jira with status Completed and the numbers published, skipped and removed; delete the preview; and return MSG32.",
+      "AC-003.2": "IF a Valid row's Jira key has become a Ticket ID since the pull, THEN THE system SHALL skip that row, import the others, and return MSG38 with the number and keys of the skipped issues together with MSG32.",
+      "AC-003.3": "IF every Valid row of the preview has become a Ticket since the pull, THEN THE system SHALL import nothing, record one Completed Import Batch with 0 published, delete the preview, and return MSG38.",
+      "AC-003.4": "IF the preview's Project is no longer Active at Finish, THEN THE system SHALL reject Finish with HTTP 409 (MSG40), import nothing, keep the preview and record no Import Batch.",
+      "AC-003.5": "IF the preview's Project is Active but the caller no longer manages it, THEN THE system SHALL reject Finish with HTTP 403 (MSG08), import nothing and record no Import Batch. (The MSG40 check of AC-003.4 comes first.)",
+      "AC-003.6": "IF at least one row of the preview Needs Solution, or the preview has no Valid row, THEN THE system SHALL reject Finish with HTTP 409 and  with the number of Needs Solution rows, import nothing and record no Import Batch.",
+      "AC-003.7": "IF saving any Ticket fails, THEN THE system SHALL import no Ticket, keep the preview, return MSG33, and record one Import Batch of source Jira with status Failed, 0 published and an error description that contains no issue content.",
+      "AC-003.8": "IF the same preview is finished again while or after a Finish of it succeeds, THEN THE system SHALL reject the second Finish with HTTP 404 and record no Import Batch for it.",
+      "AC-003.9": "WHEN Finish publishes at least one Ticket, THE system SHALL publish a \"tickets published\" event with the new Ticket ids after the transaction commits.",
+      "AC-003.10": "WHEN Finish succeeds on a preview that was a Draft, THE system SHALL delete the Draft.",
+      "AC-004.1": "WHEN the Project Manager clicks Save as draft on a Jira preview, THE system SHALL mark the preview as a Draft with the save time, keep its rows and their Solutions without validating them, and return MSG41.",
+      "AC-004.2": "WHEN the Project Manager opens Import Tickets, THE system SHALL list only the caller's own Drafts with their type (Jira), Project, number of rows and date saved, newest first.",
+      "AC-004.3": "WHEN the Project Manager reopens a Draft, THE system SHALL return it as an Import Preview with its rows and Solutions as saved, without reading Jira again.",
+      "AC-004.4": "WHEN the Project Manager deletes a Draft after confirming MSG42, THE system SHALL delete the Draft with its rows.",
+      "AC-004.5": "IF the Draft belongs to another user or does not exist, THEN THE system SHALL reject the reopen or delete with HTTP 404 (MSG04).",
+      "AC-004.6": "WHILE a preview is a Draft, THE daily preview cleanup and a new pull or CSV upload by the same user SHALL keep it.",
+      "AC-004.7": "WHEN the Project Manager saves a reopened Draft again, THE system SHALL update that same Draft and its save time instead of creating a second one."
     }
   },
   "jira-app": {

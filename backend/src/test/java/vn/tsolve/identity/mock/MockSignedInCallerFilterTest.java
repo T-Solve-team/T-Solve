@@ -109,6 +109,20 @@ class MockSignedInCallerFilterTest {
     }
 
     @Test
+    void skipsSignInPaths_KAN_297_Minor_6() {
+        var filter = new MockSignedInCallerFilter(scope, reader, properties);
+        var signIn = new org.springframework.mock.web.MockHttpServletRequest("GET", "/api/v1/auth/sign-in/start");
+        signIn.setRequestURI("/api/v1/auth/sign-in/start");
+        var callback = new org.springframework.mock.web.MockHttpServletRequest("GET", "/api/v1/auth/callback");
+        callback.setRequestURI("/api/v1/auth/callback");
+        var users = new org.springframework.mock.web.MockHttpServletRequest("GET", "/api/v1/users");
+        users.setRequestURI("/api/v1/users");
+        assertThat(filter.shouldNotFilter(signIn)).isTrue();
+        assertThat(filter.shouldNotFilter(callback)).isTrue();
+        assertThat(filter.shouldNotFilter(users)).isFalse();
+    }
+
+    @Test
     @WithTSolveUser
     void preservesExistingCaller_AC_004_17() throws Exception {
         mvc.perform(get("/api/v1/users")).andExpect(status().isForbidden());

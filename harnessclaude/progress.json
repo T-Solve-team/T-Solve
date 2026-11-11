@@ -120,7 +120,7 @@
         "keycloak-sign-in": "pending",
         "remove-custom-sign-in": "passing",
         "account-sub-binding": "pending",
-        "callback-workspace-checks": "pending",
+        "callback-workspace-checks": "passing",
         "user-role": "pending",
         "logout-rp-initiated": "pending",
         "keycloak-provisioning": "passing",
@@ -129,18 +129,19 @@
         "keycloak-realm": "passing",
         "keycloak-sign-in-start": "passing",
         "keycloak-callback": "passing",
-        "user-list-backend": "in-progress",
-        "add-user-backend": "in-progress",
+        "user-list-backend": "passing",
+        "add-user-backend": "passing",
         "user-roles-backend": "passing",
-        "user-status-backend": "passing"
+        "user-status-backend": "passing",
+        "scope-checks": "passing"
       },
-      "lastUpdated": "2026-11-10T01:22:54.868Z",
+      "lastUpdated": "2026-11-10T17:19:55.177Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5302d0d38123e26c638dbf094340b41a0e13651d"
+        "default": "ab7e954b31a9ef70bb74ee1d394440064744b01b"
       }
     },
     "workspace": {
@@ -162,10 +163,30 @@
       "lastUpdated": "2026-10-22T14:21:22.980Z"
     },
     "ticket-repository": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:23.187Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "jira-import-contract": "passing",
+        "jira-import-schema": "passing",
+        "jira-issue-source": "passing",
+        "jira-pull": "passing",
+        "jira-preview": "passing",
+        "jira-finish": "passing",
+        "jira-drafts": "passing",
+        "jira-import-tickets-page": "passing",
+        "jira-import-preview-page": "passing",
+        "jira-import-verify": "passing",
+        "jira-gateway-auth": "passing",
+        "jira-pull-deadline": "evaluating"
+      },
+      "lastUpdated": "2026-11-09T17:11:49.645Z",
+      "branch": "feat/ticket-repository",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "125f4e28d12316d33b41f00d02e21e6fbc05df64"
+      }
     },
     "search": {
       "status": "implementing",
@@ -268,15 +289,15 @@
       "currentPhase": "implement",
       "features": {
         "audit-log": "passing",
-        "audit-log-api": "evaluating",
-        "audit-writer": "evaluating",
+        "audit-log-api": "passing",
+        "audit-writer": "passing",
         "dashboard-api": "passing",
         "dashboard-outcomes": "passing",
         "dashboard-reuse-gaps": "passing",
         "dashboard-page": "pending",
         "dashboard-sections": "pending"
       },
-      "lastUpdated": "2026-11-09T08:44:58.678Z",
+      "lastUpdated": "2026-11-10T10:44:40.361Z",
       "branch": "feat/dashboard-audit",
       "repos": [
         "default"
