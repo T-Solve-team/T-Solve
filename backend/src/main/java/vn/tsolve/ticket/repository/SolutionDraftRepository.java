@@ -13,8 +13,7 @@ public interface SolutionDraftRepository extends JpaRepository<SolutionDraft, UU
     Optional<SolutionDraft> findByCreatorIdAndProjectIdAndIssueKey(UUID creatorId, UUID projectId, String issueKey);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query(
-            """
+    @Query("""
             delete from SolutionDraft d
             where d.creatorId = :creatorId and d.projectId = :projectId and d.issueKey = :issueKey
             """)

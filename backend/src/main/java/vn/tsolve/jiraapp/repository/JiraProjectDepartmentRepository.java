@@ -13,8 +13,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class JiraProjectDepartmentRepository {
 
-    private static final String DEPARTMENT =
-            """
+    private static final String DEPARTMENT = """
             SELECT d.public_id FROM project p JOIN department d ON d.department_id = p.department_id
             WHERE p.public_id = :projectId
             """;

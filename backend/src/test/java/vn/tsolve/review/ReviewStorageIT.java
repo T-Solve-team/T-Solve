@@ -37,8 +37,7 @@ class ReviewStorageIT {
                 liquibase.update(new Contexts(), new LabelExpression());
             }
             var jdbc = new JdbcTemplate(source);
-            jdbc.update(
-                    """
+            jdbc.update("""
                     insert into ticket(ticket_id, project_id, source, status, title, symptoms, root_cause,
                                        resolution_steps, scope, updated_at)
                     values ('SEARCH-OLD', '00000000-0000-0000-0000-000000000001', 'CSV', 'PUBLISHED', 'Old Search', 's', 'r', 'st', 'sc', '2026-11-01T00:00:00Z')
@@ -87,8 +86,7 @@ class ReviewStorageIT {
                             new JdbcConnection(dataSource.getConnection()))) {
                 liquibase.update(new Contexts(), new LabelExpression());
             }
-            jdbc.update(
-                    """
+            jdbc.update("""
                     insert into ticket(ticket_id, project_id, source, status, title, symptoms, root_cause,
                                        resolution_steps, scope)
                     values ('SEARCH-1', '00000000-0000-0000-0000-000000000001', 'CSV', 'PUBLISHED', 'Published',
@@ -161,14 +159,12 @@ class ReviewStorageIT {
                             new JdbcConnection(dataSource.getConnection()))) {
                 liquibase.update(new Contexts(), new LabelExpression());
             }
-            UUID id = jdbc.queryForObject(
-                    """
+            UUID id = jdbc.queryForObject("""
                     insert into ticket (source_ticket_id, project_id, source, status, title, symptoms, root_cause,
                                         resolution_steps, scope)
                     values ('EXISTING-1', 10, 'SOLUTION_FORM', 'PENDING_REVIEW', 'Old review', 's', 'r', 'st', 'sc')
                     returning ticket_id
-                    """,
-                    UUID.class);
+                    """, UUID.class);
             try (var liquibase = new Liquibase(
                     "db/changelog/db.changelog-master.xml",
                     new ClassLoaderResourceAccessor(),
@@ -203,14 +199,12 @@ class ReviewStorageIT {
                     new ClassLoaderResourceAccessor(),
                     new JdbcConnection(dataSource.getConnection()))) {
                 liquibase.update(7, new Contexts(), new LabelExpression());
-                long oldId = jdbc.queryForObject(
-                        """
+                long oldId = jdbc.queryForObject("""
                         insert into ticket (ticket_id, project_id, source, status, title, symptoms, root_cause,
                                             resolution_steps, scope)
                         values ('TEST-1', 1, 'CSV', 'PUBLISHED', 'Login fails', 'Error', 'Token', 'Restart', 'Users')
                         returning id
-                        """,
-                        Long.class);
+                        """, Long.class);
                 jdbc.update(
                         "insert into ticket_import_decision (ticket_id, reviewer, decision) values (?, 'legacy-pm', 'APPROVE')",
                         oldId);
@@ -221,8 +215,7 @@ class ReviewStorageIT {
                     if (change.getId().equals("008-review-ticket-storage")) break;
                 }
                 liquibase.update(count, new Contexts(), new LabelExpression());
-                jdbc.update(
-                        """
+                jdbc.update("""
                         insert into ticket (source_ticket_id, project_id, source, status, title, symptoms,
                                             root_cause, resolution_steps, scope)
                         values ('TEST-LEGACY', '00000000-0000-0000-0000-000000000001', 'SOLUTION_FORM', 'PENDING_REVIEW', 'Old ticket', 'Error',
@@ -249,23 +242,15 @@ class ReviewStorageIT {
             UUID reviewerId = jdbc.queryForObject(
                     "insert into app_user (email, status, created_at) values ('pm@example.test', 'ACTIVE', now()) returning id",
                     UUID.class);
-            assertThat(jdbc.queryForObject(
-                            """
+            assertThat(jdbc.queryForObject("""
                             insert into review_decision (ticket_id, project_manager_id, decision)
                             values (?, ?, 'APPROVED') returning review_decision_id
-                            """,
-                            UUID.class,
-                            ticketId,
-                            reviewerId))
+                            """, UUID.class, ticketId, reviewerId))
                     .isNotNull();
-            assertThat(jdbc.queryForObject(
-                            """
+            assertThat(jdbc.queryForObject("""
                             insert into evidence (ticket_id, file_name, file_type, file_size)
                             values (?, 'error.png', 'image/png', 123) returning evidence_id
-                            """,
-                            UUID.class,
-                            ticketId))
-                    .isNotNull();
+                            """, UUID.class, ticketId)).isNotNull();
         }
     }
 }

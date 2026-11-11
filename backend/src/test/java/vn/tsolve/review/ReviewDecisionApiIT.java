@@ -493,16 +493,12 @@ class ReviewDecisionApiIT {
     }
 
     private static UUID pending(JdbcTemplate tenant, UUID projectId) {
-        return tenant.queryForObject(
-                """
+        return tenant.queryForObject("""
                 insert into ticket (source_ticket_id, project_id, source, status, title, symptoms,
                                     root_cause, resolution_steps, scope)
                 values (?, ?, 'SOLUTION_FORM', 'PENDING_REVIEW', 'Login fails', 'Error', 'Token', 'Restart', 'Users')
                 returning ticket_id
-                """,
-                UUID.class,
-                UUID.randomUUID().toString(),
-                projectId);
+                """, UUID.class, UUID.randomUUID().toString(), projectId);
     }
 
     private static String ticketStatus(JdbcTemplate tenant, UUID id) {
