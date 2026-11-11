@@ -26,6 +26,9 @@
         <wiremock.version>3.9.2</wiremock.version>
         <jobrunr.version>8.6.0</jobrunr.version>
         <testcontainers.version>1.21.4</testcontainers.version>
+        <!-- parallel test JVMs; override with -Dtest.forks=1 / -Dit.forks=1 to run one at a time -->
+        <test.forks>2</test.forks>
+        <it.forks>2</it.forks>
     </properties>
 
     <dependencies>
@@ -146,9 +149,22 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
             <plugin>
-                <!-- runs the *IT classes in `mvn verify`; needs Docker -->
+                <!-- unit tests in parallel JVMs; each JVM keeps its own Spring context cache -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <forkCount>${test.forks}</forkCount>
+                    <reuseForks>true</reuseForks>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!-- runs the *IT classes in `mvn verify`; needs Docker. Each fork starts its own containers. -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <forkCount>${it.forks}</forkCount>
+                    <reuseForks>true</reuseForks>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
