@@ -599,22 +599,23 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **Estimated size:** medium (7 production Java files, most salvaged from the uncommitted tree, plus compose, pom and yml); 7 tests
 **Verification:** Tests name AC-001.16, .18, .20–.25, .27; AC-001.20 and .21 are two-Workspace tests; design risk rows 114, 123 and the older rows 27–32, 90, 91, 102 that survive. Targeted: `cd backend && mvn -Dtest='WebSessionFilterTest,SessionCreationTest,SessionRedisDownTest' -Dit.test='WebSessionStoreIT' verify`; full `mvn verify`; the local sign-in run.
 
-## Task 26b: `user_role` and the Roles in the session — Jira KAN-298 (Subtask of KAN-275)
+## Task 26b: `user_role`, the Roles and the Workspace binding in the session — Jira KAN-298 (Subtask of KAN-275)
 
 **Story:** STORY-001
 **Feature:** user-role
-**Decisions owned:** K11
-**Acceptance criteria:** AC-001.26
-**Description:** Salvage of the uncommitted Task 10 tree: `AccountRole`, `AccountRoleRepository`, the `user_role` changeset, `Account` (its Roles), the dev Account and Role seeder (`DevAccountSeeder`, `DevAccounts`). `WebSessionFilter` puts a `TSolveUser` with the Account's current id, email, full name and Roles in the security context at each request, so a Role change applies from the next request (AC-001.26; Task 26a's filter built it without Roles).
-**What Hiếu can see or try:** the dev seeder creates Accounts with Roles that match the Keycloak realm import users; after a sign-in the whoami test endpoint shows the Roles; changing a Role in the database shows at the next request.
+**Decisions owned:** K11, KAN-298 Q1-Q8 (all A, 2026-11-11)
+**Acceptance criteria:** AC-001.26, AC-001.75
+**Description:** Salvage of the uncommitted Task 10 tree: `AccountRole`, `AccountRoleRepository` (built as a bean by `SessionConfig`, from a `JdbcTemplate`), and the dev Account and Role seeder `DevAccountSeeder` (adapted to the `DevAccounts` that is on `main`). `user_role` already exists on `main` (`019-identity-user-role-department.sql`, KAN-107): no new changeset and no edit of `db.changelog-master.xml`. `WebSessionFilter` (a) puts a `TSolveUser` with the Account's current id, email, full name and Roles in the security context at each request, so a Role change applies from the next request (AC-001.26; Task 26a's filter built it without Roles), and (b) binds the Workspace of the session through `TenantScope.runIn(session.workspaceId(), ...)` around `chain.doFilter`, after the host check passed, only for a valid Workspace session, and removes it when the request ends, also on an exception (AC-001.75; `IOException` and `ServletException` from the chain are wrapped and rethrown, as `MockSignedInCallerFilter` does). No default Workspace: a signed-in request that needs one with none bound answers 500 MSG06. The four obsolete dev classes copied in from the old Task 10 tree (`identity/dev/DevGoogleController`, `DevGoogleIssuer`, `DevSecurityConfig`, `DevStartupGuard`) are deleted from the worktree; they are not part of this task. `MockSignedInCallerFilter` (profile `identity-mock`) stays; its removal is its own item after 26b, and its nested-`runIn` conflict with a real session of another Workspace is a known limit (design row 135).
+**What Hiếu can see or try:** the dev seeder creates Accounts with Roles that match the Keycloak realm import users; after a sign-in the whoami test endpoint shows the Roles; changing a Role in the database shows at the next request; with a real session the user list endpoint answers from that Workspace's database instead of 500; a session of Workspace A never reads Workspace B.
 **Files:**
-- Create: `backend/src/main/java/vn/tsolve/identity/account/{AccountRole,AccountRoleRepository}.java`, `backend/src/main/resources/db/changelog/changes/<next>-identity-user-role.sql`
-- Modify: `backend/src/main/java/vn/tsolve/identity/account/Account.java`, `backend/src/main/java/vn/tsolve/identity/session/WebSessionFilter.java`, `backend/src/main/java/vn/tsolve/identity/dev/{DevAccountSeeder,DevAccounts}.java`, `backend/src/main/resources/db/changelog/db.changelog-master.xml`
-- Test: `backend/src/test/java/vn/tsolve/identity/dev/{DevAccountSeederIT,DevSessionWhoAmITest}.java` (modified), `backend/src/test/java/vn/tsolve/identity/session/RoleChangeTest.java`, `backend/src/test/java/vn/tsolve/identity/account/AccountRoleRepositoryIT.java`
-**Dependencies:** Task 26a merged.
-**PR / Jira:** branch `feat/KAN-298-identity-user-role`; Jira KAN-298 (own issue).
-**Estimated size:** small (7 production files incl. the changeset); about 5 tests
-**Verification:** Tests name AC-001.26; design risk row 32. Targeted: `cd backend && mvn -Dtest='RoleChangeTest,DevSessionWhoAmITest' -Dit.test='DevAccountSeederIT,AccountRoleRepositoryIT' verify`; full `mvn verify`.
+- Create: `backend/src/main/java/vn/tsolve/identity/account/{AccountRole,AccountRoleRepository}.java`, `backend/src/main/java/vn/tsolve/identity/dev/DevAccountSeeder.java`
+- Modify: `backend/src/main/java/vn/tsolve/identity/session/{WebSessionFilter,SessionConfig}.java`; `Account.java` only if the Roles go on the entity
+- Delete (worktree only, untracked): `backend/src/main/java/vn/tsolve/identity/dev/{DevGoogleController,DevGoogleIssuer,DevSecurityConfig,DevStartupGuard}.java`
+- Test (all Create): `backend/src/test/java/vn/tsolve/identity/dev/{DevAccountSeederIT,DevSessionWhoAmITest}.java`, `backend/src/test/java/vn/tsolve/identity/session/{RoleChangeTest,WorkspaceBindingTest}.java`, `backend/src/test/java/vn/tsolve/identity/account/AccountRoleRepositoryIT.java`. `WorkspaceBindingTest` covers: bound inside the endpoint; gone after the request, also when the endpoint throws; a session of Workspace A never reads Workspace B (two Workspaces); no binding for an anonymous request.
+**Dependencies:** Task 26a merged; AC-001.75 approved (the spec edit locks the code until then).
+**PR / Jira:** branch `feat/KAN-298-identity-user-role`; Jira KAN-298 (own issue). One task, one PR, one feature `user-role`.
+**Estimated size:** small (about 5 production files: `AccountRole`, `AccountRoleRepository`, `WebSessionFilter`, `SessionConfig`, `DevAccountSeeder`; the binding adds about 25 lines to `WebSessionFilter`); about 8 tests
+**Verification:** Tests name AC-001.26 and AC-001.75; design risk rows 32, 134, 135. Targeted: `cd backend && mvn -Dtest='RoleChangeTest,WorkspaceBindingTest,DevSessionWhoAmITest' -Dit.test='DevAccountSeederIT,AccountRoleRepositoryIT' verify`; full `mvn verify`.
 
 ## Task 27: Logout with Keycloak end-session — KAN-106
 
