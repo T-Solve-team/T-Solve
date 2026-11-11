@@ -18,6 +18,7 @@ import vn.tsolve.ticket.dto.TicketReviewView.ExpiredRow;
 import vn.tsolve.ticket.dto.TicketReviewView.Feedback;
 import vn.tsolve.ticket.dto.TicketReviewView.QueueRow;
 import vn.tsolve.ticket.entity.Ticket;
+import vn.tsolve.ticket.entity.TicketStatus;
 
 public interface TicketRepository extends JpaRepository<Ticket, UUID> {
 
@@ -46,6 +47,44 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
 
     @Query("select t from Ticket t where t.id = :id or t.publicId = :id")
     Optional<Ticket> findForReviewDetail(@Param("id") UUID id);
+
+    /**
+     * Creates the Solution Form ticket of a Jira issue in Pending review (jira-app AC-004.1). writer_id and
+     * review_due_date are not writable through the entity, so the row is inserted here; the due date follows the
+     * send-back rule above (GBR-10), and the triggers of changesets 009 and 019 set the queue entry time and notify the
+     * Review Queue. Returns no id when the Ticket ID already exists ({@code uq_ticket_ticket_id}, AC-004.3) or the
+     * Project is not ACTIVE.
+     */
+    @Query(
+            value =
+                    """
+            insert into ticket (source_ticket_id, project_id, source, status, title, writer, writer_id,
+                                symptoms, root_cause, resolution_steps, workaround, scope, review_due_date)
+            select :issueKey, p.public_id, 'SOLUTION_FORM', 'PENDING_REVIEW', :title, :writer, :writerId,
+                   :symptoms, :rootCause, :resolutionSteps, :workaround, :scope,
+                   cast(:today as date) + (case when p.review_range > 0 then p.review_range else 3 end)
+            from project p
+            where p.public_id = :projectId and p.status = 'ACTIVE'
+            on conflict (source_ticket_id) do nothing
+            returning ticket_id
+            """,
+            nativeQuery = true)
+    Optional<UUID> insertSolutionFormTicket(
+            @Param("projectId") UUID projectId,
+            @Param("issueKey") String issueKey,
+            @Param("title") String title,
+            @Param("writer") String writer,
+            @Param("writerId") UUID writerId,
+            @Param("symptoms") String symptoms,
+            @Param("rootCause") String rootCause,
+            @Param("resolutionSteps") String resolutionSteps,
+            @Param("workaround") String workaround,
+            @Param("scope") String scope,
+            @Param("today") LocalDate today);
+
+    /** The status of the ticket whose Ticket ID is this issue key, whatever its source (jira-app AC-001.2, AC-008.2). */
+    @Query("select t.status from Ticket t where t.ticketId = :issueKey")
+    Optional<TicketStatus> findStatusByTicketId(@Param("issueKey") String issueKey);
 
     @Query(
             """
