@@ -815,6 +815,232 @@ paths:
           $ref: '#/components/responses/Problem'
         '503':
           $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/issues/{issueKey}/solution-form:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    post:
+      tags: [jira-app]
+      operationId: openSolutionForm
+      summary: >
+        Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft,
+        else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolutionFormRequest'
+      responses:
+        '200':
+          description: >
+            The answer; mayOpen false when the viewer is not linked, not a member of the issue's Project, or the
+            issue already has a Solution Form ticket.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolutionForm'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/issues/{issueKey}/solution:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    post:
+      tags: [jira-app]
+      operationId: submitSolution
+      summary: >
+        Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and
+        deletes the viewer's Draft (STORY-004). Five empty sections = the form was closed: the ticket gets an empty
+        Solution (STORY-006).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitSolutionRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmittedTicket'
+        '400':
+          description: MSG01 (a required section is empty, `field_name` names it) or MSG02 (more than 10,000 characters in total).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG62 (not linked) or MSG08 (not a member of the issue's Project).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '409':
+          description: The issue already has a Solution Form ticket in its Project.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/issues/{issueKey}/solution-draft:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    put:
+      tags: [jira-app]
+      operationId: saveSolutionDraft
+      summary: Stores the five sections, unvalidated, as the viewer's only Draft for the issue (MSG41, STORY-005).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolutionSections'
+      responses:
+        '204':
+          description: Saved.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/solution-rewrites:
+    post:
+      tags: [jira-app]
+      operationId: rewriteSolution
+      summary: The AI rewrite of the five sections, for 4.2 AI Rewrite Preview (STORY-007).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolutionSections'
+      responses:
+        '200':
+          description: The rewritten sections.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolutionSections'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '503':
+          description: The AI rewrite is unavailable or took too long (MSG68).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/issues/{issueKey}/panel:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    get:
+      tags: [jira-app]
+      operationId: getIssuePanel
+      summary: What 3.3 Issue Panel shows for the issue and the viewer (STORY-001, STORY-008).
+      security:
+        - forgeInvocationToken: []
+      responses:
+        '200':
+          description: The panel state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuePanel'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/tickets/search:
+    get:
+      tags: [jira-app]
+      operationId: searchJiraAppTickets
+      summary: >
+        The Published tickets of the viewer's Departments that match the query, ranked by the search module's ticket
+        search, at most 20 (STORY-008).
+      security:
+        - forgeInvocationToken: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+      responses:
+        '200':
+          description: The matches; empty = MSG04.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 20
+                items:
+                  $ref: '#/components/schemas/JiraAppTicketResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG62 (not linked) or MSG76 (a member of no Project in a Department).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: The search is unavailable (MSG06).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/tickets/{ticketUuid}:
+    parameters:
+      - name: ticketUuid
+        in: path
+        required: true
+        description: The ticket's UUID from a search result (the Ticket ID is not unique across Projects).
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [jira-app]
+      operationId: getJiraAppTicket
+      summary: A Published ticket of the viewer's Departments, for 3.4 Published Ticket Preview (STORY-009).
+      security:
+        - forgeInvocationToken: []
+      responses:
+        '200':
+          description: The ticket.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JiraAppTicketPreview'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG08 — not Published, not in one of the viewer's Departments, or no such ticket.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/csv/template:
     get:
       tags: [import]
@@ -1480,6 +1706,15 @@ components:
       schema:
         type: integer
         format: int64
+    IssueKey:
+      name: issueKey
+      in: path
+      required: true
+      description: The Jira issue key, e.g. ITSUP-1031.
+      schema:
+        type: string
+        maxLength: 50
+        pattern: '^[A-Z][A-Z0-9_]*-[1-9][0-9]*$'
   responses:
     Problem:
       description: Error (RFC 9457 Problem Details with an SRS MSG code).
@@ -2315,6 +2550,140 @@ components:
         count:
           type: integer
           description: Number of tickets the decision was applied to (the {count} of MSG14 / MSG16 / MSG17).
+    SolutionSections:
+      type: object
+      description: The five Solution sections (GBR-33); Workaround is the only optional one. Plain text.
+      required: [symptoms, rootCause, resolutionSteps, workaround, scopeOfApplicability]
+      properties:
+        symptoms:
+          type: string
+        rootCause:
+          type: string
+        resolutionSteps:
+          type: string
+        workaround:
+          type: string
+        scopeOfApplicability:
+          type: string
+    SolutionFormRequest:
+      type: object
+      description: The issue text the Jira App read with requestJira, for the AI draft or the prefill.
+      required: [summary, description]
+      properties:
+        summary:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 32767
+          description: The issue description as plain text; empty when the issue has none.
+    SolutionFormOrigin:
+      type: string
+      description: Where the sections come from — the viewer's Draft, the AI draft, or the issue text (MSG67).
+      enum: [DRAFT, AI_DRAFT, ISSUE]
+    SolutionForm:
+      type: object
+      required: [mayOpen, origin, sections, message]
+      properties:
+        mayOpen:
+          type: boolean
+        origin:
+          anyOf:
+            - $ref: '#/components/schemas/SolutionFormOrigin'
+            - type: 'null'
+          description: Null when mayOpen is false.
+        sections:
+          anyOf:
+            - $ref: '#/components/schemas/SolutionSections'
+            - type: 'null'
+          description: Null when mayOpen is false.
+        message:
+          anyOf:
+            - $ref: '#/components/schemas/MessageRef'
+            - type: 'null'
+          description: MSG67 when the AI draft is unavailable; otherwise null.
+    SubmitSolutionRequest:
+      type: object
+      required: [summary, sections]
+      properties:
+        summary:
+          type: string
+          maxLength: 255
+          description: The issue summary, the ticket title.
+        sections:
+          $ref: '#/components/schemas/SolutionSections'
+    SubmittedTicket:
+      type: object
+      required: [id, ticketId, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The ticket's UUID.
+        ticketId:
+          type: string
+          description: The Ticket ID — the issue key.
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+    IssuePanel:
+      type: object
+      required: [linked, ticketStatus, hasDraft, mayOpenForm, canSearch]
+      properties:
+        linked:
+          type: boolean
+          description: False = the Jira account is not linked to an active T-Solve Account (MSG62); the other fields are false/null.
+        ticketStatus:
+          anyOf:
+            - $ref: '#/components/schemas/TicketStatus'
+            - type: 'null'
+          description: >
+            The status of the issue's Solution Form ticket; null = none. CHANGES_REQUESTED makes the Jira App read
+            getJiraReviewFeedback for MSG64.
+        hasDraft:
+          type: boolean
+          description: The viewer has a Draft for the issue (MSG77).
+        mayOpenForm:
+          type: boolean
+          description: >
+            The viewer is a member of the issue's Project and no Solution Form ticket exists. The Jira App also checks
+            that the issue is Done before it shows the button.
+        canSearch:
+          type: boolean
+          description: False = the viewer is a member of no Project in the issue's Department (MSG76).
+    JiraAppTicketResult:
+      type: object
+      required: [id, ticketId, title, departmentName]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The ticket's UUID, for getJiraAppTicket.
+        ticketId:
+          type: string
+          description: The Ticket ID, e.g. ITSUP-1031.
+        title:
+          type: string
+        departmentName:
+          type: string
+    JiraAppTicketPreview:
+      type: object
+      required: [id, ticketId, title, departmentName, solution, webUrl]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticketId:
+          type: string
+        title:
+          type: string
+        departmentName:
+          type: string
+        solution:
+          $ref: '#/components/schemas/SolutionSections'
+        webUrl:
+          type: string
+          format: uri
+          description: The ticket on the T-Solve web app ("Open in T-Solve").
     MessageRef:
       type: object
       description: An SRS message to show, by code; the web app fills the template from params.
