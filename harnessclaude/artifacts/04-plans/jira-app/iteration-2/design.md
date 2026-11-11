@@ -70,15 +70,16 @@ CREATE TABLE solution_draft (                         -- Solution Form Draft (GB
     updated_at        TIMESTAMPTZ  NOT NULL DEFAULT now(),
     CONSTRAINT uq_solution_draft UNIQUE (creator_id, project_id, jira_issue_key)
 );
-CREATE UNIQUE INDEX uq_ticket_solution_form_issue                -- AC-004.3: one Solution Form ticket per issue
-    ON ticket (project_id, source_ticket_id) WHERE source = 'SOLUTION_FORM';
 ```
 
 - `ticket` gains a factory `Ticket.submitted(projectId, issueKey, title, writerId, writerName, sections,
   reviewDueDate)`; an empty Solution (Close) stores empty strings, as the columns are NOT NULL (AC-006.2). Title =
   issue summary cut to the column length.
-- If `ticket` already holds a non-unique `(project_id, source_ticket_id)` for `SOLUTION_FORM` rows on some dev
-  database, the index fails: Task 2 checks the dev data first and reports it rather than deleting rows.
+- No new index: `uq_ticket_ticket_id` (changeset 003) already makes `source_ticket_id` unique in the Workspace, so
+  an issue has at most one ticket of any source (AC-004.3); the insert uses `ON CONFLICT (source_ticket_id) DO
+  NOTHING` and answers 409 MSG31 (Task 2, 12/11).
+- `writer_id` and `review_due_date` are read-only in the `Ticket` entity, so the ticket is created by a native
+  `INSERT … SELECT FROM project … RETURNING ticket_id` in `TicketRepository` instead of `Ticket.submitted(...)`.
 
 ## Key Decisions
 
@@ -90,7 +91,7 @@ CREATE UNIQUE INDEX uq_ticket_solution_form_issue                -- AC-004.3: on
 | Membership | `project` + `project_membership` rows (`MEMBER`/`PROJECT_MANAGER`) | config stub of 01/11 | Real tables exist on `main` |
 | Workspace of a FIT call | The default database, as Ask T-Solve and the tracker stand-in | wait for platform's cloudId registry | No cloudId → Workspace mapping on `main`; recorded as a risk |
 | Ticket storage | `ticket` row `SOLUTION_FORM`/`PENDING_REVIEW`, triggers for entry time and NOTIFY, due date in the service | a new table | It is what `ticket-review` queues and reviews |
-| Duplicate guard | Partial unique index on `(project_id, source_ticket_id)` for `SOLUTION_FORM` + 409 | check-then-insert only | Races (double click, retry after slow 201) |
+| Duplicate guard | Existing `uq_ticket_ticket_id` + `ON CONFLICT DO NOTHING` → 409 MSG31 | a new partial index; check-then-insert | Races (double click, retry after slow 201); the column is already unique |
 | Search | `search`'s `TicketSearchService`, PUBLISHED only | keyword `ILIKE` (01/11) | User 11/11: same results as the web |
 | AI | `SolutionAiService` on `LlmClient` + `TSOLVE_STUB_AI` | stub only | User 11/11 |
 | Open the form | Background script on own `JIRA_ISSUE_CHANGED` + panel button | panel only | RESEARCH-003: board drags send nothing, so both |

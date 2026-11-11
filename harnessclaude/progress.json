@@ -275,7 +275,7 @@
         "ask-conversation-logic": "passing",
         "ask-page-ui": "passing",
         "solution-contract": "passing",
-        "solution-ticket-storage": "pending",
+        "solution-ticket-storage": "in-progress",
         "jira-issue-access": "pending",
         "solution-ai": "pending",
         "solution-endpoints": "pending",
@@ -283,7 +283,7 @@
         "solution-form-ui": "pending",
         "issue-panel-ui": "pending"
       },
-      "lastUpdated": "2026-11-11T16:42:42.530Z",
+      "lastUpdated": "2026-11-11T17:14:29.728Z",
       "branch": "feat/jira-app",
       "repos": [
         "default"
