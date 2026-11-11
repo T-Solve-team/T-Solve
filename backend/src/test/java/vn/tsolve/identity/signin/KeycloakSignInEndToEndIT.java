@@ -2,7 +2,6 @@ package vn.tsolve.identity.signin;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import java.net.URI;
@@ -10,7 +9,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Path;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +37,7 @@ import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 import vn.tsolve.TSolveApplication;
 import vn.tsolve.identity.dev.DevAccounts;
+import vn.tsolve.identity.session.SessionCookie;
 
 /**
  * Task 23c: the whole sign-in against a real Keycloak 26.4 with the committed realm, the fake Google, a real Redis and
@@ -198,6 +197,26 @@ class KeycloakSignInEndToEndIT {
         assertThat(attributes).doesNotContainKey("domain");
     }
 
+    /** Q2 = A: the passing callback is a 302 to {@code location} that sets the session cookie and is not cached. */
+    private static void assertSessionRedirect(TestBrowser.Reply reply, String location) {
+        assertThat(reply.status()).as("callback status").isEqualTo(302);
+        assertThat(reply.location()).as("Location").isEqualTo(location);
+        List<String> headers = reply.setCookies(SessionCookie.NAME);
+        assertThat(headers).as("Set-Cookie of %s", SessionCookie.NAME).hasSize(1);
+        assertThat(headers.get(0)).doesNotStartWith(SessionCookie.NAME + "=;");
+        Map<String, String> attributes = SignInTestFixtures.attributes(headers.get(0));
+        assertThat(attributes).containsEntry("path", "/").doesNotContainKey("max-age");
+        assertThat(attributes).containsKeys("secure", "httponly");
+        assertThat(attributes.get("samesite")).isEqualToIgnoringCase("Lax");
+        assertThat(attributes).doesNotContainKey("domain");
+        assertThat(reply.header("cache-control")).as("Cache-Control").contains("no-store");
+        assertExpiryCookie(reply);
+    }
+
+    private static String boundSub(String email) {
+        return db().queryForObject("SELECT keycloak_sub FROM app_user WHERE email = ?", String.class, email);
+    }
+
     private static Set<String> authRequestKeys() {
         Set<String> keys = redis.keys(RedisAuthorizationRequestRepository.KEY_PREFIX + "*");
         return keys == null ? Set.of() : keys;
@@ -231,17 +250,9 @@ class KeycloakSignInEndToEndIT {
                         .location()
                         .substring(0, keycloakAnswer.location().indexOf('?')))
                 .isEqualTo(callbackBase(slug));
-        assertThat(reply.status()).as("callback status").isEqualTo(200);
-        assertThat(reply.location()).as("Location").isNull();
-        JsonNode claims = json.readTree(reply.body());
-        Set<String> names = new HashSet<>();
-        claims.fieldNames().forEachRemaining(names::add);
-        assertThat(names).containsExactlyInAnyOrder("sub", "email", "organization", "hd");
-        assertThat(claims.path("sub").asText()).isEqualTo(keycloakUserId(email));
-        assertThat(claims.path("email").asText()).isEqualTo(email);
-        assertThat(claims.path("organization").path(slug).path("id").asText()).isEqualTo(organizationId);
-        assertThat(claims.path("hd").asText()).isEqualTo(slug + ".test");
-        assertExpiryCookie(reply);
+        assertSessionRedirect(reply, "/");
+        // the sub of the Keycloak user is now bound to the Account the session belongs to
+        assertThat(boundSub(email)).isEqualTo(keycloakUserId(email));
         assertThat(authRequestKeys()).as("auth-request keys left in Redis").isEmpty();
         assertThat(browser.seenCookieNames()).as("cookies ever set").doesNotContain("JSESSIONID");
     }
@@ -259,10 +270,9 @@ class KeycloakSignInEndToEndIT {
         assertThat(refused.status()).as("second browser status").isEqualTo(302);
         assertThat(refused.location()).isEqualTo(MSG141);
         assertExpiryCookie(refused);
-        assertThat(accepted.status())
-                .as("first browser status, so the refused callback exchanged nothing")
-                .isEqualTo(200);
-        assertThat(accepted.body()).contains("alice@acme.test");
+        // the first browser still passes, so the refused callback exchanged nothing
+        assertSessionRedirect(accepted, "/");
+        assertThat(boundSub("alice@acme.test")).isEqualTo(keycloakUserId("alice@acme.test"));
     }
 
     @Test
@@ -373,12 +383,8 @@ class KeycloakSignInEndToEndIT {
                     .as("the only page shown is the chooser: no review or update-profile page")
                     .hasSize(1)
                     .allMatch(url -> url.startsWith("http://fake-google.localhost:8181/authorize"));
-            assertThat(reply.status()).as("callback status").isEqualTo(200);
-            JsonNode claims = json.readTree(reply.body());
-            assertThat(claims.path("email").asText()).isEqualTo("carol@acme.test");
-            assertThat(claims.path("organization").path("acme").path("id").asText())
-                    .isEqualTo(DevAccounts.ACME_ORGANIZATION_ID);
-            assertThat(claims.path("hd").asText()).isEqualTo("acme.test");
+            assertSessionRedirect(reply, "/");
+            assertThat(boundSub("carol@acme.test")).isEqualTo(keycloakUserId("carol@acme.test"));
             assertThat(realm().organizations()
                             .get(DevAccounts.ACME_ORGANIZATION_ID)
                             .members()
