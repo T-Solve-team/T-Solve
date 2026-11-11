@@ -1193,3 +1193,6 @@
 {"ts":"2026-11-11T09:02:23.786Z","type":"feature-status","module":"chatbot","feature":"follow-up-context","from":"evaluating","to":"passing"}
 {"ts":"2026-11-11T09:02:24.626Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"0e250a6df1826245c5b34dc36faed36e2baa80e4"}
 {"ts":"2026-11-11T14:42:37.843Z","type":"spec-approved","module":"identity","specHash":"b1a41a24bb08fc7928169136fd462f952cc3600c31bb37a11343d2d6308a7cfa"}
+{"ts":"2026-11-11T16:38:37.501Z","type":"feature-status","module":"identity","feature":"user-role","from":"pending","to":"in-progress"}
+{"ts":"2026-11-11T16:38:37.735Z","type":"feature-status","module":"identity","feature":"user-role","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-11T16:38:38.012Z","type":"feature-status","module":"identity","feature":"user-role","from":"evaluating","to":"passing"}

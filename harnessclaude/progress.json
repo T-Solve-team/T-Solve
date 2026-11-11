@@ -121,7 +121,7 @@
         "remove-custom-sign-in": "passing",
         "account-sub-binding": "pending",
         "callback-workspace-checks": "passing",
-        "user-role": "pending",
+        "user-role": "passing",
         "logout-rp-initiated": "pending",
         "keycloak-provisioning": "passing",
         "keycloak-theme": "passing",
@@ -135,7 +135,7 @@
         "user-status-backend": "passing",
         "scope-checks": "passing"
       },
-      "lastUpdated": "2026-11-11T13:59:23.323Z",
+      "lastUpdated": "2026-11-11T16:38:38.010Z",
       "branch": "feat/identity",
       "repos": [
         "default"
