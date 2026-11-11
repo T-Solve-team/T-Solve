@@ -1190,3 +1190,11 @@
 {"ts":"2026-11-11T09:02:23.786Z","type":"feature-status","module":"chatbot","feature":"follow-up-context","from":"evaluating","to":"passing"}
 {"ts":"2026-11-11T09:02:24.626Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"0e250a6df1826245c5b34dc36faed36e2baa80e4"}
 {"ts":"2026-11-11T14:07:47.562Z","type":"spec-approved","module":"jira-app","specHash":"8281a56c93976e2540bea627acd9d1426c3a8677ebcaba7bd1605bdd5c87bade"}
+{"ts":"2026-11-11T14:12:06.081Z","type":"feature-status","module":"jira-app","feature":"solution-contract","from":null,"to":"pending"}
+{"ts":"2026-11-11T14:12:06.477Z","type":"feature-status","module":"jira-app","feature":"solution-ticket-storage","from":null,"to":"pending"}
+{"ts":"2026-11-11T14:12:06.902Z","type":"feature-status","module":"jira-app","feature":"jira-issue-access","from":null,"to":"pending"}
+{"ts":"2026-11-11T14:12:07.326Z","type":"feature-status","module":"jira-app","feature":"solution-ai","from":null,"to":"pending"}
+{"ts":"2026-11-11T14:12:07.816Z","type":"feature-status","module":"jira-app","feature":"solution-endpoints","from":null,"to":"pending"}
+{"ts":"2026-11-11T14:12:08.309Z","type":"feature-status","module":"jira-app","feature":"solution-forge-client","from":null,"to":"pending"}
+{"ts":"2026-11-11T14:12:08.719Z","type":"feature-status","module":"jira-app","feature":"solution-form-ui","from":null,"to":"pending"}
+{"ts":"2026-11-11T14:12:09.096Z","type":"feature-status","module":"jira-app","feature":"issue-panel-ui","from":null,"to":"pending"}
