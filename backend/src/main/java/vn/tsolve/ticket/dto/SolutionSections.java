@@ -1,5 +1,7 @@
 package vn.tsolve.ticket.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * The five Solution sections of the Solution Form (GBR-33), as the Jira App sends them; Workaround is the only
  * optional one. A missing section counts as empty.
@@ -15,7 +17,8 @@ public record SolutionSections(
         scopeOfApplicability = orEmpty(scopeOfApplicability);
     }
 
-    /** All five sections empty: the form was closed without a Solution (AC-006.2). */
+    /** All five sections empty: the form was closed without a Solution (AC-006.2). Not a JSON property. */
+    @JsonIgnore
     public boolean isEmpty() {
         return symptoms.isBlank()
                 && rootCause.isBlank()
@@ -25,6 +28,7 @@ public record SolutionSections(
     }
 
     /** The length of the five sections together, in code points, so an emoji counts once (MSG02). */
+    @JsonIgnore
     public int length() {
         return count(symptoms)
                 + count(rootCause)
