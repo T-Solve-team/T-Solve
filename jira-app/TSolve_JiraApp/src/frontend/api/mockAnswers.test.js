@@ -7,22 +7,22 @@ jest.mock('@forge/bridge', () => ({ invokeRemote: jest.fn() }));
 
 describe('mockAnswer', () => {
   it('answers a VPN question with a ticket Solution and a Wiki document', () => {
-    const answer = mockAnswer('VPN của mình cứ rớt');
+    const answer = mockAnswer('My VPN keeps dropping');
 
     expect(answer.outcome).toBe('ANSWERED');
     expect(answer.citations.map((c) => c.type)).toEqual(['TICKET_SOLUTION', 'WIKI_DOCUMENT']);
   });
 
   it('answers a password question with one Wiki document', () => {
-    expect(mockAnswer('Quên mật khẩu').citations).toHaveLength(1);
+    expect(mockAnswer('I forgot my password').citations).toHaveLength(1);
   });
 
   it('has no source for any other question', () => {
-    expect(mockAnswer('Máy in kẹt giấy')).toMatchObject({ outcome: 'NO_SOURCE', citations: [] });
+    expect(mockAnswer('The printer is jammed')).toMatchObject({ outcome: 'NO_SOURCE', citations: [] });
   });
 
-  it('fails for "lỗi mạng"', () => {
-    expect(mockAnswer('Thử lỗi mạng')).toBeNull();
+  it('fails for "network error"', () => {
+    expect(mockAnswer('Try a network error')).toBeNull();
   });
 });
 
@@ -43,8 +43,8 @@ describe('the client in mock mode', () => {
     expect(invokeRemote).not.toHaveBeenCalled();
   });
 
-  it('fails with MSG06 for "lỗi mạng"', async () => {
-    const answer = askQuestion('lỗi mạng', [], true);
+  it('fails with MSG06 for "network error"', async () => {
+    const answer = askQuestion('network error', [], true);
     jest.runAllTimers();
 
     await expect(answer).rejects.toMatchObject({ code: 'MSG06' });

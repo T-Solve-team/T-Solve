@@ -21,17 +21,17 @@ import { canSend, conversationReducer, history, initialConversation, lastAnswer,
 import { createIssueContext, sourceLabel } from './prefill';
 import { validateQuestion } from './validation';
 
-// The page's own labels (spec AC-010.1, AC-010.6 to AC-010.10; "Gửi": user, 2026-11-08). The title "Ask T-Solve" is
+// The page's own labels (spec AC-010.1, AC-010.6 to AC-010.10; English only: user, 2026-11-11). The title "Ask T-Solve" is
 // the manifest's: Jira prints it above the page, so the page shows no heading of its own (BUG-182).
-const NOTE = 'Trả lời từ Solution và Wiki của T-Solve';
+const NOTE = 'Answers from T-Solve Solutions and Wiki';
 // The card heading and the box placeholder come from the team's page design (user, 2026-11-11).
-const CARD_TITLE = 'Hỏi T-Solve trước khi tạo ticket';
-const PLACEHOLDER = 'Mô tả vấn đề của bạn';
-const SOURCES = 'Nguồn:';
-const SEND = 'Gửi';
-const SOLVED = 'Đã giải quyết';
-const CREATE = 'Chưa được, tạo ticket';
-const SOLVED_TEXT = 'Vấn đề đã được giải quyết. Cảm ơn bạn!';
+const CARD_TITLE = 'Ask T-Solve before creating a ticket';
+const PLACEHOLDER = 'Describe your problem';
+const SOURCES = 'Sources:';
+const SEND = 'Send';
+const SOLVED = 'Solved';
+const CREATE = 'Not solved, create ticket';
+const SOLVED_TEXT = 'Your problem is solved. Thank you!';
 
 const FIELD_CODES = ['MSG01', 'MSG02'];
 
