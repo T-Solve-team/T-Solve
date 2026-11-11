@@ -3,6 +3,7 @@ import type { FeatureRoute } from '@/shared/routing';
 import { AppShell } from '../layout/AppShell';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { RouteErrorPage } from '../pages/RouteErrorPage';
+import { jiraLinkPage } from '@/features/auth';
 import { platformConsoleRoutes } from '@/features/platform-console';
 import { featureRoutes } from './feature-routes';
 import { FullPageLoading } from './FullPageLoading';
@@ -64,6 +65,13 @@ export function buildRoutes(
             handle: { title: route.title },
             children: [toPageRoute(route)],
           })),
+        },
+        // The Jira link confirm page checks the session itself: outside the guards, so a signed-out person is sent
+        // through sign-in with this exact URL as returnTo (AC-001.70).
+        {
+          path: '/jira-link',
+          handle: { title: 'Link Jira account' },
+          lazy: async () => ({ Component: (await jiraLinkPage()).default }),
         },
         // Dev builds only: the mock sign-in page, reachable signed out and signed in (Q5).
         ...(import.meta.env.DEV
