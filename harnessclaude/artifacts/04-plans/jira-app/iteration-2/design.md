@@ -156,6 +156,11 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
 ## Builder Check — 2026-11-11 (inline)
 - Decided: backend package for the new endpoints is `vn.tsolve.jiraapp` (as Ask T-Solve), not `tracker`.
 - Decided: `writer` = Account full name and `writer_id` = Account id, as `ticket-review` reads both.
+- Decided (Task 5): the Department of a Project is read by `jiraapp.repository.JiraProjectDepartmentRepository`
+  (read-only SQL, like review's and identity's) because the harness gate keeps `project-integration` closed until it
+  is planned; search results are filtered again with `ScopeAccessService.canAccessDepartment` and their Ticket IDs read
+  through the new `ticket` `PublishedTicketService`. With `SEARCH_DEV_SCOPE` unset, search's `NoVisibleScope` returns
+  nothing, so the panel shows MSG04 until identity supplies a real `VisibleScope`.
 - Decided (Task 4): `ai`'s own fallback (description + last comment) is replaced by AC-002.2's (summary +
   description in Symptoms); a rewrite failure or timeout is `ai`'s `AiRewriteUnavailableException` (503 MSG68).
 - Decided (Task 3): membership uses identity's `ScopeAccessService.canAccessProject` (MEMBER needs Ticket

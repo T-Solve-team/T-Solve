@@ -278,12 +278,12 @@
         "solution-ticket-storage": "in-progress",
         "jira-issue-access": "in-progress",
         "solution-ai": "in-progress",
-        "solution-endpoints": "pending",
+        "solution-endpoints": "in-progress",
         "solution-forge-client": "pending",
         "solution-form-ui": "pending",
         "issue-panel-ui": "pending"
       },
-      "lastUpdated": "2026-11-11T18:13:43.017Z",
+      "lastUpdated": "2026-11-11T18:34:11.840Z",
       "branch": "feat/jira-app",
       "repos": [
         "default"
