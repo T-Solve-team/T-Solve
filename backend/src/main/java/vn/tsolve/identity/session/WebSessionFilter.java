@@ -125,7 +125,7 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             SecurityContextHolder.setContext(context);
             // SecurityContextHolderFilter reloads from this repository on an ASYNC re-dispatch (SseEmitter, Callable)
             new RequestAttributeSecurityContextRepository().saveContext(context, request, response);
-            // the session's Workspace stays bound for the whole request (AC-001.75); runIn unbinds in its finally
+            // the session's Workspace stays bound for the whole request (AC-001.76); runIn unbinds in its finally
             try {
                 scope.runIn(outcome.workspaceId(), () -> {
                     try {

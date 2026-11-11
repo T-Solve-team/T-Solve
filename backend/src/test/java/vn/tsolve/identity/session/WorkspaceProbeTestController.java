@@ -15,7 +15,7 @@ import vn.tsolve.identity.account.AccountRepository;
 import vn.tsolve.identity.signin.port.TenantScope;
 
 /**
- * Test-only protected endpoints that show which Workspace is bound while a request runs (AC-001.75). {@code
+ * Test-only protected endpoints that show which Workspace is bound while a request runs (AC-001.76). {@code
  * @TestComponent} keeps it out of component scanning: a test adds it with {@code @Import}.
  */
 @RestController

@@ -39,7 +39,7 @@ import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.identity.signin.port.WorkspaceRef;
 
 /**
- * AC-001.75: a signed-in request runs with its session's Workspace bound for the whole request, and nothing stays bound
+ * AC-001.76: a signed-in request runs with its session's Workspace bound for the whole request, and nothing stays bound
  * afterwards. MockMvc runs on the calling thread, so the test thread stands in for a pooled Tomcat thread.
  */
 @Import({WorkspaceProbeTestController.class, EscapingFailureTestFilter.class})
@@ -124,8 +124,8 @@ class WorkspaceBindingTest extends AbstractSessionIT {
     // ---- tests
 
     @Test
-    @DisplayName("AC-001.75 a session of Workspace A reads only A, and B only B")
-    void aSessionReadsOnlyItsWorkspace_AC_001_75() throws Exception {
+    @DisplayName("AC-001.76 a session of Workspace A reads only A, and B only B")
+    void aSessionReadsOnlyItsWorkspace_AC_001_76() throws Exception {
         UUID shared = UUID.randomUUID();
         seed(ACME, shared, "same@acme.example");
         seed(BETA, shared, "same@beta.example");
@@ -147,8 +147,8 @@ class WorkspaceBindingTest extends AbstractSessionIT {
     }
 
     @Test
-    @DisplayName("AC-001.75 the binding is gone after the request, also when the endpoint throws")
-    void noBindingAfterTheRequestEvenWhenItThrows_AC_001_75() throws Exception {
+    @DisplayName("AC-001.76 the binding is gone after the request, also when the endpoint throws")
+    void noBindingAfterTheRequestEvenWhenItThrows_AC_001_76() throws Exception {
         UUID acmeAccount = seed(ACME, UUID.randomUUID(), "a@acme.example");
         UUID betaAccount = seed(BETA, UUID.randomUUID(), "b@beta.example");
         String acme = sessionOf(ACME, acmeAccount);
@@ -197,8 +197,8 @@ class WorkspaceBindingTest extends AbstractSessionIT {
 
     @ParameterizedTest(name = "[{index}] {0}")
     @MethodSource("unboundCases")
-    @DisplayName("AC-001.75 no binding for an anonymous request, a session on api. or login., or an Operator session")
-    void noBindingWithoutAWorkspaceSession_AC_001_75(String label, String host, String session, String code)
+    @DisplayName("AC-001.76 no binding for an anonymous request, a session on api. or login., or an Operator session")
+    void noBindingWithoutAWorkspaceSession_AC_001_76(String label, String host, String session, String code)
             throws Exception {
         String cookie = null;
         if ("acme".equals(session)) {
@@ -225,9 +225,9 @@ class WorkspaceBindingTest extends AbstractSessionIT {
     }
 
     @Test
-    @DisplayName("AC-001.75 a signed-in request that needs the Workspace with none bound answers 500 MSG06, never"
+    @DisplayName("AC-001.76 a signed-in request that needs the Workspace with none bound answers 500 MSG06, never"
             + " another Workspace's data")
-    void noWorkspaceBoundAnswers500_AC_001_75() throws Exception {
+    void noWorkspaceBoundAnswers500_AC_001_76() throws Exception {
         String acme = sessionOf(ACME, seed(ACME, UUID.randomUUID(), "a@acme.example"));
         seed(BETA, UUID.randomUUID(), "b@beta.example");
 
