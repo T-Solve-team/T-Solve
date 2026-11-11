@@ -89,7 +89,7 @@ CREATE TABLE solution_draft (                         -- Solution Form Draft (GB
 | Who resolves Jira users | `JiraIssueAccess` + production `ReviewJiraAccess` adapter | separate checks per module | One rule for the form, the panel and MSG64 (user 11/11) |
 | Jira account link | Existing `JiraAskerLookup` stand-in (`TSOLVE_STUB_JIRA_ASKERS`) | new stub | Already used by Ask T-Solve; identity replaces it once |
 | Membership | `project` + `project_membership` rows (`MEMBER`/`PROJECT_MANAGER`) | config stub of 01/11 | Real tables exist on `main` |
-| Workspace of a FIT call | The default database, as Ask T-Solve and the tracker stand-in | wait for platform's cloudId registry | No cloudId → Workspace mapping on `main`; recorded as a risk |
+| Workspace of a FIT call | Stand-in `TSOLVE_STUB_JIRA_SITES` (`<cloudId>=<Workspace uuid>`), bound with `TenantScope.runIn`; an unlisted site is refused (403 MSG08) | default database; one dev Workspace for every site | User 12/11 (Task 3): identity's scope check and `ReviewJiraAccess` need a Workspace from the verified cloudId; platform replaces the stand-in |
 | Ticket storage | `ticket` row `SOLUTION_FORM`/`PENDING_REVIEW`, triggers for entry time and NOTIFY, due date in the service | a new table | It is what `ticket-review` queues and reviews |
 | Duplicate guard | Existing `uq_ticket_ticket_id` + `ON CONFLICT DO NOTHING` → 409 MSG31 | a new partial index; check-then-insert | Races (double click, retry after slow 201); the column is already unique |
 | Search | `search`'s `TicketSearchService`, PUBLISHED only | keyword `ILIKE` (01/11) | User 11/11: same results as the web |
@@ -151,10 +151,13 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
 | 10 | STORY-006 | Data integrity | Close after a Draft exists | Medium | Empty ticket created; the Draft deleted | Task 2 |
 | 11 | STORY-008 | Integration | MSG64 for a ticket written by someone else | High | No feedback (ticket-review filters by writer); panel shows status only | Task 3, Task 8 |
 | 12 | All | Integration | FIT without `principal` (app-level call) | High | 401/403, no data | Task 5 |
-| 13 | All | Integration | FIT from another Jira site (no Workspace mapping yet) | Medium | Uses the default database; recorded until platform maps cloudId → Workspace | — (risk) |
+| 13 | All | Integration | FIT from a Jira site with no registered Workspace | High | 403 MSG08 before any read (`TSOLVE_STUB_JIRA_SITES` until platform's registry) | Task 3 |
 
 ## Builder Check — 2026-11-11 (inline)
 - Decided: backend package for the new endpoints is `vn.tsolve.jiraapp` (as Ask T-Solve), not `tracker`.
 - Decided: `writer` = Account full name and `writer_id` = Account id, as `ticket-review` reads both.
+- Decided (Task 3): membership uses identity's `ScopeAccessService.canAccessProject` (MEMBER needs Ticket
+  Resolver, PROJECT_MANAGER needs Project Manager); `AccountLookupService.findName` reads a former manager's name for
+  MSG64; `ReviewDecisionApiIT`'s test `ReviewJiraAccess` is marked `@Primary` next to the production adapter.
 - Open for the team, not blocking: tracker spec STORY-007/008 (Issue Panel status, Solution Form close) overlap
   this spec's STORY-008/STORY-006 — a change request removes them from the tracker spec before Task 8 lands.

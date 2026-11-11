@@ -276,14 +276,14 @@
         "ask-page-ui": "passing",
         "solution-contract": "passing",
         "solution-ticket-storage": "in-progress",
-        "jira-issue-access": "pending",
+        "jira-issue-access": "in-progress",
         "solution-ai": "pending",
         "solution-endpoints": "pending",
         "solution-forge-client": "pending",
         "solution-form-ui": "pending",
         "issue-panel-ui": "pending"
       },
-      "lastUpdated": "2026-11-11T17:14:29.728Z",
+      "lastUpdated": "2026-11-11T17:27:18.290Z",
       "branch": "feat/jira-app",
       "repos": [
         "default"
