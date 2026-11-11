@@ -2,6 +2,7 @@ package vn.tsolve.common.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -15,6 +16,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfException;
 import vn.tsolve.common.config.MethodSecurityConfig;
@@ -26,8 +28,12 @@ public class SecurityConfig {
 
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
-    SecurityFilterChain webSecurityChain(HttpSecurity http, ObjectMapper mapper) throws Exception {
+    SecurityFilterChain webSecurityChain(
+            HttpSecurity http, ObjectMapper mapper, ObjectProvider<SessionAuthenticationFilter> sessionFilter)
+            throws Exception {
         var problems = new SecurityProblemWriter(mapper);
+        // always registered in the application (SessionConfig); absent only in a controller slice test
+        sessionFilter.ifAvailable(filter -> http.addFilterBefore(filter, AnonymousAuthenticationFilter.class));
         return http.authorizeHttpRequests(requests -> requests.dispatcherTypeMatchers(DispatcherType.ERROR)
                         .permitAll()
                         .requestMatchers(
