@@ -106,7 +106,7 @@
         "sign-in-callback": "passing",
         "workspace-session": "passing",
         "operator-sign-in": "pending",
-        "jira-link-sign-in": "pending",
+        "jira-link-sign-in": "passing",
         "project-handover": "passing",
         "space-handover": "passing",
         "account-checks": "passing",
@@ -135,7 +135,7 @@
         "user-status-backend": "passing",
         "scope-checks": "passing"
       },
-      "lastUpdated": "2026-11-11T13:59:23.323Z",
+      "lastUpdated": "2026-11-11T16:38:11.107Z",
       "branch": "feat/identity",
       "repos": [
         "default"

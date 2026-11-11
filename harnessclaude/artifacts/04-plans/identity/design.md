@@ -655,7 +655,7 @@ factor) and ends in an Operator session after the allow-list check (AC-001.28–
   K8, K11). Filled at the first sign-in; never cleared except by the runbook's rebind (Q11).
 - **Redis keys** (one Redis, persistence on, `noeviction`): `tsolve:session:<hex>` (as before; plus the field
   `id_token_hint` and `kind`), `tsolve:authreq:<hex>` (a hash: `target`, `workspace_id`, `state`, `nonce`,
-  `pkce_verifier`, `return_to`; 600 s), `tsolve:jiralink:<id>` (`workspace_id`, `tracker_account_id`; 600 s).
+  `pkce_verifier`, `return_to`; 600 s), `tsolve:jiralink:<SHA-256 hex of the id>` (`workspace_id`, `tracker_account_id`, `jira_user_name`, `site_name`; 600 s; the key is hashed like sessions and authorization requests, so a key listing leaks no usable id).
 - **Keycloak**: its own database `keycloak` and user on the existing PostgreSQL server (Q3). Realm `tsolve`: client
   `tsolve-web`; client `tsolve-provisioner` (service account); one Organization and one IdP `google-<slug>` per
   Workspace; the `organization` client scope and a mapper for the user attribute `hd`. Realm `tsolve-ops`: client
@@ -751,6 +751,17 @@ together; a start-up check reads both discovery documents, R11).
   confirms on the Workspace site. The confirm page is a web-app route (`/jira-link`); the POST needs CSRF and a
   Workspace session. Design row 46 changes from Open to mitigated: a victim who confirms without reading the page is
   still exposed; the option B (a code typed into the Jira panel) stays available if the team wants it closed.
+  Task 30a decisions (QA Q1 to Q10, KAN-234): the request also holds the Jira display name and the Jira site name from
+  the verified Forge token; a non-consuming `GET /api/v1/auth/jira-link/{requestId}` (session required; failures as
+  AC-001.72) returns `{ jiraUserName, jiraSiteName }`, Y comes from the session on the front end (AC-001.75). In 30a the
+  confirm POST consumes the request (read and delete in one step, whatever the outcome, so another Workspace's
+  request is burned) and answers 501; a second POST answers 400 MSG141; Task 30b replaces the 501. `SecurityConfig`
+  moves `WebSessionFilter` before `CsrfFilter`, so the order of answers is 401 > 403 > 400 (Task 26b edits
+  `WebSessionFilter` in parallel; the `SecurityConfig` change does not touch it). The link URL origin comes from
+  `TSOLVE_SITE_ORIGIN_TEMPLATE`. `/jira-link` is its own route outside `GuestOnly`, `RequireAuth` and
+  `RequireWorkspace`; on 401 the page calls `startSignIn` with the same `returnTo`, on 403 it shows MSG06 and offers
+  "Link" again after the CSRF cookie is refreshed; "Cancel" goes to `/`. The contract defines the 200 answer of the
+  confirm now (the client is generated once); the page's MSG75 display belongs to Task 30b.
 - **Dev and tests (K14, Q8 = A).** Compose gets `keycloak` (26.x pinned, heap capped, health check) with the database
   `keycloak`, and a WireMock `fake-google` that Keycloak brokers to as `google-acme` and `google-beta`. The realm import
   holds users that match `DevAccounts`. Tests use `testcontainers-keycloak` with the same fake issuer
@@ -849,7 +860,7 @@ listed in its banner. Every Critical or High row has its test task.
 | 118 | STORY-001 | Environment | Google has not applied the new redirect URI yet, or the client's URI limit is reached (R18) | Medium | Google refuses on its own `redirect_uri_mismatch` page and never redirects back, so neither Keycloak, the callback nor the Workspace site shows it (not a themed-page case, AC-001.67); the protection is the runbook's test sign-in before the company is told with the registered redirect URIs, which lists the URIs and says to check the limit | Task 28 (runbook) |
 | 119 | STORY-001 | Data integrity | A person's Google email changes (R19) | Low | The Account is found by `sub`; `app_user.email` is unchanged (design decision above) | Task 25a |
 | 120 | STORY-001 | State transitions | A developer database already ran the unreleased `008` and `009` (R20) | Low | `docker compose down -v`; the card notes it | Task 24 |
-| 121 | STORY-001 | Authorization | Jira-link phishing: the victim opens the attacker's link URL and confirms without reading (replaces row 46) | Critical | Mitigated, not closed: single-use 10-minute request, the person's own session, the confirm page names both accounts, CSRF POST; option B (a typed code) stays open (AC-001.69–.72) | Task 30 |
+| 121 | STORY-001 | Authorization | Jira-link phishing: the victim opens the attacker's link URL and confirms without reading (replaces row 46) | Critical | Mitigated, not closed: single-use 10-minute request, the person's own session, the confirm page names both accounts, CSRF POST; option B (a typed code) stays open (AC-001.69–.72, .75) | Task 30 |
 | 122 | STORY-001 | Authorization | Login CSRF: a callback URL (state and code) of the attacker's own sign-in is opened in the victim's browser (replaces rows 45 and 100) | Critical | The victim's browser has no matching `__Host-TSOLVE_AUTHREQ`: MSG141, no session (AC-001.6, .53) | Task 23c |
 | 123 | STORY-001 | Integration | PR #119's `UserListSessionFilter` next to `WebSessionFilter` | High | One session model; the second filter is dropped from identity (Q15) | Task 26a |
 | 124 | STORY-001 | State transitions | Sign-in tried before the test sign-in of the runbook (redirect URI not yet applied) | Medium | Google refuses; the Workspace site shows the normal sign-in error; no data-model gate (AC-001.73 retired) | Task 28 (runbook) |

@@ -16,9 +16,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfException;
+import org.springframework.security.web.csrf.CsrfFilter;
 import vn.tsolve.common.config.MethodSecurityConfig;
 
 @Configuration
@@ -33,7 +33,7 @@ public class SecurityConfig {
             throws Exception {
         var problems = new SecurityProblemWriter(mapper);
         // always registered in the application (SessionConfig); absent only in a controller slice test
-        sessionFilter.ifAvailable(filter -> http.addFilterBefore(filter, AnonymousAuthenticationFilter.class));
+        sessionFilter.ifAvailable(filter -> http.addFilterBefore(filter, CsrfFilter.class));
         return http.authorizeHttpRequests(requests -> requests.dispatcherTypeMatchers(DispatcherType.ERROR)
                         .permitAll()
                         .requestMatchers(
