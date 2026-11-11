@@ -93,7 +93,7 @@ CREATE TABLE solution_draft (                         -- Solution Form Draft (GB
 | Ticket storage | `ticket` row `SOLUTION_FORM`/`PENDING_REVIEW`, triggers for entry time and NOTIFY, due date in the service | a new table | It is what `ticket-review` queues and reviews |
 | Duplicate guard | Existing `uq_ticket_ticket_id` + `ON CONFLICT DO NOTHING` → 409 MSG31 | a new partial index; check-then-insert | Races (double click, retry after slow 201); the column is already unique |
 | Search | `search`'s `TicketSearchService`, PUBLISHED only | keyword `ILIKE` (01/11) | User 11/11: same results as the web |
-| AI | `SolutionAiService` on `LlmClient` + `TSOLVE_STUB_AI` | stub only | User 11/11 |
+| AI | `jiraapp` `SolutionFormAi` wrapping the `ai` module's `SolutionAiService` (KAN-142) with an 18 s deadline on its own pool, the AC-002.2 prefill and `TSOLVE_STUB_AI` | own prompts on `LlmClient`; stub only | User 11/11; Task 4 (12/11) found `ai` already drafts and rewrites, so its prompts are reused |
 | Open the form | Background script on own `JIRA_ISSUE_CHANGED` + panel button | panel only | RESEARCH-003: board drags send nothing, so both |
 | Retry | Client: 3 retries on network error / 5xx (1 s, 2 s, 4 s), then MSG69; a 409 after a retry counts as success | none | AC-004.4, GBR-04 |
 | Evidence | Not in the Jira App | 300 KB parts | RESEARCH-003; user 01/11, kept 11/11 |
@@ -156,6 +156,8 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
 ## Builder Check — 2026-11-11 (inline)
 - Decided: backend package for the new endpoints is `vn.tsolve.jiraapp` (as Ask T-Solve), not `tracker`.
 - Decided: `writer` = Account full name and `writer_id` = Account id, as `ticket-review` reads both.
+- Decided (Task 4): `ai`'s own fallback (description + last comment) is replaced by AC-002.2's (summary +
+  description in Symptoms); a rewrite failure or timeout is `ai`'s `AiRewriteUnavailableException` (503 MSG68).
 - Decided (Task 3): membership uses identity's `ScopeAccessService.canAccessProject` (MEMBER needs Ticket
   Resolver, PROJECT_MANAGER needs Project Manager); `AccountLookupService.findName` reads a former manager's name for
   MSG64; `ReviewDecisionApiIT`'s test `ReviewJiraAccess` is marked `@Primary` next to the production adapter.
