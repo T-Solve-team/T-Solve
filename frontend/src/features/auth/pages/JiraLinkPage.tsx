@@ -14,12 +14,16 @@ function csrfHeaders(): Record<string, string> {
   return cookie ? { 'X-XSRF-TOKEN': decodeURIComponent(cookie.slice('XSRF-TOKEN='.length)) } : {};
 }
 
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
 export function JiraLinkPage() {
   const { session, isPending } = useSession();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const requestId = searchParams.get('request') ?? '';
+  const rawRequestId = searchParams.get('request') ?? '';
+  // A malformed id is treated like a missing one and never reaches the GET path.
+  const requestId = REQUEST_ID_PATTERN.test(rawRequestId) ? rawRequestId : '';
   const returnTo = location.pathname + location.search;
   const signedIn = session !== null;
 

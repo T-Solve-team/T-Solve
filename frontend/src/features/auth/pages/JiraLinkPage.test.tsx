@@ -51,7 +51,7 @@ function signInTarget(): URL {
 
 describe('Jira link confirm page', () => {
   it('AC-001.70 sends a signed-out person through sign-in with the full link URL as returnTo', async () => {
-    const fullUrl = '/jira-link?request=Ab-_9xYz&x=1';
+    const fullUrl = '/jira-link?request=Ab-_9xYz0123456789abcdefghijKLMNOPQRSTuvwxy&x=1';
     renderApp(fullUrl, { user: null });
 
     await waitFor(() => expect(navigateTo).toHaveBeenCalledTimes(1), { timeout: 2500 });
@@ -86,22 +86,24 @@ describe('Jira link confirm page', () => {
   });
 
   it.each([
-    ['no request query', '/jira-link', 0],
-    ['a rejected request id', '/jira-link?request=bad', 1],
+    ['no request query', '/jira-link'],
+    ['a rejected request id', '/jira-link?request=bad'],
+    ['a path-traversal request value', '/jira-link?request=../../api/v1/me'],
   ] as const)(
-    'AC-001.70 shows MSG141 on load and no Link button when the request is missing or rejected',
-    async (_label, path, expectedGets) => {
-      let gets = 0;
-      server.use(
-        mock.get('*/api/v1/auth/jira-link/:requestId', () => {
-          gets += 1;
-          return problem(400, 'MSG141');
-        }),
-      );
+    'AC-001.70 shows MSG141 on load, sends no GET and shows no Link button when the request is missing or malformed (%s)',
+    async (_label, path) => {
+      const requests: string[] = [];
+      const listener = ({ request }: { request: Request }) => {
+        if (request.method === 'GET') requests.push(new URL(request.url).pathname);
+      };
+      server.events.on('request:start', listener);
       renderApp(path, { user: 'employee' });
 
       await findText(msg('MSG141'));
-      expect(gets).toBe(expectedGets);
+      server.events.removeListener('request:start', listener);
+      // only the session read (/me) may go out: no jira-link GET, and no second /me from a forged value
+      expect(requests.filter((p) => p.includes('/jira-link'))).toEqual([]);
+      expect(requests.filter((p) => p === '/api/v1/me')).toHaveLength(1);
       expect(screen.queryByRole('button', { name: LINK_BUTTON })).not.toBeInTheDocument();
       expect(jiraLinkConfirmCalls).toHaveLength(0);
     },

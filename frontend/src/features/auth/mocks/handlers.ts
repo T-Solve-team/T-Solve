@@ -3,7 +3,7 @@ import { problem } from '@/shared/api/mocks';
 
 /** The one Jira link request the mock knows (AC-001.75): any other id is MSG141. */
 export const MOCK_JIRA_LINK = {
-  requestId: 'Ab-_9xYz',
+  requestId: 'Ab-_9xYz0123456789abcdefghijKLMNOPQRSTuvwxy', // 43 characters: the shape the backend issues
   jiraUserName: 'Nguyen Van A',
   jiraSiteName: 'acme-corp',
 } as const;
