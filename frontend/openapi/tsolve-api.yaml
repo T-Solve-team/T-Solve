@@ -10,6 +10,8 @@ info:
 tags:
   - name: users
     description: Workspace User List (frontend mock proposal, SRS III.1.3.1).
+  - name: departments
+    description: Create a Department and its Space (SRS UC-12).
   - name: session
     description: Who is signed in.
   - name: review
@@ -73,6 +75,30 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
         '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/departments:
+    post:
+      tags: [departments]
+      operationId: createDepartment
+      summary: Create a Department and its Space
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateDepartmentRequest' }
+      responses:
+        '201':
+          description: Department and its Space created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DepartmentRef' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
           $ref: '#/components/responses/Problem'
   /api/v1/users:
     post:
@@ -1541,6 +1567,7 @@ components:
           ROLE_CHANGE,
           PERMISSION_CHANGE,
           TRACKER_CONFIGURATION_CHANGE,
+          DEPARTMENT_CHANGE,
         ]
     AuditEntry:
       type: object
@@ -1681,6 +1708,11 @@ components:
         spaceHandovers:
           type: array
           items: { $ref: '#/components/schemas/SpaceHandover' }
+    CreateDepartmentRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 50 }
     CreateUserRequest:
       type: object
       required: [email, roles]

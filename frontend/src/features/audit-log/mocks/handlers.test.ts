@@ -1,8 +1,22 @@
 import { AuditAction, getAuditEvents } from '@/shared/api';
 import { setDevSite, setDevUser } from '@/shared/auth';
+import { AUDIT_FIXTURE_ACTIONS } from './data';
 
 describe('audit mock contract', () => {
   beforeEach(() => setDevUser('admin'));
+
+  it("BUG-198 keeps the mock entries' actions when AuditAction gains a value", async () => {
+    const entries = await getAuditEvents({ size: 100 });
+    expect(entries.content).toHaveLength(35);
+    expect(entries.content.map((entry) => entry.action)).not.toContain(
+      AuditAction.DEPARTMENT_CHANGE,
+    );
+    expect((await getAuditEvents({ action: AuditAction.APPROVE })).page.totalElements).toBe(4);
+    expect(
+      (await getAuditEvents({ actor: 'duong.pham', action: AuditAction.APPROVE })).page
+        .totalElements,
+    ).toBe(4);
+  });
 
   it('AC-001.11 scopes before totals, sorting and pagination and strips tenant metadata', async () => {
     const first = await getAuditEvents({ page: 0, size: 20 });
@@ -14,9 +28,7 @@ describe('audit mock contract', () => {
     expect(new Set(entries.map((entry) => entry.id)).size).toBe(35);
     expect(entries.some((entry) => entry.summary === 'Foreign Workspace event')).toBe(false);
     expect(entries.every((entry) => !Object.hasOwn(entry, 'workspaceId'))).toBe(true);
-    expect(new Set(entries.map((entry) => entry.action))).toEqual(
-      new Set(Object.values(AuditAction)),
-    );
+    expect(new Set(entries.map((entry) => entry.action))).toEqual(new Set(AUDIT_FIXTURE_ACTIONS));
     for (let index = 1; index < entries.length; index++) {
       const previous = entries[index - 1];
       const current = entries[index];

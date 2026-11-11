@@ -87,7 +87,7 @@ class UserListIT {
         }
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         db.update(
-                "INSERT INTO department(public_id, name, status) VALUES (?, 'List fixture Alpha', 'ACTIVE'), (?, 'list fixture alpha', 'ACTIVE'), (?, 'List fixture hidden', 'DEACTIVATED')",
+                "INSERT INTO department(public_id, name, status) VALUES (?, 'List fixture Alpha', 'ACTIVE'), (?, 'list fixture beta', 'ACTIVE'), (?, 'List fixture hidden', 'DEACTIVATED')",
                 DEPARTMENT,
                 SECOND_DEPARTMENT,
                 INACTIVE_DEPARTMENT);

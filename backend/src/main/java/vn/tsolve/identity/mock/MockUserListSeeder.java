@@ -27,7 +27,7 @@ public class MockUserListSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         scope.runIn(properties.workspaceId(), () -> {
             for (String department : new String[] {"Customer Support", "IT Operations"}) {
-                jdbc.sql("INSERT INTO department (name, status) VALUES (:name, 'ACTIVE') ON CONFLICT (name) DO NOTHING")
+                jdbc.sql("INSERT INTO department (name, status) VALUES (:name, 'ACTIVE') ON CONFLICT DO NOTHING")
                         .param("name", department)
                         .update();
                 jdbc.sql(
