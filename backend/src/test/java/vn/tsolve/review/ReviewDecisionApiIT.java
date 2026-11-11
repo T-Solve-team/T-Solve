@@ -80,7 +80,9 @@ class ReviewDecisionApiIT {
     @TestConfiguration(proxyBeanMethods = false)
     static class WorkspaceAccessConfiguration {
 
+        // @Primary: the production JiraIssueAccessReviewAdapter (jira-app KAN-126) is also a ReviewJiraAccess.
         @Bean
+        @Primary
         ReviewJiraAccess reviewJiraAccess(TwoTenantDatabases.RoutingTenantScope scope) {
             return new ReviewJiraAccess() {
                 @Override
