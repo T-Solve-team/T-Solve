@@ -160,13 +160,13 @@ describe('KnowledgeDashboardPage', () => {
     expect(view.router.state.location.search).toBe(saved.slice(saved.indexOf('?')));
     expect(screen.getByRole('textbox', { name: 'From date' })).toHaveValue('01/01/2026');
     expect(screen.getByRole('textbox', { name: 'To date' })).toHaveValue('07/01/2026');
-    expect(screen.getByText('ITSUP')).toBeInTheDocument();
+    expect(screen.getByTitle('ITSUP')).toBeInTheDocument();
     view.unmount();
     renderApp(saved, { role: 'ADMIN' });
     await ready();
     expect(screen.getByText('Custom range')).toBeInTheDocument();
     expect(screen.getByText('IT')).toBeInTheDocument();
-    expect(screen.getByText('ITSUP')).toBeInTheDocument();
+    expect(screen.getByTitle('ITSUP')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'To date' })).toHaveValue('07/01/2026');
   });
 
@@ -212,6 +212,25 @@ describe('KnowledgeDashboardPage', () => {
     expect(requests).toHaveLength(2);
     expect(requests[0]).toBe(requests[1]);
     expect(router.state.location.search).toBe(saved.slice(saved.indexOf('?')));
+  });
+
+  it('AC-005.9 links rated tickets for a Project Manager and not for an Admin only', async () => {
+    const view = renderApp(paths.knowledgeDashboard, { role: 'PROJECT_MANAGER' });
+    expect(
+      await screen.findByRole(
+        'link',
+        { name: 'Restore access to the shared drive' },
+        { timeout: 5000 },
+      ),
+    ).toBeInTheDocument();
+    view.unmount();
+    renderApp(paths.knowledgeDashboard, { role: 'ADMIN' });
+    expect(
+      await screen.findByText('Restore access to the shared drive', {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Restore access to the shared drive' }),
+    ).not.toBeInTheDocument();
   });
 
   it('AC-005.11 explains the Department scope of gaps when a Project is selected', async () => {

@@ -1,18 +1,15 @@
 /** 9.1 Knowledge Dashboard — SRS III.9.1 */
-import { Flex, Typography } from 'antd';
+import { Flex } from 'antd';
 import { useSession } from '@/shared/auth';
-import { ErrorState, LoadingState, SectionCard } from '@/shared/ui';
+import { ErrorState, LoadingState } from '@/shared/ui';
 import { useKnowledgeDashboard } from '../api/useKnowledgeDashboard';
+import { CoverageSection } from '../components/CoverageSection';
 import { DashboardFilters } from '../components/DashboardFilters';
+import { FeedbackSection } from '../components/FeedbackSection';
+import { GapsSection } from '../components/GapsSection';
+import { OutcomesSection } from '../components/OutcomesSection';
+import { SuggestionsSection } from '../components/SuggestionsSection';
 import { useDashboardFilters } from '../hooks/useDashboardFilters';
-
-const SECTIONS = [
-  'Solution outcomes',
-  'Knowledge coverage',
-  'Reuse & feedback',
-  'Knowledge gaps',
-  'Suggestion results',
-];
 
 export function KnowledgeDashboardPage() {
   const { session, hasRole } = useSession();
@@ -40,19 +37,23 @@ export function KnowledgeDashboardPage() {
         ) : (
           dashboard.data && (
             <Flex vertical gap="middle">
-              {SECTIONS.map((title) => (
-                <SectionCard key={title}>
-                  <Typography.Title level={2}>{title}</Typography.Title>
-                  <span aria-hidden>—</span>
-                  {title === 'Knowledge gaps' && filters.projectId && (
-                    <Typography.Paragraph type="secondary">
-                      {departmentId
-                        ? 'Figures count the whole Department.'
-                        : 'Figures count the whole Workspace.'}
-                    </Typography.Paragraph>
-                  )}
-                </SectionCard>
-              ))}
+              <OutcomesSection outcomes={dashboard.data.outcomes} />
+              <CoverageSection coverage={dashboard.data.coverage} />
+              <FeedbackSection
+                feedback={dashboard.data.feedback}
+                canOpenTickets={hasRole('PROJECT_MANAGER')}
+              />
+              <GapsSection
+                gaps={dashboard.data.gaps}
+                note={
+                  filters.projectId
+                    ? departmentId
+                      ? 'Figures count the whole Department.'
+                      : 'Figures count the whole Workspace.'
+                    : undefined
+                }
+              />
+              <SuggestionsSection suggestions={dashboard.data.suggestions} />
             </Flex>
           )
         ))}
