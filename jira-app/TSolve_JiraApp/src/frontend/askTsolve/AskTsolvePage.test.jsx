@@ -140,6 +140,24 @@ describe('AskTsolvePage', () => {
     expect(box()).toHaveValue('');
   });
 
+  it('AC-010.1 shows the card heading and the box placeholder of the page design', async () => {
+    await renderLinked();
+
+    expect(screen.getByText('Hỏi T-Solve trước khi tạo ticket')).toBeInTheDocument();
+    expect(box()).toHaveAttribute('placeholder', 'Mô tả vấn đề của bạn');
+  });
+
+  it('AC-010.6 lists the sources after "Nguồn:" and offers the buttons only under the last answer', async () => {
+    await renderLinked();
+    await ask('VPN fails', ANSWERED);
+
+    await ask('Still failing', NO_SOURCE);
+
+    expect(screen.getByText('Nguồn:')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Đã giải quyết' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Chưa được, tạo ticket' })).toHaveLength(1);
+  });
+
   it('AC-010.7 shows MSG109 and both buttons for NO_SOURCE', async () => {
     await renderLinked();
 
