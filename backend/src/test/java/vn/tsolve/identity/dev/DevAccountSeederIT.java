@@ -163,8 +163,41 @@ class DevAccountSeederIT {
     /** The tenant databases are shared by the whole failsafe JVM: remove the dev Accounts this class seeded. */
     @AfterAll
     static void removeSeededDevAccounts() {
+        removeDevAccounts();
+    }
+
+    static void removeDevAccounts() {
         for (DevAccount account : DevAccounts.all()) {
             dbOf(account).update("DELETE FROM app_user WHERE email = ?", account.email());
         }
+    }
+
+    /** BUG-198: alice@acme.test stayed in the shared tenant_a and MockSignedInCallerIT counted 8 instead of 7. */
+    @Test
+    void bug198_cleanupLeavesNoDevAccountInTenantDatabases() throws Exception {
+        seeder.run(null);
+        for (DevAccount account : DevAccounts.all()) {
+            assertThat(count(dbOf(account), "app_user WHERE email = '" + account.email() + "'"))
+                    .as("%s seeded before the cleanup", account.email())
+                    .isEqualTo(1);
+        }
+
+        removeDevAccounts();
+
+        for (DevAccount account : DevAccounts.all()) {
+            for (JdbcTemplate db : List.of(TwoTenantDatabases.tenantA(), TwoTenantDatabases.tenantB())) {
+                assertThat(count(db, "app_user WHERE email = '" + account.email() + "'"))
+                        .as("%s left in a tenant database", account.email())
+                        .isZero();
+            }
+        }
+        for (JdbcTemplate db : List.of(TwoTenantDatabases.tenantA(), TwoTenantDatabases.tenantB())) {
+            assertThat(count(db, "user_role WHERE user_id NOT IN (SELECT id FROM app_user)"))
+                    .as("user_role rows left without an Account")
+                    .isZero();
+        }
+
+        // later tests of the class (and the next run) need the dev Accounts back
+        seeder.run(null);
     }
 }

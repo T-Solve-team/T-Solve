@@ -191,7 +191,8 @@ class WorkspaceBindingTest extends AbstractSessionIT {
                 Arguments.of("acme session on api.", "api.localhost", "acme", "MSG07"),
                 Arguments.of("acme session on login.", "login.localhost", "acme", "MSG07"),
                 Arguments.of("operator session on acme", "acme.localhost", "operator", "MSG123"),
-                Arguments.of("operator session on admin.", "admin.localhost", "operator", "MSG123"));
+                Arguments.of("operator session on admin.", "admin.localhost", "operator", "MSG123"),
+                Arguments.of("acme session on beta host", "beta.localhost", "acme", "MSG123"));
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
