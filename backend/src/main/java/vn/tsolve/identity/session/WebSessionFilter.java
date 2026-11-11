@@ -9,6 +9,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -19,11 +21,14 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.web.filter.OncePerRequestFilter;
+import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.SecurityProblemWriter;
 import vn.tsolve.common.security.SessionAuthenticationFilter;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.identity.account.Account;
 import vn.tsolve.identity.account.AccountRepository;
+import vn.tsolve.identity.account.AccountRole;
+import vn.tsolve.identity.account.AccountRoleRepository;
 import vn.tsolve.identity.account.AccountStatus;
 import vn.tsolve.identity.signin.AuthHosts;
 import vn.tsolve.identity.signin.IdentityClock;
@@ -47,9 +52,16 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
     private static final Logger log = LoggerFactory.getLogger(WebSessionFilter.class);
 
     /** The result of the check: the user (null = anonymous), or {@code answered} when the filter wrote the answer. */
-    private record Outcome(TSolveUser user, boolean answered) {
-        static final Outcome ANONYMOUS = new Outcome(null, false);
-        static final Outcome ANSWERED = new Outcome(null, true);
+    private record Outcome(TSolveUser user, UUID workspaceId, boolean answered) {
+        static final Outcome ANONYMOUS = new Outcome(null, null, false);
+        static final Outcome ANSWERED = new Outcome(null, null, true);
+    }
+
+    /** Carries an IOException / ServletException of the chain through {@code TenantScope.runIn}'s Supplier. */
+    private static final class ChainFailure extends RuntimeException {
+        ChainFailure(Exception cause) {
+            super(cause);
+        }
     }
 
     private final WebSessionStore store;
@@ -58,6 +70,7 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
     private final WorkspaceLookup workspaces;
     private final TenantScope scope;
     private final AccountRepository accounts;
+    private final AccountRoleRepository roleRows;
     private final IdentityClock clock;
     private final SecurityProblemWriter problems;
 
@@ -68,8 +81,10 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             WorkspaceLookup workspaces,
             TenantScope scope,
             AccountRepository accounts,
+            AccountRoleRepository roleRows,
             IdentityClock clock,
             SecurityProblemWriter problems) {
+        this.roleRows = roleRows;
         this.store = store;
         this.cookies = cookies;
         this.hosts = hosts;
@@ -110,6 +125,23 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             SecurityContextHolder.setContext(context);
             // SecurityContextHolderFilter reloads from this repository on an ASYNC re-dispatch (SseEmitter, Callable)
             new RequestAttributeSecurityContextRepository().saveContext(context, request, response);
+            // the session's Workspace stays bound for the whole request (AC-001.76); runIn unbinds in its finally
+            try {
+                scope.runIn(outcome.workspaceId(), () -> {
+                    try {
+                        chain.doFilter(request, response);
+                    } catch (IOException | ServletException e) {
+                        throw new ChainFailure(e);
+                    }
+                    return null;
+                });
+            } catch (ChainFailure e) {
+                if (e.getCause() instanceof IOException io) {
+                    throw io;
+                }
+                throw (ServletException) e.getCause();
+            }
+            return;
         }
         chain.doFilter(request, response);
     }
@@ -139,10 +171,18 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             end(response, cookie);
             return Outcome.ANONYMOUS;
         }
-        Account account = session.accountId() == null
-                ? null
-                : scope.runIn(session.workspaceId(), () -> accounts.findById(session.accountId())
-                        .orElse(null));
+        Account account = null;
+        Set<Role> roles = Set.of();
+        if (session.accountId() != null) {
+            // one scope for the Account and its Roles, read again at every request so a Role change applies next
+            account = scope.runIn(session.workspaceId(), () -> accounts.findById(session.accountId())
+                    .orElse(null));
+            if (account != null) {
+                roles = scope.runIn(session.workspaceId(), () -> roleRows.findByUserId(session.accountId()).stream()
+                        .map(AccountRole::role)
+                        .collect(Collectors.toSet()));
+            }
+        }
         if (account == null) {
             end(response, cookie);
             return Outcome.ANONYMOUS;
@@ -155,9 +195,9 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
         if (!"1".equals(request.getHeader(BACKGROUND_HEADER))) {
             store.touch(cookie, now);
         }
-        // Roles come with Task 26b; until then the user holds the implicit Employee role only
         String fullName = account.getFullName() == null ? "" : account.getFullName();
-        return new Outcome(new TSolveUser(account.getId(), account.getEmail(), fullName, Set.of()), false);
+        return new Outcome(
+                new TSolveUser(account.getId(), account.getEmail(), fullName, roles), session.workspaceId(), false);
     }
 
     private void end(HttpServletResponse response, String cookie) {

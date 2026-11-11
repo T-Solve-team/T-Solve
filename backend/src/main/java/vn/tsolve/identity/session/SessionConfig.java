@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import vn.tsolve.common.security.SecurityProblemWriter;
 import vn.tsolve.identity.account.AccountRepository;
+import vn.tsolve.identity.account.AccountRoleRepository;
 import vn.tsolve.identity.signin.AuthHosts;
 import vn.tsolve.identity.signin.IdentityClock;
 import vn.tsolve.identity.signin.port.TenantScope;
@@ -23,10 +25,16 @@ class SessionConfig {
             WorkspaceLookup workspaces,
             TenantScope scope,
             AccountRepository accounts,
+            AccountRoleRepository roles,
             IdentityClock clock,
             ObjectMapper mapper) {
         return new WebSessionFilter(
-                store, cookies, hosts, workspaces, scope, accounts, clock, new SecurityProblemWriter(mapper));
+                store, cookies, hosts, workspaces, scope, accounts, roles, clock, new SecurityProblemWriter(mapper));
+    }
+
+    @Bean
+    AccountRoleRepository accountRoleRepository(JdbcTemplate jdbc) {
+        return new AccountRoleRepository(jdbc);
     }
 
     /** Boot would also add a filter bean to the servlet container, where it would run outside the web chain. */

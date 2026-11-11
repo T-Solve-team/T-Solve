@@ -251,4 +251,5 @@ Master registry of all artifacts in this workspace.
 | — | research | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-120-scout.md |
 | — | decisions | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-120-decisions.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-26a-web-session.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-26b-user-role.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-30a-jira-link-sign-in.md |
