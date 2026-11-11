@@ -34,6 +34,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.AuthSecurityConfig;
 import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.session.SessionCookie;
+import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
 import vn.tsolve.identity.signin.port.WorkspaceRef;
 
@@ -48,6 +50,8 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
     KeycloakClientRegistrations.class,
     RedisAuthorizationRequestRepository.class,
     OidcCallbackHandler.class,
+    WebSessionStore.class,
+    SessionCookie.class,
     SignInStartControllerTest.RecordingRepositoryConfig.class
 })
 @TestPropertySource(
@@ -242,8 +246,8 @@ class SignInStartControllerTest {
 
     @ParameterizedTest(name = "[{index}] {0}")
     @ValueSource(strings = {"nodomain.localhost", "blankdomain.localhost", "noorg.localhost", "blankorg.localhost"})
-    @DisplayName(
-            "AC-001.48 creates no authorization request and no cookie for a Workspace with no Google domain or no Organization id")
+    @DisplayName("AC-001.48 creates no authorization request and no cookie for a Workspace with no Google domain or no"
+            + " Organization id")
     void createsNoAuthorizationRequestForAWorkspaceWithNoGoogleDomainOrOrganizationId_AC_001_48(String host)
             throws Exception {
         MockHttpServletResponse response = perform(start(host));

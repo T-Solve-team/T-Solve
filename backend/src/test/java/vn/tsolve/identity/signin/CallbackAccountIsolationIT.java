@@ -27,10 +27,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.session.SessionTestFixtures;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
 import vn.tsolve.identity.signin.port.TenantScope;
 
@@ -66,6 +69,11 @@ class CallbackAccountIsolationIT {
         }
     }
 
+    @DynamicPropertySource
+    static void redisProps(DynamicPropertyRegistry registry) {
+        SessionTestFixtures.registerRedis(registry);
+    }
+
     @Autowired
     private TenantScope scope;
 
@@ -96,7 +104,8 @@ class CallbackAccountIsolationIT {
 
     @Test
     @DisplayName(
-            "AC-001.15 / edge 24 a sign-in on Workspace A with the email of Workspace B's Account finds nothing and leaves B's Account untouched")
+            "AC-001.15 / edge 24 a sign-in on Workspace A with the email of Workspace B's Account finds nothing and"
+                    + " leaves B's Account untouched")
     void aSignInOnAFindsNothingOfBsAccount_AC_001_15_edge24() {
         JdbcTemplate a = TwoTenantDatabases.tenantA();
         JdbcTemplate b = TwoTenantDatabases.tenantB();
@@ -205,9 +214,9 @@ class CallbackAccountIsolationIT {
                 .isEqualTo("kc-sub-1");
         assertThat(b.queryForObject("SELECT count(*) FROM app_user", Integer.class))
                 .isZero();
-        // before Task 26a there is no session: outside dev the callback still answers MSG06
+        // Task 26a: the passing sign-in creates the session and redirects to /
         assertThat(response.getStatus()).isEqualTo(302);
-        assertThat(response.getHeader(HttpHeaders.LOCATION)).isEqualTo("/login?error=MSG06");
+        assertThat(response.getHeader(HttpHeaders.LOCATION)).isEqualTo("/");
     }
 
     @Test
