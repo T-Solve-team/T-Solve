@@ -295,15 +295,15 @@
         "dashboard-outcomes": "passing",
         "dashboard-reuse-gaps": "passing",
         "dashboard-page": "passing",
-        "dashboard-sections": "pending"
+        "dashboard-sections": "passing"
       },
-      "lastUpdated": "2026-11-11T09:36:43.762Z",
+      "lastUpdated": "2026-11-11T13:52:46.593Z",
       "branch": "feat/dashboard-audit",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "a07d227ce75622dfe47b1384679fb60a83764bbc"
+        "default": "46ae603f6822b4133fe056c98bb34b56a6c2b24f"
       }
     },
     "platform": {
