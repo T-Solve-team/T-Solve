@@ -702,7 +702,7 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 - Modify: `backend/src/main/java/vn/tsolve/identity/jiralink/JiraLinkController.java`, `backend/src/main/resources/db/changelog/db.changelog-master.xml`
 - Test: `backend/src/test/java/vn/tsolve/identity/jiralink/JiraAccountLinkRepositoryIT.java`; the success cases added to `backend/src/test/java/vn/tsolve/identity/jiralink/JiraLinkControllerTest.java`
 **Dependencies:** Task 30a merged; Task 26b merged (the Workspace database binding).
-**PR / Jira:** branch `feat/KAN-234-identity-jira-account-link-record`; a new Jira Subtask of KAN-234 (to be created).
+**PR / Jira:** branch `feat/KAN-234-identity-jira-account-link-record`; a new Jira Subtask of KAN-234 (KAN-310).
 **Estimated size:** small (4 production files incl. the changeset); about 4 tests
 **Verification:** Tests name AC-001.71; design row 121. Targeted: `cd backend && mvn -Dtest=JiraLinkControllerTest -Dit.test=JiraAccountLinkRepositoryIT verify`; full `mvn verify`.
 
