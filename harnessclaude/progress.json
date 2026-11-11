@@ -275,15 +275,15 @@
         "ask-conversation-logic": "passing",
         "ask-page-ui": "passing",
         "solution-contract": "passing",
-        "solution-ticket-storage": "in-progress",
-        "jira-issue-access": "in-progress",
-        "solution-ai": "in-progress",
-        "solution-endpoints": "in-progress",
-        "solution-forge-client": "in-progress",
-        "solution-form-ui": "in-progress",
-        "issue-panel-ui": "in-progress"
+        "solution-ticket-storage": "passing",
+        "jira-issue-access": "passing",
+        "solution-ai": "passing",
+        "solution-endpoints": "passing",
+        "solution-forge-client": "evaluating",
+        "solution-form-ui": "evaluating",
+        "issue-panel-ui": "evaluating"
       },
-      "lastUpdated": "2026-11-11T18:45:40.617Z",
+      "lastUpdated": "2026-11-11T19:33:24.397Z",
       "branch": "feat/jira-app",
       "repos": [
         "default"

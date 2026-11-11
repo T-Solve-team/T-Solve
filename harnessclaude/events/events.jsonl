@@ -1208,3 +1208,14 @@
 {"ts":"2026-11-11T18:38:16.329Z","type":"feature-status","module":"jira-app","feature":"solution-forge-client","from":"pending","to":"in-progress"}
 {"ts":"2026-11-11T18:43:20.231Z","type":"feature-status","module":"jira-app","feature":"solution-form-ui","from":"pending","to":"in-progress"}
 {"ts":"2026-11-11T18:45:40.619Z","type":"feature-status","module":"jira-app","feature":"issue-panel-ui","from":"pending","to":"in-progress"}
+{"ts":"2026-11-11T19:33:19.286Z","type":"feature-status","module":"jira-app","feature":"solution-ticket-storage","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-11T19:33:19.826Z","type":"feature-status","module":"jira-app","feature":"solution-ticket-storage","from":"evaluating","to":"passing"}
+{"ts":"2026-11-11T19:33:20.312Z","type":"feature-status","module":"jira-app","feature":"jira-issue-access","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-11T19:33:20.877Z","type":"feature-status","module":"jira-app","feature":"jira-issue-access","from":"evaluating","to":"passing"}
+{"ts":"2026-11-11T19:33:21.423Z","type":"feature-status","module":"jira-app","feature":"solution-ai","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-11T19:33:22.101Z","type":"feature-status","module":"jira-app","feature":"solution-ai","from":"evaluating","to":"passing"}
+{"ts":"2026-11-11T19:33:22.590Z","type":"feature-status","module":"jira-app","feature":"solution-endpoints","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-11T19:33:23.062Z","type":"feature-status","module":"jira-app","feature":"solution-endpoints","from":"evaluating","to":"passing"}
+{"ts":"2026-11-11T19:33:23.539Z","type":"feature-status","module":"jira-app","feature":"solution-forge-client","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-11T19:33:23.990Z","type":"feature-status","module":"jira-app","feature":"solution-form-ui","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-11T19:33:24.401Z","type":"feature-status","module":"jira-app","feature":"issue-panel-ui","from":"in-progress","to":"evaluating"}
