@@ -2,7 +2,7 @@ import { AuditAction, type AuditEntry } from '@/shared/api';
 
 export const AUDIT_WORKSPACE = '00000000-0000-4000-8000-0000000000c1';
 const uuid = (n: number) => `53000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-// Keep fixture actions stable when the enum grows (BUG-198).
+// Keep fixture actions stable when the enum grows (BUG-200).
 export const AUDIT_FIXTURE_ACTIONS = [
   AuditAction.APPROVE,
   AuditAction.REJECT,

@@ -5,7 +5,7 @@ import { AUDIT_FIXTURE_ACTIONS } from './data';
 describe('audit mock contract', () => {
   beforeEach(() => setDevUser('admin'));
 
-  it("BUG-198 keeps the mock entries' actions when AuditAction gains a value", async () => {
+  it("BUG-200 keeps the mock entries' actions when AuditAction gains a value", async () => {
     const entries = await getAuditEvents({ size: 100 });
     expect(entries.content).toHaveLength(35);
     expect(entries.content.map((entry) => entry.action)).not.toContain(
