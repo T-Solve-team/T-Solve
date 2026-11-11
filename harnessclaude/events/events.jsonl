@@ -1220,3 +1220,6 @@
 {"ts":"2026-11-11T20:07:51.127Z","type":"feature-status","module":"workspace","feature":"rename-department-api","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-11T20:07:51.388Z","type":"feature-status","module":"workspace","feature":"rename-department-api","from":"evaluating","to":"passing"}
 {"ts":"2026-11-11T20:11:50.535Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"8835184a81adba8ca7c33540c3a354e7510f8b97"}
+{"ts":"2026-11-11T20:12:09.560Z","type":"feature-status","module":"workspace","feature":"rename-department-screen","from":"pending","to":"in-progress"}
+{"ts":"2026-11-11T21:16:55.511Z","type":"feature-status","module":"workspace","feature":"rename-department-screen","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-11T21:16:55.778Z","type":"feature-status","module":"workspace","feature":"rename-department-screen","from":"evaluating","to":"passing"}
