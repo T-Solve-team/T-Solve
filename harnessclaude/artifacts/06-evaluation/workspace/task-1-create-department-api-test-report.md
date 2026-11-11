@@ -93,4 +93,4 @@ The backend has no coverage tool set up, and the spec sets no threshold, so cove
 | Bug | Severity | Status |
 |-----|----------|--------|
 | (new, not yet in `docs/bug-log.md`) Name made only of Unicode whitespace (U+2003, U+3000) passes `@NotBlank`, and an empty-named Department, Space and audit entry are written (AC-001.5); 51 such characters get MSG02, not MSG01 (AC-001.6) | High | Open — review issue 1. The developer logs it in `docs/bug-log.md` with the fix (the reviewer writes only evaluation files) |
-| BUG-198 (audit-log mock actions shift when `AuditAction` grows) | Medium | Fixed in this change; `handlers.test.ts` "BUG-198 …" passes |
+| BUG-200 (audit-log mock actions shift when `AuditAction` grows) | Medium | Fixed in this change; `handlers.test.ts` "BUG-200 …" passes |

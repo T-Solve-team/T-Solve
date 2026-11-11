@@ -10,20 +10,20 @@
 
 ### Working on: create-department-api (KAN-120, STORY-001)
 
-**Who wrote what.** Codex wrote all code and tests in three runs (`codex exec -s workspace-write --ephemeral`, prompts in the scratchpad): A, contract and the AC-001.16 test; B, changesets 027 and 028, the enum value, the seeder and `UserListIT` one-line changes, compile stubs and every backend test; C, production code and the `ACTION_LABELS` entry. Claude reviewed each diff against the spec and design, ran every check, ran `npm ci`, `generate:api` and `spotless:apply`, and wrote the BUG-198 row and this log. Codex was not blocked by its sandbox.
+**Who wrote what.** Codex wrote all code and tests in three runs (`codex exec -s workspace-write --ephemeral`, prompts in the scratchpad): A, contract and the AC-001.16 test; B, changesets 027 and 028, the enum value, the seeder and `UserListIT` one-line changes, compile stubs and every backend test; C, production code and the `ACTION_LABELS` entry. Claude reviewed each diff against the spec and design, ran every check, ran `npm ci`, `generate:api` and `spotless:apply`, and wrote the BUG-200 row and this log. Codex was not blocked by its sandbox.
 
 **Test-first evidence.** With stubs in place: `audit-filters.test.ts` failed with `expected undefined to be 'Department change'`. `DepartmentControllerTest` failed 9 of 10 (status 501; the anonymous case already gives 401 through `SecurityConfig`), `DepartmentServiceImplTest` failed 4 of 4, and `DepartmentCreationIT` failed 9 of 9 on assertions (501, wrong exception type). None of these were compile errors.
 
 **Files**
 - New: `backend/src/main/java/vn/tsolve/workspace/{controller/DepartmentController, service/DepartmentService, service/impl/DepartmentServiceImpl, repository/DepartmentRepository, dto/CreateDepartmentRequest}.java`, changesets `027-workspace-audit-department-change.sql`, `028-workspace-department-name-lower-unique.sql`, tests `DepartmentControllerTest`, `DepartmentServiceImplTest`, `DepartmentCreationIT`, generated `departments/` and `model/createDepartmentRequest.ts`.
-- Modified: `db.changelog-master.xml`, `AuditAction.java`, `MockUserListSeeder.java` (`ON CONFLICT DO NOTHING`), `UserListIT.java` (`'list fixture beta'`), `tsolve-api.yaml`, generated `index.ts`, `index.msw.ts`, `model/auditAction.ts`, `model/index.ts`, `audit-filters.ts`, `audit-filters.test.ts`, `docs/bug-log.md` (BUG-198).
+- Modified: `db.changelog-master.xml`, `AuditAction.java`, `MockUserListSeeder.java` (`ON CONFLICT DO NOTHING`), `UserListIT.java` (`'list fixture beta'`), `tsolve-api.yaml`, generated `index.ts`, `index.msw.ts`, `model/auditAction.ts`, `model/index.ts`, `audit-filters.ts`, `audit-filters.test.ts`, `docs/bug-log.md` (BUG-200).
 
 **Decisions**
 - The service body, SQL and changesets are verbatim from the master design. No abstraction was added beyond it.
 - Local `node_modules` had orval 8.41.0 while the lockfile pins 8.46.0. That gave `generate:api` a 27-file formatting diff unrelated to the contract. `npm ci` (lockfile, no tracked change) fixed it; afterwards the generated diff is only the four files and two new paths above.
 
 **Deviations**
-- `docs/bug-log.md` gained the BUG-198 row (root CLAUDE.md: log every bug). It is not in Task 1's list, but it is in the workspace `paths`.
+- `docs/bug-log.md` gained the BUG-200 row (root CLAUDE.md: log every bug). It is not in Task 1's list, but it is in the workspace `paths`.
 
 ### Verify
 
@@ -34,7 +34,7 @@
 | `npm run format:check` | exit 0 |
 | `npm run lint` | exit 0 (1 existing warning in `TicketListFilters.tsx`) |
 | `npm run typecheck` | exit 0 |
-| `npm run test` | **exit 1: 1489 passed, 2 failed** (BUG-198: `audit-log/mocks/handlers.test.ts` AC-001.17 and `AuditLogPage.test.tsx` AC-001.3). `audit-filters.test.ts` alone: 12/12 passed |
+| `npm run test` | **exit 1: 1489 passed, 2 failed** (BUG-200: `audit-log/mocks/handlers.test.ts` AC-001.17 and `AuditLogPage.test.tsx` AC-001.3). `audit-filters.test.ts` alone: 12/12 passed |
 | `npm run build` | exit 0 |
 | `bun harnessclaude/hooks/sdd.ts trace workspace STORY-001` | **exit 1: 15/16** |
 
@@ -62,7 +62,7 @@ trace workspace (STORY-001): 15/16 acceptance criteria have a test
 
 ### Blockers (need the main session or the user)
 
-1. **BUG-198, frontend tests red.** `audit-log/mocks/data.ts:16` assigns mock actions by `index % Object.values(AuditAction).length`, so the 11th value reshuffles the 34 entries and two dashboard-audit tests lose their counts. The fix belongs in `data.ts`, which is outside Task 1's list and the workspace `paths`. Recommended: add that file to the task (and `paths`), and cycle over a fixed list of the ten earlier actions there, with a BUG-198 test. Alternative: update the two expected counts (weaker).
+1. **BUG-200, frontend tests red.** `audit-log/mocks/data.ts:16` assigns mock actions by `index % Object.values(AuditAction).length`, so the 11th value reshuffles the 34 entries and two dashboard-audit tests lose their counts. The fix belongs in `data.ts`, which is outside Task 1's list and the workspace `paths`. Recommended: add that file to the task (and `paths`), and cycle over a fixed list of the ten earlier actions there, with a BUG-200 test. Alternative: update the two expected counts (weaker).
 2. **Trace ambiguity for AC-001.16.** `dashboard-audit` claims `frontend/src/features/audit-log/**`, and its spec has its own AC-001.16, so trace cannot credit `audit-filters.test.ts` to workspace. A test under `features/workspace` would need a cross-feature import (guideline 01). Fixing this needs a harness decision, such as narrowing one module's `paths`, or accepting it as a known trace exception in the review.
 
 ### Proposed commit message
@@ -86,7 +86,7 @@ Resolve the two blockers, then re-run `npm run test` and trace, then commit afte
 
 **Done**
 - D23: Claude reverted `audit-filters.test.ts` (`git checkout`) and changed workspace `module.md` `paths`: removed `audit-filters.test.ts`, added `audit-log/mocks/data.ts` and `audit-log/mocks/handlers.test.ts` (D24). Codex wrote `frontend/src/features/workspace/pages/AuditActionLabel.test.tsx` (`AC-001.16 labels the DEPARTMENT_CHANGE action "Department change" on the Audit Log screen`). It renders `paths.auditLog` through `renderApp` as ADMIN and finds the option in the Action filter, with no import from `features/audit-log`. The label already existed, so to prove the test can fail Claude changed the label to "Dept change" for one run: the test failed (`Unable to find role="option" and name "Department change"`). The file was then restored byte for byte.
-- D24: Codex added `BUG-198 keeps the mock entries' actions when AuditAction gains a value` to `handlers.test.ts`. It failed on the old data (`expected [...] to not include 'DEPARTMENT_CHANGE'`). Codex then changed `mocks/data.ts` to cycle over the ten earlier actions. Claude set BUG-198 to Fixed in `docs/bug-log.md` and ran Prettier on the two new tests.
+- D24: Codex added `BUG-200 keeps the mock entries' actions when AuditAction gains a value` to `handlers.test.ts`. It failed on the old data (`expected [...] to not include 'DEPARTMENT_CHANGE'`). Codex then changed `mocks/data.ts` to cycle over the ten earlier actions. Claude set BUG-200 to Fixed in `docs/bug-log.md` and ran Prettier on the two new tests.
 
 **Checks** (frontend/, Node 24.22.2; backend untouched this round)
 
@@ -101,14 +101,14 @@ Resolve the two blockers, then re-run `npm run test` and trace, then commit afte
 | `bun harnessclaude/hooks/sdd.ts trace workspace STORY-001` | **exit 0, 16/16**; AC-001.16 is now `features/workspace/pages/AuditActionLabel.test.tsx` |
 
 ### Blocker (needs a decision)
-The remaining failure is dashboard-audit's `handlers.test.ts` `AC-001.11 scopes before totals, sorting and pagination and strips tenant metadata`. It asserts that the set of actions in the mock equals `new Set(Object.values(AuditAction))`, so it requires a `DEPARTMENT_CHANGE` entry. D24's fixed ten-action list and the BUG-198 test require that there is none, so both cannot pass without changing an existing assertion, which neither D24 nor the plan says. Options:
+The remaining failure is dashboard-audit's `handlers.test.ts` `AC-001.11 scopes before totals, sorting and pagination and strips tenant metadata`. It asserts that the set of actions in the mock equals `new Set(Object.values(AuditAction))`, so it requires a `DEPARTMENT_CHANGE` entry. D24's fixed ten-action list and the BUG-200 test require that there is none, so both cannot pass without changing an existing assertion, which neither D24 nor the plan says. Options:
 1. (recommended) Change that one assertion in AC-001.11 to compare against the fixture's ten actions, not the whole enum. The AC is about scoping, totals and order, and the set check only guards fixture coverage.
-2. Add one `DEPARTMENT_CHANGE` fixture entry beyond the 34. This changes AC-001.11's totals (35 → 36) and the page counts, and the BUG-198 test must drop its "no DEPARTMENT_CHANGE" check.
+2. Add one `DEPARTMENT_CHANGE` fixture entry beyond the 34. This changes AC-001.11's totals (35 → 36) and the page counts, and the BUG-200 test must drop its "no DEPARTMENT_CHANGE" check.
 
 ## Session 2026-11-11 (later): decision D25
 
 ### Working on: create-department-api, AC-001.11 conflict
-- D25 took option 1. Codex exported the ten-action list from `audit-log/mocks/data.ts` as `AUDIT_FIXTURE_ACTIONS`, used it in `data.ts`, and pointed the AC-001.11 set assertion in `handlers.test.ts` at it. The BUG-198 test is unchanged. Claude ran Prettier on `handlers.test.ts` (one line wrap).
+- D25 took option 1. Codex exported the ten-action list from `audit-log/mocks/data.ts` as `AUDIT_FIXTURE_ACTIONS`, used it in `data.ts`, and pointed the AC-001.11 set assertion in `handlers.test.ts` at it. The BUG-200 test is unchanged. Claude ran Prettier on `handlers.test.ts` (one line wrap).
 - Checks (frontend/, Node 24.22.2): `npm run test` exit 0, **86 files, 1492/1492 passed**. `typecheck` exit 0. `lint` exit 0 (same existing warning). `format:check` exit 0 after Prettier. `build` and `generate:api` (no extra diff) passed in the previous round, and nothing they read has changed since except test files and a mock-data constant.
 - `bun harnessclaude/hooks/sdd.ts trace workspace STORY-001`: exit 0, 16/16.
 - Backend not re-run (untouched since `mvn verify` passed: 1256 unit, 430 IT).

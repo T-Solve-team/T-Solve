@@ -86,7 +86,7 @@ Review, then commit after the user agrees.
 ## Session 2026-11-11 (main session, after review attempt 1 passed)
 
 - `useDepartmentMutations.ts`: MSG05 is shown before the Departments query is refetched, and the hook returns the invalidation promise (review issue 3, guideline 06 §3, D29).
-- Review issue 5 logged as BUG-199 in `docs/bug-log.md` (shared/, FE Lead), not fixed here.
+- Review issue 5 logged as BUG-201 in `docs/bug-log.md` (shared/, FE Lead), not fixed here.
 - Re-run: format:check, lint, typecheck ok; tests 1509/1509; build ok; generate:api unchanged; trace STORY-002 14/14.
 - A browser check in mock mode was not possible: the built-in browser pane could not register the MSW Service Worker.
 
