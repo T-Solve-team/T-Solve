@@ -6,6 +6,12 @@ modules:
         endpoint: tsolve-ui-endpoint
       render: native
       title: Ask T-Solve
+  jira:issueViewBackgroundScript:
+    - key: tsolve-solution-form-watch
+      resource: solution-form-watch
+      resolver:
+        endpoint: tsolve-ui-endpoint
+      render: native
   jira:issuePanel:
     - key: tsolve-jiraapp-hello-world-issue-panel
       resource: main
@@ -39,6 +45,8 @@ resources:
     path: src/frontend/index.jsx
   - key: ask-tsolve
     path: src/frontend/askTsolve/index.jsx
+  - key: solution-form-watch
+    path: src/frontend/background/index.jsx
 permissions:
   scopes:
     - read:jira-work
