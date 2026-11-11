@@ -244,3 +244,4 @@ Master registry of all artifacts in this workspace.
 | — | review | identity | fail | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-review.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-review2.md |
 | — | test-report | identity | pass-with-open-format | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-test-report.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-26a-web-session.md |
