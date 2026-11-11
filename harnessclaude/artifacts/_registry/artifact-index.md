@@ -244,3 +244,9 @@ Master registry of all artifacts in this workspace.
 | — | review | identity | fail | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-review.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-review2.md |
 | — | test-report | identity | pass-with-open-format | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-test-report.md |
+| — | spec | workspace | draft | artifacts/03-modules/workspace/spec.md |
+| — | design | workspace | draft | artifacts/04-plans/workspace/design.md |
+| — | design | workspace | draft | artifacts/04-plans/workspace/iteration-1/design.md |
+| — | tasks | workspace | draft | artifacts/04-plans/workspace/iteration-1/tasks.md |
+| — | research | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-120-scout.md |
+| — | decisions | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-120-decisions.md |
