@@ -1185,3 +1185,4 @@
 {"ts":"2026-11-10T17:19:54.930Z","type":"feature-status","module":"identity","feature":"callback-workspace-checks","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-10T17:19:55.179Z","type":"feature-status","module":"identity","feature":"callback-workspace-checks","from":"evaluating","to":"passing"}
 {"ts":"2026-11-10T17:21:50.901Z","type":"spec-approved","module":"identity","specHash":"e6974c2f3d4b0d2cc3cec74d1d8d6710bb17507ef22d1743de60bf995bc7d668"}
+{"ts":"2026-11-11T13:56:46.118Z","type":"spec-approved","module":"tracker","specHash":"713b8feebeab7d07826e0b0535cf4148cd8adbfead38c936fb1c7935de3942f9"}

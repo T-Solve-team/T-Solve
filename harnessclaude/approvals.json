@@ -833,8 +833,8 @@
     }
   },
   "tracker": {
-    "specHash": "d6067341599e4132f355e68fff4afb6c15f16dd5ce5c8ca7eb9f66f46d5fbdbf",
-    "approvedAt": "2026-11-07T15:51:59.653Z",
+    "specHash": "713b8feebeab7d07826e0b0535cf4148cd8adbfead38c936fb1c7935de3942f9",
+    "approvedAt": "2026-11-11T13:56:46.116Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a request to the Jira App API carries a FIT whose signature verifies against Atlassian's JWKS, whose issuer is , whose audience equals the configured app id, which is within its / window, and which has a , THE tracker SHALL pass the request to its handler with the cloudId and the principal (if any).",
@@ -872,6 +872,7 @@
       "AC-011.7": "IF the issue's suggestion result no longer exists or already has a suggested solution when the job runs, THEN THE tracker SHALL not ask search and SHALL change no suggestion field; a stored suggestion whose comment is still missing is posted (AC-012.3).",
       "AC-011.8": "WHERE the new issue has the label  (created by the Chatbot), THE tracker SHALL record it and enqueue its suggestion job like any other issue (GBR-40).",
       "AC-011.9": "WHERE the  job runner is not enabled, THE tracker SHALL run the suggestion job in its own process instead, without retries, and still respond 202 without waiting for it.",
+      "AC-011.10": "WHERE the new issue has the label  (created from the Jira App's Ask T-Solve page, jira-app AC-010.9), THE tracker SHALL record it (AC-003.1) and enqueue no suggestion job, so no MSG80 comment (STORY-012) repeats the answer the reporter already tried, which is in the issue's description.",
       "AC-012.1": "WHEN the suggestion job has stored a suggestion (AC-011.4), THE tracker SHALL add one comment to the issue in Jira with the service account, whose text is MSG80 with  = the stored suggested solution and without its \"Related documents\" sentence.",
       "AC-012.2": "THE MSG80 comment SHALL never name, link or quote a source the suggestion was built from — neither a Wiki document nor a ticket; the sources stay only in the issue's suggestion result.",
       "AC-012.3": "WHEN the comment is added, THE tracker SHALL store the Jira comment id and the time in the issue's suggestion result (, ); WHEN a suggestion job runs for a suggestion result that has a suggested solution and no comment id, THE tracker SHALL add the comment without asking search again.",
