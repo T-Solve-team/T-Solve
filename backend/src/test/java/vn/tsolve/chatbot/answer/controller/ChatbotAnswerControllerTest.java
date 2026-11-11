@@ -12,12 +12,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,6 +88,53 @@ class ChatbotAnswerControllerTest {
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("question"))
                 .andExpect(jsonPath("$.fieldErrors[0].code").value("MSG02"));
         verifyNoInteractions(answers);
+    }
+
+    @ParameterizedTest
+    @MethodSource("badHistoryBodies")
+    @WithTSolveUser
+    void rejectsBadHistory_AC_007_3(String body) throws Exception {
+        mvc.perform(post(PATH)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG06"))
+                .andExpect(jsonPath("$.fieldErrors").doesNotExist());
+        verifyNoInteractions(answers);
+    }
+
+    private static Stream<String> badHistoryBodies() {
+        String turn = "{\"question\":\"old question\",\"answer\":\"old answer\"}";
+        return Stream.of(
+                "{\"question\":\"question\"}",
+                "{\"question\":\"question\",\"history\":null}",
+                "{\"question\":\"question\",\"history\":[" + String.join(",", Collections.nCopies(11, turn)) + "]}",
+                "{\"question\":\"question\",\"history\":[{\"question\":\"" + "q".repeat(1001)
+                        + "\",\"answer\":\"answer\"}]}",
+                "{\"question\":\"question\",\"history\":[{\"question\":\"old question\",\"answer\":\""
+                        + "a".repeat(10001) + "\"}]}",
+                "{\"question\":\"question\",\"history\":[null]}",
+                "{\"question\":\"question\",\"history\":[{\"question\":null,\"answer\":\"answer\"}]}",
+                "{\"question\":\"question\",\"history\":[{\"question\":\"old question\",\"answer\":null}]}");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    @WithTSolveUser
+    void acceptsHistoryWithinLimits_AC_007_3(boolean emptyTurns) throws Exception {
+        String turn = "{\"question\":\"" + (emptyTurns ? "" : "q".repeat(1000)) + "\",\"answer\":\""
+                + (emptyTurns ? "" : "a".repeat(10000)) + "\"}";
+        when(answers.ask(any(), any()))
+                .thenReturn(new ChatbotAnswerResponse(ANSWER_ID, Outcome.NO_SOURCE, "", List.of()));
+
+        mvc.perform(post(PATH)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\"question\",\"history\":["
+                                + String.join(",", Collections.nCopies(10, turn)) + "]}"))
+                .andExpect(status().isOk());
+        verify(answers).ask(any(), any());
     }
 
     @Test

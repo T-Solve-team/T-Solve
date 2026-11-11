@@ -1212,3 +1212,7 @@
 {"ts":"2026-11-11T13:52:31.125Z","type":"feature-status","module":"dashboard-audit","feature":"dashboard-sections","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-11T13:52:31.533Z","type":"feature-status","module":"dashboard-audit","feature":"dashboard-sections","from":"evaluating","to":"passing"}
 {"ts":"2026-11-11T13:52:46.594Z","type":"commit-recorded","module":"dashboard-audit","repo":"default","sha":"46ae603f6822b4133fe056c98bb34b56a6c2b24f"}
+{"ts":"2026-11-11T07:40:07.704Z","type":"feature-status","module":"chatbot","feature":"follow-up-context","from":"pending","to":"in-progress"}
+{"ts":"2026-11-11T09:02:23.254Z","type":"feature-status","module":"chatbot","feature":"follow-up-context","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-11T09:02:23.786Z","type":"feature-status","module":"chatbot","feature":"follow-up-context","from":"evaluating","to":"passing"}
+{"ts":"2026-11-11T09:02:24.626Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"0e250a6df1826245c5b34dc36faed36e2baa80e4"}

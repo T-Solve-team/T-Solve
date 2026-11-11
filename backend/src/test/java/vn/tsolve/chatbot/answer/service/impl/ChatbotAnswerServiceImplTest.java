@@ -102,10 +102,7 @@ class ChatbotAnswerServiceImplTest {
             assertThat(Thread.currentThread()).isNotSameAs(requestThread);
             return "Answer [1]";
         });
-        var response = service.ask(
-                USER,
-                new ChatbotQuestionRequest(
-                        "  question  ", List.of(new ChatbotTurnRequest("old question", "old answer"))));
+        var response = service.ask(USER, new ChatbotQuestionRequest("  question  ", List.of()));
         assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
         verify(embeddings).embed(List.of("question"));
         verify(solutions).nearest(vector, 0.7, 5);
@@ -113,7 +110,53 @@ class ChatbotAnswerServiceImplTest {
         ArgumentCaptor<List<ChatMessage>> prompt = ArgumentCaptor.forClass(List.class);
         verify(llm).chat(prompt.capture(), isNull());
         assertThat(prompt.getValue()).hasSize(2);
-        assertThat(prompt.getValue().toString()).doesNotContain("old question", "old answer");
+    }
+
+    @Test
+    void prependsLastQuestionForRetrieval_AC_007_1() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
+
+        service.ask(
+                USER,
+                new ChatbotQuestionRequest(
+                        "  What about Windows?  ",
+                        List.of(
+                                new ChatbotTurnRequest("first question", "first answer"),
+                                new ChatbotTurnRequest("  How do I connect to VPN?  ", "last answer"))));
+
+        verify(embeddings).embed(List.of("How do I connect to VPN?\nWhat about Windows?"));
+        ArgumentCaptor<List<ChatMessage>> prompt = ArgumentCaptor.forClass(List.class);
+        verify(llm).chat(prompt.capture(), isNull());
+        assertThat(prompt.getValue()).hasSize(6);
+        assertThat(prompt.getValue().get(1).content()).isEqualTo("<turn-question>first question</turn-question>");
+        assertThat(prompt.getValue().get(2).content()).isEqualTo("<turn-answer>first answer</turn-answer>");
+        assertThat(prompt.getValue().getLast().content()).contains("<question>What about Windows?</question>");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void storesOnlyTheNewQuestion_AC_007_4(boolean hasSources) {
+        when(embeddings.embed(any())).thenReturn(List.of(vector));
+        if (hasSources) {
+            withSolution();
+            when(llm.chat(any(), isNull())).thenReturn("New answer [1]");
+        }
+
+        var response = service.ask(
+                USER,
+                new ChatbotQuestionRequest(
+                        "  new question  ", List.of(new ChatbotTurnRequest("earlier question", "earlier answer [1]"))));
+
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getQuestion()).isEqualTo("new question");
+        assertThat(saved.getValue().getAnswerText()).isEqualTo(hasSources ? "New answer [1]" : "");
+        assertThat(response.outcome()).isEqualTo(hasSources ? Outcome.ANSWERED : Outcome.NO_SOURCE);
+        if (!hasSources) {
+            verifyNoInteractions(llm);
+            assertThat(response.citations()).isEmpty();
+        }
     }
 
     @Test
@@ -168,7 +211,9 @@ class ChatbotAnswerServiceImplTest {
     void answersNoSourceWhenNoMarker_AC_005_5(String text) {
         withSolution();
         when(llm.chat(any(), isNull())).thenReturn(text);
-        var response = service.ask(USER, question());
+        var response = service.ask(
+                USER,
+                new ChatbotQuestionRequest("question", List.of(new ChatbotTurnRequest("old question", "Old [9]"))));
         assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
         assertThat(response.text()).isEmpty();
         assertThat(response.citations()).isEmpty();
