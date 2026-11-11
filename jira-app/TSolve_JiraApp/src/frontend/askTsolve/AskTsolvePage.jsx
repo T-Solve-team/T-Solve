@@ -3,7 +3,6 @@ import React, { useEffect, useReducer, useState } from 'react';
 import {
   Box,
   Button,
-  ButtonGroup,
   ErrorMessage,
   Icon,
   Inline,
@@ -146,7 +145,7 @@ export function AskTsolvePage() {
   return (
     <Box xcss={cardStyle}>
       <Stack space="space.200">
-        <Inline spread="space-between" alignBlock="center" shouldWrap>
+        <Inline spread="space-between" alignBlock="baseline" shouldWrap>
           <Inline space="space.100" alignBlock="center">
             <Icon glyph="ai-chat" label="" />
             <Text weight="semibold">{CARD_TITLE}</Text>
@@ -161,7 +160,7 @@ export function AskTsolvePage() {
             <SectionMessage appearance="warning">
               <Text>{message('MSG62')}</Text>
             </SectionMessage>
-            <ButtonGroup>{createButton}</ButtonGroup>
+            <Inline space="space.100">{createButton}</Inline>
           </Stack>
         )}
         {access === 'linked' && conversation.status === 'solved' && (
@@ -174,12 +173,12 @@ export function AskTsolvePage() {
             {conversation.turns.map((turn, index) => (
               <Turn key={index} turn={turn}>
                 {answered && index === lastIndex && (
-                  <ButtonGroup>
+                  <Inline space="space.100" shouldWrap>
                     <Button iconBefore="check-mark" onClick={() => dispatch({ type: 'solve' })}>
                       {SOLVED}
                     </Button>
                     {createButton}
-                  </ButtonGroup>
+                  </Inline>
                 )}
               </Turn>
             ))}
@@ -196,7 +195,7 @@ export function AskTsolvePage() {
                 <Text>{message('MSG06')}</Text>
               </SectionMessage>
             )}
-            {conversation.status === 'failed' && <ButtonGroup>{createButton}</ButtonGroup>}
+            {conversation.status === 'failed' && <Inline space="space.100">{createButton}</Inline>}
             <Stack space="space.050">
               <Inline space="space.100" alignBlock="end">
                 <Box xcss={growStyle}>
