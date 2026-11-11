@@ -1205,3 +1205,6 @@
 {"ts":"2026-11-11T17:27:18.295Z","type":"feature-status","module":"jira-app","feature":"jira-issue-access","from":"pending","to":"in-progress"}
 {"ts":"2026-11-11T18:13:43.019Z","type":"feature-status","module":"jira-app","feature":"solution-ai","from":"pending","to":"in-progress"}
 {"ts":"2026-11-11T18:34:11.843Z","type":"feature-status","module":"jira-app","feature":"solution-endpoints","from":"pending","to":"in-progress"}
+{"ts":"2026-11-11T18:38:16.329Z","type":"feature-status","module":"jira-app","feature":"solution-forge-client","from":"pending","to":"in-progress"}
+{"ts":"2026-11-11T18:43:20.231Z","type":"feature-status","module":"jira-app","feature":"solution-form-ui","from":"pending","to":"in-progress"}
+{"ts":"2026-11-11T18:45:40.619Z","type":"feature-status","module":"jira-app","feature":"issue-panel-ui","from":"pending","to":"in-progress"}
