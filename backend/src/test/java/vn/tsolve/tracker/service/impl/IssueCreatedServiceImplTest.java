@@ -149,6 +149,27 @@ class IssueCreatedServiceImplTest {
         verify(jobQueue).enqueue(new SuggestionJobRequest(SUGGESTION_ID, "ITSUP-1"));
     }
 
+    @Test
+    void recordsButEnqueuesNoJobForAnIssueThatAlreadyAskedTSolve_AC_011_10() {
+        given(projectService.findActivePublicIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(PROJECT));
+        given(repository.saveAndFlush(any())).willReturn(mock(SuggestionResult.class));
+
+        service().receive(payload("VPN drops every hour", adf("Reconnect fails."), List.of("vpn", "tsolve-asked")));
+
+        verify(repository).saveAndFlush(any());
+        verifyNoInteractions(jobQueue);
+    }
+
+    @Test
+    void enqueuesTheJobOfAnIssueWithoutLabels_AC_011_10() {
+        given(projectService.findActivePublicIdByJiraProjectKey("ITSUP")).willReturn(Optional.of(PROJECT));
+        savesRowWithId(SUGGESTION_ID);
+
+        service().receive(payload("VPN drops every hour", adf("Reconnect fails."), null));
+
+        verify(jobQueue).enqueue(new SuggestionJobRequest(SUGGESTION_ID, "ITSUP-1"));
+    }
+
     // The database gives the row its UUID key on insert; the job is queued with that id.
     private void savesRowWithId(UUID id) {
         SuggestionResult row = mock(SuggestionResult.class);

@@ -34,6 +34,12 @@ public record IssueCreatedPayload(@NotNull @Valid Issue issue) {
         return summary == null ? "" : summary;
     }
 
+    /** Whether the issue carries this label; an event without labels has none. */
+    public boolean hasLabel(String label) {
+        List<String> labels = issue.fields().labels();
+        return labels != null && labels.contains(label);
+    }
+
     /** The description as ADF, or {@code null} when the event has none. */
     public JsonNode description() {
         return issue.fields().description();

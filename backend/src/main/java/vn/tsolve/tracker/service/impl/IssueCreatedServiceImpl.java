@@ -22,6 +22,9 @@ public class IssueCreatedServiceImpl implements IssueCreatedService {
 
     static final String UNIQUE_ISSUE = "uq_suggestion_issue";
 
+    /** The label the Jira App's Ask T-Solve page puts on the issue it prefills (jira-app AC-010.9). */
+    static final String ASKED_LABEL = "tsolve-asked";
+
     private static final Logger log = LoggerFactory.getLogger(IssueCreatedServiceImpl.class);
 
     private final ProjectService projectService;
@@ -65,7 +68,13 @@ public class IssueCreatedServiceImpl implements IssueCreatedService {
             log.info("Issue created already recorded: {}", payload.issueKey());
             return;
         }
-        // Labels are not looked at: an issue created by the Chatbot is suggested like any other (AC-011.8).
+        // An issue created from the Jira App's Ask T-Solve page already carries T-Solve's answer in its description,
+        // so a suggestion comment would repeat it (AC-011.10). Other labels, `tsolve-chatbot` included, are
+        // suggested like any other issue (AC-011.8).
+        if (payload.hasLabel(ASKED_LABEL)) {
+            log.info("Suggestion job skipped, issue already asked T-Solve: {}", payload.issueKey());
+            return;
+        }
         suggestionJobQueue.enqueue(new SuggestionJobRequest(saved.getId(), payload.issueKey()));
     }
 
