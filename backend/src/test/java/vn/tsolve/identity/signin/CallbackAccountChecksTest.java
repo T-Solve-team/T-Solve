@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.Cookie;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,12 +29,13 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.HttpHeaders;
-import org.springframework.mock.env.MockEnvironment;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import vn.tsolve.identity.account.AccountSignInService;
 import vn.tsolve.identity.account.AccountSignInService.Result;
 import vn.tsolve.identity.account.AccountSignInService.Status;
+import vn.tsolve.identity.session.SessionCookie;
+import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
 import vn.tsolve.identity.signin.port.RecordingTenantScope;
 import vn.tsolve.identity.signin.port.WorkspaceRef;
@@ -76,10 +78,16 @@ class CallbackAccountChecksTest {
             // bound to the sub), so a test fails if the handler leans on signIn to refuse a missing email.
             return stubbed;
         });
-        MockEnvironment environment = new MockEnvironment();
-        environment.setActiveProfiles("dev");
+        WebSessionStore sessions = mock(WebSessionStore.class);
+        when(sessions.create(any())).thenReturn("session-cookie-value-for-the-unit-test-00");
         handler = new OidcCallbackHandler(
-                environment, workspaces, new AuthHosts(SignInTestFixtures.properties()), scope, accounts);
+                workspaces,
+                new AuthHosts(SignInTestFixtures.properties()),
+                scope,
+                accounts,
+                sessions,
+                new SessionCookie(),
+                new IdentityClock(Clock.systemUTC()));
     }
 
     // ---- helpers
@@ -131,10 +139,9 @@ class CallbackAccountChecksTest {
             MockHttpServletRequest request, MockHttpServletResponse response, String location, CapturedOutput output) {
         assertThat(response.getStatus()).as("status").isEqualTo(302);
         assertThat(response.getHeaders(HttpHeaders.LOCATION)).as("Location").containsExactly(location);
-        assertThat(response.getForwardedUrl()).as("forward").isNull();
-        assertThat(request.getAttribute(OidcCallbackHandler.CLAIMS_ATTRIBUTE))
-                .as("claims attribute")
-                .isNull();
+        assertThat(SignInTestFixtures.setCookie(response, SessionCookie.NAME))
+                .as("session cookie")
+                .isEmpty();
         assertCookieExpired(response);
         assertThat(output.getAll()).as("log").doesNotContain(EMAIL).doesNotContain(SUB);
     }
@@ -238,7 +245,7 @@ class CallbackAccountChecksTest {
 
         verify(accounts).signIn(SUB, EMAIL, NAME);
         assertThat(boundWhenCalled).containsExactly(ACME.id());
-        assertThat(response.getForwardedUrl()).isEqualTo(OidcCallbackHandler.DEV_CLAIMS_PATH);
+        assertThat(response.getHeader(HttpHeaders.LOCATION)).isEqualTo("/");
     }
 
     @Test
@@ -338,7 +345,7 @@ class CallbackAccountChecksTest {
         assertThat(workspaces.askedHosts()).containsOnly("acme.localhost");
         assertThat(workspaces.askedIds()).doesNotContain(BETA.id());
         verify(accounts).signIn(SUB, EMAIL, NAME);
-        assertThat(response.getForwardedUrl()).isEqualTo(OidcCallbackHandler.DEV_CLAIMS_PATH);
+        assertThat(response.getHeader(HttpHeaders.LOCATION)).isEqualTo("/");
     }
 
     @Test
@@ -366,17 +373,18 @@ class CallbackAccountChecksTest {
             throws Exception {
         Map<String, Object> claims = validFor(ACME);
         switch (failure) {
-            case SIGN_IN_THROWS -> doThrow(
-                            new IllegalStateException("boom for " + EMAIL + " sub " + SUB + " name " + NAME))
-                    .when(accounts)
-                    .signIn(any(), any(), any());
-            case DATABASE_DOWN -> doThrow(new DataAccessResourceFailureException("connection refused for " + EMAIL))
-                    .when(accounts)
-                    .signIn(any(), any(), any());
-            case WRAPPED_ROOT_CAUSE -> doThrow(new IllegalStateException(
-                            "wrapped for " + EMAIL, new java.sql.SQLException("root for " + SUB)))
-                    .when(accounts)
-                    .signIn(any(), any(), any());
+            case SIGN_IN_THROWS ->
+                doThrow(new IllegalStateException("boom for " + EMAIL + " sub " + SUB + " name " + NAME))
+                        .when(accounts)
+                        .signIn(any(), any(), any());
+            case DATABASE_DOWN ->
+                doThrow(new DataAccessResourceFailureException("connection refused for " + EMAIL))
+                        .when(accounts)
+                        .signIn(any(), any(), any());
+            case WRAPPED_ROOT_CAUSE ->
+                doThrow(new IllegalStateException("wrapped for " + EMAIL, new java.sql.SQLException("root for " + SUB)))
+                        .when(accounts)
+                        .signIn(any(), any(), any());
         }
         MockHttpServletRequest request = request("acme.localhost");
 
@@ -483,6 +491,6 @@ class CallbackAccountChecksTest {
         MockHttpServletResponse response = callback("acme.localhost", claims);
 
         verify(accounts).signIn(SUB, EMAIL, NAME);
-        assertThat(response.getForwardedUrl()).isEqualTo(OidcCallbackHandler.DEV_CLAIMS_PATH);
+        assertThat(response.getHeader(HttpHeaders.LOCATION)).isEqualTo("/");
     }
 }

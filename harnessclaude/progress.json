@@ -104,9 +104,9 @@
         "login-screen": "passing",
         "sign-in-start": "passing",
         "sign-in-callback": "passing",
-        "workspace-session": "pending",
+        "workspace-session": "passing",
         "operator-sign-in": "pending",
-        "jira-link-sign-in": "pending",
+        "jira-link-sign-in": "passing",
         "project-handover": "passing",
         "space-handover": "passing",
         "account-checks": "passing",
@@ -121,7 +121,7 @@
         "remove-custom-sign-in": "passing",
         "account-sub-binding": "pending",
         "callback-workspace-checks": "passing",
-        "user-role": "pending",
+        "user-role": "passing",
         "logout-rp-initiated": "pending",
         "keycloak-provisioning": "passing",
         "keycloak-theme": "passing",
@@ -135,7 +135,7 @@
         "user-status-backend": "passing",
         "scope-checks": "passing"
       },
-      "lastUpdated": "2026-11-10T17:19:55.177Z",
+      "lastUpdated": "2026-11-11T17:03:11.850Z",
       "branch": "feat/identity",
       "repos": [
         "default"
