@@ -82,6 +82,49 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
             @Param("scope") String scope,
             @Param("today") LocalDate today);
 
+    /** A Published ticket with its Department, as the Jira App lists and previews it (jira-app AC-008.4, AC-009.1). */
+    interface PublishedTicketRow {
+        UUID getId();
+
+        String getTicketId();
+
+        String getTitle();
+
+        UUID getDepartmentId();
+
+        String getDepartmentName();
+
+        String getSymptoms();
+
+        String getRootCause();
+
+        String getResolutionSteps();
+
+        String getWorkaround();
+
+        String getScope();
+    }
+
+    /**
+     * The PUBLISHED tickets of an ACTIVE Department among these public ids. A ticket refers to its Project by public id
+     * or by the legacy hex form of the numeric id, as in search's ranking query.
+     */
+    @Query(
+            value =
+                    """
+            select t.public_id as "id", t.source_ticket_id as "ticketId", t.title as "title",
+                   d.public_id as "departmentId", d.name as "departmentName",
+                   t.symptoms as "symptoms", t.root_cause as "rootCause", t.resolution_steps as "resolutionSteps",
+                   t.workaround as "workaround", t.scope as "scope"
+            from ticket t
+            join project p on (p.public_id = t.project_id
+                or lpad(to_hex(p.project_id), 32, '0')::uuid = t.project_id)
+            join department d on d.department_id = p.department_id
+            where t.public_id in (:ids) and t.status = 'PUBLISHED' and d.status = 'ACTIVE'
+            """,
+            nativeQuery = true)
+    List<PublishedTicketRow> findPublished(@Param("ids") Collection<UUID> publicIds);
+
     /** The status of the ticket whose Ticket ID is this issue key, whatever its source (jira-app AC-001.2, AC-008.2). */
     @Query("select t.status from Ticket t where t.ticketId = :issueKey")
     Optional<TicketStatus> findStatusByTicketId(@Param("issueKey") String issueKey);

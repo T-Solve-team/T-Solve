@@ -2,6 +2,7 @@ package vn.tsolve.jiraapp.service;
 
 import java.util.function.Function;
 import vn.tsolve.common.security.JiraAppPrincipal;
+import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.jiraapp.dto.JiraIssueContext;
 
 /**
@@ -15,4 +16,10 @@ public interface JiraIssueAccess {
      * without a Jira user, or from a site with no registered Workspace, is refused with 403 MSG08 before any read.
      */
     <T> T inIssue(JiraAppPrincipal caller, String issueKey, Function<JiraIssueContext, T> work);
+
+    /**
+     * Binds the site's Workspace and runs {@code work} for the linked user, for calls that are not about one issue
+     * (AI rewrite, ticket search and preview). Refused like {@link #inIssue}; an unlinked account answers 403 MSG62.
+     */
+    <T> T asUser(JiraAppPrincipal caller, Function<TSolveUser, T> work);
 }

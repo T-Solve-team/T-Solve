@@ -9,6 +9,7 @@ import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.identity.service.ScopeAccessService;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.jiraapp.dto.JiraIssueContext;
+import vn.tsolve.jiraapp.exception.JiraAskerNotLinkedException;
 import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
 import vn.tsolve.jiraapp.service.JiraAskerLookup;
 import vn.tsolve.jiraapp.service.JiraIssueAccess;
@@ -39,11 +40,23 @@ public class JiraIssueAccessImpl implements JiraIssueAccess {
 
     @Override
     public <T> T inIssue(JiraAppPrincipal caller, String issueKey, Function<JiraIssueContext, T> work) {
+        return tenantScope.runIn(workspace(caller), () -> work.apply(context(caller, issueKey)));
+    }
+
+    @Override
+    public <T> T asUser(JiraAppPrincipal caller, Function<TSolveUser, T> work) {
+        return tenantScope.runIn(
+                workspace(caller),
+                () -> work.apply(users.find(caller.cloudId(), caller.accountId())
+                        .orElseThrow(JiraAskerNotLinkedException::new)));
+    }
+
+    // Refused before anything is read: no Jira user, or a site with no registered Workspace (403 MSG08).
+    private UUID workspace(JiraAppPrincipal caller) {
         if (caller == null || caller.accountId() == null || caller.accountId().isBlank()) {
             throw new JiraIssueAccessDeniedException();
         }
-        UUID workspace = workspaces.workspaceOf(caller.cloudId()).orElseThrow(JiraIssueAccessDeniedException::new);
-        return tenantScope.runIn(workspace, () -> work.apply(context(caller, issueKey)));
+        return workspaces.workspaceOf(caller.cloudId()).orElseThrow(JiraIssueAccessDeniedException::new);
     }
 
     private JiraIssueContext context(JiraAppPrincipal caller, String issueKey) {
