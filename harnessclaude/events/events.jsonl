@@ -1185,3 +1185,4 @@
 {"ts":"2026-11-10T17:19:54.930Z","type":"feature-status","module":"identity","feature":"callback-workspace-checks","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-10T17:19:55.179Z","type":"feature-status","module":"identity","feature":"callback-workspace-checks","from":"evaluating","to":"passing"}
 {"ts":"2026-11-10T17:21:50.901Z","type":"spec-approved","module":"identity","specHash":"e6974c2f3d4b0d2cc3cec74d1d8d6710bb17507ef22d1743de60bf995bc7d668"}
+{"ts":"2026-11-11T13:38:05.844Z","type":"spec-approved","module":"jira-app","specHash":"fe3bdea2138f91327864601c6983a8f0d38c625302d0ee643787575d540f897e"}
