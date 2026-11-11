@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -36,6 +37,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import vn.tsolve.common.config.MethodSecurityConfig;
 import vn.tsolve.common.exception.BusinessRuleException;
@@ -43,8 +45,10 @@ import vn.tsolve.ticket.dto.FillSolutionRequest;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.ImportResultResponse;
 import vn.tsolve.ticket.dto.MessageRef;
+import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
+import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.exception.ImportFailedException;
 import vn.tsolve.ticket.exception.UploadTooLargeException;
 import vn.tsolve.ticket.service.CsvImportService;
@@ -76,7 +80,7 @@ class ImportControllerTest {
     void confirmReturnsTheImportResult_AC_004_4() throws Exception {
         when(confirms.confirm("pm@company.vn", 42L))
                 .thenReturn(new ImportResultResponse(
-                        7L, 2, 3L, new MessageRef("MSG32", Map.of("created", 2, "skipped", 3L))));
+                        7L, 2, 3L, new MessageRef("MSG32", Map.of("created", 2, "skipped", 3L)), null));
 
         mvc.perform(post("/api/v1/imports/previews/42/confirm").with(csrf()))
                 .andExpect(status().isOk())
@@ -108,8 +112,14 @@ class ImportControllerTest {
             new MockMultipartFile("file", "tickets.csv", "text/csv", "ticket_id\n".getBytes());
 
     private static ImportPreviewResponse preview() {
-        return ImportPreviewResponse.of(
-                42L, PROJECT, "tickets.csv", ImportType.WITH_SOLUTION, 2, 0, 0, 0, new PageImpl<>(List.of()));
+        return preview(ImportType.WITH_SOLUTION);
+    }
+
+    private static ImportPreviewResponse preview(ImportType importType) {
+        ImportPreview preview =
+                new ImportPreview("pm@company.vn", PROJECT, TicketSource.CSV, importType, "tickets.csv", Instant.EPOCH);
+        ReflectionTestUtils.setField(preview, "id", 42L);
+        return ImportPreviewResponse.of(preview, 2, 0, 0, 0, new PageImpl<>(List.of()));
     }
 
     @Test
@@ -287,16 +297,7 @@ class ImportControllerTest {
     @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
     void fillSolutionPassesTheRequestToTheService_AC_013_1() throws Exception {
         when(previews.fillSolution(eq("pm@company.vn"), eq(42L), any()))
-                .thenReturn(ImportPreviewResponse.of(
-                        42L,
-                        UUID.fromString("00000000-0000-0000-0000-000000000001"),
-                        "tickets.csv",
-                        ImportType.WITHOUT_SOLUTION,
-                        2,
-                        0,
-                        0,
-                        0,
-                        new PageImpl<>(List.of())));
+                .thenReturn(preview(ImportType.WITHOUT_SOLUTION));
 
         mvc.perform(post("/api/v1/imports/previews/42/fill-solution")
                         .with(csrf())

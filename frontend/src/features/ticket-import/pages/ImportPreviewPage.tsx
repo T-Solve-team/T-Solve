@@ -1,21 +1,23 @@
-/** 5.2 Import Preview — SRS III.5.2 */
+/** 5.2 Import Preview — SRS III.5.2, shared by a CSV upload and a Jira pull */
 import { Alert, Button, Flex, Typography } from 'antd';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, useBlocker, useNavigate, useSearchParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetImportPreviewQueryKey,
   getGetImportPreviewRowsQueryKey,
   useGetImportPreview,
+  type ApiError,
   type ImportPreviewRowSummary,
 } from '@/shared/api';
+import { formatDate, TICKET_SOURCE_LABELS } from '@/shared/lib';
 import { isMsgCode, msg, showMessage } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { ConfirmDialog, ErrorState, LoadingState, SectionCard, StatCard } from '@/shared/ui';
 import { ImportPreviewTable } from '../components/ImportPreviewTable';
 import { ImportTicketPreviewModal } from '../components/ImportTicketPreviewModal';
 import { SolutionFormModal } from '../components/SolutionFormModal';
-import { useConfirmPreview, useRemovePreviewRows } from '../hooks/useImportPreview';
+import { useConfirmPreview, useRemovePreviewRows, useSaveDraft } from '../hooks/useImportPreview';
 
 /** The address keeps the preview id (D11); anything but a positive whole number opens Import Tickets (AC-009.11). */
 export function ImportPreviewPage() {
@@ -31,6 +33,7 @@ function ImportPreview({ previewId }: { previewId: number }) {
   const preview = useGetImportPreview(previewId);
   const remove = useRemovePreviewRows(previewId);
   const confirm = useConfirmPreview();
+  const saveDraft = useSaveDraft(previewId);
   const [selectedRows, setSelectedRows] = useState<
     Pick<ImportPreviewRowSummary, 'rowNo' | 'status'>[]
   >([]);
@@ -52,6 +55,31 @@ function ImportPreview({ previewId }: { previewId: number }) {
       currentLocation.pathname !== nextLocation.pathname,
   );
 
+  /** To Import Tickets without MSG37. The preview is gone, so browser Back must not show it from the cache. */
+  function leave() {
+    isFinished.current = true;
+    // Removed once the page has left, so its own queries do not refetch it.
+    void Promise.resolve(navigate(paths.importTickets)).then(() => {
+      for (const queryKey of [
+        getGetImportPreviewQueryKey(previewId),
+        getGetImportPreviewRowsQueryKey(previewId),
+      ]) {
+        queryClient.removeQueries({ queryKey });
+      }
+    });
+  }
+
+  const isJira = preview.data?.source === 'JIRA_IMPORT';
+  // A new pull in another tab deletes this Jira preview: any 404 about it goes back to Import Tickets (design Edge 10).
+  const leaveIfGone = (error: ApiError) => {
+    if (isJira && error.status === 404 && !isFinished.current) leave();
+  };
+  const isGone = isJira && preview.error?.status === 404;
+  // Declared after useBlocker, so the blocker already knows the preview could not be read.
+  useEffect(() => {
+    if (isGone && !isFinished.current) leave();
+  });
+
   if (preview.isPending) return <LoadingState />;
   if (preview.isError) {
     const { error } = preview;
@@ -65,7 +93,7 @@ function ImportPreview({ previewId }: { previewId: number }) {
   function handleRemove() {
     remove.mutate(
       { previewId, data: { rowNumbers: selectedRowNos } },
-      { onSuccess: () => setSelectedRows([]) },
+      { onSuccess: () => setSelectedRows([]), onError: leaveIfGone },
     );
   }
 
@@ -78,22 +106,11 @@ function ImportPreview({ previewId }: { previewId: number }) {
         onSettled: () => {
           isConfirming.current = false;
         },
-        onSuccess: () => {
-          isFinished.current = true;
-          // The confirmed preview is gone: browser Back must not show it from the cache. Removed once
-          // the page has left, so its own queries do not refetch it.
-          void Promise.resolve(navigate(paths.importTickets)).then(() => {
-            for (const queryKey of [
-              getGetImportPreviewQueryKey(previewId),
-              getGetImportPreviewRowsQueryKey(previewId),
-            ]) {
-              queryClient.removeQueries({ queryKey });
-            }
-          });
-        },
+        onSuccess: leave,
         onError: (error) => {
           // The global MSG07 dialog is the one message for a 401 (guideline 06 §6).
           if (error.status !== 401) showMessage(error.code, error.params);
+          leaveIfGone(error);
         },
       },
     );
@@ -101,6 +118,8 @@ function ImportPreview({ previewId }: { previewId: number }) {
 
   const {
     fileName,
+    resolvedFrom,
+    resolvedTo,
     importType,
     validCount,
     errorCount,
@@ -110,6 +129,7 @@ function ImportPreview({ previewId }: { previewId: number }) {
   } = preview.data;
   const isWithoutSolution = importType === 'WITHOUT_SOLUTION';
   const unreadyCount = needsSolutionCount + errorCount;
+  // A Jira preview is WITHOUT_SOLUTION too: Finish waits for every issue's Solution (AC-002.10).
   const isConfirmBlocked = isWithoutSolution && unreadyCount > 0;
   const canFill =
     selectedRows.length > 0 &&
@@ -123,10 +143,18 @@ function ImportPreview({ previewId }: { previewId: number }) {
     <Flex vertical gap="middle">
       <SectionCard title="Summary">
         <Flex vertical gap="middle">
-          <Typography.Text strong>{fileName}</Typography.Text>
+          {isJira ? (
+            <Flex gap="middle" wrap>
+              <Typography.Text strong>{TICKET_SOURCE_LABELS.JIRA_IMPORT}</Typography.Text>
+              <Typography.Text>Resolved from: {formatDate(resolvedFrom)}</Typography.Text>
+              <Typography.Text>Resolved to: {formatDate(resolvedTo)}</Typography.Text>
+            </Flex>
+          ) : (
+            <Typography.Text strong>{fileName}</Typography.Text>
+          )}
           <Flex gap="middle" wrap>
             <StatCard label="Valid" value={validCount} />
-            <StatCard label="Error" value={errorCount} />
+            {!isJira && <StatCard label="Error" value={errorCount} />}
             <StatCard label="Removed" value={removedCount} />
             {isWithoutSolution && <StatCard label="Needs Solution" value={needsSolutionCount} />}
           </Flex>
@@ -167,14 +195,26 @@ function ImportPreview({ previewId }: { previewId: number }) {
           />
           <Flex gap="small" justify="flex-end">
             <Button onClick={() => void navigate(paths.importTickets)}>Cancel</Button>
+            {/* No Save as draft for a CSV preview (import-ticket-list D13). */}
+            {isJira && (
+              <Button
+                disabled={remove.isPending || confirm.isPending}
+                loading={saveDraft.isPending}
+                onClick={() => saveDraft.mutate({ previewId }, { onError: leaveIfGone })}
+              >
+                Save as draft
+              </Button>
+            )}
             <Button
               type="primary"
-              // One of Remove and Confirm at a time: a Confirm during a Remove could import a removed row.
-              disabled={validCount === 0 || isConfirmBlocked || remove.isPending}
+              // One action at a time: a Confirm during a Remove could import a removed row.
+              disabled={
+                validCount === 0 || isConfirmBlocked || remove.isPending || saveDraft.isPending
+              }
               loading={confirm.isPending}
               onClick={handleConfirm}
             >
-              Confirm
+              {isJira ? 'Finish' : 'Confirm'}
             </Button>
           </Flex>
         </Flex>
@@ -200,6 +240,7 @@ function ImportPreview({ previewId }: { previewId: number }) {
             );
           }
         }}
+        onError={leaveIfGone}
         onClose={() => {
           setPreviewRow(null);
           setIsFillOpen(false);

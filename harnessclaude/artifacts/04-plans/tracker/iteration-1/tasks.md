@@ -208,3 +208,20 @@ throws; `InProcessSuggestionJobQueue` only while `tsolve.worker.enabled` is fals
 on a scratch PostgreSQL with two rows: both kept their text and suggestion and joined their Project by `public_id`.
 **Dependencies:** Task 16
 **Estimated size:** medium
+
+## Task 18: Post the suggestion as the MSG80 comment (KAN-131)
+
+**Story:** STORY-012, STORY-011 (AC-011.7)
+**Feature:** suggestion-comment
+**Description:** Changeset `020-tracker-suggestion-comment` (`jira_comment_id`, `commented_at`). After the suggestion
+job stores a suggestion — or when it runs for a row that has a suggestion and no comment id — it posts MSG80 (without
+"Related documents", naming no source) on the issue with the Workspace's Jira service account, finds a comment that
+was posted but not recorded instead of posting twice, and records the comment id and time. Jira 5xx/429/timeout fail
+the job for a retry; 401/403/404 or no service account end it without a retry. `JiraServiceAccount` port with a
+stand-in reading `JIRA_SITE_URL`, `JIRA_SERVICE_ACCOUNT_EMAIL`, `JIRA_SERVICE_ACCOUNT_TOKEN`. Edge cases 51–57.
+**Files:** design "STORY-012: Post the suggestion as the MSG80 comment".
+**Test:** `SuggestionCommentServiceImplTest`, `Msg80Test`, `JiraClientTest` (ADF body, Basic auth, status mapping, no
+secret in errors), `SuggestionJobServiceImplTest` (AC-011.7, AC-012.3, AC-012.6), `SuggestionResultRepositoryIT`
+(`markCommented` never overwrites), `ConfiguredJiraServiceAccountTest`.
+**Dependencies:** Task 16, Task 17
+**Estimated size:** medium

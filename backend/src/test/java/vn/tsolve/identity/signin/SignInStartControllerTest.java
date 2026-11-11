@@ -18,21 +18,22 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.AuthSecurityConfig;
-import vn.tsolve.identity.signin.SignInTestFixtures.StateStore;
+import vn.tsolve.identity.account.AccountSignInService;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
 import vn.tsolve.identity.signin.port.WorkspaceRef;
 
@@ -42,29 +43,24 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
     SecurityConfig.class,
     AuthSecurityConfig.class,
     AuthHosts.class,
-    SignInStateService.class,
-    SignedToken.class,
-    GoogleOidcClient.class,
     SignInTestBeans.class,
     KeycloakAuthorizationRequestResolver.class,
     KeycloakClientRegistrations.class,
+    RedisAuthorizationRequestRepository.class,
+    OidcCallbackHandler.class,
     SignInStartControllerTest.RecordingRepositoryConfig.class
 })
 @TestPropertySource(
         properties = {
             "TSOLVE_LOGIN_ORIGIN=" + SignInTestFixtures.LOGIN_ORIGIN,
             "TSOLVE_ADMIN_ORIGIN=" + SignInTestFixtures.ADMIN_ORIGIN,
-            "TSOLVE_SIGNING_KEY=" + SignInTestFixtures.KEY,
-            "GOOGLE_CLIENT_ID=test-client-id",
-            "GOOGLE_CLIENT_SECRET=test-secret",
             "PLATFORM_OPERATOR_EMAILS=ops@example.test",
+            "KEYCLOAK_WEB_CLIENT_SECRET=test-keycloak-secret",
             "CORS_ALLOWED_ORIGINS=http://localhost:5173",
             "server.port=0"
         })
 @ExtendWith(OutputCaptureExtension.class)
 class SignInStartControllerTest {
-
-    private static final String AUTHORIZE_URL = SignInTestFixtures.LOGIN_ORIGIN + "/api/v1/auth/authorize";
 
     private static final String KEYCLOAK_ENDPOINT =
             SignInTestFixtures.LOGIN_ORIGIN + "/realms/tsolve/protocol/openid-connect/auth";
@@ -73,35 +69,34 @@ class SignInStartControllerTest {
     @TestConfiguration(proxyBeanMethods = false)
     static class RecordingRepositoryConfig {
 
+        // Primary: the controller records into this one; the callback chain takes the Redis one by its own type.
         @Bean
+        @Primary
         RecordingAuthorizationRequestRepository recordingAuthorizationRequestRepository() {
             return new RecordingAuthorizationRequestRepository();
         }
     }
 
+    /** Only so the callback chain's Redis repository can be built; sign-in start talks to the recording double. */
+    @MockBean
+    private StringRedisTemplate redis;
+
+    /** The callback handler's Account step (Task 25b); sign-in start never reaches it. */
+    @MockBean
+    private AccountSignInService accountSignInService;
+
     @Autowired
     private MockMvc mvc;
 
     @Autowired
-    private StateStore store;
-
-    @Autowired
     private InMemoryWorkspaceLookup workspaces;
-
-    @Autowired
-    private SignedToken signedToken;
-
-    @Autowired
-    private MutableClock clock;
 
     @Autowired
     private RecordingAuthorizationRequestRepository requests;
 
     @BeforeEach
     void reset() {
-        store.reset();
         workspaces.reset();
-        clock.reset();
         requests.reset();
     }
 
@@ -111,18 +106,6 @@ class SignInStartControllerTest {
 
     private MockHttpServletResponse perform(MockHttpServletRequestBuilder request) throws Exception {
         return mvc.perform(request).andReturn().getResponse();
-    }
-
-    /** Asserts a 302 to login.'s authorize with only a state parameter, and returns that state value. */
-    private static String stateOfRedirectToAuthorize(MockHttpServletResponse response) {
-        assertThat(response.getStatus()).as("status").isEqualTo(302);
-        String location = response.getHeader(HttpHeaders.LOCATION);
-        assertThat(location).as("Location").startsWith(AUTHORIZE_URL + "?state=");
-        UriComponents uri = UriComponentsBuilder.fromUriString(location).build();
-        assertThat(uri.getQueryParams().keySet()).as("query parameters").containsExactly("state");
-        String state = uri.getQueryParams().getFirst("state");
-        assertThat(location).isEqualTo(AUTHORIZE_URL + "?state=" + state);
-        return state;
     }
 
     /** Asserts a 302 to Keycloak's authorization endpoint and returns the Location. */
@@ -150,7 +133,6 @@ class SignInStartControllerTest {
         assertThat(location).isEqualTo(saved.getAuthorizationRequestUri());
         assertThat(saved.getAttributes().get(KeycloakAuthorizationRequestResolver.WORKSPACE_ID))
                 .hasToString(workspace.id().toString());
-        assertThat(store.calls("save")).isZero();
     }
 
     @Test
@@ -211,16 +193,13 @@ class SignInStartControllerTest {
     }
 
     @Test
-    @DisplayName("AC-001.28 starts a Platform Console sign-in on admin.")
-    void startsPlatformConsoleSignInOnAdmin_AC_001_28() throws Exception {
+    @DisplayName("AC-001.28 interim answers 404 to a sign-in start on admin. until Task 29")
+    void answersNotFoundToSignInStartOnAdmin_AC_001_28_interim() throws Exception {
         MockHttpServletResponse response = perform(start("admin.localhost"));
 
-        String state = stateOfRedirectToAuthorize(response);
-        SignInState saved = store.onlySaved();
-        assertThat(saved.getTarget()).isEqualTo(SignInState.Target.PLATFORM_CONSOLE);
-        assertThat(saved.getWorkspaceId()).isNull();
-        assertThat(signedToken.verify(state)).contains(saved.getId().toString());
-        assertThat(workspaces.askedHosts()).noneMatch(host -> host.startsWith("admin."));
+        assertThat(response.getStatus()).as("status").isEqualTo(404);
+        assertThat(response.getHeader(HttpHeaders.LOCATION)).as("Location").isNull();
+        assertThat(requests.saved()).as("authorization requests saved").isEmpty();
     }
 
     @Test
@@ -231,10 +210,6 @@ class SignInStartControllerTest {
         redirectToKeycloak(response);
         assertThat(requests.onlySaved().getAttributes().get(KeycloakAuthorizationRequestResolver.WORKSPACE_ID))
                 .hasToString(InMemoryWorkspaceLookup.GAMMA.id().toString());
-    }
-
-    private static WorkspaceRef noDomain(String host) {
-        return host.startsWith("nodomain") ? InMemoryWorkspaceLookup.NO_DOMAIN : InMemoryWorkspaceLookup.BLANK_DOMAIN;
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
@@ -252,30 +227,58 @@ class SignInStartControllerTest {
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
-    @ValueSource(strings = {"nodomain.localhost", "blankdomain.localhost"})
-    @DisplayName("AC-001.48 creates no authorization request and no cookie for a Workspace with no Google domain")
-    void createsNoAuthorizationRequestForAWorkspaceWithNoGoogleDomain_AC_001_48(String host) throws Exception {
+    @ValueSource(strings = {"noorg.localhost", "blankorg.localhost"})
+    @DisplayName("AC-001.48 refuses sign-in start for a Workspace with no Organization id")
+    void refusesSignInStartForAWorkspaceWithNoOrganizationId_AC_001_48(String host) throws Exception {
+        MockHttpServletResponse response = perform(start(host));
+
+        assertThat(response.getStatus()).as("status").isEqualTo(302);
+        String location = response.getHeader(HttpHeaders.LOCATION);
+        assertThat(location).as("Location").isNotNull();
+        URI resolved =
+                URI.create("http://" + host + ":8081/api/v1/auth/sign-in").resolve(location);
+        assertThat(resolved.toString()).isEqualTo("http://" + host + ":8081/login?error=MSG141");
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @ValueSource(strings = {"nodomain.localhost", "blankdomain.localhost", "noorg.localhost", "blankorg.localhost"})
+    @DisplayName(
+            "AC-001.48 creates no authorization request and no cookie for a Workspace with no Google domain or no Organization id")
+    void createsNoAuthorizationRequestForAWorkspaceWithNoGoogleDomainOrOrganizationId_AC_001_48(String host)
+            throws Exception {
         MockHttpServletResponse response = perform(start(host));
 
         assertThat(requests.saved()).isEmpty();
-        assertThat(store.calls("save")).isZero();
-        assertThat(store.saved()).isEmpty();
         assertThat(response.getHeaders(HttpHeaders.SET_COOKIE)).isEmpty();
     }
 
-    @Test
-    @DisplayName("AC-001.48 logs one WARN that names only the Workspace id")
-    void logsOneWarnThatNamesOnlyTheWorkspaceId_AC_001_48(CapturedOutput output) throws Exception {
-        perform(start("nodomain.localhost").param("returnTo", "/secret-return-path"));
+    static Stream<Arguments> unreadyWorkspaces() {
+        return Stream.of(
+                Arguments.of("nodomain.localhost", InMemoryWorkspaceLookup.NO_DOMAIN),
+                Arguments.of("noorg.localhost", InMemoryWorkspaceLookup.NO_ORGANIZATION));
+    }
 
-        String id = noDomain("nodomain").id().toString();
+    @ParameterizedTest(name = "[{index}] {0}")
+    @MethodSource("unreadyWorkspaces")
+    @DisplayName("AC-001.48 logs one WARN that names only the Workspace id")
+    void logsOneWarnThatNamesOnlyTheWorkspaceId_AC_001_48(String host, WorkspaceRef workspace, CapturedOutput output)
+            throws Exception {
+        perform(start(host).param("returnTo", "/secret-return-path"));
+
+        String id = workspace.id().toString();
         List<String> warnLines = output.getAll()
                 .lines()
                 .filter(line -> line.contains(" WARN "))
                 .filter(line -> line.contains(id))
                 .toList();
         assertThat(warnLines).hasSize(1);
-        assertThat(warnLines.get(0)).doesNotContain("nodomain.localhost").doesNotContain("secret-return-path");
+        assertThat(warnLines.get(0))
+                .doesNotContain(host)
+                .doesNotContain("secret-return-path")
+                .doesNotContain(workspace.slug());
+        if (workspace.googleDomain() != null) {
+            assertThat(warnLines.get(0)).doesNotContain(workspace.googleDomain());
+        }
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
@@ -285,8 +288,6 @@ class SignInStartControllerTest {
         MockHttpServletResponse response = perform(start(host));
 
         assertThat(response.getStatus()).isEqualTo(404);
-        assertThat(store.calls("save")).isZero();
-        assertThat(store.saved()).isEmpty();
         assertThat(requests.saved()).isEmpty();
         assertThat(response.getHeaders(HttpHeaders.SET_COOKIE)).isEmpty();
     }

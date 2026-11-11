@@ -17,4 +17,7 @@ public interface ImportPreviewRowRepository extends JpaRepository<ImportPreviewR
     List<ImportPreviewRow> findByIdPreviewIdAndStatus(Long previewId, PreviewRowStatus status);
 
     long countByIdPreviewIdAndStatus(Long previewId, PreviewRowStatus status);
+
+    /** The rows of a Draft the user still sees: every row but the Removed ones (AC-004.2). */
+    long countByIdPreviewIdAndStatusNot(Long previewId, PreviewRowStatus status);
 }

@@ -2,6 +2,8 @@ package vn.tsolve.chatbot.answer.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -9,11 +11,11 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.Immutable;
 import org.hibernate.generator.EventType;
+import vn.tsolve.chatbot.rating.entity.ChatbotRating;
 
+// @Immutable breaks @Generated insert columns in Hibernate 6; columns use updatable = false instead.
 @Entity
-@Immutable
 @Table(name = "chatbot_answer")
 public class ChatbotAnswer {
     @Id
@@ -36,6 +38,13 @@ public class ChatbotAnswer {
     @Generated(event = EventType.INSERT)
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private Instant createdAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ChatbotRating rating;
+
+    @Column(name = "rated_at")
+    private Instant ratedAt;
 
     protected ChatbotAnswer() {}
 
@@ -68,5 +77,13 @@ public class ChatbotAnswer {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public ChatbotRating getRating() {
+        return rating;
+    }
+
+    public Instant getRatedAt() {
+        return ratedAt;
     }
 }

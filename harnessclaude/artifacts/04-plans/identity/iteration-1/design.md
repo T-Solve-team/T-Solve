@@ -105,3 +105,169 @@ QA step 1 of Task 23 asked eight questions; the user answered on 5/11. Each is c
 Non-scope notes (kept out of Task 23): an optional real-Google IdP turned on by `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) for a manual smoke test belongs to the Keycloak provisioning task (Task 28) and the runbook; a real Google Workspace or Cloud Identity domain is a prerequisite of the staging smoke test and of production readiness (`hd` exists only for Workspace domains), not of Task 23; Microsoft Entra ID is NOT in scope and needs a separate Change Mode decision.
 
 Test size: the QA plan has 84 test methods for the old Task 23 against a rule of about 12 per task. Decided 6/11: Task 23 is split into three slices, each with a "Test scope" line, QA step 1 re-run on each: Task 23 (realm, compose, start-up check, 22 tests), Task 23b (sign-in start and the Redis authorization request, 28), Task 23c (callback and the round trip, 34). The boundary moved from the QA proposal: the Redis repository went to the start slice and the end-to-end test, with `AuthSecurityConfig`, to the callback slice; QA answers 2–8 bind the slice named in `tasks.md`.
+
+## User List backend — KAN-107, Task 32 (2026-11-07)
+
+Covers AC-004.9 to AC-004.18. Decisions of the user (Dương, 07/11): Q1–Q4 = recommendation (spec Changelog).
+
+- **Caller.** The endpoints depend only on what `main` already has: `@PreAuthorize("hasRole(ADMIN)")` with the
+  `TSolveUser` in the security context, and `TenantScope.currentWorkspaceId()` for the bound Workspace, like the Review
+  controllers. No session filter, no `identity/session` package, no `WorkspaceSessionBinding`, no `TenantContext`
+  (PR #119's files stay dropped, KAN-275 Q15). Unauthenticated and non-Admin answers come from `SecurityConfig` and
+  `GlobalExceptionHandler` as today (401 MSG07, 403 MSG08).
+- **Interim mock (AC-004.17).** `vn.tsolve.identity.mock`, all `@Profile("identity-mock")`: `MockSignedInCallerFilter`
+  (a servlet filter registered in the web chain before authorization; only when the context holds no authentication,
+  so the owners' `WebSessionFilter` wins once it exists) reads `tsolve.identity.mock.account-email` and
+  `tsolve.identity.mock.workspace-id`, binds the Workspace with `TenantScope.runIn` around the rest of the chain,
+  re-reads the Account and its Roles, and sets a `TSolveUser`; a missing or Deactivated Account leaves the request
+  signed out. `MockUserListSeeder` (AC-004.18) inserts the missing demo rows at start-up inside `runIn`. Javadoc on
+  each: "replace when KAN-275 workspace-session (Tasks 26a/26b) lands". Never in tests' default context or `prod`.
+- **Schema.** Changeset `019-identity-user-role-department.sql` (author `identity`): `user_role` (`id UUID PK
+  DEFAULT gen_random_uuid()`, `user_id UUID NOT NULL → app_user(id) ON DELETE CASCADE`, `role VARCHAR(30)` CHECK in
+  `TICKET_RESOLVER, PROJECT_MANAGER, KNOWLEDGE_MANAGER, ADMIN`, `assigned_at TIMESTAMPTZ NOT NULL`, UNIQUE
+  `(user_id, role)`), and `app_user.department_id BIGINT NULL → department(department_id)` with an index. Baseline
+  names; key types follow `main` (UUID `app_user.id`, BIGINT `department_id` with the UUID `public_id` exposed).
+  Task 26b reuses this table instead of adding its own.
+- **Read.** `UserListService` / `UserListServiceImpl` (read-only transaction) → `UserListRepository`, a native SQL
+  query (count + page) on `app_user` left-joined to `department`, roles aggregated from `user_role`; filters bound as
+  parameters, `q` escaped for `LIKE`; sort whitelist with `lower(...)` and `NULLS FIRST`/`LAST` and `id` tie-break.
+  Departments: `department` where `status = 'ACTIVE'` ordered by `lower(name)`. The service asserts a bound Workspace
+  first (`TenantScope.currentWorkspaceId()` throws → 500 MSG06). Lenient paging like the MSW mock: an unknown sort
+  falls back to the default, `size` is capped at 100.
+- **Tests.** Unit: query parsing (q length/escape, sort whitelist, paging). `@WebMvcTest`-style: 401/403/400.
+  IT with `TwoTenantDatabases`: rows in `tenant_b` never appear for ACME; filters, sort, paging; departments list;
+  mock filter with the profile on (signed in) and off (401); seeder idempotent.
+
+## Add user backend — KAN-108, Task 33 (2026-11-07)
+
+Covers AC-005.9 to AC-005.17; decisions Q1–Q3 of 07/11 (spec Changelog). Builds on Task 32 (same caller, same
+`identity-mock` profile).
+
+- **Schema.** Changeset `020-identity-space-manager.sql` (author `identity`): `space` (`space_id BIGSERIAL PK`,
+  `public_id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()`, `department_id BIGINT NOT NULL UNIQUE → department`,
+  `name VARCHAR(100) NOT NULL`, `status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'` CHECK `ACTIVE, HIDDEN`) and
+  `space_manager` (`space_id BIGINT PRIMARY KEY → space` — the key makes one Knowledge Manager per Space —
+  `user_id UUID NOT NULL → app_user(id) ON DELETE CASCADE`, `assigned_at TIMESTAMPTZ NOT NULL`, index on `user_id`).
+  Key style follows `department` on main; the wiki module reuses both.
+- **Write.** `UserCreationService` / impl, `@Transactional`: validate in the mock's order (email required → length
+  on the raw input → format + company domain → duplicate in this Workspace → roles → Department → Spaces → occupied
+  Space), claim the email in `WorkspaceEmailRegistry`, insert `app_user`, `user_role`, `space_manager`, record the
+  audit event, return the `UserAccount` read back through Task 32's repository mapping. A unique violation on
+  `space_manager` (race) maps to 409 MSG117 and a unique violation on `app_user.email` to 409 MSG11. Field errors
+  use the existing `fieldErrors` Problem shape the frontend reads.
+- **Ports.** `WorkspaceEmailRegistry` (`boolean claim(UUID workspaceId, String email)`, `void release(...)`) in
+  `identity.service`, default bean `AcceptAllWorkspaceEmailRegistry` with javadoc "interim until platform's
+  workspace_email registry (Task 14)". Company domain: `WorkspaceLookup.findById(bound).googleDomain()`, then the
+  `identity-mock` property `tsolve.identity.mock.company-domain` (default `acme.test`).
+- **Seed.** `MockUserListSeeder` also ensures one Active Space per demo Department (and one Knowledge Manager
+  assignment for the seeded Knowledge Manager), so creation-options and MSG117 are visible in the demo.
+- **Tests.** Unit: validation order and codes. MVC: 401/403/400. IT (`TwoTenantDatabases`): creation lands only in
+  `tenant_a`; a duplicate email in `tenant_b` does not block ACME; MSG11/MSG111; MSG117 including two concurrent
+  creations for one Space; registry refusal → MSG155 and nothing saved; creation-options; audit row.
+## Update roles backend — KAN-110, Task 34 (2026-11-07)
+
+Covers AC-007.8 to AC-007.23; the user's ten decisions of 07/11 (spec Changelog). Builds on Task 32 (caller,
+`identity-mock` profile, `user_role`, `app_user.department_id`) and Task 33 (`space`, `space_manager`, changeset 020,
+arriving by rebase onto `feat/KAN-108-identity-add-user-api`).
+
+- **Endpoints.** `GET /api/v1/users/{userId}` (`getUserDetail`), `GET /api/v1/users/{userId}/handover-options`
+  (`getUserHandoverOptions`), `PUT /api/v1/users/{userId}` (`updateUserRoles`), all `@PreAuthorize` ADMIN. `{userId}`
+  is matched as a UUID pattern so `/departments` (Task 32) and `/creation-options` (Task 33) keep their mappings; a
+  non-UUID or unknown id is 404 MSG04. Contract and MSW behaviour: `frontend/openapi/tsolve-api.yaml` and
+  `frontend/src/features/users/mocks/{roles-handler,handover,state}.ts` (research note
+  `kan-110-research.md`, file:line references).
+- **Schema.** Changeset `023-identity-one-project-manager.sql` (author `identity`): partial unique index
+  `uq_membership_one_manager ON project_membership (project_id) WHERE role_in_project = 'PROJECT_MANAGER'`
+  (baseline rule; enforces AC-007.19). No history tables: former managers and memberships are kept in the
+  `ROLE_CHANGE` audit details only.
+- **Read.** `UserDetail` = Task 32's `UserAccount` row + `isCurrentUser` + `ticketResolverProjectIds` + `projects`
+  (`UserProject.name` = `project.jira_project_key`; Projects without a Project Manager row are left out) +
+  `managedSpaces`. Handover options: eligible recipients computed by one query per responsibility kind.
+- **Write.** `UserRoleUpdateService` / impl in one `@Transactional` method, checks in the AC-007.20 order. Locks:
+  `SELECT … FOR UPDATE` on the target `app_user` row; WHEN ADMIN is removed, on every Active Admin's `app_user` row
+  (ordered by id to avoid deadlocks) before counting; on the recipients' rows before re-checking eligibility; on the
+  requested `space` rows before the MSG117 check. A unique violation on `space_manager` maps to 409 MSG117; a
+  violation of the one-Project-Manager index (only reachable by two concurrent handovers of the same Project) rolls
+  the whole update back and answers 500 MSG06, logged. Apply: roles, Department
+  (stored as sent, also for a non-PM), Spaces, handovers, membership changes (AC-007.19), one audit event.
+- **Seed.** `MockUserListSeeder` adds, idempotently, Projects of a demo Department (two `ACTIVE`, one non-Active)
+  managed by the seeded Project Manager, a second Project Manager eligible for one Department only (so one Project
+  shows MSG59), and `MEMBER` rows for the seeded Ticket Resolver (MSG78).
+- **Tests.** Unit: each check, its order, codes, params. MVC: 401/403/404/400 MSG06. IT (`TwoTenantDatabases`):
+  detail and handover options; a full update with Project and Space handovers; MSG117, MSG56, MSG113, MSG59,
+  MSG118, Hand Over Responsibilities MSG01, MSG78 with and without confirmation; rollback leaves every row unchanged;
+  a BETA recipient/Project/Space is never offered or accepted; two Admins removing each other's Admin role at once →
+  exactly one succeeds; two updates racing for one Space → one 409 MSG117.
+
+## Account status backend — KAN-109, Task 35 (2026-11-10)
+
+Covers AC-006.9 to AC-006.19; the user's three decisions of 10/11 (spec Changelog: audit as `ROLE_CHANGE`; Roles,
+Department and `MEMBER` rows kept; seed a second Knowledge Manager). Builds on Task 34 (KAN-110, PR #170): its
+`UserDetailRepository.handoverOptions`, `UserRoleUpdateRepository` locks and transfers, `UserDetailService.getDetail`.
+
+- **Endpoint.** `PUT /api/v1/users/{userId}/status` (`updateUserStatus`) on `UserDetailController`, `@PreAuthorize`
+  ADMIN, `{userId}` matched as a UUID; the controller's invalid-id mapping also covers `/{invalid}/status` (404 MSG04).
+  Contract and MSW behaviour: `frontend/openapi/tsolve-api.yaml` (`UpdateUserStatusRequest`) and
+  `frontend/src/features/users/mocks/{status-handlers,handover,state}.ts`. No contract change.
+- **Schema.** None. `app_user.status` exists (changeset 006); the one-Project-Manager index is changeset 023.
+- **Write.** `UserStatusUpdateService` / impl, one `@Transactional` method, checks in the AC-006.16 order (404 → MSG06
+  shape → MSG56 → MSG112 → MSG59 → MSG118 → MSG01). It takes the same advisory lock as the role update
+  (`serializeUpdates`), so status and role updates of one Workspace never interleave (AC-006.13), then the target row,
+  the Active Admin rows (only for a deactivation of an Active Admin) and the recipients' rows before reading
+  `handoverOptions` again. Apply: `transferProject(user, project, recipient, retainMember = holds TICKET_RESOLVER)`,
+  `transferSpace`, then the new `UserRoleUpdateRepository.updateStatus`; nothing else of the Account is touched.
+  The one-Project-Manager violation rolls back and answers 500 MSG06 as in Task 34.
+- **Reuse.** The handover-list parsing (`Choice`, shape check → MSG06) and matching (→ MSG01 Hand Over
+  Responsibilities) move from `UserRoleUpdateServiceImpl` into a package-private `HandoverChoices` helper used by both
+  services; Task 34's behaviour and tests stay unchanged.
+- **Audit.** One `ROLE_CHANGE` event (target `USER`, the Account) with `statusBefore`, `statusAfter`,
+  `projectHandovers`, `spaceHandovers`; none when the status is unchanged and no handover applies.
+- **Seed.** `MockUserListSeeder` adds, idempotently, `knowledge-replacement@roles-demo.test` (Active, KNOWLEDGE_MANAGER,
+  no Space).
+- **Tests.** Unit: each check, its order, codes, params, no-op without audit. MVC: 401/403/404/400 MSG06 and the
+  `/status` invalid-id route. IT `UserStatusIT` (`TwoTenantDatabases`): deactivate with Project and Space handovers
+  (memberships per AC-006.15, Account and Roles kept, audit row); activate; MSG56, MSG112, MSG59, MSG118, MSG01;
+  rollback leaves every row unchanged; a BETA recipient is never accepted; two Admins deactivating each other at once →
+  exactly one succeeds; the mock seed row.
+
+## Scope checks — KAN-118, Task 36 (2026-11-10)
+
+Covers AC-011.1 to AC-011.11; the user's four decisions of 10/11 (spec Changelog: a port in `identity` called from
+code, the rules per Role, only the helpers before the code freeze, 403 MSG08 also for an unknown id).
+
+- **Port.** `vn.tsolve.identity.service.ScopeAccessService` (`canAccessDepartment`, `canAccessProject`,
+  `canAccessSpace`, `requireDepartment`, `requireProject`, `requireSpace`); impl
+  `service/impl/ScopeAccessServiceImpl` (`@Service`, `@Transactional(readOnly = true)`), which calls
+  `TenantScope.currentWorkspaceId()` first (unbound → `IllegalStateException`, 500 MSG06, AC-011.9) and returns false
+  for a null argument without a query (AC-011.8). `require…` throws `identity/exception/ScopeAccessDeniedException`
+  (`MessageCodeException`, 403, MSG08, no params) — the same shape as `ticket`'s `ProjectAccessDeniedException`.
+- **Reads.** `repository/ScopeAccessRepository` (`NamedParameterJdbcTemplate`, like `UserDetailRepository`): three
+  `SELECT EXISTS (…)` queries on the bound database. A common CTE-free fragment `scoped departments` of an Active
+  Account:
+  - own Department: `app_user.department_id` WHERE a `user_role` row `PROJECT_MANAGER` exists;
+  - Departments of its Projects: `project_membership` → `project.department_id`, a `PROJECT_MANAGER` row only with the
+    Role PROJECT_MANAGER, a `MEMBER` row only with TICKET_RESOLVER; Project status not filtered (ACTIVE and REMOVED).
+  - `canAccessDepartment`: the Department is `ACTIVE` and in the fragment.
+  - `canAccessProject`: a counted membership row of that Project, and the Project's Department `ACTIVE`.
+  - `canAccessSpace`: the Space is `ACTIVE`, its Department `ACTIVE`, and either a `space_manager` row of the Account
+    with the Role KNOWLEDGE_MANAGER, or the Space's Department in the fragment.
+  - Every query also requires `app_user.status = 'ACTIVE'` (AC-011.7). ADMIN and EMPLOYEE appear in no predicate
+    (AC-011.6). No write, no audit, no log line (AC-011.11).
+- **Not changed.** `ticket` `ProjectAccess`, `review` `ReviewWorkspaceAccess`, `triage` `ManagedProjects`, `search`
+  `VisibleScope` and their tests (spec Out of Scope). No schema change, no endpoint, no contract change.
+- **Tests.** Unit `ScopeAccessServiceImplTest` (Mockito): null arguments → false with no query; `require…` throws
+  MSG08 / 403 on false and passes on true; unbound scope propagates. IT `ScopeAccessIT` (`TwoTenantDatabases`, the same
+  `@SpringBootTest` properties as `UserDetailIT` so the cached context is reused; ids `new UUID(118, n)`): each rule of
+  AC-011.2 to AC-011.7 with a positive and a negative case — a Project Manager refused another Department, a Ticket
+  Resolver with Projects in two Departments allowed both and refused a third, a member refused another Project, a
+  Knowledge Manager refused a Space it does not manage, Admin-only refused, the Role removed while the row stays,
+  deleted Department, Hidden Space, Deactivated Account, REMOVED Project still allowed; an id of tenant B is refused
+  in tenant A and the same ids answer from B only when bound to B (AC-011.9); unknown ids → false (AC-011.8).
+
+### Edge cases — STORY-011
+- Stale rows after a Role change (AC-007.19 keeps `PROJECT_MANAGER` rows of non-Active Projects): counted only with the
+  Role, so a former Project Manager gets nothing from them.
+- A Project Manager whose `department_id` is null (data from before AC-007.13): only its Projects count.
+- `space.department_id` is unique (one Space per Department); a Space of a deleted Department is refused even if its
+  own status is still `ACTIVE`.
+- Several Roles: the union of the rules (GBR-28), e.g. a Knowledge Manager who is also a Ticket Resolver.

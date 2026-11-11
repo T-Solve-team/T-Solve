@@ -242,3 +242,104 @@ Without a production `ReviewWorkspaceAccess` every Review endpoint answers 403. 
 - **Decisions** — storage holds APPROVED, REJECTED and CHANGES_REQUESTED; the API maps them to the contract's APPROVE, REJECT and REQUEST_CHANGES. UNPUBLISH, REPUBLISH and SEND_BACK are valid filters with no stored rows yet, so they return an empty page; unknown values return MSG06.
 - **Dates** — paired yyyy-MM-dd dates become `[from 00:00, to + 1 day 00:00)` in Asia/Ho_Chi_Minh, like Suggestion History; missing bounds use fixed sentinels so no nullable timestamp parameter reaches PostgreSQL.
 - **Names** — actorName is the reviewer's full name, else their email; authorName is `ticket.writer`, as in the Review Queue.
+
+## KAN-154 extension: real-time Review Queue (STORY-012)
+
+- **Transport** — chosen: Server-Sent Events from Spring MVC `SseEmitter` on GET `/api/v1/review-queue/events`; alternatives: WebSocket/STOMP, keep polling only. Rationale: the queue only needs server → browser signals; SSE is same-origin, carries the session cookie through the Vite proxy and Caddy, and needs no new package on either side.
+- **Event source** — chosen (user, 2026-11-07): a tenant trigger `ticket_notify_review_queue` (AFTER INSERT OR UPDATE OF status, project_id) that calls `pg_notify('review_queue', project_id::text)` when a Solution Form ticket enters Pending review or any ticket leaves it; alternatives: in-process Spring events after commit, Redis pub/sub. Rationale: there is no submit endpoint in the backend yet (the Solution form belongs to jira-app), so only the database sees every entry; NOTIFY is delivered at commit, never after a rollback, and PostgreSQL drops duplicate payloads in one transaction, which gives AC-012.3's one event per Project per transaction.
+- **Signal, not data** — chosen: the event carries only `{"projectId": "<uuid>"}` and the browser refetches the queue it already shows; alternatives: push the changed rows. Rationale: the queue's scope, Department filter, sort and paging stay in one place (STORY-009) and no ticket content travels on the stream.
+- **Listener per Workspace** — `ReviewQueueEventServiceImpl` (review module) keeps the open emitters per Workspace with the caller's managed Project ids taken at subscribe time. While a Workspace has at least one emitter, one daemon thread holds one connection from the routing `DataSource` opened inside `TenantScope.runIn(workspace)`, runs `LISTEN review_queue`, and polls `PGConnection.getNotifications(500 ms)`; the last emitter to leave closes it. Each active Workspace therefore holds one pool connection; a listener whose connection fails is reopened on the next poll cycle after 2 s.
+- **Heartbeat and lifetime** — a scheduled task sends the comment `:hb` every 25 s (AC-012.1). An emitter times out after 30 minutes; the browser's EventSource reconnects by itself, which also picks up Project membership changes made meanwhile (a manager removed from a Project keeps that Project's signals at most until then — signals carry no content).
+- **Frontend** — `useReviewQueueEvents()` in `features/review/hooks` opens `EventSource('/api/v1/review-queue/events', { withCredentials: true })` while the Review Queue page is mounted, invalidates the queue and ticket-ids queries on `queue-changed` and on every (re)open, and reports `connected`; `useReviewQueue` sets `refetchInterval` to `false` while connected and keeps `REVIEW_QUEUE_POLL_MS` otherwise (AC-012.5–012.7). The MSW mock serves no stream, so mock mode keeps polling.
+
+### Edge cases
+
+| Case | Handling |
+|------|----------|
+| Decision batch of 500 tickets in one Project | One NOTIFY payload after commit (PostgreSQL de-duplicates), one event per stream |
+| Decision rolled back (stale batch, AC-009.7) | NOTIFY is transactional — nothing is sent |
+| Ticket moved to another Project while pending | Trigger notifies the new Project (and the old one via `OLD.project_id`) |
+| Caller manages no Project | `managedProjectIds` empty → 403 like the queue, no stream |
+| Workspace unbound or unverified Account | 403, no listener opened |
+| Listener connection dropped | Thread logs once without payload, retries after 2 s; after reopening it sends one `queue-changed` for every Project of its emitters, so changes in the gap are not lost |
+| Browser tab hidden | EventSource stays open; refetch on event is cheap. Polling, when active, still pauses while hidden |
+
+### PR #155 review fixes (2026-11-07)
+
+- **Connect off the lock** — chosen: the subscription is registered under the lock with a `Listener` that has no connection yet; the listener thread opens the connection and runs `LISTEN` itself, and the first subscriber waits (bounded, 5 s) for "listening" before its heartbeats start; alternatives: build the Listener outside the lock and race to insert it. Rationale: a pool or database outage can no longer stall every subscribe, unsubscribe and completion callback behind the Hikari timeout.
+- **Sends off the shared threads** — chosen: each subscription coalesces what it still has to send (a set of pending Project ids and a heartbeat flag) and a small shared send pool (4 threads) drains it; the listener and heartbeat threads only enqueue. A subscription whose send fails is completed and removed; one that still has a send in flight when the next heartbeat is due keeps a single pending heartbeat, so a slow client cannot grow a queue or hold another stream's thread. Alternatives: a send timeout per call (SseEmitter has none), one thread per stream.
+- **Managed Projects re-checked** — chosen: with each heartbeat (25 s) the subscription re-reads `managedProjectIds` for its Account inside the Workspace; Projects no longer managed stop getting events, and a subscription left with none (or an unverified Account) is completed. Alternatives: re-check on every event (one query per stream per event), shorten the emitter timeout. Rationale: AC-012.2 ("whose caller manages that Project") holds within one heartbeat interval at one query per stream per 25 s. Removing the Project Manager role itself takes effect at the next sign-in, as for every other Review endpoint.
+- **Pool use** — each Workspace with an open stream holds one tenant pool connection for its listener; the join barrier briefly uses one more. The per-Workspace pool must keep at least 2 connections above request load; the platform pool sizing (KAN platform module) owns that limit.
+- **Generated client** — orval also emits `useStreamReviewQueueEvents` for the SSE operation; it must not be called (it would wait for a body that never ends). The web app uses `useReviewQueueEvents` only.
+
+### PR #155 second review (review 5813751864, 2026-11-07)
+
+- **Added Project (BUG-174)** — when a heartbeat re-check adds a managed Project, the stream gets one `queue-changed` for it through the coalesced send path, because its queue may have changed before it was added.
+- **Mock mode (BUG-175)** — the web app opens no EventSource while it runs on MSW mocks; the generated SSE mock returns a finite body, and reconnects every ~3 s made polling flap. Mock mode stays on 5 s polling, as the design already intended.
+- **Dead connection (BUG-176)** — EventSource never surfaces `:hb` comments, so a connection cut without a close is invisible. While connected, the queue keeps a 60 s safety refetch; the 5 s polling stays off (AC-012.6).
+- **Subscribe failure (BUG-177)** — anything that throws after the subscription is registered (join barrier, heartbeat scheduling) ends and removes it; the request thread waits at most ~5 s in total.
+- **Changeset number** — main gained `019-tracker-*` and `019-identity-*`; ours stays `019-review-queue-notify.sql` (ids differ by name) and is included last.
+
+## KAN-156 extension: production Expired tickets and send-back (STORY-013)
+
+Decided with the user on 2026-11-08, before the spec: SEND_BACK is stored in `review_decision`; Review History returns it; `previousStatus` and `expiredAt` are derived, not stored; the review range is `project.review_range` with a 3-day fallback.
+
+- **Storage** — chosen: changeset `024-review-send-back-decision.sql` (author `review`) drops and re-adds `ck_review_decision` with `SEND_BACK` added; the stored-decision enum gains SEND_BACK. Alternatives: `audit_log_entry`, a new `send_back` table. Rationale: the schema reference already lists SEND_BACK in `review_decision`, and Review History reads one table.
+- **Reads** — `GET /api/v1/expired-tickets` and `/ticket-ids` in `ReviewReadController` (Project Manager) resolve managed Projects through `ReviewWorkspaceAccess` as the queue does, narrow them by Department, then new `TicketReviewReadService` methods load EXPIRED Solution Form tickets of those Projects and page them in memory in the queue's comparator style (same data scale as the queue). Sort keys `expiredAt`, `sourceTicketId`, `title`, `project`; default `expiredAt,desc`, then ticket UUID. An unknown key or direction, or page/size outside the limits, is the MSG06 400 that history uses (AC-013.4).
+- **Derived fields** — `previousStatus` is always PENDING_REVIEW (user decision, AC-013.3). Known limitation: KAN-157 (JOB-02, STORY-014) chose on 2026-11-08 to also expire Changes requested tickets and to store `ticket.expired_at` and `ticket.status_before_expiry` (changeset 025); once both branches are on main, a change request on STORY-013 switches these reads to the stored columns so CHANGES_REQUESTED shows correctly. `expiredAt` is 00:00 Asia/Ho_Chi_Minh on `review_due_date + 1 day`, so sorting by `expiredAt` is sorting by the due date. JOB-02 expires a ticket only because of its due date, so an EXPIRED ticket always has one; a legacy EXPIRED row with a null due date falls back to `updated_at` for `expiredAt` (sorted the same way) rather than failing the page.
+- **Send-back** — `POST /api/v1/reviews/send-back` in `ReviewDecisionController` calls a new `TicketDecisionService.sendBack(...)`, one `@Transactional` method in `TicketDecisionServiceImpl`. Order mirrors the three decisions (AC-009.7): request shape 400 (empty, more than 500, duplicate, non-UUID — the existing ticket-ids request validation); lock the rows (`FOR UPDATE`); any id missing in this Workspace → 404 MSG04 with no data; any Project not managed → 403; any status other than EXPIRED or source other than SOLUTION_FORM → 409. Only then one native update sets status PENDING_REVIEW, `review_due_date = :today + range` where range is `project.review_range` when positive, else 3, and `updated_at = :now`, joined to `project` on `project_id`; then one `review_decision` row per ticket (SEND_BACK, caller, `:now`, null text). `:today` is the Vietnam calendar date of `:now` from the injected `Clock`. Solution, Evidence and feedback columns are untouched. `review_due_date` is read-only on the entity, hence the native update.
+- **Queue entry and events** — the existing trigger of AC-009.11 sets `review_queue_entered_at` on the transition to PENDING_REVIEW (the transaction time), and the STORY-012 trigger NOTIFYs the Project; no code needed, the IT asserts the entry time.
+- **No email** — the STORY-010 enqueue runs only for Reject and Request Changes; `sendBack` never calls it (asserted with the notifier).
+- **History** — SEND_BACK moves out of the history-only filter list; stored SEND_BACK maps to SEND_BACK with null reason and comment (AC-013.8).
+- **Contract and web** — the three operations keep their shapes; `tsolve-api.yaml` drops the "frontend proposal" wording and documents sorts, 404/409 and the derived fields; then `npm run generate:api`. The web hooks already call the generated `getExpiredTickets`, `getExpiredTicketIds` and `sendBackTickets` through `@/shared/api`; a page test named AC-013.9 proves the requests go through them. MSW handlers stay for mock mode.
+
+## KAN-157 extension: JOB-02 expires overdue tickets (STORY-014)
+
+Decisions (user, 2026-11-08): JobRunr fan-out; ticket columns plus a per-Project log line, no review decision or audit row; fixed 15-minute retry, 3 attempts per night; the Active-Workspace list is a worker change request (worker STORY-003).
+
+- **Registration (AC-014.1)** — chosen: `ReviewExpiryRegistration` listens for `ApplicationReadyEvent` and calls `JobRunrRuntime.scheduler().scheduleRecurrently("review-job-02-expire-overdue", "0 0 * * *", ZoneId.of("Asia/Ho_Chi_Minh"), new ReviewExpiryDispatchRequest())`, only when `tsolve.worker.enabled=true`. JobRunr keys recurring jobs by id, so every process re-registering keeps one, and one BackgroundJobServer runs each occurrence. Alternatives: Spring `@Scheduled` (runs in every process); per-Workspace recurring jobs on provisioning (needs platform hooks, KAN-161).
+- **Fan-out (AC-014.2)** — `ReviewExpiryDispatchHandler` (`JobRequestHandler<ReviewExpiryDispatchRequest>`, a Spring bean so the JobActivator finds it) calls `WorkerTenantService.activeWorkspaceIds()` and enqueues `ReviewExpiryJobRequest(workspaceId, 1)` for each. If the list cannot be read, the occurrence fails (JobRunr records it) and the next night catches up.
+- **Per-Workspace job (AC-014.3–014.7)** — `ReviewExpiryJobHandler.run(request)`, annotated `@Job(retries = 0)` so JobRunr's exponential retry never doubles ours:
+  1. If `tenants.isWorkspaceActive(ws)` is false → log that the Workspace was skipped and return: no change, no retry (AC-014.7).
+  2. `today = LocalDate.now(clock.withZone(Asia/Ho_Chi_Minh))`, once per attempt.
+  3. `execution.runInTenant(ws, () -> expiry.expireOverdue(today))`.
+  4. On a `RuntimeException`: log the attempt number, Workspace UUID and exception class only (not its message, which may quote SQL values). If `n < 3`, `scheduler.schedule(now + 15 min, new ReviewExpiryJobRequest(ws, n + 1))`; then return normally. If scheduling the retry itself throws, rethrow so JobRunr marks the job failed.
+- **Expiry (AC-014.3–014.5)** — `ReviewExpiryService.expireOverdue(LocalDate today)` in `ReviewExpiryServiceImpl`, `@Transactional`, runs one statement through `ReviewExpiryRepository` (JdbcClient): `UPDATE ticket t SET status_before_expiry = t.status, status = 'EXPIRED', expired_at = statement_timestamp() FROM project p JOIN department d ON d.department_id = p.department_id WHERE <p's UUID key> = t.project_id AND d.status <> 'DELETED' AND t.status IN ('PENDING_REVIEW', 'CHANGES_REQUESTED') AND t.review_due_date < :today RETURNING t.project_id`. The service groups the returned Project UUIDs into counts and logs one line per Project with Workspace UUID, Project UUID and count (AC-014.5). One statement is all or nothing, so no batching is needed. A concurrent decision on the same row waits for the row lock: if the decision commits first, the ticket no longer matches and is skipped; if JOB-02 commits first, the decision's status guard refuses it (409, the existing stale path).
+- **Queue and stream** — the status leaves PENDING_REVIEW, so the queue and eligible ids drop the ticket, and the STORY-012 trigger sends one NOTIFY per Project (de-duplicated in the transaction). CHANGES_REQUESTED → EXPIRED is not a queue change, so no NOTIFY is sent for it.
+- **Changelog (AC-014.8)** — `025-review-ticket-expiry.sql`, changeset `review:025-review-ticket-expiry`: nullable `ticket.expired_at TIMESTAMPTZ`, nullable `ticket.status_before_expiry VARCHAR(20)` with a CHECK for NULL, PENDING_REVIEW or CHANGES_REQUESTED, and a partial index on `review_due_date` for the two expirable statuses. It is included last in the master changelog. KAN-156 (STORY-013) derives the Expired list without these columns, as approved there (previous status always PENDING_REVIEW, expiry at 00:00 VN after the due date). The user chose (2026-11-08) to keep them anyway, as the only record of a Changes requested ticket's previous status and of the real expiry time; switching the Expired list to read them is a follow-up change request on STORY-013 after both branches merge. KAN-156 owns changeset 024.
+- **Payloads (AC-014.8)** — `ReviewExpiryDispatchRequest()` has no fields; `ReviewExpiryJobRequest(UUID workspaceId, int attempt)` has only those. Both are records in `review/dto` implementing `JobRequest`.
+- **Vietnam date** — `today` comes from the shared `Clock` bean in Asia/Ho_Chi_Minh, never `CURRENT_DATE` in the session time zone. A ticket due yesterday (VN) expires at 00:00 VN; one due today stays (GBR-10: the due date has passed).
+
+### Edge cases
+
+| Case | Handling |
+|------|----------|
+| Same batch sent twice (double click, two managers) | Row locks serialise; the second sees PENDING_REVIEW → 409, nothing written |
+| One batch over two Projects with different ranges | Each ticket uses its own Project's range |
+| `review_range` null, 0 or negative | 3 days |
+| Send-back at 23:30 UTC (06:30 next day in Vietnam) | Due date counts from the Vietnam date; fixed-Clock test at the boundary |
+| Ticket id of another Workspace | Not in this tenant database → 404, nothing exposed |
+| Department with no managed Project | Empty page and empty ids, no query |
+| Imported (non Solution Form) EXPIRED ticket | Not listed; send-back 409 |
+| Worker down at 00:00 | The next occurrence or retry uses `< today`, so missed tickets expire then |
+| Run twice the same day | Second run matches no row (AC-014.4) |
+| Workspace suspended between fan-out and run | Step 1 skips it; if suspended between step 1 and `runInTenant`, runInTenant throws → failure → the 15-min retry skips it |
+| `review_due_date` null (older rows) | `NULL < :today` is not true → never expired |
+| Deleted Department restored later | Its overdue tickets expire on the next run after restoration |
+| Other statuses (PUBLISHED, REJECTED, UNPUBLISHED, EXPIRED) | Not matched |
+| DB error mid-statement | Transaction rolls back; no per-Project log; retry scheduled (AC-014.6) |
+| JobRunr default retries | Off on the expiry handler (`@Job(retries = 0)`); the dispatch handler keeps the default (it only enqueues) |
+
+### Files
+
+`backend/src/main/resources/db/changelog/changes/025-review-ticket-expiry.sql` + master changelog; `review/dto/ReviewExpiry{Dispatch,Job}Request.java`; `review/service/ReviewExpiryService.java`; `review/service/impl/ReviewExpiry{ServiceImpl,DispatchHandler,JobHandler,Registration}.java`; `review/repository/ReviewExpiryRepository.java`. Tests: `review/ReviewExpiryIT.java` (PostgreSQL), `review/service/impl/ReviewExpiry{JobHandler,DispatchHandler,Registration}Test.java`.
+
+## KAN-307 change: Expired list reads the stored expiry columns (STORY-013)
+
+Decided with the user on 2026-11-10: read `ticket.expired_at` and `ticket.status_before_expiry` (written by JOB-02, changeset 025) and keep the KAN-156 derived values only where a column is null; no backfill changeset (AC-013.3, AC-013.4).
+
+- **Entity** — `Ticket` maps both columns read-only (`insertable = false, updatable = false`): `expiredAt` as `Instant`, `statusBeforeExpiry` as `TicketStatus` (`EnumType.STRING`). Only JOB-02's native UPDATE writes them; send-back leaves them as they are (they are read only for EXPIRED tickets, and the next expiry overwrites both).
+- **Read** — `findExpiredTickets` adds `t.expiredAt` and `t.statusBeforeExpiry` to `ExpiredRow`. `TicketReviewReadServiceImpl.expired` reports `expiredAt` = stored instant in Asia/Ho_Chi_Minh offset, else the KAN-156 fallback (00:00 VN on `review_due_date + 1`, else `updated_at`); `previousStatus` = stored status, else PENDING_REVIEW. Each column falls back on its own.
+- **Sort** — unchanged code: the in-memory comparator already orders `ExpiredItem::expiredAt`, which is now the reported value, so stored and fallback rows sort together (AC-013.4).
+- **Contract** — the `getExpiredTickets` description drops "previousStatus is always PENDING_REVIEW" and describes the stored values with the fallback; shapes unchanged; regenerate the client. The web page already shows CHANGES_REQUESTED (enum has it).
+- **Tests** — `ExpiredTicketsApiIT`: a ticket expired from CHANGES_REQUESTED with a stored `expired_at` that differs from its due date reports both stored values; a null-columns ticket keeps the derived values; `sort=expiredAt` orders by the stored time across both kinds.

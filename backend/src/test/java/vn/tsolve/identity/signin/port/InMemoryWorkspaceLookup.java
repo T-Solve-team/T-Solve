@@ -53,7 +53,26 @@ public final class InMemoryWorkspaceLookup implements WorkspaceLookup {
             "blankdomain",
             "10000000-0000-4000-8000-00000000000e");
 
-    private static final List<WorkspaceRef> ALL = List.of(ACME, BETA, GAMMA, NO_DOMAIN, BLANK_DOMAIN);
+    /** No Keycloak Organization id (null). */
+    public static final WorkspaceRef NO_ORGANIZATION = new WorkspaceRef(
+            UUID.fromString("00000000-0000-4000-8000-00000000000f"),
+            "noorg.localhost",
+            "noorg.example",
+            WorkspaceRef.Status.ACTIVE,
+            "noorg",
+            null);
+
+    /** A blank Keycloak Organization id. */
+    public static final WorkspaceRef BLANK_ORGANIZATION = new WorkspaceRef(
+            UUID.fromString("00000000-0000-4000-8000-000000000010"),
+            "blankorg.localhost",
+            "blankorg.example",
+            WorkspaceRef.Status.ACTIVE,
+            "blankorg",
+            "  ");
+
+    private static final List<WorkspaceRef> ALL =
+            List.of(ACME, BETA, GAMMA, NO_DOMAIN, BLANK_DOMAIN, NO_ORGANIZATION, BLANK_ORGANIZATION);
 
     private final List<WorkspaceRef> workspaces = new CopyOnWriteArrayList<>(ALL);
     private final List<String> askedHosts = new CopyOnWriteArrayList<>();

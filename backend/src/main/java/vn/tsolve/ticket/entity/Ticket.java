@@ -89,6 +89,13 @@ public class Ticket {
     @Column(name = "review_queue_entered_at", insertable = false, updatable = false)
     private Instant reviewQueueEnteredAt;
 
+    @Column(name = "expired_at", insertable = false, updatable = false)
+    private Instant expiredAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_before_expiry", insertable = false, updatable = false)
+    private TicketStatus statusBeforeExpiry;
+
     protected Ticket() {}
 
     /** An imported ticket: brought in by its Project Manager, so it is Published at once (GBR-23). */
@@ -169,6 +176,14 @@ public class Ticket {
 
     public LocalDate getReviewDueDate() {
         return reviewDueDate;
+    }
+
+    public Instant getExpiredAt() {
+        return expiredAt;
+    }
+
+    public TicketStatus getStatusBeforeExpiry() {
+        return statusBeforeExpiry;
     }
 
     public String getChangeRequestComment() {

@@ -7,10 +7,11 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 import type { ImportPreviewRowStatus } from './importPreviewRowStatus';
+import type { IssueComment } from './issueComment';
 import type { RowError } from './rowError';
 
 /**
- * One preview row in full, read-only.
+ * One preview row in full.
  */
 export interface ImportPreviewRowResponse {
   rowNo: number;
@@ -36,4 +37,11 @@ export interface ImportPreviewRowResponse {
   scope?: string | null;
   status: ImportPreviewRowStatus;
   errors: RowError[];
+  /**
+   * Jira only — the issue in Jira.
+   * @nullable
+   */
+  sourceUrl?: string | null;
+  /** Jira only — the comments at pull time; empty for CSV. */
+  comments?: IssueComment[];
 }

@@ -3,13 +3,15 @@ import {
   getGetImportPreviewQueryKey,
   getGetImportPreviewRowQueryKey,
   getGetImportPreviewRowsQueryKey,
+  getListImportDraftsQueryKey,
   useConfirmImport,
   useFillImportPreviewSolution,
   useGetImportPreviewRows,
   useRemoveImportPreviewRows,
+  useSaveImportDraft,
 } from '@/shared/api';
 import { PAGE_SIZE } from '@/shared/lib';
-import { showMessage } from '@/shared/messages';
+import { isMsgCode, showAcknowledgement, showMessage } from '@/shared/messages';
 
 /** One page of the preview's rows, 20 per page; `page` counts from 1 like the table. */
 export function useImportPreviewRows(previewId: number, page: number) {
@@ -55,13 +57,34 @@ export function useFillPreviewSolution(previewId: number) {
   });
 }
 
-/** Confirm (AC-009.6, AC-009.7): MSG32 on success; the page shows the error and stays. */
+/**
+ * Confirm / Finish (AC-009.6, AC-009.7): MSG32 on success, and for Jira MSG38 with the skipped issues, which stays
+ * until the user closes it (AC-003.2); the page shows the error and stays.
+ */
 export function useConfirmPreview() {
   return useConfirmImport({
     mutation: {
       meta: { handlesOwnErrors: true },
-      onSuccess: (result) =>
-        showMessage('MSG32', { created: result.created, skipped: result.skipped }),
+      onSuccess: ({ created, skipped, notice }) => {
+        showMessage('MSG32', { created, skipped });
+        if (notice && isMsgCode(notice.code)) void showAcknowledgement(notice.code, notice.params);
+      },
+    },
+  });
+}
+
+/** Save as draft of a Jira preview (AC-004.1): MSG41; the Summary and the Drafts list are read again. Errors: global toast. */
+export function useSaveDraft(previewId: number) {
+  const queryClient = useQueryClient();
+  return useSaveImportDraft({
+    mutation: {
+      onSuccess: () => {
+        showMessage('MSG41');
+        return Promise.all([
+          queryClient.invalidateQueries({ queryKey: getGetImportPreviewQueryKey(previewId) }),
+          queryClient.invalidateQueries({ queryKey: getListImportDraftsQueryKey() }),
+        ]);
+      },
     },
   });
 }

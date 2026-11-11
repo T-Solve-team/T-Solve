@@ -7,19 +7,41 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 import type { ImportPreviewRowPage } from './importPreviewRowPage';
+import type { ImportSource } from './importSource';
 import type { ImportType } from './importType';
 import type { MessageRef } from './messageRef';
 
 export interface ImportPreviewResponse {
   previewId: number;
   projectId: string;
-  fileName: string;
+  /**
+   * Null for a Jira preview.
+   * @nullable
+   */
+  fileName: string | null;
   importType: ImportType;
+  /** Omitted = CSV. */
+  source?: ImportSource;
+  /**
+   * Jira only.
+   * @nullable
+   */
+  resolvedFrom?: string | null;
+  /**
+   * Jira only.
+   * @nullable
+   */
+  resolvedTo?: string | null;
+  /**
+   * Null when the preview is not a Draft.
+   * @nullable
+   */
+  draftSavedAt?: string | null;
   validCount: number;
   errorCount: number;
   removedCount: number;
   needsSolutionCount: number;
-  /** MSG30 with {count} when at least one row is an Error; otherwise null. */
+  /** MSG30 with {count} when at least one row is an Error (CSV); MSG35 when more Jira issues match the date range; otherwise null. */
   message?: MessageRef | null;
   rows: ImportPreviewRowPage;
 }

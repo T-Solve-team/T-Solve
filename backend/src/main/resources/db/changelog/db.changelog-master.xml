@@ -31,9 +31,21 @@
     <include file="changes/012-review-search-restore-time.sql" relativeToChangelogFile="true"/>
     <include file="changes/016-review-search-ticket-refs-attach.sql" relativeToChangelogFile="true"/>
     <include file="changes/017-project-membership.sql" relativeToChangelogFile="true"/>
-
     <include file="changes/018-audit-log-entry.sql" relativeToChangelogFile="true"/>
     <!-- Tracker (KAN-22): the suggestion job input, after main's 017 and 018. -->
     <include file="changes/017-tracker-suggestion-job-input.sql" relativeToChangelogFile="true"/>
     <include file="changes/019-tracker-suggestion-uuid-keys.sql" relativeToChangelogFile="true"/>
+    <include file="changes/019-identity-user-role-department.sql" relativeToChangelogFile="true"/>
+    <include file="changes/020-tracker-suggestion-comment.sql" relativeToChangelogFile="true"/>
+    <!-- Jira import (KAN-45): the Draft and Jira columns of the Import Preview, after main's tracker changesets. -->
+    <include file="changes/010-ticket-jira-import.sql" relativeToChangelogFile="true"/>
+    <include file="changes/020-identity-space-manager.sql" relativeToChangelogFile="true"/>
+    <include file="changes/019-review-queue-notify.sql" relativeToChangelogFile="true"/>
+    <include file="changes/021-identity-drop-sign-in-states.sql" relativeToChangelogFile="true"/>
+    <include file="changes/022-identity-drop-hand-off-code.sql" relativeToChangelogFile="true"/>
+    <include file="changes/023-identity-one-project-manager.sql" relativeToChangelogFile="true"/>
+    <include file="changes/024-review-send-back-decision.sql" relativeToChangelogFile="true"/>
+    <include file="changes/025-review-ticket-expiry.sql" relativeToChangelogFile="true"/>
+    <include file="changes/024-chatbot-answer-rating.sql" relativeToChangelogFile="true"/>
+    <include file="changes/026-identity-app-user-keycloak-sub.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

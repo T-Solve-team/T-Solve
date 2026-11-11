@@ -6,15 +6,29 @@ dependencies: [project-integration]
 complexity: large
 paths:
   - backend/src/main/java/vn/tsolve/ticket/**
-  - backend/src/test/java/vn/tsolve/ticket/**
+  - backend/src/test/java/vn/tsolve/ticket/**/Jira*
+  - backend/src/test/java/vn/tsolve/ticket/**/*Draft*
+  - backend/src/test/java/vn/tsolve/ticket/**/ImportPreviewIssue*
+  - backend/src/test/java/vn/tsolve/ticket/**/SolutionRules*
+  - backend/src/test/java/vn/tsolve/ticket/jira/**
   - backend/src/main/java/vn/tsolve/knowledge/**
   - backend/src/test/java/vn/tsolve/knowledge/**
-  - frontend/src/features/ticket-import/**
+  - frontend/src/features/ticket-import/*.ts
+  - frontend/src/features/ticket-import/pages/*Page.tsx
+  - frontend/src/features/ticket-import/pages/Jira*
+  - frontend/src/features/ticket-import/components/Jira*
+  - frontend/src/features/ticket-import/components/*Draft*
+  - frontend/src/features/ticket-import/components/SolutionFields*
+  - frontend/src/features/ticket-import/api/**
+  - frontend/src/features/ticket-import/mocks/**
   - frontend/src/features/tickets/**
   - backend/src/main/resources/db/changelog/**
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
   - docs/bug-log.md
+  - backend/src/main/java/vn/tsolve/project/service/**
+  - backend/src/main/resources/application.yml
+  - .env.example
 ---
 
 # Module: ticket-repository

@@ -2,6 +2,8 @@ package vn.tsolve.ticket.service.impl;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -60,13 +62,7 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
             UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds, Action action, String feedback) {
         Objects.requireNonNull(reviewerId, "Verified reviewer is required");
         Objects.requireNonNull(action, "Decision action is required");
-        if (ticketIds == null || ticketIds.isEmpty() || ticketIds.size() > MAX_TICKETS) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        }
-        Set<UUID> ids = new HashSet<>(ticketIds);
-        if (ids.contains(null) || ids.size() != ticketIds.size()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        }
+        Set<UUID> ids = validatedIds(ticketIds);
         String text = validatedFeedback(action, feedback);
         if (managedProjectIds.isEmpty()) {
             throw new ProjectAccessDeniedException();
@@ -105,6 +101,42 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
         return batch.size();
     }
 
+    @Override
+    @Transactional
+    public int sendBack(UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds) {
+        Objects.requireNonNull(reviewerId, "Verified reviewer is required");
+        Set<UUID> ids = validatedIds(ticketIds);
+        List<Ticket> batch = tickets.lockForReview(ids);
+        validateScope(batch, ids.size(), managedProjectIds);
+        if (batch.stream()
+                .anyMatch(ticket -> ticket.getStatus() != TicketStatus.EXPIRED
+                        || ticket.getSource() != TicketSource.SOLUTION_FORM)) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+        Instant now = clock.instant();
+        LocalDate today = LocalDate.ofInstant(now, ZoneId.of("Asia/Ho_Chi_Minh"));
+        List<UUID> storedIds = batch.stream().map(Ticket::getId).toList();
+        int count = tickets.sendBack(storedIds, today, now);
+        if (count != batch.size()) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+        decisions.saveAll(storedIds.stream()
+                .map(id -> new ReviewDecisionRecord(id, reviewerId, "SEND_BACK", null, now))
+                .toList());
+        return count;
+    }
+
+    private static Set<UUID> validatedIds(List<UUID> ticketIds) {
+        if (ticketIds == null || ticketIds.isEmpty() || ticketIds.size() > MAX_TICKETS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        Set<UUID> ids = new HashSet<>(ticketIds);
+        if (ids.contains(null) || ids.size() != ticketIds.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        return ids;
+    }
+
     private static String validatedFeedback(Action action, String feedback) {
         if (action == Action.APPROVED) {
             return null;
@@ -115,14 +147,18 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
         return feedback.strip();
     }
 
-    private static void validateBatch(
-            List<Ticket> batch, int expectedSize, Set<UUID> managedProjectIds, Action action) {
+    private static void validateScope(List<Ticket> batch, int expectedSize, Set<UUID> managedProjectIds) {
         if (batch.size() != expectedSize) {
             throw new NotFoundException("MSG04", Map.of());
         }
         if (batch.stream().anyMatch(ticket -> !managedProjectIds.contains(ticket.getProjectId()))) {
             throw new ProjectAccessDeniedException();
         }
+    }
+
+    private static void validateBatch(
+            List<Ticket> batch, int expectedSize, Set<UUID> managedProjectIds, Action action) {
+        validateScope(batch, expectedSize, managedProjectIds);
         boolean containsImportedTicket =
                 batch.stream().anyMatch(ticket -> ticket.getSource() != TicketSource.SOLUTION_FORM);
         if (containsImportedTicket && action == Action.CHANGES_REQUESTED) {

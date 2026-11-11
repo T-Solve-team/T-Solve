@@ -145,10 +145,7 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
 
     private ImportPreviewResponse summary(ImportPreview preview) {
         return ImportPreviewResponse.of(
-                preview.getId(),
-                preview.getProjectId(),
-                preview.getFileName(),
-                preview.getImportType(),
+                preview,
                 previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.VALID),
                 previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.ERROR),
                 previewRows.countByIdPreviewIdAndStatus(preview.getId(), PreviewRowStatus.REMOVED),

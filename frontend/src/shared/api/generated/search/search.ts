@@ -6,20 +6,29 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from '@tanstack/react-query';
 
-import type { ProblemResponse, SearchTicketsParams, TicketSearchResultPage } from '../model';
+import type {
+  ProblemResponse,
+  SearchTicketsParams,
+  TicketSearchResult,
+  TicketSearchResultPage,
+  TicketSuggestionRequest,
+} from '../model';
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
@@ -176,3 +185,107 @@ export function useSearchTickets<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getSuggestTicketsUrl = () => {
+  return `/api/v1/search/suggestions`;
+};
+
+/**
+ * @summary Suggest similar Published tickets for a Jira issue (UC-26, KAN-146).
+ */
+export const suggestTickets = async (
+  ticketSuggestionRequest: TicketSuggestionRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<TicketSearchResult[]> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<TicketSearchResult[]>(getSuggestTicketsUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(ticketSuggestionRequest),
+  });
+};
+
+export const getSuggestTicketsMutationKey = () => ['suggestTickets'] as const;
+
+export const getSuggestTicketsMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof suggestTickets>>,
+    TError,
+    SuggestTicketsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof suggestTickets>>,
+  TError,
+  SuggestTicketsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSuggestTicketsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof suggestTickets>>,
+    SuggestTicketsMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return suggestTickets(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SuggestTicketsMutationResult = NonNullable<Awaited<ReturnType<typeof suggestTickets>>>;
+export type SuggestTicketsMutationBody = TicketSuggestionRequest;
+export type SuggestTicketsMutationError = ErrorType<ProblemResponse>;
+export type SuggestTicketsMutationVariables = { data: TicketSuggestionRequest };
+
+/**
+ * @summary Suggest similar Published tickets for a Jira issue (UC-26, KAN-146).
+ */
+export const useSuggestTickets = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof suggestTickets>>,
+      TError,
+      SuggestTicketsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof suggestTickets>>,
+  TError,
+  SuggestTicketsMutationVariables,
+  TContext
+> => {
+  return useMutation(getSuggestTicketsMutationOptions(options), queryClient);
+};

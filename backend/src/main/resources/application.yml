@@ -71,6 +71,10 @@ tsolve:
     username: ${JOBS_DB_USER:}
     password: ${JOBS_DB_PASSWORD:}
     worker-count: ${TSOLVE_WORKER_COUNT:4}
+  review:
+    events:
+      # Review Queue event stream: interval of the keep-alive comment (ISO-8601 duration).
+      heartbeat: PT25S
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
   tracker:
@@ -79,28 +83,44 @@ tsolve:
     # Dev and mock only: the Workspace bound when the worker enqueues a suggestion job and no Workspace is bound yet
     # (until platform binds the request's Workspace). One of TSOLVE_MOCK_ACTIVE_WORKSPACES. Empty = not bound.
     dev-workspace-id: ${TSOLVE_TRACKER_DEV_WORKSPACE_ID:}
+    # Stand-in for the Workspace's Jira service account until `workspace` stores it (UC-08/09): posts the MSG80
+    # suggestion comment (tracker STORY-012). Any of the three empty = no comment is posted.
+    jira:
+      site-url: ${JIRA_SITE_URL:}
+      service-account-email: ${JIRA_SERVICE_ACCOUNT_EMAIL:}
+      service-account-token: ${JIRA_SERVICE_ACCOUNT_TOKEN:}
+      connect-timeout: 5s
+      read-timeout: 10s
   # Central sign-in (identity). All from the environment with no default: startup fails while one is missing.
   auth:
     login-origin: ${TSOLVE_LOGIN_ORIGIN}
     admin-origin: ${TSOLVE_ADMIN_ORIGIN}
-    signing-key: ${TSOLVE_SIGNING_KEY}
-    google-client-id: ${GOOGLE_CLIENT_ID}
-    google-client-secret: ${GOOGLE_CLIENT_SECRET}
     operator-emails: ${PLATFORM_OPERATOR_EMAILS}
     keycloak-web-client-secret: ${KEYCLOAK_WEB_CLIENT_SECRET}
-  # Google's published endpoints: not our hosts and not secrets, so they carry values (tests can point them elsewhere)
-  oidc:
-    google:
-      authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
-      token-uri: https://oauth2.googleapis.com/token
-      jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
-      issuer: https://accounts.google.com
-      connect-timeout: 5s
-      read-timeout: 10s
   # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId", ids as UUIDs. Empty = nobody can import.
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
     inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}
+    # Jira import: "projectId:JIRAKEY,projectId:JIRAKEY". A Project without a key cannot pull from Jira (MSG50).
+    jira-keys: ${TSOLVE_STUB_JIRA_KEYS:}
     # Until search builds the AI Solution Suggestion (KAN-47): empty = no suggestion, "unavailable" = search fails,
     # any other text = that suggested solution for every new issue (tracker STORY-011).
     suggestion: ${TSOLVE_STUB_SUGGESTION:}
+
+---
+# Keycloak provisioning of a Workspace's sign-in (AC-001.58, .60, .61). This document is active only in the `ops`
+# profile, so the keys do not exist in a Workspace web process, whatever its environment holds. Empty defaults (a
+# deviation from "no default", AC-001.60): with one of the three secrets empty the no-op bean is wired and one WARN
+# names the missing variable; with all three set, TSOLVE_LOGIN_ORIGIN and TSOLVE_SITE_ORIGIN_TEMPLATE are validated.
+spring:
+  config:
+    activate:
+      on-profile: ops
+tsolve:
+  keycloak-provisioning:
+    base-url: ${TSOLVE_LOGIN_ORIGIN:}
+    realm: tsolve
+    admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
+    google-client-id: ${GOOGLE_CLIENT_ID:}
+    google-client-secret: ${GOOGLE_CLIENT_SECRET:}
+    site-origin-template: ${TSOLVE_SITE_ORIGIN_TEMPLATE:}
