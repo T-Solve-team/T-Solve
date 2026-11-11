@@ -149,15 +149,17 @@
       "currentPhase": "implement",
       "features": {
         "create-department-api": "passing",
-        "create-department-screen": "passing"
+        "create-department-screen": "passing",
+        "rename-department-api": "passing",
+        "rename-department-screen": "pending"
       },
-      "lastUpdated": "2026-11-11T15:54:34.998Z",
+      "lastUpdated": "2026-11-11T20:11:50.531Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5d06062761d473d9153fdfe12fbdf3b5aeeed926"
+        "default": "8835184a81adba8ca7c33540c3a354e7510f8b97"
       }
     },
     "project-integration": {

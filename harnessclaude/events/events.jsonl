@@ -1213,3 +1213,10 @@
 {"ts":"2026-11-11T17:03:11.604Z","type":"feature-status","module":"identity","feature":"user-role","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-11T17:03:11.852Z","type":"feature-status","module":"identity","feature":"user-role","from":"evaluating","to":"passing"}
 {"ts":"2026-11-11T17:06:57.337Z","type":"spec-approved","module":"identity","specHash":"0ce4e92a3fcb4837874ef03c8f4606a9bae0b141abf9c1d6ba5327f60caba07a"}
+{"ts":"2026-11-11T18:14:03.445Z","type":"feature-status","module":"workspace","feature":"rename-department-api","from":null,"to":"pending"}
+{"ts":"2026-11-11T18:14:03.942Z","type":"feature-status","module":"workspace","feature":"rename-department-screen","from":null,"to":"pending"}
+{"ts":"2026-11-11T18:20:04.520Z","type":"spec-approved","module":"workspace","specHash":"8a42bb6e4d9d611e2f4cedd1d7d760057f54a1179cd496c0526ae1d52df92a69"}
+{"ts":"2026-11-11T18:20:16.949Z","type":"feature-status","module":"workspace","feature":"rename-department-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-11T20:07:51.127Z","type":"feature-status","module":"workspace","feature":"rename-department-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-11T20:07:51.388Z","type":"feature-status","module":"workspace","feature":"rename-department-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-11T20:11:50.535Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"8835184a81adba8ca7c33540c3a354e7510f8b97"}
