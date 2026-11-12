@@ -1257,3 +1257,4 @@
 {"ts":"2026-11-12T18:17:48.951Z","type":"feature-status","module":"workspace","feature":"workspace-update-api","from":"evaluating","to":"passing"}
 {"ts":"2026-11-12T18:17:49.282Z","type":"feature-status","module":"workspace","feature":"workspace-service-account","from":"evaluating","to":"passing"}
 {"ts":"2026-11-12T18:21:28.050Z","type":"spec-approved","module":"workspace","specHash":"687480ff015764e2a9d6073419d51f205d7b5a7a2832f660b6b99b2dd06912e8"}
+{"ts":"2026-11-12T18:27:46.309Z","type":"spec-approved","module":"workspace","specHash":"257f71707ef6546881d4484a0f80395209373bf57d7ffc43020ae4121154d2f9"}

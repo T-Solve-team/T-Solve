@@ -13,7 +13,7 @@ reviewer did not re-run Maven (low-RAM machine, per the review brief).
 | later tree (Task 3/4 run) | `mvn -B verify` | BUILD SUCCESS — 1534 unit + 454 IT, 0 failures (includes the moved test class) |
 
 ## Traceability (run by the reviewer)
-`bun harnessclaude/hooks/sdd.ts trace workspace STORY-007` → 7/7. AC-007.1 and AC-007.2 →
+`bun harnessclaude/hooks/sdd.ts trace workspace STORY-009` → 7/7. AC-009.1 and AC-009.2 →
 `backend/src/test/java/vn/tsolve/workspace/jira/JiraServiceAccountCheckTest.java`. The ambiguity the session log
 mentions is gone.
 

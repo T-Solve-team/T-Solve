@@ -12,8 +12,8 @@ Spec: `artifacts/03-modules/workspace/spec.md`
 ```
 WorkspaceController (/api/v1/workspace, @PreAuthorize ADMIN)
    └─ WorkspaceService (impl: WorkspaceServiceImpl, @Transactional)
-        ├─ JiraSiteRule            static: validate + normalise the site (AC-007.3)
-        ├─ TicketTrackerClient     tracker: checkServiceAccount(JiraAccount) (AC-007.1/2)
+        ├─ JiraSiteRule            static: validate + normalise the site (AC-009.3)
+        ├─ TicketTrackerClient     tracker: checkServiceAccount(JiraAccount) (AC-009.1/2)
         ├─ JiraSiteLinker (port)   → InterimJiraSiteLinker (reads /_edge/tenant_info) [Interim]
         ├─ TokenCipher             AES-256-GCM, key WORKSPACE_SECRET_KEY, AAD = workspace id
         ├─ WorkspaceInfoRepository JPA, table `workspace` (one row)
@@ -23,13 +23,13 @@ WorkspaceStatusLookupImpl  → common/lookup/WorkspaceStatusLookup (for /me)
 WorkspaceJiraServiceAccount → tracker/service/JiraServiceAccount (replaces ConfiguredJiraServiceAccount)
 ```
 
-Setup order (AC-001.2..11): field checks → `JiraSiteRule` (MSG61) → row exists? (409) → `checkServiceAccount`
+Setup order (AC-003.2..11): field checks → `JiraSiteRule` (MSG61) → row exists? (409) → `checkServiceAccount`
 (MSG156) → in one transaction: `linkJiraSite` (MSG153 / MSG61) → insert row → audit → commit. A unique-key violation
 on the singleton constraint at insert (concurrent Setup) is mapped to 409.
 
 ## Data Model
 
-Changeset `027-workspace-info.sql` (author `workspace`):
+Changeset `029-workspace-info.sql` (author `workspace`):
 ```sql
 ALTER TABLE workspace RENAME TO legacy_workspace;          -- changeset 001 table; FKs follow the rename
 CREATE TABLE workspace (
@@ -85,7 +85,7 @@ The user delegated the remaining calls on 12/11 ("tự quyết và note lại").
 | D12 | `sign_in_provider` value | `GOOGLE` | null / config | NOT NULL in the DDL; sign-in is Keycloak with Google (ADR-0003) |
 | D13 | Link and insert in one transaction | Link first, then insert, same transaction | insert then link after commit | A refused link stores no row; the left-over risk (commit fails after the link) is a platform change request (AC-004.23 idempotent) |
 | D14 | `WorkspaceStatusLookup` interface does not exist yet | Create it in `common/lookup` with `boolean isReady()` (be-foundation design.md:182 names this file) | wait for be-foundation | Lets `/me` wire it later; path added to `module.md` |
-| D15 | Stand-in `ConfiguredJiraServiceAccount` | Delete it, its test and its 3 settings (`application.yml`, `.env.example`) | keep under a profile | Its own Javadoc says to delete it; one bean only (AC-004.2) |
+| D15 | Stand-in `ConfiguredJiraServiceAccount` | Delete it, its test and its 3 settings (`application.yml`, `.env.example`) | keep under a profile | Its own Javadoc says to delete it; one bean only (AC-006.2) |
 | D16 | Decrypt failure | Log error, return empty | throw | No Jira call with a broken token; tracker already handles "no account" (AC-012.8) |
 | D17 | Request `jiraSiteUrl` on PUT | Ignored | 400 | Read-only field; a client that echoes the form must not fail |
 | D18 | Missing Jira timeouts | Reuse `tsolve.tracker.jira.connect-timeout` 5 s / `read-timeout` 10 s; interim linker uses the same values | new settings | NFR 3, no new knobs |
@@ -93,12 +93,12 @@ The user delegated the remaining calls on 12/11 ("tự quyết và note lại").
 | D20 | Spec depth / risk review | Deep; risk-review done inline below | five-persona subagent | Planner agent was stopped by the user; findings folded into the edge cases |
 | D21 | "Token differs" on UC-11 (builder check) | Any non-blank token counts as changed: it is checked with Jira and `tokenChanged` = true; the stored token is never decrypted to compare | decrypt and compare | Simpler; never handles the old secret in clear for a comparison |
 | D23 | `JIRA_SITE_URL` after removing the stand-in (Task 6) | Keep it in `.env.example` under the Jira import section; only the stand-in's email and token variables go | delete it everywhere | `ticket/client/JiraRestIssueSource` (ticket-repository) still reads it for browse links |
-| D24 | No side menu on 2.1 (AC-005.1, Task 7) | Spec change: "with no menu" removed from AC-005.1; change request to `fe-foundation` (`AppShell`) | edit `AppShell` here | `AppShell` is `fe-foundation` code, locked while its spec is changed since approval |
+| D24 | No side menu on 2.1 (AC-007.1, Task 7) | Spec change: "with no menu" removed from AC-007.1; change request to `fe-foundation` (`AppShell`) | edit `AppShell` here | `AppShell` is `fe-foundation` code, locked while its spec is changed since approval |
 | D25 | Detecting the 409 on 2.1 (Task 7) | Status 409 with no field error on `setupWorkspace` (its only non-field conflict) | read the technical code | The shared transport normalises unknown codes to `MSG06` and drops `WORKSPACE_ALREADY_SET_UP` |
 | D26 | fe-foundation's route-table test still expects the 2.1 placeholder (Task 7) | Remove the 2.1 row, as its comment asks the building module to do; path added to `module.md` | leave the test failing | Same convention chatbot (12.1) and triage (10.1) followed |
 | D27 | Developer for Task 8 after Codex hit its usage limit (until 14/11) | Claude `harnessclaude-developer` subagent with the same brief and rules | wait for Codex | Keeps KAN-119 moving; the Reviewer stays independent of the writer |
-| D28 | Which Workspace `JiraServiceAccount.current()` reads in a worker job (evaluation, Task 6 CRITICAL) | `WorkerTenantService.currentWorkspaceId()` when present (optional bean), else `TenantScope`; AC-004.1 reworded | make `worker`'s `runInTenant` also bind `TenantScope` | `worker` is `completed`; the fix stays inside this module; a later platform tenant binding can replace both |
-| D29 | Email-only update while the stored token cannot be decrypted (evaluation, Task 5) | 400 `MSG156` on `serviceAccountToken`, workspace id logged only; AC-003.5 extended | generic 500 | The Admin must re-enter the token after a key loss; MSG156 tells them which field |
+| D28 | Which Workspace `JiraServiceAccount.current()` reads in a worker job (evaluation, Task 6 CRITICAL) | `WorkerTenantService.currentWorkspaceId()` when present (optional bean), else `TenantScope`; AC-006.1 reworded | make `worker`'s `runInTenant` also bind `TenantScope` | `worker` is `completed`; the fix stays inside this module; a later platform tenant binding can replace both |
+| D29 | Email-only update while the stored token cannot be decrypted (evaluation, Task 5) | 400 `MSG156` on `serviceAccountToken`, workspace id logged only; AC-005.5 extended | generic 500 | The Admin must re-enter the token after a key loss; MSG156 tells them which field |
 | D30 | Jira check inside the `setup` transaction (evaluation, Task 4, backend/AGENTS.md §4) | Check before the transaction; link, persist and audit in a `TransactionTemplate`, like `update` | keep as is | No remote call while a DB transaction is open |
 | D22 | Where the interim linker puts the `cloudId` (builder check) | Returned to the service and only logged (host, not secrets); nothing persists it until the catalog exists | add a `jira_cloud_id` column to the tenant table | The catalog owns `jira_cloud_id` (platform AC-001.15); a tenant column would duplicate it |
 
@@ -115,7 +115,7 @@ backend/src/main/java/vn/tsolve/workspace/
   crypto/TokenCipher.java
 backend/src/main/java/vn/tsolve/common/lookup/WorkspaceStatusLookup.java
 backend/src/main/java/vn/tsolve/tracker/client/TicketTrackerClient.java, JiraClient.java   (+ checkServiceAccount)
-backend/src/main/resources/db/changelog/changes/027-workspace-info.sql (+ master include)
+backend/src/main/resources/db/changelog/changes/029-workspace-info.sql (+ master include)
 backend/src/main/resources/application.yml  (tsolve.workspace.secret-key: ${WORKSPACE_SECRET_KEY}; remove stand-in keys)
 backend/src/test/resources/application*.yml (test key)
 .env.example (WORKSPACE_SECRET_KEY)
@@ -131,13 +131,13 @@ frontend/src/shared/messages/{catalog.ts,report3-messages.json,catalog.test.ts}
 ## Risk review (inline, Deep spec)
 
 Verdict: **CAUTION** — go, with the mitigations below folded into the tasks.
-- Secret leak (token in logs/toString/audit/errors) → AC-007.7 tests per type; `JiraAccount.toString` already hides it.
-- SSRF via site address → AC-007.3 rule before any call; no redirects in the interim linker; tests with
+- Secret leak (token in logs/toString/audit/errors) → AC-009.7 tests per type; `JiraAccount.toString` already hides it.
+- SSRF via site address → AC-009.3 rule before any call; no redirects in the interim linker; tests with
   `http://`, `https://localhost`, `https://169.254.169.254`, `https://a.atlassian.net.evil.com`, `https://x@a.atlassian.net`,
   `https://a.atlassian.net:8443`.
 - Key loss = all tokens undecryptable → documented in `.env.example`; decrypt failure returns empty (D16); the Admin
   re-enters the token in 2.2.
-- Cross-tenant copy of ciphertext → AAD = workspace id (AC-007.5).
+- Cross-tenant copy of ciphertext → AAD = workspace id (AC-009.5).
 - Half-done Setup (catalog linked, tenant commit failed) → D13 + platform change request.
 - MSG153 untestable end-to-end until the catalog exists → [Interim] in spec; unit test with a refusing double.
 
@@ -145,23 +145,23 @@ Verdict: **CAUTION** — go, with the mitigations below folded into the tasks.
 
 | # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
 |---|-------|-----------|----------|----------|-------------------|-----------|
-| 1 | STORY-001 | Concurrency | Two Admins submit Setup at once | High | One row; the other gets 409 (unique singleton) | Task 4 |
-| 2 | STORY-001 | Security | Site `https://169.254.169.254` / `localhost` / evil suffix | Critical | MSG61, no outbound call | Task 3 |
-| 3 | STORY-001 | Input | Site with trailing `/`, upper case, spaces | Medium | Normalised to `https://<host>` | Task 3 |
-| 4 | STORY-001 | External | Jira 401 / 403 / 500 / timeout | High | MSG156, nothing stored, no body logged | Task 2, Task 4 |
-| 5 | STORY-001 | External | Account authenticates but lacks MODIFY_REPORTER | High | MSG156 | Task 2 |
-| 6 | STORY-001 | External | tenant_info 404 or no cloudId / redirect | High | MSG61, nothing stored | Task 3 |
-| 7 | STORY-001 | State | Linker refuses (another Workspace) | High | MSG153, no row | Task 4 |
-| 8 | STORY-001 | State | Setup when already set up | High | 409, site unchanged | Task 4 |
-| 9 | STORY-007 | Security | Token in logs / audit / response | Critical | Never present | Task 1, Task 4, Task 5 |
-| 10 | STORY-007 | Security | Ciphertext copied to another Workspace id | High | Decrypt fails | Task 1 |
-| 11 | STORY-007 | Config | Key missing / wrong length | High | Startup fails, names setting only | Task 1 |
-| 12 | STORY-003 | Input | Blank token on update | High | Stored token kept; check uses it if the email changed | Task 5 |
-| 13 | STORY-003 | External | Only company name changed while Jira is down | Medium | Saved, no Jira call | Task 5 |
-| 14 | STORY-003 | Input | Body carries `jiraSiteUrl` | Medium | Ignored | Task 5 |
-| 15 | STORY-004 | State | Not set up | High | `current()` empty | Task 6 |
-| 16 | STORY-004 | Security | Tampered ciphertext | High | Error log without value, empty | Task 6 |
-| 17 | STORY-005 | UX | Double click Save | Medium | One request | Task 7 |
-| 18 | STORY-005 | UX | 409 response | Medium | No error, go to 2.2 | Task 7 |
-| 19 | STORY-006 | UX | Token never shown, empty means keep | High | Field empty; PUT omits token | Task 8 |
-| 20 | STORY-002 | Access | Non-Admin calls any endpoint | High | 403 | Task 4, Task 5 |
+| 1 | STORY-003 | Concurrency | Two Admins submit Setup at once | High | One row; the other gets 409 (unique singleton) | Task 4 |
+| 2 | STORY-003 | Security | Site `https://169.254.169.254` / `localhost` / evil suffix | Critical | MSG61, no outbound call | Task 3 |
+| 3 | STORY-003 | Input | Site with trailing `/`, upper case, spaces | Medium | Normalised to `https://<host>` | Task 3 |
+| 4 | STORY-003 | External | Jira 401 / 403 / 500 / timeout | High | MSG156, nothing stored, no body logged | Task 2, Task 4 |
+| 5 | STORY-003 | External | Account authenticates but lacks MODIFY_REPORTER | High | MSG156 | Task 2 |
+| 6 | STORY-003 | External | tenant_info 404 or no cloudId / redirect | High | MSG61, nothing stored | Task 3 |
+| 7 | STORY-003 | State | Linker refuses (another Workspace) | High | MSG153, no row | Task 4 |
+| 8 | STORY-003 | State | Setup when already set up | High | 409, site unchanged | Task 4 |
+| 9 | STORY-009 | Security | Token in logs / audit / response | Critical | Never present | Task 1, Task 4, Task 5 |
+| 10 | STORY-009 | Security | Ciphertext copied to another Workspace id | High | Decrypt fails | Task 1 |
+| 11 | STORY-009 | Config | Key missing / wrong length | High | Startup fails, names setting only | Task 1 |
+| 12 | STORY-005 | Input | Blank token on update | High | Stored token kept; check uses it if the email changed | Task 5 |
+| 13 | STORY-005 | External | Only company name changed while Jira is down | Medium | Saved, no Jira call | Task 5 |
+| 14 | STORY-005 | Input | Body carries `jiraSiteUrl` | Medium | Ignored | Task 5 |
+| 15 | STORY-006 | State | Not set up | High | `current()` empty | Task 6 |
+| 16 | STORY-006 | Security | Tampered ciphertext | High | Error log without value, empty | Task 6 |
+| 17 | STORY-007 | UX | Double click Save | Medium | One request | Task 7 |
+| 18 | STORY-007 | UX | 409 response | Medium | No error, go to 2.2 | Task 7 |
+| 19 | STORY-008 | UX | Token never shown, empty means keep | High | Field empty; PUT omits token | Task 8 |
+| 20 | STORY-004 | Access | Non-Admin calls any endpoint | High | 403 | Task 4, Task 5 |

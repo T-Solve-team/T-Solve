@@ -12,7 +12,7 @@ iteration: 1
 # Review: workspace — Task 6: Service account for tracker, remove the stand-in
 
 ## Summary
-Commits `default@2969d0a` (original) and `default@df3d89e` (fix), covering STORY-004. AC-004.1 now says that the bound
+Commits `default@2969d0a` (original) and `default@df3d89e` (fix), covering STORY-006. AC-006.1 now says that the bound
 Workspace is the one of the running worker job (`WorkerTenantService`), or else that of the web request
 (`TenantScope`) (spec Changelog 2026-11-12, D28, re-approved by the user).
 
@@ -28,12 +28,12 @@ closes the attempt-1 CRITICAL:
   used.
 - `WorkerTenantService` is the `worker` module's `service/` port, so the dependency follows `backend/AGENTS.md` §1.
 
-There are three new AC-004.1 tests:
+There are three new AC-006.1 tests:
 - a worker binding is used and `TenantScope` is never touched (`verifyNoInteractions(scope)`);
 - a worker bean with no binding falls back to the scope;
 - with no worker bean, the scope is used.
 
-I re-checked the whole feature against the current spec. AC-004.2 and AC-004.3 are unchanged and still met. Verdict:
+I re-checked the whole feature against the current spec. AC-006.2 and AC-006.3 are unchanged and still met. Verdict:
 **pass**.
 
 ## Criteria
@@ -49,17 +49,17 @@ I re-checked the whole feature against the current spec. AC-004.2 and AC-004.3 a
 
 | # | AC | Status | Evidence |
 |---|----|--------|----------|
-| 1 | AC-004.1 | PASS | `:44-61`. Tests: account returned, no row, incomplete row, re-read on every call; plus the new worker binding (`WorkspaceJiraServiceAccountTest.java:112`), the fallback with an unbound worker (`:129`), and the fallback with no worker bean (`:144`) |
-| 2 | AC-004.2 | PASS | The stand-in, its test and the `tsolve.tracker.jira.site-url/service-account-*` settings are removed. The test "AC-004.2 … exactly one JiraServiceAccount bean" scans `vn.tsolve` |
-| 3 | AC-004.3 | PASS | `:59-65`. Parameterised tests (tampered, other-workspace AAD, wrong key): an ERROR log with no token, email, ciphertext or throwable, and the result is empty |
+| 1 | AC-006.1 | PASS | `:44-61`. Tests: account returned, no row, incomplete row, re-read on every call; plus the new worker binding (`WorkspaceJiraServiceAccountTest.java:112`), the fallback with an unbound worker (`:129`), and the fallback with no worker bean (`:144`) |
+| 2 | AC-006.2 | PASS | The stand-in, its test and the `tsolve.tracker.jira.site-url/service-account-*` settings are removed. The test "AC-006.2 … exactly one JiraServiceAccount bean" scans `vn.tsolve` |
+| 3 | AC-006.3 | PASS | `:59-65`. Parameterised tests (tampered, other-workspace AAD, wrong key): an ERROR log with no token, email, ciphertext or throwable, and the result is empty |
 
 ## Traceability
 ```
-$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-004
-  ✓ AC-004.1  backend/src/test/java/vn/tsolve/workspace/service/impl/WorkspaceJiraServiceAccountTest.java
-  ✓ AC-004.2  backend/src/test/java/vn/tsolve/workspace/service/impl/WorkspaceJiraServiceAccountTest.java
-  ✓ AC-004.3  backend/src/test/java/vn/tsolve/workspace/service/impl/WorkspaceJiraServiceAccountTest.java
-trace workspace (STORY-004): 3/3 acceptance criteria have a test
+$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-006
+  ✓ AC-006.1  backend/src/test/java/vn/tsolve/workspace/service/impl/WorkspaceJiraServiceAccountTest.java
+  ✓ AC-006.2  backend/src/test/java/vn/tsolve/workspace/service/impl/WorkspaceJiraServiceAccountTest.java
+  ✓ AC-006.3  backend/src/test/java/vn/tsolve/workspace/service/impl/WorkspaceJiraServiceAccountTest.java
+trace workspace (STORY-006): 3/3 acceptance criteria have a test
 ```
 
 ## Issues
@@ -73,18 +73,18 @@ MINOR (do not block):
    `MockWorkerTenantService` and calls `current()` from inside `runIn`.
 2. (new) Spec `harnessclaude/artifacts/03-modules/workspace/spec.md`, "Required from other modules", still lists only
    `identity: TenantScope.currentWorkspaceId()`. It should also list `worker: WorkerTenantService.currentWorkspaceId()`,
-   which AC-004.1 now names. Fix: one line in the spec (a documentation fix; the behaviour is in AC-004.1).
+   which AC-006.1 now names. Fix: one line in the spec (a documentation fix; the behaviour is in AC-006.1).
 3. (carried) `WorkspaceJiraServiceAccount.java:44-47`: when neither binding is present, `LocalTenantScope` still throws
    `IllegalStateException("no Workspace is bound to this thread")`. The spec does not cover this case. It is a
-   programming error (a call from an unbound thread), not a decrypt failure, so it is kept apart from the AC-004.3 log
+   programming error (a call from an unbound thread), not a decrypt failure, so it is kept apart from the AC-006.3 log
    as attempt 1 asked.
 
 ## Attempt 1
 Verdict fail (`2969d0a`).
 - CRITICAL: `current()` read only identity's `TenantScope`, which a worker job never binds. The tracker suggestion
   job, the only consumer, threw, so the MSG80 comment stopped being posted after the stand-in was removed. The spec
-  named only the request binding. **Resolved**: AC-004.1 was reworded (D28, re-approved) and the code was fixed in
-  `df3d89e` (worker binding first, then `TenantScope`), with three AC-004.1 tests.
+  named only the request binding. **Resolved**: AC-006.1 was reworded (D28, re-approved) and the code was fixed in
+  `df3d89e` (worker binding first, then `TenantScope`), with three AC-006.1 tests.
 - MINOR (keep "no Workspace bound" separate from the decrypt failure). **Holds**: the resolution sits outside the
   `try`, so an unbound thread is never logged as a decrypt failure (MINOR 3).
 

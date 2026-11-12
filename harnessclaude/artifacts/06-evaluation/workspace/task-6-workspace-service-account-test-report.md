@@ -11,17 +11,17 @@ machine. Source: `artifacts/05-implementation/workspace/task-6-workspace-service
   (52e87dc, b18a62f, 92f0118, df3d89e)
 - Result: BUILD SUCCESS: 1594 unit + 481 integration tests
 - New tests in `WorkspaceJiraServiceAccountTest`:
-  - "AC-004.1 a worker job reads the Workspace bound by WorkerTenantService without touching TenantScope"
-  - "AC-004.1 falls back to TenantScope when the worker binds no Workspace"
-  - "AC-004.1 falls back to TenantScope when no WorkerTenantService bean exists"
+  - "AC-006.1 a worker job reads the Workspace bound by WorkerTenantService without touching TenantScope"
+  - "AC-006.1 falls back to TenantScope when the worker binds no Workspace"
+  - "AC-006.1 falls back to TenantScope when no WorkerTenantService bean exists"
 
 ## Frontend
 No frontend change in this feature.
 
 ## Traceability (run by the reviewer)
 ```
-$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-004
-trace workspace (STORY-004): 3/3 acceptance criteria have a test
+$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-006
+trace workspace (STORY-006): 3/3 acceptance criteria have a test
 ```
 
 ## Reviewer checks

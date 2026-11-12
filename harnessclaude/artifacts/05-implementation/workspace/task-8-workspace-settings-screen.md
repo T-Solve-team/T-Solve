@@ -17,7 +17,7 @@
 - Tests failed 10/10 against the placeholder page, then passed.
 - Verify: format:check ok, lint 0 errors (1 existing warning in tickets), typecheck ok, generate:api unchanged,
   vitest 89 files / 1537 tests passed, build ok.
-- Trace STORY-006: 6/6.
+- Trace STORY-008: 6/6.
 - Commit: default@8e62372
 
 ### Next up

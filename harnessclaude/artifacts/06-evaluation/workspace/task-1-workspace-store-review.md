@@ -14,8 +14,8 @@ iteration: 1
 ## Summary
 Commit `d9b87ae` (default repo, monorepo). It adds changeset 027, which renames the legacy table and creates the one-row
 `workspace` table. It also adds the `WorkspaceInfo` entity and repository, `TokenCipher` (AES-256-GCM), the
-`tsolve.workspace.secret-key` setting, the test key and `.env.example`. Every criterion this task owns (AC-007.5,
-AC-007.6, AC-007.7) is implemented, and each has tests that check the behaviour. The supporting AC-001.1 and AC-001.11
+`tsolve.workspace.secret-key` setting, the test key and `.env.example`. Every criterion this task owns (AC-009.5,
+AC-009.6, AC-009.7) is implemented, and each has tests that check the behaviour. The supporting AC-003.1 and AC-003.11
 tests check the schema and the singleton guard. No CRITICAL or IMPORTANT findings. Verdict: **pass**.
 
 ## Criteria
@@ -31,25 +31,25 @@ tests check the schema and the singleton guard. No CRITICAL or IMPORTANT finding
 
 | # | Criterion | Status | Evidence |
 |---|-----------|--------|----------|
-| 1 | AC-007.5 AES-256-GCM, fresh 96-bit nonce, Workspace id as AAD | PASS | `TokenCipher.java:41-55,76-83`. `TokenCipherTest` "AC-007.5 encrypts…" decrypts with an independent JCE cipher and the same AAD. "AC-007.5 generates a fresh nonce…" checks the nonce. "AC-007.5 refuses ciphertext copied to another Workspace" checks the AAD binding. Tampering at bytes 0, 12 and the last byte is rejected, and so is a wrong key. |
-| 2 | AC-007.6 missing / non-Base64 / not 32 bytes → startup fails, names setting not value | PASS | `TokenCipher.java:26-38`. `ApplicationContextRunner` tests load the real `application.yml` with the system environment removed. They cover a missing key, `""`, `" "`, non-Base64, an unresolved placeholder, and 16/24/31/33-byte keys. Each test asserts `hasFailed()`, that the stack trace contains `WORKSPACE_SECRET_KEY`, and that neither the trace nor the captured output contains the value. |
-| 3 | AC-007.7 token not in response, log, audit, exception message, `toString()` | PASS (for this task's types) | `WorkspaceInfo.toString()` → `WorkspaceInfo[id=…]`. `@JsonIgnore` on `getServiceAccountApiToken`. Cipher exceptions carry fixed messages and no cause (`hasNoCause()` asserted). Tests: "AC-007.7 entity and cipher diagnostics and entity JSON hide secret values", "…decryption diagnostics never expose…", "…encryption failures never expose…". Responses and audit entries are Tasks 4 and 5. |
-| 4 | AC-001.1 (support: schema, `workspace_id`, `sign_in_provider` GOOGLE, encrypted token stored) | PASS | `WorkspaceInfoRepositoryIT` "AC-001.1 stores the bound Workspace id…", "…schema uses the specified columns…", the changelog/rollback tests, and tenant B unaffected. |
-| 5 | AC-001.11 (support: one row only) | PASS | IT "singleton constraint refuses a second row even with a different Workspace id"; `false`/`null` cannot bypass it (CHECK + NOT NULL). |
+| 1 | AC-009.5 AES-256-GCM, fresh 96-bit nonce, Workspace id as AAD | PASS | `TokenCipher.java:41-55,76-83`. `TokenCipherTest` "AC-009.5 encrypts…" decrypts with an independent JCE cipher and the same AAD. "AC-009.5 generates a fresh nonce…" checks the nonce. "AC-009.5 refuses ciphertext copied to another Workspace" checks the AAD binding. Tampering at bytes 0, 12 and the last byte is rejected, and so is a wrong key. |
+| 2 | AC-009.6 missing / non-Base64 / not 32 bytes → startup fails, names setting not value | PASS | `TokenCipher.java:26-38`. `ApplicationContextRunner` tests load the real `application.yml` with the system environment removed. They cover a missing key, `""`, `" "`, non-Base64, an unresolved placeholder, and 16/24/31/33-byte keys. Each test asserts `hasFailed()`, that the stack trace contains `WORKSPACE_SECRET_KEY`, and that neither the trace nor the captured output contains the value. |
+| 3 | AC-009.7 token not in response, log, audit, exception message, `toString()` | PASS (for this task's types) | `WorkspaceInfo.toString()` → `WorkspaceInfo[id=…]`. `@JsonIgnore` on `getServiceAccountApiToken`. Cipher exceptions carry fixed messages and no cause (`hasNoCause()` asserted). Tests: "AC-009.7 entity and cipher diagnostics and entity JSON hide secret values", "…decryption diagnostics never expose…", "…encryption failures never expose…". Responses and audit entries are Tasks 4 and 5. |
+| 4 | AC-003.1 (support: schema, `workspace_id`, `sign_in_provider` GOOGLE, encrypted token stored) | PASS | `WorkspaceInfoRepositoryIT` "AC-003.1 stores the bound Workspace id…", "…schema uses the specified columns…", the changelog/rollback tests, and tenant B unaffected. |
+| 5 | AC-003.11 (support: one row only) | PASS | IT "singleton constraint refuses a second row even with a different Workspace id"; `false`/`null` cannot bypass it (CHECK + NOT NULL). |
 
 ## Traceability
 ```
-  ✓ AC-007.1  backend/src/test/java/vn/tsolve/workspace/jira/JiraServiceAccountCheckTest.java
-  ✓ AC-007.2  backend/src/test/java/vn/tsolve/workspace/jira/JiraServiceAccountCheckTest.java
-  ✓ AC-007.3  backend/src/test/java/vn/tsolve/workspace/site/InterimJiraSiteLinkerTest.java, backend/src/test/java/vn/tsolve/workspace/site/JiraSiteRuleTest.java
-  ✓ AC-007.4  backend/src/test/java/vn/tsolve/workspace/site/InterimJiraSiteLinkerTest.java
-  ✓ AC-007.5  backend/src/test/java/vn/tsolve/workspace/crypto/TokenCipherTest.java
-  ✓ AC-007.6  backend/src/test/java/vn/tsolve/workspace/crypto/TokenCipherTest.java
-  ✓ AC-007.7  backend/src/test/java/vn/tsolve/workspace/crypto/TokenCipherTest.java
-trace workspace (STORY-007): 7/7 acceptance criteria have a test
+  ✓ AC-009.1  backend/src/test/java/vn/tsolve/workspace/jira/JiraServiceAccountCheckTest.java
+  ✓ AC-009.2  backend/src/test/java/vn/tsolve/workspace/jira/JiraServiceAccountCheckTest.java
+  ✓ AC-009.3  backend/src/test/java/vn/tsolve/workspace/site/InterimJiraSiteLinkerTest.java, backend/src/test/java/vn/tsolve/workspace/site/JiraSiteRuleTest.java
+  ✓ AC-009.4  backend/src/test/java/vn/tsolve/workspace/site/InterimJiraSiteLinkerTest.java
+  ✓ AC-009.5  backend/src/test/java/vn/tsolve/workspace/crypto/TokenCipherTest.java
+  ✓ AC-009.6  backend/src/test/java/vn/tsolve/workspace/crypto/TokenCipherTest.java
+  ✓ AC-009.7  backend/src/test/java/vn/tsolve/workspace/crypto/TokenCipherTest.java
+trace workspace (STORY-009): 7/7 acceptance criteria have a test
 ```
-This task owns AC-007.5..AC-007.7. AC-001.1 and AC-001.11 also have Task 1 tests in `WorkspaceInfoRepositoryIT` and
-`WorkspaceChangelogTest` (`trace workspace STORY-001`: 13/13).
+This task owns AC-009.5..AC-009.7. AC-003.1 and AC-003.11 also have Task 1 tests in `WorkspaceInfoRepositoryIT` and
+`WorkspaceChangelogTest` (`trace workspace STORY-003`: 13/13).
 
 ## Issues
 No CRITICAL or IMPORTANT findings.
@@ -69,11 +69,11 @@ Informational (does not block):
    shared IT base or property set that the identity ITs use.
 
 ## Assumptions made
-- Task 1 is judged against AC-007.5..AC-007.7 (tasks.md). AC-001.1 and AC-001.11 are only the storage part here. Their
+- Task 1 is judged against AC-009.5..AC-009.7 (tasks.md). AC-003.1 and AC-003.11 are only the storage part here. Their
   API behaviour belongs to Task 4.
 - The schema's deviation from platform AC-001.20 (no UUID default, no timestamps) is accepted. The spec records it as a
   change request to platform. Open judgment call for the user: accept it, or add timestamp columns now.
 
 ## Test Report
 See `task-1-workspace-store-test-report.md`. The orchestrator ran the full suite: `mvn -B verify` (JDK 21 JBR), 1383 unit
-+ 439 IT, 0 failures, BUILD SUCCESS. The reviewer ran `sdd.ts trace`: STORY-007 7/7, STORY-001 13/13.
++ 439 IT, 0 failures, BUILD SUCCESS. The reviewer ran `sdd.ts trace`: STORY-009 7/7, STORY-003 13/13.

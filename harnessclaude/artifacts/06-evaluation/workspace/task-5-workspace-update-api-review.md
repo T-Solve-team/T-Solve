@@ -12,7 +12,7 @@ iteration: 1
 # Review: workspace — Task 5: Update API (UC-11)
 
 ## Summary
-Commits `default@0f0a1ff` (original) and `default@92f0118` (fix), covering STORY-003. AC-003.5 now reads "IF that
+Commits `default@0f0a1ff` (original) and `default@92f0118` (fix), covering STORY-005. AC-005.5 now reads "IF that
 check fails, or the stored token it needs cannot be decrypted, THEN … 400 `MSG156` … on `serviceAccountToken` and
 change nothing" (spec Changelog 2026-11-12, D29, re-approved by the user in `approvals.json`).
 
@@ -22,21 +22,21 @@ error. This happens before the Jira call and before the write transaction, so no
 maps every failure to that one exception, including a null stored token (NPE is caught at `TokenCipher.java:69`), so
 no decrypt path reaches the 500 handler any more.
 
-The new test "AC-003.5 undecryptable stored token on an email change returns MSG156 and changes nothing D29"
+The new test "AC-005.5 undecryptable stored token on an email change returns MSG156 and changes nothing D29"
 (`WorkspaceServiceImplTest.java:587`) checks these things:
 - the field, the code and the params;
 - no cause;
 - exactly one ERROR log that contains the id and no token, ciphertext or email, with no throwable;
 - no save, no audit, no transaction, no Jira call and no encrypt.
 
-I re-checked the whole feature against the current spec; AC-003.1..4 and AC-003.6..10 are unchanged and still met.
+I re-checked the whole feature against the current spec; AC-005.1..4 and AC-005.6..10 are unchanged and still met.
 Verdict: **pass**.
 
 ## Criteria
 
 | Criterion | Result | Detail |
 |-----------|--------|--------|
-| Functionality | pass | `WorkspaceServiceImpl.update` `:139-183` + `storedToken` `:185-193` implement every AC, including the reworded AC-003.5. |
+| Functionality | pass | `WorkspaceServiceImpl.update` `:139-183` + `storedToken` `:185-193` implement every AC, including the reworded AC-005.5. |
 | Completeness | pass | 10/10 ACs PASS. EXTRA (unchanged, tested, harmless): a non-string token → `MSG03` on `serviceAccountToken`; a malformed body → `MSG03`. |
 | Correctness | pass | Orchestrator's verify after the four fixes: `mvn -B verify` — 1594 unit + 481 IT, BUILD SUCCESS. Not re-run by the reviewer (brief: low-RAM machine). No CRITICAL finding. |
 | Integration | pass | The `PUT` contract is unchanged. The new error path uses the existing `FieldMessageCodeException` → ProblemDetails mapping, as the other `MSG156` paths do. |
@@ -45,23 +45,23 @@ Verdict: **pass**.
 
 | # | AC | Status | Evidence |
 |---|----|--------|----------|
-| 1 | AC-003.1 | PASS | `:166-182`; IT "AC-003.1 PUT persists encrypted changes only in the bound tenant" |
-| 2 | AC-003.2 | PASS | `:153-154,166`; IT: an omitted, null or blank token keeps the identical ciphertext |
-| 3 | AC-003.3 | PASS | `:143-148`; unit + IT for MSG01/MSG02/MSG03, row and audit unchanged |
-| 4 | AC-003.4 | PASS | `:158-165` (any non-blank token counts as changed, D21); IT checks the stored site and the decrypted stored token on an email change |
-| 5 | AC-003.5 | PASS (extended) | Jira failure: `:162-164`, unit + IT. Undecryptable stored token: `:185-193`, unit `WorkspaceServiceImplTest.java:587` |
-| 6 | AC-003.6 | PASS | `:158` skips Jira and the cipher; IT renames while Jira throws |
-| 7 | AC-003.7 | PASS | The request site is never read; `stored.getJiraSiteAddress()` at `:161,169`; unit + IT |
-| 8 | AC-003.8 | PASS | `:173-180`; unit + IT, no token or ciphertext |
-| 9 | AC-003.9 | PASS | `:157`; unit, slice, IT |
-| 10 | AC-003.10 | PASS | `@PreAuthorize` on the controller; slice + IT |
+| 1 | AC-005.1 | PASS | `:166-182`; IT "AC-005.1 PUT persists encrypted changes only in the bound tenant" |
+| 2 | AC-005.2 | PASS | `:153-154,166`; IT: an omitted, null or blank token keeps the identical ciphertext |
+| 3 | AC-005.3 | PASS | `:143-148`; unit + IT for MSG01/MSG02/MSG03, row and audit unchanged |
+| 4 | AC-005.4 | PASS | `:158-165` (any non-blank token counts as changed, D21); IT checks the stored site and the decrypted stored token on an email change |
+| 5 | AC-005.5 | PASS (extended) | Jira failure: `:162-164`, unit + IT. Undecryptable stored token: `:185-193`, unit `WorkspaceServiceImplTest.java:587` |
+| 6 | AC-005.6 | PASS | `:158` skips Jira and the cipher; IT renames while Jira throws |
+| 7 | AC-005.7 | PASS | The request site is never read; `stored.getJiraSiteAddress()` at `:161,169`; unit + IT |
+| 8 | AC-005.8 | PASS | `:173-180`; unit + IT, no token or ciphertext |
+| 9 | AC-005.9 | PASS | `:157`; unit, slice, IT |
+| 10 | AC-005.10 | PASS | `@PreAuthorize` on the controller; slice + IT |
 
 ## Traceability
 ```
-$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-003
-  ✓ AC-003.1 … ✓ AC-003.10
-  (AC-003.5: WorkspaceServiceImplTest, WorkspaceControllerTest, WorkspaceControllerIT)
-trace workspace (STORY-003): 10/10 acceptance criteria have a test
+$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-005
+  ✓ AC-005.1 … ✓ AC-005.10
+  (AC-005.5: WorkspaceServiceImplTest, WorkspaceControllerTest, WorkspaceControllerIT)
+trace workspace (STORY-005): 10/10 acceptance criteria have a test
 ```
 
 ## Issues
@@ -80,12 +80,12 @@ MINOR (do not block):
 ## Attempt 1
 Verdict pass with an IMPORTANT finding (`0f0a1ff`).
 - IMPORTANT: on an email-only update, an undecryptable stored token threw from `cipher.decrypt` outside any handler →
-  500 `UNEXPECTED_ERROR`. **Resolved**: the spec now covers it (AC-003.5 extended, D29), and the code was fixed in
+  500 `UNEXPECTED_ERROR`. **Resolved**: the spec now covers it (AC-005.5 extended, D29), and the code was fixed in
   `92f0118` (MSG156 on `serviceAccountToken`, id-only log, nothing changed) with its test.
 - MINOR 2–3 (stale read / merge, `Map.of` with null). **Not changed**; they are carried as MINOR 1–2.
 
 ## Assumptions made
-- The attempt-1 open judgment call (does AC-003.5 cover the decrypt failure?) is settled by the spec change of
+- The attempt-1 open judgment call (does AC-005.5 cover the decrypt failure?) is settled by the spec change of
   2026-11-12, which the user re-approved. No open call remains.
 - Tests were not re-run by the reviewer. The dispatcher's brief forbids `mvn` on this low-RAM machine. The
   orchestrator's recorded verify (session log, "Session 2026-11-13") is used.

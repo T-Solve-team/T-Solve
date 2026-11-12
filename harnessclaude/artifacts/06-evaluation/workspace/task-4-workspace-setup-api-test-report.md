@@ -10,8 +10,8 @@ section "Session 2026-11-13".
 - Command: `mvn -B verify` (tests + `spotless:check`) in `backend/`, on the tree with all four fixes
   (52e87dc, b18a62f, 92f0118, df3d89e)
 - Result: BUILD SUCCESS: 1594 unit + 481 integration tests
-- New or changed tests in `WorkspaceServiceImplTest`: "AC-001.8 setup links, inserts and audits inside one
-  transaction", "AC-001.8 a refused link rolls the setup transaction back", "AC-001.6 checks the Jira account before
+- New or changed tests in `WorkspaceServiceImplTest`: "AC-003.8 setup links, inserts and audits inside one
+  transaction", "AC-003.8 a refused link rolls the setup transaction back", "AC-003.6 checks the Jira account before
   any transaction opens D30"
 
 ## Frontend
@@ -20,8 +20,8 @@ The fix does not touch the frontend. Attempt 1's recorded frontend checks (forma
 
 ## Traceability (run by the reviewer)
 ```
-$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-001 STORY-002
-trace workspace (STORY-001, STORY-002): 17/17 acceptance criteria have a test
+$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-003 STORY-004
+trace workspace (STORY-003, STORY-004): 17/17 acceptance criteria have a test
 ```
 
 ## Attempt 1

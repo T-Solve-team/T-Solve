@@ -13,9 +13,9 @@ The reviewer did not re-run Maven (low-RAM machine, per the review brief).
 Task classes: `TokenCipherTest` 27, `WorkspaceChangelogTest` 1, `WorkspaceInfoRepositoryIT` 6. All passed.
 
 ## Traceability (run by the reviewer)
-`bun harnessclaude/hooks/sdd.ts trace workspace STORY-007` → 7/7 acceptance criteria have a test. This task owns
-AC-007.5, AC-007.6 and AC-007.7, all found in `TokenCipherTest.java`.
-`bun harnessclaude/hooks/sdd.ts trace workspace STORY-001` → 13/13. Task 1 adds AC-001.1 and AC-001.11 tests in
+`bun harnessclaude/hooks/sdd.ts trace workspace STORY-009` → 7/7 acceptance criteria have a test. This task owns
+AC-009.5, AC-009.6 and AC-009.7, all found in `TokenCipherTest.java`.
+`bun harnessclaude/hooks/sdd.ts trace workspace STORY-003` → 13/13. Task 1 adds AC-003.1 and AC-003.11 tests in
 `WorkspaceInfoRepositoryIT` and `WorkspaceChangelogTest`.
 
 ## Coverage

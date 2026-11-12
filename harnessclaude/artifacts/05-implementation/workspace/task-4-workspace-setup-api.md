@@ -19,7 +19,7 @@
 - Verify: `mvn -B verify` — 1534 unit + 454 IT, BUILD SUCCESS (WorkspaceServiceImplTest 41, WorkspaceControllerIT 15,
   WorkspaceOpenApiTest 2). Frontend: format:check ok, lint 0 errors (1 existing warning in tickets), typecheck ok,
   generate:api leaves the generated folder unchanged (hash), vitest 86 files / 1499 tests passed, build ok.
-- Trace STORY-001, STORY-002: 17/17.
+- Trace STORY-003, STORY-004: 17/17.
 - Commit: default@b1b2b30
 
 ### Next up
@@ -27,6 +27,6 @@ Task 2 fix-up (trace ids), then Task 5 workspace-update-api
 
 ## Session 2026-11-13 (fix after review, attempt 1 → 2)
 
-- Review IMPORTANT (D30, backend/AGENTS.md §4): Jira check ran inside the setup transaction. Fix: `@Transactional` removed; check first, link + persist + audit in `TransactionTemplate`. Tests: AC-001.8 one transaction, AC-001.8 refused link rolls back, AC-001.6 no transaction during the check.
+- Review IMPORTANT (D30, backend/AGENTS.md §4): Jira check ran inside the setup transaction. Fix: `@Transactional` removed; check first, link + persist + audit in `TransactionTemplate`. Tests: AC-003.8 one transaction, AC-003.8 refused link rolls back, AC-003.6 no transaction during the check.
 - Verify (tree with all four fixes): `mvn -B verify` — 1594 unit + 481 IT, BUILD SUCCESS.
 - Commit: default@b18a62f

@@ -9,7 +9,7 @@ machine. Source: `artifacts/05-implementation/workspace/task-5-workspace-update-
 - Command: `mvn -B verify` (tests + `spotless:check`) in `backend/`, on the tree with all four fixes
   (52e87dc, b18a62f, 92f0118, df3d89e)
 - Result: BUILD SUCCESS: 1594 unit + 481 integration tests
-- New test: `WorkspaceServiceImplTest` "AC-003.5 undecryptable stored token on an email change returns MSG156 and
+- New test: `WorkspaceServiceImplTest` "AC-005.5 undecryptable stored token on an email change returns MSG156 and
   changes nothing D29"
 
 ## Frontend
@@ -17,8 +17,8 @@ No frontend change in this feature.
 
 ## Traceability (run by the reviewer)
 ```
-$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-003
-trace workspace (STORY-003): 10/10 acceptance criteria have a test
+$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-005
+trace workspace (STORY-005): 10/10 acceptance criteria have a test
 ```
 
 ## Attempt 1
