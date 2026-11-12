@@ -254,10 +254,16 @@ next free number, listed in `db.changelog-master.xml` (until Task 14 moves the t
 
 Expiry and `SessionEnded` (AC-002.4, HLA Q3): the key's time to live removes an unused session; the 15-minute bound
 for `SessionEnded` `EXPIRED` needs the session's Account id and Workspace id, which a Redis expiry event does not
-carry. How `EXPIRED` is produced (keyspace events on a shadow key, or a recurring worker job over an expiry-ordered
-index, the JobRunr worker of the HLA) is settled when KAN-106 (STORY-002, AC-002.4) is planned, because Task 10 only stores the session; it must keep the
-15-minute bound
-and the single event of AC-002.3. `SessionCleanup` (`@Scheduled`, every 15 minutes) goes: N API replicas must not each
+carry. Decided in planning (KAN-106, user, 2026-11-12): `EXPIRED` is produced by a `@Scheduled` sweep every minute
+over the Redis sorted set `tsolve:session:expiry` (member: the session key; score: the time the session reaches its
+limit), with the time taken from `IdentityClock`; delivery is at most once (a crash between claim and publish loses the
+event, never repeats it). The one-minute sweep keeps the 15-minute bound, and the claim rule below keeps the single
+event of AC-002.3. Claim rule (finding (a)): every end path (logout, the filter's limit path, deactivation, the sweep)
+claims the session by one atomic Lua script that runs `DEL` on the session key and `ZREM` on the index member; the claim
+holds when its `DEL` removed the key or its `ZREM` removed the member, and only the claimer publishes `SessionEnded`.
+In Task 27a the script has only the `DEL` (no index entry exists yet); Task 27b adds the index, the sweep, `EXPIRED`
+and `DEACTIVATED`. Between the two merges the filter's limit and deactivation paths end a session without an event,
+because nothing consumes `SessionEnded` yet. `SessionCleanup` (`@Scheduled`, every 15 minutes) goes: N API replicas must not each
 run it. Old states and hand-off codes (one hour after `expires_at`) are deleted by a recurring job in the `worker`
 process (JobRunr) once the tables are in the registry, and until then by a `@Scheduled` job in the web process
 (Decided in planning; the sessions are no longer part of it).
@@ -435,6 +441,10 @@ configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`; the Console on `admin
   honoured only on `admin.` or on a host that `WorkspaceLookup` resolves as a Workspace site; there is no
   `TSOLVE_API_ORIGIN` (Q10). `SecurityConfig` registers `WebSessionFilter` and `SecurityProblemWriter` gets the MSG10
   and MSG123 texts (Q11, a small edit in `common/security`, the BE lead agrees).
+- Decided in planning (KAN-106, Q4, Q5): a logout that loses the claim (a concurrent double logout) still answers 200
+  `{ logoutUrl }` with the same URL, expires the cookie and publishes nothing. A logout on a session past its limit that
+  the sweep has not yet removed publishes nothing itself and answers 401 MSG07; the filter's limit path ends the session
+  on that request and publishes the one `EXPIRED`.
 - Per request (`WebSessionFilter`, after the platform's Tenant Resolver): on `login.` or `api.` → no session
   (AC-001.22); then a host or kind mismatch → 401 MSG123 without ending the session (AC-001.20/.21/.32); then the
   8 h / 60 min limits (read from the Redis session) → end (delete the key) + 401 MSG07 (AC-001.23); then the
@@ -700,8 +710,10 @@ together; a start-up check reads both discovery documents, R11).
   keeps showing the old address until STORY-007 edits it.
 - **K9 limits.** The realm sets SSO Session Max 8 h and Idle 60 min (AC-001.63). T-Solve's own 8 h / 60 min checks
   stay in `WebSessionFilter`.
-- **Logout (K10, Q7 = A).** `logoutUrl` = Keycloak's `end_session_endpoint` + `id_token_hint` + `post_logout_redirect_uri`
-  (the site's `/login`, registered per Workspace by AC-001.58). `SessionEnded` is unchanged. fe-foundation's
+- **Logout (K10, Q7 = A).** `logoutUrl` = Keycloak's `end_session_endpoint` + `client_id` + `id_token_hint` +
+  `post_logout_redirect_uri` (the site's `/login`, registered per Workspace by AC-001.58). `client_id` is always present
+  (`tsolve-web`, or `tsolve-console` for an Operator session); `id_token_hint` is added when the session has one
+  (Q6 = A, KAN-106). `SessionEnded` is unchanged. fe-foundation's
   `useSignOut` navigates to the URL (change request KAN-198). The Operator's logout uses the `tsolve-ops` endpoint.
 - **Operators (Q1 = B).** A separate realm and client, a Google IdP without `hd`, TOTP or WebAuthn required, the
   allow-list as the backend's second check. A mistake in a tenant IdP can never grant the Console.
@@ -875,6 +887,12 @@ listed in its banner. Every Critical or High row has its test task.
 | 133 | STORY-001 | Error cascades | The Account step fails itself at the callback: the database is down, `signIn` throws, or the token has `email_verified` true but no `email` (it would be an NPE in `signIn`) | High | 302 `/login?error=MSG06`, the sign-in cookie expired, no session, one `ERROR` with only the Workspace id (no email, `sub` or name), never a 500 (AC-001.74; AC-001.14 order unchanged) | Task 25b |
 | 134 | STORY-001 | Authorization | A session of Workspace A reaches Workspace B's data: the binding is wrong, or it stays on a pooled thread after an exception and the next request on that thread reads it (two-Workspace test) | Critical | `WebSessionFilter` binds `session.workspaceId()` (after the host check) with `TenantScope.runIn` around `chain.doFilter`; the binding ends in `runIn`'s `finally`, also when the endpoint throws; a session of A never reads B; the next request on the same thread starts unbound (AC-001.76, AC-001.26) | Task 26b |
 | 135 | STORY-001 | Integration | A signed-in request reaches tenant code with nothing bound (an ASYNC re-dispatch such as SSE or a `Callable`, or a future endpoint that bypasses the filter); under the profile `identity-mock` the mock filter binds its own Workspace first, so a real session of another Workspace gets a 500 from the nested `runIn` | Medium | No default Workspace (ADR-0002): 500 `MSG06`. Code that runs later binds itself with `runIn`, as `ReviewQueueEventServiceImpl` does. Known limit: `MockSignedInCallerFilter` stays until its own small item after 26b (Decided in planning: KAN-298 Q3, Q5, Q6) (AC-001.76) | Task 26b |
+| 136 | STORY-001 | Authorization | A tenant identity provider or an `hd` restriction in the realm `tsolve-ops` | Critical | The realm has one Google identity provider (`google-operators`), no `hd`, no Organization and no tenant identity provider; the browser flow redirects at once to `/broker/google-operators/login` (identity-provider-redirector, `defaultProvider=google-operators`), so no login page is shown (AC-001.66) | Task 29a |
+| 137 | STORY-001 | Authorization | An Operator with no second factor configured | Critical | The TOTP setup is forced before any code is issued: the callback is never reached and no `code` is issued (AC-001.66) | Task 29a |
+| 138 | STORY-001 | Authorization | Forwarded headers or `returnTo` steer the Console redirect | High | `redirect_uri` comes from `TSOLVE_ADMIN_ORIGIN`, never from the request; `returnTo` is filtered to `/` when it is another origin (AC-001.28, AC-001.3) | Task 29a |
+| 139 | STORY-001 | Authorization | An old Operator cookie is sent with the callback on `admin.` (session fixation) | High | The old session is ended and the new session id is different (AC-001.29) | Task 29b |
+| 140 | STORY-001 | Authorization | A Workspace request is used at the callback on `admin.`, or a Console request at the callback on `acme.` | Critical | MSG06 on `admin.` (Console failures answer MSG06); MSG141 on `acme.` (AC-001.6); no session and no token request (AC-001.29; extends row 122) | Task 29b |
+| 141 | STORY-001 | Authorization | An Operator session calls a Workspace endpoint on `admin.` (Q7 = A) | High | The endpoint's own Role check answers 403 MSG08; the scope is never bound and no row is returned (AC-001.29) | Task 29b |
 
 Open questions for the spec owner: none. Every row is closed by the answers Q1–Q16.
 

@@ -15,18 +15,34 @@ import org.springframework.stereotype.Component;
 public class KeycloakClientRegistrations implements ClientRegistrationRepository {
 
     public static final String REGISTRATION_ID = "tsolve-web";
+    public static final String CONSOLE_REGISTRATION_ID = "tsolve-console";
 
     private final InMemoryClientRegistrationRepository delegate;
 
     public KeycloakClientRegistrations(SignInProperties properties) {
-        String issuer = trimSlash(properties.loginOrigin().toString()) + "/realms/tsolve";
+        String loginOrigin = trimSlash(properties.loginOrigin().toString());
+        String adminCallback = trimSlash(properties.adminOrigin().toString()) + "/api/v1/auth/callback";
+        this.delegate = new InMemoryClientRegistrationRepository(
+                registration(
+                        REGISTRATION_ID,
+                        loginOrigin + "/realms/tsolve",
+                        properties.keycloakWebClientSecret(),
+                        "{baseUrl}/api/v1/auth/callback"),
+                registration(
+                        CONSOLE_REGISTRATION_ID,
+                        loginOrigin + "/realms/tsolve-ops",
+                        properties.keycloakConsoleClientSecret(),
+                        adminCallback));
+    }
+
+    private static ClientRegistration registration(String id, String issuer, String secret, String redirectUri) {
         String oidc = issuer + "/protocol/openid-connect";
-        ClientRegistration registration = ClientRegistration.withRegistrationId(REGISTRATION_ID)
-                .clientId(REGISTRATION_ID)
-                .clientSecret(properties.keycloakWebClientSecret())
+        return ClientRegistration.withRegistrationId(id)
+                .clientId(id)
+                .clientSecret(secret)
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .redirectUri("{baseUrl}/api/v1/auth/callback")
+                .redirectUri(redirectUri)
                 .scope("openid", "email", "profile")
                 .authorizationUri(oidc + "/auth")
                 .tokenUri(oidc + "/token")
@@ -35,7 +51,6 @@ public class KeycloakClientRegistrations implements ClientRegistrationRepository
                 .issuerUri(issuer)
                 .userNameAttributeName("sub")
                 .build();
-        this.delegate = new InMemoryClientRegistrationRepository(registration);
     }
 
     @Override
