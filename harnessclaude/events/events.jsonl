@@ -1226,3 +1226,8 @@
 {"ts":"2026-11-12T17:21:53.778Z","type":"feature-status","module":"identity","feature":"session-replaced-event","from":"pending","to":"in-progress"}
 {"ts":"2026-11-12T17:21:54.088Z","type":"feature-status","module":"identity","feature":"session-replaced-event","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-12T17:21:54.348Z","type":"feature-status","module":"identity","feature":"session-replaced-event","from":"evaluating","to":"passing"}
+{"ts":"2026-11-12T16:56:54.379Z","type":"spec-approved","module":"fe-foundation","specHash":"6aef3f501ac532c7dbd01e18dadf819752bf01bb6837f8c278089960be7765d6"}
+{"ts":"2026-11-12T16:57:01.664Z","type":"feature-status","module":"fe-foundation","feature":"sign-out-logout-url","from":null,"to":"pending"}
+{"ts":"2026-11-12T17:59:35.525Z","type":"feature-status","module":"fe-foundation","feature":"sign-out-logout-url","from":"pending","to":"in-progress"}
+{"ts":"2026-11-12T17:59:37.606Z","type":"feature-status","module":"fe-foundation","feature":"sign-out-logout-url","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-12T17:59:39.577Z","type":"feature-status","module":"fe-foundation","feature":"sign-out-logout-url","from":"evaluating","to":"passing"}
