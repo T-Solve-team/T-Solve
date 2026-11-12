@@ -12,7 +12,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
@@ -45,6 +47,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private final TokenCipher cipher;
     private final AuditService audit;
     private final WorkspaceInfoMapper mapper;
+    private final TransactionTemplate transaction;
 
     public WorkspaceServiceImpl(
             TenantScope scope,
@@ -54,7 +57,8 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             JiraSiteLinker linker,
             TokenCipher cipher,
             AuditService audit,
-            WorkspaceInfoMapper mapper) {
+            WorkspaceInfoMapper mapper,
+            PlatformTransactionManager transactions) {
         this.scope = scope;
         this.repository = repository;
         this.entities = entities;
@@ -63,6 +67,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         this.cipher = cipher;
         this.audit = audit;
         this.mapper = mapper;
+        this.transaction = new TransactionTemplate(transactions);
     }
 
     @Override
@@ -126,6 +131,54 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         return mapper.toResponse(repository
                 .findById(scope.currentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("MSG60", Map.of())));
+    }
+
+    @Override
+    public WorkspaceInfoResponse update(JsonNode input) {
+        if (input == null || !input.isObject()) {
+            throw error(null, "MSG03", Map.of());
+        }
+        String companyName = field(input, "companyName", "Company name", 100).strip();
+        String email = field(input, "serviceAccountEmail", "Service account email", 100)
+                .strip();
+        if (!EMAIL.matcher(email).matches()) {
+            throw error("serviceAccountEmail", "MSG03", Map.of());
+        }
+        JsonNode tokenInput = input.path("serviceAccountToken");
+        if (!tokenInput.isMissingNode() && !tokenInput.isNull() && !tokenInput.isTextual()) {
+            throw error("serviceAccountToken", "MSG03", Map.of());
+        }
+        String token = tokenInput.isTextual() ? tokenInput.textValue() : "";
+        boolean tokenChanged = !token.isBlank();
+        UUID workspaceId = scope.currentWorkspaceId();
+        WorkspaceInfo stored =
+                repository.findById(workspaceId).orElseThrow(() -> new NotFoundException("MSG60", Map.of()));
+        if (tokenChanged || !email.equals(stored.getServiceAccountEmail())) {
+            String resultingToken =
+                    tokenChanged ? token : cipher.decrypt(workspaceId, stored.getServiceAccountApiToken());
+            try {
+                tracker.checkServiceAccount(new JiraAccount(stored.getJiraSiteAddress(), email, resultingToken));
+            } catch (JiraRejectedException | JiraUnavailableException failure) {
+                throw error("serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
+            }
+        }
+        String encryptedToken = tokenChanged ? cipher.encrypt(workspaceId, token) : stored.getServiceAccountApiToken();
+        // Keep the immutable site and the stored ciphertext when no replacement token was supplied.
+        WorkspaceInfo updated =
+                new WorkspaceInfo(workspaceId, companyName, stored.getJiraSiteAddress(), email, encryptedToken);
+        // Jira checks finish before the write transaction; the update and its audit commit together.
+        return transaction.execute(status -> {
+            WorkspaceInfo saved = repository.save(updated);
+            audit.record(
+                    AuditAction.TRACKER_CONFIGURATION_CHANGE,
+                    "WORKSPACE",
+                    workspaceId,
+                    Map.of(
+                            "companyName", Map.of("old", stored.getCompanyName(), "new", companyName),
+                            "serviceAccountEmail", Map.of("old", stored.getServiceAccountEmail(), "new", email),
+                            "tokenChanged", tokenChanged));
+            return mapper.toResponse(saved);
+        });
     }
 
     private static String field(JsonNode input, String field, String label, Integer maxLength) {

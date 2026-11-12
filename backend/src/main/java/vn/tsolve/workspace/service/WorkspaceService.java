@@ -7,4 +7,6 @@ public interface WorkspaceService {
     WorkspaceInfoResponse setup(JsonNode input);
 
     WorkspaceInfoResponse get();
+
+    WorkspaceInfoResponse update(JsonNode input);
 }

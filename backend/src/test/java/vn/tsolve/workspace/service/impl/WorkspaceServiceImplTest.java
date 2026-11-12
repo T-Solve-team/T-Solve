@@ -3,9 +3,11 @@ package vn.tsolve.workspace.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -28,6 +30,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
@@ -42,6 +46,7 @@ import vn.tsolve.workspace.crypto.TokenCipher;
 import vn.tsolve.workspace.dto.WorkspaceInfoMapper;
 import vn.tsolve.workspace.dto.WorkspaceInfoResponse;
 import vn.tsolve.workspace.dto.WorkspaceSetupRequest;
+import vn.tsolve.workspace.dto.WorkspaceUpdateRequest;
 import vn.tsolve.workspace.entity.WorkspaceInfo;
 import vn.tsolve.workspace.repository.WorkspaceInfoRepository;
 import vn.tsolve.workspace.site.JiraSiteLinkRefusedException;
@@ -60,6 +65,7 @@ class WorkspaceServiceImplTest {
     private final JiraSiteLinker linker = mock(JiraSiteLinker.class);
     private final TokenCipher cipher = mock(TokenCipher.class);
     private final AuditService audit = mock(AuditService.class);
+    private final PlatformTransactionManager transactions = mock(PlatformTransactionManager.class);
     private WorkspaceServiceImpl service;
 
     @BeforeEach
@@ -74,7 +80,8 @@ class WorkspaceServiceImplTest {
                 linker,
                 cipher,
                 audit,
-                Mappers.getMapper(WorkspaceInfoMapper.class));
+                Mappers.getMapper(WorkspaceInfoMapper.class),
+                transactions);
     }
 
     private ObjectNode valid() {
@@ -355,5 +362,247 @@ class WorkspaceServiceImplTest {
                     assertThat(e.getCode()).isEqualTo("MSG03");
                     assertThat(e.getCause()).isNull();
                 });
+    }
+
+    private WorkspaceInfo storedWorkspace() {
+        var stored = new WorkspaceInfo(workspaceId, "Fake company", SITE, "fake@example.test", "fake-ciphertext");
+        when(repository.findById(workspaceId)).thenReturn(Optional.of(stored));
+        when(repository.save(any(WorkspaceInfo.class))).thenAnswer(call -> call.getArgument(0));
+        when(transactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+        return stored;
+    }
+
+    private WorkspaceInfo updatedWorkspace() {
+        var saved = ArgumentCaptor.forClass(WorkspaceInfo.class);
+        verify(repository).save(saved.capture());
+        return saved.getValue();
+    }
+
+    private void updateError(JsonNode input, String field, String code, Map<String, Object> params) {
+        assertThatThrownBy(() -> service.update(input)).isInstanceOfSatisfying(FieldMessageCodeException.class, e -> {
+            assertThat(e.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(e.getField()).isEqualTo(field);
+            assertThat(e.getCode()).isEqualTo(code);
+            assertThat(e.getParams()).isEqualTo(params);
+            assertThat(e.getCause()).isNull();
+            assertThat(e.toString()).doesNotContain(TOKEN, "fake-ciphertext");
+        });
+        verify(repository, never()).save(any());
+        verifyNoInteractions(entities, audit, transactions);
+    }
+
+    @Test
+    @DisplayName("AC-003.1 saves updated values with encrypted token and returns only public fields")
+    void updatesWorkspace() throws Exception {
+        storedWorkspace();
+        when(cipher.encrypt(workspaceId, "obviously-fake-new-token")).thenReturn("fake-new-ciphertext");
+        WorkspaceInfoResponse response = service.update(valid().put("companyName", " Renamed ")
+                .put("serviceAccountEmail", " new@example.test ")
+                .put("serviceAccountToken", "obviously-fake-new-token"));
+        WorkspaceInfo saved = updatedWorkspace();
+        assertThat(saved.getId()).isEqualTo(workspaceId);
+        assertThat(saved.getCompanyName()).isEqualTo("Renamed");
+        assertThat(saved.getServiceAccountEmail()).isEqualTo("new@example.test");
+        assertThat(saved.getServiceAccountApiToken()).isEqualTo("fake-new-ciphertext");
+        assertThat(saved.getSignInProvider()).isEqualTo("GOOGLE");
+        assertThat(response).isEqualTo(new WorkspaceInfoResponse("Renamed", SITE, "new@example.test"));
+        assertThat(json.valueToTree(response).size()).isEqualTo(3);
+        assertThat(json.writeValueAsString(response))
+                .doesNotContain(TOKEN, "obviously-fake-new-token", "fake-new-ciphertext", "token", "Token");
+        verify(transactions).commit(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"absent", "null", "", " \t\n "})
+    @DisplayName("AC-003.2 absent, null or blank token preserves ciphertext without encryption or decryption")
+    void keepsStoredToken(String token) {
+        storedWorkspace();
+        ObjectNode input = valid();
+        if (token.equals("absent")) input.remove("serviceAccountToken");
+        else if (token.equals("null")) input.putNull("serviceAccountToken");
+        else input.put("serviceAccountToken", token);
+        service.update(input);
+        assertThat(updatedWorkspace().getServiceAccountApiToken()).isEqualTo("fake-ciphertext");
+        verifyNoInteractions(cipher, tracker, linker);
+        verify(audit)
+                .record(
+                        AuditAction.TRACKER_CONFIGURATION_CHANGE,
+                        "WORKSPACE",
+                        workspaceId,
+                        Map.of(
+                                "companyName", Map.of("old", "Fake company", "new", "Fake company"),
+                                "serviceAccountEmail", Map.of("old", "fake@example.test", "new", "fake@example.test"),
+                                "tokenChanged", false));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"companyName,Company name", "serviceAccountEmail,Service account email"})
+    @DisplayName("AC-003.3 rejects absent, null, blank and non-string required update fields")
+    void requiresUpdateFields(String field, String label) {
+        ObjectNode input = valid();
+        input.remove(field);
+        updateError(input, field, "MSG01", Map.of("field_name", label));
+        input.putNull(field);
+        updateError(input, field, "MSG01", Map.of("field_name", label));
+        input.put(field, " \t\n ");
+        updateError(input, field, "MSG01", Map.of("field_name", label));
+        input.put(field, 42);
+        updateError(input, field, "MSG01", Map.of("field_name", label));
+        verifyNoInteractions(tracker, linker, cipher);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"companyName,Company name", "serviceAccountEmail,Service account email"})
+    @DisplayName("AC-003.3 rejects raw fields over 100 characters with MSG02 and max_length")
+    void limitsUpdateFields(String field, String label) {
+        updateError(
+                valid().put(field, "x".repeat(101)), field, "MSG02", Map.of("field_name", label, "max_length", 100));
+        verifyNoInteractions(tracker, linker, cipher);
+    }
+
+    @Test
+    @DisplayName("AC-003.3 accepts company name and email exactly at 100 characters")
+    void acceptsUpdateLimits() {
+        storedWorkspace();
+        String email = "a".repeat(87) + "@example.test";
+        assertThat(email).hasSize(100);
+        service.update(valid().put("companyName", "x".repeat(100)).put("serviceAccountEmail", email));
+        assertThat(updatedWorkspace().getCompanyName()).hasSize(100);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"bad", "a b@example.test", "a@@example.test", "a@example", "a@", "@example.test"})
+    @DisplayName("AC-003.3 rejects invalid email with MSG03 before contacting Jira")
+    void rejectsUpdateEmail(String email) {
+        updateError(valid().put("serviceAccountEmail", email), "serviceAccountEmail", "MSG03", Map.of());
+        verifyNoInteractions(tracker, linker, cipher);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "[]", "42", "{} {}", "{", ""})
+    @DisplayName("AC-003.3 malformed update bodies return safe MSG03 without input or cause")
+    void rejectsMalformedUpdateBody(String body) {
+        assertThatThrownBy(() -> WorkspaceUpdateRequest.parse(body, json))
+                .isInstanceOfSatisfying(FieldMessageCodeException.class, e -> {
+                    assertThat(e.getCode()).isEqualTo("MSG03");
+                    assertThat(e.getCause()).isNull();
+                });
+    }
+
+    @Test
+    @DisplayName("AC-003.3 rejects non-string optional token with a safe field error")
+    void rejectsNonStringUpdateToken() {
+        updateError(valid().put("serviceAccountToken", 42), "serviceAccountToken", "MSG03", Map.of());
+        verifyNoInteractions(tracker, linker, cipher);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"absent", "", " \t\n "})
+    @DisplayName("AC-003.4 changed email checks stored site and decrypted stored token before writing")
+    void checksChangedEmailWithStoredToken(String token) {
+        storedWorkspace();
+        when(cipher.decrypt(workspaceId, "fake-ciphertext")).thenReturn(TOKEN);
+        ObjectNode input = valid().put("serviceAccountEmail", "new@example.test");
+        if (token.equals("absent")) input.remove("serviceAccountToken");
+        else input.put("serviceAccountToken", token);
+        doAnswer(call -> {
+                    verifyNoInteractions(transactions, audit, entities);
+                    verify(repository, never()).save(any());
+                    return null;
+                })
+                .when(tracker)
+                .checkServiceAccount(any());
+        service.update(input);
+        verify(tracker).checkServiceAccount(new JiraAccount(SITE, "new@example.test", TOKEN));
+        verify(cipher).decrypt(workspaceId, "fake-ciphertext");
+        verify(cipher, never()).encrypt(any(), any());
+        assertThat(updatedWorkspace().getServiceAccountApiToken()).isEqualTo("fake-ciphertext");
+        verifyNoInteractions(linker);
+    }
+
+    @Test
+    @DisplayName("AC-003.4 any supplied non-blank token is checked and encrypted without decrypting to compare D21")
+    void checksEvenRepeatedToken() {
+        storedWorkspace();
+        service.update(valid());
+        var order = inOrder(tracker, cipher, repository);
+        order.verify(tracker).checkServiceAccount(new JiraAccount(SITE, "fake@example.test", TOKEN));
+        order.verify(cipher).encrypt(workspaceId, TOKEN);
+        order.verify(repository).save(any(WorkspaceInfo.class));
+        verify(cipher, never()).decrypt(any(), any());
+        verifyNoInteractions(linker);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {401, 403, 500, 0})
+    @DisplayName("AC-003.5 failed account check returns MSG156 and leaves all stored values and audit unchanged")
+    void rejectsFailedUpdateCheck(int status) {
+        WorkspaceInfo stored = storedWorkspace();
+        RuntimeException failure = status == 401 || status == 403
+                ? new JiraRejectedException(status)
+                : new JiraUnavailableException(status);
+        doThrow(failure).when(tracker).checkServiceAccount(any());
+        updateError(
+                valid().put("companyName", "Renamed").put("serviceAccountEmail", "new@example.test"),
+                "serviceAccountToken",
+                "MSG156",
+                Map.of("tracker_name", "Jira"));
+        assertThat(stored.getCompanyName()).isEqualTo("Fake company");
+        assertThat(stored.getServiceAccountEmail()).isEqualTo("fake@example.test");
+        assertThat(stored.getServiceAccountApiToken()).isEqualTo("fake-ciphertext");
+        verifyNoInteractions(cipher, linker);
+    }
+
+    @Test
+    @DisplayName("AC-003.6 company-only update succeeds without any Jira or cipher call D10")
+    void renamesWithoutJira() {
+        storedWorkspace();
+        ObjectNode input = valid().put("companyName", "Renamed");
+        input.remove("serviceAccountToken");
+        service.update(input);
+        assertThat(updatedWorkspace().getCompanyName()).isEqualTo("Renamed");
+        verifyNoInteractions(tracker, linker, cipher);
+    }
+
+    @Test
+    @DisplayName("AC-003.7 ignores even non-string jiraSiteUrl and checks only the stored site D17")
+    void ignoresUpdateSite() {
+        storedWorkspace();
+        ObjectNode input = valid();
+        input.putObject("jiraSiteUrl").put("ignored", "http://localhost");
+        service.update(input);
+        assertThat(updatedWorkspace().getJiraSiteAddress()).isEqualTo(SITE);
+        verify(tracker).checkServiceAccount(new JiraAccount(SITE, "fake@example.test", TOKEN));
+        verifyNoInteractions(linker);
+    }
+
+    @Test
+    @DisplayName("AC-003.8 audits old and new public values and tokenChanged true without secret values")
+    void auditsUpdate() throws Exception {
+        storedWorkspace();
+        ObjectNode input = valid().put("companyName", "Renamed").put("serviceAccountEmail", "new@example.test");
+        service.update(input);
+        verify(audit)
+                .record(
+                        AuditAction.TRACKER_CONFIGURATION_CHANGE,
+                        "WORKSPACE",
+                        workspaceId,
+                        Map.of(
+                                "companyName", Map.of("old", "Fake company", "new", "Renamed"),
+                                "serviceAccountEmail", Map.of("old", "fake@example.test", "new", "new@example.test"),
+                                "tokenChanged", true));
+        assertThat(WorkspaceUpdateRequest.parse(json.writeValueAsString(input), json)
+                        .toString())
+                .doesNotContain(TOKEN);
+    }
+
+    @Test
+    @DisplayName("AC-003.9 update before setup returns MSG60 without external calls or changes")
+    void rejectsMissingUpdateWorkspace() {
+        assertThatThrownBy(() -> service.update(valid()))
+                .isInstanceOfSatisfying(
+                        NotFoundException.class, e -> assertThat(e.getCode()).isEqualTo("MSG60"));
+        verify(repository, never()).save(any());
+        verifyNoInteractions(tracker, linker, cipher, entities, audit, transactions);
     }
 }
