@@ -34,6 +34,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.AuthSecurityConfig;
 import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.session.OperatorAllowList;
 import vn.tsolve.identity.session.SessionCookie;
 import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
@@ -79,6 +80,12 @@ class SignInStartControllerTest {
         @Primary
         RecordingAuthorizationRequestRepository recordingAuthorizationRequestRepository() {
             return new RecordingAuthorizationRequestRepository();
+        }
+
+        /** The callback handler's single constructor takes the Operator allow-list; an empty one, as before. */
+        @Bean
+        OperatorAllowList operatorAllowList() {
+            return new OperatorAllowList("");
         }
     }
 

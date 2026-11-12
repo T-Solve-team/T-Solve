@@ -487,4 +487,45 @@ class OpsRealmImportIT {
             assertThat(response.body()).contains("Invalid parameter: redirect_uri");
         }
     }
+
+    private static final String POST_LOGOUT_URI = "http://admin.localhost:8080/login";
+
+    static Stream<Arguments> postLogoutRedirectUris() {
+        return Stream.of(
+                Arguments.of("the exact URI", true, (UnaryOperator<String>) u -> u),
+                Arguments.of("trailing slash", false, (UnaryOperator<String>) u -> u + "/"),
+                Arguments.of("extra path segment", false, (UnaryOperator<String>) u -> u + "/x"),
+                Arguments.of("another port", false, (UnaryOperator<String>) u -> u.replace(":8080", ":8090")),
+                Arguments.of("https instead of http", false, (UnaryOperator<String>)
+                        u -> u.replaceFirst("^http:", "https:")),
+                Arguments.of("the acme login", false, (UnaryOperator<String>) u -> "http://acme.localhost:8080/login"),
+                Arguments.of("the callback URI", false, (UnaryOperator<String>) u -> EXPECTED_REDIRECT_URI));
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @MethodSource("postLogoutRedirectUris")
+    @DisplayName("AC-002.1 gives tsolve-console the one post-logout redirect URI of TSOLVE_ADMIN_ORIGIN")
+    void givesTsolveConsoleTheOnePostLogoutRedirectUri_AC_002_1(
+            String label, boolean accepted, UnaryOperator<String> mutate) throws Exception {
+        // static: the attribute holds exactly the /login of the admin origin, no wildcard and no "+"
+        String attribute = consoleClient().toRepresentation().getAttributes().get("post.logout.redirect.uris");
+        assertThat(attribute).as("attribute post.logout.redirect.uris").isNotNull();
+        assertThat(List.of(attribute.split("##"))).containsExactly(POST_LOGOUT_URI);
+        assertThat(attribute).doesNotContain("+").doesNotContain("*");
+
+        // dynamic: Keycloak's end-session endpoint accepts that URI and nothing else
+        String url = keycloak.getAuthServerUrl() + "/realms/" + REALM + "/protocol/openid-connect/logout?client_id="
+                + CLIENT_ID + "&post_logout_redirect_uri="
+                + URLEncoder.encode(mutate.apply(POST_LOGOUT_URI), StandardCharsets.UTF_8);
+        HttpResponse<String> response =
+                http.send(HttpRequest.newBuilder(URI.create(url)).GET().build(), HttpResponse.BodyHandlers.ofString());
+
+        if (accepted) {
+            assertThat(response.statusCode()).as("status for " + label).isLessThan(400);
+            assertThat(response.body()).doesNotContain("Invalid redirect uri");
+        } else {
+            assertThat(response.statusCode()).as("status for " + label).isGreaterThanOrEqualTo(400);
+            assertThat(response.body()).contains("Invalid redirect uri");
+        }
+    }
 }

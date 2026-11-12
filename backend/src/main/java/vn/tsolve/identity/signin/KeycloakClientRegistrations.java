@@ -47,7 +47,6 @@ public class KeycloakClientRegistrations implements ClientRegistrationRepository
                 .authorizationUri(oidc + "/auth")
                 .tokenUri(oidc + "/token")
                 .jwkSetUri(oidc + "/certs")
-                .userInfoUri(oidc + "/userinfo")
                 .issuerUri(issuer)
                 .userNameAttributeName("sub")
                 .build();

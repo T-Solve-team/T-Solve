@@ -417,9 +417,9 @@ class TwoInstanceCallbackIT {
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
-    @ValueSource(strings = {"admin.localhost", "unknown.localhost"})
-    @DisplayName("AC-001.54 answers 404 to the callback on admin. and on a host that is no Workspace")
-    void answers404ToTheCallbackOnAdminAndOnAHostWithNoWorkspace_AC_001_54(String host) {
+    @ValueSource(strings = {"unknown.localhost"})
+    @DisplayName("AC-001.54 answers 404 to the callback on a host that is no Workspace")
+    void answers404ToTheCallbackOnAHostWithNoWorkspace_AC_001_54(String host) {
         TestBrowser browser = new TestBrowser();
         Started started = start(browser, portA, ACME);
         browser.setCookie(host, COOKIE, started.cookie());
