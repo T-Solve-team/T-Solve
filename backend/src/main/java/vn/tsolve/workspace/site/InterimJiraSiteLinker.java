@@ -31,17 +31,21 @@ public class InterimJiraSiteLinker implements JiraSiteLinker {
     public InterimJiraSiteLinker(
             @Value("${tsolve.tracker.jira.connect-timeout:5s}") Duration connectTimeout,
             @Value("${tsolve.tracker.jira.read-timeout:10s}") Duration readTimeout) {
+        this(clientBuilder(connectTimeout, readTimeout));
+    }
+
+    /** The production client: a redirect could escape the validated Jira host, so none is followed (AC-007.4). */
+    static RestClient.Builder clientBuilder(Duration connectTimeout, Duration readTimeout) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory() {
             @Override
             protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
                 super.prepareConnection(connection, httpMethod);
-                // A redirect could escape the validated Jira host.
                 connection.setInstanceFollowRedirects(false);
             }
         };
         factory.setConnectTimeout(connectTimeout);
         factory.setReadTimeout(readTimeout);
-        this.http = RestClient.builder().requestFactory(factory).build();
+        return RestClient.builder().requestFactory(factory);
     }
 
     InterimJiraSiteLinker(RestClient.Builder builder) {

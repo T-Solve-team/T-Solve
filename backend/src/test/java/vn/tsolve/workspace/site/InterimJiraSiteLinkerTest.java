@@ -8,7 +8,14 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import com.sun.net.httpserver.HttpServer;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,6 +28,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.support.HttpRequestWrapper;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -68,13 +76,50 @@ class InterimJiraSiteLinkerTest {
     }
 
     @Test
-    @DisplayName("AC-007.4 refuses a 302 without following its Location")
-    void refusesRedirect() {
-        jira.expect(requestTo(TENANT_INFO))
-                .andRespond(withStatus(HttpStatus.FOUND)
-                        .location(java.net.URI.create("https://169.254.169.254/fake-private-target")));
+    @DisplayName("AC-007.4 the production client refuses a 302 and never requests its Location")
+    void productionClientFollowsNoRedirect() throws IOException {
+        AtomicInteger targetHits = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/_edge/tenant_info", exchange -> {
+            try (exchange) {
+                exchange.getResponseHeaders().set("Location", "/fake-private-target");
+                exchange.sendResponseHeaders(302, -1);
+            }
+        });
+        server.createContext("/fake-private-target", exchange -> {
+            try (exchange) {
+                targetHits.incrementAndGet();
+                byte[] body = "{\"cloudId\":\"fake-cloud-id\"}".getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, body.length);
+                exchange.getResponseBody().write(body);
+            }
+        });
+        try {
+            server.start();
+            URI local = URI.create("http://127.0.0.1:" + server.getAddress().getPort());
+            // Send the validated site's request to the local server; the production request factory still runs.
+            RestClient.Builder realClient = InterimJiraSiteLinker.clientBuilder(
+                            Duration.ofSeconds(1), Duration.ofSeconds(1))
+                    .requestInterceptor((request, body, execution) -> execution.execute(
+                            new HttpRequestWrapper(request) {
+                                @Override
+                                public URI getURI() {
+                                    return local.resolve(request.getURI().getRawPath());
+                                }
+                            },
+                            body));
+            linker = new InterimJiraSiteLinker(realClient);
 
-        assertUnreadable();
+            assertThatThrownBy(() -> linker.linkJiraSite(SITE))
+                    .isInstanceOfSatisfying(JiraSiteLinkRefusedException.class, error -> assertThat(error.getReason())
+                            .isEqualTo(JiraSiteLinkRefusedException.Reason.UNREADABLE))
+                    .hasMessage("Jira site link refused: UNREADABLE")
+                    .hasNoCause();
+            assertThat(targetHits).hasValue(0);
+        } finally {
+            server.stop(0);
+        }
     }
 
     @DisplayName("AC-007.4 refuses absent or blank cloudId")
