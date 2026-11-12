@@ -1220,3 +1220,5 @@
 {"ts":"2026-11-12T04:44:05.553Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"787c7db55624a505a3be6c61fd8191d49678b6ac"}
 {"ts":"2026-11-12T08:23:33.329Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"7da71b807e91acfbca891f5d02a279aaac45a999"}
 {"ts":"2026-11-12T08:23:33.683Z","type":"feature-status","module":"workspace","feature":"jira-site-linker","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-12T08:32:11.091Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"b1b2b304783c095d91de69af19412a9cd44552ab"}
+{"ts":"2026-11-12T08:32:11.378Z","type":"feature-status","module":"workspace","feature":"workspace-setup-api","from":"in-progress","to":"evaluating"}
