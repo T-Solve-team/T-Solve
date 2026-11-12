@@ -64,6 +64,8 @@ management:
         include: health,info
 
 tsolve:
+  workspace:
+    secret-key: ${WORKSPACE_SECRET_KEY}
   worker:
     enabled: ${TSOLVE_WORKER_ENABLED:false}
     # Optional until enabled; validation rejects missing Jobs credentials without a fallback.
