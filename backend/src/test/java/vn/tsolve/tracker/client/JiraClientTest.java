@@ -523,6 +523,19 @@ class JiraClientTest {
     }
 
     @Test
+    void returnsUNAVAILABLEWithoutPartialProjectForNonHttpScheme_AC_013_7_BUG_203() {
+        JiraAccount account = new JiraAccount("ftp://example.atlassian.net", ACCOUNT.email(), ACCOUNT.apiToken());
+        JiraClient realClient = new JiraClient(Duration.ofSeconds(3), Duration.ofSeconds(7));
+
+        TrackerProjectLookup lookup =
+                new TrackerProjectServiceImpl(() -> Optional.of(account), realClient).findProject("ITSUP");
+
+        assertThat(lookup.outcome()).isEqualTo(Outcome.UNAVAILABLE);
+        assertThat(lookup.key()).isNull();
+        assertThat(lookup.statuses()).isEmpty();
+    }
+
+    @Test
     void returnsUNAVAILABLEWithoutPartialProjectForInvalidContentType_AC_013_7_AC_013_8_BUG_203() {
         JiraAccount account = ACCOUNT;
         jira.expect(requestTo(account.siteUrl() + "/rest/api/3/project/ITSUP"))
