@@ -19,6 +19,7 @@ owner: BA
 | 2026-10-26 | STORY-012 | returnTo backslash/control chars; google_domain two labels: AC-012.2 also rejects `\` and ASCII control or whitespace characters in `returnTo`; AC-012.4 needs two or more labels, the last one letters only | QA of Task 8 step 1 (KAN-206, Hiếu, 26/10): browsers read `/\evil.example` and a tab inside a path as `//evil.example`; Google Workspace domains always have a TLD |
 | 2026-11-01 | STORY-006 | AC-006.3 also holds MSG142 "No Spaces found" and MSG143 "Not a member of any Project." (type inline); AC-006.7 lists them | Identity STORY-003 (AC-003.15, AC-003.16) needs two empty-state messages; numbered by incrementing from MSG141, Report3 System_Messages updated later (KAN-237, Hiếu, 1/11) |
 | 2026-11-01 | STORY-006 | New AC-006.9 (`MSG_NEW_3`, a duplicate Ticket ID inside one CSV file); AC-006.7 also allows `MSG_NEW_3` | import-ticket-list asked for MSG78 as a new code, but System_Messages v3460 gave MSG78 to another message; the Import Preview shows the row error from the catalog (import-ticket-list D14, user decision 2026-11-01) |
+| 2026-11-12 | STORY-008 | AC-008.1 reworded (order: call, then clear); AC-008.2 reworded (navigate the browser to `logoutUrl`, full page load); new AC-008.4 (no usable `logoutUrl` or old 204: clear and go to Login, no error); AC-008.3 says Login inside the app; Interface: logout answers 200 `{ logoutUrl }` | `POST /api/v1/auth/logout` answers 200 `{ logoutUrl }` instead of 204 (identity Task 27, AC-002.1, AC-002.8; KAN-311, KAN-106) so Keycloak ends its own SSO session |
 
 ## Requirements
 
@@ -205,12 +206,17 @@ owner: BA
 - As a user, I want logging out to forget everything of my session so that the next person at the computer sees
   nothing of mine.
 - Acceptance:
-  - AC-008.1: WHEN the user logs out, THE web app SHALL call `POST /api/v1/auth/logout`, drop every cached query and
-    mutation of the previous user, and remove every browser-storage entry whose key starts with `tsolve.session.`
-    (where features keep session-only data, such as the Chatbot history, UC-02).
-  - AC-008.2: WHEN logout finishes, THE web app SHALL send the user to Login.
+  - AC-008.1: WHEN the user logs out, THE web app SHALL call `POST /api/v1/auth/logout`, then drop every cached query
+    and mutation of the previous user, and remove every browser-storage entry whose key starts with `tsolve.session.`
+    (where features keep session-only data, such as the Chatbot history, UC-02), in that order.
+  - AC-008.2: WHEN the logout call answers 200 with a usable `logoutUrl`, THE web app SHALL navigate the browser to
+    it with a full page load, not through the router, once the cached data and session-only entries are dropped, so
+    that the identity provider ends its own session (identity AC-002.8; KAN-311).
   - AC-008.3: IF `POST /api/v1/auth/logout` fails, THEN THE web app SHALL still drop the cached data and the
-    session-only entries and send the user to Login.
+    session-only entries and send the user to Login inside the app.
+  - AC-008.4: IF `POST /api/v1/auth/logout` answers without a usable `logoutUrl`, THEN THE web app SHALL drop the cached
+    data and the session-only entries, send the user to Login inside the app, and show no error. Not usable means: the
+    answer is 204, or the body has no `logoutUrl`, or it is not a string, or it is not an absolute `http` or `https` URL.
 
 ### STORY-009: Mock users and test helpers
 - As a developer and a test writer, I want ready users with one role or several so that every screen can be tried and
@@ -355,7 +361,7 @@ owner: BA
                        roleInProject: ProjectRole }
   SpaceRef:          { spaceId: uuid, name: string }
   ```
-  401 = signed out. `POST /api/v1/auth/logout` → 204 (unchanged).
+  401 = signed out. `POST /api/v1/auth/logout` → 200 `{ logoutUrl: string }` (was 204; identity AC-002.1, KAN-311).
 - **`@/shared/auth`**: `ROLES`, `ROLE_LABELS`, `useSession()` (`session`, `roles`, `hasRole`, `hasAnyRole`,
   `isProjectManagerOf`, `isMemberOf`), `landingPath(roles)`, `useSignOut()`, `resetSession()`.
 - **`@/shared/messages`**: the catalog, `msg(code, params)`, `showMessage(code, params)`, `isMsgCode`.

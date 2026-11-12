@@ -33,11 +33,14 @@ src/mocks/session.ts (fixture users) ◄── shared/auth/dev-user (mock mode) 
   Manager, Knowledge Manager, Ticket Resolver, Employee and drops repeated paths.
 - **Catalog:** `catalog.ts` is rewritten from System_Messages; `msg()` fills `{tracker_name}` from
   `shared/config/tracker.ts` (`TRACKER_NAME = 'Jira'`) unless a parameter is passed.
-- **Log out:** `useSignOut` → `logout()` (errors caught, not rethrown) → `resetSession(queryClient, { signedOut:
-  true })`, which drops every other query and mutation, removes `tsolve.session.*` keys from `sessionStorage` and
-  `localStorage`, and sets the session query to `null` locally instead of refetching — so the user is signed out in
-  the app even when the logout request failed. `UserMenu` then always navigates to Login. A global 401 calls
-  `resetSession` the same way.
+- **Log out:** `useSignOut` → `logout()` (errors caught, not rethrown; the answer is kept) → `resetSession(queryClient,
+  { signedOut: true })`, which drops every other query and mutation, removes `tsolve.session.*` keys from
+  `sessionStorage` and `localStorage`, and sets the session query to `null` locally instead of refetching — so the
+  user is signed out in the app even when the logout request failed. Then, if the answer holds a usable `logoutUrl`
+  (a string that parses as an absolute `http` or `https` URL), the hook navigates the browser to it with a full page
+  load (`window.location.assign`, not the router) so Keycloak ends its own session (AC-008.2). In every other case
+  (request failed, 204, no or bad `logoutUrl`) `useSignOut` returns `false` and `UserMenu` navigates to Login inside
+  the app (AC-008.3, AC-008.4); no error is shown. A global 401 calls `resetSession` the same way.
 - **Mocks and tests:** fixture users live in `src/mocks/session.ts`, keyed by a user id (`'pm'`, `'pm-km'`, …);
   `dev-user.ts` stores the chosen id; `renderApp(path, { role })` maps a role to its single-role fixture user.
 
@@ -157,7 +160,8 @@ type MessageDefinition = { type: 'field' | 'inline' | 'toast' | 'confirm' | 'too
 | Task 1 green on its own | Task 1 also renames every role reference mechanically (routes.ts, `MENUS` keys, `ALL_SIGNED_IN_ROLES`, tests, review mocks); behaviour changes stay in Tasks 2–3 | Merge Tasks 1–3 | Small reviewable PRs, each green (builder check) |
 | Tracker App codes | Web catalog keeps every code except the tracker-panel types and Tracker comment (MSG62, MSG65–69, MSG71, MSG72 stay, unused by the web app) | Leave out the whole Tracker App section except MSG73, MSG75 | One simple rule; MSG72 may serve the web Evidence upload (user, 22/10) |
 | Catalog test source | `frontend/scripts/report3-messages.mjs` builds `frontend/src/shared/messages/report3-messages.json` from `$TSOLVE_DOCS/Report3/System_Messages.md`; the test checks every catalog entry against it | Hard-coded texts; review only | A Report3 change shows up as a failing test with the changed text (user, 22/10) |
-| Logout when the request fails | Session set to `null` locally (no refetch); `useSignOut` never throws; `UserMenu` always navigates to Login | Refetch `/me` | A refetch after a failed logout would sign the user back in (builder check) |
+| Logout when the request fails | Session set to `null` locally (no refetch); `useSignOut` never throws; `UserMenu` navigates to Login in the app unless `useSignOut` already left the page for `logoutUrl` | Refetch `/me` | A refetch after a failed logout would sign the user back in (builder check) |
+| Where the logout answer is used | `useSignOut` clears first, then `window.location.assign(logoutUrl)` only for an absolute http(s) URL; returns whether it navigated away | Navigate before clearing; use the router | Clearing first keeps the AC-008.1 order and the local sign-out even if the page load is slow; the Keycloak URL is on another origin, so the router cannot open it; a bad URL must never reach `location` (KAN-311, Q1–Q3) |
 | Names | Decided in planning (builder check): `paths` keys `workspaceSetup`, `triageHistory`, `wikiHome`, `wikiDocument`, `wikiUpload`, `spaceSettings`, `chatbot`; menu icons `ReadOutlined` (Wiki), `MessageOutlined` (Knowledge Chatbot), `BranchesOutlined` (Triage History) — the kit v4 icons of UI decision 5; dev storage key `tsolve.dev.user`; `hasRole(role)`, `hasAnyRole(roles)`; `{ role }` default `'PROJECT_MANAGER'`; `{ role }` and `{ user }` are a union type, never both; Status tag colours Simple = green, Complex = orange until the Figma kit says otherwise | — | Calls any builder could make; the FE Lead can change them in review |
 | Edge rules | Decided in planning (builder check): while not set up, an unknown path still shows 404 and `/dev/kit` is not redirected; `/workspace-setup` opens normally after setup; every user's menu ends with the Employee items (D4); a global 401 also clears `tsolve.session.*` | — | Follow the spec's wording; no new behaviour |
 | Login screen boundary (KAN-198) | fe-foundation gives `startSignIn` and `useSignInMessage`; the 1.1.1 Login page stays with `identity` | fe-foundation builds a minimal Login; all sign-in in `identity` | One owner per screen while KAN-197 writes the identity spec (Hiếu, 25/10, Q1) |

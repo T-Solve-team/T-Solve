@@ -80,9 +80,10 @@
         "site-sign-in": "passing",
         "host-routes": "passing",
         "uuid-ids": "passing",
-        "catalog-msg-new-3": "evaluating"
+        "catalog-msg-new-3": "evaluating",
+        "sign-out-logout-url": "passing"
       },
-      "lastUpdated": "2026-11-01T05:52:44.075Z",
+      "lastUpdated": "2026-11-12T17:59:39.575Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
