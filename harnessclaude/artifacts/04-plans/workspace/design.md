@@ -92,6 +92,7 @@ The user delegated the remaining calls on 12/11 ("tự quyết và note lại").
 | D19 | After Setup, landing page | User List (`paths.users`) | Workspace Settings | SRS UC-10 step 7 |
 | D20 | Spec depth / risk review | Deep; risk-review done inline below | five-persona subagent | Planner agent was stopped by the user; findings folded into the edge cases |
 | D21 | "Token differs" on UC-11 (builder check) | Any non-blank token counts as changed: it is checked with Jira and `tokenChanged` = true; the stored token is never decrypted to compare | decrypt and compare | Simpler; never handles the old secret in clear for a comparison |
+| D23 | `JIRA_SITE_URL` after removing the stand-in (Task 6) | Keep it in `.env.example` under the Jira import section; only the stand-in's email and token variables go | delete it everywhere | `ticket/client/JiraRestIssueSource` (ticket-repository) still reads it for browse links |
 | D22 | Where the interim linker puts the `cloudId` (builder check) | Returned to the service and only logged (host, not secrets); nothing persists it until the catalog exists | add a `jira_cloud_id` column to the tenant table | The catalog owns `jira_cloud_id` (platform AC-001.15); a tenant column would duplicate it |
 
 ## File Structure
