@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
-import type { WorkspaceInfo } from '@/shared/api';
+import type { DepartmentRef, WorkspaceInfo } from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { getDevUser } from '@/shared/auth';
 import type { MsgCode, MsgParams } from '@/shared/messages';
@@ -58,6 +58,12 @@ function validate(input: Record<string, unknown>, isSetup: boolean) {
 }
 
 /** Already registered by src/mocks/handlers.ts, ahead of the generated handlers. */
+let created: DepartmentRef[] = [];
+
+function departmentNameError(code: MsgCode, params?: MsgParams, status = 400) {
+  return problem(status, code, { params, fieldErrors: [{ field: 'name', code, params }] });
+}
+
 export const handlers: HttpHandler[] = [
   http.post('*/api/v1/workspace/setup', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
@@ -108,9 +114,31 @@ export const handlers: HttpHandler[] = [
     };
     return HttpResponse.json<WorkspaceInfo>(workspace);
   }),
+  // The users mock serves GET /api/v1/users/departments from a static list, so Departments
+  // created here do not appear in the table in browser mock mode (spec Interim limit 4).
+  http.post('*/api/v1/departments', async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    const input: unknown = await request.json().catch(() => null);
+    const name =
+      typeof input === 'object' && input !== null && 'name' in input ? input.name : undefined;
+    if (typeof name !== 'string' || !name.trim())
+      return departmentNameError('MSG01', { field_name: 'name' });
+    if (name.length > 50)
+      return departmentNameError('MSG02', { field_name: 'name', max_length: 50 });
+    const strippedName = name.trim();
+    if (created.some((department) => department.name.toLowerCase() === strippedName.toLowerCase()))
+      return departmentNameError('MSG43', undefined, 409);
+    const department: DepartmentRef = {
+      departmentId: crypto.randomUUID(),
+      name: strippedName,
+    };
+    created.push(department);
+    return HttpResponse.json<DepartmentRef>(department, { status: 201 });
+  }),
 ];
 
 /** Restores this feature's mock data to its starting state — called after every test (src/test/setup.ts). */
 export function resetMockData(): void {
   workspace = undefined;
+  created = [];
 }

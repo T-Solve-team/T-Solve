@@ -80,9 +80,10 @@
         "site-sign-in": "passing",
         "host-routes": "passing",
         "uuid-ids": "passing",
-        "catalog-msg-new-3": "evaluating"
+        "catalog-msg-new-3": "evaluating",
+        "sign-out-logout-url": "passing"
       },
-      "lastUpdated": "2026-11-01T05:52:44.075Z",
+      "lastUpdated": "2026-11-12T17:59:39.575Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
@@ -122,7 +123,7 @@
         "account-sub-binding": "pending",
         "callback-workspace-checks": "passing",
         "user-role": "passing",
-        "logout-rp-initiated": "pending",
+        "logout-rp-initiated": "passing",
         "keycloak-provisioning": "passing",
         "keycloak-theme": "passing",
         "keycloak-prerequisites": "passing",
@@ -133,9 +134,12 @@
         "add-user-backend": "passing",
         "user-roles-backend": "passing",
         "user-status-backend": "passing",
-        "scope-checks": "passing"
+        "scope-checks": "passing",
+        "session-expiry-events": "passing",
+        "operator-session": "pending",
+        "session-replaced-event": "passing"
       },
-      "lastUpdated": "2026-11-11T17:03:11.850Z",
+      "lastUpdated": "2026-11-12T17:21:54.347Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -148,6 +152,8 @@
       "status": "evaluating",
       "currentPhase": "evaluate",
       "features": {
+        "create-department-api": "passing",
+        "create-department-screen": "passing",
         "workspace-store": "passing",
         "tracker-account-check": "passing",
         "jira-site-linker": "passing",

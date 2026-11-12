@@ -1,21 +1,48 @@
-/** 2.2 Workspace Settings — Report3 UC-11; SRS v3460 layout */
-import { Flex } from 'antd';
-import { useGetWorkspace } from '@/shared/api';
-import { ErrorState, LoadingState, ScreenPlaceholder, SectionCard } from '@/shared/ui';
+/** 2.2 Workspace Settings — company information (UC-11) and New Department (UC-12); SRS v3460 layout. */
+import { Button, Flex } from 'antd';
+import { useState } from 'react';
+import { useGetUserDepartments, useGetWorkspace, type DepartmentRef } from '@/shared/api';
+import { cells, DataTable, ErrorState, LoadingState, type DataTableColumn } from '@/shared/ui';
+import { NewDepartmentModal } from '../components/NewDepartmentModal';
 import { WorkspaceInfoForm } from '../components/WorkspaceInfoForm';
 
-export function WorkspaceSettingsPage() {
-  const query = useGetWorkspace();
+const COLUMNS: DataTableColumn<DepartmentRef>[] = [
+  { key: 'name', title: 'Name', render: (_, d) => cells.text(d.name) },
+];
 
-  if (query.isPending) return <LoadingState />;
-  if (query.isError) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
+export function WorkspaceSettingsPage() {
+  const workspace = useGetWorkspace();
+  const departments = useGetUserDepartments();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // One loading state for the page until the company information arrives (KAN-120 AC-002.2 expects a single one).
+  if (workspace.isPending) return <LoadingState />;
+
   return (
     <Flex vertical gap="large">
-      <WorkspaceInfoForm workspace={query.data} />
-      {/* TEMPORARY — the Departments section of 2.2 is KAN-120, not built yet. */}
-      <SectionCard title="Departments">
-        <ScreenPlaceholder number="2.2" name="Workspace Settings" />
-      </SectionCard>
+      {workspace.isError ? (
+        <ErrorState error={workspace.error} onRetry={() => void workspace.refetch()} />
+      ) : (
+        <WorkspaceInfoForm workspace={workspace.data} />
+      )}
+      <Flex justify="flex-end">
+        <Button type="primary" onClick={() => setIsModalOpen(true)}>
+          New Department
+        </Button>
+      </Flex>
+      {departments.isPending ? (
+        <LoadingState />
+      ) : (
+        <DataTable<DepartmentRef>
+          label="Departments"
+          columns={COLUMNS}
+          rows={departments.data}
+          rowKey={(d) => d.departmentId}
+          error={departments.isError ? departments.error : null}
+          onRetry={() => void departments.refetch()}
+        />
+      )}
+      <NewDepartmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </Flex>
   );
 }

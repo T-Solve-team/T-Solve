@@ -20,8 +20,8 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
 
 /**
  * Starts a sign-in on a Workspace site. The resolver builds the Keycloak authorization request, it is stored in Redis,
- * and the browser is redirected to Keycloak (AC-001.1, AC-001.52). On the {@code admin.} host nothing starts and the
- * answer is 404 until the Platform Console sign-in (Task 29). The target comes only from the host.
+ * and the browser is redirected to Keycloak (AC-001.1, AC-001.52). On the {@code admin.} host the Platform Console
+ * sign-in starts against the realm {@code tsolve-ops} (AC-001.28). The target comes only from the host.
  */
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -54,7 +54,11 @@ public class SignInStartController {
     public ResponseEntity<Void> start(
             @RequestParam(required = false) String returnTo, HttpServletRequest request, HttpServletResponse response) {
         if (hosts.isAdminHost(request)) {
-            return ResponseEntity.notFound().build();
+            OAuth2AuthorizationRequest console = resolver.resolveConsole(filterReturnTo(returnTo));
+            authorizationRequests.saveAuthorizationRequest(console, request, response);
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(console.getAuthorizationRequestUri()))
+                    .build();
         }
         Optional<WorkspaceRef> workspace = workspaces.findBySiteHost(hosts.hostOf(request));
         if (workspace.isEmpty()) {

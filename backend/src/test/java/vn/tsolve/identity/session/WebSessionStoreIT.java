@@ -32,6 +32,13 @@ class WebSessionStoreIT extends AbstractSessionIT {
         SessionTestFixtures.registerRedis(registry);
     }
 
+    /** Every Redis key except the expiry index (Task 27b), which is not a session key. */
+    private Set<String> sessionKeys() {
+        Set<String> keys = new java.util.HashSet<>(redis.keys("*"));
+        keys.remove(SessionTestFixtures.EXPIRY_INDEX);
+        return keys;
+    }
+
     private String create() {
         return store.create(new WebSession(
                 WebSession.Kind.WORKSPACE,
@@ -51,7 +58,7 @@ class WebSessionStoreIT extends AbstractSessionIT {
 
         assertThat(cookie).matches("[A-Za-z0-9_-]{43}");
         String key = keyOf(cookie);
-        assertThat(redis.keys("*")).containsExactly(key);
+        assertThat(sessionKeys()).containsExactly(key);
         Map<Object, Object> fields = redis.opsForHash().entries(key);
         assertThat(fields).containsEntry("kind", "WORKSPACE");
         assertThat(fields).containsEntry("workspace_id", WORKSPACE.toString());
@@ -139,7 +146,7 @@ class WebSessionStoreIT extends AbstractSessionIT {
         store.touch(cookie, MutableClock.START.plus(Duration.ofMinutes(1)));
 
         assertThat(redis.hasKey(keyOf(cookie))).isFalse();
-        assertThat(redis.keys("*")).isEmpty();
+        assertThat(sessionKeys()).isEmpty();
         assertThat(store.find(cookie)).isEmpty();
     }
 

@@ -8,7 +8,7 @@ owner: Dev
 # Tasks: workspace — iteration 1 (KAN-119)
 
 Spec: artifacts/03-modules/workspace/spec.md
-Design: artifacts/04-plans/workspace/iteration-1/kan-119-design.md (Master: artifacts/04-plans/workspace/design.md)
+Design: artifacts/04-plans/workspace/iteration-1/kan-119/design.md (Master: artifacts/04-plans/workspace/design.md)
 
 Every test name starts with the AC id it proves (`AC-003.5 …`). Backend verify: `mvn verify` in `backend/`.
 Frontend verify (in `frontend/`): `npm run format:check`, `lint`, `typecheck`, `test`, `build`; `npm run generate:api`

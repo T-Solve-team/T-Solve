@@ -94,6 +94,7 @@ tsolve:
     admin-origin: ${TSOLVE_ADMIN_ORIGIN}
     operator-emails: ${PLATFORM_OPERATOR_EMAILS}
     keycloak-web-client-secret: ${KEYCLOAK_WEB_CLIENT_SECRET}
+    keycloak-console-client-secret: ${KEYCLOAK_CONSOLE_CLIENT_SECRET}
   # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId", ids as UUIDs. Empty = nobody can import.
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
