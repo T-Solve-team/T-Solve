@@ -4,6 +4,7 @@ export { getFeedbackMock } from './feedback/feedback.msw';
 export { getImportMock } from './import/import.msw';
 export { getJiraAppMock } from './jira-app/jira-app.msw';
 export { getProfileMock } from './profile/profile.msw';
+export { getProjectsMock } from './projects/projects.msw';
 export { getReviewMock } from './review/review.msw';
 export { getSearchMock } from './search/search.msw';
 export { getSessionMock } from './session/session.msw';
