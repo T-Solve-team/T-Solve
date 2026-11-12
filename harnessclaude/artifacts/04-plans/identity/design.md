@@ -655,7 +655,7 @@ factor) and ends in an Operator session after the allow-list check (AC-001.28–
   K8, K11). Filled at the first sign-in; never cleared except by the runbook's rebind (Q11).
 - **Redis keys** (one Redis, persistence on, `noeviction`): `tsolve:session:<hex>` (as before; plus the field
   `id_token_hint` and `kind`), `tsolve:authreq:<hex>` (a hash: `target`, `workspace_id`, `state`, `nonce`,
-  `pkce_verifier`, `return_to`; 600 s), `tsolve:jiralink:<id>` (`workspace_id`, `tracker_account_id`; 600 s).
+  `pkce_verifier`, `return_to`; 600 s), `tsolve:jiralink:<SHA-256 hex of the id>` (`workspace_id`, `tracker_account_id`, `jira_user_name`, `site_name`; 600 s; the key is hashed like sessions and authorization requests, so a key listing leaks no usable id).
 - **Keycloak**: its own database `keycloak` and user on the existing PostgreSQL server (Q3). Realm `tsolve`: client
   `tsolve-web`; client `tsolve-provisioner` (service account); one Organization and one IdP `google-<slug>` per
   Workspace; the `organization` client scope and a mapper for the user attribute `hd`. Realm `tsolve-ops`: client
@@ -674,6 +674,7 @@ factor) and ends in an Operator session after the allow-list check (AC-001.28–
 | `PLATFORM_OPERATOR_EMAILS` | allow-list, second check after Keycloak (Q1) | a developer's email |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | as Task 10 | compose Redis |
 | `KEYCLOAK_ADMIN_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | only the profiles that create or remove Workspaces (AC-001.61); absent elsewhere | a placeholder; the dev fake Google ignores them |
+| `TSOLVE_SITE_ORIGIN_TEMPLATE` | origin of a Workspace site for the two `tsolve-web` URIs (AC-001.58, Task 28 Q6); `{slug}` is replaced; read only by the `ops` adapter | `http://{slug}.localhost:8080` (production `https://{slug}.tsolve.io.vn`) |
 | removed | `TSOLVE_SIGNING_KEY`, `tsolve.oidc.google.*` | |
 
 The backend reaches Keycloak at the issuer it expects in tokens (the Docker network name and `KC_HOSTNAME` are set
@@ -705,7 +706,7 @@ together; a start-up check reads both discovery documents, R11).
 - **Operators (Q1 = B).** A separate realm and client, a Google IdP without `hd`, TOTP or WebAuthn required, the
   allow-list as the backend's second check. A mistake in a tenant IdP can never grant the Console.
 - **Failures (Q6 = A).** Failures that reach the callback go to `/login?error=` on the site. The others show on
-  Keycloak's themed page (AC-001.67); which case lands where is fixed by the Testcontainers tests of Task 23 (K14).
+  Keycloak's themed page (AC-001.67); which case lands where is fixed by the Testcontainers tests of Tasks 23 and 31 (K14). Google's own `redirect_uri_mismatch` page is not among them: Google never redirects back. A cancel at Google (`error=access_denied`) is a themed-page case too: Keycloak 26.4.7 does not return it to the callback but shows its own 400 page, which the theme replaces with the MSG06 text; the callback side of AC-001.8 is pinned by the `prompt=none` test (probe, Task 31 QA 2). The themed page's "Back to sign-in" link uses `client.baseUrl` (the realm sets `tsolve-web.baseUrl` to one neutral T-Solve URL: dev `http://localhost:5173/`, prod `https://tsolve.io.vn/`) and falls back to the same URL, kept in `theme.properties`, when Keycloak does not know the client (K13).
   The error list of the Login screen does not change (Q11 = A adds no message).
 - **Keycloak hardening (Q13 = A).** Realm import: registration off, no password form, IdPs hidden on the login page,
   a custom first-broker-login flow, brute-force detection on (AC-001.64); the provisioning adapter sets
@@ -717,10 +718,50 @@ together; a start-up check reads both discovery documents, R11).
   connection, creates Organization → IdP → client URIs, re-reads the client and checks that the earlier URIs are all
   still there, and on any failure deletes in reverse order, idempotent by alias. The adapter's credentials are only
   in the `ops` and Console profiles. Until the platform exists the no-op bean answers (AC-001.60).
+  Decided in Task 28 QA (KAN-299, Hiếu, 9/11, all option A):
+  - Q1: `check` and `remove` get only the Workspace id. `provision` tags the Organization (attribute
+    `tsolve.workspace-id`) and the IdP (config key `tsolve.workspace-id`); they are found by that tag; the Organization
+    alias is the slug; the port's `siteName` is the slug. The port's signatures do not change.
+  - Q2: `ops` + provisioner secret + `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` all set wires the Keycloak adapter;
+    any missing wires the no-op and logs one WARN naming the variable; a Workspace web profile always gets the no-op.
+    No command runner in Task 28 (it comes with Task 14 or the runbook task); the ITs are the demonstration.
+  - Q3: Task 28 covers `ops` only. The Console process profile is decided and tested in Task 29. Because AC-001.61
+    forbids a Workspace web process to hold the credentials, the Console needs its own process (note in architecture.md).
+  - Q4: the `tsolve-provisioner` test asserts an explicit minimal role list (`manage-identity-providers`,
+    `view-identity-providers`, `manage-clients`, `view-clients`, `manage-users`, `view-users`, `query-users`, plus what
+    Organizations need) and a 403 on a call outside it. If a spike shows `manage-realm` is needed, the 403 case uses a
+    call that role does not grant and the risk goes into row 109. The spike's result is not decided here.
+  - Q5: the IdP copies `google-acme`'s broker settings (type `google`, flow `tsolve first broker login`, the `hd`
+    mapper, `trustEmail` true, `syncMode` IMPORT).
+  - Q6: the origin of the two URIs comes from `TSOLVE_SITE_ORIGIN_TEMPLATE` (see Configuration).
+  - Q7: a lost earlier URI found by the re-read: throw, delete this Workspace's own objects, one ERROR naming the lost
+    URIs, no repair; the runbook restores them. The re-read follows every write the adapter makes to `tsolve-web`
+    (review of Task 28, B1): in `remove` a lost earlier URI gives one ERROR naming the lost URIs, no repair, and the
+    call throws; in the undo the ERROR is logged and the remaining undo steps still run. `remove` and the undo find
+    the IdP by the tag `tsolve.workspace-id`, not by the alias.
+  - Q8: `provision` for an already-provisioned Workspace with another Google domain or slug throws and changes
+    nothing; there is no update path.
+  - S6 (review of Task 28): when the Organization is absent but the tagged IdP `google-<slug>` exists, `provision`
+    reads the IdP and throws, changing nothing, if its `hostedDomain` differs from the requested domain or it is not
+    linked to an Organization of this Workspace (same rule as Q8).
+  - S5 (review of Task 28): in `ops`, when the three secrets are set, `base-url` and `TSOLVE_SITE_ORIGIN_TEMPLATE`
+    (which must contain `{slug}`) are validated at start-up; if either is empty or invalid the start-up fails with a
+    message naming the variable (never its value).
 - **Jira link (Q2 = A).** `jira-app` calls `JiraLinkRequestService` after verifying the Forge token; the person
   confirms on the Workspace site. The confirm page is a web-app route (`/jira-link`); the POST needs CSRF and a
   Workspace session. Design row 46 changes from Open to mitigated: a victim who confirms without reading the page is
   still exposed; the option B (a code typed into the Jira panel) stays available if the team wants it closed.
+  Task 30a decisions (QA Q1 to Q10, KAN-234): the request also holds the Jira display name and the Jira site name from
+  the verified Forge token; a non-consuming `GET /api/v1/auth/jira-link/{requestId}` (session required; failures as
+  AC-001.72) returns `{ jiraUserName, jiraSiteName }`, Y comes from the session on the front end (AC-001.75). In 30a the
+  confirm POST consumes the request (read and delete in one step, whatever the outcome, so another Workspace's
+  request is burned) and answers 501; a second POST answers 400 MSG141; Task 30b replaces the 501. `SecurityConfig`
+  moves `WebSessionFilter` before `CsrfFilter`, so the order of answers is 401 > 403 > 400 (Task 26b edits
+  `WebSessionFilter` in parallel; the `SecurityConfig` change does not touch it). The link URL origin comes from
+  `TSOLVE_SITE_ORIGIN_TEMPLATE`. `/jira-link` is its own route outside `GuestOnly`, `RequireAuth` and
+  `RequireWorkspace`; on 401 the page calls `startSignIn` with the same `returnTo`, on 403 it shows MSG06 and offers
+  "Link" again after the CSRF cookie is refreshed; "Cancel" goes to `/`. The contract defines the 200 answer of the
+  confirm now (the client is generated once); the page's MSG75 display belongs to Task 30b.
 - **Dev and tests (K14, Q8 = A).** Compose gets `keycloak` (26.x pinned, heap capped, health check) with the database
   `keycloak`, and a WireMock `fake-google` that Keycloak brokers to as `google-acme` and `google-beta`. The realm import
   holds users that match `DevAccounts`. Tests use `testcontainers-keycloak` with the same fake issuer
@@ -807,7 +848,7 @@ listed in its banner. Every Critical or High row has its test task.
 | 106 | STORY-001 | Authorization | The hint is edited to Workspace B's IdP on A's site (R6) | High | The token's Organization is B's: MSG122 (AC-001.11); two-Workspace test | Task 25b |
 | 107 | STORY-001 | Timing | Two Workspace creations at once rewrite `tsolve-web`'s redirect list (R7) | High | One at a time; every earlier URI is still there after each write (AC-001.59) | Task 28 |
 | 108 | STORY-001 | Error cascades | `provision` fails after the Organization exists, or the platform undoes the Workspace (R8) | High | The objects created are deleted in reverse order; a repeated call is harmless (AC-001.59, .62) | Task 28 |
-| 109 | STORY-001 | Authorization | The Admin API credentials are read from a Workspace web replica (R9) | High | Not loaded there; least roles in the profiles that have them (AC-001.61) | Task 28 |
+| 109 | STORY-001 | Authorization | The Admin API credentials are read from a Workspace web replica (R9) | High | Not loaded there; least roles in the profiles that have them (AC-001.61); Keycloak 26.4 answers 403 on every Organization call (even a read) without `manage-realm`, so `tsolve-provisioner` holds it too, which also lets a leaked secret change realm settings: keep the secret to `ops` and rotate it on any doubt (Task 28 spike). If Keycloak imports the realm without `KEYCLOAK_ADMIN_CLIENT_SECRET` in its environment, the `tsolve-provisioner` client may keep the public placeholder as its secret while holding `manage-realm`; compose therefore refuses to start without the variable, and the production runbook has a step that sets it and checks it | Task 28 |
 | 110 | STORY-001 | Error cascades | Keycloak is down (R10) | Medium | Nobody can start a sign-in; signed-in sessions in Redis continue; compose and Caddy health check; ADR-0003 upgrade note | Task 23 |
 | 111 | STORY-001 | Environment | The backend reaches Keycloak at a name that differs from the token issuer (R11) | Medium | The start-up check refuses to start and names the issuer (NFR 4) | Task 23 |
 | 112 | STORY-001 | Compliance | A company is removed but its Keycloak users, Organization or IdP remain (R12); PII in Keycloak logs | High | `remove` deletes them (AC-001.62); the runbook's "remove a company"; no email in Keycloak logs | Task 28 |
@@ -816,10 +857,10 @@ listed in its banner. Every Critical or High row has its test task.
 | 115 | STORY-001 | Timing | The callback reaches another API replica than the sign-in start (R15) | High | The request is in Redis, no HTTP session, `NullSecurityContextRepository` (AC-001.55); a two-instance test | Task 23c |
 | 116 | STORY-002 | Integration | A `fetch` POST cannot follow the redirect to Keycloak's end-session URL (R16) | Medium | The answer is 200 `{ logoutUrl }`; the browser navigates (AC-002.1, AC-002.8) | Task 27 |
 | 117 | STORY-001 | Integration | The platform, `jira-app` or fe-foundation still use the old contract (R17) | High | Change requests sent before the dependent code (this plan, "Platform change requests") | Tasks 28, 30, 27 |
-| 118 | STORY-001 | Environment | Google has not applied the new redirect URI yet, or the client's URI limit is reached (R18) | Medium | Google refuses and the Workspace site shows the normal sign-in error; the runbook does the test sign-in before the company is told, lists the URIs and says to check the limit | Task 28 (runbook) |
+| 118 | STORY-001 | Environment | Google has not applied the new redirect URI yet, or the client's URI limit is reached (R18) | Medium | Google refuses on its own `redirect_uri_mismatch` page and never redirects back, so neither Keycloak, the callback nor the Workspace site shows it (not a themed-page case, AC-001.67); the protection is the runbook's test sign-in before the company is told with the registered redirect URIs, which lists the URIs and says to check the limit | Task 28 (runbook) |
 | 119 | STORY-001 | Data integrity | A person's Google email changes (R19) | Low | The Account is found by `sub`; `app_user.email` is unchanged (design decision above) | Task 25a |
 | 120 | STORY-001 | State transitions | A developer database already ran the unreleased `008` and `009` (R20) | Low | `docker compose down -v`; the card notes it | Task 24 |
-| 121 | STORY-001 | Authorization | Jira-link phishing: the victim opens the attacker's link URL and confirms without reading (replaces row 46) | Critical | Mitigated, not closed: single-use 10-minute request, the person's own session, the confirm page names both accounts, CSRF POST; option B (a typed code) stays open (AC-001.69–.72) | Task 30 |
+| 121 | STORY-001 | Authorization | Jira-link phishing: the victim opens the attacker's link URL and confirms without reading (replaces row 46) | Critical | Mitigated, not closed: single-use 10-minute request, the person's own session, the confirm page names both accounts, CSRF POST; option B (a typed code) stays open (AC-001.69–.72, .75) | Task 30 |
 | 122 | STORY-001 | Authorization | Login CSRF: a callback URL (state and code) of the attacker's own sign-in is opened in the victim's browser (replaces rows 45 and 100) | Critical | The victim's browser has no matching `__Host-TSOLVE_AUTHREQ`: MSG141, no session (AC-001.6, .53) | Task 23c |
 | 123 | STORY-001 | Integration | PR #119's `UserListSessionFilter` next to `WebSessionFilter` | High | One session model; the second filter is dropped from identity (Q15) | Task 26a |
 | 124 | STORY-001 | State transitions | Sign-in tried before the test sign-in of the runbook (redirect URI not yet applied) | Medium | Google refuses; the Workspace site shows the normal sign-in error; no data-model gate (AC-001.73 retired) | Task 28 (runbook) |
@@ -829,6 +870,11 @@ listed in its banner. Every Critical or High row has its test task.
 | 128 | STORY-001 | Environment | The app runs without the profile `dev` | High | `DevWorkspaceLookup` exists only with the profile `dev`; otherwise `NoWorkspaceLookup` answers nothing | Task 23a |
 | 129 | STORY-001 | Integration | Redis wiring: the app reaches Redis through `REDIS_HOST`, `REDIS_PORT` and `REDIS_PASSWORD`; a key is stored with a time to live | High | The app connects with those three settings; a key with a time to live expires | Task 23a |
 | 130 | STORY-001 | Error cascades | Redis health: the `redis` health indicator when Redis is up | Medium | The indicator is UP, so `/actuator/health` stays 200 UP | Task 23a |
+| 131 | STORY-001 | Timing, Data integrity | Two subs do a first sign-in on one sub-less Account at once | High | The later one is refused (MSG09, one WARN with the Account id); the Account keeps the first sub (AC-001.56; conditional bind) | Task 25a |
+| 132 | STORY-001 | State transitions | A Deactivated Account on its first sign-in | Medium | Refused as MSG10; the sub is not bound (AC-001.13, AC-001.16) | Task 25a |
+| 133 | STORY-001 | Error cascades | The Account step fails itself at the callback: the database is down, `signIn` throws, or the token has `email_verified` true but no `email` (it would be an NPE in `signIn`) | High | 302 `/login?error=MSG06`, the sign-in cookie expired, no session, one `ERROR` with only the Workspace id (no email, `sub` or name), never a 500 (AC-001.74; AC-001.14 order unchanged) | Task 25b |
+| 134 | STORY-001 | Authorization | A session of Workspace A reaches Workspace B's data: the binding is wrong, or it stays on a pooled thread after an exception and the next request on that thread reads it (two-Workspace test) | Critical | `WebSessionFilter` binds `session.workspaceId()` (after the host check) with `TenantScope.runIn` around `chain.doFilter`; the binding ends in `runIn`'s `finally`, also when the endpoint throws; a session of A never reads B; the next request on the same thread starts unbound (AC-001.76, AC-001.26) | Task 26b |
+| 135 | STORY-001 | Integration | A signed-in request reaches tenant code with nothing bound (an ASYNC re-dispatch such as SSE or a `Callable`, or a future endpoint that bypasses the filter); under the profile `identity-mock` the mock filter binds its own Workspace first, so a real session of another Workspace gets a 500 from the nested `runIn` | Medium | No default Workspace (ADR-0002): 500 `MSG06`. Code that runs later binds itself with `runIn`, as `ReviewQueueEventServiceImpl` does. Known limit: `MockSignedInCallerFilter` stays until its own small item after 26b (Decided in planning: KAN-298 Q3, Q5, Q6) (AC-001.76) | Task 26b |
 
 Open questions for the spec owner: none. Every row is closed by the answers Q1–Q16.
 
@@ -1252,3 +1298,137 @@ Covers AC-004.9 to AC-004.18. Decisions of the user (Dương, 07/11): Q1–Q4 = 
 - **Tests.** Unit: query parsing (q length/escape, sort whitelist, paging). `@WebMvcTest`-style: 401/403/400.
   IT with `TwoTenantDatabases`: rows in `tenant_b` never appear for ACME; filters, sort, paging; departments list;
   mock filter with the profile on (signed in) and off (401); seeder idempotent.
+
+## Add user backend — KAN-108, Task 33 (2026-11-07)
+
+Covers AC-005.9 to AC-005.17; decisions Q1–Q3 of 07/11 (spec Changelog). Builds on Task 32 (same caller, same
+`identity-mock` profile).
+
+- **Schema.** Changeset `020-identity-space-manager.sql` (author `identity`): `space` (`space_id BIGSERIAL PK`,
+  `public_id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()`, `department_id BIGINT NOT NULL UNIQUE → department`,
+  `name VARCHAR(100) NOT NULL`, `status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'` CHECK `ACTIVE, HIDDEN`) and
+  `space_manager` (`space_id BIGINT PRIMARY KEY → space` — the key makes one Knowledge Manager per Space —
+  `user_id UUID NOT NULL → app_user(id) ON DELETE CASCADE`, `assigned_at TIMESTAMPTZ NOT NULL`, index on `user_id`).
+  Key style follows `department` on main; the wiki module reuses both.
+- **Write.** `UserCreationService` / impl, `@Transactional`: validate in the mock's order (email required → length
+  on the raw input → format + company domain → duplicate in this Workspace → roles → Department → Spaces → occupied
+  Space), claim the email in `WorkspaceEmailRegistry`, insert `app_user`, `user_role`, `space_manager`, record the
+  audit event, return the `UserAccount` read back through Task 32's repository mapping. A unique violation on
+  `space_manager` (race) maps to 409 MSG117 and a unique violation on `app_user.email` to 409 MSG11. Field errors
+  use the existing `fieldErrors` Problem shape the frontend reads.
+- **Ports.** `WorkspaceEmailRegistry` (`boolean claim(UUID workspaceId, String email)`, `void release(...)`) in
+  `identity.service`, default bean `AcceptAllWorkspaceEmailRegistry` with javadoc "interim until platform's
+  workspace_email registry (Task 14)". Company domain: `WorkspaceLookup.findById(bound).googleDomain()`, then the
+  `identity-mock` property `tsolve.identity.mock.company-domain` (default `acme.test`).
+- **Seed.** `MockUserListSeeder` also ensures one Active Space per demo Department (and one Knowledge Manager
+  assignment for the seeded Knowledge Manager), so creation-options and MSG117 are visible in the demo.
+- **Tests.** Unit: validation order and codes. MVC: 401/403/400. IT (`TwoTenantDatabases`): creation lands only in
+  `tenant_a`; a duplicate email in `tenant_b` does not block ACME; MSG11/MSG111; MSG117 including two concurrent
+  creations for one Space; registry refusal → MSG155 and nothing saved; creation-options; audit row.
+## Update roles backend — KAN-110, Task 34 (2026-11-07)
+
+Covers AC-007.8 to AC-007.23; the user's ten decisions of 07/11 (spec Changelog). Builds on Task 32 (caller,
+`identity-mock` profile, `user_role`, `app_user.department_id`) and Task 33 (`space`, `space_manager`, changeset 020,
+arriving by rebase onto `feat/KAN-108-identity-add-user-api`).
+
+- **Endpoints.** `GET /api/v1/users/{userId}` (`getUserDetail`), `GET /api/v1/users/{userId}/handover-options`
+  (`getUserHandoverOptions`), `PUT /api/v1/users/{userId}` (`updateUserRoles`), all `@PreAuthorize` ADMIN. `{userId}`
+  is matched as a UUID pattern so `/departments` (Task 32) and `/creation-options` (Task 33) keep their mappings; a
+  non-UUID or unknown id is 404 MSG04. Contract and MSW behaviour: `frontend/openapi/tsolve-api.yaml` and
+  `frontend/src/features/users/mocks/{roles-handler,handover,state}.ts` (research note
+  `kan-110-research.md`, file:line references).
+- **Schema.** Changeset `023-identity-one-project-manager.sql` (author `identity`): partial unique index
+  `uq_membership_one_manager ON project_membership (project_id) WHERE role_in_project = 'PROJECT_MANAGER'`
+  (baseline rule; enforces AC-007.19). No history tables: former managers and memberships are kept in the
+  `ROLE_CHANGE` audit details only.
+- **Read.** `UserDetail` = Task 32's `UserAccount` row + `isCurrentUser` + `ticketResolverProjectIds` + `projects`
+  (`UserProject.name` = `project.jira_project_key`; Projects without a Project Manager row are left out) +
+  `managedSpaces`. Handover options: eligible recipients computed by one query per responsibility kind.
+- **Write.** `UserRoleUpdateService` / impl in one `@Transactional` method, checks in the AC-007.20 order. Locks:
+  `SELECT … FOR UPDATE` on the target `app_user` row; WHEN ADMIN is removed, on every Active Admin's `app_user` row
+  (ordered by id to avoid deadlocks) before counting; on the recipients' rows before re-checking eligibility; on the
+  requested `space` rows before the MSG117 check. A unique violation on `space_manager` maps to 409 MSG117; a
+  violation of the one-Project-Manager index (only reachable by two concurrent handovers of the same Project) rolls
+  the whole update back and answers 500 MSG06, logged. Apply: roles, Department
+  (stored as sent, also for a non-PM), Spaces, handovers, membership changes (AC-007.19), one audit event.
+- **Seed.** `MockUserListSeeder` adds, idempotently, Projects of a demo Department (two `ACTIVE`, one non-Active)
+  managed by the seeded Project Manager, a second Project Manager eligible for one Department only (so one Project
+  shows MSG59), and `MEMBER` rows for the seeded Ticket Resolver (MSG78).
+- **Tests.** Unit: each check, its order, codes, params. MVC: 401/403/404/400 MSG06. IT (`TwoTenantDatabases`):
+  detail and handover options; a full update with Project and Space handovers; MSG117, MSG56, MSG113, MSG59,
+  MSG118, Hand Over Responsibilities MSG01, MSG78 with and without confirmation; rollback leaves every row unchanged;
+  a BETA recipient/Project/Space is never offered or accepted; two Admins removing each other's Admin role at once →
+  exactly one succeeds; two updates racing for one Space → one 409 MSG117.
+
+## Account status backend — KAN-109, Task 35 (2026-11-10)
+
+Covers AC-006.9 to AC-006.19; the user's three decisions of 10/11 (spec Changelog: audit as `ROLE_CHANGE`; Roles,
+Department and `MEMBER` rows kept; seed a second Knowledge Manager). Builds on Task 34 (KAN-110, PR #170): its
+`UserDetailRepository.handoverOptions`, `UserRoleUpdateRepository` locks and transfers, `UserDetailService.getDetail`.
+
+- **Endpoint.** `PUT /api/v1/users/{userId}/status` (`updateUserStatus`) on `UserDetailController`, `@PreAuthorize`
+  ADMIN, `{userId}` matched as a UUID; the controller's invalid-id mapping also covers `/{invalid}/status` (404 MSG04).
+  Contract and MSW behaviour: `frontend/openapi/tsolve-api.yaml` (`UpdateUserStatusRequest`) and
+  `frontend/src/features/users/mocks/{status-handlers,handover,state}.ts`. No contract change.
+- **Schema.** None. `app_user.status` exists (changeset 006); the one-Project-Manager index is changeset 023.
+- **Write.** `UserStatusUpdateService` / impl, one `@Transactional` method, checks in the AC-006.16 order (404 → MSG06
+  shape → MSG56 → MSG112 → MSG59 → MSG118 → MSG01). It takes the same advisory lock as the role update
+  (`serializeUpdates`), so status and role updates of one Workspace never interleave (AC-006.13), then the target row,
+  the Active Admin rows (only for a deactivation of an Active Admin) and the recipients' rows before reading
+  `handoverOptions` again. Apply: `transferProject(user, project, recipient, retainMember = holds TICKET_RESOLVER)`,
+  `transferSpace`, then the new `UserRoleUpdateRepository.updateStatus`; nothing else of the Account is touched.
+  The one-Project-Manager violation rolls back and answers 500 MSG06 as in Task 34.
+- **Reuse.** The handover-list parsing (`Choice`, shape check → MSG06) and matching (→ MSG01 Hand Over
+  Responsibilities) move from `UserRoleUpdateServiceImpl` into a package-private `HandoverChoices` helper used by both
+  services; Task 34's behaviour and tests stay unchanged.
+- **Audit.** One `ROLE_CHANGE` event (target `USER`, the Account) with `statusBefore`, `statusAfter`,
+  `projectHandovers`, `spaceHandovers`; none when the status is unchanged and no handover applies.
+- **Seed.** `MockUserListSeeder` adds, idempotently, `knowledge-replacement@roles-demo.test` (Active, KNOWLEDGE_MANAGER,
+  no Space).
+- **Tests.** Unit: each check, its order, codes, params, no-op without audit. MVC: 401/403/404/400 MSG06 and the
+  `/status` invalid-id route. IT `UserStatusIT` (`TwoTenantDatabases`): deactivate with Project and Space handovers
+  (memberships per AC-006.15, Account and Roles kept, audit row); activate; MSG56, MSG112, MSG59, MSG118, MSG01;
+  rollback leaves every row unchanged; a BETA recipient is never accepted; two Admins deactivating each other at once →
+  exactly one succeeds; the mock seed row.
+
+## Scope checks — KAN-118, Task 36 (2026-11-10)
+
+Covers AC-011.1 to AC-011.11; the user's four decisions of 10/11 (spec Changelog: a port in `identity` called from
+code, the rules per Role, only the helpers before the code freeze, 403 MSG08 also for an unknown id).
+
+- **Port.** `vn.tsolve.identity.service.ScopeAccessService` (`canAccessDepartment`, `canAccessProject`,
+  `canAccessSpace`, `requireDepartment`, `requireProject`, `requireSpace`); impl
+  `service/impl/ScopeAccessServiceImpl` (`@Service`, `@Transactional(readOnly = true)`), which calls
+  `TenantScope.currentWorkspaceId()` first (unbound → `IllegalStateException`, 500 MSG06, AC-011.9) and returns false
+  for a null argument without a query (AC-011.8). `require…` throws `identity/exception/ScopeAccessDeniedException`
+  (`MessageCodeException`, 403, MSG08, no params) — the same shape as `ticket`'s `ProjectAccessDeniedException`.
+- **Reads.** `repository/ScopeAccessRepository` (`NamedParameterJdbcTemplate`, like `UserDetailRepository`): three
+  `SELECT EXISTS (…)` queries on the bound database. A common CTE-free fragment `scoped departments` of an Active
+  Account:
+  - own Department: `app_user.department_id` WHERE a `user_role` row `PROJECT_MANAGER` exists;
+  - Departments of its Projects: `project_membership` → `project.department_id`, a `PROJECT_MANAGER` row only with the
+    Role PROJECT_MANAGER, a `MEMBER` row only with TICKET_RESOLVER; Project status not filtered (ACTIVE and REMOVED).
+  - `canAccessDepartment`: the Department is `ACTIVE` and in the fragment.
+  - `canAccessProject`: a counted membership row of that Project, and the Project's Department `ACTIVE`.
+  - `canAccessSpace`: the Space is `ACTIVE`, its Department `ACTIVE`, and either a `space_manager` row of the Account
+    with the Role KNOWLEDGE_MANAGER, or the Space's Department in the fragment.
+  - Every query also requires `app_user.status = 'ACTIVE'` (AC-011.7). ADMIN and EMPLOYEE appear in no predicate
+    (AC-011.6). No write, no audit, no log line (AC-011.11).
+- **Not changed.** `ticket` `ProjectAccess`, `review` `ReviewWorkspaceAccess`, `triage` `ManagedProjects`, `search`
+  `VisibleScope` and their tests (spec Out of Scope). No schema change, no endpoint, no contract change.
+- **Tests.** Unit `ScopeAccessServiceImplTest` (Mockito): null arguments → false with no query; `require…` throws
+  MSG08 / 403 on false and passes on true; unbound scope propagates. IT `ScopeAccessIT` (`TwoTenantDatabases`, the same
+  `@SpringBootTest` properties as `UserDetailIT` so the cached context is reused; ids `new UUID(118, n)`): each rule of
+  AC-011.2 to AC-011.7 with a positive and a negative case — a Project Manager refused another Department, a Ticket
+  Resolver with Projects in two Departments allowed both and refused a third, a member refused another Project, a
+  Knowledge Manager refused a Space it does not manage, Admin-only refused, the Role removed while the row stays,
+  deleted Department, Hidden Space, Deactivated Account, REMOVED Project still allowed; an id of tenant B is refused
+  in tenant A and the same ids answer from B only when bound to B (AC-011.9); unknown ids → false (AC-011.8).
+
+### Edge cases — STORY-011
+- Stale rows after a Role change (AC-007.19 keeps `PROJECT_MANAGER` rows of non-Active Projects): counted only with the
+  Role, so a former Project Manager gets nothing from them.
+- A Project Manager whose `department_id` is null (data from before AC-007.13): only its Projects count.
+- `space.department_id` is unique (one Space per Department); a Space of a deleted Department is refused even if its
+  own status is still `ACTIVE`.
+- Several Roles: the union of the rules (GBR-28), e.g. a Knowledge Manager who is also a Ticket Resolver.

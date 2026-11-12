@@ -1,25 +1,26 @@
 package vn.tsolve.identity.signin;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.HttpHeaders;
-import org.springframework.mock.env.MockEnvironment;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
@@ -30,12 +31,16 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.session.SessionCookie;
+import vn.tsolve.identity.session.WebSessionStore;
+import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
+import vn.tsolve.identity.signin.port.RecordingTenantScope;
 
 /**
- * Task 23c: the end of the Keycloak code exchange. Plain unit tests on a Workspace host ({@code acme.localhost}); the
- * handler is built with a mock environment with or without the {@code dev} profile.
+ * Task 23c, updated by Task 26a: the end of the Keycloak code exchange. Plain unit tests on a Workspace host ({@code
+ * acme.localhost}); every profile creates the session, so there is no dev forward any more (Q2 A).
  */
-@ExtendWith(OutputCaptureExtension.class)
 class OidcCallbackHandlerTest {
 
     private static final String MSG141_LOCATION = "/login?error=MSG141";
@@ -44,14 +49,28 @@ class OidcCallbackHandlerTest {
     private static final String EMAIL = "alice@acme.test";
     private static final String SUB = "kc-sub-7f3a9c52";
     private static final String ID_TOKEN_VALUE = "id-token-value-should-never-appear";
-    private static final Map<String, Object> ORGANIZATION = Map.of("acme", Map.of("id", "org-id-acme"));
+    private static final Map<String, Object> ORGANIZATION =
+            Map.of("acme", Map.of("id", InMemoryWorkspaceLookup.ACME.organizationId()));
+    private static final String HD = InMemoryWorkspaceLookup.ACME.googleDomain();
 
-    private static OidcCallbackHandler handler(boolean dev) {
-        MockEnvironment environment = new MockEnvironment();
-        if (dev) {
-            environment.setActiveProfiles("dev");
-        }
-        return new OidcCallbackHandler(environment);
+    /**
+     * Task 26a wiring: the Account step answers SIGNED_IN and the session store (a mock) accepts every session, so a
+     * verified sign-in reaches the end of the handler in every profile.
+     */
+    private static OidcCallbackHandler handler() {
+        AccountSignInService accounts = mock(AccountSignInService.class);
+        when(accounts.signIn(any(), any(), any()))
+                .thenReturn(new AccountSignInService.Result(AccountSignInService.Status.SIGNED_IN, UUID.randomUUID()));
+        WebSessionStore sessions = mock(WebSessionStore.class);
+        when(sessions.create(any())).thenReturn("session-cookie-value-for-the-unit-test-00");
+        return new OidcCallbackHandler(
+                new InMemoryWorkspaceLookup(),
+                new AuthHosts(SignInTestFixtures.properties()),
+                new RecordingTenantScope(),
+                accounts,
+                sessions,
+                new SessionCookie(),
+                new IdentityClock(Clock.systemUTC()));
     }
 
     private static MockHttpServletRequest request() {
@@ -68,7 +87,7 @@ class OidcCallbackHandlerTest {
 
     private static MockHttpServletResponse fail(AuthenticationException exception) throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
-        handler(true).onAuthenticationFailure(request(), response, exception);
+        handler().onAuthenticationFailure(request(), response, exception);
         return response;
     }
 
@@ -89,14 +108,14 @@ class OidcCallbackHandlerTest {
         claims.put("email", EMAIL);
         claims.put("email_verified", true);
         claims.put("organization", ORGANIZATION);
-        claims.put("hd", "acme.test");
+        claims.put("hd", HD);
         return claims;
     }
 
-    private static MockHttpServletResponse succeed(
-            boolean dev, MockHttpServletRequest request, Map<String, Object> claims) throws Exception {
+    private static MockHttpServletResponse succeed(MockHttpServletRequest request, Map<String, Object> claims)
+            throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
-        handler(dev).onAuthenticationSuccess(request, response, signedIn(claims));
+        handler().onAuthenticationSuccess(request, response, signedIn(claims));
         return response;
     }
 
@@ -148,7 +167,7 @@ class OidcCallbackHandlerTest {
         request.setAttribute(REQUEST_CHECKED_ATTRIBUTE, Boolean.TRUE);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        handler(true).onAuthenticationFailure(request, response, oauth2("invalid_request"));
+        handler().onAuthenticationFailure(request, response, oauth2("invalid_request"));
 
         assertRedirectedTo(response, MSG06_LOCATION);
         assertExpiryCookie(response);
@@ -211,19 +230,15 @@ class OidcCallbackHandlerTest {
     void refusesAnUnverifiedEmailWithMsg06_AC_001_9(String label, Map<String, Object> claims) throws Exception {
         MockHttpServletRequest request = request();
 
-        MockHttpServletResponse response = succeed(true, request, claims);
+        MockHttpServletResponse response = succeed(request, claims);
 
         assertRedirectedTo(response, MSG06_LOCATION);
-        assertThat(request.getAttribute(OidcCallbackHandler.CLAIMS_ATTRIBUTE))
-                .as("claims attribute")
-                .isNull();
     }
 
     enum Answer {
         MSG141_FAILURE,
         MSG06_FAILURE,
-        DEV_SUCCESS,
-        NON_DEV_SUCCESS,
+        SUCCESS,
         UNVERIFIED_EMAIL
     }
 
@@ -235,55 +250,14 @@ class OidcCallbackHandlerTest {
                 switch (answer) {
                     case MSG141_FAILURE -> fail(oauth2("authorization_request_not_found"));
                     case MSG06_FAILURE -> fail(oauth2("access_denied"));
-                    case DEV_SUCCESS -> succeed(true, request(), verifiedClaims());
-                    case NON_DEV_SUCCESS -> succeed(false, request(), verifiedClaims());
+                    case SUCCESS -> succeed(request(), verifiedClaims());
                     case UNVERIFIED_EMAIL -> {
                         Map<String, Object> claims = verifiedClaims();
                         claims.put("email_verified", false);
-                        yield succeed(true, request(), claims);
+                        yield succeed(request(), claims);
                     }
                 };
 
         assertExpiryCookie(response);
-    }
-
-    @Test
-    @DisplayName("edge 122 (Q2 A) forwards a dev sign-in in the same request to the claims page")
-    void forwardsADevSignInToTheClaimsPageInTheSameRequest_edge122() throws Exception {
-        MockHttpServletRequest request = request();
-
-        MockHttpServletResponse response = succeed(true, request, verifiedClaims());
-
-        assertThat(response.getForwardedUrl()).isEqualTo(OidcCallbackHandler.DEV_CLAIMS_PATH);
-        assertThat(request.getAttribute(OidcCallbackHandler.CLAIMS_ATTRIBUTE))
-                .isInstanceOfSatisfying(Map.class, claims -> {
-                    assertThat(claims).containsOnlyKeys("sub", "email", "organization", "hd");
-                    assertThat(claims)
-                            .containsEntry("sub", SUB)
-                            .containsEntry("email", EMAIL)
-                            .containsEntry("organization", ORGANIZATION)
-                            .containsEntry("hd", "acme.test");
-                    assertThat(claims.toString())
-                            .doesNotContain(ID_TOKEN_VALUE)
-                            .doesNotContain("nonce-value-should-never-appear");
-                });
-        assertThat(response.getHeader(HttpHeaders.LOCATION)).as("Location").isNull();
-        assertThat(response.getStatus() / 100).as("no 3xx").isNotEqualTo(3);
-    }
-
-    @Test
-    @DisplayName("edge 122 (Q2 A) answers a success outside dev with MSG06 and one WARN")
-    void answersASuccessOutsideDevWithMsg06AndOneWarn_edge122(CapturedOutput output) throws Exception {
-        MockHttpServletRequest request = request();
-
-        MockHttpServletResponse response = succeed(false, request, verifiedClaims());
-
-        assertRedirectedTo(response, MSG06_LOCATION);
-        assertThat(request.getAttribute(OidcCallbackHandler.CLAIMS_ATTRIBUTE)).isNull();
-        List<String> warnings =
-                output.getAll().lines().filter(line -> line.contains("WARN")).toList();
-        assertThat(warnings).as("WARN lines").hasSize(1);
-        assertThat(warnings.get(0)).contains("session not built yet");
-        assertThat(output.getAll()).as("log").doesNotContain(EMAIL).doesNotContain(SUB);
     }
 }

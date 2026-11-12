@@ -1,7 +1,7 @@
 ---
 module: worker
 date: 2026-11-07
-total_tasks: 2
+total_tasks: 3
 owner: Dev
 ---
 
@@ -47,3 +47,12 @@ Spec: artifacts/03-modules/worker/spec.md
 - [x] All sixteen criteria traced and focused tests pass.
 - [x] Full verification result and independent review recorded.
 - [x] User approved code and harness commits; code commit 68bd287; no push or merge.
+
+## Task 3: List the Active Workspaces (KAN-157)
+
+**Story:** STORY-003
+**Feature:** active-workspaces
+**Description:** Add `Set<UUID> activeWorkspaceIds()` to `WorkerTenantService` and implement it in `MockWorkerTenantService` (a copy of the Active allow-list; no binding). Update any other implementations or test doubles of the port. Test first.
+**Files:** `backend/src/main/java/vn/tsolve/worker/service/WorkerTenantService.java`, `backend/src/main/java/vn/tsolve/worker/service/mock/MockWorkerTenantService.java`; test `backend/src/test/java/vn/tsolve/worker/service/mock/MockWorkerTenantServiceTest.java` (create or extend).
+**Dependencies:** worker STORY-002 (completed).
+**Verification:** AC-003.1 and AC-003.2 tests; `mvn verify`; `sdd.ts trace worker STORY-003`.

@@ -40,6 +40,9 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.common.security.SecurityConfig;
+import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.session.SessionCookie;
+import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.AuthHosts;
 import vn.tsolve.identity.signin.KeycloakClientRegistrations;
 import vn.tsolve.identity.signin.OidcCallbackHandler;
@@ -60,6 +63,8 @@ import vn.tsolve.identity.signin.SignInTestFixtures;
     KeycloakClientRegistrations.class,
     RedisAuthorizationRequestRepository.class,
     OidcCallbackHandler.class,
+    WebSessionStore.class,
+    SessionCookie.class,
     AuthSecurityConfigTest.ProbeController.class
 })
 @TestPropertySource(
@@ -98,6 +103,10 @@ class AuthSecurityConfigTest {
     /** The Redis the callback's repository reads; no test here talks to a real one. */
     @MockBean
     private StringRedisTemplate redis;
+
+    /** The callback handler's Account step (Task 25b); the chain tests here never reach it. */
+    @MockBean
+    private AccountSignInService accountSignInService;
 
     private ValueOperations<String, String> values;
 
@@ -244,11 +253,11 @@ class AuthSecurityConfigTest {
     /**
      * MockMvc does not forward a failed request to {@code /error}; the servlet container does, as an ERROR dispatch
      * with the original path and status in request attributes. This replays that dispatch: an exception (500) on
-     * {@code sign-in}, and no handler (404) on {@code complete} and {@code callback}. The browser must get that
+     * {@code sign-in}, and no handler (404) on {@code callback}. The browser must get that
      * status, not a 401 from the chain that guards everything else (design row 43, review finding 2).
      */
     @ParameterizedTest(name = "[{index}] {0} -> {1}")
-    @CsvSource({"/api/v1/auth/sign-in, 500", "/api/v1/auth/complete, 404", "/api/v1/auth/callback, 404"})
+    @CsvSource({"/api/v1/auth/sign-in, 500", "/api/v1/auth/callback, 404"})
     @DisplayName("edge 43 keeps the error status of a redirect path instead of 401")
     void keepsErrorStatusOfRedirectPath_edge43(String path, int status) throws Exception {
         for (String accept : List.of(MediaType.ALL_VALUE, MediaType.TEXT_HTML_VALUE)) {

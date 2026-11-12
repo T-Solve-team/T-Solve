@@ -2,6 +2,7 @@ package vn.tsolve.ticket.dto;
 
 import java.util.List;
 import vn.tsolve.ticket.csv.RowError;
+import vn.tsolve.ticket.entity.IssueComment;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 
 /** One preview row in full, read-only (Import Ticket Preview popup). */
@@ -18,4 +19,6 @@ public record ImportPreviewRowResponse(
         String workaround,
         String scope,
         PreviewRowStatus status,
-        List<RowError> errors) {}
+        List<RowError> errors,
+        String sourceUrl,
+        List<IssueComment> comments) {}

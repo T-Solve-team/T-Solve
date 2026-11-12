@@ -95,24 +95,32 @@ tsolve:
   auth:
     login-origin: ${TSOLVE_LOGIN_ORIGIN}
     admin-origin: ${TSOLVE_ADMIN_ORIGIN}
-    signing-key: ${TSOLVE_SIGNING_KEY}
-    google-client-id: ${GOOGLE_CLIENT_ID}
-    google-client-secret: ${GOOGLE_CLIENT_SECRET}
     operator-emails: ${PLATFORM_OPERATOR_EMAILS}
     keycloak-web-client-secret: ${KEYCLOAK_WEB_CLIENT_SECRET}
-  # Google's published endpoints: not our hosts and not secrets, so they carry values (tests can point them elsewhere)
-  oidc:
-    google:
-      authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
-      token-uri: https://oauth2.googleapis.com/token
-      jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
-      issuer: https://accounts.google.com
-      connect-timeout: 5s
-      read-timeout: 10s
   # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId", ids as UUIDs. Empty = nobody can import.
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
     inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}
+    # Jira import: "projectId:JIRAKEY,projectId:JIRAKEY". A Project without a key cannot pull from Jira (MSG50).
+    jira-keys: ${TSOLVE_STUB_JIRA_KEYS:}
   triage:
     # Cosine similarity (0 to 1) a Solution or Wiki document needs to be a source of the AI Solution Suggestion.
     min-similarity: ${SUGGESTION_MIN_SIMILARITY:0.7}
+
+---
+# Keycloak provisioning of a Workspace's sign-in (AC-001.58, .60, .61). This document is active only in the `ops`
+# profile, so the keys do not exist in a Workspace web process, whatever its environment holds. Empty defaults (a
+# deviation from "no default", AC-001.60): with one of the three secrets empty the no-op bean is wired and one WARN
+# names the missing variable; with all three set, TSOLVE_LOGIN_ORIGIN and TSOLVE_SITE_ORIGIN_TEMPLATE are validated.
+spring:
+  config:
+    activate:
+      on-profile: ops
+tsolve:
+  keycloak-provisioning:
+    base-url: ${TSOLVE_LOGIN_ORIGIN:}
+    realm: tsolve
+    admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
+    google-client-id: ${GOOGLE_CLIENT_ID:}
+    google-client-secret: ${GOOGLE_CLIENT_SECRET:}
+    site-origin-template: ${TSOLVE_SITE_ORIGIN_TEMPLATE:}

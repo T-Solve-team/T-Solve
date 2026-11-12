@@ -12,12 +12,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,6 +90,53 @@ class ChatbotAnswerControllerTest {
         verifyNoInteractions(answers);
     }
 
+    @ParameterizedTest
+    @MethodSource("badHistoryBodies")
+    @WithTSolveUser
+    void rejectsBadHistory_AC_007_3(String body) throws Exception {
+        mvc.perform(post(PATH)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG06"))
+                .andExpect(jsonPath("$.fieldErrors").doesNotExist());
+        verifyNoInteractions(answers);
+    }
+
+    private static Stream<String> badHistoryBodies() {
+        String turn = "{\"question\":\"old question\",\"answer\":\"old answer\"}";
+        return Stream.of(
+                "{\"question\":\"question\"}",
+                "{\"question\":\"question\",\"history\":null}",
+                "{\"question\":\"question\",\"history\":[" + String.join(",", Collections.nCopies(11, turn)) + "]}",
+                "{\"question\":\"question\",\"history\":[{\"question\":\"" + "q".repeat(1001)
+                        + "\",\"answer\":\"answer\"}]}",
+                "{\"question\":\"question\",\"history\":[{\"question\":\"old question\",\"answer\":\""
+                        + "a".repeat(10001) + "\"}]}",
+                "{\"question\":\"question\",\"history\":[null]}",
+                "{\"question\":\"question\",\"history\":[{\"question\":null,\"answer\":\"answer\"}]}",
+                "{\"question\":\"question\",\"history\":[{\"question\":\"old question\",\"answer\":null}]}");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    @WithTSolveUser
+    void acceptsHistoryWithinLimits_AC_007_3(boolean emptyTurns) throws Exception {
+        String turn = "{\"question\":\"" + (emptyTurns ? "" : "q".repeat(1000)) + "\",\"answer\":\""
+                + (emptyTurns ? "" : "a".repeat(10000)) + "\"}";
+        when(answers.ask(any(), any()))
+                .thenReturn(new ChatbotAnswerResponse(ANSWER_ID, Outcome.NO_SOURCE, "", List.of()));
+
+        mvc.perform(post(PATH)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\"question\",\"history\":["
+                                + String.join(",", Collections.nCopies(10, turn)) + "]}"))
+                .andExpect(status().isOk());
+        verify(answers).ask(any(), any());
+    }
+
     @Test
     void answers401WithoutSession_AC_005_9() throws Exception {
         mvc.perform(post(PATH)
@@ -125,6 +175,36 @@ class ChatbotAnswerControllerTest {
                 .andExpect(jsonPath("$.citations[0].solution.workaround").isEmpty())
                 .andExpect(jsonPath("$.citations[1].type").value("WIKI_DOCUMENT"));
         verify(answers).ask(eq(user), any());
+    }
+
+    @Test
+    @WithTSolveUser
+    void writesCitationTypeDiscriminator_AC_006_1() throws Exception {
+        UUID document = UUID.fromString("80000000-0000-0000-0000-000000000001");
+        when(answers.ask(any(), any()))
+                .thenReturn(new ChatbotAnswerResponse(
+                        ANSWER_ID,
+                        Outcome.ANSWERED,
+                        "Policy [1] and fix [3]",
+                        List.of(
+                                new WikiDocumentCitation(1, document, "Policy"),
+                                new TicketSolutionCitation(
+                                        3, new CitedSolution("symptoms", "cause", "steps", "workaround", "scope")))));
+        mvc.perform(post(PATH)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\"question\",\"history\":[]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.citations.length()").value(2))
+                .andExpect(jsonPath("$.citations[0].type").value("WIKI_DOCUMENT"))
+                .andExpect(jsonPath("$.citations[0].number").value(1))
+                .andExpect(jsonPath("$.citations[0].wikiDocumentId").value(document.toString()))
+                .andExpect(jsonPath("$.citations[0].title").value("Policy"))
+                .andExpect(jsonPath("$.citations[1].type").value("TICKET_SOLUTION"))
+                .andExpect(jsonPath("$.citations[1].number").value(3))
+                .andExpect(jsonPath("$.citations[1].solution.workaround").value("workaround"))
+                .andExpect(jsonPath("$.citations[1].ticketId").doesNotExist())
+                .andExpect(jsonPath("$.citations[1].title").doesNotExist());
     }
 
     @Test

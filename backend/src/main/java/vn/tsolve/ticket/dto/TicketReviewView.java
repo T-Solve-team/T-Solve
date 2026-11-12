@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import vn.tsolve.ticket.entity.TicketStatus;
 
 public final class TicketReviewView {
 
@@ -33,6 +34,30 @@ public final class TicketReviewView {
             Instant enteredQueueAt,
             OffsetDateTime reviewDueDate) {}
 
+    public record ExpiredRow(
+            UUID ticketId,
+            String sourceTicketId,
+            UUID projectId,
+            String title,
+            String authorName,
+            Instant enteredQueueAt,
+            LocalDate reviewDueDate,
+            Instant updatedAt,
+            Instant expiredAt,
+            TicketStatus statusBeforeExpiry) {}
+
+    public record ExpiredItem(
+            UUID ticketId,
+            String sourceTicketId,
+            String title,
+            Project project,
+            String source,
+            String authorName,
+            Instant enteredQueueAt,
+            OffsetDateTime reviewDueDate,
+            OffsetDateTime expiredAt,
+            String previousStatus) {}
+
     public record Solution(
             String symptoms, String rootCause, String resolutionSteps, String workaround, String scope) {}
 
@@ -42,7 +67,13 @@ public final class TicketReviewView {
 
     /** Review History query parameters as received; the service validates them (STORY-011). */
     public record HistoryFilter(
-            UUID departmentId, String decision, String dateFrom, String dateTo, int page, int size, List<String> sort) {}
+            UUID departmentId,
+            String decision,
+            String dateFrom,
+            String dateTo,
+            int page,
+            int size,
+            List<String> sort) {}
 
     public record HistoryItem(
             UUID decisionId,

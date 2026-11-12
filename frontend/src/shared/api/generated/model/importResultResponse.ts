@@ -12,7 +12,9 @@ export interface ImportResultResponse {
   importBatchId: number;
   /** Tickets published. */
   created: number;
-  /** Error rows plus Removed rows. */
+  /** Error rows plus Removed rows (CSV); issues skipped because they already had a ticket (Jira). */
   skipped: number;
   message: MessageRef;
+  /** Jira only — MSG38 with {count} and {issue_keys} when issues were skipped; otherwise null. */
+  notice?: MessageRef | null;
 }

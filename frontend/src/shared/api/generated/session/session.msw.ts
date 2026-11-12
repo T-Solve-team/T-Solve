@@ -9,10 +9,15 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
 import { ProjectRole, Role } from '../model';
-import type { CurrentUser } from '../model';
+import type {
+  CurrentUser,
+  JiraLinkConfirmRequest,
+  JiraLinkConfirmed,
+  JiraLinkRequestInfo,
+} from '../model';
 
 export const getGetMeResponseMock = (
   overrideResponse: Partial<Extract<CurrentUser, object>> = {},
@@ -55,7 +60,20 @@ export const getGetMeResponseMock = (
   ...overrideResponse,
 });
 
-export const getAuthCallbackResponseMock = (): string => faker.word.sample();
+export const getGetJiraLinkRequestResponseMock = (
+  overrideResponse: Partial<Extract<JiraLinkRequestInfo, object>> = {},
+): JiraLinkRequestInfo => ({
+  jiraUserName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  jiraSiteName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getConfirmJiraLinkResponseMock = (
+  overrideResponse: Partial<Extract<JiraLinkConfirmed, object>> = {},
+): JiraLinkConfirmed => ({
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
 
 export const getGetMeMockHandler = (
   overrideResponse?:
@@ -97,53 +115,13 @@ export const getSignInMockHandler = (
   );
 };
 
-export const getAuthorizeMockHandler = (
-  overrideResponse?:
-    unknown | ((info: Parameters<HttpResponseResolver>[0]) => Promise<unknown> | unknown),
-  options?: RequestHandlerOptions,
-) => {
-  return http.get(
-    '*/api/v1/auth/authorize',
-    async (info: Parameters<HttpResponseResolver>[0]) => {
-      if (typeof overrideResponse === 'function') {
-        await overrideResponse(info);
-      }
-
-      return new HttpResponse(null, { status: 200 });
-    },
-    options,
-  );
-};
-
 export const getAuthCallbackMockHandler = (
   overrideResponse?:
-    string | ((info: Parameters<HttpResponseResolver>[0]) => Promise<string> | string),
+    unknown | ((info: Parameters<HttpResponseResolver>[0]) => Promise<unknown> | unknown),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(
     '*/api/v1/auth/callback',
-    async (info: Parameters<HttpResponseResolver>[0]) => {
-      const resolvedBody =
-        overrideResponse !== undefined
-          ? typeof overrideResponse === 'function'
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getAuthCallbackResponseMock();
-      const textBody =
-        typeof resolvedBody === 'string' ? resolvedBody : JSON.stringify(resolvedBody ?? null);
-      return HttpResponse.html(textBody, { status: 200 });
-    },
-    options,
-  );
-};
-
-export const getCompleteSignInMockHandler = (
-  overrideResponse?:
-    unknown | ((info: Parameters<HttpResponseResolver>[0]) => Promise<unknown> | unknown),
-  options?: RequestHandlerOptions,
-) => {
-  return http.get(
-    '*/api/v1/auth/complete',
     async (info: Parameters<HttpResponseResolver>[0]) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
@@ -171,11 +149,59 @@ export const getLogoutMockHandler = (
     options,
   );
 };
+
+export const getGetJiraLinkRequestMockHandler = (
+  overrideResponse?:
+    | JiraLinkRequestInfo
+    | ((
+        info: Parameters<HttpResponseResolver<{ requestId: string }>>[0],
+      ) => Promise<JiraLinkRequestInfo> | JiraLinkRequestInfo),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ requestId: string }>(
+    '*/api/v1/auth/jira-link/:requestId',
+    async (info: Parameters<HttpResponseResolver<{ requestId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetJiraLinkRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getConfirmJiraLinkMockHandler = (
+  overrideResponse?:
+    | JiraLinkConfirmed
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, JiraLinkConfirmRequest>>[0],
+      ) => Promise<JiraLinkConfirmed> | JiraLinkConfirmed),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, JiraLinkConfirmRequest>(
+    '*/api/v1/auth/jira-link/confirm',
+    async (info: Parameters<HttpResponseResolver<PathParams, JiraLinkConfirmRequest>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getConfirmJiraLinkResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getSessionMock = () => [
   getGetMeMockHandler(),
   getSignInMockHandler(),
-  getAuthorizeMockHandler(),
   getAuthCallbackMockHandler(),
-  getCompleteSignInMockHandler(),
   getLogoutMockHandler(),
+  getGetJiraLinkRequestMockHandler(),
+  getConfirmJiraLinkMockHandler(),
 ];

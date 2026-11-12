@@ -129,9 +129,12 @@ const NO_SOLUTION = {
 export type MockPreview = Pick<
   ImportPreviewResponse,
   'previewId' | 'projectId' | 'fileName' | 'importType'
-> & {
-  rows: ImportPreviewRowResponse[];
-};
+> &
+  Partial<
+    Pick<ImportPreviewResponse, 'source' | 'resolvedFrom' | 'resolvedTo' | 'draftSavedAt'>
+  > & {
+    rows: ImportPreviewRowResponse[];
+  };
 
 export function seedImport(
   previewId = 1,
@@ -149,6 +152,48 @@ export function seedImport(
             : { ...row, ...NO_SOLUTION },
         );
   return { previewId, projectId, fileName, importType, rows };
+}
+
+/** A Jira pull of a few resolved issues, each Needs Solution until its Solution is written (AC-001.1). */
+export function seedJiraImport(
+  previewId: number,
+  projectId: string,
+  resolvedFrom: string,
+  resolvedTo: string,
+): MockPreview {
+  const rows = Array.from({ length: 3 }, (_, i): ImportPreviewRowResponse => {
+    const key = `ITSUP-10${String(i + 1).padStart(2, '0')}`;
+    return {
+      rowNo: i + 1,
+      ticketId: key,
+      title: `Wi-Fi drops in meeting room ${i + 1}`,
+      author: 'Phạm Quốc Bảo',
+      resolvedDate: resolvedTo,
+      description: DESCRIPTION,
+      symptoms: null,
+      rootCause: null,
+      resolutionSteps: null,
+      workaround: null,
+      scope: null,
+      status: 'NEEDS_SOLUTION',
+      errors: [],
+      sourceUrl: `https://acme.atlassian.net/browse/${key}`,
+      comments: [
+        { author: 'Lê Văn Tùng', created: '2026-10-02T03:15:00Z', body: 'Moved the access point.' },
+      ],
+    };
+  });
+  return {
+    previewId,
+    projectId,
+    fileName: null,
+    importType: 'WITHOUT_SOLUTION',
+    source: 'JIRA_IMPORT',
+    resolvedFrom,
+    resolvedTo,
+    draftSavedAt: null,
+    rows,
+  };
 }
 
 /** One page of rows (`page` from 0), as `GET /imports/previews/{id}/rows` returns it. */

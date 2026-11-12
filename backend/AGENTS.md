@@ -207,6 +207,23 @@ change updates the contract first, then the code. On the controller, keep annota
   the bug id (§10).
 - `mvn verify` passes before a task is done.
 
+**Keep the CI fast** (the CI split of KAN-305 took the backend check from ~400 s to ~220 s; these rules keep it there):
+
+- An IT is for what only a real database, Redis or Keycloak can show. A service, mapper or controller rule is a
+  unit or `@WebMvcTest` test (about 0.1 s; an IT costs 5–70 s).
+- Do not start a container per IT class. Share one per JVM, as `TwoTenantDatabases` does for the tenant databases,
+  and give a class its own database in it when it needs isolation. Today 28 IT classes start their own pgvector
+  and 6 their own Redis; a new IT must not add to that.
+- Reuse the Spring context: ITs with the same configuration share one cached context. Every different `@MockBean`,
+  `@TestPropertySource` or `@DirtiesContext` builds a new one (~2–6 s), so put common setup in a shared base.
+- A new Keycloak IT is added to one of the two `it-keycloak-*` lists in `.github/workflows/ci.yml` (the shorter one).
+  Left out, it still runs in `it-other`, but the parts get unbalanced. Classes that share `KeycloakItStack` stay in
+  the same list.
+- `*Test` classes run in the `unit` part without Docker and never wait on the clock: a test that polls with a
+  timeout (BUG_173) fails when the machine is loaded. A test that needs Docker is an `*IT`.
+- CI time budget: no part of the backend check above ~4 min. If one goes over, move classes between the lists or
+  add a part in `ci.yml`; do not raise the job timeout.
+
 ## 9. Code style
 
 - Palantir Java Format (4 spaces, 120 columns) through Spotless with `ratchetFrom origin/main` — only files

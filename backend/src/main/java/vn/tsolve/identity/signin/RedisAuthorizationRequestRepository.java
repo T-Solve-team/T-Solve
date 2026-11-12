@@ -96,7 +96,12 @@ public class RedisAuthorizationRequestRepository implements AuthorizationRequest
     @Override
     public OAuth2AuthorizationRequest removeAuthorizationRequest(
             HttpServletRequest request, HttpServletResponse response) {
-        return read(cookieValue(request), true);
+        OAuth2AuthorizationRequest saved = read(cookieValue(request), true);
+        if (saved != null && saved.getAttribute(KeycloakAuthorizationRequestResolver.RETURN_TO) instanceof String to) {
+            // hands the kept return_to to OidcCallbackHandler, which runs after Spring has consumed the request
+            request.setAttribute(OidcCallbackHandler.RETURN_TO_ATTRIBUTE, to);
+        }
+        return saved;
     }
 
     private OAuth2AuthorizationRequest read(String value, boolean consume) {

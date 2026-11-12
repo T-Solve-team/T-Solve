@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -26,11 +27,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 import vn.tsolve.ai.client.ChatMessage;
 import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.client.LlmClient;
@@ -57,12 +61,14 @@ class ChatbotAnswerServiceImplTest {
     private final SolutionRetrieval solutions = mock(SolutionRetrieval.class);
     private final WikiSources wiki = mock(WikiSources.class);
     private final ChatbotAnswerRepository answers = mock(ChatbotAnswerRepository.class);
+    private final PlatformTransactionManager transactions = mock(PlatformTransactionManager.class);
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
     private final float[] vector = new float[1024];
     private ChatbotAnswerServiceImpl service;
 
     @BeforeEach
     void setUp() {
+        when(transactions.getTransaction(any())).thenAnswer(invocation -> new SimpleTransactionStatus());
         service = service(Duration.ofSeconds(2), 5);
         when(answers.save(any())).thenAnswer(invocation -> {
             ChatbotAnswer answer = invocation.getArgument(0);
@@ -96,10 +102,7 @@ class ChatbotAnswerServiceImplTest {
             assertThat(Thread.currentThread()).isNotSameAs(requestThread);
             return "Answer [1]";
         });
-        var response = service.ask(
-                USER,
-                new ChatbotQuestionRequest(
-                        "  question  ", List.of(new ChatbotTurnRequest("old question", "old answer"))));
+        var response = service.ask(USER, new ChatbotQuestionRequest("  question  ", List.of()));
         assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
         verify(embeddings).embed(List.of("question"));
         verify(solutions).nearest(vector, 0.7, 5);
@@ -107,7 +110,53 @@ class ChatbotAnswerServiceImplTest {
         ArgumentCaptor<List<ChatMessage>> prompt = ArgumentCaptor.forClass(List.class);
         verify(llm).chat(prompt.capture(), isNull());
         assertThat(prompt.getValue()).hasSize(2);
-        assertThat(prompt.getValue().toString()).doesNotContain("old question", "old answer");
+    }
+
+    @Test
+    void prependsLastQuestionForRetrieval_AC_007_1() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
+
+        service.ask(
+                USER,
+                new ChatbotQuestionRequest(
+                        "  What about Windows?  ",
+                        List.of(
+                                new ChatbotTurnRequest("first question", "first answer"),
+                                new ChatbotTurnRequest("  How do I connect to VPN?  ", "last answer"))));
+
+        verify(embeddings).embed(List.of("How do I connect to VPN?\nWhat about Windows?"));
+        ArgumentCaptor<List<ChatMessage>> prompt = ArgumentCaptor.forClass(List.class);
+        verify(llm).chat(prompt.capture(), isNull());
+        assertThat(prompt.getValue()).hasSize(6);
+        assertThat(prompt.getValue().get(1).content()).isEqualTo("<turn-question>first question</turn-question>");
+        assertThat(prompt.getValue().get(2).content()).isEqualTo("<turn-answer>first answer</turn-answer>");
+        assertThat(prompt.getValue().getLast().content()).contains("<question>What about Windows?</question>");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void storesOnlyTheNewQuestion_AC_007_4(boolean hasSources) {
+        when(embeddings.embed(any())).thenReturn(List.of(vector));
+        if (hasSources) {
+            withSolution();
+            when(llm.chat(any(), isNull())).thenReturn("New answer [1]");
+        }
+
+        var response = service.ask(
+                USER,
+                new ChatbotQuestionRequest(
+                        "  new question  ", List.of(new ChatbotTurnRequest("earlier question", "earlier answer [1]"))));
+
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getQuestion()).isEqualTo("new question");
+        assertThat(saved.getValue().getAnswerText()).isEqualTo(hasSources ? "New answer [1]" : "");
+        assertThat(response.outcome()).isEqualTo(hasSources ? Outcome.ANSWERED : Outcome.NO_SOURCE);
+        if (!hasSources) {
+            verifyNoInteractions(llm);
+            assertThat(response.citations()).isEmpty();
+        }
     }
 
     @Test
@@ -118,7 +167,7 @@ class ChatbotAnswerServiceImplTest {
         when(solutions.nearest(vector, 0.7, 3))
                 .thenReturn(List.of(solution("best", 0.99), solution("tie", 0.9), solution("low", 0.8)));
         when(wiki.nearest(USER, vector, 0.7, 3)).thenReturn(List.of(new WikiPassage(document, "Wiki", "passage", 0.9)));
-        when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
+        when(llm.chat(any(), isNull())).thenReturn("Answer [1] [2] [3]");
 
         var response = service.ask(USER, question());
 
@@ -162,7 +211,9 @@ class ChatbotAnswerServiceImplTest {
     void answersNoSourceWhenNoMarker_AC_005_5(String text) {
         withSolution();
         when(llm.chat(any(), isNull())).thenReturn(text);
-        var response = service.ask(USER, question());
+        var response = service.ask(
+                USER,
+                new ChatbotQuestionRequest("question", List.of(new ChatbotTurnRequest("old question", "Old [9]"))));
         assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
         assertThat(response.text()).isEmpty();
         assertThat(response.citations()).isEmpty();
@@ -191,6 +242,38 @@ class ChatbotAnswerServiceImplTest {
         assertThat(saved.getValue().getQuestion()).isEqualTo("question");
         assertThat(saved.getValue().getOutcome()).isEqualTo("ANSWERED");
         assertThat(saved.getValue().getAnswerText()).isEqualTo("Answer [1]");
+        verify(answers).flush();
+        verify(transactions).commit(any());
+        verify(transactions, never()).rollback(any());
+    }
+
+    @Test
+    void returnsOnlyCitedSources_AC_006_1() {
+        when(embeddings.embed(any())).thenReturn(List.of(vector));
+        when(solutions.nearest(any(), anyDouble(), anyInt()))
+                .thenReturn(List.of(solution("first", 0.95), solution("second", 0.9)));
+        when(llm.chat(any(), isNull())).thenReturn("Use the second fix [2].");
+
+        var response = service.ask(USER, question());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
+        assertThat(response.citations()).hasSize(1);
+        var cited = (TicketSolutionCitation) response.citations().getFirst();
+        assertThat(cited.number()).isEqualTo(2);
+        assertThat(cited.solution().symptoms()).isEqualTo("second");
+    }
+
+    @Test
+    void storesAndReturnsTextWithoutUnknownMarkers_AC_006_2() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn("Restart [7] the service [1].");
+
+        var response = service.ask(USER, question());
+
+        assertThat(response.text()).isEqualTo("Restart the service [1].");
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getAnswerText()).isEqualTo("Restart the service [1].");
     }
 
     @ParameterizedTest
@@ -264,8 +347,53 @@ class ChatbotAnswerServiceImplTest {
                         "private-source");
     }
 
+    @ParameterizedTest
+    @CsvSource({
+        "NO_SOURCE, false",
+        "UNCITED, false",
+        "ANSWERED, false",
+        "NO_SOURCE, true",
+        "UNCITED, true",
+        "ANSWERED, true"
+    })
+    void timesOutAndRollsBackSlowPersistence_BUG_165(String outcome, boolean slowFlush) {
+        service = service(Duration.ofMillis(500), 5);
+        when(embeddings.embed(any())).thenReturn(List.of(vector));
+        if (!outcome.equals("NO_SOURCE")) {
+            withSolution();
+            when(llm.chat(any(), isNull())).thenReturn(outcome.equals("ANSWERED") ? "Answer [1]" : "No citation");
+        }
+        doAnswer(invocation -> {
+                    if (!slowFlush) {
+                        TimeUnit.MILLISECONDS.sleep(600);
+                    }
+                    ChatbotAnswer answer = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(answer, "id", ANSWER_ID);
+                    return answer;
+                })
+                .when(answers)
+                .save(any());
+        doAnswer(invocation -> {
+                    if (slowFlush) {
+                        TimeUnit.MILLISECONDS.sleep(600);
+                    }
+                    return null;
+                })
+                .when(answers)
+                .flush();
+
+        assertThatThrownBy(() -> service.ask(USER, question()))
+                .isInstanceOf(AiUnavailableException.class)
+                .hasMessage("MSG06")
+                .hasNoCause();
+        verify(answers).save(any());
+        verify(transactions).rollback(any());
+        verify(transactions, never()).commit(any());
+    }
+
     private ChatbotAnswerServiceImpl service(Duration timeout, int limit) {
-        return new ChatbotAnswerServiceImpl(embeddings, llm, solutions, wiki, answers, executor, 0.7, limit, timeout);
+        return new ChatbotAnswerServiceImpl(
+                embeddings, llm, solutions, wiki, answers, transactions, executor, 0.7, limit, timeout);
     }
 
     private void withSolution() {

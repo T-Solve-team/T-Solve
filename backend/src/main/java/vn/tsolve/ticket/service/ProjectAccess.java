@@ -1,5 +1,6 @@
 package vn.tsolve.ticket.service;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -13,4 +14,7 @@ public interface ProjectAccess {
 
     /** False when the Project was removed or its Department deleted (MSG40). */
     boolean isActive(UUID projectId);
+
+    /** The key of the Jira project linked to this Project; empty when it has none (Jira import, MSG50). */
+    Optional<String> jiraProjectKey(UUID projectId);
 }

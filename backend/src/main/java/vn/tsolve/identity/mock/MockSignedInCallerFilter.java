@@ -28,9 +28,10 @@ public class MockSignedInCallerFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getRequestURI()
-                        .substring(request.getContextPath().length())
-                        .startsWith("/api/")
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        // The sign-in paths pick the Workspace from the host; binding the mock one breaks them (KAN-297 Minor 6).
+        return !path.startsWith("/api/")
+                || path.startsWith("/api/v1/auth/")
                 || new AuthenticationTrustResolverImpl()
                         .isAuthenticated(SecurityContextHolder.getContext().getAuthentication());
     }

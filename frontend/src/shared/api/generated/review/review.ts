@@ -372,6 +372,13 @@ export const getGetExpiredTicketsUrl = (params?: GetExpiredTicketsParams) => {
 };
 
 /**
+ * Production Workspace data: only EXPIRED Solution Form tickets of Projects the caller manages.
+ * An optional Department narrows those Projects; a Department without a managed Project returns an empty page.
+ * Sort by expiredAt (default descending), sourceTicketId, title or project, ascending or descending,
+ * with ticket UUID as tie-breaker. Unknown sort fields or directions, negative page or size outside 1–100
+ * return 400 MSG06. expiredAt and previousStatus are the expiry time and previous status stored by JOB-02.
+ * For tickets expired before they were stored, expiredAt falls back to midnight in Asia/Ho_Chi_Minh on the
+ * day after reviewDueDate (or updated_at without a due date) and previousStatus to PENDING_REVIEW.
  * @summary Expired tickets of the Projects the user is Project Manager of (SRS 7.5).
  */
 export const getExpiredTickets = async (
@@ -509,6 +516,9 @@ export const getGetExpiredTicketIdsUrl = (params?: GetExpiredTicketIdsParams) =>
 };
 
 /**
+ * Production Workspace data: every EXPIRED Solution Form ticket in Projects the caller manages,
+ * across all pages, using the same optional Department filter as getExpiredTickets.
+ * A Department without a managed Project returns an empty id list.
  * @summary Ids of every Expired ticket, for "Select all" (all pages, not only the one shown).
  */
 export const getExpiredTicketIds = async (
@@ -644,8 +654,15 @@ export const getSendBackTicketsUrl = () => {
 };
 
 /**
- * Frontend proposal. Validate and authorize the entire unique 1–500 UUID batch before sending back; retain mock history and immutable Ticket content, reset due dates using current Project review ranges.
- * @summary Sends Expired tickets back to the queue (MSG25); frontend proposal.
+ * Production operation: validate and authorize the entire unique 1–500 UUID batch in the signed-in Workspace.
+ * Only EXPIRED Solution Form tickets of Projects the caller manages are eligible. Atomically set PENDING_REVIEW,
+ * record the new queue entry time, and reset each review due date to the send-back calendar date in
+ * Asia/Ho_Chi_Minh plus its Project review_range days (3 days when the range is null or not positive).
+ * Preserve Solution, Evidence and feedback; store one SEND_BACK review decision per ticket with the caller,
+ * send-back time and no reason or comment. Enqueue no review notification job. Invalid shapes return 400,
+ * a missing Workspace ticket returns 404 MSG04, an unmanaged Project returns 403, and a stale status or
+ * non-Solution-Form source returns 409; every refused batch leaves all tickets and decisions unchanged.
+ * @summary Sends Expired tickets back to the Review Queue (MSG25).
  */
 export const sendBackTickets = async (
   approveTicketsRequest: ApproveTicketsRequest,
@@ -724,7 +741,7 @@ export type SendBackTicketsMutationError = ErrorType<ProblemResponse>;
 export type SendBackTicketsMutationVariables = { data: ApproveTicketsRequest };
 
 /**
- * @summary Sends Expired tickets back to the queue (MSG25); frontend proposal.
+ * @summary Sends Expired tickets back to the Review Queue (MSG25).
  */
 export const useSendBackTickets = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
   options?: {

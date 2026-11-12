@@ -104,10 +104,7 @@ public class CsvImportServiceImpl implements CsvImportService {
                 .map(mapper::toSummary)
                 .toList();
         return ImportPreviewResponse.of(
-                preview.getId(),
-                projectId,
-                fileName,
-                importType,
+                preview,
                 counts.getOrDefault(PreviewRowStatus.VALID, 0L),
                 counts.getOrDefault(PreviewRowStatus.ERROR, 0L),
                 0,

@@ -49,6 +49,42 @@ class MockSignedInCallerIT {
     private MockIdentityProperties properties;
 
     @Test
+    void seedsSecondKnowledgeManagerWithoutDepartmentOrSpace_AC_006_19() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        var row = db.queryForMap(
+                "SELECT id, full_name, status, department_id FROM app_user WHERE email = 'knowledge-replacement@roles-demo.test'");
+        assertThat(row.get("full_name")).isEqualTo("Demo Replacement Knowledge Manager");
+        assertThat(row.get("status")).isEqualTo("ACTIVE");
+        assertThat(row.get("department_id")).isNull();
+        assertThat(db.queryForList("SELECT role FROM user_role WHERE user_id = ?", String.class, row.get("id")))
+                .containsExactly("KNOWLEDGE_MANAGER");
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM space_manager WHERE user_id = ?", Integer.class, row.get("id")))
+                .isZero();
+        seeder.run(new DefaultApplicationArguments());
+        assertThat(
+                        db.queryForMap(
+                                "SELECT id, full_name, status, department_id FROM app_user WHERE email = 'knowledge-replacement@roles-demo.test'"))
+                .isEqualTo(row);
+        assertThat(TwoTenantDatabases.tenantB()
+                        .queryForObject(
+                                "SELECT count(*) FROM app_user WHERE email = 'knowledge-replacement@roles-demo.test'",
+                                Integer.class))
+                .isZero();
+    }
+
+    @Test
+    void seededSpacesAppearInCreationOptions_AC_005_14() throws Exception {
+        mvc.perform(get("/api/v1/users/creation-options"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.companyDomain").value("acme.test"))
+                .andExpect(jsonPath("$.spaces[?(@.name == 'Customer Support Wiki')].spaceId")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.spaces[?(@.name == 'IT Operations Wiki')].spaceId")
+                        .isNotEmpty());
+    }
+
+    @Test
     void signsInFromSeededTenantThroughDefaultSecurityChain_AC_004_17_AC_004_18() throws Exception {
         assertThat(properties.workspaceId()).isEqualTo(TwoTenantDatabases.ACME);
         mvc.perform(get("/api/v1/users").param("q", "@acme.test"))
@@ -99,5 +135,34 @@ class MockSignedInCallerIT {
         } finally {
             seeder.run(new DefaultApplicationArguments());
         }
+    }
+
+    @Test
+    void seedsProjectHandoverAndMembershipScenariosOnlyOnce_AC_007_23() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        List<Map<String, Object>> projects = db.queryForList(
+                "SELECT * FROM project WHERE jira_project_key IN ('SUP', 'OPS', 'OLD') ORDER BY jira_project_key");
+        List<Map<String, Object>> memberships = db.queryForList(
+                "SELECT m.* FROM project_membership m JOIN project p ON p.public_id = m.project_id WHERE p.jira_project_key IN ('SUP', 'OPS', 'OLD') ORDER BY m.user_id, m.project_id");
+        assertThat(projects).hasSize(3);
+        assertThat(projects.stream().map(row -> row.get("status"))).containsExactly("REMOVED", "ACTIVE", "ACTIVE");
+        assertThat(memberships).hasSize(6);
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM app_user u JOIN user_role r ON r.user_id = u.id JOIN department d ON d.department_id = u.department_id WHERE u.email = 'manager-replacement@roles-demo.test' AND u.status = 'ACTIVE' AND r.role = 'PROJECT_MANAGER' AND d.name = 'Customer Support'",
+                        Integer.class))
+                .isEqualTo(1);
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM app_user u JOIN user_role r ON r.user_id = u.id JOIN department d ON d.department_id = u.department_id WHERE u.email <> 'manager@acme.test' AND u.status = 'ACTIVE' AND r.role = 'PROJECT_MANAGER' AND d.name = 'IT Operations'",
+                        Integer.class))
+                .isZero();
+        seeder.run(new DefaultApplicationArguments());
+        assertThat(
+                        db.queryForList(
+                                "SELECT * FROM project WHERE jira_project_key IN ('SUP', 'OPS', 'OLD') ORDER BY jira_project_key"))
+                .isEqualTo(projects);
+        assertThat(
+                        db.queryForList(
+                                "SELECT m.* FROM project_membership m JOIN project p ON p.public_id = m.project_id WHERE p.jira_project_key IN ('SUP', 'OPS', 'OLD') ORDER BY m.user_id, m.project_id"))
+                .isEqualTo(memberships);
     }
 }

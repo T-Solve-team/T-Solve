@@ -5,18 +5,16 @@ import java.util.Locale;
 import org.springframework.stereotype.Component;
 
 /**
- * Tells which configured origin a request came to: the central sign-in ({@code login.}), the Platform Console
- * ({@code admin.}), or any other host, which is a Workspace site. Only host names are compared; the port is not part
+ * Tells which configured origin a request came to: the Platform Console ({@code admin.}) or any other
+ * host, which is a Workspace site. Only host names are compared; the port is not part
  * of a site's name and a proxy may change it.
  */
 @Component
 public class AuthHosts {
 
-    private final String loginHost;
     private final String adminHost;
 
     public AuthHosts(SignInProperties properties) {
-        this.loginHost = lower(properties.loginOrigin().getHost());
         this.adminHost = lower(properties.adminOrigin().getHost());
     }
 
@@ -26,10 +24,6 @@ public class AuthHosts {
         int colon = host.lastIndexOf(':');
         boolean hasPort = colon > 0 && host.indexOf(']') < colon && host.indexOf(':') == colon;
         return hasPort ? host.substring(0, colon) : host;
-    }
-
-    public boolean isLoginHost(HttpServletRequest request) {
-        return hostOf(request).equals(loginHost);
     }
 
     public boolean isAdminHost(HttpServletRequest request) {

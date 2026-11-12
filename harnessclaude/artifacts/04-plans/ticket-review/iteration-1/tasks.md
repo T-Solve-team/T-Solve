@@ -1,7 +1,7 @@
 ---
 module: ticket-review
 date: 2026-11-01
-total_tasks: 10
+total_tasks: 18
 owner: Dev
 ---
 
@@ -155,3 +155,30 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** `review/service/impl/ReviewQueueEventServiceImpl.java`, `review/service/ReviewQueueEventService.java`, `review/controller/ReviewQueueEventController.java`, `review/ReviewQueueEventsIT.java` (and a unit test under `review/service/impl/` if timing needs fakes).
 **Dependencies:** Task 13.
 **Verification:** `ReviewQueueEventsIT` and the new tests; full `mvn verify`; trace STORY-012.
+
+## Task 16: Production Expired tickets and send-back (KAN-156)
+
+**Story:** STORY-013
+**Feature:** review-send-back-api
+**Description:** Implement AC-013.1–013.9 (design "KAN-156 extension"). Changeset `024-review-send-back-decision.sql` widens `ck_review_decision` with SEND_BACK. `GET /api/v1/expired-tickets` and `/ticket-ids` (Project Manager) list EXPIRED Solution Form tickets of managed Projects with the Department filter, sorts and derived `expiredAt`/`previousStatus`. `POST /api/v1/reviews/send-back` validates the whole batch, then moves the tickets to PENDING_REVIEW with the recalculated due date and one SEND_BACK `review_decision` each, in one transaction and without a notification job. Review History returns SEND_BACK. OpenAPI wording first; client regenerated.
+**Files:** `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated` (regenerated), `backend/src/main/resources/db/changelog/changes/024-review-send-back-decision.sql` + master changelog, `review/controller/ReviewReadController.java`, `review/controller/ReviewDecisionController.java`, the stored-decision enum in `ticket/entity/`, `ticket/service/TicketReviewReadService.java` + impl, `ticket/service/TicketDecisionService.java` + impl, `ticket/repository/TicketRepository.java`, `ticket/dto/TicketReviewView.java`; tests `review/ExpiredTicketsApiIT.java`, `review/SendBackApiIT.java`, `review/ReviewHistoryApiIT.java`, `frontend/src/features/review/pages/ExpiredTicketsPage.test.tsx`.
+**Dependencies:** KAN-24 storage, decisions and membership (Tasks 5–9), queue entry trigger (Task 8), History API (Task 12).
+**Verification:** PostgreSQL ITs for scope, filter, sorts, derived fields, the atomic batch, due date with two ranges and the Vietnam day boundary, kept Solution/Evidence, SEND_BACK rows, 400/401/403/404/409 and History SEND_BACK; `mvn verify`; frontend `format:check`, `lint`, `typecheck`, `test`, `build`, `generate:api` with no diff; `sdd.ts trace ticket-review STORY-013`.
+
+## Task 17: JOB-02 expires overdue tickets (KAN-157)
+
+**Story:** STORY-014
+**Feature:** review-expiry-job
+**Description:** Implement AC-014.1–014.8 as in the master's "KAN-157 extension". Changelog `025-review-ticket-expiry.sql`; `ReviewExpiryService` + impl with one `UPDATE … RETURNING project_id` for PENDING_REVIEW and CHANGES_REQUESTED tickets due before today (Vietnam), skipping deleted Departments, plus a per-Project log line; `ReviewExpiryDispatchHandler`, `ReviewExpiryJobHandler` (`@Job(retries = 0)`, own 15-minute retry up to 3 attempts, skips non-Active Workspaces) and `ReviewExpiryRegistration` (recurring id `review-job-02-expire-overdue`, `0 0 * * *`, Asia/Ho_Chi_Minh), all only with `tsolve.worker.enabled=true`. Test first.
+**Files:** `backend/src/main/resources/db/changelog/changes/025-review-ticket-expiry.sql` + `db.changelog-master.xml`; `review/dto/ReviewExpiry{Dispatch,Job}Request.java`; `review/service/ReviewExpiryService.java`; `review/service/impl/ReviewExpiry{ServiceImpl,DispatchHandler,JobHandler,Registration}.java`; `review/repository/ReviewExpiryRepository.java`; tests `review/ReviewExpiryIT.java`, `review/service/impl/ReviewExpiry{JobHandler,DispatchHandler,Registration}Test.java`.
+**Dependencies:** worker Task 3 (`WorkerTenantService.activeWorkspaceIds()`); STORY-012 trigger (Task 13); tenant ticket storage (Task 5).
+**Verification:** named AC-014 tests; PostgreSQL IT for the UPDATE, dates around VN midnight, Department, columns, queue and eligible ids, idempotence, rollback; `mvn verify` (tests + spotless); `sdd.ts trace ticket-review STORY-014`.
+
+## Task 18: Expired list reads the stored expiry columns (KAN-307)
+
+**Story:** STORY-013
+**Feature:** review-expired-stored-columns
+**Description:** Implement the changed AC-013.3 and AC-013.4 (master "KAN-307 change"). Map `ticket.expired_at` and `ticket.status_before_expiry` read-only on `Ticket`; `findExpiredTickets` returns them; the Expired list reports the stored expiry time and previous status, falling back per column to the KAN-156 derived values (00:00 VN after the due date, else `updated_at`; PENDING_REVIEW) when null; the expiredAt sort orders the reported value. OpenAPI description updated; client regenerated. Test first.
+**Files:** `backend/src/main/java/vn/tsolve/ticket/entity/Ticket.java`, `ticket/repository/TicketRepository.java`, `ticket/dto/TicketReviewView.java`, `ticket/service/impl/TicketReviewReadServiceImpl.java`; `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated` (regenerated); tests `review/ExpiredTicketsApiIT.java`.
+**Dependencies:** Task 16 (Expired list), Task 17 (changeset 025 and JOB-02).
+**Verification:** `ExpiredTicketsApiIT` tests named AC-013.3/AC-013.4 for a CHANGES_REQUESTED ticket with stored columns, a null-columns ticket and the expiredAt sort across both; `mvn verify`; `generate:api` with no diff after regeneration; `sdd.ts trace ticket-review STORY-013`.
