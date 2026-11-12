@@ -10,6 +10,8 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
@@ -22,6 +24,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 import vn.tsolve.identity.account.AccountSignInService;
 import vn.tsolve.identity.session.SessionCookie;
+import vn.tsolve.identity.session.SessionEnded;
 import vn.tsolve.identity.session.WebSession;
 import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.port.TenantScope;
@@ -62,7 +65,9 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
     private final WebSessionStore sessions;
     private final SessionCookie sessionCookies;
     private final IdentityClock clock;
+    private final ApplicationEventPublisher events;
 
+    /** Without an event publisher (unit tests of the checks): a replaced session publishes nowhere. */
     public OidcCallbackHandler(
             WorkspaceLookup workspaces,
             AuthHosts hosts,
@@ -71,6 +76,20 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
             WebSessionStore sessions,
             SessionCookie sessionCookies,
             IdentityClock clock) {
+        this(workspaces, hosts, scope, accounts, sessions, sessionCookies, clock, event -> {});
+    }
+
+    @Autowired
+    public OidcCallbackHandler(
+            WorkspaceLookup workspaces,
+            AuthHosts hosts,
+            TenantScope scope,
+            AccountSignInService accounts,
+            WebSessionStore sessions,
+            SessionCookie sessionCookies,
+            IdentityClock clock,
+            ApplicationEventPublisher events) {
+        this.events = events;
         this.workspaces = workspaces;
         this.hosts = hosts;
         this.scope = scope;
@@ -163,7 +182,7 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
         try {
             String old = sessionCookies.valueOf(request);
             if (old != null && !old.isEmpty()) {
-                sessions.end(old);
+                replaceOld(old);
             }
             Instant now = clock.now();
             value = sessions.create(new WebSession(
@@ -188,6 +207,35 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
         Object returnTo = request.getAttribute(RETURN_TO_ATTRIBUTE);
         redirect(response, SignInStartController.filterReturnTo(returnTo instanceof String s ? s : null));
+    }
+
+    /**
+     * Ends the old session of the same browser. A live Workspace session that this call ends publishes one LOGOUT
+     * (AC-002.3); a session already past a limit loses only its key, so the sweep publishes its EXPIRED (AC-002.4);
+     * an Operator session publishes nothing.
+     */
+    private void replaceOld(String old) {
+        WebSession prior = sessions.find(old).orElse(null);
+        if (prior != null && !sessions.isWithinLimits(prior, clock.now())) {
+            sessions.deleteKeyOnly(old);
+            return;
+        }
+        boolean ended = sessions.end(old);
+        if (ended
+                && prior != null
+                && prior.kind() == WebSession.Kind.WORKSPACE
+                && prior.workspaceId() != null
+                && prior.accountId() != null) {
+            try {
+                events.publishEvent(new SessionEnded(
+                        prior.accountId(), prior.workspaceId(), sessions.sessionIdOf(old), SessionEnded.Reason.LOGOUT));
+            } catch (RuntimeException e) {
+                // class name only: a listener's message can hold personal data
+                log.error(
+                        "A SessionEnded listener failed on a replaced session ({})",
+                        e.getClass().getName());
+            }
+        }
     }
 
     /** True when some entry of the organization claim map has an {@code id} equal to the Workspace's (Q1 A). */
