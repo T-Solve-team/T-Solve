@@ -27,9 +27,19 @@ class SessionConfig {
             AccountRepository accounts,
             AccountRoleRepository roles,
             IdentityClock clock,
-            ObjectMapper mapper) {
+            ObjectMapper mapper,
+            OperatorAllowList operatorList) {
         return new WebSessionFilter(
-                store, cookies, hosts, workspaces, scope, accounts, roles, clock, new SecurityProblemWriter(mapper));
+                store,
+                cookies,
+                hosts,
+                workspaces,
+                scope,
+                accounts,
+                roles,
+                clock,
+                new SecurityProblemWriter(mapper),
+                operatorList);
     }
 
     @Bean

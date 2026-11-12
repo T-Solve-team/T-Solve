@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -52,9 +53,9 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
     private static final Logger log = LoggerFactory.getLogger(WebSessionFilter.class);
 
     /** The result of the check: the user (null = anonymous), or {@code answered} when the filter wrote the answer. */
-    private record Outcome(TSolveUser user, UUID workspaceId, boolean answered) {
-        static final Outcome ANONYMOUS = new Outcome(null, null, false);
-        static final Outcome ANSWERED = new Outcome(null, null, true);
+    private record Outcome(TSolveUser user, UUID workspaceId, OperatorPrincipal operator, boolean answered) {
+        static final Outcome ANONYMOUS = new Outcome(null, null, null, false);
+        static final Outcome ANSWERED = new Outcome(null, null, null, true);
     }
 
     /** Carries an IOException / ServletException of the chain through {@code TenantScope.runIn}'s Supplier. */
@@ -73,6 +74,7 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
     private final AccountRoleRepository roleRows;
     private final IdentityClock clock;
     private final SecurityProblemWriter problems;
+    private final OperatorAllowList operatorList;
 
     public WebSessionFilter(
             WebSessionStore store,
@@ -83,7 +85,9 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             AccountRepository accounts,
             AccountRoleRepository roleRows,
             IdentityClock clock,
-            SecurityProblemWriter problems) {
+            SecurityProblemWriter problems,
+            OperatorAllowList operatorList) {
+        this.operatorList = operatorList;
         this.roleRows = roleRows;
         this.store = store;
         this.cookies = cookies;
@@ -115,6 +119,16 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             return;
         }
         if (outcome.answered()) {
+            return;
+        }
+        if (outcome.operator() != null) {
+            // no Workspace is bound for an Operator (AC-001.29)
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(
+                    UsernamePasswordAuthenticationToken.authenticated(outcome.operator(), null, List.of()));
+            SecurityContextHolder.setContext(context);
+            new RequestAttributeSecurityContextRepository().saveContext(context, request, response);
+            chain.doFilter(request, response);
             return;
         }
         TSolveUser user = outcome.user();
@@ -158,10 +172,9 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             return Outcome.ANONYMOUS;
         }
         WebSession session = found.get();
-        // shortcut: an OPERATOR session is refused everywhere until Task 29 builds the Console side
-        if (admin
-                || session.kind() != WebSession.Kind.WORKSPACE
-                || !site.get().id().equals(session.workspaceId())) {
+        // the host decides first: an Operator session counts on admin. only, a Workspace session on its own site only
+        boolean operator = session.kind() == WebSession.Kind.OPERATOR;
+        if (admin != operator || (!admin && !site.get().id().equals(session.workspaceId()))) {
             problems.write(request, response, HttpStatus.UNAUTHORIZED, SecurityProblemWriter.MSG123);
             return Outcome.ANSWERED;
         }
@@ -170,6 +183,18 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
                 || Duration.between(session.createdAt(), now).compareTo(WebSessionStore.ABSOLUTE_LIMIT) > 0) {
             end(response, cookie);
             return Outcome.ANONYMOUS;
+        }
+        if (operator) {
+            // AC-001.33: the list is read again at every request, background ones too
+            if (!operatorList.contains(session.operatorEmail())) {
+                end(response, cookie);
+                problems.write(request, response, HttpStatus.UNAUTHORIZED, SecurityProblemWriter.MSG135);
+                return Outcome.ANSWERED;
+            }
+            if (!"1".equals(request.getHeader(BACKGROUND_HEADER))) {
+                store.touch(cookie, now);
+            }
+            return new Outcome(null, null, new OperatorPrincipal(session.operatorEmail()), false);
         }
         Account account = null;
         Set<Role> roles = Set.of();
@@ -197,7 +222,10 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
         }
         String fullName = account.getFullName() == null ? "" : account.getFullName();
         return new Outcome(
-                new TSolveUser(account.getId(), account.getEmail(), fullName, roles), session.workspaceId(), false);
+                new TSolveUser(account.getId(), account.getEmail(), fullName, roles),
+                session.workspaceId(),
+                null,
+                false);
     }
 
     private void end(HttpServletResponse response, String cookie) {

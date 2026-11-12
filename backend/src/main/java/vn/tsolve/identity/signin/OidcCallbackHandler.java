@@ -10,6 +10,8 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
@@ -21,6 +23,7 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.session.OperatorAllowList;
 import vn.tsolve.identity.session.SessionCookie;
 import vn.tsolve.identity.session.WebSession;
 import vn.tsolve.identity.session.WebSessionStore;
@@ -62,7 +65,9 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
     private final WebSessionStore sessions;
     private final SessionCookie sessionCookies;
     private final IdentityClock clock;
+    private final OperatorAllowList operators;
 
+    /** A handler for Workspace sites only: every Console sign-in is refused with MSG135. */
     public OidcCallbackHandler(
             WorkspaceLookup workspaces,
             AuthHosts hosts,
@@ -71,6 +76,40 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
             WebSessionStore sessions,
             SessionCookie sessionCookies,
             IdentityClock clock) {
+        this(workspaces, hosts, scope, accounts, sessions, sessionCookies, clock, new OperatorAllowList(""));
+    }
+
+    @Autowired
+    public OidcCallbackHandler(
+            WorkspaceLookup workspaces,
+            AuthHosts hosts,
+            TenantScope scope,
+            AccountSignInService accounts,
+            WebSessionStore sessions,
+            SessionCookie sessionCookies,
+            IdentityClock clock,
+            ObjectProvider<OperatorAllowList> operatorList) {
+        this(
+                workspaces,
+                hosts,
+                scope,
+                accounts,
+                sessions,
+                sessionCookies,
+                clock,
+                operatorList.getIfAvailable(() -> new OperatorAllowList("")));
+    }
+
+    private OidcCallbackHandler(
+            WorkspaceLookup workspaces,
+            AuthHosts hosts,
+            TenantScope scope,
+            AccountSignInService accounts,
+            WebSessionStore sessions,
+            SessionCookie sessionCookies,
+            IdentityClock clock,
+            OperatorAllowList operators) {
+        this.operators = operators;
         this.workspaces = workspaces;
         this.hosts = hosts;
         this.scope = scope;
@@ -83,6 +122,10 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
     @Override
     public void onAuthenticationFailure(
             HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) {
+        if (hosts.isAdminHost(request)) {
+            redirect(response, MSG06); // AC-001.31: every Console failure is MSG06
+            return;
+        }
         boolean requestCheck = exception instanceof OAuth2AuthenticationException oauth2
                 && (REQUEST_CHECK_FAILURES.contains(oauth2.getError().getErrorCode())
                         || ("invalid_request".equals(oauth2.getError().getErrorCode())
@@ -97,6 +140,10 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
         OidcIdToken token = ((OidcUser) authentication.getPrincipal()).getIdToken();
         if (!Boolean.TRUE.equals(token.getEmailVerified())) {
             redirect(response, MSG06);
+            return;
+        }
+        if (hosts.isAdminHost(request)) {
+            onConsoleSignIn(request, response, token);
             return;
         }
         // AC-001.7: the Workspace comes only from the host
@@ -152,12 +199,39 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
         }
     }
 
+    /**
+     * AC-001.29, .30: the Console callback on {@code admin.}. MSG06 for a missing email, MSG135 for an email outside
+     * the allow-list, else an Operator session (no Account, no Workspace, no hand-off code).
+     */
+    private void onConsoleSignIn(HttpServletRequest request, HttpServletResponse response, OidcIdToken token) {
+        String email = token.getEmail();
+        if (email == null) {
+            log.error("Console sign-in failed (no email claim)");
+            redirect(response, MSG06);
+        } else if (!operators.contains(email)) {
+            redirect(response, "/login?error=MSG135");
+        } else {
+            startSession(request, response, WebSession.Kind.OPERATOR, null, null, email, token.getTokenValue());
+        }
+    }
+
     /** AC-001.16, .18: a new session id for every sign-in (any old one is ended), then the 302 that sets its cookie. */
     private void startSession(
             HttpServletRequest request,
             HttpServletResponse response,
             WorkspaceRef workspace,
             UUID accountId,
+            String idToken) {
+        startSession(request, response, WebSession.Kind.WORKSPACE, workspace, accountId, null, idToken);
+    }
+
+    private void startSession(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            WebSession.Kind kind,
+            WorkspaceRef workspace,
+            UUID accountId,
+            String operatorEmail,
             String idToken) {
         String value;
         try {
@@ -167,19 +241,18 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
             }
             Instant now = clock.now();
             value = sessions.create(new WebSession(
-                    WebSession.Kind.WORKSPACE,
-                    workspace.id(),
+                    kind,
+                    workspace == null ? null : workspace.id(),
                     accountId,
-                    null,
-                    workspace.siteHost(),
+                    operatorEmail,
+                    workspace == null ? hosts.hostOf(request) : workspace.siteHost(),
                     idToken,
                     now,
                     now));
         } catch (DataAccessException e) {
             // class name only: no ID token, cookie value or hash may reach the log
             log.error(
-                    "Sign-in passed but the session store (Redis) failed for Workspace {} ({})",
-                    workspace.id(),
+                    "Sign-in passed but the session store (Redis) failed ({})",
                     e.getClass().getName());
             redirect(response, MSG06);
             return;
