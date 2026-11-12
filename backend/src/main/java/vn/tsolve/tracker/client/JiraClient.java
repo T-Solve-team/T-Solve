@@ -41,7 +41,8 @@ public class JiraClient implements TicketTrackerClient {
         this.builder = RestClient.builder().requestFactory(factory);
     }
 
-    JiraClient(RestClient.Builder builder) {
+    /** For tests: a builder bound to a mock server. */
+    public JiraClient(RestClient.Builder builder) {
         this.builder = builder;
     }
 
