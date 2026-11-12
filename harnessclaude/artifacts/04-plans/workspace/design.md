@@ -96,6 +96,7 @@ The user delegated the remaining calls on 12/11 ("tự quyết và note lại").
 | D24 | No side menu on 2.1 (AC-005.1, Task 7) | Spec change: "with no menu" removed from AC-005.1; change request to `fe-foundation` (`AppShell`) | edit `AppShell` here | `AppShell` is `fe-foundation` code, locked while its spec is changed since approval |
 | D25 | Detecting the 409 on 2.1 (Task 7) | Status 409 with no field error on `setupWorkspace` (its only non-field conflict) | read the technical code | The shared transport normalises unknown codes to `MSG06` and drops `WORKSPACE_ALREADY_SET_UP` |
 | D26 | fe-foundation's route-table test still expects the 2.1 placeholder (Task 7) | Remove the 2.1 row, as its comment asks the building module to do; path added to `module.md` | leave the test failing | Same convention chatbot (12.1) and triage (10.1) followed |
+| D27 | Developer for Task 8 after Codex hit its usage limit (until 14/11) | Claude `harnessclaude-developer` subagent with the same brief and rules | wait for Codex | Keeps KAN-119 moving; the Reviewer stays independent of the writer |
 | D22 | Where the interim linker puts the `cloudId` (builder check) | Returned to the service and only logged (host, not secrets); nothing persists it until the catalog exists | add a `jira_cloud_id` column to the tenant table | The catalog owns `jira_cloud_id` (platform AC-001.15); a tenant column would duplicate it |
 
 ## File Structure
