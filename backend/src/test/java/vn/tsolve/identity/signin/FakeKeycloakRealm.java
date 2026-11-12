@@ -45,7 +45,11 @@ public final class FakeKeycloakRealm {
     public static final String EMAIL = "alice@acme.test";
     public static final String ORGANIZATION_ID = "00000000-0000-4000-8000-0000000000c1";
 
+    public static final String CONSOLE_CLIENT_ID = "tsolve-console";
+
     private static final String REALM_PATH = "/realms/tsolve";
+    private static final String OPS_REALM_PATH = "/realms/tsolve-ops";
+    private static final String OPS_OIDC = OPS_REALM_PATH + "/protocol/openid-connect";
     private static final String OIDC = REALM_PATH + "/protocol/openid-connect";
     private static final String TOKEN = OIDC + "/token";
 
@@ -80,6 +84,11 @@ public final class FakeKeycloakRealm {
         return origin() + REALM_PATH;
     }
 
+    /** The issuer of the second realm, {@code tsolve-ops}, which signs the Platform Operators in (Task 29a). */
+    public String opsIssuer() {
+        return origin() + OPS_REALM_PATH;
+    }
+
     /** Forgets every stub and every recorded request, then publishes discovery, the keys and userinfo again. */
     public void reset() {
         server.resetAll();
@@ -96,6 +105,18 @@ public final class FakeKeycloakRealm {
                 get(urlPathEqualTo(OIDC + "/certs")).willReturn(json(200, new JWKSet(key.toPublicJWK()).toString())));
         server.stubFor(get(urlPathEqualTo(OIDC + "/userinfo"))
                 .willReturn(json(200, "{\"sub\":\"" + SUB + "\",\"email\":\"" + EMAIL + "\"}")));
+        // the second realm: discovery and keys (its token endpoint comes with the callback, Task 29b)
+        String opsOidc = origin() + OPS_OIDC;
+        server.stubFor(get(urlPathEqualTo(OPS_REALM_PATH + "/.well-known/openid-configuration"))
+                .willReturn(json(
+                        200,
+                        "{\"issuer\":\"" + opsIssuer() + "\",\"authorization_endpoint\":\"" + opsOidc
+                                + "/auth\",\"token_endpoint\":\"" + opsOidc + "/token\",\"jwks_uri\":\"" + opsOidc
+                                + "/certs\",\"userinfo_endpoint\":\"" + opsOidc
+                                + "/userinfo\",\"subject_types_supported\":[\"public\"],"
+                                + "\"id_token_signing_alg_values_supported\":[\"RS256\"]}")));
+        server.stubFor(get(urlPathEqualTo(OPS_OIDC + "/certs"))
+                .willReturn(json(200, new JWKSet(key.toPublicJWK()).toString())));
     }
 
     private static com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder json(int status, String body) {

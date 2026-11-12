@@ -145,7 +145,16 @@ public class TwoTenantDatabases {
 
         RoutingDataSource(RoutingTenantScope scope) {
             this.scope = scope;
-            setTargetDataSources(Map.of(ACME, TENANT_A, BETA, TENANT_B));
+            // the two dev Workspaces (DevAccounts ids) share the same two databases, for the dev-profile tests
+            setTargetDataSources(Map.of(
+                    ACME,
+                    TENANT_A,
+                    BETA,
+                    TENANT_B,
+                    vn.tsolve.identity.dev.DevAccounts.ACME_ID,
+                    TENANT_A,
+                    vn.tsolve.identity.dev.DevAccounts.BETA_ID,
+                    TENANT_B));
             setDefaultTargetDataSource(MAIN);
             setLenientFallback(false);
         }

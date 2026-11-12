@@ -104,9 +104,9 @@
         "login-screen": "passing",
         "sign-in-start": "passing",
         "sign-in-callback": "passing",
-        "workspace-session": "pending",
+        "workspace-session": "passing",
         "operator-sign-in": "pending",
-        "jira-link-sign-in": "pending",
+        "jira-link-sign-in": "passing",
         "project-handover": "passing",
         "space-handover": "passing",
         "account-checks": "passing",
@@ -121,8 +121,8 @@
         "remove-custom-sign-in": "passing",
         "account-sub-binding": "pending",
         "callback-workspace-checks": "passing",
-        "user-role": "pending",
-        "logout-rp-initiated": "pending",
+        "user-role": "passing",
+        "logout-rp-initiated": "passing",
         "keycloak-provisioning": "passing",
         "keycloak-theme": "passing",
         "keycloak-prerequisites": "passing",
@@ -133,9 +133,11 @@
         "add-user-backend": "passing",
         "user-roles-backend": "passing",
         "user-status-backend": "passing",
-        "scope-checks": "passing"
+        "scope-checks": "passing",
+        "session-expiry-events": "pending",
+        "operator-session": "pending"
       },
-      "lastUpdated": "2026-11-10T17:19:55.177Z",
+      "lastUpdated": "2026-11-12T14:47:05.471Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -145,10 +147,20 @@
       }
     },
     "workspace": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:22.576Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "create-department-api": "passing",
+        "create-department-screen": "passing"
+      },
+      "lastUpdated": "2026-11-11T15:54:34.998Z",
+      "branch": "feat/workspace",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "5d06062761d473d9153fdfe12fbdf3b5aeeed926"
+      }
     },
     "project-integration": {
       "status": "decomposed",
@@ -251,17 +263,17 @@
         "ask-answer-api": "passing",
         "answer-citations": "passing",
         "cited-documents": "passing",
-        "follow-up-context": "pending",
+        "follow-up-context": "passing",
         "answer-rating-schema": "passing",
         "answer-rating-api": "passing"
       },
-      "lastUpdated": "2026-11-09T05:15:45.201Z",
+      "lastUpdated": "2026-11-11T09:02:24.623Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "6555ebac926abf92fd8ee0a100ac980beaedf901"
+        "default": "0e250a6df1826245c5b34dc36faed36e2baa80e4"
       }
     },
     "jira-app": {

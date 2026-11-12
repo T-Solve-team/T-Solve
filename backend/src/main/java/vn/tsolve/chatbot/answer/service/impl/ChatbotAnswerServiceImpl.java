@@ -105,9 +105,12 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
     public ChatbotAnswerResponse ask(TSolveUser user, ChatbotQuestionRequest request) {
         long deadline = System.nanoTime() + timeoutNanos;
         String question = request.question().trim();
-        // ponytail: Task 10 adds follow-up retrieval and prompt turns; history is accepted but not sent yet.
+        // ponytail: No LLM rewrite yet; upgrade to LLM query rewriting if follow-up retrieval quality needs it.
+        String retrievalText = request.history().isEmpty()
+                ? question
+                : request.history().getLast().question().trim() + "\n" + question;
         float[] vector =
-                callAi(() -> embeddings.embed(List.of(question)), deadline).getFirst();
+                callAi(() -> embeddings.embed(List.of(retrievalText)), deadline).getFirst();
         // Fail fast before the vector search if embedding has exhausted the deadline.
         remaining(deadline);
 
@@ -132,7 +135,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         if (kept.isEmpty()) {
             return save(user, question, Outcome.NO_SOURCE, "", List.of(), deadline);
         }
-        var messages = AnswerPrompt.messages(question, kept);
+        var messages = AnswerPrompt.messages(question, request.history(), kept);
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
         var cited = Citations.of(text, kept);
