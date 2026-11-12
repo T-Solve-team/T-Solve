@@ -35,4 +35,4 @@ Independent review: `06-evaluation/jira-app/task-1-solution-contract-review.md`.
 none
 
 ### Next up
-Review attempt 2 passed; see `06-evaluation/jira-app/*-review-2.md`.
+Review attempt 2 passed; see `06-evaluation/jira-app/*-review.md (attempt 2)`.

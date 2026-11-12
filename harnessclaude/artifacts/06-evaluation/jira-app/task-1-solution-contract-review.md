@@ -2,59 +2,78 @@
 module: jira-app
 feature: solution-contract
 task: 1
-verdict: fail
-attempt: 1
+verdict: pass
+attempt: 2
 date: 2026-11-13
 reviewer: harnessclaude-reviewer
 iteration: 2
 ---
 
+> Attempt 2. Attempt 1 (verdict fail) is this file at commit `2e46b72b`.
+
 # Review: jira-app — Task 1: Solution Form and Issue Panel contract
 
 ## Summary
 
-Commit f16c8a02 adds the seven Jira App paths of the spec's Exposed table to `frontend/openapi/tsolve-api.yaml`, with
-their schemas and the regenerated client, plus `TSOLVE_STUB_AI` and `TSOLVE_WEB_ORIGIN` in `.env.example`. None of
-the 21 later commits on the branch changed the jira-app part of the contract. At HEAD (221d53ca) I checked:
+Attempt 1 failed because the contract left out errors the backend really returns. The fix commit ccfee5d6 changes
+`frontend/openapi/tsolve-api.yaml`, the three controllers' `@ApiResponse`, the Forge client's 409 rule (BUG-204) and
+the web-origin check (BUG-205). I judged HEAD ccfee5d6.
 
-- Paths, methods, operationIds, schemas and field names match the backend controllers and DTOs.
-- `npm run generate:api` leaves no diff.
-- `npm run typecheck` passes.
+All five CRITICAL issues of attempt 1 are fixed, and so are Informational issues 6 and 7. Issues 8 and 9 were
+informational and are unchanged; they still do not block.
 
-The task's own check fails: "every error the backend can raise for each operation is documented". Five operations
-leave out status codes or message codes that the backend really returns:
+I traced every error path again for the seven operations. The sources were:
 
-- `openSolutionForm` and `getIssuePanel` document no 403. The backend returns 403 MSG08 for a Jira site with no
-  registered Workspace (design edge case 13).
-- Five operations leave out the 503 MSG06 that the FIT security chain returns when the JWKS cannot be fetched. The
-  older jira-app paths in the same file do document this 503.
-- The search 403 names MSG76, which the search endpoint never returns, and leaves out MSG08.
-- The submit 409 does not name its codes and leaves out MSG40.
+- the FIT security chain;
+- `JiraIssueAccessImpl`;
+- `JiraIssueContext.requireMember`;
+- the solution, ticket, Draft, AI and search services;
+- bean validation on the controllers;
+- `GlobalExceptionHandler`.
 
-The verdict is fail, because these gaps are exactly what this task delivers.
+Every 4xx/503 status and message code they can raise is now in the contract, and each one matches the controller's
+`@ApiResponse`. `npm run generate:api` leaves no diff, and `npm run typecheck` passes.
+
+The verdict is pass. Three informational notes remain (Issues 1 to 3 below).
 
 ## Criteria
 
 | Criterion | Result | Detail |
 |-----------|--------|--------|
-| Functionality | fail | The seven paths exist with the right methods and request/response schemas, but the error responses do not cover every error the backend raises (Issues 1 to 5). |
-| Completeness | fail | 403 is missing on 2 operations, 503 on 5 operations, and message codes are wrong or missing on 3 operations. `.env.example` has `TSOLVE_STUB_AI` (and `TSOLVE_WEB_ORIGIN`). |
-| Correctness | pass | `npm run generate:api`: no diff in `src/shared/api/generated`. `npm run typecheck`: exit 0. Maven was not run (the main session runs it, see the test report). |
-| Integration | fail | Backend DTOs (`IssuePanelResponse`, `SolutionFormResponse`, `SubmittedTicketResponse`, `JiraAppTicketResult`, `JiraAppTicketPreview`, `SolutionSections`) and the Forge client use the contract's field names. But the 409 of `submitSolution` has two meanings and the contract does not say so, and the Forge client treats every 409 after a retry as a success (Issue 5). |
+| Functionality | pass | The seven paths, methods, operationIds and schemas match the controllers and DTOs. Every error the backend raises is documented (error matrix below). |
+| Completeness | pass | The Exposed table rows are all present. `.env.example` has `TSOLVE_STUB_AI` and, now, a required absolute `TSOLVE_WEB_ORIGIN` (`.env.example:100`). |
+| Correctness | pass | `npm run generate:api`: no diff. `npm run typecheck`: no errors. I did not run Maven or the Forge app's tests, as the dispatcher told me. The new tests `refusesToStartWithoutAnAbsoluteWebOrigin_BUG_205` and `gives MSG40 back after a retry … (BUG-204)` must pass in the main session's run. |
+| Integration | pass | The Forge client now treats a 409 after a retry as "submitted" only when the code is MSG31 (`jira-app/TSolve_JiraApp/src/frontend/api/tsolveClient.js:86`), so a MSG40 is passed back to the caller (test at `solutionClient.test.js:77`). Backend DTO field names still match the contract. |
 
-### Stage 1 — contract rows owned by this task
+### Attempt-1 issues
 
-| # | Item (spec Exposed table) | Status | Evidence |
-|---|---------------------------|--------|----------|
-| 1 | `POST …/issues/{issueKey}/solution-form` → may open, Draft/AI draft/prefill, MSG67 flag | PARTIAL | Schemas OK (`SolutionForm`: `mayOpen`, `origin` DRAFT/AI_DRAFT/ISSUE, `sections`, `message` = MSG67) match `SolutionFormResponse.java`. Responses at yaml:886-898 have only 200/400/401: 403 and 503 are missing (Issues 1, 2). |
-| 2 | `POST …/issues/{issueKey}/solution` (five sections; all empty = Close) | PARTIAL | 201 `SubmittedTicket {id, ticketId, status}`, 400 MSG01 with `field_name`/MSG02, 403 MSG62/MSG08 and 409 are documented. The 409 at yaml:939 names no code and leaves out MSG40; 503 is missing (Issues 2, 5). |
-| 3 | `PUT …/issues/{issueKey}/solution-draft` | PARTIAL | 204/400/401/403 are documented; 503 is missing (Issue 2). |
-| 4 | `POST …/solution-rewrites` (five → five; 503 MSG68) | PASS | 200/400/401/403/503 are documented. Minor: the 503 text at yaml:995 names only MSG68, but a JWKS failure gives 503 MSG06 (Issue 7). |
-| 5 | `GET …/issues/{issueKey}/panel` → linked, ticket status, Draft, may open, search allowed | PARTIAL | `IssuePanel {linked, ticketStatus, hasDraft, mayOpenForm, canSearch}` matches `IssuePanelResponse.java`. Responses at yaml:1008-1019 have only 200/400/401: 403 and 503 are missing (Issues 1, 2). |
-| 6 | `GET …/tickets/search?q=` (503 MSG06) | PARTIAL | The `q` limits (1..200), at most 20 results and 503 are documented. The 403 text at yaml:1052 is wrong (Issue 3). |
-| 7 | `GET …/tickets/{ticketId}` (403 MSG08) | PARTIAL | The path parameter is named `ticketUuid` (same URL template). The 403 text at yaml:1090 leaves out MSG62, and 503 is missing (Issues 2, 4). |
-| 8 | `npm run generate:api` leaves no diff | PASS | Run on 2026-11-13: `git status` clean under `frontend/`. |
-| 9 | `TSOLVE_STUB_AI` in `.env.example` | PASS | `.env.example` (added in f16c8a02, later reworded). |
+| # | Attempt-1 issue | Status | Evidence at HEAD |
+|---|-----------------|--------|------------------|
+| 1 | `openSolutionForm` / `getIssuePanel` had no 403 | Fixed | `tsolve-api.yaml:899`, `:1055` (MSG08). Controllers: `JiraAppSolutionController.java:45`, `JiraAppPanelController.java:33` |
+| 2 | 503 MSG06 (JWKS) missing on five operations | Fixed | `tsolve-api.yaml:905`, `:958`, `:992`, `:1061`, `:1144`; rewrite `:1028` and search `:1104` name MSG06 as well. Controllers: `JiraAppSolutionController.java:46`, `:60`, `:73`, `:87`; `JiraAppPanelController.java:34`; `JiraAppTicketController.java:38-40`, `:51` |
+| 3 | Search 403 named MSG76 | Fixed | `tsolve-api.yaml:1098-1099`: "MSG62 … or MSG08". Matches `JiraAppTicketController.java:37` |
+| 4 | Preview 403 left out MSG62 | Fixed | `tsolve-api.yaml:1136-1139`. Matches `JiraAppTicketController.java:50` |
+| 5 | Submit 409 had no codes and left out MSG40; the Forge client counted any 409 after a retry as a success | Fixed | `tsolve-api.yaml:950-953` names MSG31 and MSG40; `JiraAppSolutionController.java:59`; `tsolveClient.js:86`; BUG-204 at `docs/bug-log.md:214` |
+| 6 | `webUrl` could be relative | Fixed | `JiraAppTicketServiceImpl.java:47`, `:54-67` refuse to start without an absolute http(s) origin. Test at `JiraAppTicketServiceImplTest.java:126-133`; BUG-205 at `docs/bug-log.md:215`; test config `backend/src/test/resources/config/application.yml:3` |
+| 7 | Rewrite 503 named only MSG68 | Fixed | `tsolve-api.yaml:1028-1030`; `JiraAppSolutionController.java:87` |
+| 8 | Names differ from the task text | Unchanged (informational) | The spec's Exposed table fixes none of these names. The backend and the Forge client use the contract's names. |
+| 9 | `SolutionSections` stricter in the contract | Unchanged (informational) | Harmless. |
+
+### Error matrix (backend source → contract)
+
+| Operation | Errors the backend can raise | Contract | Controller `@ApiResponse` |
+|-----------|------------------------------|----------|---------------------------|
+| `openSolutionForm` | 400 (bad key `@Pattern`/`@Size`, body `@NotNull`/`@Size`); 401 MSG08 (FIT entry point); 403 MSG08 (role check `JiraAppSecurityConfig.java:42-43`; no accountId / unregistered site `JiraIssueAccessImpl.java:55-60`); 503 MSG06 (JWKS `JiraAppSecurityConfig.java:45-48`). No MSG62: an unlinked or non-member viewer gets 200 `mayOpen:false` (`JiraAppSolutionServiceImpl.java` `openForm`), and the AI draft never throws (`SolutionFormAiImpl` `draft` catches every failure) | 400/401/403/503 | 400/403/503 |
+| `submitSolution` | 400 MSG01 + field / MSG02 (`SolutionFormTicketServiceImpl.java:75-83`, bean validation); 401; 403 MSG62 (`JiraIssueContext.java:22`) / MSG08 (`:23-25`, the role check, issue access); 409 MSG31 / MSG40 (`SolutionFormTicketServiceImpl.java:101-105`, `GlobalExceptionHandler.java:82-84`); 503 MSG06 (JWKS) | 400/401/403/409/503 | 400/403/409/503 |
+| `saveSolutionDraft` | 400 (key, body); 401; 403 MSG62/MSG08 (`requireMember`, issue access); 503 MSG06 (JWKS). The Draft save itself adds no 4xx | 400/401/403/503 | 400/403/503 |
+| `rewriteSolution` | 400 (body); 401; 403 MSG62 (`JiraIssueAccessImpl.java:51`) / MSG08; 503 MSG68 (`SolutionFormAiImpl` `rewrite`) / MSG06 (JWKS) | 400/401/403/503 | 400/403/503 |
+| `getIssuePanel` | 400 (key); 401; 403 MSG08 (issue access, the role check); 503 MSG06 (JWKS). An unlinked viewer gets 200 `linked:false`, not MSG62 | 400/401/403/503 | 400/403/503 |
+| `searchJiraAppTickets` | 400 MSG01/MSG02 with field `q` (`TicketSearchQuery.parse`, called at `JiraAppTicketServiceImpl.java:71`; the fixed page/size cannot give the other 400 codes); 401; 403 MSG62/MSG08 (`asUser`, `:72`); 503 MSG06 (JWKS) | 400/401/403/503 | 400/403/503 |
+| `getJiraAppTicket` | 400 (not a UUID); 401; 403 MSG62 / MSG08 (`asUser` at `JiraAppTicketServiceImpl.java:99`, not visible / not Published / no such ticket at `:109`); 503 MSG06 (JWKS) | 400/401/403/503 | 400/403/503 |
+
+No controller lists 401. The contract lists 401 for every operation. This follows the older `JiraAppQuestionController`
+(`:43-45`), which also leaves 401 out, so I do not count it as a mismatch. A 500 with MSG06
+(`GlobalExceptionHandler.java:106-112`) can happen on any operation. It is global, and the contract lists it on none.
 
 ## Traceability
 
@@ -99,115 +118,70 @@ The verdict is fail, because these gaps are exactly what this task delivers.
 trace jira-app (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008, STORY-009): 34/35 acceptance criteria have a test
 ```
 
-About AC-005.3: this task does not own it, so it does not count against this task. Its tests are in the `ticket`
-module (Task 2): `backend/src/test/java/vn/tsolve/ticket/service/impl/SolutionDraftServiceImplTest.java` and
-`backend/src/test/java/vn/tsolve/ticket/SolutionFormTicketIT.java`. Those folders are outside the module's trace
-paths, which is why the trace shows ✗. Task 2's review should confirm it.
+About AC-005.3 ("THE server SHALL show a Draft only to its creator"): this task does not own it. Its tests are in the
+`ticket` module (Task 2), outside the module's trace paths:
 
-This task owns no runtime criterion. Its deliverable is the contract, checked in the Stage 1 table above.
+- `backend/src/test/java/vn/tsolve/ticket/service/impl/SolutionDraftServiceImplTest.java:62`
+  `returnsOnlyTheCreatorsOwnDraft_AC_005_3`
+- `backend/src/test/java/vn/tsolve/ticket/SolutionFormTicketIT.java:165`
+  `keepsOneDraftPerCreatorAndIssue_AC_005_1_AC_005_3`
+
+So it does not count against this task. Task 1 owns no runtime criterion; its deliverable is the contract, checked in
+the error matrix above.
 
 ## Issues
 
 ### CRITICAL (blocks pass)
 
-1. **`openSolutionForm` and `getIssuePanel` have no 403.** See `frontend/openapi/tsolve-api.yaml:886-898` and
-   `:1008-1019`. Both operations run inside `JiraIssueAccess.inIssue`, which first calls `workspace(caller)`
-   (`backend/src/main/java/vn/tsolve/jiraapp/service/impl/JiraIssueAccessImpl.java:54-59`). That call throws
-   `JiraIssueAccessDeniedException` (403 MSG08) when the FIT has no `accountId` or comes from a Jira site with no
-   registered Workspace (design edge case 13, `TSOLVE_STUB_JIRA_SITES`). The FIT chain's `AccessDeniedHandler`
-   (`backend/src/main/java/vn/tsolve/common/security/JiraAppSecurityConfig.java:42-43`) can also answer 403 MSG08.
-   The 200 descriptions say "mayOpen false / linked false". That is true for an unlinked user, but not for an
-   unregistered site, so a client written from the contract will not expect a 403 here.
-   Fix: add `'403'` with the text "MSG08 (the Jira site has no registered Workspace, or the FIT has no user)" to both
-   operations.
-
-2. **503 MSG06 is missing on five operations.** The FIT chain answers 503 MSG06 when the JWKS cannot be fetched
-   (`JiraAppSecurityConfig.java:45-48`). The two older jira-app operations in the same file document it
-   (`tsolve-api.yaml:832-833`, `:867`), but the new operations do not:
-   - `openSolutionForm` (`:886-898`)
-   - `submitSolution` (`:917-943`)
-   - `saveSolutionDraft` (`:958-967`)
-   - `getIssuePanel` (`:1008-1019`)
-   - `getJiraAppTicket` (`:1080-1094`)
-
-   For `submitSolution` this also matters to the Forge client, whose retry rule (AC-004.4) depends on 5xx.
-   Fix: add `'503': $ref: '#/components/responses/Problem'` to each of the five.
-
-3. **The search 403 lists the wrong codes.** At `tsolve-api.yaml:1052` the text is "MSG62 (not linked) or MSG76 (a
-   member of no Project in a Department)". The search path never raises MSG76:
-   - `JiraAppTicketServiceImpl.search` (`backend/src/main/java/vn/tsolve/jiraapp/service/impl/JiraAppTicketServiceImpl.java:49-60`)
-     only filters by Department.
-   - MSG76 is a panel flag (`IssuePanel.canSearch`, `tsolve-api.yaml:2703`).
-   - The search raises MSG62 (`JiraIssueAccessImpl.java:51`) and MSG08 (`:54-59`).
-   - The controller's own annotation says "MSG62 or MSG08"
-     (`backend/src/main/java/vn/tsolve/jiraapp/controller/JiraAppTicketController.java:38`).
-
-   Fix: change the text to "MSG62 (not linked) or MSG08 (unregistered Jira site)".
-
-4. **The preview 403 leaves out MSG62.** At `tsolve-api.yaml:1090` the text is "MSG08 — not Published, not in one of
-   the viewer's Departments, or no such ticket". But `preview` runs in `access.asUser`, which throws
-   `JiraAskerNotLinkedException` (403 MSG62) for an unlinked Jira account (`JiraIssueAccessImpl.java:51`), and
-   MSG08 is also returned for an unregistered site.
-   Fix: name MSG62 as well, and the unregistered-site case.
-
-5. **The `submitSolution` 409 does not name its codes and leaves out MSG40.** At `tsolve-api.yaml:939` the only text
-   is "The issue already has a Solution Form ticket in its Project". The backend has two 409s:
-   - MSG31 (`TicketAlreadyExistsException`, mapped to 409 by `GlobalExceptionHandler.java:82-85`).
-   - MSG40 (`ProjectNotActiveException`) when the conditional insert creates no row because the Project stopped being
-     ACTIVE (`backend/src/main/java/vn/tsolve/ticket/service/impl/SolutionFormTicketServiceImpl.java:100-105`).
-
-   This is not only wording. The Forge client treats any 409 after a retry as "submitted"
-   (`jira-app/TSolve_JiraApp/src/frontend/api/tsolveClient.js:85-86`). A MSG40 after a retry would therefore show
-   MSG66 success when no ticket was created, breaking AC-004.2 and GBR-04.
-   Fix: document "MSG31 (the issue already has a ticket) or MSG40 (the Project is no longer active)". The Forge client
-   (Task 6) should count a 409 as success only when `code === 'MSG31'`.
+No issues found.
 
 ### Informational (does not block)
 
-6. **`webUrl` can be a relative path.** The schema at `tsolve-api.yaml:2734-2737` says `format: uri`. But when
-   `TSOLVE_WEB_ORIGIN` is empty (the `.env.example` default), the backend returns the relative path
-   `/tickets/<uuid>` (`JiraAppTicketServiceImpl.java:45`, `:87`). Inside Jira, "Open in T-Solve" would then point
-   at the Atlassian host. Either make the backend refuse to start without it, or say in the contract that the link
-   is empty or relative when the variable is unset.
-
-7. **The rewrite 503 text is incomplete.** `rewriteSolution` 503 (`tsolve-api.yaml:995`) names only MSG68, but a
-   JWKS failure gives 503 MSG06. The text could say "MSG68, or MSG06 when the FIT cannot be verified".
-
-8. **Names differ from the task text.** The contract differs from the Task 1 text in several names:
-   - `origin` `AI_DRAFT` instead of `AI`
-   - a `message` (MessageRef MSG67) instead of an `aiUnavailable` boolean
-   - `mayOpenForm`/`canSearch` instead of `mayOpen`/`searchAllowed`
-   - `SubmitSolutionRequest` carries `summary` as well as the sections
-   - the path parameter `{ticketUuid}` instead of `{ticketId}`
-
-   The backend DTOs and the Forge client use the contract's names, and the spec's Exposed table fixes none of these
-   names, so this is not a defect. The `{ticketUuid}` choice has a stated reason (`tsolve-api.yaml:1068`).
-
-9. **`SolutionSections` is stricter in the contract than in the backend.** The contract requires all five
-   properties, but the backend treats a missing one as empty
-   (`backend/src/main/java/vn/tsolve/ticket/dto/SolutionSections.java:14-20`). A stricter contract is harmless.
+1. **The search 503 text promises a case the backend never answers with 503.**
+   - Where: `frontend/openapi/tsolve-api.yaml:1104-1105` and
+     `backend/src/main/java/vn/tsolve/jiraapp/controller/JiraAppTicketController.java:38-40` both say "MSG06 — the
+     search is unavailable, or the Forge token could not be checked".
+   - What the backend does: when the AI embedding fails, the search falls back to keyword search
+     (`backend/src/main/java/vn/tsolve/search/query/service/impl/TicketRankingServiceImpl.java:49`). Any other search
+     failure is a 500 MSG06 (`backend/src/main/java/vn/tsolve/common/exception/GlobalExceptionHandler.java:106-112`).
+     So 503 on search means only the JWKS failure.
+   - Why it does not block: AC-008.8 is met, because the panel shows MSG06 for any failure.
+   - Fix: say "MSG06 — the Forge token could not be checked; a search failure is a 500 MSG06", or leave as is.
+2. **`TSOLVE_WEB_ORIGIN` is now a start-up requirement (BUG-205).**
+   - The backend refuses to start without an absolute http(s) origin
+     (`backend/src/main/java/vn/tsolve/jiraapp/service/impl/JiraAppTicketServiceImpl.java:54-67`).
+   - No deployment file in the repo sets it. Only `.env.example:100` and the test config
+     `backend/src/test/resources/config/application.yml:3` do, which is the same pattern as `OLLAMA_BASE_URL`.
+   - Every deployed environment must add it before this branch is deployed, or the backend will not start.
+   - The main session's `mvn verify` confirms that the Spring test contexts still start.
+3. **Names differ from the task text (attempt-1 Issue 8, unchanged).**
+   - `origin` `AI_DRAFT`, `message` MSG67 instead of `aiUnavailable`, `mayOpenForm`/`canSearch`, and `{ticketUuid}`.
+   - The spec fixes none of these names, and the backend and the Forge client agree with the contract.
 
 ## Assumptions made
 
-- **What "every error" covers.** I counted as a contract gap every status and message code the backend can actually
-  return for an operation, including:
-  - the FIT chain's 503 MSG06 (JWKS);
-  - the 403 MSG08 for an unregistered Jira site (a stand-in until platform's registry).
+- **What "every error" covers.** As in attempt 1, I counted every 4xx and 503 the backend can return for an operation:
+  - the JWKS 503 MSG06;
+  - the 403 MSG08 for an unregistered site.
 
-  If the team treats the JWKS 503 as a global response that does not need listing per operation, then Issue 2 goes
-  away. Issues 1, 3, 4 and 5 still fail the task. **Open judgment call for the user.**
-- **Renamed parameter.** I took the spec's `GET /api/v1/jira-app/tickets/{ticketId}` as met by `{ticketUuid}`,
-  because the URL template is the same and the reason is written down. **Open judgment call for the user** if the
-  spec's name was meant literally.
-- **Later commits.** I judged the contract at HEAD 221d53ca. The 21 commits after f16c8a02 changed only the session
-  (Jira link) paths and `.env.example` comments, not the jira-app paths.
+  I did not count the global 500 MSG06 or the 401, which the controllers leave out on every jira-app operation, the
+  older ones included. **Open judgment call for the user:** should the controllers list 401 too? This does not change
+  the verdict.
+- **Renamed parameter.** I took `GET /api/v1/jira-app/tickets/{ticketId}` in the spec as met by `{ticketUuid}`: the
+  URL template is the same, and the reason is written at `tsolve-api.yaml:1115`. **Open judgment call for the user**,
+  carried over from attempt 1.
+- **Tests I did not run.** The dispatcher told me not to run Maven, and to run only `generate:api` and `typecheck` in
+  `frontend/`. The pass assumes the main session's backend run passes, including
+  `JiraAppTicketServiceImplTest.refusesToStartWithoutAnAbsoluteWebOrigin_BUG_205`. It also assumes the Forge app's
+  `solutionClient.test.js` (BUG-204 test) passes. If either fails, the verdict becomes fail.
 
 ## Test Report
 
-See task-1-solution-contract-test-report.md
+See task-1-solution-contract-test-report.md (attempt 2 section)
 
-Checks I ran myself on 2026-11-13 (no Maven):
+Checks I ran myself on 2026-11-13 at HEAD ccfee5d6 (no Maven):
 
-- `npm run generate:api` in `frontend/`: completed, no diff under `src/shared/api/generated` (`git status` clean
-  apart from untracked harness artifacts that were already there).
-- `npm run typecheck` in `frontend/`: exit 0.
+- `npm run generate:api` in `frontend/`: it completed, and `git status` is clean afterwards (no diff in
+  `src/shared/api/generated`).
+- `npm run typecheck` in `frontend/`: no errors.
+- `bun harnessclaude/hooks/sdd.ts trace …`: 34/35, see Traceability.
