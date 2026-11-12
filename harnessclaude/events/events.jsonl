@@ -1200,3 +1200,14 @@
 {"ts":"2026-11-11T17:03:11.604Z","type":"feature-status","module":"identity","feature":"user-role","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-11T17:03:11.852Z","type":"feature-status","module":"identity","feature":"user-role","from":"evaluating","to":"passing"}
 {"ts":"2026-11-11T17:06:57.337Z","type":"spec-approved","module":"identity","specHash":"0ce4e92a3fcb4837874ef03c8f4606a9bae0b141abf9c1d6ba5327f60caba07a"}
+{"ts":"2026-11-12T10:17:01.963Z","type":"spec-approved","module":"tracker","specHash":"7414e4484b16b383af63cf03bcf7ffe70a5d9593a9537f0cab09c3042996d319"}
+{"ts":"2026-11-12T10:18:20.673Z","type":"spec-approved","module":"project-integration","specHash":"566581aa5e358660b5e2f4dec9d06807abdf48d7618829bae88c236ec6222580"}
+{"ts":"2026-11-12T10:18:26.280Z","type":"module-status","module":"project-integration","from":"decomposed","to":"planned"}
+{"ts":"2026-11-12T10:18:26.585Z","type":"feature-status","module":"project-integration","feature":"project-done-statuses-schema","from":null,"to":"pending"}
+{"ts":"2026-11-12T10:18:26.878Z","type":"feature-status","module":"project-integration","feature":"project-connection-test","from":null,"to":"pending"}
+{"ts":"2026-11-12T10:18:27.169Z","type":"feature-status","module":"project-integration","feature":"project-create","from":null,"to":"pending"}
+{"ts":"2026-11-12T10:18:27.471Z","type":"feature-status","module":"project-integration","feature":"project-reconnect","from":null,"to":"pending"}
+{"ts":"2026-11-12T10:18:27.769Z","type":"feature-status","module":"project-integration","feature":"project-list","from":null,"to":"pending"}
+{"ts":"2026-11-12T10:18:28.053Z","type":"feature-status","module":"project-integration","feature":"jira-integration-projects-table","from":null,"to":"pending"}
+{"ts":"2026-11-12T10:18:28.332Z","type":"feature-status","module":"project-integration","feature":"jira-integration-add-project","from":null,"to":"pending"}
+{"ts":"2026-11-12T10:18:28.615Z","type":"feature-status","module":"tracker","feature":"jira-project-read","from":null,"to":"pending"}

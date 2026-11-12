@@ -151,10 +151,18 @@
       "lastUpdated": "2026-10-22T14:21:22.576Z"
     },
     "project-integration": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:22.778Z"
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "project-done-statuses-schema": "pending",
+        "project-connection-test": "pending",
+        "project-create": "pending",
+        "project-reconnect": "pending",
+        "project-list": "pending",
+        "jira-integration-projects-table": "pending",
+        "jira-integration-add-project": "pending"
+      },
+      "lastUpdated": "2026-11-12T10:18:28.330Z"
     },
     "wiki": {
       "status": "decomposed",
@@ -398,9 +406,10 @@
         "suggestion-job": "passing",
         "suggestion-job-worker": "passing",
         "suggestion-uuid-keys": "evaluating",
-        "suggestion-comment": "passing"
+        "suggestion-comment": "passing",
+        "jira-project-read": "pending"
       },
-      "lastUpdated": "2026-11-07T16:53:12.227Z",
+      "lastUpdated": "2026-11-12T10:18:28.613Z",
       "branch": "feat/tracker",
       "repos": [
         "default"

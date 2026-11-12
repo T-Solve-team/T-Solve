@@ -34,6 +34,7 @@ results it returns to the Jira App.
 |-----------|------|-------------|
 | Jira App API | REST (Forge Remote, FIT) | Events (created, Done), panel data, search again, Solution Form actions |
 | `TicketTrackerClientFactory.getClient(trackerType)` | Java service | Read a tracker issue (+comments) for other packages, e.g. import |
+| `TrackerProjectService.findProject(projectKey)` | Java service | Read-only Workspace service-account Browse check and project statuses for `project`; returns `TrackerProjectLookup` with FOUND, NOT_FOUND, DENIED or UNAVAILABLE (STORY-013, KAN-127). `TicketTrackerClient`/`JiraClient` gain `findProject` and `projectStatuses`; callers use the service boundary only |
 
 ### Consumed
 | Dependency | Interface | Description |

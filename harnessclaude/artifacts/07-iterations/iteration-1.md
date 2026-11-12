@@ -116,6 +116,21 @@ original date window has passed. Spec: `artifacts/03-modules/triage/spec.md`; ac
 | 9 · Web — Import Preview and popup (KAN-45) | Đặng Nhật Minh | pending |
 | 10 · Trace and end-to-end check (KAN-45) | Đặng Nhật Minh | pending |
 
+### project-integration (added 2026-11-12)
+
+KAN-127, UC-16: test/add/reconnect a Jira Project and list the caller's Department Projects on screen 3.1. Spec: `artifacts/03-modules/project-integration/spec.md`; tasks: `artifacts/04-plans/project-integration/iteration-1/tasks.md`. Tracker Task 19 is the read dependency; D29's separate MSG48 catalog quick change precedes the screen.
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| tracker 19 · jira-project-read — Read a Jira project and statuses (KAN-127) | Đặng Tấn Bình | pending |
+| 1 · project-done-statuses-schema — Preserve legacy settings as JSONB (KAN-127) | Đặng Tấn Bình | pending |
+| 2 · project-connection-test — Connection test and prefill (KAN-127) | Đặng Tấn Bình | pending |
+| 3 · project-create — Project, membership and audit transaction (KAN-127) | Đặng Tấn Bình | pending |
+| 4 · project-reconnect — Reconnect the retained Project and manager membership (KAN-127) | Đặng Tấn Bình | pending |
+| 5 · project-list — Own Department Projects (KAN-127) | Đặng Tấn Bình | pending |
+| 6 · jira-integration-projects-table — Department, table and states (KAN-127) | Đặng Tấn Bình | pending |
+| 7 · jira-integration-add-project — Test and Save popup (KAN-127) | Đặng Tấn Bình | pending |
+
 ## Order — feedback first
 
 1. fe-foundation Task 7 (KAN-204): catalog synced to System_Messages of 25/10; 9.3 Audit Entry Detail removed.
@@ -192,6 +207,14 @@ original date window has passed. Spec: `artifacts/03-modules/triage/spec.md`; ac
 1. Mock mode, Project Manager: open Triage History, filter to one managed Project, Solved and a date range; the list and URL match.
 2. Open a result: the popup shows the full suggestion, Ticket source count, available Wiki links and reporter answer. Open a result without a suggestion: the popup shows a dash and No answer.
 3. Open the route as an Employee: MSG08; a forged unmanaged Project or issue key returns no data.
+
+### project-integration
+
+1. Run `mvn verify` in `backend/`: migration IT upgrades legacy VARCHAR and NULL using the shared PostgreSQL server, with no range constraint; connection/create/reconnect/list ITs prove own-Department/Workspace scope, Jira outside the write transaction, one winner per race, membership preservation and complete membership/audit rollback. Existing Active-key lookup finds the committed public id.
+2. Mock mode, sign in as Project Manager `manager@acme.test` and open Jira Integration. Confirm read-only IT Operations and the Projects table (including Removed OLD). Add project, enter a new key such as `NEW127`, Test connection → MSG47; settings are prefilled with Done-category ids and review range 3. Select a non-Done status if desired, Save → MSG05, popup closes and the new Active row appears through refreshed GET.
+3. Add `SUP`, Test connection → MSG49 below Project key with the owning Department. Add `MISSING`, Test connection → corrected MSG48 inline (the service account Browse advice). Neither adds a row. A failed Save keeps entered settings; key edit hides tested settings.
+4. Add `OLD`, Test connection → MSG47 with stored settings (or documented fallback), Save → MSG05/200; the same Project ID becomes Active, with existing members retained. Inspect backend IT evidence for replacement-manager and rollback cases, since the basic mock demo uses the same PM.
+5. Demonstrate a held request prevents double click, edits and dismissal, and idle Cancel/reopen clears the form. Admin-only keeps the placeholder; Employee gets the existing MSG08 route guard. This is an MSW journey: real browser CSRF/Workspace binding and gateway Bearer support are separate prerequisites; stored statuses still need the GBR-04 Jira App follow-up. The external DDL owner updates its done_status line to JSONB.
 
 ## Actual Outcomes
 <!-- filled at end of iteration, split by module -->
