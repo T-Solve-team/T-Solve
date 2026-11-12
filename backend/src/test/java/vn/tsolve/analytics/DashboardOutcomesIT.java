@@ -72,7 +72,7 @@ class DashboardOutcomesIT {
     @BeforeEach
     void seedScope() {
         alpha = insertDepartment("Alpha", "ACTIVE");
-        other = insertDepartment("alpha", "ACTIVE");
+        other = insertDepartment("beta", "ACTIVE");
         inactive = insertDepartment("Zulu", "DEACTIVATED");
         app = insertProject(alpha, "APP");
         appLower = insertProject(alpha, "app");
@@ -175,7 +175,7 @@ class DashboardOutcomesIT {
                         0.5,
                         List.of(
                                 new DepartmentCoverage(alpha, "Alpha", 2, 3, 2.0 / 3),
-                                new DepartmentCoverage(other, "alpha", 0, 1, 0.0),
+                                new DepartmentCoverage(other, "beta", 0, 1, 0.0),
                                 new DepartmentCoverage(inactive, "Zulu", 1, 2, 0.5))));
         assertThat(result.options().departments())
                 .extracting(KnowledgeDashboardResponse.DepartmentOption::departmentId)

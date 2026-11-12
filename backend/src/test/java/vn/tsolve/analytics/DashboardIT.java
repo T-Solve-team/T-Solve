@@ -53,7 +53,7 @@ class DashboardIT {
     private DashboardService service;
 
     private UUID alpha;
-    private UUID alphaLower;
+    private UUID beta;
     private UUID zulu;
     private UUID inactive;
     private UUID activeProject;
@@ -66,7 +66,7 @@ class DashboardIT {
     @BeforeEach
     void seed() {
         alpha = insertDepartment("Alpha", "ACTIVE");
-        alphaLower = insertDepartment("alpha", "ACTIVE");
+        beta = insertDepartment("beta", "ACTIVE");
         zulu = insertDepartment("Zulu", "ACTIVE");
         inactive = insertDepartment("Hidden", "DEACTIVATED");
         activeProject = insertProject(alpha, "APP", "ACTIVE");
@@ -82,10 +82,10 @@ class DashboardIT {
         var result = service.dashboard(user(manager, Role.ADMIN), null, null, null, null);
         assertThat(result.options().departments())
                 .extracting(DepartmentOption::departmentId)
-                .containsExactly(alpha, alphaLower, zulu);
+                .containsExactly(alpha, beta, zulu);
         assertThat(result.options().departments())
                 .extracting(DepartmentOption::name)
-                .containsExactly("Alpha", "alpha", "Zulu");
+                .containsExactly("Alpha", "beta", "Zulu");
         assertThat(result.options().projects())
                 .extracting(ProjectOption::projectId)
                 .containsExactly(activeProject, activeLowerProject, zuluProject);
