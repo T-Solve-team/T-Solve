@@ -2,6 +2,7 @@ package vn.tsolve.tracker.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,6 +16,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerStatus;
 import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
 
@@ -77,6 +79,57 @@ public class JiraClient implements TicketTrackerClient {
             }
         }
         return Optional.empty();
+    }
+
+    @Override
+    public Optional<String> findProject(JiraAccount account, String projectKey) {
+        try {
+            JsonNode project = call(() -> http(account)
+                    .get()
+                    .uri("/rest/api/3/project/{projectKey}", projectKey)
+                    .retrieve()
+                    .body(JsonNode.class));
+            return Optional.of(requiredString(project, "key"));
+        } catch (JiraRejectedException e) {
+            if (e.getStatus() == 404) {
+                return Optional.empty();
+            }
+            throw e;
+        }
+    }
+
+    @Override
+    public List<TrackerStatus> projectStatuses(JiraAccount account, String projectKey) {
+        JsonNode issueTypes = call(() -> http(account)
+                .get()
+                .uri("/rest/api/3/project/{projectKey}/statuses", projectKey)
+                .retrieve()
+                .body(JsonNode.class));
+        if (issueTypes == null || !issueTypes.isArray()) {
+            throw new JiraUnavailableException(0);
+        }
+        List<TrackerStatus> statuses = new ArrayList<>();
+        for (JsonNode issueType : issueTypes) {
+            JsonNode issueStatuses = issueType.path("statuses");
+            if (!issueStatuses.isArray()) {
+                throw new JiraUnavailableException(0);
+            }
+            for (JsonNode status : issueStatuses) {
+                String id = requiredString(status, "id");
+                String name = requiredString(status, "name");
+                boolean done =
+                        "done".equals(status.path("statusCategory").path("key").asText());
+                statuses.add(new TrackerStatus(id, name, done));
+            }
+        }
+        return List.copyOf(statuses);
+    }
+
+    private static String requiredString(JsonNode node, String field) {
+        if (node == null || !node.path(field).isTextual()) {
+            throw new JiraUnavailableException(0);
+        }
+        return requiredText(node, field);
     }
 
     // An answer Jira should never give: treated as unavailable so the job retries rather than acting on it.
