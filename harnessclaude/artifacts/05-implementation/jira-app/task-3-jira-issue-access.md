@@ -2,7 +2,7 @@
 
 **Module:** jira-app
 **Assignee:** BinhBinh13
-**Status:** evaluating
+**Status:** passing
 **Iteration:** 2
 
 > Written on 2026-11-13 from the commit and its message, after the PR review of KAN-126 found the log missing. It records what the commit holds; reasoning not in the commit message is not reconstructed.

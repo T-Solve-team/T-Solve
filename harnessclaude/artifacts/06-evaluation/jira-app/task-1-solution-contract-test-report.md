@@ -31,3 +31,21 @@ Branch `feat/KAN-126-jira-app-solution-form-v2`, head `221d53ca` (repo `default`
 ## Traceability
 
 `bun harnessclaude/hooks/sdd.ts trace jira-app STORY-001 STORY-002 STORY-004 STORY-005 STORY-006 STORY-007 STORY-008 STORY-009`: **34/35** criteria have a test. The one without is AC-005.3 (see Task 2): its tests are in `backend/src/test/java/vn/tsolve/ticket/`, outside the module's trace paths. The contract has no criterion of its own; its check is the generated client.
+
+## Attempt 2
+
+Run on 2026-11-13 by the main session, on `ccfee5d6` (the fix for attempt 1: contract and `@ApiResponse` aligned, BUG-204, BUG-205).
+
+| Check | Command (directory) | Result |
+|-------|---------------------|--------|
+| jira-app backend unit tests | `mvn test -Dtest='vn.tsolve.jiraapp.**.*Test,SolutionFormTicketServiceImplTest,SolutionDraftServiceImplTest,SolutionSectionsTest,SecurityConfigTest'` (`backend/`) | PASS. JiraAppSolutionControllerTest 12/12, JiraAppSolutionServiceImplTest 13/13, JiraAppTicketServiceImplTest 11/11 (with `refusesToStartWithoutAnAbsoluteWebOrigin_BUG_205`, 7 cases), JiraIssueAccessImplTest 7/7, SolutionFormAiImplTest 11/11, SecurityConfigTest 15/15, and the ticket and Ask suites |
+| BUG-205 test first | same, before the fix | FAIL as expected (7 of 7 new cases), then PASS after |
+| Backend format | `mvn spotless:check` (`backend/`) | PASS |
+| Forge app tests | `npx jest` (`jira-app/TSolve_JiraApp`) | PASS. 11 suites, 125 tests (with the BUG-204 test, which failed before the fix) |
+| Forge app ESLint | `npm run lint` (`jira-app/TSolve_JiraApp`) | PASS |
+| OpenAPI client | `npm run generate:api` (`frontend/`) | PASS. The regenerated `jira-app.ts` is committed; a second run leaves no diff |
+| Web format, lint, typecheck, build | `npm run format:check`, `lint`, `typecheck`, `build` (`frontend/`) | PASS |
+
+Not run: the Testcontainers ITs (Docker is not running) and the full `mvn verify` (the sandbox loopback limits of attempt 1 still apply); `forge lint`. The CI backend job is the check for them.
+
+Web tests: `npm run test` (`frontend/`) ran 1499 tests: 1490 passed, 9 failed with "Test timed out in 15000ms", in `ReviewQueuePage.test.tsx`, `JiraPullForm.test.tsx` and `ImportPreviewPage.test.tsx`. This change touches none of them. Run alone (`npx vitest run` on those three files), all 70 pass. They time out only when the whole suite runs on this machine at once.
