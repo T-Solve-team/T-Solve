@@ -303,8 +303,8 @@
     }
   },
   "identity": {
-    "specHash": "427504ea13c6c6f15d21e84b3c2ec0e56904432b80002354fb47511c137d33c9",
-    "approvedAt": "2026-11-11T18:09:23.049Z",
+    "specHash": "9a48880cdc39b99388de9f09d7ddb981ac98009a01929a935698a138c26edbf1",
+    "approvedAt": "2026-11-12T15:13:05.892Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
@@ -368,7 +368,7 @@
       "AC-001.76": "WHEN a request carries a valid Workspace session, THE backend SHALL bind the Workspace of that session (the Workspace id the session holds, after the host check of AC-001.20 has passed) through  for the rest of that request and SHALL remove the binding when the request ends, also when the endpoint throws, so the endpoint reads only that Workspace's database. A request with no valid Workspace session (anonymous, an Operator session, or the hosts  and ) SHALL get no binding, and no default Workspace is ever bound. IF a signed-in request reaches code that needs the Workspace and none is bound, THEN THE backend SHALL answer 500 with  , never another Workspace's data (decision of KAN-298:  makes the binding; AC-004.16 states the same 500 for the user list).",
       "AC-002.1": "WHEN a signed-in user sends  with a valid CSRF token, on a Workspace site or on , THE backend SHALL end the Redis session, expire the cookie  (, with  and  and no ) and answer 200 with , the Keycloak end-session URL of the realm that signed the person in (, or  on ) carrying the kept  and  set to  on the same site (K10, Q7).",
       "AC-002.2": "WHEN a session has been ended by logout, THE backend SHALL answer every later request that carries its cookie with 401 and  .",
-      "AC-002.3": "WHEN a Workspace session ends, THE backend SHALL publish exactly one  event with the Account id, the Workspace id, the session id and the reason, after the session is gone. The reason SHALL be  (AC-002.1),  (AC-001.23) or  (AC-001.27).",
+      "AC-002.3": "WHEN a Workspace session ends, THE backend SHALL publish exactly one  event with the Account id, the Workspace id, the session id and the reason, after the session is gone. The reason SHALL be  (AC-002.1),  (AC-001.23) or  (AC-001.27). The reason is also  when the Account no longer exists.",
       "AC-002.4": "WHILE a Workspace session is past a limit of AC-001.23 and no request uses it, THE backend SHALL still remove it from the shared session store and publish  with  at most 15 minutes after the limit passed.",
       "AC-002.5": "WHEN a user logs out, THE backend SHALL keep every Jira account link of the Account unchanged.",
       "AC-002.6": "IF  comes with no valid session, THEN THE backend SHALL answer 401 with   (be-foundation AC-002.4) and publish no event. The web app still clears its data and opens Login (fe-foundation AC-008.3).",
@@ -1160,22 +1160,59 @@
     }
   },
   "jira-app": {
-    "specHash": "3a593a33dcb6dfb1a6f4d48aa552a22636c1e12f36172c963fef22cd68614a5e",
-    "approvedAt": "2026-11-08T03:51:28.791Z",
+    "specHash": "fe3bdea2138f91327864601c6983a8f0d38c625302d0ee643787575d540f897e",
+    "approvedAt": "2026-11-11T13:38:05.836Z",
     "by": "user",
     "acs": {
-      "AC-010.1": "THE Jira App SHALL show a project page titled \"Ask T-Solve\" in every Jira project of the site, with a question box, a send button and the note \"Trả lời từ Solution và Wiki của T-Solve\".",
-      "AC-010.2": "IF the Jira account is not linked to an active T-Solve user, THEN THE page SHALL show MSG62 instead of the question box and SHALL still show \"Chưa được, tạo ticket\", which opens the Create dialog of AC-010.9 with nothing prefilled.",
+      "AC-010.1": "THE Jira App SHALL show a project page titled \"Ask T-Solve\" in every Jira project of the site, with a question box, a send button and the note \"Answers from T-Solve Solutions and Wiki\".",
+      "AC-010.2": "IF the Jira account is not linked to an active T-Solve user, THEN THE page SHALL show MSG62 instead of the question box and SHALL still show \"Not solved, create ticket\", which opens the Create dialog of AC-010.9 with nothing prefilled.",
       "AC-010.3": "WHEN the user sends a question, THE Jira App SHALL call  with the question and, as history, the earlier turns of the conversation — at most the last 10.",
       "AC-010.4": "WHEN the server receives a valid question from a linked user, THE server SHALL return the chatbot answer for that user — the same sources, citations and outcomes as the web Knowledge Chatbot, from every Solution and Wiki document the user may see.",
       "AC-010.5": "IF the question is empty or only white space, THEN THE Jira App SHALL show MSG01 under the box and send nothing; IF it is longer than 1,000 characters, THEN THE Jira App SHALL show MSG02 and send nothing; THE server SHALL answer 400 with the same codes whatever the Jira App checked.",
-      "AC-010.6": "WHEN the answer has outcome , THE page SHALL show its text, its sources in number order — a Wiki document as \"[n] <title> · Wiki document\", a ticket source as \"[n] Solution from a ticket\" with its Solution, never the ticket's id, link or Project (GBR-36) — and the buttons \"Đã giải quyết\" and \"Chưa được, tạo ticket\".",
-      "AC-010.7": "WHEN the answer has outcome , THE page SHALL show MSG109 and the buttons \"Đã giải quyết\" and \"Chưa được, tạo ticket\".",
-      "AC-010.8": "IF the answer request fails, does not answer within 20 seconds, or the server answers 5xx, THEN THE page SHALL show MSG06, keep the question in the box and still show \"Chưa được, tạo ticket\" (GBR-12).",
-      "AC-010.9": "WHEN the user clicks \"Chưa được, tạo ticket\", THE Jira App SHALL open Jira's Create issue dialog for the open Jira project with Summary = the first question of the conversation cut to 255 characters, Description = every question of the conversation followed by a part \"Đã thử theo T-Solve\" with the last answer and its sources labelled as in AC-010.6 (no Solution text), and the label ; the user can change every field before clicking Create.",
-      "AC-010.10": "WHEN the user clicks \"Đã giải quyết\", THE page SHALL end the conversation, show the text \"Vấn đề đã được giải quyết. Cảm ơn bạn!\" (a Jira App label, not an SRS message — user, 2026-11-07), create no issue and store nothing.",
+      "AC-010.6": "WHEN the answer has outcome , THE page SHALL show its text, its sources in number order — a Wiki document as \"[n] <title> · Wiki document\", a ticket source as \"[n] Solution from a ticket\" with its Solution, never the ticket's id, link or Project (GBR-36) — and the buttons \"Solved\" and \"Not solved, create ticket\".",
+      "AC-010.7": "WHEN the answer has outcome , THE page SHALL show MSG109 and the buttons \"Solved\" and \"Not solved, create ticket\".",
+      "AC-010.8": "IF the answer request fails, does not answer within 20 seconds, or the server answers 5xx, THEN THE page SHALL show MSG06, keep the question in the box and still show \"Not solved, create ticket\" (GBR-12).",
+      "AC-010.9": "WHEN the user clicks \"Not solved, create ticket\", THE Jira App SHALL open Jira's Create issue dialog for the open Jira project with Summary = the first question of the conversation cut to 255 characters, Description = every question of the conversation followed by a part \"Tried with T-Solve:\" with the last answer and, after \"Sources:\", its sources labelled as in AC-010.6 (no Solution text), and the label ; the user can change every field before clicking Create.",
+      "AC-010.10": "WHEN the user clicks \"Solved\", THE page SHALL end the conversation, show the text \"Your problem is solved. Thank you!\" (a Jira App label, not an SRS message — user, 2026-11-07), create no issue and store nothing.",
       "AC-010.11": "IF the FIT user is not linked to an active T-Solve user, THEN THE server SHALL answer  with 403 MSG62 and call no AI.",
       "AC-010.12": "THE Jira App SHALL keep the conversation only while the page is open; it SHALL store no question or answer itself and SHALL log no question or answer text."
+    }
+  },
+  "workspace": {
+    "specHash": "b4e6960ff13e3e11e849f691ced36b338821d85053aa0c077e909261551a49e4",
+    "approvedAt": "2026-11-11T07:22:47.369Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN an Admin sends  with an allowed name, THE system SHALL store one Department in status  under that name with leading and trailing whitespace removed and inner spaces kept, and answer 201 with its  and stored .",
+      "AC-001.2": "WHEN a Department is created, THE system SHALL create exactly one Space for it in the same transaction, with the same name as the Department, status , and no Knowledge Manager.",
+      "AC-001.3": "WHEN a Department is created, THE system SHALL write one audit entry in the same transaction with the signed-in Admin's id and email as actor, action , target type , target id the Department's , and details holding  = ,  and .",
+      "AC-001.4": "WHEN a Department is created, THE system SHALL include it in the response of .",
+      "AC-001.5": "IF the name is missing, empty or only whitespace, THEN THE system SHALL answer 400 with code MSG01 on field  and write no Department, Space or audit entry.",
+      "AC-001.6": "IF the name is not blank and as received is longer than 50 characters, THEN THE system SHALL answer 400 with code MSG02 and  50 on field  and write no Department, Space or audit entry.",
+      "AC-001.7": "IF the name after whitespace removal equals the name of an Active Department, THEN THE system SHALL answer 409 with code MSG43 on field  and write no Department, Space or audit entry.",
+      "AC-001.8": "IF the name after whitespace removal equals the name of a Deleted Department, THEN THE system SHALL answer 409 with code MSG43 on field  and write no Department, Space or audit entry.",
+      "AC-001.9": "IF the name after whitespace removal differs from an existing Department's name only in letter case, THEN THE system SHALL answer 409 with code MSG43 on field  and write no Department, Space or audit entry.",
+      "AC-001.10": "IF two requests with the same name arrive at the same moment, THEN THE system SHALL create one Department, one Space and one audit entry, answer one request with 201, and answer the other with 409 MSG43.",
+      "AC-001.11": "IF writing the Space or the audit entry fails, THEN THE system SHALL leave no Department, Space or audit entry from that request and answer 500 with code MSG06.",
+      "AC-001.12": "IF a signed-in user without the Admin role sends a create request with an allowed name, THEN THE system SHALL answer 403 with code MSG08 and write no Department, Space or audit entry.",
+      "AC-001.13": "IF a create request has no signed-in user, THEN THE system SHALL answer 401 with code MSG07 and write no Department, Space or audit entry.",
+      "AC-001.14": "WHILE a request is bound to one Workspace, THE system SHALL write only to that Workspace's database and SHALL NOT treat a Department of another Workspace as a duplicate.",
+      "AC-001.15": "IF no Workspace is bound to the request, THEN THE system SHALL answer 500 with code MSG06 and write no Department, Space or audit entry.",
+      "AC-001.16": "WHERE an audit entry has action , THE Audit Log screen SHALL label that action \"Department change\".",
+      "AC-002.1": "WHEN an Admin opens 2.2 Workspace Settings, THE web app SHALL show a \"New Department\" button and a table labelled \"Departments\" with one column, Name, listing the Active Departments from .",
+      "AC-002.2": "WHILE the Departments are loading, THE web app SHALL show the loading state in place of the table.",
+      "AC-002.3": "IF the Departments cannot be loaded, THEN THE web app SHALL show the error state with a retry action in place of the table and keep the \"New Department\" button.",
+      "AC-002.4": "WHERE the Workspace has no Active Department, THE web app SHALL show MSG04 in the table.",
+      "AC-002.5": "WHEN the Admin clicks \"New Department\", THE web app SHALL open a popup titled \"New Department\" with an empty required field \"Department name\" and the buttons Save and Cancel.",
+      "AC-002.6": "IF the field is empty or only whitespace when the Admin clicks Save, THEN THE web app SHALL show \"The Department name field is required.\" (MSG01) below the field, send no request and keep the popup open.",
+      "AC-002.7": "IF the field is not only whitespace and holds more than 50 characters when the Admin clicks Save, THEN THE web app SHALL show \"Department name must not exceed 50 characters.\" (MSG02) below the field, send no request, keep the popup open and keep every character typed.",
+      "AC-002.8": "WHEN the Admin clicks Save with an allowed name, THE web app SHALL send the name with leading and trailing whitespace removed and SHALL send one request however many times Save is clicked while it runs.",
+      "AC-002.9": "WHEN the server answers 201, THE web app SHALL close the popup, show \"Changes saved successfully.\" (MSG05) and refresh the Departments query that the table and the Add User form share, so the new Department appears in the table.",
+      "AC-002.10": "IF the server answers 409 with MSG43 on field , THEN THE web app SHALL show \"A Department with this name already exists.\" below the field and keep the popup open with the typed name.",
+      "AC-002.11": "IF the server answers any other error, THEN THE web app SHALL show the message of the returned code and keep the popup open with the typed name.",
+      "AC-002.12": "WHEN the Admin clicks Cancel or the close icon while no save is running, THE web app SHALL close the popup, send no request and show an empty field the next time the popup opens.",
+      "AC-002.13": "IF a user without the Admin role opens 2.2 Workspace Settings, THEN THE web app SHALL show the no-permission page with MSG08 and no \"New Department\" button.",
+      "AC-002.14": "WHILE a save is running, THE web app SHALL ignore Cancel and the close icon."
     }
   }
 }

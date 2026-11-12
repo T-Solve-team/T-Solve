@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset analytics:027-dashboard-period-indexes
+--changeset analytics:029-dashboard-period-indexes
 CREATE INDEX idx_review_decision_decided_at ON review_decision (decided_at);
 CREATE INDEX idx_ticket_created_at ON ticket (created_at);
 CREATE INDEX idx_chatbot_answer_created_at ON chatbot_answer (created_at);

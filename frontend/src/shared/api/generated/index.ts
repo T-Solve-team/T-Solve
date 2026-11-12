@@ -1,6 +1,7 @@
 export * from './audit-log/audit-log';
 export * from './chatbot/chatbot';
 export * from './dashboard/dashboard';
+export * from './departments/departments';
 export * from './feedback/feedback';
 export * from './import/import';
 export * from './jira-app/jira-app';
