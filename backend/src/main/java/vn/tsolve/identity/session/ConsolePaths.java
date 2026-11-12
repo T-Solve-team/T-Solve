@@ -3,8 +3,9 @@ package vn.tsolve.identity.session;
 import java.util.Set;
 
 /**
- * The {@code /api/**} endpoints an Operator session may reach on {@code admin.}: every other API request is refused
- * with MSG08 by {@link WebSessionFilter} before the endpoint runs. Entries are {@code "METHOD /path"}.
+ * The requests an Operator session may make on {@code admin.}: every other request, whatever its path, is refused with
+ * MSG08 by {@link WebSessionFilter} before the endpoint runs. Entries are {@code "METHOD /path"}, matched exactly by
+ * method and path.
  */
 public record ConsolePaths(Set<String> entries) {
 
