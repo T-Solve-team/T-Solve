@@ -303,8 +303,8 @@
     }
   },
   "identity": {
-    "specHash": "427504ea13c6c6f15d21e84b3c2ec0e56904432b80002354fb47511c137d33c9",
-    "approvedAt": "2026-11-11T18:09:23.049Z",
+    "specHash": "9a48880cdc39b99388de9f09d7ddb981ac98009a01929a935698a138c26edbf1",
+    "approvedAt": "2026-11-12T15:13:05.892Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
@@ -368,7 +368,7 @@
       "AC-001.76": "WHEN a request carries a valid Workspace session, THE backend SHALL bind the Workspace of that session (the Workspace id the session holds, after the host check of AC-001.20 has passed) through  for the rest of that request and SHALL remove the binding when the request ends, also when the endpoint throws, so the endpoint reads only that Workspace's database. A request with no valid Workspace session (anonymous, an Operator session, or the hosts  and ) SHALL get no binding, and no default Workspace is ever bound. IF a signed-in request reaches code that needs the Workspace and none is bound, THEN THE backend SHALL answer 500 with  , never another Workspace's data (decision of KAN-298:  makes the binding; AC-004.16 states the same 500 for the user list).",
       "AC-002.1": "WHEN a signed-in user sends  with a valid CSRF token, on a Workspace site or on , THE backend SHALL end the Redis session, expire the cookie  (, with  and  and no ) and answer 200 with , the Keycloak end-session URL of the realm that signed the person in (, or  on ) carrying the kept  and  set to  on the same site (K10, Q7).",
       "AC-002.2": "WHEN a session has been ended by logout, THE backend SHALL answer every later request that carries its cookie with 401 and  .",
-      "AC-002.3": "WHEN a Workspace session ends, THE backend SHALL publish exactly one  event with the Account id, the Workspace id, the session id and the reason, after the session is gone. The reason SHALL be  (AC-002.1),  (AC-001.23) or  (AC-001.27).",
+      "AC-002.3": "WHEN a Workspace session ends, THE backend SHALL publish exactly one  event with the Account id, the Workspace id, the session id and the reason, after the session is gone. The reason SHALL be  (AC-002.1),  (AC-001.23) or  (AC-001.27). The reason is also  when the Account no longer exists.",
       "AC-002.4": "WHILE a Workspace session is past a limit of AC-001.23 and no request uses it, THE backend SHALL still remove it from the shared session store and publish  with  at most 15 minutes after the limit passed.",
       "AC-002.5": "WHEN a user logs out, THE backend SHALL keep every Jira account link of the Account unchanged.",
       "AC-002.6": "IF  comes with no valid session, THEN THE backend SHALL answer 401 with   (be-foundation AC-002.4) and publish no event. The web app still clears its data and opens Login (fe-foundation AC-008.3).",

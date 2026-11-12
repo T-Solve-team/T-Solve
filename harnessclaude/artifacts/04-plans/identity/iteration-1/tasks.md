@@ -647,11 +647,12 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **What Hiếu can see or try:** a session left idle past its limit gets one `EXPIRED` event within 15 minutes (the sweep, or the next request); a Deactivated Account's next request ends its session with one `DEACTIVATED` event; two instances never publish the same event twice.
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/identity/session/SessionExpiryPublisher.java`
-- Modify: `backend/src/main/java/vn/tsolve/identity/session/{WebSessionStore,WebSessionFilter,SessionConfig}.java` (`@EnableScheduling`), `backend/src/test/resources/config/application.yml` (sweep off in tests)
-- Test: `backend/src/test/java/vn/tsolve/identity/session/{SessionEndedEventTest,SessionExpiryPublisherIT}.java`
+- Modify: `backend/src/main/java/vn/tsolve/identity/session/{WebSessionStore,WebSessionFilter,SessionConfig}.java` (SessionConfig passes the publisher to the filter; `@EnableScheduling` is already active app-wide, so it is not added), `backend/src/test/resources/config/application.yml` (`TSOLVE_SESSION_SWEEP_CRON: "-"`, sweep off in tests)
+- Test: `backend/src/test/java/vn/tsolve/identity/session/{SessionEndedEventTest,SessionExpiryPublisherIT}.java`; modify `backend/src/test/java/vn/tsolve/identity/session/WebSessionStoreIT.java` (AC-001.18 and edge 13 exclude the index key `tsolve:session:expiry`) and `SessionTestFixtures.java` (helpers `EXPIRY_INDEX`, `memberOf`, `scoreOf`)
 **Dependencies:** Task 27a merged.
 **PR / Jira:** branch `feat/KAN-312-identity-session-expiry`; a new Jira Subtask of KAN-106 (KAN-312).
-**Estimated size:** small to medium (4 production files); 11 tests (2 + 9)
+**Estimated size:** small to medium (4 production files); 12 tests (2 + 10)
+**Decided in QA (KAN-312, Hiếu 2026-11-12, all recommended):** Q1 `SessionExpiryPublisher(WebSessionStore, IdentityClock, ApplicationEventPublisher)` with `public void sweep()`, the store's package-private `boolean claim(String member)` (Lua: DEL the hash key + ZREM the member) and `end(String)` still returning `boolean` through the same Lua; Q2 `@Scheduled(cron = "${TSOLVE_SESSION_SWEEP_CRON:0 * * * * *}")`; Q3 the Account-gone path publishes `DEACTIVATED` (AC-002.3); Q4 the sweep's claim is conditional (`ZSCORE member <= now` in the same Lua), so a late `touch` never re-adds a member for an ended session; Q5 score = epoch milliseconds, due when `score < now`; Q6 member format as in the design.
 **Verification:** Tests name AC-002.3 and AC-002.4. Targeted: `cd backend && mvn -Dtest=SessionEndedEventTest -Dit.test=SessionExpiryPublisherIT verify`; full `mvn verify`.
 
 ## Task 28: Keycloak provisioning port and Admin API adapter — Jira KAN-299 (Subtask of KAN-275)

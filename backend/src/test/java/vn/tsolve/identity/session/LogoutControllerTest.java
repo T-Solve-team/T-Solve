@@ -236,6 +236,9 @@ class LogoutControllerTest extends AbstractSessionIT {
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(body(response).path("code").asText()).isEqualTo(MSG07_CODE);
         assertThat(SessionEndedRecorder.ofReason(SessionEnded.Reason.LOGOUT)).isEmpty();
+        // finding (e): the filter publishes the one EXPIRED on this very request
+        assertThat(SessionEndedRecorder.all()).hasSize(1);
+        assertThat(SessionEndedRecorder.all().get(0).event().reason()).isEqualTo(SessionEnded.Reason.EXPIRED);
         assertThat(redis.hasKey(keyOf(cookie))).isFalse();
     }
 
