@@ -75,6 +75,7 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
     private final IdentityClock clock;
     private final SecurityProblemWriter problems;
     private final OperatorAllowList operatorList;
+    private final ConsolePaths consolePaths;
 
     public WebSessionFilter(
             WebSessionStore store,
@@ -86,8 +87,10 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             AccountRoleRepository roleRows,
             IdentityClock clock,
             SecurityProblemWriter problems,
-            OperatorAllowList operatorList) {
+            OperatorAllowList operatorList,
+            ConsolePaths consolePaths) {
         this.operatorList = operatorList;
+        this.consolePaths = consolePaths;
         this.roleRows = roleRows;
         this.store = store;
         this.cookies = cookies;
@@ -189,6 +192,12 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             if (!operatorList.contains(session.operatorEmail())) {
                 end(response, cookie);
                 problems.write(request, response, HttpStatus.UNAUTHORIZED, SecurityProblemWriter.MSG135);
+                return Outcome.ANSWERED;
+            }
+            // edge 141: an Operator session reaches the Console endpoints only; the Workspace API is refused here
+            String path = request.getRequestURI();
+            if (path.startsWith("/api/") && !consolePaths.allows(request.getMethod(), path)) {
+                problems.write(request, response, HttpStatus.FORBIDDEN, SecurityProblemWriter.MSG08);
                 return Outcome.ANSWERED;
             }
             if (!"1".equals(request.getHeader(BACKGROUND_HEADER))) {

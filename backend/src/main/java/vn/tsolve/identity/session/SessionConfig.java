@@ -28,7 +28,8 @@ class SessionConfig {
             AccountRoleRepository roles,
             IdentityClock clock,
             ObjectMapper mapper,
-            OperatorAllowList operatorList) {
+            OperatorAllowList operatorList,
+            ConsolePaths consolePaths) {
         return new WebSessionFilter(
                 store,
                 cookies,
@@ -39,7 +40,14 @@ class SessionConfig {
                 roles,
                 clock,
                 new SecurityProblemWriter(mapper),
-                operatorList);
+                operatorList,
+                consolePaths);
+    }
+
+    /** What an Operator session may call on admin.: logout only, until the Console endpoints exist. */
+    @Bean
+    ConsolePaths consolePaths() {
+        return ConsolePaths.of("POST /api/v1/auth/logout");
     }
 
     @Bean

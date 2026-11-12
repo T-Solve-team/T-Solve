@@ -10,8 +10,6 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
@@ -67,40 +65,7 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
     private final IdentityClock clock;
     private final OperatorAllowList operators;
 
-    /** A handler for Workspace sites only: every Console sign-in is refused with MSG135. */
     public OidcCallbackHandler(
-            WorkspaceLookup workspaces,
-            AuthHosts hosts,
-            TenantScope scope,
-            AccountSignInService accounts,
-            WebSessionStore sessions,
-            SessionCookie sessionCookies,
-            IdentityClock clock) {
-        this(workspaces, hosts, scope, accounts, sessions, sessionCookies, clock, new OperatorAllowList(""));
-    }
-
-    @Autowired
-    public OidcCallbackHandler(
-            WorkspaceLookup workspaces,
-            AuthHosts hosts,
-            TenantScope scope,
-            AccountSignInService accounts,
-            WebSessionStore sessions,
-            SessionCookie sessionCookies,
-            IdentityClock clock,
-            ObjectProvider<OperatorAllowList> operatorList) {
-        this(
-                workspaces,
-                hosts,
-                scope,
-                accounts,
-                sessions,
-                sessionCookies,
-                clock,
-                operatorList.getIfAvailable(() -> new OperatorAllowList("")));
-    }
-
-    private OidcCallbackHandler(
             WorkspaceLookup workspaces,
             AuthHosts hosts,
             TenantScope scope,
