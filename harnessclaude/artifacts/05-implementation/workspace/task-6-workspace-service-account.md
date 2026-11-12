@@ -23,3 +23,9 @@
 
 ### Next up
 Task 7 workspace-setup-screen
+
+## Session 2026-11-13 (fix after review, attempt 1 → 2)
+
+- Review CRITICAL (D28, AC-004.1 reworded): the suggestion job binds only `WorkerTenantService`, so `current()` threw in the job. Fix: `ObjectProvider<WorkerTenantService>` binding first, else `TenantScope`. Tests: 3 × AC-004.1.
+- Verify (tree with all four fixes): `mvn -B verify` — 1594 unit + 481 IT, BUILD SUCCESS.
+- Commit: default@df3d89e

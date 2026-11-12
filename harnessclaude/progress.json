@@ -145,25 +145,25 @@
       }
     },
     "workspace": {
-      "status": "implementing",
-      "currentPhase": "implement",
+      "status": "evaluating",
+      "currentPhase": "evaluate",
       "features": {
-        "workspace-store": "evaluating",
-        "tracker-account-check": "evaluating",
+        "workspace-store": "passing",
+        "tracker-account-check": "passing",
         "jira-site-linker": "evaluating",
         "workspace-setup-api": "evaluating",
         "workspace-update-api": "evaluating",
         "workspace-service-account": "evaluating",
-        "workspace-setup-screen": "evaluating",
-        "workspace-settings-screen": "evaluating"
+        "workspace-setup-screen": "passing",
+        "workspace-settings-screen": "passing"
       },
-      "lastUpdated": "2026-11-12T17:05:09.648Z",
+      "lastUpdated": "2026-11-12T17:39:40.873Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "8e62372510b36fa32751833b66e361aa843a85e8"
+        "default": "df3d89e2afdcbba11a7be56a149efd866115a6b2"
       }
     },
     "project-integration": {

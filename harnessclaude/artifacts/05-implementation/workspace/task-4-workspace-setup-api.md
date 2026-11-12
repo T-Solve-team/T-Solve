@@ -24,3 +24,9 @@
 
 ### Next up
 Task 2 fix-up (trace ids), then Task 5 workspace-update-api
+
+## Session 2026-11-13 (fix after review, attempt 1 → 2)
+
+- Review IMPORTANT (D30, backend/AGENTS.md §4): Jira check ran inside the setup transaction. Fix: `@Transactional` removed; check first, link + persist + audit in `TransactionTemplate`. Tests: AC-001.8 one transaction, AC-001.8 refused link rolls back, AC-001.6 no transaction during the check.
+- Verify (tree with all four fixes): `mvn -B verify` — 1594 unit + 481 IT, BUILD SUCCESS.
+- Commit: default@b18a62f

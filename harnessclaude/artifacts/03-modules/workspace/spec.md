@@ -12,6 +12,7 @@ owner: BA
 |------|-------|--------|--------|
 | 2026-11-12 | STORY-001..STORY-007 | Initial spec for KAN-119 (UC-10 Workspace Setup, UC-11 Workspace Settings: company information and the Jira service account). Departments (KAN-120..KAN-123) are out of scope | KAN-119; decisions Q1–Q8 of 12/11 (user) and the self-made decisions listed in design.md "Decisions made without the user" (user delegated them, 12/11) |
 | 2026-11-12 | STORY-005 | AC-005.1 reworded: "with no menu" removed; hiding the side menu on 2.1 becomes a change request to `fe-foundation` (Required from other modules, Out of Scope) | The menu is rendered by `fe-foundation`'s `AppShell`, whose code is locked (its spec changed since approval); decision D24 (user delegated decisions, 12/11) |
+| 2026-11-12 | STORY-003, STORY-004 | AC-004.1 names the binding a worker job uses (`WorkerTenantService`, else `TenantScope`); AC-003.5 also covers a stored token that cannot be decrypted (MSG156) | Evaluation of Tasks 5 and 6: the suggestion job binds only `WorkerTenantService`, so `current()` failed in the job; an undecryptable token answered 500. Decisions D28, D29 (user delegated decisions, 12/11) |
 
 ## Requirements
 
@@ -100,8 +101,8 @@ owner: BA
   - AC-003.4: WHEN the email or the token differs from the stored one, THE backend SHALL check the resulting service
     account (new or stored email with new or stored token) against the stored site as in STORY-007 before it stores
     anything.
-  - AC-003.5: IF that check fails, THEN THE backend SHALL answer 400 with `code` `MSG156` and `params` `tracker_name`
-    = `Jira` on `serviceAccountToken` and change nothing.
+  - AC-003.5: IF that check fails, or the stored token it needs cannot be decrypted, THEN THE backend SHALL answer
+    400 with `code` `MSG156` and `params` `tracker_name` = `Jira` on `serviceAccountToken` and change nothing.
   - AC-003.6: WHILE only the company name changes, THE backend SHALL not call Jira.
   - AC-003.7: IF the request carries `jiraSiteUrl`, THEN THE backend SHALL ignore it and keep the stored site (the
     site is read-only, GBR-24).
@@ -116,7 +117,8 @@ owner: BA
 - As `tracker` and the Chatbot, I want the current Workspace's service account, so that I call Jira as the company.
 - Acceptance:
   - AC-004.1: THE `workspace` module SHALL implement `tracker`'s `JiraServiceAccount.current()`, returning the bound
-    Workspace's site address, email and decrypted token, or empty while the Workspace is not set up.
+    Workspace's site address, email and decrypted token, or empty while the Workspace is not set up. The bound
+    Workspace is the one of the worker job running (`WorkerTenantService`) or else of the web request (`TenantScope`).
   - AC-004.2: THE backend SHALL have no other `JiraServiceAccount` bean: the stand-in `ConfiguredJiraServiceAccount`
     and its `tsolve.tracker.jira.site-url`, `service-account-email`, `service-account-token` settings are removed.
   - AC-004.3: IF the stored token cannot be decrypted (wrong key or tampered value), THEN THE implementation SHALL log

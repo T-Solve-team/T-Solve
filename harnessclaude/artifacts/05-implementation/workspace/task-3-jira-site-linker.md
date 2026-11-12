@@ -20,3 +20,9 @@
 
 ### Next up
 Task 4 workspace-setup-api
+
+## Session 2026-11-13 (fix after review, attempt 1 → 2)
+
+- Review IMPORTANT: AC-007.4 redirect clause had a test that could not fail. Fix: package-private `InterimJiraSiteLinker.clientBuilder`; test "AC-007.4 the production client refuses a 302 and never requests its Location" runs the real client against a local HttpServer (fails when redirects are on, checked by flipping the setting).
+- Verify (tree with all four fixes): `mvn -B verify` — 1594 unit + 481 IT, BUILD SUCCESS.
+- Commit: default@52e87dc
