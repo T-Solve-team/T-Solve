@@ -72,7 +72,8 @@ class OidcCallbackHandlerTest {
                 sessions,
                 new SessionCookie(),
                 new IdentityClock(Clock.systemUTC()),
-                new OperatorAllowList(""));
+                new OperatorAllowList(""),
+                event -> {});
     }
 
     private static MockHttpServletRequest request() {

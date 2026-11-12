@@ -89,7 +89,8 @@ class CallbackAccountChecksTest {
                 sessions,
                 new SessionCookie(),
                 new IdentityClock(Clock.systemUTC()),
-                new OperatorAllowList(""));
+                new OperatorAllowList(""),
+                event -> {});
     }
 
     // ---- helpers

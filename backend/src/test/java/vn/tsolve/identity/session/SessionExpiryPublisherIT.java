@@ -16,14 +16,19 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockHttpServletResponse;
 import vn.tsolve.identity.session.SessionTestFixtures.MutableClock;
@@ -33,9 +38,11 @@ import vn.tsolve.identity.signin.IdentityClock;
  * Task 27b: the expiry index kept by the store and the sweep that ends due sessions with one {@code EXPIRED}
  * (AC-002.3, AC-002.4), against a real Redis and its Lua. The scheduler is off in tests; they call {@code sweep()}.
  */
+@ExtendWith(OutputCaptureExtension.class)
 class SessionExpiryPublisherIT extends AbstractExpiryIT {
 
     private static final Instant START = MutableClock.START;
+    private static final String KEY_PREFIX_ONLY = "tsolve:session:";
 
     @Autowired
     private SessionExpiryPublisher sweeper;
@@ -318,6 +325,100 @@ class SessionExpiryPublisherIT extends AbstractExpiryIT {
         assertOneExpired(cookie);
         assertThat(redis.hasKey(keyOf(cookie))).isFalse();
         assertThat(score(cookie)).isNull();
+    }
+
+    @Test
+    @DisplayName("edge 143 a dropped member logs one ERROR line with no member text, hash or id")
+    void droppedMemberLogsOneErrorWithNoMemberText_edge143(CapturedOutput output) {
+        String cookie = acmeSession();
+        redis.opsForZSet().add(EXPIRY_INDEX, "no-separator-at-all", 1);
+        redis.opsForZSet().add(EXPIRY_INDEX, "abc|not-a-uuid|not-a-uuid", 2);
+        clock.advance(Duration.ofMinutes(61));
+
+        sweeper.sweep();
+
+        List<String> errors = output.getAll()
+                .lines()
+                .filter(line -> line.contains("ERROR") && line.contains("SessionExpiryPublisher"))
+                .toList();
+        assertThat(errors).hasSize(2);
+        assertThat(errors).allSatisfy(line -> assertThat(line)
+                .doesNotContain("no-separator-at-all")
+                .doesNotContain("not-a-uuid")
+                .doesNotContain("abc|")
+                .doesNotContain(ACME.id().toString())
+                .doesNotContain(account.toString())
+                .doesNotContain(sha256Hex(cookie))
+                .doesNotContainPattern("[0-9a-f]{64}"));
+        assertThat(redis.opsForZSet().score(EXPIRY_INDEX, "no-separator-at-all"))
+                .isNull();
+        assertThat(redis.opsForZSet().score(EXPIRY_INDEX, "abc|not-a-uuid|not-a-uuid"))
+                .isNull();
+        assertOneExpired(cookie);
+    }
+
+    @Test
+    @DisplayName("edge 145 a member with an empty key hash is malformed: removed, no event, and the key"
+            + " tsolve:session: is never deleted")
+    void memberWithAnEmptyKeyHashIsMalformed_edge145() {
+        String cookie = acmeSession();
+        String emptyHash = "|" + ACME.id() + "|" + account;
+        redis.opsForZSet().add(EXPIRY_INDEX, emptyHash, 1);
+        redis.opsForValue().set(KEY_PREFIX_ONLY, "must-survive");
+        clock.advance(Duration.ofMinutes(61));
+
+        sweeper.sweep();
+
+        assertThat(redis.opsForZSet().score(EXPIRY_INDEX, emptyHash)).isNull();
+        assertThat(redis.opsForValue().get(KEY_PREFIX_ONLY)).isEqualTo("must-survive");
+        assertOneExpired(cookie);
+    }
+
+    @Test
+    @DisplayName("edge 147 a member whose key hash is not 64 hex characters is malformed: removed, no event, and"
+            + " the index key and a live session are never deleted")
+    void memberWithACorruptedKeyHashIsMalformed_edge147() {
+        String due = acmeSession();
+        clock.advance(Duration.ofMinutes(61));
+        String live = acmeSession();
+        // "expiry" would make the claim DEL tsolve:session:expiry, the whole index
+        String corrupted = "expiry|" + ACME.id() + "|" + account;
+        redis.opsForZSet().add(EXPIRY_INDEX, corrupted, 1);
+
+        sweeper.sweep();
+
+        assertThat(redis.opsForZSet().score(EXPIRY_INDEX, corrupted)).isNull();
+        assertThat(redis.hasKey(EXPIRY_INDEX)).isTrue();
+        assertThat(redis.hasKey(keyOf(live))).isTrue();
+        assertThat(score(live)).isNotNull();
+        assertOneExpired(due);
+    }
+
+    @Test
+    @DisplayName("edge 146 a listener that throws on one session does not stop the next one; its text is not logged")
+    void aThrowingListenerDoesNotStopTheNextMember_edge146(CapturedOutput output) {
+        String first = acmeSession(START, START);
+        String second = acmeSession(START, START);
+        clock.advance(Duration.ofMinutes(61));
+        AtomicInteger calls = new AtomicInteger();
+        List<SessionEnded> recorded = new CopyOnWriteArrayList<>();
+        ApplicationEventPublisher flaky = event -> {
+            if (calls.incrementAndGet() == 1) {
+                throw new IllegalStateException("secret-text");
+            }
+            recorded.add((SessionEnded) event);
+        };
+
+        new SessionExpiryPublisher(store, identityClock, flaky).sweep();
+
+        assertThat(calls.get()).isEqualTo(2);
+        assertThat(recorded).hasSize(1);
+        assertThat(recorded.get(0).reason()).isEqualTo(SessionEnded.Reason.EXPIRED);
+        for (String cookie : List.of(first, second)) {
+            assertThat(redis.hasKey(keyOf(cookie))).isFalse();
+            assertThat(score(cookie)).isNull();
+        }
+        assertThat(output.getAll()).contains("IllegalStateException").doesNotContain("secret-text");
     }
 
     @Test

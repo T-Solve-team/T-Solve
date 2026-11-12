@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Component;
 import vn.tsolve.identity.account.AccountSignInService;
 import vn.tsolve.identity.session.OperatorAllowList;
 import vn.tsolve.identity.session.SessionCookie;
+import vn.tsolve.identity.session.SessionEnded;
 import vn.tsolve.identity.session.WebSession;
 import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.port.TenantScope;
@@ -64,6 +66,7 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
     private final SessionCookie sessionCookies;
     private final IdentityClock clock;
     private final OperatorAllowList operators;
+    private final ApplicationEventPublisher events;
 
     public OidcCallbackHandler(
             WorkspaceLookup workspaces,
@@ -73,8 +76,10 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
             WebSessionStore sessions,
             SessionCookie sessionCookies,
             IdentityClock clock,
-            OperatorAllowList operators) {
+            OperatorAllowList operators,
+            ApplicationEventPublisher events) {
         this.operators = operators;
+        this.events = events;
         this.workspaces = workspaces;
         this.hosts = hosts;
         this.scope = scope;
@@ -205,7 +210,7 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
         try {
             String old = sessionCookies.valueOf(request);
             if (old != null && !old.isEmpty()) {
-                sessions.end(old);
+                replaceOld(old);
             }
             Instant now = clock.now();
             value = sessions.create(new WebSession(
@@ -230,6 +235,35 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
         Object returnTo = request.getAttribute(RETURN_TO_ATTRIBUTE);
         redirect(response, SignInStartController.filterReturnTo(returnTo instanceof String s ? s : null));
         return true;
+    }
+
+    /**
+     * Ends the old session of the same browser. A live Workspace session that this call ends publishes one LOGOUT
+     * (AC-002.3); a session already past a limit loses only its key, so the sweep publishes its EXPIRED (AC-002.4);
+     * an Operator session publishes nothing.
+     */
+    private void replaceOld(String old) {
+        WebSession prior = sessions.find(old).orElse(null);
+        if (prior != null && !sessions.isWithinLimits(prior, clock.now())) {
+            sessions.deleteKeyOnly(old);
+            return;
+        }
+        boolean ended = sessions.end(old);
+        if (ended
+                && prior != null
+                && prior.kind() == WebSession.Kind.WORKSPACE
+                && prior.workspaceId() != null
+                && prior.accountId() != null) {
+            try {
+                events.publishEvent(new SessionEnded(
+                        prior.accountId(), prior.workspaceId(), sessions.sessionIdOf(old), SessionEnded.Reason.LOGOUT));
+            } catch (RuntimeException e) {
+                // class name only: a listener's message can hold personal data
+                log.error(
+                        "A SessionEnded listener failed on a replaced session ({})",
+                        e.getClass().getName());
+            }
+        }
     }
 
     /** True when some entry of the organization claim map has an {@code id} equal to the Workspace's (Q1 A). */

@@ -1224,6 +1224,11 @@
 {"ts":"2026-11-12T16:13:57.143Z","type":"spec-approved","module":"identity","specHash":"bbdead8d9a9a7ea4b0606b5e5fcec11978375b8e71b7b7fffc6b382779ef71df"}
 {"ts":"2026-11-12T17:14:23.253Z","type":"spec-approved","module":"identity","specHash":"9a32631f5957c08bf9444fb4b3e20cf150315f33e4463fdec94213fab930b08a"}
 {"ts":"2026-11-12T18:17:41.493Z","type":"spec-approved","module":"identity","specHash":"f389a9c813ec5423cc4c0e185a4f14370e0d7506c947fd071e8c1d8e36df2adc"}
+{"ts":"2026-11-12T17:02:17.673Z","type":"spec-approved","module":"identity","specHash":"2d2a80710c883c90736d86e42c1788f9f63816540b4d64f8851b342bf3712c18"}
+{"ts":"2026-11-12T17:21:53.534Z","type":"feature-status","module":"identity","feature":"session-replaced-event","from":null,"to":"pending"}
+{"ts":"2026-11-12T17:21:53.778Z","type":"feature-status","module":"identity","feature":"session-replaced-event","from":"pending","to":"in-progress"}
+{"ts":"2026-11-12T17:21:54.088Z","type":"feature-status","module":"identity","feature":"session-replaced-event","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-12T17:21:54.348Z","type":"feature-status","module":"identity","feature":"session-replaced-event","from":"evaluating","to":"passing"}
 {"ts":"2026-11-12T16:56:54.379Z","type":"spec-approved","module":"fe-foundation","specHash":"6aef3f501ac532c7dbd01e18dadf819752bf01bb6837f8c278089960be7765d6"}
 {"ts":"2026-11-12T16:57:01.664Z","type":"feature-status","module":"fe-foundation","feature":"sign-out-logout-url","from":null,"to":"pending"}
 {"ts":"2026-11-12T17:59:35.525Z","type":"feature-status","module":"fe-foundation","feature":"sign-out-logout-url","from":"pending","to":"in-progress"}
