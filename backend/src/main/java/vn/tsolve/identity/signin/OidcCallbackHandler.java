@@ -174,9 +174,12 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
             log.error("Console sign-in failed (no email claim)");
             redirect(response, MSG06);
         } else if (!operators.contains(email)) {
+            log.info("Console sign-in refused (MSG135)");
             redirect(response, "/login?error=MSG135");
         } else {
-            startSession(request, response, WebSession.Kind.OPERATOR, null, null, email, token.getTokenValue());
+            if (startSession(request, response, WebSession.Kind.OPERATOR, null, null, email, token.getTokenValue())) {
+                log.info("Console sign-in succeeded");
+            }
         }
     }
 
@@ -190,7 +193,7 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
         startSession(request, response, WebSession.Kind.WORKSPACE, workspace, accountId, null, idToken);
     }
 
-    private void startSession(
+    private boolean startSession(
             HttpServletRequest request,
             HttpServletResponse response,
             WebSession.Kind kind,
@@ -220,12 +223,13 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
                     "Sign-in passed but the session store (Redis) failed ({})",
                     e.getClass().getName());
             redirect(response, MSG06);
-            return;
+            return false;
         }
         response.addHeader(HttpHeaders.SET_COOKIE, sessionCookies.issue(value).toString());
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
         Object returnTo = request.getAttribute(RETURN_TO_ATTRIBUTE);
         redirect(response, SignInStartController.filterReturnTo(returnTo instanceof String s ? s : null));
+        return true;
     }
 
     /** True when some entry of the organization claim map has an {@code id} equal to the Workspace's (Q1 A). */

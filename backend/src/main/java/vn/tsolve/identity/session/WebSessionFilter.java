@@ -43,7 +43,10 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
  * decides whether a session counts at all (AC-001.22); a host or kind mismatch is MSG123 and keeps the session; then
  * the 8 h / 60 min limits (MSG07); then the Account re-read in the session's Workspace (gone: MSG07, Deactivated:
  * MSG10). A dead cookie is cleared and the request goes on anonymous, so a protected endpoint answers MSG07 and a
- * public one is unaffected. No cookie: nothing happens and Redis is not called. The web chain adds it (Boot's own
+ * public one is unaffected. An Operator session (admin. only) goes: host, then the same limits (MSG07, also when the
+ * email is off the allow-list), then the allow-list read again (MSG135), then the Console list (every request off it
+ * is MSG08, whatever the spelling of its path); it ends without a {@code SessionEnded} event, since it has no Account
+ * or Workspace. No cookie: nothing happens and Redis is not called. The web chain adds it (Boot's own
  * servlet registration is disabled in {@code SessionConfig}).
  */
 public class WebSessionFilter extends OncePerRequestFilter implements SessionAuthenticationFilter {
@@ -198,9 +201,10 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
                 problems.write(request, response, HttpStatus.UNAUTHORIZED, SecurityProblemWriter.MSG135);
                 return Outcome.ANSWERED;
             }
-            // edge 141: an Operator session reaches the Console endpoints only; the Workspace API is refused here
-            String path = request.getRequestURI();
-            if (path.startsWith("/api/") && !consolePaths.allows(request.getMethod(), path)) {
+            // edge 141: an Operator session reaches the Console endpoints only. Fail closed: no test on the spelling of
+            // the path (a percent-encoded "/%61pi/" must not slip past), so anything off the Console list is refused.
+            // The backend serves no page or static file; the Console page comes from the front end's own host.
+            if (!consolePaths.allows(request.getMethod(), request.getRequestURI())) {
                 problems.write(request, response, HttpStatus.FORBIDDEN, SecurityProblemWriter.MSG08);
                 return Outcome.ANSWERED;
             }
