@@ -1219,3 +1219,5 @@
 {"ts":"2026-11-12T13:56:15.806Z","type":"feature-status","module":"tracker","feature":"jira-project-read","from":"evaluating","to":"fixing"}
 {"ts":"2026-11-12T14:29:01.485Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"eeaee68d5445f8f0f601f14f765d9fd576362a5f"}
 {"ts":"2026-11-12T14:29:01.979Z","type":"feature-status","module":"tracker","feature":"jira-project-read","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-12T14:29:27.493Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"180caebc0ea0b6e9097babbefd198cfbc40f962b"}
+{"ts":"2026-11-12T14:29:27.937Z","type":"feature-status","module":"project-integration","feature":"project-done-statuses-schema","from":"in-progress","to":"evaluating"}

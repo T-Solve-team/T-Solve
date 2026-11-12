@@ -73,7 +73,7 @@ None from the task or design.
 None found.
 
 ### Commit
-pending user agreement
+default@180caebc — `feat(project-integration): store Project Done statuses as JSONB (KAN-127)`, committed after the user agreed (12/11). The session log itself first landed in the tracker harness commit 1b6801cf (staged together by the main session).
 
 ### Blockers
 none
