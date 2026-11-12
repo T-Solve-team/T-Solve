@@ -18,6 +18,7 @@ type MessageDefinition = {
  * the Platform Console codes MSG125-MSG133 and MSG135-MSG140 (their own module); MSG20 and MSG70 (decision D2: a Solution is
  * never empty); MSG58 and MSG79 (decision D3: the Hand Over popup with MSG_NEW_2 replaces them).
  * MSG_NEW_3 (import-ticket-list D14): MSG78, asked for by the CSV import, was given to another message in v3460.
+ * Workspace v3460 (KAN-119 D2): MSG61 is active again; MSG153 and MSG156 are field messages.
  * Toast level: error when the action failed (MSG06, MSG33, MSG69), success otherwise.
  */
 export const MESSAGES = {
@@ -164,6 +165,10 @@ export const MESSAGES = {
     type: 'inline',
     text: 'Welcome to T-Solve. Enter your company information to finish setting up the Workspace.',
   },
+  MSG61: {
+    type: 'field',
+    text: 'Please enter a valid site address, e.g. https://company.atlassian.net.',
+  },
   MSG62: { type: 'inline', text: 'Sign in to T-Solve to use the T-Solve panel.' },
   MSG65: { type: 'inline', text: 'Solution submitted – awaiting review.' },
   MSG66: {
@@ -260,6 +265,14 @@ export const MESSAGES = {
   /** Provisional (KAN-237): System_Messages will number these two. */
   MSG142: { type: 'inline', text: 'No Spaces found' },
   MSG143: { type: 'inline', text: 'Not a member of any Project.' },
+  MSG153: {
+    type: 'field',
+    text: 'This {tracker_name} site is already linked to another workspace.',
+  },
+  MSG156: {
+    type: 'field',
+    text: 'The service account could not connect to {tracker_name} or lacks the required permissions.',
+  },
   /** Provisional key (decision D3) until System_Messages numbers it: the intro of 1.3.3 Hand Over Responsibilities. */
   MSG_NEW_2: {
     type: 'inline',
