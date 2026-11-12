@@ -672,7 +672,7 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **Estimated size:** medium (10 files: 5 Java, `application.yml`, the realm and the fake-Google mapping, compose, `.env.example`); 8 tests (`OpsRealmImportIT` 5, `OperatorSignInTest` start 2, `DiscoveryCheckTest` 1)
 **Verification:** Tests name AC-001.28 and .66; the AC-001.66 realm test also asserts no username/password form, brute-force detection, and SSO Max at most 8 h / Idle at most 60 min; design older row 111 and the new rows 136, 137, 138 of the 29-QA plan. Targeted: `cd backend && mvn -Dtest='OperatorSignInTest,DiscoveryCheckTest,SignInStartControllerTest' -Dit.test=OpsRealmImportIT -Dsurefire.failIfNoSpecifiedTests=false verify`; full `mvn verify`.
 
-## Task 29b: Console callback and the Operator session — KAN-TBD (new Subtask of KAN-233; split from Task 29)
+## Task 29b: Console callback and the Operator session — KAN-313 (new Subtask of KAN-233; split from Task 29)
 
 **Story:** STORY-001
 **Feature:** operator-session
@@ -685,7 +685,7 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 - Modify: `backend/src/main/java/vn/tsolve/identity/AuthSecurityConfig.java`, `backend/src/main/java/vn/tsolve/identity/signin/OidcCallbackHandler.java`, `backend/src/main/java/vn/tsolve/identity/session/WebSessionFilter.java`, `backend/src/main/java/vn/tsolve/common/security/SecurityProblemWriter.java`
 - Test: `backend/src/test/java/vn/tsolve/identity/signin/OperatorSignInTest.java` (the callback part), `backend/src/test/java/vn/tsolve/identity/session/OperatorSessionTest.java`. Fixtures (not counted): `OperatorProbeTestController` on `admin.`. Edits to existing tests: `TwoInstanceCallbackIT.answers404ToTheCallbackOnAdminAndOnAHostWithNoWorkspace_AC_001_54` drops `admin.localhost` from its `@ValueSource`; `WorkspaceBindingTest.unboundCases` loses the row "operator session on admin." (the `OperatorSessionTest` test replaces it). `WebSessionFilterTest` is not touched.
 **Dependencies:** Task 29a merged; Task 27 merged (or rebase onto it) because of `WebSessionFilter`.
-**PR / Jira:** branch `feat/KAN-233-identity-operator-session`; a new Jira Subtask of KAN-233 (key KAN-TBD, filled by a Jira card).
+**PR / Jira:** branch `feat/KAN-233-identity-operator-session`; a new Jira Subtask of KAN-233 (key KAN-313, filled by a Jira card).
 **Estimated size:** medium (6 production files); 12 tests (`OperatorSignInTest` callback 6, `OperatorSessionTest` 6)
 **Verification:** Tests name AC-001.29–.34; AC-001.32 is a two-Workspace test; design older rows 29, 35, 36, 122 and the new rows 139, 140, 141 of the 29-QA plan. Targeted: `cd backend && mvn -Dtest='OperatorSignInTest,OperatorSessionTest,WorkspaceBindingTest' -Dit.test=TwoInstanceCallbackIT verify`; full `mvn verify`.
 
