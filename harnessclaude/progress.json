@@ -154,16 +154,16 @@
         "workspace-setup-api": "evaluating",
         "workspace-update-api": "evaluating",
         "workspace-service-account": "evaluating",
-        "workspace-setup-screen": "pending",
+        "workspace-setup-screen": "evaluating",
         "workspace-settings-screen": "pending"
       },
-      "lastUpdated": "2026-11-12T15:21:33.551Z",
+      "lastUpdated": "2026-11-12T16:50:07.261Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "2969d0aeb38828091aac46ac20e13a2cbb52b1ad"
+        "default": "f802956ee9b9ef9b4cb469429e266f5ec1bc6edf"
       }
     },
     "project-integration": {

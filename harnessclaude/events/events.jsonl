@@ -1230,3 +1230,7 @@
 {"ts":"2026-11-12T09:02:24.930Z","type":"feature-status","module":"workspace","feature":"workspace-service-account","from":"pending","to":"in-progress"}
 {"ts":"2026-11-12T15:21:31.798Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"2969d0aeb38828091aac46ac20e13a2cbb52b1ad"}
 {"ts":"2026-11-12T15:21:33.569Z","type":"feature-status","module":"workspace","feature":"workspace-service-account","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-12T15:21:36.074Z","type":"feature-status","module":"workspace","feature":"workspace-setup-screen","from":"pending","to":"in-progress"}
+{"ts":"2026-11-12T16:32:12.791Z","type":"spec-approved","module":"workspace","specHash":"2337e2de6344c3cafcdf2eb8301a17bf61036f434765c5a0426bcaaa1e0bb616"}
+{"ts":"2026-11-12T16:50:06.896Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"f802956ee9b9ef9b4cb469429e266f5ec1bc6edf"}
+{"ts":"2026-11-12T16:50:07.263Z","type":"feature-status","module":"workspace","feature":"workspace-setup-screen","from":"in-progress","to":"evaluating"}

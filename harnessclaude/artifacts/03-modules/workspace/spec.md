@@ -11,6 +11,7 @@ owner: BA
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
 | 2026-11-12 | STORY-001..STORY-007 | Initial spec for KAN-119 (UC-10 Workspace Setup, UC-11 Workspace Settings: company information and the Jira service account). Departments (KAN-120..KAN-123) are out of scope | KAN-119; decisions Q1–Q8 of 12/11 (user) and the self-made decisions listed in design.md "Decisions made without the user" (user delegated them, 12/11) |
+| 2026-11-12 | STORY-005 | AC-005.1 reworded: "with no menu" removed; hiding the side menu on 2.1 becomes a change request to `fe-foundation` (Required from other modules, Out of Scope) | The menu is rendered by `fe-foundation`'s `AppShell`, whose code is locked (its spec changed since approval); decision D24 (user delegated decisions, 12/11) |
 
 ## Requirements
 
@@ -125,7 +126,7 @@ owner: BA
 - As the first Admin, I want a Setup screen, so that I enter the information right after my first sign-in.
 - Acceptance:
   - AC-005.1: WHILE a signed-in Admin's `/me` has `workspaceReady` false, THE web app SHALL open 2.1 Workspace Setup
-    with no menu and show `MSG60` (existing guard `RequireWorkspace`, fe-foundation AC-003.2).
+    and show `MSG60` (existing guard `RequireWorkspace`, fe-foundation AC-003.2).
   - AC-005.2: THE screen SHALL have the fields Company name (at most 100 characters), Jira site address (at most 200,
     placeholder `https://company.atlassian.net`), Service account email (at most 100) and Service account API token
     (masked input), all required.
@@ -181,6 +182,8 @@ owner: BA
   linked elsewhere; AC-001.9 is tested with a refusing test double. **[Interim]**
 - `/me` itself (be-foundation `me-session`): this module only implements `WorkspaceStatusLookup`.
 - The per-Project Create Issues / Modify Reporter check when a default Project is chosen (UC-13).
+- Hiding the side menu on 2.1 Workspace Setup (SRS screen 2.1 "It has no menu"): a layout change in `fe-foundation`
+  (`AppShell`), requested there.
 - `token_expiry_date`: stays null; Jira has no API to read it.
 - Turning issue creation off by leaving the service account empty (UC-11 alternative): the service account is
   required (screen 2.2).
@@ -210,6 +213,7 @@ vn.tsolve.tracker.service.JiraServiceAccount  { Optional<JiraAccount> current();
   Change requests for platform (not made here): AC-004.21 should use `MSG61` (baseline System_Messages) instead of
   `MSG156`; AC-001.20 should allow the `workspace` table's key `workspace_id`; AC-004.23 should accept a repeated
   link of the same site on the same Workspace, so a Setup whose tenant commit failed can be retried.
+- `fe-foundation`: change request — `AppShell` renders no side menu on `paths.workspaceSetup` (SRS 2.1).
 - `dashboard-audit`: `AuditService.record(...)` and `AuditAction.TRACKER_CONFIGURATION_CHANGE`.
 
 ## Definition of Done

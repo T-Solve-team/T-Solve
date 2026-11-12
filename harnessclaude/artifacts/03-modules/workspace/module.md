@@ -22,6 +22,7 @@ paths:
   - backend/src/test/resources/**
   - .env.example
   - frontend/src/shared/messages/**
+  - frontend/src/app/router/route-table.test.tsx
 ---
 
 # Module: workspace
