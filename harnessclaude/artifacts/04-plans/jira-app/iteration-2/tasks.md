@@ -37,13 +37,13 @@ mayOpen, searchAllowed}`), `GET /tickets/search?q=` (list of `{ticketId, publicI
 
 **Story:** STORY-002, STORY-004, STORY-005, STORY-006
 **Feature:** solution-ticket-storage
-**Description:** Changeset `027-jira-app-solution-draft.sql` (table `solution_draft`, partial unique index on
-`ticket (project_id, source_ticket_id) WHERE source = 'SOLUTION_FORM'`; check the dev data first). In `ticket`:
+**Description:** Changeset `027-jira-app-solution-draft.sql` (table `solution_draft`; no new ticket index — `uq_ticket_ticket_id`
+keeps one ticket per issue key, of any source, as the design decides). In `ticket`:
 `Ticket.submitted(...)`; `SolutionFormTicketService.submit(project, issueKey, title, writer, sections)` — validates
 required sections (MSG01 with `field_name`) and 10,000 code points (MSG02) unless all five are empty (Close), sets
 `review_due_date` = today in Asia/Ho_Chi_Minh + the Project's `review_range` (3 when not positive), saves
 `SOLUTION_FORM`/`PENDING_REVIEW`, maps the unique violation to 409, deletes the writer's Draft for the issue;
-`findStatus(project, issueKey)`. `SolutionDraftService.save/find/exists(creator, project, issueKey)`. IT (shared
+`findStatus(issueKey)` (the issue's ticket, any source: AC-001.2, AC-008.2). `SolutionDraftService.save/find(creator, project, issueKey)`. IT (shared
 Testcontainers base): the new ticket appears in `TicketReviewReadService.queue` with entry time and due date;
 two concurrent submits → one ticket. Tests: AC-002.5, AC-004.1, AC-004.3, AC-005.1, AC-005.3, AC-006.2.
 **Files:**

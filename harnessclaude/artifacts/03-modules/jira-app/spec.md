@@ -15,7 +15,9 @@ spec (STORY-005 to STORY-007). Terms: **user** = the active T-Solve Account link
 `principal`; **Project** = the ACTIVE T-Solve Project whose `jira_project_key` is the issue's project key;
 **member** = a user with a `project_membership` row in that Project (`MEMBER` or `PROJECT_MANAGER`); **form** = 4.1
 Solution Form; **panel** = 3.3 Issue Panel; **Solution Form ticket** = a `ticket` row with source `SOLUTION_FORM`,
-the one `ticket-review` reviews.
+the one `ticket-review` reviews; **the issue's ticket** = the `ticket` row whose Ticket ID is the issue key, whatever
+its source (a Solution Form ticket, a Jira import or a CSV import) — Ticket IDs are unique (`uq_ticket_ticket_id`), so
+an issue has at most one.
 
 ## Changelog
 
@@ -26,12 +28,13 @@ the one `ticket-review` reviews.
 | 2026-11-08 | STORY-010 | AC-010.6 reworded: sources shown like the web chatbot — "[n] <title> · Wiki document", "[n] Solution from a ticket" with its Solution, no ticket id, link or Project. AC-010.9: the sources in the Create dialog use the same labels, without Solution text | Task 5 found that AC-010.6 ("Ticket ID and title of each Solution") contradicts GBR-36 and AC-010.4: a `TicketSolutionCitation` carries only the Solution. User chose to match the web (08/11) |
 | 2026-11-08 | STORY-010 | AC-010.1: the page title is "Ask T-Solve" (was "Hỏi T-Solve"); requirement 5, the terms and the Exposed table follow. The other page labels stay Vietnamese | User decision in the Task 6 dev-site check (08/11) |
 | 2026-11-11 | STORY-001..009 | Port STORY-001 to STORY-009 from `feat/KAN-126-jira-app-solution-form` (spec of 01/11, Evidence removed, STORY-003 stays retired) and re-base them on `main`: the user and Project membership come from `project_membership`, the linked Account from the Jira App link stand-in; Finish and Close create a Solution Form ticket that enters `ticket-review`'s Review Queue (AC-004.1, AC-006.2); the panel also shows a change request (MSG64, new AC-008.7) through `ticket-review`'s feedback endpoint; panel search reuses the `search` module's ranked ticket search; the AI draft and rewrite call the `ai` module's chat client with a configured stand-in | KAN-126 resumed on a fresh branch from `main` (user, 11/11): the old branch was 61 commits behind and its ticket services predate `ticket-review`'s ticket storage. User decisions 11/11: show MSG64, reuse search, use the ai chat client, keep Evidence out |
+| 2026-11-13 | STORY-001, STORY-004, STORY-008 | New term "the issue's ticket" (the ticket whose Ticket ID is the issue key, of any source). AC-001.2 to AC-001.5, AC-004.3, AC-008.2 and AC-008.3 use it instead of "a Solution Form ticket … in that Project"; AC-004.3 names MSG31. AC-004.1, AC-006.2 and AC-008.7 still mean the Solution Form ticket | KAN-126 PR review: the criteria said only a Solution Form ticket blocks the form, but a Jira-import or CSV ticket with the same key does too, because `ticket.ticket_id` is unique across sources and Projects (changeset 003). A second ticket for the key cannot be stored, so the spec follows the schema; the code (`TicketRepository.findStatusByTicketId`) already does this. User chose to reword the spec, not filter by source (13/11) |
 
 ## Requirements
 
 ### Functional
 1. The form opens by itself when an issue of a Project moves to a Done status, only for members of that Project,
-   and only while the issue has no Solution Form ticket (STORY-001).
+   and only while the issue has no ticket of any source (STORY-001).
 2. The form edits the five-section Solution, pre-filled by a Draft, the AI draft or the issue; it can Finish, Save
    as draft or Close (STORY-002, STORY-004 to STORY-006). Finish and Close hand the ticket to `ticket-review`.
 3. Rewrite with AI shows 4.2 AI Rewrite Preview (STORY-007).
@@ -53,10 +56,10 @@ the one `ticket-review` reviews.
 - As a Ticket Resolver, I want the Solution Form to open when I move an issue of my Project to Done so that I write the Solution while I still remember it.
 - Acceptance:
   - AC-001.1: WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.
-  - AC-001.2: THE server SHALL allow the form only when the issue's project key is a Project's, the user is a member of it, and no Solution Form ticket exists for the issue in that Project.
-  - AC-001.3: IF the user is not linked to an active T-Solve Account, is not a member, or the issue already has a Solution Form ticket, THEN THE Jira App SHALL not open the form.
-  - AC-001.4: WHILE the issue is in a Done status, the user may open the form and no Solution Form ticket exists, THE panel SHALL show a button that opens the form.
-  - AC-001.5: IF an issue that already has a Solution Form ticket is reopened and moved to Done again, THEN THE Jira App SHALL not open the form (GBR-04).
+  - AC-001.2: THE server SHALL allow the form only when the issue's project key is a Project's, the user is a member of it, and the issue's ticket does not exist.
+  - AC-001.3: IF the user is not linked to an active T-Solve Account, is not a member, or the issue's ticket already exists, THEN THE Jira App SHALL not open the form.
+  - AC-001.4: WHILE the issue is in a Done status, the user may open the form and the issue's ticket does not exist, THE panel SHALL show a button that opens the form.
+  - AC-001.5: IF an issue whose ticket already exists is reopened and moved to Done again, THEN THE Jira App SHALL not open the form (GBR-04).
 
 ### STORY-002: Write the Solution
 - As a Ticket Resolver, I want to write the Solution in the five sections of the template so that it can be reviewed and reused.
@@ -72,7 +75,7 @@ the one `ticket-review` reviews.
 - Acceptance:
   - AC-004.1: WHEN the user clicks Finish with a valid Solution, THE server SHALL create exactly one Solution Form ticket in Pending review for the issue — source ticket id = the issue key, title = the issue summary, the Project, the Solution and the user as writer — that enters `ticket-review`'s Review Queue with its entry time and review due date set as `ticket-review` requires (its AC-009.11, GBR-08, GBR-10), and SHALL delete the user's Draft for the issue.
   - AC-004.2: WHEN the submission succeeds, THE Jira App SHALL close the form and show MSG66.
-  - AC-004.3: IF a Solution Form ticket already exists for the issue in its Project, THEN THE server SHALL not create a second one and SHALL answer 409.
+  - AC-004.3: IF the issue's ticket already exists, THEN THE server SHALL not create a Solution Form ticket and SHALL answer 409 MSG31.
   - AC-004.4: IF the server cannot be reached or answers 5xx, THEN THE Jira App SHALL retry automatically up to 3 times and, if it still fails, show MSG69 and keep the form open with its content.
 
 ### STORY-005: Save as draft
@@ -102,8 +105,8 @@ the one `ticket-review` reviews.
 - As a Ticket Resolver, I want the panel to show the issue's Solution status and search Published tickets so that I reuse known Solutions.
 - Acceptance:
   - AC-008.1: IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and nothing else.
-  - AC-008.2: WHILE the issue has a Solution Form ticket in Pending review, THE panel SHALL show MSG65.
-  - AC-008.3: WHILE the user has a Draft for the issue and no Solution Form ticket exists, THE panel SHALL show MSG77 with a button that reopens the form with the Draft.
+  - AC-008.2: WHILE the issue's ticket is in Pending review, THE panel SHALL show MSG65.
+  - AC-008.3: WHILE the user has a Draft for the issue and the issue's ticket does not exist, THE panel SHALL show MSG77 with a button that reopens the form with the Draft.
   - AC-008.4: WHEN the user searches, THE server SHALL return the Published tickets of the Departments the user is a member of, ranked by the `search` module's ticket search, and THE panel SHALL list title, Ticket ID and Department.
   - AC-008.5: IF the search finds nothing, THEN THE panel SHALL show MSG04.
   - AC-008.6: IF the user is not a member of any Project in the issue's Department, THEN THE panel SHALL show MSG76 instead of the search box.
