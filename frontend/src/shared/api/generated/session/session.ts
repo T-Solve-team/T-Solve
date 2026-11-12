@@ -28,6 +28,7 @@ import type {
   JiraLinkConfirmRequest,
   JiraLinkConfirmed,
   JiraLinkRequestInfo,
+  Logout200,
   ProblemResponse,
   SignInParams,
 } from '../model';
@@ -429,8 +430,8 @@ export const getLogoutUrl = () => {
 /**
  * @summary Ends the session (the backend clears the session cookie).
  */
-export const logout = async (options?: Parameters<typeof http>[1]): Promise<void> => {
-  return http<void>(getLogoutUrl(), {
+export const logout = async (options?: Parameters<typeof http>[1]): Promise<Logout200> => {
+  return http<Logout200>(getLogoutUrl(), {
     ...options,
     method: 'POST',
   });

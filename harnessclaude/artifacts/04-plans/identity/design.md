@@ -254,10 +254,16 @@ next free number, listed in `db.changelog-master.xml` (until Task 14 moves the t
 
 Expiry and `SessionEnded` (AC-002.4, HLA Q3): the key's time to live removes an unused session; the 15-minute bound
 for `SessionEnded` `EXPIRED` needs the session's Account id and Workspace id, which a Redis expiry event does not
-carry. How `EXPIRED` is produced (keyspace events on a shadow key, or a recurring worker job over an expiry-ordered
-index, the JobRunr worker of the HLA) is settled when KAN-106 (STORY-002, AC-002.4) is planned, because Task 10 only stores the session; it must keep the
-15-minute bound
-and the single event of AC-002.3. `SessionCleanup` (`@Scheduled`, every 15 minutes) goes: N API replicas must not each
+carry. Decided in planning (KAN-106, user, 2026-11-12): `EXPIRED` is produced by a `@Scheduled` sweep every minute
+over the Redis sorted set `tsolve:session:expiry` (member: the session key; score: the time the session reaches its
+limit), with the time taken from `IdentityClock`; delivery is at most once (a crash between claim and publish loses the
+event, never repeats it). The one-minute sweep keeps the 15-minute bound, and the claim rule below keeps the single
+event of AC-002.3. Claim rule (finding (a)): every end path (logout, the filter's limit path, deactivation, the sweep)
+claims the session by one atomic Lua script that runs `DEL` on the session key and `ZREM` on the index member; the claim
+holds when its `DEL` removed the key or its `ZREM` removed the member, and only the claimer publishes `SessionEnded`.
+In Task 27a the script has only the `DEL` (no index entry exists yet); Task 27b adds the index, the sweep, `EXPIRED`
+and `DEACTIVATED`. Between the two merges the filter's limit and deactivation paths end a session without an event,
+because nothing consumes `SessionEnded` yet. `SessionCleanup` (`@Scheduled`, every 15 minutes) goes: N API replicas must not each
 run it. Old states and hand-off codes (one hour after `expires_at`) are deleted by a recurring job in the `worker`
 process (JobRunr) once the tables are in the registry, and until then by a `@Scheduled` job in the web process
 (Decided in planning; the sessions are no longer part of it).
@@ -435,6 +441,10 @@ configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`; the Console on `admin
   honoured only on `admin.` or on a host that `WorkspaceLookup` resolves as a Workspace site; there is no
   `TSOLVE_API_ORIGIN` (Q10). `SecurityConfig` registers `WebSessionFilter` and `SecurityProblemWriter` gets the MSG10
   and MSG123 texts (Q11, a small edit in `common/security`, the BE lead agrees).
+- Decided in planning (KAN-106, Q4, Q5): a logout that loses the claim (a concurrent double logout) still answers 200
+  `{ logoutUrl }` with the same URL, expires the cookie and publishes nothing. A logout on a session past its limit that
+  the sweep has not yet removed publishes nothing itself and answers 401 MSG07; the filter's limit path ends the session
+  on that request and publishes the one `EXPIRED`.
 - Per request (`WebSessionFilter`, after the platform's Tenant Resolver): on `login.` or `api.` → no session
   (AC-001.22); then a host or kind mismatch → 401 MSG123 without ending the session (AC-001.20/.21/.32); then the
   8 h / 60 min limits (read from the Redis session) → end (delete the key) + 401 MSG07 (AC-001.23); then the
@@ -700,8 +710,10 @@ together; a start-up check reads both discovery documents, R11).
   keeps showing the old address until STORY-007 edits it.
 - **K9 limits.** The realm sets SSO Session Max 8 h and Idle 60 min (AC-001.63). T-Solve's own 8 h / 60 min checks
   stay in `WebSessionFilter`.
-- **Logout (K10, Q7 = A).** `logoutUrl` = Keycloak's `end_session_endpoint` + `id_token_hint` + `post_logout_redirect_uri`
-  (the site's `/login`, registered per Workspace by AC-001.58). `SessionEnded` is unchanged. fe-foundation's
+- **Logout (K10, Q7 = A).** `logoutUrl` = Keycloak's `end_session_endpoint` + `client_id` + `id_token_hint` +
+  `post_logout_redirect_uri` (the site's `/login`, registered per Workspace by AC-001.58). `client_id` is always present
+  (`tsolve-web`, or `tsolve-console` for an Operator session); `id_token_hint` is added when the session has one
+  (Q6 = A, KAN-106). `SessionEnded` is unchanged. fe-foundation's
   `useSignOut` navigates to the URL (change request KAN-198). The Operator's logout uses the `tsolve-ops` endpoint.
 - **Operators (Q1 = B).** A separate realm and client, a Google IdP without `hd`, TOTP or WebAuthn required, the
   allow-list as the backend's second check. A mistake in a tenant IdP can never grant the Console.
