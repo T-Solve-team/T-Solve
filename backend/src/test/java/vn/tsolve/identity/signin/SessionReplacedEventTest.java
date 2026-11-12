@@ -162,7 +162,7 @@ class SessionReplacedEventTest extends AbstractSessionIT {
     @Test
     @DisplayName("AC-002.3 a session replaced by a new sign-in publishes one LOGOUT with its own Workspace and Account"
             + " ids, after its key is gone")
-    void replacedWorkspaceSessionPublishesLogoutWithItsOwnIds_AC_002_3() throws Exception {
+    void replacedWorkspaceSessionPublishesLogoutWithItsOwnIds_BUG_203_AC_002_3() throws Exception {
         UUID oldAccount = UUID.randomUUID();
         String oldCookie = oldSession(BETA, oldAccount);
 

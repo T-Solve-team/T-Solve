@@ -375,6 +375,26 @@ class SessionExpiryPublisherIT extends AbstractExpiryIT {
     }
 
     @Test
+    @DisplayName("edge 147 a member whose key hash is not 64 hex characters is malformed: removed, no event, and"
+            + " the index key and a live session are never deleted")
+    void memberWithACorruptedKeyHashIsMalformed_edge147() {
+        String due = acmeSession();
+        clock.advance(Duration.ofMinutes(61));
+        String live = acmeSession();
+        // "expiry" would make the claim DEL tsolve:session:expiry, the whole index
+        String corrupted = "expiry|" + ACME.id() + "|" + account;
+        redis.opsForZSet().add(EXPIRY_INDEX, corrupted, 1);
+
+        sweeper.sweep();
+
+        assertThat(redis.opsForZSet().score(EXPIRY_INDEX, corrupted)).isNull();
+        assertThat(redis.hasKey(EXPIRY_INDEX)).isTrue();
+        assertThat(redis.hasKey(keyOf(live))).isTrue();
+        assertThat(score(live)).isNotNull();
+        assertOneExpired(due);
+    }
+
+    @Test
     @DisplayName("edge 146 a listener that throws on one session does not stop the next one; its text is not logged")
     void aThrowingListenerDoesNotStopTheNextMember_edge146(CapturedOutput output) {
         String first = acmeSession(START, START);
