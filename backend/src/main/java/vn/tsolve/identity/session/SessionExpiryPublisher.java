@@ -79,7 +79,7 @@ public class SessionExpiryPublisher {
     /** The event of an index member {@code <hash>|<workspaceId>|<accountId>}, or null if it cannot be parsed. */
     private static SessionEnded parse(String member) {
         String[] parts = member.split("\\|", -1);
-        if (parts.length != 3 || parts[0].isEmpty()) {
+        if (parts.length != 3 || !parts[0].matches("[0-9a-f]{64}")) {
             return null;
         }
         try {
