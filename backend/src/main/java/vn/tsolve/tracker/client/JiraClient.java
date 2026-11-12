@@ -161,6 +161,9 @@ public class JiraClient implements TicketTrackerClient {
         } catch (RestClientException e) {
             // No answer: connection refused, timeout, unreadable body.
             throw new JiraUnavailableException(0);
+        } catch (IllegalArgumentException e) {
+            // A malformed site URL, credential or response header leaves no usable answer.
+            throw new JiraUnavailableException(0);
         }
     }
 

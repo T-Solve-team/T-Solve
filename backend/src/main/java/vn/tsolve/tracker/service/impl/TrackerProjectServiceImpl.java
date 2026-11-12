@@ -56,7 +56,15 @@ public class TrackerProjectServiceImpl implements TrackerProjectService {
             log.warn("Jira project lookup {}: {} (Jira answered {})", projectKey, outcome, e.getStatus());
             return TrackerProjectLookup.failed(outcome);
         } catch (JiraUnavailableException e) {
-            log.warn("Jira project lookup {}: {} (Jira answered {})", projectKey, Outcome.UNAVAILABLE, e.getStatus());
+            if (e.getStatus() == 0) {
+                log.warn("Jira project lookup {}: {} (no answer)", projectKey, Outcome.UNAVAILABLE);
+            } else {
+                log.warn(
+                        "Jira project lookup {}: {} (Jira answered {})",
+                        projectKey,
+                        Outcome.UNAVAILABLE,
+                        e.getStatus());
+            }
             return TrackerProjectLookup.failed(Outcome.UNAVAILABLE);
         }
     }

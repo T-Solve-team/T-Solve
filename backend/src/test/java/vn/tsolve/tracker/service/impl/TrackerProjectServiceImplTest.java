@@ -207,7 +207,7 @@ class TrackerProjectServiceImplTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {401, 500})
+    @ValueSource(ints = {401, 500, 0})
     void logsFailureKeyStatusAndOutcomeWithoutCredentials_AC_013_11_AC_013_12(int status, CapturedOutput output) {
         given(serviceAccount.current()).willReturn(Optional.of(ACCOUNT));
         Outcome outcome;
@@ -224,8 +224,13 @@ class TrackerProjectServiceImplTest {
         assertEmptyLookup(lookup, outcome);
         verify(jira, never()).projectStatuses(any(), anyString());
         assertThat(output)
-                .contains("ITSUP", outcome.name(), Integer.toString(status))
+                .contains("ITSUP", outcome.name())
                 .doesNotContain("bot@acme.test", "secret-token", "JIRA-BODY-SECRET", ACCOUNT.siteUrl());
+        if (status == 0) {
+            assertThat(output).contains("no answer").doesNotContain("answered 0");
+        } else {
+            assertThat(output).contains(Integer.toString(status));
+        }
     }
 
     @Test

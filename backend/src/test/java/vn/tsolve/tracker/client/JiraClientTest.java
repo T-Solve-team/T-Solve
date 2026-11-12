@@ -18,20 +18,27 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerProjectLookup;
+import vn.tsolve.tracker.dto.TrackerProjectLookup.Outcome;
 import vn.tsolve.tracker.dto.TrackerStatus;
 import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
+import vn.tsolve.tracker.service.impl.TrackerProjectServiceImpl;
 
 class JiraClientTest {
 
@@ -428,7 +435,7 @@ class JiraClientTest {
     }
 
     @Test
-    void retainsExistingConnectAndReadTimeoutDefaults_AC_013_10() throws NoSuchMethodException {
+    void appliesConnectAndReadTimeoutsToTheRequestFactory_AC_013_10() throws NoSuchMethodException {
         var parameters =
                 JiraClient.class.getConstructor(Duration.class, Duration.class).getParameters();
 
@@ -436,6 +443,100 @@ class JiraClientTest {
                 .isEqualTo("${tsolve.tracker.jira.connect-timeout:5s}");
         assertThat(parameters[1].getAnnotation(Value.class).value())
                 .isEqualTo("${tsolve.tracker.jira.read-timeout:10s}");
+
+        JiraClient configuredClient = new JiraClient(Duration.ofSeconds(3), Duration.ofSeconds(7));
+        Object builder = ReflectionTestUtils.getField(configuredClient, "builder");
+        assertThat(builder).isNotNull();
+        Object factory = ReflectionTestUtils.getField(builder, "requestFactory");
+        assertThat(factory).isInstanceOf(SimpleClientHttpRequestFactory.class);
+        assertThat(ReflectionTestUtils.getField(factory, "connectTimeout")).isEqualTo(3000);
+        assertThat(ReflectionTestUtils.getField(factory, "readTimeout")).isEqualTo(7000);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void reportsSchemeLessSiteAsUnavailable_AC_013_7_AC_013_8_BUG_203(boolean statusesRead) {
+        JiraAccount account = new JiraAccount("acme.atlassian.net", ACCOUNT.email(), ACCOUNT.apiToken());
+        // The mock factory accepts relative URIs; the production factory rejects them before opening a connection.
+        JiraClient realClient = new JiraClient(Duration.ofSeconds(3), Duration.ofSeconds(7));
+
+        assertThatThrownBy(() -> {
+                    if (statusesRead) {
+                        realClient.projectStatuses(account, "ITSUP");
+                    } else {
+                        realClient.findProject(account, "ITSUP");
+                    }
+                })
+                .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                        .isZero())
+                .hasNoCause()
+                .hasMessageNotContaining(account.email())
+                .hasMessageNotContaining(account.apiToken());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "bot:automation@acme.test, false",
+        "bot:automation@acme.test, true",
+        "бот@acme.test, false",
+        "бот@acme.test, true"
+    })
+    void reportsMalformedEmailAsUnavailable_AC_013_7_AC_013_8_BUG_203(String email, boolean statusesRead) {
+        JiraAccount account = new JiraAccount(ACCOUNT.siteUrl(), email, ACCOUNT.apiToken());
+
+        assertThatThrownBy(() -> {
+                    if (statusesRead) {
+                        client.projectStatuses(account, "ITSUP");
+                    } else {
+                        client.findProject(account, "ITSUP");
+                    }
+                })
+                .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                        .isZero())
+                .hasNoCause()
+                .hasMessageNotContaining(email)
+                .hasMessageNotContaining(account.apiToken());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void reportsInvalidContentTypeAsUnavailable_AC_013_7_AC_013_8_BUG_203(boolean statusesRead) {
+        String url = ACCOUNT.siteUrl() + "/rest/api/3/project/ITSUP" + (statusesRead ? "/statuses" : "");
+        jira.expect(requestTo(url))
+                .andRespond(withStatus(HttpStatus.OK)
+                        .header("Content-Type", "not a media type")
+                        .body(statusesRead ? "[]" : "{\"key\":\"ITSUP\"}"));
+
+        assertThatThrownBy(() -> {
+                    if (statusesRead) {
+                        client.projectStatuses(ACCOUNT, "ITSUP");
+                    } else {
+                        client.findProject(ACCOUNT, "ITSUP");
+                    }
+                })
+                .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                        .isZero())
+                .hasNoCause()
+                .hasMessageNotContaining(ACCOUNT.email())
+                .hasMessageNotContaining(ACCOUNT.apiToken());
+        jira.verify();
+    }
+
+    @Test
+    void returnsUNAVAILABLEWithoutPartialProjectForInvalidContentType_AC_013_7_AC_013_8_BUG_203() {
+        JiraAccount account = ACCOUNT;
+        jira.expect(requestTo(account.siteUrl() + "/rest/api/3/project/ITSUP"))
+                .andRespond(withStatus(HttpStatus.OK)
+                        .header("Content-Type", "not a media type")
+                        .body("{\"key\":\"ITSUP\"}"));
+
+        TrackerProjectLookup lookup =
+                new TrackerProjectServiceImpl(() -> Optional.of(account), client).findProject("ITSUP");
+
+        assertThat(lookup.outcome()).isEqualTo(Outcome.UNAVAILABLE);
+        assertThat(lookup.key()).isNull();
+        assertThat(lookup.statuses()).isEmpty();
+        jira.verify();
     }
 
     private static String adf(String text) {
