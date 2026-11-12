@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -72,6 +73,7 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
     private final AccountRepository accounts;
     private final AccountRoleRepository roleRows;
     private final IdentityClock clock;
+    private final ApplicationEventPublisher events;
     private final SecurityProblemWriter problems;
 
     public WebSessionFilter(
@@ -83,7 +85,9 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             AccountRepository accounts,
             AccountRoleRepository roleRows,
             IdentityClock clock,
+            ApplicationEventPublisher events,
             SecurityProblemWriter problems) {
+        this.events = events;
         this.roleRows = roleRows;
         this.store = store;
         this.cookies = cookies;
@@ -168,7 +172,7 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
         Instant now = clock.now();
         if (Duration.between(session.lastActivityAt(), now).compareTo(WebSessionStore.IDLE_LIMIT) > 0
                 || Duration.between(session.createdAt(), now).compareTo(WebSessionStore.ABSOLUTE_LIMIT) > 0) {
-            end(response, cookie);
+            end(response, cookie, session, SessionEnded.Reason.EXPIRED);
             return Outcome.ANONYMOUS;
         }
         Account account = null;
@@ -184,11 +188,11 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             }
         }
         if (account == null) {
-            end(response, cookie);
+            end(response, cookie, session, SessionEnded.Reason.DEACTIVATED);
             return Outcome.ANONYMOUS;
         }
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            end(response, cookie);
+            end(response, cookie, session, SessionEnded.Reason.DEACTIVATED);
             problems.write(request, response, HttpStatus.UNAUTHORIZED, SecurityProblemWriter.MSG10);
             return Outcome.ANSWERED;
         }
@@ -200,9 +204,14 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
                 new TSolveUser(account.getId(), account.getEmail(), fullName, roles), session.workspaceId(), false);
     }
 
-    private void end(HttpServletResponse response, String cookie) {
-        store.end(cookie);
+    /** Ends the session and publishes the event only if this request won the claim, after the key is gone. */
+    private void end(HttpServletResponse response, String cookie, WebSession session, SessionEnded.Reason reason) {
+        boolean claimed = store.end(cookie);
         clear(response);
+        if (claimed) {
+            events.publishEvent(
+                    new SessionEnded(session.accountId(), session.workspaceId(), store.sessionIdOf(cookie), reason));
+        }
     }
 
     private void clear(HttpServletResponse response) {
