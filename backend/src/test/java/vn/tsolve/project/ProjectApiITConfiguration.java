@@ -1,9 +1,9 @@
 package vn.tsolve.project;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -25,16 +25,25 @@ public class ProjectApiITConfiguration {
     }
 
     public static class FakeTrackerProjectService implements TrackerProjectService {
-        private final Map<String, TrackerProjectLookup> stubs = new HashMap<>();
-        private final List<String> requested = new ArrayList<>();
+        private static final Runnable NOTHING = () -> {};
+
+        private final Map<String, TrackerProjectLookup> stubs = new ConcurrentHashMap<>();
+        private final List<String> requested = new CopyOnWriteArrayList<>();
+        private volatile Runnable hook = NOTHING;
 
         public void stub(String key, TrackerProjectLookup lookup) {
             stubs.put(key, lookup);
         }
 
+        /** Runs during the Jira read, outside any transaction: a race barrier or a concurrent change. */
+        public void beforeAnswer(Runnable hook) {
+            this.hook = hook;
+        }
+
         public void reset() {
             stubs.clear();
             requested.clear();
+            hook = NOTHING;
         }
 
         public List<String> calls() {
@@ -47,6 +56,7 @@ public class ProjectApiITConfiguration {
                 throw new AssertionError("Jira called inside a transaction");
             }
             requested.add(key);
+            hook.run();
             return stubs.getOrDefault(key, TrackerProjectLookup.failed(Outcome.NOT_FOUND));
         }
     }

@@ -1,19 +1,31 @@
 package vn.tsolve.project.service.impl;
 
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.regex.Pattern;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import vn.tsolve.common.audit.AuditAction;
+import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
+import vn.tsolve.common.exception.FieldMessageCodeException;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.identity.signin.port.TenantScope;
+import vn.tsolve.project.dto.CreateProjectRequest;
 import vn.tsolve.project.dto.ProjectConnectionTestRequest;
 import vn.tsolve.project.dto.ProjectConnectionTestResponse;
+import vn.tsolve.project.dto.ProjectResponse;
+import vn.tsolve.project.dto.ProjectSaveResult;
 import vn.tsolve.project.entity.Project;
 import vn.tsolve.project.entity.ProjectStatus;
 import vn.tsolve.project.exception.ProjectAccessDeniedException;
@@ -23,6 +35,7 @@ import vn.tsolve.project.repository.ProjectLinkRepository.CallerDepartment;
 import vn.tsolve.project.repository.ProjectLinkRepository.Link;
 import vn.tsolve.project.repository.ProjectRepository;
 import vn.tsolve.project.service.ProjectService;
+import vn.tsolve.tracker.dto.TrackerProjectLookup;
 import vn.tsolve.tracker.dto.TrackerProjectLookup.Outcome;
 import vn.tsolve.tracker.dto.TrackerStatus;
 import vn.tsolve.tracker.service.TrackerProjectService;
@@ -31,58 +44,48 @@ import vn.tsolve.tracker.service.TrackerProjectService;
 public class ProjectServiceImpl implements ProjectService {
 
     private static final Pattern KEY_FORMAT = Pattern.compile("[A-Z][A-Z0-9_]*");
+    private static final BigDecimal MAX_REVIEW_RANGE = BigDecimal.valueOf(Integer.MAX_VALUE);
     private static final String MSG48 = "MSG48";
     private static final String TRACKER_NAME = "Jira";
+    private static final String DONE_STATUS_IDS = "doneStatusIds";
+    private static final String REVIEW_RANGE = "reviewRange";
 
     private final ProjectRepository projectRepository;
     private final ProjectLinkRepository links;
     private final TrackerProjectService tracker;
     private final TenantScope scope;
+    private final AuditService audit;
+    private final TransactionTemplate writeTransaction;
 
     public ProjectServiceImpl(
             ProjectRepository projectRepository,
             ProjectLinkRepository links,
             TrackerProjectService tracker,
-            TenantScope scope) {
+            TenantScope scope,
+            AuditService audit,
+            PlatformTransactionManager transactionManager) {
         this.projectRepository = projectRepository;
         this.links = links;
         this.tracker = tracker;
         this.scope = scope;
+        this.audit = audit;
+        this.writeTransaction = new TransactionTemplate(transactionManager);
     }
+
+    /** The caller, their own eligible Department and the normalised key, checked in the AC-007.8 order. */
+    private record CheckedKey(UUID caller, CallerDepartment department, String key) {}
 
     @Override
     public ProjectConnectionTestResponse testConnection(ProjectConnectionTestRequest request) {
-        scope.currentWorkspaceId(); // throws when no Workspace is bound: 500 MSG06 before any read (AC-007.5)
-        UUID caller = TSolveUser.current()
-                .orElseThrow(ProjectAccessDeniedException::new)
-                .id();
-        CallerDepartment department = links.findCallerDepartment(caller).orElseThrow(ProjectAccessDeniedException::new);
-        String key = request.jiraProjectKey().strip().toUpperCase(Locale.ROOT);
-        if (!KEY_FORMAT.matcher(key).matches()) {
-            throw new BusinessRuleException(MSG48, Map.of("tracker_name", TRACKER_NAME));
-        }
+        CheckedKey checked = checkScopeAndKey(request.jiraProjectKey());
+        UUID caller = checked.caller();
+        CallerDepartment department = checked.department();
+        String key = checked.key();
 
         Optional<Link> requested = links.findLink(key);
         requested.ifPresent(link -> refuseIfLinked(link, department, caller));
-        var jira = tracker.findProject(key);
-        if (jira.outcome() == Outcome.UNAVAILABLE) {
-            throw new ProjectTrackerUnavailableException();
-        }
-        if (jira.outcome() != Outcome.FOUND) {
-            throw new BusinessRuleException(MSG48, Map.of("tracker_name", TRACKER_NAME));
-        }
-
-        Optional<Link> linked = requested;
-        if (!key.equals(jira.key())) {
-            Optional<Link> canonical = links.findLink(jira.key());
-            canonical.ifPresent(link -> {
-                refuseIfLinked(link, department, caller);
-                if (requested.isPresent() && !requested.get().projectId().equals(link.projectId())) {
-                    throw conflict(link.departmentName());
-                }
-            });
-            linked = canonical.or(() -> requested);
-        }
+        TrackerProjectLookup jira = readJiraProject(key);
+        Optional<Link> linked = checkCanonicalLink(key, jira.key(), requested, links::findLink, department, caller);
 
         List<String> doneIds = jira.statuses().stream()
                 .filter(TrackerStatus::done)
@@ -97,6 +100,142 @@ public class ProjectServiceImpl implements ProjectService {
                 linked.map(Link::projectId).orElse(null),
                 selected.isEmpty() ? doneIds : List.copyOf(selected),
                 linked.map(Link::reviewRange).orElse(3));
+    }
+
+    @Override
+    public ProjectSaveResult create(CreateProjectRequest request) {
+        CheckedKey checked = checkScopeAndKey(request.jiraProjectKey());
+        UUID caller = checked.caller();
+        String key = checked.key();
+        int range = requireWholeRange(request.reviewRange());
+        List<String> ids = requireSelectedIds(request.doneStatusIds());
+
+        Optional<Link> requested = links.findLink(key);
+        requested.ifPresent(link -> refuseIfLinked(link, checked.department(), caller));
+        TrackerProjectLookup jira = readJiraProject(key); // always a fresh read, outside any transaction (AC-002.18)
+        checkCanonicalLink(key, jira.key(), requested, links::findLink, checked.department(), caller);
+        List<String> available = jira.statuses().stream().map(TrackerStatus::id).toList();
+        if (!available.containsAll(ids)) {
+            throw required(DONE_STATUS_IDS);
+        }
+
+        return writeTransaction.execute(tx -> {
+            CallerDepartment department =
+                    links.findCallerDepartment(caller).orElseThrow(ProjectAccessDeniedException::new);
+            Optional<Link> link = recheckLinks(key, jira.key(), department, caller);
+            if (link.isPresent()) {
+                // Reconnect arrives with Task 4; until then a 500, never a pretended success.
+                throw new UnsupportedOperationException("Reconnecting a Removed Project is not implemented yet");
+            }
+            UUID id = links.insertProject(department.departmentId(), jira.key(), ids, range)
+                    .orElseThrow(() -> lostInsert(jira.key()));
+            links.upsertManager(caller, id);
+            ProjectResponse saved = links.readProject(id).orElseThrow();
+            audit.record(AuditAction.TRACKER_CONFIGURATION_CHANGE, "PROJECT", id, auditDetails("CREATE", saved));
+            return new ProjectSaveResult(saved, true);
+        });
+    }
+
+    private CheckedKey checkScopeAndKey(String requestedKey) {
+        scope.currentWorkspaceId(); // throws when no Workspace is bound: 500 MSG06 before any read (AC-007.5)
+        UUID caller = TSolveUser.current()
+                .orElseThrow(ProjectAccessDeniedException::new)
+                .id();
+        CallerDepartment department = links.findCallerDepartment(caller).orElseThrow(ProjectAccessDeniedException::new);
+        String key = requestedKey.strip().toUpperCase(Locale.ROOT);
+        if (!KEY_FORMAT.matcher(key).matches()) {
+            throw new BusinessRuleException(MSG48, Map.of("tracker_name", TRACKER_NAME));
+        }
+        return new CheckedKey(caller, department, key);
+    }
+
+    private TrackerProjectLookup readJiraProject(String key) {
+        TrackerProjectLookup jira = tracker.findProject(key);
+        if (jira.outcome() == Outcome.UNAVAILABLE) {
+            throw new ProjectTrackerUnavailableException();
+        }
+        if (jira.outcome() != Outcome.FOUND) {
+            throw new BusinessRuleException(MSG48, Map.of("tracker_name", TRACKER_NAME));
+        }
+        return jira;
+    }
+
+    /** The one Project the requested and canonical keys resolve to, if allowed (AC-001.19, AC-001.21, AC-001.22). */
+    private Optional<Link> checkCanonicalLink(
+            String key,
+            String canonicalKey,
+            Optional<Link> requested,
+            Function<String, Optional<Link>> find,
+            CallerDepartment department,
+            UUID caller) {
+        if (key.equals(canonicalKey)) {
+            return requested;
+        }
+        Optional<Link> canonical = find.apply(canonicalKey);
+        canonical.ifPresent(link -> {
+            refuseIfLinked(link, department, caller);
+            if (requested.isPresent() && !requested.get().projectId().equals(link.projectId())) {
+                throw conflict(link.departmentName());
+            }
+        });
+        return canonical.or(() -> requested);
+    }
+
+    /** Inside the write transaction: lock and re-read both links, then apply the same rules (AC-002.17). */
+    private Optional<Link> recheckLinks(String key, String canonicalKey, CallerDepartment department, UUID caller) {
+        Optional<Link> requested = lockedLink(key);
+        requested.ifPresent(link -> refuseIfLinked(link, department, caller));
+        return checkCanonicalLink(key, canonicalKey, requested, this::lockedLink, department, caller);
+    }
+
+    // FOR UPDATE does not re-read the joined manager rows, so the link is read again once the row is locked.
+    private Optional<Link> lockedLink(String key) {
+        Optional<Link> found = links.findLink(key);
+        if (found.isEmpty()) {
+            return found;
+        }
+        links.lockProject(found.get().projectId());
+        return links.findLink(key);
+    }
+
+    private BusinessRuleException lostInsert(String canonicalKey) {
+        return links.findLink(canonicalKey)
+                .map(winner -> conflict(winner.departmentName()))
+                .orElseThrow(() -> new IllegalStateException("Project insert skipped without a conflicting row"));
+    }
+
+    private static int requireWholeRange(BigDecimal range) {
+        if (range == null) {
+            throw required(REVIEW_RANGE);
+        }
+        if (range.stripTrailingZeros().scale() > 0
+                || range.compareTo(BigDecimal.ONE) < 0
+                || range.compareTo(MAX_REVIEW_RANGE) > 0) {
+            throw new FieldMessageCodeException(HttpStatus.BAD_REQUEST, "MSG44", Map.of(), REVIEW_RANGE);
+        }
+        return range.intValueExact();
+    }
+
+    /** Exact ids, never trimmed; duplicates collapse in first-seen order (AC-002.15). */
+    private static List<String> requireSelectedIds(List<String> ids) {
+        if (ids == null || ids.isEmpty() || ids.stream().anyMatch(id -> id == null || id.isBlank())) {
+            throw required(DONE_STATUS_IDS);
+        }
+        return List.copyOf(new LinkedHashSet<>(ids));
+    }
+
+    private static FieldMessageCodeException required(String field) {
+        return new FieldMessageCodeException(HttpStatus.BAD_REQUEST, "MSG01", Map.of("field_name", field), field);
+    }
+
+    private static Map<String, Object> auditDetails(String operation, ProjectResponse saved) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("operation", operation);
+        details.put("jiraProjectKey", saved.jiraProjectKey());
+        details.put("departmentId", saved.departmentId());
+        details.put(DONE_STATUS_IDS, saved.doneStatusIds());
+        details.put(REVIEW_RANGE, saved.reviewRange());
+        return details;
     }
 
     private void refuseIfLinked(Link link, CallerDepartment department, UUID caller) {

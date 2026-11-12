@@ -7,8 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
+import vn.tsolve.project.dto.ProjectResponse;
 
 @Repository
 public class ProjectLinkRepository {
@@ -79,6 +81,72 @@ public class ProjectLinkRepository {
                                 rs.getBoolean("manager_protected")))
                 .stream()
                 .findFirst();
+    }
+
+    /** Row lock for the write transaction; a caller re-reads the link afterwards, since joined rows are not re-read. */
+    public void lockProject(UUID projectId) {
+        jdbc.query(
+                "SELECT public_id FROM project WHERE public_id = :id FOR UPDATE",
+                Map.of("id", projectId),
+                (rs, rowNum) -> rs.getObject(1, UUID.class));
+    }
+
+    /** Empty when another Project already holds the key: a lost insert, never turned into a reconnect (D22). */
+    public Optional<UUID> insertProject(
+            long departmentId, String jiraProjectKey, List<String> doneStatusIds, int reviewRange) {
+        return jdbc
+                .query(
+                        """
+                        INSERT INTO project (department_id, jira_project_key, done_status, review_range, status, field_mapping)
+                        VALUES (:departmentId, :key, CAST(:ids AS jsonb), :range, 'ACTIVE', NULL)
+                        ON CONFLICT (jira_project_key) DO NOTHING
+                        RETURNING public_id
+                        """,
+                        new MapSqlParameterSource()
+                                .addValue("departmentId", departmentId)
+                                .addValue("key", jiraProjectKey)
+                                .addValue("ids", writeDoneStatusIds(doneStatusIds))
+                                .addValue("range", reviewRange),
+                        (rs, rowNum) -> rs.getObject(1, UUID.class))
+                .stream()
+                .findFirst();
+    }
+
+    public void upsertManager(UUID callerId, UUID projectId) {
+        jdbc.update("""
+                INSERT INTO project_membership (user_id, project_id, role_in_project)
+                VALUES (:callerId, :id, 'PROJECT_MANAGER')
+                ON CONFLICT (user_id, project_id) DO UPDATE SET role_in_project = 'PROJECT_MANAGER'
+                """, Map.of("callerId", callerId, "id", projectId));
+    }
+
+    public Optional<ProjectResponse> readProject(UUID projectId) {
+        return jdbc
+                .query(
+                        """
+                        SELECT p.public_id, d.public_id AS department_public_id, p.jira_project_key,
+                               p.done_status::text AS done_status, p.review_range, p.status
+                        FROM project p JOIN department d ON d.department_id = p.department_id
+                        WHERE p.public_id = :id
+                        """,
+                        Map.of("id", projectId),
+                        (rs, rowNum) -> new ProjectResponse(
+                                rs.getObject("public_id", UUID.class),
+                                rs.getObject("department_public_id", UUID.class),
+                                rs.getString("jira_project_key"),
+                                readDoneStatusIds(rs.getString("done_status")),
+                                rs.getInt("review_range"),
+                                rs.getString("status")))
+                .stream()
+                .findFirst();
+    }
+
+    private String writeDoneStatusIds(List<String> ids) {
+        try {
+            return mapper.writeValueAsString(ids);
+        } catch (JsonProcessingException error) {
+            throw new IllegalStateException("Done status ids are not serializable", error);
+        }
     }
 
     private List<String> readDoneStatusIds(String json) {
