@@ -40,13 +40,13 @@ beforeEach(() => {
 
 const box = () => screen.getByRole('textbox');
 const type = (text) => fireEvent.change(box(), { target: { value: text } });
-const send = () => fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
+const send = () => fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
 async function ask(text, answer) {
   askQuestion.mockResolvedValueOnce(answer);
   type(text);
   send();
-  await screen.findByRole('button', { name: 'Chưa được, tạo ticket' });
+  await screen.findByRole('button', { name: 'Not solved, create ticket' });
 }
 
 async function renderLinked() {
@@ -58,8 +58,8 @@ describe('AskTsolvePage', () => {
   it('AC-010.1 shows the question box, the send button and the note', async () => {
     await renderLinked();
 
-    expect(screen.getByRole('button', { name: 'Gửi' })).toBeEnabled();
-    expect(screen.getByText('Trả lời từ Solution và Wiki của T-Solve')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+    expect(screen.getByText('Answers from T-Solve Solutions and Wiki')).toBeInTheDocument();
   });
 
   it('AC-010.1 titles the project page "Ask T-Solve" through the manifest, once (BUG-182)', async () => {
@@ -76,7 +76,7 @@ describe('AskTsolvePage', () => {
 
     expect(await screen.findByText(message('MSG62'))).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Chưa được, tạo ticket' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Not solved, create ticket' }));
 
     expect(CreateIssueModal).toHaveBeenCalledWith({ context: { projectId: '10001' } });
     expect(open).toHaveBeenCalled();
@@ -121,7 +121,7 @@ describe('AskTsolvePage', () => {
     type('VPN fails');
     send();
 
-    expect(screen.getByRole('button', { name: 'Gửi' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
     expect(askQuestion).toHaveBeenCalledTimes(1);
   });
 
@@ -136,8 +136,26 @@ describe('AskTsolvePage', () => {
     expect(screen.getByText('Symptoms: VPN drops')).toBeInTheDocument();
     expect(screen.getByText('Resolution steps: Update the client')).toBeInTheDocument();
     expect(screen.queryByText(/Workaround/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Đã giải quyết' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Solved' })).toBeInTheDocument();
     expect(box()).toHaveValue('');
+  });
+
+  it('AC-010.1 shows the card heading and the box placeholder of the page design', async () => {
+    await renderLinked();
+
+    expect(screen.getByText('Ask T-Solve before creating a ticket')).toBeInTheDocument();
+    expect(box()).toHaveAttribute('placeholder', 'Describe your problem');
+  });
+
+  it('AC-010.6 lists the sources after "Sources:" and offers the buttons only under the last answer', async () => {
+    await renderLinked();
+    await ask('VPN fails', ANSWERED);
+
+    await ask('Still failing', NO_SOURCE);
+
+    expect(screen.getByText('Sources:')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Solved' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Not solved, create ticket' })).toHaveLength(1);
   });
 
   it('AC-010.7 shows MSG109 and both buttons for NO_SOURCE', async () => {
@@ -146,7 +164,7 @@ describe('AskTsolvePage', () => {
     await ask('VPN fails', NO_SOURCE);
 
     expect(screen.getByText(message('MSG109'))).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Đã giải quyết' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Solved' })).toBeInTheDocument();
   });
 
   it('AC-010.8 shows MSG06, keeps the question and still offers to create a ticket', async () => {
@@ -158,19 +176,19 @@ describe('AskTsolvePage', () => {
 
     expect(await screen.findByText(message('MSG06'))).toBeInTheDocument();
     expect(box()).toHaveValue('VPN fails');
-    expect(screen.getByRole('button', { name: 'Chưa được, tạo ticket' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Đã giải quyết' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Not solved, create ticket' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Solved' })).not.toBeInTheDocument();
   });
 
   it('AC-010.9 opens the Create dialog prefilled with the conversation', async () => {
     await renderLinked();
     await ask('VPN fails', ANSWERED);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Chưa được, tạo ticket' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Not solved, create ticket' }));
 
     const { context } = CreateIssueModal.mock.calls[0][0];
     expect(context).toMatchObject({ projectId: '10001', summary: 'VPN fails', labels: ['tsolve-asked'] });
-    expect(JSON.stringify(context.description)).toContain('Đã thử theo T-Solve:');
+    expect(JSON.stringify(context.description)).toContain('Tried with T-Solve:');
     expect(open).toHaveBeenCalled();
   });
 
@@ -178,11 +196,11 @@ describe('AskTsolvePage', () => {
     await renderLinked();
     await ask('VPN fails', ANSWERED);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Đã giải quyết' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Solved' }));
 
-    expect(screen.getByText('Vấn đề đã được giải quyết. Cảm ơn bạn!')).toBeInTheDocument();
+    expect(screen.getByText('Your problem is solved. Thank you!')).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Chưa được, tạo ticket' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Not solved, create ticket' })).not.toBeInTheDocument();
     expect(CreateIssueModal).not.toHaveBeenCalled();
   });
 

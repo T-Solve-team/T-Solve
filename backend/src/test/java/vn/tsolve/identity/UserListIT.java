@@ -87,7 +87,7 @@ class UserListIT {
         }
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         db.update(
-                "INSERT INTO department(public_id, name, status) VALUES (?, 'List fixture Alpha', 'ACTIVE'), (?, 'list fixture alpha', 'ACTIVE'), (?, 'List fixture hidden', 'DEACTIVATED')",
+                "INSERT INTO department(public_id, name, status) VALUES (?, 'List fixture Alpha', 'ACTIVE'), (?, 'list fixture beta', 'ACTIVE'), (?, 'List fixture hidden', 'DEACTIVATED')",
                 DEPARTMENT,
                 SECOND_DEPARTMENT,
                 INACTIVE_DEPARTMENT);
@@ -204,10 +204,11 @@ class UserListIT {
         Comparator<Row> order =
                 switch (field) {
                     case "email" -> Comparator.comparing(row -> row.email().toLowerCase(Locale.ROOT));
-                    case "lastSignInAt" -> Comparator.comparing(
-                            Row::signedIn, Comparator.nullsFirst(Comparator.naturalOrder()));
-                    default -> Comparator.comparing(
-                            row -> row.name() == null ? "" : row.name().toLowerCase(Locale.ROOT));
+                    case "lastSignInAt" ->
+                        Comparator.comparing(Row::signedIn, Comparator.nullsFirst(Comparator.naturalOrder()));
+                    default ->
+                        Comparator.comparing(
+                                row -> row.name() == null ? "" : row.name().toLowerCase(Locale.ROOT));
                 };
         if (direction.equals("desc")) {
             order = order.reversed();
