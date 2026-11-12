@@ -152,8 +152,8 @@ public class WebSessionStore {
     }
 
     /**
-     * Deletes the key; a second call is a no-op. Returns true only to the caller whose DEL removed the key (the claim):
-     * only that caller may publish the {@code SessionEnded} event.
+     * Deletes the key and removes its index member; a second call is a no-op. Returns true only to the caller whose DEL
+     * or ZREM removed something (the claim): only that caller may publish the {@code SessionEnded} event.
      */
     public boolean end(String cookieValue) {
         String key = keyOf(cookieValue);
@@ -169,6 +169,11 @@ public class WebSessionStore {
         return claimed(KEY_PREFIX + member.substring(0, member.indexOf('|')), member, Long.toString(nowMillis));
     }
 
+    /** Removes an index member that cannot be parsed, so it stops coming back every tick. */
+    void drop(String member) {
+        redis.opsForZSet().remove(EXPIRY_INDEX, member);
+    }
+
     private boolean claimed(String key, String member, String nowMillis) {
         return Long.valueOf(1).equals(redis.execute(CLAIM, List.of(key, EXPIRY_INDEX), member, nowMillis));
     }
@@ -179,9 +184,11 @@ public class WebSessionStore {
         return due == null ? Set.of() : due;
     }
 
-    /** The index member of a Workspace session, or empty text for an Operator session (not indexed). */
+    /** The index member of a Workspace session, or empty text for an Operator session or one without an Account id (not indexed). */
     private static String memberOf(String key, UUID workspaceId, UUID accountId) {
-        return workspaceId == null ? "" : key.substring(KEY_PREFIX.length()) + "|" + workspaceId + "|" + accountId;
+        return workspaceId == null || accountId == null
+                ? ""
+                : key.substring(KEY_PREFIX.length()) + "|" + workspaceId + "|" + accountId;
     }
 
     private static long deadlineMillis(Instant createdAt, Instant lastActivityAt) {
