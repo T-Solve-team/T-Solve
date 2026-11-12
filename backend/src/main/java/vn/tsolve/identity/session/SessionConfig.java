@@ -2,6 +2,7 @@ package vn.tsolve.identity.session;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -27,6 +28,7 @@ class SessionConfig {
             AccountRepository accounts,
             AccountRoleRepository roles,
             IdentityClock clock,
+            ApplicationEventPublisher events,
             ObjectMapper mapper,
             OperatorAllowList operatorList,
             ConsolePaths consolePaths) {
@@ -39,6 +41,7 @@ class SessionConfig {
                 accounts,
                 roles,
                 clock,
+                events,
                 new SecurityProblemWriter(mapper),
                 operatorList,
                 consolePaths);

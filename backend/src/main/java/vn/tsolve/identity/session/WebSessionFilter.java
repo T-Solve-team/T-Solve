@@ -14,6 +14,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -73,6 +74,7 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
     private final AccountRepository accounts;
     private final AccountRoleRepository roleRows;
     private final IdentityClock clock;
+    private final ApplicationEventPublisher events;
     private final SecurityProblemWriter problems;
     private final OperatorAllowList operatorList;
     private final ConsolePaths consolePaths;
@@ -86,9 +88,11 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             AccountRepository accounts,
             AccountRoleRepository roleRows,
             IdentityClock clock,
+            ApplicationEventPublisher events,
             SecurityProblemWriter problems,
             OperatorAllowList operatorList,
             ConsolePaths consolePaths) {
+        this.events = events;
         this.operatorList = operatorList;
         this.consolePaths = consolePaths;
         this.roleRows = roleRows;
@@ -184,13 +188,13 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
         Instant now = clock.now();
         if (Duration.between(session.lastActivityAt(), now).compareTo(WebSessionStore.IDLE_LIMIT) > 0
                 || Duration.between(session.createdAt(), now).compareTo(WebSessionStore.ABSOLUTE_LIMIT) > 0) {
-            end(response, cookie);
+            end(response, cookie, session, SessionEnded.Reason.EXPIRED);
             return Outcome.ANONYMOUS;
         }
         if (operator) {
             // AC-001.33: the list is read again at every request, background ones too
             if (!operatorList.contains(session.operatorEmail())) {
-                end(response, cookie);
+                end(response, cookie, session, SessionEnded.Reason.DEACTIVATED);
                 problems.write(request, response, HttpStatus.UNAUTHORIZED, SecurityProblemWriter.MSG135);
                 return Outcome.ANSWERED;
             }
@@ -218,11 +222,11 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
             }
         }
         if (account == null) {
-            end(response, cookie);
+            end(response, cookie, session, SessionEnded.Reason.DEACTIVATED);
             return Outcome.ANONYMOUS;
         }
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            end(response, cookie);
+            end(response, cookie, session, SessionEnded.Reason.DEACTIVATED);
             problems.write(request, response, HttpStatus.UNAUTHORIZED, SecurityProblemWriter.MSG10);
             return Outcome.ANSWERED;
         }
@@ -237,9 +241,17 @@ public class WebSessionFilter extends OncePerRequestFilter implements SessionAut
                 false);
     }
 
-    private void end(HttpServletResponse response, String cookie) {
-        store.end(cookie);
+    /**
+     * Ends the session and publishes the event only if this request won the claim, after the key is gone. An Operator
+     * session ends silently: an Operator has no Account or Workspace for the event to name.
+     */
+    private void end(HttpServletResponse response, String cookie, WebSession session, SessionEnded.Reason reason) {
+        boolean claimed = store.end(cookie);
         clear(response);
+        if (claimed && session.kind() != WebSession.Kind.OPERATOR) {
+            events.publishEvent(
+                    new SessionEnded(session.accountId(), session.workspaceId(), store.sessionIdOf(cookie), reason));
+        }
     }
 
     private void clear(HttpServletResponse response) {
