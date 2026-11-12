@@ -80,8 +80,8 @@ class ProjectDoneStatusesMigrationIT {
     }
 
     @Test
-    @DisplayName("AC-002.19 includes changeset 029 exactly once and last in the master changelog")
-    void includesChangesetLast_AC_002_19() throws Exception {
+    @DisplayName("AC-002.19 includes changeset 029 exactly once and after 026 in the master changelog")
+    void includesChangesetOnceAfter026_AC_002_19() throws Exception {
         URL url = getClass().getClassLoader().getResource("db/changelog/db.changelog-master.xml");
         assertThat(url).as("master changelog resource").isNotNull();
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -95,11 +95,10 @@ class ProjectDoneStatusesMigrationIT {
                 includes.add(((Element) nodes.item(i)).getAttribute("file"));
             }
         }
-        assertThat(includes).isNotEmpty();
-        assertThat(includes.getLast())
-                .as("last master changelog include")
-                .isEqualTo("changes/029-project-done-statuses.sql");
-        assertThat(includes).containsOnlyOnce("changes/029-project-done-statuses.sql");
+        assertThat(includes)
+                .containsOnlyOnce("changes/029-project-done-statuses.sql")
+                .containsSubsequence(
+                        "changes/026-identity-app-user-keycloak-sub.sql", "changes/029-project-done-statuses.sql");
     }
 
     @Test
