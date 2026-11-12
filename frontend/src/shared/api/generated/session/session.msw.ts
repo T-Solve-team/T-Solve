@@ -9,10 +9,16 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
 import { ProjectRole, Role } from '../model';
-import type { CurrentUser } from '../model';
+import type {
+  CurrentUser,
+  JiraLinkConfirmRequest,
+  JiraLinkConfirmed,
+  JiraLinkRequestInfo,
+  Logout200,
+} from '../model';
 
 export const getGetMeResponseMock = (
   overrideResponse: Partial<Extract<CurrentUser, object>> = {},
@@ -52,6 +58,28 @@ export const getGetMeResponseMock = (
     }),
   ),
   workspaceReady: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getLogoutResponseMock = (
+  overrideResponse: Partial<Extract<Logout200, object>> = {},
+): Logout200 => ({
+  logoutUrl: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getGetJiraLinkRequestResponseMock = (
+  overrideResponse: Partial<Extract<JiraLinkRequestInfo, object>> = {},
+): JiraLinkRequestInfo => ({
+  jiraUserName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  jiraSiteName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getConfirmJiraLinkResponseMock = (
+  overrideResponse: Partial<Extract<JiraLinkConfirmed, object>> = {},
+): JiraLinkConfirmed => ({
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
 
@@ -114,17 +142,69 @@ export const getAuthCallbackMockHandler = (
 };
 
 export const getLogoutMockHandler = (
-  overrideResponse?: void | ((info: Parameters<HttpResponseResolver>[0]) => Promise<void> | void),
+  overrideResponse?:
+    Logout200 | ((info: Parameters<HttpResponseResolver>[0]) => Promise<Logout200> | Logout200),
   options?: RequestHandlerOptions,
 ) => {
   return http.post(
     '*/api/v1/auth/logout',
     async (info: Parameters<HttpResponseResolver>[0]) => {
-      if (typeof overrideResponse === 'function') {
-        await overrideResponse(info);
-      }
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getLogoutResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 
-      return new HttpResponse(null, { status: 204 });
+export const getGetJiraLinkRequestMockHandler = (
+  overrideResponse?:
+    | JiraLinkRequestInfo
+    | ((
+        info: Parameters<HttpResponseResolver<{ requestId: string }>>[0],
+      ) => Promise<JiraLinkRequestInfo> | JiraLinkRequestInfo),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ requestId: string }>(
+    '*/api/v1/auth/jira-link/:requestId',
+    async (info: Parameters<HttpResponseResolver<{ requestId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetJiraLinkRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getConfirmJiraLinkMockHandler = (
+  overrideResponse?:
+    | JiraLinkConfirmed
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, JiraLinkConfirmRequest>>[0],
+      ) => Promise<JiraLinkConfirmed> | JiraLinkConfirmed),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, JiraLinkConfirmRequest>(
+    '*/api/v1/auth/jira-link/confirm',
+    async (info: Parameters<HttpResponseResolver<PathParams, JiraLinkConfirmRequest>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getConfirmJiraLinkResponseMock(),
+        { status: 200 },
+      );
     },
     options,
   );
@@ -134,4 +214,6 @@ export const getSessionMock = () => [
   getSignInMockHandler(),
   getAuthCallbackMockHandler(),
   getLogoutMockHandler(),
+  getGetJiraLinkRequestMockHandler(),
+  getConfirmJiraLinkMockHandler(),
 ];

@@ -4,13 +4,13 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.LinkedHashMap;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -21,6 +21,9 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.session.SessionCookie;
+import vn.tsolve.identity.session.WebSession;
+import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.identity.signin.port.WorkspaceLookup;
 import vn.tsolve.identity.signin.port.WorkspaceRef;
@@ -29,14 +32,12 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
  * Ends the Keycloak callback on a Workspace site (AC-001.6, .7, .8, .9, .10, .11, .14, .53, .55, .74). Every answer
  * expires the auth-request cookie. A failed request check answers MSG141; a wrong Organization or {@code hd} MSG122;
  * a Workspace that is not Active MSG120; a missing email claim or a failed Account step MSG06; no Account MSG09; a
- * deactivated Account MSG10. Only the first failure is reported (AC-001.14). A verified sign-in is shown on the dev
- * claims page in the same request (nothing stored); outside dev it answers MSG06 until the session exists (Task 26a).
+ * deactivated Account MSG10. Only the first failure is reported (AC-001.14). A passing sign-in creates the session
+ * at once (AC-001.16, .18): a 302 to the kept {@code return_to} (or {@code /}) with {@code __Host-TSOLVE_SESSION}; a
+ * failing session store answers MSG06 and creates no session.
  */
 @Component
 public class OidcCallbackHandler implements AuthenticationSuccessHandler, AuthenticationFailureHandler {
-
-    public static final String DEV_CLAIMS_PATH = "/api/v1/auth/dev/claims";
-    public static final String CLAIMS_ATTRIBUTE = "vn.tsolve.identity.signin.claims";
 
     private static final Logger log = LoggerFactory.getLogger(OidcCallbackHandler.class);
     private static final String MSG141 = "/login?error=MSG141";
@@ -48,23 +49,35 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
     private static final Set<String> REQUEST_CHECK_FAILURES =
             Set.of("authorization_request_not_found", "invalid_state_parameter", "client_registration_not_found");
 
-    private final Environment environment;
+    /**
+     * The request attribute that carries the kept {@code return_to} from {@code
+     * RedisAuthorizationRequestRepository.removeAuthorizationRequest} to this handler.
+     */
+    public static final String RETURN_TO_ATTRIBUTE = "vn.tsolve.identity.signin.returnTo";
+
     private final WorkspaceLookup workspaces;
     private final AuthHosts hosts;
     private final TenantScope scope;
     private final AccountSignInService accounts;
+    private final WebSessionStore sessions;
+    private final SessionCookie sessionCookies;
+    private final IdentityClock clock;
 
     public OidcCallbackHandler(
-            Environment environment,
             WorkspaceLookup workspaces,
             AuthHosts hosts,
             TenantScope scope,
-            AccountSignInService accounts) {
-        this.environment = environment;
+            AccountSignInService accounts,
+            WebSessionStore sessions,
+            SessionCookie sessionCookies,
+            IdentityClock clock) {
         this.workspaces = workspaces;
         this.hosts = hosts;
         this.scope = scope;
         this.accounts = accounts;
+        this.sessions = sessions;
+        this.sessionCookies = sessionCookies;
+        this.clock = clock;
     }
 
     @Override
@@ -134,18 +147,47 @@ public class OidcCallbackHandler implements AuthenticationSuccessHandler, Authen
             redirect(response, "/login?error=MSG10");
         } else if (result.status() != AccountSignInService.Status.SIGNED_IN) {
             redirect(response, "/login?error=MSG09");
-        } else if (environment.acceptsProfiles(Profiles.of("dev"))) {
-            Map<String, Object> claims = new LinkedHashMap<>();
-            for (String name : new String[] {"sub", "email", "organization", "hd"}) {
-                claims.put(name, token.getClaims().get(name));
-            }
-            request.setAttribute(CLAIMS_ATTRIBUTE, claims);
-            expireCookie(response);
-            request.getRequestDispatcher(DEV_CLAIMS_PATH).forward(request, response);
         } else {
-            log.warn("A Keycloak sign-in succeeded; session not built yet");
-            redirect(response, MSG06);
+            startSession(request, response, workspace, result.accountId(), token.getTokenValue());
         }
+    }
+
+    /** AC-001.16, .18: a new session id for every sign-in (any old one is ended), then the 302 that sets its cookie. */
+    private void startSession(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            WorkspaceRef workspace,
+            UUID accountId,
+            String idToken) {
+        String value;
+        try {
+            String old = sessionCookies.valueOf(request);
+            if (old != null && !old.isEmpty()) {
+                sessions.end(old);
+            }
+            Instant now = clock.now();
+            value = sessions.create(new WebSession(
+                    WebSession.Kind.WORKSPACE,
+                    workspace.id(),
+                    accountId,
+                    null,
+                    workspace.siteHost(),
+                    idToken,
+                    now,
+                    now));
+        } catch (DataAccessException e) {
+            // class name only: no ID token, cookie value or hash may reach the log
+            log.error(
+                    "Sign-in passed but the session store (Redis) failed for Workspace {} ({})",
+                    workspace.id(),
+                    e.getClass().getName());
+            redirect(response, MSG06);
+            return;
+        }
+        response.addHeader(HttpHeaders.SET_COOKIE, sessionCookies.issue(value).toString());
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+        Object returnTo = request.getAttribute(RETURN_TO_ATTRIBUTE);
+        redirect(response, SignInStartController.filterReturnTo(returnTo instanceof String s ? s : null));
     }
 
     /** True when some entry of the organization claim map has an {@code id} equal to the Workspace's (Q1 A). */

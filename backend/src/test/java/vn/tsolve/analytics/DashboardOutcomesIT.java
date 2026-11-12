@@ -80,14 +80,10 @@ class DashboardOutcomesIT {
         inactiveProject = insertProject(inactive, "HIDDEN");
         emptyProject = insertProject(alpha, "IDLE");
         manager = UUID.randomUUID();
-        jdbc.update(
-                """
+        jdbc.update("""
                 insert into app_user (id, email, full_name, status, created_at, department_id)
                 select ?, ?, 'Test User', 'ACTIVE', now(), department_id from department where public_id = ?
-                """,
-                manager,
-                manager + "@example.test",
-                alpha);
+                """, manager, manager + "@example.test", alpha);
     }
 
     @Test
@@ -273,14 +269,10 @@ class DashboardOutcomesIT {
 
     private UUID insertProject(UUID department, String key) {
         UUID id = UUID.randomUUID();
-        jdbc.update(
-                """
+        jdbc.update("""
                 insert into project (public_id, department_id, jira_project_key, status)
                 select ?, department_id, ?, 'ACTIVE' from department where public_id = ?
-                """,
-                id,
-                key,
-                department);
+                """, id, key, department);
         return id;
     }
 
@@ -309,16 +301,10 @@ class DashboardOutcomesIT {
     }
 
     private void insertDecision(UUID ticket, String decision, String decidedAt) {
-        jdbc.update(
-                """
+        jdbc.update("""
                 insert into review_decision (review_decision_id, ticket_id, project_manager_id, decision, decided_at)
                 values (?, ?, ?, ?, ?)
-                """,
-                UUID.randomUUID(),
-                ticket,
-                manager,
-                decision,
-                Timestamp.from(Instant.parse(decidedAt)));
+                """, UUID.randomUUID(), ticket, manager, decision, Timestamp.from(Instant.parse(decidedAt)));
     }
 
     private TSolveUser user(Role role) {

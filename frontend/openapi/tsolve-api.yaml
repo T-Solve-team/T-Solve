@@ -433,8 +433,67 @@ paths:
       operationId: logout
       summary: Ends the session (the backend clears the session cookie).
       responses:
-        '204':
-          description: Signed out.
+        '200':
+          description: >
+            Signed out. The session cookie is expired. Send the browser to logoutUrl to end the Keycloak session too.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [logoutUrl]
+                properties:
+                  logoutUrl: { type: string }
+  /api/v1/auth/jira-link/{requestId}:
+    get:
+      tags: [session]
+      operationId: getJiraLinkRequest
+      summary: Reads a Jira link request for the confirm page; does not consume it (AC-001.75).
+      description: >
+        Needs a signed-in person of the Workspace. 400 MSG141 when the request is missing, expired, already used or
+        made for another Workspace (AC-001.72); 401 MSG07 without a session.
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: The Jira user and the site the link would connect.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JiraLinkRequestInfo' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/auth/jira-link/confirm:
+    post:
+      tags: [session]
+      operationId: confirmJiraLink
+      summary: Confirms a Jira link request; consumes it whatever the outcome (AC-001.71, AC-001.72).
+      description: >
+        Needs a signed-in person of the Workspace and a CSRF token (header `X-XSRF-TOKEN`). The answers are checked in
+        the order session (401 MSG07), CSRF token (403), link request (400 MSG141). Until the account link is recorded
+        (Task 30b) a valid request answers 501.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JiraLinkConfirmRequest' }
+      responses:
+        '200':
+          description: The link is recorded; `code` is MSG75.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JiraLinkConfirmed' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '501':
+          $ref: '#/components/responses/Problem'
   /api/v1/tickets/{ticketId}:
     get:
       tags: [review]
@@ -2909,6 +2968,24 @@ components:
           type: object
           additionalProperties:
             type: [string, number]
+    JiraLinkRequestInfo:
+      type: object
+      required: [jiraUserName, jiraSiteName]
+      properties:
+        jiraUserName: { type: string }
+        jiraSiteName: { type: string }
+    JiraLinkConfirmRequest:
+      type: object
+      required: [requestId]
+      properties:
+        requestId: { type: string }
+    JiraLinkConfirmed:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: MSG75.
     ProblemDetail:
       type: object
       description: RFC 9457 Problem Details (Spring ProblemDetail) plus the SRS message code.

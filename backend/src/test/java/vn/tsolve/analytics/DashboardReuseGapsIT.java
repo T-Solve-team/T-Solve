@@ -361,28 +361,20 @@ class DashboardReuseGapsIT {
 
     private UUID insertProject(UUID owningDepartment, String key) {
         UUID id = UUID.randomUUID();
-        jdbc.update(
-                """
+        jdbc.update("""
                 insert into project (public_id, department_id, jira_project_key, status)
                 select ?, department_id, ?, 'ACTIVE' from department where public_id = ?
-                """,
-                id,
-                key,
-                owningDepartment);
+                """, id, key, owningDepartment);
         return id;
     }
 
     private UUID insertUser(UUID owningDepartment) {
         UUID id = UUID.randomUUID();
-        jdbc.update(
-                """
+        jdbc.update("""
                 insert into app_user (id, email, full_name, status, created_at, department_id)
                 values (?, ?, 'Test User', 'ACTIVE', now(),
                     (select department_id from department where public_id = ?))
-                """,
-                id,
-                id + "@example.test",
-                owningDepartment);
+                """, id, id + "@example.test", owningDepartment);
         return id;
     }
 
@@ -394,18 +386,11 @@ class DashboardReuseGapsIT {
                         UUID.class,
                         owningProject)
                 : owningProject;
-        jdbc.update(
-                """
+        jdbc.update("""
                 insert into ticket (ticket_id, public_id, source_ticket_id, project_id, source, status, title,
                     symptoms, root_cause, resolution_steps, scope, created_at)
                 values (?, ?, ?, ?, 'SOLUTION_FORM', 'PUBLISHED', ?, 'Symptoms', 'Cause', 'Steps', 'Scope', ?)
-                """,
-                id,
-                publicId,
-                id.toString(),
-                storedProject,
-                title,
-                timestamp(OLD));
+                """, id, publicId, id.toString(), storedProject, title, timestamp(OLD));
         return id;
     }
 
@@ -429,47 +414,26 @@ class DashboardReuseGapsIT {
 
     private void insertSearch(
             UUID asker, UUID loggedDepartment, String query, String channel, int results, String createdAt) {
-        jdbc.update(
-                """
+        jdbc.update("""
                 insert into search_log (search_log_id, user_id, department_id, query, channel, result_count, is_fallback, created_at)
                 values (?, ?, (select department_id from department where public_id = ?), ?, ?, ?, true, ?)
-                """,
-                UUID.randomUUID(),
-                asker,
-                loggedDepartment,
-                query,
-                channel,
-                results,
-                timestamp(createdAt));
+                """, UUID.randomUUID(), asker, loggedDepartment, query, channel, results, timestamp(createdAt));
     }
 
     private void insertAnswer(UUID asker, String question, String outcome, String createdAt) {
-        jdbc.update(
-                """
+        jdbc.update("""
                 insert into chatbot_answer (chatbot_answer_id, user_id, question, outcome, answer_text, created_at)
                 values (?, ?, ?, ?, 'Test answer', ?)
-                """,
-                UUID.randomUUID(),
-                asker,
-                question,
-                outcome,
-                timestamp(createdAt));
+                """, UUID.randomUUID(), asker, question, outcome, timestamp(createdAt));
     }
 
     private void insertSuggestion(UUID owningProject, String answer, String commentedAt, String createdAt) {
         UUID id = UUID.randomUUID();
-        jdbc.update(
-                """
+        jdbc.update("""
                 insert into suggestion_result (suggestion_id, project_id, jira_issue_key, sources_used,
                     reporter_answer, commented_at, created_at)
                 values (?, ?, ?, '[]'::jsonb, ?, ?, ?)
-                """,
-                id,
-                owningProject,
-                "APP-" + id,
-                answer,
-                timestamp(commentedAt),
-                timestamp(createdAt));
+                """, id, owningProject, "APP-" + id, answer, timestamp(commentedAt), timestamp(createdAt));
     }
 
     private Timestamp timestamp(String instant) {

@@ -1,7 +1,9 @@
 package vn.tsolve.identity.dev;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import vn.tsolve.common.security.Role;
 
 /** The dev accounts and the two dev Workspaces' constants; Task 23's realm import and tests read the same values. */
 public final class DevAccounts {
@@ -16,11 +18,12 @@ public final class DevAccounts {
 
     private DevAccounts() {}
 
-    public record DevAccount(String email, UUID workspaceId, String displayName) {}
+    /** {@code roles} are the stored Roles; the implicit Employee is not one of them. */
+    public record DevAccount(String email, UUID workspaceId, String displayName, Set<Role> roles) {}
 
     public static List<DevAccount> all() {
         return List.of(
-                new DevAccount("alice@acme.test", ACME_ID, "Alice Acme"),
-                new DevAccount("bob@beta.test", BETA_ID, "Bob Beta"));
+                new DevAccount("alice@acme.test", ACME_ID, "Alice Acme", Set.of(Role.ADMIN)),
+                new DevAccount("bob@beta.test", BETA_ID, "Bob Beta", Set.of()));
     }
 }
