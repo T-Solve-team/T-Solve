@@ -10,3 +10,4 @@ export * from './session/session';
 export * from './tickets/tickets';
 export * from './triage/triage';
 export * from './users/users';
+export * from './workspace/workspace';
