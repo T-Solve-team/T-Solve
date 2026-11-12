@@ -247,5 +247,6 @@ Master registry of all artifacts in this workspace.
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-26a-web-session.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-26b-user-role.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-30a-jira-link-sign-in.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-29a-operator-sign-in.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-29a-operator-sign-in-review.md |
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-29a-operator-sign-in-test-report.md |
