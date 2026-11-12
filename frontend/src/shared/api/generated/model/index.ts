@@ -20,6 +20,7 @@ export * from './chatbotRating';
 export * from './chatbotRatingRating';
 export * from './chatbotTurn';
 export * from './citedSolution';
+export * from './createDepartmentRequest';
 export * from './createUserRequest';
 export * from './currentUser';
 export * from './dashboardCoverage';

@@ -22,12 +22,13 @@ STORY-007), SRS System Messages. Terms: **user** = the T-Solve user linked to th
 | 2026-11-08 | STORY-010 | Add `GET /api/v1/jira-app/questions/eligibility` to the Exposed interfaces; no criterion changes | Planning builder check: AC-010.2 shows MSG62 before any question, which the POST alone cannot tell the page (user chose this over rewording AC-010.2, 08/11) |
 | 2026-11-08 | STORY-010 | AC-010.6 reworded: sources shown like the web chatbot — "[n] <title> · Wiki document", "[n] Solution from a ticket" with its Solution, no ticket id, link or Project. AC-010.9: the sources in the Create dialog use the same labels, without Solution text | Task 5 found that AC-010.6 ("Ticket ID and title of each Solution") contradicts GBR-36 and AC-010.4: a `TicketSolutionCitation` carries only the Solution. User chose to match the web (08/11) |
 | 2026-11-08 | STORY-010 | AC-010.1: the page title is "Ask T-Solve" (was "Hỏi T-Solve"); requirement 5, the terms and the Exposed table follow. The other page labels stay Vietnamese | User decision in the Task 6 dev-site check (08/11) |
+| 2026-11-11 | STORY-010 | Every page and Create-dialog label in English: AC-010.1 note "Answers from T-Solve Solutions and Wiki"; AC-010.2, 010.6 to 010.10 buttons "Solved" and "Not solved, create ticket", the solved text "Your problem is solved. Thank you!", the description parts "Tried with T-Solve:" and "Sources:". The card heading "Ask T-Solve before creating a ticket", the placeholder "Describe your problem" and the "Send" button follow | User decision (11/11): the Jira App is English only, like the page title |
 
 ## Requirements
 
 ### Functional
 5. An "Ask T-Solve" page in each Jira project lets a linked user ask the Knowledge Chatbot before creating an issue;
-   "Chưa được, tạo ticket" opens Jira's Create dialog prefilled with the conversation (STORY-010). Requirements 1
+   "Not solved, create ticket" opens Jira's Create dialog prefilled with the conversation (STORY-010). Requirements 1
    to 4 belong to KAN-126.
 
 ### Non-Functional
@@ -43,16 +44,16 @@ STORY-007), SRS System Messages. Terms: **user** = the T-Solve user linked to th
 - As an Employee, I want to ask T-Solve about my problem inside Jira before I create an issue, so that I fix it myself when a known Solution exists and, when not, the issue I create says what I already tried.
 - Terms: **page** = the "Ask T-Solve" Jira project page; **conversation** = the questions and answers on the page since it was opened; **chatbot answer** = the answer of the `chatbot` module's answer service (chatbot STORY-005 to STORY-007).
 - Acceptance:
-  - AC-010.1: THE Jira App SHALL show a project page titled "Ask T-Solve" in every Jira project of the site, with a question box, a send button and the note "Trả lời từ Solution và Wiki của T-Solve".
-  - AC-010.2: IF the Jira account is not linked to an active T-Solve user, THEN THE page SHALL show MSG62 instead of the question box and SHALL still show "Chưa được, tạo ticket", which opens the Create dialog of AC-010.9 with nothing prefilled.
+  - AC-010.1: THE Jira App SHALL show a project page titled "Ask T-Solve" in every Jira project of the site, with a question box, a send button and the note "Answers from T-Solve Solutions and Wiki".
+  - AC-010.2: IF the Jira account is not linked to an active T-Solve user, THEN THE page SHALL show MSG62 instead of the question box and SHALL still show "Not solved, create ticket", which opens the Create dialog of AC-010.9 with nothing prefilled.
   - AC-010.3: WHEN the user sends a question, THE Jira App SHALL call `POST /api/v1/jira-app/questions` with the question and, as history, the earlier turns of the conversation — at most the last 10.
   - AC-010.4: WHEN the server receives a valid question from a linked user, THE server SHALL return the chatbot answer for that user — the same sources, citations and outcomes as the web Knowledge Chatbot, from every Solution and Wiki document the user may see.
   - AC-010.5: IF the question is empty or only white space, THEN THE Jira App SHALL show MSG01 under the box and send nothing; IF it is longer than 1,000 characters, THEN THE Jira App SHALL show MSG02 and send nothing; THE server SHALL answer 400 with the same codes whatever the Jira App checked.
-  - AC-010.6: WHEN the answer has outcome `ANSWERED`, THE page SHALL show its text, its sources in number order — a Wiki document as "[n] <title> · Wiki document", a ticket source as "[n] Solution from a ticket" with its Solution, never the ticket's id, link or Project (GBR-36) — and the buttons "Đã giải quyết" and "Chưa được, tạo ticket".
-  - AC-010.7: WHEN the answer has outcome `NO_SOURCE`, THE page SHALL show MSG109 and the buttons "Đã giải quyết" and "Chưa được, tạo ticket".
-  - AC-010.8: IF the answer request fails, does not answer within 20 seconds, or the server answers 5xx, THEN THE page SHALL show MSG06, keep the question in the box and still show "Chưa được, tạo ticket" (GBR-12).
-  - AC-010.9: WHEN the user clicks "Chưa được, tạo ticket", THE Jira App SHALL open Jira's Create issue dialog for the open Jira project with Summary = the first question of the conversation cut to 255 characters, Description = every question of the conversation followed by a part "Đã thử theo T-Solve" with the last answer and its sources labelled as in AC-010.6 (no Solution text), and the label `tsolve-asked`; the user can change every field before clicking Create.
-  - AC-010.10: WHEN the user clicks "Đã giải quyết", THE page SHALL end the conversation, show the text "Vấn đề đã được giải quyết. Cảm ơn bạn!" (a Jira App label, not an SRS message — user, 2026-11-07), create no issue and store nothing.
+  - AC-010.6: WHEN the answer has outcome `ANSWERED`, THE page SHALL show its text, its sources in number order — a Wiki document as "[n] <title> · Wiki document", a ticket source as "[n] Solution from a ticket" with its Solution, never the ticket's id, link or Project (GBR-36) — and the buttons "Solved" and "Not solved, create ticket".
+  - AC-010.7: WHEN the answer has outcome `NO_SOURCE`, THE page SHALL show MSG109 and the buttons "Solved" and "Not solved, create ticket".
+  - AC-010.8: IF the answer request fails, does not answer within 20 seconds, or the server answers 5xx, THEN THE page SHALL show MSG06, keep the question in the box and still show "Not solved, create ticket" (GBR-12).
+  - AC-010.9: WHEN the user clicks "Not solved, create ticket", THE Jira App SHALL open Jira's Create issue dialog for the open Jira project with Summary = the first question of the conversation cut to 255 characters, Description = every question of the conversation followed by a part "Tried with T-Solve:" with the last answer and, after "Sources:", its sources labelled as in AC-010.6 (no Solution text), and the label `tsolve-asked`; the user can change every field before clicking Create.
+  - AC-010.10: WHEN the user clicks "Solved", THE page SHALL end the conversation, show the text "Your problem is solved. Thank you!" (a Jira App label, not an SRS message — user, 2026-11-07), create no issue and store nothing.
   - AC-010.11: IF the FIT user is not linked to an active T-Solve user, THEN THE server SHALL answer `POST /api/v1/jira-app/questions` with 403 MSG62 and call no AI.
   - AC-010.12: THE Jira App SHALL keep the conversation only while the page is open; it SHALL store no question or answer itself and SHALL log no question or answer text.
 
@@ -60,7 +61,7 @@ STORY-007), SRS System Messages. Terms: **user** = the T-Solve user linked to th
 - STORY-001 to STORY-009 (Solution Form, Issue Panel, Published Ticket Preview) — KAN-126, on its own branch.
 - Images in the question (OCR or a vision model, attaching them to the created issue) — a later version
   (RESEARCH-004).
-- Recording "Đã giải quyết" on the server — after the chatbot ratings backend (KAN-182).
+- Recording "Solved" on the server — after the chatbot ratings backend (KAN-182).
 - Sources limited to the open Jira project — the page answers like the web chatbot (user, 2026-11-07).
 - Anything on Jira's own Create dialog (RESEARCH-004 Options A, A+, B).
 - Linking the Jira account to a T-Solve user — `identity`; a configured stub until then.

@@ -116,6 +116,15 @@ original date window has passed. Spec: `artifacts/03-modules/triage/spec.md`; ac
 | 9 · Web — Import Preview and popup (KAN-45) | Đặng Nhật Minh | pending |
 | 10 · Trace and end-to-end check (KAN-45) | Đặng Nhật Minh | pending |
 
+### workspace (added 2026-11-11)
+
+UC-12 Create Department. Spec: `artifacts/03-modules/workspace/spec.md`; plan: `artifacts/04-plans/workspace/iteration-1/tasks.md`.
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · Create Department API, Space and audit (KAN-120) | Đặng Tấn Bình | pending |
+| 2 · New Department on Workspace Settings (KAN-120) | Đặng Tấn Bình | pending |
+
 ## Order — feedback first
 
 1. fe-foundation Task 7 (KAN-204): catalog synced to System_Messages of 25/10; 9.3 Audit Entry Detail removed.
@@ -192,6 +201,10 @@ original date window has passed. Spec: `artifacts/03-modules/triage/spec.md`; ac
 1. Mock mode, Project Manager: open Triage History, filter to one managed Project, Solved and a date range; the list and URL match.
 2. Open a result: the popup shows the full suggestion, Ticket source count, available Wiki links and reporter answer. Open a result without a suggestion: the popup shows a dash and No answer.
 3. Open the route as an Employee: MSG08; a forged unmanaged Project or issue key returns no data.
+
+### workspace
+1. `mvn verify` in `backend/`: `DepartmentCreationIT` shows one Department, Space and audit entry per create; MSG43 for Active, Deleted, case-only and concurrent duplicates; and a rollback when the audit write fails.
+2. Mock mode, Admin, Workspace Settings: New Department, Save empty shows MSG01; an existing name such as `it` shows MSG43; a new name closes the popup with MSG05. In mock mode the table does not gain the row; `WorkspaceSettingsPage.test.tsx` proves the refresh.
 
 ## Actual Outcomes
 <!-- filled at end of iteration, split by module -->
