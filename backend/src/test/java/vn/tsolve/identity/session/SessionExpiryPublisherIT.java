@@ -298,4 +298,35 @@ class SessionExpiryPublisherIT extends AbstractExpiryIT {
         assertThat(redis.hasKey(keyOf(cookie))).isFalse();
         assertThat(score(cookie)).isNull();
     }
+
+    @Test
+    @DisplayName("edge 8 (finding b) members that do not parse are removed with no event and do not block the due"
+            + " sessions behind them")
+    void malformedMembersDoNotBlockTheSweep_edge8() {
+        String cookie = acmeSession();
+        // lowest scores, so they come first in the due list
+        redis.opsForZSet().add(EXPIRY_INDEX, "no-separator-at-all", 1);
+        redis.opsForZSet().add(EXPIRY_INDEX, "abc|not-a-uuid|not-a-uuid", 2);
+        clock.advance(Duration.ofMinutes(61));
+
+        sweeper.sweep();
+
+        assertThat(redis.opsForZSet().score(EXPIRY_INDEX, "no-separator-at-all"))
+                .isNull();
+        assertThat(redis.opsForZSet().score(EXPIRY_INDEX, "abc|not-a-uuid|not-a-uuid"))
+                .isNull();
+        assertOneExpired(cookie);
+        assertThat(redis.hasKey(keyOf(cookie))).isFalse();
+        assertThat(score(cookie)).isNull();
+    }
+
+    @Test
+    @DisplayName("edge 9 (finding c) a Workspace session without an Account id is not indexed")
+    void workspaceSessionWithoutAnAccountIdIsNotIndexed_edge9() {
+        String cookie = store.create(
+                new WebSession(WebSession.Kind.WORKSPACE, ACME.id(), null, null, ACME.siteHost(), HINT, START, START));
+
+        assertThat(redis.hasKey(keyOf(cookie))).isTrue();
+        assertThat(redis.opsForZSet().zCard(EXPIRY_INDEX)).isZero();
+    }
 }
