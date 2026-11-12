@@ -1,5 +1,7 @@
 package vn.tsolve.jiraapp.service.impl;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -42,7 +44,26 @@ public class JiraAppTicketServiceImpl implements JiraAppTicketService {
         this.search = search;
         this.published = published;
         this.scopes = scopes;
-        this.webOrigin = webOrigin == null ? "" : webOrigin.strip().replaceAll("/+$", "");
+        this.webOrigin = absoluteOrigin(webOrigin);
+    }
+
+    /**
+     * The web app's origin without a trailing slash. "Open in T-Solve" must be an absolute link, so a missing or
+     * relative TSOLVE_WEB_ORIGIN stops the start-up instead of giving a dead link (contract `format: uri`, BUG-205).
+     */
+    static String absoluteOrigin(String configured) {
+        String origin = configured == null ? "" : configured.strip().replaceAll("/+$", "");
+        try {
+            URI uri = new URI(origin);
+            String scheme = uri.getScheme();
+            if (("http".equals(scheme) || "https".equals(scheme)) && uri.getHost() != null) {
+                return origin;
+            }
+        } catch (URISyntaxException e) {
+            // reported below
+        }
+        throw new IllegalStateException("TSOLVE_WEB_ORIGIN must be the absolute http(s) origin of the T-Solve web app, "
+                + "e.g. https://acme.tsolve.io.vn");
     }
 
     @Override

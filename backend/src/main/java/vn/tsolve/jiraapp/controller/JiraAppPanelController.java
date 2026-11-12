@@ -30,6 +30,8 @@ public class JiraAppPanelController {
     @PreAuthorize("hasRole('" + Roles.JIRA_APP + "')")
     @Operation(operationId = "getIssuePanel", summary = "What the Issue Panel shows for the issue and the viewer")
     @ApiResponse(responseCode = "400", description = "Invalid issue key")
+    @ApiResponse(responseCode = "403", description = "MSG08: no registered Workspace for the site, or no Jira user")
+    @ApiResponse(responseCode = "503", description = "MSG06: the Forge token could not be checked")
     public ResponseEntity<IssuePanelResponse> getIssuePanel(
             @AuthenticationPrincipal JiraAppPrincipal caller,
             @PathVariable @Size(max = 50) @Pattern(regexp = JiraAppSolutionController.ISSUE_KEY) String issueKey) {

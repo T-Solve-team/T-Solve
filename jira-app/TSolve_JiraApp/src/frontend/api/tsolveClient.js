@@ -69,7 +69,8 @@ export async function openSolutionForm(issueKey, { summary, description }) {
 
 /**
  * Finish or Close: creates the issue's ticket `{id, ticketId, status}`. Retries 3 times when T-Solve cannot be
- * reached or fails, then gives MSG69 (AC-004.4). A 409 after a retry means an earlier try got through.
+ * reached or fails, then gives MSG69 (AC-004.4). A 409 MSG31 after a retry means an earlier try got through; any other
+ * 409 (MSG40: the Project is no longer active) is given back (BUG-204).
  */
 export async function submitSolution(issueKey, { summary, sections }, { sleep = wait } = {}) {
   const request = {
@@ -82,7 +83,7 @@ export async function submitSolution(issueKey, { summary, sections }, { sleep = 
     try {
       return (await call(request)).body;
     } catch (failure) {
-      if (attempt > 0 && failure.status === 409) {
+      if (attempt > 0 && failure.status === 409 && failure.code === 'MSG31') {
         return { ticketId: issueKey, status: 'PENDING_REVIEW' };
       }
       if (!failure.retryable) {

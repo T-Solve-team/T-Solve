@@ -896,6 +896,18 @@ paths:
           $ref: '#/components/responses/Problem'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG08 — a Jira site with no registered Workspace, or no Jira user.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/jira-app/issues/{issueKey}/solution:
     parameters:
       - $ref: '#/components/parameters/IssueKey'
@@ -930,13 +942,21 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
         '403':
-          description: MSG62 (not linked) or MSG08 (not a member of the issue's Project).
+          description: MSG62 (not linked) or MSG08 (not a member of the issue's Project, a Jira site with no registered Workspace, or no Jira user).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
         '409':
-          description: The issue already has a Solution Form ticket in its Project.
+          description: >
+            MSG31 — a ticket with the issue key as its Ticket ID already exists; MSG40 — the issue's Project or its
+            Department is no longer active, so no ticket was created.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
           content:
             application/problem+json:
               schema:
@@ -964,7 +984,17 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
         '403':
-          $ref: '#/components/responses/Problem'
+          description: MSG62 (not linked) or MSG08 (not a member of the issue's Project, a Jira site with no registered Workspace, or no Jira user).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/jira-app/solution-rewrites:
     post:
       tags: [jira-app]
@@ -990,9 +1020,14 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
         '403':
-          $ref: '#/components/responses/Problem'
+          description: MSG62 (not linked) or MSG08 (a Jira site with no registered Workspace, or no Jira user).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '503':
-          description: The AI rewrite is unavailable or took too long (MSG68).
+          description: >
+            MSG68 — the AI rewrite is unavailable or took too long; MSG06 — the Forge token could not be checked.
           content:
             application/problem+json:
               schema:
@@ -1017,6 +1052,18 @@ paths:
           $ref: '#/components/responses/Problem'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG08 — a Jira site with no registered Workspace, or no Jira user.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/jira-app/tickets/search:
     get:
       tags: [jira-app]
@@ -1049,13 +1096,13 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
         '403':
-          description: MSG62 (not linked) or MSG76 (a member of no Project in a Department).
+          description: MSG62 (not linked) or MSG08 (a Jira site with no registered Workspace, or no Jira user).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
         '503':
-          description: The search is unavailable (MSG06).
+          description: MSG06 — the search is unavailable, or the Forge token could not be checked.
           content:
             application/problem+json:
               schema:
@@ -1087,7 +1134,15 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
         '403':
-          description: MSG08 — not Published, not in one of the viewer's Departments, or no such ticket.
+          description: >
+            MSG62 (not linked) or MSG08 — not Published, not in one of the viewer's Departments, no such ticket, a
+            Jira site with no registered Workspace, or no Jira user.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
           content:
             application/problem+json:
               schema:

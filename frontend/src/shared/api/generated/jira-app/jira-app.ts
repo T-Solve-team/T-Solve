@@ -586,7 +586,7 @@ export const openSolutionForm = async (
 export const getOpenSolutionFormMutationKey = () => ['openSolutionForm'] as const;
 
 export const getOpenSolutionFormMutationOptions = <
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -625,14 +625,17 @@ export type OpenSolutionFormMutationResult = NonNullable<
   Awaited<ReturnType<typeof openSolutionForm>>
 >;
 export type OpenSolutionFormMutationBody = SolutionFormRequest;
-export type OpenSolutionFormMutationError = ErrorType<ProblemResponse>;
+export type OpenSolutionFormMutationError = ErrorType<ProblemResponse | ProblemDetail>;
 export type OpenSolutionFormMutationVariables = { issueKey: string; data: SolutionFormRequest };
 
 /**
  * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
 
  */
-export const useOpenSolutionForm = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+export const useOpenSolutionForm = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof openSolutionForm>>,
@@ -802,7 +805,7 @@ export const saveSolutionDraft = async (
 export const getSaveSolutionDraftMutationKey = () => ['saveSolutionDraft'] as const;
 
 export const getSaveSolutionDraftMutationOptions = <
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -841,13 +844,16 @@ export type SaveSolutionDraftMutationResult = NonNullable<
   Awaited<ReturnType<typeof saveSolutionDraft>>
 >;
 export type SaveSolutionDraftMutationBody = SolutionSections;
-export type SaveSolutionDraftMutationError = ErrorType<ProblemResponse>;
+export type SaveSolutionDraftMutationError = ErrorType<ProblemResponse | ProblemDetail>;
 export type SaveSolutionDraftMutationVariables = { issueKey: string; data: SolutionSections };
 
 /**
  * @summary Stores the five sections, unvalidated, as the viewer's only Draft for the issue (MSG41, STORY-005).
  */
-export const useSaveSolutionDraft = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+export const useSaveSolutionDraft = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof saveSolutionDraft>>,
@@ -997,7 +1003,7 @@ export const getGetIssuePanelQueryKey = (issueKey: string) => {
 
 export const getGetIssuePanelQueryOptions = <
   TData = Awaited<ReturnType<typeof getIssuePanel>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   issueKey: string,
   options?: {
@@ -1027,11 +1033,11 @@ export const getGetIssuePanelQueryOptions = <
 };
 
 export type GetIssuePanelQueryResult = NonNullable<Awaited<ReturnType<typeof getIssuePanel>>>;
-export type GetIssuePanelQueryError = ErrorType<ProblemResponse>;
+export type GetIssuePanelQueryError = ErrorType<ProblemResponse | ProblemDetail>;
 
 export function useGetIssuePanel<
   TData = Awaited<ReturnType<typeof getIssuePanel>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   issueKey: string,
   options: {
@@ -1050,7 +1056,7 @@ export function useGetIssuePanel<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetIssuePanel<
   TData = Awaited<ReturnType<typeof getIssuePanel>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   issueKey: string,
   options?: {
@@ -1069,7 +1075,7 @@ export function useGetIssuePanel<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetIssuePanel<
   TData = Awaited<ReturnType<typeof getIssuePanel>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   issueKey: string,
   options?: {
@@ -1084,7 +1090,7 @@ export function useGetIssuePanel<
 
 export function useGetIssuePanel<
   TData = Awaited<ReturnType<typeof getIssuePanel>>,
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
 >(
   issueKey: string,
   options?: {

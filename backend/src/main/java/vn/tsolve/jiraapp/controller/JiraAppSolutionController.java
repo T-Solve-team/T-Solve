@@ -42,6 +42,8 @@ public class JiraAppSolutionController {
     @PreAuthorize("hasRole('" + Roles.JIRA_APP + "')")
     @Operation(operationId = "openSolutionForm", summary = "Whether the Solution Form may open, and its content")
     @ApiResponse(responseCode = "400", description = "Invalid issue key or body")
+    @ApiResponse(responseCode = "403", description = "MSG08: no registered Workspace for the site, or no Jira user")
+    @ApiResponse(responseCode = "503", description = "MSG06: the Forge token could not be checked")
     public ResponseEntity<SolutionFormResponse> openSolutionForm(
             @AuthenticationPrincipal JiraAppPrincipal caller,
             @PathVariable @Size(max = 50) @Pattern(regexp = ISSUE_KEY) String issueKey,
@@ -54,7 +56,8 @@ public class JiraAppSolutionController {
     @Operation(operationId = "submitSolution", summary = "Create the Solution Form ticket of the issue")
     @ApiResponse(responseCode = "400", description = "MSG01 or MSG02")
     @ApiResponse(responseCode = "403", description = "MSG62 or MSG08")
-    @ApiResponse(responseCode = "409", description = "The issue already has a ticket")
+    @ApiResponse(responseCode = "409", description = "MSG31: the issue already has a ticket; MSG40: Project not active")
+    @ApiResponse(responseCode = "503", description = "MSG06: the Forge token could not be checked")
     public ResponseEntity<SubmittedTicketResponse> submitSolution(
             @AuthenticationPrincipal JiraAppPrincipal caller,
             @PathVariable @Size(max = 50) @Pattern(regexp = ISSUE_KEY) String issueKey,
@@ -65,7 +68,9 @@ public class JiraAppSolutionController {
     @PutMapping("/issues/{issueKey}/solution-draft")
     @PreAuthorize("hasRole('" + Roles.JIRA_APP + "')")
     @Operation(operationId = "saveSolutionDraft", summary = "Store the only Draft of the viewer for the issue")
+    @ApiResponse(responseCode = "400", description = "Invalid issue key or body")
     @ApiResponse(responseCode = "403", description = "MSG62 or MSG08")
+    @ApiResponse(responseCode = "503", description = "MSG06: the Forge token could not be checked")
     public ResponseEntity<Void> saveSolutionDraft(
             @AuthenticationPrincipal JiraAppPrincipal caller,
             @PathVariable @Size(max = 50) @Pattern(regexp = ISSUE_KEY) String issueKey,
@@ -77,8 +82,9 @@ public class JiraAppSolutionController {
     @PostMapping("/solution-rewrites")
     @PreAuthorize("hasRole('" + Roles.JIRA_APP + "')")
     @Operation(operationId = "rewriteSolution", summary = "The AI rewrite of the five sections")
+    @ApiResponse(responseCode = "400", description = "Invalid body")
     @ApiResponse(responseCode = "403", description = "MSG62 or MSG08")
-    @ApiResponse(responseCode = "503", description = "MSG68")
+    @ApiResponse(responseCode = "503", description = "MSG68, or MSG06: the Forge token could not be checked")
     public ResponseEntity<SolutionSections> rewriteSolution(
             @AuthenticationPrincipal JiraAppPrincipal caller, @Valid @RequestBody SolutionSections sections) {
         return ResponseEntity.ok(solutions.rewrite(caller, sections));

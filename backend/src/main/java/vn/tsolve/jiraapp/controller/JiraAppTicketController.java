@@ -35,7 +35,9 @@ public class JiraAppTicketController {
     @Operation(operationId = "searchJiraAppTickets", summary = "Published tickets of the Departments of the viewer")
     @ApiResponse(responseCode = "400", description = "MSG01 or MSG02 for the query")
     @ApiResponse(responseCode = "403", description = "MSG62 or MSG08")
-    @ApiResponse(responseCode = "503", description = "MSG06")
+    @ApiResponse(
+            responseCode = "503",
+            description = "MSG06: the search is unavailable or the token could not be checked")
     public ResponseEntity<List<JiraAppTicketResult>> searchJiraAppTickets(
             @AuthenticationPrincipal JiraAppPrincipal caller, @RequestParam(required = false) String q) {
         return ResponseEntity.ok(tickets.search(caller, q));
@@ -44,7 +46,9 @@ public class JiraAppTicketController {
     @GetMapping("/{ticketUuid}")
     @PreAuthorize("hasRole('" + Roles.JIRA_APP + "')")
     @Operation(operationId = "getJiraAppTicket", summary = "A Published ticket for the Published Ticket Preview")
-    @ApiResponse(responseCode = "403", description = "MSG08")
+    @ApiResponse(responseCode = "400", description = "Invalid ticket id")
+    @ApiResponse(responseCode = "403", description = "MSG62 or MSG08")
+    @ApiResponse(responseCode = "503", description = "MSG06: the Forge token could not be checked")
     public ResponseEntity<JiraAppTicketPreview> getJiraAppTicket(
             @AuthenticationPrincipal JiraAppPrincipal caller, @PathVariable UUID ticketUuid) {
         return ResponseEntity.ok(tickets.preview(caller, ticketUuid));

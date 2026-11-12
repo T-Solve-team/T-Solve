@@ -13,6 +13,9 @@ import java.util.UUID;
 import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.data.domain.PageImpl;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
@@ -118,5 +121,14 @@ class JiraAppTicketServiceImplTest {
     private static PublishedTicketView view(UUID id, String ticketId, UUID department) {
         return new PublishedTicketView(
                 id, ticketId, "Title " + ticketId, department, department.equals(IT) ? "IT" : "HR", SOLUTION);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"  ", "/tickets", "acme.tsolve.io.vn", "ftp://acme.tsolve.io.vn", "https://"})
+    void refusesToStartWithoutAnAbsoluteWebOrigin_BUG_205(String webOrigin) {
+        assertThatThrownBy(() -> new JiraAppTicketServiceImpl(access, search, published, scopes, webOrigin))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("TSOLVE_WEB_ORIGIN");
     }
 }
