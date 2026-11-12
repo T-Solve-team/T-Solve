@@ -233,16 +233,46 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-001.8 setup links and inserts inside its transactional service boundary")
-    void usesTransaction() throws Exception {
+    @DisplayName("AC-001.8 setup links, inserts and audits inside one transaction")
+    void usesTransaction() {
+        when(transactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+        service.setup(valid());
+        var order = inOrder(transactions, linker, entities, audit);
+        order.verify(transactions).getTransaction(any());
+        order.verify(linker).linkJiraSite(SITE);
+        order.verify(entities).persist(any());
+        order.verify(entities).flush();
+        order.verify(audit).record(any(), any(), any(), any());
+        order.verify(transactions).commit(any());
+    }
+
+    @Test
+    @DisplayName("AC-001.8 a refused link rolls the setup transaction back")
+    void rollsBackRefusedLink() {
+        when(transactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+        when(linker.linkJiraSite(SITE)).thenThrow(new JiraSiteLinkRefusedException(Reason.LINKED_ELSEWHERE));
+        assertThatThrownBy(() -> service.setup(valid())).isInstanceOf(FieldMessageCodeException.class);
+        verify(transactions).rollback(any());
+        verify(transactions, never()).commit(any());
+    }
+
+    @Test
+    @DisplayName("AC-001.6 checks the Jira account before any transaction opens D30")
+    void checksAccountOutsideTransaction() throws Exception {
         assertThat(WorkspaceServiceImpl.class
                         .getMethod("setup", JsonNode.class)
                         .getAnnotation(org.springframework.transaction.annotation.Transactional.class))
-                .isNotNull();
+                .isNull();
+        doAnswer(call -> {
+                    verifyNoInteractions(transactions);
+                    return null;
+                })
+                .when(tracker)
+                .checkServiceAccount(any());
         service.setup(valid());
-        var order = inOrder(linker, entities);
-        order.verify(linker).linkJiraSite(SITE);
-        order.verify(entities).persist(any());
+        var order = inOrder(tracker, transactions);
+        order.verify(tracker).checkServiceAccount(any());
+        order.verify(transactions).getTransaction(any());
     }
 
     @Test

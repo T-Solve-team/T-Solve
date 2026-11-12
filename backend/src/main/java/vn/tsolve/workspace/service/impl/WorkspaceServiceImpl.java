@@ -71,7 +71,6 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     }
 
     @Override
-    @Transactional
     public WorkspaceInfoResponse setup(JsonNode input) {
         if (input == null || !input.isObject()) {
             throw error(null, "MSG03", Map.of());
@@ -95,34 +94,37 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             // The underlying Jira exception/body must never be propagated with the credential error.
             throw error("serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
         }
-        try {
-            linker.linkJiraSite(site);
-        } catch (JiraSiteLinkRefusedException failure) {
-            if (failure.getReason() == JiraSiteLinkRefusedException.Reason.LINKED_ELSEWHERE) {
-                throw error("jiraSiteUrl", "MSG153", Map.of("tracker_name", "Jira"));
+        // D30: the Jira check above runs with no transaction open; link (AC-001.8), insert and audit commit together.
+        return transaction.execute(status -> {
+            try {
+                linker.linkJiraSite(site);
+            } catch (JiraSiteLinkRefusedException failure) {
+                if (failure.getReason() == JiraSiteLinkRefusedException.Reason.LINKED_ELSEWHERE) {
+                    throw error("jiraSiteUrl", "MSG153", Map.of("tracker_name", "Jira"));
+                }
+                log.warn("Jira tenant information could not be read during Workspace setup");
+                throw error("jiraSiteUrl", "MSG61", Map.of());
             }
-            log.warn("Jira tenant information could not be read during Workspace setup");
-            throw error("jiraSiteUrl", "MSG61", Map.of());
-        }
-        WorkspaceInfo workspace =
-                new WorkspaceInfo(workspaceId, companyName, site, email, cipher.encrypt(workspaceId, token));
-        try {
-            // Assigned ids make JpaRepository.save merge: a concurrent Setup could overwrite the winner.
-            // Persist is insert-only; flush brings the unique violation inside this error boundary.
-            entities.persist(workspace);
-            entities.flush();
-        } catch (PersistenceException | DataIntegrityViolationException failure) {
-            if (isConcurrentSetup(failure)) {
-                throw alreadySetUp();
+            WorkspaceInfo workspace =
+                    new WorkspaceInfo(workspaceId, companyName, site, email, cipher.encrypt(workspaceId, token));
+            try {
+                // Assigned ids make JpaRepository.save merge: a concurrent Setup could overwrite the winner.
+                // Persist is insert-only; flush brings the unique violation inside this error boundary.
+                entities.persist(workspace);
+                entities.flush();
+            } catch (PersistenceException | DataIntegrityViolationException failure) {
+                if (isConcurrentSetup(failure)) {
+                    throw alreadySetUp();
+                }
+                throw failure;
             }
-            throw failure;
-        }
-        audit.record(
-                AuditAction.TRACKER_CONFIGURATION_CHANGE,
-                "WORKSPACE",
-                workspaceId,
-                Map.of("companyName", companyName, "jiraSiteUrl", site, "serviceAccountEmail", email));
-        return mapper.toResponse(workspace);
+            audit.record(
+                    AuditAction.TRACKER_CONFIGURATION_CHANGE,
+                    "WORKSPACE",
+                    workspaceId,
+                    Map.of("companyName", companyName, "jiraSiteUrl", site, "serviceAccountEmail", email));
+            return mapper.toResponse(workspace);
+        });
     }
 
     @Override
