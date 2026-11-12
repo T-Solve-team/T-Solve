@@ -1,0 +1,14 @@
+{
+  "priority": 5,
+  "request": {
+    "method": "GET",
+    "urlPath": "/authorize",
+    "queryParameters": { "hd": { "absent": true } }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "text/html; charset=utf-8" },
+    "transformers": ["response-template"],
+    "body": "<!doctype html><html><head><title>Fake Google: choose an account</title></head><body><h1>Fake Google</h1><p>Choose an account</p><ul><li><a href=\"{{request.query.redirect_uri.[0]}}?code=ops.{{request.query.nonce.[0]}}&amp;state={{request.query.state.[0]}}\">ops@example.test</a></li></ul></body></html>"
+  }
+}

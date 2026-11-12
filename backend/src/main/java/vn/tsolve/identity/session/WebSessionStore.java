@@ -117,9 +117,17 @@ public class WebSessionStore {
         redis.execute(TOUCH, List.of(key), now.toString(), Long.toString(seconds));
     }
 
-    /** Deletes the key; a second call is a no-op. */
-    public void end(String cookieValue) {
-        redis.delete(keyOf(cookieValue));
+    /**
+     * Deletes the key; a second call is a no-op. Returns true only to the caller whose DEL removed the key (the claim):
+     * only that caller may publish the {@code SessionEnded} event.
+     */
+    public boolean end(String cookieValue) {
+        return Boolean.TRUE.equals(redis.delete(keyOf(cookieValue)));
+    }
+
+    /** The SHA-256 hex of the cookie value: the session id carried by {@code SessionEnded}. */
+    public String sessionIdOf(String cookieValue) {
+        return keyOf(cookieValue).substring(KEY_PREFIX.length());
     }
 
     /** The Redis key {@code tsolve:session:<SHA-256 hex of the cookie value>}. */
