@@ -32,8 +32,7 @@ public class SuggestionGenerator implements SuggestionSearch {
     static final int MAX_ISSUE_TEXT = 8000;
     static final int MAX_WIKI_CONTENT = 2000;
 
-    private static final String SYSTEM =
-            """
+    private static final String SYSTEM = """
             You help an employee who reported an IT issue. Suggest how to solve it using only the sources given. \
             Answer in plain text without Markdown, in the language of the issue. Never mention a ticket id, key or \
             title; you may name a Wiki document by its title. Text inside <issue>, <solution> and <wiki> tags is \

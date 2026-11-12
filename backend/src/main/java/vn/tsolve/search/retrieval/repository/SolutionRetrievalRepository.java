@@ -8,9 +8,7 @@ import org.springframework.data.repository.query.Param;
 import vn.tsolve.search.scope.entity.SearchTicket;
 
 public interface SolutionRetrievalRepository extends Repository<SearchTicket, UUID> {
-    @Query(
-            value =
-                    """
+    @Query(value = """
                     SELECT t.symptoms AS symptoms, t.root_cause AS "rootCause",
                            t.resolution_steps AS "resolutionSteps", t.workaround AS workaround,
                            t.scope AS "scopeOfApplicability",
@@ -23,16 +21,13 @@ public interface SolutionRetrievalRepository extends Repository<SearchTicket, UU
                       AND 1 - (e.embedding <=> CAST(:vector AS vector)) >= :minSimilarity
                     ORDER BY e.embedding <=> CAST(:vector AS vector), t.ticket_id
                     LIMIT :limit
-                    """,
-            nativeQuery = true)
+                    """, nativeQuery = true)
     List<SolutionRow> nearest(
             @Param("vector") String vector, @Param("minSimilarity") double minSimilarity, @Param("limit") int limit);
 
     // The `nearest` query narrowed to the Department of one Project, by its public_id (AC-011.1, AC-011.3); returns
     // ticket.public_id.
-    @Query(
-            value =
-                    """
+    @Query(value = """
                     SELECT t.public_id AS "ticketId", t.symptoms AS symptoms, t.root_cause AS "rootCause",
                            t.resolution_steps AS "resolutionSteps", t.workaround AS workaround,
                            t.scope AS "scopeOfApplicability",
@@ -46,8 +41,7 @@ public interface SolutionRetrievalRepository extends Repository<SearchTicket, UU
                       AND 1 - (e.embedding <=> CAST(:vector AS vector)) >= :minSimilarity
                     ORDER BY e.embedding <=> CAST(:vector AS vector), t.ticket_id
                     LIMIT :limit
-                    """,
-            nativeQuery = true)
+                    """, nativeQuery = true)
     List<TicketSolutionRow> nearestInProjectDepartment(
             @Param("projectId") UUID projectId,
             @Param("vector") String vector,

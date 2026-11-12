@@ -186,17 +186,12 @@ class SolutionRetrievalRepositoryIT {
     }
 
     private UUID ticket(UUID projectId, String key, String status, float x, float y) {
-        var ids = jdbc.queryForMap(
-                """
+        var ids = jdbc.queryForMap("""
                 INSERT INTO ticket(source_ticket_id, project_id, source, status, title,
                                    symptoms, root_cause, resolution_steps, workaround, scope)
                 VALUES (?, ?, 'CSV', ?, 'Private title', ?, 'Root cause', 'Resolution', '  ', 'Scope')
                 RETURNING ticket_id, public_id
-                """,
-                key,
-                projectId,
-                status,
-                key);
+                """, key, projectId, status, key);
         jdbc.update(
                 "INSERT INTO ticket_embedding(ticket_id, embedding, model) VALUES (?, CAST(? AS vector), 'bge-m3')",
                 ids.get("ticket_id"),
@@ -219,18 +214,12 @@ class SolutionRetrievalRepositoryIT {
                 UUID.class,
                 department,
                 key);
-        UUID ticket = jdbc.queryForObject(
-                """
+        UUID ticket = jdbc.queryForObject("""
                 INSERT INTO ticket(source_ticket_id, project_id, source, status, title,
                                    symptoms, root_cause, resolution_steps, workaround, scope)
                 VALUES (?, ?, 'CSV', ?, 'Private title', ?, 'Root cause', 'Resolution', '  ', 'Scope')
                 RETURNING ticket_id
-                """,
-                UUID.class,
-                key,
-                project,
-                ticketStatus,
-                key);
+                """, UUID.class, key, project, ticketStatus, key);
         jdbc.update(
                 "INSERT INTO ticket_embedding(ticket_id, embedding, model) VALUES (?, CAST(? AS vector), 'bge-m3')",
                 ticket,
