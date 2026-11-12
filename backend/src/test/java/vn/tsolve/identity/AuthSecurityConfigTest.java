@@ -76,6 +76,7 @@ import vn.tsolve.identity.signin.SignInTestFixtures;
             "GOOGLE_CLIENT_SECRET=test-secret",
             "PLATFORM_OPERATOR_EMAILS=ops@example.test",
             "KEYCLOAK_WEB_CLIENT_SECRET=test-keycloak-secret",
+            "KEYCLOAK_CONSOLE_CLIENT_SECRET=test-keycloak-console-secret",
             "CORS_ALLOWED_ORIGINS=http://localhost:5173",
             "server.port=0"
         })

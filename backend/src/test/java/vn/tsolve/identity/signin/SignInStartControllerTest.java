@@ -60,6 +60,7 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
             "TSOLVE_ADMIN_ORIGIN=" + SignInTestFixtures.ADMIN_ORIGIN,
             "PLATFORM_OPERATOR_EMAILS=ops@example.test",
             "KEYCLOAK_WEB_CLIENT_SECRET=test-keycloak-secret",
+            "KEYCLOAK_CONSOLE_CLIENT_SECRET=test-keycloak-console-secret",
             "CORS_ALLOWED_ORIGINS=http://localhost:5173",
             "server.port=0"
         })
@@ -194,16 +195,6 @@ class SignInStartControllerTest {
         assertThat(AuthorizationUris.one(location, "scope")).isEqualTo("openid email profile");
         assertThat(AuthorizationUris.one(location, "state"))
                 .isEqualTo(requests.onlySaved().getState());
-    }
-
-    @Test
-    @DisplayName("AC-001.28 interim answers 404 to a sign-in start on admin. until Task 29")
-    void answersNotFoundToSignInStartOnAdmin_AC_001_28_interim() throws Exception {
-        MockHttpServletResponse response = perform(start("admin.localhost"));
-
-        assertThat(response.getStatus()).as("status").isEqualTo(404);
-        assertThat(response.getHeader(HttpHeaders.LOCATION)).as("Location").isNull();
-        assertThat(requests.saved()).as("authorization requests saved").isEmpty();
     }
 
     @Test

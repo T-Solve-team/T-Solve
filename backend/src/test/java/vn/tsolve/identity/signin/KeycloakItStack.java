@@ -44,6 +44,9 @@ final class KeycloakItStack {
 
     static final Path REALM_FILE =
             Path.of("../infra/keycloak/realm-tsolve.json").toAbsolutePath().normalize();
+    static final String CONSOLE_CLIENT_SECRET = "it-keycloak-console-client-secret";
+    static final Path OPS_REALM_FILE =
+            Path.of("../infra/keycloak/realm-tsolve-ops.json").toAbsolutePath().normalize();
     static final Path FAKE_GOOGLE_DIR =
             Path.of("../infra/keycloak/fake-google").toAbsolutePath().normalize();
     static final Path THEME_DIR =
@@ -84,8 +87,12 @@ final class KeycloakItStack {
                 .withNetwork(network)
                 .withEnv("KEYCLOAK_WEB_CLIENT_SECRET", WEB_CLIENT_SECRET)
                 .withEnv("TSOLVE_WEB_BASE_URL", FALLBACK_URL)
+                .withEnv("KEYCLOAK_CONSOLE_CLIENT_SECRET", CONSOLE_CLIENT_SECRET)
                 .withCopyFileToContainer(
-                        MountableFile.forHostPath(REALM_FILE), "/opt/keycloak/data/import/realm-tsolve.json");
+                        MountableFile.forHostPath(REALM_FILE), "/opt/keycloak/data/import/realm-tsolve.json")
+                // the start-up discovery check also checks tsolve-ops (Task 29a)
+                .withCopyFileToContainer(
+                        MountableFile.forHostPath(OPS_REALM_FILE), "/opt/keycloak/data/import/realm-tsolve-ops.json");
         if (Files.isDirectory(THEME_DIR)) {
             kc = kc.withCopyFileToContainer(MountableFile.forHostPath(THEME_DIR), THEME_MOUNT);
         }
@@ -108,6 +115,7 @@ final class KeycloakItStack {
                         "--GOOGLE_CLIENT_SECRET=test-secret",
                         "--PLATFORM_OPERATOR_EMAILS=ops@example.test",
                         "--KEYCLOAK_WEB_CLIENT_SECRET=" + WEB_CLIENT_SECRET,
+                        "--KEYCLOAK_CONSOLE_CLIENT_SECRET=" + CONSOLE_CLIENT_SECRET,
                         "--CORS_ALLOWED_ORIGINS=http://localhost:5173",
                         "--DB_HOST=" + db.getHost(),
                         "--DB_PORT=" + db.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT),
