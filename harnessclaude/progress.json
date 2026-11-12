@@ -407,15 +407,15 @@
         "suggestion-job-worker": "passing",
         "suggestion-uuid-keys": "evaluating",
         "suggestion-comment": "passing",
-        "jira-project-read": "pending"
+        "jira-project-read": "evaluating"
       },
-      "lastUpdated": "2026-11-12T10:18:28.613Z",
+      "lastUpdated": "2026-11-12T13:44:40.596Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "c8c32eaeede691bd09f0a1e87a669488d3bbb7b5"
+        "default": "aa966ab850e44c8991f1f9f31d1a869fce250e0b"
       }
     },
     "ticket-review": {

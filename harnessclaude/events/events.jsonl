@@ -1211,3 +1211,6 @@
 {"ts":"2026-11-12T10:18:28.053Z","type":"feature-status","module":"project-integration","feature":"jira-integration-projects-table","from":null,"to":"pending"}
 {"ts":"2026-11-12T10:18:28.332Z","type":"feature-status","module":"project-integration","feature":"jira-integration-add-project","from":null,"to":"pending"}
 {"ts":"2026-11-12T10:18:28.615Z","type":"feature-status","module":"tracker","feature":"jira-project-read","from":null,"to":"pending"}
+{"ts":"2026-11-12T10:19:39.148Z","type":"feature-status","module":"tracker","feature":"jira-project-read","from":"pending","to":"in-progress"}
+{"ts":"2026-11-12T13:44:22.356Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"aa966ab850e44c8991f1f9f31d1a869fce250e0b"}
+{"ts":"2026-11-12T13:44:40.597Z","type":"feature-status","module":"tracker","feature":"jira-project-read","from":"in-progress","to":"evaluating"}
