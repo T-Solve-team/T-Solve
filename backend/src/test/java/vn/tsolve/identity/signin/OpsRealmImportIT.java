@@ -106,6 +106,15 @@ class OpsRealmImportIT {
         }
     }
 
+    /** A test that finishes a sign-in leaves a user with a TOTP; the next test must meet a new user again. */
+    @org.junit.jupiter.api.AfterEach
+    void deleteTheBrokeredUsers() {
+        for (org.keycloak.representations.idm.UserRepresentation user :
+                realm().users().list()) {
+            realm().users().delete(user.getId()).close();
+        }
+    }
+
     // ---- helpers
 
     private static RealmResource realm() {
@@ -323,6 +332,89 @@ class OpsRealmImportIT {
                 .isNull();
         assertThat(settled.status()).as("status of the last page").isEqualTo(200);
         assertThat(settled.body().toLowerCase()).as("TOTP setup page").containsPattern("<input[^>]*name=\"totp\"");
+    }
+
+    @Test
+    @DisplayName("AC-001.66 review I1 lets only admin edit the email of a tsolve-ops user")
+    void letsOnlyAdminEditTheEmail_AC_001_66_reviewI1() throws IOException {
+        Object configuration = realm().users().userProfile().getConfiguration();
+        String json = configuration instanceof String text
+                ? text
+                : new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(configuration);
+        com.fasterxml.jackson.databind.JsonNode attributes =
+                new com.fasterxml.jackson.databind.ObjectMapper().readTree(json).path("attributes");
+        com.fasterxml.jackson.databind.JsonNode email = null;
+        for (com.fasterxml.jackson.databind.JsonNode attribute : attributes) {
+            if ("email".equals(attribute.path("name").asText())) {
+                email = attribute;
+            }
+        }
+        assertThat(email)
+                .as("the user profile of " + REALM + " has an email attribute")
+                .isNotNull();
+        List<String> edit = new ArrayList<>();
+        email.path("permissions").path("edit").forEach(n -> edit.add(n.asText()));
+        assertThat(edit).as("who may edit the email").containsExactly("admin");
+    }
+
+    @Test
+    @DisplayName("AC-001.66 review I2 has no auth-cookie step in the browser flow")
+    void hasNoAuthCookieStepInTheBrowserFlow_AC_001_66_reviewI2() {
+        assertThat(executions(realm().toRepresentation().getBrowserFlow()))
+                .extracting(AuthenticationExecutionInfoRepresentation::getProviderId)
+                .as("steps of the browser flow")
+                .doesNotContain("auth-cookie");
+    }
+
+    @Test
+    @DisplayName("AC-001.66 review I2 sends a second Console start with a live SSO cookie to Google again")
+    void sendsASecondStartWithALiveSsoCookieToGoogleAgain_AC_001_66_reviewI2() throws Exception {
+        TestBrowser browser = newBrowser();
+        TestBrowser.Reply start = consoleStart(browser);
+        TestBrowser.Reply setup =
+                browser.followUntilSettled(browser.get(start.location()), EXPECTED_REDIRECT_URI, true);
+        assertThat(setup.status())
+                .as("first sign-in ends on the TOTP setup page")
+                .isEqualTo(200);
+        java.util.regex.Matcher action =
+                java.util.regex.Pattern.compile("<form[^>]*action=\"([^\"]+)\"").matcher(setup.body());
+        assertThat(action.find()).as("a form on the TOTP setup page").isTrue();
+        String secret = java.util.regex.Pattern.compile(
+                        "name=\"totpSecret\"[^>]*value=\"([^\"]+)\"|value=\"([^\"]+)\"[^>]*name=\"totpSecret\"")
+                .matcher(setup.body())
+                .results()
+                .map(m -> m.group(1) != null ? m.group(1) : m.group(2))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no totpSecret on the TOTP setup page"));
+        javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA1");
+        mac.init(new javax.crypto.spec.SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA1"));
+        byte[] hash = mac.doFinal(java.nio.ByteBuffer.allocate(8)
+                .putLong(System.currentTimeMillis() / 1000 / 30)
+                .array());
+        int offset = hash[hash.length - 1] & 0xf;
+        int binary = ((hash[offset] & 0x7f) << 24)
+                | ((hash[offset + 1] & 0xff) << 16)
+                | ((hash[offset + 2] & 0xff) << 8)
+                | (hash[offset + 3] & 0xff);
+        String code = String.format("%06d", binary % 1_000_000);
+        Map<String, String> form = new java.util.LinkedHashMap<>();
+        form.put("totp", code);
+        form.put("totpSecret", secret);
+        form.put("userLabel", "it");
+        TestBrowser.Reply done = browser.post(action.group(1).replace("&amp;", "&"), form);
+        TestBrowser.Reply first = browser.followUntilSettled(done, EXPECTED_REDIRECT_URI, true);
+        assertThat(first.location())
+                .as("the first sign-in is complete: a code goes to the callback")
+                .startsWith(EXPECTED_REDIRECT_URI);
+        assertThat(first.location()).contains("code=");
+
+        // a second start with the same cookie jar must go to the broker login, not return a code
+        TestBrowser.Reply second = browser.get(authorizeUrl(CLIENT_ID, EXPECTED_REDIRECT_URI, s256()));
+        assertThat(String.valueOf(second.location()))
+                .as("second Console start Location (broker login, no code)")
+                .doesNotStartWith(EXPECTED_REDIRECT_URI)
+                .contains(BROKER_LOGIN_PATH);
+        assertThat(second.status()).as("second Console start status").isIn(302, 303);
     }
 
     @Test
