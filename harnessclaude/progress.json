@@ -122,7 +122,7 @@
         "account-sub-binding": "pending",
         "callback-workspace-checks": "passing",
         "user-role": "passing",
-        "logout-rp-initiated": "pending",
+        "logout-rp-initiated": "passing",
         "keycloak-provisioning": "passing",
         "keycloak-theme": "passing",
         "keycloak-prerequisites": "passing",
