@@ -258,9 +258,9 @@ carry. Decided in planning (KAN-106, user, 2026-11-12): `EXPIRED` is produced by
 over the Redis sorted set `tsolve:session:expiry` (member: `<keyHash>|<workspaceId>|<accountId>`; score: the session's
 deadline in epoch milliseconds; the sweep takes a member as due when its score is below now, strictly), with the time taken from `IdentityClock`; delivery is at most once (a crash between claim and publish loses the
 event, never repeats it). The one-minute sweep keeps the 15-minute bound, and the claim rule below keeps the single
-event of AC-002.3. Claim rule (finding (a)): every end path (logout, the filter's limit path, deactivation, the sweep)
+event of AC-002.3. Claim rule (finding (a)): every end path (logout, the filter's limit path, deactivation, the sweep, and the callback when it replaces an old session)
 claims the session by one atomic Lua script that runs `DEL` on the session key and `ZREM` on the index member; the claim
-holds when its `DEL` removed the key or its `ZREM` removed the member, and only the claimer publishes `SessionEnded`. The two-key Lua scripts need a single Redis node (they are refused on Redis Cluster).
+holds when its `DEL` removed the key or its `ZREM` removed the member, and only the claimer publishes `SessionEnded`. The two-key Lua scripts need a single Redis node (they are refused on Redis Cluster). The callback (Task 27c, AC-002.3) publishes `LOGOUT` for the old Workspace session of the same browser: it reads the old session before `end` and uses that session's own Account id and Workspace id (they can differ from the new sign-in), publishes only when `end` returns true, never for an Operator session, and leaves a session already past a limit of AC-001.23 to the sweep so its event stays `EXPIRED` (AC-002.4).
 In Task 27a the script has only the `DEL` (no index entry exists yet); Task 27b adds the index, the sweep, `EXPIRED`
 and `DEACTIVATED`. Between the two merges the filter's limit and deactivation paths end a session without an event,
 because nothing consumes `SessionEnded` yet. `SessionCleanup` (`@Scheduled`, every 15 minutes) goes: N API replicas must not each
@@ -893,6 +893,7 @@ listed in its banner. Every Critical or High row has its test task.
 | 139 | STORY-001 | Authorization | An old Operator cookie is sent with the callback on `admin.` (session fixation) | High | The old session is ended and the new session id is different (AC-001.29) | Task 29b |
 | 140 | STORY-001 | Authorization | A Workspace request is used at the callback on `admin.`, or a Console request at the callback on `acme.` | Critical | MSG06 on `admin.` (Console failures answer MSG06); MSG141 on `acme.` (AC-001.6); no session and no token request (AC-001.29; extends row 122) | Task 29b |
 | 141 | STORY-001 | Authorization | An Operator session calls a Workspace endpoint on `admin.` (Q7 = A) | High | The endpoint's own Role check answers 403 MSG08; the scope is never bound and no row is returned (AC-001.29) | Task 29b |
+| 142 | STORY-002 | State transitions | A new sign-in in the same browser replaces an old Workspace session (a user may switch Google accounts, so the old Account and Workspace can differ from the new ones) | High | The callback reads the old session before `end` and publishes one `SessionEnded` `LOGOUT` with the old session's own Account id and Workspace id, only when `end` returns true; none for an Operator session; an old session already past a limit of AC-001.23 is not ended by the callback, the sweep ends it and its event stays `EXPIRED` (AC-002.3, AC-002.4) | Task 27c |
 
 Open questions for the spec owner: none. Every row is closed by the answers Q1–Q16.
 
