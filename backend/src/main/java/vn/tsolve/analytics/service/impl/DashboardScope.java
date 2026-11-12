@@ -16,24 +16,38 @@ public record DashboardScope(Set<Long> departments, UUID projectId, Long ownDepa
             TSolveUser user, String departmentId, String projectId, DashboardRepository repository) {
         UUID departmentPublicId = parseId(departmentId);
         UUID projectPublicId = parseId(projectId);
-        var department = departmentPublicId == null
-                ? null
-                : repository
-                        .findDepartment(departmentPublicId)
-                        .orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
-        var project = projectPublicId == null
-                ? null
-                : repository.findProject(projectPublicId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
         if (user.roles().contains(Role.ADMIN)) {
+            var department = departmentPublicId == null
+                    ? null
+                    : repository
+                            .findDepartment(departmentPublicId)
+                            .orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+            var project = projectPublicId == null
+                    ? null
+                    : repository
+                            .findProject(projectPublicId)
+                            .orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
             if (department != null && project != null && project.departmentId() != department.id()) {
                 throw new InvalidDashboardFilterException("MSG06");
             }
             return new DashboardScope(department == null ? null : Set.of(department.id()), projectPublicId, null);
         }
+        // A Project Manager gets 403 for an unknown id too, so the answer never tells whether another
+        // Department's id exists (AC-004.5, AC-004.7).
         long ownDepartment =
                 repository.findUserDepartment(user.id()).orElseThrow(() -> new AccessDeniedException("MSG08"));
-        if ((department != null && department.id() != ownDepartment)
-                || (project != null && project.departmentId() != ownDepartment)) {
+        if (departmentPublicId != null
+                && repository
+                        .findDepartment(departmentPublicId)
+                        .filter(department -> department.id() == ownDepartment)
+                        .isEmpty()) {
+            throw new AccessDeniedException("MSG08");
+        }
+        if (projectPublicId != null
+                && repository
+                        .findProject(projectPublicId)
+                        .filter(project -> project.departmentId() == ownDepartment)
+                        .isEmpty()) {
             throw new AccessDeniedException("MSG08");
         }
         return new DashboardScope(Set.of(ownDepartment), projectPublicId, ownDepartment);

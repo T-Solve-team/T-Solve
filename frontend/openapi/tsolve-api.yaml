@@ -65,7 +65,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/KnowledgeDashboard' }
         '400':
-          description: Invalid date range (MSG39) or malformed id (MSG06).
+          description: Invalid date range (MSG39), malformed id (MSG06), or an Admin's projectId outside the given departmentId (MSG06).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
