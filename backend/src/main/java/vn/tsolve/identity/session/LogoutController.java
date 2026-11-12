@@ -55,7 +55,7 @@ public class LogoutController {
         String logoutUrl = urls.build(session.get(), request).toString();
         boolean claimed = store.end(cookie);
         response.addHeader(HttpHeaders.SET_COOKIE, cookies.expire().toString());
-        if (claimed) {
+        if (claimed && session.get().kind() == WebSession.Kind.WORKSPACE) {
             events.publishEvent(new SessionEnded(
                     session.get().accountId(),
                     session.get().workspaceId(),
