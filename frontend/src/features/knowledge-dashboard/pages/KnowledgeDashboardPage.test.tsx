@@ -233,11 +233,28 @@ describe('KnowledgeDashboardPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('AC-005.2 ignores dates left in the URL for a preset period', async () => {
+    const requests = recordRequests();
+    renderApp(`${paths.knowledgeDashboard}?period=7d&from=2026-01-01&to=2026-01-07`, {
+      role: 'ADMIN',
+    });
+    await ready();
+    expect(screen.getByText('Last 7 days')).toBeInTheDocument();
+    expect(requests[0]?.searchParams.get('from')).toBe(presetRange('7d').from);
+    expect(requests[0]?.searchParams.get('to')).toBe(presetRange('7d').to);
+  });
+
   it('AC-005.11 explains the Department scope of gaps when a Project is selected', async () => {
     renderApp(`${paths.knowledgeDashboard}?departmentId=${IT}&projectId=${ITSUP}`, {
       role: 'ADMIN',
     });
     await ready();
     expect(screen.getByText('Figures count the whole Department.')).toBeInTheDocument();
+  });
+
+  it('AC-005.11 explains the Workspace scope of gaps when an Admin chooses only a Project', async () => {
+    renderApp(`${paths.knowledgeDashboard}?projectId=${ITSUP}`, { role: 'ADMIN' });
+    await ready();
+    expect(screen.getByText('Figures count the whole Workspace.')).toBeInTheDocument();
   });
 });

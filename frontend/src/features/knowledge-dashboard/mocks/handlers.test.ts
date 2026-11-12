@@ -46,6 +46,34 @@ describe('knowledge dashboard mock', () => {
     });
   });
 
+  it.each([
+    { departmentId: 'bad' },
+    { departmentId: '' },
+    { projectId: '00000000000040008000000000000101' },
+    { projectId: ' 00000000-0000-4000-8000-000000000101' },
+  ])('AC-005.7 rejects a malformed id with 400 MSG06 as the backend does: %j', async (filters) => {
+    await expect(getKnowledgeDashboard(filters)).rejects.toMatchObject({
+      status: 400,
+      code: 'MSG06',
+    });
+  });
+
+  it('AC-005.7 answers 404 MSG04 for an unknown id to an Admin and 403 MSG08 to a Project Manager', async () => {
+    const unknown = '00000000-0000-4000-8000-000000000999';
+    for (const filters of [{ departmentId: unknown }, { projectId: unknown }]) {
+      setDevUser('admin');
+      await expect(getKnowledgeDashboard(filters)).rejects.toMatchObject({
+        status: 404,
+        code: 'MSG04',
+      });
+      setDevUser('pm');
+      await expect(getKnowledgeDashboard(filters)).rejects.toMatchObject({
+        status: 403,
+        code: 'MSG08',
+      });
+    }
+  });
+
   it('AC-005.4 offers the Project Manager Department and its Projects', async () => {
     setDevUser('pm-km');
     const data = await getKnowledgeDashboard();

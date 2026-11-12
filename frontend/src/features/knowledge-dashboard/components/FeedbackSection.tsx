@@ -1,7 +1,14 @@
-import { Flex, Statistic, Typography } from 'antd';
+import { Flex, Typography } from 'antd';
 import type { DashboardFeedback, DashboardRatedTicket } from '@/shared/api';
 import { paths } from '@/shared/routing';
-import { cells, DataTable, EmptyState, SectionCard, type DataTableColumn } from '@/shared/ui';
+import {
+  cells,
+  DataTable,
+  EmptyState,
+  SectionCard,
+  StatCard,
+  type DataTableColumn,
+} from '@/shared/ui';
 import { Share } from './Share';
 
 type FeedbackSectionProps = {
@@ -34,15 +41,14 @@ function ticketColumns(canOpenTickets: boolean): DataTableColumn<DashboardRatedT
 export function FeedbackSection({ feedback, canOpenTickets }: FeedbackSectionProps) {
   const columns = ticketColumns(canOpenTickets);
   return (
-    <SectionCard>
-      <Typography.Title level={2}>Reuse &amp; feedback</Typography.Title>
+    <SectionCard title="Reuse & feedback">
       {feedback.helpful + feedback.notHelpful === 0 ? (
         <EmptyState />
       ) : (
         <Flex vertical gap="large">
           <Flex wrap gap="large">
-            <Statistic title="Helpful" value={feedback.helpful} />
-            <Statistic title="Not helpful" value={feedback.notHelpful} />
+            <StatCard label="Helpful" value={feedback.helpful} />
+            <StatCard label="Not helpful" value={feedback.notHelpful} />
           </Flex>
           <Share label="Helpful rate" value={feedback.helpfulRate} />
           <Typography.Title level={3}>Top 5 tickets</Typography.Title>

@@ -30,8 +30,9 @@ describe('OutcomesSection', () => {
   it('AC-005.6 shows totals as statistics, the approval rate as a progress bar and bars per day and Project', () => {
     renderWithProviders(<OutcomesSection outcomes={OUTCOMES} />);
     expect(screen.getByText('Pending review')).toBeInTheDocument();
+    // A StatCard (a card inside the section card): BarList legends repeat some labels.
     expect(
-      screen.getByText('Changes requested', { selector: '.ant-statistic-title' }),
+      screen.getByText('Changes requested', { selector: '.ant-card .ant-card .ant-typography' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'Approval rate' })).toHaveAttribute(
       'aria-valuenow',

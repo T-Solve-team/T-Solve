@@ -7,6 +7,8 @@ import { dashboardRange, presetRange } from '../hooks/useDashboardFilters';
 
 const IT = '00000000-0000-4000-8000-0000000000d1';
 const HR = '00000000-0000-4000-8000-0000000000d2';
+/** The backend accepts only the canonical 8-4-4-4-12 form, in either case. */
+const UUID_FORM = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const OPTIONS: DashboardOptions = {
   departments: [
     { departmentId: IT, name: 'IT' },
@@ -33,10 +35,15 @@ export const handlers: HttpHandler[] = [
         : presetRange('30d');
     if (!dashboardRange(period.from, period.to) || !period.from || !period.to)
       return problem(400, 'MSG39');
+    const rawIds = [search.get('departmentId'), search.get('projectId')];
+    if (rawIds.some((id) => id !== null && !UUID_FORM.test(id))) return problem(400, 'MSG06');
     const ownDepartment = user === 'pm-km' ? HR : IT;
     const departmentId = search.get('departmentId') || (isAdmin ? undefined : ownDepartment);
     const projectId = search.get('projectId');
+    // A Project Manager gets 403 for any id outside their Department, unknown ones included.
     if (!isAdmin && departmentId !== ownDepartment) return problem(403, 'MSG08');
+    if (departmentId && !OPTIONS.departments.some((item) => item.departmentId === departmentId))
+      return problem(404, 'MSG04');
     const options = {
       departments: OPTIONS.departments.filter(
         (item) => isAdmin || item.departmentId === ownDepartment,
@@ -44,8 +51,9 @@ export const handlers: HttpHandler[] = [
       projects: OPTIONS.projects.filter((item) => isAdmin || item.departmentId === ownDepartment),
     };
     const project = OPTIONS.projects.find((item) => item.projectId === projectId);
+    if (!isAdmin && projectId && project?.departmentId !== ownDepartment)
+      return problem(403, 'MSG08');
     if (projectId && !project) return problem(404, 'MSG04');
-    if (project && !isAdmin && project.departmentId !== ownDepartment) return problem(403, 'MSG08');
     if (project && departmentId && project.departmentId !== departmentId)
       return problem(400, 'MSG06');
     const projects = options.projects.filter(

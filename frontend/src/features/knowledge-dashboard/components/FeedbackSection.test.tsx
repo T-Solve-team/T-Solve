@@ -42,8 +42,9 @@ function renderSection(feedback: DashboardFeedback, canOpenTickets: boolean) {
 describe('FeedbackSection', () => {
   it('AC-005.6 shows the totals, the helpful rate and the top and bottom 5 tickets as tables', () => {
     renderSection(FEEDBACK, true);
+    // A StatCard (a card inside the section card): BarList legends repeat some labels.
     expect(
-      screen.getByText('Not helpful', { selector: '.ant-statistic-title' }),
+      screen.getByText('Not helpful', { selector: '.ant-card .ant-card .ant-typography' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'Helpful rate' })).toHaveAttribute(
       'aria-valuenow',

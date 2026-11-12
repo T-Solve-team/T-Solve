@@ -1,6 +1,13 @@
-import { Flex, Statistic, Typography } from 'antd';
+import { Flex, Typography } from 'antd';
 import type { DashboardGaps, DashboardQuestionGap, DashboardSearchGap } from '@/shared/api';
-import { cells, DataTable, EmptyState, SectionCard, type DataTableColumn } from '@/shared/ui';
+import {
+  cells,
+  DataTable,
+  EmptyState,
+  SectionCard,
+  StatCard,
+  type DataTableColumn,
+} from '@/shared/ui';
 
 const SEARCH_COLUMNS: DataTableColumn<DashboardSearchGap>[] = [
   { key: 'query', title: 'Search', render: (_, row) => cells.text(row.query) },
@@ -24,8 +31,7 @@ export function GapsSection({ gaps, note }: GapsSectionProps) {
     gaps.chatbotQuestions.length === 0 &&
     gaps.chatbotNoSource === 0;
   return (
-    <SectionCard>
-      <Typography.Title level={2}>Knowledge gaps</Typography.Title>
+    <SectionCard title="Knowledge gaps">
       {note && <Typography.Paragraph type="secondary">{note}</Typography.Paragraph>}
       {isEmpty ? (
         <EmptyState />
@@ -39,7 +45,7 @@ export function GapsSection({ gaps, note }: GapsSectionProps) {
             rowKey={(row) => row.query}
           />
           <Typography.Title level={3}>Knowledge Chatbot answers with no source</Typography.Title>
-          <Statistic title="Answers" value={gaps.chatbotNoSource} />
+          <StatCard label="Answers" value={gaps.chatbotNoSource} />
           <DataTable
             label="Knowledge Chatbot questions with no source"
             columns={QUESTION_COLUMNS}

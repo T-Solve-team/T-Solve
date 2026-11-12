@@ -44,11 +44,9 @@ export function useDashboardFilters() {
       : search.has('from') || search.has('to')
         ? 'custom'
         : '30d';
-  const hasDates = search.has('from') || search.has('to');
+  // A preset always means the last N days from today: dates left in the URL count only for a custom range.
   const range =
-    period === 'custom' || hasDates
-      ? { from: search.get('from'), to: search.get('to') }
-      : presetRange(period);
+    period === 'custom' ? { from: search.get('from'), to: search.get('to') } : presetRange(period);
   const isRangeValid = dashboardRange(range.from, range.to);
   const departmentId = search.get('departmentId') || undefined;
   const projectId = search.get('projectId') || undefined;
