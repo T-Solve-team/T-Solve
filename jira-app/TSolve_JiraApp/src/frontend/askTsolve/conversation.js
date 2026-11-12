@@ -42,7 +42,7 @@ export function conversationReducer(state, action) {
   }
 }
 
-/** Whether the send button works: not while waiting, not after "Đã giải quyết". */
+/** Whether the send button works: not while waiting, not after "Solved". */
 export function canSend(state) {
   return state.status !== 'asking' && state.status !== 'solved';
 }
