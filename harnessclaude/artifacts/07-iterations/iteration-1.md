@@ -211,3 +211,10 @@ Backend recording and production tenant isolation are not part of this deliverab
 The active HarnessClaude iteration adds one Worker feature, `review-notification-smtp` (STORY-001).
 See [the task](../04-plans/worker/iteration-1/tasks.md). Run the backend integration tests to demonstrate
 both messages in the local SMTP fixture. Worker job wiring and retries follow the queue work.
+
+## KAN-119 workspace setup and settings addition — 2026-11-12
+- Module `workspace`, tasks 1–8 of `artifacts/04-plans/workspace/iteration-1/tasks.md`: Workspace table and token
+  cipher, tracker service account check, Jira site rule and interim linker, Setup/read API, update API, service account
+  for tracker, screens 2.1 and 2.2 (company information only).
+- Demo: first Admin sign-in opens 2.1 with MSG60 → enter company, `https://<site>.atlassian.net`, service account →
+  User List; 2.2 shows the read-only site and lets the Admin change the name or token.

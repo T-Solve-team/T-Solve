@@ -12,6 +12,16 @@ paths:
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
   - docs/bug-log.md
+  - backend/src/main/java/vn/tsolve/common/lookup/WorkspaceStatusLookup.java
+  - backend/src/main/java/vn/tsolve/tracker/client/**
+  - backend/src/test/java/vn/tsolve/tracker/client/**
+  - backend/src/main/java/vn/tsolve/tracker/service/JiraServiceAccount.java
+  - backend/src/main/java/vn/tsolve/tracker/service/impl/ConfiguredJiraServiceAccount.java
+  - backend/src/test/java/vn/tsolve/tracker/service/impl/ConfiguredJiraServiceAccountTest.java
+  - backend/src/main/resources/application.yml
+  - backend/src/test/resources/**
+  - .env.example
+  - frontend/src/shared/messages/**
 ---
 
 # Module: workspace
