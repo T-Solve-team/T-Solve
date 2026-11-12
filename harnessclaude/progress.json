@@ -163,13 +163,13 @@
         "workspace-setup-screen": "passing",
         "workspace-settings-screen": "passing"
       },
-      "lastUpdated": "2026-11-12T18:17:49.281Z",
+      "lastUpdated": "2026-11-12T19:46:35.915Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "df3d89e2afdcbba11a7be56a149efd866115a6b2"
+        "default": "dcdc6063c3134ae17f645c18adb7ebcbf836dd16"
       }
     },
     "project-integration": {
