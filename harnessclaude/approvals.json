@@ -303,8 +303,8 @@
     }
   },
   "identity": {
-    "specHash": "9a48880cdc39b99388de9f09d7ddb981ac98009a01929a935698a138c26edbf1",
-    "approvedAt": "2026-11-12T15:13:05.892Z",
+    "specHash": "9a32631f5957c08bf9444fb4b3e20cf150315f33e4463fdec94213fab930b08a",
+    "approvedAt": "2026-11-12T17:14:23.242Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
