@@ -1222,3 +1222,7 @@
 {"ts":"2026-11-12T14:45:05.227Z","type":"feature-status","module":"identity","feature":"logout-rp-initiated","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-12T14:45:05.462Z","type":"feature-status","module":"identity","feature":"logout-rp-initiated","from":"evaluating","to":"passing"}
 {"ts":"2026-11-12T17:02:17.673Z","type":"spec-approved","module":"identity","specHash":"2d2a80710c883c90736d86e42c1788f9f63816540b4d64f8851b342bf3712c18"}
+{"ts":"2026-11-12T17:21:53.534Z","type":"feature-status","module":"identity","feature":"session-replaced-event","from":null,"to":"pending"}
+{"ts":"2026-11-12T17:21:53.778Z","type":"feature-status","module":"identity","feature":"session-replaced-event","from":"pending","to":"in-progress"}
+{"ts":"2026-11-12T17:21:54.088Z","type":"feature-status","module":"identity","feature":"session-replaced-event","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-12T17:21:54.348Z","type":"feature-status","module":"identity","feature":"session-replaced-event","from":"evaluating","to":"passing"}
