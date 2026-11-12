@@ -94,7 +94,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             // The underlying Jira exception/body must never be propagated with the credential error.
             throw error("serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
         }
-        // D30: the Jira check above runs with no transaction open; link (AC-001.8), insert and audit commit together.
+        // D30: the Jira check above runs with no transaction open; link (AC-003.8), insert and audit commit together.
         return transaction.execute(status -> {
             try {
                 linker.linkJiraSite(site);

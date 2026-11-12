@@ -71,7 +71,7 @@ class WorkspaceInfoRepositoryIT {
     }
 
     @Test
-    @DisplayName("AC-001.1 stores the bound Workspace id and setup fields with the encrypted token")
+    @DisplayName("AC-003.1 stores the bound Workspace id and setup fields with the encrypted token")
     void storesTheSetupFields() {
         UUID id = TwoTenantDatabases.ACME;
         String encrypted = cipher.encrypt(id, "obviously-fake-jira-token");
@@ -99,7 +99,7 @@ class WorkspaceInfoRepositoryIT {
     }
 
     @Test
-    @DisplayName("AC-001.11 singleton constraint refuses a second row even with a different Workspace id")
+    @DisplayName("AC-003.11 singleton constraint refuses a second row even with a different Workspace id")
     void rejectsASecondRow() {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         insertWorkspace(db, TwoTenantDatabases.ACME);
@@ -112,7 +112,7 @@ class WorkspaceInfoRepositoryIT {
     }
 
     @Test
-    @DisplayName("AC-001.11 singleton cannot be bypassed with false or null")
+    @DisplayName("AC-003.11 singleton cannot be bypassed with false or null")
     void rejectsFalseOrNullSingleton() {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         for (Boolean singleton : new Boolean[] {false, null}) {
@@ -128,7 +128,7 @@ class WorkspaceInfoRepositoryIT {
     }
 
     @Test
-    @DisplayName("AC-001.1 schema uses the specified columns lengths nullability and explicit primary key")
+    @DisplayName("AC-003.1 schema uses the specified columns lengths nullability and explicit primary key")
     void matchesTheDataModel() {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         assertThat(db.queryForList("""
@@ -149,7 +149,7 @@ class WorkspaceInfoRepositoryIT {
     }
 
     @Test
-    @DisplayName("AC-001.1 legacy snapshot and solution foreign keys still reference legacy_workspace")
+    @DisplayName("AC-003.1 legacy snapshot and solution foreign keys still reference legacy_workspace")
     void preservesLegacyForeignKeysAndRows() {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         assertLegacyReferences(db, "legacy_workspace");
@@ -183,7 +183,7 @@ class WorkspaceInfoRepositoryIT {
     }
 
     @Test
-    @DisplayName("AC-001.1 last changeset rolls back the new table and restores the legacy name and foreign keys")
+    @DisplayName("AC-003.1 last changeset rolls back the new table and restores the legacy name and foreign keys")
     void rollsBackAndReappliesWorkspaceMigration() throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantB();
         try (Connection connection = db.getDataSource().getConnection();
@@ -194,7 +194,7 @@ class WorkspaceInfoRepositoryIT {
                         DatabaseFactory.getInstance()
                                 .findCorrectDatabaseImplementation(new JdbcConnection(connection)))) {
             var changesets = liquibase.getDatabaseChangeLog().getChangeSets();
-            assertThat(changesets.getLast().getId()).isEqualTo("027-workspace-info");
+            assertThat(changesets.getLast().getId()).isEqualTo("029-workspace-info");
             try {
                 liquibase.rollback(1, "");
                 assertThat(db.queryForObject("SELECT to_regclass('legacy_workspace')::text", String.class))

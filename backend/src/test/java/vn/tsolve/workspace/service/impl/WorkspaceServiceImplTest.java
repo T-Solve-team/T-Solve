@@ -105,7 +105,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-001.1 inserts bound id, GOOGLE, normalized site and encrypted token")
+    @DisplayName("AC-003.1 inserts bound id, GOOGLE, normalized site and encrypted token")
     void insertsSetup() {
         WorkspaceInfoResponse response = service.setup(valid());
         var saved = ArgumentCaptor.forClass(WorkspaceInfo.class);
@@ -129,7 +129,7 @@ class WorkspaceServiceImplTest {
         "serviceAccountEmail,Service account email",
         "serviceAccountToken,Service account API token"
     })
-    @DisplayName("AC-001.2 rejects missing, null, blank and non-string required fields before any check")
+    @DisplayName("AC-003.2 rejects missing, null, blank and non-string required fields before any check")
     void requiresFields(String field, String label) {
         ObjectNode input = valid();
         input.remove(field);
@@ -149,7 +149,7 @@ class WorkspaceServiceImplTest {
         "jiraSiteUrl,Jira site address,200",
         "serviceAccountEmail,Service account email,100"
     })
-    @DisplayName("AC-001.3 measures raw length and returns MSG02 with field_name and max_length")
+    @DisplayName("AC-003.3 measures raw length and returns MSG02 with field_name and max_length")
     void limitsFields(String field, String label, int limit) {
         error(
                 valid().put(field, "x".repeat(limit + 1)),
@@ -160,7 +160,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-001.3 accepts company, site and email exactly at their limits")
+    @DisplayName("AC-003.3 accepts company, site and email exactly at their limits")
     void acceptsLimits() {
         String email = "a".repeat(86) + "@example.test";
         String site = " ".repeat(200 - SITE.length()) + SITE;
@@ -174,7 +174,7 @@ class WorkspaceServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"bad", "a b@example.test", "a@@example.test", "a@example", "a@", "@example.test"})
-    @DisplayName("AC-001.4 rejects malformed email without contacting Jira")
+    @DisplayName("AC-003.4 rejects malformed email without contacting Jira")
     void rejectsEmail(String email) {
         error(valid().put("serviceAccountEmail", email), "serviceAccountEmail", "MSG03", Map.of());
         verifyNoInteractions(repository, tracker, linker);
@@ -189,14 +189,14 @@ class WorkspaceServiceImplTest {
                 "https://fake.atlassian.net.evil.test",
                 "https://fake.atlassian.net/path"
             })
-    @DisplayName("AC-001.5 rejects unsafe sites before checking the row or making outbound calls")
+    @DisplayName("AC-003.5 rejects unsafe sites before checking the row or making outbound calls")
     void rejectsSite(String site) {
         error(valid().put("jiraSiteUrl", site), "jiraSiteUrl", "MSG61", Map.of());
         verifyNoInteractions(repository, tracker, linker);
     }
 
     @Test
-    @DisplayName("AC-001.6 checks the normalized Jira account before linking or inserting")
+    @DisplayName("AC-003.6 checks the normalized Jira account before linking or inserting")
     void checksAccountInOrder() {
         service.setup(valid());
         var order = inOrder(repository, tracker, linker, cipher, entities, audit);
@@ -222,7 +222,7 @@ class WorkspaceServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(ints = {401, 403, 500, 0})
-    @DisplayName("AC-001.7 maps Jira rejection, outage and timeout to MSG156 without linking or leaking credentials")
+    @DisplayName("AC-003.7 maps Jira rejection, outage and timeout to MSG156 without linking or leaking credentials")
     void rejectsJiraFailure(int status) {
         RuntimeException failure = status == 401 || status == 403
                 ? new JiraRejectedException(status)
@@ -233,7 +233,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-001.8 setup links, inserts and audits inside one transaction")
+    @DisplayName("AC-003.8 setup links, inserts and audits inside one transaction")
     void usesTransaction() {
         when(transactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
         service.setup(valid());
@@ -247,7 +247,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-001.8 a refused link rolls the setup transaction back")
+    @DisplayName("AC-003.8 a refused link rolls the setup transaction back")
     void rollsBackRefusedLink() {
         when(transactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
         when(linker.linkJiraSite(SITE)).thenThrow(new JiraSiteLinkRefusedException(Reason.LINKED_ELSEWHERE));
@@ -257,7 +257,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-001.6 checks the Jira account before any transaction opens D30")
+    @DisplayName("AC-003.6 checks the Jira account before any transaction opens D30")
     void checksAccountOutsideTransaction() throws Exception {
         assertThat(WorkspaceServiceImpl.class
                         .getMethod("setup", JsonNode.class)
@@ -276,14 +276,14 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-001.9 linker refusal for another Workspace returns MSG153 without inserting")
+    @DisplayName("AC-003.9 linker refusal for another Workspace returns MSG153 without inserting")
     void rejectsLinkedElsewhere() {
         when(linker.linkJiraSite(SITE)).thenThrow(new JiraSiteLinkRefusedException(Reason.LINKED_ELSEWHERE));
         error(valid(), "jiraSiteUrl", "MSG153", Map.of("tracker_name", "Jira"));
     }
 
     @Test
-    @DisplayName("AC-001.10 unreadable tenant info returns MSG61 and logs no token")
+    @DisplayName("AC-003.10 unreadable tenant info returns MSG61 and logs no token")
     void rejectsUnreadable() {
         var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(WorkspaceServiceImpl.class);
         var logs = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
@@ -303,7 +303,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-001.11 an existing row returns WORKSPACE_ALREADY_SET_UP before external calls")
+    @DisplayName("AC-003.11 an existing row returns WORKSPACE_ALREADY_SET_UP before external calls")
     void rejectsExisting() {
         when(repository.count()).thenReturn(1L);
         assertThatThrownBy(() -> service.setup(valid()))
@@ -314,7 +314,7 @@ class WorkspaceServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"uq_workspace_singleton", "pk_workspace_info"})
-    @DisplayName("AC-001.11 concurrent singleton or primary key insert violation returns a safe conflict")
+    @DisplayName("AC-003.11 concurrent singleton or primary key insert violation returns a safe conflict")
     void rejectsConcurrentInsert(String constraint) {
         doThrow(new ConstraintViolationException(
                         "fake-ciphertext", new SQLException("fake database error", "23505"), constraint))
@@ -329,7 +329,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-001.11 unrelated integrity failures are not mislabeled as already set up")
+    @DisplayName("AC-003.11 unrelated integrity failures are not mislabeled as already set up")
     void preservesOtherFailure() {
         var failure = new ConstraintViolationException(
                 "fake database error", new SQLException("check", "23514"), "ck_workspace_singleton");
@@ -339,7 +339,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-001.12 audits exactly the three public setup fields without token or ciphertext")
+    @DisplayName("AC-003.12 audits exactly the three public setup fields without token or ciphertext")
     void auditsSafeDetails() throws Exception {
         WorkspaceInfoResponse response = service.setup(valid());
         verify(audit)
@@ -361,7 +361,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-002.2 reads only the three public fields of the bound Workspace")
+    @DisplayName("AC-004.2 reads only the three public fields of the bound Workspace")
     void readsWorkspace() throws Exception {
         when(repository.findById(workspaceId))
                 .thenReturn(Optional.of(
@@ -376,7 +376,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-002.3 absent Workspace information returns MSG60")
+    @DisplayName("AC-004.3 absent Workspace information returns MSG60")
     void rejectsMissingWorkspace() {
         assertThatThrownBy(service::get).isInstanceOfSatisfying(NotFoundException.class, e -> assertThat(e.getCode())
                 .isEqualTo("MSG60"));
@@ -385,7 +385,7 @@ class WorkspaceServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"null", "[]", "42", "{} {}", "{", ""})
-    @DisplayName("AC-001.2 malformed or non-object request bodies return safe MSG03")
+    @DisplayName("AC-003.2 malformed or non-object request bodies return safe MSG03")
     void rejectsMalformedBody(String input) {
         assertThatThrownBy(() -> WorkspaceSetupRequest.parse(input, json))
                 .isInstanceOfSatisfying(FieldMessageCodeException.class, e -> {
@@ -422,7 +422,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-003.1 saves updated values with encrypted token and returns only public fields")
+    @DisplayName("AC-005.1 saves updated values with encrypted token and returns only public fields")
     void updatesWorkspace() throws Exception {
         storedWorkspace();
         when(cipher.encrypt(workspaceId, "obviously-fake-new-token")).thenReturn("fake-new-ciphertext");
@@ -444,7 +444,7 @@ class WorkspaceServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"absent", "null", "", " \t\n "})
-    @DisplayName("AC-003.2 absent, null or blank token preserves ciphertext without encryption or decryption")
+    @DisplayName("AC-005.2 absent, null or blank token preserves ciphertext without encryption or decryption")
     void keepsStoredToken(String token) {
         storedWorkspace();
         ObjectNode input = valid();
@@ -467,7 +467,7 @@ class WorkspaceServiceImplTest {
 
     @ParameterizedTest
     @CsvSource({"companyName,Company name", "serviceAccountEmail,Service account email"})
-    @DisplayName("AC-003.3 rejects absent, null, blank and non-string required update fields")
+    @DisplayName("AC-005.3 rejects absent, null, blank and non-string required update fields")
     void requiresUpdateFields(String field, String label) {
         ObjectNode input = valid();
         input.remove(field);
@@ -483,7 +483,7 @@ class WorkspaceServiceImplTest {
 
     @ParameterizedTest
     @CsvSource({"companyName,Company name", "serviceAccountEmail,Service account email"})
-    @DisplayName("AC-003.3 rejects raw fields over 100 characters with MSG02 and max_length")
+    @DisplayName("AC-005.3 rejects raw fields over 100 characters with MSG02 and max_length")
     void limitsUpdateFields(String field, String label) {
         updateError(
                 valid().put(field, "x".repeat(101)), field, "MSG02", Map.of("field_name", label, "max_length", 100));
@@ -491,7 +491,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-003.3 accepts company name and email exactly at 100 characters")
+    @DisplayName("AC-005.3 accepts company name and email exactly at 100 characters")
     void acceptsUpdateLimits() {
         storedWorkspace();
         String email = "a".repeat(87) + "@example.test";
@@ -502,7 +502,7 @@ class WorkspaceServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"bad", "a b@example.test", "a@@example.test", "a@example", "a@", "@example.test"})
-    @DisplayName("AC-003.3 rejects invalid email with MSG03 before contacting Jira")
+    @DisplayName("AC-005.3 rejects invalid email with MSG03 before contacting Jira")
     void rejectsUpdateEmail(String email) {
         updateError(valid().put("serviceAccountEmail", email), "serviceAccountEmail", "MSG03", Map.of());
         verifyNoInteractions(tracker, linker, cipher);
@@ -510,7 +510,7 @@ class WorkspaceServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"null", "[]", "42", "{} {}", "{", ""})
-    @DisplayName("AC-003.3 malformed update bodies return safe MSG03 without input or cause")
+    @DisplayName("AC-005.3 malformed update bodies return safe MSG03 without input or cause")
     void rejectsMalformedUpdateBody(String body) {
         assertThatThrownBy(() -> WorkspaceUpdateRequest.parse(body, json))
                 .isInstanceOfSatisfying(FieldMessageCodeException.class, e -> {
@@ -520,7 +520,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-003.3 rejects non-string optional token with a safe field error")
+    @DisplayName("AC-005.3 rejects non-string optional token with a safe field error")
     void rejectsNonStringUpdateToken() {
         updateError(valid().put("serviceAccountToken", 42), "serviceAccountToken", "MSG03", Map.of());
         verifyNoInteractions(tracker, linker, cipher);
@@ -528,7 +528,7 @@ class WorkspaceServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"absent", "", " \t\n "})
-    @DisplayName("AC-003.4 changed email checks stored site and decrypted stored token before writing")
+    @DisplayName("AC-005.4 changed email checks stored site and decrypted stored token before writing")
     void checksChangedEmailWithStoredToken(String token) {
         storedWorkspace();
         when(cipher.decrypt(workspaceId, "fake-ciphertext")).thenReturn(TOKEN);
@@ -551,7 +551,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-003.4 any supplied non-blank token is checked and encrypted without decrypting to compare D21")
+    @DisplayName("AC-005.4 any supplied non-blank token is checked and encrypted without decrypting to compare D21")
     void checksEvenRepeatedToken() {
         storedWorkspace();
         service.update(valid());
@@ -565,7 +565,7 @@ class WorkspaceServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(ints = {401, 403, 500, 0})
-    @DisplayName("AC-003.5 failed account check returns MSG156 and leaves all stored values and audit unchanged")
+    @DisplayName("AC-005.5 failed account check returns MSG156 and leaves all stored values and audit unchanged")
     void rejectsFailedUpdateCheck(int status) {
         WorkspaceInfo stored = storedWorkspace();
         RuntimeException failure = status == 401 || status == 403
@@ -584,7 +584,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-003.5 undecryptable stored token on an email change returns MSG156 and changes nothing D29")
+    @DisplayName("AC-005.5 undecryptable stored token on an email change returns MSG156 and changes nothing D29")
     void rejectsUndecryptableStoredToken() {
         storedWorkspace();
         when(cipher.decrypt(workspaceId, "fake-ciphertext"))
@@ -613,7 +613,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-003.6 company-only update succeeds without any Jira or cipher call D10")
+    @DisplayName("AC-005.6 company-only update succeeds without any Jira or cipher call D10")
     void renamesWithoutJira() {
         storedWorkspace();
         ObjectNode input = valid().put("companyName", "Renamed");
@@ -624,7 +624,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-003.7 ignores even non-string jiraSiteUrl and checks only the stored site D17")
+    @DisplayName("AC-005.7 ignores even non-string jiraSiteUrl and checks only the stored site D17")
     void ignoresUpdateSite() {
         storedWorkspace();
         ObjectNode input = valid();
@@ -636,7 +636,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-003.8 audits old and new public values and tokenChanged true without secret values")
+    @DisplayName("AC-005.8 audits old and new public values and tokenChanged true without secret values")
     void auditsUpdate() throws Exception {
         storedWorkspace();
         ObjectNode input = valid().put("companyName", "Renamed").put("serviceAccountEmail", "new@example.test");
@@ -656,7 +656,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-003.9 update before setup returns MSG60 without external calls or changes")
+    @DisplayName("AC-005.9 update before setup returns MSG60 without external calls or changes")
     void rejectsMissingUpdateWorkspace() {
         assertThatThrownBy(() -> service.update(valid()))
                 .isInstanceOfSatisfying(

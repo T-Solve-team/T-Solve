@@ -49,7 +49,7 @@ class InterimJiraSiteLinkerTest {
     }
 
     @Test
-    @DisplayName("AC-007.4 returns the cloudId from public tenant information without credentials")
+    @DisplayName("AC-009.4 returns the cloudId from public tenant information without credentials")
     void returnsCloudId() {
         jira.expect(requestTo(TENANT_INFO))
                 .andExpect(method(HttpMethod.GET))
@@ -60,8 +60,8 @@ class InterimJiraSiteLinkerTest {
         jira.verify();
     }
 
-    @DisplayName("AC-007.4 refuses every non-200 status and logs only host and status")
-    @ParameterizedTest(name = "AC-007.4 refuses HTTP {0}")
+    @DisplayName("AC-009.4 refuses every non-200 status and logs only host and status")
+    @ParameterizedTest(name = "AC-009.4 refuses HTTP {0}")
     @ValueSource(ints = {201, 204, 301, 302, 307, 308, 400, 401, 403, 404, 429, 500})
     void refusesNon200(int status, CapturedOutput output) {
         jira.expect(requestTo(TENANT_INFO))
@@ -76,7 +76,7 @@ class InterimJiraSiteLinkerTest {
     }
 
     @Test
-    @DisplayName("AC-007.4 the production client refuses a 302 and never requests its Location")
+    @DisplayName("AC-009.4 the production client refuses a 302 and never requests its Location")
     void productionClientFollowsNoRedirect() throws IOException {
         AtomicInteger targetHits = new AtomicInteger();
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -122,8 +122,8 @@ class InterimJiraSiteLinkerTest {
         }
     }
 
-    @DisplayName("AC-007.4 refuses absent or blank cloudId")
-    @ParameterizedTest(name = "AC-007.4 refuses tenant information [{0}]")
+    @DisplayName("AC-009.4 refuses absent or blank cloudId")
+    @ParameterizedTest(name = "AC-009.4 refuses tenant information [{0}]")
     @ValueSource(strings = {"", "{}", "{\"cloudId\":null}", "{\"cloudId\":\"\"}", "{\"cloudId\":\"  \"}"})
     void refusesMissingCloudId(String body) {
         jira.expect(requestTo(TENANT_INFO)).andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
@@ -132,7 +132,7 @@ class InterimJiraSiteLinkerTest {
     }
 
     @Test
-    @DisplayName("AC-007.4 refuses IO failures without exposing their messages or causes")
+    @DisplayName("AC-009.4 refuses IO failures without exposing their messages or causes")
     void refusesIoFailure(CapturedOutput output) {
         jira.expect(requestTo(TENANT_INFO)).andRespond(request -> {
             throw new SocketTimeoutException("fake-private-body fake-token");
@@ -143,7 +143,7 @@ class InterimJiraSiteLinkerTest {
     }
 
     @Test
-    @DisplayName("AC-007.4 refuses malformed tenant information without exposing its body")
+    @DisplayName("AC-009.4 refuses malformed tenant information without exposing its body")
     void refusesMalformedBody(CapturedOutput output) {
         jira.expect(requestTo(TENANT_INFO))
                 .andRespond(withSuccess("fake-private-body fake-token", MediaType.APPLICATION_JSON));
@@ -152,8 +152,8 @@ class InterimJiraSiteLinkerTest {
         assertThat(output).doesNotContain("fake-private-body", "fake-token");
     }
 
-    @DisplayName("AC-007.3 refuses unchecked or non-normalised input before any outbound call")
-    @ParameterizedTest(name = "AC-007.3 makes no request for [{0}]")
+    @DisplayName("AC-009.3 refuses unchecked or non-normalised input before any outbound call")
+    @ParameterizedTest(name = "AC-009.3 makes no request for [{0}]")
     @NullAndEmptySource
     @ValueSource(
             strings = {

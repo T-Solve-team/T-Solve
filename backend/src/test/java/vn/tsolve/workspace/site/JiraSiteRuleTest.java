@@ -10,8 +10,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class JiraSiteRuleTest {
 
-    @DisplayName("AC-007.3 accepts Jira Cloud sites and normalises whitespace case and trailing slash")
-    @ParameterizedTest(name = "AC-007.3 normalises {0} to {1}")
+    @DisplayName("AC-009.3 accepts Jira Cloud sites and normalises whitespace case and trailing slash")
+    @ParameterizedTest(name = "AC-009.3 normalises {0} to {1}")
     @CsvSource(
             value = {
                 "'https://acme.atlassian.net',https://acme.atlassian.net",
@@ -25,8 +25,8 @@ class JiraSiteRuleTest {
         assertThat(JiraSiteRule.normalise(raw)).contains(expected);
     }
 
-    @DisplayName("AC-007.3 rejects unsafe or malformed site addresses")
-    @ParameterizedTest(name = "AC-007.3 rejects site [{0}]")
+    @DisplayName("AC-009.3 rejects unsafe or malformed site addresses")
+    @ParameterizedTest(name = "AC-009.3 rejects site [{0}]")
     @NullAndEmptySource
     @ValueSource(
             strings = {

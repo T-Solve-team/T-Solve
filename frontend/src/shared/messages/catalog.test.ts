@@ -53,13 +53,13 @@ describe('message catalog', () => {
       'MSG156',
       'The service account could not connect to {tracker_name} or lacks the required permissions.',
     ],
-  ])('AC-005.4 holds %s as a field message with the exact v3460 text', (code, text) => {
+  ])('AC-007.4 holds %s as a field message with the exact v3460 text', (code, text) => {
     expect(entry(code)).toEqual({ type: 'field', text });
     expect(report3[code]?.text).toBe(text);
     expect(report3[code]?.type).toBe('Red text below the field');
     expect(report3[code]?.context).not.toMatch(/^Retired\b/);
   });
-  it('AC-005.4 has the Report3 reference file with 143 messages including the workspace codes', () => {
+  it('AC-007.4 has the Report3 reference file with 143 messages including the workspace codes', () => {
     expect(Object.keys(report3)).toHaveLength(143);
   });
 

@@ -7,7 +7,7 @@ import { useUpdateWorkspaceInfo } from '../hooks/useWorkspace';
 
 type WorkspaceInfoFormProps = { workspace: WorkspaceInfo };
 
-/** An empty token keeps the stored one, so it is left out of the request (AC-006.3, edge 19). */
+/** An empty token keeps the stored one, so it is left out of the request (AC-008.3, edge 19). */
 function toRequest({
   serviceAccountToken,
   ...rest
@@ -15,11 +15,11 @@ function toRequest({
   return serviceAccountToken?.trim() ? { ...rest, serviceAccountToken } : rest;
 }
 
-/** 2.2 "Company information" section (STORY-006). */
+/** 2.2 "Company information" section (STORY-008). */
 export function WorkspaceInfoForm({ workspace }: WorkspaceInfoFormProps) {
   const [form] = Form.useForm<WorkspaceUpdateRequest>();
   const update = useUpdateWorkspaceInfo();
-  // Only these two fields: a stored token is never put into the form (AC-006.2).
+  // Only these two fields: a stored token is never put into the form (AC-008.2).
   const loaded = {
     companyName: workspace.companyName,
     serviceAccountEmail: workspace.serviceAccountEmail,

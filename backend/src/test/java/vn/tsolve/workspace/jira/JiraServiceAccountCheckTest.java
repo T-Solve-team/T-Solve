@@ -62,7 +62,7 @@ class JiraServiceAccountCheckTest {
     }
 
     @Test
-    @DisplayName("AC-007.1 checks identity then all three permissions with Basic auth")
+    @DisplayName("AC-009.1 checks identity then all three permissions with Basic auth")
     void checksServiceAccountWithBasicAuth() {
         jira.expect(requestTo(MYSELF))
                 .andExpect(method(HttpMethod.GET))
@@ -78,8 +78,8 @@ class JiraServiceAccountCheckTest {
         jira.verify();
     }
 
-    @DisplayName("AC-007.2 rejects authentication and authorization errors without leaking secrets")
-    @ParameterizedTest(name = "AC-007.2 rejects {1} from {0} without exposing Jira body or credentials")
+    @DisplayName("AC-009.2 rejects authentication and authorization errors without leaking secrets")
+    @ParameterizedTest(name = "AC-009.2 rejects {1} from {0} without exposing Jira body or credentials")
     @CsvSource({"myself,401", "myself,403", "mypermissions,401", "mypermissions,403"})
     void rejectsAuthenticationAndAuthorizationErrors(String endpoint, int status, CapturedOutput output) {
         expectIdentityBefore(endpoint);
@@ -96,8 +96,8 @@ class JiraServiceAccountCheckTest {
         jira.verify();
     }
 
-    @DisplayName("AC-007.2 treats server errors as unavailable without leaking secrets")
-    @ParameterizedTest(name = "AC-007.2 treats 500 from {0} as unavailable without exposing Jira body or credentials")
+    @DisplayName("AC-009.2 treats server errors as unavailable without leaking secrets")
+    @ParameterizedTest(name = "AC-009.2 treats 500 from {0} as unavailable without exposing Jira body or credentials")
     @ValueSource(strings = {"myself", "mypermissions"})
     void treatsServerErrorsAsUnavailable(String endpoint, CapturedOutput output) {
         expectIdentityBefore(endpoint);
@@ -113,8 +113,8 @@ class JiraServiceAccountCheckTest {
         jira.verify();
     }
 
-    @DisplayName("AC-007.1 rejects a false required permission")
-    @ParameterizedTest(name = "AC-007.1 rejects false permission {0}")
+    @DisplayName("AC-009.1 rejects a false required permission")
+    @ParameterizedTest(name = "AC-009.1 rejects false permission {0}")
     @ValueSource(strings = {"BROWSE_PROJECTS", "CREATE_ISSUES", "MODIFY_REPORTER"})
     void rejectsFalsePermission(String permission) {
         expectPermissions(ALL_PERMISSIONS.replace(
@@ -124,8 +124,8 @@ class JiraServiceAccountCheckTest {
         assertPermissionRejected();
     }
 
-    @DisplayName("AC-007.1 rejects a missing required permission")
-    @ParameterizedTest(name = "AC-007.1 rejects missing permission {0}")
+    @DisplayName("AC-009.1 rejects a missing required permission")
+    @ParameterizedTest(name = "AC-009.1 rejects missing permission {0}")
     @ValueSource(strings = {"BROWSE_PROJECTS", "CREATE_ISSUES", "MODIFY_REPORTER"})
     void rejectsMissingPermission(String permission) {
         expectPermissions(ALL_PERMISSIONS.replace("\"" + permission + "\"", "\"UNRELATED_PERMISSION\""));
@@ -133,8 +133,8 @@ class JiraServiceAccountCheckTest {
         assertPermissionRejected();
     }
 
-    @DisplayName("AC-007.1 requires havePermission to be boolean true")
-    @ParameterizedTest(name = "AC-007.1 rejects havePermission that is not boolean true: {0}")
+    @DisplayName("AC-009.1 requires havePermission to be boolean true")
+    @ParameterizedTest(name = "AC-009.1 rejects havePermission that is not boolean true: {0}")
     @ValueSource(
             strings = {"{}", "{\"havePermission\":null}", "{\"havePermission\":\"true\"}", "{\"havePermission\":1}"})
     void rejectsPermissionThatIsNotTrue(String permission) {
@@ -144,8 +144,8 @@ class JiraServiceAccountCheckTest {
         assertPermissionRejected();
     }
 
-    @DisplayName("AC-007.1 rejects absent permissions")
-    @ParameterizedTest(name = "AC-007.1 rejects an absent permissions body: {0}")
+    @DisplayName("AC-009.1 rejects absent permissions")
+    @ParameterizedTest(name = "AC-009.1 rejects an absent permissions body: {0}")
     @ValueSource(strings = {"", "{}", "{\"permissions\":{}}"})
     void rejectsAbsentPermissions(String body) {
         expectPermissions(body);
@@ -153,8 +153,8 @@ class JiraServiceAccountCheckTest {
         assertPermissionRejected();
     }
 
-    @DisplayName("AC-007.2 treats timeouts as unavailable without leaking secrets")
-    @ParameterizedTest(name = "AC-007.2 treats timeout from {0} as unavailable without exposing credentials")
+    @DisplayName("AC-009.2 treats timeouts as unavailable without leaking secrets")
+    @ParameterizedTest(name = "AC-009.2 treats timeout from {0} as unavailable without exposing credentials")
     @ValueSource(strings = {"myself", "mypermissions"})
     void treatsCheckTimeoutAsUnavailable(String endpoint, CapturedOutput output) {
         expectIdentityBefore(endpoint);
@@ -171,8 +171,8 @@ class JiraServiceAccountCheckTest {
         jira.verify();
     }
 
-    @DisplayName("AC-007.1 requires HTTP 200 from both endpoints")
-    @ParameterizedTest(name = "AC-007.1 rejects a non-200 response {1} from {0}")
+    @DisplayName("AC-009.1 requires HTTP 200 from both endpoints")
+    @ParameterizedTest(name = "AC-009.1 rejects a non-200 response {1} from {0}")
     @CsvSource({"myself,204", "myself,302", "mypermissions,204", "mypermissions,302"})
     void rejectsNon200CheckResponse(String endpoint, int status) {
         expectIdentityBefore(endpoint);

@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset workspace:027-workspace-info
+--changeset workspace:029-workspace-info
 -- PostgreSQL preserves the legacy rows and foreign-key targets when their table is renamed.
 ALTER TABLE workspace RENAME TO legacy_workspace;
 

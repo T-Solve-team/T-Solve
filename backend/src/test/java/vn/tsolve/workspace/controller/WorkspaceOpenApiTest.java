@@ -13,7 +13,7 @@ import vn.tsolve.workspace.dto.WorkspaceUpdateRequest;
 
 class WorkspaceOpenApiTest {
     @Test
-    @DisplayName("AC-003.1 OpenAPI describes updateWorkspace with two required fields and optional write-only token")
+    @DisplayName("AC-005.1 OpenAPI describes updateWorkspace with two required fields and optional write-only token")
     void describesUpdate() throws Exception {
         Schema<?> schema =
                 ModelConverters.getInstance().read(WorkspaceUpdateRequest.class).get("WorkspaceUpdateRequest");
@@ -35,7 +35,7 @@ class WorkspaceOpenApiTest {
     }
 
     @Test
-    @DisplayName("AC-001.1 OpenAPI describes the four required setup fields and write-only token")
+    @DisplayName("AC-003.1 OpenAPI describes the four required setup fields and write-only token")
     void describesSetup() throws Exception {
         Schema<?> schema =
                 ModelConverters.getInstance().read(WorkspaceSetupRequest.class).get("WorkspaceSetupRequest");
@@ -57,7 +57,7 @@ class WorkspaceOpenApiTest {
     }
 
     @Test
-    @DisplayName("AC-002.2 OpenAPI exposes exactly three required public Workspace fields and getWorkspace")
+    @DisplayName("AC-004.2 OpenAPI exposes exactly three required public Workspace fields and getWorkspace")
     void describesWorkspaceInfo() throws Exception {
         Schema<?> schema =
                 ModelConverters.getInstance().read(WorkspaceInfoResponse.class).get("WorkspaceInfo");

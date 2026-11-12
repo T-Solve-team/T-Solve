@@ -34,7 +34,7 @@ public class InterimJiraSiteLinker implements JiraSiteLinker {
         this(clientBuilder(connectTimeout, readTimeout));
     }
 
-    /** The production client: a redirect could escape the validated Jira host, so none is followed (AC-007.4). */
+    /** The production client: a redirect could escape the validated Jira host, so none is followed (AC-009.4). */
     static RestClient.Builder clientBuilder(Duration connectTimeout, Duration readTimeout) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory() {
             @Override

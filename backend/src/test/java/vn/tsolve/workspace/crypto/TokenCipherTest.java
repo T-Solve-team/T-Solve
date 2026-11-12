@@ -43,7 +43,7 @@ class TokenCipherTest {
     private final TokenCipher cipher = cipher(KEY);
 
     @Test
-    @DisplayName("AC-007.5 encrypts with AES-256-GCM and a 96-bit nonce in the v1 envelope")
+    @DisplayName("AC-009.5 encrypts with AES-256-GCM and a 96-bit nonce in the v1 envelope")
     void encryptsWithTheSpecifiedEnvelope() throws Exception {
         String encrypted = cipher.encrypt(WORKSPACE, TOKEN);
 
@@ -66,7 +66,7 @@ class TokenCipherTest {
     }
 
     @Test
-    @DisplayName("AC-007.5 generates a fresh nonce even for the same Workspace and token")
+    @DisplayName("AC-009.5 generates a fresh nonce even for the same Workspace and token")
     void generatesFreshNonces() {
         String first = cipher.encrypt(WORKSPACE, TOKEN);
         String second = cipher.encrypt(WORKSPACE, TOKEN);
@@ -79,7 +79,7 @@ class TokenCipherTest {
     }
 
     @Test
-    @DisplayName("AC-007.5 refuses ciphertext copied to another Workspace")
+    @DisplayName("AC-009.5 refuses ciphertext copied to another Workspace")
     void bindsCiphertextToTheWorkspace() {
         String encrypted = cipher.encrypt(WORKSPACE, TOKEN);
 
@@ -89,9 +89,9 @@ class TokenCipherTest {
                 .hasNoCause();
     }
 
-    @ParameterizedTest(name = "AC-007.5 rejects tampering at byte {0}")
+    @ParameterizedTest(name = "AC-009.5 rejects tampering at byte {0}")
     @ValueSource(ints = {0, 12, -1})
-    @DisplayName("AC-007.5 authenticates the nonce ciphertext and tag")
+    @DisplayName("AC-009.5 authenticates the nonce ciphertext and tag")
     void rejectsTampering(int position) {
         byte[] packed =
                 Base64.getDecoder().decode(cipher.encrypt(WORKSPACE, TOKEN).substring(3));
@@ -105,7 +105,7 @@ class TokenCipherTest {
     }
 
     @Test
-    @DisplayName("AC-007.5 refuses a value encrypted under a different key")
+    @DisplayName("AC-009.5 refuses a value encrypted under a different key")
     void rejectsTheWrongKey() {
         byte[] otherKey = new byte[32];
         Arrays.fill(otherKey, (byte) 1);
@@ -119,7 +119,7 @@ class TokenCipherTest {
     }
 
     @Test
-    @DisplayName("AC-007.6 starts with a Base64 encoded 32-byte WORKSPACE_SECRET_KEY")
+    @DisplayName("AC-009.6 starts with a Base64 encoded 32-byte WORKSPACE_SECRET_KEY")
     void startsWithAValidKey() {
         runner(KEY).run(context -> {
             assertThat(context).hasNotFailed().hasSingleBean(TokenCipher.class);
@@ -130,7 +130,7 @@ class TokenCipherTest {
     }
 
     @Test
-    @DisplayName("AC-007.6 shared test configuration supplies the fake key for existing application contexts")
+    @DisplayName("AC-009.6 shared test configuration supplies the fake key for existing application contexts")
     void startsWithTheSharedTestConfiguration() {
         new ApplicationContextRunner()
                 .withInitializer(new ConfigDataApplicationContextInitializer())
@@ -143,7 +143,7 @@ class TokenCipherTest {
     }
 
     @Test
-    @DisplayName("AC-007.6 refuses startup with a missing WORKSPACE_SECRET_KEY")
+    @DisplayName("AC-009.6 refuses startup with a missing WORKSPACE_SECRET_KEY")
     void refusesAMissingKey() {
         runner(null).run(context -> {
             assertThat(context).hasFailed();
@@ -151,9 +151,9 @@ class TokenCipherTest {
         });
     }
 
-    @ParameterizedTest(name = "AC-007.6 rejects invalid key case {index}")
+    @ParameterizedTest(name = "AC-009.6 rejects invalid key case {index}")
     @MethodSource("invalidKeys")
-    @DisplayName("AC-007.6 refuses blank malformed or wrong-length keys without exposing the value")
+    @DisplayName("AC-009.6 refuses blank malformed or wrong-length keys without exposing the value")
     void refusesInvalidKeys(String invalid, CapturedOutput output) {
         runner(invalid).run(context -> {
             assertThat(context).hasFailed();
@@ -172,9 +172,9 @@ class TokenCipherTest {
                 Stream.of(16, 24, 31, 33).map(length -> Base64.getEncoder().encodeToString(new byte[length])));
     }
 
-    @ParameterizedTest(name = "AC-007.7 sanitizes malformed ciphertext case {index}")
+    @ParameterizedTest(name = "AC-009.7 sanitizes malformed ciphertext case {index}")
     @MethodSource("invalidCiphertexts")
-    @DisplayName("AC-007.7 decryption diagnostics never expose ciphertext or decoder causes")
+    @DisplayName("AC-009.7 decryption diagnostics never expose ciphertext or decoder causes")
     void sanitizesDecryptionFailures(String invalid, CapturedOutput output) {
         assertThatThrownBy(() -> cipher.decrypt(WORKSPACE, invalid))
                 .isInstanceOf(IllegalStateException.class)
@@ -198,7 +198,7 @@ class TokenCipherTest {
     }
 
     @Test
-    @DisplayName("AC-007.7 encryption failures never expose the input token")
+    @DisplayName("AC-009.7 encryption failures never expose the input token")
     void sanitizesEncryptionFailures(CapturedOutput output) {
         assertThatThrownBy(() -> cipher.encrypt(null, TOKEN))
                 .isInstanceOf(IllegalStateException.class)
@@ -212,7 +212,7 @@ class TokenCipherTest {
     }
 
     @Test
-    @DisplayName("AC-007.7 entity and cipher diagnostics and entity JSON hide secret values")
+    @DisplayName("AC-009.7 entity and cipher diagnostics and entity JSON hide secret values")
     void hidesSecretsInDiagnosticsAndJson() throws Exception {
         String encrypted = cipher.encrypt(WORKSPACE, TOKEN);
         WorkspaceInfo workspace = new WorkspaceInfo(

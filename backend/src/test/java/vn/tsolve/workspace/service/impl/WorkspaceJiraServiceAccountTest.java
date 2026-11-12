@@ -57,7 +57,7 @@ class WorkspaceJiraServiceAccountTest {
     }
 
     @Test
-    @DisplayName("AC-004.1 returns the bound Workspace's site, email and decrypted token")
+    @DisplayName("AC-006.1 returns the bound Workspace's site, email and decrypted token")
     void returnsAccount() {
         store(SITE, EMAIL, cipher.encrypt(WORKSPACE, TOKEN));
 
@@ -67,7 +67,7 @@ class WorkspaceJiraServiceAccountTest {
     }
 
     @Test
-    @DisplayName("AC-004.1 returns empty before the bound Workspace is set up")
+    @DisplayName("AC-006.1 returns empty before the bound Workspace is set up")
     void returnsEmptyWithoutRow() {
         when(repository.findById(WORKSPACE)).thenReturn(Optional.empty());
 
@@ -79,7 +79,7 @@ class WorkspaceJiraServiceAccountTest {
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = "  ")
-    @DisplayName("AC-004.1 returns empty when the stored site, email or token is missing")
+    @DisplayName("AC-006.1 returns empty when the stored site, email or token is missing")
     void returnsEmptyWithIncompleteAccount(String missing) {
         String encrypted = cipher.encrypt(WORKSPACE, TOKEN);
         withAccount(account -> {
@@ -93,7 +93,7 @@ class WorkspaceJiraServiceAccountTest {
     }
 
     @Test
-    @DisplayName("AC-004.1 reads the current Workspace and token again on every call")
+    @DisplayName("AC-006.1 reads the current Workspace and token again on every call")
     void followsBoundWorkspaceAndUpdates() {
         when(scope.currentWorkspaceId()).thenReturn(WORKSPACE, OTHER_WORKSPACE, WORKSPACE);
         WorkspaceInfo initial = row(SITE, EMAIL, cipher.encrypt(WORKSPACE, TOKEN));
@@ -109,7 +109,7 @@ class WorkspaceJiraServiceAccountTest {
     }
 
     @Test
-    @DisplayName("AC-004.1 a worker job reads the Workspace bound by WorkerTenantService without touching TenantScope")
+    @DisplayName("AC-006.1 a worker job reads the Workspace bound by WorkerTenantService without touching TenantScope")
     void usesWorkerBinding() {
         WorkerTenantService worker = mock(WorkerTenantService.class);
         when(worker.currentWorkspaceId()).thenReturn(Optional.of(OTHER_WORKSPACE));
@@ -126,7 +126,7 @@ class WorkspaceJiraServiceAccountTest {
     }
 
     @Test
-    @DisplayName("AC-004.1 falls back to TenantScope when the worker binds no Workspace")
+    @DisplayName("AC-006.1 falls back to TenantScope when the worker binds no Workspace")
     void fallsBackWhenWorkerUnbound() {
         WorkerTenantService worker = mock(WorkerTenantService.class);
         when(worker.currentWorkspaceId()).thenReturn(Optional.empty());
@@ -141,7 +141,7 @@ class WorkspaceJiraServiceAccountTest {
     }
 
     @Test
-    @DisplayName("AC-004.1 falls back to TenantScope when no WorkerTenantService bean exists")
+    @DisplayName("AC-006.1 falls back to TenantScope when no WorkerTenantService bean exists")
     void fallsBackWithoutWorkerBean() {
         store(SITE, EMAIL, cipher.encrypt(WORKSPACE, TOKEN));
 
@@ -154,7 +154,7 @@ class WorkspaceJiraServiceAccountTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"tampered", "other-workspace", "wrong-key"})
-    @DisplayName("AC-004.3 returns empty and logs an error without credentials or ciphertext on decrypt failure")
+    @DisplayName("AC-006.3 returns empty and logs an error without credentials or ciphertext on decrypt failure")
     void rejectsBrokenCiphertextSafely(String failure) {
         String encrypted;
         if (failure.equals("other-workspace")) {
@@ -190,7 +190,7 @@ class WorkspaceJiraServiceAccountTest {
     }
 
     @Test
-    @DisplayName("AC-004.2 the application discovers exactly one JiraServiceAccount bean owned by workspace")
+    @DisplayName("AC-006.2 the application discovers exactly one JiraServiceAccount bean owned by workspace")
     void discoversOnlyWorkspaceAccountBean() {
         runner.run(context -> {
             assertThat(context).hasNotFailed().hasSingleBean(JiraServiceAccount.class);

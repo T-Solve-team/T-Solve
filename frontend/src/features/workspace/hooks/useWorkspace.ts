@@ -38,7 +38,7 @@ export function useSetUpWorkspace() {
   });
 }
 
-/** 2.2 Save: MSG05, then the Workspace query refreshes (AC-006.3). Field errors are the form's (guideline 09). */
+/** 2.2 Save: MSG05, then the Workspace query refreshes (AC-008.3). Field errors are the form's (guideline 09). */
 export function useUpdateWorkspaceInfo() {
   const client = useQueryClient();
   return useUpdateWorkspace({

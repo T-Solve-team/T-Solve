@@ -55,13 +55,13 @@ describe('WorkspaceSetupPage', () => {
     );
   });
 
-  it('AC-005.1 opens Setup with MSG60 for an Admin before setup', async () => {
+  it('AC-007.1 opens Setup with MSG60 for an Admin before setup', async () => {
     const { router } = renderApp(paths.userList, { role: 'ADMIN' });
     expect(await screen.findByText(msg('MSG60'), {}, { timeout: 5000 })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(paths.workspaceSetup);
   });
 
-  it('AC-005.2 shows four required fields, the Jira placeholder and a masked token', async () => {
+  it('AC-007.2 shows four required fields, the Jira placeholder and a masked token', async () => {
     renderApp(paths.workspaceSetup, { role: 'ADMIN' });
     await screen.findByRole('button', { name: 'Save' }, { timeout: 5000 });
     for (const label of Object.values(LABELS)) {
@@ -74,7 +74,7 @@ describe('WorkspaceSetupPage', () => {
     expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveAttribute('type', 'password');
   });
 
-  it('AC-005.3 shows MSG01 for each empty or whitespace-only field without sending', async () => {
+  it('AC-007.3 shows MSG01 for each empty or whitespace-only field without sending', async () => {
     let calls = 0;
     server.use(
       http.post('*/api/v1/workspace/setup', () => {
@@ -105,7 +105,7 @@ describe('WorkspaceSetupPage', () => {
     ['jiraSiteUrl', 200],
     ['serviceAccountEmail', 100],
   ] as const)(
-    'AC-005.2 validates the %s limit with MSG02 without truncating input',
+    'AC-007.2 validates the %s limit with MSG02 without truncating input',
     async (field, max) => {
       let calls = 0;
       server.use(
@@ -138,7 +138,7 @@ describe('WorkspaceSetupPage', () => {
     ['MSG153', 'jiraSiteUrl', { tracker_name: 'Jira' }],
     ['MSG156', 'serviceAccountToken', { tracker_name: 'Jira' }],
   ] as const)(
-    'AC-005.4 displays server %s under %s and keeps every value',
+    'AC-007.4 displays server %s under %s and keeps every value',
     async (code, field, params) => {
       server.use(
         http.post('*/api/v1/workspace/setup', () =>
@@ -164,7 +164,7 @@ describe('WorkspaceSetupPage', () => {
     },
   );
 
-  it('AC-005.5 sends the form, shows MSG05, refetches /me and opens User List', async () => {
+  it('AC-007.5 sends the form, shows MSG05, refetches /me and opens User List', async () => {
     let body: unknown;
     server.use(
       http.post('*/api/v1/workspace/setup', async ({ request }) => {
@@ -185,7 +185,7 @@ describe('WorkspaceSetupPage', () => {
     expect(await screen.findByRole('menu', { name: 'Main menu' })).toBeInTheDocument();
   });
 
-  it('AC-005.6 refetches /me and opens Settings without an error on WORKSPACE_ALREADY_SET_UP', async () => {
+  it('AC-007.6 refetches /me and opens Settings without an error on WORKSPACE_ALREADY_SET_UP', async () => {
     server.use(
       http.post('*/api/v1/workspace/setup', () => {
         workspaceReady = true;
@@ -206,7 +206,7 @@ describe('WorkspaceSetupPage', () => {
     expect(screen.queryByText(msg('MSG05'))).not.toBeInTheDocument();
   });
 
-  it('AC-005.4 keeps input and allows retry after a server failure', async () => {
+  it('AC-007.4 keeps input and allows retry after a server failure', async () => {
     let fails = true;
     server.use(
       http.post('*/api/v1/workspace/setup', () => {
@@ -229,7 +229,7 @@ describe('WorkspaceSetupPage', () => {
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
   });
 
-  it('AC-005.7 disables Save while pending and sends once on a double click', async () => {
+  it('AC-007.7 disables Save while pending and sends once on a double click', async () => {
     let finish: (() => void) | undefined;
     let calls = 0;
     const pending = new Promise<void>((resolve) => {

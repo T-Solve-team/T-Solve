@@ -144,7 +144,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-001.1 returns 201 and stores encrypted setup only in the bound tenant")
+    @DisplayName("AC-003.1 returns 201 and stores encrypted setup only in the bound tenant")
     void createsWorkspace() throws Exception {
         String body = perform(setup(input("Fake company", " HTTPS://FAKE.ATLASSIAN.NET/ ")))
                 .andExpect(status().isCreated())
@@ -167,7 +167,7 @@ class WorkspaceControllerIT {
 
     @ParameterizedTest
     @CsvSource({"companyName,MSG01", "jiraSiteUrl,MSG01", "serviceAccountEmail,MSG01", "serviceAccountToken,MSG01"})
-    @DisplayName("AC-001.2 blank setup fields return 400 Problem Details field errors and store nothing")
+    @DisplayName("AC-003.2 blank setup fields return 400 Problem Details field errors and store nothing")
     void rejectsBlankField(String field, String code) throws Exception {
         var body = new java.util.HashMap<>(input("Fake company", "https://fake.atlassian.net"));
         body.put(field, " ");
@@ -181,7 +181,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-001.7 Jira failures return MSG156 without storing or exposing the token")
+    @DisplayName("AC-003.7 Jira failures return MSG156 without storing or exposing the token")
     void rejectsJira() throws Exception {
         doThrow(new JiraRejectedException(401)).when(tracker).checkServiceAccount(any());
         String body = perform(setup(input("Fake company", "https://fake.atlassian.net")))
@@ -198,7 +198,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-001.9 refused link rolls back with MSG153 on jiraSiteUrl")
+    @DisplayName("AC-003.9 refused link rolls back with MSG153 on jiraSiteUrl")
     void rejectsLink() throws Exception {
         when(linker.linkJiraSite(anyString())).thenThrow(new JiraSiteLinkRefusedException(Reason.LINKED_ELSEWHERE));
         perform(setup(input("Fake company", "https://fake.atlassian.net")))
@@ -210,7 +210,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-001.11 second setup returns 409 and never overwrites the site")
+    @DisplayName("AC-003.11 second setup returns 409 and never overwrites the site")
     void rejectsSecondSetup() throws Exception {
         perform(setup(input("First", "https://first.atlassian.net"))).andExpect(status().isCreated());
         perform(setup(input("Second", "https://second.atlassian.net")))
@@ -223,7 +223,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-001.11 concurrent inserts return 201 and 409 with one unchanged row and audit")
+    @DisplayName("AC-003.11 concurrent inserts return 201 and 409 with one unchanged row and audit")
     void rejectsConcurrentInsert() throws Exception {
         var barrier = new CyclicBarrier(2);
         doAnswer(call -> {
@@ -271,7 +271,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-001.12 setup writes one audit entry with public details and no token")
+    @DisplayName("AC-003.12 setup writes one audit entry with public details and no token")
     void auditsSetup() throws Exception {
         perform(setup(input("Fake company", "https://fake.atlassian.net"))).andExpect(status().isCreated());
         var rows = TwoTenantDatabases.tenantA()
@@ -294,7 +294,7 @@ class WorkspaceControllerIT {
 
     @Test
     @WithTSolveUser
-    @DisplayName("AC-001.13 non-Admin setup returns 403 without side effects")
+    @DisplayName("AC-003.13 non-Admin setup returns 403 without side effects")
     void rejectsNonAdminSetup() throws Exception {
         perform(setup(input("Fake company", "https://fake.atlassian.net"))).andExpect(status().isForbidden());
         assertEmpty();
@@ -302,7 +302,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-002.1 readiness is false before setup and isolated by tenant after setup")
+    @DisplayName("AC-004.1 readiness is false before setup and isolated by tenant after setup")
     void readsReadiness() throws Exception {
         assertThat(scope.runIn(TwoTenantDatabases.ACME, lookup::isReady)).isFalse();
         perform(setup(input("Fake company", "https://fake.atlassian.net"))).andExpect(status().isCreated());
@@ -311,7 +311,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-002.2 GET returns 200 with exactly the three public fields")
+    @DisplayName("AC-004.2 GET returns 200 with exactly the three public fields")
     void readsWorkspace() throws Exception {
         perform(setup(input("Fake company", "https://fake.atlassian.net"))).andExpect(status().isCreated());
         var response = perform(get("/api/v1/workspace"))
@@ -325,7 +325,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-002.3 GET before setup returns 404 MSG60")
+    @DisplayName("AC-004.3 GET before setup returns 404 MSG60")
     void rejectsMissingWorkspace() throws Exception {
         perform(get("/api/v1/workspace"))
                 .andExpect(status().isNotFound())
@@ -334,7 +334,7 @@ class WorkspaceControllerIT {
 
     @Test
     @WithTSolveUser
-    @DisplayName("AC-002.4 non-Admin GET returns 403")
+    @DisplayName("AC-004.4 non-Admin GET returns 403")
     void rejectsNonAdminRead() throws Exception {
         perform(get("/api/v1/workspace")).andExpect(status().isForbidden());
     }
@@ -364,7 +364,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-003.1 PUT persists encrypted changes only in the bound tenant and returns public fields")
+    @DisplayName("AC-005.1 PUT persists encrypted changes only in the bound tenant and returns public fields")
     void updatesWorkspace() throws Exception {
         existingWorkspace();
         String token = "obviously-fake-new-token";
@@ -396,7 +396,7 @@ class WorkspaceControllerIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"absent", "null", "", " \t\n "})
-    @DisplayName("AC-003.2 omitted, null and blank update tokens retain the identical stored ciphertext")
+    @DisplayName("AC-005.2 omitted, null and blank update tokens retain the identical stored ciphertext")
     void keepsUpdateToken(String token) throws Exception {
         var before = existingWorkspace();
         var body = new java.util.HashMap<String, Object>(
@@ -420,7 +420,7 @@ class WorkspaceControllerIT {
         "serviceAccountEmail,blank",
         "serviceAccountEmail,number"
     })
-    @DisplayName("AC-003.3 invalid required fields return MSG01 and preserve the row and audit")
+    @DisplayName("AC-005.3 invalid required fields return MSG01 and preserve the row and audit")
     void rejectsRequiredUpdateFields(String field, String kind) throws Exception {
         var before = existingWorkspace();
         var body = new java.util.HashMap<String, Object>(input("Renamed", "https://fake.atlassian.net"));
@@ -441,7 +441,7 @@ class WorkspaceControllerIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"companyName", "serviceAccountEmail"})
-    @DisplayName("AC-003.3 overlong update fields return MSG02 with max_length and change nothing")
+    @DisplayName("AC-005.3 overlong update fields return MSG02 with max_length and change nothing")
     void rejectsLongUpdateFields(String field) throws Exception {
         var before = existingWorkspace();
         var body = new java.util.HashMap<>(input("Renamed", "https://fake.atlassian.net"));
@@ -456,7 +456,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-003.3 invalid update email returns MSG03 without changing data")
+    @DisplayName("AC-005.3 invalid update email returns MSG03 without changing data")
     void rejectsUpdateEmail() throws Exception {
         var before = existingWorkspace();
         perform(update(Map.of("companyName", "Renamed", "serviceAccountEmail", "invalid")))
@@ -468,7 +468,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-003.4 changed email with blank token checks the stored site and decrypted stored token")
+    @DisplayName("AC-005.4 changed email with blank token checks the stored site and decrypted stored token")
     void checksUpdateEmail() throws Exception {
         var before = existingWorkspace();
         perform(update(Map.of(
@@ -488,7 +488,7 @@ class WorkspaceControllerIT {
 
     @ParameterizedTest
     @ValueSource(ints = {401, 403, 500, 0})
-    @DisplayName("AC-003.5 Jira failure returns MSG156 on token without changing any stored value or audit")
+    @DisplayName("AC-005.5 Jira failure returns MSG156 on token without changing any stored value or audit")
     void rejectsUpdateCheck(int code) throws Exception {
         var before = existingWorkspace();
         RuntimeException failure =
@@ -515,7 +515,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-003.6 company-only rename succeeds while Jira is unavailable")
+    @DisplayName("AC-005.6 company-only rename succeeds while Jira is unavailable")
     void renamesWithoutJira() throws Exception {
         existingWorkspace();
         doThrow(new JiraUnavailableException(0)).when(tracker).checkServiceAccount(any());
@@ -526,7 +526,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-003.7 request site is ignored and never used in the account check")
+    @DisplayName("AC-005.7 request site is ignored and never used in the account check")
     void ignoresUpdateSite() throws Exception {
         existingWorkspace();
         perform(update(input("Renamed", "http://localhost")))
@@ -540,7 +540,7 @@ class WorkspaceControllerIT {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    @DisplayName("AC-003.8 update writes one audit with old/new public values and tokenChanged without secrets")
+    @DisplayName("AC-005.8 update writes one audit with old/new public values and tokenChanged without secrets")
     void auditsUpdate(boolean tokenChanged) throws Exception {
         var before = existingWorkspace();
         var body = new java.util.HashMap<>(input("Renamed", "https://fake.atlassian.net"));
@@ -571,7 +571,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-003.9 PUT before setup returns 404 MSG60 and stores nothing")
+    @DisplayName("AC-005.9 PUT before setup returns 404 MSG60 and stores nothing")
     void rejectsMissingUpdateWorkspace() throws Exception {
         perform(update(Map.of("companyName", "Renamed", "serviceAccountEmail", "fake@example.test")))
                 .andExpect(status().isNotFound())
@@ -582,7 +582,7 @@ class WorkspaceControllerIT {
 
     @Test
     @WithTSolveUser
-    @DisplayName("AC-003.10 non-Admin PUT returns 403 without changing data or calling Jira")
+    @DisplayName("AC-005.10 non-Admin PUT returns 403 without changing data or calling Jira")
     void rejectsNonAdminUpdate() throws Exception {
         perform(update(input("Renamed", "https://fake.atlassian.net")))
                 .andExpect(status().isForbidden())

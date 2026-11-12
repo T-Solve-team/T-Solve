@@ -55,7 +55,7 @@ describe('WorkspaceSettingsPage', () => {
     );
   });
 
-  it('AC-006.1 loads the Workspace: editable company name and email, read-only Jira site', async () => {
+  it('AC-008.1 loads the Workspace: editable company name and email, read-only Jira site', async () => {
     renderApp(paths.workspaceSettings, { role: 'ADMIN' });
     await findSave();
     expect(screen.getByLabelText(LABELS.companyName)).toHaveValue(INFO.companyName);
@@ -67,7 +67,7 @@ describe('WorkspaceSettingsPage', () => {
     expect(getCalls).toBe(1);
   });
 
-  it('AC-006.2 starts the masked token field empty with the keep hint and never shows a stored token', async () => {
+  it('AC-008.2 starts the masked token field empty with the keep hint and never shows a stored token', async () => {
     server.use(
       http.get('*/api/v1/workspace', () =>
         HttpResponse.json({ ...INFO, serviceAccountToken: 'stored-secret-token' }),
@@ -84,7 +84,7 @@ describe('WorkspaceSettingsPage', () => {
     expect(screen.queryByText('stored-secret-token')).not.toBeInTheDocument();
   });
 
-  it('AC-006.3 sends the edited values and a typed token, shows MSG05 and refreshes the Workspace', async () => {
+  it('AC-008.3 sends the edited values and a typed token, shows MSG05 and refreshes the Workspace', async () => {
     const user = userEvent.setup();
     renderApp(paths.workspaceSettings, { role: 'ADMIN' });
     await findSave();
@@ -104,7 +104,7 @@ describe('WorkspaceSettingsPage', () => {
     await waitFor(() => expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveValue(''));
   });
 
-  it('AC-006.3 omits serviceAccountToken from the PUT body when the token field is empty (edge 19)', async () => {
+  it('AC-008.3 omits serviceAccountToken from the PUT body when the token field is empty (edge 19)', async () => {
     const user = userEvent.setup();
     renderApp(paths.workspaceSettings, { role: 'ADMIN' });
     await findSave();
@@ -125,7 +125,7 @@ describe('WorkspaceSettingsPage', () => {
     ['MSG03', 'serviceAccountEmail', {}],
     ['MSG156', 'serviceAccountToken', { tracker_name: 'Jira' }],
   ] as const)(
-    'AC-006.4 displays server %s under %s and keeps the values entered',
+    'AC-008.4 displays server %s under %s and keeps the values entered',
     async (code, field, params) => {
       server.use(
         http.put('*/api/v1/workspace', () =>
@@ -157,7 +157,7 @@ describe('WorkspaceSettingsPage', () => {
     },
   );
 
-  it('AC-006.5 Cancel restores the loaded values and sends nothing', async () => {
+  it('AC-008.5 Cancel restores the loaded values and sends nothing', async () => {
     const user = userEvent.setup();
     renderApp(paths.workspaceSettings, { role: 'ADMIN' });
     await findSave();
@@ -171,7 +171,7 @@ describe('WorkspaceSettingsPage', () => {
     expect(putBodies).toHaveLength(0);
   });
 
-  it('AC-006.6 shows the shared error state when loading fails and retries', async () => {
+  it('AC-008.6 shows the shared error state when loading fails and retries', async () => {
     let fails = true;
     server.use(
       http.get('*/api/v1/workspace', () => (fails ? problem(500) : HttpResponse.json(INFO))),

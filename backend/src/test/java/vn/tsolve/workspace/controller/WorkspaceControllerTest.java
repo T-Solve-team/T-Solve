@@ -48,7 +48,7 @@ class WorkspaceControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    @DisplayName("AC-003.1 Admin can PUT Workspace information")
+    @DisplayName("AC-005.1 Admin can PUT Workspace information")
     void updatesWorkspace() throws Exception {
         when(service.update(any()))
                 .thenReturn(new WorkspaceInfoResponse("Renamed", "https://fake.atlassian.net", "fake@example.test"));
@@ -66,7 +66,7 @@ class WorkspaceControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"", "null", "[]", "42", "{", "{} {}", "{} garbage"})
     @WithTSolveUser(roles = Role.ADMIN)
-    @DisplayName("AC-003.3 malformed PUT bodies return safe MSG03 before calling service")
+    @DisplayName("AC-005.3 malformed PUT bodies return safe MSG03 before calling service")
     void rejectsMalformedUpdate(String body) throws Exception {
         mvc.perform(put("/api/v1/workspace")
                         .with(csrf())
@@ -79,7 +79,7 @@ class WorkspaceControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    @DisplayName("AC-003.5 failed update check renders MSG156 on serviceAccountToken")
+    @DisplayName("AC-005.5 failed update check renders MSG156 on serviceAccountToken")
     void rendersUpdateFailure() throws Exception {
         when(service.update(any()))
                 .thenThrow(new FieldMessageCodeException(
@@ -96,7 +96,7 @@ class WorkspaceControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    @DisplayName("AC-003.9 PUT before setup renders 404 MSG60")
+    @DisplayName("AC-005.9 PUT before setup renders 404 MSG60")
     void rendersMissingUpdateWorkspace() throws Exception {
         when(service.update(any())).thenThrow(new NotFoundException("MSG60", Map.of()));
         mvc.perform(put("/api/v1/workspace")
@@ -109,7 +109,7 @@ class WorkspaceControllerTest {
 
     @Test
     @WithTSolveUser
-    @DisplayName("AC-003.10 non-Admin PUT returns 403 without calling service")
+    @DisplayName("AC-005.10 non-Admin PUT returns 403 without calling service")
     void rejectsNonAdminUpdate() throws Exception {
         mvc.perform(put("/api/v1/workspace")
                         .with(csrf())
@@ -122,7 +122,7 @@ class WorkspaceControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    @DisplayName("AC-001.1 setup returns 201 with Workspace information")
+    @DisplayName("AC-003.1 setup returns 201 with Workspace information")
     void createsWorkspace() throws Exception {
         when(service.setup(any()))
                 .thenReturn(
@@ -137,7 +137,7 @@ class WorkspaceControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    @DisplayName("AC-001.2 renders field errors and their parameters as Problem Details")
+    @DisplayName("AC-003.2 renders field errors and their parameters as Problem Details")
     void rendersFieldError() throws Exception {
         when(service.setup(any()))
                 .thenThrow(new FieldMessageCodeException(
@@ -156,7 +156,7 @@ class WorkspaceControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"", "null", "[]", "42", "{", "{} {}", "{} garbage"})
     @WithTSolveUser(roles = Role.ADMIN)
-    @DisplayName("AC-001.2 malformed requests return MSG03 without exposing input or calling service")
+    @DisplayName("AC-003.2 malformed requests return MSG03 without exposing input or calling service")
     void rejectsMalformedBody(String body) throws Exception {
         mvc.perform(post("/api/v1/workspace/setup")
                         .with(csrf())
@@ -169,7 +169,7 @@ class WorkspaceControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    @DisplayName("AC-001.11 duplicate setup renders 409 WORKSPACE_ALREADY_SET_UP")
+    @DisplayName("AC-003.11 duplicate setup renders 409 WORKSPACE_ALREADY_SET_UP")
     void rendersConflict() throws Exception {
         when(service.setup(any())).thenThrow(new BusinessRuleException("WORKSPACE_ALREADY_SET_UP", Map.of()));
         mvc.perform(post("/api/v1/workspace/setup")
@@ -182,7 +182,7 @@ class WorkspaceControllerTest {
 
     @Test
     @WithTSolveUser
-    @DisplayName("AC-001.13 non-Admin cannot set up the Workspace")
+    @DisplayName("AC-003.13 non-Admin cannot set up the Workspace")
     void rejectsNonAdminSetup() throws Exception {
         mvc.perform(post("/api/v1/workspace/setup")
                         .with(csrf())
@@ -195,7 +195,7 @@ class WorkspaceControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    @DisplayName("AC-002.2 GET returns 200 and exactly the three public Workspace fields")
+    @DisplayName("AC-004.2 GET returns 200 and exactly the three public Workspace fields")
     void readsWorkspace() throws Exception {
         when(service.get())
                 .thenReturn(
@@ -216,7 +216,7 @@ class WorkspaceControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    @DisplayName("AC-002.3 missing Workspace renders 404 MSG60")
+    @DisplayName("AC-004.3 missing Workspace renders 404 MSG60")
     void rendersMissingWorkspace() throws Exception {
         when(service.get()).thenThrow(new NotFoundException("MSG60", Map.of()));
         mvc.perform(get("/api/v1/workspace"))
@@ -226,7 +226,7 @@ class WorkspaceControllerTest {
 
     @Test
     @WithTSolveUser
-    @DisplayName("AC-002.4 non-Admin cannot read Workspace information")
+    @DisplayName("AC-004.4 non-Admin cannot read Workspace information")
     void rejectsNonAdminRead() throws Exception {
         mvc.perform(get("/api/v1/workspace"))
                 .andExpect(status().isForbidden())
