@@ -255,8 +255,8 @@ next free number, listed in `db.changelog-master.xml` (until Task 14 moves the t
 Expiry and `SessionEnded` (AC-002.4, HLA Q3): the key's time to live removes an unused session; the 15-minute bound
 for `SessionEnded` `EXPIRED` needs the session's Account id and Workspace id, which a Redis expiry event does not
 carry. Decided in planning (KAN-106, user, 2026-11-12): `EXPIRED` is produced by a `@Scheduled` sweep every minute
-over the Redis sorted set `tsolve:session:expiry` (member: the session key; score: the time the session reaches its
-limit), with the time taken from `IdentityClock`; delivery is at most once (a crash between claim and publish loses the
+over the Redis sorted set `tsolve:session:expiry` (member: `<keyHash>|<workspaceId>|<accountId>`; score: the session's
+deadline in epoch milliseconds; the sweep takes a member as due when its score is below now, strictly), with the time taken from `IdentityClock`; delivery is at most once (a crash between claim and publish loses the
 event, never repeats it). The one-minute sweep keeps the 15-minute bound, and the claim rule below keeps the single
 event of AC-002.3. Claim rule (finding (a)): every end path (logout, the filter's limit path, deactivation, the sweep)
 claims the session by one atomic Lua script that runs `DEL` on the session key and `ZREM` on the index member; the claim
@@ -435,7 +435,7 @@ configured Platform Console origin (`TSOLVE_ADMIN_ORIGIN`; the Console on `admin
   an Operator code has `start_hash` null and is handled in Task 11 (see Open questions).
 - Session filter rules (KAN-232 Q1, Q2, Q10): if the Account row is gone when the filter re-reads it, the session is
   ended and the answer is 401 `MSG07` (the same as expiry; not `MSG10`, since the Account is absent, not
-  Deactivated). A session cookie that names no session (unknown,
+  Deactivated). Task 27b: this path publishes `SessionEnded` with reason `DEACTIVATED` (AC-002.3, KAN-312 Q3 = B). A session cookie that names no session (unknown,
   expired in Redis, or Redis restarted) on a Workspace site is treated as anonymous, and the answer carries
   `__Host-TSOLVE_SESSION=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax` so the browser drops it. A session is
   honoured only on `admin.` or on a host that `WorkspaceLookup` resolves as a Workspace site; there is no
