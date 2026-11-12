@@ -132,3 +132,15 @@ default@eeaee68d — `fix(tracker): keep request errors inside the Jira project 
 
 ### Next up
 Re-evaluate `jira-project-read` (attempt 2) after the commit.
+
+## Session 2026-11-12 (attempt 3, fixing)
+
+### Working on: jira-project-read — attempt-2 review findings (D46)
+- MEDIUM-8: a last `catch (RuntimeException)` in `TrackerProjectServiceImpl.findProject` returns UNAVAILABLE and logs only the exception class (a non-HTTP site scheme made RestClient throw `IllegalStateException`). New real-client test `returnsUNAVAILABLEWithoutPartialProjectForNonHttpScheme_AC_013_7_BUG_203`.
+- LOW-7: BUG-203's row now says `findComment` still builds its client outside `call` (STORY-012, out of scope).
+- Who wrote what: Codex wrote the test and the fix in one run (prompt `kan127-fix-d46-d47.md` in the scratchpad), run by the main session, which reviewed the diff.
+- Verify: ran inside Task 3's full `mvn verify` (same working tree): unit 1600, IT 462, 0 failures, BUILD SUCCESS; the new test is in `TEST-vn.tsolve.tracker.client.JiraClientTest.xml`.
+- Commit: default@ba276218
+
+### Next up
+Re-evaluate jira-project-read (attempt 3).

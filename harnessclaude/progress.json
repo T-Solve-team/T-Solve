@@ -155,14 +155,14 @@
       "currentPhase": "implement",
       "features": {
         "project-done-statuses-schema": "fixing",
-        "project-connection-test": "evaluating",
-        "project-create": "pending",
+        "project-connection-test": "fixing",
+        "project-create": "in-progress",
         "project-reconnect": "pending",
         "project-list": "pending",
         "jira-integration-projects-table": "pending",
         "jira-integration-add-project": "pending"
       },
-      "lastUpdated": "2026-11-12T15:25:11.292Z",
+      "lastUpdated": "2026-11-12T15:35:21.366Z",
       "branch": "feat/project-integration",
       "repos": [
         "default"
@@ -416,13 +416,13 @@
         "suggestion-comment": "passing",
         "jira-project-read": "fixing"
       },
-      "lastUpdated": "2026-11-12T14:53:37.983Z",
+      "lastUpdated": "2026-11-12T16:18:19.312Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "eeaee68d5445f8f0f601f14f765d9fd576362a5f"
+        "default": "ba276218949a22759cea3e1c2a0660c2af93abdf"
       }
     },
     "ticket-review": {

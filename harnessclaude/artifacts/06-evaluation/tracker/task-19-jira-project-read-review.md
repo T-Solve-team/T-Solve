@@ -3,7 +3,7 @@ module: tracker
 feature: jira-project-read
 task: 19
 verdict: pass
-attempt: 1
+attempt: 2
 date: 2026-11-12
 reviewer: harnessclaude-reviewer
 iteration: 1
@@ -175,3 +175,137 @@ Run fresh from `backend/` (JAVA_HOME = IntelliJ JBR) on the working tree. `git s
   - `{"key":"ITSUP"} trailing`: FOUND
 - Codex: compiled the commit's sources in memory and ran 74/74 tests passing; reproduced the header, email and
   trailing-data cases; ran an in-memory mutation removing the timeout setters, and the AC-013.10 test still passed.
+
+---
+
+# Attempt 2 — 2026-11-12
+
+**Verdict: pass** (attempt 2, with an open judgment call on MEDIUM-8). Fix commit `eeaee68d`
+(`eeaee68d^..eeaee68d`), on top of `aa966ab8`. The changes are 4 backend files plus the BUG-203 row in
+`docs/bug-log.md`. Decision D45 (`kan-127-decisions.md`) chose to fix MEDIUM-1, LOW-3 and INFO-4 and to leave LOW-2,
+INFO-5 and INFO-6.
+
+## Summary
+
+MEDIUM-1 is fixed for every input attempt 1 listed, on both reads. `JiraClient.call` (`JiraClient.java:164-166`) now
+maps `IllegalArgumentException` to `JiraUnavailableException(0)` and keeps neither the message nor the cause.
+`findProject` and `projectStatuses` both build `http(account)` inside the `call` lambda (`JiraClient.java:87,103`), so
+each of these becomes UNAVAILABLE (probe below):
+- a scheme-less site URL
+- an email with `:`
+- an email with a non-Latin-1 character
+- an invalid `Content-Type`
+
+LOW-3 is fixed. The test reads the request factory's real timeouts. Without the setters the factory keeps its default
+of -1, so the assertions on 3000 and 7000 would fail. INFO-4 is fixed: status 0 logs "no answer", and the test
+asserts that "answered 0" is absent. LOW-2, INFO-5 and INFO-6 are unchanged, as D45 decided.
+
+The comment operations show no behavioural regression. `SuggestionJobServiceImpl.java:51,66` catches every
+`RuntimeException` the same way, so turning an `IllegalArgumentException` into `JiraUnavailableException` changes only
+the log line in `SuggestionCommentServiceImpl.java:49-56`.
+
+Two new findings, both confirmed by my own probe:
+- **MEDIUM-8** (Codex): a site URL with a non-HTTP scheme still throws, now as `IllegalStateException`, which the fix
+  does not catch. It is the same class of configuration error as MEDIUM-1. It is non-blocking by the same reasoning
+  as attempt 1, but **read strictly (as D45 did), it is a fail** (see Assumptions).
+- **LOW-7** (Claude and Codex): BUG-203's note overstates the effect on `findComment`.
+
+## Criteria
+
+| Criterion | Result | Detail |
+|-----------|--------|--------|
+| Functionality | pass | AC-013.7/AC-013.8: no exception crosses `findProject` for any attempt-1 input, on either read. A non-HTTP site URL still escapes (MEDIUM-8, a configuration error). AC-013.12: status 0 logs "no answer"; the new tests assert `hasNoCause` and no email or token in the message. |
+| Completeness | pass | 13/13 criteria still have a test. The new tests carry the `BUG_203` id the project rule asks for. Nothing EXTRA. |
+| Correctness | pass | `JiraClientTest` 60/60 and `TrackerProjectServiceImplTest` 24/24 pass in an isolated worktree, with spotless passing too. The full verify log shows 1430 unit and 438 IT passing. With the fix reverted, each new `BUG_203` test fails: it expects `JiraUnavailableException` where the plain exception escaped in attempt 1. No CRITICAL finding. |
+| Integration | pass | No interface or signature change. The comment path (STORY-012) passes all its existing tests; the behaviour change is limited to the log line (see LOW-7). |
+
+### Attempt-1 findings
+
+| Finding | D45 decision | Status in `eeaee68d` | Evidence |
+|---------|--------------|----------------------|----------|
+| MEDIUM-1 non-Jira exceptions escape | fix | **Fixed** for the listed inputs (residual: MEDIUM-8) | `JiraClient.java:164-166`; `JiraClientTest.java:458` (scheme-less, real client, both reads), `:484` (`:` and Cyrillic email, both reads), `:503` (invalid Content-Type, both reads), `:526` (through `TrackerProjectServiceImpl`: UNAVAILABLE, no key, no statuses, and no statuses call, because `jira.verify()` has one expectation) |
+| LOW-2 trailing JSON accepted | leave | Unchanged, as decided | `JiraClient.java:87-92,103-107` still `body(JsonNode.class)` |
+| LOW-3 timeout test cannot fail | fix | **Fixed** | `JiraClientTest.java:438-455` reads the `SimpleClientHttpRequestFactory` `connectTimeout`/`readTimeout` (3000/7000 ms from 3 s/7 s) |
+| INFO-4 "Jira answered 0" | fix | **Fixed** | `TrackerProjectServiceImpl.java:59-67`; `logsFailureKeyStatusAndOutcomeWithoutCredentials_AC_013_11_AC_013_12` now runs with 0 and asserts "no answer" and not "answered 0" |
+| INFO-5 record invariants | leave | Unchanged, as decided | `git diff aa966ab8 eeaee68d -- backend/src/main/java/vn/tsolve/tracker/dto` is empty |
+| INFO-6 formatting noise | leave | Unchanged, as decided | The fix diff adds no formatting-only churn |
+
+## Traceability
+
+```
+  ✓ AC-013.1 to AC-013.13: each named by TrackerProjectServiceImplTest.java and/or JiraClientTest.java (same files as attempt 1)
+  ! ids in tests but not in the spec: AC-001.72
+trace tracker (STORY-013): 13/13 acceptance criteria have a test
+```
+
+## Issues
+
+No CRITICAL findings. Non-blocking:
+
+7. **LOW-7 — BUG-203's note claims the comment operations are covered too, but `findComment` is not** (Claude and
+   Codex independently; Claude's probe)
+   - `JiraClient.java:65` builds `RestClient http = http(account)` outside `call`. Spring 6.1.14 runs the
+     `defaultHeaders(...)` consumer, and with it `setBasicAuth`, when the client is built. So for an email with `:` or
+     a non-Latin-1 character, `findComment` still throws a plain `IllegalArgumentException`.
+   - `SuggestionCommentServiceImpl.post` calls `findComment` first, so for these emails the comment path behaves as it
+     did before the fix and skips the "Jira answered nothing" log.
+   - The BUG-203 note (`docs/bug-log.md:213`) says "the same inputs there now surface as `JiraUnavailableException(0)`".
+     That holds for a scheme-less URL or a bad `Content-Type`, not for the email cases on `findComment`.
+   - No user-visible effect: the job treats both exceptions alike. The gap is in STORY-012, not STORY-013.
+   - Fix: correct the BUG-203 note. Optionally, as a STORY-012 quick change, build the client inside the two `call`
+     lambdas of `findComment` and add a test.
+8. **MEDIUM-8 — a site URL with a non-HTTP scheme still escapes `findProject`** (Codex; reproduced by Claude)
+   - Probe, through `TrackerProjectServiceImpl` with the production `JiraClient`: `ftp://localhost`,
+     `file:///C:/jira` and `mailto:x@y` each throw `java.lang.IllegalStateException` out of `findProject`.
+     `SimpleClientHttpRequestFactory` throws it when the connection is not an `HttpURLConnection`.
+     `JiraClient.call` (`JiraClient.java:152-167`) catches only `RestClientException` and `IllegalArgumentException`.
+   - The message carries neither the email nor the token, and the global handler gives a 500 MSG06, so nothing
+     leaks.
+   - It is reachable only through a misconfigured `JIRA_SITE_URL`: `ConfiguredJiraServiceAccount` checks only for a
+     blank value. It is the same kind of input as MEDIUM-1's scheme-less URL, and the new catch's own comment says "a
+     malformed site URL … leaves no usable answer".
+   - Fix: close the class of failures at the boundary the contract names. In `TrackerProjectServiceImpl.findProject`,
+     catch `RuntimeException` last, log the key, `UNAVAILABLE` and the exception class name only, and return
+     `failed(UNAVAILABLE)`. Add one test with an `ftp://` site through the real client. Alternative: also catch
+     `IllegalStateException` in `JiraClient.call`.
+
+## Assumptions made
+
+- **MEDIUM-8 is not blocking.** I keep attempt 1's reading: AC-013.7/AC-013.8 cover Jira's answers, and a non-HTTP site
+  URL is a configuration error that surfaces as 500 MSG06 with no leak. But D45 fixed MEDIUM-1 under the strict
+  reading of AC-013.7 and the interface Javadoc ("never thrown"). Under that same reading, MEDIUM-8 breaks the
+  contract and the verdict is **fail**. **Open judgment call.** The fix is a single catch in the service.
+- LOW-2 (trailing JSON) is still open by D45's choice. I keep my attempt-1 reading that AC-013.8's "unreadable" does
+  not cover it. **Open judgment call** (unchanged from attempt 1).
+- LOW-7 is non-blocking, because it is outside STORY-013 and changes no behaviour.
+
+## Test Report
+
+Run fresh in an isolated worktree at `180caebc`, which contains `eeaee68d`. No tracker file differs between the two
+(`git diff --stat eeaee68d 180caebc -- backend/src/main/java/vn/tsolve/tracker backend/src/test/java/vn/tsolve/tracker`
+is empty). Run from `backend/` with JAVA_HOME set to the IntelliJ JBR:
+
+- `mvn -B -Dapi.version=1.44 -Dtest='JiraClientTest,TrackerProjectServiceImplTest' -Dit.test='ProjectDoneStatusesMigrationIT,SendBackApiIT' -Dsurefire.failIfNoSpecifiedTests=false -Dfailsafe.failIfNoSpecifiedTests=false verify`
+  - `JiraClientTest`: Tests run: 60, Failures: 0, Errors: 0, Skipped: 0
+  - `TrackerProjectServiceImplTest`: Tests run: 24, Failures: 0, Errors: 0, Skipped: 0
+  - Surefire total 84/84; Failsafe 12/12; `spotless:check` passed; BUILD SUCCESS
+- Full `mvn verify` at `180caebc` (implementer's log `kan127-t1-verify.log` in the session scratchpad, which I read):
+  Surefire `Tests run: 1430, Failures: 0, Errors: 0, Skipped: 0`, Failsafe `Tests run: 438, Failures: 0, Errors: 0,
+  Skipped: 0`, BUILD SUCCESS.
+- `bun harnessclaude/hooks/sdd.ts trace tracker STORY-013`: 13/13 acceptance criteria have a test.
+- Claude's probes (scratchpad, not committed): the compiled `JiraClient` at `180caebc`, built with the production
+  constructor, with Jira pointed at a closed port.
+  - Unchanged inputs, now mapped:
+    - `findProject`, email with `:` → `JiraUnavailableException`
+    - `findProject`, null site → `JiraUnavailableException`
+    - `findProject`, null email → `JiraUnavailableException`
+    - `addComment`, email with `:` → `JiraUnavailableException`
+    - `findComment`, scheme-less site → `JiraUnavailableException`
+  - LOW-7:
+    - `findComment`, email with `:` → `IllegalArgumentException`
+    - `findComment`, Cyrillic email → `IllegalArgumentException`
+  - MEDIUM-8, through `TrackerProjectServiceImpl.findProject`:
+    - `ftp://localhost`, `file:///C:/jira`, `mailto:x@y` → `IllegalStateException` escapes
+    - `http://`, `https://exa mple.com` → UNAVAILABLE
+- Codex (second opinion, `kan127-t19-rereview-codex.md` in the session scratchpad) reported MEDIUM-8 and LOW-7, and
+  confirmed that LOW-2, INFO-5 and INFO-6 are unchanged. I reproduced both findings and kept them.
