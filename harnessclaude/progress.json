@@ -154,21 +154,21 @@
       "status": "implementing",
       "currentPhase": "implement",
       "features": {
-        "project-done-statuses-schema": "fixing",
+        "project-done-statuses-schema": "evaluating",
         "project-connection-test": "fixing",
-        "project-create": "in-progress",
+        "project-create": "evaluating",
         "project-reconnect": "pending",
         "project-list": "pending",
         "jira-integration-projects-table": "pending",
         "jira-integration-add-project": "pending"
       },
-      "lastUpdated": "2026-11-12T16:19:00.047Z",
+      "lastUpdated": "2026-11-12T16:20:04.408Z",
       "branch": "feat/project-integration",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "db144c550af31c418598f0df3c423b22c8d1855d"
+        "default": "15b491d964d3971e84a7d3b110b21b784e2b4225"
       }
     },
     "wiki": {

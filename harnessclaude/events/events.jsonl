@@ -1232,3 +1232,6 @@
 {"ts":"2026-11-12T16:18:19.317Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"ba276218949a22759cea3e1c2a0660c2af93abdf"}
 {"ts":"2026-11-12T16:18:38.093Z","type":"feature-status","module":"tracker","feature":"jira-project-read","from":"fixing","to":"evaluating"}
 {"ts":"2026-11-12T16:19:00.051Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"db144c550af31c418598f0df3c423b22c8d1855d"}
+{"ts":"2026-11-12T16:19:17.601Z","type":"feature-status","module":"project-integration","feature":"project-done-statuses-schema","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-12T16:19:51.407Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"15b491d964d3971e84a7d3b110b21b784e2b4225"}
+{"ts":"2026-11-12T16:20:04.410Z","type":"feature-status","module":"project-integration","feature":"project-create","from":"in-progress","to":"evaluating"}
