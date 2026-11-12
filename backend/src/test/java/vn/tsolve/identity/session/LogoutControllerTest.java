@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -31,8 +32,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Import;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -62,6 +66,12 @@ class LogoutControllerTest extends AbstractSessionIT {
 
     @Autowired
     private ObjectMapper json;
+
+    @Autowired
+    private SessionCookie sessionCookie;
+
+    @Autowired
+    private KeycloakLogoutUrlBuilder urlBuilder;
 
     private UUID account;
 
@@ -291,6 +301,69 @@ class LogoutControllerTest extends AbstractSessionIT {
         }
         assertThat(SessionEndedRecorder.ofReason(SessionEnded.Reason.LOGOUT)).hasSize(1);
         assertThat(redis.hasKey(keyOf(concurrent))).isFalse();
+    }
+
+    /** The controller on its own (no filter chain) with a stubbed store and a recording publisher. */
+    private MockHttpServletResponse callController(
+            WebSessionStore stubbedStore, ApplicationEventPublisher publisher, String cookie) throws Exception {
+        LogoutController controller = new LogoutController(stubbedStore, sessionCookie, urlBuilder, publisher, json);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", LOGOUT);
+        request.setScheme("http");
+        request.setServerName(ACME.siteHost());
+        request.setServerPort(PORT);
+        request.setCookies(new Cookie(SESSION_COOKIE, cookie));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Map<String, String> answer = controller.logout(request, response);
+        response.setContentType("application/json");
+        response.getWriter().write(json.writeValueAsString(answer));
+        return response;
+    }
+
+    @Test
+    @DisplayName("AC-002.2 edge 4 the caller that lost the claim (end returns false) answers 200 with the same"
+            + " logoutUrl, expires the cookie and publishes nothing")
+    void theLoserOfTheClaimAnswers200AndPublishesNothing_AC_002_2_edge4() throws Exception {
+        String cookie = acmeSession();
+        WebSession session = store.find(cookie).orElseThrow();
+        WebSessionStore losing = Mockito.mock(WebSessionStore.class);
+        Mockito.when(losing.find(cookie)).thenReturn(Optional.of(session));
+        Mockito.when(losing.end(cookie)).thenReturn(false);
+        Mockito.when(losing.sessionIdOf(cookie)).thenReturn(sha256Hex(cookie));
+        ApplicationEventPublisher publisher = Mockito.mock(ApplicationEventPublisher.class);
+
+        MockHttpServletResponse response = callController(losing, publisher, cookie);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertTheAcmeLogoutUrl(body(response).path("logoutUrl").asText());
+        List<String> cookies = SignInTestFixtures.setCookie(response, SESSION_COOKIE);
+        assertThat(cookies).hasSize(1);
+        assertThat(SignInTestFixtures.attributes(cookies.get(0))).containsEntry("max-age", "0");
+        Mockito.verifyNoInteractions(publisher);
+    }
+
+    @Test
+    @DisplayName("AC-002.3 edge 5 logout of an OPERATOR session publishes no SessionEnded and answers the tsolve-ops"
+            + " logoutUrl")
+    void operatorLogoutPublishesNothing_AC_002_3_edge5() throws Exception {
+        String cookie = randomCookieValue();
+        WebSession operator = new WebSession(
+                WebSession.Kind.OPERATOR, null, null, "ops@example.test", null, HINT, clock.instant(), clock.instant());
+        WebSessionStore stub = Mockito.mock(WebSessionStore.class);
+        Mockito.when(stub.find(cookie)).thenReturn(Optional.of(operator));
+        Mockito.when(stub.end(cookie)).thenReturn(true);
+        Mockito.when(stub.sessionIdOf(cookie)).thenReturn(sha256Hex(cookie));
+        ApplicationEventPublisher publisher = Mockito.mock(ApplicationEventPublisher.class);
+
+        MockHttpServletResponse response = callController(stub, publisher, cookie);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        URI uri = URI.create(body(response).path("logoutUrl").asText());
+        assertThat(uri.getPath()).isEqualTo("/realms/tsolve-ops/protocol/openid-connect/logout");
+        assertThat(queryOf(uri)).containsEntry("client_id", "tsolve-console");
+        List<String> cookies = SignInTestFixtures.setCookie(response, SESSION_COOKIE);
+        assertThat(cookies).hasSize(1);
+        assertThat(SignInTestFixtures.attributes(cookies.get(0))).containsEntry("max-age", "0");
+        Mockito.verifyNoInteractions(publisher);
     }
 
     @Test
