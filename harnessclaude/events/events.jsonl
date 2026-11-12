@@ -1223,3 +1223,4 @@
 {"ts":"2026-11-12T14:45:05.462Z","type":"feature-status","module":"identity","feature":"logout-rp-initiated","from":"evaluating","to":"passing"}
 {"ts":"2026-11-12T16:13:57.143Z","type":"spec-approved","module":"identity","specHash":"bbdead8d9a9a7ea4b0606b5e5fcec11978375b8e71b7b7fffc6b382779ef71df"}
 {"ts":"2026-11-12T17:14:23.253Z","type":"spec-approved","module":"identity","specHash":"9a32631f5957c08bf9444fb4b3e20cf150315f33e4463fdec94213fab930b08a"}
+{"ts":"2026-11-12T18:17:41.493Z","type":"spec-approved","module":"identity","specHash":"f389a9c813ec5423cc4c0e185a4f14370e0d7506c947fd071e8c1d8e36df2adc"}
