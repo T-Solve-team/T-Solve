@@ -41,6 +41,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.session.SessionCookie;
+import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.AuthHosts;
 import vn.tsolve.identity.signin.KeycloakClientRegistrations;
 import vn.tsolve.identity.signin.OidcCallbackHandler;
@@ -61,6 +63,8 @@ import vn.tsolve.identity.signin.SignInTestFixtures;
     KeycloakClientRegistrations.class,
     RedisAuthorizationRequestRepository.class,
     OidcCallbackHandler.class,
+    WebSessionStore.class,
+    SessionCookie.class,
     AuthSecurityConfigTest.ProbeController.class
 })
 @TestPropertySource(
@@ -72,6 +76,7 @@ import vn.tsolve.identity.signin.SignInTestFixtures;
             "GOOGLE_CLIENT_SECRET=test-secret",
             "PLATFORM_OPERATOR_EMAILS=ops@example.test",
             "KEYCLOAK_WEB_CLIENT_SECRET=test-keycloak-secret",
+            "KEYCLOAK_CONSOLE_CLIENT_SECRET=test-keycloak-console-secret",
             "CORS_ALLOWED_ORIGINS=http://localhost:5173",
             "server.port=0"
         })

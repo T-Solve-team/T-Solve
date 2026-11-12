@@ -20,10 +20,14 @@ public class SecurityProblemWriter {
     public static final String MSG06 = "MSG06";
     public static final String MSG07 = "MSG07";
     public static final String MSG08 = "MSG08";
+    public static final String MSG10 = "MSG10";
+    public static final String MSG123 = "MSG123";
 
     private static final String MSG06_TEXT = "Something went wrong. Please try again later.";
     private static final String MSG07_TEXT = "Your session has expired. Please log in again.";
     private static final String MSG08_TEXT = "You do not have permission to access this page.";
+    private static final String MSG10_TEXT = "Your T-Solve account has been deactivated. Please contact your Admin.";
+    private static final String MSG123_TEXT = "Your session is not valid on this site. Please log in again.";
 
     private final ObjectMapper objectMapper;
 
@@ -37,6 +41,8 @@ public class SecurityProblemWriter {
                 switch (code) {
                     case MSG07 -> MSG07_TEXT;
                     case MSG08 -> MSG08_TEXT;
+                    case MSG10 -> MSG10_TEXT;
+                    case MSG123 -> MSG123_TEXT;
                     default -> MSG06_TEXT;
                 };
         ProblemDetail problem =

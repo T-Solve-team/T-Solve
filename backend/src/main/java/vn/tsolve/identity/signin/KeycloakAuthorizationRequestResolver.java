@@ -43,6 +43,31 @@ public class KeycloakAuthorizationRequestResolver {
     public OAuth2AuthorizationRequest resolve(HttpServletRequest request, WorkspaceRef workspace, String keptReturnTo) {
         ClientRegistration registration =
                 registrations.findByRegistrationId(KeycloakClientRegistrations.REGISTRATION_ID);
+        // scheme, host and port come from the request (ForwardedHeaderFilter applies); no query, default port dropped
+        String redirectUri = ServletUriComponentsBuilder.fromContextPath(request)
+                .path(CALLBACK_PATH)
+                .build()
+                .toUriString();
+        return build(registration, redirectUri, "WORKSPACE", workspace, "google-" + workspace.slug(), keptReturnTo);
+    }
+
+    /**
+     * The Platform Console start on {@code admin.} (AC-001.28): realm {@code tsolve-ops}, client {@code tsolve-console},
+     * no Identity Provider hint, no Workspace id. The redirect URI is the configured admin origin, never the request's.
+     */
+    public OAuth2AuthorizationRequest resolveConsole(String keptReturnTo) {
+        ClientRegistration registration =
+                registrations.findByRegistrationId(KeycloakClientRegistrations.CONSOLE_REGISTRATION_ID);
+        return build(registration, registration.getRedirectUri(), "PLATFORM_CONSOLE", null, null, keptReturnTo);
+    }
+
+    private OAuth2AuthorizationRequest build(
+            ClientRegistration registration,
+            String redirectUri,
+            String target,
+            WorkspaceRef workspace,
+            String idpHint,
+            String keptReturnTo) {
         String verifier = randomValue();
         String rawNonce = randomValue();
 
@@ -50,21 +75,19 @@ public class KeycloakAuthorizationRequestResolver {
         attributes.put(OAuth2ParameterNames.REGISTRATION_ID, registration.getRegistrationId());
         attributes.put(PkceParameterNames.CODE_VERIFIER, verifier);
         attributes.put(OidcParameterNames.NONCE, rawNonce);
-        attributes.put(TARGET, "WORKSPACE");
-        attributes.put(WORKSPACE_ID, workspace.id().toString());
+        attributes.put(TARGET, target);
+        if (workspace != null) {
+            attributes.put(WORKSPACE_ID, workspace.id().toString());
+        }
         attributes.put(RETURN_TO, keptReturnTo);
 
         Map<String, Object> parameters = new HashMap<>();
         parameters.put(OidcParameterNames.NONCE, sha256(rawNonce));
         parameters.put(PkceParameterNames.CODE_CHALLENGE, sha256(verifier));
         parameters.put(PkceParameterNames.CODE_CHALLENGE_METHOD, "S256");
-        parameters.put("kc_idp_hint", "google-" + workspace.slug());
-
-        // scheme, host and port come from the request (ForwardedHeaderFilter applies); no query, default port dropped
-        String redirectUri = ServletUriComponentsBuilder.fromContextPath(request)
-                .path(CALLBACK_PATH)
-                .build()
-                .toUriString();
+        if (idpHint != null) {
+            parameters.put("kc_idp_hint", idpHint);
+        }
 
         return OAuth2AuthorizationRequest.authorizationCode()
                 .authorizationUri(registration.getProviderDetails().getAuthorizationUri())
