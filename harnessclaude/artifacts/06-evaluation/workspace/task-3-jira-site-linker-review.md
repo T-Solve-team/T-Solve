@@ -2,9 +2,9 @@
 module: workspace
 feature: jira-site-linker
 task: 3
-verdict: fail
-attempt: 1
-date: 2026-11-12
+verdict: pass
+attempt: 2
+date: 2026-11-13
 reviewer: harnessclaude-reviewer
 iteration: 1
 ---
@@ -12,36 +12,42 @@ iteration: 1
 # Review: workspace — Task 3: Jira site rule and interim site linker
 
 ## Summary
-Commit `7da71b8` (default repo). It adds `JiraSiteRule.normalise`, the port `JiraSiteLinker`,
-`JiraSiteLinkRefusedException` (`LINKED_ELSEWHERE`, `UNREADABLE`) and `InterimJiraSiteLinker`. The site rule is correct
-and well tested, including every SSRF case from the design's risk review. The linker code is correct: its production
-factory turns redirects off after `super.prepareConnection`. **But the "follow no redirect" clause of AC-007.4 has no
-test that proves it.** Every linker test injects a `MockRestServiceServer` builder through the package-private
-constructor. That replaces the production request factory and never follows redirects anyway. So the test "AC-007.4
-refuses a 302 without following its Location" would still pass if `setInstanceFollowRedirects(false)` were deleted. The
-clause is the SSRF control of NFR 2 and design edge case 6, and its test proves it in name only. Verdict: **fail**
-(criterion clause without a real test). The fix is one test; no production code change is expected.
+Commits `default@7da71b8` (original) and `default@52e87dc` (fix). The fix closes the only attempt-1 finding. It moves
+the production `RestClient.Builder` into a package-private static `InterimJiraSiteLinker.clientBuilder(...)`
+(`InterimJiraSiteLinker.java:38-49`). The new test runs that real builder against a local `HttpServer`
+(`InterimJiraSiteLinkerTest.java:78-123`). The server's `/_edge/tenant_info` answers 302 with a relative Location to a
+second path that would return a valid `cloudId`. The test asserts `UNREADABLE` and zero hits on the target.
+
+An interceptor rewrites only the URI. `InterceptingClientHttpRequest` then creates the delegate request from the
+production `SimpleClientHttpRequestFactory`, so the `prepareConnection` override runs. If
+`setInstanceFollowRedirects(false)` were deleted, `HttpURLConnection` would follow the same-protocol 302 and get a
+`cloudId`, the target counter would be 1, and the test would fail. The test can now fail when the code is wrong. The
+production behaviour has not changed: the constructor delegates to the same builder.
+
+I re-checked the whole feature against the current spec. AC-007.3 and AC-007.4 did not change in the spec update of
+2026-11-12. No new defect was found. Verdict: **pass**.
 
 ## Criteria
 
 | Criterion | Result | Detail |
 |-----------|--------|--------|
-| Functionality | pass | `JiraSiteRule.java:15-38` implements AC-007.3 exactly: trim, lower-case with `Locale.ROOT`, https, single label + `.atlassian.net`, no user info, no port (an empty `:` is rejected too), no query or fragment, path empty or `/`, result `https://<host>`. `InterimJiraSiteLinker.java:51-78` re-checks the input is already normalised, then GETs `<site>/_edge/tenant_info` with no credentials. Any non-200 status, an IO or decode failure, or a missing or blank `cloudId` → `UNREADABLE`. It logs only host and status and never keeps a body or cause. Redirects are off (`:34-41`). Timeouts come from `tsolve.tracker.jira.*` (NFR 3). |
-| Completeness | **fail** | AC-007.4's "follow no redirect" has no test that can fail (Issue 1). Everything else in Stage 1 passes. |
-| Correctness | pass | Orchestrator: `mvn -B verify` (with Task 4) → 1534 unit + 454 IT, 0 failures, BUILD SUCCESS. Includes JiraSiteRuleTest 35 and InterimJiraSiteLinkerTest 32. Not re-run here (brief's low-RAM limit). |
-| Integration | pass | `WorkspaceServiceImpl.java:87` uses `JiraSiteRule.normalise` → `MSG61` before any outbound call. `:100-101` maps `LINKED_ELSEWHERE` → `MSG153` and the rest → `MSG61`. The port's Javadoc names platform AC-004.19..24 and marks the adapter `[Interim]`. |
+| Functionality | pass | `JiraSiteRule.java:15-38` implements AC-007.3: trim, `Locale.ROOT` lower-case, https, one label + `.atlassian.net`, no user info/port (an empty `:` too)/query/fragment, path empty or `/`, result `https://<host>`. `InterimJiraSiteLinker.java:56-82` re-applies the rule and GETs `<site>/_edge/tenant_info` with no credentials. Non-200 / IO / decode / blank `cloudId` → `UNREADABLE`, logged with host and status only. No redirects (`:39-45`). Timeouts come from `tsolve.tracker.jira.*`. |
+| Completeness | pass | AC-007.3 and AC-007.4 are each proven by a test that can fail (Stage 1). No EXTRA behaviour. |
+| Correctness | pass | Orchestrator's verify after the four fixes: `mvn -B verify` — 1594 unit + 481 IT, BUILD SUCCESS. Not re-run by the reviewer (brief: low-RAM machine). No CRITICAL finding. |
+| Integration | pass | `WorkspaceServiceImpl.java:86` applies `JiraSiteRule.normalise` → `MSG61` before any outbound call. `:100-107` maps `LINKED_ELSEWHERE` → `MSG153` and anything else → `MSG61`, inside the setup transaction (AC-001.8). |
 
-### Stage 1 — Spec compliance
+### Stage 1 — spec compliance
 
 | # | Criterion | Status | Evidence |
 |---|-----------|--------|----------|
-| 1 | AC-007.3 site rule and normalised form | PASS | `JiraSiteRuleTest`: 5 accepted forms (case, spaces, trailing `/`, numeric and hyphenated labels) and 30 rejected ones: null, empty, blank, `http`, localhost, 169.254.169.254, `.evil.com` suffix, user info, ports 8443/443/empty, multi-label, a path, `?`/`#` (empty ones too), leading or trailing hyphen, `_`, trailing dot, `%2e`, `%2f`, `..`, backslash, `%`, `https:///`, a space, garbage. `InterimJiraSiteLinkerTest` "AC-007.3 refuses unchecked or non-normalised input before any outbound call" checks with `jira.verify()` that no request is made. |
-| 2 | AC-007.4 reads `https://<host>/_edge/tenant_info`, returns `cloudId` | PASS | "AC-007.4 returns the cloudId from public tenant information without credentials" checks the exact URI, GET, and no `Authorization` header. |
-| 3 | AC-007.4 refuses when not 200 or no `cloudId` | PASS | Statuses 201, 204, 301, 302, 307, 308, 400, 401, 403, 404, 429 and 500 are refused, and the log has `host` and `status=` with no body. An empty, `{}`, null, `""` or blank `cloudId` is refused. A malformed body and an IO failure are refused with no leak. |
-| 4 | AC-007.4 follows no redirect | **MISSING** (named, not proven) | `InterimJiraSiteLinkerTest.java:72` (`refusesRedirect`) uses the mock builder from `:37-40`. `MockRestServiceServer.bindTo(builder)` swaps in its own request factory, so the production `SimpleClientHttpRequestFactory` override at `InterimJiraSiteLinker.java:34-41` is never run by any test. |
+| 1 | AC-007.3 site rule and normalised form | PASS | `JiraSiteRuleTest` (5 accepted, 30 rejected forms, including every SSRF case of design edge 2). `InterimJiraSiteLinkerTest` "AC-007.3 refuses unchecked or non-normalised input before any outbound call" makes no request. |
+| 2 | AC-007.4 reads `https://<host>/_edge/tenant_info`, returns `cloudId` | PASS | "AC-007.4 returns the cloudId from public tenant information without credentials" (exact URI, GET, no `Authorization`). |
+| 3 | AC-007.4 refuses when not 200 or no `cloudId` | PASS | Parameterised over 12 statuses with a log check; blank or absent `cloudId` (5 bodies); malformed body; IO failure. No body or cause is kept. |
+| 4 | AC-007.4 follows no redirect | PASS (fixed) | "AC-007.4 the production client refuses a 302 and never requests its Location" (`InterimJiraSiteLinkerTest.java:78-123`) runs the real request factory. |
 
 ## Traceability
 ```
+$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-007
   ✓ AC-007.1  backend/src/test/java/vn/tsolve/workspace/jira/JiraServiceAccountCheckTest.java
   ✓ AC-007.2  backend/src/test/java/vn/tsolve/workspace/jira/JiraServiceAccountCheckTest.java
   ✓ AC-007.3  backend/src/test/java/vn/tsolve/workspace/site/InterimJiraSiteLinkerTest.java, backend/src/test/java/vn/tsolve/workspace/site/JiraSiteRuleTest.java
@@ -51,39 +57,32 @@ clause is the SSRF control of NFR 2 and design edge case 6, and its test proves 
   ✓ AC-007.7  backend/src/test/java/vn/tsolve/workspace/crypto/TokenCipherTest.java
 trace workspace (STORY-007): 7/7 acceptance criteria have a test
 ```
-This task owns AC-007.3 and AC-007.4. Trace sees a test name for AC-007.4, but one of its clauses is not proven
-(Issue 1).
+This task owns AC-007.3 and AC-007.4. Both are now proven, not only named.
 
 ## Issues
-1. **IMPORTANT (blocks: AC clause without a real test)** — `backend/src/test/java/vn/tsolve/workspace/site/InterimJiraSiteLinkerTest.java:72`
-   (with `:37-40`) does not test the production redirect policy at
-   `backend/src/main/java/vn/tsolve/workspace/site/InterimJiraSiteLinker.java:34-41`.
-   Expected: deleting `connection.setInstanceFollowRedirects(false)` makes a test fail. Actual: all 32 linker tests stay
-   green, because the mock factory never follows redirects.
-   Fix: build the production `RestClient.Builder` in a package-private static factory, the way
-   `JiraRestIssueSource.clientBuilder(...)` does. Then add an `AC-007.4 …` test against a local
-   `com.sun.net.httpserver.HttpServer` on 127.0.0.1, as `JiraRestIssueSourceTest.java:307-330` already does. That
-   server's `/_edge/tenant_info` answers 302 to a second path on itself that returns `{"cloudId":"x"}`. Assert that the
-   linker logic refuses with `UNREADABLE` and the second path is never hit. Because `linkJiraSite` re-applies the site
-   rule and would refuse `127.0.0.1`, the test must call a package-private seam that takes the target URI. Or assert
-   on the `HttpURLConnection` that the factory prepares (`getInstanceFollowRedirects()` is false).
+CRITICAL: none. IMPORTANT: none.
 
-Informational (does not block):
-2. `backend/src/main/java/vn/tsolve/workspace/site/JiraSiteRule.java:11` — the label is not capped at 63 characters
-   (RFC 1035). This is harmless for SSRF, because any such host is still under `atlassian.net`. Fix (optional): use
-   `{0,61}` in the middle group.
-3. `backend/src/main/java/vn/tsolve/workspace/site/InterimJiraSiteLinker.java:60-67` — the response body is read
-   without a size limit. The host is Atlassian-controlled and the read timeout applies, so the risk is low. Fix: none
-   needed for the interim adapter.
+MINOR (carried from attempt 1, do not block):
+1. `backend/src/main/java/vn/tsolve/workspace/site/JiraSiteRule.java:11`: the label is not capped at 63 characters
+   (RFC 1035). This is harmless for SSRF. Fix (optional): `{0,61}` in the middle group.
+2. `backend/src/main/java/vn/tsolve/workspace/site/InterimJiraSiteLinker.java:64-71`: the tenant-info body is read
+   without a size limit. The host is Atlassian's and the read timeout applies. No fix needed for the interim adapter.
+
+## Attempt 1
+Verdict fail (`7da71b8`).
+- IMPORTANT (blocked as an AC clause without a real test): the "follow no redirect" clause of AC-007.4 was tested only
+  through `MockRestServiceServer`. That mock replaced the production request factory, so the test could not fail.
+  **Resolved** in `52e87dc` by the package-private `clientBuilder` and a local-`HttpServer` test of the real factory
+  (see Summary).
+- Informational: the 63-char label cap and the unbounded body read. **Not changed**; they are carried as MINOR 1–2.
 
 ## Assumptions made
-- A clause of an AC whose only test cannot fail when that clause's code is removed counts as MISSING, which means
-  verdict fail. The rest of AC-007.4 is proven, and the production code is believed correct. Open judgment call for
-  the user: accept the code as it is and downgrade this to informational, or require the test (recommended, because
-  this is the SSRF control).
-- NFR 3 (timeouts) is not an AC, so the absence of a timeout test for the linker is not a finding. The values come
-  from the same settings as `JiraClient`.
+- Tests were not re-run by the reviewer. The dispatcher's brief forbids `mvn` on this low-RAM machine. The
+  orchestrator's recorded verify (session log, "Session 2026-11-13") is used. The test's ability to fail was judged by
+  reading it against Spring's `InterceptingClientHttpRequest` and `HttpURLConnection` redirect behaviour. The session
+  log also says it was checked by flipping the setting.
+- NFR 3 (timeouts) is not an AC, so the lack of a linker timeout test is not a finding.
 
 ## Test Report
-See `task-3-jira-site-linker-test-report.md`. Full suite run by the orchestrator: BUILD SUCCESS. Trace STORY-007: 7/7
-by name; one clause of AC-007.4 is not proven.
+See `task-3-jira-site-linker-test-report.md`. Recorded: `mvn -B verify` BUILD SUCCESS (1594 unit + 481 IT).
+Trace STORY-007: 7/7 (run by the reviewer).

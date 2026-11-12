@@ -150,14 +150,14 @@
       "features": {
         "workspace-store": "passing",
         "tracker-account-check": "passing",
-        "jira-site-linker": "evaluating",
-        "workspace-setup-api": "evaluating",
-        "workspace-update-api": "evaluating",
-        "workspace-service-account": "evaluating",
+        "jira-site-linker": "passing",
+        "workspace-setup-api": "passing",
+        "workspace-update-api": "passing",
+        "workspace-service-account": "passing",
         "workspace-setup-screen": "passing",
         "workspace-settings-screen": "passing"
       },
-      "lastUpdated": "2026-11-12T17:39:40.873Z",
+      "lastUpdated": "2026-11-12T18:17:49.281Z",
       "branch": "feat/workspace",
       "repos": [
         "default"

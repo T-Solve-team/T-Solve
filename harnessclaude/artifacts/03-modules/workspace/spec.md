@@ -209,6 +209,7 @@ vn.tsolve.tracker.service.JiraServiceAccount  { Optional<JiraAccount> current();
 
 ### Required from other modules
 - `identity`: `TenantScope.currentWorkspaceId()` (the bound Workspace of the request), `Roles.ADMIN`.
+- `worker`: `WorkerTenantService.currentWorkspaceId()` (the Workspace a worker job binds, AC-004.1), optional bean.
 - `tracker`: `TicketTrackerClient` gains `checkServiceAccount(JiraAccount)` (implemented in `JiraClient`).
 - `platform`: `WorkspaceCatalog.linkJiraSite(siteUrl)` (platform AC-004.19..24). Until it exists, the
   workspace-owned port `JiraSiteLinker` with the same contract is answered by an interim adapter **[Interim]**.

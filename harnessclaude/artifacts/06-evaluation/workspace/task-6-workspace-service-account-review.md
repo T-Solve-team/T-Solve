@@ -2,9 +2,9 @@
 module: workspace
 feature: workspace-service-account
 task: 6
-verdict: fail
-attempt: 1
-date: 2026-11-12
+verdict: pass
+attempt: 2
+date: 2026-11-13
 reviewer: harnessclaude-reviewer
 iteration: 1
 ---
@@ -12,86 +12,90 @@ iteration: 1
 # Review: workspace — Task 6: Service account for tracker, remove the stand-in
 
 ## Summary
-Commit `default@2969d0a` (STORY-004). The class itself is correct for a web request: it reads the bound Workspace's
-row on every call, decrypts with the Workspace id as AAD, returns empty for no row / incomplete row / decrypt failure,
-and logs only the Workspace id. The stand-in, its test, its three settings and its env variables are gone (repo-wide
-grep finds no reference), and the AC-004.2 test really component-scans `vn.tsolve` for `JiraServiceAccount` beans.
+Commits `default@2969d0a` (original) and `default@df3d89e` (fix), covering STORY-004. AC-004.1 now says that the bound
+Workspace is the one of the running worker job (`WorkerTenantService`), or else that of the web request
+(`TenantScope`) (spec Changelog 2026-11-12, D28, re-approved by the user).
 
-It fails because the only consumer of `JiraServiceAccount` runs in a worker job, where this implementation cannot
-find the Workspace and throws. Removing the stand-in therefore turns the tracker's MSG80 suggestion comment (tracker
-STORY-012) from "posted" into "job failed" — a regression no test catches because every consumer test mocks
-`JiraServiceAccount`. The spec is incomplete on the same point (it names only the request's `TenantScope`).
+The fix injects `ObjectProvider<WorkerTenantService>` and resolves
+`worker.currentWorkspaceId()` → else `scope.currentWorkspaceId()` (`WorkspaceJiraServiceAccount.java:44-47`). This
+closes the attempt-1 CRITICAL:
+- The suggestion job runs under `TenantExecutionServiceImpl.runInTenant`, which binds only
+  `MockWorkerTenantService`'s ThreadLocal. `current()` now reads that Workspace instead of hitting the unbound
+  `LocalTenantScope` and throwing.
+- In a web request the worker binding is empty, because `MockWorkerTenantService.currentWorkspaceId()` returns only
+  the ThreadLocal, with no default. `TenantScope` then answers, as before.
+- When no `WorkerTenantService` bean exists (worker profile off), `getIfAvailable()` returns null and `TenantScope` is
+  used.
+- `WorkerTenantService` is the `worker` module's `service/` port, so the dependency follows `backend/AGENTS.md` §1.
+
+There are three new AC-004.1 tests:
+- a worker binding is used and `TenantScope` is never touched (`verifyNoInteractions(scope)`);
+- a worker bean with no binding falls back to the scope;
+- with no worker bean, the scope is used.
+
+I re-checked the whole feature against the current spec. AC-004.2 and AC-004.3 are unchanged and still met. Verdict:
+**pass**.
 
 ## Criteria
 
 | Criterion | Result | Detail |
 |-----------|--------|--------|
-| Functionality | fail | Inside a web request AC-004.1/004.3 hold. In the worker (the real caller) `current()` throws instead of returning the account or empty (Issue 1). |
+| Functionality | pass | `current()` `:41-66`: resolve the Workspace (worker, else scope) → no row or incomplete row → empty; decrypt with the Workspace id as AAD; on decrypt failure, an ERROR log with the id only, then empty. |
 | Completeness | pass | 3/3 ACs have tests that check them; no EXTRA behaviour. |
-| Correctness | fail | Recorded verify: `mvn -B verify` BUILD SUCCESS (1588 unit + 481 IT), not re-run by the reviewer (dispatcher's low-RAM limit). CRITICAL Issue 1 is untested runtime behaviour. |
-| Integration | fail | `tracker` consumer `SuggestionCommentServiceImpl` is reached only through the worker's `TenantExecutionService`, which binds `WorkerTenantService`, not identity's `TenantScope`. |
+| Correctness | pass | Orchestrator's verify after the four fixes: `mvn -B verify` — 1594 unit + 481 IT, BUILD SUCCESS. Not re-run by the reviewer (brief: low-RAM machine). No CRITICAL finding. |
+| Integration | pass | The only consumer path (`TenantJobRequestHandler` → `TenantExecutionServiceImpl.runInTenant` → `SuggestionJobServiceImpl` → `SuggestionCommentServiceImpl.post` → `current()`) now resolves the job's Workspace. Web callers are unchanged. |
 
 ### Stage 1 — spec compliance
 
 | # | AC | Status | Evidence |
 |---|----|--------|----------|
-| 1 | AC-004.1 | PASS (request context only) | `WorkspaceJiraServiceAccount.java:33-53`; tests: account, no row, incomplete row, re-read per call |
-| 2 | AC-004.2 | PASS | stand-in, its test and `tsolve.tracker.jira.site-url/service-account-*` removed; test "AC-004.2 … exactly one JiraServiceAccount bean" scans `vn.tsolve` |
-| 3 | AC-004.3 | PASS | `:46-52`; tests tampered / other-workspace AAD / wrong key, ERROR log without token, email, ciphertext or throwable |
+| 1 | AC-004.1 | PASS | `:44-61`. Tests: account returned, no row, incomplete row, re-read on every call; plus the new worker binding (`WorkspaceJiraServiceAccountTest.java:112`), the fallback with an unbound worker (`:129`), and the fallback with no worker bean (`:144`) |
+| 2 | AC-004.2 | PASS | The stand-in, its test and the `tsolve.tracker.jira.site-url/service-account-*` settings are removed. The test "AC-004.2 … exactly one JiraServiceAccount bean" scans `vn.tsolve` |
+| 3 | AC-004.3 | PASS | `:59-65`. Parameterised tests (tampered, other-workspace AAD, wrong key): an ERROR log with no token, email, ciphertext or throwable, and the result is empty |
 
 ## Traceability
 ```
 $ bun harnessclaude/hooks/sdd.ts trace workspace STORY-004
-  ✓ AC-004.1  WorkspaceJiraServiceAccountTest.java
-  ✓ AC-004.2  WorkspaceJiraServiceAccountTest.java
-  ✓ AC-004.3  WorkspaceJiraServiceAccountTest.java
+  ✓ AC-004.1  backend/src/test/java/vn/tsolve/workspace/service/impl/WorkspaceJiraServiceAccountTest.java
+  ✓ AC-004.2  backend/src/test/java/vn/tsolve/workspace/service/impl/WorkspaceJiraServiceAccountTest.java
+  ✓ AC-004.3  backend/src/test/java/vn/tsolve/workspace/service/impl/WorkspaceJiraServiceAccountTest.java
 trace workspace (STORY-004): 3/3 acceptance criteria have a test
 ```
 
 ## Issues
+CRITICAL: none. IMPORTANT: none.
 
-CRITICAL (blocks pass):
-1. `backend/src/main/java/vn/tsolve/workspace/service/impl/WorkspaceJiraServiceAccount.java:34` — the account is
-   unreachable from the worker, its only caller.
-   - `scope.currentWorkspaceId()` is identity's `LocalTenantScope`, a ThreadLocal bound only by
-     `identity/session/WebSessionFilter` (web requests); unbound it throws
-     `IllegalStateException("no Workspace is bound to this thread")` (`identity/signin/port/LocalTenantScope.java:17-22`).
-   - The sole consumer path is a worker job: `TenantJobRequestHandler` → `TenantExecutionServiceImpl.runInTenant`
-     (`worker/service/impl/TenantExecutionServiceImpl.java:27`, binds `WorkerTenantService` — a different
-     ThreadLocal in `MockWorkerTenantService`) → `SuggestionJobServiceImpl.run` (`tracker/…/SuggestionJobServiceImpl.java:64`)
-     → `SuggestionCommentServiceImpl.post` (`tracker/…/SuggestionCommentServiceImpl.java:36`) → `current()`.
-   - Result: the call at `:34` (outside the `try`) throws, `SuggestionJobServiceImpl.run` rethrows it as a job
-     failure, and the MSG80 comment is never posted. Before this commit the stand-in answered from configuration and
-     the comment was posted. Other worker-run code in the repo (`review/…/ReviewExpiryServiceImpl.java:35`,
-     `worker/…/ReviewNotificationEnqueuer.java:45`) reads the Workspace from `WorkerTenantService`, confirming the
-     two bindings are separate today.
-   - No test catches it: `SuggestionCommentServiceImplTest` mocks `JiraServiceAccount`, and
-     `WorkspaceJiraServiceAccountTest` mocks `TenantScope` as always bound.
-   Fix (pick one, then add a test that runs `current()` inside `TenantExecutionService.runInTenant` with no web
-   binding):
-   a. Preferred, smallest blast radius for every future worker-side caller: have `TenantExecutionServiceImpl.runInTenant`
-      also bind identity's `TenantScope` (`scope.runIn(workspaceId, …)`) — worker module code, so a change request
-      to `worker` unless the user adds the file to this module.
-   b. Inside `workspace`: resolve the Workspace from `TenantScope` when bound, else from
-      `ObjectProvider<WorkerTenantService>.getIfAvailable().currentWorkspaceId()`, else return empty.
-   Spec: STORY-004 / "Required from other modules" names only `TenantScope.currentWorkspaceId()` "(the bound Workspace
-   of the request)"; AC-004.1 must say which binding a worker job uses (spec change first, plan skill Change Mode).
+MINOR (do not block):
+1. (new) The worker test mocks `WorkerTenantService.currentWorkspaceId()`. It does not run `current()` inside the real
+   `MockWorkerTenantService.runIn` / `TenantExecutionService.runInTenant`. The unit test proves the order of
+   resolution, and the mock's contract is a plain ThreadLocal. An end-to-end test through `runInTenant` would also
+   guard against a future change in the worker binding. Fix (optional): add one test that wires
+   `MockWorkerTenantService` and calls `current()` from inside `runIn`.
+2. (new) Spec `harnessclaude/artifacts/03-modules/workspace/spec.md`, "Required from other modules", still lists only
+   `identity: TenantScope.currentWorkspaceId()`. It should also list `worker: WorkerTenantService.currentWorkspaceId()`,
+   which AC-004.1 now names. Fix: one line in the spec (a documentation fix; the behaviour is in AC-004.1).
+3. (carried) `WorkspaceJiraServiceAccount.java:44-47`: when neither binding is present, `LocalTenantScope` still throws
+   `IllegalStateException("no Workspace is bound to this thread")`. The spec does not cover this case. It is a
+   programming error (a call from an unbound thread), not a decrypt failure, so it is kept apart from the AC-004.3 log
+   as attempt 1 asked.
 
-MINOR:
-2. `WorkspaceJiraServiceAccount.java:49-51` — even if the unbound case were moved inside the `try`, it would be
-   logged as "could not be decrypted"; keep the "no Workspace bound" case separate from the decrypt failure.
+## Attempt 1
+Verdict fail (`2969d0a`).
+- CRITICAL: `current()` read only identity's `TenantScope`, which a worker job never binds. The tracker suggestion
+  job, the only consumer, threw, so the MSG80 comment stopped being posted after the stand-in was removed. The spec
+  named only the request binding. **Resolved**: AC-004.1 was reworded (D28, re-approved) and the code was fixed in
+  `df3d89e` (worker binding first, then `TenantScope`), with three AC-004.1 tests.
+- MINOR (keep "no Workspace bound" separate from the decrypt failure). **Holds**: the resolution sits outside the
+  `try`, so an unbound thread is never logged as a decrypt failure (MINOR 3).
 
 ## Assumptions made
-- **Open judgment call (for the user):** whether the worker binding is this module's job or a platform/worker
-  change request. I rated it CRITICAL because the spec's user story is "As `tracker` and the Chatbot, I want the
-  current Workspace's service account" and the delivered bean cannot serve `tracker`'s only call site, a regression
-  of tracker STORY-012 introduced by this commit's removal of the stand-in. If the user accepts "suggestion comments
-  stop until platform unifies the bindings", this can be downgraded with a spec note — but then AC-004.2's removal
-  should wait for that.
-- Severity assumes the worker profile is a supported way to run the stack today (`worker-mock`; there is no other
-  `WorkerTenantService` implementation in the repo).
-- Tests were not re-run by the reviewer (dispatcher's low-RAM limit); the orchestrator's recorded verify is used.
+- The attempt-1 open judgment call (should this module or `worker` fix the binding?) is settled by D28 and the spec
+  change, which the user re-approved. No open call remains.
+- The suggestion-job path is judged by reading the code (`MockWorkerTenantService` is the only `WorkerTenantService`
+  in the repo). No end-to-end worker test was run (see MINOR 1).
+- Tests were not re-run by the reviewer. The dispatcher's brief forbids `mvn` on this low-RAM machine. The
+  orchestrator's recorded verify (session log, "Session 2026-11-13") is used.
 
 ## Test Report
-See `task-6-workspace-service-account-test-report.md`. Recorded: `mvn -B verify` BUILD SUCCESS — 1588 unit + 481 IT
-(WorkspaceJiraServiceAccountTest 10). Trace 3/3 (run by the reviewer).
+See `task-6-workspace-service-account-test-report.md`. Recorded: `mvn -B verify` BUILD SUCCESS (1594 unit + 481 IT).
+Trace 3/3 (run by the reviewer).
