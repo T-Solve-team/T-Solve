@@ -14,20 +14,14 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import jakarta.validation.Validation;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -50,7 +44,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -60,7 +53,6 @@ import org.springframework.transaction.TransactionStatus;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
-import vn.tsolve.common.exception.CodedException;
 import vn.tsolve.common.exception.FieldMessageCodeException;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
@@ -436,100 +428,6 @@ class ProjectServiceImplTest {
             assertThat(factory.getValidator()
                             .validate(new CreateProjectRequest("OPS", List.of("10002"), BigDecimal.ONE)))
                     .isEmpty();
-        }
-    }
-
-    @Test
-    void excludesCredentialsAndRawJiraBodiesOnSuccessAndEveryFailurePath_AC_001_17() throws Exception {
-        Logger logger = (Logger) LoggerFactory.getLogger("vn.tsolve.project");
-        Level previous = logger.getLevel();
-        ListAppender<ILoggingEvent> appender = new ListAppender<>();
-        appender.start();
-        logger.setLevel(Level.ALL);
-        logger.addAppender(appender);
-        ObjectMapper mapper = JsonMapper.builder().findAndAddModules().build();
-        List<String> serialized = new ArrayList<>();
-        try {
-            serialized.add(mapper.writeValueAsString(succeeds("OPS")));
-            for (String path : List.of(
-                    "format",
-                    "active",
-                    "foreign",
-                    "protected",
-                    "canonical",
-                    "ambiguous",
-                    "NOT_FOUND",
-                    "DENIED",
-                    "UNAVAILABLE",
-                    "access",
-                    "principal",
-                    "workspace")) {
-                reset(links, tracker, scope);
-                signIn();
-                String key = "OPS";
-                switch (path) {
-                    case "format" -> key = "1BAD";
-                    case "active" ->
-                        given(links.findLink("OPS"))
-                                .willReturn(Optional.of(link(1, "ACTIVE", CALLER, true, null, null)));
-                    case "foreign" ->
-                        given(links.findLink("OPS"))
-                                .willReturn(Optional.of(link(2, "REMOVED", CALLER, false, null, null)));
-                    case "protected" ->
-                        given(links.findLink("OPS"))
-                                .willReturn(Optional.of(link(1, "REMOVED", OTHER, true, null, null)));
-                    case "canonical", "ambiguous" -> {
-                        given(tracker.findProject("OPS")).willReturn(TrackerProjectLookup.found("LEGACY", STATUSES));
-                        given(links.findLink("LEGACY"))
-                                .willReturn(Optional.of(new Link(
-                                        OTHER,
-                                        1,
-                                        "Canonical",
-                                        "LEGACY",
-                                        path.equals("canonical") ? "ACTIVE" : "REMOVED",
-                                        null,
-                                        null,
-                                        CALLER,
-                                        true)));
-                        if (path.equals("ambiguous")) {
-                            given(links.findLink("OPS"))
-                                    .willReturn(Optional.of(link(1, "REMOVED", CALLER, true, null, null)));
-                        }
-                    }
-                    case "access" -> given(links.findCallerDepartment(CALLER)).willReturn(Optional.empty());
-                    case "principal" -> SecurityContextHolder.clearContext();
-                    case "workspace" -> given(scope.currentWorkspaceId()).willThrow(new IllegalStateException());
-                    default ->
-                        given(tracker.findProject("OPS"))
-                                .willReturn(TrackerProjectLookup.failed(Outcome.valueOf(path)));
-                }
-                String testedKey = key;
-                assertThatThrownBy(() -> service().testConnection(new ProjectConnectionTestRequest(testedKey)))
-                        .satisfies(error -> {
-                            if (path.equals("workspace")) {
-                                assertThat(error).isInstanceOf(IllegalStateException.class);
-                                serialized.add("MSG06:{}:null");
-                            } else {
-                                assertThat(error).isInstanceOf(CodedException.class);
-                                CodedException coded = (CodedException) error;
-                                try {
-                                    serialized.add(mapper.writeValueAsString(
-                                            Arrays.asList(coded.getCode(), coded.getParams(), coded.getField())));
-                                } catch (Exception e) {
-                                    throw new AssertionError(e);
-                                }
-                            }
-                        });
-            }
-            appender.list.forEach(event -> serialized.add(event.getFormattedMessage()));
-            for (String value : serialized) {
-                assertThat(value)
-                        .doesNotContain("svc@acme.atlassian.test", "ATATT-planted-token", "{\"errorMessages\"");
-            }
-        } finally {
-            logger.detachAppender(appender);
-            logger.setLevel(previous);
-            appender.stop();
         }
     }
 

@@ -152,14 +152,14 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser
-    void validatesEmployeeBodyBeforeMethodAccess_AC_001_2_AC_007_3() throws Exception {
+    void validatesEmployeeBodyBeforeMethodAccess_AC_001_2() throws Exception {
         assertKeyError(perform("{}"), "MSG01", Map.of("field_name", "jiraProjectKey"));
         verifyNoInteractions(service);
     }
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    void validatesAdminBodyBeforeMethodAccess_AC_001_2_AC_007_3() throws Exception {
+    void validatesAdminBodyBeforeMethodAccess_AC_001_2() throws Exception {
         assertKeyError(perform("{}"), "MSG01", Map.of("field_name", "jiraProjectKey"));
         verifyNoInteractions(service);
     }
