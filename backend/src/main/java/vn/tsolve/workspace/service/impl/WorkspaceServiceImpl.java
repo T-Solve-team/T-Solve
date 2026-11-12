@@ -156,8 +156,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         WorkspaceInfo stored =
                 repository.findById(workspaceId).orElseThrow(() -> new NotFoundException("MSG60", Map.of()));
         if (tokenChanged || !email.equals(stored.getServiceAccountEmail())) {
-            String resultingToken =
-                    tokenChanged ? token : cipher.decrypt(workspaceId, stored.getServiceAccountApiToken());
+            String resultingToken = tokenChanged ? token : storedToken(workspaceId, stored);
             try {
                 tracker.checkServiceAccount(new JiraAccount(stored.getJiraSiteAddress(), email, resultingToken));
             } catch (JiraRejectedException | JiraUnavailableException failure) {
@@ -181,6 +180,16 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                             "tokenChanged", tokenChanged));
             return mapper.toResponse(saved);
         });
+    }
+
+    private String storedToken(UUID workspaceId, WorkspaceInfo stored) {
+        try {
+            return cipher.decrypt(workspaceId, stored.getServiceAccountApiToken());
+        } catch (IllegalStateException failure) {
+            // D29: the Admin re-enters the token; never log the value or the cause.
+            log.error("Workspace {} stored Jira token could not be decrypted", workspaceId);
+            throw error("serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
+        }
     }
 
     private static String field(JsonNode input, String field, String label, Integer maxLength) {

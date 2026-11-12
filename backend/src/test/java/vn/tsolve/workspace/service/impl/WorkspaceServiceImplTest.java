@@ -584,6 +584,35 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
+    @DisplayName("AC-003.5 undecryptable stored token on an email change returns MSG156 and changes nothing D29")
+    void rejectsUndecryptableStoredToken() {
+        storedWorkspace();
+        when(cipher.decrypt(workspaceId, "fake-ciphertext"))
+                .thenThrow(new IllegalStateException("Workspace token decryption failed"));
+        ObjectNode input = valid().put("serviceAccountEmail", "new@example.test");
+        input.remove("serviceAccountToken");
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(WorkspaceServiceImpl.class);
+        var logs = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        logs.start();
+        logger.addAppender(logs);
+        try {
+            updateError(input, "serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
+            assertThat(logs.list).singleElement().satisfies(event -> {
+                assertThat(event.getLevel()).isEqualTo(ch.qos.logback.classic.Level.ERROR);
+                assertThat(event.getFormattedMessage())
+                        .contains(workspaceId.toString())
+                        .doesNotContain(TOKEN, "fake-ciphertext", "new@example.test");
+                assertThat(event.getThrowableProxy()).isNull();
+            });
+        } finally {
+            logger.detachAppender(logs);
+            logs.stop();
+        }
+        verifyNoInteractions(tracker, linker);
+        verify(cipher, never()).encrypt(any(), any());
+    }
+
+    @Test
     @DisplayName("AC-003.6 company-only update succeeds without any Jira or cipher call D10")
     void renamesWithoutJira() {
         storedWorkspace();
