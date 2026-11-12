@@ -1214,3 +1214,8 @@
 {"ts":"2026-11-12T10:19:39.148Z","type":"feature-status","module":"tracker","feature":"jira-project-read","from":"pending","to":"in-progress"}
 {"ts":"2026-11-12T13:44:22.356Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"aa966ab850e44c8991f1f9f31d1a869fce250e0b"}
 {"ts":"2026-11-12T13:44:40.597Z","type":"feature-status","module":"tracker","feature":"jira-project-read","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-12T13:44:47.377Z","type":"module-status","module":"project-integration","from":"planned","to":"implementing"}
+{"ts":"2026-11-12T13:44:47.659Z","type":"feature-status","module":"project-integration","feature":"project-done-statuses-schema","from":"pending","to":"in-progress"}
+{"ts":"2026-11-12T13:56:15.806Z","type":"feature-status","module":"tracker","feature":"jira-project-read","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-12T14:29:01.485Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"eeaee68d5445f8f0f601f14f765d9fd576362a5f"}
+{"ts":"2026-11-12T14:29:01.979Z","type":"feature-status","module":"tracker","feature":"jira-project-read","from":"fixing","to":"evaluating"}
