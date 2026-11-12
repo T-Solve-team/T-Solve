@@ -3,7 +3,7 @@ module: identity
 feature: operator-session
 task: 29b
 verdict: pass
-attempt: 3
+attempt: 4
 date: 2026-11-13
 reviewer: tsolve-code-reviewer (Fable 5.2, medium)
 iteration: 1
@@ -11,36 +11,32 @@ iteration: 1
 
 # Review: identity — Task 29b: Console callback and the Operator session
 
-PR #212, branch `feat/KAN-233-identity-operator-session`, head `75281b55` (clean tree, equal to the pushed head and to the PR's head). Attempt 3 covers `01c7a7ae..HEAD`: `757c1991` (tests), `8d699872` (fix), `75281b55` (review record only), plus `WebSessionFilter` read as a whole. CI on this head (`gh pr checks 212`): backend unit, it-keycloak-a, it-keycloak-b, it-other, gitleaks and pr-title pass; the frontend jobs are skipped (no frontend change).
+PR #212, branch `feat/KAN-233-identity-operator-session`, head `fa3c7a5f` (clean tree, equal to HEAD). Attempt 4 covers only the merge of main (KAN-314, #214): merge commit `85fa2676` against its first parent, and `fa3c7a5f` (the approval record). CI on this head (`gh pr checks 212`): backend, backend-tests unit, it-keycloak-a, it-keycloak-b, it-other, gitleaks and pr-title pass; the frontend jobs are skipped (no frontend change).
 
-## Attempt 3 (2026-11-13)
+## Attempt 4 (2026-11-13) — the merge of main (KAN-314, #214) into PR #212
 
 ### Summary
 
-Approve: 0 Critical, 0 Important, 2 Minor (new). Earlier findings still open: 1 (attempt-1 finding 7, Minor). Nothing open blocks the merge.
+Approve: 0 Critical, 0 Important, 2 Minor (new). Earlier findings are out of scope (approved at attempt 3 on `75281b55`).
 
-The Console rule now refuses every Operator request whose method and raw path are not exactly an entry of `ConsolePaths`, so no spelling of a path can pass it. The reviewer probe found no way around it and no second way to the logout endpoint.
+The merge keeps both behaviours: the old session is ended on both callback paths before the new one is created, and the `LOGOUT` event depends only on the kind of the old session, never on which callback runs.
 
 ### Criteria
 
 | Criterion | Result | Detail |
 |-----------|--------|--------|
-| Functionality | pass | AC-001.29: every `/api/**` request of an Operator session outside the Console list gets 403 MSG08, in plain and encoded form; AC-001.34: limits apply, and limits come before the allow-list (decision of 2026-11-13) |
-| Completeness | pass | No MISSING. One EXTRA that the user accepted: the rule also refuses non-API paths (A3-1) |
-| Correctness | pass | Targeted tests 148/148 pass at this head; CI passes; no Critical finding |
-| Integration | pass | No endpoint other than `POST /api/v1/auth/logout` runs for an Operator; sign-in and callback are on their own chains and do not pass this filter, so an Operator with a live session can sign in again |
+| Functionality | pass | AC-002.3: a live Workspace session replaced at the callback publishes one `LOGOUT` with its own ids; AC-002.4: a past-limit one is left to the sweep; AC-001.29 and AC-001.31 are not changed by the merge |
+| Completeness | pass | No MISSING, no EXTRA |
+| Correctness | pass | Targeted run 108/108 at this head; CI passes; no Critical finding |
+| Integration | pass | One public constructor (9 parameters); Spring injects `ApplicationEventPublisher`; no caller of the removed constructors is left |
 
-### Earlier findings
+### The card's questions
 
-| # | Finding | Status | Evidence |
-|---|---------|--------|----------|
-| 1 / A2-1 | Critical: Operator reaches endpoints with no Role check; encoded-path bypass | **closed** | `WebSessionFilter.java:207`: no prefix test, exact match on `ConsolePaths`; `OperatorSessionTest.java:282-293` (3 encoded rows, 403 MSG08, `scope.runIn` never called); probe below |
-| 6 | Minor: no log line for a refused or successful Console sign-in | **closed** | `OidcCallbackHandler.java:177,181`: one INFO line each, outcome only; the success line is written only when the session was stored |
-| 7 | Minor: unused `nullValues = "NONE"`; NFR 3 log check only on the refused path | **open** | `OperatorSignInTest.java:302,378` unchanged; the success path still has no `CapturedOutput` check, and it now has a log line of its own. By reading, that line carries no email, token or cookie |
-| A2-2 | Minor: expiry rows do not assert that no `SessionEnded` is published | **closed** | `OperatorSessionTest.java:230,242,264` |
-| A2-3 | Minor: no test for expired and off the allow-list | **closed** | `OperatorSessionTest.java:267-280` (401 MSG07, key gone, cookie expired, no event) |
-| A2-4 | Minor: `userInfoUri` still set | **closed** | Line removed from `KeycloakClientRegistrations.java`; no other userinfo URI in `main` |
-| A2-5 | Minor: Javadoc silent on the Operator order | **closed** | `WebSessionFilter.java:46-49` |
+- **(a) `replaceOld` on both paths.** `OidcCallbackHandler.java:245-267`: the event is published only when the old session has `kind == WORKSPACE` and both ids, and `end` claimed it. The kind of the new sign-in is not read. So a Workspace callback never skips the event because of the Operator branch, and an Operator session (old or new) never produces one: it has no ids and no index member (`WebSessionStore.java:202-206`). One case stays: A4-2.
+- **(b) Fixation.** `OidcCallbackHandler.java:211-216`: `replaceOld(old)` runs before `sessions.create`, and the cookie is set at line 233. `startSession` is shared, so this holds on both paths. Both branches of `replaceOld` delete the old key (`deleteKeyOnly` or `end`). A Redis failure gives MSG06 and no new session, as before the merge.
+- **(c) Constructor and wiring.** One constructor at `OidcCallbackHandler.java:71`, so no `@Autowired` is needed. The only two `new OidcCallbackHandler(` calls are `CallbackAccountChecksTest.java:84` and `OidcCallbackHandlerTest.java:67`, both with `event -> {}`. `SessionReplacedEventTest` and `OperatorSignInTest` use the Spring bean and pass, so the publisher is wired.
+- **(d) design.md and tasks.md.** Row 141: main's version was the older text ("High", "the endpoint's own Role check answers 403 MSG08"). Ours replaces it and keeps Q7 and AC-001.29, so nothing of main's row is lost. Main's rows 142 to 147 are all present. tasks.md holds Task 27c in full and the new dependency sentence of Task 29b. No conflict markers in spec, design, tasks, progress or the bug log.
+- **(e) Approval.** The merge commit itself carried main's approval hash, which did not match the merged spec; `fa3c7a5f` fixes it. `sdd.ts diff identity`: "the spec is unchanged since it was approved (2026-11-12T18:30:09.009Z)". The approved text holds the AC-001.29, AC-001.31 and AC-002.3 wording of both sides.
 
 ### New issues
 
@@ -54,97 +50,68 @@ None.
 
 #### Minor
 
-A3-1. `backend/src/main/java/vn/tsolve/identity/session/ConsolePaths.java:6-7` and spec.md AC-001.29 — both still say the rule covers "`/api/**` requests"; the code now refuses every request of an Operator session that is off the list (`/actuator/health` and `/v3/api-docs` give 403 MSG08 with an Operator cookie). The user accepted this on 2026-11-13, but it is written only in the card. Fix: correct the Javadoc; add one Changelog line to the spec (Change Mode) or a design note. Open question 1.
-A3-2. `backend/src/test/java/vn/tsolve/identity/session/OperatorSessionTest.java` (missing rows) — the tests pin the encoded `/api/solutions` forms only. Nothing pins that the logout entry is matched exactly (`GET /api/v1/auth/logout`, `POST /api/v1/auth/logout/`, `POST /api/v1/auth/logou%74` all give 403 today) or that a non-API path is refused. A later change of `ConsolePaths.allows` to a prefix or pattern match would fail no test. Fix: three or four rows in the edge 141 parameterized test.
-
-### The card's questions
-
-**Is the bypass closed for other forms?** Yes. The rule compares `METHOD + " " + getRequestURI()` with the list by string equality (`ConsolePaths.java:19-21`), so only the exact raw spelling passes and every other form is refused, by this filter or by Spring's `StrictHttpFirewall` before it. Reviewer probe, scratch copy of the head, whole application through MockMvc, an allow-listed Operator session on `admin.localhost`:
-
-| Request | Answer |
-|---------|--------|
-| `GET /api/solutions`, `GET /api/solutions/` | 403 MSG08 |
-| `GET /%2561pi/solutions` (double encoding) | 400 (firewall) |
-| `GET /api/solutions;x=1`, `GET /api;x=1/solutions` | 400 (firewall) |
-| `GET //api/solutions`, `GET /api//solutions` | 400 (firewall) |
-| `GET /api/v1/../solutions`, `/x/../api/solutions`, `/api/%2e%2e/api/solutions`, `/api/./solutions` | 400 (firewall) |
-| `GET /api/solutions%2f`, `GET /api/solutions%00` | 400 (firewall) |
-| `GET /actuator/health`, `GET /v3/api-docs` | 403 MSG08 |
-| `GET /api/solutions` with `X-HTTP-Method-Override: POST` | 403 MSG08 |
-
-**Is the logout path matched exactly?** Yes, by method and by path.
-
-| Request | Answer |
-|---------|--------|
-| `POST /api/v1/auth/logout` (and with `?x=1`; the query is not part of the path) | 200 `{ logoutUrl }` |
-| `GET /api/v1/auth/logout`, `PUT /api/v1/auth/logout` | 403 MSG08 |
-| `GET /api/v1/auth/logout` with `X-HTTP-Method-Override: POST` or `?_method=POST` | 403 MSG08 |
-| `POST /api/v1/auth/logout/`, `POST /api/v1/auth/logou%74` | 403 MSG08 |
-| `POST /api/v1/auth/logout;x=1`, `POST //api/v1/auth/logout`, `POST /api/v1/auth/../auth/logout` | 400 (firewall) |
-
-With the test's second entry (`GET /api/v1/test/operator`): `HEAD`, a trailing slash, `operato%72`, `POST ?_method=GET` and `POST` with `X-HTTP-Method-Override: GET` all give 403 MSG08. No method override is active: `spring.mvc.hiddenmethod.filter.enabled` is not set, and Spring does not read the override header. If the hidden-method filter were turned on later it would run before the security chain, so the filter and Spring MVC would still see the same method. No `context-path` is set; one would make the logout entry miss and refuse (fail closed).
-
-Limits of the probe: MockMvc, not a live Tomcat. The result does not depend on how a container normalises the path, since any raw path other than the exact entry is refused.
-
-**Do the new log lines leak anything?** No. `Console sign-in refused (MSG135)` and `Console sign-in succeeded` are constant texts: no email, token, cookie, state or host, and no user input, so no log injection. They do not name the actor; that follows the "no email" decision (NFR 3) and is not a finding.
-
-**`WebSessionFilter` as a whole.** Order for an Operator: host (MSG123, session kept), limits (MSG07, session ended, no event), allow-list (MSG135, session ended, no event), Console list (MSG08, session kept and not touched), then touch unless background. Read against the code at lines 173-215: it holds. A refused request never reaches `chain.doFilter`, so no CSRF, authorization or controller code runs for it. The filter is skipped on ERROR and ASYNC dispatches (`OncePerRequestFilter` defaults); on those the request is either public by rule or carries the saved context of a request that already passed the list. The Workspace path is unchanged by this range.
+A4-1. `backend/src/test/java/vn/tsolve/identity/signin/OperatorSignInTest.java:359` — the Console callback with an old Operator cookie checks that the old key is gone, but not that no `SessionEnded` is published. The only "Operator publishes nothing" test (`SessionReplacedEventTest.java:181`) goes through the Workspace callback. Fix: import `SessionEndedRecorder` in `OperatorSignInTest` and assert that it stays empty.
+A4-2. `backend/src/main/java/vn/tsolve/identity/signin/OidcCallbackHandler.java:252` — a Console callback whose request carries the cookie value of a live Workspace session ends that session and publishes its `LOGOUT`. A browser never sends this (`__Host-` cookie, host-only); it needs a hand-made request by an allow-listed Operator who also holds that cookie value. The event is true (the Workspace session did end, AC-002.3), so the code needs no change; no test covers the case. Fix: none in code; one test or one design row if the user wants it pinned (open question 1).
 
 ### Traceability
 
-`bun harnessclaude/hooks/sdd.ts trace identity STORY-001` / `STORY-002`, run at this head (rows of this task):
+`bun harnessclaude/hooks/sdd.ts trace identity STORY-002`, run at this head (the criteria #214 touched):
 
 ```
-✓ AC-001.29  signin/OperatorSignInTest.java, session/OperatorSessionTest.java
-✓ AC-001.30  signin/OperatorSignInTest.java
-✓ AC-001.31  signin/OperatorSignInTest.java
-✓ AC-001.32  session/OperatorSessionTest.java
-✓ AC-001.33  session/OperatorSessionTest.java
-✓ AC-001.34  session/OperatorSessionTest.java
-✓ AC-002.1   KeycloakLogoutUrlBuilderTest, LogoutControllerTest, OperatorSessionTest, OpsRealmImportIT
-✓ AC-002.2   LogoutControllerTest, OperatorSessionTest
+✓ AC-002.3  signin/SessionReplacedEventTest.java, session/LogoutControllerTest.java, session/SessionEndedEventTest.java, session/SessionExpiryPublisherIT.java
+✓ AC-002.4  signin/SessionReplacedEventTest.java, session/SessionExpiryPublisherTest.java, session/SessionExpiryPublisherIT.java
 ```
 
-The tests named for AC-001.29 and AC-001.34 were read: they check the criterion (403 MSG08 with no Workspace bound; 401 MSG07 with the key gone).
+`SessionReplacedEventTest` was read: it checks the old session's own ids, the session id as a hash, and that the key is gone at publish.
 
-### Security Review — identity (Task 29b) — 2026-11-13
+### Security Review — identity (the merge) — 2026-11-13
 
 | Category | Critical | High | Medium | Low |
 |----------|----------|------|--------|-----|
 | Secrets | 0 | 0 | 0 | 0 |
-| Dependencies | not run (no dependency change in the range) | | | |
+| Dependencies | not run (no dependency change in the merge) | | | |
 | Code | 0 | 0 | 0 | 0 |
 | STRIDE | 0 | 0 | 0 | 0 |
 
-Elevation of privilege: A2-1 is closed (see the probe). Repudiation: Console sign-in success and refusal are now logged. Spoofing, tampering, information disclosure, denial of service: nothing new in the range. gitleaks passes in CI; the secrets grep was not repeated by hand (the range adds no literal that looks like a secret).
+Spoofing: a new session id for every sign-in on both paths; the old one is ended first. Repudiation and information disclosure: the new log lines hold a class name only, with no id, hash, email or token. Elevation of privilege: an Operator session still has no ids, so it has no index member and no event. gitleaks passes in CI.
 
 ### Assumptions made
 
-- Refusing an Operator session on non-API paths is wider than the text of AC-001.29; taken as accepted on the card's decision of 2026-11-13 (A3-1, open question 1).
-- The developer's verify ran before the two commits were made; the only commit after them (`75281b55`) changes this review file alone, and CI ran both full suites on the same head, so the verify result is taken as current.
-- The probe's 400 answers are counted as refused: no controller ran.
+- The event belongs to the session that ended, not to the sign-in that ended it. So A4-2 follows AC-002.3 and does not go against the decision of 2026-11-13, which names an Operator sign-in and an old Operator session.
+- The developer's verify and CI ran on `fa3c7a5f`; the tree is unchanged since, so both results are taken as current.
 
 ### Open questions for the user (1)
 
-1. The wider Console rule (every request, not only `/api/**`): add a Changelog line to AC-001.29 through Change Mode now (recommended; it locks the code until the spec is approved again, so do it as its own small step), or leave it as a design note only?
+1. A4-2: is a `LOGOUT` for a Workspace session ended by a Console callback (hand-made request only) the wanted behaviour? Recommended: yes, keep the code; optionally one test.
 
 ### Test Report
 
-Head `75281b55`, scratch copy outside the repo (`git archive HEAD backend/pom.xml backend/src`), one run: `mvn -o -Dtest='OperatorSessionTest,OperatorSignInTest,WebSessionFilterTest,OidcCallbackHandlerTest,AuthSecurityConfigTest,LogoutControllerTest,WorkspaceBindingTest' test`, exit 0, BUILD SUCCESS.
+Head `fa3c7a5f`, one run, log outside the repo: `mvn -o -Dtest='SessionReplacedEventTest,OidcCallbackHandlerTest,CallbackAccountChecksTest,OperatorSignInTest,SessionExpiryPublisherTest' test`, exit 0, BUILD SUCCESS.
 
 | Class | Tests | Failures |
 |-------|-------|----------|
-| `identity/session/OperatorSessionTest` | 18 | 0 |
-| `identity/signin/OperatorSignInTest` | 38 | 0 |
-| `identity/session/WebSessionFilterTest` | 35 | 0 |
+| `identity/signin/SessionReplacedEventTest` | 8 | 0 |
 | `identity/signin/OidcCallbackHandlerTest` | 22 | 0 |
-| `identity/AuthSecurityConfigTest` | 14 | 0 |
-| `identity/session/LogoutControllerTest` | 12 | 0 |
-| `identity/session/WorkspaceBindingTest` | 9 | 0 |
+| `identity/signin/CallbackAccountChecksTest` | 38 | 0 |
+| `identity/signin/OperatorSignInTest` | 38 | 0 |
+| `identity/session/SessionExpiryPublisherTest` | 2 | 0 |
 
-Total 148, 0 failures, 0 errors, 0 skipped. The reviewer probe was one more class in the same run (1 test, in the scratch copy only; not in the repo). Spotless, the full unit suite and the ITs were not re-run: the developer's verify (`mvn spotless:check test` 1454 tests, 0 failures; `TwoInstanceCallbackIT,OpsRealmImportIT` 43 tests, 0 failures) and CI on this head cover them. Details: `task-29b-operator-session-test-report.md`.
+Total 108, 0 failures, 0 errors, 0 skipped. The full verify was not re-run: the developer's verify (Spotless and 9 unit classes, 0 failures) and CI on this head cover it.
 
 Proposed status: `operator-session` → `passing` (not changed; the card does not ask for it).
+
+## Attempt 3 (2026-11-13, head `75281b55`) — verdict pass, kept for reference
+
+Approve: 0 Critical, 0 Important, 2 Minor (new); attempt-1 finding 7 (Minor) still open. The full attempt-3 text (criteria, the path probe tables, traceability, security review, test report 148/148) is in git: `git show fa3c7a5f:harnessclaude/artifacts/06-evaluation/identity/task-29b-operator-session-review.md`.
+
+### Issues (attempt 3)
+
+#### Minor
+
+A3-1. `backend/src/main/java/vn/tsolve/identity/session/ConsolePaths.java:6-7` and spec.md AC-001.29 — both said the rule covers "`/api/**` requests", while the code refuses every request of an Operator session that is off the list. Fix: correct the Javadoc; add one Changelog line to the spec (Change Mode) or a design note.
+A3-2. `backend/src/test/java/vn/tsolve/identity/session/OperatorSessionTest.java` (missing rows) — nothing pins that the logout entry is matched exactly or that a non-API path is refused. Fix: three or four rows in the edge 141 parameterized test.
+
+Open from attempt 1: finding 7 (`OperatorSignInTest.java:302,378`: unused `nullValues = "NONE"`; the NFR 3 log check runs only on the refused path).
 
 ## Attempt 2 (2026-11-13, head `01c7a7ae`) — verdict fail, kept for reference
 
