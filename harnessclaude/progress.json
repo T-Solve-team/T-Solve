@@ -81,9 +81,9 @@
         "host-routes": "passing",
         "uuid-ids": "passing",
         "catalog-msg-new-3": "evaluating",
-        "sign-out-logout-url": "pending"
+        "sign-out-logout-url": "passing"
       },
-      "lastUpdated": "2026-11-12T16:57:01.661Z",
+      "lastUpdated": "2026-11-12T17:59:39.575Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
