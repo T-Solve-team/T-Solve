@@ -1222,3 +1222,5 @@
 {"ts":"2026-11-12T08:23:33.683Z","type":"feature-status","module":"workspace","feature":"jira-site-linker","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-12T08:32:11.091Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"b1b2b304783c095d91de69af19412a9cd44552ab"}
 {"ts":"2026-11-12T08:32:11.378Z","type":"feature-status","module":"workspace","feature":"workspace-setup-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-12T08:37:53.607Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"e60a44e9c74b933b66fc5ec932a71e10fbb2bcc9"}
+{"ts":"2026-11-12T08:37:53.906Z","type":"feature-status","module":"workspace","feature":"tracker-account-check","from":"in-progress","to":"evaluating"}
