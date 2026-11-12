@@ -260,7 +260,7 @@ deadline in epoch milliseconds; the sweep takes a member as due when its score i
 event, never repeats it). The one-minute sweep keeps the 15-minute bound, and the claim rule below keeps the single
 event of AC-002.3. Claim rule (finding (a)): every end path (logout, the filter's limit path, deactivation, the sweep)
 claims the session by one atomic Lua script that runs `DEL` on the session key and `ZREM` on the index member; the claim
-holds when its `DEL` removed the key or its `ZREM` removed the member, and only the claimer publishes `SessionEnded`.
+holds when its `DEL` removed the key or its `ZREM` removed the member, and only the claimer publishes `SessionEnded`. The two-key Lua scripts need a single Redis node (they are refused on Redis Cluster).
 In Task 27a the script has only the `DEL` (no index entry exists yet); Task 27b adds the index, the sweep, `EXPIRED`
 and `DEACTIVATED`. Between the two merges the filter's limit and deactivation paths end a session without an event,
 because nothing consumes `SessionEnded` yet. `SessionCleanup` (`@Scheduled`, every 15 minutes) goes: N API replicas must not each
