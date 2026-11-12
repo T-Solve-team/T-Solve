@@ -13,8 +13,8 @@ export function UserMenu({ fullName }: UserMenuProps) {
   const navigate = useNavigate();
 
   async function handleLogOut() {
-    await signOut();
-    await navigate(paths.login);
+    const navigatedAway = await signOut();
+    if (!navigatedAway) await navigate(paths.login);
   }
 
   return (
