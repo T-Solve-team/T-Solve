@@ -1234,3 +1234,4 @@
 {"ts":"2026-11-12T17:59:35.525Z","type":"feature-status","module":"fe-foundation","feature":"sign-out-logout-url","from":"pending","to":"in-progress"}
 {"ts":"2026-11-12T17:59:37.606Z","type":"feature-status","module":"fe-foundation","feature":"sign-out-logout-url","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-12T17:59:39.577Z","type":"feature-status","module":"fe-foundation","feature":"sign-out-logout-url","from":"evaluating","to":"passing"}
+{"ts":"2026-11-12T18:30:09.020Z","type":"spec-approved","module":"identity","specHash":"7680f68b9cb8b19f9d40f1b687f3dee0b3b61c4acb8680ef1323f5c93537287e"}
