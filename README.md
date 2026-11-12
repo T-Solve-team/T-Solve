@@ -90,8 +90,12 @@ The frontend also runs without the backend (mock mode); see `frontend/README.md`
 
 Sign-in runs on Keycloak. Besides the DB values, `.env` needs: `REDIS_PASSWORD` (password of the Redis service),
 `KEYCLOAK_DB_PASSWORD` (password of the Keycloak database user), `KEYCLOAK_WEB_CLIENT_SECRET` (secret of the Keycloak
-client `tsolve-web`; Keycloak and the backend read the same value) and `TSOLVE_LOGIN_ORIGIN` (locally
-`http://localhost:8180`, the Keycloak origin). Start the local stack with `docker compose up -d keycloak fake-google`
+client `tsolve-web`; Keycloak and the backend read the same value), `KEYCLOAK_CONSOLE_CLIENT_SECRET` (secret of the
+client `tsolve-console` in the realm `tsolve-ops`; the dev value is in `.env.example`, production sets its own and never
+commits it) and `TSOLVE_LOGIN_ORIGIN` (locally `http://localhost:8180`, the Keycloak origin). At start-up the backend
+refuses to start when the realm `tsolve-ops` is missing (404) or serves a wrong issuer; an unreachable Keycloak is only
+a warning. The realm file is `infra/keycloak/realm-tsolve-ops.json` (dev/CI values; production values come from the
+deploy runbook). Start the local stack with `docker compose up -d keycloak fake-google`
 (fake Google included) and try it at `http://localhost:8180/realms/tsolve/protocol/openid-connect/auth` with the
 organization `acme` (the acme chooser); see `.env.example`.
 

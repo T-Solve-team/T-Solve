@@ -415,8 +415,16 @@ paths:
       operationId: logout
       summary: Ends the session (the backend clears the session cookie).
       responses:
-        '204':
-          description: Signed out.
+        '200':
+          description: >
+            Signed out. The session cookie is expired. Send the browser to logoutUrl to end the Keycloak session too.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [logoutUrl]
+                properties:
+                  logoutUrl: { type: string }
   /api/v1/auth/jira-link/{requestId}:
     get:
       tags: [session]
