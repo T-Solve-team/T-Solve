@@ -17,6 +17,7 @@ import type {
   JiraLinkConfirmRequest,
   JiraLinkConfirmed,
   JiraLinkRequestInfo,
+  Logout200,
 } from '../model';
 
 export const getGetMeResponseMock = (
@@ -57,6 +58,13 @@ export const getGetMeResponseMock = (
     }),
   ),
   workspaceReady: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getLogoutResponseMock = (
+  overrideResponse: Partial<Extract<Logout200, object>> = {},
+): Logout200 => ({
+  logoutUrl: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
 
@@ -134,17 +142,21 @@ export const getAuthCallbackMockHandler = (
 };
 
 export const getLogoutMockHandler = (
-  overrideResponse?: void | ((info: Parameters<HttpResponseResolver>[0]) => Promise<void> | void),
+  overrideResponse?:
+    Logout200 | ((info: Parameters<HttpResponseResolver>[0]) => Promise<Logout200> | Logout200),
   options?: RequestHandlerOptions,
 ) => {
   return http.post(
     '*/api/v1/auth/logout',
     async (info: Parameters<HttpResponseResolver>[0]) => {
-      if (typeof overrideResponse === 'function') {
-        await overrideResponse(info);
-      }
-
-      return new HttpResponse(null, { status: 204 });
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getLogoutResponseMock(),
+        { status: 200 },
+      );
     },
     options,
   );
