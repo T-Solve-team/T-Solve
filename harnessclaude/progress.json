@@ -152,18 +152,18 @@
         "tracker-account-check": "evaluating",
         "jira-site-linker": "evaluating",
         "workspace-setup-api": "evaluating",
-        "workspace-update-api": "pending",
+        "workspace-update-api": "evaluating",
         "workspace-service-account": "pending",
         "workspace-setup-screen": "pending",
         "workspace-settings-screen": "pending"
       },
-      "lastUpdated": "2026-11-12T08:37:53.904Z",
+      "lastUpdated": "2026-11-12T09:02:24.398Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "e60a44e9c74b933b66fc5ec932a71e10fbb2bcc9"
+        "default": "0f0a1ffbe2ad0cc0bb8866921f6a82defe8a4473"
       }
     },
     "project-integration": {

@@ -1224,3 +1224,6 @@
 {"ts":"2026-11-12T08:32:11.378Z","type":"feature-status","module":"workspace","feature":"workspace-setup-api","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-12T08:37:53.607Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"e60a44e9c74b933b66fc5ec932a71e10fbb2bcc9"}
 {"ts":"2026-11-12T08:37:53.906Z","type":"feature-status","module":"workspace","feature":"tracker-account-check","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-12T08:37:54.412Z","type":"feature-status","module":"workspace","feature":"workspace-update-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-12T09:02:24.099Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"0f0a1ffbe2ad0cc0bb8866921f6a82defe8a4473"}
+{"ts":"2026-11-12T09:02:24.400Z","type":"feature-status","module":"workspace","feature":"workspace-update-api","from":"in-progress","to":"evaluating"}
