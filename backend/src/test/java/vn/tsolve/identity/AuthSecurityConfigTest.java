@@ -41,6 +41,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.session.OperatorAllowList;
 import vn.tsolve.identity.session.SessionCookie;
 import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.AuthHosts;
@@ -65,6 +66,7 @@ import vn.tsolve.identity.signin.SignInTestFixtures;
     OidcCallbackHandler.class,
     WebSessionStore.class,
     SessionCookie.class,
+    OperatorAllowList.class,
     AuthSecurityConfigTest.ProbeController.class
 })
 @TestPropertySource(

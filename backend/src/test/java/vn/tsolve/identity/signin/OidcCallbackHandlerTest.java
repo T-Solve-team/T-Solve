@@ -32,6 +32,7 @@ import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.session.OperatorAllowList;
 import vn.tsolve.identity.session.SessionCookie;
 import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
@@ -70,7 +71,8 @@ class OidcCallbackHandlerTest {
                 accounts,
                 sessions,
                 new SessionCookie(),
-                new IdentityClock(Clock.systemUTC()));
+                new IdentityClock(Clock.systemUTC()),
+                new OperatorAllowList(""));
     }
 
     private static MockHttpServletRequest request() {

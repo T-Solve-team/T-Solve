@@ -284,6 +284,33 @@ class OperatorSessionTest extends AbstractSessionIT {
     }
 
     @Test
+    @DisplayName("edge 141 an Operator on GET /api/solutions gets 403 MSG08")
+    void anOperatorOnGetSolutionsGets403Msg08_edge141() throws Exception {
+        String cookie = operatorSession(OPS, "ops-hint");
+
+        MockHttpServletResponse response =
+                perform(get(url(ADMIN, "/api/solutions")).cookie(new Cookie(SESSION_COOKIE, cookie)));
+
+        assertProblem(response, 403, "MSG08", null);
+        verify(scope, never()).runIn(any(), any());
+    }
+
+    @Test
+    @DisplayName("edge 141 an Operator on POST /api/v1/chatbot/answers gets 403 MSG08")
+    void anOperatorOnPostChatbotAnswersGets403Msg08_edge141() throws Exception {
+        String cookie = operatorSession(OPS, "ops-hint");
+
+        MockHttpServletResponse response = perform(post(url(ADMIN, "/api/v1/chatbot/answers"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("{\"question\":\"How do I reset a password?\"}")
+                .cookie(new Cookie(SESSION_COOKIE, cookie)));
+
+        assertProblem(response, 403, "MSG08", null);
+        verify(scope, never()).runIn(any(), any());
+    }
+
+    @Test
     @DisplayName("AC-002.1 an Operator logs out on admin.")
     void anOperatorLogsOutOnAdmin_AC_002_1() throws Exception {
         String cookie = operatorSession(OPS, "ops-hint");

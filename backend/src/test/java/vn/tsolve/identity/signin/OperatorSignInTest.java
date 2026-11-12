@@ -498,7 +498,8 @@ class OperatorSignInTest extends AbstractSessionIT {
 
     @ParameterizedTest(name = "[{index}] {0}")
     @MethodSource("otherRequests")
-    @DisplayName("AC-001.29 edge 122 edge 140 refuses a saved request of the other site kind or a missing one")
+    @DisplayName("AC-001.29 AC-001.31 edge 122 edge 140 refuses a saved request of the other site kind or a missing"
+            + " one (a missing one on admin. is MSG06)")
     void refusesASavedRequestOfTheOtherSiteKindOrAMissingOne_AC_001_29_edge122_edge140(String label, String scenario)
             throws Exception {
         String origin = SignInTestFixtures.ADMIN_ORIGIN;
@@ -545,6 +546,28 @@ class OperatorSignInTest extends AbstractSessionIT {
         assertRefused(response, expected);
         assertThat(FAKE.opsTokenRequests()).as("ops token requests").isEmpty();
         assertThat(FAKE.tokenRequests()).as("tsolve token requests").isEmpty();
+    }
+
+    @Test
+    @DisplayName("AC-001.6 no callback requests /userinfo")
+    void noCallbackRequestsUserinfo_AC_001_6() throws Exception {
+        SignInTestFixtures.seedAccount(TwoTenantDatabases.tenantA(), "alice@acme.test", "Alice");
+
+        ConsoleSignIn console = consoleSignInOf(OPS_EMAIL);
+        assertThat(sessionOf(console.response()).kind()).isEqualTo(WebSession.Kind.OPERATOR);
+
+        Started started = startAt(ACME_ORIGIN, null);
+        String code = newCode();
+        FAKE.answerCode(
+                code,
+                FAKE.idToken(
+                        started.nonce(),
+                        claims -> claims.putAll(
+                                SessionTestFixtures.claimsOf(InMemoryWorkspaceLookup.ACME, "alice@acme.test"))));
+        MockHttpServletResponse workspace = callbackAt(ACME_ORIGIN, codeQuery(started, code), started.cookie());
+        assertThat(sessionOf(workspace).kind()).isEqualTo(WebSession.Kind.WORKSPACE);
+
+        assertThat(FAKE.userinfoRequests()).as("requests to /userinfo").isEmpty();
     }
 
     @Test

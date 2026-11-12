@@ -3,9 +3,11 @@ package vn.tsolve.identity.signin;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -252,6 +254,15 @@ public final class FakeKeycloakRealm {
     }
 
     // ---- what the application sent
+
+    /** The path of each request any realm's userinfo endpoint got, oldest first (matched or not). */
+    public List<String> userinfoRequests() {
+        List<String> paths = new ArrayList<>();
+        for (LoggedRequest request : server.findAll(getRequestedFor(urlPathMatching(".*/userinfo")))) {
+            paths.add(request.getUrl());
+        }
+        return paths;
+    }
 
     /** The form parameters of each request the ops token endpoint got, oldest first. */
     public List<Map<String, String>> opsTokenRequests() {
