@@ -154,21 +154,21 @@
       "status": "implementing",
       "currentPhase": "implement",
       "features": {
-        "project-done-statuses-schema": "evaluating",
-        "project-connection-test": "pending",
+        "project-done-statuses-schema": "fixing",
+        "project-connection-test": "evaluating",
         "project-create": "pending",
         "project-reconnect": "pending",
         "project-list": "pending",
         "jira-integration-projects-table": "pending",
         "jira-integration-add-project": "pending"
       },
-      "lastUpdated": "2026-11-12T14:29:27.934Z",
+      "lastUpdated": "2026-11-12T15:25:11.292Z",
       "branch": "feat/project-integration",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "180caebc0ea0b6e9097babbefd198cfbc40f962b"
+        "default": "6d71a20d8bf4ed375288f0adb391a3ec9c2fd8c3"
       }
     },
     "wiki": {
@@ -414,9 +414,9 @@
         "suggestion-job-worker": "passing",
         "suggestion-uuid-keys": "evaluating",
         "suggestion-comment": "passing",
-        "jira-project-read": "evaluating"
+        "jira-project-read": "fixing"
       },
-      "lastUpdated": "2026-11-12T14:29:01.977Z",
+      "lastUpdated": "2026-11-12T14:53:37.983Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
