@@ -52,6 +52,9 @@ class KeycloakSignInEndToEndIT {
     private static final String WEB_CLIENT_SECRET = "it-keycloak-web-client-secret";
     private static final Path REALM_FILE =
             Path.of("../infra/keycloak/realm-tsolve.json").toAbsolutePath().normalize();
+    private static final String CONSOLE_CLIENT_SECRET = "it-keycloak-console-client-secret";
+    private static final Path OPS_REALM_FILE =
+            Path.of("../infra/keycloak/realm-tsolve-ops.json").toAbsolutePath().normalize();
     private static final Path FAKE_GOOGLE_DIR =
             Path.of("../infra/keycloak/fake-google").toAbsolutePath().normalize();
     private static final String REALM = "tsolve";
@@ -93,8 +96,12 @@ class KeycloakSignInEndToEndIT {
         keycloak = new KeycloakContainer("quay.io/keycloak/keycloak:26.4.7")
                 .withNetwork(NETWORK)
                 .withEnv("KEYCLOAK_WEB_CLIENT_SECRET", WEB_CLIENT_SECRET)
+                .withEnv("KEYCLOAK_CONSOLE_CLIENT_SECRET", CONSOLE_CLIENT_SECRET)
                 .withCopyFileToContainer(
-                        MountableFile.forHostPath(REALM_FILE), "/opt/keycloak/data/import/realm-tsolve.json");
+                        MountableFile.forHostPath(REALM_FILE), "/opt/keycloak/data/import/realm-tsolve.json")
+                // the start-up discovery check also checks tsolve-ops (Task 29a)
+                .withCopyFileToContainer(
+                        MountableFile.forHostPath(OPS_REALM_FILE), "/opt/keycloak/data/import/realm-tsolve-ops.json");
         if (java.nio.file.Files.isDirectory(KeycloakItStack.THEME_DIR)) { // Task 31: the realm sets loginTheme
             keycloak.withCopyFileToContainer(
                     MountableFile.forHostPath(KeycloakItStack.THEME_DIR), KeycloakItStack.THEME_MOUNT);
@@ -112,6 +119,7 @@ class KeycloakSignInEndToEndIT {
                         "--GOOGLE_CLIENT_SECRET=test-secret",
                         "--PLATFORM_OPERATOR_EMAILS=ops@example.test",
                         "--KEYCLOAK_WEB_CLIENT_SECRET=" + WEB_CLIENT_SECRET,
+                        "--KEYCLOAK_CONSOLE_CLIENT_SECRET=" + CONSOLE_CLIENT_SECRET,
                         "--CORS_ALLOWED_ORIGINS=http://localhost:5173",
                         "--DB_HOST=" + DB.getHost(),
                         "--DB_PORT=" + DB.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT),

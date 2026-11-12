@@ -134,9 +134,10 @@
         "user-roles-backend": "passing",
         "user-status-backend": "passing",
         "scope-checks": "passing",
-        "session-expiry-events": "pending"
+        "session-expiry-events": "pending",
+        "operator-session": "pending"
       },
-      "lastUpdated": "2026-11-12T14:45:05.461Z",
+      "lastUpdated": "2026-11-12T14:47:05.471Z",
       "branch": "feat/identity",
       "repos": [
         "default"
