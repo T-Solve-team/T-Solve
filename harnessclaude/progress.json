@@ -162,13 +162,13 @@
         "jira-integration-projects-table": "pending",
         "jira-integration-add-project": "pending"
       },
-      "lastUpdated": "2026-11-12T15:35:21.366Z",
+      "lastUpdated": "2026-11-12T16:19:00.047Z",
       "branch": "feat/project-integration",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "6d71a20d8bf4ed375288f0adb391a3ec9c2fd8c3"
+        "default": "db144c550af31c418598f0df3c423b22c8d1855d"
       }
     },
     "wiki": {
@@ -414,9 +414,9 @@
         "suggestion-job-worker": "passing",
         "suggestion-uuid-keys": "evaluating",
         "suggestion-comment": "passing",
-        "jira-project-read": "fixing"
+        "jira-project-read": "evaluating"
       },
-      "lastUpdated": "2026-11-12T16:18:19.312Z",
+      "lastUpdated": "2026-11-12T16:18:38.091Z",
       "branch": "feat/tracker",
       "repos": [
         "default"

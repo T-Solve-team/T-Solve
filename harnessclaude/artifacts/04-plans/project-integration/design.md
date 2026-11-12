@@ -123,7 +123,7 @@ Append LAST before `</databaseChangeLog>` in `backend/src/main/resources/db/chan
 <include file="changes/029-project-done-statuses.sql" relativeToChangelogFile="true"/>
 ```
 
-No CHECK/default/backfill on `review_range`: `review/SendBackApiIT` deliberately stores 0 and -1. Migration preserves every non-null legacy scalar as one string, even JSON-looking text; SQL NULL remains NULL. Rollback keeps only element zero and is lossy for later multi-status settings: deploy forward in normal operation; test rollback on a scratch schema. The DDL owner must update the `done_status` line to JSONB in `SEP490_G89-TaiLieu/SEP490_G89/Notes/DDL_01-11/02_tenant.sql`; this run must not edit that external document.
+No CHECK/default/backfill on `review_range`: `review/SendBackApiIT` deliberately stores 0 and -1. Migration preserves every non-null legacy scalar as one string, even JSON-looking text; SQL NULL remains NULL. Rollback keeps only element zero and is lossy for later multi-status settings: deploy forward in normal operation; test rollback on a scratch schema. Rollback also turns `[]`, `[null]` and non-array values into SQL NULL and fails on an element longer than 100 characters; T-Solve's own writes never produce these. The DDL owner must update the `done_status` line to JSONB in `SEP490_G89-TaiLieu/SEP490_G89/Notes/DDL_01-11/02_tenant.sql`; this run must not edit that external document.
 
 `ProjectLinkRepository` uses `NamedParameterJdbcTemplate`, constructor injection and named parameters. Planned method SQL follows. Record projections are nested in this repository for storage-only ids; SQL is the authority for columns. No cross-module repository import.
 

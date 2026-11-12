@@ -80,3 +80,15 @@ none
 
 ### Next up
 Commit after the user agrees; then Task 2 `project-connection-test` (needs tracker Task 19).
+
+## Session 2026-11-12 (attempt 2, fixing)
+
+### Working on: project-done-statuses-schema — review findings (D47)
+- LOW-1: `includesChangesetOnceAfter026_AC_002_19` asserts the 029 include appears once and after 026, so the changesets of the open pull requests can be included after it.
+- INFO-2: one sentence on the rollback's edge cases added to the changeset 029 note in `04-plans/project-integration/design.md`. INFO-3 left (D43).
+- Who wrote what: Codex wrote both in one run (prompt `kan127-fix-d46-d47.md`), run and reviewed by the main session.
+- Verify: inside Task 3's full `mvn verify` (same working tree): unit 1600, IT 462, 0 failures, BUILD SUCCESS.
+- Commit: default@db144c55
+
+### Next up
+Re-evaluate project-done-statuses-schema (attempt 2).
