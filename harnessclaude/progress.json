@@ -283,13 +283,13 @@
         "solution-form-ui": "evaluating",
         "issue-panel-ui": "evaluating"
       },
-      "lastUpdated": "2026-11-11T19:33:24.397Z",
-      "branch": "feat/jira-app",
+      "lastUpdated": "2026-11-12T17:32:36.223Z",
+      "branch": "feat/KAN-126-jira-app-solution-form-v2",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "ac7d5c2bb6a89afc0c41b913c57ed2639457009e"
+        "default": "221d53ca88689bbacefa2161950340c7e00293c1"
       }
     },
     "dashboard-audit": {
