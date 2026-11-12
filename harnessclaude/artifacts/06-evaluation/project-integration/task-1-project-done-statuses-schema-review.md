@@ -3,8 +3,8 @@ module: project-integration
 feature: project-done-statuses-schema
 task: 1
 verdict: pass
-attempt: 1
-date: 2026-11-12
+attempt: 2
+date: 2026-11-13
 reviewer: harnessclaude-reviewer
 iteration: 1
 ---
@@ -130,3 +130,76 @@ from `backend/`, with JAVA_HOME set to the IntelliJ JBR:
 - Readers: `grep -rli done_status` over the repo (outside `harnessclaude/`, `.git`, `node_modules`, `target`)
   finds only `002-tenant-project-suggestion.sql`, `029-project-done-statuses.sql` and the new IT (plus copies in
   other worktrees under `.claude/worktrees/`).
+
+---
+
+# Attempt 2 — 2026-11-13
+
+**Verdict: pass** (attempt 2). Fix commit `db144c55` (`db144c55^..db144c55`, one test file). The design note comes
+from harness commit `41fae565`. Decision D47 chose to fix LOW-1, add INFO-2 to the design's rollback note as one line,
+and leave INFO-3 (D43).
+
+## Summary
+
+LOW-1 is fixed. The test is renamed `includesChangesetOnceAfter026_AC_002_19`
+(`ProjectDoneStatusesMigrationIT.java:84`). It no longer requires 029 to be the last include. It asserts that
+`changes/029-project-done-statuses.sql` appears once and comes after `changes/026-identity-app-user-keycloak-sub.sql`
+(`containsOnlyOnce` plus `containsSubsequence`, `:98-101`). Any 027 or 028 include that the open pull requests append
+after 029 now passes. Removing 029, including it twice, or moving it before 026 still fails the test. The changeset
+and the master changelog are unchanged (`git diff db144c55 0dd4f8cc -- backend/src/main/resources/db` is empty;
+029 is at `db.changelog-master.xml:51`, after 026 at `:50`).
+
+INFO-2 is documented. The master design's rollback note (`04-plans/project-integration/design.md:126`) now says that
+the rollback turns `[]`, `[null]` and non-array values into SQL NULL and fails on an element longer than 100
+characters. INFO-3 is unchanged, as D43 and D47 decided.
+
+No new findings. The diff changes only the one assertion and the test's display name.
+
+## Criteria
+
+| Criterion | Result | Detail |
+|-----------|--------|--------|
+| Functionality | pass | Changeset 029 unchanged; the attempt-1 checks still hold. |
+| Completeness | pass | AC-002.19 and AC-002.20 still have tests (trace below). |
+| Correctness | pass | `ProjectDoneStatusesMigrationIT` 5/5 in an isolated worktree, spotless passes. |
+| Integration | pass | The IT no longer fails once another team's 027/028 changesets are appended after 029. |
+
+### Attempt-1 findings
+
+| Finding | D47 decision | Status | Evidence |
+|---------|--------------|--------|----------|
+| LOW-1 "029 is last" breaks the next changeset | fix | **Fixed** | `ProjectDoneStatusesMigrationIT.java:84,98-101` |
+| INFO-2 rollback limits not written down | one design line | **Fixed** | `design.md:126` (commit `41fae565`) |
+| INFO-3 Liquibase never runs the rollback | leave (D43) | Unchanged, as decided | — |
+
+## Traceability
+
+Run in the worktree at `0dd4f8cc`:
+
+```
+  ✓ AC-002.19  project/ProjectDoneStatusesMigrationIT.java
+  ✓ AC-002.20  project/ProjectDoneStatusesMigrationIT.java
+```
+
+## Issues
+
+None.
+
+## Assumptions made
+
+- Spec line 429 says "included last". As in attempt 1, I read it as where 029 goes when it is added (after 026 and
+  every changeset applied so far), not as "last forever". The new assertion matches that reading. If the user means
+  "always last", the old assertion was right, and it would break every later changeset.
+- External DDL (`SEP490_G89/Notes/DDL_01-11/02_tenant.sql:57`) is a known, accepted caveat and not part of this
+  review.
+
+## Test Report
+
+Isolated worktree at `0dd4f8cc` (it contains `db144c55`, and the IT file is identical). Run from `backend/` with
+JAVA_HOME set to the IntelliJ JBR:
+
+- `mvn -B -Dapi.version=1.44 -Dit.test='ProjectDoneStatusesMigrationIT,ProjectCreationIT,ProjectConnectionIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
+  - `Tests run: 5, Failures: 0, Errors: 0, Skipped: 0 -- in vn.tsolve.project.ProjectDoneStatusesMigrationIT`
+  - Failsafe total: `Tests run: 29, Failures: 0, Errors: 0, Skipped: 0`
+  - `spotless:check` in the same run; `BUILD SUCCESS`
+- `mvn -B spotless:check`: `BUILD SUCCESS`

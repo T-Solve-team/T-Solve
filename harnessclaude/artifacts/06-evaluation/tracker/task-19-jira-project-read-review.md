@@ -3,8 +3,8 @@ module: tracker
 feature: jira-project-read
 task: 19
 verdict: pass
-attempt: 2
-date: 2026-11-12
+attempt: 3
+date: 2026-11-13
 reviewer: harnessclaude-reviewer
 iteration: 1
 ---
@@ -309,3 +309,109 @@ is empty). Run from `backend/` with JAVA_HOME set to the IntelliJ JBR:
     - `http://`, `https://exa mple.com` → UNAVAILABLE
 - Codex (second opinion, `kan127-t19-rereview-codex.md` in the session scratchpad) reported MEDIUM-8 and LOW-7, and
   confirmed that LOW-2, INFO-5 and INFO-6 are unchanged. I reproduced both findings and kept them.
+
+---
+
+# Attempt 3 — 2026-11-13
+
+**Verdict: pass** (attempt 3). Fix commit `ba276218` (`ba276218^..ba276218`), harness commit `7c71b75f`. Three files
+changed: `TrackerProjectServiceImpl.java` (+7), `JiraClientTest.java` (+13), and the BUG-203 row in `docs/bug-log.md`.
+Decision D46 chose to fix MEDIUM-8 and to correct the BUG-203 note for LOW-7.
+
+## Summary
+
+MEDIUM-8 is fixed. `findProject` now ends with a last `catch (RuntimeException e)`
+(`TrackerProjectServiceImpl.java:69-76`). It logs the key, `UNAVAILABLE` and `e.getClass().getSimpleName()`, never
+the message or the cause, and it returns `failed(UNAVAILABLE)`. The try block covers `serviceAccount.current()` and
+both client calls, so no runtime exception can cross the service boundary anymore. That matches AC-013.7 and the
+interface Javadoc ("never thrown", `TrackerProjectService.java:5`). The two specific catches still come first, so
+their outcomes and log lines have not changed.
+
+The new test `returnsUNAVAILABLEWithoutPartialProjectForNonHttpScheme_AC_013_7_BUG_203` (`JiraClientTest.java:525-536`)
+runs the production `JiraClient` with an `ftp://` site. `SimpleClientHttpRequestFactory` throws its
+`IllegalStateException` before it connects, so the test needs no network. Without the new catch the exception escapes
+(my attempt-2 probe showed this for `ftp://`, `file:` and `mailto:`), so the test can fail.
+
+LOW-7 is fixed. The BUG-203 note (`docs/bug-log.md:213`) now says that `findComment` builds its client outside `call`
+and still throws a raw `IllegalArgumentException` for a bad email (STORY-012, out of scope). The note also describes
+the new catch, and the Test column names the new test.
+
+The fix causes no regression: all 61 `JiraClientTest` and 24 `TrackerProjectServiceImplTest` tests pass. One new
+LOW finding is about test strength only.
+
+## Criteria
+
+| Criterion | Result | Detail |
+|-----------|--------|--------|
+| Functionality | pass | AC-013.7/AC-013.8: every runtime failure inside `findProject` now becomes `UNAVAILABLE` with no key and no statuses. AC-013.12: the new log line has the key, the outcome and the exception class, with no message, cause, email, token or body. |
+| Completeness | pass | 13/13 criteria have a test (trace below). The new test carries `BUG_203`, as the project rule asks. Nothing EXTRA. |
+| Correctness | pass | `JiraClientTest` 61/61 and `TrackerProjectServiceImplTest` 24/24 pass in an isolated worktree at `0dd4f8cc`, and spotless passes. No CRITICAL finding. |
+| Integration | pass | No signature change. The comment path (STORY-012) is untouched by this commit. The only caller, project-integration (`ProjectServiceImpl.readJiraProject`), already maps `UNAVAILABLE` to 503 MSG06. |
+
+### Earlier findings
+
+| Finding | Decision | Status in `ba276218` | Evidence |
+|---------|----------|----------------------|----------|
+| MEDIUM-1 non-Jira exceptions escape | D45 fix | Fixed (attempt 2); now backed by the catch-all | `JiraClient.java:164-166` plus `TrackerProjectServiceImpl.java:69-76` |
+| LOW-2 trailing JSON accepted | D45 leave | Unchanged, as decided | `JiraClient.java` read paths unchanged |
+| LOW-3 timeout test | D45 fix | Fixed (attempt 2) | unchanged |
+| INFO-4 "answered 0" | D45 fix | Fixed (attempt 2) | `TrackerProjectServiceImpl.java:59-60` |
+| INFO-5 record invariants | D45 leave | Unchanged, as decided | `tracker/dto` not touched |
+| INFO-6 formatting noise | D45 leave | Unchanged, as decided | — |
+| LOW-7 BUG-203 note overstated | D46 correct the note | **Fixed** | `docs/bug-log.md:213`: the note now names the `findComment` gap as STORY-012 and out of scope |
+| MEDIUM-8 non-HTTP scheme escapes | D46 fix | **Fixed** | `TrackerProjectServiceImpl.java:69-76`; test `JiraClientTest.java:525-536` |
+
+## Traceability
+
+Run in the worktree at `0dd4f8cc` and in the main checkout. Both give the same result.
+
+```
+  ✓ AC-013.1 … AC-013.13  TrackerProjectServiceImplTest.java and/or JiraClientTest.java (AC-013.5 and AC-013.11 service test only)
+  ! ids in tests but not in the spec: AC-001.72
+trace tracker (STORY-013): 13/13 acceptance criteria have a test
+```
+
+`AC-001.72` comes from other modules' tests (see attempt 1).
+
+## Issues
+
+No CRITICAL, HIGH or MEDIUM findings. Non-blocking:
+
+9. **LOW-9 — no test checks the new catch-all's log line**
+   - `TrackerProjectServiceImpl.java:70-74` logs `e.getClass().getSimpleName()`. The new test (`JiraClientTest.java:525-536`)
+     asserts only the outcome, key and statuses.
+   - If someone later changed the line to log `e` or `e.getMessage()`, no test would fail. The message could carry
+     the site URL, or the email: attempt 1 noted that `setBasicAuth` messages quote it.
+   - AC-013.12 is covered for the other branches (`logsFailureKeyStatusAndOutcomeWithoutCredentials_AC_013_11_AC_013_12`).
+   - Fix: add a `TrackerProjectServiceImplTest` case where the mocked client throws
+     `new IllegalStateException("<planted email> <planted token> ftp://planted")`. Assert through `CapturedOutput` that
+     the output contains `UNAVAILABLE (IllegalStateException)` and none of the planted strings.
+10. **INFO-10 — the catch-all also hides programming errors**
+    - A `NullPointerException` or similar bug inside `findProject` now becomes `UNAVAILABLE` (503 MSG06 for the
+      Project caller), logged at WARN with the class name and no stack trace.
+    - This is the intended trade-off of D46 (the "never thrown" contract wins), so it is not a defect. Note it when
+      debugging a 503 that Jira did not cause.
+    - Fix: none required.
+
+## Assumptions made
+
+- Logging the exception's simple class name goes beyond AC-013.12's list (key, HTTP status, outcome). I read the
+  class name as harmless diagnostic text, the same kind as the existing "(no service account)" and "(no answer)"
+  suffixes: it carries no credential or body. If AC-013.12 is meant as an exhaustive list, the class name must go.
+  **Open judgment call (minor).**
+- LOW-2 (trailing JSON) stays open by D45's choice. I keep my attempt-1 reading of "unreadable" (AC-013.8).
+- The attempt-1 and attempt-2 judgment calls on MEDIUM-1 and MEDIUM-8 are closed: both are fixed.
+
+## Test Report
+
+Isolated worktree at `0dd4f8cc` (it contains `ba276218`, and `git diff ba276218 0dd4f8cc` touches no tracker file).
+Run from `backend/` in Git Bash with JAVA_HOME set to the IntelliJ JBR.
+
+- `mvn -B -Dapi.version=1.44 -Dtest='JiraClientTest,TrackerProjectServiceImplTest,ProjectServiceImplTest,ProjectControllerTest' -Dsurefire.failIfNoSpecifiedTests=false test`
+  - `Tests run: 61, Failures: 0, Errors: 0, Skipped: 0 -- in vn.tsolve.tracker.client.JiraClientTest`
+  - `Tests run: 24, Failures: 0, Errors: 0, Skipped: 0 -- in vn.tsolve.tracker.service.impl.TrackerProjectServiceImplTest`
+  - total `Tests run: 256, Failures: 0, Errors: 0, Skipped: 0`, `BUILD SUCCESS`
+- `mvn -B spotless:check`: `BUILD SUCCESS`
+- `bun harnessclaude/hooks/sdd.ts trace tracker STORY-013`: 13/13 acceptance criteria have a test
+- Full `mvn verify`: not rerun by me. The session log reports Task 3's full verify on the same tree (unit 1600, IT 462, 0
+  failures).

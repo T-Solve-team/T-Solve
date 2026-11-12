@@ -107,3 +107,92 @@ none
 
 ### Next up
 Commit after the user agrees; then Task 3 `project-create`.
+
+---
+
+## Attempt 2 (fixing) — 2026-11-13
+
+### Working on: review findings 1 (MAJOR) and 3 (MINOR) of `task-2-project-connection-test-review.md` (D48)
+
+**Who wrote what.** Claude alone (Codex is out of quota, D49) wrote the test changes, ran the mutation check and
+the checks below. Test files only; no production code changed.
+
+### What changed
+- **Finding 1 (AC-001.17 test could not fail).** New plain composition test, no Spring context (D43):
+  `ProjectConnectionSecrecyTest.keepsCredentialsAndJiraBodiesOutOfResponsesAndLogs_AC_001_17`, 8 cases.
+  - Real `TrackerProjectServiceImpl` + real `JiraClient` (public constructor, 30 s timeouts) against a WireMock fake
+    Jira (`wiremock-standalone`, already in the pom). Service account `svc@acme.atlassian.test` /
+    `ATATT-planted-token`.
+  - `ProjectServiceImpl` with a mocked `ProjectLinkRepository` and `TenantScope`, other collaborators mocked.
+  - Answers rendered by a standalone MockMvc with the real `ProjectController` and `GlobalExceptionHandler`.
+  - Cases: 200 found; 200 whose canonical key is linked (409 MSG49); 401, 403, 404 (409 MSG48); 500 on the project;
+    500 on the statuses; 200 without a key (503 MSG06). Every Jira body holds planted JSON
+    (`{"errorMessages":["planted-secret-body"], "errors":{email, token}}`, or the email and marker in extra fields).
+  - ROOT logger captured at ALL; each event's formatted message, raw message, arguments and throwable text are
+    checked, plus the response body and headers. Forbidden: the email, the token, `planted-secret-body`,
+    `errorMessages` and the Base64 of `email:token`. The fake server's own loggers (`com.github.tomakehurst`,
+    `wiremock`, `org.eclipse`) are excluded: they are the test's server, not T-Solve.
+  - The old `excludesCredentialsAndRawJiraBodiesOnSuccessAndEveryFailurePath_AC_001_17` in `ProjectServiceImplTest`
+    is removed (it planted nothing), with its now-unused imports.
+- **Finding 3.** `ProjectControllerTest`: `validatesEmployeeBodyBeforeMethodAccess_AC_001_2` and
+  `validatesAdminBodyBeforeMethodAccess_AC_001_2` (dropped `_AC_007_3`).
+
+### Mutation check (each applied alone, test run, then `git checkout` of the file; `src/main` has no diff after)
+| Mutation | Where | Result |
+|---|---|---|
+| A: append `serviceAccount.current().get().apiToken()` to the rejected-lookup `log.warn` | `TrackerProjectServiceImpl` | FAIL 2/8 (`[401]`, `[403]` must not contain a planted value) |
+| B: `JiraUnavailableException(status).initCause(e)` in `JiraClient.call`, and the tracker's unavailable `log.warn` passes `e` | `JiraClient`, `TrackerProjectServiceImpl` | FAIL 2/8 (`[500]`, `[statuses 500]`: Jira body in the logged throwable) |
+| C: `TrackerProjectLookup.found(canonicalKey + apiToken, …)` | `TrackerProjectServiceImpl` | FAIL 2/8 (`[found]`, `[canonical key linked]`: response `"jiraProjectKey":"LEGACYATATT-planted-token"`) |
+
+No real leak found: on unmodified code all 8 cases pass. A Project-side-only mutation cannot leak a planted value,
+because `ProjectServiceImpl` only sees `TrackerProjectLookup` (key, statuses, outcome); mutation C shows that whatever
+the lookup carries does reach the Project response, so the test guards that boundary.
+
+One run note: the first run used 2 s client timeouts and the first case got "no answer" (cold WireMock); raised to
+30 s, a ceiling not a wait.
+
+### Verify (Git Bash, `backend/`)
+`mvn -B spotless:apply && mvn -B -Dapi.version=1.44 -Dtest='ProjectServiceImplTest,ProjectControllerTest,*Project*Test,JiraClientTest,TrackerProjectServiceImplTest' -Dsurefire.failIfNoSpecifiedTests=false test spotless:check`
+- `Tests run: 8, Failures: 0, Errors: 0, Skipped: 0 -- in vn.tsolve.project.controller.ProjectConnectionSecrecyTest`
+- `Tests run: 68, Failures: 0, Errors: 0, Skipped: 0 -- in vn.tsolve.project.controller.ProjectControllerTest`
+- `Tests run: 102, Failures: 0, Errors: 0, Skipped: 0 -- in vn.tsolve.project.service.impl.ProjectServiceImplTest`
+- `Tests run: 61 … JiraClientTest`, `Tests run: 24 … TrackerProjectServiceImplTest`, `2 … JiraProjectKeyStubTest`,
+  `8 … StubProjectAccessTest`
+- `Tests run: 273, Failures: 0, Errors: 0, Skipped: 0`; `spotless:check` passes; `BUILD SUCCESS`.
+- Full `mvn verify` not run here (the main session runs it).
+
+Harness: `bun harnessclaude/hooks/sdd.ts trace project-integration` → `51/103 acceptance criteria have a test`;
+every AC of STORY-001, STORY-002 and STORY-007 is ✓ (0 ✗); `✓ AC-001.17 …/project/controller/ProjectConnectionSecrecyTest.java`.
+The ✗ rows are STORY-003…006 (later tasks).
+
+### Files
+- `backend/src/test/java/vn/tsolve/project/controller/ProjectConnectionSecrecyTest.java` (new)
+- `backend/src/test/java/vn/tsolve/project/service/impl/ProjectServiceImplTest.java` (old AC-001.17 test removed)
+- `backend/src/test/java/vn/tsolve/project/controller/ProjectControllerTest.java` (two renames)
+
+### Deviations
+- The new class is named for the behaviour (`ProjectConnectionSecrecyTest`), not after one class, because it
+  composes five real classes; it sits with the controller it drives.
+
+### Bugs
+None found.
+
+### Commit
+Not committed (dispatcher commits after review).
+
+### Full verify (main session)
+- First full `mvn -B -Dapi.version=1.44 verify`: `ProjectConnectionSecrecyTest` failed 8/8. The captured text was the JDK's
+  `sun.net.www` HTTP client FINE log of the request headers (`Authorization: Basic …`). It appears only after an earlier
+  Spring context has bridged JUL to SLF4J, and only because the test sets ROOT to ALL; the application logs at INFO, so
+  this is the JDK's debug trace, not a T-Solve leak. The main session added `sun.net.www` to the ignored server/JDK
+  loggers, with a comment.
+- Second full verify: unit `Tests run: 1607, Failures: 0, Errors: 0, Skipped: 0`; IT `Tests run: 462, Failures: 1` —
+  `ReviewQueueEventsIT.edge3_noEventForAChangeInAnotherWorkspace_AC_012_3` timed out in `openReady`'s 5 s heartbeat
+  wait (ticket-review, untouched here). Rerun alone: `Tests run: 18, Failures: 0, Errors: 0` — BUILD SUCCESS. Same
+  set-up flake as BUG-186; the sighting is added to that row.
+
+### Commit
+default@93fcab68 — `test(project-integration): make the AC-001.17 secrecy test plant real credentials (KAN-127)`, committed after the user agreed (13/11).
+
+### Next up
+Re-evaluate project-connection-test (attempt 2).
