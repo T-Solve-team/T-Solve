@@ -24,8 +24,7 @@ import vn.tsolve.analytics.dto.KnowledgeDashboardResponse.TicketFeedback;
 
 @Repository
 public class DashboardRepository {
-    private static final String TICKET_SCOPE_JOINS =
-            """
+    private static final String TICKET_SCOPE_JOINS = """
             join (
                 select project_id, public_id as ticket_project_id from project
                 union all
@@ -91,8 +90,7 @@ public class DashboardRepository {
                 select p.public_id, p.jira_project_key, d.public_id as department_public_id
                 from project p join department d on d.department_id = p.department_id
                 where
-                """
-                        + projectFilter + " order by lower(p.jira_project_key), p.project_id",
+                """ + projectFilter + " order by lower(p.jira_project_key), p.project_id",
                 parameters,
                 (row, index) -> new ProjectOption(
                         row.getObject("public_id", UUID.class),
@@ -125,25 +123,23 @@ public class DashboardRepository {
                 .addValue("start", Timestamp.from(start))
                 .addValue("end", Timestamp.from(end));
         String filter = " and t.project_id in (:ticketProjects)";
-        String decisions =
-                """
+        String decisions = """
                 select (r.decided_at at time zone 'Asia/Ho_Chi_Minh')::date as day,
                     p.project_id, p.public_id, p.jira_project_key, r.decision
                 from review_decision r join ticket t on t.ticket_id = r.ticket_id
                 """
-                        + TICKET_SCOPE_JOINS
-                        + " where r.decided_at >= :start and r.decided_at < :end"
-                        + " and r.decision in ('APPROVED', 'REJECTED', 'CHANGES_REQUESTED')"
-                        + filter;
-        String imports =
-                """
+                + TICKET_SCOPE_JOINS
+                + " where r.decided_at >= :start and r.decided_at < :end"
+                + " and r.decision in ('APPROVED', 'REJECTED', 'CHANGES_REQUESTED')"
+                + filter;
+        String imports = """
                 select (t.created_at at time zone 'Asia/Ho_Chi_Minh')::date as day,
                     p.project_id, p.public_id, p.jira_project_key, 'APPROVED' as decision
                 from ticket t
                 """
-                        + TICKET_SCOPE_JOINS
-                        + " where t.source <> 'SOLUTION_FORM' and t.created_at >= :start and t.created_at < :end"
-                        + filter;
+                + TICKET_SCOPE_JOINS
+                + " where t.source <> 'SOLUTION_FORM' and t.created_at >= :start and t.created_at < :end"
+                + filter;
         return jdbc.query(
                 """
                 select day, public_id, jira_project_key,
@@ -151,9 +147,7 @@ public class DashboardRepository {
                     count(*) filter (where decision = 'REJECTED') as rejected,
                     count(*) filter (where decision = 'CHANGES_REQUESTED') as changes_requested
                 from (
-                """
-                        + decisions + " union all " + imports
-                        + """
+                """ + decisions + " union all " + imports + """
                 ) events
                 group by day, project_id, public_id, jira_project_key
                 order by lower(jira_project_key), project_id, day
@@ -174,9 +168,7 @@ public class DashboardRepository {
                 """
                 select d.public_id, d.name, t.status, count(*) as total
                 from ticket t
-                """
-                        + TICKET_SCOPE_JOINS + " where t.project_id in (:ticketProjects)"
-                        + """
+                """ + TICKET_SCOPE_JOINS + " where t.project_id in (:ticketProjects)" + """
                  group by d.department_id, d.public_id, d.name, t.status
                  order by lower(d.name), d.department_id, t.status
                 """,
@@ -265,9 +257,7 @@ public class DashboardRepository {
                         count(*) over (partition by lower(trim(query))) as total
                     from search_log
                     where result_count = 0 and created_at >= :start and created_at < :end
-                """
-                        + (departments == null ? "" : " and department_id in (:departments)")
-                        + """
+                """ + (departments == null ? "" : " and department_id in (:departments)") + """
                     order by lower(trim(query)), created_at, search_log_id
                 ) grouped order by total desc, grouping_key limit 10
                 """,
@@ -281,9 +271,7 @@ public class DashboardRepository {
                         count(*) over (partition by lower(trim(a.question))) as total
                     from chatbot_answer a join app_user u on u.id = a.user_id
                     where a.outcome = 'NO_SOURCE' and a.created_at >= :start and a.created_at < :end
-                """
-                        + (departments == null ? "" : " and u.department_id in (:departments)")
-                        + """
+                """ + (departments == null ? "" : " and u.department_id in (:departments)") + """
                     order by lower(trim(a.question)), a.created_at, a.chatbot_answer_id
                 )
                 select spelling, total, sum(total) over () as no_source
