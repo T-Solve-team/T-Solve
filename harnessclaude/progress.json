@@ -122,7 +122,7 @@
         "account-sub-binding": "pending",
         "callback-workspace-checks": "passing",
         "user-role": "passing",
-        "logout-rp-initiated": "pending",
+        "logout-rp-initiated": "passing",
         "keycloak-provisioning": "passing",
         "keycloak-theme": "passing",
         "keycloak-prerequisites": "passing",
@@ -136,7 +136,7 @@
         "scope-checks": "passing",
         "session-expiry-events": "pending"
       },
-      "lastUpdated": "2026-11-12T01:40:45.520Z",
+      "lastUpdated": "2026-11-12T14:45:05.461Z",
       "branch": "feat/identity",
       "repos": [
         "default"
