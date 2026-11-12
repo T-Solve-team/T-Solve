@@ -17,6 +17,7 @@ status: draft
 | 2026-11-07 | STORY-002, STORY-003 | New STORY-002 (write audit entries for review decisions and CSV import through `AuditService.record` into a new append-only `audit_log_entry` table that replaces `audit_event`) and STORY-003 (the backend serves `GET /api/v1/audit-events` of the contract); Out of Scope and Interface Contracts updated; supersedes be-foundation STORY-004 | KAN-152, demo 08/11. The user, 07/11: actions = review decisions + import (no user/role backend exists yet); table = `audit_log_entry` from the team DDL `02_tenant.sql`, adapted to UUID keys and the contract's target fields; build the read API; be-foundation's spec is left untouched for now with a follow-up to retire its STORY-004 |
 | 2026-11-09 | STORY-004, STORY-005 (new) | New STORY-004 Knowledge Dashboard figures API (KAN-150) and STORY-005 screen 9.1 (KAN-151); Requirements 6-7, Out of Scope, Interface Contracts (`getKnowledgeDashboard`, `KnowledgeDashboard`), Sources and Definition of Done follow; STORY-001..003 unchanged | User decisions 09/11: the five groups of SRS 9.1 from stored data without ticket views; one endpoint for all groups; knowledge gaps counted by the asker's Department; charts with antd and CSS, no new dependency. Planning call: the filter options come in the response because no Department or Project list API exists |
 | 2026-11-09 | STORY-004, STORY-005 | AC-004.7: an Admin's `projectId` outside the given `departmentId` answers 400 MSG06; AC-004.10: "given in the period" is the time of the latest rating (`ticket_feedback.updated_at`) and the 5 lowest leave out the 5 highest; new AC-005.11: the page says that Knowledge gaps ignore the chosen Project | Review of PR #178 (trhieudev1309) and the user's decisions 09/11: "400 MSG06", "Loại trùng", "updated_at", and a note on the page for Project-independent gaps |
+| 2026-11-12 | STORY-004 | AC-004.7: a Project Manager gets 403 MSG08 for an unknown id (own Department checked first); AC-004.6, AC-004.9: tickets whose Project does not exist are left out of every figure; Interface Contracts errors list the Admin cross-Department 400 MSG06 | Low items of the PR #178 re-review (trhieudev1309, 12/11) |
 
 ## Requirements
 
@@ -127,9 +128,12 @@ status: draft
   - AC-004.5: IF a Project Manager's request is outside their Department, THEN THE backend SHALL answer 403 with
     MSG08 (another `departmentId`, a `projectId` of another Department, or a user with no Department; Admins excepted).
   - AC-004.6: WHILE the user is an Admin, THE backend SHALL count the whole Workspace, or one Department with
-    `departmentId`, or one Project with `projectId`.
+    `departmentId`, or one Project with `projectId`. Tickets whose `project_id` matches no Project belong to no
+    Department or Project and SHALL be left out of every figure, the whole Workspace included.
   - AC-004.7: IF `departmentId` or `projectId` is not a UUID, THEN THE backend SHALL answer 400 with MSG06; IF it
-    names no Department or Project, THEN 404 with MSG04; IF an Admin sends a `projectId` whose Project is not in the
+    names no Department or Project, THEN 404 with MSG04 to an Admin and 403 with MSG08 to a Project Manager (checked
+    against their own Department first, so the answer does not tell whether another Department's id exists); IF an
+    Admin sends a `projectId` whose Project is not in the
     given `departmentId`, THEN 400 with MSG06.
   - AC-004.8: THE backend SHALL return as Solution outcomes, for the period and scope: the APPROVED, REJECTED and
     CHANGES_REQUESTED review decisions, plus as approved the tickets imported or created manually in the period
@@ -137,7 +141,8 @@ status: draft
     included) and per Project; the approval rate (approved / all three, null when zero); and the current numbers of
     Pending review and Expired tickets of the scope.
   - AC-004.9: THE backend SHALL return as Knowledge coverage the current numbers of Published tickets and of all
-    tickets of the scope, the Published share (null when there is no ticket), and the same per Department.
+    tickets of the scope, the Published share (null when there is no ticket), and the same per Department; "all
+    tickets" leaves out tickets whose `project_id` matches no Project (AC-004.6).
   - AC-004.10: THE backend SHALL return as Reuse & feedback the Helpful and Not helpful feedback given in the period
     (by the time of each user's latest rating, `ticket_feedback.updated_at`) on tickets of the scope, the helpful
     rate (null when none), and the 5 highest and the 5 lowest rated tickets by helpful rate among the tickets with
@@ -296,7 +301,7 @@ suggestions:
   posted, solved, solvedShare
 ```
 
-Errors: 400 MSG39 (date range), 400 MSG06 (malformed id), 401 MSG07, 403 MSG08, 404 MSG04.
+Errors: 400 MSG39 (date range), 400 MSG06 (malformed id, or an Admin's `projectId` outside the given `departmentId`), 401 MSG07, 403 MSG08 (a Project Manager outside their Department, unknown ids included), 404 MSG04 (unknown id, Admin only).
 
 ### Required from other modules
 - fe-foundation: session/role guard, same-origin API transport, global session/site errors, list URL state,

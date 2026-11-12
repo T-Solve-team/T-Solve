@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Clock;
@@ -244,13 +245,33 @@ class DashboardServiceImplTest {
     }
 
     @Test
-    void rejectsUnknownIdsBeforeAccess_AC_004_7() {
+    void answersNotFoundForUnknownIdsToAdmins_AC_004_7() {
+        assertThatThrownBy(() -> service.dashboard(ADMIN, null, null, DEPARTMENT.toString(), null))
+                .isInstanceOfSatisfying(
+                        NotFoundException.class, e -> assertThat(e.getCode()).isEqualTo("MSG04"));
+        assertThatThrownBy(() -> service.dashboard(ADMIN, null, null, null, PROJECT.toString()))
+                .isInstanceOfSatisfying(
+                        NotFoundException.class, e -> assertThat(e.getCode()).isEqualTo("MSG04"));
+    }
+
+    @Test
+    void answersForbiddenForUnknownIdsToProjectManagers_AC_004_5() {
+        when(repository.findUserDepartment(PM.id())).thenReturn(Optional.of(7L));
         assertThatThrownBy(() -> service.dashboard(PM, null, null, DEPARTMENT.toString(), null))
-                .isInstanceOfSatisfying(
-                        NotFoundException.class, e -> assertThat(e.getCode()).isEqualTo("MSG04"));
+                .isInstanceOfSatisfying(AccessDeniedException.class, e -> assertThat(e.getMessage())
+                        .isEqualTo("MSG08"));
         assertThatThrownBy(() -> service.dashboard(PM, null, null, null, PROJECT.toString()))
-                .isInstanceOfSatisfying(
-                        NotFoundException.class, e -> assertThat(e.getCode()).isEqualTo("MSG04"));
+                .isInstanceOfSatisfying(AccessDeniedException.class, e -> assertThat(e.getMessage())
+                        .isEqualTo("MSG08"));
+    }
+
+    @Test
+    void checksProjectManagerDepartmentBeforeLookingUpIds_AC_004_5() {
+        assertThatThrownBy(() -> service.dashboard(PM, null, null, DEPARTMENT.toString(), PROJECT.toString()))
+                .isInstanceOfSatisfying(AccessDeniedException.class, e -> assertThat(e.getMessage())
+                        .isEqualTo("MSG08"));
+        verify(repository).findUserDepartment(PM.id());
+        verifyNoMoreInteractions(repository);
     }
 
     private static TSolveUser user(Role role) {
