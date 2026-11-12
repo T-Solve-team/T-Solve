@@ -227,6 +227,7 @@ class OperatorSessionTest extends AbstractSessionIT {
                 assertProblem(response, 401, "MSG07", null);
                 assertThat(keyExists(cookie)).isFalse();
                 assertSessionCookieExpired(response);
+                assertThat(SessionEndedRecorder.all()).as("SessionEnded events").isEmpty();
             }
             default -> {
                 clock.advance(Duration.ofMinutes(30));
@@ -238,6 +239,7 @@ class OperatorSessionTest extends AbstractSessionIT {
                 assertProblem(response, 401, "MSG07", null);
                 assertThat(keyExists(cookie)).isFalse();
                 assertSessionCookieExpired(response);
+                assertThat(SessionEndedRecorder.all()).as("SessionEnded events").isEmpty();
             }
         }
     }
@@ -259,6 +261,35 @@ class OperatorSessionTest extends AbstractSessionIT {
         assertProblem(response, 401, "MSG07", null);
         assertThat(keyExists(cookie)).isFalse();
         assertThat(OperatorProbeTestController.calls()).isEqualTo(callsBefore);
+        assertThat(SessionEndedRecorder.all()).as("SessionEnded events").isEmpty();
+    }
+
+    @Test
+    @DisplayName("AC-001.34 an Operator session past the limits and off the allow-list gets 401 MSG07, not MSG135")
+    void anExpiredSessionOffTheAllowListGetsMsg07LimitsFirst_AC_001_34() throws Exception {
+        String cookie = operatorSession(FORMER, "former-hint");
+        clock.advance(Duration.ofMinutes(61));
+
+        MockHttpServletResponse response = probe(ADMIN, cookie);
+
+        assertProblem(response, 401, "MSG07", null);
+        assertThat(keyExists(cookie)).isFalse();
+        assertSessionCookieExpired(response);
+        assertThat(OperatorProbeTestController.calls()).isZero();
+        assertThat(SessionEndedRecorder.all()).as("SessionEnded events").isEmpty();
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @ValueSource(strings = {"/%61pi/solutions", "/ap%69/solutions", "/%61%70%69/solutions"})
+    @DisplayName("edge 141 an Operator on a percent-encoded /api/solutions gets 403 MSG08")
+    void anOperatorOnEncodedApiPathGets403Msg08_edge141(String path) throws Exception {
+        String cookie = operatorSession(OPS, "ops-hint");
+
+        MockHttpServletResponse response =
+                perform(get(URI.create("http://" + ADMIN + path)).cookie(new Cookie(SESSION_COOKIE, cookie)));
+
+        assertProblem(response, 403, "MSG08", null);
+        verify(scope, never()).runIn(any(), any());
     }
 
     @Test
