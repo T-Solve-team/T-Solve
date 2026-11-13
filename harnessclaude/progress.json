@@ -159,10 +159,10 @@
         "project-create": "passing",
         "project-reconnect": "passing",
         "project-list": "passing",
-        "jira-integration-projects-table": "evaluating",
-        "jira-integration-add-project": "pending"
+        "jira-integration-projects-table": "passing",
+        "jira-integration-add-project": "evaluating"
       },
-      "lastUpdated": "2026-11-13T07:29:34.005Z",
+      "lastUpdated": "2026-11-13T08:08:30.510Z",
       "branch": "feat/project-integration",
       "repos": [
         "default"
