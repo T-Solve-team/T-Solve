@@ -19,8 +19,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 public abstract class GarageTestBase {
 
     private static final String BUCKET = "tsolve-files";
-    private static final String CONFIG =
-            """
+    private static final String CONFIG = """
             metadata_dir = "/tmp/meta"
             data_dir = "/tmp/data"
             db_engine = "sqlite"
@@ -31,8 +30,7 @@ public abstract class GarageTestBase {
             [s3_api]
             s3_region = "garage"
             api_bind_addr = "[::]:3900"
-            """
-                    .formatted(rpcSecret());
+            """.formatted(rpcSecret());
 
     // Shared for the JVM; Ryuk stops it after the test process exits.
     private static final GenericContainer<?> GARAGE = new GenericContainer<>(

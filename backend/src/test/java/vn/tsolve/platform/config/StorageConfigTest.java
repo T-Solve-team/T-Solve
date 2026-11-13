@@ -56,8 +56,7 @@ class StorageConfigTest {
                 .withPropertyValues("tsolve.storage.url-ttl-seconds=", "tsolve.storage.max-bytes=")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
-                    StorageConfig.StorageProperties properties =
-                            context.getBean(StorageConfig.StorageProperties.class);
+                    StorageConfig.StorageProperties properties = context.getBean(StorageConfig.StorageProperties.class);
                     assertThat(properties.urlTtlSeconds()).isEqualTo(300);
                     assertThat(properties.maxBytes()).isEqualTo(10485760);
                 });

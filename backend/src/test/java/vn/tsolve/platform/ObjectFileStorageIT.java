@@ -296,8 +296,7 @@ class ObjectFileStorageIT extends GarageTestBase {
                 "http://{site}.localhost:" + s3Port(),
                 (long) TTL_SECONDS,
                 (long) MAX_BYTES);
-        ObjectFileStorage absent =
-                new ObjectFileStorage(storageClient, missing, tenantProvider(), catalogProvider());
+        ObjectFileStorage absent = new ObjectFileStorage(storageClient, missing, tenantProvider(), catalogProvider());
         assertThatThrownBy(absent::checkBucket).isInstanceOf(S3Exception.class);
     }
 
