@@ -138,6 +138,17 @@ describe('Jira link confirm page', () => {
     expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
   });
 
+  it('AC-001.72 a 500 answer shows MSG06 and no Link button, because the request is used up', async () => {
+    document.cookie = `XSRF-TOKEN=${CSRF_TOKEN}; path=/`;
+    server.use(mock.post('*/api/v1/auth/jira-link/confirm', () => problem(500, 'MSG06')));
+    await openSignedIn();
+
+    await userEvent.setup().click(screen.getByRole('button', { name: LINK_BUTTON }));
+
+    await findText(msg('MSG06'));
+    expect(screen.queryByRole('button', { name: LINK_BUTTON })).not.toBeInTheDocument();
+  });
+
   it.each([
     ['400 MSG141', 400, 'MSG141'],
     ['401 MSG07', 401, 'MSG07'],

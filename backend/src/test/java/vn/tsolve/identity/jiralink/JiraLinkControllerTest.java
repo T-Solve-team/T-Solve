@@ -478,6 +478,7 @@ class JiraLinkControllerTest extends AbstractSessionIT {
             response = confirmAsAcme(session, id);
         } finally {
             a.execute("DROP TRIGGER IF EXISTS fail_link_insert ON jira_account_links");
+            a.execute("DROP FUNCTION IF EXISTS fail_link_insert()");
         }
 
         assertThat(response.getStatus()).isEqualTo(500);
