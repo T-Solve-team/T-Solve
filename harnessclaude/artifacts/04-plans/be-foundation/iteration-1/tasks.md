@@ -89,7 +89,11 @@ access-denied handler 403 MSG07 for a CSRF failure and MSG08 otherwise, through 
 `departments` = `department` then each Project's Department, once each); `SessionController` `GET /api/v1/me`
 (`operationId` `getMe`, `@PreAuthorize` EMPLOYEE). Every id component is a `UUID` (design "Ids in `/me` and the
 principal"), so the generated schema matches the contract once fe-foundation Task 10 has made its ids UUID strings
-(AC-003.6); the lookups take the user id as a `UUID`.
+(AC-003.6); the Department, Project membership and managed Space lookups take the user id as a `UUID`.
+`WorkspaceStatusLookup` is `boolean isCompanyInformationEntered()` with no parameter (the implementation reads the
+Workspace bound to the request) and means company information entered, not the platform's ACTIVE status. Lookup
+contracts (javadoc, see design Key Decisions): `findProjects` follows identity's ScopeAccess and is ordered by
+`jiraProjectKey`; `findDepartment` returns only an ACTIVE Department of a Project Manager, else empty.
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/common/session/controller/SessionController.java`,
   `service/SessionService.java`, `service/impl/SessionServiceImpl.java`, `lookup/DepartmentLookup.java`,
@@ -97,10 +101,10 @@ principal"), so the generated schema matches the contract once fe-foundation Tas
   `dto/CurrentUserResponse.java`, `dto/UserSummaryResponse.java`, `dto/DepartmentRef.java`,
   `dto/ProjectMembership.java`, `dto/SpaceRef.java`, `dto/ProjectRole.java`
 - Test: `backend/src/test/java/vn/tsolve/common/session/SessionServiceImplTest.java` (Mockito, lookups present and
-  missing), `SessionControllerTest.java` (`@WebMvcTest`: 200 with every contract field incl. `department: null`, 401),
+  missing), `SessionControllerTest.java` (`@WebMvcTest`: 200 with every contract field incl. `department: null`, 401; `@WithMockUser(roles = "OPERATOR")` (not EMPLOYEE) 403 MSG08),
   `CurrentUserSchemaTest.java` (swagger-core `ModelConverters`: schema names, `required` lists, nullable
   `department`, ids `string` / `uuid`, as in the contract)
-**Covers:** AC-003.1–AC-003.6; edge cases 14, 15, 16, 17
+**Covers:** AC-003.1–AC-003.6; edge cases 14, 15, 16, 17, 28 (the card called it "18"; 18 is taken by Task 4)
 **Dependencies:** Task 2 (`TSolveUser`, `@WithTSolveUser`, security); fe-foundation Task 10 (the contract's UUID ids)
 **Estimated size:** small
 
