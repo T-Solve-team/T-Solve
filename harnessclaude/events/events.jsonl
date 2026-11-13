@@ -1258,6 +1258,9 @@
 {"ts":"2026-11-12T16:50:07.986Z","type":"feature-status","module":"workspace","feature":"workspace-settings-screen","from":"pending","to":"in-progress"}
 {"ts":"2026-11-12T16:56:54.379Z","type":"spec-approved","module":"fe-foundation","specHash":"6aef3f501ac532c7dbd01e18dadf819752bf01bb6837f8c278089960be7765d6"}
 {"ts":"2026-11-12T16:57:01.664Z","type":"feature-status","module":"fe-foundation","feature":"sign-out-logout-url","from":null,"to":"pending"}
+{"ts":"2026-11-12T16:13:57.143Z","type":"spec-approved","module":"identity","specHash":"bbdead8d9a9a7ea4b0606b5e5fcec11978375b8e71b7b7fffc6b382779ef71df"}
+{"ts":"2026-11-12T17:14:23.253Z","type":"spec-approved","module":"identity","specHash":"9a32631f5957c08bf9444fb4b3e20cf150315f33e4463fdec94213fab930b08a"}
+{"ts":"2026-11-12T18:17:41.493Z","type":"spec-approved","module":"identity","specHash":"f389a9c813ec5423cc4c0e185a4f14370e0d7506c947fd071e8c1d8e36df2adc"}
 {"ts":"2026-11-12T17:02:17.673Z","type":"spec-approved","module":"identity","specHash":"2d2a80710c883c90736d86e42c1788f9f63816540b4d64f8851b342bf3712c18"}
 {"ts":"2026-11-12T17:05:09.310Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"8e62372510b36fa32751833b66e361aa843a85e8"}
 {"ts":"2026-11-12T17:05:09.650Z","type":"feature-status","module":"workspace","feature":"workspace-settings-screen","from":"in-progress","to":"evaluating"}
@@ -1291,3 +1294,7 @@
 {"ts":"2026-11-12T18:27:46.309Z","type":"spec-approved","module":"workspace","specHash":"257f71707ef6546881d4484a0f80395209373bf57d7ffc43020ae4121154d2f9"}
 {"ts":"2026-11-12T18:32:46.017Z","type":"spec-approved","module":"workspace","specHash":"530a12170650e42fae38ed6e6262f698386aa8c896f6179a6adfcef68d2d7ea8"}
 {"ts":"2026-11-12T19:46:35.919Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"dcdc6063c3134ae17f645c18adb7ebcbf836dd16"}
+{"ts":"2026-11-12T18:30:09.020Z","type":"spec-approved","module":"identity","specHash":"7680f68b9cb8b19f9d40f1b687f3dee0b3b61c4acb8680ef1323f5c93537287e"}
+{"ts":"2026-11-12T18:43:35.540Z","type":"feature-status","module":"identity","feature":"operator-session","from":"pending","to":"in-progress"}
+{"ts":"2026-11-12T18:43:37.837Z","type":"feature-status","module":"identity","feature":"operator-session","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-12T18:43:38.640Z","type":"feature-status","module":"identity","feature":"operator-session","from":"evaluating","to":"passing"}

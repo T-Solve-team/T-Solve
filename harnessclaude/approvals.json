@@ -305,8 +305,8 @@
     }
   },
   "identity": {
-    "specHash": "2d2a80710c883c90736d86e42c1788f9f63816540b4d64f8851b342bf3712c18",
-    "approvedAt": "2026-11-12T17:02:17.637Z",
+    "specHash": "7680f68b9cb8b19f9d40f1b687f3dee0b3b61c4acb8680ef1323f5c93537287e",
+    "approvedAt": "2026-11-12T18:30:09.009Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
@@ -332,9 +332,9 @@
       "AC-001.26": "WHEN a request carries a valid Workspace session, THE backend SHALL re-read the Account at that request and put a  with its current id, email, full name and Roles in the security context (be-foundation AC-002.2), so a Role change applies from the next request.",
       "AC-001.27": "IF the Account of a Workspace session is Deactivated, THEN THE backend SHALL end the session at its next request and answer 401 with   (GBR-03).",
       "AC-001.28": "WHEN a browser opens  on the configured Platform Console origin ( in production), THE backend SHALL save an authorization request naming the Platform Console (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm , for the client , with PKCE , a state value, a nonce, and the redirect URI  on  (D13).",
-      "AC-001.29": "WHEN the checks of AC-001.6, AC-001.8 and AC-001.9 pass for a Platform Console sign-in against the realm  and the verified email is in  (compared ignoring case), THE backend SHALL create an Operator session at that callback on , with no hand-off code, set  as AC-001.18 says, and redirect to the kept  or . The session SHALL have no Account, no Workspace and none of the five Roles.",
+      "AC-001.29": "WHEN the checks of AC-001.6, AC-001.8 and AC-001.9 pass for a Platform Console sign-in against the realm  and the verified email is in  (compared ignoring case), THE backend SHALL create an Operator session at that callback on , with no hand-off code, set  as AC-001.18 says, and redirect to the kept  or . The session SHALL have no Account, no Workspace and none of the five Roles, and THE backend SHALL answer 403 with   to an Operator session on  for every request outside the Console list ( only, matched exactly by method and path), not only , whatever the endpoint's own Role check.",
       "AC-001.30": "IF the verified email of a Platform Console sign-in is not in the allow-list, THEN THE backend SHALL redirect to  on the configured Platform Console origin and create no session (GBR-03).",
-      "AC-001.31": "IF Keycloak returns an error, or the code exchange or the ID token check fails, for a Platform Console sign-in whose saved authorization request is valid, THEN THE backend SHALL redirect to  on the configured Platform Console origin and create no session.",
+      "AC-001.31": "IF Keycloak returns an error, or the code exchange or the ID token check fails, for a Platform Console sign-in whose saved authorization request is valid, or IF the callback on  has no saved authorization request, or one that is expired or was saved for another site, THEN THE backend SHALL redirect to  on the configured Platform Console origin and create no session.",
       "AC-001.32": "IF a request to a Workspace site carries an Operator session, THEN THE backend SHALL answer 401 with   and not run the endpoint (D13).",
       "AC-001.33": "IF a request carries an Operator session whose email is no longer in the allow-list, THEN THE backend SHALL end the session and answer 401 with  .",
       "AC-001.34": "THE backend SHALL apply the limits of AC-001.23 to AC-001.25 to Operator sessions as well.",
