@@ -64,6 +64,9 @@ public class JiraLinkRequestService {
 
     /** Stores a request and returns the link {@code <site origin>/jira-link?request=<id>} of the Workspace's site. */
     public String create(UUID workspaceId, String trackerAccountId, String jiraUserName, String siteName) {
+        if (trackerAccountId == null || trackerAccountId.isBlank() || trackerAccountId.length() > 128) {
+            throw new IllegalArgumentException("The tracker account id must be 1 to 128 characters");
+        }
         WorkspaceRef workspace = workspaces
                 .findById(workspaceId)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown Workspace " + workspaceId));

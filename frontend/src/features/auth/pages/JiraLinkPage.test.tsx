@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http as mock } from 'msw';
+import { http as mock, HttpResponse } from 'msw';
 import { jiraLinkConfirmCalls, MOCK_JIRA_LINK } from '@/features/auth/mocks/handlers';
 import { server } from '@/mocks/server';
 import { problem } from '@/shared/api/mocks';
@@ -108,6 +108,46 @@ describe('Jira link confirm page', () => {
       expect(jiraLinkConfirmCalls).toHaveLength(0);
     },
   );
+
+  it('AC-001.71 Link shows MSG75 for Jira on 200 and sends one request', async () => {
+    document.cookie = `XSRF-TOKEN=${CSRF_TOKEN}; path=/`;
+    const seen: { body: unknown; csrfHeader: string | null }[] = [];
+    server.use(
+      mock.post('*/api/v1/auth/jira-link/confirm', async ({ request }) => {
+        seen.push({
+          body: await request.json(),
+          csrfHeader: request.headers.get('X-XSRF-TOKEN'),
+        });
+        return HttpResponse.json({ code: 'MSG75' });
+      }),
+    );
+    await openSignedIn();
+
+    // a double click must send one request
+    await userEvent.setup().dblClick(screen.getByRole('button', { name: LINK_BUTTON }));
+
+    await findText(msg('MSG75', { tracker_name: 'Jira' }));
+    expect(seen).toEqual([
+      { body: { requestId: MOCK_JIRA_LINK.requestId }, csrfHeader: CSRF_TOKEN },
+    ]);
+    expect(navigateTo).not.toHaveBeenCalled();
+    // the question and both buttons are replaced, so a used-up request cannot be sent again
+    expect(screen.queryByRole('button', { name: LINK_BUTTON })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: CANCEL_BUTTON })).not.toBeInTheDocument();
+    expect(screen.queryByText(msg('MSG141'))).not.toBeInTheDocument();
+    expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+  });
+
+  it('AC-001.72 a 500 answer shows MSG06 and no Link button, because the request is used up', async () => {
+    document.cookie = `XSRF-TOKEN=${CSRF_TOKEN}; path=/`;
+    server.use(mock.post('*/api/v1/auth/jira-link/confirm', () => problem(500, 'MSG06')));
+    await openSignedIn();
+
+    await userEvent.setup().click(screen.getByRole('button', { name: LINK_BUTTON }));
+
+    await findText(msg('MSG06'));
+    expect(screen.queryByRole('button', { name: LINK_BUTTON })).not.toBeInTheDocument();
+  });
 
   it.each([
     ['400 MSG141', 400, 'MSG141'],
