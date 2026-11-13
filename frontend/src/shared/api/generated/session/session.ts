@@ -614,7 +614,7 @@ export const getConfirmJiraLinkUrl = () => {
 };
 
 /**
- * Needs a signed-in person of the Workspace and a CSRF token (header `X-XSRF-TOKEN`). The answers are checked in the order session (401 MSG07), CSRF token (403), link request (400 MSG141). Until the account link is recorded (Task 30b) a valid request answers 501.
+ * Needs a signed-in person of the Workspace and a CSRF token (header `X-XSRF-TOKEN`). The answers are checked in the order session (401 MSG07), CSRF token (403), link request (400 MSG141). When the link cannot be recorded the answer is 500 MSG06 and the request stays used up.
  * @summary Confirms a Jira link request; consumes it whatever the outcome (AC-001.71, AC-001.72).
  */
 export const confirmJiraLink = async (
