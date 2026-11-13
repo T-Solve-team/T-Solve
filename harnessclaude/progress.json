@@ -165,10 +165,20 @@
       }
     },
     "project-integration": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:22.778Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "project-members-api": "evaluating",
+        "project-members-tab": "pending"
+      },
+      "lastUpdated": "2026-11-13T08:15:37.360Z",
+      "branch": "feat/project-integration",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "782e23ff6a94c4981ac521c34c9cece7391a05f8"
+      }
     },
     "wiki": {
       "status": "decomposed",

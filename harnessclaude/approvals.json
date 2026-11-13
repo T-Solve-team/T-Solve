@@ -1190,5 +1190,35 @@
       "AC-002.13": "IF a user without the Admin role opens 2.2 Workspace Settings, THEN THE web app SHALL show the no-permission page with MSG08 and no \"New Department\" button.",
       "AC-002.14": "WHILE a save is running, THE web app SHALL ignore Cancel and the close icon."
     }
+  },
+  "project-integration": {
+    "specHash": "b8f05bc98b077a0e9e777c6f275a6a5c08e44bdf905560d2a8f9346963bc7f2c",
+    "approvedAt": "2026-11-13T07:04:23.616Z",
+    "by": "user",
+    "acs": {
+      "AC-001.1": "WHEN the Project Manager of a Project requests , THE backend SHALL answer 200 with the Project id, Jira project key, Department name, the Project Manager's full name and the status ( or ).",
+      "AC-001.2": "WHEN the Project Manager of a Project requests , THE backend SHALL answer 200 with every member of the Project — user id, full name, email, role in the Project ( or ) and date added — the Project Manager first, then the other members by full name, ascending, ignoring letter case, members without a full name last.",
+      "AC-001.3": "IF the caller is not the Project Manager of the Project (no  membership row for it, or no  role, or an account that is not Active), THEN THE backend SHALL answer 403 to every endpoint of this spec and return no Project data.",
+      "AC-001.4": "IF a caller with the  role gives a  no Project has, THEN THE backend SHALL answer 404 to every endpoint of this spec.",
+      "AC-001.5": "WHEN the Project Manager opens Project Detail, THE web app SHALL show the header (Jira project key, Department, Project Manager, status) and the Members tab with the columns Full name, Email, Role, Added on, with \"Added on\" as a date in the app time zone.",
+      "AC-001.6": "IF the backend answers 403, THEN THE web app SHALL show MSG08 in place of the screen; IF it answers 404, THEN THE web app SHALL show MSG04; IF it fails otherwise, THEN THE web app SHALL show MSG06.",
+      "AC-001.7": "THE web app SHALL show no Remove button in the Members tab (removing members is KAN-129).",
+      "AC-002.1": "WHEN the Project Manager requests , THE backend SHALL answer 200 with at most 20 accounts — user id, full name, email — that are Active, hold the  role, are not members of the Project, and whose full name or email contains  (trimmed) literally, ignoring letter case, sorted by full name ascending ignoring letter case, accounts without a full name last. Candidates are not limited to the Project's Department (UC-15 step 6).",
+      "AC-002.2": "WHERE  is missing or blank after trimming, THE backend SHALL apply no name or email filter to the candidates of AC-002.1.",
+      "AC-002.3": "IF  is longer than 100 characters after trimming, THEN THE backend SHALL answer 400 and return no candidates.",
+      "AC-002.4": "WHEN the Project Manager posts  with  of 1 to 50 distinct ids, each an Active  account that is not a member of the Project, THE backend SHALL add each as a member with role  and date added = the database time of the insert, and answer 201 with the full member list in the form and order of AC-001.2.",
+      "AC-002.5": "WHEN members are added, THE backend SHALL record one audit entry with action , target type , target id the Project id, and details , in the same transaction as the rows.",
+      "AC-002.6": "IF  is missing, empty, longer than 50, or contains a duplicate or a null, THEN THE backend SHALL answer 400 and add nobody.",
+      "AC-002.7": "IF any id in  is not an Active account with the  role, or is already a member of the Project, THEN THE backend SHALL answer 409, add nobody and record no audit entry.",
+      "AC-002.8": "IF the Project is , THEN THE backend SHALL answer 409 to , add nobody and record no audit entry.",
+      "AC-002.9": "WHILE the Project is , THE web app SHALL show the \"Add member\" button in the Members tab; WHILE it is , THE web app SHALL not show it.",
+      "AC-002.10": "WHEN the Project Manager clicks \"Add member\", THE web app SHALL open the Add member popup with a search box (name or email) and the candidate list of AC-002.1, loaded at once with an empty  and refreshed 300 ms after the last keystroke, where one or more candidates can be selected.",
+      "AC-002.11": "IF the candidate list is empty, THEN THE web app SHALL show MSG04 in the popup.",
+      "AC-002.12": "WHILE no candidate is selected or an add is in progress, THE web app SHALL disable the Add button of the popup.",
+      "AC-002.13": "WHEN the Project Manager clicks Add and the backend answers 201, THE web app SHALL close the popup, show MSG05 and show the returned member list.",
+      "AC-002.14": "IF the add fails, THEN THE web app SHALL keep the popup open with the selection and show MSG06 (any error, 409 included).",
+      "AC-002.15": "WHEN the Project Manager clicks Cancel or closes the popup, THE web app SHALL send no add request and change nothing.",
+      "AC-002.16": "THE audit log screen SHALL label the action  \"Project member change\"."
+    }
   }
 }

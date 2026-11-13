@@ -1238,3 +1238,11 @@
 {"ts":"2026-11-12T18:43:35.540Z","type":"feature-status","module":"identity","feature":"operator-session","from":"pending","to":"in-progress"}
 {"ts":"2026-11-12T18:43:37.837Z","type":"feature-status","module":"identity","feature":"operator-session","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-12T18:43:38.640Z","type":"feature-status","module":"identity","feature":"operator-session","from":"evaluating","to":"passing"}
+{"ts":"2026-11-13T07:04:23.618Z","type":"spec-approved","module":"project-integration","specHash":"b8f05bc98b077a0e9e777c6f275a6a5c08e44bdf905560d2a8f9346963bc7f2c"}
+{"ts":"2026-11-13T07:04:28.647Z","type":"module-status","module":"project-integration","from":"decomposed","to":"planned"}
+{"ts":"2026-11-13T07:04:28.931Z","type":"feature-status","module":"project-integration","feature":"project-members-api","from":null,"to":"pending"}
+{"ts":"2026-11-13T07:04:29.205Z","type":"feature-status","module":"project-integration","feature":"project-members-tab","from":null,"to":"pending"}
+{"ts":"2026-11-13T07:04:29.483Z","type":"module-status","module":"project-integration","from":"planned","to":"implementing"}
+{"ts":"2026-11-13T07:04:29.762Z","type":"feature-status","module":"project-integration","feature":"project-members-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-13T08:15:37.090Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"782e23ff6a94c4981ac521c34c9cece7391a05f8"}
+{"ts":"2026-11-13T08:15:37.362Z","type":"feature-status","module":"project-integration","feature":"project-members-api","from":"in-progress","to":"evaluating"}
