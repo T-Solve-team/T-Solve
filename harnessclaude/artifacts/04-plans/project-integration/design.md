@@ -32,7 +32,7 @@ No new table. Reads and writes the existing tables:
 | `app_user`, `user_role` (identity) | status `ACTIVE`, full name, email, role `TICKET_RESOLVER` / `PROJECT_MANAGER` |
 | `audit_log_entry` | new action `PROJECT_MEMBER_CHANGE` |
 
-Migration `029-project-audit-member-change.sql` (changeset `project-integration:029-project-audit-member-change`): drop and re-add `ck_audit_log_entry_action` with `PROJECT_MEMBER_CHANGE` appended, rollback to the 027 list — same shape as `027-workspace-audit-department-change.sql`. Register it in the master changelog the way 027/028 are.
+Migration `030-project-audit-member-change.sql` (changeset `project-integration:030-project-audit-member-change`): drop and re-add `ck_audit_log_entry_action` with `PROJECT_MEMBER_CHANGE` appended, rollback to the 027 list — same shape as `027-workspace-audit-department-change.sql`. Register it in the master changelog the way 027/028 are.
 
 ## Key technical decisions
 
@@ -58,7 +58,7 @@ Backend (`backend/src/main/java/vn/tsolve/project/`):
 - `service/ProjectMemberService.java` + `service/impl/ProjectMemberServiceImpl.java`.
 - `repository/ProjectMemberRepository.java` (JDBC).
 - `common/audit/AuditAction.java` — add `PROJECT_MEMBER_CHANGE`.
-- `resources/db/changelog/changes/029-project-audit-member-change.sql` (+ master changelog entry).
+- `resources/db/changelog/changes/030-project-audit-member-change.sql` (+ master changelog entry).
 
 Backend tests (`backend/src/test/java/vn/tsolve/project/`): unit test of the service (validation, all-or-nothing, audit) and an IT (`*IT.java`, Testcontainers, same base as `UserListIT` / workspace ITs) covering every backend AC with names starting with the AC id.
 

@@ -50,5 +50,6 @@
     <include file="changes/026-identity-app-user-keycloak-sub.sql" relativeToChangelogFile="true"/>
     <include file="changes/027-workspace-audit-department-change.sql" relativeToChangelogFile="true"/>
     <include file="changes/028-workspace-department-name-lower-unique.sql" relativeToChangelogFile="true"/>
-    <include file="changes/029-project-audit-member-change.sql" relativeToChangelogFile="true"/>
+    <include file="changes/029-identity-jira-account-links.sql" relativeToChangelogFile="true"/>
+    <include file="changes/030-project-audit-member-change.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

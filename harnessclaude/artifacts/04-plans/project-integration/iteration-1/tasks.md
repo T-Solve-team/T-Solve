@@ -9,14 +9,14 @@ Branch: `feat/KAN-128-project-integration-add-ticket-resolver`. One commit per t
 - **Story:** STORY-001, STORY-002
 - **Feature:** `project-members-api`
 - **Covers:** AC-001.1–AC-001.4, AC-002.1–AC-002.8
-- **Description:** The four endpoints of the spec's Interface Contracts, the manager check (design D3, D4), all-or-nothing add with audit in one transaction (D5, D6), candidate search (D8), `AuditAction.PROJECT_MEMBER_CHANGE` + migration 029. Tests first; every test name starts with its AC id. Edge cases E1–E9, E11 each have a test.
+- **Description:** The four endpoints of the spec's Interface Contracts, the manager check (design D3, D4), all-or-nothing add with audit in one transaction (D5, D6), candidate search (D8), `AuditAction.PROJECT_MEMBER_CHANGE` + migration 030 (029 is identity's, KAN-310). Tests first; every test name starts with its AC id. Edge cases E1–E9, E11 each have a test.
 - **Files:**
   - create `backend/src/main/java/vn/tsolve/project/controller/ProjectController.java`
   - create `backend/src/main/java/vn/tsolve/project/dto/{ProjectSummaryResponse,ProjectMemberResponse,MemberCandidateResponse,AddProjectMembersRequest}.java`
   - create `backend/src/main/java/vn/tsolve/project/service/ProjectMemberService.java`, `service/impl/ProjectMemberServiceImpl.java`
   - create `backend/src/main/java/vn/tsolve/project/repository/ProjectMemberRepository.java`
   - modify `backend/src/main/java/vn/tsolve/common/audit/AuditAction.java`
-  - create `backend/src/main/resources/db/changelog/changes/029-project-audit-member-change.sql`; modify the master changelog
+  - create `backend/src/main/resources/db/changelog/changes/030-project-audit-member-change.sql`; modify the master changelog
   - create tests under `backend/src/test/java/vn/tsolve/project/`
 - **Verify:** `mvn verify` in `backend/`.
 - **Depends on:** —
