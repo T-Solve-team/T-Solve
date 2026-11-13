@@ -21,7 +21,8 @@
         <mapstruct.version>1.6.3</mapstruct.version>
         <springdoc.version>2.6.0</springdoc.version>
         <commons-csv.version>1.12.0</commons-csv.version>
-        <spotless.version>2.43.0</spotless.version>
+        <spotless.version>3.2.0</spotless.version>
+        <palantir-java-format.version>2.80.0</palantir-java-format.version>
         <wiremock.version>3.9.2</wiremock.version>
         <jobrunr.version>8.6.0</jobrunr.version>
         <testcontainers.version>1.21.4</testcontainers.version>
@@ -221,7 +222,9 @@
                 <configuration>
                     <ratchetFrom>origin/main</ratchetFrom>
                     <java>
-                        <palantirJavaFormat/>
+                        <palantirJavaFormat>
+                            <version>${palantir-java-format.version}</version>
+                        </palantirJavaFormat>
                         <removeUnusedImports/>
                     </java>
                 </configuration>

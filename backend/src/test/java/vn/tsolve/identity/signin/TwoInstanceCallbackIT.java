@@ -2,8 +2,6 @@ package vn.tsolve.identity.signin;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.http.Fault;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -37,6 +35,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.TSolveApplication;
+import vn.tsolve.identity.session.SessionCookie;
 
 /**
  * Task 23c: two separately started instances of the application (own beans, own Tomcat, profile {@code dev}) share
@@ -50,6 +49,7 @@ class TwoInstanceCallbackIT {
     private static final int REDIS_PORT = 6379;
     private static final String REDIS_PASSWORD = UUID.randomUUID().toString();
     private static final String COOKIE = RedisAuthorizationRequestRepository.COOKIE_NAME;
+    private static final String SESSION_COOKIE = SessionCookie.NAME;
     private static final String MSG141 = "/login?error=MSG141";
     private static final String MSG06 = "/login?error=MSG06";
     private static final String ACME = "acme.localhost";
@@ -67,8 +67,6 @@ class TwoInstanceCallbackIT {
     private static int portA;
     private static int portB;
     private static StringRedisTemplate redis;
-
-    private final ObjectMapper json = new ObjectMapper();
 
     @BeforeAll
     static void startInstances() {
@@ -120,6 +118,7 @@ class TwoInstanceCallbackIT {
                         "--GOOGLE_CLIENT_SECRET=test-secret",
                         "--PLATFORM_OPERATOR_EMAILS=ops@example.test",
                         "--KEYCLOAK_WEB_CLIENT_SECRET=it-keycloak-web-client-secret",
+                        "--KEYCLOAK_CONSOLE_CLIENT_SECRET=it-keycloak-console-client-secret",
                         "--CORS_ALLOWED_ORIGINS=http://localhost:5173",
                         "--DB_HOST=" + DB.getHost(),
                         "--DB_PORT=" + DB.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT),
@@ -249,27 +248,18 @@ class TwoInstanceCallbackIT {
                 .isEqualTo(started.challenge());
         assertThat(tokenRequests.get(0))
                 .containsEntry("redirect_uri", "http://acme.localhost:8080/api/v1/auth/callback");
-        assertThat(reply.status()).as("status").isEqualTo(200);
-        assertThat(reply.location()).as("Location").isNull();
-        JsonNode claims = json.readTree(reply.body());
-        Set<String> names = new HashSet<>();
-        claims.fieldNames().forEachRemaining(names::add);
-        assertThat(names).containsExactlyInAnyOrder("sub", "email", "organization", "hd");
-        assertThat(claims.path("email").asText()).isEqualTo(FakeKeycloakRealm.EMAIL);
-        assertThat(claims.path("organization").path("acme").path("id").asText())
-                .isEqualTo(FakeKeycloakRealm.ORGANIZATION_ID);
+        // Task 26a: a passing sign-in creates the session at once and redirects to /
+        assertThat(reply.status()).as("status").isEqualTo(302);
+        assertThat(reply.location()).as("Location").isEqualTo("/");
+        assertThat(reply.setCookies(SESSION_COOKIE))
+                .as("Set-Cookie of %s", SESSION_COOKIE)
+                .hasSize(1);
         assertExpiryCookie(reply);
         Set<String> newKeys = allKeys();
         newKeys.removeAll(keysBefore);
-        assertThat(newKeys).as("keys Redis gained").isEmpty();
+        assertThat(newKeys).as("keys Redis gained").hasSize(1).allMatch(key -> key.startsWith("tsolve:session:"));
         assertNoSession(browser);
         assertNoAuthorizedClient();
-        for (int port : new int[] {portA, portB}) {
-            TestBrowser.Reply protectedCall = browser.backend("http://acme.localhost:8080/api/v1/tickets", port);
-            assertThat(protectedCall.status())
-                    .as("protected request on port %d", port)
-                    .isEqualTo(401);
-        }
     }
 
     enum Unmatched {
@@ -290,8 +280,8 @@ class TwoInstanceCallbackIT {
         TestBrowser.Reply reply;
         int tokenRequestsAllowed = 0;
         switch (row) {
-            case NO_COOKIE -> reply =
-                    callback(browser, portB, host, "code=" + code + "&state=an-attackers-state-value");
+            case NO_COOKIE ->
+                reply = callback(browser, portB, host, "code=" + code + "&state=an-attackers-state-value");
             case VICTIMS_COOKIE_ATTACKERS_STATE -> {
                 Started victim = start(browser, portA, host);
                 FAKE.answerCode(code, FAKE.idToken(victim.nonce(), claims -> {}));
@@ -305,7 +295,7 @@ class TwoInstanceCallbackIT {
                 Started started = start(browser, portA, host);
                 FAKE.answerCode(code, FAKE.idToken(started.nonce(), claims -> {}));
                 String query = "code=" + code + "&state=" + started.state();
-                assertThat(callback(browser, portB, host, query).status()).isEqualTo(200);
+                assertThat(callback(browser, portB, host, query).status()).isEqualTo(302);
                 tokenRequestsAllowed = 1;
                 browser.setCookie(host, COOKIE, started.cookie());
                 reply = callback(browser, portA, host, query);
@@ -392,22 +382,25 @@ class TwoInstanceCallbackIT {
             case TOKEN_500 -> FAKE.answerCodeStatus(code, 500, "{\"error\":\"server_error\"}");
             case CONNECTION_RESET -> FAKE.answerCodeFault(code, Fault.CONNECTION_RESET_BY_PEER);
             case SIGNED_WITH_OTHER_KEY -> FAKE.answerCode(code, FAKE.signedWithOtherKey(started.nonce(), claims -> {}));
-            case ISSUER_OF_OPS_REALM -> FAKE.answerCode(
-                    code,
-                    FAKE.idToken(started.nonce(), claims -> claims.put("iss", FAKE.origin() + "/realms/tsolve-ops")));
-            case AUDIENCE_OF_CONSOLE -> FAKE.answerCode(
-                    code, FAKE.idToken(started.nonce(), claims -> claims.put("aud", "tsolve-console")));
-            case EXPIRED -> FAKE.answerCode(code, FAKE.idToken(started.nonce(), claims -> {
-                Instant past = Instant.now().minusSeconds(3600);
-                claims.put("iat", past.minusSeconds(300).getEpochSecond());
-                claims.put("exp", past.getEpochSecond());
-            }));
-            case NONCE_OF_ANOTHER_REQUEST -> FAKE.answerCode(
-                    code, FAKE.idToken("the-nonce-of-another-request", claims -> {}));
-            case EMAIL_NOT_VERIFIED -> FAKE.answerCode(
-                    code, FAKE.idToken(started.nonce(), claims -> claims.put("email_verified", false)));
-            case EMAIL_VERIFIED_MISSING -> FAKE.answerCode(
-                    code, FAKE.idToken(started.nonce(), claims -> claims.remove("email_verified")));
+            case ISSUER_OF_OPS_REALM ->
+                FAKE.answerCode(
+                        code,
+                        FAKE.idToken(
+                                started.nonce(), claims -> claims.put("iss", FAKE.origin() + "/realms/tsolve-ops")));
+            case AUDIENCE_OF_CONSOLE ->
+                FAKE.answerCode(code, FAKE.idToken(started.nonce(), claims -> claims.put("aud", "tsolve-console")));
+            case EXPIRED ->
+                FAKE.answerCode(code, FAKE.idToken(started.nonce(), claims -> {
+                    Instant past = Instant.now().minusSeconds(3600);
+                    claims.put("iat", past.minusSeconds(300).getEpochSecond());
+                    claims.put("exp", past.getEpochSecond());
+                }));
+            case NONCE_OF_ANOTHER_REQUEST ->
+                FAKE.answerCode(code, FAKE.idToken("the-nonce-of-another-request", claims -> {}));
+            case EMAIL_NOT_VERIFIED ->
+                FAKE.answerCode(code, FAKE.idToken(started.nonce(), claims -> claims.put("email_verified", false)));
+            case EMAIL_VERIFIED_MISSING ->
+                FAKE.answerCode(code, FAKE.idToken(started.nonce(), claims -> claims.remove("email_verified")));
         }
 
         TestBrowser.Reply reply = callback(browser, portB, ACME, "code=" + code + "&state=" + started.state());
@@ -424,9 +417,9 @@ class TwoInstanceCallbackIT {
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
-    @ValueSource(strings = {"admin.localhost", "unknown.localhost"})
-    @DisplayName("AC-001.54 answers 404 to the callback on admin. and on a host that is no Workspace")
-    void answers404ToTheCallbackOnAdminAndOnAHostWithNoWorkspace_AC_001_54(String host) {
+    @ValueSource(strings = {"unknown.localhost"})
+    @DisplayName("AC-001.54 answers 404 to the callback on a host that is no Workspace")
+    void answers404ToTheCallbackOnAHostWithNoWorkspace_AC_001_54(String host) {
         TestBrowser browser = new TestBrowser();
         Started started = start(browser, portA, ACME);
         browser.setCookie(host, COOKIE, started.cookie());
@@ -444,8 +437,7 @@ class TwoInstanceCallbackIT {
     void servesNoClaimsToADirectRequestForTheDevClaimsPage_edge122() {
         TestBrowser browser = new TestBrowser();
 
-        TestBrowser.Reply reply =
-                browser.backend("http://acme.localhost:8080" + OidcCallbackHandler.DEV_CLAIMS_PATH, portA);
+        TestBrowser.Reply reply = browser.backend("http://acme.localhost:8080/api/v1/auth/dev/claims", portA);
 
         assertThat(reply.status()).as("status").isNotEqualTo(200);
         assertThat(reply.body()).as("body").doesNotContain("\"sub\"").doesNotContain("\"email\"");

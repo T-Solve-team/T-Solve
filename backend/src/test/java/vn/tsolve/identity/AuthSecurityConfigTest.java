@@ -41,6 +41,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.identity.account.AccountSignInService;
+import vn.tsolve.identity.session.OperatorAllowList;
+import vn.tsolve.identity.session.SessionCookie;
+import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.AuthHosts;
 import vn.tsolve.identity.signin.KeycloakClientRegistrations;
 import vn.tsolve.identity.signin.OidcCallbackHandler;
@@ -61,6 +64,9 @@ import vn.tsolve.identity.signin.SignInTestFixtures;
     KeycloakClientRegistrations.class,
     RedisAuthorizationRequestRepository.class,
     OidcCallbackHandler.class,
+    WebSessionStore.class,
+    SessionCookie.class,
+    OperatorAllowList.class,
     AuthSecurityConfigTest.ProbeController.class
 })
 @TestPropertySource(
@@ -72,6 +78,7 @@ import vn.tsolve.identity.signin.SignInTestFixtures;
             "GOOGLE_CLIENT_SECRET=test-secret",
             "PLATFORM_OPERATOR_EMAILS=ops@example.test",
             "KEYCLOAK_WEB_CLIENT_SECRET=test-keycloak-secret",
+            "KEYCLOAK_CONSOLE_CLIENT_SECRET=test-keycloak-console-secret",
             "CORS_ALLOWED_ORIGINS=http://localhost:5173",
             "server.port=0"
         })
@@ -183,22 +190,23 @@ class AuthSecurityConfigTest {
 
     @ParameterizedTest(name = "[{index}] {0}")
     @CsvSource({
-        "acme.localhost, true",
-        "beta.localhost, true",
-        "login.localhost, false",
-        "admin.localhost, false",
-        "unknown.localhost, false"
+        "acme.localhost, /login?error=MSG141",
+        "beta.localhost, /login?error=MSG141",
+        "login.localhost,",
+        "admin.localhost, /login?error=MSG06",
+        "unknown.localhost,"
     })
-    @DisplayName("AC-001.54 runs the Keycloak callback only on a Workspace site")
-    void leavesTheCallbackOnLoginAdminAndUnknownHostsToTheOldChain_AC_001_54(String host, boolean workspace)
+    @DisplayName("AC-001.54 runs the Keycloak callback only on a Workspace site and on admin.")
+    void leavesTheCallbackOnLoginAndUnknownHostsToTheOldChain_AC_001_54(String host, String expectedLocation)
             throws Exception {
         MockHttpServletResponse response = mvc.perform(get("http://" + host + CALLBACK + "?code=c&state=s"))
                 .andReturn()
                 .getResponse();
 
-        if (workspace) {
+        if (expectedLocation != null) {
+            // admin. is a callback host since Task 29b: no saved request there is MSG06, and the probe is not reached
             assertThat(response.getStatus()).as("status").isEqualTo(302);
-            assertThat(response.getHeader(HttpHeaders.LOCATION)).isEqualTo("/login?error=MSG141");
+            assertThat(response.getHeader(HttpHeaders.LOCATION)).isEqualTo(expectedLocation);
             assertThat(ProbeController.CALLS).as("controller calls").hasValue(0);
         } else {
             assertThat(response.getStatus()).as("status").isEqualTo(200);

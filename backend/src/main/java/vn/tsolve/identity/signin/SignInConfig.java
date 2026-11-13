@@ -33,12 +33,15 @@ public class SignInConfig {
      */
     @Bean
     public InitializingBean keycloakDiscoveryCheck(SignInProperties properties) {
-        return () -> checkDiscovery(properties.loginOrigin().toString());
+        return () -> {
+            checkDiscovery(properties.loginOrigin().toString(), "tsolve");
+            checkDiscovery(properties.loginOrigin().toString(), "tsolve-ops");
+        };
     }
 
-    private static void checkDiscovery(String origin) {
+    private static void checkDiscovery(String origin, String realm) {
         String base = origin.endsWith("/") ? origin.substring(0, origin.length() - 1) : origin;
-        String expectedIssuer = base + "/realms/tsolve";
+        String expectedIssuer = base + "/realms/" + realm;
         String discoveryUrl = expectedIssuer + "/.well-known/openid-configuration";
         HttpResponse<String> response;
         try {

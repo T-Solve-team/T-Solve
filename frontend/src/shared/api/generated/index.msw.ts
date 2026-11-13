@@ -1,5 +1,6 @@
 export { getAuditLogMock } from './audit-log/audit-log.msw';
 export { getChatbotMock } from './chatbot/chatbot.msw';
+export { getDepartmentsMock } from './departments/departments.msw';
 export { getFeedbackMock } from './feedback/feedback.msw';
 export { getImportMock } from './import/import.msw';
 export { getJiraAppMock } from './jira-app/jira-app.msw';

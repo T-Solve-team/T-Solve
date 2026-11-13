@@ -9,13 +9,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties("tsolve.auth")
 public record SignInProperties(
-        URI loginOrigin, URI adminOrigin, String operatorEmails, String keycloakWebClientSecret) {
+        URI loginOrigin,
+        URI adminOrigin,
+        String operatorEmails,
+        String keycloakWebClientSecret,
+        String keycloakConsoleClientSecret) {
 
     public SignInProperties {
         requireOrigin(loginOrigin, "TSOLVE_LOGIN_ORIGIN");
         requireOrigin(adminOrigin, "TSOLVE_ADMIN_ORIGIN");
         requireText(operatorEmails, "PLATFORM_OPERATOR_EMAILS");
         requireText(keycloakWebClientSecret, "KEYCLOAK_WEB_CLIENT_SECRET");
+        requireText(keycloakConsoleClientSecret, "KEYCLOAK_CONSOLE_CLIENT_SECRET");
     }
 
     private static void requireOrigin(URI origin, String envName) {

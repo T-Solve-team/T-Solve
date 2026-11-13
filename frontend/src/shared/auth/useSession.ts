@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { getGetMeQueryKey, getMe, isApiError, logout } from '@/shared/api';
+import { navigateTo } from '@/shared/lib/navigate';
 import type { Role } from './roles';
 import { toSession, type Session } from './session';
 
@@ -116,18 +117,36 @@ export async function resetSession(
   await queryClient.resetQueries({ queryKey: SESSION_QUERY_KEY });
 }
 
+/** `logoutUrl` is used only when it is an absolute http(s) URL (AC-008.4). */
+function toLogoutUrl(answer: unknown): string | null {
+  const url = (answer as { logoutUrl?: unknown } | null | undefined)?.logoutUrl;
+  if (typeof url !== 'string') return null;
+  try {
+    const { protocol } = new URL(url);
+    return protocol === 'https:' || protocol === 'http:' ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Logs out (UC-02): asks the server to end the session, then signs out in the app — also when that request
- * fails, so the user is never left signed in on this screen. Never throws.
+ * Logs out (UC-02): asks the server to end the session, signs out in the app — also when that request fails, so
+ * the user is never left signed in on this screen — then loads the `logoutUrl` the server answered (full page
+ * load, AC-008.2). Never throws. Returns `true` when it navigated away, `false` otherwise (the caller then shows
+ * Login inside the app).
  */
 export function useSignOut() {
   const queryClient = useQueryClient();
-  return useCallback(async () => {
+  return useCallback(async (): Promise<boolean> => {
+    let logoutUrl: string | null = null;
     try {
-      await logout();
+      logoutUrl = toLogoutUrl(await logout());
     } catch {
       // The server session may still be valid; it ends with the cookie's lifetime (AC-008.3).
     }
     await resetSession(queryClient, { signedOut: true });
+    if (logoutUrl === null) return false;
+    navigateTo(logoutUrl);
+    return true;
   }, [queryClient]);
 }
