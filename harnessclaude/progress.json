@@ -160,9 +160,9 @@
         "project-reconnect": "passing",
         "project-list": "passing",
         "jira-integration-projects-table": "passing",
-        "jira-integration-add-project": "evaluating"
+        "jira-integration-add-project": "passing"
       },
-      "lastUpdated": "2026-11-13T08:08:30.510Z",
+      "lastUpdated": "2026-11-13T09:00:27.946Z",
       "branch": "feat/project-integration",
       "repos": [
         "default"
