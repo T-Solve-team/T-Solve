@@ -455,7 +455,7 @@ class JiraClientTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void reportsSchemeLessSiteAsUnavailable_AC_013_7_AC_013_8_BUG_203(boolean statusesRead) {
+    void reportsSchemeLessSiteAsUnavailable_AC_013_7_AC_013_8_BUG_204(boolean statusesRead) {
         JiraAccount account = new JiraAccount("acme.atlassian.net", ACCOUNT.email(), ACCOUNT.apiToken());
         // The mock factory accepts relative URIs; the production factory rejects them before opening a connection.
         JiraClient realClient = new JiraClient(Duration.ofSeconds(3), Duration.ofSeconds(7));
@@ -481,7 +481,7 @@ class JiraClientTest {
         "бот@acme.test, false",
         "бот@acme.test, true"
     })
-    void reportsMalformedEmailAsUnavailable_AC_013_7_AC_013_8_BUG_203(String email, boolean statusesRead) {
+    void reportsMalformedEmailAsUnavailable_AC_013_7_AC_013_8_BUG_204(String email, boolean statusesRead) {
         JiraAccount account = new JiraAccount(ACCOUNT.siteUrl(), email, ACCOUNT.apiToken());
 
         assertThatThrownBy(() -> {
@@ -500,7 +500,7 @@ class JiraClientTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void reportsInvalidContentTypeAsUnavailable_AC_013_7_AC_013_8_BUG_203(boolean statusesRead) {
+    void reportsInvalidContentTypeAsUnavailable_AC_013_7_AC_013_8_BUG_204(boolean statusesRead) {
         String url = ACCOUNT.siteUrl() + "/rest/api/3/project/ITSUP" + (statusesRead ? "/statuses" : "");
         jira.expect(requestTo(url))
                 .andRespond(withStatus(HttpStatus.OK)
@@ -523,7 +523,7 @@ class JiraClientTest {
     }
 
     @Test
-    void returnsUNAVAILABLEWithoutPartialProjectForNonHttpScheme_AC_013_7_BUG_203() {
+    void returnsUNAVAILABLEWithoutPartialProjectForNonHttpScheme_AC_013_7_BUG_204() {
         JiraAccount account = new JiraAccount("ftp://example.atlassian.net", ACCOUNT.email(), ACCOUNT.apiToken());
         JiraClient realClient = new JiraClient(Duration.ofSeconds(3), Duration.ofSeconds(7));
 
@@ -536,7 +536,7 @@ class JiraClientTest {
     }
 
     @Test
-    void returnsUNAVAILABLEWithoutPartialProjectForInvalidContentType_AC_013_7_AC_013_8_BUG_203() {
+    void returnsUNAVAILABLEWithoutPartialProjectForInvalidContentType_AC_013_7_AC_013_8_BUG_204() {
         JiraAccount account = ACCOUNT;
         jira.expect(requestTo(account.siteUrl() + "/rest/api/3/project/ITSUP"))
                 .andRespond(withStatus(HttpStatus.OK)

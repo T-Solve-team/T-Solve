@@ -58,7 +58,7 @@ ran every check.
   IT (Failsafe) `Tests run: 438, Failures: 0, Errors: 0, Skipped: 0` (including `SendBackApiIT` 7/7 and
   `ProjectDoneStatusesMigrationIT` 5/5); `spotless:check` passed; `BUILD SUCCESS` (12:49 min). Every IT that
   migrates a database applied the full changelog with 029.
-- During the run, the working tree also held uncommitted tracker changes from a parallel BUG-203 fix (`JiraClient`,
+- During the run, the working tree also held uncommitted tracker changes from a parallel BUG-204 fix (`JiraClient`,
   `TrackerProjectServiceImpl` and their tests, `docs/bug-log.md`). They are not part of this task and were not
   touched; the result above includes them.
 - `bun harnessclaude/hooks/sdd.ts check project-integration` → `spec project-integration: 7 stories, 103 acceptance criteria — OK` (exit 0).

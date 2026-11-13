@@ -130,6 +130,14 @@ KAN-127, UC-16: test/add/reconnect a Jira Project and list the caller's Departme
 | 5 · project-list — Own Department Projects (KAN-127) | Đặng Tấn Bình | pending |
 | 6 · jira-integration-projects-table — Department, table and states (KAN-127) | Đặng Tấn Bình | pending |
 | 7 · jira-integration-add-project — Test and Save popup (KAN-127) | Đặng Tấn Bình | pending |
+### workspace (added 2026-11-11)
+
+UC-12 Create Department. Spec: `artifacts/03-modules/workspace/spec.md`; plan: `artifacts/04-plans/workspace/iteration-1/tasks.md`.
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · Create Department API, Space and audit (KAN-120) | Đặng Tấn Bình | pending |
+| 2 · New Department on Workspace Settings (KAN-120) | Đặng Tấn Bình | pending |
 
 ## Order — feedback first
 
@@ -215,6 +223,9 @@ KAN-127, UC-16: test/add/reconnect a Jira Project and list the caller's Departme
 3. Add `SUP`, Test connection → MSG49 below Project key with the owning Department. Add `MISSING`, Test connection → corrected MSG48 inline (the service account Browse advice). Neither adds a row. A failed Save keeps entered settings; key edit hides tested settings.
 4. Add `OLD`, Test connection → MSG47 with stored settings (or documented fallback), Save → MSG05/200; the same Project ID becomes Active, with existing members retained. Inspect backend IT evidence for replacement-manager and rollback cases, since the basic mock demo uses the same PM.
 5. Demonstrate a held request prevents double click, edits and dismissal, and idle Cancel/reopen clears the form. Admin-only keeps the placeholder; Employee gets the existing MSG08 route guard. This is an MSW journey: real browser CSRF/Workspace binding and gateway Bearer support are separate prerequisites; stored statuses still need the GBR-04 Jira App follow-up. The external DDL owner updates its done_status line to JSONB.
+### workspace
+1. `mvn verify` in `backend/`: `DepartmentCreationIT` shows one Department, Space and audit entry per create; MSG43 for Active, Deleted, case-only and concurrent duplicates; and a rollback when the audit write fails.
+2. Mock mode, Admin, Workspace Settings: New Department, Save empty shows MSG01; an existing name such as `it` shows MSG43; a new name closes the popup with MSG05. In mock mode the table does not gain the row; `WorkspaceSettingsPage.test.tsx` proves the refresh.
 
 ## Actual Outcomes
 <!-- filled at end of iteration, split by module -->

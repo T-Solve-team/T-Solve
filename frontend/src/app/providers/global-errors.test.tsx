@@ -1,7 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { delay, http as mock } from 'msw';
+import { delay, http as mock, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { approveTickets, getReviewQueue } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
@@ -141,6 +141,8 @@ describe('global error handling', () => {
   });
 
   it('logs out through the API and lands on Login', async () => {
+    // The old answer (204, no logoutUrl): the app goes to Login itself. With a logoutUrl the page is left instead.
+    server.use(mock.post('*/api/v1/auth/logout', () => new HttpResponse(null, { status: 204 })));
     const user = userEvent.setup();
     const { router } = renderApp('/review-queue');
     await user.click(await screen.findByRole('button', { name: /Đỗ Minh Quân/ }));

@@ -169,6 +169,8 @@ export const sessionHandlers = [
   }),
   http.post('*/api/v1/auth/logout', () => {
     setDevUser(null);
-    return new HttpResponse(null, { status: 204 });
+    return HttpResponse.json({
+      logoutUrl: 'https://auth.tsolve.io.vn/realms/tsolve/protocol/openid-connect/logout',
+    });
   }),
 ];

@@ -6,6 +6,7 @@ import { REVIEW_QUEUE_POLL_MS, useReviewQueue } from '@/features/review/hooks/us
 import { server } from '@/mocks/server';
 import { approveTickets, useGetReviewQueue } from '@/shared/api';
 import { useSignOut } from '@/shared/auth';
+import { restoreLocation, stubLocationAssign } from '@/test/location';
 import { createTestQueryClient } from '@/test/render';
 
 /**
@@ -153,6 +154,9 @@ describe('the background-request header', () => {
   });
 
   it('AC-012.7 logout sends no header', async () => {
+    // The logout answer carries a logoutUrl: the hook loads it as a new page, which jsdom cannot do.
+    stubLocationAssign();
+    onTestFinished(restoreLocation);
     const { wrapper } = setup();
     const { result } = renderHook(() => ({ queue: useGetReviewQueue(), signOut: useSignOut() }), {
       wrapper,
