@@ -14,6 +14,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import vn.tsolve.common.audit.AuditAction;
@@ -73,6 +74,9 @@ public class ProjectServiceImpl implements ProjectService {
         this.scope = scope;
         this.audit = audit;
         this.writeTransaction = new TransactionTemplate(transactionManager);
+        // Pinned, not inherited: the lost insert's re-read must see the winner committed after ON CONFLICT waited, and
+        // a reconnect must re-read the row after its lock. Under REPEATABLE READ both fail as 500 instead of MSG49.
+        this.writeTransaction.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
 
     /** The caller, their own eligible Department and the normalised key, checked in the AC-007.8 order. */

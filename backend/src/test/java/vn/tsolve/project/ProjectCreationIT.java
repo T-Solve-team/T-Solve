@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -44,6 +45,7 @@ import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.project.ProjectApiITConfiguration.FakeTrackerProjectService;
 import vn.tsolve.project.dto.CreateProjectRequest;
+import vn.tsolve.project.repository.ProjectLinkRepository;
 import vn.tsolve.project.service.ProjectService;
 import vn.tsolve.tracker.dto.TrackerProjectLookup;
 import vn.tsolve.tracker.dto.TrackerStatus;
@@ -98,6 +100,9 @@ class ProjectCreationIT {
     @Autowired
     private FakeTrackerProjectService tracker;
 
+    @Autowired
+    private ProjectLinkRepository links;
+
     @BeforeEach
     void seed() {
         tracker.reset();
@@ -117,7 +122,8 @@ class ProjectCreationIT {
             user(db, SECOND, OWN);
             user(db, FOREIGN, OTHER);
         }
-        for (String key : List.of("PCRNEW", "PCRCANON", "PCRRACE", "PCRFAIL", "PCRRECHK", "PCRSAME", "PCRDENY")) {
+        for (String key :
+                List.of("PCRNEW", "PCRCANON", "PCRRACE", "PCRFAIL", "PCRRECHK", "PCRSAME", "PCRDENY", "PCRLOST")) {
             tracker.stub(key, TrackerProjectLookup.found(key, STATUSES));
         }
         tracker.stub("PCRALIAS", TrackerProjectLookup.found("PCRCANON", STATUSES));
@@ -278,6 +284,64 @@ class ProjectCreationIT {
                 .isEqualTo(1);
         assertThat(auditCount()).isEqualTo(auditsBefore + 1);
         assertThat(tracker.calls()).hasSize(2);
+    }
+
+    /** Forces the lost insert: the Save's ON CONFLICT waits on an uncommitted holder row, then finds it committed. */
+    @Test
+    void refusesALostInsertNamingTheCommittedWinnerWithoutWrites_AC_002_11() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        int auditsBefore = auditCount();
+        UUID winner;
+        Future<MockHttpServletResponse> save;
+        try (var pool = Executors.newSingleThreadExecutor();
+                Connection holder = db.getDataSource().getConnection()) {
+            holder.setAutoCommit(false);
+            try (var insert = holder.prepareStatement(
+                    "INSERT INTO project(department_id, jira_project_key, status) SELECT department_id, 'PCRLOST',"
+                            + " 'ACTIVE' FROM department WHERE public_id = ? RETURNING public_id")) {
+                insert.setObject(1, OTHER);
+                try (var rs = insert.executeQuery()) {
+                    rs.next();
+                    winner = rs.getObject(1, UUID.class);
+                }
+            }
+            save = pool.submit(() -> perform(TwoTenantDatabases.ACME, CALLER, body("PCRLOST"))
+                    .andReturn()
+                    .getResponse());
+            try {
+                ProjectApiITConfiguration.awaitBlockedBy(db, holder);
+                holder.commit();
+            } finally {
+                holder.rollback(); // no-op after the commit; releases the row if the wait failed
+            }
+            MockHttpServletResponse response = save.get(30, TimeUnit.SECONDS);
+            assertThat(response.getStatus()).as(response.getContentAsString()).isEqualTo(409);
+            JsonNode problem = mapper.readTree(response.getContentAsString());
+            assertThat(problem.get("code").asText()).isEqualTo("MSG49");
+            assertThat(problem.get("params").get("department_name").asText()).isEqualTo("PCR Support");
+            assertThat(problem.get("fieldErrors").get(0).get("field").asText()).isEqualTo("jiraProjectKey");
+        }
+        assertThat(db.queryForList("SELECT public_id FROM project WHERE jira_project_key = 'PCRLOST'", UUID.class))
+                .containsExactly(winner);
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM project_membership WHERE user_id = ?", Integer.class, CALLER))
+                .isZero();
+        assertThat(auditCount()).isEqualTo(auditsBefore);
+        assertThat(tracker.calls()).containsExactly("PCRLOST");
+    }
+
+    @Test
+    void refusesToReadAProjectWithAnUnknownStoredStatus_AC_002_13() {
+        UUID id = TwoTenantDatabases.tenantA()
+                .queryForObject(
+                        "INSERT INTO project(department_id, jira_project_key, done_status, review_range, status)"
+                                + " SELECT department_id, 'PCRODD', CAST('[\"10002\"]' AS jsonb), 3, 'DISABLED'"
+                                + " FROM department WHERE public_id = ? RETURNING public_id",
+                        UUID.class,
+                        OWN);
+        assertThatThrownBy(() -> scope.runIn(TwoTenantDatabases.ACME, () -> links.readProject(id)))
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("DISABLED");
     }
 
     @Test

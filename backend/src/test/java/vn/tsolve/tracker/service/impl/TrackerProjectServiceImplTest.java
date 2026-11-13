@@ -234,6 +234,20 @@ class TrackerProjectServiceImplTest {
     }
 
     @Test
+    void logsOnlyTheExceptionClassForAnUnexpectedClientFailure_AC_013_12(CapturedOutput output) {
+        given(serviceAccount.current()).willReturn(Optional.of(ACCOUNT));
+        given(jira.findProject(ACCOUNT, "ITSUP"))
+                .willThrow(new IllegalStateException("planted@mail.test planted-token-42 ftp://planted.example"));
+
+        TrackerProjectLookup lookup = service().findProject("ITSUP");
+
+        assertEmptyLookup(lookup, Outcome.UNAVAILABLE);
+        assertThat(output)
+                .contains("Jira project lookup ITSUP: UNAVAILABLE (IllegalStateException)")
+                .doesNotContain("planted@mail.test", "planted-token-42", "ftp://planted.example", "planted");
+    }
+
+    @Test
     void returnsOnlyProjectDataUsingTwoReadDependencies_AC_013_13() {
         given(serviceAccount.current()).willReturn(Optional.of(ACCOUNT));
         given(jira.findProject(ACCOUNT, "ITSUP")).willReturn(Optional.of("ITSUP"));

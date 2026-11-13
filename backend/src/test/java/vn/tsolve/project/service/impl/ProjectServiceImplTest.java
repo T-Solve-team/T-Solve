@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
@@ -51,6 +52,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
@@ -289,6 +291,14 @@ class ProjectServiceImplTest {
         given(links.findLink("OPS")).willReturn(Optional.of(link(1, "REMOVED", CALLER, true, List.of("10001"), 5)));
         given(tracker.findProject("OPS")).willReturn(TrackerProjectLookup.found("OPS", List.of()));
         assertThat(succeeds("OPS").doneStatusIds()).isEmpty();
+    }
+
+    @Test
+    void writesUnderReadCommittedSoTheLostInsertReReadSeesTheWinner_AC_002_11() {
+        save(create("OPS", List.of("10002"), "3"));
+        verify(transactionManager)
+                .getTransaction(argThat(definition ->
+                        definition.getIsolationLevel() == TransactionDefinition.ISOLATION_READ_COMMITTED));
     }
 
     @ParameterizedTest

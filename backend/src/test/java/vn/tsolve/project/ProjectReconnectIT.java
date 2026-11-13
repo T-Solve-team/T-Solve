@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -44,6 +45,7 @@ import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.project.ProjectApiITConfiguration.FakeTrackerProjectService;
 import vn.tsolve.project.dto.CreateProjectRequest;
+import vn.tsolve.project.repository.ProjectLinkRepository;
 import vn.tsolve.project.service.ProjectService;
 import vn.tsolve.tracker.dto.TrackerProjectLookup;
 import vn.tsolve.tracker.dto.TrackerStatus;
@@ -101,6 +103,9 @@ class ProjectReconnectIT {
     @Autowired
     private FakeTrackerProjectService tracker;
 
+    @Autowired
+    private ProjectLinkRepository links;
+
     @BeforeEach
     void seed() {
         tracker.reset();
@@ -122,7 +127,8 @@ class ProjectReconnectIT {
             user(db, OLD_PM, OWN, true);
             user(db, MEMBER, OWN, false);
         }
-        for (String key : List.of("PRCROLD", "PRCRACE", "PRCRCANON", "PRCRSAME", "PRCRCHK", "PRCRFAIL", "PRCRSWAP")) {
+        for (String key :
+                List.of("PRCROLD", "PRCRACE", "PRCRCANON", "PRCRSAME", "PRCRCHK", "PRCRFAIL", "PRCRSWAP", "PRCRWAIT")) {
             tracker.stub(key, TrackerProjectLookup.found(key, STATUSES));
         }
         tracker.stub("PRCRACEA", TrackerProjectLookup.found("PRCRACE", STATUSES));
@@ -431,18 +437,107 @@ class ProjectReconnectIT {
 
     @Test
     void reconnectsOnlyInTheBoundWorkspaceDatabase_AC_007_6() throws Exception {
-        UUID acme = removed(TwoTenantDatabases.tenantA(), "PRCRSAME", OWN, CALLER);
-        UUID beta = removed(TwoTenantDatabases.tenantB(), "PRCRSAME", OWN, CALLER);
-        String betaRow = projectRow(TwoTenantDatabases.tenantB(), beta);
+        // A deactivated previous manager in both databases, so the reconnect also writes memberships (AC-003.4).
+        UUID acme = removed(TwoTenantDatabases.tenantA(), "PRCRSAME", OWN, OLD_PM);
+        removed(TwoTenantDatabases.tenantB(), "PRCRSAME", OWN, OLD_PM);
+        for (JdbcTemplate db : List.of(TwoTenantDatabases.tenantA(), TwoTenantDatabases.tenantB())) {
+            db.update("UPDATE app_user SET status = 'DEACTIVATED' WHERE id = ?", OLD_PM);
+        }
+        List<Map<String, Object>> beta = snapshot(TwoTenantDatabases.tenantB());
         List<Map<String, Object>> main = snapshot(TwoTenantDatabases.main());
         perform(TwoTenantDatabases.ACME, CALLER, body("PRCRSAME"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.projectId").value(acme.toString()));
-        assertThat(TwoTenantDatabases.tenantA()
-                        .queryForObject("SELECT status FROM project WHERE public_id = ?", String.class, acme))
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        assertThat(db.queryForObject("SELECT status FROM project WHERE public_id = ?", String.class, acme))
                 .isEqualTo("ACTIVE");
-        assertThat(projectRow(TwoTenantDatabases.tenantB(), beta)).isEqualTo(betaRow);
+        assertThat(db.queryForList(
+                        "SELECT user_id, role_in_project FROM project_membership WHERE project_id = ? ORDER BY user_id",
+                        acme))
+                .containsExactly(
+                        Map.of("user_id", CALLER, "role_in_project", "PROJECT_MANAGER"),
+                        Map.of("user_id", MEMBER, "role_in_project", "MEMBER"));
+        assertReconnectAudit(db, acme, "PRCRSAME", List.of("10002"), 3);
+        assertThat(snapshot(TwoTenantDatabases.tenantB())).isEqualTo(beta);
         assertThat(snapshot(TwoTenantDatabases.main())).isEqualTo(main);
+    }
+
+    @Test
+    void reconnectsAnAliasUnderJirasCanonicalKey_AC_003_1_AC_003_10() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        UUID id = removed(db, "PRCRALIAS", OWN, CALLER);
+        perform(TwoTenantDatabases.ACME, CALLER, body("PRCRALIAS"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.projectId").value(id.toString()))
+                .andExpect(jsonPath("$.jiraProjectKey").value("PRCRCANON"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+        assertThat(db.queryForObject("SELECT jira_project_key FROM project WHERE public_id = ?", String.class, id))
+                .isEqualTo("PRCRCANON");
+        assertReconnectAudit(db, id, "PRCRCANON", List.of("10002"), 3);
+        assertThat(scope.runIn(
+                        TwoTenantDatabases.ACME, () -> projectService.findActivePublicIdByJiraProjectKey("PRCRCANON")))
+                .contains(id);
+        assertThat(tracker.calls()).containsExactly("PRCRALIAS");
+    }
+
+    @Test
+    void conditionalReconnectUpdatesNothingOnAnActiveRow_AC_003_8() {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        UUID id = removed(db, "PRCRCHK", OWN, null);
+        db.update("UPDATE project SET status = 'ACTIVE' WHERE public_id = ?", id);
+        String before = projectRow(db, id);
+        assertThat(scope.runIn(
+                        TwoTenantDatabases.ACME, () -> links.reconnectProject(id, "PRCRCANON", List.of("10002"), 3)))
+                .isZero();
+        assertThat(projectRow(db, id)).isEqualTo(before);
+    }
+
+    /** Forces the waiter: the Save blocks on the Removed row's lock while another transaction activates it. */
+    @Test
+    void refusesAReconnectThatWaitedForAConcurrentActivation_AC_003_8() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        UUID id = removed(db, "PRCRWAIT", OWN, null);
+        List<String> members = memberships(db, id);
+        int auditsBefore = auditCount();
+        try (var pool = Executors.newSingleThreadExecutor();
+                Connection holder = db.getDataSource().getConnection()) {
+            holder.setAutoCommit(false);
+            try (var lock = holder.prepareStatement("SELECT 1 FROM project WHERE public_id = ? FOR UPDATE")) {
+                lock.setObject(1, id);
+                lock.executeQuery().close();
+            }
+            Future<MockHttpServletResponse> save =
+                    pool.submit(() -> perform(TwoTenantDatabases.ACME, CALLER, body("PRCRWAIT"))
+                            .andReturn()
+                            .getResponse());
+            try {
+                ProjectApiITConfiguration.awaitBlockedBy(db, holder);
+                try (var activate =
+                        holder.prepareStatement("UPDATE project SET status = 'ACTIVE' WHERE public_id = ?")) {
+                    activate.setObject(1, id);
+                    activate.executeUpdate();
+                }
+                holder.commit();
+            } finally {
+                holder.rollback(); // no-op after the commit; releases the lock if the wait failed
+            }
+            MockHttpServletResponse response = save.get(30, TimeUnit.SECONDS);
+            assertThat(response.getStatus()).as(response.getContentAsString()).isEqualTo(409);
+            JsonNode problem = mapper.readTree(response.getContentAsString());
+            assertThat(problem.get("code").asText()).isEqualTo("MSG49");
+            assertThat(problem.get("params").get("department_name").asText()).isEqualTo(OWN_NAME);
+            assertThat(problem.get("fieldErrors").get(0).get("field").asText()).isEqualTo("jiraProjectKey");
+        }
+        assertThat(db.queryForMap(
+                        "SELECT status, review_range, done_status = CAST('[\"10000\"]' AS jsonb) AS ids_kept"
+                                + " FROM project WHERE public_id = ?",
+                        id))
+                .containsEntry("status", "ACTIVE")
+                .containsEntry("review_range", 9)
+                .containsEntry("ids_kept", true);
+        assertThat(memberships(db, id)).isEqualTo(members);
+        assertThat(auditCount()).isEqualTo(auditsBefore);
+        assertThat(tracker.calls()).containsExactly("PRCRWAIT");
     }
 
     private void assertReconnectAudit(JdbcTemplate db, UUID id, String key, List<String> ids, int range)

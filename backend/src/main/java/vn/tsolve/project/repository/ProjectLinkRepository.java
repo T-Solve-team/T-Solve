@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import vn.tsolve.project.dto.ProjectResponse;
 import vn.tsolve.project.dto.ProjectRowResponse;
 import vn.tsolve.project.dto.ProjectRowResponse.ProjectManagerRef;
+import vn.tsolve.project.entity.ProjectStatus;
 
 @Repository
 public class ProjectLinkRepository {
@@ -164,7 +165,7 @@ public class ProjectLinkRepository {
                                 rs.getString("jira_project_key"),
                                 readDoneStatusIds(rs.getString("done_status")),
                                 rs.getInt("review_range"),
-                                rs.getString("status")))
+                                status(rs.getString("status"))))
                 .stream()
                 .findFirst();
     }
@@ -190,8 +191,13 @@ public class ProjectLinkRepository {
                     rs.getString("jira_project_key"),
                     managerId == null ? null : new ProjectManagerRef(managerId, rs.getString("manager_name")),
                     rs.getInt("member_count"),
-                    rs.getString("status"));
+                    status(rs.getString("status")));
         });
+    }
+
+    /** Through the enum, so an unknown stored value fails as 500 MSG06 instead of reaching the client (D54). */
+    private static String status(String stored) {
+        return ProjectStatus.valueOf(stored).name();
     }
 
     private String writeDoneStatusIds(List<String> ids) {

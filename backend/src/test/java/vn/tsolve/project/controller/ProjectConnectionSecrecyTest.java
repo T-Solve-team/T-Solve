@@ -177,7 +177,9 @@ class ProjectConnectionSecrecyTest {
                         seen.add(ThrowableProxyUtil.asString(event.getThrowableProxy()));
                     }
                 });
-        assertThat(logs.list).as("logs were captured").isNotEmpty();
+        assertThat(logs.list)
+                .as("T-Solve's own tracker logs were captured, not only the fake Jira's")
+                .anyMatch(event -> event.getLoggerName().startsWith("vn.tsolve.tracker"));
         for (String text : seen) {
             for (String planted : PLANTED) {
                 assertThat(text)

@@ -215,6 +215,21 @@ describe('AddProjectModal errors', () => {
     },
   );
 
+  it('AC-006.19 leaves a 401 to the shared MSG07 dialog with no toast of its own', async () => {
+    answerNext(TEST, () => problem(401, 'MSG07'));
+    const { user, dialog } = await renderPopup();
+
+    await enterKey(user, dialog, 'new1');
+    await click(user, dialog, 'Test connection');
+    // antd prints the dialog title twice; every copy must sit in a dialog, none in a toast.
+    const shown = await screen.findAllByText(msg('MSG07'));
+    await waitFor(() => expect(keyInput(dialog)).toBeEnabled());
+    expect(shown.length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(msg('MSG07')).filter((el) => !el.closest('[role="dialog"]')),
+    ).toHaveLength(0);
+  });
+
   it.each(NON_FIELD)(
     'AC-006.19 AC-006.20 shows the Save error $name once by its code and keeps the settings (rows 21, 24)',
     async ({ response, code }) => {

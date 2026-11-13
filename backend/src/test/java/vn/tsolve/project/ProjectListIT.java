@@ -138,6 +138,16 @@ class ProjectListIT {
     }
 
     @Test
+    void failsLoudlyOnAnUnknownStoredStatusInsteadOfSendingOrHidingIt_AC_004_1() throws Exception {
+        project(TwoTenantDatabases.tenantA(), "PLSODD", OWN, "DISABLED", null);
+        perform(TwoTenantDatabases.ACME, CALLER, list())
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("MSG06"))
+                .andExpect(jsonPath("$.params").isEmpty())
+                .andExpect(jsonPath("$.projects").doesNotExist());
+    }
+
+    @Test
     void readsWithoutJiraOrAnyPersistedChange_AC_004_8() throws Exception {
         List<Map<String, Object>> tenant = snapshot(TwoTenantDatabases.tenantA());
         List<Map<String, Object>> main = snapshot(TwoTenantDatabases.main());

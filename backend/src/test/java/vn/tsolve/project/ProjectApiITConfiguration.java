@@ -1,5 +1,7 @@
 package vn.tsolve.project;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -8,6 +10,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.tracker.dto.TrackerProjectLookup;
@@ -22,6 +25,31 @@ public class ProjectApiITConfiguration {
     @Primary
     FakeTrackerProjectService fakeTrackerProjectService() {
         return new FakeTrackerProjectService();
+    }
+
+    /**
+     * Waits until some session of {@code db} is blocked by {@code holder}'s locks, so a waiter IT commits the holder
+     * only once the Save really waits. Polls the condition for at most 10 s; never a blind sleep.
+     */
+    public static void awaitBlockedBy(JdbcTemplate db, Connection holder) throws SQLException, InterruptedException {
+        int holderPid;
+        try (var statement = holder.createStatement();
+                var rs = statement.executeQuery("SELECT pg_backend_pid()")) {
+            rs.next();
+            holderPid = rs.getInt(1);
+        }
+        long deadline = System.nanoTime() + 10_000_000_000L;
+        while (System.nanoTime() < deadline) {
+            Integer waiting = db.queryForObject(
+                    "SELECT count(*) FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid))",
+                    Integer.class,
+                    holderPid);
+            if (waiting != null && waiting > 0) {
+                return;
+            }
+            Thread.sleep(20);
+        }
+        throw new AssertionError("No session waited on the holder's lock within 10 s");
     }
 
     public static class FakeTrackerProjectService implements TrackerProjectService {

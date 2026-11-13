@@ -43,7 +43,7 @@ describe('JiraIntegrationPage', () => {
     server.events.removeAllListeners();
   });
 
-  it('AC-005.1 AC-005.2 AC-005.5 loads the Projects and shows the read-only Department and the table', async () => {
+  it('AC-005.1 AC-005.2 AC-005.3 AC-005.5 loads the Projects and shows the read-only Department and the table', async () => {
     const requests = countListRequests();
     renderApp('/jira-integration', { role: 'PROJECT_MANAGER' });
 
@@ -67,7 +67,7 @@ describe('JiraIntegrationPage', () => {
     expect(screen.queryByRole('row', { name: /\bSUP\b/ })).not.toBeInTheDocument();
   });
 
-  it('AC-005.3 keeps the returned row order instead of sorting by key (D55)', async () => {
+  it('AC-005.2 keeps the returned row order instead of sorting by key (D55)', async () => {
     const row = (suffix: string, jiraProjectKey: string) => ({
       projectId: `00000000-0000-4000-8000-0000000003${suffix}`,
       jiraProjectKey,
