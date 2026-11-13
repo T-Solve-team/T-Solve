@@ -155,14 +155,14 @@
       "currentPhase": "implement",
       "features": {
         "project-done-statuses-schema": "passing",
-        "project-connection-test": "evaluating",
+        "project-connection-test": "passing",
         "project-create": "passing",
-        "project-reconnect": "pending",
+        "project-reconnect": "evaluating",
         "project-list": "pending",
         "jira-integration-projects-table": "pending",
         "jira-integration-add-project": "pending"
       },
-      "lastUpdated": "2026-11-12T19:30:59.057Z",
+      "lastUpdated": "2026-11-13T02:52:25.818Z",
       "branch": "feat/project-integration",
       "repos": [
         "default"

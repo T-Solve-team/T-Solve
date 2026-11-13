@@ -3,8 +3,8 @@ module: project-integration
 feature: project-connection-test
 task: 2
 verdict: pass
-attempt: 1
-date: 2026-11-12
+attempt: 2
+date: 2026-11-13
 reviewer: harnessclaude-reviewer
 iteration: 1
 ---
@@ -245,3 +245,165 @@ test findings are Issues 1 and 3.
 
 The dispatcher asked for this review file only, so there is no separate test report file; the run results are in
 this section.
+
+---
+
+# Attempt 2 — 2026-11-13
+
+verdict: **pass** · reviewer: harnessclaude-reviewer (Claude only, D49) · commits `93fcab68` (test files and
+`docs/bug-log.md`) and `1a0795ac` (harness)
+
+## Summary
+
+The fix closes both findings it was meant to close: MAJOR-1 (the AC-001.17 test could not fail) and MINOR-3 (two
+tests mislabelled `_AC_007_3`). MINOR-2 (AC-002.14) goes to Task 3 under D48 and is not re-reviewed here. No
+production code changed. I checked that with `git show --stat 93fcab68`: the commit touches only 3 test files and
+the bug log.
+
+- **The new test.** `ProjectConnectionSecrecyTest` (`backend/src/test/java/vn/tsolve/project/controller/ProjectConnectionSecrecyTest.java`)
+  plants the values where they really enter:
+  - It uses the real `TrackerProjectServiceImpl` and the real `JiraClient` (public constructor, so the real
+    `SimpleClientHttpRequestFactory`) against a WireMock fake Jira.
+  - The service account is `svc@acme.atlassian.test` / `ATATT-planted-token`.
+  - Every Jira body (200, 401, 403, 404, 500, statuses 500, 200 without a key) holds the email, the token or the
+    `planted-secret-body` marker.
+  - Answers are rendered by the real `ProjectController` and `GlobalExceptionHandler` in a standalone MockMvc. There
+    is no Spring context, as D43 requires.
+  - The ROOT logger is captured at ALL. The test checks each event's formatted message, raw message, arguments and
+    throwable, plus the response body and headers. The forbidden strings include the Base64 of `email:token`.
+- **The old test.** The `ProjectServiceImplTest` test that planted nothing is removed. It was the only method the
+  commit removed.
+- **The renames.** `ProjectControllerTest.java:154,161` are now `..._AC_001_2`. AC-007.3 is still covered by
+  `refusesEmployeeWithValidBody_AC_007_3` and `refusesAdminWithValidBody_AC_007_3` (`:141,148`).
+
+## Mutation check (mine)
+
+I applied each mutation alone in the scratch worktree, ran the tests, then ran `git checkout`. Afterwards
+`git status --porcelain` was empty. Order "ctx first" means
+`-Dtest='ProjectControllerTest,ProjectConnectionSecrecyTest' -Dsurefire.runOrder=reversealphabetical`, which runs
+the `@WebMvcTest` context first. With `alphabetical`, `ProjectConnectionSecrecyTest` sorts before
+`ProjectControllerTest` (`Conn` < `Cont`), so that order would not reproduce the full run.
+
+| # | Mutation | Order | Result |
+|---|---|---|---|
+| X0 | Drop `"sun.net.www"` from the test's exclusion list (`:77`) | ctx first | **FAIL 8/8.** The captured text is `Authorization: Basic c3ZjQGFjbWUuYXRsYXNzaWFuLnRlc3Q6...` from loggers `sun.net.www.MessageHeader` and `sun.net.www.http.HttpClient`. This confirms the session log's account. |
+| M1 | `log.debug("lookup as {}", account.get().apiToken())` on the found path, `TrackerProjectServiceImpl.java:49` | ctx first | **FAIL 2/8** (`[found]`, `[canonical key linked]`) |
+| M1 | same | alone | **FAIL 2/8** (same cases). DEBUG is captured with or without the Spring bridge. |
+| M2 | `.trace("Jira said {}", e.getResponseBodyAsString())` in `JiraClient.call`'s `RestClientResponseException` catch (`:155`) | ctx first | **FAIL 5/8** (`[401]`, `[403]`, `[404]`, `[500]`, `[statuses 500]`) |
+| M3 | Status name replaced by `account.get().email()` (`TrackerProjectServiceImpl.java:47`), so it reaches the Project's rendered 200 | ctx first | **FAIL 1/8** (`[found]`). The MSG49 case renders no statuses, which is correct. |
+
+The test fails on a leak at the log, throwable and rendered-response layers. A mutation in Project code alone cannot
+plant a value: `ProjectServiceImpl` holds no `JiraServiceAccount` and sees only `TrackerProjectLookup` (key,
+statuses, outcome). `GlobalExceptionHandler` never logs or renders `getMessage()`. So the leak paths into Project are
+the lookup's fields, and M3 covers those.
+
+## Is the `sun.net.www` exclusion sound?
+
+**Yes, for this test. It does hide one residual risk, which is configuration-gated and outside Task 2's code**
+(Issue A2-1).
+
+**Why the exclusion is sound:**
+- The prefix matches only the JDK's own `HttpURLConnection` loggers. No T-Solve logger (`vn.tsolve.*`) or Spring
+  logger is excluded.
+- At ALL, Spring's `org.springframework.web.client` and `org.springframework.http` DEBUG/TRACE lines were captured,
+  and they carried nothing planted.
+- The trace appears only when a Spring context has installed the JUL-to-SLF4J bridge and its level propagation, and
+  the test then lowers ROOT to ALL. `application.yml:53-58` leaves ROOT at Spring Boot's INFO default, so the
+  application never emits it as configured.
+
+**The risk it hides:** nothing pins that logger. If an operator sets `logging.level.root=DEBUG` (or
+`logging.level.sun.net.www=DEBUG`), the JDK logs the Jira `Authorization: Basic` header, which is the service
+account's email and token, on every Jira call in every module that uses `JiraClient`. As written, the test can
+never catch this.
+
+## Traceability
+
+At `1a0795ac` (worktree) and in the main checkout (which holds Task 4 work in progress), the result is the same:
+
+```
+  ✓ AC-001.17  backend/src/test/java/vn/tsolve/project/controller/ProjectConnectionSecrecyTest.java
+  ✓ AC-007.3  backend/src/test/java/vn/tsolve/project/controller/ProjectControllerTest.java
+trace project-integration (STORY-001, STORY-007): 30/30 acceptance criteria have a test
+```
+
+There are no ✗ rows. AC-001.17 now points at a test that can fail (mutations above).
+
+## Issues (attempt 2)
+
+No CRITICAL or MAJOR findings. None of these blocks.
+
+**A2-1. LOW: the JDK HTTP client's header trace is unpinned.**
+- **Location:** `backend/src/main/resources/application.yml:53-58` and
+  `backend/src/test/java/vn/tsolve/project/controller/ProjectConnectionSecrecyTest.java:73-77`.
+- **Problem:** at DEBUG, `sun.net.www` logs `Authorization: Basic <base64(email:token)>`. AC-001.17, AC-013.12 and
+  tracker NFR 9 forbid that. The test excludes this logger, so it cannot guard against it.
+- **Fix:** add `sun.net.www: INFO` under `logging.level` in `application.yml`, with a comment. Then drop
+  `"sun.net.www"` from the test's list. An explicit logger level wins over ROOT=ALL, so a full run (context first)
+  then guards the pin.
+- **Ownership:** this is tracker (`JiraClient`) config, so it is a quick change, not Task 2 code. It is a judgment
+  call (Assumptions, item A2-a).
+
+**A2-2. INFO: the "logs were captured" check can pass on WireMock's lines alone.**
+- **Location:** `ProjectConnectionSecrecyTest.java:180`.
+- **Problem:** `assertThat(logs.list).isNotEmpty()` counts WireMock's own events too. M1 shows T-Solve lines are
+  captured today, but the check would not notice if the appender lost them.
+- **Fix:** assert that at least one event's logger name starts with `vn.tsolve.tracker`. Every case logs one.
+
+**A2-3. INFO: the WireMock deviation from D48 is not recorded.**
+- **Location:** `harnessclaude/artifacts/04-plans/project-integration/iteration-1/kan-127-decisions.md:54`.
+- **Problem:** D48 says `MockRestServiceServer`; the test uses WireMock.
+- **Why the deviation is sound:**
+  - D48's reason, "no new dependency", still holds. `wiremock-standalone` has been a test dependency since
+    `116c681f` (`backend/pom.xml:127-132`) and is used by 6 other test classes.
+  - WireMock is the stronger choice. It drives the real request factory and `HttpURLConnection`, which is how the
+    header trace in A2-1 came to light. `MockRestServiceServer` replaces the request factory, so that trace would
+    have stayed invisible.
+- **Fix:** add a note to D48, or a new decision row, saying WireMock was used and why.
+
+## Assumptions made (attempt 2)
+
+- **A2-a.** I grade A2-1 as LOW and non-blocking. As configured, the application never logs the header, and the
+  logger is JDK and tracker plumbing, not Task 2's Project code. If AC-001.17's "all Project logs" must hold under
+  any log level an operator might choose, A2-1 becomes a required fix, and it should go to the tracker module as a
+  quick change. **Open judgment call for the user.**
+- **A2-b.** A Project-only mutation cannot leak a planted value, because Project never holds one. So I mutated the
+  tracker boundary (M1-M3) and checked the Project rendering through M3. I count that as proving the Project-side
+  guarantee.
+- **A2-c.** MINOR-2 (AC-002.14) belongs to Task 3 under D48. It is outside this attempt.
+
+## Test Report (attempt 2)
+
+Isolated worktree at `1a0795ac`
+(`C:/Users/admin/AppData/Local/Temp/claude/53e9b9e089520e92/64463b39-cd5d-4751-a518-aad974551625/scratchpad/wt-review-t2`,
+removed afterwards). Git Bash, IntelliJ JBR.
+
+1. `mvn -B -Dapi.version=1.44 -Dtest='ProjectConnectionSecrecyTest,ProjectControllerTest,ProjectServiceImplTest' -Dsurefire.failIfNoSpecifiedTests=false test spotless:check`
+   (log `C:/Users/admin/AppData/Local/Temp/claude/53e9b9e089520e92/64463b39-cd5d-4751-a518-aad974551625/scratchpad/kan127-t2a2-run1.log`):
+   ```
+   Tests run: 8, Failures: 0, Errors: 0, Skipped: 0 -- in vn.tsolve.project.controller.ProjectConnectionSecrecyTest
+   Tests run: 68, Failures: 0, Errors: 0, Skipped: 0 -- in vn.tsolve.project.controller.ProjectControllerTest
+   Tests run: 102, Failures: 0, Errors: 0, Skipped: 0 -- in vn.tsolve.project.service.impl.ProjectServiceImplTest
+   Tests run: 178, Failures: 0, Errors: 0, Skipped: 0
+   --- spotless:3.2.0:check (default-cli) @ t-solve-backend ---
+   BUILD SUCCESS
+   ```
+2. Context first: `-Dtest='ProjectControllerTest,ProjectConnectionSecrecyTest' -Dsurefire.runOrder=reversealphabetical test`
+   (log `C:/Users/admin/AppData/Local/Temp/claude/53e9b9e089520e92/64463b39-cd5d-4751-a518-aad974551625/scratchpad/kan127-t2a2-ordered.log`):
+   ```
+   Running vn.tsolve.project.controller.ProjectControllerTest
+   Tests run: 68, Failures: 0, Errors: 0, Skipped: 0 -- in vn.tsolve.project.controller.ProjectControllerTest
+   Running vn.tsolve.project.controller.ProjectConnectionSecrecyTest
+   Tests run: 8, Failures: 0, Errors: 0, Skipped: 0 -- in vn.tsolve.project.controller.ProjectConnectionSecrecyTest
+   Tests run: 76, Failures: 0, Errors: 0, Skipped: 0
+   BUILD SUCCESS
+   ```
+3. Mutations: script
+   `C:/Users/admin/AppData/Local/Temp/claude/53e9b9e089520e92/64463b39-cd5d-4751-a518-aad974551625/scratchpad/kan127-t2a2-mutate.sh`,
+   summary
+   `C:/Users/admin/AppData/Local/Temp/claude/53e9b9e089520e92/64463b39-cd5d-4751-a518-aad974551625/scratchpad/kan127-t2a2-mutations.log`.
+   The table is above. Every mutation failed the test, and the worktree was clean afterwards.
+
+The full verify at this state comes from the session log; I did not run it. It reports unit 1607/0, and IT 462 with
+1 failure: `ReviewQueueEventsIT` (`edge3_noEventForAChangeInAnotherWorkspace_AC_012_3`), which is in ticket-review
+and untouched here. That class passed 18/18 when rerun alone, and the failure is recorded under BUG-186. The
+dispatcher asked for this review file only, so there is no separate test report file.

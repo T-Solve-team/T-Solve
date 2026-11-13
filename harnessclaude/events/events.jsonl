@@ -1239,3 +1239,6 @@
 {"ts":"2026-11-12T19:00:53.580Z","type":"feature-status","module":"project-integration","feature":"project-done-statuses-schema","from":"evaluating","to":"passing"}
 {"ts":"2026-11-12T19:01:06.661Z","type":"feature-status","module":"project-integration","feature":"project-create","from":"evaluating","to":"passing"}
 {"ts":"2026-11-12T19:30:59.060Z","type":"feature-status","module":"project-integration","feature":"project-connection-test","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-12T19:35:15.010Z","type":"feature-status","module":"project-integration","feature":"project-reconnect","from":"pending","to":"in-progress"}
+{"ts":"2026-11-12T19:41:28.147Z","type":"feature-status","module":"project-integration","feature":"project-connection-test","from":"evaluating","to":"passing"}
+{"ts":"2026-11-13T02:52:25.820Z","type":"feature-status","module":"project-integration","feature":"project-reconnect","from":"in-progress","to":"evaluating"}
