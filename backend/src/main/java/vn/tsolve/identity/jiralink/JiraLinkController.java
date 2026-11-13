@@ -6,9 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -43,13 +40,10 @@ public class JiraLinkController {
     private static final String MSG141_TEXT =
             "This sign-in request is not valid or has expired. Please start the sign-in again.";
 
-    private static final Logger log = LoggerFactory.getLogger(JiraLinkController.class);
     private static final String MSG75 = "MSG75";
-    private static final String MSG06 = "MSG06";
-    private static final String MSG06_TEXT = "Something went wrong. Please try again later.";
 
     private final JiraLinkRequestService requests;
-    private final JiraAccountLinkRepository links;
+    private final JiraAccountLinkService links;
     private final IdentityClock clock;
     private final AuthHosts hosts;
     private final WorkspaceLookup workspaces;
@@ -57,7 +51,7 @@ public class JiraLinkController {
 
     public JiraLinkController(
             JiraLinkRequestService requests,
-            JiraAccountLinkRepository links,
+            JiraAccountLinkService links,
             IdentityClock clock,
             AuthHosts hosts,
             WorkspaceLookup workspaces,
@@ -94,14 +88,8 @@ public class JiraLinkController {
         if (found.isEmpty()) {
             return invalid();
         }
-        try {
-            // the tracker account is the stored one; the Account is the session's (AC-001.38)
-            links.upsert(new JiraAccountLink(found.get().trackerAccountId(), user.id(), clock.now()));
-        } catch (DataAccessException e) {
-            // class name only: the message carries SQL; the request stays used up
-            log.error("Recording a Jira account link failed ({})", e.getClass().getName());
-            return failed();
-        }
+        // the tracker account is the stored one; the Account is the session's (AC-001.38)
+        links.link(found.get().trackerAccountId(), user.id(), clock.now());
         return ResponseEntity.ok(Map.of("code", MSG75));
     }
 
@@ -120,14 +108,6 @@ public class JiraLinkController {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private static ResponseEntity<ProblemDetail> failed() {
-        ProblemDetail problem = ProblemDetails.withCode(
-                ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, MSG06_TEXT), MSG06, Map.of());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-                .body(problem);
     }
 
     private static ResponseEntity<ProblemDetail> invalid() {

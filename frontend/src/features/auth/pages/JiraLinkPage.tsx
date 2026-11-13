@@ -33,6 +33,7 @@ export function JiraLinkPage() {
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<'MSG141' | 'MSG06' | null>(null);
   const [linked, setLinked] = useState(false);
+  const [usedUp, setUsedUp] = useState(false);
   const sending = useRef(false);
   const signInStarted = useRef(false);
 
@@ -60,6 +61,11 @@ export function JiraLinkPage() {
       }
       if (isApiError(error) && error.status === 400) setFailure('MSG141');
       else setFailure('MSG06');
+      if (isApiError(error) && error.status >= 500) {
+        // the request is used up: show MSG06 and keep the Link button hidden
+        setUsedUp(true);
+        return;
+      }
     }
     sending.current = false;
     setPending(false);
@@ -98,14 +104,16 @@ export function JiraLinkPage() {
                 {failure ? <Typography.Text type="danger">{msg(failure)}</Typography.Text> : null}
               </div>
               <Flex gap="small">
-                <Button
-                  type="primary"
-                  disabled={pending}
-                  aria-busy={pending}
-                  onClick={() => void handleLink()}
-                >
-                  Link
-                </Button>
+                {usedUp ? null : (
+                  <Button
+                    type="primary"
+                    disabled={pending}
+                    aria-busy={pending}
+                    onClick={() => void handleLink()}
+                  >
+                    Link
+                  </Button>
+                )}
                 <Button onClick={() => void navigate('/')}>Cancel</Button>
               </Flex>
             </>
