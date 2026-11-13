@@ -13,7 +13,9 @@ paths:
   - frontend/src/shared/api/generated/**
   - docs/bug-log.md
   - backend/src/main/java/vn/tsolve/common/audit/AuditAction.java
-  - frontend/src/features/audit-log/**
+  - frontend/src/features/audit-log/hooks/audit-filters.ts
+  - frontend/src/features/audit-log/mocks/data.ts
+  - frontend/src/features/audit-log/mocks/handlers.test.ts
 ---
 
 # Module: project-integration

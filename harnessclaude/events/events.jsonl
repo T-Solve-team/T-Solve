@@ -1246,3 +1246,6 @@
 {"ts":"2026-11-13T07:04:29.762Z","type":"feature-status","module":"project-integration","feature":"project-members-api","from":"pending","to":"in-progress"}
 {"ts":"2026-11-13T08:15:37.090Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"782e23ff6a94c4981ac521c34c9cece7391a05f8"}
 {"ts":"2026-11-13T08:15:37.362Z","type":"feature-status","module":"project-integration","feature":"project-members-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-13T08:15:43.037Z","type":"feature-status","module":"project-integration","feature":"project-members-tab","from":"pending","to":"in-progress"}
+{"ts":"2026-11-13T09:04:01.790Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"0af04d13dff8d4c4510726293e4af4af25cf3ecd"}
+{"ts":"2026-11-13T09:04:02.148Z","type":"feature-status","module":"project-integration","feature":"project-members-tab","from":"in-progress","to":"evaluating"}
