@@ -7,4 +7,6 @@ import java.util.UUID;
 public record UserSummaryResponse(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED) UUID id,
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String fullName,
-        @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String email) {}
+
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED, format = "email")
+        String email) {}

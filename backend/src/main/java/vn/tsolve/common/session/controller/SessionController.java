@@ -1,6 +1,7 @@
 package vn.tsolve.common.session.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,6 +24,8 @@ public class SessionController {
     @Operation(
             operationId = "getMe",
             summary = "The signed-in user with all their roles, Department(s), Projects and managed Spaces.")
+    @ApiResponse(responseCode = "200")
+    @ApiResponse(responseCode = "401")
     @PreAuthorize("hasRole('" + Roles.EMPLOYEE + "')")
     public ResponseEntity<CurrentUserResponse> getMe() {
         return ResponseEntity.ok(service.getMe());

@@ -7,7 +7,9 @@ import vn.tsolve.common.security.Role;
 @Schema(name = "CurrentUser")
 public record CurrentUserResponse(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED) UserSummaryResponse user,
-        @Schema(requiredMode = Schema.RequiredMode.REQUIRED) List<Role> roles,
+
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED, enumAsRef = true)
+        List<Role> roles,
 
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
         DepartmentRef department,

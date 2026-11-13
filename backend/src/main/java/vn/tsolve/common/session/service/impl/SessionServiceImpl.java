@@ -1,8 +1,9 @@
 package vn.tsolve.common.session.service.impl;
 
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Function;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -43,16 +44,17 @@ public class SessionServiceImpl implements SessionService {
         var department = ask(departments, lookup -> lookup.findDepartment(id), Optional.<DepartmentRef>empty())
                 .orElse(null);
         var memberships = ask(projects, lookup -> lookup.findProjects(id), List.<ProjectMembership>of());
-        var all = new LinkedHashSet<DepartmentRef>();
+        var all = new LinkedHashMap<UUID, DepartmentRef>();
         if (department != null) {
-            all.add(department);
+            all.putIfAbsent(department.departmentId(), department);
         }
-        memberships.forEach(p -> all.add(new DepartmentRef(p.departmentId(), p.departmentName())));
+        memberships.forEach(
+                p -> all.putIfAbsent(p.departmentId(), new DepartmentRef(p.departmentId(), p.departmentName())));
         return new CurrentUserResponse(
                 new UserSummaryResponse(id, principal.fullName(), principal.email()),
                 principal.roles().stream().sorted().toList(),
                 department,
-                List.copyOf(all),
+                List.copyOf(all.values()),
                 memberships,
                 ask(spaces, lookup -> lookup.findManagedSpaces(id), List.of()),
                 ask(workspace, WorkspaceStatusLookup::isCompanyInformationEntered, false));

@@ -8,4 +8,6 @@ public record ProjectMembership(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String jiraProjectKey,
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED) UUID departmentId,
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String departmentName,
-        @Schema(requiredMode = Schema.RequiredMode.REQUIRED) ProjectRole roleInProject) {}
+
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED, enumAsRef = true)
+        ProjectRole roleInProject) {}
