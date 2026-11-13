@@ -1155,8 +1155,8 @@
     }
   },
   "workspace": {
-    "specHash": "8a42bb6e4d9d611e2f4cedd1d7d760057f54a1179cd496c0526ae1d52df92a69",
-    "approvedAt": "2026-11-11T18:20:04.517Z",
+    "specHash": "076541991f7a0047bc4b4f552c7a9e7fc5f64d63ce4a91d9a6edda57b26fc8be",
+    "approvedAt": "2026-11-13T14:25:00.825Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN an Admin sends  with an allowed name, THE system SHALL store one Department in status  under that name with leading and trailing whitespace removed and inner spaces kept, and answer 201 with its  and stored .",

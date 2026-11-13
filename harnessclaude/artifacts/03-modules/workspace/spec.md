@@ -41,7 +41,7 @@ These are known limits of the code this story builds on. They are not defects of
 2. A real Keycloak sign-in cannot reach this screen until KAN-275 lands.
 3. The web app does not send the CSRF header yet, so a browser POST to the real backend gets 403. That is a separate quick change to `frontend/src/shared/api/http.ts` for every write (decision D17). This story is verified with MSW and backend tests.
 4. In browser mock mode a new Department shows MSG05 but does not appear in the table or the Add User form, because the `users` mock answers `GET /api/v1/users/departments` from a static list. AC-002.9 is proven by a page test that overrides that GET.
-5. The shipped app has one datasource until the tenant layer (KAN-98, KAN-99) lands. AC-001.14 and AC-003.19 are proven with the test router in `TwoTenantDatabases`.
+5. The shipped app has one datasource until the tenant layer (KAN-98, KAN-99) lands. AC-001.14 and AC-003.20 are proven with the test router in `TwoTenantDatabases`.
 6. In browser mock mode a renamed Department keeps its old name in the 2.2 table, for the reason of item 4. The `workspace` mock serves 2.3 for the two Departments the `users` mock lists, by copying their ids and names, not importing them (decision D18). AC-004.9 is proven by a page test.
 
 ## User Stories

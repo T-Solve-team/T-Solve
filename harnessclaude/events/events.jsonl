@@ -1256,3 +1256,4 @@
 {"ts":"2026-11-13T12:30:26.172Z","type":"feature-status","module":"identity","feature":"jira-link-record","from":"pending","to":"in-progress"}
 {"ts":"2026-11-13T12:30:26.442Z","type":"feature-status","module":"identity","feature":"jira-link-record","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-13T12:30:26.709Z","type":"feature-status","module":"identity","feature":"jira-link-record","from":"evaluating","to":"passing"}
+{"ts":"2026-11-13T14:25:00.828Z","type":"spec-approved","module":"workspace","specHash":"076541991f7a0047bc4b4f552c7a9e7fc5f64d63ce4a91d9a6edda57b26fc8be"}
