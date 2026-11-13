@@ -40,6 +40,7 @@ class SignInPropertiesTest {
         env.put("TSOLVE_ADMIN_ORIGIN", SignInTestFixtures.ADMIN_ORIGIN);
         env.put("PLATFORM_OPERATOR_EMAILS", "ops@example.test");
         env.put("KEYCLOAK_WEB_CLIENT_SECRET", "test-keycloak-secret");
+        env.put("KEYCLOAK_CONSOLE_CLIENT_SECRET", "test-keycloak-console-secret");
         return env;
     }
 

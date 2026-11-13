@@ -2,6 +2,8 @@
 // manifest's endpoint to the tsolve-backend remote; Forge adds the FIT. Nothing here logs: questions and answers
 // are personal text (AC-010.12).
 import { invokeRemote } from '@forge/bridge';
+import { MOCK_DELAY_MS, mockAnswer } from './mockAnswers';
+import { USE_MOCK } from './mode';
 
 /** The page gives up after this long and shows MSG06 (AC-010.8); the backend stops at 18 s. */
 export const ASK_TIMEOUT_MS = 20000;
@@ -21,7 +23,10 @@ export class TsolveError extends Error {
 }
 
 /** Whether the viewer may ask (AC-010.2). */
-export async function getEligibility() {
+export async function getEligibility(useMock = USE_MOCK) {
+  if (useMock) {
+    return { linked: true };
+  }
   const response = await call({ path: `${QUESTIONS}/eligibility`, method: 'GET' });
   return { linked: response.body?.linked === true };
 }
@@ -30,7 +35,15 @@ export async function getEligibility() {
  * The Knowledge Chatbot's answer `{answerId, outcome, text, citations}` to `question`, sent with the last 10 of the
  * earlier `{question, answer}` turns (AC-010.3, AC-010.4).
  */
-export async function askQuestion(question, history = []) {
+export async function askQuestion(question, history = [], useMock = USE_MOCK) {
+  if (useMock) {
+    await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS));
+    const answer = mockAnswer(question);
+    if (!answer) {
+      throw new TsolveError('MSG06');
+    }
+    return answer;
+  }
   const response = await call({
     path: QUESTIONS,
     method: 'POST',

@@ -1,6 +1,7 @@
 package vn.tsolve.identity.jiralink;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static vn.tsolve.identity.session.SessionTestFixtures.sha256Hex;
 
 import java.util.ArrayList;
@@ -104,6 +105,22 @@ class JiraLinkRequestServiceTest extends AbstractSessionIT {
         assertThat(ids).hasSize(200);
         assertThat(all).noneMatch(x -> output.getAll().contains(x));
         assertThat(output.getAll()).doesNotContain(id);
+    }
+
+    @Test
+    @DisplayName("AC-001.69 edge 4 a blank, missing or over-long tracker account id is rejected; 128 characters pass")
+    void rejectsABlankMissingOrOverlongTrackerAccountId() {
+        assertThatThrownBy(() -> service.create(ACME.id(), "", JIRA_USER, SITE))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.create(ACME.id(), "   ", JIRA_USER, SITE))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.create(ACME.id(), null, JIRA_USER, SITE))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.create(ACME.id(), "a".repeat(129), JIRA_USER, SITE))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThat(idOf(service.create(ACME.id(), "a".repeat(128), JIRA_USER, SITE)))
+                .hasSize(43);
     }
 
     @Test

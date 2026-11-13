@@ -54,10 +54,10 @@
       "features": {
         "problem-errors": "passing",
         "roles-security": "passing",
-        "me-session": "pending",
+        "me-session": "passing",
         "audit-writer": "pending"
       },
-      "lastUpdated": "2026-11-04T14:50:22.250Z",
+      "lastUpdated": "2026-11-13T13:54:45.150Z",
       "branch": "feat/be-foundation",
       "repos": [
         "default"
@@ -80,9 +80,10 @@
         "site-sign-in": "passing",
         "host-routes": "passing",
         "uuid-ids": "passing",
-        "catalog-msg-new-3": "evaluating"
+        "catalog-msg-new-3": "evaluating",
+        "sign-out-logout-url": "passing"
       },
-      "lastUpdated": "2026-11-01T05:52:44.075Z",
+      "lastUpdated": "2026-11-12T17:59:39.575Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
@@ -122,7 +123,7 @@
         "account-sub-binding": "pending",
         "callback-workspace-checks": "passing",
         "user-role": "passing",
-        "logout-rp-initiated": "pending",
+        "logout-rp-initiated": "passing",
         "keycloak-provisioning": "passing",
         "keycloak-theme": "passing",
         "keycloak-prerequisites": "passing",
@@ -133,9 +134,13 @@
         "add-user-backend": "passing",
         "user-roles-backend": "passing",
         "user-status-backend": "passing",
-        "scope-checks": "passing"
+        "scope-checks": "passing",
+        "session-expiry-events": "passing",
+        "operator-session": "passing",
+        "session-replaced-event": "passing",
+        "jira-link-record": "passing"
       },
-      "lastUpdated": "2026-11-11T17:03:11.850Z",
+      "lastUpdated": "2026-11-13T12:30:26.708Z",
       "branch": "feat/identity",
       "repos": [
         "default"

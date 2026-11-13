@@ -63,7 +63,11 @@ public final class SignInTestFixtures {
 
     public static SignInProperties properties() {
         return new SignInProperties(
-                URI.create(LOGIN_ORIGIN), URI.create(ADMIN_ORIGIN), "ops@example.test", "test-keycloak-secret");
+                URI.create(LOGIN_ORIGIN),
+                URI.create(ADMIN_ORIGIN),
+                "ops@example.test",
+                "test-keycloak-secret",
+                "test-keycloak-console-secret");
     }
 
     /** Every Set-Cookie header value whose cookie has this name. */

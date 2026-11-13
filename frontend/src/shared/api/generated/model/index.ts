@@ -66,6 +66,7 @@ export * from './jiraLinkRequestInfo';
 export * from './jiraPullRequest';
 export * from './jiraReviewFeedback';
 export * from './listUnavailableCitedDocumentsParams';
+export * from './logout200';
 export * from './messageRef';
 export * from './messageRefParams';
 export * from './mySolution';

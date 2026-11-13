@@ -461,8 +461,16 @@ paths:
       operationId: logout
       summary: Ends the session (the backend clears the session cookie).
       responses:
-        '204':
-          description: Signed out.
+        '200':
+          description: >
+            Signed out. The session cookie is expired. Send the browser to logoutUrl to end the Keycloak session too.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [logoutUrl]
+                properties:
+                  logoutUrl: { type: string }
   /api/v1/auth/jira-link/{requestId}:
     get:
       tags: [session]
@@ -493,8 +501,8 @@ paths:
       summary: Confirms a Jira link request; consumes it whatever the outcome (AC-001.71, AC-001.72).
       description: >
         Needs a signed-in person of the Workspace and a CSRF token (header `X-XSRF-TOKEN`). The answers are checked in
-        the order session (401 MSG07), CSRF token (403), link request (400 MSG141). Until the account link is recorded
-        (Task 30b) a valid request answers 501.
+        the order session (401 MSG07), CSRF token (403), link request (400 MSG141). When the link cannot be recorded the
+        answer is 500 MSG06 and the request stays used up.
       requestBody:
         required: true
         content:
@@ -512,7 +520,7 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
-        '501':
+        '500':
           $ref: '#/components/responses/Problem'
   /api/v1/tickets/{ticketId}:
     get:

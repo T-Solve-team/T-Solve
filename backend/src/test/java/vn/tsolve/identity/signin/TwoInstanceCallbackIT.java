@@ -118,6 +118,7 @@ class TwoInstanceCallbackIT {
                         "--GOOGLE_CLIENT_SECRET=test-secret",
                         "--PLATFORM_OPERATOR_EMAILS=ops@example.test",
                         "--KEYCLOAK_WEB_CLIENT_SECRET=it-keycloak-web-client-secret",
+                        "--KEYCLOAK_CONSOLE_CLIENT_SECRET=it-keycloak-console-client-secret",
                         "--CORS_ALLOWED_ORIGINS=http://localhost:5173",
                         "--DB_HOST=" + DB.getHost(),
                         "--DB_PORT=" + DB.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT),
@@ -416,9 +417,9 @@ class TwoInstanceCallbackIT {
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
-    @ValueSource(strings = {"admin.localhost", "unknown.localhost"})
-    @DisplayName("AC-001.54 answers 404 to the callback on admin. and on a host that is no Workspace")
-    void answers404ToTheCallbackOnAdminAndOnAHostWithNoWorkspace_AC_001_54(String host) {
+    @ValueSource(strings = {"unknown.localhost"})
+    @DisplayName("AC-001.54 answers 404 to the callback on a host that is no Workspace")
+    void answers404ToTheCallbackOnAHostWithNoWorkspace_AC_001_54(String host) {
         TestBrowser browser = new TestBrowser();
         Started started = start(browser, portA, ACME);
         browser.setCookie(host, COOKIE, started.cookie());

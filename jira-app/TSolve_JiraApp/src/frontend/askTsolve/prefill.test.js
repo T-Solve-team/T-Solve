@@ -45,9 +45,9 @@ describe('prefill', () => {
     expect(paragraphs(description)).toEqual([
       'VPN fails',
       'Still failing',
-      'Đã thử theo T-Solve:',
+      'Tried with T-Solve:',
       'Restart the VPN [1] [2]',
-      'Nguồn:',
+      'Sources:',
       '[1] Solution from a ticket',
       '[2] VPN guide · Wiki document',
     ]);
@@ -64,7 +64,7 @@ describe('prefill', () => {
 
     expect(paragraphs(description)).toEqual([
       'VPN fails',
-      'Đã thử theo T-Solve:',
+      'Tried with T-Solve:',
       'I could not find an answer in the knowledge you can access. You can create an issue in Jira to ask for help.',
     ]);
   });
