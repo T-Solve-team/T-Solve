@@ -82,7 +82,7 @@ public class Ticket {
     @Column(name = "change_request_comment", columnDefinition = "text")
     private String changeRequestComment;
 
-    @Column(name = "writer_id", insertable = false, updatable = false)
+    @Column(name = "writer_id", updatable = false)
     private UUID writerId;
 
     @Column(name = "review_due_date", insertable = false, updatable = false)
@@ -126,6 +126,31 @@ public class Ticket {
         t.resolutionSteps = solution.resolutionSteps();
         t.workaround = solution.workaround();
         t.scope = solution.scope();
+        return t;
+    }
+
+    /** A ticket entered by hand by its Project Manager (UC-22): Published at once; they are its writer (D15). */
+    public static Ticket manual(
+            String ticketId,
+            UUID projectId,
+            Long importBatchId,
+            String title,
+            String description,
+            String writer,
+            UUID writerId,
+            LocalDate resolvedDate,
+            Solution solution) {
+        Ticket t = imported(
+                ticketId,
+                projectId,
+                TicketSource.MANUAL,
+                importBatchId,
+                title,
+                description,
+                writer,
+                resolvedDate,
+                solution);
+        t.writerId = writerId;
         return t;
     }
 

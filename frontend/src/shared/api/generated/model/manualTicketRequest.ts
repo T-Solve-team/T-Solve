@@ -19,7 +19,7 @@ export interface ManualTicketRequest {
   /** @nullable */
   description?: string | null;
   /**
-   * ISO date (yyyy-MM-dd), parsed on save (MSG02 when invalid, MSG39 when in the future).
+   * ISO date (yyyy-MM-dd), parsed on save (MSG39 when not a valid date or in the future).
    * @nullable
    */
   resolvedDate?: string | null;

@@ -3030,7 +3030,7 @@ components:
           type: [string, 'null']
         resolvedDate:
           type: [string, 'null']
-          description: ISO date (yyyy-MM-dd), parsed on save (MSG02 when invalid, MSG39 when in the future).
+          description: ISO date (yyyy-MM-dd), parsed on save (MSG39 when not a valid date or in the future).
         symptoms:
           type: [string, 'null']
         rootCause:
