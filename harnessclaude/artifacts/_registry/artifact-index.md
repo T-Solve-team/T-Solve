@@ -270,3 +270,4 @@ Master registry of all artifacts in this workspace.
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-29b-operator-session-test-report.md |
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-12-logout-url.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-12-logout-url-review.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/kan-14-staging-cd-review.md |
