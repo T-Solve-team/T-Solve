@@ -50,6 +50,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.retries.StandardRetryStrategy;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.tenant.TenantContext;
@@ -264,22 +265,40 @@ class ObjectFileStorageIT extends GarageTestBase {
 
     @Test
     @DisplayName("AC-007.9 maps generic S3 404 reads to MSG06 and propagates other S3 failures")
-    void mapsGenericReadNotFoundAndPropagatesOtherS3Failures_AC_007_9() {
+    void mapsOnlyAMissingKeyToNotFoundAndPropagatesOtherS3Failures_AC_007_9() {
         S3Client client = mock(S3Client.class);
         ObjectFileStorage isolated = storage(client);
         String key = UUID.randomUUID().toString();
         tenant.runIn(workspaceA, () -> {
-            doThrow((S3Exception) S3Exception.builder().statusCode(404).build())
+            doThrow(NoSuchKeyException.builder().statusCode(404).build())
                     .when(client)
                     .getObject(ArgumentMatchers.<Consumer<GetObjectRequest.Builder>>any());
             assertMissing(() -> isolated.read(key));
-            for (int status : new int[] {403, 500}) {
+            // A generic 404 (a missing bucket) is not a missing file.
+            for (int status : new int[] {404, 403, 500}) {
                 S3Exception failure =
                         (S3Exception) S3Exception.builder().statusCode(status).build();
                 doThrow(failure).when(client).getObject(ArgumentMatchers.<Consumer<GetObjectRequest.Builder>>any());
                 assertThatThrownBy(() -> isolated.read(key)).isSameAs(failure);
             }
         });
+    }
+
+    @Test
+    @DisplayName("AC-007.9 the startup check passes for the bucket and fails for a missing one")
+    void checksTheBucketAtStartup_AC_007_9() {
+        assertThatCode(storage::checkBucket).doesNotThrowAnyException();
+        StorageConfig.StorageProperties missing = new StorageConfig.StorageProperties(
+                endpoint(),
+                accessKey(),
+                secretKey(),
+                "missing-" + UUID.randomUUID(),
+                "http://{site}.localhost:" + s3Port(),
+                (long) TTL_SECONDS,
+                (long) MAX_BYTES);
+        ObjectFileStorage absent =
+                new ObjectFileStorage(storageClient, missing, tenantProvider(), catalogProvider());
+        assertThatThrownBy(absent::checkBucket).isInstanceOf(S3Exception.class);
     }
 
     @Test
@@ -419,8 +438,8 @@ class ObjectFileStorageIT extends GarageTestBase {
                 secretKey(),
                 bucket(),
                 "http://{site}.localhost:" + s3Port(),
-                TTL_SECONDS,
-                MAX_BYTES);
+                (long) TTL_SECONDS,
+                (long) MAX_BYTES);
     }
 
     private ObjectProvider<TenantContext> tenantProvider() {

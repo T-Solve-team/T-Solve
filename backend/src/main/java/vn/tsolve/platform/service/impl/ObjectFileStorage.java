@@ -10,10 +10,14 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -47,6 +51,8 @@ public class ObjectFileStorage implements FileStorage {
     private final StorageConfig.StorageProperties properties;
     private final ObjectProvider<TenantContext> tenantContext;
     private final ObjectProvider<WorkspaceCatalog> workspaceCatalog;
+    // One per Workspace site: the signed host differs per Workspace (D15), signing itself is offline.
+    private final Map<String, S3Presigner> presigners = new ConcurrentHashMap<>();
 
     public ObjectFileStorage(
             S3Client s3,
@@ -59,12 +65,26 @@ public class ObjectFileStorage implements FileStorage {
         this.workspaceCatalog = workspaceCatalog;
     }
 
+    /** Fails startup when the bucket is missing: a HEAD on a missing bucket is a body-less 404, like a missing key. */
+    @EventListener(ApplicationReadyEvent.class)
+    public void checkBucket() {
+        s3.headBucket(request -> request.bucket(properties.bucket()));
+    }
+
+    @PreDestroy
+    public void closePresigners() {
+        presigners.values().forEach(S3Presigner::close);
+        presigners.clear();
+    }
+
     @Override
     public StoredFile store(InputStream content) {
         UUID workspaceId = requireWorkspaceId();
+        // ponytail: buffers the whole file (up to FILE_STORAGE_MAX_BYTES, at most 100 MB); callers enforce the
+        // multipart limit first. Stream with a multipart upload if large files become normal.
         byte[] bytes;
         try {
-            int readLimit = (int) properties.maxBytes() + 1;
+            int readLimit = properties.maxBytes().intValue() + 1;
             bytes = content.readNBytes(readLimit);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -115,14 +135,15 @@ public class ObjectFileStorage implements FileStorage {
             throw new IllegalStateException("Workspace site name is not a valid host label");
         }
         URI endpoint = URI.create(properties.publicUrlPattern().replace("{site}", siteName));
-        try (S3Presigner presigner = S3Presigner.builder()
+        S3Presigner presigner = presigners.computeIfAbsent(siteName, site -> S3Presigner.builder()
                 .endpointOverride(endpoint)
                 .region(REGION)
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(properties.accessKey(), properties.secretKey())))
                 .serviceConfiguration(
                         S3Configuration.builder().pathStyleAccessEnabled(true).build())
-                .build()) {
+                .build());
+        try {
             GetObjectRequest get = GetObjectRequest.builder()
                     .bucket(properties.bucket())
                     .key(objectKey)
@@ -152,10 +173,16 @@ public class ObjectFileStorage implements FileStorage {
         return context.requireWorkspaceId();
     }
 
-    private static RuntimeException mapNotFound(S3Exception exception) {
-        if (exception instanceof NoSuchKeyException || exception.statusCode() == 404) {
+    private RuntimeException mapNotFound(S3Exception exception) {
+        if (exception instanceof NoSuchKeyException) {
             return new NotFoundException(ProblemDetails.UNEXPECTED_ERROR, Map.of());
         }
+        // No object key: it names the Workspace and the file.
+        log.error(
+                "Object storage request failed; bucket={}, status={}, code={}",
+                properties.bucket(),
+                exception.statusCode(),
+                exception.awsErrorDetails() == null ? null : exception.awsErrorDetails().errorCode());
         return exception;
     }
 

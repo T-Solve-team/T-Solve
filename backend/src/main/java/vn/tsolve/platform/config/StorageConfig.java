@@ -5,7 +5,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
@@ -58,20 +57,23 @@ public class StorageConfig {
     }
 
     @ConfigurationProperties("tsolve.storage")
-    @ConditionalOnExpression("!'${tsolve.storage.endpoint:}'.isBlank()")
     public record StorageProperties(
             String endpoint,
             String accessKey,
             String secretKey,
             String bucket,
             String publicUrlPattern,
-            @DefaultValue("300") long urlTtlSeconds,
-            @DefaultValue("10485760") long maxBytes) {
+            Long urlTtlSeconds,
+            Long maxBytes) {
 
         private static final int MAX_URL_TTL_SECONDS = 604800;
         private static final int MAX_BYTES_LIMIT = 100 * 1024 * 1024;
 
+        // Boxed, defaulted here: `.env` may hold FILE_STORAGE_URL_TTL_SECONDS= (empty), which binds null, and
+        // @DefaultValue cannot put null into a primitive.
         public StorageProperties {
+            urlTtlSeconds = urlTtlSeconds == null ? 300L : urlTtlSeconds;
+            maxBytes = maxBytes == null ? 10485760L : maxBytes;
             requireText(endpoint, "FILE_STORAGE_ENDPOINT");
             requireText(accessKey, "FILE_STORAGE_ACCESS_KEY");
             requireText(secretKey, "FILE_STORAGE_SECRET_KEY");

@@ -49,6 +49,20 @@ class StorageConfigTest {
         });
     }
 
+    @Test
+    @DisplayName("AC-007.1 an empty TTL or size limit from .env falls back to the defaults")
+    void usesDefaultsForEmptyTtlAndSize_AC_007_1() {
+        configuredRunner()
+                .withPropertyValues("tsolve.storage.url-ttl-seconds=", "tsolve.storage.max-bytes=")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    StorageConfig.StorageProperties properties =
+                            context.getBean(StorageConfig.StorageProperties.class);
+                    assertThat(properties.urlTtlSeconds()).isEqualTo(300);
+                    assertThat(properties.maxBytes()).isEqualTo(10485760);
+                });
+    }
+
     @ParameterizedTest
     @CsvSource({
         "url-ttl-seconds=604801, FILE_STORAGE_URL_TTL_SECONDS",
