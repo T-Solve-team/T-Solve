@@ -92,6 +92,16 @@ class SuggestionGeneratorTest {
                         t80.ticketId().toString(),
                         w80.documentId(),
                         t75.ticketId().toString());
+        // AC-005.5: the dropped sources never reach the model.
+        assertThat(userPrompt()).doesNotContain(t70.symptoms(), w72.title());
+    }
+
+    @Test
+    void cutsTextWithoutSplittingASurrogatePair_AC_005_3() {
+        String emoji = new String(Character.toChars(0x1F600));
+        assertThat(SuggestionGenerator.cut("ab" + emoji, 3)).isEqualTo("ab");
+        assertThat(SuggestionGenerator.cut("ab" + emoji, 4)).isEqualTo("ab" + emoji);
+        assertThat(SuggestionGenerator.cut("abcd", 3)).isEqualTo("abc");
     }
 
     @Test

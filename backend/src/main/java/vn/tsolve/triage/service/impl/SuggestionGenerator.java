@@ -87,7 +87,15 @@ public class SuggestionGenerator implements SuggestionSearch {
 
     private static String issueText(String summary, String description) {
         String text = description == null || description.isBlank() ? summary : summary + "\n\n" + description;
-        return text.length() > MAX_ISSUE_TEXT ? text.substring(0, MAX_ISSUE_TEXT) : text;
+        return cut(text, MAX_ISSUE_TEXT);
+    }
+
+    /** At most {@code max} chars, never splitting a surrogate pair. */
+    static String cut(String text, int max) {
+        if (text.length() <= max) {
+            return text;
+        }
+        return text.substring(0, Character.isHighSurrogate(text.charAt(max - 1)) ? max - 1 : max);
     }
 
     // AC-005.6: tickets reach the model as numbered Solution sections only; Wiki documents by title and content.
@@ -123,9 +131,7 @@ public class SuggestionGenerator implements SuggestionSearch {
             } else {
                 WikiSource document = source.document();
                 String content = document.content() == null ? "" : document.content();
-                if (content.length() > MAX_WIKI_CONTENT) {
-                    content = content.substring(0, MAX_WIKI_CONTENT);
-                }
+                content = cut(content, MAX_WIKI_CONTENT);
                 text.append("<wiki title=\"")
                         .append(escape(document.title()))
                         .append("\">")
