@@ -43,7 +43,7 @@ describe('JiraIntegrationPage', () => {
     server.events.removeAllListeners();
   });
 
-  it('AC-005.1 AC-005.2 AC-005.3 AC-005.5 loads the Projects and shows the read-only Department and the table in the returned order', async () => {
+  it('AC-005.1 AC-005.2 AC-005.5 loads the Projects and shows the read-only Department and the table', async () => {
     const requests = countListRequests();
     renderApp('/jira-integration', { role: 'PROJECT_MANAGER' });
 
@@ -65,6 +65,27 @@ describe('JiraIntegrationPage', () => {
       'Active',
     ]);
     expect(screen.queryByRole('row', { name: /\bSUP\b/ })).not.toBeInTheDocument();
+  });
+
+  it('AC-005.3 keeps the returned row order instead of sorting by key (D55)', async () => {
+    const row = (suffix: string, jiraProjectKey: string) => ({
+      projectId: `00000000-0000-4000-8000-0000000003${suffix}`,
+      jiraProjectKey,
+      projectManager: null,
+      memberCount: 0,
+      status: 'ACTIVE' as const,
+    });
+    server.use(
+      getListProjectsMockHandler({
+        department: { departmentId: '00000000-0000-4000-8000-0000000003d1', name: 'IT Operations' },
+        projects: [row('b1', 'ZED'), row('b2', 'ABC')],
+      }),
+    );
+    renderApp('/jira-integration', { role: 'PROJECT_MANAGER' });
+
+    await findRow('ZED');
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows.map((r) => cellsOf(r)[1])).toEqual(['ZED', 'ABC']);
   });
 
   it('AC-005.4 shows MSG54 when a Project has no Project Manager', async () => {

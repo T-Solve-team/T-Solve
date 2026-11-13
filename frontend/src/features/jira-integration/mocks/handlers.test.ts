@@ -36,7 +36,7 @@ describe('jira-integration mock contract', () => {
 
   it('AC-005.1 refuses a signed-out caller and a caller without the Project Manager role', async () => {
     setDevUser(null);
-    await expect(listProjects()).rejects.toMatchObject({ status: 401 });
+    await expect(listProjects()).rejects.toMatchObject({ status: 401, code: 'MSG07' });
     setDevUser('admin');
     await expect(listProjects()).rejects.toMatchObject({ status: 403, code: 'MSG08' });
   });
@@ -126,7 +126,7 @@ describe('jira-integration mock contract', () => {
       });
       await expect(
         createProject({ jiraProjectKey, doneStatusIds: ['10002'], reviewRange: 3 }),
-      ).rejects.toMatchObject(expected);
+      ).rejects.toMatchObject({ ...expected, fieldErrors: [] });
     }
   });
 
