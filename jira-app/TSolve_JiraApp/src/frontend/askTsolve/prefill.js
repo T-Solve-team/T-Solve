@@ -1,4 +1,4 @@
-// What "Chưa được, tạo ticket" puts in Jira's Create dialog (AC-010.9). The description is ADF, as CreateIssueModal
+// What "Not solved, create ticket" puts in Jira's Create dialog (AC-010.9). The description is ADF, as CreateIssueModal
 // requires (RESEARCH-004 Spike 2).
 import { message } from '../messages';
 
@@ -17,7 +17,7 @@ export function sourceLabel(citation) {
 
 /**
  * The `context` of CreateIssueModal for the open project: Summary = the first question cut to 255 characters;
- * Description = every question, then "Đã thử theo T-Solve:" with the last answer and its sources; label
+ * Description = every question, then "Tried with T-Solve:" with the last answer and its sources; label
  * `tsolve-asked`. With nothing asked, only the project (AC-010.2).
  */
 export function createIssueContext(projectId, askedQuestions, lastAnswer) {
@@ -26,13 +26,13 @@ export function createIssueContext(projectId, askedQuestions, lastAnswer) {
   }
   const lines = [...askedQuestions];
   if (lastAnswer) {
-    lines.push('Đã thử theo T-Solve:');
+    lines.push('Tried with T-Solve:');
     lines.push(lastAnswer.outcome === 'ANSWERED' ? lastAnswer.text : message('MSG109'));
     const sources = [...(lastAnswer.outcome === 'ANSWERED' ? lastAnswer.citations : [])].sort(
       (a, b) => a.number - b.number,
     );
     if (sources.length > 0) {
-      lines.push('Nguồn:', ...sources.map(sourceLabel));
+      lines.push('Sources:', ...sources.map(sourceLabel));
     }
   }
   return {

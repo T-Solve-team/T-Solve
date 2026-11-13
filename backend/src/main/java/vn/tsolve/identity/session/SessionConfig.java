@@ -2,6 +2,7 @@ package vn.tsolve.identity.session;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -27,9 +28,29 @@ class SessionConfig {
             AccountRepository accounts,
             AccountRoleRepository roles,
             IdentityClock clock,
-            ObjectMapper mapper) {
+            ApplicationEventPublisher events,
+            ObjectMapper mapper,
+            OperatorAllowList operatorList,
+            ConsolePaths consolePaths) {
         return new WebSessionFilter(
-                store, cookies, hosts, workspaces, scope, accounts, roles, clock, new SecurityProblemWriter(mapper));
+                store,
+                cookies,
+                hosts,
+                workspaces,
+                scope,
+                accounts,
+                roles,
+                clock,
+                events,
+                new SecurityProblemWriter(mapper),
+                operatorList,
+                consolePaths);
+    }
+
+    /** What an Operator session may call on admin.: logout only, until the Console endpoints exist. */
+    @Bean
+    ConsolePaths consolePaths() {
+        return ConsolePaths.of("POST /api/v1/auth/logout");
     }
 
     @Bean

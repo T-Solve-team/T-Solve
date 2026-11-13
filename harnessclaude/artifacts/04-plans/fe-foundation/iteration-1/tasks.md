@@ -1,7 +1,7 @@
 ---
 module: fe-foundation
 date: 2026-10-22
-total_tasks: 11
+total_tasks: 12
 owner: Dev
 ---
 
@@ -286,4 +286,27 @@ Task 3 serves `/me` (its records use `UUID`)
 - Test: `frontend/src/shared/messages/catalog.test.ts`
 **Covers:** AC-006.7, AC-006.9
 **Dependencies:** none (import-ticket-list Task 20 needs it)
+**Estimated size:** small
+
+---
+
+## Task 12: Log out leaves for the identity provider's logoutUrl
+
+**Story:** STORY-008
+**Feature:** sign-out-logout-url
+**Description:** Spec change of 2026-11-12 (KAN-311; identity Task 27 / KAN-106 makes `POST /api/v1/auth/logout` answer
+200 `{ logoutUrl }`). `useSignOut` keeps the answer of `logout()`, calls `resetSession` as today, then navigates the
+browser to `logoutUrl` with `window.location.assign` when it is an absolute http(s) URL and returns `true`; otherwise
+(request failed, 204, missing or bad `logoutUrl`) it returns `false` and shows no error. `UserMenu` navigates to Login
+in the app only when the hook returned `false`. The stub client already types the answer as `Logout200`; run
+`npm run generate:api` and check there is no diff. The mock logout handler answers 200 with a `logoutUrl`. Must merge
+before or with KAN-106's PR.
+**Files:**
+- Modify: `frontend/src/shared/auth/useSession.ts` (`useSignOut`)
+- Modify: `frontend/src/app/layout/UserMenu.tsx`
+- Modify: `frontend/src/mocks/handlers.ts` (logout answers 200 `{ logoutUrl }`)
+- Modify: `frontend/src/shared/auth/sign-out.test.tsx` (AC-008.1 to AC-008.4; stub `window.location.assign`)
+- Check only: `frontend/src/shared/api/generated/` (no diff after `npm run generate:api`)
+**Covers:** AC-008.1, AC-008.2, AC-008.3, AC-008.4
+**Dependencies:** none (merge before or with identity Task 27)
 **Estimated size:** small

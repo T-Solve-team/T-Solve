@@ -54,10 +54,10 @@
       "features": {
         "problem-errors": "passing",
         "roles-security": "passing",
-        "me-session": "pending",
+        "me-session": "passing",
         "audit-writer": "pending"
       },
-      "lastUpdated": "2026-11-04T14:50:22.250Z",
+      "lastUpdated": "2026-11-13T13:54:45.150Z",
       "branch": "feat/be-foundation",
       "repos": [
         "default"
@@ -80,9 +80,10 @@
         "site-sign-in": "passing",
         "host-routes": "passing",
         "uuid-ids": "passing",
-        "catalog-msg-new-3": "evaluating"
+        "catalog-msg-new-3": "evaluating",
+        "sign-out-logout-url": "passing"
       },
-      "lastUpdated": "2026-11-01T05:52:44.075Z",
+      "lastUpdated": "2026-11-12T17:59:39.575Z",
       "branch": "feat/fe-foundation",
       "repos": [
         "default"
@@ -134,10 +135,12 @@
         "user-roles-backend": "passing",
         "user-status-backend": "passing",
         "scope-checks": "passing",
-        "session-expiry-events": "pending",
-        "operator-session": "pending"
+        "session-expiry-events": "passing",
+        "operator-session": "passing",
+        "session-replaced-event": "passing",
+        "jira-link-record": "passing"
       },
-      "lastUpdated": "2026-11-12T14:47:05.471Z",
+      "lastUpdated": "2026-11-13T12:30:26.708Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -147,10 +150,20 @@
       }
     },
     "workspace": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:22.576Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "create-department-api": "passing",
+        "create-department-screen": "passing"
+      },
+      "lastUpdated": "2026-11-11T15:54:34.998Z",
+      "branch": "feat/workspace",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "5d06062761d473d9153fdfe12fbdf3b5aeeed926"
+      }
     },
     "project-integration": {
       "status": "decomposed",

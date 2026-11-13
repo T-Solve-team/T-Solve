@@ -2,6 +2,7 @@ package vn.tsolve.identity;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -14,11 +15,15 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.NullSecurityContextRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
@@ -58,14 +63,18 @@ public class AuthSecurityConfig {
             WorkspaceLookup workspaces,
             AuthHosts hosts)
             throws Exception {
-        http.securityMatcher(request -> AntPathRequestMatcher.antMatcher(CALLBACK)
-                                .matches(request)
-                        && workspaces.findBySiteHost(hosts.hostOf(request)).isPresent())
+        http.securityMatcher(
+                        request -> AntPathRequestMatcher.antMatcher(CALLBACK).matches(request)
+                                && (hosts.isAdminHost(request)
+                                        || workspaces
+                                                .findBySiteHost(hosts.hostOf(request))
+                                                .isPresent()))
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
                 .oauth2Login(login -> login.loginProcessingUrl(CALLBACK)
                         .authorizedClientRepository(new NoAuthorizedClients())
                         .authorizationEndpoint(endpoint -> endpoint.authorizationRequestRepository(
                                 new CheckedRequests(requests, workspaces, hosts)))
+                        .userInfoEndpoint(userInfo -> userInfo.oidcUserService(AuthSecurityConfig::oidcUser))
                         .successHandler(handler)
                         .failureHandler(handler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -73,6 +82,12 @@ public class AuthSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .requestCache(cache -> cache.disable());
         return http.build();
+    }
+
+    /** Both callbacks read their claims from the verified ID token alone: no userinfo call. */
+    private static OidcUser oidcUser(OidcUserRequest userRequest) {
+        return new DefaultOidcUser(
+                List.of(new OidcUserAuthority(userRequest.getIdToken())), userRequest.getIdToken(), "sub");
     }
 
     /**
@@ -110,14 +125,21 @@ public class AuthSecurityConfig {
             if (saved == null) {
                 return null;
             }
-            String workspaceId = workspaces
-                    .findBySiteHost(hosts.hostOf(request))
-                    .map(WorkspaceRef::id)
-                    .map(Object::toString)
-                    .orElse(null);
-            boolean matches = saved.getState().equals(request.getParameter("state"))
-                    && workspaceId != null
-                    && workspaceId.equals(saved.getAttribute(KeycloakAuthorizationRequestResolver.WORKSPACE_ID));
+            boolean matches;
+            if (hosts.isAdminHost(request)) {
+                // the Console start has a target and no Workspace id
+                matches = saved.getState().equals(request.getParameter("state"))
+                        && "PLATFORM_CONSOLE".equals(saved.getAttribute(KeycloakAuthorizationRequestResolver.TARGET));
+            } else {
+                String workspaceId = workspaces
+                        .findBySiteHost(hosts.hostOf(request))
+                        .map(WorkspaceRef::id)
+                        .map(Object::toString)
+                        .orElse(null);
+                matches = saved.getState().equals(request.getParameter("state"))
+                        && workspaceId != null
+                        && workspaceId.equals(saved.getAttribute(KeycloakAuthorizationRequestResolver.WORKSPACE_ID));
+            }
             if (!matches) {
                 throw new OAuth2AuthenticationException(new OAuth2Error("invalid_state_parameter"));
             }
