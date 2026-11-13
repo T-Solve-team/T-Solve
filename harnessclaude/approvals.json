@@ -1088,8 +1088,8 @@
     }
   },
   "ticket-repository": {
-    "specHash": "9fe7731752092de0e9518f178b30256a340a942603f70ee75c6b5553ad5adf95",
-    "approvedAt": "2026-11-08T12:52:06.892Z",
+    "specHash": "63372498dc9cf51510517898382c0ea11936bfd77fa29bad887763e888bed21b",
+    "approvedAt": "2026-11-13T15:41:50.016Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
@@ -1132,7 +1132,12 @@
       "AC-004.4": "WHEN the Project Manager deletes a Draft after confirming MSG42, THE system SHALL delete the Draft with its rows.",
       "AC-004.5": "IF the Draft belongs to another user or does not exist, THEN THE system SHALL reject the reopen or delete with HTTP 404 (MSG04).",
       "AC-004.6": "WHILE a preview is a Draft, THE daily preview cleanup and a new pull or CSV upload by the same user SHALL keep it.",
-      "AC-004.7": "WHEN the Project Manager saves a reopened Draft again, THE system SHALL update that same Draft and its save time instead of creating a second one."
+      "AC-004.7": "WHEN the Project Manager saves a reopened Draft again, THE system SHALL update that same Draft and its save time instead of creating a second one.",
+      "AC-005.1": "WHEN the status of a Ticket changes, THE system SHALL allow only these changes: Pending review to Published, Rejected, Changes requested or Expired; Changes requested to Pending review or Expired; Expired to Pending review; Published to Unpublished; Unpublished to Published (D9). Rejected SHALL change to no other status.",
+      "AC-005.2": "WHEN a Ticket is created by an import, THE system SHALL create it in Published (GBR-23).",
+      "AC-005.3": "IF a request would change a Ticket's status in a way AC-005.1 does not allow, THEN THE system SHALL reject the request with HTTP 409 (MSG06) and change the status of none of the Tickets of that request (D11).",
+      "AC-005.4": "WHEN a request moves one or more Tickets to Published (review Approve, re-publish), THE system SHALL publish one \"tickets published\" event with the ids of all those Tickets, for listeners to handle after the transaction commits.",
+      "AC-005.5": "WHEN a request moves one or more Tickets to Unpublished, THE system SHALL publish one \"tickets unpublished\" event with the ids of all those Tickets, for listeners to handle after the transaction commits."
     }
   },
   "jira-app": {

@@ -1,7 +1,7 @@
 ---
 module: ticket-repository
 date: 2026-11-07
-total_tasks: 11
+total_tasks: 13
 owner: Dev
 ---
 
@@ -171,4 +171,23 @@ Order: Tasks 1–4 and 7 need nothing else. Tasks 5, 6, 8 and 9 start after the 
 - Modify: `T/service/JiraIssueSource.java`, `T/client/JiraRestIssueSource.java`, `T/service/impl/JiraImportServiceImpl.java`
 - Test: `TT/client/JiraRestIssueSourceTest.java`, `TT/service/impl/JiraImportServiceImplTest.java` (AC-001.13)
 **Dependencies:** Task 11
+**Estimated size:** small
+
+## Task 13: Ticket status model — one state machine for submit, review and import
+
+**Story:** STORY-005
+**Feature:** ticket-status-model
+**Description:** KAN-132, master design "Change 2026-11-13". `TicketStatus.canMoveTo` with the AC-005.1 table;
+`Ticket.moveTo(to, at)` throws `BusinessRuleException("MSG06")` on a forbidden change; `applyReview` goes through it.
+New `TicketTransitions.move(tickets, to, at)`: check all, then move all, then publish one `TicketsPublishedEvent`
+(to PUBLISHED) or new `TicketsUnpublishedEvent` (to UNPUBLISHED) with every id. `TicketDecisionServiceImpl.decide`
+uses it, so review Approve publishes `TicketsPublishedEvent`. Bulk SQL (expiry, send back) and import Finish unchanged.
+**Files:**
+- Create: `T/service/TicketTransitions.java`, `T/event/TicketsUnpublishedEvent.java`
+- Modify: `T/entity/TicketStatus.java`, `T/entity/Ticket.java`, `T/service/impl/TicketDecisionServiceImpl.java`, `T/event/TicketsPublishedEvent.java`
+- Test: `TT/entity/TicketStatusTest.java` (AC-005.1 every one of the 36 pairs, AC-005.2 `Ticket.imported`),
+  `TT/service/TicketStatusTransitionsTest.java` (AC-005.3 mixed batch → MSG06 and no status changed, AC-005.4 one
+  event with all ids, AC-005.5 one unpublished event, no event for REJECTED/CHANGES_REQUESTED); existing
+  `review/TicketDecisionIT` and `ImportConfirm*` tests stay green.
+**Dependencies:** none
 **Estimated size:** small

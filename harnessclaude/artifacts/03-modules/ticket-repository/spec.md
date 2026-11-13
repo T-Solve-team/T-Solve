@@ -8,7 +8,9 @@ owner: BA
 
 Source: SRS Report 3 v3460 — UC-20, GBR-15, GBR-23, GBR-26, GBR-33, screens 5.1 Import Tickets (Jira tab), 5.2 Import
 Preview, 5.3 Import Ticket Preview, MSG01, MSG02, MSG04, MSG08, MSG32, MSG33, MSG35–MSG42, MSG50; Jira story KAN-45.
-This version covers only **KAN-45 Import resolved issues from Jira (UC-20)**, including Drafts of a Jira import.
+This version covers **KAN-45 Import resolved issues from Jira (UC-20)**, including Drafts of a Jira import, and
+**KAN-132 Ticket status model** (STORY-005: the one Ticket state machine shared by submit, review and import, GBR-07,
+GBR-08, GBR-10, GBR-11, GBR-23, UC-25).
 CSV import (UC-21) lives in `import-ticket-list`; manual entry (UC-22), Import History screen (UC-23), Ticket Detail
 (UC-24), unpublish / re-publish (UC-25) and the Solution Form submission (UC-19) are added later through Change Mode.
 
@@ -25,6 +27,7 @@ is one row of such a preview.
 | 2026-11-07 | STORY-001 | AC-001.3: MSG35 also after the 20-page scan cap, and without a count (D8) | Jira gives no total and counting would need every page (NFR 1); user decision 2026-11-07 |
 | 2026-11-07 | STORY-001 | D2 reworded: scoped API token as Bearer through the Atlassian API gateway (`api.atlassian.com/ex/jira/{cloudId}`), env `JIRA_SITE_URL`, `JIRA_CLOUD_ID`, `JIRA_API_TOKEN`; no email. New AC-001.11 (retry 429/503 with `Retry-After`) and AC-001.12 (gateway + Bearer, link on the site); AC-001.7 reworded to apply after those retries | RESEARCH-003: a service account has only scoped tokens, which get 401 with basic auth on the site URL; user decisions 2026-11-07 (scoped only, retry twice) |
 | 2026-11-08 | STORY-001 | New AC-001.13: a pull stops reading Jira after 60 seconds in total and answers MSG50 as in AC-001.7 | PR #166 review (trhieudev1309), BUG-189: up to 20 pages plus comment calls, each with a 30 s timeout and 2 retries, could hold a request thread for minutes; user decision 2026-11-08 |
+| 2026-11-13 | STORY-005 | New STORY-005 (KAN-132): AC-005.1–AC-005.5, decisions D9–D11 | One Ticket state machine for submit, review and import; review Approve did not publish the "tickets published" event, so approved tickets were never indexed for search; user decisions 2026-11-13 |
 
 ## Decisions taken while planning (2026-11-07, with the user)
 | # | Question | Decision |
@@ -37,6 +40,9 @@ is one row of such a preview.
 | D6 | Requirements shared with CSV import | Required Solution sections, text limits, preview storage and the "one unconfirmed preview per PM" rule are those of `import-ticket-list` (D1, D7, D8, D9 there). |
 | D7 | Separate Jira preview or the CSV one | The CSV Import Preview of PR #110: one row per issue (Ticket ID = Jira key, result Needs Solution until it has a Solution), with two new row fields, the issue's link and its comments. Rows list, row detail, Fill solution, remove-rows, Confirm and the screens are reused; only the pull and Drafts are new endpoints. |
 | D8 | MSG35's text in Report3 names how many more issues match, but the pull stops at 100 kept issues or 20 Jira pages, and Jira's `search/jql` gives no total | MSG35 names no count. Its Report3 text drops the count parameter (Report3 change by the team; then `report3-messages.json` and the web app's catalog follow). The pull does not count the remaining issues. |
+| D9 | Which status changes are allowed (KAN-132) | The table of AC-005.1, taken from SRS v3460 GBR-08, GBR-10, GBR-11, GBR-23, UC-19, UC-25 and UC-30. Rejected is final; Unpublished only goes back to Published (user decision 2026-11-13). |
+| D10 | Where the "tickets published / unpublished" events are published | The rule lives in `TicketStatus` and `Ticket`; one shared transition step moves a batch of Tickets and publishes ONE event with all their ids, as Finish already does (AC-003.9). Not one Spring `@DomainEvents` event per Ticket: it needs `save()`, which review does not call, and it would split a 100-ticket import into 100 events (user decision 2026-11-13). |
+| D11 | Answer to a status change the table does not allow | HTTP 409 with MSG06, no Ticket of the request changed — the answer review already gives for a Ticket that is not Pending review (UC-30 step 3). |
 
 ## Requirements
 
@@ -111,6 +117,15 @@ is one row of such a preview.
   - AC-004.6: WHILE a preview is a Draft, THE daily preview cleanup and a new pull or CSV upload by the same user SHALL keep it.
   - AC-004.7: WHEN the Project Manager saves a reopened Draft again, THE system SHALL update that same Draft and its save time instead of creating a second one.
 
+### STORY-005: One Ticket state machine (KAN-132)
+- As a developer, I want one Ticket state machine shared by submit, review and import so that no flow can put a Ticket into a status the business rules forbid, and other modules learn when a Ticket enters or leaves use.
+- Acceptance:
+  - AC-005.1: WHEN the status of a Ticket changes, THE system SHALL allow only these changes: Pending review to Published, Rejected, Changes requested or Expired; Changes requested to Pending review or Expired; Expired to Pending review; Published to Unpublished; Unpublished to Published (D9). Rejected SHALL change to no other status.
+  - AC-005.2: WHEN a Ticket is created by an import, THE system SHALL create it in Published (GBR-23).
+  - AC-005.3: IF a request would change a Ticket's status in a way AC-005.1 does not allow, THEN THE system SHALL reject the request with HTTP 409 (MSG06) and change the status of none of the Tickets of that request (D11).
+  - AC-005.4: WHEN a request moves one or more Tickets to Published (review Approve, re-publish), THE system SHALL publish one "tickets published" event with the ids of all those Tickets, for listeners to handle after the transaction commits.
+  - AC-005.5: WHEN a request moves one or more Tickets to Unpublished, THE system SHALL publish one "tickets unpublished" event with the ids of all those Tickets, for listeners to handle after the transaction commits.
+
 ## Out of Scope
 - CSV import (UC-21) — `import-ticket-list`; Drafts of a CSV import (GBR-26, UC-21 step 7b) are a later Change there.
 - Manual entry (UC-22), Import History screen (UC-23), Ticket Detail (UC-24), unpublish / re-publish (UC-25), Solution Form submission (UC-19).
@@ -118,7 +133,8 @@ is one row of such a preview.
 - The Jira field mapping and "resolution comments field" of a Project — `project-integration` (D5).
 - Linking a Jira assignee to a T-Solve user (D4).
 - Evidence and attachments of Jira issues.
-- Search indexing of new tickets — `search` consumes the "tickets published" event.
+- Search indexing of new tickets — `search` consumes the "tickets published" event. Removing an Unpublished ticket from search, triage and the chatbot — `search` and the others consume the "tickets unpublished" event later.
+- The unpublish / re-publish endpoints and screens (UC-25) and the Solution Form submission (UC-19): STORY-005 gives them the transition step and the events only.
 
 ## Interface Contracts
 

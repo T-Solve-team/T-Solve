@@ -146,3 +146,32 @@ frontend/src/features/ticket-import/
 - **Schema alignment (KAN-248)** renames these tables and columns; whoever merges second updates their changeset.
 - **Shared files** (`application.yml`, `.env.example`, `project/service`) need their owners' approval in the PR.
 - **Service account permissions:** a missing Browse permission looks like "no issues" (MSG04), not an error.
+
+## Change 2026-11-13: Ticket status model (KAN-132, STORY-005)
+
+**Rule in the enum.** `TicketStatus` gets `boolean canMoveTo(TicketStatus to)` backed by one `EnumMap` table — exactly
+AC-005.1 (D9). Creation is not a transition: `Ticket.imported` keeps setting `PUBLISHED` (AC-005.2).
+
+**One transition step.** `Ticket.moveTo(TicketStatus to, Instant at)` throws `BusinessRuleException("MSG06")` (→ 409,
+D11) when `canMoveTo` is false, else sets `status` and `updatedAt`. `applyReview` calls `moveTo` first, then sets the
+reason/comment. A new `@Component TicketTransitions` (`T/service/TicketTransitions.java`) with
+`List<UUID> move(List<Ticket> tickets, TicketStatus to, Instant at)`:
+1. checks every Ticket first and throws MSG06 before changing any (AC-005.3 — no half-moved batch in memory either);
+2. calls `moveTo` on each;
+3. publishes one `TicketsPublishedEvent(ids)` when `to == PUBLISHED`, one new `TicketsUnpublishedEvent(ids)` when
+   `to == UNPUBLISHED` (AC-005.4, AC-005.5, D10). Published inside the caller's transaction; listeners use
+   `@TransactionalEventListener(AFTER_COMMIT)` as `TicketsPublishedListener` already does.
+
+`TicketDecisionServiceImpl.decide` uses `transitions.move(batch, outcome, now)` and then sets each Ticket's review
+feedback — so review Approve now publishes `TicketsPublishedEvent` and approved tickets get indexed. Its own status
+pre-check (MSG06 when not Pending review) stays: it also guards the source rule.
+
+**Not routed through the step (and why).** Bulk SQL updates keep their own `WHERE` guard, which encodes the same
+table: `ReviewExpiryRepository.expireOverdue` (`status IN ('PENDING_REVIEW','CHANGES_REQUESTED')` → EXPIRED) and
+`TicketRepository.sendBack` (service checks EXPIRED first). Import Finish keeps its batched event (AC-003.9).
+`ponytail:` loading every expired Ticket as an entity just to run `moveTo` would cost one row read per Ticket for no
+new protection.
+
+**Files.** Modify `T/entity/TicketStatus.java`, `T/entity/Ticket.java`, `T/service/impl/TicketDecisionServiceImpl.java`,
+`T/event/TicketsPublishedEvent.java` (javadoc: not only import). Create `T/service/TicketTransitions.java`,
+`T/event/TicketsUnpublishedEvent.java`. Tests `TT/entity/TicketStatusTest.java`, `TT/service/TicketStatusTransitionsTest.java`.
