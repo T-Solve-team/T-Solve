@@ -71,10 +71,10 @@ class ProjectConnectionSecrecyTest {
             + "\",\"statuses\":[{\"id\":\"10002\",\"name\":\"Done\",\"description\":\"" + EMAIL
             + "\",\"statusCategory\":{\"key\":\"done\"}}]}]";
     // The fake Jira's own loggers report what it serves; they are the test's server, not T-Solve. The JDK's HTTP
-    // client logs every request header at FINE (seen once a Spring context has bridged JUL to SLF4J); that is the
-    // JDK's debug trace, off at the application's INFO level, not something T-Solve writes.
+    // client (`sun.net.www`) is not excluded: application.yml pins it at INFO (D51), and the same Spring start that
+    // bridges JUL to SLF4J applies that pin, so a full run fails here if the pin is lost.
     private static final List<String> FAKE_SERVER_LOGGERS =
-            List.of("com.github.tomakehurst", "wiremock", "org.eclipse", "sun.net.www");
+            List.of("com.github.tomakehurst", "wiremock", "org.eclipse");
     private static final UUID CALLER = new UUID(127, 11);
 
     private final WireMockServer jira = new WireMockServer(options().dynamicPort());

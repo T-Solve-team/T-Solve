@@ -56,6 +56,9 @@ logging:
     # their own line with the exception type and SQLState instead
     org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
     org.hibernate.orm.jdbc.batch: OFF
+    # the JDK HTTP client logs every request header at FINE, including the Jira service account's Authorization
+    # header; pinned so a DEBUG root never writes it (D51)
+    sun.net.www: INFO
 
 management:
   endpoints:
