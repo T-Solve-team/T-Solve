@@ -92,4 +92,14 @@ class SessionMeIT {
                 .andExpect(
                         jsonPath("$.paths['/api/v1/me'].get.responses['401']").exists());
     }
+
+    @Test
+    void documentsDepartmentAsNullableInTheServedApiDocs_AC_003_6_edge17() throws Exception {
+        mvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.components.schemas.CurrentUser.properties.department.nullable")
+                        .value(true))
+                .andExpect(jsonPath("$.components.schemas.CurrentUser.properties.department.allOf[0].$ref")
+                        .value("#/components/schemas/DepartmentRef"));
+    }
 }
