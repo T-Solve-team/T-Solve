@@ -33,6 +33,9 @@ import type {
   ImportPreviewRowResponse,
   ImportResultResponse,
   JiraPullRequest,
+  ManualTicketDraft,
+  ManualTicketRequest,
+  ProblemDetail,
   ProblemResponse,
   RemoveRowsRequest,
   UploadCsvImportBody,
@@ -1435,3 +1438,359 @@ export const useDeleteImportDraft = <TError = ErrorType<ProblemResponse>, TConte
 > => {
   return useMutation(getDeleteImportDraftMutationOptions(options), queryClient);
 };
+export const getCreateManualTicketUrl = () => {
+  return `/api/v1/imports/manual`;
+};
+
+/**
+ * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+
+ */
+export const createManualTicket = async (
+  manualTicketRequest: ManualTicketRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<ImportResultResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ImportResultResponse>(getCreateManualTicketUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(manualTicketRequest),
+  });
+};
+
+export const getCreateManualTicketMutationKey = () => ['createManualTicket'] as const;
+
+export const getCreateManualTicketMutationOptions = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createManualTicket>>,
+    TError,
+    CreateManualTicketMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createManualTicket>>,
+  TError,
+  CreateManualTicketMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateManualTicketMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createManualTicket>>,
+    CreateManualTicketMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createManualTicket(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateManualTicketMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createManualTicket>>
+>;
+export type CreateManualTicketMutationBody = ManualTicketRequest;
+export type CreateManualTicketMutationError = ErrorType<ProblemDetail | ProblemResponse>;
+export type CreateManualTicketMutationVariables = { data: ManualTicketRequest };
+
+/**
+ * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+
+ */
+export const useCreateManualTicket = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createManualTicket>>,
+      TError,
+      CreateManualTicketMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createManualTicket>>,
+  TError,
+  CreateManualTicketMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateManualTicketMutationOptions(options), queryClient);
+};
+export const getSaveManualTicketDraftUrl = () => {
+  return `/api/v1/imports/manual/drafts`;
+};
+
+/**
+ * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+
+ */
+export const saveManualTicketDraft = async (
+  manualTicketRequest: ManualTicketRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<DraftSavedResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DraftSavedResponse>(getSaveManualTicketDraftUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(manualTicketRequest),
+  });
+};
+
+export const getSaveManualTicketDraftMutationKey = () => ['saveManualTicketDraft'] as const;
+
+export const getSaveManualTicketDraftMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveManualTicketDraft>>,
+    TError,
+    SaveManualTicketDraftMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveManualTicketDraft>>,
+  TError,
+  SaveManualTicketDraftMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSaveManualTicketDraftMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveManualTicketDraft>>,
+    SaveManualTicketDraftMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return saveManualTicketDraft(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveManualTicketDraftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveManualTicketDraft>>
+>;
+export type SaveManualTicketDraftMutationBody = ManualTicketRequest;
+export type SaveManualTicketDraftMutationError = ErrorType<ProblemResponse>;
+export type SaveManualTicketDraftMutationVariables = { data: ManualTicketRequest };
+
+/**
+ * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+
+ */
+export const useSaveManualTicketDraft = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof saveManualTicketDraft>>,
+      TError,
+      SaveManualTicketDraftMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof saveManualTicketDraft>>,
+  TError,
+  SaveManualTicketDraftMutationVariables,
+  TContext
+> => {
+  return useMutation(getSaveManualTicketDraftMutationOptions(options), queryClient);
+};
+export const getGetManualTicketDraftUrl = (previewId: number) => {
+  return `/api/v1/imports/manual/drafts/${previewId}`;
+};
+
+/**
+ * @summary One of the caller's Manual Drafts with every field as saved; another user's, missing or not Manual = MSG04 (404).
+ */
+export const getManualTicketDraft = async (
+  previewId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ManualTicketDraft> => {
+  return http<ManualTicketDraft>(getGetManualTicketDraftUrl(previewId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetManualTicketDraftQueryKey = (previewId: number) => {
+  return [`/api/v1/imports/manual/drafts/${previewId}`] as const;
+};
+
+export const getGetManualTicketDraftQueryOptions = <
+  TData = Awaited<ReturnType<typeof getManualTicketDraft>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getManualTicketDraft>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetManualTicketDraftQueryKey(previewId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getManualTicketDraft>>> = ({ signal }) =>
+    getManualTicketDraft(previewId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: previewId !== null && previewId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getManualTicketDraft>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetManualTicketDraftQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getManualTicketDraft>>
+>;
+export type GetManualTicketDraftQueryError = ErrorType<ProblemResponse>;
+
+export function useGetManualTicketDraft<
+  TData = Awaited<ReturnType<typeof getManualTicketDraft>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getManualTicketDraft>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getManualTicketDraft>>,
+          TError,
+          Awaited<ReturnType<typeof getManualTicketDraft>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetManualTicketDraft<
+  TData = Awaited<ReturnType<typeof getManualTicketDraft>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getManualTicketDraft>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getManualTicketDraft>>,
+          TError,
+          Awaited<ReturnType<typeof getManualTicketDraft>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetManualTicketDraft<
+  TData = Awaited<ReturnType<typeof getManualTicketDraft>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getManualTicketDraft>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary One of the caller's Manual Drafts with every field as saved; another user's, missing or not Manual = MSG04 (404).
+ */
+
+export function useGetManualTicketDraft<
+  TData = Awaited<ReturnType<typeof getManualTicketDraft>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getManualTicketDraft>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetManualTicketDraftQueryOptions(previewId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

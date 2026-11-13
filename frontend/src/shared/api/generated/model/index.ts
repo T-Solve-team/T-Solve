@@ -84,6 +84,8 @@ export * from './jiraReviewFeedback';
 export * from './knowledgeDashboard';
 export * from './listUnavailableCitedDocumentsParams';
 export * from './logout200';
+export * from './manualTicketDraft';
+export * from './manualTicketRequest';
 export * from './messageRef';
 export * from './messageRefParams';
 export * from './mySolution';

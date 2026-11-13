@@ -1303,6 +1303,89 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/imports/manual:
+    post:
+      tags: [import]
+      operationId: createManualTicket
+      summary: >
+        Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source
+        MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field
+        with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project =
+        MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualTicketRequest'
+      responses:
+        '201':
+          description: Ticket published.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResultResponse'
+        '400':
+          description: Invalid fields (one fieldErrors entry per field).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/manual/drafts:
+    post:
+      tags: [import]
+      operationId: saveManualTicketDraft
+      summary: >
+        Saves the entry as a Manual Draft without validating any field but the Project (MSG41); with draftId,
+        updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's
+        Manual Draft = MSG04 (404).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualTicketRequest'
+      responses:
+        '200':
+          description: Draft saved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftSavedResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/manual/drafts/{previewId}:
+    get:
+      tags: [import]
+      operationId: getManualTicketDraft
+      summary: One of the caller's Manual Drafts with every field as saved; another user's, missing or not Manual = MSG04 (404).
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '200':
+          description: The Draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualTicketDraft'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
   /api/v1/chatbot/answers:
     post:
       tags: [chatbot]
@@ -2899,7 +2982,7 @@ components:
           description: Plain text.
     ImportSource:
       type: string
-      enum: [JIRA_IMPORT, CSV]
+      enum: [JIRA_IMPORT, CSV, MANUAL]
     ImportDraftSummary:
       type: object
       required: [previewId, source, projectId, rowCount, savedAt]
@@ -2929,6 +3012,71 @@ components:
           format: date-time
         message:
           $ref: '#/components/schemas/MessageRef'
+    ManualTicketRequest:
+      type: object
+      description: >
+        A manual entry. Save validates every field at once; Save as draft checks only projectId and keeps the rest
+        as typed.
+      required: [projectId]
+      properties:
+        projectId:
+          type: string
+          format: uuid
+        ticketId:
+          type: [string, 'null']
+        title:
+          type: [string, 'null']
+        description:
+          type: [string, 'null']
+        resolvedDate:
+          type: [string, 'null']
+          description: ISO date (yyyy-MM-dd), parsed on save (MSG02 when invalid, MSG39 when in the future).
+        symptoms:
+          type: [string, 'null']
+        rootCause:
+          type: [string, 'null']
+        resolutionSteps:
+          type: [string, 'null']
+        workaround:
+          type: [string, 'null']
+        scope:
+          type: [string, 'null']
+        draftId:
+          type: [integer, 'null']
+          format: int64
+          description: The Manual Draft this entry was reopened from.
+    ManualTicketDraft:
+      type: object
+      required: [previewId, projectId, savedAt]
+      properties:
+        previewId:
+          type: integer
+          format: int64
+        projectId:
+          type: string
+          format: uuid
+        ticketId:
+          type: [string, 'null']
+        title:
+          type: [string, 'null']
+        description:
+          type: [string, 'null']
+        resolvedDate:
+          type: [string, 'null']
+          description: As typed, not validated.
+        symptoms:
+          type: [string, 'null']
+        rootCause:
+          type: [string, 'null']
+        resolutionSteps:
+          type: [string, 'null']
+        workaround:
+          type: [string, 'null']
+        scope:
+          type: [string, 'null']
+        savedAt:
+          type: string
+          format: date-time
     ChatbotQuestion:
       type: object
       required: [question, history]

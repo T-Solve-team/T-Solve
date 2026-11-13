@@ -21,6 +21,8 @@ import type {
   ImportPreviewRowResponse,
   ImportResultResponse,
   JiraPullRequest,
+  ManualTicketDraft,
+  ManualTicketRequest,
   MessageRef,
   RemoveRowsRequest,
   UploadCsvImportBody,
@@ -769,6 +771,96 @@ export const getListImportDraftsResponseMock = (): ImportDraftSummary[] =>
     savedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
   }));
 
+export const getCreateManualTicketResponseMessageRefMock = (
+  overrideResponse: Partial<MessageRef> = {},
+): MessageRef => ({
+  ...{
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getCreateManualTicketResponseMock = (
+  overrideResponse: Partial<Extract<ImportResultResponse, object>> = {},
+): ImportResultResponse => ({
+  importBatchId: faker.number.int(),
+  created: faker.number.int(),
+  skipped: faker.number.int(),
+  message: {
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  notice: faker.helpers.arrayElement([{ ...getCreateManualTicketResponseMessageRefMock() }, null]),
+  ...overrideResponse,
+});
+
+export const getSaveManualTicketDraftResponseMock = (
+  overrideResponse: Partial<Extract<DraftSavedResponse, object>> = {},
+): DraftSavedResponse => ({
+  previewId: faker.number.int(),
+  savedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  message: {
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getGetManualTicketDraftResponseMock = (
+  overrideResponse: Partial<Extract<ManualTicketDraft, object>> = {},
+): ManualTicketDraft => ({
+  previewId: faker.number.int(),
+  projectId: faker.string.uuid(),
+  ticketId: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  description: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  resolvedDate: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  symptoms: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  rootCause: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  resolutionSteps: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  workaround: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  scope: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  savedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  ...overrideResponse,
+});
+
 export const getDownloadCsvTemplateMockHandler = (
   overrideResponse?:
     string | ((info: Parameters<HttpResponseResolver>[0]) => Promise<string> | string),
@@ -1051,6 +1143,78 @@ export const getDeleteImportDraftMockHandler = (
     options,
   );
 };
+
+export const getCreateManualTicketMockHandler = (
+  overrideResponse?:
+    | ImportResultResponse
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, ManualTicketRequest>>[0],
+      ) => Promise<ImportResultResponse> | ImportResultResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, ManualTicketRequest>(
+    '*/api/v1/imports/manual',
+    async (info: Parameters<HttpResponseResolver<PathParams, ManualTicketRequest>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateManualTicketResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSaveManualTicketDraftMockHandler = (
+  overrideResponse?:
+    | DraftSavedResponse
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, ManualTicketRequest>>[0],
+      ) => Promise<DraftSavedResponse> | DraftSavedResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, ManualTicketRequest>(
+    '*/api/v1/imports/manual/drafts',
+    async (info: Parameters<HttpResponseResolver<PathParams, ManualTicketRequest>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSaveManualTicketDraftResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetManualTicketDraftMockHandler = (
+  overrideResponse?:
+    | ManualTicketDraft
+    | ((
+        info: Parameters<HttpResponseResolver<{ previewId: string }>>[0],
+      ) => Promise<ManualTicketDraft> | ManualTicketDraft),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ previewId: string }>(
+    '*/api/v1/imports/manual/drafts/:previewId',
+    async (info: Parameters<HttpResponseResolver<{ previewId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetManualTicketDraftResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getImportMock = () => [
   getDownloadCsvTemplateMockHandler(),
   getUploadCsvImportMockHandler(),
@@ -1064,4 +1228,7 @@ export const getImportMock = () => [
   getSaveImportDraftMockHandler(),
   getListImportDraftsMockHandler(),
   getDeleteImportDraftMockHandler(),
+  getCreateManualTicketMockHandler(),
+  getSaveManualTicketDraftMockHandler(),
+  getGetManualTicketDraftMockHandler(),
 ];
