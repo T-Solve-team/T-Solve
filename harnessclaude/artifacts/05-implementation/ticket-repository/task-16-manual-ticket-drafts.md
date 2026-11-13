@@ -10,3 +10,7 @@
 - Contract: 400 added to saveManualTicketDraft (missing projectId → MSG01).
 - Verify: mvn verify 1550 unit + 490 IT, 0 failures (developer); orchestrator re-run green (see Task 15).
 - Commit: default@2bd4f203
+
+## Session 2026-11-14 (after review)
+- Review INFORMATIONAL fixed by orchestrator: Save as draft with draftId now uses lockByIdAndOwner (race with Save → 404, not 500). Manual* unit + ManualTicketControllerIT re-run green.
+- Commit: default@5e24ba61
