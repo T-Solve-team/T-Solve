@@ -1365,3 +1365,6 @@
 {"ts":"2026-11-13T21:18:57.342Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-drafts","from":null,"to":"pending"}
 {"ts":"2026-11-13T21:18:57.638Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":null,"to":"pending"}
 {"ts":"2026-11-13T21:19:18.068Z","type":"spec-approved","module":"ticket-repository","specHash":"0dc5471df359acf501a0e65be78bd01eb9bc569958b2ad2f0c20300610900277"}
+{"ts":"2026-11-13T21:21:25.880Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-contract","from":"pending","to":"in-progress"}
+{"ts":"2026-11-13T21:31:39.044Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"f12974cdb48f8ba9233ace4c1fc6d0ad2e4b6c24"}
+{"ts":"2026-11-13T21:31:39.332Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-contract","from":"in-progress","to":"evaluating"}

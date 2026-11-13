@@ -209,18 +209,18 @@
         "jira-gateway-auth": "passing",
         "jira-pull-deadline": "evaluating",
         "ticket-status-model": "passing",
-        "manual-ticket-contract": "pending",
+        "manual-ticket-contract": "evaluating",
         "manual-ticket-create": "pending",
         "manual-ticket-drafts": "pending",
         "manual-entry-tab": "pending"
       },
-      "lastUpdated": "2026-11-13T21:18:57.636Z",
+      "lastUpdated": "2026-11-13T21:31:39.330Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "034b0f18dd6bbb7861dfcdae3fb89ad705c04874"
+        "default": "f12974cdb48f8ba9233ace4c1fc6d0ad2e4b6c24"
       }
     },
     "search": {
