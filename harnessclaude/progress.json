@@ -151,8 +151,8 @@
       "lastUpdated": "2026-10-22T14:21:22.576Z"
     },
     "project-integration": {
-      "status": "implementing",
-      "currentPhase": "implement",
+      "status": "completed",
+      "currentPhase": "evaluate",
       "features": {
         "project-done-statuses-schema": "passing",
         "project-connection-test": "passing",
@@ -162,13 +162,13 @@
         "jira-integration-projects-table": "passing",
         "jira-integration-add-project": "passing"
       },
-      "lastUpdated": "2026-11-13T09:00:27.946Z",
+      "lastUpdated": "2026-11-13T09:41:48.788Z",
       "branch": "feat/project-integration",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "15b491d964d3971e84a7d3b110b21b784e2b4225"
+        "default": "1ac3c6051b2742a4e4a4326b437cd4eccc7a95ae"
       }
     },
     "wiki": {
@@ -416,13 +416,13 @@
         "suggestion-comment": "passing",
         "jira-project-read": "passing"
       },
-      "lastUpdated": "2026-11-12T19:00:33.063Z",
+      "lastUpdated": "2026-11-13T09:41:30.891Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "ba276218949a22759cea3e1c2a0660c2af93abdf"
+        "default": "1ac3c6051b2742a4e4a4326b437cd4eccc7a95ae"
       }
     },
     "ticket-review": {

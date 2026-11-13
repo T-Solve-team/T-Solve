@@ -1254,3 +1254,9 @@
 {"ts":"2026-11-13T07:42:52.321Z","type":"feature-status","module":"project-integration","feature":"jira-integration-projects-table","from":"evaluating","to":"passing"}
 {"ts":"2026-11-13T08:08:30.512Z","type":"feature-status","module":"project-integration","feature":"jira-integration-add-project","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-13T09:00:27.949Z","type":"feature-status","module":"project-integration","feature":"jira-integration-add-project","from":"evaluating","to":"passing"}
+{"ts":"2026-11-13T09:13:47.880Z","type":"quick-opened","what":"Pin the JDK HTTP client logger sun.net.www at INFO so a DEBUG root never logs the Jira Basic auth header; the AC-001.17 secrecy test then stops excluding it (D51 A2-1, KAN-127)","files":["backend/src/main/resources/application.yml","backend/src/test/java/vn/tsolve/project/controller/ProjectConnectionSecrecyTest.java"]}
+{"ts":"2026-11-13T09:41:15.441Z","type":"quick-closed","what":"Pin the JDK HTTP client logger sun.net.www at INFO so a DEBUG root never logs the Jira Basic auth header; the AC-001.17 secrecy test then stops excluding it (D51 A2-1, KAN-127)","files":["backend/src/main/resources/application.yml","backend/src/test/java/vn/tsolve/project/controller/ProjectConnectionSecrecyTest.java"]}
+{"ts":"2026-11-13T09:41:28.570Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"1ac3c6051b2742a4e4a4326b437cd4eccc7a95ae"}
+{"ts":"2026-11-13T09:41:30.895Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"1ac3c6051b2742a4e4a4326b437cd4eccc7a95ae"}
+{"ts":"2026-11-13T09:41:42.974Z","type":"module-status","module":"project-integration","from":"implementing","to":"evaluating"}
+{"ts":"2026-11-13T09:41:48.791Z","type":"module-status","module":"project-integration","from":"evaluating","to":"completed"}
