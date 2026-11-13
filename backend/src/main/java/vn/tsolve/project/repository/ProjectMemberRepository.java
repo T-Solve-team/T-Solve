@@ -105,14 +105,18 @@ public class ProjectMemberRepository {
 
     /**
      * How many of {@code userIds} may be added. Locks those accounts FOR SHARE so identity's role removal
-     * ({@code FOR UPDATE}) cannot interleave with the add.
+     * ({@code FOR UPDATE}) cannot interleave with the add. The lock and the check are separate statements
+     * (BUG-204): under READ COMMITTED the check must take a fresh snapshot after any wait on the lock.
      */
     public int lockEligible(UUID projectId, List<UUID> userIds) {
-        return jdbc.query(
-                        "SELECT u.id FROM app_user u WHERE u.id IN (:ids) AND " + ELIGIBLE + " FOR SHARE OF u",
-                        Map.of("project", projectId, "ids", userIds),
-                        (rs, row) -> rs.getObject(1, UUID.class))
-                .size();
+        jdbc.query(
+                "SELECT id FROM app_user WHERE id IN (:ids) ORDER BY id FOR SHARE",
+                Map.of("ids", userIds),
+                (rs, row) -> rs.getObject(1, UUID.class));
+        return jdbc.queryForObject(
+                "SELECT count(*) FROM app_user u WHERE u.id IN (:ids) AND " + ELIGIBLE,
+                Map.of("project", projectId, "ids", userIds),
+                Integer.class);
     }
 
     public void addMembers(UUID projectId, List<UUID> userIds) {

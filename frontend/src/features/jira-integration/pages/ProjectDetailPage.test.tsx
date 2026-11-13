@@ -20,6 +20,10 @@ describe('ProjectDetailPage', () => {
     expect(screen.getByText('ITSUP')).toBeInTheDocument();
     expect(screen.getByText('IT')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
+    const managerLabel = screen.getByText('Project Manager', {
+      selector: '.ant-descriptions-item-label',
+    });
+    expect(managerLabel.closest('.ant-descriptions-item')).toHaveTextContent('Đỗ Minh Quân');
     expect(screen.getByRole('tab', { name: 'Members' })).toBeInTheDocument();
     const headers = within(table)
       .getAllByRole('columnheader')

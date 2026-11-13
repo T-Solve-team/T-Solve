@@ -17,7 +17,7 @@ export function useAddMembersToProject(projectId: string) {
       onSuccess: (members) => {
         showMessage('MSG05');
         client.setQueryData(getListProjectMembersQueryKey(projectId), members);
-        return refreshCandidates();
+        void refreshCandidates(); // the popup closes now, not after the candidate reload
       },
       onError: () => {
         showMessage('MSG06');

@@ -2,6 +2,7 @@ package vn.tsolve.project;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.securityContext;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -9,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -18,6 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +33,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -318,6 +324,52 @@ class ProjectMembersIT {
                     .andExpect(jsonPath("$.code").value("MSG06"));
         }
         assertThat(memberCount(PROJECT)).isEqualTo(4);
+        assertThat(auditCount(PROJECT)).isZero();
+    }
+
+    @Test
+    void refusesAddWhenRoleRemovedWhileWaiting_BUG_204_AC_002_7() throws Exception {
+        // Identity's role removal: lock the account FOR UPDATE, delete its Ticket Resolver role, commit later.
+        var context = SecurityContextHolder.getContext();
+        try (Connection identity = db.getDataSource().getConnection()) {
+            identity.setAutoCommit(false);
+            try (PreparedStatement lock = identity.prepareStatement("SELECT id FROM app_user WHERE id = ? FOR UPDATE");
+                    PreparedStatement removeRole = identity.prepareStatement(
+                            "DELETE FROM user_role WHERE user_id = ? AND role = 'TICKET_RESOLVER'")) {
+                lock.setObject(1, CAROL);
+                lock.executeQuery().close();
+                removeRole.setObject(1, CAROL);
+                removeRole.executeUpdate();
+            }
+            CompletableFuture<Integer> addition = CompletableFuture.supplyAsync(() -> {
+                try {
+                    return perform(add(PROJECT, List.of(CAROL)).with(securityContext(context)))
+                            .andReturn()
+                            .getResponse()
+                            .getStatus();
+                } catch (Exception e) {
+                    throw new AssertionError(e);
+                }
+            });
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (db.queryForObject(
+                            "SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock'"
+                                    + " AND query LIKE '%FOR SHARE%'",
+                            Integer.class)
+                    == 0) {
+                assertThat(addition).isNotDone();
+                assertThat(System.nanoTime()).as("add request never blocked").isLessThan(deadline);
+                Thread.sleep(50);
+            }
+            identity.commit();
+            assertThat(addition.get(10, TimeUnit.SECONDS)).isEqualTo(409);
+        }
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM project_membership WHERE user_id = ? AND project_id = ?",
+                        Integer.class,
+                        CAROL,
+                        PROJECT))
+                .isZero();
         assertThat(auditCount(PROJECT)).isZero();
     }
 
