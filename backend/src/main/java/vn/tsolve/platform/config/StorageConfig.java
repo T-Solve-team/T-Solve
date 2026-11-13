@@ -56,7 +56,10 @@ public class StorageConfig {
         return new ObjectFileStorage(s3, properties, tenantContext, workspaceCatalog);
     }
 
+    // Not a no-op: @ConfigurationPropertiesScan registers this record on its own, so without the condition it binds,
+    // and fails, when no storage is configured.
     @ConfigurationProperties("tsolve.storage")
+    @ConditionalOnExpression("!'${tsolve.storage.endpoint:}'.isBlank()")
     public record StorageProperties(
             String endpoint,
             String accessKey,
