@@ -15,6 +15,7 @@ owner: BA
 | 2026-10-25 | STORY-003, STORY-004 | AC-003.6 reworded (ids are UUID strings, as the fe-foundation contract says); AC-004.6 and AC-004.7 reworded (`audit_events` under the platform tenant-table convention replaces `audit_event`, whose dev rows are dropped); AC-004.8 reworded (also AC-004.9 and AC-004.10); new AC-004.9 (the bound Workspace is stored) and AC-004.10 (no Workspace bound: throw, store nothing); Interface Contracts: the principal's `id` is a `UUID`, `platform` required | Change request KAN-196 Q2 (the user, 25/10): UUID primary keys and plural table names in every module (Phan_cong v6 §1); `audit_event` leaves the platform legacy allow-list now that be-foundation is built (platform AC-001.8, AC-001.11); SPEC-P1-7 (U1 = A, U2 = A) |
 | 2026-10-29 | STORY-001 | AC-001.6 reworded (`BusinessRuleException` only); AC-001.8 reworded (points to AC-001.12); AC-001.9 reworded (`MessageCodeException` too, no `common/error` left); new AC-001.10 (`NotFoundException` without code → 404 MSG04), AC-001.11 (`MessageCodeException` → its status, code, params), AC-001.12 (upload over the size limit → 413 MSG28); Interface Contracts: `MessageCodeException` | Merging `main` into KAN-25: import-ticket-list (KAN-31) built its own handler in `common/error` with these behaviours (its contract: preview or row not found → 404 MSG04, file over 10 MB → 413 MSG28). One handler stays, in `common/exception`, keeping them (the user, 29/10: option A) |
 | 2026-10-30 | STORY-001 | AC-001.6 reworded (a `BusinessRuleException` without code → 409 `MSG06`); AC-001.7 reworded (500 carries an `instance` id; the ERROR log line has only the exception class and that id, the full exception goes to DEBUG); new AC-001.13 (a request parameter, path variable or service constraint that fails → 400 with `fieldErrors`) | PR #82 review (bluebearccc, findings 3, 4, 7), the user's choice 30/10: `backend/AGENTS.md` §5 wants a `code` on every error and §9 never logs personal data; parameter and service validation answered 400 without `fieldErrors` or 500 |
+| 2026-11-13 | STORY-003 | New AC-003.7: while the staging stub flag `tsolve.stub.workspace-ready` is true and no real Workspace lookup exists, `workspaceReady` is true; AC-003.4 unchanged (flag false or unset) | BUG-205 / KAN-329: staging always answered `workspaceReady` false (no lookup bean), so the guard sent the Admin back to Workspace Setup from every menu item; the stub goes when KAN-119 lands |
 
 ## Requirements
 
@@ -132,6 +133,10 @@ owner: BA
     Department of each of their `projects`, each Department once, in that order.
   - AC-003.4: WHILE a lookup has no implementation yet (its module is not built), THE backend SHALL answer `/me` with
     `department` null, an empty list, or `workspaceReady` false for that part, and still answer 200.
+  - AC-003.7: WHILE the staging stub flag `tsolve.stub.workspace-ready` is true, THE backend SHALL report
+    `workspaceReady` as true in `GET /api/v1/me` when no real Workspace status lookup exists.
+    Note: staging-only stub for BUG-205 / KAN-329 (env `TSOLVE_STUB_WORKSPACE_READY`); default false, so AC-003.4
+    holds when the flag is false or unset; removed when the Workspace module's lookup (KAN-119) lands.
   - AC-003.5: IF nobody is signed in, THEN THE backend SHALL answer `/me` with 401 and `code` `MSG07`.
   - AC-003.6: THE response of `/me` SHALL match the `CurrentUser` schema of `frontend/openapi/tsolve-api.yaml`
     (field names, nullability, `Role` and `ProjectRole` values), with every id (`user.id`, `departmentId`,
