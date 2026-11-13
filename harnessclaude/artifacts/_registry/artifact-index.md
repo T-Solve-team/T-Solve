@@ -87,6 +87,8 @@ Master registry of all artifacts in this workspace.
 | — | tasks | platform | draft | artifacts/04-plans/platform/iteration-1/tasks.md |
 | — | design | platform | draft | artifacts/04-plans/platform/iteration-2/design.md |
 | — | tasks | platform | draft | artifacts/04-plans/platform/iteration-2/tasks.md |
+| — | session-log | platform | passing | artifacts/05-implementation/platform/task-7-kan-317-vps-deploy.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/kan-317-vps-deploy-review.md |
 | — | session-log | chatbot | passing | artifacts/05-implementation/chatbot/task-1-ask-answer.md |
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-6-placeholder-rule.md |
 | — | review | chatbot | pass | artifacts/06-evaluation/chatbot/task-1-ask-answer-review.md |
@@ -268,3 +270,4 @@ Master registry of all artifacts in this workspace.
 | — | test-report | identity | pass | artifacts/06-evaluation/identity/task-29b-operator-session-test-report.md |
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-12-logout-url.md |
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-12-logout-url-review.md |
+| — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-bug-205-stub-workspace-ready-review.md |

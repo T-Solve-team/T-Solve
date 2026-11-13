@@ -1,0 +1,141 @@
+# T-Solve edge proxy (stock caddy:2.11.7-alpine, no plugins).
+# Automatic HTTPS per explicit host (HTTP-01 / TLS-ALPN-01); no wildcard certificate, no DNS provider.
+# HTTP -> HTTPS redirect is automatic.
+#
+# Env vars:
+#   TSOLVE_DOMAIN       base domain, e.g. tsolve.io.vn
+#   TSOLVE_SITE_HOSTS   company site hosts, space-separated (or comma + space), e.g. "acme.tsolve.io.vn beta.tsolve.io.vn".
+#                       A comma without a space ("a.x,b.x") is rejected by Caddy: compose must use spaces.
+#   ACME_EMAIL          optional, Let's Encrypt contact (empty = none)
+#
+# Compose upstreams: backend:8080, web:8080, keycloak:8080.
+#
+# COMPOSE NOTE: the backend calls https://login.{$TSOLVE_DOMAIN} for token/JWKS and the issuer must match,
+# so the caddy service needs a network alias `login.<TSOLVE_DOMAIN>` on the internal network (set in compose).
+#
+# Client-sent X-Forwarded-* are overwritten, not passed through: no `trusted_proxies` is configured, so Caddy
+# treats every client as untrusted and sets X-Forwarded-For/Proto/Host itself (Caddy 2.11 default).
+# `Forwarded` and `X-Forwarded-Prefix` are not set by Caddy, so they are stripped explicitly.
+#
+# Keycloak on login.<domain>: only /realms/*, /resources/*, /robots.txt are proxied; /realms/master and the
+# admin console are 404. To reach it, publish keycloak
+# on the VPS loopback only (ports: "127.0.0.1:8081:8080" in compose), then from your machine:
+#   ssh -L 8081:127.0.0.1:8081 <vps>   and open http://localhost:8081/admin/master/console/
+# The Keycloak management port (9000) is never routed.
+{
+	email "{$ACME_EMAIL:}"
+}
+
+# ---- shared snippets -------------------------------------------------------
+
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+(proxy_headers) {
+	header_up -Forwarded
+	header_up -X-Forwarded-Prefix
+}
+
+# ---- company sites + admin: /api -> backend, everything else -> web ----------
+
+{$TSOLVE_SITE_HOSTS}, admin.{$TSOLVE_DOMAIN} {
+	import common
+
+	# Review Queue SSE stream (GET /api/v1/review-queue/events): no buffering, no timeout.
+	@sse {
+		path_regexp ^/api/v1/.+/events$
+	}
+	handle @sse {
+		reverse_proxy backend:8080 {
+			import proxy_headers
+			flush_interval -1
+			lb_try_duration 30s
+			lb_try_interval 1s
+			transport http {
+				read_timeout 0
+			}
+		}
+	}
+
+	handle /api/* {
+		request_body {
+			max_size 12MB
+		}
+		reverse_proxy backend:8080 {
+			import proxy_headers
+			lb_try_duration 30s
+			lb_try_interval 1s
+		}
+	}
+
+	handle {
+		reverse_proxy web:8080 {
+			import proxy_headers
+			lb_try_duration 30s
+			lb_try_interval 1s
+		}
+	}
+}
+
+# ---- login: Keycloak (allow-list; admin console and master realm blocked) ---------------
+
+login.{$TSOLVE_DOMAIN} {
+	import common
+
+	# Allow-list: only what sign-in needs (realms: OIDC endpoints, login pages and broker flows; resources: theme
+	# and static files, including the tsolve login theme; robots.txt). The master realm (the Admin Console's own
+	# login and the admin-cli password grant) and everything else, /admin included, answer 404.
+	@master path /realms/master /realms/master/*
+	handle @master {
+		respond 404
+	}
+
+	@allowed path /realms/* /resources/* /robots.txt
+	handle @allowed {
+		reverse_proxy keycloak:8080 {
+			import proxy_headers
+		}
+	}
+
+	handle {
+		respond 404
+	}
+}
+
+# ---- api: Jira app + health only; never basic auth --------------------------
+
+api.{$TSOLVE_DOMAIN} {
+	import common
+
+	@allowed path /api/v1/jira-app/* /actuator/health
+	handle @allowed {
+		request_body {
+			max_size 12MB
+		}
+		reverse_proxy backend:8080 {
+			import proxy_headers
+			lb_try_duration 30s
+			lb_try_interval 1s
+		}
+	}
+
+	handle {
+		respond 404
+	}
+}
+
+# ---- apex and www: nothing served -------------------------------------------
+
+{$TSOLVE_DOMAIN}, www.{$TSOLVE_DOMAIN} {
+	import common
+	respond 404
+}
