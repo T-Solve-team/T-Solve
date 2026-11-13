@@ -4,6 +4,11 @@ Master registry of all artifacts in this workspace.
 
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
+| — | spec | wiki | approved | artifacts/03-modules/wiki/spec.md |
+| — | design | wiki | approved | artifacts/04-plans/wiki/design.md |
+| — | design | wiki | approved | artifacts/04-plans/wiki/iteration-1/design.md |
+| — | decisions | wiki | approved | artifacts/04-plans/wiki/iteration-1/kan-91-decisions.md |
+| — | tasks | wiki | approved | artifacts/04-plans/wiki/iteration-1/tasks.md |
 | IMPL-REVIEW-10 | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-10-review-jira-feedback.md |
 | IMPL-REVIEW-9 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-9-review-production-api.md |
 | IMPL-REVIEW-8 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-8-review-queue-entry-time.md |

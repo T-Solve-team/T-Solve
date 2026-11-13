@@ -1245,3 +1245,17 @@
 {"ts":"2026-11-13T12:30:26.172Z","type":"feature-status","module":"identity","feature":"jira-link-record","from":"pending","to":"in-progress"}
 {"ts":"2026-11-13T12:30:26.442Z","type":"feature-status","module":"identity","feature":"jira-link-record","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-13T12:30:26.709Z","type":"feature-status","module":"identity","feature":"jira-link-record","from":"evaluating","to":"passing"}
+{"ts":"2026-11-13T16:52:16.338Z","type":"spec-approved","module":"wiki","specHash":"738c6855e3ba311e6970275f82be45f9da387a16001c546abec8ce630f16b529"}
+{"ts":"2026-11-13T16:53:04.258Z","type":"module-status","module":"wiki","from":"decomposed","to":"planned"}
+{"ts":"2026-11-13T16:53:04.609Z","type":"feature-status","module":"wiki","feature":"wiki-view-rule","from":null,"to":"pending"}
+{"ts":"2026-11-13T16:53:04.938Z","type":"feature-status","module":"wiki","feature":"wiki-browse-api","from":null,"to":"pending"}
+{"ts":"2026-11-13T16:53:05.260Z","type":"feature-status","module":"wiki","feature":"wiki-home-ui","from":null,"to":"pending"}
+{"ts":"2026-11-13T16:53:05.578Z","type":"feature-status","module":"wiki","feature":"wiki-folder-api","from":null,"to":"pending"}
+{"ts":"2026-11-13T16:53:05.896Z","type":"feature-status","module":"wiki","feature":"wiki-folder-ui","from":null,"to":"pending"}
+{"ts":"2026-11-13T16:53:06.244Z","type":"feature-status","module":"wiki","feature":"wiki-upload-api","from":null,"to":"pending"}
+{"ts":"2026-11-13T16:53:06.592Z","type":"feature-status","module":"wiki","feature":"wiki-indexing","from":null,"to":"pending"}
+{"ts":"2026-11-13T16:53:06.926Z","type":"feature-status","module":"wiki","feature":"wiki-upload-ui","from":null,"to":"pending"}
+{"ts":"2026-11-13T16:53:07.298Z","type":"feature-status","module":"wiki","feature":"wiki-trash-api","from":null,"to":"pending"}
+{"ts":"2026-11-13T16:53:07.642Z","type":"feature-status","module":"wiki","feature":"wiki-trash-ui","from":null,"to":"pending"}
+{"ts":"2026-11-13T16:53:07.962Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":null,"to":"pending"}
+{"ts":"2026-11-13T16:53:08.294Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":null,"to":"pending"}
