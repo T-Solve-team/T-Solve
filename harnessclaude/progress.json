@@ -171,13 +171,13 @@
         "project-members-api": "passing",
         "project-members-tab": "passing"
       },
-      "lastUpdated": "2026-11-13T09:09:48.156Z",
+      "lastUpdated": "2026-11-13T13:29:41.141Z",
       "branch": "feat/project-integration",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "0af04d13dff8d4c4510726293e4af4af25cf3ecd"
+        "default": "0d882fb62e868bbe9e62c400c6d204a88cb89269"
       }
     },
     "wiki": {
