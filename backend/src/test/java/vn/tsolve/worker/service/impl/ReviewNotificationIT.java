@@ -40,6 +40,7 @@ import vn.tsolve.ticket.config.TicketClockConfig;
 import vn.tsolve.ticket.service.ReviewNotificationService;
 import vn.tsolve.ticket.service.TicketDecisionService;
 import vn.tsolve.ticket.service.TicketDecisionService.Action;
+import vn.tsolve.ticket.service.TicketTransitions;
 import vn.tsolve.ticket.service.impl.ReviewNotificationServiceImpl;
 import vn.tsolve.ticket.service.impl.TicketDecisionServiceImpl;
 import vn.tsolve.worker.client.ReviewNotificationSender;
@@ -53,6 +54,7 @@ import vn.tsolve.worker.service.TenantJobService;
 @Import({
     TicketClockConfig.class,
     TicketDecisionServiceImpl.class,
+    TicketTransitions.class,
     ReviewNotificationServiceImpl.class,
     ReviewNotificationEnqueuer.class
 })
@@ -200,17 +202,11 @@ class ReviewNotificationIT {
     }
 
     private UUID ticket(String key, String status, UUID writer) {
-        return jdbc.queryForObject(
-                """
+        return jdbc.queryForObject("""
                 insert into ticket (source_ticket_id, project_id, source, status, writer_id, title, symptoms,
                                     root_cause, resolution_steps, scope, review_due_date)
                 values (?, ?, 'SOLUTION_FORM', ?, ?, 'Login fails', 'Error', 'Token', 'Restart', 'Users', '2026-11-12')
                 returning ticket_id
-                """,
-                UUID.class,
-                key,
-                PROJECT,
-                status,
-                writer);
+                """, UUID.class, key, PROJECT, status, writer);
     }
 }
