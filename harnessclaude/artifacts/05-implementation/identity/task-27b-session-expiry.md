@@ -15,3 +15,11 @@
 - 3e1f67cf code (sweep, `EXPIRED`, `DEACTIVATED`)
 - 789003c5 tests (review fixes: bad member, `|null` member, cron default, logout with an expired session)
 - e1ea3a66 fix (review fixes: per-member handling, Javadoc of `end`)
+
+## Hand-off (Task 27c, KAN-314, 2026-11-13)
+
+- done: Task 27c, the LOGOUT event for a replaced session (re-sign-in publishes SessionEnded LOGOUT; sweep hardening items done); feature `session-replaced-event` passing (11 tests: SessionReplacedEventTest, SessionExpiryPublisherTest, SessionExpiryPublisherIT); BUG-203 Fixed in PR #214
+- open: KAN-311 (FE useSignOut), Task 28, Task 29b rebase on 27c, Task 30b
+- next: review, merge PR #214
+- branch: feat/KAN-314-identity-session-replaced-event
+- PR: #214 (commit 2140795a)

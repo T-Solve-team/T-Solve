@@ -164,6 +164,20 @@ public class WebSessionStore {
         return claimed(key, member, "");
     }
 
+    /**
+     * Deletes only the session key and keeps its index member, so the sweep still finds the session and publishes
+     * its {@code EXPIRED} event (AC-002.4). For a session already past a limit that a new sign-in replaces.
+     */
+    public void deleteKeyOnly(String cookieValue) {
+        redis.delete(keyOf(cookieValue));
+    }
+
+    /** True while the session is inside both limits (idle 60 minutes, age 8 hours; exactly at a limit is live). */
+    public boolean isWithinLimits(WebSession session, Instant now) {
+        return Duration.between(session.lastActivityAt(), now).compareTo(IDLE_LIMIT) <= 0
+                && Duration.between(session.createdAt(), now).compareTo(ABSOLUTE_LIMIT) <= 0;
+    }
+
     /** The sweep's claim of one index member; false if its score is past {@code nowMillis} or it was claimed already. */
     boolean claim(String member, long nowMillis) {
         return claimed(KEY_PREFIX + member.substring(0, member.indexOf('|')), member, Long.toString(nowMillis));

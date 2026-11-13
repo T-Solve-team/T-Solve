@@ -34,6 +34,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import vn.tsolve.identity.account.AccountSignInService;
 import vn.tsolve.identity.account.AccountSignInService.Result;
 import vn.tsolve.identity.account.AccountSignInService.Status;
+import vn.tsolve.identity.session.OperatorAllowList;
 import vn.tsolve.identity.session.SessionCookie;
 import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
@@ -87,7 +88,9 @@ class CallbackAccountChecksTest {
                 accounts,
                 sessions,
                 new SessionCookie(),
-                new IdentityClock(Clock.systemUTC()));
+                new IdentityClock(Clock.systemUTC()),
+                new OperatorAllowList(""),
+                event -> {});
     }
 
     // ---- helpers

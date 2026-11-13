@@ -3,9 +3,11 @@ package vn.tsolve.identity.signin;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -52,6 +54,7 @@ public final class FakeKeycloakRealm {
     private static final String OPS_OIDC = OPS_REALM_PATH + "/protocol/openid-connect";
     private static final String OIDC = REALM_PATH + "/protocol/openid-connect";
     private static final String TOKEN = OIDC + "/token";
+    private static final String OPS_TOKEN = OPS_OIDC + "/token";
 
     private final WireMockServer server = new WireMockServer(options().dynamicPort());
     private final RSAKey key;
@@ -157,7 +160,10 @@ public final class FakeKeycloakRealm {
     }
 
     private String sign(RSAKey signingKey, String nonce, Consumer<Map<String, Object>> edit) {
-        Map<String, Object> claims = goodClaims(nonce);
+        return signClaims(signingKey, goodClaims(nonce), edit);
+    }
+
+    private String signClaims(RSAKey signingKey, Map<String, Object> claims, Consumer<Map<String, Object>> edit) {
         edit.accept(claims);
         try {
             SignedJWT jwt = new SignedJWT(
@@ -197,12 +203,90 @@ public final class FakeKeycloakRealm {
                 .willReturn(aResponse().withFault(fault)));
     }
 
+    // ---- the realm tsolve-ops (Task 29b): ID token and token endpoint of the Console client
+
+    /** The claims of a good Console ID token: no {@code organization} and no {@code hd}. */
+    public Map<String, Object> opsClaims(String nonce, String email) {
+        Instant now = Instant.now();
+        Map<String, Object> claims = new LinkedHashMap<>();
+        claims.put("iss", opsIssuer());
+        claims.put("aud", CONSOLE_CLIENT_ID);
+        claims.put("sub", "kc-ops-" + email);
+        claims.put("email", email);
+        claims.put("email_verified", Boolean.TRUE);
+        claims.put("iat", now.getEpochSecond());
+        claims.put("exp", now.plusSeconds(300).getEpochSecond());
+        if (nonce != null) {
+            claims.put("nonce", nonce);
+        }
+        return claims;
+    }
+
+    public String opsIdToken(String nonce, String email, Consumer<Map<String, Object>> edit) {
+        return signClaims(key, opsClaims(nonce, email), edit);
+    }
+
+    /** Signed with a key the JWKS does not publish (same key id). */
+    public String opsSignedWithOtherKey(String nonce, String email, Consumer<Map<String, Object>> edit) {
+        return signClaims(otherKey, opsClaims(nonce, email), edit);
+    }
+
+    /** The ops token endpoint answers this ID token to a request that carries this code. */
+    public void answerOpsCode(String code, String idToken) {
+        server.stubFor(post(urlPathEqualTo(OPS_TOKEN))
+                .withRequestBody(containing("code=" + code))
+                .willReturn(json(
+                        200,
+                        "{\"access_token\":\"fake-access-token\",\"token_type\":\"Bearer\",\"expires_in\":300,"
+                                + "\"id_token\":\"" + idToken + "\"}")));
+    }
+
+    public void answerOpsCodeStatus(String code, int status, String body) {
+        server.stubFor(post(urlPathEqualTo(OPS_TOKEN))
+                .withRequestBody(containing("code=" + code))
+                .willReturn(json(status, body)));
+    }
+
+    public void answerOpsCodeFault(String code, Fault fault) {
+        server.stubFor(post(urlPathEqualTo(OPS_TOKEN))
+                .withRequestBody(containing("code=" + code))
+                .willReturn(aResponse().withFault(fault)));
+    }
+
     // ---- what the application sent
+
+    /** The path of each request any realm's userinfo endpoint got, oldest first (matched or not). */
+    public List<String> userinfoRequests() {
+        List<String> paths = new ArrayList<>();
+        for (LoggedRequest request : server.findAll(getRequestedFor(urlPathMatching(".*/userinfo")))) {
+            paths.add(request.getUrl());
+        }
+        return paths;
+    }
+
+    /** The form parameters of each request the ops token endpoint got, oldest first. */
+    public List<Map<String, String>> opsTokenRequests() {
+        return formsOf(OPS_TOKEN);
+    }
 
     /** The form parameters of each request the token endpoint got, oldest first. */
     public List<Map<String, String>> tokenRequests() {
+        return formsOf(TOKEN);
+    }
+
+    /** The Authorization header of each request the ops token endpoint got (client_secret_basic), oldest first. */
+    public List<String> opsTokenAuthorizations() {
+        List<String> headers = new ArrayList<>();
+        for (LoggedRequest request : server.findAll(postRequestedFor(urlPathEqualTo(OPS_TOKEN)))) {
+            String value = request.getHeader("Authorization");
+            headers.add(value == null ? "" : value);
+        }
+        return headers;
+    }
+
+    private List<Map<String, String>> formsOf(String path) {
         List<Map<String, String>> requests = new ArrayList<>();
-        for (LoggedRequest request : server.findAll(postRequestedFor(urlPathEqualTo(TOKEN)))) {
+        for (LoggedRequest request : server.findAll(postRequestedFor(urlPathEqualTo(path)))) {
             Map<String, String> form = new LinkedHashMap<>();
             for (String pair : request.getBodyAsString().split("&")) {
                 if (pair.isEmpty()) {

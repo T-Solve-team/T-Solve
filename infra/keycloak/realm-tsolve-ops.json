@@ -77,7 +77,10 @@
       "serviceAccountsEnabled": false,
       "redirectUris": ["http://admin.localhost:8080/api/v1/auth/callback"],
       "webOrigins": [],
-      "attributes": { "pkce.code.challenge.method": "S256" },
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://admin.localhost:8080/login"
+      },
       "defaultClientScopes": ["email", "profile"]
     }
   ],
