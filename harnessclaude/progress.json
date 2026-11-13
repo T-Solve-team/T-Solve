@@ -137,9 +137,10 @@
         "scope-checks": "passing",
         "session-expiry-events": "passing",
         "operator-session": "passing",
-        "session-replaced-event": "passing"
+        "session-replaced-event": "passing",
+        "jira-link-record": "passing"
       },
-      "lastUpdated": "2026-11-12T18:43:38.638Z",
+      "lastUpdated": "2026-11-13T12:30:26.708Z",
       "branch": "feat/identity",
       "repos": [
         "default"
