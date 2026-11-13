@@ -1245,3 +1245,8 @@
 {"ts":"2026-11-13T02:53:36.116Z","type":"feature-status","module":"project-integration","feature":"project-list","from":"pending","to":"in-progress"}
 {"ts":"2026-11-13T03:06:52.545Z","type":"feature-status","module":"project-integration","feature":"project-reconnect","from":"evaluating","to":"passing"}
 {"ts":"2026-11-13T06:37:26.589Z","type":"feature-status","module":"project-integration","feature":"project-list","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-13T06:40:41.224Z","type":"quick-opened","what":"MSG48 text: match the newest SRS (Sua_31-10 System_Messages row 49): Check the project key and that the service account can browse this project. (D29, KAN-127)","files":["frontend/src/shared/messages/catalog.ts","frontend/src/shared/messages/report3-messages.json"]}
+{"ts":"2026-11-13T06:50:55.489Z","type":"quick-closed","what":"MSG48 text: match the newest SRS (Sua_31-10 System_Messages row 49): Check the project key and that the service account can browse this project. (D29, KAN-127)","files":["frontend/src/shared/messages/catalog.ts","frontend/src/shared/messages/report3-messages.json"]}
+{"ts":"2026-11-13T06:52:56.720Z","type":"feature-status","module":"project-integration","feature":"jira-integration-projects-table","from":"pending","to":"in-progress"}
+{"ts":"2026-11-13T07:03:57.702Z","type":"feature-status","module":"project-integration","feature":"project-list","from":"evaluating","to":"passing"}
+{"ts":"2026-11-13T07:29:34.007Z","type":"feature-status","module":"project-integration","feature":"jira-integration-projects-table","from":"in-progress","to":"evaluating"}
