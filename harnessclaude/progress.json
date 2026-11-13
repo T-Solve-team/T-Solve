@@ -325,7 +325,7 @@
         "row-level-security": "pending",
         "workspace-registry": "pending",
         "web-tenant-resolver": "pending",
-        "file-storage": "passing",
+        "file-storage": "evaluating",
         "local-compose": "pending",
         "ci-images": "pending",
         "staging-servers": "pending",
@@ -351,14 +351,12 @@
         "load-test": "pending",
         "forge-security-chain": "pending"
       },
-      "lastUpdated": "2026-11-11T04:36:31.373Z",
-      "branch": "feat/platform",
+      "lastUpdated": "2026-11-13T14:52:33.719Z",
+      "branch": "feat/KAN-96-platform-file-storage",
       "repos": [
         "default"
       ],
-      "lastCommit": {
-        "default": "8cca7f86252e453dbf35b493757d4ee8f1c13bff"
-      }
+      "lastCommit": {}
     },
     "platform-console": {
       "status": "decomposed",
