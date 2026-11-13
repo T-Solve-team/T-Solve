@@ -82,7 +82,7 @@ access-denied handler 403 MSG07 for a CSRF failure and MSG08 otherwise, through 
 
 **Story:** STORY-003
 **Feature:** me-session
-**Jira:** KAN-? (to create) · branch `feat/KAN-<n>-be-foundation-me-session`
+**Jira:** KAN-316 · branch `feat/KAN-316-be-foundation-me-session`
 **Description:** The four lookup interfaces; DTO records with the contract's schema names, every component
 `@Schema(requiredMode = REQUIRED)` and `department` also `nullable = true`; `SessionService` /
 `SessionServiceImpl` (user and roles from `TSolveUser.current()`, optional lookups through `ObjectProvider`,
