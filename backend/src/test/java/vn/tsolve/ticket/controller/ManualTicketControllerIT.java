@@ -3,10 +3,13 @@ package vn.tsolve.ticket.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -23,6 +26,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
@@ -187,5 +191,89 @@ class ManualTicketControllerIT {
 
         assertThat(count("ticket")).isZero();
         assertThat(count("import_batch")).isZero();
+    }
+
+    static String withDraft(String json, long draftId) {
+        return json.substring(0, json.lastIndexOf('}')) + ", \"draftId\": " + draftId + "}";
+    }
+
+    ResultActions as(TSolveUser user, MockHttpServletRequestBuilder request) throws Exception {
+        return mvc.perform(
+                request.with(authentication(new UsernamePasswordAuthenticationToken(user, null, user.authorities())))
+                        .with(csrf()));
+    }
+
+    long saveDraft(String json) throws Exception {
+        String answer = postAs(PM, "/api/v1/imports/manual/drafts", json)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message.code").value("MSG41"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return ((Number) JsonPath.read(answer, "$.previewId")).longValue();
+    }
+
+    @Test
+    void AC_006_9_to_AC_006_12_savesReopensUpdatesAndFinishesAManualDraft() throws Exception {
+        // a Draft is not validated: blank Ticket ID, title over 200 characters, an unreadable date
+        long draft = saveDraft("""
+                {"projectId": "%s", "ticketId": " ", "title": "%s", "resolvedDate": "soon"}
+                """.formatted(PROJECT, "t".repeat(201)));
+
+        as(PM, get("/api/v1/imports/drafts"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].previewId").value(draft))
+                .andExpect(jsonPath("$[0].source").value("MANUAL"))
+                .andExpect(jsonPath("$[0].rowCount").value(1));
+        as(PM, get("/api/v1/imports/manual/drafts/" + draft))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.projectId").value(PROJECT))
+                .andExpect(jsonPath("$.ticketId").value(" "))
+                .andExpect(jsonPath("$.title").value("t".repeat(201)))
+                .andExpect(jsonPath("$.resolvedDate").value("soon"))
+                .andExpect(jsonPath("$.savedAt").exists());
+        // the preview endpoints do not serve a Manual Draft (AC-006.13)
+        as(PM, get("/api/v1/imports/previews/" + draft)).andExpect(status().isNotFound());
+
+        assertThat(saveDraft(withDraft(body(PROJECT, "ITSUP-9", "Login fails"), draft)))
+                .isEqualTo(draft);
+        assertThat(count("import_preview")).isEqualTo(1);
+        as(PM, get("/api/v1/imports/manual/drafts/" + draft))
+                .andExpect(jsonPath("$.ticketId").value("ITSUP-9"))
+                .andExpect(jsonPath("$.title").value("Login fails"))
+                .andExpect(jsonPath("$.resolvedDate").value("2026-01-15"));
+
+        // a rejected save keeps the Draft (AC-006.12)
+        postAs(PM, "/api/v1/imports/manual", withDraft(body(PROJECT, "ITSUP-9", " "), draft))
+                .andExpect(status().isBadRequest());
+        assertThat(count("import_preview")).isEqualTo(1);
+
+        postAs(PM, "/api/v1/imports/manual", withDraft(body(PROJECT, "ITSUP-9", "Login fails"), draft))
+                .andExpect(status().isCreated());
+        assertThat(count("ticket")).isEqualTo(1);
+        assertThat(count("import_preview")).isZero();
+        assertThat(count("import_preview_row")).isZero();
+        as(PM, get("/api/v1/imports/manual/drafts/" + draft))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MSG04"));
+    }
+
+    @Test
+    void AC_006_13_deletesAManualDraftAndAnswers404ToAnotherUser() throws Exception {
+        long draft = saveDraft("{\"projectId\": \"" + PROJECT + "\"}");
+        TSolveUser otherPm = new TSolveUser(
+                UUID.fromString("44444444-4444-4444-4444-444444444444"),
+                "other-pm@example.test",
+                "Other PM",
+                Set.of(Role.PROJECT_MANAGER));
+
+        as(otherPm, get("/api/v1/imports/manual/drafts/" + draft))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MSG04"));
+        as(otherPm, delete("/api/v1/imports/drafts/" + draft)).andExpect(status().isNotFound());
+
+        as(PM, delete("/api/v1/imports/drafts/" + draft)).andExpect(status().isNoContent());
+        assertThat(count("import_preview")).isZero();
+        assertThat(count("import_preview_row")).isZero();
     }
 }

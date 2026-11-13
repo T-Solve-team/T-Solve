@@ -1344,7 +1344,7 @@ paths:
       tags: [import]
       operationId: saveManualTicketDraft
       summary: >
-        Saves the entry as a Manual Draft without validating any field but the Project (MSG41); with draftId,
+        Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId,
         updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's
         Manual Draft = MSG04 (404).
       requestBody:
@@ -1360,6 +1360,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DraftSavedResponse'
+        '400':
+          description: No Project (MSG01 on projectId).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '401':
           $ref: '#/components/responses/Problem'
         '403':

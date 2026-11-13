@@ -68,10 +68,10 @@ public class ImportDraftServiceImpl implements ImportDraftService {
     @Override
     @Transactional
     public void delete(String user, long previewId) {
-        ImportPreview preview = jiraPreview(user, previewId);
-        if (!preview.isDraft()) {
-            throw notFound();
-        }
+        // a Jira Draft or a Manual Draft (AC-006.13); a CSV preview is not a Draft
+        ImportPreview preview = previews.findByIdAndOwner(previewId, user)
+                .filter(p -> p.getSource() != TicketSource.CSV && p.isDraft())
+                .orElseThrow(ImportDraftServiceImpl::notFound);
         // rows go through ON DELETE CASCADE
         previews.delete(preview);
     }

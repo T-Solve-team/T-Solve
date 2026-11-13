@@ -47,6 +47,8 @@ import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
+import vn.tsolve.ticket.repository.ImportPreviewRepository;
+import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ProjectAccess;
@@ -70,8 +72,16 @@ class ManualTicketServiceImplTest {
     final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     final AuditService audit = mock(AuditService.class);
 
-    final ManualTicketServiceImpl service =
-            new ManualTicketServiceImpl(tickets, decisions, batches, projects, events, audit, CLOCK);
+    final ManualTicketServiceImpl service = new ManualTicketServiceImpl(
+            mock(ImportPreviewRepository.class),
+            mock(ImportPreviewRowRepository.class),
+            tickets,
+            decisions,
+            batches,
+            projects,
+            events,
+            audit,
+            CLOCK);
 
     static ManualTicketRequest valid() {
         return new ManualTicketRequest(

@@ -1,11 +1,13 @@
 package vn.tsolve.ticket.service.impl;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -15,19 +17,26 @@ import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.InvalidFieldsException;
+import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.exception.ProblemDetails.FieldError;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.ticket.csv.CsvRowValidator;
+import vn.tsolve.ticket.dto.DraftSavedResponse;
 import vn.tsolve.ticket.dto.ImportResultResponse;
+import vn.tsolve.ticket.dto.ManualTicketDraft;
 import vn.tsolve.ticket.dto.ManualTicketRequest;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportBatch;
+import vn.tsolve.ticket.entity.ImportPreview;
+import vn.tsolve.ticket.entity.ImportPreviewRow;
 import vn.tsolve.ticket.entity.Ticket;
 import vn.tsolve.ticket.entity.TicketReviewDecision;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
+import vn.tsolve.ticket.repository.ImportPreviewRepository;
+import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ManualTicketService;
@@ -45,6 +54,8 @@ public class ManualTicketServiceImpl implements ManualTicketService {
     private static final int TITLE_MAX = 200;
     private static final int DESCRIPTION_MAX = 10_000;
 
+    private final ImportPreviewRepository previews;
+    private final ImportPreviewRowRepository previewRows;
     private final TicketRepository tickets;
     private final TicketReviewDecisionRepository decisions;
     private final ImportBatchRepository batches;
@@ -55,6 +66,8 @@ public class ManualTicketServiceImpl implements ManualTicketService {
     private final Clock clock;
 
     public ManualTicketServiceImpl(
+            ImportPreviewRepository previews,
+            ImportPreviewRowRepository previewRows,
             TicketRepository tickets,
             TicketReviewDecisionRepository decisions,
             ImportBatchRepository batches,
@@ -62,6 +75,8 @@ public class ManualTicketServiceImpl implements ManualTicketService {
             ApplicationEventPublisher events,
             AuditService audit,
             Clock clock) {
+        this.previews = previews;
+        this.previewRows = previewRows;
         this.tickets = tickets;
         this.decisions = decisions;
         this.batches = batches;
@@ -82,6 +97,9 @@ public class ManualTicketServiceImpl implements ManualTicketService {
         if (!projects.managesActive(owner, request.projectId())) {
             throw new ProjectAccessDeniedException();
         }
+        // locked, so a second save of the same Draft (another tab) waits, then finds it gone (404)
+        ImportPreview draft =
+                request.draftId() == null ? null : manualDraft(previews.lockByIdAndOwner(request.draftId(), owner));
         String ticketId = CsvRowValidator.trim(request.ticketId());
         if (!tickets.findExistingTicketIds(List.of(ticketId)).isEmpty()) {
             throw ticketIdTaken(ticketId);
@@ -115,6 +133,10 @@ public class ManualTicketServiceImpl implements ManualTicketService {
             throw e;
         }
         decisions.save(TicketReviewDecision.approve(ticket.getId(), owner));
+        if (draft != null) {
+            // rows go through ON DELETE CASCADE (AC-006.12)
+            previews.delete(draft);
+        }
         // inside the transaction: @TransactionalEventListener(AFTER_COMMIT) listeners get it once this commits
         events.publishEvent(new TicketsPublishedEvent(List.of(ticket.getId())));
         audit.record(
@@ -124,6 +146,77 @@ public class ManualTicketServiceImpl implements ManualTicketService {
                 Map.of("importBatchId", batch.getId(), "created", 1));
         return new ImportResultResponse(
                 batch.getId(), 1, 0, new MessageRef("MSG32", Map.of("created", 1, "skipped", 0)), null);
+    }
+
+    @Override
+    @Transactional
+    public DraftSavedResponse saveDraft(TSolveUser user, ManualTicketRequest request) {
+        if (request.projectId() == null) {
+            throw new InvalidFieldsException(List.of(required("projectId")));
+        }
+        String owner = user.getName();
+        if (!projects.managesActive(owner, request.projectId())) {
+            throw new ProjectAccessDeniedException();
+        }
+        Instant now = Instant.now(clock);
+        ImportPreviewRow.Values values = new ImportPreviewRow.Values(
+                request.ticketId(),
+                request.title(),
+                request.description(),
+                null,
+                request.resolvedDate(),
+                request.symptoms(),
+                request.rootCause(),
+                request.resolutionSteps(),
+                request.workaround(),
+                request.scope());
+        ImportPreview draft;
+        if (request.draftId() == null) {
+            draft = previews.save(ImportPreview.manualDraft(owner, request.projectId(), now));
+            previewRows.save(ImportPreviewRow.manualDraft(draft.getId(), values));
+        } else {
+            draft = manualDraft(previews.findByIdAndOwner(request.draftId(), owner));
+            draft.moveManualDraft(request.projectId(), now);
+            row(draft).rewrite(values);
+        }
+        return new DraftSavedResponse(draft.getId(), now, new MessageRef("MSG41", Map.of()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ManualTicketDraft getDraft(TSolveUser user, long previewId) {
+        String owner = user.getName();
+        ImportPreview draft = manualDraft(previews.findByIdAndOwner(previewId, owner));
+        // as for a preview of a Project the caller no longer manages (AC-002.9)
+        if (!projects.managesActive(owner, draft.getProjectId())) {
+            throw new ProjectAccessDeniedException();
+        }
+        ImportPreviewRow.Values v = row(draft).getValues();
+        return new ManualTicketDraft(
+                draft.getId(),
+                draft.getProjectId(),
+                v.ticketId(),
+                v.title(),
+                v.description(),
+                v.resolvedDate(),
+                v.symptoms(),
+                v.rootCause(),
+                v.resolutionSteps(),
+                v.workaround(),
+                v.scope(),
+                draft.getDraftSavedAt());
+    }
+
+    /** Another user's preview, a missing one or one that is not a Manual Draft is "not found" (AC-006.13). */
+    private static ImportPreview manualDraft(Optional<ImportPreview> preview) {
+        return preview.filter(p -> p.getSource() == TicketSource.MANUAL)
+                .orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+    }
+
+    private ImportPreviewRow row(ImportPreview draft) {
+        return previewRows
+                .findById(new ImportPreviewRow.Id(draft.getId(), 1))
+                .orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
     }
 
     private static BusinessRuleException ticketIdTaken(String ticketId) {

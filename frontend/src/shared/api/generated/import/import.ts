@@ -1553,7 +1553,7 @@ export const getSaveManualTicketDraftUrl = () => {
 };
 
 /**
- * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
 
  */
 export const saveManualTicketDraft = async (
@@ -1590,7 +1590,7 @@ export const saveManualTicketDraft = async (
 export const getSaveManualTicketDraftMutationKey = () => ['saveManualTicketDraft'] as const;
 
 export const getSaveManualTicketDraftMutationOptions = <
-  TError = ErrorType<ProblemResponse>,
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1629,14 +1629,17 @@ export type SaveManualTicketDraftMutationResult = NonNullable<
   Awaited<ReturnType<typeof saveManualTicketDraft>>
 >;
 export type SaveManualTicketDraftMutationBody = ManualTicketRequest;
-export type SaveManualTicketDraftMutationError = ErrorType<ProblemResponse>;
+export type SaveManualTicketDraftMutationError = ErrorType<ProblemDetail | ProblemResponse>;
 export type SaveManualTicketDraftMutationVariables = { data: ManualTicketRequest };
 
 /**
- * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
 
  */
-export const useSaveManualTicketDraft = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+export const useSaveManualTicketDraft = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof saveManualTicketDraft>>,

@@ -99,6 +99,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
     @Override
     public ImportResultResponse confirm(String user, long previewId) {
         ImportPreview preview = previews.findByIdAndOwner(previewId, user)
+                // a Manual Draft is saved through /imports/manual, with its field checks (AC-006.13)
+                .filter(p -> p.getSource() != TicketSource.MANUAL)
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
