@@ -112,6 +112,32 @@ public class ProjectLinkRepository {
                 .findFirst();
     }
 
+    /**
+     * Reconnects a Removed row in place with Jira's canonical key and the saved settings; Department, tickets and
+     * {@code field_mapping} stay. Zero when the row is no longer Removed: the caller lost the race (D22).
+     */
+    public int reconnectProject(UUID projectId, String jiraProjectKey, List<String> doneStatusIds, int reviewRange) {
+        return jdbc.update(
+                """
+                UPDATE project SET status = 'ACTIVE', jira_project_key = :key,
+                    done_status = CAST(:ids AS jsonb), review_range = :range
+                WHERE public_id = :id AND status = 'REMOVED'
+                """,
+                new MapSqlParameterSource()
+                        .addValue("id", projectId)
+                        .addValue("key", jiraProjectKey)
+                        .addValue("ids", writeDoneStatusIds(doneStatusIds))
+                        .addValue("range", reviewRange));
+    }
+
+    /** Removes only the previous manager's row, so the caller can take the one manager place (AC-003.4). */
+    public void deleteManager(UUID projectId, UUID managerId) {
+        jdbc.update("""
+                DELETE FROM project_membership
+                WHERE project_id = :id AND user_id = :managerId AND role_in_project = 'PROJECT_MANAGER'
+                """, Map.of("id", projectId, "managerId", managerId));
+    }
+
     public void upsertManager(UUID callerId, UUID projectId) {
         jdbc.update("""
                 INSERT INTO project_membership (user_id, project_id, role_in_project)

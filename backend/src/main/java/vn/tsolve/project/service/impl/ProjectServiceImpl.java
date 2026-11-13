@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -119,21 +120,49 @@ public class ProjectServiceImpl implements ProjectService {
             throw required(DONE_STATUS_IDS);
         }
 
-        return writeTransaction.execute(tx -> {
-            CallerDepartment department =
-                    links.findCallerDepartment(caller).orElseThrow(ProjectAccessDeniedException::new);
-            Optional<Link> link = recheckLinks(key, jira.key(), department, caller);
-            if (link.isPresent()) {
-                // Reconnect arrives with Task 4; until then a 500, never a pretended success.
-                throw new UnsupportedOperationException("Reconnecting a Removed Project is not implemented yet");
+        try {
+            return writeTransaction.execute(tx -> {
+                CallerDepartment department =
+                        links.findCallerDepartment(caller).orElseThrow(ProjectAccessDeniedException::new);
+                Optional<Link> link = recheckLinks(key, jira.key(), department, caller);
+                UUID id = link.isPresent()
+                        ? reconnect(link.get(), caller, jira.key(), ids, range)
+                        : insertNew(department, caller, jira.key(), ids, range);
+                ProjectResponse saved = links.readProject(id).orElseThrow();
+                String operation = link.isPresent() ? "RECONNECT" : "CREATE";
+                audit.record(AuditAction.TRACKER_CONFIGURATION_CHANGE, "PROJECT", id, auditDetails(operation, saved));
+                return new ProjectSaveResult(saved, link.isEmpty());
+            });
+        } catch (DuplicateKeyException error) {
+            // Only a reconnect's canonical-key update can meet a concurrent insert of that key; after the rollback
+            // the committed winner is named (D41). Any other constraint stays a failure.
+            if (!String.valueOf(error.getMostSpecificCause().getMessage()).contains("uq_project_jira_key")) {
+                throw error;
             }
-            UUID id = links.insertProject(department.departmentId(), jira.key(), ids, range)
-                    .orElseThrow(() -> lostInsert(jira.key()));
+            throw lostInsert(jira.key());
+        }
+    }
+
+    private UUID insertNew(CallerDepartment department, UUID caller, String canonicalKey, List<String> ids, int range) {
+        UUID id = links.insertProject(department.departmentId(), canonicalKey, ids, range)
+                .orElseThrow(() -> lostInsert(canonicalKey));
+        links.upsertManager(caller, id);
+        return id;
+    }
+
+    /** The locked, re-read Removed row becomes Active in place; memberships change only for a new manager. */
+    private UUID reconnect(Link link, UUID caller, String canonicalKey, List<String> ids, int range) {
+        UUID id = link.projectId();
+        if (links.reconnectProject(id, canonicalKey, ids, range) == 0) {
+            throw conflict(link.departmentName());
+        }
+        if (!caller.equals(link.managerId())) {
+            if (link.managerId() != null) {
+                links.deleteManager(id, link.managerId());
+            }
             links.upsertManager(caller, id);
-            ProjectResponse saved = links.readProject(id).orElseThrow();
-            audit.record(AuditAction.TRACKER_CONFIGURATION_CHANGE, "PROJECT", id, auditDetails("CREATE", saved));
-            return new ProjectSaveResult(saved, true);
-        });
+        }
+        return id;
     }
 
     private CheckedKey checkScopeAndKey(String requestedKey) {

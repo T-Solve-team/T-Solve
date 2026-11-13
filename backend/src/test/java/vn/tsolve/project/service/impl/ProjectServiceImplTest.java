@@ -45,6 +45,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -783,12 +784,198 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void doesNotPretendToReconnectAnEligibleRemovedProject() {
-        given(links.findLink("OPS")).willReturn(Optional.of(link(1, "REMOVED", CALLER, true, null, null)));
-        assertThatThrownBy(() -> service().create(create("OPS", List.of("10002"), "3")))
-                .isInstanceOf(UnsupportedOperationException.class);
-        assertNoCreateWrites();
+    void reconnectsForThePreviousManagerWithoutTouchingMemberships_AC_003_1_AC_003_3_AC_003_5_AC_003_6() {
+        givenRemoved("OPS", removed(CALLER, true));
+        ProjectResponse projection = reconnected(List.of("10001", "10002"), 5);
+        given(links.readProject(PROJECT)).willReturn(Optional.of(projection));
+        assertThat(save(create("OPS", List.of("10001", "10002", "10001"), "5")))
+                .isEqualTo(new ProjectSaveResult(projection, false));
+        InOrder order = inOrder(tracker, links, audit, transactionManager);
+        order.verify(tracker).findProject("OPS");
+        order.verify(transactionManager).getTransaction(any());
+        order.verify(links).findCallerDepartment(CALLER);
+        order.verify(links).findLink("OPS");
+        order.verify(links).lockProject(PROJECT);
+        order.verify(links).findLink("OPS");
+        order.verify(links).reconnectProject(PROJECT, "OPS", List.of("10001", "10002"), 5);
+        order.verify(links).readProject(PROJECT);
+        order.verify(audit)
+                .record(AuditAction.TRACKER_CONFIGURATION_CHANGE, "PROJECT", PROJECT, details("RECONNECT", projection));
+        order.verify(transactionManager).commit(transactionStatus);
+        verify(links, never()).deleteManager(any(), any());
         verify(links, never()).upsertManager(any(), any());
+        verify(audit, times(1)).record(any(), anyString(), any(), any());
+        assertNoInsert();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void replacesAnUnprotectedPreviousManagerBeforeUpsertingTheCaller_AC_003_4(boolean hadManager) {
+        givenRemoved("OPS", removed(hadManager ? OTHER : null, false));
+        save(create("OPS", List.of("10002"), "3"));
+        InOrder order = inOrder(links, audit);
+        order.verify(links).reconnectProject(PROJECT, "OPS", List.of("10002"), 3);
+        if (hadManager) {
+            order.verify(links).deleteManager(PROJECT, OTHER);
+        }
+        order.verify(links).upsertManager(CALLER, PROJECT);
+        order.verify(audit).record(any(), anyString(), any(), any());
+        verify(links, times(hadManager ? 1 : 0)).deleteManager(any(), any());
+        verify(links, times(1)).upsertManager(any(), any());
+        assertNoInsert();
+    }
+
+    @Test
+    void storesJiraCanonicalKeyOnTheReconnectedRow_AC_003_1() {
+        given(tracker.findProject("OPSALIAS")).willReturn(TrackerProjectLookup.found("OPS", STATUSES));
+        givenRemoved("OPSALIAS", removed(CALLER, true));
+        save(create("opsalias", List.of("10002"), "3"));
+        verify(links).reconnectProject(PROJECT, "OPS", List.of("10002"), 3);
+        assertNoInsert();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"2, REMOVED, false", "1, REMOVED, true", "1, ACTIVE, false"})
+    void refusesForeignProtectedOrActiveProjectsBeforeJira_AC_003_7(
+            long department, String status, boolean protectedManager) {
+        given(links.findLink("OPS"))
+                .willReturn(Optional.of(link(department, status, OTHER, protectedManager, null, 9)));
+        assertCreateConflict(create("OPS", List.of("10002"), "3"), "MSG49", "Link Department");
+        assertBeforeJiraRefusal();
+        verify(links, never()).reconnectProject(any(), anyString(), anyList(), anyInt());
+    }
+
+    @Test
+    void refusesWhenTheConditionalReconnectMatchesNoRow_AC_003_8() {
+        givenRemoved("OPS", removed(CALLER, true));
+        given(links.reconnectProject(any(), anyString(), anyList(), anyInt())).willReturn(0);
+        assertCreateConflict(create("OPS", List.of("10002"), "3"), "MSG49", "Link Department");
+        verify(links, never()).deleteManager(any(), any());
+        verify(links, never()).upsertManager(any(), any());
+        verify(links, never()).readProject(any());
+        verifyNoInteractions(audit);
+        verify(transactionManager).rollback(transactionStatus);
+        verify(transactionManager, never()).commit(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"activated", "managed"})
+    void loserRereadsStateAndManagerAfterTheLock_AC_003_8(String change) {
+        Link before = removed(null, false);
+        Link after = change.equals("activated") ? link(1, "ACTIVE", CALLER, true, null, 9) : removed(OTHER, true);
+        given(links.findLink("OPS")).willReturn(Optional.of(before), Optional.of(before), Optional.of(after));
+        assertCreateConflict(create("OPS", List.of("10002"), "3"), "MSG49", "Link Department");
+        InOrder order = inOrder(links, transactionManager);
+        order.verify(transactionManager).getTransaction(any());
+        order.verify(links).lockProject(PROJECT);
+        order.verify(links).findLink("OPS");
+        verify(links, never()).reconnectProject(any(), anyString(), anyList(), anyInt());
+        verify(links, never()).upsertManager(any(), any());
+        verifyNoInteractions(audit);
+        verify(transactionManager).rollback(transactionStatus);
+    }
+
+    @Test
+    void translatesALostCanonicalKeyUpdateAfterRollback_AC_003_8() {
+        given(tracker.findProject("OPSALIAS")).willReturn(TrackerProjectLookup.found("OPS", STATUSES));
+        givenRemoved("OPSALIAS", removed(CALLER, true));
+        // Before Jira, inside the transaction, then after the rollback: the committed winner.
+        given(links.findLink("OPS"))
+                .willReturn(Optional.empty(), Optional.empty(), Optional.of(link(2, "ACTIVE", OTHER, true, null, 3)));
+        given(links.reconnectProject(any(), anyString(), anyList(), anyInt()))
+                .willThrow(new DuplicateKeyException(
+                        "duplicate key value violates unique constraint \"uq_project_jira_key\""));
+        assertCreateConflict(create("OPSALIAS", List.of("10002"), "3"), "MSG49", "Link Department");
+        InOrder order = inOrder(links, transactionManager);
+        order.verify(transactionManager).rollback(transactionStatus);
+        order.verify(links).findLink("OPS");
+        verify(transactionManager, never()).commit(any());
+        verify(links, never()).upsertManager(any(), any());
+        verifyNoInteractions(audit);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"delete", "upsert", "audit"})
+    void rollsBackTheReconnectWhenAWriteFails_AC_003_9(String step) {
+        givenRemoved("OPS", removed(OTHER, false));
+        RuntimeException failure =
+                switch (step) {
+                    case "delete" -> new DataIntegrityViolationException("membership");
+                    // Another constraint than the Jira key is a plain failure, never a conflict.
+                    case "upsert" ->
+                        new DuplicateKeyException(
+                                "duplicate key value violates unique constraint \"uq_membership_one_manager\"");
+                    default -> new IllegalStateException("audit");
+                };
+        switch (step) {
+            case "delete" -> doThrow(failure).when(links).deleteManager(PROJECT, OTHER);
+            case "upsert" -> doThrow(failure).when(links).upsertManager(CALLER, PROJECT);
+            default -> doThrow(failure).when(audit).record(any(), anyString(), any(), any());
+        }
+        assertThatThrownBy(() -> service().create(create("OPS", List.of("10002"), "3")))
+                .isSameAs(failure);
+        verify(links).reconnectProject(PROJECT, "OPS", List.of("10002"), 3);
+        if (!step.equals("audit")) {
+            verifyNoInteractions(audit);
+        }
+        verify(transactionManager).rollback(transactionStatus);
+        verify(transactionManager, never()).commit(any());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = Outcome.class,
+            names = {"NOT_FOUND", "DENIED", "UNAVAILABLE"})
+    void refusesReconnectWhenTheFreshJiraReadFails_AC_002_3_AC_003_1(Outcome outcome) {
+        givenRemoved("OPS", removed(CALLER, true));
+        given(tracker.findProject("OPS")).willReturn(TrackerProjectLookup.failed(outcome));
+        assertThatThrownBy(() -> service().create(create("OPS", List.of("10002"), "3")))
+                .isInstanceOf(
+                        outcome == Outcome.UNAVAILABLE
+                                ? ProjectTrackerUnavailableException.class
+                                : BusinessRuleException.class);
+        assertBeforeTransactionRefusal();
+        verify(links, never()).reconnectProject(any(), anyString(), anyList(), anyInt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"10009, 3, MSG01, doneStatusIds", "10002, 2.5, MSG44, reviewRange"})
+    void refusesReconnectWithAnUnknownIdOrInvalidRange_AC_002_5_AC_002_7_AC_003_1(
+            String id, String range, String code, String field) {
+        givenRemoved("OPS", removed(CALLER, true));
+        assertCreateField(create("OPS", List.of(id), range), code, field);
+        assertBeforeTransactionRefusal();
+        verify(links, never()).reconnectProject(any(), anyString(), anyList(), anyInt());
+    }
+
+    @Test
+    void rechecksReconnectEligibilityInsideTheTransaction_AC_002_17_AC_003_1() {
+        givenRemoved("OPS", removed(CALLER, true));
+        given(links.findCallerDepartment(CALLER)).willReturn(Optional.of(DEPARTMENT), Optional.empty());
+        assertCreateAccess(create("OPS", List.of("10002"), "3"));
+        verify(links, never()).reconnectProject(any(), anyString(), anyList(), anyInt());
+        verifyNoInteractions(audit);
+        verify(transactionManager).rollback(transactionStatus);
+    }
+
+    private Link removed(UUID manager, boolean protectedManager) {
+        return link(1, "REMOVED", manager, protectedManager, List.of("10000"), 9);
+    }
+
+    private void givenRemoved(String key, Link removed) {
+        lenient().when(links.findLink(key)).thenReturn(Optional.of(removed));
+        lenient()
+                .when(links.reconnectProject(any(), anyString(), anyList(), anyInt()))
+                .thenReturn(1);
+        lenient().when(links.readProject(PROJECT)).thenReturn(Optional.of(reconnected(List.of("10002"), 3)));
+    }
+
+    private ProjectResponse reconnected(List<String> ids, int range) {
+        return new ProjectResponse(PROJECT, DEPARTMENT.departmentPublicId(), "OPS", ids, range, "ACTIVE");
+    }
+
+    private void assertNoInsert() {
+        verify(links, never()).insertProject(anyLong(), anyString(), anyList(), anyInt());
     }
 
     @Test
@@ -832,9 +1019,13 @@ class ProjectServiceImplTest {
     }
 
     private Map<String, Object> details(ProjectResponse saved) {
+        return details("CREATE", saved);
+    }
+
+    private Map<String, Object> details(String operation, ProjectResponse saved) {
         return Map.of(
                 "operation",
-                "CREATE",
+                operation,
                 "jiraProjectKey",
                 saved.jiraProjectKey(),
                 "departmentId",

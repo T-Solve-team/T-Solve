@@ -439,7 +439,7 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersCreateLostInsertEnvelope_AC_002_11() throws Exception {
+    void rendersCreateLostInsertEnvelope_AC_002_11_AC_003_7_AC_003_8() throws Exception {
         Map<String, Object> params = Map.of("tracker_name", "Jira", "department_name", "IT Operations");
         when(service.create(any())).thenThrow(new BusinessRuleException("MSG49", params, "jiraProjectKey"));
         assertCreateField(createRequest(validCreate()), 409, "MSG49", "jiraProjectKey", params)
@@ -450,7 +450,7 @@ class ProjectControllerTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersCreateWriteFailure_AC_002_12(boolean integrity) throws Exception {
+    void rendersCreateWriteFailure_AC_002_12_AC_003_9(boolean integrity) throws Exception {
         RuntimeException failure =
                 integrity ? new DataIntegrityViolationException("membership") : new IllegalStateException("audit");
         when(service.create(any())).thenThrow(failure);
@@ -466,7 +466,7 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void answers200WhenTheServiceReportsAnExistingProject() throws Exception {
+    void answers200WithTheReconnectedProject_AC_003_6() throws Exception {
         when(service.create(any())).thenReturn(new ProjectSaveResult(savedProject(), false));
         assertSavedBody(createRequest(validCreate()).andExpect(status().isOk()));
     }
