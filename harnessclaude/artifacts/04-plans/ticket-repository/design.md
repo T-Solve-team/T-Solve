@@ -177,3 +177,40 @@ new protection.
 **Files.** Modify `T/entity/TicketStatus.java`, `T/entity/Ticket.java`, `T/service/impl/TicketDecisionServiceImpl.java`,
 `T/event/TicketsPublishedEvent.java` (javadoc: not only import). Create `T/service/impl/TicketTransitions.java`,
 `T/event/TicketsUnpublishedEvent.java`. Tests `TT/entity/TicketStatusTest.java`, `TT/service/impl/TicketTransitionsTest.java`.
+`T/event/TicketsPublishedEvent.java` (javadoc: not only import). Create `T/service/TicketTransitions.java`,
+`T/event/TicketsUnpublishedEvent.java`. Tests `TT/entity/TicketStatusTest.java`, `TT/service/TicketStatusTransitionsTest.java`.
+
+## Change 2026-11-14: Manual entry (KAN-133, STORY-006)
+
+**Shape.** New `ManualTicketController` (`/api/v1/imports/manual`, PM role) → `ManualTicketService` → existing
+repositories. No new table, no migration.
+
+- **Save** (`POST /imports/manual`): validate every field at once (AC-006.3–AC-006.6) → 400 ProblemDetail with
+  `fieldErrors` (`ProblemDetails.withFieldErrors`; one entry per field: MSG01 / MSG02 with `max_length` / MSG39).
+  Then `ProjectAccess.managesActive` (403 MSG08). In one transaction: `findExistingTicketIds` → 409 MSG31;
+  `ImportBatch.completed(project, user, MANUAL, null, 1, 0, 0)`; `Ticket.imported(…, source MANUAL, writer =
+  fullName)` with `writerId`; `TicketReviewDecision.approve`; publish `TicketsPublishedEvent([id])`; audit IMPORT.
+  A unique violation on insert (race) → 409 MSG31, nothing kept (AC-006.7). Manual entry records no Failed batch.
+  - chosen: a dedicated service; alternatives: a one-row preview + the existing Confirm. Rationale: Confirm carries
+    CSV/Jira rules (MSG30, MSG_NEW_4, skip/retry) that do not apply, and field errors need the request's fields.
+- **Writer (D15).** The controller takes `@AuthenticationPrincipal TSolveUser`: `getName()` = id (the owner string the
+  previews already use), `fullName()` → `writer` (cut to 100 code points as BUG-190), `id()` → `writer_id`.
+  `Ticket.writerId` becomes insertable and is set by the manual factory.
+- **Drafts (D14).** A Manual Draft = an `import_preview` of source MANUAL, import_type WITH_SOLUTION, `draft_saved_at`
+  set at creation (so the partial unique index `uq_import_preview_owner_open` never counts it), with one
+  `import_preview_row` (row_no 1, status VALID, values as typed, not validated). Save as draft with `draftId` rewrites
+  that row and moves `draft_saved_at` (AC-006.10). `GET /imports/manual/drafts/{id}` returns the fields. A save with
+  `draftId` deletes the Draft in its transaction (AC-006.12). `ImportDraftServiceImpl.list` / `delete` accept MANUAL
+  (today they filter to JIRA_IMPORT). `PreviewCleanupJob` already skips Drafts. The `/previews/{id}/…` endpoints keep
+  answering 404 for a Manual preview.
+- **Web app.** `ManualEntryForm` on the now-enabled Manual entry tab: Project select (`useManagedProjects`), Ticket
+  ID, Title, Description, Resolved date (antd DatePicker, future days disabled), the five Solution sections (reuse
+  the section fields of `SolutionFormModal` when they can be shared without changing its behavior; otherwise plain
+  `Input.TextArea`s). Save → MSG32 toast and reset; Save as draft → MSG41 toast, keep `draftId`, refresh Drafts.
+  Server `fieldErrors` → `form.setFields`. Drafts list: type label "Manual"; Open → Import Tickets with
+  `?tab=manual&draftId=N`, which loads the Draft into the form.
+
+**Edge cases.** Whitespace-only fields count as missing (trim). Lengths count code points, as CSV does. Resolved date
+is compared with today in `Asia/Ho_Chi_Minh` through the injected `Clock`. Two tabs saving the same Draft: the second
+save answers 404 (Draft gone) and saves nothing. Draft of a Project the caller no longer manages: save / Save as draft
+answer 403 (MSG08), the Draft stays.

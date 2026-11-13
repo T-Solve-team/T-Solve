@@ -1,7 +1,7 @@
 ---
 module: ticket-repository
 date: 2026-11-07
-total_tasks: 13
+total_tasks: 17
 owner: Dev
 ---
 
@@ -191,3 +191,71 @@ uses it, so review Approve publishes `TicketsPublishedEvent`. Bulk SQL (expiry, 
   `review/TicketDecisionIT` and `ImportConfirm*` tests stay green.
 **Dependencies:** none
 **Estimated size:** small
+
+## Task 14: Manual entry contract
+
+**Story:** STORY-006
+**Feature:** manual-ticket-contract
+**Description:** KAN-133, master design "Change 2026-11-14". In `frontend/openapi/tsolve-api.yaml` (tag `import`):
+`POST /imports/manual` (`ManualTicketRequest` → 201 `ImportResultResponse`; 400 with `fieldErrors`, 403, 404, 409),
+`POST /imports/manual/drafts` (`ManualTicketRequest` → `DraftSavedResponse`; 403, 404),
+`GET /imports/manual/drafts/{previewId}` (→ `ManualTicketDraft`; 403, 404); the `source` enum of
+`ImportDraftSummary` gains `MANUAL`. Field shapes as in the spec's Interface Contracts. Run `npm run generate:api`
+and keep the generated client. Backend DTO records match the schema.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
+- Create: `T/dto/ManualTicketRequest.java`, `T/dto/ManualTicketDraft.java`
+**Dependencies:** none
+**Estimated size:** small
+
+## Task 15: Save a manual ticket
+
+**Story:** STORY-006
+**Feature:** manual-ticket-create
+**Description:** Master design "Change 2026-11-14" (Save, Writer). `ManualTicketController.create` +
+`ManualTicketService.create(TSolveUser, ManualTicketRequest)`. Validation reports every invalid field at once
+(AC-006.3–AC-006.6); 409 MSG31 on a taken Ticket ID, also on a unique-violation race (AC-006.7); 403 MSG08
+(AC-006.8); Published Ticket + approve decision + Completed MANUAL batch + MSG32 (AC-006.1); one
+`TicketsPublishedEvent` (AC-006.2). `Ticket.writerId` insertable and set. `draftId` is Task 16 — ignore it here.
+**Files:**
+- Create: `T/controller/ManualTicketController.java`, `T/service/ManualTicketService.java`,
+  `T/service/impl/ManualTicketServiceImpl.java`
+- Modify: `T/entity/Ticket.java`
+- Test: `TT/service/impl/ManualTicketServiceImplTest.java` (AC-006.1–AC-006.8),
+  `TT/controller/ManualTicketControllerIT.java` (AC-006.1, AC-006.3, AC-006.7, AC-006.8 over HTTP with the real DB)
+**Dependencies:** Task 14
+**Estimated size:** medium
+
+## Task 16: Manual entry Drafts
+
+**Story:** STORY-006
+**Feature:** manual-ticket-drafts
+**Description:** Master design "Change 2026-11-14" (Drafts). `POST /imports/manual/drafts` creates or updates (by
+`draftId`) a Manual Draft, checks only the Project, answers MSG41 (AC-006.9, AC-006.10);
+`GET /imports/manual/drafts/{id}` (AC-006.11); `create` with `draftId` deletes the Draft in its transaction and keeps
+it on any rejection (AC-006.12); 404 MSG04 for another user's, a missing or a non-Manual Draft (AC-006.13).
+`ImportDraftServiceImpl.list` and `delete` accept MANUAL; a CSV preview stays 404.
+**Files:**
+- Modify: `T/controller/ManualTicketController.java`, `T/service/ManualTicketService.java`,
+  `T/service/impl/ManualTicketServiceImpl.java`, `T/service/impl/ImportDraftServiceImpl.java`,
+  `T/entity/ImportPreview.java`, `T/entity/ImportPreviewRow.java`
+- Test: `TT/service/impl/ManualTicketDraftTest.java` (AC-006.9–AC-006.13), extend `ManualTicketControllerIT`
+  (save draft → list shows MANUAL → reopen → save → Draft gone)
+**Dependencies:** Task 15
+**Estimated size:** medium
+
+## Task 17: Manual entry tab
+
+**Story:** STORY-006
+**Feature:** manual-entry-tab
+**Description:** Master design "Change 2026-11-14" (Web app). Enable the Manual entry tab of `ImportTicketsPage`
+with `ManualEntryForm`; the tab and the Draft come from `?tab=manual&draftId=N`; `DraftsList` labels MANUAL
+"Manual" and opens it on that tab. MSW handlers and data for the three endpoints. Server `fieldErrors` shown under
+each field with the input kept (AC-006.14).
+**Files:**
+- Create: `F/components/ManualEntryForm.tsx`, `F/components/ManualEntryForm.test.tsx`
+- Modify: `F/pages/ImportTicketsPage.tsx`, `F/pages/ImportTicketsPage.test.tsx`, `F/components/DraftsList.tsx`,
+  `F/api/**` (API helpers, if the feature keeps them there), `F/mocks/handlers.ts`, `F/mocks/data.ts`
+- Test: `ManualEntryForm.test.tsx` (AC-006.9, AC-006.11, AC-006.14 — test names cite the ids)
+**Dependencies:** Task 14 (Tasks 15–16 only for a live run)
+**Estimated size:** medium

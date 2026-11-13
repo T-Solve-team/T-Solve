@@ -10,9 +10,10 @@ Source: SRS Report 3 v3460 — UC-20, GBR-15, GBR-23, GBR-26, GBR-33, screens 5.
 Preview, 5.3 Import Ticket Preview, MSG01, MSG02, MSG04, MSG08, MSG32, MSG33, MSG35–MSG42, MSG50; Jira story KAN-45.
 This version covers **KAN-45 Import resolved issues from Jira (UC-20)**, including Drafts of a Jira import, and
 **KAN-132 Ticket status model** (STORY-005: the one Ticket state machine shared by submit, review and import, GBR-07,
-GBR-08, GBR-10, GBR-11, GBR-23, UC-25).
-CSV import (UC-21) lives in `import-ticket-list`; manual entry (UC-22), Import History screen (UC-23), Ticket Detail
-(UC-24), unpublish / re-publish (UC-25) and the Solution Form submission (UC-19) are added later through Change Mode.
+GBR-08, GBR-10, GBR-11, GBR-23, UC-25), and **KAN-133 Create a ticket with its Solution manually** (STORY-006,
+UC-22, screen 5.1 Manual entry tab, MSG31, MSG41; Evidence deferred, D13).
+CSV import (UC-21) lives in `import-ticket-list`; Import History screen (UC-23), Ticket Detail (UC-24), unpublish /
+re-publish (UC-25) and the Solution Form submission (UC-19) are added later through Change Mode.
 
 This spec builds on `import-ticket-list` as changed by PR #110 (KAN-31): the Import Preview, its rows, the
 Needs Solution result, Fill solution, remove-rows, Confirm and the Import Ticket Preview popup. A pulled Jira issue
@@ -28,6 +29,7 @@ is one row of such a preview.
 | 2026-11-07 | STORY-001 | D2 reworded: scoped API token as Bearer through the Atlassian API gateway (`api.atlassian.com/ex/jira/{cloudId}`), env `JIRA_SITE_URL`, `JIRA_CLOUD_ID`, `JIRA_API_TOKEN`; no email. New AC-001.11 (retry 429/503 with `Retry-After`) and AC-001.12 (gateway + Bearer, link on the site); AC-001.7 reworded to apply after those retries | RESEARCH-003: a service account has only scoped tokens, which get 401 with basic auth on the site URL; user decisions 2026-11-07 (scoped only, retry twice) |
 | 2026-11-08 | STORY-001 | New AC-001.13: a pull stops reading Jira after 60 seconds in total and answers MSG50 as in AC-001.7 | PR #166 review (trhieudev1309), BUG-189: up to 20 pages plus comment calls, each with a 30 s timeout and 2 retries, could hold a request thread for minutes; user decision 2026-11-08 |
 | 2026-11-13 | STORY-005 | New STORY-005 (KAN-132): AC-005.1–AC-005.5, decisions D9–D11 | One Ticket state machine for submit, review and import; review Approve did not publish the "tickets published" event, so approved tickets were never indexed for search; user decisions 2026-11-13 |
+| 2026-11-14 | STORY-006 | New STORY-006 (KAN-133, UC-22 manual entry): AC-006.1–AC-006.14, decisions D12–D16; manual entry leaves Out of Scope, Evidence stays out (D13) | KAN-133; user decisions 2026-11-14 |
 
 ## Decisions taken while planning (2026-11-07, with the user)
 | # | Question | Decision |
@@ -43,6 +45,11 @@ is one row of such a preview.
 | D9 | Which status changes are allowed (KAN-132) | The table of AC-005.1, taken from SRS v3460 GBR-08, GBR-10, GBR-11, GBR-23, UC-19, UC-25 and UC-30. Rejected is final; Unpublished only goes back to Published (user decision 2026-11-13). |
 | D10 | Where the "tickets published / unpublished" events are published | The rule lives in `TicketStatus` and `Ticket`; one shared transition step moves a batch of Tickets and publishes ONE event with all their ids, as Finish already does (AC-003.9). Not one Spring `@DomainEvents` event per Ticket: it needs `save()`, which review does not call, and it would split a 100-ticket import into 100 events (user decision 2026-11-13). |
 | D11 | Answer to a status change the table does not allow | HTTP 409 with MSG06, no Ticket of the request changed — the answer review already gives for a Ticket that is not Pending review (UC-30 step 3). |
+| D12 | Scope of KAN-133 | The manual entry endpoints, their Drafts, and the Manual entry tab of screen 5.1 (user decision 2026-11-14). |
+| D13 | Evidence of a manual ticket (UC-22 step 3, MSG34, MSG72) | Deferred: file storage (KAN-96, `platform`) does not exist yet. A later Change adds Evidence to manual entry and its Drafts (user decision 2026-11-14). |
+| D14 | Where a manual entry Draft is stored | As an Import Preview of source Manual with one row holding the entered fields, marked a Draft when it is created. The Drafts list and Delete of STORY-004 serve it as they are (user decision 2026-11-14). |
+| D15 | Writer of a manual ticket ("writer = Project Manager") | `writer` = the caller's full name, `writer_id` = the caller's user id (user decision 2026-11-14). |
+| D16 | Message for a Resolved date in the future (screen 5.1 names none) | MSG39 (user decision 2026-11-14). |
 
 ## Requirements
 
@@ -51,6 +58,7 @@ is one row of such a preview.
 2. On the Import Preview the Project Manager reads each issue (summary, description, comments, assignee, resolved date, link to Jira), writes its Solution one issue at a time or for several issues at once, and removes issues they do not want.
 3. Finish (Confirm of a Jira preview) saves every remaining issue as a Published Ticket with an approve decision by the Project Manager (GBR-23), skips issues that got a Ticket in the meantime, and records exactly one Import Batch.
 4. The Project Manager can save the import as a Draft, reopen it later without pulling from Jira again, and delete it (GBR-26).
+5. A Project Manager enters one resolved ticket with its Solution by hand into one of their Active Projects; it is Published at once with an approve decision by them (UC-22, GBR-23), and the entry can be saved as a Draft first (GBR-26).
 
 ### Non-Functional
 1. A pull of 100 issues with their comments returns the Import Preview within 60 seconds.
@@ -126,9 +134,29 @@ is one row of such a preview.
   - AC-005.4: WHEN a request moves one or more Tickets to Published (review Approve, re-publish), THE system SHALL publish one "tickets published" event with the ids of all those Tickets, for listeners to handle after the transaction commits.
   - AC-005.5: WHEN a request moves one or more Tickets to Unpublished, THE system SHALL publish one "tickets unpublished" event with the ids of all those Tickets, for listeners to handle after the transaction commits.
 
+### STORY-006: Create a ticket with its Solution manually (KAN-133)
+- As a Project Manager, I want to enter a resolved ticket with its Solution by hand so that knowledge that is not in Jira can also be reused.
+- Acceptance:
+  - AC-006.1: WHEN a Project Manager saves a manual entry with valid fields for an Active Project they manage, THE system SHALL, in one transaction, save a Ticket of that Project with the entered Ticket ID, title, description, resolved date and Solution, source Manual, status Published, writer = the caller's full name and writer id = the caller's user id (D15); record an approve decision by the caller; record one Import Batch of source Manual with status Completed, 1 published, 0 skipped and 0 removed; and return MSG32 (1 published, 0 skipped).
+  - AC-006.2: WHEN a manual entry is saved, THE system SHALL publish one "tickets published" event with the new Ticket's id, for listeners to handle after the transaction commits.
+  - AC-006.3: IF Project, Ticket ID, Title, Description, Symptoms, Root cause, Resolution steps or Scope is missing or blank after trimming, THEN THE system SHALL reject the save with HTTP 400 and MSG01 for each missing field and save nothing.
+  - AC-006.4: IF the Ticket ID is longer than 50 characters, the Title longer than 200, the Description longer than 10,000, or the Solution sections longer than 10,000 characters in total, THEN THE system SHALL reject the save with HTTP 400 and MSG02 for each such field with its limit, and save nothing.
+  - AC-006.5: IF the Resolved date is after today (Vietnam time), THEN THE system SHALL reject the save with HTTP 400 and MSG39 for that field and save nothing (D16). A missing Resolved date is allowed.
+  - AC-006.6: WHEN a save is rejected for invalid fields, THE system SHALL report every invalid field of the request in the one answer, each with its message.
+  - AC-006.7: IF the Ticket ID (after trimming) is already a Ticket ID, including when another request takes it while this one is saved, THEN THE system SHALL reject the save with HTTP 409 and MSG31 with that Ticket ID, save nothing and record no Import Batch.
+  - AC-006.8: IF the caller does not have the Project Manager role, or the selected Project is not Active or not managed by the caller, THEN THE system SHALL reject the save or the Save as draft with HTTP 403 (MSG08) and save nothing.
+  - AC-006.9: WHEN the Project Manager clicks Save as draft on the Manual entry tab with a Project they manage, THE system SHALL save the entered fields as a Draft of type Manual with the save time without validating any other field (D14), and return MSG41 with the Draft's id.
+  - AC-006.10: WHEN the Project Manager saves as draft an entry reopened from a Draft, THE system SHALL update that same Draft, its fields and its save time instead of creating a second one.
+  - AC-006.11: WHEN the Project Manager reopens a Manual Draft from the Drafts list, THE system SHALL return its Project and every field as saved, and THE web app SHALL show them on the Manual entry tab.
+  - AC-006.12: WHEN a manual entry reopened from a Draft is saved successfully, THE system SHALL delete that Draft in the same transaction; IF the save is rejected, THEN THE system SHALL keep the Draft unchanged.
+  - AC-006.13: IF a request names a Manual Draft that belongs to another user, does not exist or is not a Manual Draft, THEN THE system SHALL reject it with HTTP 404 (MSG04); Delete of a Manual Draft works as AC-004.4 and AC-004.5.
+  - AC-006.14: WHEN a save or Save as draft is rejected, THE web app SHALL show each message next to its field and keep everything the Project Manager entered; WHEN a save succeeds, THE web app SHALL show MSG32 and clear the form.
+
 ## Out of Scope
 - CSV import (UC-21) — `import-ticket-list`; Drafts of a CSV import (GBR-26, UC-21 step 7b) are a later Change there.
-- Manual entry (UC-22), Import History screen (UC-23), Ticket Detail (UC-24), unpublish / re-publish (UC-25), Solution Form submission (UC-19).
+- Evidence of a manually entered ticket and of its Draft (UC-22 step 3, MSG34, MSG72) — waits for file storage (KAN-96, D13).
+- Import History screen (UC-23), Ticket Detail (UC-24), unpublish / re-publish (UC-25), Solution Form submission (UC-19).
+  (Manual entry, UC-22, is STORY-006 without its Evidence.)
 - Storing the Jira service account in the database and the UC-10 screen — `workspace`. Until then the connection comes from the environment (D2).
 - The Jira field mapping and "resolution comments field" of a Project — `project-integration` (D5).
 - Linking a Jira assignee to a T-Solve user (D4).
@@ -148,7 +176,12 @@ New endpoints:
 | `POST /imports/jira` | `{ projectId (uuid), resolvedFrom, resolvedTo }` (ISO dates) | `ImportPreviewResponse` (source JIRA_IMPORT, message MSG35?) |
 | `POST /imports/previews/{previewId}/draft` | — | `{ previewId, savedAt, message MSG41 }` |
 | `GET /imports/drafts` | — | list of `ImportDraftSummary` (previewId, source, projectId, rowCount, savedAt) |
-| `DELETE /imports/drafts/{previewId}` | — | 204 |
+| `DELETE /imports/drafts/{previewId}` | — | 204 (also a Manual Draft, AC-006.13) |
+| `POST /imports/manual` | `ManualTicketRequest { projectId (uuid), ticketId, title, description, resolvedDate?, symptoms, rootCause, resolutionSteps, workaround?, scope, draftId? }` | 201 `ImportResultResponse` (MSG32) |
+| `POST /imports/manual/drafts` | `ManualTicketRequest` (only `projectId` required; `draftId` updates that Draft) | `DraftSavedResponse` (MSG41) |
+| `GET /imports/manual/drafts/{previewId}` | — | `ManualTicketDraft { previewId, projectId, ticketId?, title?, description?, resolvedDate?, symptoms?, rootCause?, resolutionSteps?, workaround?, scope?, savedAt }` |
+
+Manual entry rejections: invalid fields → 400 ProblemDetail listing every field with its MSG01 / MSG02 / MSG39 (AC-006.6) · Ticket ID taken → 409 (MSG31) · no PM role, Project not Active or not managed → 403 (MSG08) · Draft not found, another user's or not Manual → 404 (MSG04). `ImportDraftSummary.source` gains `MANUAL`.
 
 Endpoints of `import-ticket-list` that also serve a Jira preview: `GET /imports/previews/{previewId}`,
 `GET …/rows`, `GET …/rows/{rowNo}`, `POST …/fill-solution`, `POST …/remove-rows`, `POST …/confirm` (Finish).

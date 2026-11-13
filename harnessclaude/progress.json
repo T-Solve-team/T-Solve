@@ -208,9 +208,13 @@
         "jira-import-verify": "passing",
         "jira-gateway-auth": "passing",
         "jira-pull-deadline": "evaluating",
-        "ticket-status-model": "passing"
+        "ticket-status-model": "passing",
+        "manual-ticket-contract": "pending",
+        "manual-ticket-create": "pending",
+        "manual-ticket-drafts": "pending",
+        "manual-entry-tab": "pending"
       },
-      "lastUpdated": "2026-11-13T21:06:56.729Z",
+      "lastUpdated": "2026-11-13T21:18:57.636Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
