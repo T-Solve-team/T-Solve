@@ -168,10 +168,10 @@
       "status": "implementing",
       "currentPhase": "implement",
       "features": {
-        "project-members-api": "evaluating",
-        "project-members-tab": "evaluating"
+        "project-members-api": "passing",
+        "project-members-tab": "passing"
       },
-      "lastUpdated": "2026-11-13T09:04:02.145Z",
+      "lastUpdated": "2026-11-13T09:09:48.156Z",
       "branch": "feat/project-integration",
       "repos": [
         "default"
