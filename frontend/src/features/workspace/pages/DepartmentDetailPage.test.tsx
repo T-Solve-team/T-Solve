@@ -280,7 +280,8 @@ describe('DepartmentDetailPage', () => {
     expect(await screen.findByText(msg('MSG43'))).toBeInTheDocument();
     expect(input).toHaveAccessibleDescription(msg('MSG43'));
     expect(input).toHaveValue('HR');
-    expect(saveButton()).toBeInTheDocument();
+    // The button reads "loading Save" until the failed request settles.
+    expect(await screen.findByRole('button', { name: 'Save' })).toBeInTheDocument();
   });
 
   it.each([
@@ -296,7 +297,7 @@ describe('DepartmentDetailPage', () => {
     await user.click(saveButton());
     expect(await screen.findByText(msg(code))).toBeInTheDocument();
     expect(input).toHaveValue('IT Support');
-    expect(saveButton()).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Save' })).toBeInTheDocument();
   });
 
   it('AC-004.12 Cancel sends nothing, shows the current name, and the next Edit shows it again', async () => {
