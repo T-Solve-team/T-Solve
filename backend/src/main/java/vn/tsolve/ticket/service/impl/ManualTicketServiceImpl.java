@@ -175,7 +175,8 @@ public class ManualTicketServiceImpl implements ManualTicketService {
             draft = previews.save(ImportPreview.manualDraft(owner, request.projectId(), now));
             previewRows.save(ImportPreviewRow.manualDraft(draft.getId(), values));
         } else {
-            draft = manualDraft(previews.findByIdAndOwner(request.draftId(), owner));
+            // locked like create: a Save of this Draft in another tab finishes first, then this finds it gone (404)
+            draft = manualDraft(previews.lockByIdAndOwner(request.draftId(), owner));
             draft.moveManualDraft(request.projectId(), now);
             row(draft).rewrite(values);
         }
