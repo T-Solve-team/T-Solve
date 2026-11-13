@@ -14,7 +14,7 @@ set -Eeuo pipefail
 cfg() { # cfg <VAR> <default>: the override only when this is not an SSH forced-command run
   if [[ -n "${SSH_ORIGINAL_COMMAND:-}" ]]; then printf '%s' "$2"; else printf '%s' "${!1:-$2}"; fi
 }
-SRC="$(cfg TSOLVE_SRC /srv/tsolve/repo)"
+SRC="$(cfg TSOLVE_SRC /srv/tsolve/src)"
 STATE="$(cfg TSOLVE_STATE_DIR /srv/tsolve/staging)"
 ENV_FILE="$(cfg TSOLVE_ENV_FILE "$STATE/.env")"
 LOG="$(cfg TSOLVE_DEPLOY_LOG "$STATE/deploy.log")"

@@ -159,7 +159,7 @@ for a push to `main` (never for a pull request), or by hand ("Run workflow", opt
 connects over SSH with a dedicated deploy key and sends the commit SHA. The key can run one program only,
 `/usr/local/sbin/tsolve-deploy` (source: `infra/scripts/deploy.sh`), which:
 
-1. refuses a SHA that is not on `origin/main`, checks the commit out in `/srv/tsolve/repo` (detached) and prints the
+1. refuses a SHA that is not on `origin/main`, checks the commit out in `/srv/tsolve/src` (detached) and prints the
    previous commit (the one in `DEPLOYED`, the last successful deploy);
 2. fails, naming the variables, when `/srv/tsolve/staging/.env` lacks a name that `staging.env.example` has (it never
    prints values);
@@ -192,12 +192,12 @@ first admin stay manual (sections 5 and 6). One deploy runs at a time (a second 
 
 1. On the VPS, as root: `install -o root -g root -m 755 infra/scripts/deploy.sh /usr/local/sbin/tsolve-deploy`. The
    `deploy` user must not be able to write it.
-2. The `deploy` user (member of the `docker` group, owner of `/srv/tsolve/repo` and `/srv/tsolve/staging`) gets the
-   key. On your machine: `ssh-keygen -t ed25519 -f tsolve-deploy -C tsolve-staging-cd -N ""`. In
+2. The `deploy` user (member of the `docker` group, owner of `/srv/tsolve/src` and `/srv/tsolve/staging`) gets the
+   key. On your machine: `ssh-keygen -t ed25519 -f tsolve-deploy -C tsolve-cd-staging -N ""`. In
    `~deploy/.ssh/authorized_keys` add the public key on one line:
 
    ```
-   restrict,command="/usr/local/sbin/tsolve-deploy" ssh-ed25519 AAAA... tsolve-staging-cd
+   restrict,command="/usr/local/sbin/tsolve-deploy" ssh-ed25519 AAAA... tsolve-cd-staging
    ```
 
    (See "Trust model" for who may edit this file.)
@@ -205,9 +205,10 @@ first admin stay manual (sections 5 and 6). One deploy runs at a time (a second 
    allow only `main`. Then add these secrets:
    `STAGING_SSH_HOST`, `STAGING_SSH_USER` (`deploy`), `STAGING_SSH_KEY` (the private key file) and
    `STAGING_SSH_KNOWN_HOSTS`. Then delete the private key from your machine.
-4. For `STAGING_SSH_KNOWN_HOSTS` run `ssh-keyscan -t ed25519 <host>` and compare the key's fingerprint
-   (`ssh-keygen -lf` on the scanned line) with `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` run on the server.
-   Paste the line only when they match.
+4. For `STAGING_SSH_KNOWN_HOSTS` (the host, `tsolve.io.vn`, has an RSA host key only) run
+   `ssh-keyscan -t rsa <host>`, and compare the fingerprint of the scanned line (pipe it to `ssh-keygen -lf -`) with
+   `ssh-keygen -lf /etc/ssh/ssh_host_rsa_key.pub` run on the server. Paste the line only when they match. Windows
+   OpenSSH's `ssh-keyscan` may fail with an unsupported key exchange: use the one from Git Bash.
 
 ### Redeploy or roll back
 
@@ -224,5 +225,5 @@ A merged PR does not change the script the key runs. After `infra/scripts/deploy
 
 Backend, worker and web are deployed (the new compose file applies to them), but `compose.staging.yml` (for the other
 services), a `keycloak/(staging/)realm-*.json` file, `keycloak/themes/` or `postgres/init/` changed and CD did not apply
-it. With no valid `DEPLOYED` file the warning lists every such file. Read the change (`git -C /srv/tsolve/repo diff <previous> <sha> -- <file>`) and apply
+it. With no valid `DEPLOYED` file the warning lists every such file. Read the change (`git -C /srv/tsolve/src diff <previous> <sha> -- <file>`) and apply
 it by hand as in sections 4, 8 and 10 (for the compose file, `dc up -d --wait`; a realm file needs a realm reset).
