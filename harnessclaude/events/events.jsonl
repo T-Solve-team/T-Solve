@@ -766,6 +766,11 @@
 {"ts":"2026-11-06T00:17:30.307Z","type":"quick-closed","what":"KAN-117 cover Suggestion History method security with TSolveUser","files":["backend/src/test/java/vn/tsolve/triage/controller/SuggestionResultControllerTest.java"]}
 {"ts":"2026-11-06T00:29:47.520Z","type":"quick-opened","what":"KAN-186 verify CSV import preview ownership in PostgreSQL","files":["backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmIT.java"]}
 {"ts":"2026-11-06T00:33:29.931Z","type":"quick-closed","what":"KAN-186 verify CSV import preview ownership in PostgreSQL","files":["backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmIT.java"]}
+{"ts":"2026-11-06T00:57:53.681Z","type":"spec-approved","module":"worker","specHash":"6d0b11c652fe3181394ea638199d5ac00abbd31ae96e1fdc9df68981adb95e3d"}
+{"ts":"2026-11-06T01:02:18.740Z","type":"module-status","module":"worker","from":"decomposed","to":"planned"}
+{"ts":"2026-11-06T01:02:18.813Z","type":"feature-status","module":"worker","feature":"review-notification-smtp","from":null,"to":"pending"}
+{"ts":"2026-11-06T01:02:18.889Z","type":"module-status","module":"worker","from":"planned","to":"implementing"}
+{"ts":"2026-11-06T01:02:18.963Z","type":"feature-status","module":"worker","feature":"review-notification-smtp","from":"pending","to":"in-progress"}
 {"ts":"2026-11-06T04:24:14.457Z","type":"feature-status","module":"search","feature":"search-public-ids","from":"pending","to":"in-progress"}
 {"ts":"2026-11-06T04:48:51.533Z","type":"feature-status","module":"search","feature":"ticket-updated-at","from":"pending","to":"in-progress"}
 {"ts":"2026-11-06T04:48:51.707Z","type":"feature-status","module":"search","feature":"visible-scope","from":"pending","to":"in-progress"}
@@ -781,6 +786,8 @@
 {"ts":"2026-11-06T12:13:56.735Z","type":"feature-status","module":"ai","feature":"solution-review-fixes","from":"evaluating","to":"passing"}
 {"ts":"2026-11-06T12:24:31.034Z","type":"feature-status","module":"search","feature":"ticket-embedding-schema","from":"pending","to":"in-progress"}
 {"ts":"2026-11-06T12:24:31.419Z","type":"feature-status","module":"search","feature":"ticket-embedding-pipeline","from":"pending","to":"in-progress"}
+{"ts":"2026-11-06T12:50:23.485Z","type":"commit-recorded","module":"worker","repo":"default","sha":"c7dd3d10cfad23c2ebc54bdc4e5ad54a4fb974f4"}
+{"ts":"2026-11-06T12:50:23.571Z","type":"feature-status","module":"worker","feature":"review-notification-smtp","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-06T13:19:21.167Z","type":"feature-status","module":"search","feature":"ticket-embedding-schema","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-06T13:19:21.481Z","type":"feature-status","module":"search","feature":"ticket-embedding-schema","from":"evaluating","to":"passing"}
 {"ts":"2026-11-06T13:19:21.790Z","type":"feature-status","module":"search","feature":"ticket-embedding-pipeline","from":"in-progress","to":"evaluating"}
