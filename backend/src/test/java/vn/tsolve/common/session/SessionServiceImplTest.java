@@ -148,6 +148,18 @@ class SessionServiceImplTest {
     }
 
     @Test
+    void listsOneDepartmentIdOnceEvenWithDifferentNames_AC_003_3() {
+        allLookupsPresent();
+        var renamed = new DepartmentRef(D1.departmentId(), "Engineering (renamed)");
+        when(departmentLookup.findDepartment(USER_ID)).thenReturn(Optional.of(D1));
+        when(projectLookup.findProjects(USER_ID)).thenReturn(List.of(projectIn(renamed, "A"), projectIn(D2, "B")));
+
+        CurrentUserResponse me = service.getMe();
+
+        assertThat(me.departments()).containsExactly(D1, D2);
+    }
+
+    @Test
     void listsProjectDepartmentsWhenNoDepartment_AC_003_3() {
         allLookupsPresent();
         when(projectLookup.findProjects(USER_ID)).thenReturn(List.of(projectIn(D2, "B"), projectIn(D3, "D")));
