@@ -11,6 +11,8 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import vn.tsolve.project.dto.ProjectResponse;
+import vn.tsolve.project.dto.ProjectRowResponse;
+import vn.tsolve.project.dto.ProjectRowResponse.ProjectManagerRef;
 
 @Repository
 public class ProjectLinkRepository {
@@ -165,6 +167,31 @@ public class ProjectLinkRepository {
                                 rs.getString("status")))
                 .stream()
                 .findFirst();
+    }
+
+    /**
+     * All Active and Removed Projects of one Department, by key in code-point order (keys are {@code [A-Z0-9_]}, so
+     * {@code COLLATE "C"} does not depend on the database locale). The manager is shown only while the account is
+     * Active; the count covers every membership row, whatever the account status (AC-004.4 to AC-004.6).
+     */
+    public List<ProjectRowResponse> listProjects(long departmentId) {
+        return jdbc.query("""
+                SELECT p.public_id, p.jira_project_key, p.status, u.id AS manager_id, u.full_name AS manager_name,
+                       (SELECT count(*) FROM project_membership a WHERE a.project_id = p.public_id) AS member_count
+                FROM project p
+                LEFT JOIN project_membership m ON m.project_id = p.public_id AND m.role_in_project = 'PROJECT_MANAGER'
+                LEFT JOIN app_user u ON u.id = m.user_id AND u.status = 'ACTIVE'
+                WHERE p.department_id = :departmentId
+                ORDER BY p.jira_project_key COLLATE "C"
+                """, Map.of("departmentId", departmentId), (rs, rowNum) -> {
+            UUID managerId = rs.getObject("manager_id", UUID.class);
+            return new ProjectRowResponse(
+                    rs.getObject("public_id", UUID.class),
+                    rs.getString("jira_project_key"),
+                    managerId == null ? null : new ProjectManagerRef(managerId, rs.getString("manager_name")),
+                    rs.getInt("member_count"),
+                    rs.getString("status"));
+        });
     }
 
     private String writeDoneStatusIds(List<String> ids) {

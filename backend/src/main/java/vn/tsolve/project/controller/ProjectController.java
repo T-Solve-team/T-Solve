@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,7 @@ import vn.tsolve.common.security.Roles;
 import vn.tsolve.project.dto.CreateProjectRequest;
 import vn.tsolve.project.dto.ProjectConnectionTestRequest;
 import vn.tsolve.project.dto.ProjectConnectionTestResponse;
+import vn.tsolve.project.dto.ProjectListResponse;
 import vn.tsolve.project.dto.ProjectResponse;
 import vn.tsolve.project.dto.ProjectSaveResult;
 import vn.tsolve.project.service.ProjectService;
@@ -42,6 +44,14 @@ public class ProjectController {
     public ResponseEntity<ProjectConnectionTestResponse> testConnection(
             @Valid @RequestBody ProjectConnectionTestRequest request) {
         return ResponseEntity.ok(service.testConnection(request));
+    }
+
+    @GetMapping
+    @Operation(operationId = "listProjects", summary = "List own Department Projects (Project Manager only).")
+    @ApiResponse(responseCode = "403", description = "Access denied")
+    @PreAuthorize("hasRole('" + Roles.PROJECT_MANAGER + "')")
+    public ResponseEntity<ProjectListResponse> list() {
+        return ResponseEntity.ok(service.list());
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)

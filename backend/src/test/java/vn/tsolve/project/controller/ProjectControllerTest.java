@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -42,10 +43,14 @@ import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.Roles;
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.common.security.WithTSolveUser;
+import vn.tsolve.identity.dto.DepartmentRefResponse;
 import vn.tsolve.project.dto.CreateProjectRequest;
 import vn.tsolve.project.dto.ProjectConnectionTestRequest;
 import vn.tsolve.project.dto.ProjectConnectionTestResponse;
+import vn.tsolve.project.dto.ProjectListResponse;
 import vn.tsolve.project.dto.ProjectResponse;
+import vn.tsolve.project.dto.ProjectRowResponse;
+import vn.tsolve.project.dto.ProjectRowResponse.ProjectManagerRef;
 import vn.tsolve.project.dto.ProjectSaveResult;
 import vn.tsolve.project.exception.ProjectAccessDeniedException;
 import vn.tsolve.project.exception.ProjectTrackerUnavailableException;
@@ -601,5 +606,116 @@ class ProjectControllerTest {
                     .andExpect(jsonPath("$.fieldErrors[0].params").value(new LinkedHashMap<>(params)));
         }
         return result;
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.PROJECT_MANAGER)
+    void returnsTheListExampleWithANullManager_AC_004_1_AC_004_3_AC_004_4_AC_004_5() throws Exception {
+        UUID department = UUID.fromString("3f2a7c1e-52d1-4b7e-9d1f-0a4ab3c1d201");
+        UUID old = UUID.fromString("8d1b5d72-6c12-4b95-83e4-c9a6b1181001");
+        UUID ops = UUID.fromString("8d1b5d72-6c12-4b95-83e4-c9a6b1181002");
+        UUID manager = UUID.fromString("16257b22-0d64-46ef-9cd3-1ee109989a01");
+        when(service.list())
+                .thenReturn(new ProjectListResponse(
+                        new DepartmentRefResponse(department, "IT Operations"),
+                        List.of(
+                                new ProjectRowResponse(old, "OLD", null, 2, "REMOVED"),
+                                new ProjectRowResponse(
+                                        ops, "OPS", new ProjectManagerRef(manager, "Alex Nguyen"), 1, "ACTIVE"))));
+        listRequest()
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(content().json("""
+                        {"department":{"departmentId":"3f2a7c1e-52d1-4b7e-9d1f-0a4ab3c1d201","name":"IT Operations"},
+                         "projects":[
+                          {"projectId":"8d1b5d72-6c12-4b95-83e4-c9a6b1181001","jiraProjectKey":"OLD",
+                           "projectManager":null,"memberCount":2,"status":"REMOVED"},
+                          {"projectId":"8d1b5d72-6c12-4b95-83e4-c9a6b1181002","jiraProjectKey":"OPS",
+                           "projectManager":{"userId":"16257b22-0d64-46ef-9cd3-1ee109989a01","fullName":"Alex Nguyen"},
+                           "memberCount":1,"status":"ACTIVE"}]}
+                        """, true))
+                .andExpect(jsonPath("$.projects[0].projectManager").hasJsonPath())
+                .andExpect(jsonPath("$.page").doesNotExist())
+                .andExpect(jsonPath("$.code").doesNotExist());
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.PROJECT_MANAGER)
+    void returnsTheDepartmentWithAnEmptyArray_AC_004_7() throws Exception {
+        when(service.list())
+                .thenReturn(new ProjectListResponse(new DepartmentRefResponse(PROJECT, "IT Operations"), List.of()));
+        listRequest()
+                .andExpect(status().isOk())
+                .andExpect(content()
+                        .json(
+                                "{\"department\":{\"departmentId\":\"" + PROJECT
+                                        + "\",\"name\":\"IT Operations\"},\"projects\":[]}",
+                                true));
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.PROJECT_MANAGER)
+    void ignoresClientPagingAndScopeParameters_AC_004_2_AC_007_7() throws Exception {
+        when(service.list())
+                .thenReturn(new ProjectListResponse(new DepartmentRefResponse(PROJECT, "IT Operations"), List.of()));
+        mvc.perform(get("/api/v1/projects")
+                        .param("page", "1")
+                        .param("size", "1")
+                        .param("sort", "jiraProjectKey,desc")
+                        .param("departmentId", new UUID(127, 99).toString())
+                        .param("workspaceId", new UUID(127, 98).toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.department.departmentId").value(PROJECT.toString()));
+        verify(service).list();
+    }
+
+    @Test
+    void declaresListProjectManagerAccess_AC_007_1() {
+        Method method = Arrays.stream(ProjectController.class.getMethods())
+                .filter(candidate -> candidate.getName().equals("list") && candidate.getParameterCount() == 0)
+                .findFirst()
+                .orElse(null);
+        assertThat(method).as("public list() handler").isNotNull();
+        PreAuthorize access = method.getAnnotation(PreAuthorize.class);
+        assertThat(access).isNotNull();
+        assertThat(access.value()).contains(Roles.PROJECT_MANAGER).isEqualTo("hasRole('PROJECT_MANAGER')");
+    }
+
+    @Test
+    void refusesAnonymousList_AC_007_2() throws Exception {
+        assertNoFieldProblem(listRequest(), 401, "MSG07");
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @WithTSolveUser
+    void refusesEmployeeList_AC_007_3() throws Exception {
+        assertNoFieldProblem(listRequest(), 403, "MSG08");
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.ADMIN)
+    void refusesAdminList_AC_007_3() throws Exception {
+        assertNoFieldProblem(listRequest(), 403, "MSG08");
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.PROJECT_MANAGER)
+    void rendersIneligibleListCaller_AC_007_4() throws Exception {
+        when(service.list()).thenThrow(new ProjectAccessDeniedException());
+        assertNoFieldProblem(listRequest(), 403, "MSG08");
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.PROJECT_MANAGER)
+    void rendersUnboundListWorkspace_AC_007_5() throws Exception {
+        when(service.list()).thenThrow(new IllegalStateException("no Workspace is bound"));
+        assertNoFieldProblem(listRequest(), 500, "MSG06");
+    }
+
+    private ResultActions listRequest() throws Exception {
+        return mvc.perform(get("/api/v1/projects"));
     }
 }

@@ -21,10 +21,12 @@ import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.FieldMessageCodeException;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.identity.dto.DepartmentRefResponse;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.project.dto.CreateProjectRequest;
 import vn.tsolve.project.dto.ProjectConnectionTestRequest;
 import vn.tsolve.project.dto.ProjectConnectionTestResponse;
+import vn.tsolve.project.dto.ProjectListResponse;
 import vn.tsolve.project.dto.ProjectResponse;
 import vn.tsolve.project.dto.ProjectSaveResult;
 import vn.tsolve.project.entity.Project;
@@ -75,6 +77,8 @@ public class ProjectServiceImpl implements ProjectService {
 
     /** The caller, their own eligible Department and the normalised key, checked in the AC-007.8 order. */
     private record CheckedKey(UUID caller, CallerDepartment department, String key) {}
+
+    private record CallerScope(UUID caller, CallerDepartment department) {}
 
     @Override
     public ProjectConnectionTestResponse testConnection(ProjectConnectionTestRequest request) {
@@ -166,16 +170,24 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private CheckedKey checkScopeAndKey(String requestedKey) {
-        scope.currentWorkspaceId(); // throws when no Workspace is bound: 500 MSG06 before any read (AC-007.5)
-        UUID caller = TSolveUser.current()
-                .orElseThrow(ProjectAccessDeniedException::new)
-                .id();
-        CallerDepartment department = links.findCallerDepartment(caller).orElseThrow(ProjectAccessDeniedException::new);
+        CallerScope checked = checkScope();
+        UUID caller = checked.caller();
+        CallerDepartment department = checked.department();
         String key = requestedKey.strip().toUpperCase(Locale.ROOT);
         if (!KEY_FORMAT.matcher(key).matches()) {
             throw new BusinessRuleException(MSG48, Map.of("tracker_name", TRACKER_NAME));
         }
         return new CheckedKey(caller, department, key);
+    }
+
+    /** The bound Workspace, then the caller's own eligible Department, both from the server side (AC-007.7). */
+    private CallerScope checkScope() {
+        scope.currentWorkspaceId(); // throws when no Workspace is bound: 500 MSG06 before any read (AC-007.5)
+        UUID caller = TSolveUser.current()
+                .orElseThrow(ProjectAccessDeniedException::new)
+                .id();
+        CallerDepartment department = links.findCallerDepartment(caller).orElseThrow(ProjectAccessDeniedException::new);
+        return new CallerScope(caller, department);
     }
 
     private TrackerProjectLookup readJiraProject(String key) {
@@ -278,6 +290,15 @@ public class ProjectServiceImpl implements ProjectService {
     private BusinessRuleException conflict(String departmentName) {
         return new BusinessRuleException(
                 "MSG49", Map.of("tracker_name", TRACKER_NAME, "department_name", departmentName), "jiraProjectKey");
+    }
+
+    // Like testConnection, no transaction: two independent reads, and READ COMMITTED would not join their snapshots.
+    @Override
+    public ProjectListResponse list() {
+        CallerDepartment department = checkScope().department();
+        return new ProjectListResponse(
+                new DepartmentRefResponse(department.departmentPublicId(), department.name()),
+                links.listProjects(department.departmentId()));
     }
 
     @Override

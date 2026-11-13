@@ -17,6 +17,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -57,11 +58,15 @@ import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.FieldMessageCodeException;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.identity.dto.DepartmentRefResponse;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.project.dto.CreateProjectRequest;
 import vn.tsolve.project.dto.ProjectConnectionTestRequest;
 import vn.tsolve.project.dto.ProjectConnectionTestResponse;
+import vn.tsolve.project.dto.ProjectListResponse;
 import vn.tsolve.project.dto.ProjectResponse;
+import vn.tsolve.project.dto.ProjectRowResponse;
+import vn.tsolve.project.dto.ProjectRowResponse.ProjectManagerRef;
 import vn.tsolve.project.dto.ProjectSaveResult;
 import vn.tsolve.project.entity.Project;
 import vn.tsolve.project.entity.ProjectStatus;
@@ -1084,5 +1089,76 @@ class ProjectServiceImplTest {
     private void assertNoCreateWrites() {
         verify(links, never()).insertProject(anyLong(), anyString(), anyList(), anyInt());
         verifyNoInteractions(audit);
+    }
+
+    @Test
+    void listsTheOwnDepartmentAndItsRowsWithoutJiraOrWrites_AC_004_1_AC_004_3_AC_004_8() {
+        var rows = List.of(
+                new ProjectRowResponse(PROJECT, "OLD", null, 2, "REMOVED"),
+                new ProjectRowResponse(NEW_ID, "OPS", new ProjectManagerRef(CALLER, "Alex Nguyen"), 1, "ACTIVE"));
+        given(links.listProjects(DEPARTMENT.departmentId())).willReturn(rows);
+
+        assertThat(service().list())
+                .isEqualTo(new ProjectListResponse(
+                        new DepartmentRefResponse(DEPARTMENT.departmentPublicId(), "Operations"), rows));
+        verify(links).findCallerDepartment(CALLER);
+        verify(links).listProjects(DEPARTMENT.departmentId());
+        verifyNoMoreInteractions(links);
+        verifyNoInteractions(tracker, audit, transactionManager, projectRepository);
+    }
+
+    @Test
+    void returnsTheDepartmentWhenItHasNoProjects_AC_004_7() {
+        given(links.listProjects(DEPARTMENT.departmentId())).willReturn(List.of());
+        ProjectListResponse list = service().list();
+        assertThat(list.department())
+                .isEqualTo(new DepartmentRefResponse(DEPARTMENT.departmentPublicId(), "Operations"));
+        assertThat(list.projects()).isEmpty();
+        verifyNoInteractions(tracker, audit, transactionManager);
+    }
+
+    @Test
+    void refusesAnIneligibleListCallerBeforeReadingProjects_AC_007_4_AC_007_8() {
+        given(links.findCallerDepartment(CALLER)).willReturn(Optional.empty());
+        assertListAccess();
+        verify(links, never()).listProjects(anyLong());
+        verifyNoInteractions(tracker, audit, transactionManager);
+    }
+
+    @Test
+    void refusesAMissingListPrincipalBeforeAnyRead_AC_007_4_AC_007_8() {
+        SecurityContextHolder.clearContext();
+        assertListAccess();
+        verify(scope).currentWorkspaceId();
+        verifyNoInteractions(links, tracker, audit, transactionManager);
+    }
+
+    @Test
+    void propagatesAnUnboundListWorkspaceBeforeAnyRead_AC_007_5() {
+        var failure = new IllegalStateException("no Workspace is bound");
+        given(scope.currentWorkspaceId()).willThrow(failure);
+        assertThatThrownBy(() -> service().list()).isSameAs(failure);
+        verifyNoInteractions(links, tracker, audit, transactionManager);
+    }
+
+    @Test
+    void derivesTheListScopeFromTheBindingAndSessionOnly_AC_007_7_AC_007_8() throws Exception {
+        given(links.listProjects(DEPARTMENT.departmentId())).willReturn(List.of());
+        service().list();
+        InOrder order = inOrder(scope, links);
+        order.verify(scope).currentWorkspaceId();
+        order.verify(links).findCallerDepartment(CALLER);
+        order.verify(links).listProjects(DEPARTMENT.departmentId());
+        assertThat(ProjectServiceImpl.class.getMethod("list").getParameterCount())
+                .isZero();
+    }
+
+    private void assertListAccess() {
+        assertThatThrownBy(() -> service().list()).isInstanceOfSatisfying(ProjectAccessDeniedException.class, error -> {
+            assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(error.getCode()).isEqualTo("MSG08");
+            assertThat(error.getField()).isNull();
+            assertThat(error.getParams()).isEmpty();
+        });
     }
 }
