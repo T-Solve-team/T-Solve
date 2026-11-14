@@ -182,7 +182,7 @@
       "features": {
         "wiki-view-rule": "evaluating",
         "wiki-browse-api": "evaluating",
-        "wiki-home-ui": "pending",
+        "wiki-home-ui": "evaluating",
         "wiki-folder-api": "pending",
         "wiki-folder-ui": "pending",
         "wiki-upload-api": "pending",
@@ -193,13 +193,13 @@
         "wiki-permissions-api": "pending",
         "wiki-permissions-ui": "pending"
       },
-      "lastUpdated": "2026-11-14T16:26:10.594Z",
+      "lastUpdated": "2026-11-14T16:59:14.195Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "24df32dd00de0162f1e29ad5e7b2fbac46e54949"
+        "default": "9c72f9bd66c7d305de423cb25ace1bae16ea9681"
       }
     },
     "ticket-repository": {
