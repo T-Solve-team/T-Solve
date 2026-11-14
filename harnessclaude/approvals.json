@@ -1192,8 +1192,8 @@
     }
   },
   "project-integration": {
-    "specHash": "b8f05bc98b077a0e9e777c6f275a6a5c08e44bdf905560d2a8f9346963bc7f2c",
-    "approvedAt": "2026-11-13T07:04:23.616Z",
+    "specHash": "f042a8e48d64762128b9567ec9f2c06d7bb544eb07e907e9eaef508190e8b003",
+    "approvedAt": "2026-11-14T04:18:01.100Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Project Manager of a Project requests , THE backend SHALL answer 200 with the Project id, Jira project key, Department name, the Project Manager's full name and the status ( or ).",
@@ -1202,7 +1202,7 @@
       "AC-001.4": "IF a caller with the  role gives a  no Project has, THEN THE backend SHALL answer 404 to every endpoint of this spec.",
       "AC-001.5": "WHEN the Project Manager opens Project Detail, THE web app SHALL show the header (Jira project key, Department, Project Manager, status) and the Members tab with the columns Full name, Email, Role, Added on, with \"Added on\" as a date in the app time zone.",
       "AC-001.6": "IF the backend answers 403, THEN THE web app SHALL show MSG08 in place of the screen; IF it answers 404, THEN THE web app SHALL show MSG04; IF it fails otherwise, THEN THE web app SHALL show MSG06.",
-      "AC-001.7": "THE web app SHALL show no Remove button in the Members tab (removing members is KAN-129).",
+      "AC-001.7": "THE web app SHALL show no Remove button on the Project Manager's row of the Members tab.",
       "AC-002.1": "WHEN the Project Manager requests , THE backend SHALL answer 200 with at most 20 accounts — user id, full name, email — that are Active, hold the  role, are not members of the Project, and whose full name or email contains  (trimmed) literally, ignoring letter case, sorted by full name ascending ignoring letter case, accounts without a full name last. Candidates are not limited to the Project's Department (UC-15 step 6).",
       "AC-002.2": "WHERE  is missing or blank after trimming, THE backend SHALL apply no name or email filter to the candidates of AC-002.1.",
       "AC-002.3": "IF  is longer than 100 characters after trimming, THEN THE backend SHALL answer 400 and return no candidates.",
@@ -1218,7 +1218,17 @@
       "AC-002.13": "WHEN the Project Manager clicks Add and the backend answers 201, THE web app SHALL close the popup, show MSG05 and show the returned member list.",
       "AC-002.14": "IF the add fails, THEN THE web app SHALL keep the popup open with the selection and show MSG06 (any error, 409 included).",
       "AC-002.15": "WHEN the Project Manager clicks Cancel or closes the popup, THE web app SHALL send no add request and change nothing.",
-      "AC-002.16": "THE audit log screen SHALL label the action  \"Project member change\"."
+      "AC-002.16": "THE audit log screen SHALL label the action  \"Project member change\".",
+      "AC-003.1": "WHEN the Project Manager sends  for a member with role , THE backend SHALL delete that membership row and answer 200 with the full member list in the form and order of AC-001.2.",
+      "AC-003.2": "WHEN a member is removed, THE backend SHALL record one audit entry with action , target type , target id the Project id, and details , in the same transaction as the delete.",
+      "AC-003.3": "IF  has no  row in the Project (not a member, already removed, or the Project's  row), THEN THE backend SHALL answer 409, delete nothing and record no audit entry.",
+      "AC-003.4": "IF the Project is , THEN THE backend SHALL answer 409 to , delete nothing and record no audit entry.",
+      "AC-003.5": "WHEN a member is removed, THE backend SHALL keep every ticket and Solution in the Project unchanged, those the removed person wrote included.",
+      "AC-003.6": "WHILE the Project is , THE web app SHALL show a Remove button on every  row of the Members tab; WHILE it is , THE web app SHALL show no Remove button.",
+      "AC-003.7": "WHEN the Project Manager clicks Remove, THE web app SHALL ask for confirmation with MSG55, where  is the member's full name (else email) and  is the Jira project key, and send no request yet.",
+      "AC-003.8": "WHEN the Project Manager confirms and the backend answers 200, THE web app SHALL show MSG05 and show the returned member list.",
+      "AC-003.9": "IF the remove fails, THEN THE web app SHALL show MSG06 and keep the member list unchanged (any error, 409 included).",
+      "AC-003.10": "WHEN the Project Manager cancels the confirmation, THE web app SHALL send no remove request and change nothing."
     }
   }
 }

@@ -1259,3 +1259,13 @@
 {"ts":"2026-11-13T09:09:47.890Z","type":"feature-status","module":"project-integration","feature":"project-members-api","from":"evaluating","to":"passing"}
 {"ts":"2026-11-13T09:09:48.158Z","type":"feature-status","module":"project-integration","feature":"project-members-tab","from":"evaluating","to":"passing"}
 {"ts":"2026-11-13T13:29:41.145Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"0d882fb62e868bbe9e62c400c6d204a88cb89269"}
+{"ts":"2026-11-14T04:18:01.108Z","type":"spec-approved","module":"project-integration","specHash":"f042a8e48d64762128b9567ec9f2c06d7bb544eb07e907e9eaef508190e8b003"}
+{"ts":"2026-11-14T04:18:11.270Z","type":"feature-status","module":"project-integration","feature":"project-member-remove-api","from":null,"to":"pending"}
+{"ts":"2026-11-14T04:18:11.570Z","type":"feature-status","module":"project-integration","feature":"project-member-remove-tab","from":null,"to":"pending"}
+{"ts":"2026-11-14T04:18:11.856Z","type":"feature-status","module":"project-integration","feature":"project-member-remove-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T05:29:32.057Z","type":"feature-status","module":"project-integration","feature":"project-member-remove-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T05:29:32.329Z","type":"feature-status","module":"project-integration","feature":"project-member-remove-tab","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T05:29:32.587Z","type":"feature-status","module":"project-integration","feature":"project-member-remove-tab","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T06:36:55.655Z","type":"feature-status","module":"project-integration","feature":"project-member-remove-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T06:36:55.972Z","type":"feature-status","module":"project-integration","feature":"project-member-remove-tab","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T07:40:19.467Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"df750d443b8a988893ec5c35560ba3b86df9b221"}

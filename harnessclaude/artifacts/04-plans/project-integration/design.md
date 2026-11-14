@@ -102,3 +102,19 @@ None new.
 - After a failed add the popup refetches the candidate list; the selection is kept (AC-002.14). (builder check 18)
 - Endpoints live under `/api/v1/projects/{projectId}` (matches `/api/v1/departments`).
 - The header endpoint `GET /api/v1/projects/{id}` is built now, minimal; KAN-127 extends it with settings.
+
+## KAN-129: Remove a member (STORY-003, Change Mode 14/11)
+
+Branch `feat/KAN-129-project-integration-remove-member`, stacked on `feat/KAN-128-project-integration-add-ticket-resolver` (user, 14/11).
+
+| # | Decision | Chosen | Alternatives | Rationale |
+|---|----------|--------|--------------|-----------|
+| D12 | Scope of the Solution Form rule | Only delete the `MEMBER` row; the spec's contract tells `jira-app` to check `project_membership` | add a membership port; edit the Solution Form (PR #203) | User, 14/11. The Solution Form is KAN-126, another person's open PR. |
+| D13 | Endpoint | `DELETE /api/v1/projects/{projectId}/members/{userId}` → 200 with the member list, `operationId` `removeProjectMember` | 204; `POST …/members/remove` | Mirrors the add, which answers the list, so the table refreshes from one response. |
+| D14 | Delete | One `DELETE … WHERE project_id = :p AND user_id = :u AND role_in_project = 'MEMBER'`; 0 rows → 409 (`BusinessRuleException` MSG06) | read then delete | One statement covers "not a member", "already removed by a concurrent request" and "the PM row" without a race. |
+| D15 | Removed Project | 409 before the delete, like D5 | allow | Same rule as AC-002.8. |
+| D16 | Audit | One entry, details `{"removed": [userId]}`; same action `PROJECT_MEMBER_CHANGE` (no migration) | new action | The label "Project member change" fits both. |
+| D17 | Tickets kept | No code: tickets and Solutions reference the Project and the author's `app_user`, never `project_membership`. An IT proves a ticket by the removed member is unchanged. | — | AC-003.5. |
+| D18 | Confirm popup | `ConfirmDialog` from `@/shared/ui` with MSG55 from the message catalog, as `DraftsList` and `ReviewQueuePage` do | `Modal.confirm`; a new modal | Existing kit component. |
+
+Edge cases: E12 removing the PM row → 409 (AC-003.3); E13 two removes of the same member at once → the second deletes 0 rows → 409; E14 a member whose TICKET_RESOLVER role identity removes at the same time → either side deletes the row, the other 0 rows (409 or no-op in identity); E15 a member without a full name → MSG55 uses the email.
