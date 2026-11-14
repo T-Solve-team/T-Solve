@@ -376,14 +376,18 @@
         "backup-restore": "pending",
         "monitoring": "pending",
         "load-test": "pending",
-        "forge-security-chain": "pending"
+        "forge-security-chain": "pending",
+        "cross-module-isolation": "passing",
+        "e2e-smoke": "passing"
       },
-      "lastUpdated": "2026-11-13T16:03:48.381Z",
-      "branch": "feat/KAN-96-platform-file-storage",
+      "lastUpdated": "2026-11-14T06:06:15.574Z",
+      "branch": "feat/platform",
       "repos": [
         "default"
       ],
-      "lastCommit": {}
+      "lastCommit": {
+        "default": "f6dd0fc4f74ad3539e99bee73ea6e016b97902c0"
+      }
     },
     "platform-console": {
       "status": "decomposed",
