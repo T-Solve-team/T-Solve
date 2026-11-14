@@ -2,11 +2,16 @@
 import { Button, Flex } from 'antd';
 import { useState } from 'react';
 import { useGetUserDepartments, type DepartmentRef } from '@/shared/api';
+import { paths } from '@/shared/routing';
 import { cells, DataTable, LoadingState, type DataTableColumn } from '@/shared/ui';
 import { NewDepartmentModal } from '../components/NewDepartmentModal';
 
 const COLUMNS: DataTableColumn<DepartmentRef>[] = [
-  { key: 'name', title: 'Name', render: (_, d) => cells.text(d.name) },
+  {
+    key: 'name',
+    title: 'Name',
+    render: (_, d) => cells.link(paths.departmentDetail(d.departmentId), d.name),
+  },
 ];
 
 export function WorkspaceSettingsPage() {
