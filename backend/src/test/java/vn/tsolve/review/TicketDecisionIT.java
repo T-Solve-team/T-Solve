@@ -149,7 +149,7 @@ class TicketDecisionIT {
     }
 
     @Test
-    void approvePublishesOneTicketsPublishedEventAfterCommitAndRejectNone_AC_005_4_BUG_209() {
+    void approvePublishesOneTicketsPublishedEventAfterCommitAndRejectNone_AC_005_4_BUG_210() {
         UUID first = ticket("TEST-1", 10, "PENDING_REVIEW", null);
         UUID second = ticket("TEST-2", 10, "PENDING_REVIEW", null);
         UUID rejected = ticket("TEST-3", 10, "PENDING_REVIEW", null);
