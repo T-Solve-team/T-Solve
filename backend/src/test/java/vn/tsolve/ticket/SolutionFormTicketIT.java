@@ -202,7 +202,10 @@ class SolutionFormTicketIT {
                 submitted,
                 PROJECT);
 
-        List<OpenDraft> all = scope.runIn(TwoTenantDatabases.ACME, () -> drafts.findOpenDrafts());
+        // Tenant A is shared per JVM, so keep only this test's issues.
+        List<OpenDraft> all = scope.runIn(TwoTenantDatabases.ACME, () -> drafts.findOpenDrafts()).stream()
+                .filter(draft -> draft.issueKey().startsWith(KEY + "-"))
+                .toList();
         List<OpenDraft> mine = scope.runIn(TwoTenantDatabases.ACME, () -> drafts.findOpenDrafts(WRITER));
 
         assertThat(all).extracting(OpenDraft::issueKey).containsExactly(newer, older);
