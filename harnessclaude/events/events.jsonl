@@ -1360,3 +1360,13 @@
 {"ts":"2026-11-13T16:53:07.962Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":null,"to":"pending"}
 {"ts":"2026-11-13T16:53:08.294Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":null,"to":"pending"}
 {"ts":"2026-11-14T04:19:53.910Z","type":"spec-approved","module":"wiki","specHash":"75e10cbc9301985fbfd3cf1d5d09b0e79987563b15ed1b03d543a10b35727f2a"}
+{"ts":"2026-11-14T07:19:02.832Z","type":"spec-approved","module":"ticket-review","specHash":"814240704938db19e3d45042910e7ea30657fe05d3af6ad1edb039c7e2b3b2b1"}
+{"ts":"2026-11-14T07:20:46.340Z","type":"feature-status","module":"ticket-review","feature":"review-email-html","from":null,"to":"pending"}
+{"ts":"2026-11-14T07:23:39.493Z","type":"feature-status","module":"ticket-review","feature":"review-email-html","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T07:29:14.570Z","type":"spec-approved","module":"worker","specHash":"9b0967b2e2d9104e6833efe71f2b7763922fa55c93a505c781c6364bd243cae5"}
+{"ts":"2026-11-14T07:29:30.682Z","type":"module-status","module":"worker","from":"completed","to":"planned"}
+{"ts":"2026-11-14T07:29:30.719Z","type":"feature-status","module":"worker","feature":"review-email-html-sender","from":null,"to":"pending"}
+{"ts":"2026-11-14T07:29:30.759Z","type":"module-status","module":"worker","from":"planned","to":"implementing"}
+{"ts":"2026-11-14T07:29:30.796Z","type":"feature-status","module":"worker","feature":"review-email-html-sender","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T07:55:12.557Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"dbeb3db7b8fbb2b282f69784a8c171bf873edea2"}
+{"ts":"2026-11-14T07:55:12.748Z","type":"commit-recorded","module":"worker","repo":"default","sha":"dbeb3db7b8fbb2b282f69784a8c171bf873edea2"}

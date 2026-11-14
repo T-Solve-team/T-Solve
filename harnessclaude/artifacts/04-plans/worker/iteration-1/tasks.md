@@ -56,3 +56,12 @@ Spec: artifacts/03-modules/worker/spec.md
 **Files:** `backend/src/main/java/vn/tsolve/worker/service/WorkerTenantService.java`, `backend/src/main/java/vn/tsolve/worker/service/mock/MockWorkerTenantService.java`; test `backend/src/test/java/vn/tsolve/worker/service/mock/MockWorkerTenantServiceTest.java` (create or extend).
 **Dependencies:** worker STORY-002 (completed).
 **Verification:** AC-003.1 and AC-003.2 tests; `mvn verify`; `sdd.ts trace worker STORY-003`.
+
+## Task 4: Multipart HTML review email sender (KAN-333)
+
+**Story:** STORY-001
+**Feature:** review-email-html-sender
+**Description:** Implement the reworded AC-001.1 and AC-001.2. `ReviewNotificationSender` sends a `MimeMessage` with a plain-text part and an HTML part, from "T-Solve <TSOLVE_SMTP_FROM>". The content comes from `ReviewEmailRenderer` and the classpath template, as described in ticket-review Task 19 and the design section "STORY-010 change: branded HTML email". AC-001.3 to AC-001.7 do not change. This is built together with ticket-review Task 19 in one change.
+**Files:** `backend/src/main/java/vn/tsolve/worker/client/{ReviewNotificationSender,ReviewEmailRenderer,ReviewEmail}.java`, `backend/src/main/resources/mail/review-notification.html`, `.env.example`; tests `backend/src/test/java/vn/tsolve/worker/client/{ReviewNotificationSenderTest,ReviewNotificationSenderIT,ReviewEmailRendererTest}.java`.
+**Dependencies:** Task 1.
+**Verification:** AC-001.1 and AC-001.2 tests check that both parts are present and that the From display name is set; `mvn verify`; `sdd.ts trace worker STORY-001`.

@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |---|---|---|---|
+| 2026-11-14 | STORY-001 | The SMTP sender sends a multipart HTML + plain-text email from the display name T-Solve (AC-001.1, AC-001.2 reworded) (KAN-333) | ticket-review STORY-010 change: the user asked for a professional HTML email; the sender in worker/client must follow it |
 | 2026-11-08 | STORY-003 | The tenant port lists the Active Workspaces, for JOB-02's per-Workspace fan-out (KAN-157) | ticket-review STORY-014; user chose a worker change request over claiming the port in ticket-review |
 | 2026-11-06 | STORY-001 | Define the SMTP delivery slice of KAN-162 | Verify review email delivery before the job queue is available |
 | 2026-11-07 | STORY-002 | Add the KAN-102 contract including JobRunr integration and temporary TenantContext mock | User requested KAN-102, explicitly added JobRunr and requested mocked TenantContext |
@@ -40,8 +41,8 @@ owner: BA
 
 - As a ticket writer, I want the review decision and its reason or comment by email so that I know how to respond.
 - Acceptance:
-  - AC-001.1: WHEN the caller submits a Reject notification, THE SMTP sender SHALL send a plain-text email to the supplied writer address with a rejection subject, the ticket key and the rejection reason.
-  - AC-001.2: WHEN the caller submits a Request Changes notification, THE SMTP sender SHALL send a plain-text email to the supplied writer address with a request-changes subject, the ticket key and the review comment.
+  - AC-001.1: WHEN the caller submits a Reject notification, THE SMTP sender SHALL send one multipart email (an HTML part and a plain-text part, as ticket-review AC-010.7) to the supplied writer address, from the display name "T-Solve" at the configured sender address, with a rejection subject, the ticket key and the rejection reason.
+  - AC-001.2: WHEN the caller submits a Request Changes notification, THE SMTP sender SHALL send one multipart email (an HTML part and a plain-text part, as ticket-review AC-010.7) to the supplied writer address, from the display name "T-Solve" at the configured sender address, with a request-changes subject, the ticket key and the review comment.
   - AC-001.3: IF the supplied recipient does not represent exactly one mailbox, THEN THE SMTP sender SHALL reject the request before attempting delivery.
   - AC-001.4: IF the SMTP server refuses delivery or the send times out, THEN THE SMTP sender SHALL report a delivery failure to the caller after one attempt, with no recipient address, message content or credentials in the reported error.
   - AC-001.5: THE SMTP sender SHALL configure finite SMTP connection, read and write timeouts.
@@ -78,7 +79,7 @@ owner: BA
 
 ## Out of Scope
 
-- STORY-001: a later KAN-162 change covers retry policy and job delivery, including the limit of three retries in one hour. KAN-155 owns the trigger after a committed review decision; its integration verifies that email failure cannot roll back the decision. The job integration owns recipient lookup in the current Workspace; this slice uses only synthetic recipients in local tests. First Admin invitation, production SMTP provider setup and HTML email are outside this slice.
+- STORY-001: a later KAN-162 change covers retry policy and job delivery, including the limit of three retries in one hour. KAN-155 owns the trigger after a committed review decision; its integration verifies that email failure cannot roll back the decision. The job integration owns recipient lookup in the current Workspace; this slice uses only synthetic recipients in local tests. First Admin invitation and production SMTP provider setup are outside this slice; the HTML layout and its content are defined by ticket-review STORY-010.
 - STORY-002: real platform TenantContext, catalog persistence, tenant database routing and row guards (KAN-99 / platform). The mock proves context propagation only, not physical database isolation.
 - STORY-002: production container provisioning, dashboard rollout, per-Workspace recurring job registration on provisioning and per-workspace concurrency caps (KAN-161). JOB-02 itself (one recurring job fanning out per Active Workspace) is ticket-review STORY-014.
 - STORY-002: wiring the SMTP sender and first-Admin invitation as job handlers (KAN-162 follow-up).
