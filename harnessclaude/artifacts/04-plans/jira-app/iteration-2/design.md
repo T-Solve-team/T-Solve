@@ -203,7 +203,10 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
   trigger `record_review_queue_entry` sets the new `review_queue_entered_at` because the status changes. No schema
   change. `SolutionFormTicketService` gains `findResubmittable(issueKey, writerId)` and `resubmit(submission)`; a
   guard miss throws `TicketNotResubmittableException` (409 MSG06, as `Ticket.moveTo`), and the writer's Draft is
-  deleted in the same transaction.
+  deleted in the same transaction. The UPDATE also sets `change_request_comment = null`, as `recordReviewFeedback` does.
+- Deliberate exception: `resubmitSolutionFormTicket` does not go through `TicketTransitions` / `Ticket.moveTo`. The
+  status guard, the ACTIVE Project check and the write are one atomic UPDATE, so a resubmit racing a PM decision or an
+  expiry cannot both win; the only move it makes (`CHANGES_REQUESTED` → `PENDING_REVIEW`) is one `TicketStatus` allows.
 - `jiraapp`: `SolutionFormRequest` and `SubmitSolutionRequest` gain an optional `resubmit` (default false), so the
   background script's Done check never opens a resubmission (AC-001.5). `openForm` with `resubmit` opens only for a
   member whose ticket is resubmittable — origin `DRAFT` or the new `TICKET`; `submit` with `resubmit` calls
