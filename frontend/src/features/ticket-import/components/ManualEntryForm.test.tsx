@@ -1,8 +1,12 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
-import type { ManualTicketDraft, ManualTicketRequest } from '@/shared/api';
+import {
+  getGetManualTicketDraftQueryKey,
+  type ManualTicketDraft,
+  type ManualTicketRequest,
+} from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
@@ -22,6 +26,11 @@ async function openManualTab(path = '/import?tab=manual') {
 async function chooseProject(user: User) {
   await user.click(screen.getByRole('combobox', { name: 'Project' }));
   await user.click(await screen.findByTitle('ITSUP · IT'));
+}
+
+async function openManualDraft(user: User) {
+  const row = await screen.findByRole('row', { name: /Manual/ });
+  await user.click(within(row).getByRole('button', { name: /^Open Draft/ }));
 }
 
 /** The Project select, which shows the chosen Project. */
@@ -150,6 +159,114 @@ describe('ManualEntryForm', () => {
     expect(router.state.location.search).toMatch(/^\?tab=manual&draftId=\d+$/);
   });
 
+  it('AC-006.11 reopening a Draft after Save as draft shows the fields as saved', async () => {
+    const { user, router } = await openManualTab();
+    await chooseProject(user);
+    await user.type(screen.getByLabelText('Title'), 'Original title');
+    await user.click(screen.getByRole('button', { name: 'Save as draft' }));
+    await screen.findByText(msg('MSG41'));
+    await openManualDraft(user);
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Original title'));
+    await user.clear(screen.getByLabelText('Title'));
+    await user.type(screen.getByLabelText('Title'), 'Saved edit');
+    await user.click(screen.getByRole('button', { name: 'Save as draft' }));
+    await waitFor(() => expect(screen.getAllByText(msg('MSG41'))).toHaveLength(2));
+
+    await act(() => router.navigate('/import?tab=manual'));
+    await openManualDraft(user);
+
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Saved edit'));
+  });
+
+  it('AC-006.12 reopening a Draft after Save shows MSG04 instead of cached fields', async () => {
+    const { user, router } = await openManualTab();
+    await fillAll(user);
+    await user.click(screen.getByRole('button', { name: 'Save as draft' }));
+    await screen.findByText(msg('MSG41'));
+    await openManualDraft(user);
+    await waitFor(() => expect(router.state.location.search).toContain('draftId=801'));
+    await screen.findByRole('button', { name: 'Save' });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await screen.findByText(msg('MSG32', { created: 1, skipped: 0 }));
+    await waitFor(() => expect(router.state.location.search).not.toContain('draftId'));
+
+    await act(() => router.navigate('/import?tab=manual&draftId=801'));
+
+    expect(await screen.findByText(msg('MSG04'))).toBeInTheDocument();
+    expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
+  });
+
+  it('AC-006.14 a failed background Draft refetch keeps the form and entered fields', async () => {
+    server.use(
+      http.get('*/api/v1/imports/manual/drafts/801', () =>
+        HttpResponse.json<ManualTicketDraft>({
+          previewId: 801,
+          projectId: ITSUP_ID,
+          title: 'Saved title',
+          savedAt: '2026-10-16T02:30:00Z',
+        }),
+      ),
+    );
+    const { user, queryClient } = await openManualTab('/import?tab=manual&draftId=801');
+    await user.clear(screen.getByLabelText('Title'));
+    await user.type(screen.getByLabelText('Title'), 'Unsaved edit');
+    server.use(http.get('*/api/v1/imports/manual/drafts/801', () => problem(500, 'MSG06')));
+
+    await act(() => queryClient.refetchQueries({ queryKey: getGetManualTicketDraftQueryKey(801) }));
+    await user.click(screen.getByRole('tab', { name: 'Manual entry' }));
+
+    expect(screen.getByLabelText('Title')).toHaveValue('Unsaved edit');
+    expect(screen.getByRole('button', { name: 'Save as draft' })).toBeInTheDocument();
+  });
+
+  it('AC-006.11 a Draft load failure without data shows the error screen', async () => {
+    renderApp('/import?tab=manual&draftId=801', { role: 'PROJECT_MANAGER' });
+
+    expect(await screen.findByText(msg('MSG04'), {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
+  });
+
+  it('AC-008.1 an unknown tab value falls back to CSV', async () => {
+    renderApp('/import?tab=unknown', { role: 'PROJECT_MANAGER' });
+
+    expect(
+      await screen.findByRole('button', { name: 'Upload' }, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'CSV' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it.each([false, true])(
+    'AC-006.14 shows an unknown field error in the Alert (with a known field error: %s)',
+    async (withKnownField) => {
+      const titleError = {
+        field: 'title',
+        code: 'MSG02' as const,
+        params: { field_name: 'Title', max_length: 200 },
+      };
+      server.use(
+        http.post('*/api/v1/imports/manual/drafts', () =>
+          problem(400, 'MSG06', {
+            fieldErrors: [
+              { field: 'draftId', code: 'MSG04' },
+              ...(withKnownField ? [titleError] : []),
+            ],
+          }),
+        ),
+      );
+      const { user } = await openManualTab();
+      await chooseProject(user);
+      await user.type(screen.getByLabelText('Title'), 'Keep this title');
+
+      await user.click(screen.getByRole('button', { name: 'Save as draft' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(msg('MSG04'));
+      if (withKnownField) {
+        expect(screen.getByText(msg(titleError.code, titleError.params))).toBeInTheDocument();
+      }
+      expect(screen.getByLabelText('Title')).toHaveValue('Keep this title');
+    },
+  );
+
   it('AC-006.14 shows each field error and keeps the input', async () => {
     server.use(
       http.post('*/api/v1/imports/manual', () =>
@@ -204,8 +321,14 @@ describe('ManualEntryForm', () => {
     expect(screen.getByLabelText('Title')).toHaveValue(FIELDS.Title);
   });
 
-  it('AC-006.14 a successful save shows MSG32 and clears the form', async () => {
+  it('AC-006.14 a successful save returns HTTP 201, shows MSG32 and clears the form', async () => {
     const saves = captureBodies('/api/v1/imports/manual');
+    const statuses: number[] = [];
+    server.events.on('response:mocked', ({ request, response }) => {
+      if (request.method === 'POST' && new URL(request.url).pathname === '/api/v1/imports/manual') {
+        statuses.push(response.status);
+      }
+    });
     const { user } = await openManualTab();
     await fillAll(user);
 
@@ -215,5 +338,6 @@ describe('ManualEntryForm', () => {
     await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue(''));
     expect(screen.getByLabelText('Ticket ID')).toHaveValue('');
     expect(saves[0]).toMatchObject({ projectId: ITSUP_ID, ticketId: 'ITSUP-2001', draftId: null });
+    expect(statuses).toEqual([201]);
   });
 });

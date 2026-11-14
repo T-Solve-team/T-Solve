@@ -210,12 +210,15 @@ export const handlers: HttpHandler[] = [
     }
     manualDrafts = manualDrafts.filter((draft) => draft.previewId !== body.draftId);
     lastBatchId += 1;
-    return HttpResponse.json<ImportResultResponse>({
-      importBatchId: lastBatchId,
-      created: 1,
-      skipped: 0,
-      message: { code: 'MSG32', params: { created: 1, skipped: 0 } },
-    });
+    return HttpResponse.json<ImportResultResponse>(
+      {
+        importBatchId: lastBatchId,
+        created: 1,
+        skipped: 0,
+        message: { code: 'MSG32', params: { created: 1, skipped: 0 } },
+      },
+      { status: 201 },
+    );
   }),
 
   // Save as draft (AC-006.9, AC-006.10): only the Project is checked; a draftId rewrites that Draft.

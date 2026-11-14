@@ -16,12 +16,13 @@ const TABS = [
 /** The tab comes from `?tab=` (a Manual Draft opens `?tab=manual&draftId=N`, AC-006.11); CSV by default. */
 export function ImportTicketsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab');
 
   return (
     <Flex vertical gap="middle">
       <SectionCard>
         <Tabs
-          activeKey={searchParams.get('tab') ?? 'csv'}
+          activeKey={TABS.find(({ key }) => key === tab)?.key ?? 'csv'}
           onChange={(tab) =>
             setSearchParams(
               (params) => {

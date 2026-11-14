@@ -4,6 +4,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import {
+  getGetManualTicketDraftQueryKey,
   getListImportDraftsQueryKey,
   useCreateManualTicket,
   useGetManualTicketDraft,
@@ -39,7 +40,8 @@ export function ManualEntryForm() {
 
   if (draftId === null) return <ManualEntryFields />;
   if (draft.isPending) return <LoadingState />;
-  if (draft.isError) return <ErrorState error={draft.error} onRetry={() => void draft.refetch()} />;
+  if (draft.isError && !draft.data)
+    return <ErrorState error={draft.error} onRetry={() => void draft.refetch()} />;
   return <ManualEntryFields key={draftId} draft={draft.data} />;
 }
 
@@ -55,16 +57,23 @@ function toValues(draft: ManualTicketDraft): ManualValues {
 }
 
 /** Server field errors under their fields; `solution` (the total Solution length) under the first section. */
-function showFieldErrors(form: FormInstance<ManualValues>, error: ApiError): boolean {
+function showFieldErrors(form: FormInstance<ManualValues>, error: ApiError): string[] {
   const byField = new Map<string, string[]>();
+  const unhandled: string[] = [];
+  const fields = form.getFieldsValue();
   for (const fieldError of error.fieldErrors) {
     const name = fieldError.field === 'solution' ? 'symptoms' : fieldError.field;
-    byField.set(name, [...(byField.get(name) ?? []), msg(fieldError.code, fieldError.params)]);
+    const message = msg(fieldError.code, fieldError.params);
+    if (Object.hasOwn(fields, name)) {
+      byField.set(name, [...(byField.get(name) ?? []), message]);
+    } else {
+      unhandled.push(message);
+    }
   }
   form.setFields(
     [...byField].map(([name, errors]) => ({ name: name as keyof ManualValues, errors })),
   );
-  return byField.size > 0;
+  return unhandled;
 }
 
 /**
@@ -78,7 +87,7 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
   const queryClient = useQueryClient();
   const projects = useManagedProjectOptions();
   const [draftId, setDraftId] = useState<number | null>(draft?.previewId ?? null);
-  const [rejection, setRejection] = useState<ApiError | null>(null);
+  const [rejection, setRejection] = useState<string | null>(null);
   // A double click reaches the handler twice before `isPending` renders: one request only.
   const isSending = useRef(false);
 
@@ -99,7 +108,9 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
   function onError(error: ApiError) {
     // The global MSG07 dialog is the one message for a 401 (guideline 06 §6).
     if (error.status === 401) return;
-    if (!showFieldErrors(form, error)) setRejection(error);
+    const unhandled = showFieldErrors(form, error);
+    if (error.fieldErrors.length === 0) unhandled.push(msg(error.code, error.params));
+    setRejection(unhandled.join(' ') || null);
   }
 
   function send(mutate: () => void) {
@@ -119,6 +130,9 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
           },
           onSuccess: ({ created, skipped }) => {
             showMessage('MSG32', { created, skipped });
+            if (draftId !== null) {
+              queryClient.removeQueries({ queryKey: getGetManualTicketDraftQueryKey(draftId) });
+            }
             form.resetFields();
             setDraftId(null);
             // A reopened Draft is deleted with the save (AC-006.12); a changed draftId mounts an empty form.
@@ -152,6 +166,9 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
           },
           onSuccess: (saved) => {
             showMessage('MSG41');
+            queryClient.removeQueries({
+              queryKey: getGetManualTicketDraftQueryKey(saved.previewId),
+            });
             setDraftId(saved.previewId);
             void refreshDrafts();
           },
@@ -163,7 +180,7 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
 
   return (
     <Flex vertical gap="middle">
-      {rejection && <Alert type="error" showIcon title={msg(rejection.code, rejection.params)} />}
+      {rejection && <Alert type="error" showIcon title={rejection} />}
       {/* name: field ids differ from the other tabs' (label → input). */}
       <AppForm<ManualValues>
         name="manualEntry"
