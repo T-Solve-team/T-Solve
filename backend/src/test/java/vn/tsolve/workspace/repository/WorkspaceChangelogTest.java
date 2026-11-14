@@ -17,12 +17,15 @@ class WorkspaceChangelogTest {
         try (ClassLoaderResourceAccessor resources = new ClassLoaderResourceAccessor()) {
             var changelog = new XMLChangeLogSAXParser()
                     .parse("db/changelog/db.changelog-master.xml", new ChangeLogParameters(), resources);
-            var last = changelog.getChangeSets().getLast();
+            var workspaceChangeSet = changelog.getChangeSets().stream()
+                    .filter(changeSet -> changeSet.getId().equals("035-workspace-info"))
+                    .findFirst()
+                    .orElseThrow();
 
-            assertThat(last.getId()).isEqualTo("035-workspace-info");
-            assertThat(last.getAuthor()).isEqualTo("workspace");
-            assertThat(last.supportsRollback(new PostgresDatabase())).isTrue();
-            assertThat(last.getRollback().getChanges()).isNotEmpty();
+            assertThat(workspaceChangeSet.getAuthor()).isEqualTo("workspace");
+            assertThat(workspaceChangeSet.supportsRollback(new PostgresDatabase()))
+                    .isTrue();
+            assertThat(workspaceChangeSet.getRollback().getChanges()).isNotEmpty();
         }
     }
 }

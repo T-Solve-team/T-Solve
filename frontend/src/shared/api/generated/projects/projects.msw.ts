@@ -9,15 +9,103 @@
 import { faker } from '@faker-js/faker';
 
 import { HttpResponse, http } from 'msw';
-import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
+import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
-import { ProjectRole } from '../model';
+import { ProjectRole, ProjectStatus } from '../model';
 import type {
   AddProjectMembersRequest,
+  CreateProjectRequest,
   MemberCandidateResponse,
+  Project,
+  ProjectConnectionTest,
+  ProjectConnectionTestRequest,
+  ProjectList,
+  ProjectManagerRef,
   ProjectMemberResponse,
   ProjectSummaryResponse,
 } from '../model';
+
+export const getTestProjectConnectionResponseMock = (
+  overrideResponse: Partial<Extract<ProjectConnectionTest, object>> = {},
+): ProjectConnectionTest => ({
+  jiraProjectKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  statuses: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      done: faker.datatype.boolean(),
+    }),
+  ),
+  reconnect: faker.datatype.boolean(),
+  projectId: faker.helpers.arrayElement([faker.string.uuid(), undefined]),
+  doneStatusIds: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  reviewRange: faker.number.int(),
+  ...overrideResponse,
+});
+
+export const getCreateProjectResponseMock = (
+  overrideResponse: Partial<Extract<Project, object>> = {},
+): Project =>
+  faker.helpers.arrayElement([
+    {
+      projectId: faker.string.uuid(),
+      departmentId: faker.string.uuid(),
+      jiraProjectKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      doneStatusIds: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+      reviewRange: faker.number.int(),
+      status: faker.helpers.arrayElement(Object.values(ProjectStatus)),
+      ...overrideResponse,
+    },
+    {
+      projectId: faker.string.uuid(),
+      departmentId: faker.string.uuid(),
+      jiraProjectKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      doneStatusIds: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+      reviewRange: faker.number.int(),
+      status: faker.helpers.arrayElement(Object.values(ProjectStatus)),
+      ...overrideResponse,
+    },
+  ]);
+
+export const getListProjectsResponseProjectManagerRefMock = (
+  overrideResponse: Partial<ProjectManagerRef> = {},
+): ProjectManagerRef => ({
+  ...{
+    userId: faker.string.uuid(),
+    fullName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListProjectsResponseMock = (
+  overrideResponse: Partial<Extract<ProjectList, object>> = {},
+): ProjectList => ({
+  department: {
+    departmentId: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  projects: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      projectId: faker.string.uuid(),
+      jiraProjectKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      projectManager: faker.helpers.arrayElement([
+        { ...getListProjectsResponseProjectManagerRefMock() },
+        null,
+      ]),
+      memberCount: faker.number.int({ min: 0 }),
+      status: faker.helpers.arrayElement(Object.values(ProjectStatus)),
+    }),
+  ),
+  ...overrideResponse,
+});
 
 export const getGetProjectResponseMock = (
   overrideResponse: Partial<Extract<ProjectSummaryResponse, object>> = {},
@@ -78,6 +166,76 @@ export const getSearchProjectMemberCandidatesResponseMock = (): MemberCandidateR
     ]),
     email: faker.internet.email(),
   }));
+
+export const getTestProjectConnectionMockHandler = (
+  overrideResponse?:
+    | ProjectConnectionTest
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, ProjectConnectionTestRequest>>[0],
+      ) => Promise<ProjectConnectionTest> | ProjectConnectionTest),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, ProjectConnectionTestRequest>(
+    '*/api/v1/projects/connection-test',
+    async (info: Parameters<HttpResponseResolver<PathParams, ProjectConnectionTestRequest>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getTestProjectConnectionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateProjectMockHandler = (
+  overrideResponse?:
+    | Project
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, CreateProjectRequest>>[0],
+      ) => Promise<Project> | Project),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, CreateProjectRequest>(
+    '*/api/v1/projects',
+    async (info: Parameters<HttpResponseResolver<PathParams, CreateProjectRequest>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateProjectResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListProjectsMockHandler = (
+  overrideResponse?:
+    | ProjectList
+    | ((info: Parameters<HttpResponseResolver>[0]) => Promise<ProjectList> | ProjectList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/projects',
+    async (info: Parameters<HttpResponseResolver>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListProjectsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 
 export const getGetProjectMockHandler = (
   overrideResponse?:
@@ -201,6 +359,9 @@ export const getSearchProjectMemberCandidatesMockHandler = (
   );
 };
 export const getProjectsMock = () => [
+  getTestProjectConnectionMockHandler(),
+  getCreateProjectMockHandler(),
+  getListProjectsMockHandler(),
   getGetProjectMockHandler(),
   getListProjectMembersMockHandler(),
   getAddProjectMembersMockHandler(),

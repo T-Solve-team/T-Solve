@@ -183,8 +183,9 @@ class WorkspaceInfoRepositoryIT {
     }
 
     @Test
-    @DisplayName("AC-005.1 last changeset rolls back the new table and restores the legacy name and foreign keys")
-    void rollsBackAndReappliesWorkspaceMigration() throws Exception {
+    @DisplayName(
+            "AC-005.1 the workspace changeset rolls back the new table and restores the legacy name and foreign keys")
+    void rollsBackAndReappliesWorkspaceMigration_BUG_243() throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantB();
         try (Connection connection = db.getDataSource().getConnection();
                 ClassLoaderResourceAccessor resources = new ClassLoaderResourceAccessor();
@@ -194,9 +195,15 @@ class WorkspaceInfoRepositoryIT {
                         DatabaseFactory.getInstance()
                                 .findCorrectDatabaseImplementation(new JdbcConnection(connection)))) {
             var changesets = liquibase.getDatabaseChangeLog().getChangeSets();
-            assertThat(changesets.getLast().getId()).isEqualTo("035-workspace-info");
+            // Roll back the workspace changeset and every one added after it, so a later migration does not break
+            // this test (BUG-243).
+            var workspaceIndex = changesets.stream()
+                    .map(changeSet -> changeSet.getId())
+                    .toList()
+                    .indexOf("035-workspace-info");
+            assertThat(workspaceIndex).isNotNegative();
             try {
-                liquibase.rollback(1, "");
+                liquibase.rollback(changesets.size() - workspaceIndex, "");
                 assertThat(db.queryForObject("SELECT to_regclass('legacy_workspace')::text", String.class))
                         .isNull();
                 assertThat(db.queryForObject("SELECT count(*) FROM workspace WHERE id BETWEEN 1 AND 4", Integer.class))
