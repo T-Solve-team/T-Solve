@@ -43,8 +43,8 @@ import vn.tsolve.ticket.service.TicketDecisionService.Action;
 import vn.tsolve.ticket.service.impl.ReviewNotificationServiceImpl;
 import vn.tsolve.ticket.service.impl.TicketDecisionServiceImpl;
 import vn.tsolve.ticket.service.impl.TicketTransitions;
-import vn.tsolve.worker.client.ReviewNotificationSender;
-import vn.tsolve.worker.client.ReviewNotificationSender.Decision;
+import vn.tsolve.worker.client.SmtpEmailSender;
+import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.service.TenantJobService;
 
 /** A committed decision enqueues jobs, and each job sends one email from the stored decision (STORY-010). */
@@ -87,7 +87,7 @@ class ReviewNotificationIT {
     @MockBean
     private TenantJobService jobs;
 
-    private final ReviewNotificationSender sender = mock(ReviewNotificationSender.class);
+    private final SmtpEmailSender sender = mock(SmtpEmailSender.class);
 
     private UUID reviewerId;
     private UUID writerId;
@@ -163,8 +163,13 @@ class ReviewNotificationIT {
 
         handler().execute(decisionIds().get(0));
 
-        Decision expected = action == Action.REJECTED ? Decision.REJECT : Decision.REQUEST_CHANGES;
-        verify(sender).send(expected, WRITER, "ITS-7", FEEDBACK);
+        boolean rejected = action == Action.REJECTED;
+        verify(sender)
+                .send(new OutboundEmail(
+                        WRITER,
+                        rejected ? "Ticket rejected" : "Changes requested for your ticket",
+                        "Ticket ITS-7\n\n%s\n%s".formatted(rejected ? "Rejection reason" : "Review comment", FEEDBACK),
+                        null));
     }
 
     @Test
@@ -185,7 +190,7 @@ class ReviewNotificationIT {
 
     private ReviewNotificationJobHandler handler() {
         @SuppressWarnings("unchecked")
-        ObjectProvider<ReviewNotificationSender> provider = mock(ObjectProvider.class);
+        ObjectProvider<SmtpEmailSender> provider = mock(ObjectProvider.class);
         when(provider.getIfAvailable()).thenReturn(sender);
         return new ReviewNotificationJobHandler(notifications, provider);
     }

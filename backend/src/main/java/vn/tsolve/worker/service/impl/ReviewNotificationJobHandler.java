@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.service.ReviewNotificationService;
-import vn.tsolve.worker.client.ReviewNotificationSender;
-import vn.tsolve.worker.client.ReviewNotificationSender.Decision;
+import vn.tsolve.worker.client.SmtpEmailSender;
+import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.service.TenantJobHandler;
 
 /**
@@ -21,10 +21,10 @@ public class ReviewNotificationJobHandler implements TenantJobHandler {
     public static final String TYPE = "review-notification";
 
     private final ReviewNotificationService notifications;
-    private final ObjectProvider<ReviewNotificationSender> senders;
+    private final ObjectProvider<SmtpEmailSender> senders;
 
     public ReviewNotificationJobHandler(
-            ReviewNotificationService notifications, ObjectProvider<ReviewNotificationSender> senders) {
+            ReviewNotificationService notifications, ObjectProvider<SmtpEmailSender> senders) {
         this.notifications = notifications;
         this.senders = senders;
     }
@@ -40,16 +40,19 @@ public class ReviewNotificationJobHandler implements TenantJobHandler {
     }
 
     private void send(ReviewNotification notification) {
-        ReviewNotificationSender sender = senders.getIfAvailable();
+        SmtpEmailSender sender = senders.getIfAvailable();
         if (sender == null) {
             throw new IllegalStateException("Review email sender is not configured in this process");
         }
-        Decision decision =
-                switch (notification.kind()) {
-                    case REJECTED -> Decision.REJECT;
-                    case CHANGES_REQUESTED -> Decision.REQUEST_CHANGES;
-                };
-        // A DeliveryException fails the job, so JobRunr retries it; the decision is already committed.
-        sender.send(decision, notification.recipient(), notification.ticketKey(), notification.feedback());
+        boolean rejected = notification.kind() == ReviewNotification.Kind.REJECTED;
+        sender.send(new OutboundEmail(
+                notification.recipient(),
+                rejected ? "Ticket rejected" : "Changes requested for your ticket",
+                "Ticket %s\n\n%s\n%s"
+                        .formatted(
+                                notification.ticketKey(),
+                                rejected ? "Rejection reason" : "Review comment",
+                                notification.feedback()),
+                null));
     }
 }
