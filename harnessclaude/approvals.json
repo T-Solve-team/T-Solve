@@ -1114,12 +1114,12 @@
     }
   },
   "worker": {
-    "specHash": "9b0967b2e2d9104e6833efe71f2b7763922fa55c93a505c781c6364bd243cae5",
-    "approvedAt": "2026-11-14T07:29:14.569Z",
+    "specHash": "5033b810492a0269525db73446412a8072725fb1012187e5d97045ed300c86cf",
+    "approvedAt": "2026-11-14T08:14:45.632Z",
     "by": "user",
     "acs": {
-      "AC-001.1": "WHEN the caller submits a Reject notification, THE SMTP sender SHALL send one multipart email (an HTML part and a plain-text part, as ticket-review AC-010.7) to the supplied writer address, from the display name \"T-Solve\" at the configured sender address, with a rejection subject, the ticket key and the rejection reason.",
-      "AC-001.2": "WHEN the caller submits a Request Changes notification, THE SMTP sender SHALL send one multipart email (an HTML part and a plain-text part, as ticket-review AC-010.7) to the supplied writer address, from the display name \"T-Solve\" at the configured sender address, with a request-changes subject, the ticket key and the review comment.",
+      "AC-001.1": "WHEN the caller submits an email with one recipient, a subject, a plain-text body and an HTML body, THE SMTP sender SHALL send one multipart email holding that plain-text part and that HTML part to the recipient, from the display name \"T-Solve\" at the configured sender address, with that subject.",
+      "AC-001.2": "THE SMTP sender SHALL send the subject and both bodies exactly as submitted and SHALL add no review-specific content; the review email subject, layout and content are defined by ticket-review AC-010.2 and AC-010.7–010.9 and rendered before the sender is called.",
       "AC-001.3": "IF the supplied recipient does not represent exactly one mailbox, THEN THE SMTP sender SHALL reject the request before attempting delivery.",
       "AC-001.4": "IF the SMTP server refuses delivery or the send times out, THEN THE SMTP sender SHALL report a delivery failure to the caller after one attempt, with no recipient address, message content or credentials in the reported error.",
       "AC-001.5": "THE SMTP sender SHALL configure finite SMTP connection, read and write timeouts.",

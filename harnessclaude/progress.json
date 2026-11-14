@@ -404,13 +404,13 @@
         "active-workspaces": "passing",
         "review-email-html-sender": "in-progress"
       },
-      "lastUpdated": "2026-11-14T07:55:12.747Z",
+      "lastUpdated": "2026-11-14T08:24:17.443Z",
       "branch": "feat/worker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "dbeb3db7b8fbb2b282f69784a8c171bf873edea2"
+        "default": "4a36c9cc5d6396ed44738a1845c39571431a6a82"
       }
     },
     "ai": {
@@ -485,13 +485,13 @@
         "review-expired-stored-columns": "passing",
         "review-email-html": "in-progress"
       },
-      "lastUpdated": "2026-11-14T07:55:12.557Z",
+      "lastUpdated": "2026-11-14T08:24:17.665Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "dbeb3db7b8fbb2b282f69784a8c171bf873edea2"
+        "default": "4a36c9cc5d6396ed44738a1845c39571431a6a82"
       }
     }
   },

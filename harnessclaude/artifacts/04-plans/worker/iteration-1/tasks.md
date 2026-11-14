@@ -61,7 +61,7 @@ Spec: artifacts/03-modules/worker/spec.md
 
 **Story:** STORY-001
 **Feature:** review-email-html-sender
-**Description:** Implement the reworded AC-001.1 and AC-001.2. `ReviewNotificationSender` sends a `MimeMessage` with a plain-text part and an HTML part, from "T-Solve <TSOLVE_SMTP_FROM>". The content comes from `ReviewEmailRenderer` and the classpath template, as described in ticket-review Task 19 and the design section "STORY-010 change: branded HTML email". AC-001.3 to AC-001.7 do not change. This is built together with ticket-review Task 19 in one change.
+**Description:** Implement the reworded AC-001.1 and AC-001.2. `ReviewNotificationSender.send(recipient, subject, text, html)` checks for a single mailbox, sends one `MimeMessage` with the given plain-text part and HTML part from "T-Solve <TSOLVE_SMTP_FROM>", and wraps failures in `DeliveryException`. It holds no review content: `ReviewEmailRenderer` (ticket-review Task 19) renders the subject and both bodies, and the job handler calls the renderer and then the sender. The `Decision` enum lives with `ReviewEmail`, not in the sender, so the KAN-162 email outbox can rename and reuse the sender. AC-001.3 to AC-001.7 do not change.
 **Files:** `backend/src/main/java/vn/tsolve/worker/client/{ReviewNotificationSender,ReviewEmailRenderer,ReviewEmail}.java`, `backend/src/main/resources/mail/review-notification.html`, `.env.example`; tests `backend/src/test/java/vn/tsolve/worker/client/{ReviewNotificationSenderTest,ReviewNotificationSenderIT,ReviewEmailRendererTest}.java`.
 **Dependencies:** Task 1.
 **Verification:** AC-001.1 and AC-001.2 tests check that both parts are present and that the From display name is set; `mvn verify`; `sdd.ts trace worker STORY-001`.

@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |---|---|---|---|
+| 2026-11-14 | STORY-001 | The SMTP sender becomes generic: it sends a submitted recipient, subject, plain-text and HTML body as one multipart email from T-Solve; review content is rendered before it (AC-001.1, AC-001.2 reworded) (KAN-333) | Requested by the KAN-162 email-outbox session so the outbox can reuse the sender unchanged; user agreed |
 | 2026-11-14 | STORY-001 | The SMTP sender sends a multipart HTML + plain-text email from the display name T-Solve (AC-001.1, AC-001.2 reworded) (KAN-333) | ticket-review STORY-010 change: the user asked for a professional HTML email; the sender in worker/client must follow it |
 | 2026-11-08 | STORY-003 | The tenant port lists the Active Workspaces, for JOB-02's per-Workspace fan-out (KAN-157) | ticket-review STORY-014; user chose a worker change request over claiming the port in ticket-review |
 | 2026-11-06 | STORY-001 | Define the SMTP delivery slice of KAN-162 | Verify review email delivery before the job queue is available |
@@ -41,8 +42,8 @@ owner: BA
 
 - As a ticket writer, I want the review decision and its reason or comment by email so that I know how to respond.
 - Acceptance:
-  - AC-001.1: WHEN the caller submits a Reject notification, THE SMTP sender SHALL send one multipart email (an HTML part and a plain-text part, as ticket-review AC-010.7) to the supplied writer address, from the display name "T-Solve" at the configured sender address, with a rejection subject, the ticket key and the rejection reason.
-  - AC-001.2: WHEN the caller submits a Request Changes notification, THE SMTP sender SHALL send one multipart email (an HTML part and a plain-text part, as ticket-review AC-010.7) to the supplied writer address, from the display name "T-Solve" at the configured sender address, with a request-changes subject, the ticket key and the review comment.
+  - AC-001.1: WHEN the caller submits an email with one recipient, a subject, a plain-text body and an HTML body, THE SMTP sender SHALL send one multipart email holding that plain-text part and that HTML part to the recipient, from the display name "T-Solve" at the configured sender address, with that subject.
+  - AC-001.2: THE SMTP sender SHALL send the subject and both bodies exactly as submitted and SHALL add no review-specific content; the review email subject, layout and content are defined by ticket-review AC-010.2 and AC-010.7–010.9 and rendered before the sender is called.
   - AC-001.3: IF the supplied recipient does not represent exactly one mailbox, THEN THE SMTP sender SHALL reject the request before attempting delivery.
   - AC-001.4: IF the SMTP server refuses delivery or the send times out, THEN THE SMTP sender SHALL report a delivery failure to the caller after one attempt, with no recipient address, message content or credentials in the reported error.
   - AC-001.5: THE SMTP sender SHALL configure finite SMTP connection, read and write timeouts.
