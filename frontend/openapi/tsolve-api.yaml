@@ -1064,89 +1064,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
-  /api/v1/jira-app/tickets/search:
-    get:
-      tags: [jira-app]
-      operationId: searchJiraAppTickets
-      summary: >
-        The Published tickets of the viewer's Departments that match the query, ranked by the search module's ticket
-        search, at most 20 (STORY-008).
-      security:
-        - forgeInvocationToken: []
-      parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-            minLength: 1
-            maxLength: 200
-      responses:
-        '200':
-          description: The matches; empty = MSG04.
-          content:
-            application/json:
-              schema:
-                type: array
-                maxItems: 20
-                items:
-                  $ref: '#/components/schemas/JiraAppTicketResult'
-        '400':
-          $ref: '#/components/responses/Problem'
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          description: MSG62 (not linked) or MSG08 (a Jira site with no registered Workspace, or no Jira user).
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetail'
-        '503':
-          description: MSG06 — the search is unavailable, or the Forge token could not be checked.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetail'
-  /api/v1/jira-app/tickets/{ticketUuid}:
-    parameters:
-      - name: ticketUuid
-        in: path
-        required: true
-        description: The ticket's UUID from a search result (the Ticket ID is not unique across Projects).
-        schema:
-          type: string
-          format: uuid
-    get:
-      tags: [jira-app]
-      operationId: getJiraAppTicket
-      summary: A Published ticket of the viewer's Departments, for 3.4 Published Ticket Preview (STORY-009).
-      security:
-        - forgeInvocationToken: []
-      responses:
-        '200':
-          description: The ticket.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JiraAppTicketPreview'
-        '400':
-          $ref: '#/components/responses/Problem'
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          description: >
-            MSG62 (not linked) or MSG08 — not Published, not in one of the viewer's Departments, no such ticket, a
-            Jira site with no registered Workspace, or no Jira user.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetail'
-        '503':
-          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/csv/template:
     get:
       tags: [import]
@@ -2733,7 +2650,7 @@ components:
           $ref: '#/components/schemas/TicketStatus'
     IssuePanel:
       type: object
-      required: [linked, ticketStatus, hasDraft, mayOpenForm, canSearch]
+      required: [linked, ticketStatus, hasDraft, mayOpenForm]
       properties:
         linked:
           type: boolean
@@ -2753,43 +2670,6 @@ components:
           description: >
             The viewer is a member of the issue's Project and no Solution Form ticket exists. The Jira App also checks
             that the issue is Done before it shows the button.
-        canSearch:
-          type: boolean
-          description: False = the viewer is a member of no Project in the issue's Department (MSG76).
-    JiraAppTicketResult:
-      type: object
-      required: [id, ticketId, title, departmentName]
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: The ticket's UUID, for getJiraAppTicket.
-        ticketId:
-          type: string
-          description: The Ticket ID, e.g. ITSUP-1031.
-        title:
-          type: string
-        departmentName:
-          type: string
-    JiraAppTicketPreview:
-      type: object
-      required: [id, ticketId, title, departmentName, solution, webUrl]
-      properties:
-        id:
-          type: string
-          format: uuid
-        ticketId:
-          type: string
-        title:
-          type: string
-        departmentName:
-          type: string
-        solution:
-          $ref: '#/components/schemas/SolutionSections'
-        webUrl:
-          type: string
-          format: uri
-          description: The ticket on the T-Solve web app ("Open in T-Solve").
     MessageRef:
       type: object
       description: An SRS message to show, by code; the web app fills the template from params.

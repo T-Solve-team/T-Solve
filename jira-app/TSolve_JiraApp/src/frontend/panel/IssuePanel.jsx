@@ -1,33 +1,16 @@
-// 3.3 Issue Panel (jira-app STORY-001, STORY-008): the issue's Solution status, the way into the Solution Form, and
-// the search of Published tickets.
+// 3.3 Issue Panel (jira-app STORY-001, STORY-008): the issue's Solution status and the way into the Solution Form.
+// No Published-ticket search in Jira (spec change 2026-11-14): search is on the T-Solve web app.
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Button,
-  Inline,
-  SectionMessage,
-  Spinner,
-  Stack,
-  Text,
-  Textfield,
-  useProductContext,
-} from '@forge/react';
+import { Button, Inline, SectionMessage, Spinner, Stack, Text, useProductContext } from '@forge/react';
 import { requestJira, showFlag } from '@forge/bridge';
-import {
-  getIssuePanel,
-  getReviewFeedback,
-  openSolutionForm,
-  searchTickets,
-} from '../api/tsolveClient';
+import { getIssuePanel, getReviewFeedback, openSolutionForm } from '../api/tsolveClient';
 import { DONE, readIssue } from '../background/watchDone';
 import { SolutionFormModal } from '../form/SolutionFormModal';
 import { message } from '../messages';
-import { TicketPreviewModal } from './TicketPreviewModal';
 
 export const PANEL_LABELS = {
   writeSolution: 'Write Solution',
   continueDraft: 'Continue draft',
-  search: 'Search',
-  searchPlaceholder: 'Search Published tickets',
 };
 
 export function IssuePanel() {
@@ -117,7 +100,6 @@ export function IssuePanel() {
           </Button>
         </Inline>
       )}
-      {panel.canSearch ? <TicketSearch /> : <Text>{message('MSG76')}</Text>}
       {form && (
         <SolutionFormModal
           issueKey={issueKey}
@@ -134,52 +116,3 @@ export function IssuePanel() {
   );
 }
 
-/** The search of Published tickets of the user's Departments (AC-008.4, AC-008.5, AC-008.8). */
-function TicketSearch() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState(null);
-  const [searching, setSearching] = useState(false);
-  const [error, setError] = useState(false);
-  const [preview, setPreview] = useState(null);
-
-  const search = async () => {
-    if (!query.trim()) {
-      return;
-    }
-    setSearching(true);
-    setError(false);
-    try {
-      setResults(await searchTickets(query.trim()));
-    } catch {
-      setResults(null);
-      setError(true);
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  return (
-    <Stack space="space.100">
-      <Inline space="space.100" alignBlock="center">
-        <Textfield
-          id="tsolve-ticket-search"
-          value={query}
-          placeholder={PANEL_LABELS.searchPlaceholder}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <Button onClick={search} isDisabled={searching}>
-          {PANEL_LABELS.search}
-        </Button>
-      </Inline>
-      {searching && <Spinner label="loading" />}
-      {error && <Text>{message('MSG06')}</Text>}
-      {results && results.length === 0 && <Text>{message('MSG04')}</Text>}
-      {results?.map((result) => (
-        <Button key={result.id} appearance="subtle" onClick={() => setPreview(result.id)}>
-          {`${result.ticketId} · ${result.title} · ${result.departmentName}`}
-        </Button>
-      ))}
-      {preview && <TicketPreviewModal ticketId={preview} onClose={() => setPreview(null)} />}
-    </Stack>
-  );
-}

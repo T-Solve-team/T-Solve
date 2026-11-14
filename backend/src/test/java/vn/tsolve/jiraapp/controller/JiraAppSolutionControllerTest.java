@@ -24,7 +24,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
 import vn.tsolve.ai.exception.AiRewriteUnavailableException;
-import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.common.security.JiraAppAuthentication;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.JiraAppSecurityConfig;
@@ -35,13 +34,12 @@ import vn.tsolve.jiraapp.dto.SubmitSolutionRequest;
 import vn.tsolve.jiraapp.dto.SubmittedTicketResponse;
 import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
 import vn.tsolve.jiraapp.service.JiraAppSolutionService;
-import vn.tsolve.jiraapp.service.JiraAppTicketService;
 import vn.tsolve.ticket.dto.SolutionSections;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.exception.SolutionSectionRequiredException;
 import vn.tsolve.ticket.exception.TicketAlreadyExistsException;
 
-@WebMvcTest({JiraAppSolutionController.class, JiraAppPanelController.class, JiraAppTicketController.class})
+@WebMvcTest({JiraAppSolutionController.class, JiraAppPanelController.class})
 @Import({JiraAppSecurityConfig.class, SecurityConfig.class})
 class JiraAppSolutionControllerTest {
 
@@ -56,9 +54,6 @@ class JiraAppSolutionControllerTest {
 
     @MockBean
     private JiraAppSolutionService solutions;
-
-    @MockBean
-    private JiraAppTicketService tickets;
 
     @MockBean
     private JwtDecoder fitJwtDecoder;
@@ -162,42 +157,13 @@ class JiraAppSolutionControllerTest {
     @Test
     void showsThePanelState_AC_008_2() throws Exception {
         when(solutions.panel(CALLER, "ITSUP-12"))
-                .thenReturn(new IssuePanelResponse(true, TicketStatus.PENDING_REVIEW, false, false, true));
+                .thenReturn(new IssuePanelResponse(true, TicketStatus.PENDING_REVIEW, false, false));
 
         mvc.perform(get("/api/v1/jira-app/issues/ITSUP-12/panel").with(authentication(fit())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.linked").value(true))
                 .andExpect(jsonPath("$.ticketStatus").value("PENDING_REVIEW"))
-                .andExpect(jsonPath("$.canSearch").value(true));
-    }
-
-    @Test
-    void answers503Msg06WhenTheSearchIsUnavailable_AC_008_8() throws Exception {
-        when(tickets.search(CALLER, "vpn")).thenThrow(new AiUnavailableException());
-
-        mvc.perform(get("/api/v1/jira-app/tickets/search?q=vpn").with(authentication(fit())))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.code").value("MSG06"));
-    }
-
-    @Test
-    void answers403Msg08ForATicketOutsideTheUsersDepartments_AC_009_2() throws Exception {
-        when(tickets.preview(CALLER, TICKET)).thenThrow(new JiraIssueAccessDeniedException());
-
-        mvc.perform(get("/api/v1/jira-app/tickets/" + TICKET).with(authentication(fit())))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("MSG08"));
-    }
-
-    @Test
-    void listsTheSearchResults_AC_008_4() throws Exception {
-        when(tickets.search(CALLER, "vpn"))
-                .thenReturn(List.of(new vn.tsolve.jiraapp.dto.JiraAppTicketResult(TICKET, "ITSUP-9", "VPN", "IT")));
-
-        mvc.perform(get("/api/v1/jira-app/tickets/search?q=vpn").with(authentication(fit())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].ticketId").value("ITSUP-9"))
-                .andExpect(jsonPath("$[0].departmentName").value("IT"));
+                .andExpect(jsonPath("$.canSearch").doesNotExist());
     }
 
     private static JiraAppAuthentication fit() {

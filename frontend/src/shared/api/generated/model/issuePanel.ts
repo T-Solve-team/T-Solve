@@ -17,6 +17,4 @@ export interface IssuePanel {
   hasDraft: boolean;
   /** The viewer is a member of the issue's Project and no Solution Form ticket exists. The Jira App also checks that the issue is Done before it shows the button. */
   mayOpenForm: boolean;
-  /** False = the viewer is a member of no Project in the issue's Department (MSG76). */
-  canSearch: boolean;
 }

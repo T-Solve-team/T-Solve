@@ -17,7 +17,6 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
-import vn.tsolve.identity.service.ScopeAccessService;
 import vn.tsolve.jiraapp.dto.IssuePanelResponse;
 import vn.tsolve.jiraapp.dto.JiraIssueContext;
 import vn.tsolve.jiraapp.dto.SolutionFormDraft;
@@ -28,7 +27,6 @@ import vn.tsolve.jiraapp.dto.SubmitSolutionRequest;
 import vn.tsolve.jiraapp.dto.SubmittedTicketResponse;
 import vn.tsolve.jiraapp.exception.JiraAskerNotLinkedException;
 import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
-import vn.tsolve.jiraapp.repository.JiraProjectDepartmentRepository;
 import vn.tsolve.jiraapp.service.JiraIssueAccess;
 import vn.tsolve.jiraapp.service.SolutionFormAi;
 import vn.tsolve.ticket.dto.SolutionFormSubmission;
@@ -42,7 +40,6 @@ class JiraAppSolutionServiceImplTest {
 
     private static final String ISSUE = "ITSUP-12";
     private static final UUID PROJECT = UUID.fromString("00000000-0000-0000-0000-000000000126");
-    private static final UUID DEPARTMENT = UUID.fromString("00000000-0000-0000-0000-0000000000d1");
     private static final UUID TICKET = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
     private static final TSolveUser USER =
             new TSolveUser(UUID.fromString("00000000-0000-0000-0000-000000000001"), "b@x.test", "Ngo Bao", Set.of());
@@ -54,10 +51,7 @@ class JiraAppSolutionServiceImplTest {
     private final SolutionFormTicketService tickets = mock(SolutionFormTicketService.class);
     private final SolutionDraftService drafts = mock(SolutionDraftService.class);
     private final SolutionFormAi ai = mock(SolutionFormAi.class);
-    private final ScopeAccessService scopes = mock(ScopeAccessService.class);
-    private final JiraProjectDepartmentRepository departments = mock(JiraProjectDepartmentRepository.class);
-    private final JiraAppSolutionServiceImpl service =
-            new JiraAppSolutionServiceImpl(access, tickets, drafts, ai, scopes, departments);
+    private final JiraAppSolutionServiceImpl service = new JiraAppSolutionServiceImpl(access, tickets, drafts, ai);
 
     @Test
     void opensWithTheUsersDraftFirst_AC_005_2() {
@@ -157,30 +151,17 @@ class JiraAppSolutionServiceImplTest {
     void showsTheDraftAndTheFormButtonWhileNoTicketExists_AC_001_4_AC_008_3() {
         givenContext(member());
         given(drafts.find(USER.id(), PROJECT, ISSUE)).willReturn(Optional.of(SECTIONS));
-        givenDepartment(true);
 
-        assertThat(service.panel(CALLER, ISSUE)).isEqualTo(new IssuePanelResponse(true, null, true, true, true));
+        assertThat(service.panel(CALLER, ISSUE)).isEqualTo(new IssuePanelResponse(true, null, true, true));
     }
 
     @Test
     void showsTheTicketStatusAndNoFormButtonOnceSubmitted_AC_008_2() {
         givenContext(member());
         given(tickets.findStatus(ISSUE)).willReturn(Optional.of(TicketStatus.PENDING_REVIEW));
-        givenDepartment(true);
 
         assertThat(service.panel(CALLER, ISSUE))
-                .isEqualTo(new IssuePanelResponse(true, TicketStatus.PENDING_REVIEW, false, false, true));
-    }
-
-    @Test
-    void hidesTheSearchWhenTheUserSeesNoDepartmentOfTheIssue_AC_008_6() {
-        givenContext(new JiraIssueContext(Optional.of(USER), Optional.of(PROJECT), false));
-        givenDepartment(false);
-
-        IssuePanelResponse panel = service.panel(CALLER, ISSUE);
-
-        assertThat(panel.canSearch()).isFalse();
-        assertThat(panel.mayOpenForm()).isFalse();
+                .isEqualTo(new IssuePanelResponse(true, TicketStatus.PENDING_REVIEW, false, false));
     }
 
     @Test
@@ -197,11 +178,6 @@ class JiraAppSolutionServiceImplTest {
 
     private static JiraIssueContext member() {
         return new JiraIssueContext(Optional.of(USER), Optional.of(PROJECT), true);
-    }
-
-    private void givenDepartment(boolean visible) {
-        given(departments.departmentOf(PROJECT)).willReturn(Optional.of(DEPARTMENT));
-        given(scopes.canAccessDepartment(USER.id(), DEPARTMENT)).willReturn(visible);
     }
 
     private void givenContext(JiraIssueContext context) {

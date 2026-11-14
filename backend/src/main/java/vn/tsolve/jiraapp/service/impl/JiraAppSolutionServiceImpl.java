@@ -6,9 +6,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
-import vn.tsolve.identity.service.ScopeAccessService;
 import vn.tsolve.jiraapp.dto.IssuePanelResponse;
-import vn.tsolve.jiraapp.dto.JiraIssueContext;
 import vn.tsolve.jiraapp.dto.JiraIssueContext.Member;
 import vn.tsolve.jiraapp.dto.SolutionFormDraft;
 import vn.tsolve.jiraapp.dto.SolutionFormRequest;
@@ -16,7 +14,6 @@ import vn.tsolve.jiraapp.dto.SolutionFormResponse;
 import vn.tsolve.jiraapp.dto.SolutionFormResponse.Origin;
 import vn.tsolve.jiraapp.dto.SubmitSolutionRequest;
 import vn.tsolve.jiraapp.dto.SubmittedTicketResponse;
-import vn.tsolve.jiraapp.repository.JiraProjectDepartmentRepository;
 import vn.tsolve.jiraapp.service.JiraAppSolutionService;
 import vn.tsolve.jiraapp.service.JiraIssueAccess;
 import vn.tsolve.jiraapp.service.SolutionFormAi;
@@ -39,22 +36,13 @@ public class JiraAppSolutionServiceImpl implements JiraAppSolutionService {
     private final SolutionFormTicketService tickets;
     private final SolutionDraftService drafts;
     private final SolutionFormAi ai;
-    private final ScopeAccessService scopes;
-    private final JiraProjectDepartmentRepository departments;
 
     public JiraAppSolutionServiceImpl(
-            JiraIssueAccess access,
-            SolutionFormTicketService tickets,
-            SolutionDraftService drafts,
-            SolutionFormAi ai,
-            ScopeAccessService scopes,
-            JiraProjectDepartmentRepository departments) {
+            JiraIssueAccess access, SolutionFormTicketService tickets, SolutionDraftService drafts, SolutionFormAi ai) {
         this.access = access;
         this.tickets = tickets;
         this.drafts = drafts;
         this.ai = ai;
-        this.scopes = scopes;
-        this.departments = departments;
     }
 
     @Override
@@ -117,20 +105,7 @@ public class JiraAppSolutionServiceImpl implements JiraAppSolutionService {
                     && status.isEmpty()
                     && drafts.find(user, context.projectId().orElseThrow(), issueKey)
                             .isPresent();
-            return new IssuePanelResponse(
-                    true,
-                    status.orElse(null),
-                    hasDraft,
-                    context.member() && status.isEmpty(),
-                    canSearch(context, user));
+            return new IssuePanelResponse(true, status.orElse(null), hasDraft, context.member() && status.isEmpty());
         });
-    }
-
-    // MSG76 when the user may see no Department of the issue's Project (AC-008.6).
-    private boolean canSearch(JiraIssueContext context, UUID user) {
-        return context.projectId()
-                .flatMap(departments::departmentOf)
-                .map(department -> scopes.canAccessDepartment(user, department))
-                .orElse(false);
     }
 }

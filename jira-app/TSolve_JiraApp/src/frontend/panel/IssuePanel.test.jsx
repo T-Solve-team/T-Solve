@@ -5,14 +5,10 @@ import { requestJira } from '@forge/bridge';
 import {
   getIssuePanel,
   getReviewFeedback,
-  getTicket,
   openSolutionForm,
-  searchTickets,
-  TsolveError,
 } from '../api/tsolveClient';
 import { message } from '../messages';
 import { PANEL_LABELS, IssuePanel } from './IssuePanel';
-import { PREVIEW_LABELS } from './TicketPreviewModal';
 
 jest.mock('@forge/bridge', () => ({ requestJira: jest.fn(), showFlag: jest.fn(), invokeRemote: jest.fn() }));
 jest.mock('../api/tsolveClient', () => {
@@ -21,13 +17,11 @@ jest.mock('../api/tsolveClient', () => {
     ...actual,
     getIssuePanel: jest.fn(),
     getReviewFeedback: jest.fn(),
-    getTicket: jest.fn(),
     openSolutionForm: jest.fn(),
-    searchTickets: jest.fn(),
   };
 });
 
-const PANEL = { linked: true, ticketStatus: null, hasDraft: false, mayOpenForm: true, canSearch: true };
+const PANEL = { linked: true, ticketStatus: null, hasDraft: false, mayOpenForm: true };
 const SECTIONS = { symptoms: 'Drops', rootCause: 'Old', resolutionSteps: 'Update', workaround: '', scopeOfApplicability: 'All' };
 
 function issueIn(category) {
@@ -51,7 +45,7 @@ async function show(panel) {
 
 describe('IssuePanel', () => {
   it('AC-008.1 shows only MSG62 when the account is not linked', async () => {
-    await show({ linked: false, ticketStatus: null, hasDraft: false, mayOpenForm: false, canSearch: false });
+    await show({ linked: false, ticketStatus: null, hasDraft: false, mayOpenForm: false });
 
     expect(screen.getByText(message('MSG62'))).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
@@ -95,86 +89,10 @@ describe('IssuePanel', () => {
     expect(screen.queryByRole('button', { name: PANEL_LABELS.writeSolution })).not.toBeInTheDocument();
   });
 
-  it('AC-008.6 shows MSG76 instead of the search box', async () => {
-    await show({ ...PANEL, canSearch: false });
-
-    expect(screen.getByText(message('MSG76'))).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText(PANEL_LABELS.searchPlaceholder)).not.toBeInTheDocument();
-  });
-
-  it('AC-008.4 lists title, Ticket ID and Department of each result', async () => {
-    searchTickets.mockResolvedValue([{ id: 't-1', ticketId: 'ITSUP-9', title: 'VPN fix', departmentName: 'IT' }]);
+  it('shows no Published-ticket search (spec change 2026-11-14)', async () => {
     await show(PANEL);
 
-    fireEvent.change(screen.getByPlaceholderText(PANEL_LABELS.searchPlaceholder), { target: { value: 'vpn' } });
-    fireEvent.click(screen.getByRole('button', { name: PANEL_LABELS.search }));
-
-    expect(await screen.findByRole('button', { name: 'ITSUP-9 · VPN fix · IT' })).toBeInTheDocument();
-    expect(searchTickets).toHaveBeenCalledWith('vpn');
-  });
-
-  it('AC-008.5 shows MSG04 when nothing is found', async () => {
-    searchTickets.mockResolvedValue([]);
-    await show(PANEL);
-
-    fireEvent.change(screen.getByPlaceholderText(PANEL_LABELS.searchPlaceholder), { target: { value: 'printer' } });
-    fireEvent.click(screen.getByRole('button', { name: PANEL_LABELS.search }));
-
-    expect(await screen.findByText(message('MSG04'))).toBeInTheDocument();
-  });
-
-  it('AC-008.8 shows MSG06 in the search area when the search fails', async () => {
-    searchTickets.mockRejectedValue(new TsolveError('MSG06', { status: 503 }));
-    await show({ ...PANEL, ticketStatus: 'PENDING_REVIEW', mayOpenForm: false });
-
-    fireEvent.change(screen.getByPlaceholderText(PANEL_LABELS.searchPlaceholder), { target: { value: 'vpn' } });
-    fireEvent.click(screen.getByRole('button', { name: PANEL_LABELS.search }));
-
-    expect(await screen.findByText(message('MSG06'))).toBeInTheDocument();
-    expect(screen.getByText(message('MSG65'))).toBeInTheDocument();
-  });
-
-  it('sends no search for an empty query', async () => {
-    await show(PANEL);
-
-    fireEvent.click(screen.getByRole('button', { name: PANEL_LABELS.search }));
-
-    expect(searchTickets).not.toHaveBeenCalled();
-  });
-
-  it('AC-009.1 opens the Published Ticket Preview of a result', async () => {
-    searchTickets.mockResolvedValue([{ id: 't-1', ticketId: 'ITSUP-9', title: 'VPN fix', departmentName: 'IT' }]);
-    getTicket.mockResolvedValue({
-      id: 't-1',
-      ticketId: 'ITSUP-9',
-      title: 'VPN fix',
-      departmentName: 'IT',
-      solution: SECTIONS,
-      webUrl: 'https://acme.tsolve.io.vn/tickets/t-1',
-    });
-    await show(PANEL);
-    fireEvent.change(screen.getByPlaceholderText(PANEL_LABELS.searchPlaceholder), { target: { value: 'vpn' } });
-    fireEvent.click(screen.getByRole('button', { name: PANEL_LABELS.search }));
-
-    fireEvent.click(await screen.findByRole('button', { name: 'ITSUP-9 · VPN fix · IT' }));
-
-    expect(await screen.findByText('ITSUP-9 · Department: IT')).toBeInTheDocument();
-    expect(screen.getByText('Update')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: PREVIEW_LABELS.openInTsolve })).toHaveAttribute(
-      'href',
-      'https://acme.tsolve.io.vn/tickets/t-1',
-    );
-  });
-
-  it('AC-009.2 shows MSG08 when the ticket may not be seen', async () => {
-    searchTickets.mockResolvedValue([{ id: 't-1', ticketId: 'ITSUP-9', title: 'VPN fix', departmentName: 'IT' }]);
-    getTicket.mockRejectedValue(new TsolveError('MSG08', { status: 403 }));
-    await show(PANEL);
-    fireEvent.change(screen.getByPlaceholderText(PANEL_LABELS.searchPlaceholder), { target: { value: 'vpn' } });
-    fireEvent.click(screen.getByRole('button', { name: PANEL_LABELS.search }));
-
-    fireEvent.click(await screen.findByRole('button', { name: 'ITSUP-9 · VPN fix · IT' }));
-
-    expect(await screen.findByText(message('MSG08'))).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
   });
 });

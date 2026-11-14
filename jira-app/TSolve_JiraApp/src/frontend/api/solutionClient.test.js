@@ -2,11 +2,9 @@ import { invokeRemote } from '@forge/bridge';
 import {
   getIssuePanel,
   getReviewFeedback,
-  getTicket,
   openSolutionForm,
   rewriteSolution,
   saveSolutionDraft,
-  searchTickets,
   submitSolution,
   SUBMIT_RETRY_DELAYS_MS,
 } from './tsolveClient';
@@ -134,22 +132,5 @@ describe('tsolveClient — Solution Form and Issue Panel', () => {
 
     await expect(getReviewFeedback('ITSUP-12')).resolves.toEqual(msg64);
     await expect(getReviewFeedback('ITSUP-12')).resolves.toBeNull();
-  });
-
-  it('AC-008.4 searches with the query in the URL', async () => {
-    invokeRemote.mockResolvedValue(answer(200, [{ id: 't-1', ticketId: 'ITSUP-9', title: 'VPN', departmentName: 'IT' }]));
-
-    const results = await searchTickets('vpn & wifi');
-
-    expect(results).toHaveLength(1);
-    expect(invokeRemote).toHaveBeenCalledWith(
-      expect.objectContaining({ path: '/api/v1/jira-app/tickets/search?q=vpn%20%26%20wifi', method: 'GET' }),
-    );
-  });
-
-  it('AC-009.2 keeps MSG08 for a ticket the user may not see', async () => {
-    invokeRemote.mockResolvedValue(answer(403, { code: 'MSG08' }));
-
-    await expect(getTicket('t-1')).rejects.toMatchObject({ code: 'MSG08', status: 403 });
   });
 });

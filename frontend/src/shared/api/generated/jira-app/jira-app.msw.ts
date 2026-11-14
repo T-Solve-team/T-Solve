@@ -17,8 +17,6 @@ import type {
   ChatbotQuestion,
   IssueCreatedPayload,
   IssuePanel,
-  JiraAppTicketPreview,
-  JiraAppTicketResult,
   JiraAskerEligibility,
   JiraReviewFeedback,
   MessageRef,
@@ -171,33 +169,6 @@ export const getGetIssuePanelResponseMock = (
   ]),
   hasDraft: faker.datatype.boolean(),
   mayOpenForm: faker.datatype.boolean(),
-  canSearch: faker.datatype.boolean(),
-  ...overrideResponse,
-});
-
-export const getSearchJiraAppTicketsResponseMock = (): JiraAppTicketResult[] =>
-  Array.from({ length: faker.number.int({ min: 1, max: 20 }) }, (_, i) => i + 1).map(() => ({
-    id: faker.string.uuid(),
-    ticketId: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    departmentName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  }));
-
-export const getGetJiraAppTicketResponseMock = (
-  overrideResponse: Partial<Extract<JiraAppTicketPreview, object>> = {},
-): JiraAppTicketPreview => ({
-  id: faker.string.uuid(),
-  ticketId: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  departmentName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  solution: {
-    symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    workaround: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    scopeOfApplicability: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  },
-  webUrl: faker.internet.url(),
   ...overrideResponse,
 });
 
@@ -414,54 +385,6 @@ export const getGetIssuePanelMockHandler = (
     options,
   );
 };
-
-export const getSearchJiraAppTicketsMockHandler = (
-  overrideResponse?:
-    | JiraAppTicketResult[]
-    | ((
-        info: Parameters<HttpResponseResolver>[0],
-      ) => Promise<JiraAppTicketResult[]> | JiraAppTicketResult[]),
-  options?: RequestHandlerOptions,
-) => {
-  return http.get(
-    '*/api/v1/jira-app/tickets/search',
-    async (info: Parameters<HttpResponseResolver>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === 'function'
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getSearchJiraAppTicketsResponseMock(),
-        { status: 200 },
-      );
-    },
-    options,
-  );
-};
-
-export const getGetJiraAppTicketMockHandler = (
-  overrideResponse?:
-    | JiraAppTicketPreview
-    | ((
-        info: Parameters<HttpResponseResolver<{ ticketUuid: string }>>[0],
-      ) => Promise<JiraAppTicketPreview> | JiraAppTicketPreview),
-  options?: RequestHandlerOptions,
-) => {
-  return http.get<{ ticketUuid: string }>(
-    '*/api/v1/jira-app/tickets/:ticketUuid',
-    async (info: Parameters<HttpResponseResolver<{ ticketUuid: string }>>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === 'function'
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getGetJiraAppTicketResponseMock(),
-        { status: 200 },
-      );
-    },
-    options,
-  );
-};
 export const getJiraAppMock = () => [
   getGetJiraReviewFeedbackMockHandler(),
   getReceiveIssueCreatedMockHandler(),
@@ -472,6 +395,4 @@ export const getJiraAppMock = () => [
   getSaveSolutionDraftMockHandler(),
   getRewriteSolutionMockHandler(),
   getGetIssuePanelMockHandler(),
-  getSearchJiraAppTicketsMockHandler(),
-  getGetJiraAppTicketMockHandler(),
 ];

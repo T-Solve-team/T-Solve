@@ -118,7 +118,7 @@ export async function rewriteSolution(sections) {
   return response.body;
 }
 
-/** What the Issue Panel shows `{linked, ticketStatus, hasDraft, mayOpenForm, canSearch}` (STORY-001, STORY-008). */
+/** What the Issue Panel shows `{linked, ticketStatus, hasDraft, mayOpenForm}` (STORY-001, STORY-008). */
 export async function getIssuePanel(issueKey) {
   const response = await call({ path: `${JIRA_APP}/issues/${encodeURIComponent(issueKey)}/panel`, method: 'GET' });
   return response.body;
@@ -131,18 +131,6 @@ export async function getReviewFeedback(issueKey) {
     method: 'GET',
   });
   return response.body?.feedback ?? null;
-}
-
-/** Published tickets of the viewer's Departments `[{id, ticketId, title, departmentName}]` (AC-008.4). */
-export async function searchTickets(q) {
-  const response = await call({ path: `${JIRA_APP}/tickets/search?q=${encodeURIComponent(q)}`, method: 'GET' });
-  return response.body ?? [];
-}
-
-/** One Published ticket for the preview (AC-009.1). */
-export async function getTicket(id) {
-  const response = await call({ path: `${JIRA_APP}/tickets/${encodeURIComponent(id)}`, method: 'GET' });
-  return response.body;
 }
 
 function wait(ms) {
