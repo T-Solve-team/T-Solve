@@ -9,7 +9,7 @@ depth: Normal
 
 The T-Solve Jira App (Forge UI Kit, `jira-app/`) and the Jira App API endpoints it calls
 (`/api/v1/jira-app/**`). STORY-001 to STORY-008 (KAN-126): Solution Form, AI Rewrite, Issue Panel (STORY-003, STORY-006
-and STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
+and STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. STORY-012 (KAN-130): resubmit after Changes requested. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
 33, 36, System Messages), RESEARCH-003, RESEARCH-004, the `ticket-review` spec (STORY-009, STORY-012), the `chatbot`
 spec (STORY-005 to STORY-007). Terms: **user** = the active T-Solve Account linked to the Jira account in the FIT
 `principal`; **Project** = the ACTIVE T-Solve Project whose `jira_project_key` is the issue's project key;
@@ -33,6 +33,7 @@ an issue has at most one.
 | 2026-11-14 | STORY-008, STORY-009 | Remove the Published-ticket search from the Jira App: AC-008.4, AC-008.5, AC-008.6 and AC-008.8 are removed, STORY-009 (3.4 Published Ticket Preview, AC-009.1, AC-009.2) is retired. The panel keeps the Solution status only (AC-008.1 to AC-008.3, AC-008.7); `GET /api/v1/jira-app/tickets/search`, `GET /api/v1/jira-app/tickets/{ticketId}` and the panel's "search allowed" flag are removed; `search` is no longer a dependency. Out of Scope gains the search | User decision in the KAN-126 dev-site test (14/11): no Published-ticket search in Jira; it stays on the T-Solve web app. The SRS puts UC-26 search, 3.4 and MSG76 in the Jira App — this is a deviation the user will agree with the team. User chose to remove the UI and the backend endpoints, so no code is left that nothing calls |
 | 2026-11-14 | STORY-005, STORY-006 | Close keeps a Draft instead of submitting an empty ticket: AC-005.1 reworded (closing the form — Close or the dialog's close control — stores the Draft and shows MSG41), new AC-005.5 (no Save as draft button, no ticket on close, the server never stores an empty Solution); STORY-006 retired (AC-006.1, AC-006.2, AC-006.3 removed, MSG70 no longer shown); the solution endpoint no longer takes "all empty = Close". The Draft reminder email moves to a separate issue (Out of Scope) | KAN-126 dev-site test (14/11): the team's Review Queue never holds an empty ticket, so the empty Solution of AC-006.2 must not reach it; with Close saving the Draft a separate Save as draft button is redundant (user 14/11). Deviation from the SRS (Save as draft button, MSG70) to agree with the team |
 | 2026-11-14 | STORY-005 | AC-005.1: closing the form shows the flag "Saved as draft" instead of MSG41 | User in the dev-site test (14/11): the short text says what Close did |
+| 2026-11-14 | STORY-012 (new), STORY-008 | Add STORY-012 Resubmit after Changes requested (KAN-130, UC-19): the writer reopens the form from the panel with "Edit and resubmit", sees MSG64 above the sections, edits the ticket's Solution (or their Draft) and Finish puts the same ticket back into Pending review with a new entry time and due date; Close keeps a Draft. The panel response gains `mayResubmit`, the form request gains `resubmit`; the Out of Scope line on resubmitting is removed | User decisions of 14/11 for the demo (script 2 step 8): due date reset as for a new submission; form filled from the ticket's Solution, Close keeps a Draft; success shows MSG66 (MSG71's SRS text is not available); button + MSG64 in the form. STORY-011 is taken by the KAN-336 branch |
 
 ## Requirements
 
@@ -43,7 +44,8 @@ an issue has at most one.
    Close, and Close keeps the content as the user's Draft (STORY-002, STORY-004, STORY-005). Only Finish hands a
    ticket to `ticket-review`.
 3. Rewrite with AI shows 4.2 AI Rewrite Preview (STORY-007).
-4. The panel shows the issue's Solution status, including a Project Manager's change request (STORY-008).
+4. The panel shows the issue's Solution status, including a Project Manager's change request (STORY-008); the writer
+   edits and resubmits a ticket in Changes requested from the panel (STORY-012, KAN-130).
 5. An "Ask T-Solve" page in each Jira project lets a linked user ask the Knowledge Chatbot before creating an issue;
    "Not solved, create ticket" opens Jira's Create dialog prefilled with the conversation (STORY-010). Requirements 1
    to 4 belong to KAN-126.
@@ -125,11 +127,24 @@ an issue has at most one.
   - AC-010.11: IF the FIT user is not linked to an active T-Solve user, THEN THE server SHALL answer `POST /api/v1/jira-app/questions` with 403 MSG62 and call no AI.
   - AC-010.12: THE Jira App SHALL keep the conversation only while the page is open; it SHALL store no question or answer itself and SHALL log no question or answer text.
 
+### STORY-012: Resubmit after Changes requested
+- As a Ticket Resolver, I want to edit and resubmit my Solution when the Project Manager requests changes, so that the corrected Solution goes back to review (UC-19, KAN-130).
+- Terms: **resubmittable** = the issue's ticket is a Solution Form ticket whose writer is the user, it is in Changes requested, and the user is a member of its Project; **resubmission form** = the form opened for a resubmittable ticket.
+- Acceptance:
+  - AC-012.1: WHILE the issue's ticket is resubmittable, THE panel SHALL show MSG64 (AC-008.7) and a button "Edit and resubmit" (a Jira App label, not an SRS message — user, 2026-11-14).
+  - AC-012.2: WHEN the user clicks "Edit and resubmit", THE server SHALL allow the form only while the ticket is resubmittable and SHALL fill it from the user's Draft for the issue when there is one, otherwise from the ticket's current Solution; THE Jira App SHALL show MSG64 with the Project Manager's name and comment above the five sections.
+  - AC-012.3: IF the issue's ticket is not resubmittable — another status, another writer, another source, or the user is no longer a member of its Project — THEN THE panel SHALL not show "Edit and resubmit" and THE server SHALL not open the resubmission form.
+  - AC-012.4: WHEN the user clicks Finish on the resubmission form with a Solution that passes AC-002.5, THE server SHALL replace the ticket's Solution, move the same ticket to Pending review with a new Review Queue entry time and a review due date of today plus the Project's review range (as for AC-004.1, GBR-08, GBR-10), and delete the user's Draft for the issue; THE Jira App SHALL close the form and show MSG66.
+  - AC-012.5: IF at Finish the ticket is no longer resubmittable (for example it expired meanwhile), THEN THE server SHALL change nothing and answer 409 MSG06, and THE Jira App SHALL show MSG06 and keep the form open with its content.
+  - AC-012.6: WHEN the user closes the resubmission form, THE server SHALL store the five sections as the user's Draft for the issue as in AC-005.1, the ticket SHALL stay in Changes requested, and THE Jira App SHALL show the flag "Saved as draft".
+  - AC-012.7: THE resubmission form SHALL check, rewrite and retry as the first submission does (AC-002.3, AC-002.4, AC-004.4, STORY-007).
+
 ## Out of Scope
 - Evidence in the Jira App (attach, MSG34, MSG72, the Evidence list of 3.4): Forge UI calls carry at most 500 KB
   (RESEARCH-003); Evidence is added on the T-Solve web app (user, 2026-11-01, kept 2026-11-11). KAN-126 "Done when"
   items about Evidence are not met — reported to the team.
-- Resubmitting after Changes requested (MSG71) — the panel only shows the change request (AC-008.7).
+- Resubmitting an Expired or Rejected ticket, and resubmitting from the T-Solve web app.
+- MSG71: its SRS text is not available; a resubmission shows MSG66 like a first submission (user, 2026-11-14).
 - The issue-created event and the AI suggestion comment — `tracker`.
 - AI drafting and rewriting quality — `ai` (Trần Hải Anh); this module calls its chat client through one service.
 - Searching Published tickets and reading one in Jira (the SRS's 3.3 search box, 3.4 Published Ticket Preview,
@@ -155,11 +170,11 @@ feedback endpoint (AC-008.7).
 
 | Endpoint | Screen | Story |
 |----------|--------|-------|
-| `POST /api/v1/jira-app/issues/{issueKey}/solution-form` (issue summary + description) → may open, Draft or AI draft or prefill, MSG67 flag | 4.1 | 001, 002, 005 |
-| `POST /api/v1/jira-app/issues/{issueKey}/solution` (JSON: five sections) | 4.1 | 004 |
+| `POST /api/v1/jira-app/issues/{issueKey}/solution-form` (issue summary + description, `resubmit`) → may open, Draft or AI draft or prefill or the ticket's Solution, MSG67 flag | 4.1 | 001, 002, 005, 012 |
+| `POST /api/v1/jira-app/issues/{issueKey}/solution` (JSON: five sections) → a new ticket, or the resubmitted one | 4.1 | 004, 012 |
 | `PUT /api/v1/jira-app/issues/{issueKey}/solution-draft` (on Close) | 4.1 | 005 |
 | `POST /api/v1/jira-app/solution-rewrites` (five sections → rewritten five sections) | 4.2 | 007 |
-| `GET /api/v1/jira-app/issues/{issueKey}/panel` → linked, ticket status, Draft, may open | 3.3 | 001, 008 |
+| `GET /api/v1/jira-app/issues/{issueKey}/panel` → linked, ticket status, Draft, may open, may resubmit | 3.3 | 001, 008, 012 |
 | `GET /api/v1/jira-app/questions/eligibility` (→ `linked`: whether the FIT user is linked to an active T-Solve user; calls no AI) | Ask T-Solve (on open, AC-010.2) | 010 |
 | `POST /api/v1/jira-app/questions` (question + history → the chatbot answer: outcome, text, citations) | Ask T-Solve | 010 |
 

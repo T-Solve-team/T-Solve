@@ -1476,3 +1476,7 @@
 {"ts":"2026-11-14T08:39:03.094Z","type":"spec-approved","module":"ticket-review","specHash":"8ca5fab301424f0d3289249e5235a5ec226b1fb3dd7f6b21964fd453140159fa"}
 {"ts":"2026-11-14T08:47:24.019Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"98ec9c7382a17815f6f001e3a6432225c4bc83b9"}
 {"ts":"2026-11-14T08:47:24.252Z","type":"commit-recorded","module":"worker","repo":"default","sha":"98ec9c7382a17815f6f001e3a6432225c4bc83b9"}
+{"ts":"2026-11-14T14:18:28.898Z","type":"spec-approved","module":"jira-app","specHash":"a3d60df6378a619c4c347e8e1b0c0c718ace12007456a5e8c76600319a1c9393"}
+{"ts":"2026-11-14T14:19:29.103Z","type":"feature-status","module":"jira-app","feature":"resubmit-backend","from":null,"to":"pending"}
+{"ts":"2026-11-14T14:19:29.494Z","type":"feature-status","module":"jira-app","feature":"resubmit-forge","from":null,"to":"pending"}
+{"ts":"2026-11-14T14:19:29.956Z","type":"feature-status","module":"jira-app","feature":"resubmit-backend","from":"pending","to":"in-progress"}
