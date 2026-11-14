@@ -325,13 +325,13 @@
         "remove-jira-search": "passing",
         "close-keeps-draft": "passing"
       },
-      "lastUpdated": "2026-11-14T08:18:02.356Z",
+      "lastUpdated": "2026-11-14T18:12:01.535Z",
       "branch": "feat/KAN-126-jira-app-solution-form-v2",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "36e22e7c5b82fc6363e6e78729916b148efcddf1"
+        "default": "19215afba9f44eb4f6dfc48ddb6f85e65e68c6b0"
       }
     },
     "dashboard-audit": {
