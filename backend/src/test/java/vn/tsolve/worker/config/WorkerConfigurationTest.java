@@ -127,7 +127,7 @@ class WorkerConfigurationTest {
                         "spring.liquibase.change-log=classpath:db/changelog/db.changelog-master.xml")
                 .run(context -> {
                     assertThat(context).hasNotFailed().hasSingleBean(EmailOutboxService.class);
-                    assertThat(context.getBean("workerClock")).isInstanceOf(Clock.class);
+                    assertThat(context).doesNotHaveBean(Clock.class);
                     assertThat(context.getBeansOfType(DataSource.class)).containsOnlyKeys("dataSource");
                     assertThat(context.getBean("liquibase", SpringLiquibase.class)
                                     .getDataSource())
@@ -148,6 +148,27 @@ class WorkerConfigurationTest {
     @Configuration(proxyBeanMethods = false)
     @EnableConfigurationProperties(EmailOutboxProperties.class)
     static class OutboxPropertiesConfiguration {}
+
+    @Test
+    void leavesTheApplicationClockTheOnlyClockBean_BUG_240() {
+        var applicationClock = Clock.systemDefaultZone();
+        var jobs = mock(DataSource.class);
+        var runtime = mock(JobRunrRuntime.class);
+        when(runtime.jobsDataSource()).thenReturn(jobs);
+        new ApplicationContextRunner()
+                .withUserConfiguration(EmailOutboxConfiguration.class, SkipMigration.class)
+                .withBean(JobRunrRuntime.class, () -> runtime)
+                .withBean(WorkerTenantService.class, () -> mock(WorkerTenantService.class))
+                .withBean("clock", Clock.class, () -> applicationClock)
+                .withPropertyValues("tsolve.worker.enabled=true")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    // AuditLogServiceImpl asks for ObjectProvider<Clock>.getIfAvailable(): with two Clock beans it
+                    // throws NoUniqueBeanDefinitionException and the worker profile does not start.
+                    assertThat(context.getBeanProvider(Clock.class).getIfAvailable(Clock::systemUTC))
+                            .isSameAs(applicationClock);
+                });
+    }
 
     @ParameterizedTest
     @ValueSource(strings = {"5m", "5m,15m,30m"})
