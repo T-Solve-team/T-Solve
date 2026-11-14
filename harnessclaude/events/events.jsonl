@@ -1425,3 +1425,7 @@
 {"ts":"2026-11-14T08:33:10.469Z","type":"feature-status","module":"worker","feature":"review-email-html-sender","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T08:37:24.584Z","type":"feature-status","module":"ticket-review","feature":"review-email-html","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T08:37:24.632Z","type":"feature-status","module":"worker","feature":"review-email-html-sender","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T08:39:00.691Z","type":"spec-approved","module":"worker","specHash":"47cb2ae30d0834749a18e7725b15d8fa1a68fe70ef9d46d61efb45ba6f5a5df0"}
+{"ts":"2026-11-14T08:39:03.094Z","type":"spec-approved","module":"ticket-review","specHash":"8ca5fab301424f0d3289249e5235a5ec226b1fb3dd7f6b21964fd453140159fa"}
+{"ts":"2026-11-14T08:47:24.019Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"98ec9c7382a17815f6f001e3a6432225c4bc83b9"}
+{"ts":"2026-11-14T08:47:24.252Z","type":"commit-recorded","module":"worker","repo":"default","sha":"98ec9c7382a17815f6f001e3a6432225c4bc83b9"}

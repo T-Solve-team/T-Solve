@@ -12,3 +12,9 @@
 - **Why:** the KAN-162 email-outbox session asked for this, so the outbox can reuse the sender. The user agreed and approved the reworded worker AC-001.1 and AC-001.2.
 - **Commit:** default@4a36c9cc. The renderer now builds the subject, the sender takes `(recipient, subject, text, html)`, and `Decision` lives in `ReviewEmail`. The emails sent are unchanged.
 - **Checks run locally:** `mvn spotless:check` passed, 26 unit tests passed, and `sdd.ts trace` is complete for both stories. The Docker ITs are left to PR CI.
+
+## Follow-up: review findings (2026-11-14)
+
+- **Why:** the independent review passed both features and listed minor findings. The user asked for all three to be fixed and approved the reworded worker AC-001.2 and ticket-review AC-010.7.
+- **Commit:** default@98ec9c73. The sender keeps the subject line-break guard (now stated in AC-001.2) and rejects null content before sending. A blank reviewer name falls back to the email, and a missing reviewer drops "Reviewed by". Tests were added for section order, no external resources, and literal template syntax.
+- **Checks run locally:** `mvn spotless:check` passed, 34 unit tests passed, and `sdd.ts trace` is complete for both stories. The new IT case `usesReviewerEmailWhenFullNameBlank_AC_010_7` needs Docker and is left to PR CI.
