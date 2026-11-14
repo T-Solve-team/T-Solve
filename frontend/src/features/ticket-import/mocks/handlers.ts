@@ -9,6 +9,9 @@ import type {
   ImportResultResponse,
   ImportType,
   JiraPullRequest,
+  ManualDraftResponse,
+  ManualEntryRequest,
+  ManualEntryResponse,
   RemoveRowsRequest,
 } from '@/shared/api';
 import { getDownloadCsvTemplateMockHandler } from '@/shared/api/generated/import/import.msw';
@@ -42,6 +45,9 @@ let preview: MockPreview = seedImport();
 let isConfirmed = false;
 let lastBatchId = 0;
 let drafts: MockPreview[] = seedDrafts();
+/** The PM's Manual Drafts (STORY-007); none at the start. */
+let manualDrafts: ManualDraftResponse[] = [];
+let lastManualId = 950;
 
 /** Back to the starting preview — called after every test (src/test/setup.ts). */
 export function resetMockData(): void {
@@ -49,6 +55,24 @@ export function resetMockData(): void {
   isConfirmed = false;
   lastBatchId = 0;
   drafts = seedDrafts();
+  manualDrafts = [];
+  lastManualId = 950;
+}
+
+/** The `entry` part and the `files` parts of a manual entry request. */
+async function readManualEntry(request: Request) {
+  const form = await request.formData();
+  const entry = form.get('entry');
+  return {
+    entry: JSON.parse(typeof entry === 'string' ? entry : '{}') as ManualEntryRequest,
+    files: form.getAll('files').filter((file): file is File => file instanceof File),
+  };
+}
+
+/** The Manual Draft a request names, or undefined when it names none. A missing one answers 404. */
+function namedManualDraft(entry: ManualEntryRequest): ManualDraftResponse | undefined | null {
+  if (entry.draftId === undefined || entry.draftId === null) return undefined;
+  return manualDrafts.find((draft) => draft.previewId === entry.draftId) ?? null;
 }
 
 /** The open preview or one of the Drafts, for the read endpoints (a reopened Draft, AC-004.3). */
@@ -137,23 +161,32 @@ export const handlers: HttpHandler[] = [
   http.get('*/api/v1/imports/drafts', async () => {
     await delay(MOCK_DELAY_MS);
     const saved = !isConfirmed && preview.draftSavedAt ? [preview, ...drafts] : drafts;
-    return HttpResponse.json<ImportDraftSummary[]>(
-      saved.map((draft) => ({
+    return HttpResponse.json<ImportDraftSummary[]>([
+      ...manualDrafts.map((draft) => ({
+        previewId: draft.previewId,
+        source: 'MANUAL' as const,
+        projectId: draft.projectId,
+        rowCount: 1,
+        savedAt: draft.savedAt,
+      })),
+      ...saved.map((draft) => ({
         previewId: draft.previewId,
         source: draft.source ?? 'CSV',
         projectId: draft.projectId,
         rowCount: draft.rows.filter((row) => row.status !== 'REMOVED').length,
         savedAt: draft.draftSavedAt ?? '',
       })),
-    );
+    ]);
   }),
 
   http.delete('*/api/v1/imports/drafts/:previewId', async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    if (!drafts.some((draft) => String(draft.previewId) === params.previewId)) {
+    const isManual = manualDrafts.some((draft) => String(draft.previewId) === params.previewId);
+    if (!isManual && !drafts.some((draft) => String(draft.previewId) === params.previewId)) {
       return problem(404, 'MSG04');
     }
     drafts = drafts.filter((draft) => String(draft.previewId) !== params.previewId);
+    manualDrafts = manualDrafts.filter((draft) => String(draft.previewId) !== params.previewId);
     return new HttpResponse(null, { status: 204 });
   }),
 
@@ -266,5 +299,78 @@ export const handlers: HttpHandler[] = [
       skipped,
       message: { code: 'MSG32', params: { created, skipped } },
     });
+  }),
+
+  // Manual entry (UC-22): Ticket ID "T-TAKEN" answers MSG31 and "T-FAIL" MSG33.
+  http.post('*/api/v1/imports/manual', async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    const { entry } = await readManualEntry(request);
+    if (namedManualDraft(entry) === null) return problem(404, 'MSG04');
+    if (entry.ticketId === 'T-TAKEN') {
+      const params = { ticket_id: entry.ticketId };
+      return problem(409, 'MSG31', {
+        params,
+        fieldErrors: [{ field: 'ticketId', code: 'MSG31', params }],
+      });
+    }
+    if (entry.ticketId === 'T-FAIL') return problem(500, 'MSG33');
+    manualDrafts = manualDrafts.filter((draft) => draft.previewId !== entry.draftId);
+    return HttpResponse.json<ManualEntryResponse>(
+      {
+        ticketId: '00000000-0000-4000-8000-000000000a01',
+        message: { code: 'MSG32', params: { created: 1, skipped: 0 } },
+      },
+      { status: 201 },
+    );
+  }),
+
+  http.post('*/api/v1/imports/manual/drafts', async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    const { entry, files } = await readManualEntry(request);
+    if (!entry.projectId) {
+      return problem(400, 'MSG01', {
+        params: { field_name: 'projectId' },
+        fieldErrors: [{ field: 'projectId', code: 'MSG01', params: { field_name: 'Project' } }],
+      });
+    }
+    const before = namedManualDraft(entry);
+    if (before === null) return problem(404, 'MSG04');
+    const keep = entry.keepEvidenceIds;
+    const kept = (before?.evidence ?? []).filter((file) => !keep || keep.includes(file.id));
+    const added = files.map((file, index) => ({
+      id: `00000000-0000-4000-8000-${String(Date.now() + index)
+        .padStart(12, '0')
+        .slice(-12)}`,
+      fileName: file.name,
+      fileType: file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase(),
+      fileSize: file.size,
+    }));
+    const saved: ManualDraftResponse = {
+      previewId: before?.previewId ?? ++lastManualId,
+      projectId: entry.projectId,
+      ticketId: entry.ticketId ?? null,
+      title: entry.title ?? null,
+      description: entry.description ?? null,
+      resolvedDate: entry.resolvedDate ?? null,
+      symptoms: entry.symptoms ?? null,
+      rootCause: entry.rootCause ?? null,
+      resolutionSteps: entry.resolutionSteps ?? null,
+      workaround: entry.workaround ?? null,
+      scope: entry.scope ?? null,
+      evidence: [...kept, ...added],
+      savedAt: new Date().toISOString(),
+    };
+    manualDrafts = [saved, ...manualDrafts.filter((draft) => draft.previewId !== saved.previewId)];
+    return HttpResponse.json<DraftSavedResponse>({
+      previewId: saved.previewId,
+      savedAt: saved.savedAt,
+      message: { code: 'MSG41', params: {} },
+    });
+  }),
+
+  http.get('*/api/v1/imports/manual/drafts/:previewId', async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const found = manualDrafts.find((draft) => String(draft.previewId) === params.previewId);
+    return found ? HttpResponse.json<ManualDraftResponse>(found) : problem(404, 'MSG04');
   }),
 ];

@@ -78,6 +78,38 @@ describe('DraftsList', () => {
     expect(within(table).getAllByRole('button', { name: /^Open Draft/ })).toHaveLength(1);
   });
 
+  it('AC-007.3 lists a Manual Draft with type Manual and 1 row beside the other Drafts', async () => {
+    server.use(
+      http.get('*/api/v1/imports/drafts', () =>
+        Response.json([
+          {
+            previewId: 950,
+            source: 'MANUAL',
+            projectId: '00000000-0000-4000-8000-000000000101',
+            rowCount: 1,
+            savedAt: '2026-11-10T02:30:00Z',
+          },
+          {
+            previewId: 900,
+            source: 'JIRA_IMPORT',
+            projectId: '00000000-0000-4000-8000-000000000101',
+            rowCount: 3,
+            savedAt: '2026-10-16T02:30:00Z',
+          },
+        ]),
+      ),
+    );
+    renderApp('/import', { role: 'PROJECT_MANAGER' });
+    const table = await screen.findByRole('table', { name: 'Drafts' }, { timeout: 5000 });
+
+    const manual = (await within(table).findByText('Manual')).closest('tr');
+    if (!(manual instanceof HTMLElement)) throw new Error('no Manual Draft row');
+    expect(within(manual).getByText('ITSUP · IT')).toBeInTheDocument();
+    expect(within(manual).getByText('1')).toBeInTheDocument();
+    expect(within(manual).getByText(formatDateTime('2026-11-10T02:30:00Z'))).toBeInTheDocument();
+    expect(within(table).getByText('Jira')).toBeInTheDocument();
+  });
+
   it('AC-004.3 Open goes to the Import Preview of the Draft', async () => {
     const { user, table, router } = await openDrafts();
 

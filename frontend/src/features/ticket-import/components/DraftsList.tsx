@@ -21,10 +21,10 @@ const TYPE_LABELS: Record<ImportSource, string> = {
 };
 
 /**
- * Drafts of 5.1 Import Tickets — SRS III.5.1, AC-004.2…AC-004.5: the caller's own Drafts, newest first; Open goes
- * to the Import Preview, Delete asks MSG42 first.
+ * Drafts of 5.1 Import Tickets — SRS III.5.1, AC-004.2…AC-004.5, AC-007.3: the caller's own Drafts, newest first;
+ * Open goes to the Import Preview, or for a Manual Draft to the Manual entry tab; Delete asks MSG42 first.
  */
-export function DraftsList() {
+export function DraftsList({ onOpenManual }: { onOpenManual: (previewId: number) => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const projects = useManagedProjectOptions();
@@ -66,7 +66,11 @@ export function DraftsList() {
           <Button
             type="link"
             aria-label={`Open ${draftName(draft)}`}
-            onClick={() => void navigate(`${paths.importPreview}?previewId=${draft.previewId}`)}
+            onClick={() =>
+              draft.source === 'MANUAL'
+                ? onOpenManual(draft.previewId)
+                : void navigate(`${paths.importPreview}?previewId=${draft.previewId}`)
+            }
           >
             Open
           </Button>
