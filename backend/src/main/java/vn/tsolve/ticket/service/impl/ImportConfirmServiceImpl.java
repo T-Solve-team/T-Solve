@@ -262,6 +262,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 user,
                 preview.getSource(),
                 preview.getFileName(),
+                preview.getResolvedFrom(),
+                preview.getResolvedTo(),
                 toImport.size(),
                 (int) (isJira(preview) ? skipped : errorRows),
                 (int) removedRows));

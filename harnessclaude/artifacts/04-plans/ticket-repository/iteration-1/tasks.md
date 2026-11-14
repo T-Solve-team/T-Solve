@@ -1,7 +1,7 @@
 ---
 module: ticket-repository
 date: 2026-11-07
-total_tasks: 20
+total_tasks: 25
 owner: Dev
 ---
 
@@ -306,3 +306,107 @@ accept multipart and return Draft evidence (AC-006.22, AC-006.18 on screen).
 - Test: `ManualEntryForm.test.tsx` (AC-006.22, AC-006.18), `EvidenceUpload.test.tsx`
 **Dependencies:** Task 18
 **Estimated size:** medium
+
+## Task 21: Date range on Import Batches
+
+**Story:** STORY-007
+**Feature:** import-batch-date-range
+**Description:** KAN-134, master design "Change 2026-11-14: Import History and Ticket Detail" (Date range, D25).
+Changeset `032-ticket-import-batch-date-range.sql` adds `import_batch.date_from` / `date_to` (DATE, nullable).
+`ImportBatch` maps them; `completed(…)` / `failed(…)` take them. Jira Finish (Completed and Failed) passes the
+preview's `resolvedFrom` / `resolvedTo`; `ImportBatchRecorder.recordJiraFailed` takes the pull request's range; CSV
+and Manual pass null (AC-007.8).
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/032-ticket-import-batch-date-range.sql`
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `T/entity/ImportBatch.java`,
+  `T/service/impl/ImportBatchRecorder.java`, `T/service/impl/JiraImportServiceImpl.java`,
+  `T/service/impl/ImportConfirmServiceImpl.java`, `T/service/impl/ManualTicketServiceImpl.java`
+- Test: `TT/service/impl/ImportHistoryDateRangeIT.java` (AC-007.8: Jira Finish Completed and Failed carry the range,
+  a failed pull carries the request's range, CSV and Manual batches keep none); existing `ImportConfirm*`,
+  `Jira*` and `Manual*` tests stay green.
+**Dependencies:** none
+**Estimated size:** small
+
+## Task 22: Import History API
+
+**Story:** STORY-007
+**Feature:** import-history-api
+**Description:** Master design "Change 2026-11-14: Import History and Ticket Detail" (Shape, Query, Filters, Error
+code). OpenAPI first: `GET /imports/history` (tag `import`, operationId `getImportHistory`, query `projectId`,
+`source`, `dateFrom`, `dateTo`, `Page`, `Size`; 200 `ImportHistoryPage`, 400, 403) and the schemas
+`ImportHistoryPage`, `ImportHistoryItem` of the spec's Interface Contracts; `npm run generate:api`. Then
+`ImportHistoryController` (PM guard), `ImportHistoryService` + impl, the native page and count query in
+`ImportBatchRepository` (managed Projects through `project_membership`, legacy hex Project ids, `app_user` name or the
+stored value, newest first), MSG code extraction, Vietnam-time date filter, `from > to` → 400 MSG39.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (generated only),
+  `T/repository/ImportBatchRepository.java`
+- Create: `T/controller/ImportHistoryController.java`, `T/service/ImportHistoryService.java`,
+  `T/service/impl/ImportHistoryServiceImpl.java`, `T/dto/ImportHistoryItem.java`, `T/dto/ImportHistoryQuery.java`
+- Test: `TT/service/impl/ImportHistoryServiceImplTest.java` (AC-007.3 name or raw value, AC-007.4 MSG code only,
+  AC-007.6 MSG39), `TT/controller/ImportHistoryControllerIT.java` with the real DB (AC-007.1 only managed Projects,
+  newest first, paging; AC-007.2 every field incl. Department and legacy hex Project id; AC-007.3; AC-007.5 each
+  filter, 23:30 Vietnam time on `dateTo`, unmanaged `projectId` → empty page; AC-007.6; AC-007.7 TR → 403)
+**Dependencies:** Task 21
+**Estimated size:** medium
+
+## Task 23: Import History screen
+
+**Story:** STORY-007
+**Feature:** import-history-page
+**Description:** Master design "Change 2026-11-14: Import History and Ticket Detail" (Web app, Import History).
+Replace the placeholder `ImportHistoryPage` with the filters (Project, Source, Date range) and the server-paged
+table of AC-007.9 through the generated `useGetImportHistory`; "Date range / file" column (Jira range, CSV file
+name); empty page → MSG04 (AC-007.10). MSW handler and data for `GET /imports/history`.
+**Files:**
+- Modify: `F/pages/ImportHistoryPage.tsx`, `F/mocks/handlers.ts`, `F/mocks/data.ts`
+- Test: `F/pages/ImportHistoryPage.test.tsx` (AC-007.9 columns, Jira range vs CSV file name, filters sent as query
+  params; AC-007.10 MSG04 — test names cite the ids)
+**Dependencies:** Task 22 (Task 22's generated client; the backend only for a live run)
+**Estimated size:** medium
+
+## Task 24: Ticket Detail visibility and fields
+
+**Story:** STORY-008
+**Feature:** ticket-detail-scope
+**Description:** Master design "Change 2026-11-14: Import History and Ticket Detail" (Ticket Detail). Extends
+`ticket-review` code (D29, owner Phạm Tùng Dương). OpenAPI `ReviewTicketDetail` + optional nullable `department`
+`{id, name}`, `resolvedDate`, `sourceLink`, and 403 on `getReviewTicketDetail`; `npm run generate:api`.
+`ReviewReadController.detail` guard → `hasAnyRole(TICKET_RESOLVER, PROJECT_MANAGER)`.
+`TicketRepository.findPlacement`; `TicketReviewReadServiceImpl.detail` applies AC-008.1–AC-008.5 in the design's
+order with `ScopeAccessService.canAccessDepartment` and answers `AccessDeniedException` (403 MSG08);
+`TicketReviewView.Detail` + `Department`, `resolvedDate`, `sourceLink` filled by `TicketReviewMapper` (AC-008.6);
+`Ticket` maps `source_link` and `ImportConfirmServiceImpl.toTicket` copies the Jira row's `sourceUrl` (AC-008.7).
+`canDecide` unchanged. Update the `ReviewDecisionApiIT` assertions that change (design Risks).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (generated only),
+  `backend/src/main/java/vn/tsolve/review/controller/ReviewReadController.java`, `T/service/TicketReviewReadService.java`,
+  `T/service/impl/TicketReviewReadServiceImpl.java`, `T/dto/TicketReviewView.java`, `T/mapper/TicketReviewMapper.java`,
+  `T/repository/TicketRepository.java`, `T/entity/Ticket.java`, `T/service/impl/ImportConfirmServiceImpl.java`,
+  `T/service/impl/ManualTicketServiceImpl.java` (passes a null source link, if `Ticket.imported` changes signature),
+  `backend/src/test/java/vn/tsolve/review/ReviewDecisionApiIT.java`
+- Test: `TT/service/impl/TicketDetailVisibilityTest.java` (AC-008.1–AC-008.5 with mocks: TR of the Department, TR of
+  another Department, writer of a pending ticket, PM of the Project, PM of the Department but not the Project,
+  Employee-only caller, inactive Department, no Project row, unknown id), `TT/controller/TicketDetailIT.java` with the
+  real DB (AC-008.1, AC-008.3, AC-008.4, AC-008.5 over HTTP; AC-008.6 the three fields and `canDecide`; AC-008.7 a
+  Jira Finish stores the issue link); `CrossModuleIsolationIT` and the other `review/` tests stay green.
+**Dependencies:** none
+**Estimated size:** medium
+
+## Task 25: Ticket Detail screen
+
+**Story:** STORY-008
+**Feature:** ticket-detail-page
+**Description:** Master design "Change 2026-11-14: Import History and Ticket Detail" (Web app, Ticket Detail).
+`ReviewTicketContent` shows Department, Resolved date and Source link (http/https only as a link, new tab,
+`rel="noopener noreferrer"`; anything else as text) and the review due date only while `PENDING_REVIEW`.
+`ReviewTicketDetail` shows MSG08 inline with no content on 403; other failures keep `ErrorState` and the global
+MSG06 toast. Decision buttons unchanged.
+**Files:**
+- Modify: `frontend/src/features/review/components/ReviewTicketContent.tsx`,
+  `frontend/src/features/review/components/ReviewTicketDetail.tsx`
+- Test: `frontend/src/features/tickets/pages/TicketDetailPage.test.tsx` (AC-008.8 fields, `javascript:` link as
+  text, https link attributes; AC-008.9 due date only for PENDING_REVIEW; AC-008.10 403 → MSG08 and no content, 500 →
+  MSG06 toast — test names cite the ids); the existing `ReviewTicketDetail.test.tsx` stays green.
+**Dependencies:** Task 24 (its generated client; the backend only for a live run)
+**Estimated size:** small

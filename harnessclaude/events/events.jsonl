@@ -1492,6 +1492,12 @@
 {"ts":"2026-11-14T18:40:18.464Z","type":"feature-status","module":"identity","feature":"my-solutions-backend","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T18:40:18.742Z","type":"feature-status","module":"identity","feature":"my-solutions-backend","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T18:40:18.992Z","type":"feature-status","module":"identity","feature":"my-solutions-backend","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T15:00:53.435Z","type":"feature-status","module":"ticket-repository","feature":"import-batch-date-range","from":null,"to":"pending"}
+{"ts":"2026-11-14T15:00:53.891Z","type":"feature-status","module":"ticket-repository","feature":"import-history-api","from":null,"to":"pending"}
+{"ts":"2026-11-14T15:00:54.398Z","type":"feature-status","module":"ticket-repository","feature":"import-history-page","from":null,"to":"pending"}
+{"ts":"2026-11-14T15:00:54.897Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-scope","from":null,"to":"pending"}
+{"ts":"2026-11-14T15:00:55.443Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-page","from":null,"to":"pending"}
+{"ts":"2026-11-14T15:04:41.984Z","type":"spec-approved","module":"ticket-repository","specHash":"87ec80a0eb4bdfa3515b7479c369592b4a7d24ad5a32f5c311dc0067c3682738"}
 {"ts":"2026-11-14T13:20:12.344Z","type":"spec-approved","module":"worker","specHash":"b048853538841e767a735e04aaf1fbe67bc37ce5b082b04a7c4fa825f1065dd1"}
 {"ts":"2026-11-14T13:20:19.709Z","type":"spec-approved","module":"ticket-review","specHash":"de462e28b43437f5706e1b6f2d226d644cbf08aa8d77a6030e3887c80939aef8"}
 {"ts":"2026-11-14T13:20:30.382Z","type":"feature-status","module":"ticket-review","feature":"review-email-outbox","from":"pending","to":"in-progress"}
@@ -1555,3 +1561,4 @@
 {"ts":"2026-11-14T11:00:10.397Z","type":"feature-status","module":"ticket-repository","feature":"manual-evidence-backend","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T11:23:10.321Z","type":"feature-status","module":"ticket-repository","feature":"manual-evidence-tab","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T11:34:19.598Z","type":"feature-status","module":"ticket-repository","feature":"manual-evidence-tab","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T21:01:34.651Z","type":"spec-approved","module":"ticket-repository","specHash":"d841e21ef53e72298449a8203e5ad8cfa65ff6d2b418245d2b0062e600c60ae7"}

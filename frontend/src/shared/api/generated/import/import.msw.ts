@@ -17,6 +17,7 @@ import type {
   DraftSavedResponse,
   FillSolutionRequest,
   ImportDraftSummary,
+  ImportHistoryPage,
   ImportPreviewResponse,
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
@@ -772,6 +773,48 @@ export const getListImportDraftsResponseMock = (): ImportDraftSummary[] =>
     savedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
   }));
 
+export const getGetImportHistoryResponseMock = (
+  overrideResponse: Partial<Extract<ImportHistoryPage, object>> = {},
+): ImportHistoryPage => ({
+  content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      batchId: faker.number.int(),
+      createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+      performedBy: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      project: {
+        projectId: faker.string.uuid(),
+        projectKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      department: {
+        id: faker.string.uuid(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      source: faker.helpers.arrayElement(Object.values(ImportSource)),
+      dateFrom: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      dateTo: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      fileName: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      publishedCount: faker.number.int(),
+      removedCount: faker.number.int(),
+      errorCount: faker.number.int(),
+      status: faker.helpers.arrayElement(['COMPLETED', 'FAILED'] as const),
+      errorCode: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  page: {
+    size: faker.number.int(),
+    number: faker.number.int(),
+    totalElements: faker.number.int(),
+    totalPages: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateManualTicketResponseMessageRefMock = (
   overrideResponse: Partial<MessageRef> = {},
 ): MessageRef => ({
@@ -1152,6 +1195,30 @@ export const getDeleteImportDraftMockHandler = (
   );
 };
 
+export const getGetImportHistoryMockHandler = (
+  overrideResponse?:
+    | ImportHistoryPage
+    | ((
+        info: Parameters<HttpResponseResolver>[0],
+      ) => Promise<ImportHistoryPage> | ImportHistoryPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/imports/history',
+    async (info: Parameters<HttpResponseResolver>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetImportHistoryResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getCreateManualTicketMockHandler = (
   overrideResponse?:
     | ImportResultResponse
@@ -1236,6 +1303,7 @@ export const getImportMock = () => [
   getSaveImportDraftMockHandler(),
   getListImportDraftsMockHandler(),
   getDeleteImportDraftMockHandler(),
+  getGetImportHistoryMockHandler(),
   getCreateManualTicketMockHandler(),
   getSaveManualTicketDraftMockHandler(),
   getGetManualTicketDraftMockHandler(),

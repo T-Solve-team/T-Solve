@@ -14,11 +14,15 @@ import type {
   ManualTicketRequest,
   RemoveRowsRequest,
 } from '@/shared/api';
+import { getMe, isApiError, TicketSource } from '@/shared/api';
 import { getDownloadCsvTemplateMockHandler } from '@/shared/api/generated/import/import.msw';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
+import { APP_TIME_ZONE, PAGE_SIZE } from '@/shared/lib';
+import dayjs from 'dayjs';
 import {
   CSV_TEMPLATE,
   CSV_TEMPLATE_WITHOUT_SOLUTION,
+  IMPORT_HISTORY,
   previewResponse,
   rowPage,
   seedImport,
@@ -150,6 +154,56 @@ function isCurrent(previewId: string | readonly string[] | undefined): boolean {
  * "import-fails" → MSG33 on Confirm. Any other file gets the seed rows.
  */
 export const handlers: HttpHandler[] = [
+  http.get('*/api/v1/imports/history', async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    try {
+      const user = await getMe();
+      if (!user.roles.includes('PROJECT_MANAGER')) return problem(403, 'MSG08');
+      const managed = new Set(
+        user.projects
+          .filter((project) => project.roleInProject === 'PROJECT_MANAGER')
+          .map((project) => project.projectId),
+      );
+      const params = new URL(request.url).searchParams;
+      const project = params.get('projectId');
+      const source = params.get('source');
+      const from = params.get('dateFrom');
+      const to = params.get('dateTo');
+      const page = Number(params.get('page') ?? 0);
+      const size = Number(params.get('size') ?? PAGE_SIZE);
+      if (
+        !Number.isInteger(page) ||
+        page < 0 ||
+        !Number.isInteger(size) ||
+        size < 1 ||
+        size > 100 ||
+        (source && !Object.values(TicketSource).some((value) => value === source))
+      )
+        return problem(400, 'MSG06');
+      if (from && to && from > to) return problem(400, 'MSG39');
+      const rows = IMPORT_HISTORY.filter((row) => {
+        const day = dayjs(row.createdAt).tz(APP_TIME_ZONE).format('YYYY-MM-DD');
+        return (
+          managed.has(row.project.projectId) &&
+          (!project || project === row.project.projectId) &&
+          (!source || row.source === source) &&
+          (!from || day >= from) &&
+          (!to || day <= to)
+        );
+      });
+      return HttpResponse.json({
+        content: rows.slice(page * size, page * size + size),
+        page: {
+          size,
+          number: page,
+          totalElements: rows.length,
+          totalPages: Math.ceil(rows.length / size),
+        },
+      });
+    } catch (error) {
+      return isApiError(error) ? problem(error.status, error.code) : problem(500, 'MSG06');
+    }
+  }),
   getDownloadCsvTemplateMockHandler(({ request }) =>
     new URL(request.url).searchParams.get('importType') === 'WITHOUT_SOLUTION'
       ? CSV_TEMPLATE_WITHOUT_SOLUTION

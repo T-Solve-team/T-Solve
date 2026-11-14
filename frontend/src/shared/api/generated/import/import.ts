@@ -27,8 +27,10 @@ import type {
   DownloadCsvTemplateParams,
   DraftSavedResponse,
   FillSolutionRequest,
+  GetImportHistoryParams,
   GetImportPreviewRowsParams,
   ImportDraftSummary,
+  ImportHistoryPage,
   ImportPreviewResponse,
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
@@ -1439,6 +1441,141 @@ export const useDeleteImportDraft = <TError = ErrorType<ProblemResponse>, TConte
 > => {
   return useMutation(getDeleteImportDraftMutationOptions(options), queryClient);
 };
+export const getGetImportHistoryUrl = (params?: GetImportHistoryParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/imports/history?${stringifiedParams}`
+    : `/api/v1/imports/history`;
+};
+
+/**
+ * @summary Import Batches of the caller's managed Projects, newest first.
+ */
+export const getImportHistory = async (
+  params?: GetImportHistoryParams,
+  options?: Parameters<typeof http>[1],
+): Promise<ImportHistoryPage> => {
+  return http<ImportHistoryPage>(getGetImportHistoryUrl(params), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetImportHistoryQueryKey = (params?: GetImportHistoryParams) => {
+  return [`/api/v1/imports/history`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetImportHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getImportHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetImportHistoryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportHistory>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetImportHistoryQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getImportHistory>>> = ({ signal }) =>
+    getImportHistory(params, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getImportHistory>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetImportHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getImportHistory>>>;
+export type GetImportHistoryQueryError = ErrorType<ProblemResponse>;
+
+export function useGetImportHistory<
+  TData = Awaited<ReturnType<typeof getImportHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params: undefined | GetImportHistoryParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportHistory>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImportHistory>>,
+          TError,
+          Awaited<ReturnType<typeof getImportHistory>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetImportHistory<
+  TData = Awaited<ReturnType<typeof getImportHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetImportHistoryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportHistory>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImportHistory>>,
+          TError,
+          Awaited<ReturnType<typeof getImportHistory>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetImportHistory<
+  TData = Awaited<ReturnType<typeof getImportHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetImportHistoryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportHistory>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Import Batches of the caller's managed Projects, newest first.
+ */
+
+export function useGetImportHistory<
+  TData = Awaited<ReturnType<typeof getImportHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetImportHistoryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportHistory>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetImportHistoryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getCreateManualTicketUrl = () => {
   return `/api/v1/imports/manual`;
 };

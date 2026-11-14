@@ -260,3 +260,101 @@ refuses ("no Workspace bound"); that also maps to 503. Tests mock `FileStorage`.
   (orval generates `FormData` for multipart bodies; check the generated signature after `generate:api`).
   Reopened Draft → its files listed as kept; removing one drops its id from `keepEvidenceIds`. Server
   `fieldErrors` on `files` show under Evidence.
+
+## Change 2026-11-14: Import History and Ticket Detail (KAN-134 STORY-007, KAN-135 STORY-008)
+
+### Import History (STORY-007)
+
+**Shape.** New `ImportHistoryController` (`GET /api/v1/imports/history`, `@PreAuthorize(ImportController.PROJECT_MANAGER)`
+→ 403 MSG08, AC-007.7) → `ImportHistoryService.list(TSolveUser, ImportHistoryQuery)` → one native page query in
+`ImportBatchRepository`. Answer `PagedModel<ImportHistoryItem>` as `GET /api/v1/tickets` (page from 0, size 1–100,
+default 20; D22).
+
+- **Query.** `import_batch b JOIN project p ON (p.public_id = b.project_id OR lpad(to_hex(p.project_id),32,'0')::uuid =
+  b.project_id) JOIN department d ON d.department_id = p.department_id LEFT JOIN app_user u ON u.id::text =
+  b.performed_by WHERE EXISTS (project_membership m WHERE m.project_id = p.public_id AND m.user_id = :caller AND
+  m.role_in_project = 'PROJECT_MANAGER')` + the optional filters, `ORDER BY b.created_at DESC, b.id DESC`, with a
+  count query. The legacy hex form matches the way `ProjectMembershipReviewAccess` keys a Project. `performedBy` =
+  `coalesce(u.full_name, b.performed_by)` (AC-007.3; the `::text` compare never fails on a non-UUID value).
+  - chosen: one native SQL query in `ticket`; alternatives: per-row calls to `project` / `identity` services.
+    Rationale: one page = one query; `ReviewDecisionRecordRepository` already joins `app_user` the same way.
+- **Filters (AC-007.5, AC-007.6).** `projectId` is a filter only: a Project the caller does not manage is cut by the
+  `EXISTS`, so the page is empty. Decided in planning: empty page, not 403 (builder check). `source` binds to
+  `TicketSource` (SOLUTION_FORM gives an empty page; an unknown value → 400 as any bad enum). `dateFrom` / `dateTo` =
+  `LocalDate`, turned into `[from 00:00, to+1 00:00)` in `Asia/Ho_Chi_Minh` through the injected `Clock` zone;
+  `from > to` → `InvalidPullRangeException.invalid()` (400 MSG39).
+- **Error code (AC-007.4, D26).** The service returns the first `MSG\w+` match of `import_batch.error` (stored as
+  "ExceptionName MSGxx" by `ImportBatchRecorder`), else null.
+- **Date range (AC-007.8, D25).** Changeset `032-ticket-import-batch-date-range.sql` (author `ticket`):
+  `ALTER TABLE import_batch ADD COLUMN date_from DATE, ADD COLUMN date_to DATE;` + include in
+  `db.changelog-master.xml`. `ImportBatch` gets both fields; `completed(…)` / `failed(…)` take them (null for CSV and
+  Manual). `ImportBatchRecorder.recordJiraFailed(projectId, user, from, to, error)` gets the pull request's range;
+  `recordFailed(preview, …)` and the Finish `completed(…)` in `ImportConfirmServiceImpl` pass
+  `preview.getResolvedFrom()` / `getResolvedTo()` (null on a CSV preview). No new index:
+  `idx_import_batch_project (project_id, created_at DESC)` serves the per-Project page.
+- **Web app (AC-007.9, AC-007.10).** `ImportHistoryPage` replaces the placeholder: antd `Table` fed by the generated
+  `useGetImportHistory` hook, server paging; filters Project (`useManagedProjectOptions`), Source (Select), Date range
+  (`DatePicker.RangePicker`). Column "Date range / file" = `dateFrom – dateTo` for JIRA_IMPORT, `fileName` for CSV,
+  `—` otherwise. Column "Removed / errors" = `removedCount / errorCount`. Empty page → `EmptyState` (MSG04). Load
+  errors → the app's global query error handler (MSG06 toast). MSW handler and data in `F/mocks/`.
+
+### Ticket Detail (STORY-008)
+
+**Shape.** Extend, do not add (D29). `ReviewReadController.detail` keeps its path and operationId; its guard becomes
+`hasAnyRole(TICKET_RESOLVER, PROJECT_MANAGER)` (AC-008.4 role part; today it is EMPLOYEE). The files are
+`ticket-review`'s (owner Phạm Tùng Dương); module.md `paths` of this module lists them so the gate opens them with
+this spec's approval.
+
+- **Department of the ticket.** New native query `TicketRepository.findPlacement(UUID projectId)` →
+  `Optional<Placement(UUID projectPublicId, String projectKey, UUID departmentId, String departmentName, boolean
+  departmentActive)>`: `project p JOIN department d`, matched by `public_id` or the legacy hex id (as above), with no
+  `p.status` condition: the Department decides (D28). No row = no Department = nobody (AC-008.3).
+- **Visibility in `TicketReviewReadServiceImpl.detail`.** Order: ticket by id, else 404 MSG04 (AC-008.5) → placement
+  missing or `!departmentActive` → 403 MSG08 (AC-008.3) → PUBLISHED: `scopeAccess.canAccessDepartment(accountId,
+  departmentId)`, else 403 (AC-008.1) → not PUBLISHED: `writerId == accountId`, or `managed` of the ticket's Project
+  in the `projects` map (`ReviewWorkspaceAccess.readableProjects` = `project_membership` PROJECT_MANAGER), else 403
+  (AC-008.2). The 403 is Spring's `AccessDeniedException`, which `GlobalExceptionHandler` already
+  answers with 403 MSG08 (`NO_PERMISSION`). `canDecide` and `lastReviewComment` keep their rules.
+  - chosen: `identity` `ScopeAccessService` (a service interface, AGENTS.md); alternatives: the `departmentId` of the
+    `projects` map. Rationale: the map lists only ACTIVE Projects and knows neither Department status nor the GBR-02
+    membership rules KAN-118 already encodes.
+- **New fields (AC-008.6).** `TicketReviewView.Detail` + `Department department` (`record Department(UUID id, String
+  name)`), `LocalDate resolvedDate`, `String sourceLink`; `project` now comes from the placement, so a Published
+  ticket of an inactive Project still shows its key. `TicketReviewMapper.detail` fills them. OpenAPI
+  `ReviewTicketDetail`: the three fields optional and nullable. Decided in planning: optional, so the `ticket-review`
+  mock data still type-checks without edits (builder check).
+- **Source link (AC-008.7, D30).** `Ticket` maps `source_link` (`VARCHAR(500)`, insertable). `Ticket.imported(…)`
+  takes `sourceLink`; `ImportConfirmServiceImpl.toTicket` passes `row.getSourceUrl()` for a Jira preview, null for CSV;
+  manual entry passes null.
+- **Web app (AC-008.8–AC-008.10).** `ReviewTicketContent` adds Department, Resolved date and Source link items; the
+  link renders as `<a target="_blank" rel="noopener noreferrer">` only when `new URL(link).protocol` is `http:` or
+  `https:`, else plain text (the rule of the Evidence links, `ticket-review` AC-006.5). The review due date item
+  renders only for `PENDING_REVIEW`. `ReviewTicketDetail`: `error.status === 403` → MSG08 inline and no content,
+  before the existing 404 → MSG04 branch; other failures keep `ErrorState` with retry plus the global query error
+  handler's MSG06 toast. The tests live in `frontend/src/features/tickets/pages/TicketDetailPage.test.tsx`, which only
+  this module claims, so AC-008.x does not clash in trace with `ticket-review`'s own AC-008.x.
+
+### Edge cases
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 17 | 007 | Data | `performed_by` = "stub-user", or a UUID with no `app_user` | Medium | Stored value shown | Task 22 |
+| 18 | 007 | Authorization | Batch of a Project the PM no longer manages | High | Not listed | Task 22 |
+| 19 | 007 | Data | Batch whose `project_id` is the legacy hex form | Medium | Listed with Project and Department | Task 22 |
+| 20 | 007 | Time | Batch created 23:30 Vietnam time on `dateTo` | Medium | Included | Task 22 |
+| 21 | 008 | Authorization | Published ticket, Ticket Resolver of another Department | High | 403 MSG08 | Task 24 |
+| 22 | 008 | Authorization | Pending ticket, PM of the same Department but not of the Project | High | 403 MSG08 | Task 24 |
+| 23 | 008 | State | Published ticket of an inactive Project in an Active Department | Medium | Visible to that Department | Task 24 |
+| 24 | 008 | State | Department soft-deleted | High | 403 for everyone, the writer and the PM too | Task 24 |
+| 25 | 008 | Security | `sourceLink` = `javascript:alert(1)` | Critical | Plain text, no link | Task 25 |
+| 26 | 008 | Tenancy | Ticket id of another Workspace | High | 404, the same answer as an unknown id (platform AC-015.3) | Task 24 |
+
+### Risks
+
+- `ReviewDecisionApiIT.readsPersistedSolutionAndEvidenceAndHidesUnmanagedPendingTickets_AC_009_2_AC_009_3`
+  (`ticket-review`) expects 404 for an unmanaged pending ticket and 200 for a Published ticket of project
+  `new UUID(0, 20)`, which has no `project` row: both answers become 403. Task 24 updates that test; tell its owner.
+- `CrossModuleIsolationIT` (platform) reads a Published ticket as a Ticket Resolver MEMBER of the Project: still
+  allowed by `canAccessDepartment`; it must stay green.
+- `ticket-review` AC-006.6 describes a mock-API 404 for a hidden ticket; the real API now answers 403 (D31). Its spec
+  is not changed here.
