@@ -46,6 +46,7 @@ class JiraAppSolutionServiceImplTest {
     private static final JiraAppPrincipal CALLER = new JiraAppPrincipal("cloud-1", "jira-1", null);
     private static final SolutionSections SECTIONS = new SolutionSections("Drops", "Old", "Update", "", "Laptops");
     private static final SolutionFormRequest ISSUE_TEXT = new SolutionFormRequest("VPN drops", "After sleep");
+    private static final SolutionFormRequest RESUBMIT = new SolutionFormRequest("VPN drops", "After sleep", true);
 
     private final JiraIssueAccess access = mock(JiraIssueAccess.class);
     private final SolutionFormTicketService tickets = mock(SolutionFormTicketService.class);
@@ -174,6 +175,86 @@ class JiraAppSolutionServiceImplTest {
         given(ai.rewrite(SECTIONS)).willReturn(rewritten);
 
         assertThat(service.rewrite(CALLER, SECTIONS)).isEqualTo(rewritten);
+    }
+
+    @Test
+    void opensTheResubmissionFormWithTheTicketsSolution_AC_012_2() {
+        givenContext(member());
+        given(drafts.find(USER.id(), PROJECT, ISSUE)).willReturn(Optional.empty());
+        given(tickets.findResubmittable(ISSUE, USER.id())).willReturn(Optional.of(SECTIONS));
+
+        SolutionFormResponse form = service.openForm(CALLER, ISSUE, RESUBMIT);
+
+        assertThat(form).isEqualTo(new SolutionFormResponse(true, Origin.TICKET, SECTIONS, null));
+        verify(ai, never()).draft(anyString(), anyString());
+    }
+
+    @Test
+    void opensTheResubmissionFormWithTheDraftFirst_AC_012_2_AC_012_6() {
+        givenContext(member());
+        SolutionSections draft = new SolutionSections("Drops", "Old", "Update 5.3", "", "Laptops");
+        given(tickets.findResubmittable(ISSUE, USER.id())).willReturn(Optional.of(SECTIONS));
+        given(drafts.find(USER.id(), PROJECT, ISSUE)).willReturn(Optional.of(draft));
+
+        assertThat(service.openForm(CALLER, ISSUE, RESUBMIT))
+                .isEqualTo(new SolutionFormResponse(true, Origin.DRAFT, draft, null));
+    }
+
+    @Test
+    void doesNotOpenTheResubmissionFormWhenTheTicketIsNotResubmittableOrForANonMember_AC_012_3() {
+        givenContext(member());
+        given(tickets.findResubmittable(ISSUE, USER.id())).willReturn(Optional.empty());
+        assertThat(service.openForm(CALLER, ISSUE, RESUBMIT).mayOpen()).isFalse();
+
+        givenContext(new JiraIssueContext(Optional.of(USER), Optional.of(PROJECT), false));
+        assertThat(service.openForm(CALLER, ISSUE, RESUBMIT).mayOpen()).isFalse();
+        verify(drafts, never()).find(any(), any(), any());
+    }
+
+    @Test
+    void resubmitsAsTheLinkedMemberOfTheProject_AC_012_4() {
+        givenContext(member());
+        given(tickets.resubmit(any()))
+                .willReturn(new SubmittedSolutionTicket(TICKET, ISSUE, TicketStatus.PENDING_REVIEW));
+
+        SubmittedTicketResponse submitted =
+                service.submit(CALLER, ISSUE, new SubmitSolutionRequest("VPN drops", SECTIONS, true));
+
+        assertThat(submitted).isEqualTo(new SubmittedTicketResponse(TICKET, ISSUE, TicketStatus.PENDING_REVIEW));
+        verify(tickets)
+                .resubmit(new SolutionFormSubmission(PROJECT, ISSUE, "VPN drops", USER.id(), "Ngo Bao", SECTIONS));
+        verify(tickets, never()).submit(any());
+    }
+
+    @Test
+    void refusesToResubmitForANonMember_AC_012_3() {
+        givenContext(new JiraIssueContext(Optional.of(USER), Optional.of(PROJECT), false));
+
+        assertThatThrownBy(() -> service.submit(CALLER, ISSUE, new SubmitSolutionRequest("VPN", SECTIONS, true)))
+                .isInstanceOf(JiraIssueAccessDeniedException.class);
+        verify(tickets, never()).resubmit(any());
+    }
+
+    @Test
+    void showsEditAndResubmitForTheWritersTicketInChangesRequested_AC_012_1() {
+        givenContext(member());
+        given(tickets.findStatus(ISSUE)).willReturn(Optional.of(TicketStatus.CHANGES_REQUESTED));
+        given(tickets.findResubmittable(ISSUE, USER.id())).willReturn(Optional.of(SECTIONS));
+
+        assertThat(service.panel(CALLER, ISSUE))
+                .isEqualTo(new IssuePanelResponse(true, TicketStatus.CHANGES_REQUESTED, false, false, true));
+    }
+
+    @Test
+    void showsNoResubmitButtonForAnotherWritersTicketOrANonMember_AC_012_3() {
+        givenContext(member());
+        given(tickets.findStatus(ISSUE)).willReturn(Optional.of(TicketStatus.CHANGES_REQUESTED));
+        given(tickets.findResubmittable(ISSUE, USER.id())).willReturn(Optional.empty());
+        assertThat(service.panel(CALLER, ISSUE).mayResubmit()).isFalse();
+
+        givenContext(new JiraIssueContext(Optional.of(USER), Optional.of(PROJECT), false));
+        given(tickets.findResubmittable(ISSUE, USER.id())).willReturn(Optional.of(SECTIONS));
+        assertThat(service.panel(CALLER, ISSUE).mayResubmit()).isFalse();
     }
 
     private static JiraIssueContext member() {

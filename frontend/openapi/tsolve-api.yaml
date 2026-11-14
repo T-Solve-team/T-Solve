@@ -882,11 +882,12 @@ paths:
     get:
       tags: [jira-app]
       operationId: getJiraReviewFeedback
-      summary: Read the latest change request for the verified writer of this issue (MSG64).
+      summary: Read the latest change request (MSG64) or Reject reason (REJECTED) for the verified writer of this issue.
       description: >
         Requires a verified Forge principal, registered Workspace, linked active Account and authorized issue.
-        The Workspace is resolved only from the verified cloudId. Returns no feedback when the issue has no
-        current Changes requested Solution Form owned by that Account in the verified Project.
+        The Workspace is resolved only from the verified cloudId. Returns MSG64 for a Changes requested Solution
+        Form ticket and REJECTED (ticket-review AC-009.13) for a Rejected one, owned by that Account in the
+        verified Project; no feedback otherwise, or when the reviewer has no name.
       security:
         - forgeInvocationToken: []
       parameters:
@@ -1041,7 +1042,9 @@ paths:
       summary: >
         Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and
         deletes the viewer's Draft (STORY-004). Every required section must be filled (400 MSG01), so an empty
-        Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead.
+        Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead. With `resubmit`, it
+        replaces the Solution of the viewer's ticket in Changes requested and moves that ticket back to Pending review
+        with a new due date (STORY-012).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -1074,7 +1077,8 @@ paths:
         '409':
           description: >
             MSG31 — a ticket with the issue key as its Ticket ID already exists; MSG40 — the issue's Project or its
-            Department is no longer active, so no ticket was created.
+            Department is no longer active, so no ticket was created; MSG06 — a resubmission whose ticket is no longer
+            the viewer's ticket in Changes requested (AC-012.5).
           content:
             application/problem+json:
               schema:
@@ -2938,7 +2942,9 @@ components:
           oneOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
-          description: MSG64 with manager_name and comment from the committed review decision.
+          description: >
+            MSG64 with manager_name and comment from the latest Request Changes decision, or REJECTED (a Jira App
+            text, not an SRS message) with manager_name and reason from the latest Reject decision.
     ReviewDecisionResult:
       type: object
       required: [count]
@@ -2973,10 +2979,18 @@ components:
           type: string
           maxLength: 32767
           description: The issue description as plain text; empty when the issue has none.
+        resubmit:
+          type: boolean
+          default: false
+          description: >
+            True = open the resubmission form of a ticket in Changes requested ("Edit and resubmit", STORY-012); it
+            opens only while the viewer is a member and the ticket's writer and the ticket is in Changes requested.
     SolutionFormOrigin:
       type: string
-      description: Where the sections come from — the viewer's Draft, the AI draft, or the issue text (MSG67).
-      enum: [DRAFT, AI_DRAFT, ISSUE]
+      description: >
+        Where the sections come from — the viewer's Draft, the AI draft, the issue text (MSG67), or the ticket's
+        current Solution (a resubmission without a Draft, AC-012.2).
+      enum: [DRAFT, AI_DRAFT, ISSUE, TICKET]
     SolutionForm:
       type: object
       required: [mayOpen, origin, sections, message]
@@ -3008,6 +3022,12 @@ components:
           description: The issue summary, the ticket title.
         sections:
           $ref: '#/components/schemas/SolutionSections'
+        resubmit:
+          type: boolean
+          default: false
+          description: >
+            True = replace the Solution of the viewer's ticket in Changes requested and move it back to Pending review
+            (AC-012.4); 409 MSG06 when it is no longer in Changes requested (AC-012.5).
     SubmittedTicket:
       type: object
       required: [id, ticketId, status]
@@ -3023,7 +3043,7 @@ components:
           $ref: '#/components/schemas/TicketStatus'
     IssuePanel:
       type: object
-      required: [linked, ticketStatus, hasDraft, mayOpenForm]
+      required: [linked, ticketStatus, hasDraft, mayOpenForm, mayResubmit]
       properties:
         linked:
           type: boolean
@@ -3044,6 +3064,11 @@ components:
           description: >
             The viewer is a member of the issue's Project and the issue has no ticket of any source. The Jira App also checks
             that the issue is Done before it shows the button.
+        mayResubmit:
+          type: boolean
+          description: >
+            The issue's ticket is a Solution Form ticket written by the viewer, in Changes requested, and the viewer is
+            a member of its Project: the panel shows "Edit and resubmit" (AC-012.1).
     MessageRef:
       type: object
       description: An SRS message to show, by code; the web app fills the template from params.

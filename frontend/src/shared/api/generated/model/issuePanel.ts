@@ -17,4 +17,6 @@ export interface IssuePanel {
   hasDraft: boolean;
   /** The viewer is a member of the issue's Project and the issue has no ticket of any source. The Jira App also checks that the issue is Done before it shows the button. */
   mayOpenForm: boolean;
+  /** The issue's ticket is a Solution Form ticket written by the viewer, in Changes requested, and the viewer is a member of its Project: the panel shows "Edit and resubmit" (AC-012.1). */
+  mayResubmit: boolean;
 }

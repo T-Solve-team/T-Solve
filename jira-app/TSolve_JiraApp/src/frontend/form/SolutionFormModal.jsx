@@ -1,5 +1,5 @@
-// 4.1 Solution Form and 4.2 AI Rewrite Preview (jira-app STORY-002, STORY-004, STORY-005, STORY-007), in one UI Kit
-// Modal. Closing it keeps a Draft and never submits (AC-005.1, AC-005.5).
+// 4.1 Solution Form and 4.2 AI Rewrite Preview (jira-app STORY-002, STORY-004, STORY-005, STORY-007, STORY-012), in one
+// UI Kit Modal. Closing it keeps a Draft and never submits (AC-005.1, AC-005.5, AC-012.6).
 import React, { useRef, useState } from 'react';
 import {
   Box,
@@ -56,9 +56,10 @@ export function doneFlag(issueKey, outcome) {
 /**
  * The form for `issueKey`. `form` is the answer of openSolutionForm (`sections`, `message`); `onDone(outcome)` is
  * called with 'submitted' after Finish (the caller shows MSG66) or 'closed' once Close has kept the Draft (the
- * caller shows "Saved as draft"); either way the caller removes the Modal.
+ * caller shows "Saved as draft"); either way the caller removes the Modal. `resubmit` makes Finish resubmit the ticket
+ * in Changes requested, and `feedback` (MSG64) is shown above the sections (STORY-012).
  */
-export function SolutionFormModal({ issueKey, summary, form, onDone, submit = submitSolution }) {
+export function SolutionFormModal({ issueKey, summary, form, onDone, resubmit = false, feedback = null, submit = submitSolution }) {
   const [sections, setSections] = useState(normalize(form?.sections ?? EMPTY_SECTIONS));
   const [step, setStep] = useState('form');
   const [rewritten, setRewritten] = useState(null);
@@ -82,7 +83,7 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
     leaving.current = true;
     setBusy(true);
     try {
-      await submit(issueKey, { summary, sections: content });
+      await submit(issueKey, resubmit ? { summary, sections: content, resubmit: true } : { summary, sections: content });
       onDone('submitted');
     } catch (failure) {
       if (failure.code === 'MSG01' || failure.code === 'MSG02') {
@@ -150,6 +151,11 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
         </ModalHeader>
         <ModalBody>
           <Stack space="space.200">
+            {feedback && step !== 'rewrite' && (
+              <SectionMessage appearance="warning">
+                <Text>{message(feedback.code, feedback.params)}</Text>
+              </SectionMessage>
+            )}
             {notice && (
               <SectionMessage appearance={notice.appearance}>
                 <Text>{message(notice.code)}</Text>
