@@ -1,7 +1,7 @@
 ---
 module: ticket-repository
 date: 2026-11-07
-total_tasks: 17
+total_tasks: 20
 owner: Dev
 ---
 
@@ -259,3 +259,58 @@ each field with the input kept (AC-006.14).
 - Test: `ManualEntryForm.test.tsx` (AC-006.9, AC-006.11, AC-006.14 — test names cite the ids)
 **Dependencies:** Task 14 (Tasks 15–16 only for a live run)
 **Estimated size:** medium
+
+## Task 18: Unpublish / re-publish contract
+
+**Story:** STORY-007
+**Feature:** ticket-publication-contract
+**Description:** KAN-136, master design "Change 2026-11-15" (Contract). In `frontend/openapi/tsolve-api.yaml`, tag
+`review`: `POST /api/v1/reviews/unpublish` (operationId `unpublishTickets`) and `POST /api/v1/reviews/republish`
+(`republishTickets`), request `ApproveTicketsRequest`, 200 `ReviewDecisionResult`, responses 400, 401, 403, 404, 409
+as `sendBackTickets`; the description names the status rule and MSG06 / MSG04 / MSG08. Run `npm run generate:api`
+and keep the generated client.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (generated only)
+**Dependencies:** none
+**Estimated size:** small
+
+## Task 19: Unpublish / re-publish on the backend
+
+**Story:** STORY-007
+**Feature:** ticket-publication
+**Description:** Master design "Change 2026-11-15" (Service, Controller, Data). `TicketDecisionService.unpublish` /
+`republish` through one private `changePublication` in `TicketDecisionServiceImpl`: ids → lock → scope →
+`TicketTransitions.move` → `ReviewDecisionRecord` (`UNPUBLISH` / `REPUBLISH`) → audit (`UNPUBLISH` / `PUBLISH`).
+`ReviewDecisionRecord.Decision` + the two values; changeset `0NN-review-decision-publication.sql` widens
+`ck_review_decision` (with rollback) and is included in the master changelog. Two `@PostMapping`s in
+`ReviewDecisionController`.
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/0NN-review-decision-publication.sql`
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `T/entity/ReviewDecisionRecord.java`,
+  `T/service/TicketDecisionService.java`, `T/service/impl/TicketDecisionServiceImpl.java`,
+  `backend/src/main/java/vn/tsolve/review/controller/ReviewDecisionController.java`
+- Test: `TT/service/impl/TicketPublicationTest.java` (AC-007.1, AC-007.2 incl. due date / feedback untouched and the
+  event of AC-005.4 / AC-005.5, AC-007.3 every wrong status and a mixed batch, AC-007.4, AC-007.5, AC-007.7),
+  `TT/controller/TicketPublicationIT.java` (over HTTP with the real DB: AC-007.1 and AC-007.2 round trip with the
+  stored decision and audit rows, AC-007.3 second unpublish → 409, AC-007.5 other Project and Removed Project → 403,
+  AC-007.6 Ticket Resolver → 403). Test names cite the AC ids.
+**Dependencies:** Task 13 (done); Task 18 for the names only
+**Estimated size:** small
+
+## Task 20: Unpublish / Re-publish buttons on Ticket Detail
+
+**Story:** STORY-007
+**Feature:** ticket-publication-buttons
+**Description:** Master design "Change 2026-11-15" (Web app). `TicketPublicationActions` above `ReviewTicketDetail`
+in `TicketDetailPage`: Unpublish for a Published ticket, Re-publish for an Unpublished one, only for the Project
+Manager of the Project of the ticket; `ConfirmDialog` MSG21 (danger) / MSG23; MSG22 / MSG24 on success; on success or
+error invalidate the detail, Ticket List and Review History queries. `ReviewTicketDetail` is not changed.
+**Files:**
+- Create: `frontend/src/features/tickets/components/TicketPublicationActions.tsx`,
+  `frontend/src/features/tickets/components/TicketPublicationActions.test.tsx`
+- Modify: `frontend/src/features/tickets/pages/TicketDetailPage.tsx`
+- Test: `TicketPublicationActions.test.tsx` (AC-007.8 button, MSG21, cancel sends nothing, confirm → request + MSG22;
+  AC-007.9 the same for Re-publish with MSG23 / MSG24; no button for a Ticket Resolver, the PM of another Project or
+  another status; AC-007.10 a 409 shows the error and refetches the detail)
+**Dependencies:** Task 18 (Task 19 only for a live run)
+**Estimated size:** small

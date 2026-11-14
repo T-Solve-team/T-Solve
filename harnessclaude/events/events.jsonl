@@ -1536,3 +1536,7 @@
 {"ts":"2026-11-14T17:39:51.397Z","type":"feature-status","module":"jira-app","feature":"panel-published","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T19:29:32.410Z","type":"spec-approved","module":"jira-app","specHash":"4f83401b7f2bd389c55664c7973bd1e9fd965bdc1c996983bb30f736d4960f73"}
 {"ts":"2026-11-14T19:29:32.653Z","type":"spec-approved","module":"ticket-review","specHash":"3f421d9a0442923749a9a9bcb8dec1ede3da9f59556abc5afd02c28bd93c6b48"}
+{"ts":"2026-11-14T20:12:03.591Z","type":"spec-approved","module":"ticket-repository","specHash":"530dd4e9e8c3f1c4b3ad24ebd7efad0e7f6c95d3aa8dc15fd364a67d5346405b"}
+{"ts":"2026-11-14T20:12:07.289Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-contract","from":null,"to":"pending"}
+{"ts":"2026-11-14T20:12:07.623Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication","from":null,"to":"pending"}
+{"ts":"2026-11-14T20:12:07.952Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-buttons","from":null,"to":"pending"}
