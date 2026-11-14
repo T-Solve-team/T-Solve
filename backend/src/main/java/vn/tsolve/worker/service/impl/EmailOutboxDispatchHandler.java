@@ -4,6 +4,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.UUID;
+import org.jobrunr.jobs.annotations.Job;
 import org.jobrunr.jobs.lambdas.JobRequestHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +48,7 @@ public class EmailOutboxDispatchHandler implements JobRequestHandler<EmailOutbox
     }
 
     @Override
+    @Job(retries = 0)
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void run(EmailOutboxDispatchRequest request) {
         SmtpEmailSender sender = senders.getIfAvailable();
@@ -61,11 +65,13 @@ public class EmailOutboxDispatchHandler implements JobRequestHandler<EmailOutbox
     private void dispatch(SmtpEmailSender sender) {
         Instant now = clock.instant();
         var claimed = new ArrayList<Row>();
-        repository.withDueRows(now, properties.batchSize(), rows -> {
+        var activeWorkspaces = new HashMap<UUID, Boolean>();
+        repository.withDueRows(now, properties.batchSize(), 10, rows -> {
             for (Row row : rows) {
+                if (claimed.size() == properties.batchSize()) break;
                 if (row.claimedAt() != null && exhausted(row, now)) {
                     repository.finish(row, "FAILED", now);
-                } else if (!isActive(row)) {
+                } else if (!activeWorkspaces.computeIfAbsent(row.workspaceId(), this::isActive)) {
                     if (pastHour(row, now)) repository.finish(row, "FAILED", now);
                     else repository.hold(row, now.plus(properties.interval()));
                 } else {
@@ -73,27 +79,34 @@ public class EmailOutboxDispatchHandler implements JobRequestHandler<EmailOutbox
                     claimed.add(row.claimed(now));
                 }
             }
+            return claimed.size() < properties.batchSize();
         });
         // withDueRows has committed; no database transaction spans SMTP.
         for (Row row : claimed) {
             try {
-                sender.send(row.email());
-            } catch (RuntimeException ignored) {
-                Instant failedAt = clock.instant();
-                if (exhausted(row, failedAt)) repository.finish(row, "FAILED", failedAt);
-                else
-                    repository.reschedule(
-                            row, failedAt.plus(properties.backoff().get(row.attemptCount() - 1)));
-                continue;
+                try {
+                    sender.send(row.email());
+                } catch (RuntimeException ignored) {
+                    Instant failedAt = clock.instant();
+                    if (exhausted(row, failedAt)) repository.finish(row, "FAILED", failedAt);
+                    else
+                        repository.reschedule(
+                                row, failedAt.plus(properties.backoff().get(row.attemptCount() - 1)));
+                    continue;
+                }
+                repository.finish(row, "SENT", clock.instant());
+            } catch (RuntimeException failure) {
+                log.warn(
+                        "Email outbox outcome write failed ({})",
+                        failure.getClass().getSimpleName());
             }
-            repository.finish(row, "SENT", clock.instant());
         }
         repository.deleteFinished(clock.instant().minus(properties.retention()), properties.batchSize());
     }
 
-    private boolean isActive(Row row) {
+    private boolean isActive(UUID workspaceId) {
         try {
-            return tenants.isWorkspaceActive(row.workspaceId());
+            return tenants.isWorkspaceActive(workspaceId);
         } catch (RuntimeException ignored) {
             return false;
         }

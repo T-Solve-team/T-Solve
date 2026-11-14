@@ -10,6 +10,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -21,7 +22,9 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.IntStream;
+import org.jobrunr.jobs.annotations.Job;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -73,16 +76,145 @@ class EmailOutboxDispatchHandlerTest {
     }
 
     private void due(Row... rows) {
+        pages(List.of(rows));
+    }
+
+    @SafeVarargs
+    private void pages(List<Row>... pages) {
+        var remaining = new java.util.ArrayDeque<>(List.of(pages));
         doAnswer(call -> {
-                    call.<Consumer<List<Row>>>getArgument(2).accept(List.of(rows));
+                    var claim = call.<Predicate<List<Row>>>getArgument(3);
+                    for (int read = 0; read < call.<Integer>getArgument(2); read++) {
+                        List<Row> page = remaining.isEmpty() ? List.of() : remaining.remove();
+                        if (page.isEmpty() || !claim.test(page)) break;
+                    }
                     return null;
                 })
                 .when(repository)
-                .withDueRows(any(), anyInt(), any());
+                .withDueRows(any(), anyInt(), anyInt(), any());
     }
 
     private void run() {
         handler.run(new EmailOutboxDispatchRequest());
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void sendsPastHeldRowsAndCachesEligibility_AC_004_4_BUG_218(boolean throwsLookup) {
+        UUID suspended = UUID.randomUUID();
+        var held = IntStream.range(0, 25)
+                .mapToObj(i -> new Row(
+                        UUID.randomUUID(), suspended, row(0, NOW, null).email(), 0, NOW.minusSeconds(30 - i), null))
+                .toList();
+        Row active = row(0, NOW, null);
+        if (throwsLookup) when(tenants.isWorkspaceActive(suspended)).thenThrow(new IllegalStateException());
+        else when(tenants.isWorkspaceActive(suspended)).thenReturn(false);
+        var last = new java.util.ArrayList<>(held.subList(20, 25));
+        last.add(active);
+        pages(held.subList(0, 20), last);
+
+        run();
+
+        verify(sender).send(active.email());
+        verify(repository).finish(active.claimed(NOW), "SENT", NOW);
+        verify(tenants).isWorkspaceActive(suspended);
+        for (Row row : held) verify(repository).hold(row, NOW.plusSeconds(30));
+    }
+
+    @Test
+    void declaresZeroJobRunrRetries_AC_004_4_BUG_219() throws Exception {
+        var annotation = EmailOutboxDispatchHandler.class
+                .getMethod("run", EmailOutboxDispatchRequest.class)
+                .getAnnotation(Job.class);
+        assertThat(annotation).isNotNull();
+        assertThat(annotation.retries()).isZero();
+        try (var storage = new org.jobrunr.storage.InMemoryStorageProvider()) {
+            storage.setJobMapper(
+                    new org.jobrunr.jobs.mappers.JobMapper(new org.jobrunr.utils.mapper.jackson.JacksonJsonMapper()));
+            var scheduler = new org.jobrunr.scheduling.JobRequestScheduler(storage);
+            scheduler.scheduleRecurrently(
+                    "outbox-retry-test", Duration.ofSeconds(30), new EmailOutboxDispatchRequest());
+            assertThat(storage.getRecurringJobs()).singleElement().satisfies(job -> assertThat(job.getAmountOfRetries())
+                    .isZero());
+        }
+    }
+
+    @Test
+    void failedRowsDoNotConsumeSendBatch_AC_004_4_BUG_218() {
+        var failed = IntStream.range(0, 20)
+                .mapToObj(i -> row(3, NOW.minusSeconds(60), NOW.minusSeconds(300)))
+                .toList();
+        var active = IntStream.range(0, 20).mapToObj(i -> row(0, NOW, null)).toList();
+        pages(failed, active);
+
+        run();
+
+        for (Row row : failed) verify(repository).finish(row, "FAILED", NOW);
+        for (Row row : active) verify(repository).claim(row, NOW, NOW.plusSeconds(300));
+        verify(sender, times(20)).send(any());
+    }
+
+    @Test
+    void capsReadsAtTenAndRefreshesEligibilityNextRun_AC_004_4_BUG_218() {
+        Row held = row(0, NOW, null);
+        when(tenants.isWorkspaceActive(held.workspaceId())).thenReturn(false);
+        var reads = new java.util.concurrent.atomic.AtomicInteger();
+        doAnswer(call -> {
+                    var claim = call.<Predicate<List<Row>>>getArgument(3);
+                    for (int read = 0; read < call.<Integer>getArgument(2); read++) {
+                        reads.incrementAndGet();
+                        if (!claim.test(java.util.Collections.nCopies(20, held))) break;
+                    }
+                    return null;
+                })
+                .when(repository)
+                .withDueRows(any(), eq(20), eq(10), any());
+
+        run();
+
+        assertThat(reads).hasValue(10);
+        verifyNoInteractions(sender);
+        verify(tenants).isWorkspaceActive(held.workspaceId());
+        clock.now = NOW.plusSeconds(30);
+        when(tenants.isWorkspaceActive(held.workspaceId())).thenReturn(true);
+        pages(List.of(held));
+        run();
+        verify(tenants, times(2)).isWorkspaceActive(held.workspaceId());
+        verify(repository).finish(held.claimed(clock.now), "SENT", clock.now);
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"SENT", "FAILED", "reschedule"})
+    void continuesAfterOutcomeWriteFailure_AC_004_6_AC_004_7_BUG_220(String outcome, CapturedOutput output) {
+        Row first = row(outcome.equals("FAILED") ? 2 : 0, NOW.minusSeconds(2), null);
+        Row second = new Row(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                new OutboundEmail("second@example.test", "second subject", "second body", null),
+                0,
+                NOW,
+                null);
+        due(first, second);
+        if (!outcome.equals("SENT"))
+            doThrow(new SmtpEmailSender.DeliveryException()).when(sender).send(first.email());
+        var failure = new IllegalStateException("private@example.test private subject private body");
+        if (outcome.equals("reschedule")) doThrow(failure).when(repository).reschedule(eq(first.claimed(NOW)), any());
+        else doThrow(failure).when(repository).finish(eq(first.claimed(NOW)), eq(outcome), any());
+
+        run();
+
+        verify(sender).send(second.email());
+        verify(repository).finish(second.claimed(NOW), "SENT", NOW);
+        assertThat(output.getAll())
+                .contains("WARN", "Email outbox outcome write failed (IllegalStateException)")
+                .doesNotContain(
+                        "private@example.test",
+                        "private subject",
+                        "private body",
+                        "second@example.test",
+                        "second subject",
+                        "second body",
+                        "\tat ");
     }
 
     @Test
@@ -97,7 +229,7 @@ class EmailOutboxDispatchHandlerTest {
                 .when(sender)
                 .send(first.email());
         run();
-        verify(repository).withDueRows(eq(NOW), eq(20), any());
+        verify(repository).withDueRows(eq(NOW), eq(20), eq(10), any());
         var order = inOrder(repository, sender);
         order.verify(repository).claim(first, NOW, NOW.plusSeconds(300));
         order.verify(repository).claim(second, NOW, NOW.plusSeconds(300));

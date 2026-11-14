@@ -2,6 +2,7 @@ package vn.tsolve.worker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -31,10 +32,14 @@ import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
+import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.tsolve.worker.client.SmtpEmailSender;
 import vn.tsolve.worker.config.EmailOutboxConfiguration;
@@ -48,6 +53,7 @@ import vn.tsolve.worker.repository.EmailOutboxRepository;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.WorkerTenantService;
 import vn.tsolve.worker.service.impl.EmailOutboxDispatchHandler;
+import vn.tsolve.worker.service.impl.EmailOutboxRegistration;
 import vn.tsolve.worker.service.impl.EmailOutboxServiceImpl;
 import vn.tsolve.worker.service.mock.MockWorkerTenantService;
 
@@ -149,6 +155,126 @@ class EmailOutboxIT {
                 WORKSPACE,
                 () -> id.set(service.queue(new OutboundEmail("writer@example.test", subject, "Text", null))));
         return id.get();
+    }
+
+    @Test
+    void sendsNewerActiveRowPast25HeldRows_AC_004_4_BUG_218() throws Exception {
+        var dataSource = jobs();
+        var jdbc = new JdbcTemplate(dataSource);
+        var repository = new EmailOutboxRepository(dataSource);
+        UUID suspended = UUID.randomUUID();
+        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(suspended));
+        for (int i = 0; i < 25; i++)
+            repository.insert(
+                    UUID.randomUUID(),
+                    suspended,
+                    new OutboundEmail("held@example.test", "Held", "Text", null),
+                    NOW.minusSeconds(30 - i));
+        UUID active = queue(repository, tenants, "Active");
+        var mailpit = WorkerMailpit.instance();
+        mailpit.clear();
+
+        dispatcher(repository, tenants, mailpit.sender()).run(new EmailOutboxDispatchRequest());
+
+        assertThat(jdbc.queryForMap("select * from email_outbox where email_outbox_id = ?", active))
+                .containsEntry("status", "SENT")
+                .containsEntry("attempt_count", 1);
+        assertThat(jdbc.queryForObject(
+                        "select count(*) from email_outbox where status = 'PENDING' and attempt_count = 0",
+                        Integer.class))
+                .isEqualTo(25);
+        assertThat(mailpit.onlyMessage().getSubject()).isEqualTo("Active");
+    }
+
+    @Test
+    void holdsSuspendedWithoutAttemptThenFailsPastHour_AC_004_9_BUG_222() throws Exception {
+        var dataSource = jobs();
+        var jdbc = new JdbcTemplate(dataSource);
+        var repository = new EmailOutboxRepository(dataSource);
+        var tenants = new MockWorkerTenantService(Set.of(), Set.of(WORKSPACE));
+        UUID id = queue(repository, tenants, "Suspended");
+        var sender = mock(SmtpEmailSender.class);
+        var handler = dispatcher(repository, tenants, sender);
+
+        handler.run(new EmailOutboxDispatchRequest());
+
+        var held = jdbc.queryForMap("select * from email_outbox where email_outbox_id = ?", id);
+        assertThat(held)
+                .containsEntry("status", "PENDING")
+                .containsEntry("attempt_count", 0)
+                .containsEntry("claimed_at", null)
+                .containsEntry("finished_at", null);
+        assertThat(((Timestamp) held.get("next_attempt_at")).toInstant()).isEqualTo(NOW.plusSeconds(30));
+        clock.now = NOW.plusSeconds(3601);
+        handler.run(new EmailOutboxDispatchRequest());
+        var failed = jdbc.queryForMap("select * from email_outbox where email_outbox_id = ?", id);
+        assertThat(failed)
+                .containsEntry("status", "FAILED")
+                .containsEntry("attempt_count", 0)
+                .containsEntry("claimed_at", null);
+        assertThat(((Timestamp) failed.get("finished_at")).toInstant()).isEqualTo(clock.now);
+        org.mockito.Mockito.verifyNoInteractions(sender);
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableTransactionManagement(proxyTargetClass = true)
+    static class Transactions {}
+
+    @Test
+    void recurringJobDispatchesThroughJobRunr_AC_004_4_BUG_221() throws Exception {
+        var dataSource = jobs();
+        var jdbc = new JdbcTemplate(dataSource);
+        var database = WorkerJobsDatabase.instance();
+        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of());
+        var mailpit = WorkerMailpit.instance();
+        mailpit.clear();
+        new ApplicationContextRunner()
+                .withInitializer(new ConfigDataApplicationContextInitializer())
+                .withUserConfiguration(
+                        WorkerConfiguration.class,
+                        EmailOutboxConfiguration.class,
+                        EmailOutboxDispatchHandler.class,
+                        EmailOutboxRegistration.class,
+                        Transactions.class)
+                .withBean(WorkerTenantService.class, () -> tenants)
+                .withBean(SmtpEmailSender.class, mailpit::sender)
+                .withBean(
+                        "transactionManager",
+                        DataSourceTransactionManager.class,
+                        () -> new DataSourceTransactionManager(dataSource))
+                .withPropertyValues(
+                        "spring.profiles.active=worker",
+                        "tsolve.worker.enabled=true",
+                        "jobrunr.background-job-server.enabled=true",
+                        "tsolve.worker.email.interval=5s",
+                        "tsolve.worker.jdbc-url=" + database.getJdbcUrl(),
+                        "tsolve.worker.username=" + database.getUsername(),
+                        "tsolve.worker.password=" + database.getPassword())
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    var runtime = context.getBean(JobRunrRuntime.class);
+                    assertThat(runtime.isRunning()).isTrue();
+                    assertThat(org.springframework.aop.support.AopUtils.isAopProxy(
+                                    context.getBean(EmailOutboxDispatchHandler.class)))
+                            .isTrue();
+                    var service = context.getBean(EmailOutboxService.class);
+                    var id = new AtomicReference<UUID>();
+                    tenants.runIn(
+                            WORKSPACE,
+                            () -> id.set(service.queue(
+                                    new OutboundEmail("writer@example.test", "Recurring", "Text", null))));
+                    // ApplicationContextRunner does not publish ApplicationReadyEvent.
+                    context.getBean(EmailOutboxRegistration.class).register();
+                    try {
+                        await().atMost(Duration.ofSeconds(60)).untilAsserted(() -> assertThat(jdbc.queryForMap(
+                                        "select * from email_outbox where email_outbox_id = ?", id.get()))
+                                .containsEntry("status", "SENT")
+                                .containsEntry("attempt_count", 1));
+                        assertThat(mailpit.onlyMessage().getSubject()).isEqualTo("Recurring");
+                    } finally {
+                        runtime.scheduler().deleteRecurringJob(EmailOutboxRegistration.ID);
+                    }
+                });
     }
 
     @Test
