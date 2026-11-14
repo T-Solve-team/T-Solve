@@ -327,13 +327,13 @@
         "resubmit-backend": "in-progress",
         "resubmit-forge": "pending"
       },
-      "lastUpdated": "2026-11-14T14:19:29.954Z",
+      "lastUpdated": "2026-11-14T18:12:01.535Z",
       "branch": "feat/KAN-126-jira-app-solution-form-v2",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "36e22e7c5b82fc6363e6e78729916b148efcddf1"
+        "default": "19215afba9f44eb4f6dfc48ddb6f85e65e68c6b0"
       }
     },
     "dashboard-audit": {
@@ -417,15 +417,17 @@
         "review-notification-smtp": "passing",
         "tenant-jobs": "passing",
         "active-workspaces": "passing",
-        "review-email-html-sender": "passing"
+        "review-email-html-sender": "passing",
+        "email-outbox": "passing",
+        "email-outbox-review-fixes": "passing"
       },
-      "lastUpdated": "2026-11-14T08:47:24.251Z",
+      "lastUpdated": "2026-11-14T14:22:13.956Z",
       "branch": "feat/worker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "98ec9c7382a17815f6f001e3a6432225c4bc83b9"
+        "default": "e6570be15d5641689f5c375a52caedf748d2d035"
       }
     },
     "ai": {
@@ -498,15 +500,17 @@
         "review-send-back-api": "passing",
         "review-expiry-job": "passing",
         "review-expired-stored-columns": "passing",
-        "review-email-html": "passing"
+        "review-email-html": "passing",
+        "review-email-outbox": "passing",
+        "review-email-link-fallback": "passing"
       },
-      "lastUpdated": "2026-11-14T08:47:24.018Z",
+      "lastUpdated": "2026-11-14T14:22:14.009Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "98ec9c7382a17815f6f001e3a6432225c4bc83b9"
+        "default": "e9eec864480ba413e53c2387698dc28e4f893647"
       }
     }
   },
