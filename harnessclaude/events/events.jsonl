@@ -1566,3 +1566,4 @@
 {"ts":"2026-11-14T20:12:07.289Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-contract","from":null,"to":"pending"}
 {"ts":"2026-11-14T20:12:07.623Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication","from":null,"to":"pending"}
 {"ts":"2026-11-14T20:12:07.952Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-buttons","from":null,"to":"pending"}
+{"ts":"2026-11-14T21:35:39.673Z","type":"spec-approved","module":"ticket-repository","specHash":"461b76a6d73409b58cc2709baf755808f6ee40a61bffe102fb759d8dc930b7cc"}
