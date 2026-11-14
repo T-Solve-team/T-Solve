@@ -1445,3 +1445,6 @@
 {"ts":"2026-11-14T16:59:19.888Z","type":"feature-status","module":"wiki","feature":"wiki-folder-api","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T17:23:22.435Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"d74e1ba04af95c39c5c003313e3e0404aa70fb8f"}
 {"ts":"2026-11-14T17:23:23.005Z","type":"feature-status","module":"wiki","feature":"wiki-folder-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T17:23:30.904Z","type":"feature-status","module":"wiki","feature":"wiki-folder-ui","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T17:40:55.231Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"68c7f4521ab0cc23353394f14fce690b8673f3d2"}
+{"ts":"2026-11-14T17:40:55.593Z","type":"feature-status","module":"wiki","feature":"wiki-folder-ui","from":"in-progress","to":"evaluating"}
