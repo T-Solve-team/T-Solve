@@ -313,15 +313,25 @@
         "ask-endpoint": "passing",
         "ask-forge-client": "passing",
         "ask-conversation-logic": "passing",
-        "ask-page-ui": "passing"
+        "ask-page-ui": "passing",
+        "solution-contract": "passing",
+        "solution-ticket-storage": "passing",
+        "jira-issue-access": "passing",
+        "solution-ai": "passing",
+        "solution-endpoints": "passing",
+        "solution-forge-client": "passing",
+        "solution-form-ui": "passing",
+        "issue-panel-ui": "passing",
+        "remove-jira-search": "passing",
+        "close-keeps-draft": "passing"
       },
-      "lastUpdated": "2026-11-08T04:25:18.975Z",
-      "branch": "feat/jira-app",
+      "lastUpdated": "2026-11-14T08:18:02.356Z",
+      "branch": "feat/KAN-126-jira-app-solution-form-v2",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "ac7d5c2bb6a89afc0c41b913c57ed2639457009e"
+        "default": "36e22e7c5b82fc6363e6e78729916b148efcddf1"
       }
     },
     "dashboard-audit": {

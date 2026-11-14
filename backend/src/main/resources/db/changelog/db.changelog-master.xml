@@ -52,4 +52,5 @@
     <include file="changes/028-workspace-department-name-lower-unique.sql" relativeToChangelogFile="true"/>
     <include file="changes/029-identity-jira-account-links.sql" relativeToChangelogFile="true"/>
     <include file="changes/030-dashboard-period-indexes.sql" relativeToChangelogFile="true"/>
+    <include file="changes/031-jira-app-solution-draft.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

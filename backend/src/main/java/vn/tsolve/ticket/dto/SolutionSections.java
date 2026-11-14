@@ -1,0 +1,37 @@
+package vn.tsolve.ticket.dto;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+/**
+ * The five Solution sections of the Solution Form (GBR-33), as the Jira App sends them; Workaround is the only
+ * optional one. A missing section counts as empty.
+ */
+public record SolutionSections(
+        String symptoms, String rootCause, String resolutionSteps, String workaround, String scopeOfApplicability) {
+
+    public SolutionSections {
+        symptoms = orEmpty(symptoms);
+        rootCause = orEmpty(rootCause);
+        resolutionSteps = orEmpty(resolutionSteps);
+        workaround = orEmpty(workaround);
+        scopeOfApplicability = orEmpty(scopeOfApplicability);
+    }
+
+    /** The length of the five sections together, in code points, so an emoji counts once (MSG02). */
+    @JsonIgnore
+    public int length() {
+        return count(symptoms)
+                + count(rootCause)
+                + count(resolutionSteps)
+                + count(workaround)
+                + count(scopeOfApplicability);
+    }
+
+    private static int count(String text) {
+        return text.codePointCount(0, text.length());
+    }
+
+    private static String orEmpty(String text) {
+        return text == null ? "" : text;
+    }
+}

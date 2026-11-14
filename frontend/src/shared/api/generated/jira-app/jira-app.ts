@@ -26,9 +26,16 @@ import type {
   ChatbotAnswer,
   ChatbotQuestion,
   IssueCreatedPayload,
+  IssuePanel,
   JiraAskerEligibility,
   JiraReviewFeedback,
+  ProblemDetail,
   ProblemResponse,
+  SolutionForm,
+  SolutionFormRequest,
+  SolutionSections,
+  SubmitSolutionRequest,
+  SubmittedTicket,
 } from '../model';
 
 import { http } from '../../http';
@@ -533,3 +540,567 @@ export const useAskJiraAppQuestion = <TError = ErrorType<ProblemResponse>, TCont
 > => {
   return useMutation(getAskJiraAppQuestionMutationOptions(options), queryClient);
 };
+export const getOpenSolutionFormUrl = (issueKey: string) => {
+  return `/api/v1/jira-app/issues/${issueKey}/solution-form`;
+};
+
+/**
+ * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+
+ */
+export const openSolutionForm = async (
+  issueKey: string,
+  solutionFormRequest: SolutionFormRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<SolutionForm> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SolutionForm>(getOpenSolutionFormUrl(issueKey), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(solutionFormRequest),
+  });
+};
+
+export const getOpenSolutionFormMutationKey = () => ['openSolutionForm'] as const;
+
+export const getOpenSolutionFormMutationOptions = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof openSolutionForm>>,
+    TError,
+    OpenSolutionFormMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof openSolutionForm>>,
+  TError,
+  OpenSolutionFormMutationVariables,
+  TContext
+> => {
+  const mutationKey = getOpenSolutionFormMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof openSolutionForm>>,
+    OpenSolutionFormMutationVariables
+  > = (props) => {
+    const { issueKey, data } = props ?? {};
+
+    return openSolutionForm(issueKey, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type OpenSolutionFormMutationResult = NonNullable<
+  Awaited<ReturnType<typeof openSolutionForm>>
+>;
+export type OpenSolutionFormMutationBody = SolutionFormRequest;
+export type OpenSolutionFormMutationError = ErrorType<ProblemResponse | ProblemDetail>;
+export type OpenSolutionFormMutationVariables = { issueKey: string; data: SolutionFormRequest };
+
+/**
+ * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+
+ */
+export const useOpenSolutionForm = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof openSolutionForm>>,
+      TError,
+      OpenSolutionFormMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof openSolutionForm>>,
+  TError,
+  OpenSolutionFormMutationVariables,
+  TContext
+> => {
+  return useMutation(getOpenSolutionFormMutationOptions(options), queryClient);
+};
+export const getSubmitSolutionUrl = (issueKey: string) => {
+  return `/api/v1/jira-app/issues/${issueKey}/solution`;
+};
+
+/**
+ * @summary Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and deletes the viewer's Draft (STORY-004). Every required section must be filled (400 MSG01), so an empty Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead.
+
+ */
+export const submitSolution = async (
+  issueKey: string,
+  submitSolutionRequest: SubmitSolutionRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<SubmittedTicket> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SubmittedTicket>(getSubmitSolutionUrl(issueKey), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(submitSolutionRequest),
+  });
+};
+
+export const getSubmitSolutionMutationKey = () => ['submitSolution'] as const;
+
+export const getSubmitSolutionMutationOptions = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitSolution>>,
+    TError,
+    SubmitSolutionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitSolution>>,
+  TError,
+  SubmitSolutionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSubmitSolutionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitSolution>>,
+    SubmitSolutionMutationVariables
+  > = (props) => {
+    const { issueKey, data } = props ?? {};
+
+    return submitSolution(issueKey, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitSolutionMutationResult = NonNullable<Awaited<ReturnType<typeof submitSolution>>>;
+export type SubmitSolutionMutationBody = SubmitSolutionRequest;
+export type SubmitSolutionMutationError = ErrorType<ProblemDetail | ProblemResponse>;
+export type SubmitSolutionMutationVariables = { issueKey: string; data: SubmitSolutionRequest };
+
+/**
+ * @summary Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and deletes the viewer's Draft (STORY-004). Every required section must be filled (400 MSG01), so an empty Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead.
+
+ */
+export const useSubmitSolution = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof submitSolution>>,
+      TError,
+      SubmitSolutionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof submitSolution>>,
+  TError,
+  SubmitSolutionMutationVariables,
+  TContext
+> => {
+  return useMutation(getSubmitSolutionMutationOptions(options), queryClient);
+};
+export const getSaveSolutionDraftUrl = (issueKey: string) => {
+  return `/api/v1/jira-app/issues/${issueKey}/solution-draft`;
+};
+
+/**
+ * @summary Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed; the Jira App then shows "Saved as draft" (STORY-005).
+ */
+export const saveSolutionDraft = async (
+  issueKey: string,
+  solutionSections: SolutionSections,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getSaveSolutionDraftUrl(issueKey), {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(solutionSections),
+  });
+};
+
+export const getSaveSolutionDraftMutationKey = () => ['saveSolutionDraft'] as const;
+
+export const getSaveSolutionDraftMutationOptions = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveSolutionDraft>>,
+    TError,
+    SaveSolutionDraftMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveSolutionDraft>>,
+  TError,
+  SaveSolutionDraftMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSaveSolutionDraftMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveSolutionDraft>>,
+    SaveSolutionDraftMutationVariables
+  > = (props) => {
+    const { issueKey, data } = props ?? {};
+
+    return saveSolutionDraft(issueKey, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveSolutionDraftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveSolutionDraft>>
+>;
+export type SaveSolutionDraftMutationBody = SolutionSections;
+export type SaveSolutionDraftMutationError = ErrorType<ProblemResponse | ProblemDetail>;
+export type SaveSolutionDraftMutationVariables = { issueKey: string; data: SolutionSections };
+
+/**
+ * @summary Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed; the Jira App then shows "Saved as draft" (STORY-005).
+ */
+export const useSaveSolutionDraft = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof saveSolutionDraft>>,
+      TError,
+      SaveSolutionDraftMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof saveSolutionDraft>>,
+  TError,
+  SaveSolutionDraftMutationVariables,
+  TContext
+> => {
+  return useMutation(getSaveSolutionDraftMutationOptions(options), queryClient);
+};
+export const getRewriteSolutionUrl = () => {
+  return `/api/v1/jira-app/solution-rewrites`;
+};
+
+/**
+ * @summary The AI rewrite of the five sections, for 4.2 AI Rewrite Preview (STORY-007).
+ */
+export const rewriteSolution = async (
+  solutionSections: SolutionSections,
+  options?: Parameters<typeof http>[1],
+): Promise<SolutionSections> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SolutionSections>(getRewriteSolutionUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(solutionSections),
+  });
+};
+
+export const getRewriteSolutionMutationKey = () => ['rewriteSolution'] as const;
+
+export const getRewriteSolutionMutationOptions = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rewriteSolution>>,
+    TError,
+    RewriteSolutionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rewriteSolution>>,
+  TError,
+  RewriteSolutionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRewriteSolutionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rewriteSolution>>,
+    RewriteSolutionMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return rewriteSolution(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RewriteSolutionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rewriteSolution>>
+>;
+export type RewriteSolutionMutationBody = SolutionSections;
+export type RewriteSolutionMutationError = ErrorType<ProblemResponse | ProblemDetail>;
+export type RewriteSolutionMutationVariables = { data: SolutionSections };
+
+/**
+ * @summary The AI rewrite of the five sections, for 4.2 AI Rewrite Preview (STORY-007).
+ */
+export const useRewriteSolution = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rewriteSolution>>,
+      TError,
+      RewriteSolutionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rewriteSolution>>,
+  TError,
+  RewriteSolutionMutationVariables,
+  TContext
+> => {
+  return useMutation(getRewriteSolutionMutationOptions(options), queryClient);
+};
+export const getGetIssuePanelUrl = (issueKey: string) => {
+  return `/api/v1/jira-app/issues/${issueKey}/panel`;
+};
+
+/**
+ * @summary What 3.3 Issue Panel shows for the issue and the viewer (STORY-001, STORY-008).
+ */
+export const getIssuePanel = async (
+  issueKey: string,
+  options?: Parameters<typeof http>[1],
+): Promise<IssuePanel> => {
+  return http<IssuePanel>(getGetIssuePanelUrl(issueKey), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetIssuePanelQueryKey = (issueKey: string) => {
+  return [`/api/v1/jira-app/issues/${issueKey}/panel`] as const;
+};
+
+export const getGetIssuePanelQueryOptions = <
+  TData = Awaited<ReturnType<typeof getIssuePanel>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  issueKey: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getIssuePanel>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetIssuePanelQueryKey(issueKey);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getIssuePanel>>> = ({ signal }) =>
+    getIssuePanel(issueKey, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: issueKey !== null && issueKey !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getIssuePanel>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetIssuePanelQueryResult = NonNullable<Awaited<ReturnType<typeof getIssuePanel>>>;
+export type GetIssuePanelQueryError = ErrorType<ProblemResponse | ProblemDetail>;
+
+export function useGetIssuePanel<
+  TData = Awaited<ReturnType<typeof getIssuePanel>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  issueKey: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getIssuePanel>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getIssuePanel>>,
+          TError,
+          Awaited<ReturnType<typeof getIssuePanel>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetIssuePanel<
+  TData = Awaited<ReturnType<typeof getIssuePanel>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  issueKey: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getIssuePanel>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getIssuePanel>>,
+          TError,
+          Awaited<ReturnType<typeof getIssuePanel>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetIssuePanel<
+  TData = Awaited<ReturnType<typeof getIssuePanel>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  issueKey: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getIssuePanel>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary What 3.3 Issue Panel shows for the issue and the viewer (STORY-001, STORY-008).
+ */
+
+export function useGetIssuePanel<
+  TData = Awaited<ReturnType<typeof getIssuePanel>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  issueKey: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getIssuePanel>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetIssuePanelQueryOptions(issueKey, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
