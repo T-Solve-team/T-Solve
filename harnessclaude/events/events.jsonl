@@ -1262,3 +1262,4 @@
 {"ts":"2026-11-13T16:53:07.642Z","type":"feature-status","module":"wiki","feature":"wiki-trash-ui","from":null,"to":"pending"}
 {"ts":"2026-11-13T16:53:07.962Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":null,"to":"pending"}
 {"ts":"2026-11-13T16:53:08.294Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":null,"to":"pending"}
+{"ts":"2026-11-14T04:19:53.910Z","type":"spec-approved","module":"wiki","specHash":"75e10cbc9301985fbfd3cf1d5d09b0e79987563b15ed1b03d543a10b35727f2a"}

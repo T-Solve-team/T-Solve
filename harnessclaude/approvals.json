@@ -1193,8 +1193,8 @@
     }
   },
   "wiki": {
-    "specHash": "738c6855e3ba311e6970275f82be45f9da387a16001c546abec8ce630f16b529",
-    "approvedAt": "2026-11-13T16:52:16.335Z",
+    "specHash": "75e10cbc9301985fbfd3cf1d5d09b0e79987563b15ed1b03d543a10b35727f2a",
+    "approvedAt": "2026-11-14T04:19:53.905Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the view rule is evaluated for a user and a Space, THE system SHALL grant View only if the user is Active, the Space is Active, its Department is Active, and one of these holds: the user is the Space's Knowledge Manager (a  row and the role ); the user's own Department is the Space's Department; one of the user's Departments has a permission on the Space; the user has their own permission on the Space.",
@@ -1270,7 +1270,7 @@
       "AC-004.22": "WHEN Publish succeeds, THE web app SHALL show MSG95 with the count and return to 11.1 on the target folder; IF it answers MSG84, MSG01 or MSG02 on a row, THEN THE web app SHALL show the message on that row and keep every row.",
       "AC-004.23": "WHEN the user clicks Cancel, THE web app SHALL return to 11.1 and send no publish request.",
       "AC-005.1": "WHEN the Space's Knowledge Manager calls  for a Published document, THE system SHALL set its status  with  the caller and  now, and answer 204.",
-      "AC-005.2": "WHEN a document is in the trash, THE system SHALL leave it out of every endpoint of STORY-002 and every port of STORY-001 from that request on.",
+      "AC-005.2": "WHEN a document is in the trash, THE system SHALL leave it out of every endpoint of STORY-002, except the Knowledge Manager's read of AC-005.4, and every port of STORY-001 from that request on.",
       "AC-005.3": "WHEN the Space's Knowledge Manager calls , THE system SHALL answer 200 with the documents in its trash, newest  first, each with , , , ,  (full name) and .",
       "AC-005.4": "WHEN the Space's Knowledge Manager calls  for a document in the trash of their Space, THE system SHALL answer 200 with the document read-only and  false.",
       "AC-005.5": "WHEN the Space's Knowledge Manager calls  for a document in the trash, THE system SHALL set it Published in its folder, clear  and , and answer 200 with  and .",
@@ -1281,6 +1281,7 @@
       "AC-005.10": "IF anyone other than the Space's Knowledge Manager calls an endpoint of this story, THEN THE system SHALL answer 403 with code MSG08 for a document they can view, otherwise 404 with code MSG110, and change nothing.",
       "AC-005.11": "WHEN a document is moved to the trash, restored or permanently deleted, THE system SHALL write one audit entry in the same transaction with target type , target id the document id, action  with   or , or action  with  , and details  and .",
       "AC-005.12": "IF deleting the original file from storage fails after a permanent delete, THEN THE system SHALL keep the delete, log the file key at WARN and answer 204.",
+      "AC-005.17": "IF the free title chosen by AC-005.6 is taken by another request (an upload or a restore) before the restore commits, THEN THE system SHALL answer 409 with code MSG84 and leave the document in the trash.",
       "AC-005.13": "WHEN the Knowledge Manager clicks Delete on 11.2, THE web app SHALL ask MSG100 with the title; on confirm it SHALL show MSG101 and return to 11.1.",
       "AC-005.14": "WHEN the Knowledge Manager opens the Trash tab of 11.5, THE web app SHALL show the trash table (Title, Folder, Owner, Deleted by, Deleted on) with Restore and \"Delete permanently\" on each row, or MSG04 when it is empty.",
       "AC-005.15": "WHEN Restore succeeds, THE web app SHALL show MSG102, and also MSG84 as information when  is true, and refresh the trash.",
