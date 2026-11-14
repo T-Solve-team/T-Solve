@@ -1574,3 +1574,5 @@
 {"ts":"2026-11-14T20:15:02.590Z","type":"feature-status","module":"workspace","feature":"delete-department-screen","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T21:01:34.651Z","type":"spec-approved","module":"ticket-repository","specHash":"d841e21ef53e72298449a8203e5ad8cfa65ff6d2b418245d2b0062e600c60ae7"}
 {"ts":"2026-11-14T21:35:39.673Z","type":"spec-approved","module":"ticket-repository","specHash":"461b76a6d73409b58cc2709baf755808f6ee40a61bffe102fb759d8dc930b7cc"}
+{"ts":"2026-11-14T22:42:47.994Z","type":"feature-status","module":"workspace","feature":"delete-department-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T22:42:48.294Z","type":"feature-status","module":"workspace","feature":"delete-department-screen","from":"evaluating","to":"passing"}
