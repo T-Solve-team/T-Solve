@@ -454,4 +454,22 @@ class ImportPreviewServiceImplTest {
         assertThat(row.getValues().symptoms()).isEqualTo("New");
         assertThat(row.getValues().workaround()).isNull();
     }
+
+    @Test
+    void aManualDraftIs404OnEveryPreviewEndpoint_AC_007_8() {
+        ImportPreview manual = ImportPreview.manualDraft(PM, PROJECT, Instant.EPOCH);
+        ReflectionTestUtils.setField(manual, "id", ID);
+        when(previews.findByIdAndOwner(ID, PM)).thenReturn(Optional.of(manual));
+        when(previews.lockByIdAndOwner(ID, PM)).thenReturn(Optional.of(manual));
+
+        for (Runnable call : List.<Runnable>of(
+                () -> service.preview(PM, ID),
+                () -> service.rows(PM, ID, null, Pageable.ofSize(20)),
+                () -> service.row(PM, ID, 1),
+                () -> service.removeRows(PM, ID, List.of(1)),
+                () -> service.fillSolution(PM, ID, new FillSolutionRequest(List.of(1), "s", "r", "st", null, "sc")))) {
+            assertThat(catchThrowableOfType(call::run, NotFoundException.class)).isNotNull();
+        }
+        verify(rows, never()).save(any());
+    }
 }

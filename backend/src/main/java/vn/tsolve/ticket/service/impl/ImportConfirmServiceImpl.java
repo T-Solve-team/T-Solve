@@ -99,6 +99,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
     @Override
     public ImportResultResponse confirm(String user, long previewId) {
         ImportPreview preview = previews.findByIdAndOwner(previewId, user)
+                .filter(ImportPreviewServiceImpl::notManual)
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
@@ -232,6 +233,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
     private Imported importRows(String user, long previewId) {
         // the lock makes a second Confirm of this preview wait, then find it gone (AC-004.12)
         ImportPreview preview = previews.lockByIdAndOwner(previewId, user)
+                .filter(ImportPreviewServiceImpl::notManual)
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);

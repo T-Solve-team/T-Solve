@@ -6,10 +6,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,9 +26,13 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.multipart.MultipartFile;
 import vn.tsolve.common.config.MethodSecurityConfig;
+import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.common.security.WithTSolveUser;
+import vn.tsolve.ticket.dto.DraftEvidenceResponse;
+import vn.tsolve.ticket.dto.DraftSavedResponse;
+import vn.tsolve.ticket.dto.ManualDraftResponse;
 import vn.tsolve.ticket.dto.ManualEntryResponse;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.exception.ManualEntryRejectedException;
@@ -142,5 +148,51 @@ class ManualEntryControllerTest {
                 .andExpect(jsonPath("$.code").value("MSG34"))
                 .andExpect(jsonPath("$.params.file_name").value("x.zip"))
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("files"));
+    }
+
+    @Test
+    @WithTSolveUser(id = PM_ID, roles = Role.PROJECT_MANAGER)
+    void saveAsDraftAnswers200WithTheDraftIdAndMsg41_AC_007_1() throws Exception {
+        when(manualEntries.saveDraft(any(), eq(ENTRY), eq(List.of())))
+                .thenReturn(new DraftSavedResponse(
+                        42L, Instant.parse("2026-11-14T03:00:00Z"), new MessageRef("MSG41", Map.of())));
+
+        mvc.perform(multipart("/api/v1/imports/manual/drafts")
+                        .param("entry", ENTRY)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.previewId").value(42))
+                .andExpect(jsonPath("$.message.code").value("MSG41"));
+    }
+
+    @Test
+    @WithTSolveUser(id = PM_ID, roles = Role.PROJECT_MANAGER)
+    void aReopenedDraftIsReturnedForTheCallerAndAMissingOneIs404_AC_007_4() throws Exception {
+        when(manualEntries.getDraft(PM_ID, 42L))
+                .thenReturn(new ManualDraftResponse(
+                        42L,
+                        TICKET,
+                        "T-1",
+                        null,
+                        null,
+                        "2026-13-40",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        List.of(new DraftEvidenceResponse(TICKET, "a.png", "png", 1)),
+                        Instant.parse("2026-11-14T03:00:00Z")));
+        when(manualEntries.getDraft(PM_ID, 7L)).thenThrow(new NotFoundException("MSG04", Map.of()));
+
+        mvc.perform(get("/api/v1/imports/manual/drafts/42"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ticketId").value("T-1"))
+                .andExpect(jsonPath("$.resolvedDate").value("2026-13-40"))
+                .andExpect(jsonPath("$.evidence[0].fileName").value("a.png"))
+                .andExpect(jsonPath("$.evidence[0].storageKey").doesNotExist());
+        mvc.perform(get("/api/v1/imports/manual/drafts/7"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MSG04"));
     }
 }

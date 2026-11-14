@@ -54,6 +54,8 @@ import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
+import vn.tsolve.ticket.repository.ImportPreviewRepository;
+import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
 import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
@@ -106,7 +108,10 @@ class ManualEntryServiceImplTest {
             recorder,
             events,
             txManager,
-            audit);
+            audit,
+            mock(ImportPreviewRepository.class),
+            mock(ImportPreviewRowRepository.class),
+            Clock.systemUTC());
 
     @BeforeEach
     void setUp() {

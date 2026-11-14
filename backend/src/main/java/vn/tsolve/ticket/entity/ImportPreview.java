@@ -30,7 +30,8 @@ public class ImportPreview {
     @Column(nullable = false, updatable = false)
     private String owner;
 
-    @Column(name = "project_id", nullable = false, updatable = false)
+    // updatable: a Manual Draft saved again takes the Project of the form (AC-007.5)
+    @Column(name = "project_id", nullable = false)
     private UUID projectId;
 
     @Enumerated(EnumType.STRING)
@@ -104,6 +105,12 @@ public class ImportPreview {
                 new ImportPreview(owner, projectId, TicketSource.MANUAL, ImportType.WITH_SOLUTION, null, savedAt);
         preview.draftSavedAt = savedAt;
         return preview;
+    }
+
+    /** A Manual Draft saved again: the Project chosen on the form now, and the new save time (AC-007.5). */
+    public void saveManualDraftAgain(UUID projectId, Instant savedAt) {
+        this.projectId = projectId;
+        this.draftSavedAt = savedAt;
     }
 
     /** The Evidence files the Manual Draft has after a save: the kept ones and the new ones (AC-007.5). */

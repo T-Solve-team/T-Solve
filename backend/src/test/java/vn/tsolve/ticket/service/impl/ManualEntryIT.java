@@ -28,9 +28,12 @@ import org.springframework.web.multipart.MultipartFile;
 import org.testcontainers.containers.PostgreSQLContainer;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.MessageCodeException;
+import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.ticket.dto.ManualEntryResponse;
+import vn.tsolve.ticket.entity.TicketSource;
+import vn.tsolve.ticket.service.ImportDraftService;
 import vn.tsolve.ticket.service.ManualEntryService;
 
 /** Manual entry against a real PostgreSQL: the rows, the after-commit event, the unique Ticket ID and the rollback. */
@@ -86,6 +89,12 @@ class ManualEntryIT {
     @Autowired
     private ManualEntryFileStorage storage;
 
+    @Autowired
+    private ImportDraftService drafts;
+
+    @Autowired
+    private PreviewCleanupJob cleanup;
+
     @TestConfiguration
     static class Listener {
         @Bean
@@ -102,6 +111,7 @@ class ManualEntryIT {
 
     @BeforeEach
     void cleanDatabase() {
+        jdbc.execute("delete from import_preview");
         jdbc.execute("delete from ticket_import_decision");
         jdbc.execute("delete from ticket");
         jdbc.execute("delete from import_batch");
@@ -281,6 +291,136 @@ class ManualEntryIT {
         assertThat(jdbc.queryForList("select file_size from evidence", Long.class))
                 .hasSize(5)
                 .containsOnly(10L * 1024 * 1024);
+    }
+
+    private long saveDraft(TSolveUser user, String fields, List<MultipartFile> files) {
+        String json = "{\"projectId\":\"" + PROJECT + "\"" + (fields.isEmpty() ? "" : "," + fields) + "}";
+        return manualEntries.saveDraft(user, json, files).previewId();
+    }
+
+    private String draftEvidence(long draftId) {
+        return jdbc.queryForObject("select evidence::text from import_preview where id = ?", String.class, draftId);
+    }
+
+    @Test
+    void aManualDraftIsListedWithTheOtherDraftsAsManualWithOneRow_AC_007_3() {
+        long id = saveDraft(PM, "\"title\":\"Login fails\"", List.of());
+
+        assertThat(drafts.list(PM.getName())).singleElement().satisfies(draft -> {
+            assertThat(draft.previewId()).isEqualTo(id);
+            assertThat(draft.source()).isEqualTo(TicketSource.MANUAL);
+            assertThat(draft.projectId()).isEqualTo(PROJECT);
+            assertThat(draft.rowCount()).isEqualTo(1);
+            assertThat(draft.savedAt()).isNotNull();
+        });
+    }
+
+    @Test
+    void theDailyCleanupKeepsAManualDraftOlderThanADay_AC_007_1() {
+        // edge 27: a Manual Draft is a Draft from its first save (AC-004.6)
+        long id = saveDraft(PM, "", List.of());
+        jdbc.update("update import_preview set created_at = now() - interval '3 days' where id = ?", id);
+
+        cleanup.deleteExpiredPreviews();
+
+        assertThat(count("import_preview")).isEqualTo(1);
+    }
+
+    @Test
+    void savingADraftAsATicketDeletesTheDraftInTheSameTransaction_AC_007_6() {
+        long id = saveDraft(PM, "", List.of(file("a.png", new byte[] {1}), file("b.log", new byte[] {2})));
+        String keepA = jdbc.queryForObject(
+                "select e->>'id' from import_preview, jsonb_array_elements(evidence) e where e->>'fileName' = 'a.png'",
+                String.class);
+
+        ManualEntryResponse response = manualEntries.save(
+                PM,
+                entry("T-1").replace("}", ",\"draftId\":" + id + ",\"keepEvidenceIds\":[\"" + keepA + "\"]}"),
+                List.of(file("c.pdf", new byte[] {3})));
+
+        assertThat(count("import_preview")).isZero();
+        assertThat(count("import_preview_row")).isZero();
+        assertThat(jdbc.queryForList(
+                        "select file_name from evidence where ticket_id = ? order by file_name",
+                        String.class,
+                        response.ticketId()))
+                .containsExactly("a.png", "c.pdf");
+        assertThat(jdbc.queryForList("select storage_key from evidence", String.class))
+                .allSatisfy(key -> assertThat(storage.objects).containsKey(key));
+        // b.log was removed: its object is gone after the commit
+        assertThat(storage.objects).hasSize(2);
+    }
+
+    @Test
+    void aFailedSaveFromADraftLeavesTheDraftAsItWas_AC_007_6() {
+        jdbc.execute("create or replace function fail_for_boom() returns trigger language plpgsql as "
+                + "$$ begin raise exception 'forced failure'; end $$");
+        jdbc.execute("create trigger fail_for_boom before insert on ticket_import_decision "
+                + "for each row when (new.reviewer = '" + BOOM.id() + "') execute function fail_for_boom()");
+        long id = saveDraft(BOOM, "\"title\":\"Draft title\"", List.of(file("a.png", new byte[] {1})));
+        String before = draftEvidence(id);
+
+        MessageCodeException e = catchThrowableOfType(
+                () -> manualEntries.save(
+                        BOOM,
+                        entry("T-1").replace("}", ",\"draftId\":" + id + ",\"keepEvidenceIds\":[]}"),
+                        List.of(file("c.pdf", new byte[] {3}))),
+                MessageCodeException.class);
+
+        assertThat(e.getCode()).isEqualTo("MSG33");
+        assertThat(draftEvidence(id)).isEqualTo(before);
+        assertThat(jdbc.queryForObject("select title from import_preview_row where preview_id = ?", String.class, id))
+                .isEqualTo("Draft title");
+        assertThat(count("ticket")).isZero();
+        // the Draft's file stays; the new one is gone
+        assertThat(storage.objects).hasSize(1);
+    }
+
+    @Test
+    void deletingAManualDraftDeletesItAndItsFilesAfterTheCommit_AC_007_7() {
+        long id = saveDraft(PM, "", List.of(file("a.png", new byte[] {1}), file("b.log", new byte[] {2})));
+
+        drafts.delete(PM.getName(), id);
+
+        assertThat(count("import_preview")).isZero();
+        assertThat(storage.objects).isEmpty();
+        assertThat(storage.deleted).hasSize(2);
+    }
+
+    @Test
+    void aSaveWaitsForAnotherRequestOnTheSameDraftThenFindsItsKeptFileGone_AC_007_9() throws Exception {
+        // edge 28: tab B holds the Draft and removes e1 while tab A saves it as a Ticket keeping e1
+        long id = saveDraft(PM, "", List.of(file("a.png", new byte[] {1})));
+        String e1 = jdbc.queryForObject(
+                "select e->>'id' from import_preview, jsonb_array_elements(evidence) e", String.class);
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try (Connection other = jdbc.getDataSource().getConnection()) {
+            other.setAutoCommit(false);
+            other.createStatement().execute("select id from import_preview where id = " + id + " for update");
+            Future<String> save = pool.submit(() -> {
+                try {
+                    manualEntries.save(
+                            PM,
+                            entry("T-1").replace("}", ",\"draftId\":" + id + ",\"keepEvidenceIds\":[\"" + e1 + "\"]}"),
+                            List.of(file("c.pdf", new byte[] {3})));
+                    return "ok";
+                } catch (NotFoundException e) {
+                    return e.getCode();
+                }
+            });
+            awaitWaitingLock();
+            other.createStatement().execute("update import_preview set evidence = '[]' where id = " + id);
+            other.commit();
+
+            assertThat(save.get()).isEqualTo("MSG04");
+        } finally {
+            pool.shutdownNow();
+        }
+        assertThat(count("ticket")).isZero();
+        assertThat(count("evidence")).isZero();
+        // only a.png is left: A's new file was deleted (B's after-commit delete is not part of this test)
+        assertThat(storage.objects).hasSize(1);
+        assertThat(count("import_batch")).isZero();
     }
 
     /** Polls until some session waits for a lock, so the test does not race the other thread. */

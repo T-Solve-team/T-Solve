@@ -42,7 +42,12 @@ class EvidenceFiles {
 
     /** MSG72 for more than five files, otherwise MSG34 for the first file of a wrong type or over 10 MB. */
     void check(List<MultipartFile> files) {
-        if (files.size() > MAX_FILES) {
+        check(files, 0);
+    }
+
+    /** As {@link #check(List)}, with {@code kept} files of a Draft counted too (AC-007.5). */
+    void check(List<MultipartFile> files, int kept) {
+        if (kept + files.size() > MAX_FILES) {
             throw ManualEntryRejectedException.tooManyFiles();
         }
         for (MultipartFile file : files) {
@@ -79,15 +84,20 @@ class EvidenceFiles {
 
     /** Best effort: a file left behind costs storage, not correctness, so a failed delete is only logged. */
     void delete(List<Stored> stored) {
+        deleteKeys(stored.stream().map(Stored::key).toList());
+    }
+
+    /** As {@link #delete(List)}, by storage key: the files of a Draft (AC-007.5, AC-007.7). */
+    void deleteKeys(List<String> keys) {
         storage.ifPresent(target -> {
-            for (Stored file : stored) {
+            for (String key : keys) {
                 try {
-                    target.delete(file.key());
+                    target.delete(key);
                 } catch (RuntimeException e) {
                     // the key only: the file name can hold personal data (backend/AGENTS.md §9)
                     log.warn(
                             "Could not delete the Evidence object {}: {}",
-                            file.key(),
+                            key,
                             e.getClass().getSimpleName());
                 }
             }

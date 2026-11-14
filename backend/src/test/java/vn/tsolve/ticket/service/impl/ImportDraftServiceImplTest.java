@@ -49,19 +49,25 @@ class ImportDraftServiceImplTest {
     private final ImportPreviewRowRepository rows = mock(ImportPreviewRowRepository.class);
     private final ProjectAccess projects = mock(ProjectAccess.class);
 
-    private final ImportDraftServiceImpl service =
-            new ImportDraftServiceImpl(previews, rows, projects, Clock.fixed(NOW, ZoneId.of("Asia/Ho_Chi_Minh")));
+    private final ImportDraftServiceImpl service = new ImportDraftServiceImpl(
+            previews,
+            rows,
+            projects,
+            Clock.fixed(NOW, ZoneId.of("Asia/Ho_Chi_Minh")),
+            new EvidenceFiles(Optional.empty()));
 
     @BeforeEach
     void setUp() {
         when(projects.managesActive(PM, PROJECT)).thenReturn(true);
         when(previews.findByIdAndOwner(anyLong(), any())).thenReturn(Optional.empty());
+        when(previews.lockByIdAndOwner(anyLong(), any())).thenReturn(Optional.empty());
     }
 
     private ImportPreview jira(long id) {
         ImportPreview preview = ImportPreview.jira(PM, PROJECT, FROM, TO, false, NOW.minusSeconds(3600));
         ReflectionTestUtils.setField(preview, "id", id);
         when(previews.findByIdAndOwner(id, PM)).thenReturn(Optional.of(preview));
+        when(previews.lockByIdAndOwner(id, PM)).thenReturn(Optional.of(preview));
         return preview;
     }
 
@@ -166,6 +172,7 @@ class ImportDraftServiceImplTest {
                 new ImportPreview(PM, PROJECT, TicketSource.CSV, ImportType.WITH_SOLUTION, "tickets.csv", NOW);
         ReflectionTestUtils.setField(csv, "id", 7L);
         when(previews.findByIdAndOwner(7L, PM)).thenReturn(Optional.of(csv));
+        when(previews.lockByIdAndOwner(7L, PM)).thenReturn(Optional.of(csv));
 
         for (Runnable call : List.<Runnable>of(
                 () -> service.delete("other@company.vn", 42L),

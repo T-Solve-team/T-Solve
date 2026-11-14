@@ -18,7 +18,9 @@ import vn.tsolve.ticket.csv.RowError;
 public class ImportPreviewRow {
 
     @Embeddable
-    public record Id(@Column(name = "preview_id") Long previewId, @Column(name = "row_no") int rowNo) {}
+    public record Id(
+            @Column(name = "preview_id") Long previewId,
+            @Column(name = "row_no") int rowNo) {}
 
     @EmbeddedId
     private Id id;
@@ -93,6 +95,25 @@ public class ImportPreviewRow {
         row.sourceUrl = sourceUrl;
         row.comments = List.copyOf(comments);
         return row;
+    }
+
+    /** The one row of a Manual Draft: the fields as entered, never checked (AC-007.1). */
+    public static ImportPreviewRow manualEntry(Long previewId, Values values) {
+        return new ImportPreviewRow(previewId, 1, values, List.of(), ImportType.WITH_SOLUTION);
+    }
+
+    /** A Manual Draft saved again: every field takes the form's value, a cleared one too (AC-007.5). */
+    public void replaceValues(Values values) {
+        this.ticketId = values.ticketId();
+        this.title = values.title();
+        this.description = values.description();
+        this.author = values.author();
+        this.resolvedDate = values.resolvedDate();
+        this.symptoms = values.symptoms();
+        this.rootCause = values.rootCause();
+        this.resolutionSteps = values.resolutionSteps();
+        this.workaround = values.workaround();
+        this.scope = values.scope();
     }
 
     private static PreviewRowStatus initialStatus(List<RowError> errors, ImportType importType) {

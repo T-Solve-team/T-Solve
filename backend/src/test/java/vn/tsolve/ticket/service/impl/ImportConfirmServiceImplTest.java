@@ -467,4 +467,17 @@ class ImportConfirmServiceImplTest {
         assertThat(result.created()).isEqualTo(2);
         verify(rows, never()).countByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.NEEDS_SOLUTION);
     }
+
+    @Test
+    void aManualDraftIs404OnConfirm_AC_007_8() {
+        // edge 24: a Manual Draft never goes through Confirm
+        ImportPreview manual = ImportPreview.manualDraft(PM, PROJECT, Instant.EPOCH);
+        ReflectionTestUtils.setField(manual, "id", PREVIEW);
+        when(previews.findByIdAndOwner(PREVIEW, PM)).thenReturn(Optional.of(manual));
+        when(previews.lockByIdAndOwner(PREVIEW, PM)).thenReturn(Optional.of(manual));
+
+        assertThat(catchThrowableOfType(() -> service.confirm(PM, PREVIEW), NotFoundException.class))
+                .isNotNull();
+        verify(tickets, never()).saveAll(any());
+    }
 }

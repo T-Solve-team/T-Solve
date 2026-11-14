@@ -24,6 +24,7 @@ import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
 import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
+import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.exception.SolutionTooLongException;
 import vn.tsolve.ticket.mapper.ImportPreviewMapper;
@@ -83,6 +84,7 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
         owned(user, previewId);
         // the lock Fill solution and Confirm take, so a removed row cannot be filled or imported meanwhile (BUG-152)
         ImportPreview preview = previews.lockByIdAndOwner(previewId, user)
+                .filter(ImportPreviewServiceImpl::notManual)
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         previewRows
                 .findAllById(rowNumbers.stream()
@@ -113,6 +115,7 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
         owned(user, previewId);
         // the lock Confirm takes: a running Confirm finishes first, then the preview is gone (AC-013.4)
         ImportPreview preview = previews.lockByIdAndOwner(previewId, user)
+                .filter(ImportPreviewServiceImpl::notManual)
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         if (preview.getImportType() != ImportType.WITHOUT_SOLUTION) {
             throw new BusinessRuleException("MSG06", Map.of());
@@ -136,6 +139,7 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
     private ImportPreview owned(String user, long previewId) {
         // another user's preview is "not found", so ids cannot be probed (design: Cross-user access)
         ImportPreview preview = previews.findByIdAndOwner(previewId, user)
+                .filter(ImportPreviewServiceImpl::notManual)
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         if (!projects.managesActive(user, preview.getProjectId())) {
             throw new ProjectAccessDeniedException();
@@ -159,5 +163,10 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
                 ? previewRows.findByIdPreviewIdOrderByIdRowNo(previewId, page)
                 : previewRows.findByIdPreviewIdAndStatusOrderByIdRowNo(previewId, status, page);
         return rows.map(mapper::toSummary);
+    }
+
+    /** A Manual Draft is not an Import Preview: its id is "not found" here (AC-007.8). */
+    static boolean notManual(ImportPreview preview) {
+        return preview.getSource() != TicketSource.MANUAL;
     }
 }

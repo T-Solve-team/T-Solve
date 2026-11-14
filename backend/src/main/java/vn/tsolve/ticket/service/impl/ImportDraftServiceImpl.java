@@ -6,10 +6,13 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.dto.DraftSavedResponse;
 import vn.tsolve.ticket.dto.ImportDraftSummary;
 import vn.tsolve.ticket.dto.MessageRef;
+import vn.tsolve.ticket.entity.DraftEvidence;
 import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.TicketSource;
@@ -26,16 +29,19 @@ public class ImportDraftServiceImpl implements ImportDraftService {
     private final ImportPreviewRowRepository previewRows;
     private final ProjectAccess projects;
     private final Clock clock;
+    private final EvidenceFiles evidence;
 
     public ImportDraftServiceImpl(
             ImportPreviewRepository previews,
             ImportPreviewRowRepository previewRows,
             ProjectAccess projects,
-            Clock clock) {
+            Clock clock,
+            EvidenceFiles evidence) {
         this.previews = previews;
         this.previewRows = previewRows;
         this.projects = projects;
         this.clock = clock;
+        this.evidence = evidence;
     }
 
     @Override
@@ -68,12 +74,24 @@ public class ImportDraftServiceImpl implements ImportDraftService {
     @Override
     @Transactional
     public void delete(String user, long previewId) {
-        ImportPreview preview = jiraPreview(user, previewId);
-        if (!preview.isDraft()) {
-            throw notFound();
-        }
+        // the lock a Manual Draft save takes, so a Draft is never deleted while it becomes a Ticket (AC-007.9)
+        ImportPreview preview = previews.lockByIdAndOwner(previewId, user)
+                .filter(p -> p.getSource() == TicketSource.JIRA_IMPORT || p.getSource() == TicketSource.MANUAL)
+                .filter(ImportPreview::isDraft)
+                .orElseThrow(ImportDraftServiceImpl::notFound);
         // rows go through ON DELETE CASCADE
         previews.delete(preview);
+        List<String> keys =
+                preview.getEvidence().stream().map(DraftEvidence::storageKey).toList();
+        if (!keys.isEmpty()) {
+            // after the commit: a rolled-back delete keeps its files (AC-007.7)
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evidence.deleteKeys(keys);
+                }
+            });
+        }
     }
 
     /** Another user's preview, a CSV one or none at all is "not found", so ids cannot be probed (AC-004.5). */

@@ -3,18 +3,23 @@ package vn.tsolve.ticket.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.security.Principal;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.ticket.dto.DraftSavedResponse;
+import vn.tsolve.ticket.dto.ManualDraftResponse;
 import vn.tsolve.ticket.dto.ManualEntryResponse;
 import vn.tsolve.ticket.service.ManualEntryService;
 
@@ -45,5 +50,25 @@ public class ManualEntryController {
             @RequestParam(value = "files", required = false) List<MultipartFile> files) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(manualEntries.save(user, entry, files == null ? List.of() : files));
+    }
+
+    @PostMapping(path = "/drafts", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(operationId = "saveManualDraft", summary = "Saves a manual entry as a Draft, or updates its Draft.")
+    @ApiResponse(responseCode = "400")
+    @ApiResponse(responseCode = "403")
+    @ApiResponse(responseCode = "404")
+    public ResponseEntity<DraftSavedResponse> saveManualDraft(
+            @AuthenticationPrincipal TSolveUser user,
+            @RequestParam("entry") String entry,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files) {
+        return ResponseEntity.ok(manualEntries.saveDraft(user, entry, files == null ? List.of() : files));
+    }
+
+    @GetMapping("/drafts/{previewId}")
+    @Operation(operationId = "getManualDraft", summary = "Returns a Manual Draft as saved.")
+    @ApiResponse(responseCode = "403")
+    @ApiResponse(responseCode = "404")
+    public ResponseEntity<ManualDraftResponse> getManualDraft(Principal principal, @PathVariable long previewId) {
+        return ResponseEntity.ok(manualEntries.getDraft(principal.getName(), previewId));
     }
 }

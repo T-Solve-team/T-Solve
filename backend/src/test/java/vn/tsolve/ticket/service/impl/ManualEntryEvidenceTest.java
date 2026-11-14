@@ -50,6 +50,8 @@ import vn.tsolve.ticket.entity.TicketEvidence;
 import vn.tsolve.ticket.entity.TicketReviewDecision;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
+import vn.tsolve.ticket.repository.ImportPreviewRepository;
+import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
 import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
@@ -109,7 +111,10 @@ class ManualEntryEvidenceTest {
             recorder,
             events,
             txManager,
-            mock(AuditService.class));
+            mock(AuditService.class),
+            mock(ImportPreviewRepository.class),
+            mock(ImportPreviewRowRepository.class),
+            Clock.systemUTC());
 
     @BeforeEach
     void setUp() {
@@ -350,7 +355,10 @@ class ManualEntryEvidenceTest {
                 recorder,
                 events,
                 txManager,
-                mock(AuditService.class));
+                mock(AuditService.class),
+                mock(ImportPreviewRepository.class),
+                mock(ImportPreviewRowRepository.class),
+                Clock.systemUTC());
 
         MessageCodeException e = catchThrowableOfType(
                 () -> withoutStorage.save(PM, ENTRY, List.of(file("a.png", "x"))), MessageCodeException.class);
