@@ -213,16 +213,16 @@
         "manual-entry-schema": "evaluating",
         "manual-entry-save": "evaluating",
         "manual-entry-evidence": "evaluating",
-        "manual-entry-drafts": "in-progress",
-        "manual-entry-tab": "pending"
+        "manual-entry-drafts": "evaluating",
+        "manual-entry-tab": "in-progress"
       },
-      "lastUpdated": "2026-11-14T13:48:11.652Z",
+      "lastUpdated": "2026-11-14T14:41:33.050Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "f7b4cc739491f9336d55ff2fa739cb8df4798afe"
+        "default": "6ba85f1867fa686c62fbb3d86074f4beb1e681f1"
       }
     },
     "search": {
