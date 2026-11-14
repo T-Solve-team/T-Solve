@@ -1303,6 +1303,49 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/imports/history:
+    get:
+      tags: [import]
+      operationId: getImportHistory
+      summary: Import Batches of the caller's managed Projects, newest first.
+      parameters:
+        - name: projectId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: source
+          in: query
+          description: Import source; SOLUTION_FORM returns an empty page.
+          schema:
+            $ref: '#/components/schemas/TicketSource'
+        - name: dateFrom
+          in: query
+          description: First creation day, inclusive in Vietnam time.
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          description: Last creation day, inclusive in Vietnam time; before dateFrom gives MSG39.
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of Import History.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportHistoryPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/imports/manual:
     post:
       tags: [import]
@@ -2958,6 +3001,69 @@ components:
           oneOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
+    ImportHistoryPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportHistoryItem'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+    ImportHistoryItem:
+      type: object
+      required: [batchId, createdAt, performedBy, project, department, source, publishedCount, removedCount, errorCount, status]
+      properties:
+        batchId:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+        performedBy:
+          type: string
+          description: Account full name, or the stored performer when no account matches.
+        project:
+          type: object
+          required: [projectId, projectKey]
+          properties:
+            projectId:
+              type: string
+              format: uuid
+            projectKey:
+              type: string
+        department:
+          type: object
+          required: [id, name]
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        source:
+          $ref: '#/components/schemas/ImportSource'
+        dateFrom:
+          type: [string, 'null']
+          format: date
+        dateTo:
+          type: [string, 'null']
+          format: date
+        fileName:
+          type: [string, 'null']
+        publishedCount:
+          type: integer
+        removedCount:
+          type: integer
+        errorCount:
+          type: integer
+        status:
+          type: string
+          enum: [COMPLETED, FAILED]
+        errorCode:
+          type: [string, 'null']
+          description: Only the first MSG code in the stored error, or null.
     JiraPullRequest:
       type: object
       required: [projectId, resolvedFrom, resolvedTo]

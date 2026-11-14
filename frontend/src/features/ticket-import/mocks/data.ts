@@ -1,4 +1,5 @@
 import type {
+  ImportHistoryItem,
   ImportPreviewResponse,
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
@@ -13,6 +14,27 @@ export const CSV_TEMPLATE =
 
 /** The template of a file without Solutions: the columns before the Solution sections (AC-012.2). */
 export const CSV_TEMPLATE_WITHOUT_SOLUTION = 'ticket_id,title,description,author,resolved_date\n';
+
+/** Read-only Import Batches, newest first, with both Jira ranges and CSV file names. */
+export const IMPORT_HISTORY: ImportHistoryItem[] = Array.from({ length: 25 }, (_, i) => {
+  const source = i % 3 === 0 ? 'JIRA_IMPORT' : i % 3 === 1 ? 'CSV' : 'MANUAL';
+  return {
+    batchId: 25 - i,
+    createdAt: new Date(Date.UTC(2026, 10, 14 - i, 3)).toISOString(),
+    performedBy: 'Đỗ Minh Quân',
+    project: { projectId: '00000000-0000-4000-8000-000000000101', projectKey: 'ITSUP' },
+    department: { id: '00000000-0000-4000-8000-0000000000d1', name: 'IT' },
+    source,
+    dateFrom: source === 'JIRA_IMPORT' ? '2026-10-01' : null,
+    dateTo: source === 'JIRA_IMPORT' ? '2026-10-31' : null,
+    fileName: source === 'CSV' ? 'itsup-resolved-2026-10.csv' : null,
+    publishedCount: i === 1 ? 0 : source === 'MANUAL' ? 1 : 20,
+    removedCount: source === 'MANUAL' ? 0 : 2,
+    errorCount: i === 1 ? 1 : 0,
+    status: i === 1 ? 'FAILED' : 'COMPLETED',
+    errorCode: i === 1 ? 'MSG33' : null,
+  };
+});
 
 /** Shown only by the Import Ticket Preview popup: the rows list has no Description. */
 const DESCRIPTION = 'Users report the problem after the latest Windows update.';

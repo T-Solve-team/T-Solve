@@ -105,8 +105,8 @@ public class ManualTicketServiceImpl implements ManualTicketService {
             throw ticketIdTaken(ticketId);
         }
 
-        ImportBatch batch =
-                batches.save(ImportBatch.completed(request.projectId(), owner, TicketSource.MANUAL, null, 1, 0, 0));
+        ImportBatch batch = batches.save(
+                ImportBatch.completed(request.projectId(), owner, TicketSource.MANUAL, null, null, null, 1, 0, 0));
         String resolved = CsvRowValidator.trim(request.resolvedDate());
         Ticket ticket;
         try {
