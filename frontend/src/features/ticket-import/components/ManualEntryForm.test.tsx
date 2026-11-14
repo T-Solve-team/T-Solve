@@ -261,7 +261,9 @@ describe('ManualEntryForm', () => {
 
       expect(await screen.findByRole('alert')).toHaveTextContent(msg('MSG04'));
       if (withKnownField) {
-        expect(screen.getByText(msg(titleError.code, titleError.params))).toBeInTheDocument();
+        expect(
+          await screen.findByText(msg(titleError.code, titleError.params)),
+        ).toBeInTheDocument();
       }
       expect(screen.getByLabelText('Title')).toHaveValue('Keep this title');
     },
