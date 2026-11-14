@@ -316,13 +316,13 @@
         "jira-issue-access": "passing",
         "solution-ai": "passing",
         "solution-endpoints": "passing",
-        "solution-forge-client": "evaluating",
-        "solution-form-ui": "evaluating",
-        "issue-panel-ui": "evaluating",
-        "remove-jira-search": "evaluating",
-        "close-keeps-draft": "evaluating"
+        "solution-forge-client": "passing",
+        "solution-form-ui": "passing",
+        "issue-panel-ui": "passing",
+        "remove-jira-search": "passing",
+        "close-keeps-draft": "passing"
       },
-      "lastUpdated": "2026-11-14T08:12:36.523Z",
+      "lastUpdated": "2026-11-14T08:18:02.356Z",
       "branch": "feat/KAN-126-jira-app-solution-form-v2",
       "repos": [
         "default"
