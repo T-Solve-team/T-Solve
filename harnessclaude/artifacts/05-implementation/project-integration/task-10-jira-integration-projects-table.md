@@ -1,7 +1,7 @@
 # Task 10: Show Department and Projects on Jira Integration (KAN-127)
 
 **Module:** project-integration
-**Assignee:** Đặng Tấn Bình (Developer: Claude, D49, no Codex)
+**Assignee:** Đặng Tấn Bình (Developer: Claude, D67, no Codex)
 **Status:** in-progress
 **Iteration:** 1
 
@@ -27,7 +27,7 @@ placeholder and never mounts the query.
 - `ProjectsTable`: kit `DataTable` with five columns, in this order: "Project ID" (public id), "Jira project key",
   "Project Manager" (`fullName`, else `msg('MSG54')`), "Members" (`memberCount`), "Status" (`cells.tag` →
   `StatusTag`: Active / Removed). Row key `projectId`; no paging, no sorting: the rows keep the server's order
-  (AC-008.2–AC-008.5, D26).
+  (AC-008.2–AC-008.5, D44).
 - `useProjects`: a thin wrapper around the generated `useListProjects` (the task names the hook file). Query errors
   are left to the screen, as the global handler does for every query.
 - `mocks/handlers.ts`: stateful handlers for all three operations, typed with the generated `ProjectList`,
@@ -44,7 +44,7 @@ placeholder and never mounts the query.
   Project (caller as PM, 1 member) or 200 for OLD (same id and member count). `resetMockData()` rebuilds the store
   from a seed function that returns fresh objects and resets the id counter.
 
-**Who wrote what.** Claude wrote all code and tests (Codex is out of quota, D49).
+**Who wrote what.** Claude wrote all code and tests (Codex is out of quota, D67).
 
 **Red step.** Only the `MOCK_PROJECT_IDS` constant was added first, so the tests could import it. Run: 16 of 18
 failed on assertions. The handler tests got the generated faker data: a random Department name, no 401/403, 200
@@ -60,7 +60,7 @@ renders `EmptyState` itself.
   absent for an Admin-only session, so that test keeps its meaning once Task 11 adds the button.
 - **Fixture tests carry no AC-009 ids.** The task ties the Test/Save fixtures to AC-009.15–AC-009.17. If those ids
   were in the names, `sdd.ts trace project-integration STORY-009` would count popup criteria as covered by
-  mock-contract tests. That is the false coverage D48 corrected for the backend. They are named `Add project fixture:
+  mock-contract tests. That is the false coverage D66 corrected for the backend. They are named `Add project fixture:
   …`; the popup tests in Task 11 own the AC-009 ids. The two list contract tests keep AC-008.1, which the page test
   covers too.
 - **Department field.** A read-only `Input` in a `FormField`, labelled "Department", not `Descriptions`: the spec

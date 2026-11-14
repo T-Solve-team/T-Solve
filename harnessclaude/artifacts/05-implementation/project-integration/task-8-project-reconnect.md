@@ -1,7 +1,7 @@
 # Task 8: Reconnect the same Removed Project safely (KAN-127)
 
 **Module:** project-integration
-**Assignee:** Đặng Tấn Bình (Developer: Claude, D49, no Codex)
+**Assignee:** Đặng Tấn Bình (Developer: Claude, D67, no Codex)
 **Status:** in-progress
 **Iteration:** 1
 
@@ -31,10 +31,10 @@ Inside the one `TransactionTemplate`, the service re-reads the caller's Departme
 Public id, `project_id`, Department, tickets, other memberships and `field_mapping` are not touched by any statement.
 A `DuplicateKeyException` on `uq_project_jira_key` (only the reconnect's canonical-key update can raise it, when a
 concurrent create inserts that key) is caught outside the transaction, after the rollback, and becomes MSG49 naming the
-committed winner's Department (D41). Any other constraint propagates as 500 MSG06. The contract already had the 200
+committed winner's Department (D59). Any other constraint propagates as 500 MSG06. The contract already had the 200
 response for `createProject`, so neither the contract nor the generated client changed.
 
-**Who wrote what.** Claude wrote all code and tests (Codex is out of quota, D49).
+**Who wrote what.** Claude wrote all code and tests (Codex is out of quota, D67).
 
 **Red step.** The two repository methods came first, so the tests could compile; the service kept Task 7's
 `UnsupportedOperationException`. Unit run: 189 tests, 9 failures, all in the new reconnect success, rollback and

@@ -158,7 +158,7 @@ Informational (does not block):
        throwables
 
      Then assert that no response body or log line contains the planted values. A plain test with no Spring context
-     keeps the single shared IT context (D43).
+     keeps the single shared IT context (D61).
 2. **MINOR: the AC-005.14 test only covers the lookup.** Location: `ProjectServiceImplTest.java:114`. Source:
    reviewer.
    - **Problem:** `findsTheActiveProjectOfAJiraKey_AC_005_14` is the old mock test of the lookup, renamed as Task 6
@@ -250,13 +250,13 @@ this section.
 
 # Attempt 2 — 2026-11-13
 
-verdict: **pass** · reviewer: harnessclaude-reviewer (Claude only, D49) · commits `93fcab68` (test files and
+verdict: **pass** · reviewer: harnessclaude-reviewer (Claude only, D67) · commits `93fcab68` (test files and
 `docs/bug-log.md`) and `1a0795ac` (harness)
 
 ## Summary
 
 The fix closes both findings it was meant to close: MAJOR-1 (the AC-004.17 test could not fail) and MINOR-3 (two
-tests mislabelled `_AC_010_3`). MINOR-2 (AC-005.14) goes to Task 7 under D48 and is not re-reviewed here. No
+tests mislabelled `_AC_010_3`). MINOR-2 (AC-005.14) goes to Task 7 under D66 and is not re-reviewed here. No
 production code changed. I checked that with `git show --stat 93fcab68`: the commit touches only 3 test files and
 the bug log.
 
@@ -268,7 +268,7 @@ the bug log.
   - Every Jira body (200, 401, 403, 404, 500, statuses 500, 200 without a key) holds the email, the token or the
     `planted-secret-body` marker.
   - Answers are rendered by the real `ProjectController` and `GlobalExceptionHandler` in a standalone MockMvc. There
-    is no Spring context, as D43 requires.
+    is no Spring context, as D61 requires.
   - The ROOT logger is captured at ALL. The test checks each event's formatted message, raw message, arguments and
     throwable, plus the response body and headers. The forbidden strings include the Base64 of `email:token`.
 - **The old test.** The `ProjectServiceImplTest` test that planted nothing is removed. It was the only method the
@@ -349,16 +349,16 @@ No CRITICAL or MAJOR findings. None of these blocks.
   captured today, but the check would not notice if the appender lost them.
 - **Fix:** assert that at least one event's logger name starts with `vn.tsolve.tracker`. Every case logs one.
 
-**A2-3. INFO: the WireMock deviation from D48 is not recorded.**
+**A2-3. INFO: the WireMock deviation from D66 is not recorded.**
 - **Location:** `harnessclaude/artifacts/04-plans/project-integration/iteration-1/kan-127-decisions.md:54`.
-- **Problem:** D48 says `MockRestServiceServer`; the test uses WireMock.
+- **Problem:** D66 says `MockRestServiceServer`; the test uses WireMock.
 - **Why the deviation is sound:**
-  - D48's reason, "no new dependency", still holds. `wiremock-standalone` has been a test dependency since
+  - D66's reason, "no new dependency", still holds. `wiremock-standalone` has been a test dependency since
     `116c681f` (`backend/pom.xml:127-132`) and is used by 6 other test classes.
   - WireMock is the stronger choice. It drives the real request factory and `HttpURLConnection`, which is how the
     header trace in A2-1 came to light. `MockRestServiceServer` replaces the request factory, so that trace would
     have stayed invisible.
-- **Fix:** add a note to D48, or a new decision row, saying WireMock was used and why.
+- **Fix:** add a note to D66, or a new decision row, saying WireMock was used and why.
 
 ## Assumptions made (attempt 2)
 
@@ -369,7 +369,7 @@ No CRITICAL or MAJOR findings. None of these blocks.
 - **A2-b.** A Project-only mutation cannot leak a planted value, because Project never holds one. So I mutated the
   tracker boundary (M1-M3) and checked the Project rendering through M3. I count that as proving the Project-side
   guarantee.
-- **A2-c.** MINOR-2 (AC-005.14) belongs to Task 7 under D48. It is outside this attempt.
+- **A2-c.** MINOR-2 (AC-005.14) belongs to Task 7 under D66. It is outside this attempt.
 
 ## Test Report (attempt 2)
 

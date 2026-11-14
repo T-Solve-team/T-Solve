@@ -17,7 +17,7 @@ SQL NULL stays NULL. It is included last in `db.changelog-master.xml`, after 026
 and `review_range` gets no CHECK, default or backfill.
 
 **Who wrote what.** The Codex CLI wrote the code test-first in two runs (`codex exec -s workspace-write --ephemeral`).
-Claude wrote the prompts, reviewed each diff against AC-005.19/20, D19, D20, D34 and D43 and `backend/AGENTS.md`, and
+Claude wrote the prompts, reviewed each diff against AC-005.19/20, D37, D38, D52 and D61 and `backend/AGENTS.md`, and
 ran every check.
 - Codex run 1 (tests only): wrote `ProjectDoneStatusesMigrationIT` with 5 methods. Red confirmed (Codex run, JDK 24
   offline): 4 tests failed with `AssertionError: [036 changeset resource] Expecting actual not to be null`, and
@@ -29,7 +29,7 @@ ran every check.
   runs wrote only files on the task's list.
 
 ### Decisions
-- The IT is a plain JUnit class with no Spring context (D43). It borrows one connection from
+- The IT is a plain JUnit class with no Spring context (D61). It borrows one connection from
   `TwoTenantDatabases.main()` (the shared server's unbound database) and creates a random `mig036_<uuid>` scratch
   schema with the pre-036 `project` columns plus `public_id`. It sets `search_path`, then runs the forward and
   rollback statements parsed from `036-project-done-statuses.sql` on the classpath. In `finally` it drops the schema
@@ -83,9 +83,9 @@ Commit after the user agrees; then Task 6 `project-connection-test` (needs track
 
 ## Session 2026-11-12 (attempt 2, fixing)
 
-### Working on: project-done-statuses-schema — review findings (D47)
+### Working on: project-done-statuses-schema — review findings (D65)
 - LOW-1: `includesChangesetOnceAfter026_AC_005_19` asserts the 036 include appears once and after 026, so the changesets of the open pull requests can be included after it.
-- INFO-2: one sentence on the rollback's edge cases added to the changeset 036 note in `04-plans/project-integration/design.md`. INFO-3 left (D43).
+- INFO-2: one sentence on the rollback's edge cases added to the changeset 036 note in `04-plans/project-integration/design.md`. INFO-3 left (D61).
 - Who wrote what: Codex wrote both in one run (prompt `kan127-fix-d46-d47.md`), run and reviewed by the main session.
 - Verify: inside Task 7's full `mvn verify` (same working tree): unit 1600, IT 462, 0 failures, BUILD SUCCESS.
 - Commit: default@db144c55

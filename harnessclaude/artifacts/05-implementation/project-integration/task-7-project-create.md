@@ -29,7 +29,7 @@ The contract was not changed (Task 6 already holds `createProject`).
   repository SQL, service and controller. Claude also reviewed Codex's tests against every Task 7 AC and kept them
   unchanged except one rename: the two new `validates…CreateBeforeMethodSecurity` tests cite `_AC_005_1` (blank key
   answered 400 before method security), not `_AC_010_3`, which is about a valid body getting 403.
-- Coordinator addition (Task 6 review, D48, MINOR-2): `ProjectCreationIT.storesTheCanonicalKeyAndFindsTheCommittedProjectByIt_AC_005_8_AC_005_14`
+- Coordinator addition (Task 6 review, D66, MINOR-2): `ProjectCreationIT.storesTheCanonicalKeyAndFindsTheCommittedProjectByIt_AC_005_8_AC_005_14`
   saves `PCRALIAS`, which Jira answers as canonical `PCRCANON`, and then
   `findActivePublicIdByJiraProjectKey("PCRCANON")` returns the committed id. The existing seeded-row AC-005.14 test
   is unchanged. The two Task 6 `_AC_010_3` controller tests are left for the main session.
@@ -41,7 +41,7 @@ because the skeleton threw before the stubbed lookup. `ProjectCreationIT` ran 15
 unbound-Workspace case passed because the skeleton also answered 500.
 
 ### Decisions
-- Check order follows D44 and AC-005.21: Bean Validation, then Workspace, caller, own Department and key format, then
+- Check order follows D62 and AC-005.21: Bean Validation, then Workspace, caller, own Department and key format, then
   range and null or blank ids, then the requested-key link, then Jira, then the canonical-key link, then ids missing
   from the fresh statuses. The service also refuses a null range and null or empty ids, for direct callers (the
   IT calls the service directly).

@@ -9,7 +9,7 @@ depth: Deep
 
 Covers UC-15 Add Ticket Resolver to Project (Jira KAN-128; numbered UC-17 in the Jira title and the module map before the SRS renumbering), STORY-001..STORY-002, and UC-16 Remove a member from a Project (Jira KAN-129, titled UC-18), STORY-003. Source: SRS v3460 (`_context/Report`): UC-15, UC-16, screen 3.2 Project Detail, GBR-02, GBR-20, MSG04, MSG05, MSG06, MSG08, MSG55. The other stories of this module (KAN-125, KAN-126, KAN-127 Add Project) are added later in Change Mode. Decision (user, 13/11): plan and build KAN-128 alone, before KAN-127.
 
-Covers UC-16 Add a Project only (KAN-127), including reconnecting a Removed Project and the add flow on screen 3.1 Jira Integration. Sources: SRS v3460 in `Sua_31-10`, UC-16, screens 3.1 and 3.2 (the initial settings), GBR-04, GBR-10, GBR-14, GBR-20 and GBR-21; `Report_3_BreakDown/System_Messages.docx.md`; the four Jira acceptance criteria in the KAN-127 brief. Verified context: `artifacts/04-plans/project-integration/iteration-1/kan-127-scout.md`. Decisions: `artifacts/04-plans/project-integration/iteration-1/kan-127-decisions.md`, D1-D37; later decisions supersede the scout where they differ. Deep depth is required by the schema change and shared API contract. This run writes the specs and module definitions only; design, tasks, approval and status changes follow separately.
+Covers UC-16 Add a Project only (KAN-127), including reconnecting a Removed Project and the add flow on screen 3.1 Jira Integration. Sources: SRS v3460 in `Sua_31-10`, UC-16, screens 3.1 and 3.2 (the initial settings), GBR-04, GBR-10, GBR-14, GBR-20 and GBR-21; `Report_3_BreakDown/System_Messages.docx.md`; the four Jira acceptance criteria in the KAN-127 brief. Verified context: `artifacts/04-plans/project-integration/iteration-1/kan-127-scout.md`. Decisions: `artifacts/04-plans/project-integration/iteration-1/kan-127-decisions.md`, D19-D37; later decisions supersede the scout where they differ. Deep depth is required by the schema change and shared API contract. This run writes the specs and module definitions only; design, tasks, approval and status changes follow separately.
 
 ## Changelog
 
@@ -19,9 +19,10 @@ Covers UC-16 Add a Project only (KAN-127), including reconnecting a Removed Proj
 | 2026-11-13 | STORY-001, STORY-002 | Builder check (before approval): no Project Manager case and MSG54 removed (only the Project Manager opens 3.2), AC-001.7/001.8 renumbered 001.6/001.7; 404 only for Project Manager callers; null full names last; no Department filter on candidates; `q` trimmed; DB time; ids in order sent; popup loads at once; AC-002.16 audit label | Builder check findings 1, 2, 4, 7, 13–17 |
 | 2026-11-14 | STORY-001, STORY-003 | Added STORY-003 Remove a member (UC-16, KAN-129): `DELETE …/members/{userId}`, MSG55 confirm, audit `{"removed": [...]}`, tickets kept; AC-001.7 reworded (no Remove button on the Project Manager's row, instead of none at all) | KAN-129; scope "remove the membership only" chosen by the user on 14/11 — the Solution Form's membership check belongs to `jira-app` (KAN-126) |
 | 2026-11-12 | STORY-004..010 | Initial spec: UC-16 Add a Project (KAN-127) | KAN-127 |
-| 2026-11-12 | STORY-004, 005 | Builder check: AC-004.21 and AC-004.22 for a requested key that differs from Jira's canonical key; AC-005.21 orders the local settings checks before the link check and Jira; the Definition of Done names how changeset 036 is proven (D44) | Builder check |
-| 2026-11-12 | STORY-004, 005, 010 | Review of the Codex draft: AC-010.8 no longer puts access before Bean Validation (`@Valid` runs before `@PreAuthorize`); AC-010.3 names a valid body; AC-004.20 and AC-005.16 drop the non-string checks Jackson's scalar coercion does not make (D33, D36 revised) | Framework order and Jackson defaults; the criteria must be testable as written |
+| 2026-11-12 | STORY-004, 005 | Builder check: AC-004.21 and AC-004.22 for a requested key that differs from Jira's canonical key; AC-005.21 orders the local settings checks before the link check and Jira; the Definition of Done names how changeset 036 is proven (D62) | Builder check |
+| 2026-11-12 | STORY-004, 005, 010 | Review of the Codex draft: AC-010.8 no longer puts access before Bean Validation (`@Valid` runs before `@PreAuthorize`); AC-010.3 names a valid body; AC-004.20 and AC-005.16 drop the non-string checks Jackson's scalar coercion does not make (D51, D54 revised) | Framework order and Jackson defaults; the criteria must be testable as written |
 | 2026-11-15 | STORY-004..010 | Merged `origin/main` into the KAN-127 branch: this module's KAN-127 stories STORY-001..007 are renumbered STORY-004..010 (AC-00n.m becomes AC-0(n+3).m) after the merged STORY-001..003 of KAN-128/KAN-129; changeset 029 renamed 036 (035 is reserved for PR #215). No criterion changes meaning | Two unmerged specs used the same ids; the unmerged PR renumbers after main |
+| 2026-11-15 | STORY-004..010 | KAN-127 design decisions D1..D57 (design.md, kan-127-decisions.md) renumbered D19..D75 (n + 18) after the D1..D18 of KAN-128/KAN-129; references in the KAN-127 spec, design, tasks, session logs, reviews, tracker docs and code comments follow. No criterion changes | Two unmerged designs used the same decision ids; the unmerged PR renumbers after main |
 
 ## Requirements
 
@@ -50,7 +51,7 @@ These are known limits of the code this story builds on. They are not defects of
 3. The initial Done statuses are the Jira project's Done-category statuses; the Project Manager can choose one or more of any of its statuses. The review range is a whole number of calendar days, at least 1, initially 3 (GBR-04, GBR-10).
 4. A Jira project key belongs to one Project across all Departments and statuses in the Workspace. Re-adding an eligible Removed Project reconnects that same Project (GBR-14, GBR-21).
 5. Every successful add or reconnect records one audit entry; failure records no change.
-6. Screen 3.1 shows the caller's Department and its Projects and opens the Add project popup. Admin keeps the existing placeholder (D30).
+6. Screen 3.1 shows the caller's Department and its Projects and opens the Add project popup. Admin keeps the existing placeholder (D48).
 
 ### Non-Functional — KAN-127 (STORY-004..010)
 1. Both Jira reads finish before and outside the write transaction; no outbound call executes with an active database transaction (`backend/AGENTS.md` section 4; AC-005.18).
@@ -65,9 +66,9 @@ These are known limits of the current dependencies, not defects of this story.
 1. Until KAN-275, only `identity-mock` binds the Workspace for these requests; real sign-in alone cannot complete this flow. Missing binding returns 500 MSG06.
 2. The browser client has no CSRF header (KAN-120 D17); a browser POST to the real backend can return 403 until that separate shared-client quick change. This story uses backend tests and MSW for browser verification.
 3. The shipped app has one datasource until the tenant layer lands. Workspace isolation is verified using the existing test router and two tenant databases.
-4. `JiraServiceAccount.current()` is the configured environment stand-in, using Basic authentication through `JiraClient`. A real scoped service-account token fails with Basic authentication; gateway Bearer support belongs to KAN-125/KAN-119 (D5, RESEARCH-003).
+4. `JiraServiceAccount.current()` is the configured environment stand-in, using Basic authentication through `JiraClient`. A real scoped service-account token fails with Basic authentication; gateway Bearer support belongs to KAN-125/KAN-119 (D23, RESEARCH-003).
 5. Removed Projects are available through seed data and fixtures only; there is no Remove story yet. Use a Removed Project of the caller's Department for reconnect fixtures, such as `OLD`, rather than the scout's inconsistent cross-Department demo membership.
-6. The stale MSG48 catalog text is corrected by a separate quick change with FE Lead review before the screen task (D29). The required text in this spec comes from the SRS.
+6. The stale MSG48 catalog text is corrected by a separate quick change with FE Lead review before the screen task (D47). The required text in this spec comes from the SRS.
 
 ## User Stories
 
@@ -165,7 +166,7 @@ These are known limits of the current dependencies, not defects of this story.
   - AC-005.18: THE system SHALL execute every Jira call before and outside any active database transaction in the add and reconnect flows.
   - AC-005.19: WHEN changeset `036-project-done-statuses.sql` applies to an existing database, THE migration SHALL convert each non-null legacy `done_status` scalar to a JSONB singleton string array and preserve SQL NULL as SQL NULL without changing another column, row or reference.
   - AC-005.21: IF `reviewRange` breaks AC-005.7 or a selected id is null or blank, THEN THE system SHALL refuse the Save after the Workspace, eligibility and key format checks and before the link check, without a Jira call; an id absent from the project's statuses (AC-005.5) is refused only after the Jira read.
-  - AC-005.20: THE migration SHALL leave `review_range` nullable with no new database CHECK, default or backfill, so existing zero and negative fixtures retain their review fallback behaviour (D20).
+  - AC-005.20: THE migration SHALL leave `review_range` nullable with no new database CHECK, default or backfill, so existing zero and negative fixtures retain their review fallback behaviour (D38).
 
 ### STORY-006: Reconnect a Removed Project
 - As a Project Manager, I want to reconnect an eligible Removed Project so that its tickets and members remain with the same Project.
@@ -259,10 +260,10 @@ KAN-128/129:
 
 KAN-127:
 - UC-15 and UC-16 member management (add and remove Ticket Resolvers on 3.2): KAN-128/KAN-129, STORY-001..003 above.
-- Screen 3.2 Project Detail, including its Settings tab and editing settings after adding (D15). No current story owns that edit; it is a backlog gap.
-- Connection status, Last import, per-row Test connection and Remove on screen 3.1 (D13).
-- A field mapping editor; a new Project stores NULL for standard Jira fields (D14).
-- Storing Jira's project id, following Jira project key renames, or changing existing key readers (D16).
+- Screen 3.2 Project Detail, including its Settings tab and editing settings after adding (D33). No current story owns that edit; it is a backlog gap.
+- Connection status, Last import, per-row Test connection and Remove on screen 3.1 (D31).
+- A field mapping editor; a new Project stores NULL for standard Jira fields (D32).
+- Storing Jira's project id, following Jira project key renames, or changing existing key readers (D34).
 - The GBR-04 end-to-end gap: KAN-126 `watchDone.js` still opens the Solution Form by Jira's Done status category. Reading these stored Done statuses for the Jira App and opening by the chosen ids is a later change; KAN-127 stores the configuration only.
 - The Admin's Jira site address and service account configuration (UC-10/UC-11, KAN-119), credential encryption and gateway Bearer support.
 - UUID key alignment of the internal tables (KAN-248); public API ids remain UUIDs through existing `public_id` columns.
@@ -295,7 +296,7 @@ Exactly three operations are added to `frontend/openapi/tsolve-api.yaml` before 
 | `POST /api/v1/projects` | `createProject` | `CreateProjectRequest` | 201 new `Project`; 200 reconnected `Project` |
 | `GET /api/v1/projects` | `listProjects` | No body or query parameters | 200 `ProjectList` |
 
-`application/json` is used for request and success bodies. All UUID fields below are UUID strings, never internal BIGINT ids. `projectId` refers to `project.public_id`; `departmentId` refers to `department.public_id`; `userId` refers to `app_user.id` (D32).
+`application/json` is used for request and success bodies. All UUID fields below are UUID strings, never internal BIGINT ids. `projectId` refers to `project.public_id`; `departmentId` refers to `department.public_id`; `userId` refers to `app_user.id` (D50).
 
 #### Request schemas
 
@@ -360,7 +361,7 @@ The initial 3 is a connection-test prefill, not a Save default: omitting `review
 |-------|------|----------|---------|
 | `projectId` | UUID string | yes | Public Project ID displayed in the table. |
 | `jiraProjectKey` | string | yes | Stored key. |
-| `projectManager` | object or null | yes | `{userId: UUID string, fullName: string}` from the Project Manager membership if the account is Active, otherwise null. This display rule is distinct from the stricter D27 reconnect protection rule. |
+| `projectManager` | object or null | yes | `{userId: UUID string, fullName: string}` from the Project Manager membership if the account is Active, otherwise null. This display rule is distinct from the stricter D45 reconnect protection rule. |
 | `memberCount` | integer, minimum 0 | yes | Count of all membership rows; Project Manager counts. |
 | `status` | string enum `ACTIVE`, `REMOVED` | yes | Browser labels are Active and Removed. |
 
@@ -368,7 +369,7 @@ The initial 3 is a connection-test prefill, not a Save default: omitting `review
 
 Errors use the existing `application/problem+json` `ProblemDetail` schema: `status`, `code`, `params`, and `fieldErrors: [{field, code, params}]` for a field error. No field error means `fieldErrors` is absent. Each operation's table below defines its errors; success bodies carry no MSG code. Unexpected failures use 500 MSG06.
 
-MSG01 uses `field_name`, for example "The Project key field is required.". MSG02 uses `field_name` and `max_length`, for example "Project key must not exceed 20 characters.". Server `field_name` is the API property name; client validation uses the displayed field label (D31). MSG44 has no params: "Review range must be a whole number of days, 1 or more.". MSG47 is "Connected to Jira successfully." with `tracker_name = Jira`. MSG48 is "Could not connect to Jira. Check the project key and that the service account can browse this project." with `tracker_name = Jira`. MSG49 uses `tracker_name = Jira` and the owning Department's name, for example "This Jira project already belongs to IT Operations.". MSG54 is "No Project Manager. Tickets of this Project are not being reviewed.". MSG04 is "No results found."; MSG05 is "Changes saved successfully.". The web app renders these through the MSG catalog.
+MSG01 uses `field_name`, for example "The Project key field is required.". MSG02 uses `field_name` and `max_length`, for example "Project key must not exceed 20 characters.". Server `field_name` is the API property name; client validation uses the displayed field label (D49). MSG44 has no params: "Review range must be a whole number of days, 1 or more.". MSG47 is "Connected to Jira successfully." with `tracker_name = Jira`. MSG48 is "Could not connect to Jira. Check the project key and that the service account can browse this project." with `tracker_name = Jira`. MSG49 uses `tracker_name = Jira` and the owning Department's name, for example "This Jira project already belongs to IT Operations.". MSG54 is "No Project Manager. Tickets of this Project are not being reviewed.". MSG04 is "No results found."; MSG05 is "Changes saved successfully.". The web app renders these through the MSG catalog.
 
 #### `testProjectConnection` status table
 
@@ -518,15 +519,15 @@ Conflict response (same envelope for both POST operations):
 
 ### Persistence contract
 
-Changeset `036-project-done-statuses.sql`, author `project`, id `036-project-done-statuses`, is included last in `db.changelog-master.xml` (D19). It changes `done_status` from VARCHAR to JSONB with the preservation rules in AC-005.19; no applied changeset is edited. No new review-range CHECK is permitted (D20).
+Changeset `036-project-done-statuses.sql`, author `project`, id `036-project-done-statuses`, is included last in `db.changelog-master.xml` (D37). It changes `done_status` from VARCHAR to JSONB with the preservation rules in AC-005.19; no applied changeset is edited. No new review-range CHECK is permitted (D38).
 
-`ProjectLinkRepository` uses `NamedParameterJdbcTemplate` (D22), deliberately differing from the JPA repository default in `backend/AGENTS.md` section 3. The existing `Project` entity remains unchanged. Insert uses `ON CONFLICT (jira_project_key) DO NOTHING RETURNING`; no returned row means 409 MSG49, not a swallowed failed transaction. Reconnect uses a conditional `UPDATE ... WHERE status = 'REMOVED'` on the identified row, after eligibility checks. No updated row means 409 MSG49. A losing insert never turns into an implicit reconnect. Membership replacement deletes the old Project Manager row before `ON CONFLICT (user_id, project_id) DO UPDATE` upserts the caller; it respects `uq_membership_one_manager`. Conditional writes and audit share one transaction. The test never calls these writes.
+`ProjectLinkRepository` uses `NamedParameterJdbcTemplate` (D40), deliberately differing from the JPA repository default in `backend/AGENTS.md` section 3. The existing `Project` entity remains unchanged. Insert uses `ON CONFLICT (jira_project_key) DO NOTHING RETURNING`; no returned row means 409 MSG49, not a swallowed failed transaction. Reconnect uses a conditional `UPDATE ... WHERE status = 'REMOVED'` on the identified row, after eligibility checks. No updated row means 409 MSG49. A losing insert never turns into an implicit reconnect. Membership replacement deletes the old Project Manager row before `ON CONFLICT (user_id, project_id) DO UPDATE` upserts the caller; it respects `uq_membership_one_manager`. Conditional writes and audit share one transaction. The test never calls these writes.
 
 ### Required from other modules — KAN-127 (STORY-004..010)
 | Owner | Required interface | Use |
 |-------|--------------------|-----|
-| tracker | `tracker.service.TrackerProjectService.findProject(String projectKey)` returning `tracker.dto.TrackerProjectLookup(outcome, key, statuses)` | New tracker STORY-013, D28. `FOUND`, `NOT_FOUND`, `DENIED`, `UNAVAILABLE`; no client or exception leaks into Project. |
-| identity | `identity.signin.port.TenantScope.currentWorkspaceId()` and authenticated `TSolveUser` | Workspace binding and caller id. Own Department is read through Project's repository using existing tables (D21), not another module's repository. |
+| tracker | `tracker.service.TrackerProjectService.findProject(String projectKey)` returning `tracker.dto.TrackerProjectLookup(outcome, key, statuses)` | New tracker STORY-013, D46. `FOUND`, `NOT_FOUND`, `DENIED`, `UNAVAILABLE`; no client or exception leaks into Project. |
+| identity | `identity.signin.port.TenantScope.currentWorkspaceId()` and authenticated `TSolveUser` | Workspace binding and caller id. Own Department is read through Project's repository using existing tables (D39), not another module's repository. |
 | workspace | Existing `department` data and `DepartmentRef` API shape | Read-only Department in the list; no new workspace operation or dependency on the unmerged KAN-120 branch. |
 | common | `AuditService.record(action, targetType, targetId, details)` | Joins the write transaction and obtains the signed-in actor; audit ids are public UUIDs. |
 | common | `Roles.PROJECT_MANAGER`, `GlobalExceptionHandler`, coded exceptions and `ProblemDetail` | Shared method security and the error envelope; no module exception handler. |
@@ -549,5 +550,5 @@ Tracker already calls `ProjectService.findActivePublicIdByJiraProjectKey` for is
 - [ ] `npm run generate:api` leaves no diff in `src/shared/api/generated` after generation from the updated YAML contract.
 - [ ] Changeset 036 applies on an empty database (every IT starts on the full changelog) and its statements convert a pre-036 `project` shape holding NULL and non-null legacy Done status values with every other column unchanged; existing zero/negative review fallback fixtures still work.
 - [ ] MSW supports list, test, create and reconnect consistently, including a Removed fixture of the caller's Department; page tests verify refresh and error retention.
-- [ ] The separate D29 MSG48 catalog quick change is complete before the screen task; the interim limits and GBR-04 follow-up remain visible in the implementation handoff.
+- [ ] The separate D47 MSG48 catalog quick change is complete before the screen task; the interim limits and GBR-04 follow-up remain visible in the implementation handoff.
 - [ ] Each feature stops after verification for user agreement on its commit, with one feature per code commit plus its harness commit; no push, merge or pull request without an explicit request.

@@ -1,7 +1,7 @@
-# Hardening pass: KAN-127 test hardening (D50, D51, D52, D54)
+# Hardening pass: KAN-127 test hardening (D68, D69, D70, D72)
 
 **Module:** project-integration (and tracker STORY-013)
-**Assignee:** Đặng Tấn Bình (Developer: Claude, D49, no Codex)
+**Assignee:** Đặng Tấn Bình (Developer: Claude, D67, no Codex)
 **Status:** in-progress (feature statuses unchanged: all `passing`)
 **Iteration:** 1
 
@@ -12,7 +12,7 @@
 ### Working on: test-hardening pass (STORY-005, STORY-006, STORY-007, tracker STORY-013)
 
 Branch `feat/KAN-127-project-integration-add-project`, from HEAD `7465d274`. Backend only. Only items 3 and 8 change
-`src/main`. Every other item adds tests. One shared IT context (D43): no new container, `@MockBean`,
+`src/main`. Every other item adds tests. One shared IT context (D61): no new container, `@MockBean`,
 `@TestPropertySource` or `@DirtiesContext`. The waiter ITs borrow a second connection from the existing tenant pool
 (`TwoTenantDatabases.tenantA().getDataSource()`).
 
@@ -51,7 +51,7 @@ only once the Save really waits. On a timeout it throws, and the holder rolls ba
     `refusesALostInsert…_AC_005_11`, `refusesAReconnectThatWaited…_AC_006_8` and both race ITs.
   - M2b (line removed): **killed** by the unit test.
 
-#### 4. D51 A2-2: the secrecy test must see T-Solve's own logs
+#### 4. D69 A2-2: the secrecy test must see T-Solve's own logs
 - `ProjectConnectionSecrecyTest`: "logs were captured" now requires at least one event from a `vn.tsolve.tracker`
   logger (`anyMatch(… startsWith("vn.tsolve.tracker"))`). The `sun.net.www` exclusion and `application.yml` were not
   touched; A2-1 is still a separate quick change.
@@ -97,7 +97,7 @@ only once the Save really waits. On a timeout it throws, and the holder rolls ba
     (`assertReconnectAudit`).
 - No production mutation applies: the database is chosen by the routing data source, which is test infrastructure.
 
-#### 8. T5 LOW-1 / D54: `project.status` through `ProjectStatus` (`src/main`)
+#### 8. T5 LOW-1 / D72: `project.status` through `ProjectStatus` (`src/main`)
 - The enum exists: `vn.tsolve.project.entity.ProjectStatus {ACTIVE, REMOVED}`. No new public type.
 - `ProjectLinkRepository`: a private `status(String stored)` returns `ProjectStatus.valueOf(stored).name()`. It is
   used by `listProjects` and `readProject` (Task 7). The DTOs keep `String status`, so the contract does not change.
@@ -148,11 +148,11 @@ Git Bash, `backend/`, JAVA_HOME = IntelliJ JBR, Docker 29.1.3:
 ### Next up
 The main session runs the full verify and commits (items 3 and 8 change no behaviour today; see the proposed header).
 
-### Main session additions (D56, Task 11 review)
+### Main session additions (D74, Task 11 review)
 - LOW-1: `AddProjectModalErrors.test.tsx` gains `AC-009.19 leaves a 401 to the shared MSG07 dialog with no toast of its own`.
   Mutation: removing `|| error.status === 401` from `showError` → this test fails (1 failed | 17 passed); restored.
 - LOW-2: `JiraIntegrationPage.test.tsx` — the row-order test is renamed to AC-008.2 and AC-008.3 is restored on the first
-  test (the only one checking the manager's `fullName`); D55's wording corrected.
+  test (the only one checking the manager's `fullName`); D73's wording corrected.
 
 ### Full verify (main session)
 - Backend `mvn -B spotless:apply && mvn -B -Dapi.version=1.44 verify` → unit `Tests run: 1643, Failures: 0, Errors: 0,

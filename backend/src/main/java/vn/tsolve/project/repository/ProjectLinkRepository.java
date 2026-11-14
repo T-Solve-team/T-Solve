@@ -94,7 +94,7 @@ public class ProjectLinkRepository {
                 (rs, rowNum) -> rs.getObject(1, UUID.class));
     }
 
-    /** Empty when another Project already holds the key: a lost insert, never turned into a reconnect (D22). */
+    /** Empty when another Project already holds the key: a lost insert, never turned into a reconnect (D40). */
     public Optional<UUID> insertProject(
             long departmentId, String jiraProjectKey, List<String> doneStatusIds, int reviewRange) {
         return jdbc
@@ -117,7 +117,7 @@ public class ProjectLinkRepository {
 
     /**
      * Reconnects a Removed row in place with Jira's canonical key and the saved settings; Department, tickets and
-     * {@code field_mapping} stay. Zero when the row is no longer Removed: the caller lost the race (D22).
+     * {@code field_mapping} stay. Zero when the row is no longer Removed: the caller lost the race (D40).
      */
     public int reconnectProject(UUID projectId, String jiraProjectKey, List<String> doneStatusIds, int reviewRange) {
         return jdbc.update(
@@ -195,7 +195,7 @@ public class ProjectLinkRepository {
         });
     }
 
-    /** Through the enum, so an unknown stored value fails as 500 MSG06 instead of reaching the client (D54). */
+    /** Through the enum, so an unknown stored value fails as 500 MSG06 instead of reaching the client (D72). */
     private static String status(String stored) {
         return ProjectStatus.valueOf(stored).name();
     }

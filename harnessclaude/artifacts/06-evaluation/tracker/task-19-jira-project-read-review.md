@@ -182,7 +182,7 @@ Run fresh from `backend/` (JAVA_HOME = IntelliJ JBR) on the working tree. `git s
 
 **Verdict: pass** (attempt 2, with an open judgment call on MEDIUM-8). Fix commit `eeaee68d`
 (`eeaee68d^..eeaee68d`), on top of `aa966ab8`. The changes are 4 backend files plus the BUG-208 row in
-`docs/bug-log.md`. Decision D45 (`kan-127-decisions.md`) chose to fix MEDIUM-1, LOW-3 and INFO-4 and to leave LOW-2,
+`docs/bug-log.md`. Decision D63 (`kan-127-decisions.md`) chose to fix MEDIUM-1, LOW-3 and INFO-4 and to leave LOW-2,
 INFO-5 and INFO-6.
 
 ## Summary
@@ -198,7 +198,7 @@ each of these becomes UNAVAILABLE (probe below):
 
 LOW-3 is fixed. The test reads the request factory's real timeouts. Without the setters the factory keeps its default
 of -1, so the assertions on 3000 and 7000 would fail. INFO-4 is fixed: status 0 logs "no answer", and the test
-asserts that "answered 0" is absent. LOW-2, INFO-5 and INFO-6 are unchanged, as D45 decided.
+asserts that "answered 0" is absent. LOW-2, INFO-5 and INFO-6 are unchanged, as D63 decided.
 
 The comment operations show no behavioural regression. `SuggestionJobServiceImpl.java:51,66` catches every
 `RuntimeException` the same way, so turning an `IllegalArgumentException` into `JiraUnavailableException` changes only
@@ -207,7 +207,7 @@ the log line in `SuggestionCommentServiceImpl.java:49-56`.
 Two new findings, both confirmed by my own probe:
 - **MEDIUM-8** (Codex): a site URL with a non-HTTP scheme still throws, now as `IllegalStateException`, which the fix
   does not catch. It is the same class of configuration error as MEDIUM-1. It is non-blocking by the same reasoning
-  as attempt 1, but **read strictly (as D45 did), it is a fail** (see Assumptions).
+  as attempt 1, but **read strictly (as D63 did), it is a fail** (see Assumptions).
 - **LOW-7** (Claude and Codex): BUG-208's note overstates the effect on `findComment`.
 
 ## Criteria
@@ -221,7 +221,7 @@ Two new findings, both confirmed by my own probe:
 
 ### Attempt-1 findings
 
-| Finding | D45 decision | Status in `eeaee68d` | Evidence |
+| Finding | D63 decision | Status in `eeaee68d` | Evidence |
 |---------|--------------|----------------------|----------|
 | MEDIUM-1 non-Jira exceptions escape | fix | **Fixed** for the listed inputs (residual: MEDIUM-8) | `JiraClient.java:164-166`; `JiraClientTest.java:458` (scheme-less, real client, both reads), `:484` (`:` and Cyrillic email, both reads), `:503` (invalid Content-Type, both reads), `:526` (through `TrackerProjectServiceImpl`: UNAVAILABLE, no key, no statuses, and no statuses call, because `jira.verify()` has one expectation) |
 | LOW-2 trailing JSON accepted | leave | Unchanged, as decided | `JiraClient.java:87-92,103-107` still `body(JsonNode.class)` |
@@ -272,10 +272,10 @@ No CRITICAL findings. Non-blocking:
 ## Assumptions made
 
 - **MEDIUM-8 is not blocking.** I keep attempt 1's reading: AC-013.7/AC-013.8 cover Jira's answers, and a non-HTTP site
-  URL is a configuration error that surfaces as 500 MSG06 with no leak. But D45 fixed MEDIUM-1 under the strict
+  URL is a configuration error that surfaces as 500 MSG06 with no leak. But D63 fixed MEDIUM-1 under the strict
   reading of AC-013.7 and the interface Javadoc ("never thrown"). Under that same reading, MEDIUM-8 breaks the
   contract and the verdict is **fail**. **Open judgment call.** The fix is a single catch in the service.
-- LOW-2 (trailing JSON) is still open by D45's choice. I keep my attempt-1 reading that AC-013.8's "unreadable" does
+- LOW-2 (trailing JSON) is still open by D63's choice. I keep my attempt-1 reading that AC-013.8's "unreadable" does
   not cover it. **Open judgment call** (unchanged from attempt 1).
 - LOW-7 is non-blocking, because it is outside STORY-013 and changes no behaviour.
 
@@ -316,7 +316,7 @@ is empty). Run from `backend/` with JAVA_HOME set to the IntelliJ JBR:
 
 **Verdict: pass** (attempt 3). Fix commit `ba276218` (`ba276218^..ba276218`), harness commit `7c71b75f`. Three files
 changed: `TrackerProjectServiceImpl.java` (+7), `JiraClientTest.java` (+13), and the BUG-208 row in `docs/bug-log.md`.
-Decision D46 chose to fix MEDIUM-8 and to correct the BUG-208 note for LOW-7.
+Decision D64 chose to fix MEDIUM-8 and to correct the BUG-208 note for LOW-7.
 
 ## Summary
 
@@ -352,14 +352,14 @@ LOW finding is about test strength only.
 
 | Finding | Decision | Status in `ba276218` | Evidence |
 |---------|----------|----------------------|----------|
-| MEDIUM-1 non-Jira exceptions escape | D45 fix | Fixed (attempt 2); now backed by the catch-all | `JiraClient.java:164-166` plus `TrackerProjectServiceImpl.java:69-76` |
-| LOW-2 trailing JSON accepted | D45 leave | Unchanged, as decided | `JiraClient.java` read paths unchanged |
-| LOW-3 timeout test | D45 fix | Fixed (attempt 2) | unchanged |
-| INFO-4 "answered 0" | D45 fix | Fixed (attempt 2) | `TrackerProjectServiceImpl.java:59-60` |
-| INFO-5 record invariants | D45 leave | Unchanged, as decided | `tracker/dto` not touched |
-| INFO-6 formatting noise | D45 leave | Unchanged, as decided | — |
-| LOW-7 BUG-208 note overstated | D46 correct the note | **Fixed** | `docs/bug-log.md:213`: the note now names the `findComment` gap as STORY-012 and out of scope |
-| MEDIUM-8 non-HTTP scheme escapes | D46 fix | **Fixed** | `TrackerProjectServiceImpl.java:69-76`; test `JiraClientTest.java:525-536` |
+| MEDIUM-1 non-Jira exceptions escape | D63 fix | Fixed (attempt 2); now backed by the catch-all | `JiraClient.java:164-166` plus `TrackerProjectServiceImpl.java:69-76` |
+| LOW-2 trailing JSON accepted | D63 leave | Unchanged, as decided | `JiraClient.java` read paths unchanged |
+| LOW-3 timeout test | D63 fix | Fixed (attempt 2) | unchanged |
+| INFO-4 "answered 0" | D63 fix | Fixed (attempt 2) | `TrackerProjectServiceImpl.java:59-60` |
+| INFO-5 record invariants | D63 leave | Unchanged, as decided | `tracker/dto` not touched |
+| INFO-6 formatting noise | D63 leave | Unchanged, as decided | — |
+| LOW-7 BUG-208 note overstated | D64 correct the note | **Fixed** | `docs/bug-log.md:213`: the note now names the `findComment` gap as STORY-012 and out of scope |
+| MEDIUM-8 non-HTTP scheme escapes | D64 fix | **Fixed** | `TrackerProjectServiceImpl.java:69-76`; test `JiraClientTest.java:525-536` |
 
 ## Traceability
 
@@ -389,7 +389,7 @@ No CRITICAL, HIGH or MEDIUM findings. Non-blocking:
 10. **INFO-10 — the catch-all also hides programming errors**
     - A `NullPointerException` or similar bug inside `findProject` now becomes `UNAVAILABLE` (503 MSG06 for the
       Project caller), logged at WARN with the class name and no stack trace.
-    - This is the intended trade-off of D46 (the "never thrown" contract wins), so it is not a defect. Note it when
+    - This is the intended trade-off of D64 (the "never thrown" contract wins), so it is not a defect. Note it when
       debugging a 503 that Jira did not cause.
     - Fix: none required.
 
@@ -399,7 +399,7 @@ No CRITICAL, HIGH or MEDIUM findings. Non-blocking:
   class name as harmless diagnostic text, the same kind as the existing "(no service account)" and "(no answer)"
   suffixes: it carries no credential or body. If AC-013.12 is meant as an exhaustive list, the class name must go.
   **Open judgment call (minor).**
-- LOW-2 (trailing JSON) stays open by D45's choice. I keep my attempt-1 reading of "unreadable" (AC-013.8).
+- LOW-2 (trailing JSON) stays open by D63's choice. I keep my attempt-1 reading of "unreadable" (AC-013.8).
 - The attempt-1 and attempt-2 judgment calls on MEDIUM-1 and MEDIUM-8 are closed: both are fixed.
 
 ## Test Report

@@ -54,7 +54,7 @@ import vn.tsolve.tracker.dto.JiraAccount;
 import vn.tsolve.tracker.service.impl.TrackerProjectServiceImpl;
 
 /**
- * AC-004.17 end to end without a Spring context (D43): the real tracker service and Jira client talk to a fake Jira
+ * AC-004.17 end to end without a Spring context (D61): the real tracker service and Jira client talk to a fake Jira
  * that echoes the service account's credentials in its bodies, and the Project's answers are rendered by the real
  * controller and {@link GlobalExceptionHandler}. Nothing planted may reach a response or any log line.
  */
@@ -71,7 +71,7 @@ class ProjectConnectionSecrecyTest {
             + "\",\"statuses\":[{\"id\":\"10002\",\"name\":\"Done\",\"description\":\"" + EMAIL
             + "\",\"statusCategory\":{\"key\":\"done\"}}]}]";
     // The fake Jira's own loggers report what it serves; they are the test's server, not T-Solve. The JDK's HTTP
-    // client (`sun.net.www`) is not excluded: application.yml pins it at INFO (D51), and the same Spring start that
+    // client (`sun.net.www`) is not excluded: application.yml pins it at INFO (D69), and the same Spring start that
     // bridges JUL to SLF4J applies that pin, so a full run fails here if the pin is lost.
     private static final List<String> FAKE_SERVER_LOGGERS =
             List.of("com.github.tomakehurst", "wiremock", "org.eclipse");

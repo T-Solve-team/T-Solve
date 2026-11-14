@@ -67,7 +67,7 @@ describe('JiraIntegrationPage', () => {
     expect(screen.queryByRole('row', { name: /\bSUP\b/ })).not.toBeInTheDocument();
   });
 
-  it('AC-008.2 keeps the returned row order instead of sorting by key (D55)', async () => {
+  it('AC-008.2 keeps the returned row order instead of sorting by key (D73)', async () => {
     const row = (suffix: string, jiraProjectKey: string) => ({
       projectId: `00000000-0000-4000-8000-0000000003${suffix}`,
       jiraProjectKey,

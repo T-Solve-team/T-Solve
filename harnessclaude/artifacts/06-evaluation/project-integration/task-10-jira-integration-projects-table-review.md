@@ -28,7 +28,7 @@ I checked it against:
 - Task 10 in `iteration-1/tasks.md`
 - the master `design.md` "Web app" and MSW paragraphs, and edge-case rows 2, 15, 19, 21, 30, 36 and 37
 - `iteration-1/design.md`
-- D26, D29–D33, D36, D44, D53 and D54 in `kan-127-decisions.md`
+- D44, D47–D51, D54, D62, D71 and D72 in `kan-127-decisions.md`
 - `frontend/AGENTS.md` and guidelines 05, 06, 07, 08 and 10
 - the `review` reference feature (`mocks/handlers.ts` `actor()`, `ReviewQueuePage`)
 - the backend contract: `listProjects`, `testProjectConnection`, `createProject`, `ProjectList`, `ProjectRow`,
@@ -65,7 +65,7 @@ How the screen works:
   (mutation M1 is killed).
 
 The three listed deviations are acceptable:
-- **No AC-009 ids on the fixture tests.** Correct, and consistent with D48. `sdd.ts trace … STORY-009` must not
+- **No AC-009 ids on the fixture tests.** Correct, and consistent with D66. `sdd.ts trace … STORY-009` must not
   count mock-contract tests as popup coverage. Task 11's popup tests own AC-009.15–AC-009.17.
 - **`EmptyState` instead of `DataTable`'s empty view.** Required by AC-008.8 ("MSG04 in place of the table"):
   `DataTable` would show MSG04 inside an empty table with headers. Mutation M3 confirms that the test tells the two
@@ -164,7 +164,7 @@ No CRITICAL, HIGH or MEDIUM findings. Non-blocking:
      `ProjectsTable.tsx:31` (`rows={rows}`).
    - The default mock already returns the rows sorted by key (`OLD, OPS`). Mutation M6 sorts the rows in the
      table (`[...rows].sort(by jiraProjectKey)`) and all 9 page tests still pass.
-   - Today's code does not sort, so this is a gap in the test, not a defect. But AC-008.2 and D26 forbid client
+   - Today's code does not sort, so this is a gap in the test, not a defect. But AC-008.2 and D44 forbid client
      sorting. A later `localeCompare` sort would differ from the backend's `COLLATE "C"` order for keys with `_`
      (Task 9 INFO-3), and nothing would catch it.
    - Fix (a few lines in the existing test, or a new one): override the list with rows that are *not* in key order,
@@ -173,8 +173,8 @@ No CRITICAL, HIGH or MEDIUM findings. Non-blocking:
    instead of one per field**
    - Location: `frontend/src/features/jira-integration/mocks/handlers.ts:237-239` (`checkSettings` before
      `checkKey`), `:130-137` and `:110-117`.
-   - Backend order (D44): `@Valid` first, which yields one error per failing field: key MSG01/MSG02, ids MSG01,
-     range MSG01. Then the role (D36: a non-PM with an invalid body gets 400). Then the key format (MSG48). Then MSG44
+   - Backend order (D62): `@Valid` first, which yields one error per failing field: key MSG01/MSG02, ids MSG01,
+     range MSG01. Then the role (D54: a non-PM with an invalid body gets 400). Then the key format (MSG48). Then MSG44
      and blank ids. Then MSG49, then Jira.
    - The mock checks the role first. It then runs every settings check (including MSG44) before the key checks, and
      answers only the first error.
@@ -200,7 +200,7 @@ No CRITICAL, HIGH or MEDIUM findings. Non-blocking:
 4. **INFO-4 — a status outside `STATUS_TAGS` would crash the page instead of showing a cell**
    - Location: `frontend/src/shared/ui/StatusTag/StatusTag.tsx:9` (`const { label, color } = STATUS_TAGS[status]`),
      reached from `ProjectsTable.tsx:20`.
-   - This is the frontend side of Task 9 LOW-1. D54 already decided that the backend fails loudly (500 MSG06) on an
+   - This is the frontend side of Task 9 LOW-1. D72 already decided that the backend fails loudly (500 MSG06) on an
      unknown `project.status`, and the generated type allows only `ACTIVE | REMOVED`. No action in this feature;
      `shared/ui` is outside its scope.
 5. **INFO-5 — two small assertion gaps in the mock-contract tests**

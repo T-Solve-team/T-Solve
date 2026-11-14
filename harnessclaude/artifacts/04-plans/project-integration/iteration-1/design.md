@@ -10,7 +10,7 @@ Spec: `artifacts/03-modules/project-integration/spec.md`
 Master: `artifacts/04-plans/project-integration/design.md`
 Tasks: `artifacts/04-plans/project-integration/iteration-1/tasks.md`
 
-Iteration 1 contains all of KAN-127's current master design, UC-16 STORY-004–010. Seven Project tasks follow tracker Task 19 (`jira-project-read`, STORY-013), whose body lives in the tracker plan. D29's separate MSG48 catalog quick change precedes the screen. All deliverables are pending; this file does not approve specs or change module state.
+Iteration 1 contains all of KAN-127's current master design, UC-16 STORY-004–010. Seven Project tasks follow tracker Task 19 (`jira-project-read`, STORY-013), whose body lives in the tracker plan. D47's separate MSG48 catalog quick change precedes the screen. All deliverables are pending; this file does not approve specs or change module state.
 
 ## Architecture Overview
 
@@ -26,18 +26,18 @@ The master's full changeset 036 converts scalar `done_status` to JSONB singleton
 
 ## Key Decisions
 
-The master's Decision/Choice/Alternatives/Rationale table incorporates D1–D43, including historical supersessions. Principal constraints for this iteration:
+The master's Decision/Choice/Alternatives/Rationale table incorporates D19–D61, including historical supersessions. Principal constraints for this iteration:
 
 | Decision | Choice | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
-| D4, D28, D38 | Tracker read service, Optional canonical key client result, typed statuses | Direct Project client; extra TrackerProject DTO | One credential/error boundary, explicit RUN 2 contract |
-| D19, D20, D34 | 036 last, preserving scalar/NULL; no range CHECK | Reuse 027; constrain existing ranges | Other branches reserve 027/028; review fallback fixtures require 0/-1 |
-| D21, D22 | Own Department SQL; NamedParameterJdbcTemplate | Identity changes; extend JPA entity | Exact own-scope check, conflict-safe insert, unchanged JPA lookup |
-| D23, D24, D33 | Fresh ids; BigDecimal range; deduplicate exact ids | Trust tested values; Integer truncation | Reject stale selections and fractions, preserve user intent |
-| D25, D36, D42 | Exact coded exceptions; @Valid first; group-sequenced key validation | Module handlers; unordered blank/length errors | Existing global contract, deterministic MSG01/MSG02 |
-| D27, D41 | Protected previous PM; locked reconnect; canonical-key recheck | Demote old PM; merge aliases | At most one manager, preserved Project identity and data |
-| D29, D30, D37, D40 | Separate catalog quick change; existing FormModal; busy lock | Shared kit edits; editable in-flight form | Scope ownership, one request and no stale settings |
-| D39, D43 | Extend ProjectService; one shared IT configuration/container | New service; one test stack per class | Keep lookup compatibility, prove transaction/isolation efficiently |
+| D22, D46, D56 | Tracker read service, Optional canonical key client result, typed statuses | Direct Project client; extra TrackerProject DTO | One credential/error boundary, explicit RUN 2 contract |
+| D37, D38, D52 | 036 last, preserving scalar/NULL; no range CHECK | Reuse 027; constrain existing ranges | Other branches reserve 027/028; review fallback fixtures require 0/-1 |
+| D39, D40 | Own Department SQL; NamedParameterJdbcTemplate | Identity changes; extend JPA entity | Exact own-scope check, conflict-safe insert, unchanged JPA lookup |
+| D41, D42, D51 | Fresh ids; BigDecimal range; deduplicate exact ids | Trust tested values; Integer truncation | Reject stale selections and fractions, preserve user intent |
+| D43, D54, D60 | Exact coded exceptions; @Valid first; group-sequenced key validation | Module handlers; unordered blank/length errors | Existing global contract, deterministic MSG01/MSG02 |
+| D45, D59 | Protected previous PM; locked reconnect; canonical-key recheck | Demote old PM; merge aliases | At most one manager, preserved Project identity and data |
+| D47, D48, D55, D58 | Separate catalog quick change; existing FormModal; busy lock | Shared kit edits; editable in-flight form | Scope ownership, one request and no stale settings |
+| D57, D61 | Extend ProjectService; one shared IT configuration/container | New service; one test stack per class | Keep lookup compatibility, prove transaction/isolation efficiently |
 
 Decided in planning: use the master's SQL and exact file plan, not the older scout proposals to expand the JPA entity or add a review-range constraint. Tracker Task 19 and Project Task 6 require their respective current specs approved before code; this planning run invokes no approval/status commands.
 
@@ -47,7 +47,7 @@ Exact paths and Create/Modify classifications live in the master and tasks. Scop
 
 ## External Dependencies
 
-None new. Tracker Task 19 supplies `TrackerProjectService`; existing audit/security/tenant ports and FE kit supply the rest. D29 and production binding/CSRF/Bearer follow-ups retain their separate owners.
+None new. Tracker Task 19 supplies `TrackerProjectService`; existing audit/security/tenant ports and FE kit supply the rest. D47 and production binding/CSRF/Bearer follow-ups retain their separate owners.
 
 ## Edge Cases & Risks
 

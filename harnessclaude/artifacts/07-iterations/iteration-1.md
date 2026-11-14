@@ -118,7 +118,7 @@ original date window has passed. Spec: `artifacts/03-modules/triage/spec.md`; ac
 
 ### project-integration (added 2026-11-12)
 
-KAN-127, UC-16: test/add/reconnect a Jira Project and list the caller's Department Projects on screen 3.1. Spec: `artifacts/03-modules/project-integration/spec.md`; tasks: `artifacts/04-plans/project-integration/iteration-1/tasks.md`. Tracker Task 19 is the read dependency; D29's separate MSG48 catalog quick change precedes the screen.
+KAN-127, UC-16: test/add/reconnect a Jira Project and list the caller's Department Projects on screen 3.1. Spec: `artifacts/03-modules/project-integration/spec.md`; tasks: `artifacts/04-plans/project-integration/iteration-1/tasks.md`. Tracker Task 19 is the read dependency; D47's separate MSG48 catalog quick change precedes the screen.
 
 | Task | Assignee | Status |
 |------|----------|--------|

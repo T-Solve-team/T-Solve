@@ -40,7 +40,7 @@ function statusOptions(statuses: TrackerStatus[]) {
 type AddProjectModalProps = { isOpen: boolean; onClose: () => void };
 
 /**
- * 3.1 Add project (popup) — spec STORY-009, D30/D37/D40. The primary action is Test connection until a test
+ * 3.1 Add project (popup) — spec STORY-009, D48/D55/D58. The primary action is Test connection until a test
  * succeeds, then Save; editing the key discards the tested result. While a request runs the popup is locked.
  */
 export function AddProjectModal({ isOpen, onClose }: AddProjectModalProps) {

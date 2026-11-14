@@ -26,7 +26,7 @@ I checked it against:
   `frontend/openapi/tsolve-api.yaml`
 - Task 9 in `iteration-1/tasks.md`
 - edge-case rows 13, 25–27 and 30 of the master `design.md`
-- D26, D32, D36 and D50–D53 in `kan-127-decisions.md`
+- D44, D50, D54 and D68–D71 in `kan-127-decisions.md`
 - the DDL for `project`, `project_membership` and `uq_membership_one_manager` (changesets 002, 017 and 023)
 
 I read the session log only for the commit ids, the listed deviations and the claimed test counts.
@@ -61,7 +61,7 @@ Findings:
   would leak past the `ProjectStatus` enum.
 - INFO-2 and INFO-3 are notes, not defects.
 
-Findings already accepted under D50 or D52 are not raised again.
+Findings already accepted under D68 or D70 are not raised again.
 
 ## Criteria
 
@@ -79,14 +79,14 @@ Findings already accepted under D50 or D52 are not raised again.
 | 1 | AC-007.1 200 `ProjectList`, own Department `{departmentId, name}`, all Active and Removed Projects | PASS (LOW-1) | `ProjectServiceImpl.java:297-302` builds `DepartmentRefResponse(department.departmentPublicId(), department.name())`, a public UUID. The IT compares the whole body: four own Projects (two Active, two Removed), with the foreign `PLSOTHER` absent. No status filter exists, so any third value would also be listed (LOW-1). |
 | 2 | AC-007.2 key ascending, no paging | PASS | `ORDER BY p.jira_project_key COLLATE "C"` (`ProjectLinkRepository.java:185`). Rows are inserted out of order and come back as `PLS9, PLSA, PLSB, PLS_A`. Controller test `ignoresClientPagingAndScopeParameters…` sends `page`/`size`/`sort` and checks that the body has no `page`. Mutation `no-collate` is killed (2 tests). |
 | 3 | AC-007.3 row = `projectId`, `jiraProjectKey`, `projectManager`, `memberCount`, `status` | PASS | `ProjectRowResponse.java:6-10` has exactly these 5 fields, plus nested `ProjectManagerRef(userId, fullName)`. `projectId` is `p.public_id`. Strict JSON equality in both the IT and the controller test. |
-| 4 | AC-007.4 Active PM account → `{userId, fullName}` | PASS | `LEFT JOIN app_user u ON u.id = m.user_id AND u.status = 'ACTIVE'`. IT: `PLSB` shows `PLS Moved`, an Active account in another Department with no PM role. This is the D26 display rule, distinct from D27 (row 30). `userId` is `app_user.id` (D32). |
+| 4 | AC-007.4 Active PM account → `{userId, fullName}` | PASS | `LEFT JOIN app_user u ON u.id = m.user_id AND u.status = 'ACTIVE'`. IT: `PLSB` shows `PLS Moved`, an Active account in another Department with no PM role. This is the D44 display rule, distinct from D45 (row 30). `userId` is `app_user.id` (D50). |
 | 5 | AC-007.5 no PM row or PM not Active → null | PASS | IT: `PLS9` and `PLS_A` have no PM row → null. `PLSA`'s PM `PLS Gone` is DEACTIVATED → null. A clean `no-active-filter` mutation (join line only) is killed. Mutation `no-role-filter` turns 4 rows into 7 and is killed by 3 tests. |
 | 6 | AC-007.6 count all membership rows, including the PM | PASS | The subquery counts `project_membership` by `project_id` with no join to `app_user`. IT counts 1/3/2/0, including a DEACTIVATED former PM and a DEACTIVATED MEMBER. Mutation `count-active-only` is killed. |
 | 7 | AC-007.7 no Projects → 200 with Department and `[]` | PASS | IT `returnsTheDepartmentWithAnEmptyProjectList_AC_007_7` (caller in `PLS Empty`). Controller and unit tests too. |
 | 8 | AC-007.8 no Jira call, no persisted write | PASS | The service has no tracker, audit or transaction call on this path. The unit test asserts `verifyNoInteractions(tracker, audit, transactionManager, projectRepository)` and only two repository calls. The IT asserts `tracker.calls()` is empty and that row-level JSON snapshots of the tenant and main databases (department, app_user, user_role, project, project_membership, audit_log_entry) are unchanged. |
 | 9 | AC-010.1 `@PreAuthorize` with `Roles.PROJECT_MANAGER` | PASS | `ProjectController.java:49-55`. A reflection test asserts the exact value `hasRole('PROJECT_MANAGER')`. |
 | 10 | AC-010.2 anonymous → 401 MSG07 | PASS | `refusesAnonymousList_AC_010_2`: no field problem, and the service is never called. |
-| 11 | AC-010.3 wrong role → 403 MSG08 | PASS | Employee and Admin-only callers: no field problem, service never called. GET has no body, so D36's "valid body" case does not arise. |
+| 11 | AC-010.3 wrong role → 403 MSG08 | PASS | Employee and Admin-only callers: no field problem, service never called. GET has no body, so D54's "valid body" case does not arise. |
 | 12 | AC-010.4 stale account, role, missing or inactive Department → 403 MSG08 | PASS | IT, parameterised over 4 changes made in the database while the session still says PM. Each gives 403 MSG08 with `{}`, no `fieldErrors`, no `projects`, no tracker call and an unchanged snapshot. Unit tests cover the missing principal and the missing Department. |
 | 13 | AC-010.5 unbound Workspace → 500 MSG06 | PASS | `scope.currentWorkspaceId()` is the first statement of `checkScope()`. IT: 500 MSG06 `{}`, main database unchanged. Unit test: the exception propagates with zero repository interactions. |
 | 14 | AC-010.6 bound database only | PASS | IT `listsOnlyTheBoundWorkspaceDatabase_AC_010_6`: the same key `PLSB` in BETA, with a different id and count. ACME still lists its own 4. |
@@ -109,7 +109,7 @@ Checked and found sound:
   - an in-memory quicksort of 40 rows on `COLLATE "C"`
 
   Execution took 1.3 ms with 1,544 shared buffer hits and no sequential scan. The cost grows with the Department's
-  Projects × members, and D26 expects a few Projects per Department. No paging is needed, and no finding.
+  Projects × members, and D44 expects a few Projects per Department. No paging is needed, and no finding.
 - **Transactions.** Two autocommit reads on separate pooled connections. Under READ COMMITTED a read-only
   transaction would give each statement its own snapshot anyway, so it would add no consistency. The session log's
   reasoning is correct (INFO-2).
@@ -119,7 +119,7 @@ Checked and found sound:
   - The column itself is an unconstrained `VARCHAR(20)` (changeset 002, no CHECK), and the mapper copies it verbatim
     (LOW-1).
 - **SQL safety.** A named parameter, a `long` taken from the server-side Department row, and nothing from the request.
-- **Data exposure.** The row exposes only the D26/D32 fields. `fullName` is the PM's display name, which the same PM
+- **Data exposure.** The row exposes only the D44/D50 fields. `fullName` is the PM's display name, which the same PM
   population already sees in the UI. No credential, internal BIGINT id or email.
 - **Logging.** No new log statement.
 
@@ -168,7 +168,7 @@ No CRITICAL, HIGH or MEDIUM findings. Non-blocking:
    - Fix (one line): map through the enum, `ProjectStatus.valueOf(rs.getString("status")).name()`, or type the DTO
      field as `ProjectStatus`. A bad row then fails loudly as 500 MSG06 instead of reaching the browser. The
      alternative is `AND p.status IN ('ACTIVE', 'REMOVED')`, which hides it silently. A CHECK constraint would be a
-     schema change outside this task. Fits the D50 hardening pass.
+     schema change outside this task. Fits the D68 hardening pass.
 2. **INFO-2 — no `@Transactional(readOnly = true)` on `list()`; the deviation from `backend/AGENTS.md` §3 is recorded
    only in a code comment and the session log**
    - Location: `ProjectServiceImpl.java:295-302`.
@@ -197,14 +197,14 @@ No CRITICAL, HIGH or MEDIUM findings. Non-blocking:
   call (minor).**
 - **LOW-1: fail loudly or filter.** AC-007.1 can be read as "list only Active and Removed" (filter) or as "the only
   statuses are Active and Removed" (map through the enum and fail on anything else). I recommend the enum mapping.
-  **Open judgment call: which fix, and whether now or in the D50 hardening pass.**
+  **Open judgment call: which fix, and whether now or in the D68 hardening pass.**
 - **INFO-2 is accepted, not a finding against the team rule.** `backend/AGENTS.md` §3 asks for `readOnly = true` on
   reads. I judged the deviation justified for the reasons above. If the team wants §3 applied literally, the change is
   one annotation, and the Workspace check would then run after the transaction opens. **Open judgment call: log a
   decision row, or add the annotation.**
-- **Manager display (AC-007.4).** I read "names an Active account" as the account status alone, per D26 and edge
+- **Manager display (AC-007.4).** I read "names an Active account" as the account status alone, per D44 and edge
   row 30, so an Active manager who has moved Department or lost the PM role is still shown. The IT pins this.
-- The accepted D50 and D52 items (T3 LOW-1 create race, INFO-2 Department at Save time, INFO-3 READ COMMITTED; T4
+- The accepted D68 and D70 items (T3 LOW-1 create race, INFO-2 Department at Save time, INFO-3 READ COMMITTED; T4
   LOW-1 to LOW-3) are not raised again.
 
 ## Test Report

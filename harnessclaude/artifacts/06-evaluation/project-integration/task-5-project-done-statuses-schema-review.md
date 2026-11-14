@@ -15,7 +15,7 @@ iteration: 1
 
 Reviewed commit `180caebc` (`180caebc^..180caebc`, 3 backend files) against spec AC-005.19, AC-005.20 and the
 "Changeset 036" paragraph (`spec.md:97,99,429`), the design's Data Model section and edge rows 28 and 29, decisions
-D7, D19, D20, D34 and D43, and `backend/AGENTS.md` §7. Codex CLI (read-only, ephemeral) gave a second opinion. I
+D25, D37, D38, D52 and D61, and `backend/AGENTS.md` §7. Codex CLI (read-only, ephemeral) gave a second opinion. I
 checked each Codex finding myself and kept only the ones I confirmed.
 
 The changeset is the design's text, character for character. The forward cast turns every non-null VARCHAR into a
@@ -68,7 +68,7 @@ No CRITICAL findings. Non-blocking:
    - `ProjectDoneStatusesMigrationIT.java:99-101` asserts that 036 is the last include in the master changelog,
      forever.
    - Open pull requests #202 and #206 add `027-workspace-*` and `028-workspace-*`, and #203 and #178 add other `027`
-     changesets (D19). Whichever merges after KAN-127 appends its include after 036, and this IT then fails on that
+     changesets (D37). Whichever merges after KAN-127 appends its include after 036, and this IT then fails on that
      branch, owned by another team.
    - The spec's "included last" (`spec.md:429`) is about placement when 036 is added: after 026 and every applied
      changeset.
@@ -87,7 +87,7 @@ No CRITICAL findings. Non-blocking:
    - The IT splits the SQL file with its own parser (IT:260-283) and runs the statements over JDBC.
    - Liquibase runs the forward statement in every IT, but no test runs `--rollback` through Liquibase. The repo's
      earlier pattern, `SearchChangesetRollbackIT`, uses `liquibase.rollback(...)`.
-   - D43 chose the scratch-schema approach on purpose, and the IT's parser uses the same `--rollback ` prefix rule,
+   - D61 chose the scratch-schema approach on purpose, and the IT's parser uses the same `--rollback ` prefix rule,
      so the risk is a future syntax change that only Liquibase would reject.
    - Fix (optional): none required; noted for the record.
 
@@ -136,8 +136,8 @@ from `backend/`, with JAVA_HOME set to the IntelliJ JBR:
 # Attempt 2 — 2026-11-13
 
 **Verdict: pass** (attempt 2). Fix commit `db144c55` (`db144c55^..db144c55`, one test file). The design note comes
-from harness commit `41fae565`. Decision D47 chose to fix LOW-1, add INFO-2 to the design's rollback note as one line,
-and leave INFO-3 (D43).
+from harness commit `41fae565`. Decision D65 chose to fix LOW-1, add INFO-2 to the design's rollback note as one line,
+and leave INFO-3 (D61).
 
 ## Summary
 
@@ -151,7 +151,7 @@ and the master changelog are unchanged (`git diff db144c55 0dd4f8cc -- backend/s
 
 INFO-2 is documented. The master design's rollback note (`04-plans/project-integration/design.md:126`) now says that
 the rollback turns `[]`, `[null]` and non-array values into SQL NULL and fails on an element longer than 100
-characters. INFO-3 is unchanged, as D43 and D47 decided.
+characters. INFO-3 is unchanged, as D61 and D65 decided.
 
 No new findings. The diff changes only the one assertion and the test's display name.
 
@@ -166,11 +166,11 @@ No new findings. The diff changes only the one assertion and the test's display 
 
 ### Attempt-1 findings
 
-| Finding | D47 decision | Status | Evidence |
+| Finding | D65 decision | Status | Evidence |
 |---------|--------------|--------|----------|
 | LOW-1 "036 is last" breaks the next changeset | fix | **Fixed** | `ProjectDoneStatusesMigrationIT.java:84,98-101` |
 | INFO-2 rollback limits not written down | one design line | **Fixed** | `design.md:126` (commit `41fae565`) |
-| INFO-3 Liquibase never runs the rollback | leave (D43) | Unchanged, as decided | — |
+| INFO-3 Liquibase never runs the rollback | leave (D61) | Unchanged, as decided | — |
 
 ## Traceability
 

@@ -29,10 +29,10 @@ and Claude wrote the prompts, reviewed each diff against STORY-013 and `backend/
   both runs wrote only files on the task's list.
 
 ### Decisions
-- Project 404 is caught only inside `JiraClient.findProject` (D38), so comment 404s stay `JiraRejectedException`.
+- Project 404 is caught only inside `JiraClient.findProject` (D56), so comment 404s stay `JiraRejectedException`.
 - New `requiredString` helper requires a JSON string (`isTextual`) for key/id/name; the comment methods keep
   `requiredText`, whose `asText` accepts numbers, unchanged.
-- An issue type without a `statuses` array, a non-array root, or an empty/`null` body is UNAVAILABLE (D35), not an
+- An issue type without a `statuses` array, a non-array root, or an empty/`null` body is UNAVAILABLE (D53), not an
   empty list; only a valid `[]` is FOUND with no statuses (AC-013.9).
 - `done` only for the exact category key `done` (case and spaces count).
 - Logs: one line per lookup with the key, the outcome and the HTTP status (`200` on FOUND, `404`, the rejected or
@@ -77,9 +77,9 @@ Evaluate `jira-project-read` (Reviewer); project-integration Task 1 `project-don
 
 ## Attempt 2 (fixing) — Session 2026-11-12
 
-### Working on: jira-project-read (review attempt 1, decision D45)
+### Working on: jira-project-read (review attempt 1, decision D63)
 Fixed MEDIUM-1, LOW-3 and INFO-4 of `06-evaluation/tracker/task-19-jira-project-read-review.md`. LOW-2, INFO-5
-and INFO-6 are left as D45 decided.
+and INFO-6 are left as D63 decided.
 
 - **MEDIUM-1 → BUG-208** (logged in `docs/bug-log.md`, owner Đặng Tấn Bình): `JiraClient.call` now also catches
   `IllegalArgumentException` (a site URL with no scheme, `:` or a non-Latin-1 character in the email, an invalid
@@ -124,7 +124,7 @@ Files:
   runs it.
 
 ### Deviations
-None from D45. The bug-log row is added under the project rule "log every bug" (review findings BUG-166..168 set the
+None from D63. The bug-log row is added under the project rule "log every bug" (review findings BUG-166..168 set the
 precedent).
 
 ### Commit
@@ -135,7 +135,7 @@ Re-evaluate `jira-project-read` (attempt 2) after the commit.
 
 ## Session 2026-11-12 (attempt 3, fixing)
 
-### Working on: jira-project-read — attempt-2 review findings (D46)
+### Working on: jira-project-read — attempt-2 review findings (D64)
 - MEDIUM-8: a last `catch (RuntimeException)` in `TrackerProjectServiceImpl.findProject` returns UNAVAILABLE and logs only the exception class (a non-HTTP site scheme made RestClient throw `IllegalStateException`). New real-client test `returnsUNAVAILABLEWithoutPartialProjectForNonHttpScheme_AC_013_7_BUG_208`.
 - LOW-7: BUG-208's row now says `findComment` still builds its client outside `call` (STORY-012, out of scope).
 - Who wrote what: Codex wrote the test and the fix in one run (prompt `kan127-fix-d46-d47.md` in the scratchpad), run by the main session, which reviewed the diff.

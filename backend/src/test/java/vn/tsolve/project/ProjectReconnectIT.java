@@ -50,7 +50,7 @@ import vn.tsolve.project.service.ProjectService;
 import vn.tsolve.tracker.dto.TrackerProjectLookup;
 import vn.tsolve.tracker.dto.TrackerStatus;
 
-/** Reconnecting a Removed Project on real PostgreSQL; same context as the other Project ITs (D43). */
+/** Reconnecting a Removed Project on real PostgreSQL; same context as the other Project ITs (D61). */
 @SpringBootTest(
         properties = {
             "TSOLVE_LOGIN_ORIGIN=http://127.0.0.1:9",

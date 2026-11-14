@@ -1,7 +1,7 @@
 # Task 11: Test and add or reconnect a Project in the popup (KAN-127)
 
 **Module:** project-integration
-**Assignee:** Đặng Tấn Bình (Developer: Claude, D49, no Codex)
+**Assignee:** Đặng Tấn Bình (Developer: Claude, D67, no Codex)
 **Status:** in-progress
 **Iteration:** 1
 
@@ -17,7 +17,7 @@ saves a new or reconnected Project. The table refreshes after a Save.
 
 - `AddProjectModal`: kit `FormModal` titled "Add project" (which renders `ModalTitle`), `Form.useForm`, `FormField`, one
   `submitting` ref for both requests and every dismissal, as in `RejectTicketModal`. The primary action is
-  "Test connection" until a test succeeds, then "Save" (D40: no separate re-test button). The tested result is the
+  "Test connection" until a test succeeds, then "Save" (D58: no separate re-test button). The tested result is the
   test mutation's `data`; the settings fields mount only while it is set, so a key-only Test never checks hidden
   settings. A successful test writes `doneStatusIds` and `reviewRange` from the response into the form
   (`setFieldsValue`). Any key edit calls `reset()` on both mutations, which hides the settings and Save and clears an
@@ -49,7 +49,7 @@ saves a new or reconnected Project. The table refreshes after a Save.
 - `mocks/handlers.ts`: unchanged. Task 10's stateful handlers covered every popup case (OPS Active, OLD Removed, SUP
   foreign → MSG49, MISSING/`1BAD` → MSG48, 201/200, `resetMockData`); per-test overrides use `server.use`.
 
-**Who wrote what.** Claude wrote all code and tests (Codex is out of quota, D49).
+**Who wrote what.** Claude wrote all code and tests (Codex is out of quota, D67).
 
 **Red step.** Both test files were written first. Run: `Tests 37 failed (37)`, each on
 `findByRole('button', { name: 'Add project' })` (no button yet). After the code: 35 of 37 passed; the two failures
@@ -67,7 +67,7 @@ Each run changed one thing, ran the named tests, then restored the file (`cmp` c
 - No `submitting` check in `onCancel` → AC-009.22 tests still pass: antd 6 `Modal.handleCancel` returns early while
   `confirmLoading`. Removing that check and `isSubmitting` together → both AC-009.22 tests fail. The ref stays: it also
   covers the moment between the click and the re-render that sets `isPending`.
-- Client-side sort in `ProjectsTable` → the new AC-008.3 test fails (D55 item 1).
+- Client-side sort in `ProjectsTable` → the new AC-008.3 test fails (D73 item 1).
 
 ### Decisions
 - **No 401 toast.** A 401 already gets the global MSG07 dialog; the popup skips `showMessage` for it so one error shows
@@ -82,10 +82,10 @@ Each run changed one thing, ran the named tests, then restored the file (`cmp` c
 - `AddProjectModal.tsx` is 156 lines after Prettier, a little over the ~150 of guideline 05 C2; splitting the two
   settings fields into another file would add a file for no reader benefit.
 
-### Task 10 review (D55)
+### Task 10 review (D73)
 Two test-only items from the Task 10 review, sent by the coordinator during this task:
 1. `pages/JiraIntegrationPage.test.tsx`: new test `AC-008.3 keeps the returned row order instead of sorting by key
-   (D55)` overrides the list with `ZED` then `ABC` and asserts that order. AC-008.3 was removed from the first test's
+   (D73)` overrides the list with `ZED` then `ABC` and asserts that order. AC-008.3 was removed from the first test's
    name, which cannot fail for it (the mock already sorts). A client-side sort makes the new test fail (mutation check).
 2. `mocks/handlers.test.ts`: the signed-out assertion now expects `code: 'MSG07'`; the Save MSG48 assertion now expects
    `fieldErrors: []`.
@@ -126,7 +126,7 @@ Two test-only items from the Task 10 review, sent by the coordinator during this
   403 MSG08, 503 MSG06, 500 MSG06, a network failure → MSG06, an unknown code → MSG06
 - `AC-009.19 AC-009.20 shows the Save error $name once by its code and keeps the settings (rows 21, 24)` × the same 5
 
-`pages/JiraIntegrationPage.test.tsx`: `AC-008.3 keeps the returned row order instead of sorting by key (D55)`.
+`pages/JiraIntegrationPage.test.tsx`: `AC-008.3 keeps the returned row order instead of sorting by key (D73)`.
 
 ### Files
 - Create: `frontend/src/features/jira-integration/components/AddProjectModal.tsx` (156 lines),
@@ -161,7 +161,7 @@ Secrets: `gitleaks detect --no-git --redact --no-banner --source <file>` on each
 
 ### Deviations
 - `mocks/handlers.ts` is listed as Modify in the task; no fixture gap turned up, so it is unchanged.
-- The D55 test-only items (Task 10 review) are in this change, as the coordinator asked.
+- The D73 test-only items (Task 10 review) are in this change, as the coordinator asked.
 
 ### Bugs
 None found.
@@ -170,7 +170,7 @@ None found.
 none
 
 ### Next up
-Review and commit after the user agrees. This is the module's last feature; then the D50 hardening pass and module
+Review and commit after the user agrees. This is the module's last feature; then the D68 hardening pass and module
 finishing.
 
 default@d5df3971 — `feat(project-integration): test and add or reconnect a Project in the Add project popup (KAN-127)`, committed after the user agreed (13/11).

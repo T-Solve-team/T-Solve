@@ -17,7 +17,7 @@ import vn.tsolve.tracker.dto.TrackerProjectLookup;
 import vn.tsolve.tracker.dto.TrackerProjectLookup.Outcome;
 import vn.tsolve.tracker.service.TrackerProjectService;
 
-/** Shares one context for all Project ITs; the Jira double asserts no active transaction (AC-005.18, D43). */
+/** Shares one context for all Project ITs; the Jira double asserts no active transaction (AC-005.18, D61). */
 @TestConfiguration(proxyBeanMethods = false)
 @Import(TwoTenantDatabases.class)
 public class ProjectApiITConfiguration {

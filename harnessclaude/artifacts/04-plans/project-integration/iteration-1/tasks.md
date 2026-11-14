@@ -89,13 +89,13 @@ Verification aliases used below:
 - **BE:** `mvn spotless:apply`, then `mvn verify` in `backend/` (unit, IT and Spotless check; Docker required). Targeted failing/passing tests during TDD do not replace this gate.
 - **FE:** in `frontend/`, `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`, then `npm run generate:api`; regeneration leaves no diff against the already generated output in `src/shared/api/generated`. Never hand-edit generated files to make that assertion pass.
 
-Dependency before Project Task 6: **tracker Task 19**, `jira-project-read`, module `tracker` (tracker story 013). Its complete body is in `artifacts/04-plans/tracker/iteration-1/tasks.md`; do not add a duplicate Task 5 or tracker feature to this module. Project Task 5 can run independently first. Screen Task 10 also depends on the separately approved D29 MSG48 catalog quick change with FE Lead review; none of these tasks edits that catalog.
+Dependency before Project Task 6: **tracker Task 19**, `jira-project-read`, module `tracker` (tracker story 013). Its complete body is in `artifacts/04-plans/tracker/iteration-1/tasks.md`; do not add a duplicate Task 5 or tracker feature to this module. Project Task 5 can run independently first. Screen Task 10 also depends on the separately approved D47 MSG48 catalog quick change with FE Lead review; none of these tasks edits that catalog.
 
 ## Task 5: Preserve legacy Done statuses as JSONB
 
 **Story:** STORY-005
 **Feature:** project-done-statuses-schema
-**Description:** First write an IT against real PostgreSQL demonstrating the pre-036 VARCHAR → JSONB upgrade with a scalar and SQL NULL. Add the exact master changeset 036 (author project, id 036-project-done-statuses) and include it LAST after current 026; do not alter applied changesets. Preserve all other values/references and add no range CHECK/default/backfill. Reuse the `TwoTenantDatabases` server: create a random scratch schema holding a `project` table with the pre-036 columns of `002-tenant-project-suggestion.sql` plus `public_id UUID` (`done_status VARCHAR(100)`), insert the legacy fixtures, execute the changeset's statement and then its rollback statement read from `036-project-done-statuses.sql`, and drop the schema in `finally` (D43). Do not touch the shared tenant schemas or their migration history. Document the rollback's element-zero loss for several values. Notify the main session that the external DDL owner must change `done_status` to JSONB; do not edit the DDL.
+**Description:** First write an IT against real PostgreSQL demonstrating the pre-036 VARCHAR → JSONB upgrade with a scalar and SQL NULL. Add the exact master changeset 036 (author project, id 036-project-done-statuses) and include it LAST after current 026; do not alter applied changesets. Preserve all other values/references and add no range CHECK/default/backfill. Reuse the `TwoTenantDatabases` server: create a random scratch schema holding a `project` table with the pre-036 columns of `002-tenant-project-suggestion.sql` plus `public_id UUID` (`done_status VARCHAR(100)`), insert the legacy fixtures, execute the changeset's statement and then its rollback statement read from `036-project-done-statuses.sql`, and drop the schema in `finally` (D61). Do not touch the shared tenant schemas or their migration history. Document the rollback's element-zero loss for several values. Notify the main session that the external DDL owner must change `done_status` to JSONB; do not edit the DDL.
 **Files:**
 - Create: `backend/src/main/resources/db/changelog/changes/036-project-done-statuses.sql`
 - Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`
@@ -236,7 +236,7 @@ Dependency before Project Task 6: **tracker Task 19**, `jira-project-read`, modu
 - AC-008.9/AC-008.10: Admin-only placeholder/no Project request/no Add button, Admin+PM sees PM table, Employee route-guard MSG08/no request (row 2).
 - Handlers use typed generated responses; GET sorted own Department rows, POST Test prefill, Save 201 updates GET, OLD Save 200 retains id, SUP MSG49 and MISSING MSG48, resetMockData restores prior ids/settings/counts. These are fixtures for AC-008.1/AC-009.15–AC-009.17; mutation UI acceptance is tested in Task 11 (rows 19/36/37).
 **Verify:** FE.
-**Dependencies:** Task 9; D29 separate MSG48 catalog quick change completed with FE Lead review.
+**Dependencies:** Task 9; D47 separate MSG48 catalog quick change completed with FE Lead review.
 **Estimated size:** medium.
 
 ## Task 11: Test and add or reconnect a Project in the popup
@@ -263,5 +263,5 @@ Dependency before Project Task 6: **tracker Task 19**, `jira-project-read`, modu
 - AC-009.21/AC-009.22: held Test and held Save prevent double click, cross-action submit, all field edits and Cancel/close/Escape/mask dismissal; no stale settings from another key (rows 12/20).
 - AC-009.23: every idle dismissal sends no request; reopen clears form/messages/result (rows 18/20).
 **Verify:** FE; at final handoff BE, `sdd.ts check project-integration`, `sdd.ts check tracker`, and each module's trace with its own paths. Review declared Basic/Bearer, GBR-04, CSRF/binding and DDL-owner follow-ups; no status/approval/push is implied by those checks.
-**Dependencies:** Task 10; D29 catalog quick change remains a prerequisite.
+**Dependencies:** Task 10; D47 catalog quick change remains a prerequisite.
 **Estimated size:** medium.

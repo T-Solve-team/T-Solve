@@ -143,7 +143,7 @@ public class ProjectServiceImpl implements ProjectService {
             });
         } catch (DuplicateKeyException error) {
             // Only a reconnect's canonical-key update can meet a concurrent insert of that key; after the rollback
-            // the committed winner is named (D41). Any other constraint stays a failure.
+            // the committed winner is named (D59). Any other constraint stays a failure.
             if (!String.valueOf(error.getMostSpecificCause().getMessage()).contains("uq_project_jira_key")) {
                 throw error;
             }

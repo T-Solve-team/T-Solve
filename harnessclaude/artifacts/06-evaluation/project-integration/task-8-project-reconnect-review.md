@@ -22,7 +22,7 @@ files (`ProjectServiceImpl`, `ProjectLinkRepository`, the Javadoc of `ProjectSer
 - Task 8 in `iteration-1/tasks.md`
 - the master design's flow, SQL block and lost-insert paragraph (`design.md:60-82,150-191`), and edge-case rows 10,
   11, 16, 17, 23, 27, 32, 34 and 36
-- D11, D22, D27 and D41 in `kan-127-decisions.md`
+- D29, D40, D45 and D59 in `kan-127-decisions.md`
 
 I read the session log only for the commit ids, the listed deviations and the claimed test counts.
 
@@ -39,14 +39,14 @@ An eligible Removed Project of the caller's Department now reconnects in place
 6. returns `created=false`, which the Task 7 controller answers with 200
 
 If the canonical-key update meets a concurrent insert of that key, the `DuplicateKeyException` on
-`uq_project_jira_key` is caught after the rollback and becomes MSG49 naming the committed winner (D41). Any other
+`uq_project_jira_key` is caught after the rollback and becomes MSG49 naming the committed winner (D59). Any other
 constraint propagates as 500 MSG06.
 
 The three listed deviations are acceptable:
 - **One `UPDATE` instead of `reconnectProject` plus `canonicaliseKey`:** setting an unchanged key is a no-op, and the
   key still persists in the same statement and transaction.
 - **The Javadoc-only change to `ProjectService.java`:** no behaviour change.
-- **The post-rollback translation:** it is exactly what the design and D41 ask for.
+- **The post-rollback translation:** it is exactly what the design and D59 ask for.
 
 There are no CRITICAL, HIGH or MEDIUM findings. All targeted tests pass, and `ProjectReconnectIT` passed 3 times out of
 3. Three LOW findings are test gaps on the database:
@@ -54,7 +54,7 @@ There are no CRITICAL, HIGH or MEDIUM findings. All targeted tests pass, and `Pr
 - LOW-2: the canonical key on reconnect is proven only by a race
 - LOW-3: the AC-010.6 IT runs no membership write and does not compare the other tenant's membership and audit rows
 
-My mutations confirm all three (Test Report). Findings already accepted under D50 (T3 LOW-1, INFO-2, INFO-3) are not
+My mutations confirm all three (Test Report). Findings already accepted under D68 (T3 LOW-1, INFO-2, INFO-3) are not
 raised again. LOW-1 is the reconnect counterpart of T3 LOW-1 and fits the same hardening pass.
 
 ## Criteria
@@ -165,7 +165,7 @@ No CRITICAL, HIGH or MEDIUM findings. Non-blocking:
        `uq_project_jira_key` translation is met on PostgreSQL only when the `alias-and-create` timing happens to take
        that branch. The unit test feeds a hand-written message, not a real `PSQLException`.
    - The test is correct and stable (3/3), so this is a coverage gap, not a defect. Edge row 10 is Critical.
-   - Fix (fold into the D50 hardening pass with T3 LOW-1):
+   - Fix (fold into the D68 hardening pass with T3 LOW-1):
      1. A repository IT: `reconnectProject` on an ACTIVE row returns 0 and changes nothing.
      2. A deterministic waiter IT: on a separate autocommit-off connection, lock the Removed row, set it ACTIVE (or
         insert a protected PM for `SECOND`) and keep the transaction open. Start the Save. Poll
@@ -198,18 +198,18 @@ No CRITICAL, HIGH or MEDIUM findings. Non-blocking:
 ## Assumptions made
 
 - **AC-006.8 "owning Department name" in the translated race.** When the canonical-key update loses to a concurrent
-  create, MSG49 names the Department of the committed winner, the Project that now owns the key. This follows D41,
+  create, MSG49 names the Department of the committed winner, the Project that now owns the key. This follows D59,
   the design ("reading the winning Department") and AC-005.11. If the creator is in another Department, this is not
   the Removed row's own Department. I read "owning" as the owner of the conflicting Project. **Open judgment call
   (minor).**
 - **LOW-1 and LOW-2 do not block.** The AC outcomes are asserted on real PostgreSQL with real concurrency, and each
   unforced branch is short and unit-tested. If the user wants Critical edge row 10 proven on the database along every
   branch, LOW-1 becomes a required fix. LOW-2 is cheap (one test case) and could go in with the Task 8 fix-up or the
-  D50 hardening pass. **Open judgment call: now or in the hardening pass.**
+  D68 hardening pass. **Open judgment call: now or in the hardening pass.**
 - **AC-006.9 membership failures.** These are shown with Mockito only (rollback, never commit), as Task 8 prescribes.
   The real-database restore is shown for the audit failure, which runs after every membership write, so it covers
   the restore of a deleted former-PM row and a promoted MEMBER row.
-- The accepted D50 items (T3 LOW-1 create race, INFO-2 Department at Save time, INFO-3 READ COMMITTED) and the other
+- The accepted D68 items (T3 LOW-1 create race, INFO-2 Department at Save time, INFO-3 READ COMMITTED) and the other
   known caveats (Basic auth vs scoped tokens, KAN-119; GBR-04 end to end; external DDL) are not findings.
 
 ## Test Report

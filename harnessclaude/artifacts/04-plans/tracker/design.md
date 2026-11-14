@@ -413,7 +413,7 @@ acceptable on the demo site only.
 
 ## STORY-013: Read a Jira project for the Project module (KAN-127, 2026-11-12)
 
-Spec: `artifacts/03-modules/tracker/spec.md`, STORY-013. Task: `artifacts/04-plans/tracker/iteration-1/tasks.md`, Task 19 (`jira-project-read`). KAN-127 decisions: `artifacts/04-plans/project-integration/iteration-1/kan-127-decisions.md`, D4-D6, D28, D35, D38. This Change Mode extension leaves earlier stories and the comment client's existing methods intact.
+Spec: `artifacts/03-modules/tracker/spec.md`, STORY-013. Task: `artifacts/04-plans/tracker/iteration-1/tasks.md`, Task 19 (`jira-project-read`). KAN-127 decisions: `artifacts/04-plans/project-integration/iteration-1/kan-127-decisions.md`, D22-D6, D46, D53, D56. This Change Mode extension leaves earlier stories and the comment client's existing methods intact.
 
 ```text
 ProjectService.testConnection / create (Workspace already bound; no transaction)
@@ -438,12 +438,12 @@ Project maps outcomes to its HTTP contract; this service adds no REST endpoint.
 
 | Decision | Choice | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
-| D4 module boundary | Project calls tracker.service.TrackerProjectService and tracker.dto records | Project own HTTP client; expose tracker/client | Keep HTTP/credential/status handling in tracker; no Project dependency in this lookup |
-| D5 credential | Existing JiraServiceAccount.current and JiraClient Basic auth | Import gateway Bearer; credential unification now | Current port is replaceable by KAN-119/KAN-125; real scoped tokens remain a documented limit |
-| D6 Browse check | Project GET then statuses GET with canonical key | mypermissions; both permission and project calls | Project GET answers visibility and key; statuses supply the form defaults |
-| D28 result | Four-outcome TrackerProjectLookup; deduplicate at service | Throw module exceptions; expose raw JSON | Project owns HTTP error mapping; first-seen dedup matches UI storage |
-| D35 malformed response | UNAVAILABLE; valid empty statuses is FOUND | Partial success; silently skip invalid status | No fabricated settings or lost choices; 429 handled before other 4xx |
-| D38 client signature | Optional<String> findProject(JiraAccount, String), project 404 empty | TrackerProject record; throw on project 404 | Explicit RUN 2 contract; synchronized interface row in tracker spec without AC edits. Statuses 404 still uses status-only client exception |
+| D22 module boundary | Project calls tracker.service.TrackerProjectService and tracker.dto records | Project own HTTP client; expose tracker/client | Keep HTTP/credential/status handling in tracker; no Project dependency in this lookup |
+| D23 credential | Existing JiraServiceAccount.current and JiraClient Basic auth | Import gateway Bearer; credential unification now | Current port is replaceable by KAN-119/KAN-125; real scoped tokens remain a documented limit |
+| D24 Browse check | Project GET then statuses GET with canonical key | mypermissions; both permission and project calls | Project GET answers visibility and key; statuses supply the form defaults |
+| D46 result | Four-outcome TrackerProjectLookup; deduplicate at service | Throw module exceptions; expose raw JSON | Project owns HTTP error mapping; first-seen dedup matches UI storage |
+| D53 malformed response | UNAVAILABLE; valid empty statuses is FOUND | Partial success; silently skip invalid status | No fabricated settings or lost choices; 429 handled before other 4xx |
+| D56 client signature | Optional<String> findProject(JiraAccount, String), project 404 empty | TrackerProject record; throw on project 404 | Explicit RUN 2 contract; synchronized interface row in tracker spec without AC edits. Statuses 404 still uses status-only client exception |
 | Tests | Existing JiraClientTest with MockRestServiceServer plus new Mockito service test | Live Jira; new HTTP server/container | Check real RestClient serialization/error mapping quickly and deterministically |
 | Logging | Project key, HTTP status if known, outcome only | Exception stack/cause or response body | Never expose service-account email/token or Jira JSON, including malformed-success paths |
 

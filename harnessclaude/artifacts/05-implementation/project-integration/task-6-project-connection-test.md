@@ -40,7 +40,7 @@ every check and made the small fixes listed below.
 - Reverted: nothing. Both runs wrote only the task's files.
 
 ### Decisions
-- Order in `testConnection`, as AC-010.8 and D36 ask: `TenantScope.currentWorkspaceId()` → caller from
+- Order in `testConnection`, as AC-010.8 and D54 ask: `TenantScope.currentWorkspaceId()` → caller from
   `TSolveUser.current()` → own Department by SQL (Active account, `PROJECT_MANAGER` row in `user_role`, Active
   Department) → strip, upper-case with `Locale.ROOT`, check the format (MSG48) → requested-key link (MSG49) →
   `TrackerProjectService.findProject` → canonical-key link (AC-004.19/21/22) → prefill. No `@Transactional`; no
@@ -112,13 +112,13 @@ Commit after the user agrees; then Task 7 `project-create`.
 
 ## Attempt 2 (fixing) — 2026-11-13
 
-### Working on: review findings 1 (MAJOR) and 3 (MINOR) of `task-6-project-connection-test-review.md` (D48)
+### Working on: review findings 1 (MAJOR) and 3 (MINOR) of `task-6-project-connection-test-review.md` (D66)
 
-**Who wrote what.** Claude alone (Codex is out of quota, D49) wrote the test changes, ran the mutation check and
+**Who wrote what.** Claude alone (Codex is out of quota, D67) wrote the test changes, ran the mutation check and
 the checks below. Test files only; no production code changed.
 
 ### What changed
-- **Finding 1 (AC-004.17 test could not fail).** New plain composition test, no Spring context (D43):
+- **Finding 1 (AC-004.17 test could not fail).** New plain composition test, no Spring context (D61):
   `ProjectConnectionSecrecyTest.keepsCredentialsAndJiraBodiesOutOfResponsesAndLogs_AC_004_17`, 8 cases.
   - Real `TrackerProjectServiceImpl` + real `JiraClient` (public constructor, 30 s timeouts) against a WireMock fake
     Jira (`wiremock-standalone`, already in the pom). Service account `svc@acme.atlassian.test` /

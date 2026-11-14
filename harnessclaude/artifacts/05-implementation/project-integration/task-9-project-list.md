@@ -1,7 +1,7 @@
 # Task 9: List the caller's Department Projects (KAN-127)
 
 **Module:** project-integration
-**Assignee:** Đặng Tấn Bình (Developer: Claude, D49, no Codex)
+**Assignee:** Đặng Tấn Bình (Developer: Claude, D67, no Codex)
 **Status:** in-progress
 **Iteration:** 1
 
@@ -37,7 +37,7 @@ The list operation, `ProjectList`, `ProjectRow`, `ProjectManagerRef` and `Depart
 `frontend/openapi/tsolve-api.yaml` (added in Task 6's commit), and the code matches them. The contract did not
 change. `npm run generate:api` (Node 24.22.2) left no diff in `src/shared/api/generated`.
 
-**Who wrote what.** Claude wrote all code and tests (Codex is out of quota, D49).
+**Who wrote what.** Claude wrote all code and tests (Codex is out of quota, D67).
 
 **Red step.** The DTOs, the interface method and two `UnsupportedOperationException` placeholders (service and
 repository) came first, so the tests could compile; there was no GET handler yet. Unit run: 204 tests, 11 failures and
@@ -54,7 +54,7 @@ dispatch. `ProjectListIT`: 10 tests, 10 failures (405).
 - **No transaction on `list()`.** `testConnection` has none either, so the two behave the same. The method makes two
   independent reads, and READ COMMITTED gives each statement its own snapshot, so a read-only transaction would not
   make them consistent. The Workspace check runs before either read.
-- **Manager display.** Only `u.status = 'ACTIVE'` decides whether the manager is shown, not the stricter D27 reconnect
+- **Manager display.** Only `u.status = 'ACTIVE'` decides whether the manager is shown, not the stricter D45 reconnect
   rule. The IT shows an Active manager who moved to another Department and has no PM role, and the list still names
   them (AC-007.4, row 30).
 - **The count does not filter on account status.** The IT counts a DEACTIVATED former manager and a DEACTIVATED
