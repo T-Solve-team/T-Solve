@@ -517,8 +517,8 @@
     }
   },
   "platform": {
-    "specHash": "de0015edeb29635061b3f6aac6d3850d69d016fc212bd55f6e653e031353b035",
-    "approvedAt": "2026-11-05T15:23:53.467Z",
+    "specHash": "f5bff144498c653f1a304a88390a8e1c1266cc1b4b2510125852a615f4d48d27",
+    "approvedAt": "2026-11-14T05:04:24.631Z",
     "by": "user",
     "acs": {
       "AC-001.15": "THE catalog database (the Platform / Tenant Registry of the HLA, named ) SHALL hold the table  with  (UUID, primary key),  (not null, unique),  ( or , not null),  (not null, unique),  (not null),  (not null, encrypted as AC-001.24 says),  (the tenant changelog version last applied to that database, not null),  (nullable),  (nullable, unique),  and  (, not null) (GBR-24, GBR-37).",
@@ -695,7 +695,19 @@
       "AC-014.10": "THE Caddy SHALL close a request that exceeds the read, write or idle time set by .",
       "AC-014.11": "IF one client IP address sends more than  requests within , or the requests to one Workspace site (all its clients together) exceed  within it, THEN THE Caddy SHALL answer 429 with a  header and pass nothing to the backend. The rates are values in ; Caddy runs as an image with the rate-limit module (decision Q8).",
       "AC-014.12": "THE repository SHALL hold a load-test script under  for sign-in, the ticket list and a call of the Jira App path, with the thresholds in the script: 500 concurrent users, 95th percentile of the response time under 1 second, error rate under 1 % (decision Q7; Hiếu confirms the numbers).",
-      "AC-014.13": "WHEN the load-test script runs against the staging environment, THE script SHALL exit non-zero if a threshold of AC-014.12 is missed, and the result of one run SHALL be recorded in a report under ."
+      "AC-014.13": "WHEN the load-test script runs against the staging environment, THE script SHALL exit non-zero if a threshold of AC-014.12 is missed, and the result of one run SHALL be recorded in a report under .",
+      "AC-015.1": "THE cross-module isolation test SHALL start the backend with two Workspace databases, ACME and BETA, each migrated with the application changelog, and SHALL send every request of a signed-in ACME Account with a Workspace session of ACME, so that its queries reach ACME's database only.",
+      "AC-015.2": "WHEN a Ticket Resolver of ACME sends  while BETA's database holds a Published ticket whose title matches an ACME ticket, THE answer SHALL list ACME's Published tickets and none of BETA's.",
+      "AC-015.3": "IF an ACME Account sends  or  with the id of a BETA ticket, THEN THE backend SHALL answer with the same status and  as for a ticket id that exists in no Workspace, and SHALL write no row in BETA's database.",
+      "AC-015.4": "WHEN a Ticket Resolver of ACME sends  with a keyword that matches tickets of both Workspaces, THE results SHALL hold only ACME's tickets, and THE search log row of that request SHALL be in ACME's database and not in BETA's.",
+      "AC-015.5": "WHEN an ACME Account asks the chatbot with  a question that matches tickets of both Workspaces, THE context given to the chat model and the cited sources of the answer SHALL hold only ACME's data, and THE stored answer SHALL be in ACME's database and not in BETA's. The chat and embedding models are test stubs that record what they receive.",
+      "AC-015.6": "WHEN a Project Manager of ACME sends  while BETA's database holds a ticket waiting for review, THE queue SHALL list only ACME's tickets.",
+      "AC-015.7": "IF a request to an endpoint of AC-015.2 – AC-015.6 carries no Workspace session, THEN THE backend SHALL answer 401 and SHALL write no row in either Workspace database.",
+      "AC-015.8": "THE repository SHALL hold a Playwright suite under  with its own , run by  against the local stack (Docker Compose , , , ; the backend in the  profile; the web app dev server), and  SHALL give the commands that start that stack and the suite.",
+      "AC-015.9": "WHEN the suite signs in as  through Keycloak and the fake Google on the ACME site, THE suite SHALL reach the home page and open the Ticket List, Search, Chatbot and User List pages, and each page SHALL show its content and no error message.",
+      "AC-015.10": "IF the suite, signed in on the ACME site, sends a request with ACME's session cookie to the BETA site, THEN THE backend SHALL treat it as a request with no session (identity AC-001.20) and return no BETA data.",
+      "AC-015.11": "IF the local stack is not running when  starts, THEN THE suite SHALL stop before any test and name the service it could not reach.",
+      "AC-015.12": "WHEN the suite has run, THE suite SHALL write an HTML report under  (not committed) and THE result of the run of 14/11 SHALL be recorded in  with the date, the commit and the pass or fail of each test."
     }
   },
   "search": {

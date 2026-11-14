@@ -1335,6 +1335,17 @@
 {"ts":"2026-11-13T12:58:04.488Z","type":"module-status","module":"platform","from":"planned","to":"implementing"}
 {"ts":"2026-11-13T16:03:48.393Z","type":"feature-status","module":"platform","feature":"staging-cd","from":"pending","to":"in-progress"}
 {"ts":"2026-11-13T16:31:24.816Z","type":"spec-approved","module":"be-foundation","specHash":"045771d2bbca1abf203acc1bc361c2bb5133a937987e910ce56a074869b1c922"}
+{"ts":"2026-11-14T04:07:33.506Z","type":"spec-approved","module":"platform","specHash":"ecefdeda0ff924ec9b4c01bfff2f65c119ffbca1480dc1e4b583f29e25c63def"}
+{"ts":"2026-11-14T04:08:50.682Z","type":"feature-status","module":"platform","feature":"cross-module-isolation","from":null,"to":"pending"}
+{"ts":"2026-11-14T04:08:50.730Z","type":"feature-status","module":"platform","feature":"e2e-smoke","from":null,"to":"pending"}
+{"ts":"2026-11-14T04:08:50.777Z","type":"feature-status","module":"platform","feature":"cross-module-isolation","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T04:39:33.379Z","type":"quick-opened","what":"Send the X-XSRF-TOKEN header on every write from the web app (BUG-207, be-foundation AC-002.11/AC-002.13)","files":["frontend/frontend/src/shared/api/http.ts","frontend/frontend/src/shared/api/http.test.ts","frontend/docs/bug-log.md"]}
+{"ts":"2026-11-14T04:39:40.392Z","type":"quick-closed","what":"Send the X-XSRF-TOKEN header on every write from the web app (BUG-207, be-foundation AC-002.11/AC-002.13)","files":["frontend/frontend/src/shared/api/http.ts","frontend/frontend/src/shared/api/http.test.ts","frontend/docs/bug-log.md"]}
+{"ts":"2026-11-14T04:39:51.603Z","type":"quick-opened","what":"Send the X-XSRF-TOKEN header on every write from the web app (BUG-207, be-foundation AC-002.11/AC-002.13)","files":["frontend/src/shared/api/http.ts","frontend/src/shared/api/http.test.ts","docs/bug-log.md"]}
+{"ts":"2026-11-14T04:54:54.602Z","type":"quick-closed","what":"Send the X-XSRF-TOKEN header on every write from the web app (BUG-207, be-foundation AC-002.11/AC-002.13)","files":["frontend/src/shared/api/http.ts","frontend/src/shared/api/http.test.ts","docs/bug-log.md"]}
+{"ts":"2026-11-14T05:04:24.637Z","type":"spec-approved","module":"platform","specHash":"f5bff144498c653f1a304a88390a8e1c1266cc1b4b2510125852a615f4d48d27"}
+{"ts":"2026-11-14T05:04:39.721Z","type":"commit-recorded","module":"platform","repo":"default","sha":"8f75599b196372ea8e734ce06271a336e159674c"}
+{"ts":"2026-11-14T05:04:56.519Z","type":"feature-status","module":"platform","feature":"cross-module-isolation","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-13T14:52:33.117Z","type":"module-status","module":"platform","from":"planned","to":"implementing"}
 {"ts":"2026-11-13T14:52:33.406Z","type":"feature-status","module":"platform","feature":"file-storage","from":"pending","to":"in-progress"}
 {"ts":"2026-11-13T14:52:33.720Z","type":"feature-status","module":"platform","feature":"file-storage","from":"in-progress","to":"evaluating"}
@@ -1360,3 +1371,8 @@
 {"ts":"2026-11-13T16:53:07.962Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":null,"to":"pending"}
 {"ts":"2026-11-13T16:53:08.294Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":null,"to":"pending"}
 {"ts":"2026-11-14T04:19:53.910Z","type":"spec-approved","module":"wiki","specHash":"75e10cbc9301985fbfd3cf1d5d09b0e79987563b15ed1b03d543a10b35727f2a"}
+{"ts":"2026-11-14T05:27:58.783Z","type":"commit-recorded","module":"platform","repo":"default","sha":"f6dd0fc4f74ad3539e99bee73ea6e016b97902c0"}
+{"ts":"2026-11-14T05:27:58.840Z","type":"feature-status","module":"platform","feature":"e2e-smoke","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T05:27:58.892Z","type":"feature-status","module":"platform","feature":"e2e-smoke","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T06:06:15.524Z","type":"feature-status","module":"platform","feature":"cross-module-isolation","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T06:06:15.575Z","type":"feature-status","module":"platform","feature":"e2e-smoke","from":"evaluating","to":"passing"}
