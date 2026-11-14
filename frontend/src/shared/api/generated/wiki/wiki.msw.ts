@@ -13,11 +13,15 @@ import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
 
 import type {
   CreateWikiFolderRequest,
+  ExtractWikiUploadsBody,
+  PublishWikiDocumentsBody,
   UpdateWikiFolderRequest,
   WikiDocumentDetail,
+  WikiDocumentRef,
   WikiDocumentSummary,
   WikiFolder,
   WikiSpace,
+  WikiUploadPreview,
 } from '../model';
 
 export const getListWikiSpacesResponseMock = (): WikiSpace[] =>
@@ -72,6 +76,12 @@ export const getUpdateWikiFolderResponseMock = (
   ...overrideResponse,
 });
 
+export const getPublishWikiDocumentsResponseMock = (): WikiDocumentRef[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    documentId: faker.string.uuid(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  }));
+
 export const getListWikiDocumentsResponseMock = (): WikiDocumentSummary[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     documentId: faker.string.uuid(),
@@ -87,6 +97,21 @@ export const getListWikiDocumentsResponseMock = (): WikiDocumentSummary[] =>
     owner: faker.string.alpha({ length: { min: 10, max: 20 } }),
     updatedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
   }));
+
+export const getExtractWikiUploadsResponseMock = (): WikiUploadPreview[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.string.alpha({ length: { min: 10, max: 200 } }),
+    excerpt: faker.string.alpha({ length: { min: 10, max: 300 } }),
+    wordCount: faker.number.int({ min: 0 }),
+    result: faker.helpers.arrayElement(['READY', 'UNREADABLE'] as const),
+  }));
+
+export const getDownloadWikiDocumentFileResponseMock = (): Blob =>
+  faker.helpers.arrayElement([
+    new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]),
+    new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]),
+  ]);
 
 export const getSearchWikiDocumentsResponseMock = (): WikiDocumentSummary[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -268,6 +293,32 @@ export const getDeleteWikiFolderMockHandler = (
   );
 };
 
+export const getPublishWikiDocumentsMockHandler = (
+  overrideResponse?:
+    | WikiDocumentRef[]
+    | ((
+        info: Parameters<HttpResponseResolver<{ spaceId: string }, PublishWikiDocumentsBody>>[0],
+      ) => Promise<WikiDocumentRef[]> | WikiDocumentRef[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ spaceId: string }, PublishWikiDocumentsBody>(
+    '*/api/v1/wiki/spaces/:spaceId/documents',
+    async (
+      info: Parameters<HttpResponseResolver<{ spaceId: string }, PublishWikiDocumentsBody>>[0],
+    ) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPublishWikiDocumentsResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListWikiDocumentsMockHandler = (
   overrideResponse?:
     | WikiDocumentSummary[]
@@ -287,6 +338,56 @@ export const getListWikiDocumentsMockHandler = (
           : getListWikiDocumentsResponseMock(),
         { status: 200 },
       );
+    },
+    options,
+  );
+};
+
+export const getExtractWikiUploadsMockHandler = (
+  overrideResponse?:
+    | WikiUploadPreview[]
+    | ((
+        info: Parameters<HttpResponseResolver<{ spaceId: string }, ExtractWikiUploadsBody>>[0],
+      ) => Promise<WikiUploadPreview[]> | WikiUploadPreview[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ spaceId: string }, ExtractWikiUploadsBody>(
+    '*/api/v1/wiki/spaces/:spaceId/uploads/extract',
+    async (
+      info: Parameters<HttpResponseResolver<{ spaceId: string }, ExtractWikiUploadsBody>>[0],
+    ) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getExtractWikiUploadsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDownloadWikiDocumentFileMockHandler = (
+  overrideResponse?:
+    | Blob
+    | ((info: Parameters<HttpResponseResolver<{ documentId: string }>>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ documentId: string }>(
+    '*/api/v1/wiki/documents/:documentId/file',
+    async (info: Parameters<HttpResponseResolver<{ documentId: string }>>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadWikiDocumentFileResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { 'Content-Type': 'application/pdf' },
+      });
     },
     options,
   );
@@ -346,7 +447,10 @@ export const getWikiMock = () => [
   getListWikiFoldersMockHandler(),
   getUpdateWikiFolderMockHandler(),
   getDeleteWikiFolderMockHandler(),
+  getPublishWikiDocumentsMockHandler(),
   getListWikiDocumentsMockHandler(),
+  getExtractWikiUploadsMockHandler(),
+  getDownloadWikiDocumentFileMockHandler(),
   getSearchWikiDocumentsMockHandler(),
   getGetWikiDocumentMockHandler(),
 ];

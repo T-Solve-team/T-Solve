@@ -6,4 +6,7 @@ import vn.tsolve.wiki.entity.WikiDocument;
 
 public interface WikiDocumentRepository extends JpaRepository<WikiDocument, UUID> {
     long countByFolderId(UUID folderId);
+
+    boolean existsBySpaceIdAndFolderIdAndStatusAndTitleIgnoreCase(
+            Long spaceId, UUID folderId, WikiDocument.Status status, String title);
 }

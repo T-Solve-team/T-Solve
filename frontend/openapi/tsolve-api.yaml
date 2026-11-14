@@ -182,6 +182,57 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
   /api/v1/wiki/spaces/{spaceId}/documents:
+    post:
+      tags: [wiki]
+      operationId: publishWikiDocuments
+      summary: Publish one to ten readable PDF or DOCX files in a managed Space.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [files, metadata]
+              properties:
+                files:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items: { type: string, format: binary }
+                metadata:
+                  $ref: '#/components/schemas/WikiPublishMetadata'
+                  description: JSON metadata; also accepts the JSON string part sent by the generated client.
+            encoding:
+              metadata: { contentType: application/json }
+      responses:
+        '201':
+          description: Published documents in file order; indexing queued after commit.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiDocumentRef' } }
+        '400':
+          description: MSG01 for files, metadata or documents[i].title; MSG02 for titles over 200; MSG88 for over ten files; MSG89 for invalid type with file_name; MSG90 for unreadable text with file_name.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG04 for an inactive or unknown Space or a folder outside the Space.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '409':
+          description: MSG84 on documents[i].title for a duplicate Published title in the folder or this request. Nothing stored.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '413':
+          $ref: '#/components/responses/Problem'
     get:
       tags: [wiki]
       operationId: listWikiDocuments
@@ -207,6 +258,70 @@ paths:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
         '404':
           description: Unknown or Hidden Space, Deleted Department, or folder outside the Space (MSG04).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/spaces/{spaceId}/uploads/extract:
+    post:
+      tags: [wiki]
+      operationId: extractWikiUploads
+      summary: Preview one to ten PDF or DOCX files without storing them.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [files]
+              properties:
+                files:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items: { type: string, format: binary }
+      responses:
+        '200':
+          description: Preview rows in file order; unreadable files have empty excerpts and zero words.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiUploadPreview' } }
+        '400':
+          description: MSG01 on files when absent; MSG88 for over ten; MSG89 with file_name for invalid extension or magic bytes.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/documents/{documentId}/file:
+    get:
+      tags: [wiki]
+      operationId: downloadWikiDocumentFile
+      summary: Download the original file after checking current document access.
+      parameters:
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Original bytes and content type, with an attachment filename and nosniff.
+          headers:
+            Content-Disposition: { schema: { type: string } }
+            X-Content-Type-Options: { schema: { type: string, const: nosniff } }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema: { type: string, format: binary }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG110 for unknown, trashed or non-viewable documents.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -1983,6 +2098,36 @@ components:
         name: { type: string }
         departmentName: { type: string }
         accessLevel: { type: string, enum: [VIEW, KNOWLEDGE_MANAGER] }
+    WikiUploadPreview:
+      type: object
+      required: [fileName, title, excerpt, wordCount, result]
+      properties:
+        fileName: { type: string }
+        title: { type: string, maxLength: 200 }
+        excerpt: { type: string, maxLength: 300 }
+        wordCount: { type: integer, minimum: 0 }
+        result: { type: string, enum: [READY, UNREADABLE] }
+    WikiPublishMetadata:
+      type: object
+      required: [documents]
+      properties:
+        folderId: { type: [string, 'null'], format: uuid }
+        documents:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            required: [title, visibility]
+            properties:
+              title: { type: string, minLength: 1, maxLength: 200 }
+              visibility: { type: string, enum: [DEPARTMENT, COMPANY_WIDE] }
+    WikiDocumentRef:
+      type: object
+      required: [documentId, title]
+      properties:
+        documentId: { type: string, format: uuid }
+        title: { type: string }
     CreateWikiFolderRequest:
       type: object
       required: [name]
