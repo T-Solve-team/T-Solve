@@ -33,7 +33,9 @@ export function IssuePanel() {
       const [state, issueRead] = await Promise.all([getIssuePanel(issueKey), readIssue(requestJira, issueKey)]);
       setPanel(state);
       setIssue(issueRead);
-      setFeedback(state.ticketStatus === 'CHANGES_REQUESTED' ? await getReviewFeedback(issueKey).catch(() => null) : null);
+      // A change request (MSG64, AC-008.7) or a Reject reason (AC-008.9) on the viewer's ticket.
+      const reviewed = state.ticketStatus === 'CHANGES_REQUESTED' || state.ticketStatus === 'REJECTED';
+      setFeedback(reviewed ? await getReviewFeedback(issueKey).catch(() => null) : null);
       setFailed(false);
     } catch {
       setFailed(true);
