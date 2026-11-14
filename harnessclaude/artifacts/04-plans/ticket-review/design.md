@@ -245,6 +245,16 @@ Without a production `ReviewWorkspaceAccess` every Review endpoint answers 403. 
 - **Workspace name in the footer**: decided in planning: the catalog stores no display name, so the footer names the Workspace by its site host (for example `acme.tsolve.io.vn`). When there is no host, the footer leaves the name out.
 - **Visual source**: the approved preview (header `#5577FF`, red badge `#FFF2F0`/`#CF1322`, amber badge `#FFFBE6`/`#AD6800`, 600 px card, table layout, inline styles, no images).
 
+### KAN-162 change (2026-11-14): review email through the worker outbox
+
+Supersedes **Delivery**, **Job payload** and **Process split** above. Worker STORY-004 is the shared outbox (master design, worker "STORY-004").
+
+- **Compose at queue time** — `ReviewNotificationEnqueuer` stays the AFTER_COMMIT listener of `ReviewFeedbackDecidedEvent`. Inside the decision's Workspace (`runIn`, as today) it reads each decision with `ReviewNotificationService.findNotification` (business DB, after commit), builds the KAN-333 `ReviewEmail` (same data and the same site-host link through `WorkspaceSiteService` as the job handler did) and renders it with `ReviewEmailRenderer`: `subject`, `plain` and `html` become one `OutboundEmail` (AC-010.2, AC-010.7–010.9). Rendering therefore runs in the API process at queue time, not in the worker.
+- **Reading after commit** — `ReviewNotificationServiceImpl.findNotification` is `@Transactional(readOnly = true)`, so each read inside `runIn` opens its own short transaction after the decision transaction has committed. Ownership is unchanged: `worker/service/impl/ReviewNotification*` and the `ticket/…/ReviewNotification*` files are already in ticket-review's `module.md` paths. The renderer tests of KAN-333 stay as they are; the queue test asserts the stored subject, text and HTML.
+- **Queue** — `EmailOutboxService.queue(email)` per decision, catching `EmailOutboxException` and `RuntimeException` per call; no `TenantJobService`. A ticket with no writer account yields no row (AC-010.5). Each queue call is wrapped on its own, so one failure does not stop the others; only counts are logged (AC-010.3, AC-010.6).
+- **Disabled queue** — no `EmailOutboxService` bean (no `tsolve.worker.enabled`): the listener returns, decision unchanged (AC-010.3).
+- **Removed** — `ReviewNotificationJobHandler` and the `review-notification` handler type. Jobs of that type already in JobRunr storage then fail as unknown handlers (worker AC-002.15); acceptable for the demo data, noted in the PR.
+
 ## KAN-159 extension: production Review History (STORY-011)
 
 - **Query** — chosen: two native queries on `review_decision` joined to `ticket` and the reviewer's `app_user`, paged in the database with a count query, one per sort direction; alternatives: in-memory sort like the queue, a JPQL join to the identity `Account` entity. Rationale: history grows without bound, and a JPQL join would reach into another module's entity. The `app_user` join reads only the reviewer name, the same way KAN-24 already stores `project_manager_id`.

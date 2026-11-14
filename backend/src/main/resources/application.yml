@@ -80,6 +80,12 @@ tsolve:
     username: ${JOBS_DB_USER:}
     password: ${JOBS_DB_PASSWORD:}
     worker-count: ${TSOLVE_WORKER_COUNT:4}
+    email:
+      interval: ${TSOLVE_WORKER_EMAIL_INTERVAL:30s}
+      backoff: ${TSOLVE_WORKER_EMAIL_BACKOFF:5m,15m}
+      lease: ${TSOLVE_WORKER_EMAIL_LEASE:5m}
+      batch-size: ${TSOLVE_WORKER_EMAIL_BATCH_SIZE:20}
+      retention: ${TSOLVE_WORKER_EMAIL_RETENTION:30d}
   review:
     events:
       # Review Queue event stream: interval of the keep-alive comment (ISO-8601 duration).

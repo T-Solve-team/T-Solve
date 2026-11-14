@@ -59,6 +59,10 @@ public class JobRunrRuntime implements SmartLifecycle, AutoCloseable {
         return scheduler;
     }
 
+    public javax.sql.DataSource jobsDataSource() {
+        return pool;
+    }
+
     @Override
     public boolean isAutoStartup() {
         return server != null;

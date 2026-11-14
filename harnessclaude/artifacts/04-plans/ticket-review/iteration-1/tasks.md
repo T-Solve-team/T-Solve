@@ -1,7 +1,7 @@
 ---
 module: ticket-review
 date: 2026-11-01
-total_tasks: 18
+total_tasks: 21
 owner: Dev
 ---
 
@@ -191,3 +191,21 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** `backend/src/main/resources/mail/review-notification.html`; `backend/src/main/java/vn/tsolve/worker/client/{ReviewNotificationSender,ReviewEmailRenderer,ReviewEmail}.java`; `worker/service/impl/ReviewNotificationJobHandler.java`; `ticket/dto/ReviewNotification.java`; `ticket/repository/ReviewDecisionRecordRepository.java`; `ticket/service/impl/ReviewNotificationServiceImpl.java`; an identity `service/` interface and impl for the Workspace site host, if none exists; `.env.example` (comment: the sender display name is fixed to T-Solve). Tests: `worker/client/ReviewEmailRendererTest.java`, `ReviewNotificationSenderTest.java`, `ReviewNotificationSenderIT.java` (multipart parts and From name), `worker/service/impl/ReviewNotificationJobHandlerTest.java`, plus the notification query IT.
 **Dependencies:** Task 11 (review-email-notification), KAN-162 SMTP sender.
 **Verification:** Tests named AC-010.2, AC-010.7, AC-010.8 and AC-010.9 cover: both decisions; a missing writer name and a missing reviewer name; `<script>` in the title and the reason coming out escaped; line breaks kept; a line break in the key replaced in the subject; no link when there is no host; and the From display name. `mvn verify` passes (tests and Spotless). `sdd.ts trace ticket-review STORY-010` passes.
+
+## Task 20: Review email through the worker outbox (KAN-162)
+
+**Story:** STORY-010
+**Feature:** review-email-outbox
+**Description:** Implement the merged AC-010.1–010.9 (master design "KAN-162 change"). `ReviewNotificationEnqueuer` builds the KAN-333 `ReviewEmail` for each Reject / Request Changes decision after commit (data and site-host link as in the job handler), renders it with `ReviewEmailRenderer` into one `OutboundEmail` (subject, text, HTML) and queues it through `EmailOutboxService`; delete `ReviewNotificationJobHandler`. Rewrite the existing STORY-010 tests against the outbox. Test first.
+**Files:** `backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java`, `ReviewNotificationJobHandler.java` (delete); tests `backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotification*`.
+**Dependencies:** worker Task 5 (`email-outbox`), same branch `feat/KAN-162-worker-email-outbox`.
+**Verification:** tests named AC-010.1–010.9, including a PostgreSQL test that a row is stored only after commit, never after rollback, and none for Approve or a ticket with no writer; `mvn verify`; `sdd.ts trace ticket-review STORY-010`.
+
+## Task 21: Review email link fallback (KAN-162)
+
+**Story:** STORY-010
+**Feature:** review-email-link-fallback
+**Description:** Fix the findings of the task 20 review (artifacts/06-evaluation/ticket-review/task-20-review-email-outbox-review.md), test-first and logged in docs/bug-log.md. No acceptance criterion changes. AC-010.8: when the site-host lookup throws, the email is still queued without the button and the link; the host is looked up once per event, not once per decision. Rename the test `stopsAtTheFirstFailedEnqueue_BUG_164` so its name says what it asserts.
+**Files:** `backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java`; tests `backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuerTest.java`, `ReviewNotificationEnqueueBugTest.java`; `docs/bug-log.md`.
+**Dependencies:** Task 20.
+**Verification:** test named AC-010.8 with the BUG id; `sdd.ts trace ticket-review STORY-010`.

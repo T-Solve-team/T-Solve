@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-email-outbox
+      author: worker
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE email_outbox (
+                email_outbox_id uuid PRIMARY KEY,
+                workspace_id uuid NOT NULL,
+                recipient varchar(320) NOT NULL,
+                subject varchar(255) NOT NULL,
+                body_text text NOT NULL,
+                body_html text,
+                status varchar(10) NOT NULL CHECK (status IN ('PENDING', 'SENT', 'FAILED')),
+                attempt_count int NOT NULL DEFAULT 0,
+                next_attempt_at timestamptz NOT NULL,
+                claimed_at timestamptz,
+                created_at timestamptz NOT NULL,
+                finished_at timestamptz
+              );
+              CREATE INDEX email_outbox_pending_idx ON email_outbox (next_attempt_at, created_at)
+                WHERE status = 'PENDING';
+              CREATE INDEX email_outbox_finished_idx ON email_outbox (finished_at)
+                WHERE status <> 'PENDING';
+      rollback:
+        - dropTable:
+            tableName: email_outbox
