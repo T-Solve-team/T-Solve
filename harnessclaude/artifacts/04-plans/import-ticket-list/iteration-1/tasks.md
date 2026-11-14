@@ -477,3 +477,15 @@ Design: master design, section "Change 2026-11-01". `F` = `frontend/src/features
 **Files:** Ticket entity and repository, import decision entity, confirm service and published event, tenant changelog, and import and migration tests.
 **Dependencies:** Approved Import and Review specs.
 **Verification:** AC-004.10 and AC-004.13, the existing import regression suite and the Review storage migration test.
+
+---
+
+## Task 31: The Manual entry tab is enabled (KAN-133)
+
+**Story:** STORY-008
+**Feature:** import-tickets-manual-tab
+**Description:** AC-008.1 as changed on 2026-11-14: the Manual entry tab is no longer disabled; its contents are `ticket-repository` Task 19. The Import Ticket Preview popup takes its Solution sections from the shared `SolutionFields` component that Task 19 adds (same fields, rules and order; no behavior change).
+**Files:**
+- Modify: `F/pages/ImportTicketsPage.test.tsx` (AC-008.1), `F/components/SolutionFormModal.tsx`
+**Dependencies:** `ticket-repository` Task 19 (same commit)
+**Estimated size:** small

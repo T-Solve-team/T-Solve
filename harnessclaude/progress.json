@@ -38,15 +38,15 @@
         "import-type-form": "passing",
         "row-solution-popup": "passing",
         "fill-solution-screen": "passing",
-        "import-tickets-manual-tab": "in-progress"
+        "import-tickets-manual-tab": "evaluating"
       },
-      "lastUpdated": "2026-11-14T15:16:42.138Z",
+      "lastUpdated": "2026-11-14T16:46:58.890Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "d3df9400e6587689b5b58b312c66a99f8d4b406a"
+        "default": "9e2e5e349aa35feaf5a084e8f1aaba57ce160c79"
       }
     },
     "be-foundation": {
