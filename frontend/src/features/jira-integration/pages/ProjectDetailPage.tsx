@@ -50,7 +50,7 @@ export function ProjectDetailPage() {
                     </Button>
                   </Flex>
                 )}
-                <MembersTable members={members.data} />
+                <MembersTable project={project.data} members={members.data} />
               </Flex>
             ),
           },

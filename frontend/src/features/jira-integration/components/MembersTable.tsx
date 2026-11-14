@@ -1,6 +1,9 @@
-import type { ProjectMemberResponse, ProjectRole } from '@/shared/api';
+import { Button } from 'antd';
+import { useState } from 'react';
+import type { ProjectMemberResponse, ProjectRole, ProjectSummaryResponse } from '@/shared/api';
 import { formatDate } from '@/shared/lib';
-import { cells, DataTable, type DataTableColumn } from '@/shared/ui';
+import { cells, ConfirmDialog, DataTable, type DataTableColumn } from '@/shared/ui';
+import { useRemoveMemberFromProject } from '../hooks/useRemoveMemberFromProject';
 
 const ROLE_LABELS: Record<ProjectRole, string> = {
   PROJECT_MANAGER: 'Project Manager',
@@ -14,9 +17,68 @@ const COLUMNS: DataTableColumn<ProjectMemberResponse>[] = [
   { key: 'dateAdded', title: 'Added on', render: (_, row) => formatDate(row.dateAdded) },
 ];
 
-/** 3.2 Project Detail — Members tab (AC-001.5). No Remove action until KAN-129 (AC-001.7). */
-export function MembersTable({ members }: { members: readonly ProjectMemberResponse[] }) {
+const memberName = (member: ProjectMemberResponse) => member.fullName ?? member.email;
+
+/**
+ * 3.2 Project Detail — Members tab (AC-001.5). Remove on MEMBER rows while the Project is Active, never on the
+ * Project Manager's row (AC-001.7, AC-003.6); asks MSG55 first (AC-003.7, AC-003.10).
+ */
+export function MembersTable({
+  project,
+  members,
+}: {
+  project: ProjectSummaryResponse;
+  members: readonly ProjectMemberResponse[];
+}) {
+  const [toRemove, setToRemove] = useState<ProjectMemberResponse | null>(null);
+  const remove = useRemoveMemberFromProject(project.id);
+
+  const columns: DataTableColumn<ProjectMemberResponse>[] =
+    project.status === 'ACTIVE'
+      ? [
+          ...COLUMNS,
+          {
+            key: 'actions',
+            title: '',
+            render: (_, row) =>
+              row.role === 'MEMBER' && (
+                <Button
+                  type="link"
+                  danger
+                  aria-label={`Remove ${memberName(row)}`}
+                  onClick={() => setToRemove(row)}
+                >
+                  Remove
+                </Button>
+              ),
+          },
+        ]
+      : COLUMNS;
+
   return (
-    <DataTable label="Members" columns={COLUMNS} rows={members} rowKey={(row) => row.userId} />
+    <>
+      <DataTable label="Members" columns={columns} rows={members} rowKey={(row) => row.userId} />
+      <ConfirmDialog
+        isOpen={toRemove !== null}
+        code="MSG55"
+        params={{
+          user_name: toRemove ? memberName(toRemove) : '',
+          project_key: project.jiraProjectKey,
+        }}
+        isDanger
+        okText="Remove"
+        isConfirming={remove.isPending}
+        onConfirm={() =>
+          toRemove &&
+          remove.mutate(
+            { projectId: project.id, userId: toRemove.userId },
+            { onSettled: () => setToRemove(null) },
+          )
+        }
+        onCancel={() => {
+          if (!remove.isPending) setToRemove(null);
+        }}
+      />
+    </>
   );
 }

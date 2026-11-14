@@ -419,6 +419,91 @@ export const useAddProjectMembers = <TError = ErrorType<ProblemResponse>, TConte
 > => {
   return useMutation(getAddProjectMembersMutationOptions(options), queryClient);
 };
+export const getRemoveProjectMemberUrl = (projectId: string, userId: string) => {
+  return `/api/v1/projects/${projectId}/members/${userId}`;
+};
+
+/**
+ * @summary Remove a member from a Project
+ */
+export const removeProjectMember = async (
+  projectId: string,
+  userId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectMemberResponse[]> => {
+  return http<ProjectMemberResponse[]>(getRemoveProjectMemberUrl(projectId, userId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getRemoveProjectMemberMutationKey = () => ['removeProjectMember'] as const;
+
+export const getRemoveProjectMemberMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeProjectMember>>,
+    TError,
+    RemoveProjectMemberMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeProjectMember>>,
+  TError,
+  RemoveProjectMemberMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRemoveProjectMemberMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeProjectMember>>,
+    RemoveProjectMemberMutationVariables
+  > = (props) => {
+    const { projectId, userId } = props ?? {};
+
+    return removeProjectMember(projectId, userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveProjectMemberMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeProjectMember>>
+>;
+
+export type RemoveProjectMemberMutationError = ErrorType<ProblemResponse>;
+export type RemoveProjectMemberMutationVariables = { projectId: string; userId: string };
+
+/**
+ * @summary Remove a member from a Project
+ */
+export const useRemoveProjectMember = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof removeProjectMember>>,
+      TError,
+      RemoveProjectMemberMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof removeProjectMember>>,
+  TError,
+  RemoveProjectMemberMutationVariables,
+  TContext
+> => {
+  return useMutation(getRemoveProjectMemberMutationOptions(options), queryClient);
+};
 export const getSearchProjectMemberCandidatesUrl = (
   projectId: string,
   params?: SearchProjectMemberCandidatesParams,
