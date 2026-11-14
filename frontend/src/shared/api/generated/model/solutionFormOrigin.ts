@@ -8,7 +8,7 @@
  */
 
 /**
- * Where the sections come from — the viewer's Draft, the AI draft, or the issue text (MSG67).
+ * Where the sections come from — the viewer's Draft, the AI draft, the issue text (MSG67), or the ticket's current Solution (a resubmission without a Draft, AC-012.2).
  */
 export type SolutionFormOrigin = (typeof SolutionFormOrigin)[keyof typeof SolutionFormOrigin];
 
@@ -16,4 +16,5 @@ export const SolutionFormOrigin = {
   DRAFT: 'DRAFT',
   AI_DRAFT: 'AI_DRAFT',
   ISSUE: 'ISSUE',
+  TICKET: 'TICKET',
 } as const;

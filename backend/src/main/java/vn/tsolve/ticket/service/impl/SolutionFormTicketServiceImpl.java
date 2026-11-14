@@ -15,6 +15,7 @@ import vn.tsolve.ticket.exception.ProjectNotActiveException;
 import vn.tsolve.ticket.exception.SolutionSectionRequiredException;
 import vn.tsolve.ticket.exception.SolutionTooLongException;
 import vn.tsolve.ticket.exception.TicketAlreadyExistsException;
+import vn.tsolve.ticket.exception.TicketNotResubmittableException;
 import vn.tsolve.ticket.repository.SolutionDraftRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.service.SolutionFormTicketService;
@@ -68,6 +69,33 @@ public class SolutionFormTicketServiceImpl implements SolutionFormTicketService 
     @Transactional(readOnly = true)
     public Optional<TicketStatus> findStatus(String issueKey) {
         return tickets.findStatusByTicketId(issueKey);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<SolutionSections> findResubmittable(String issueKey, UUID writerId) {
+        return tickets.findResubmittableSections(issueKey, writerId);
+    }
+
+    @Override
+    @Transactional
+    public SubmittedSolutionTicket resubmit(SolutionFormSubmission submission) {
+        SolutionSections sections = submission.sections();
+        // Checked as a first submission is, so a resubmission never puts an empty Solution back (AC-012.7).
+        requireSections(sections);
+        LocalDate today = LocalDate.ofInstant(clock.instant(), REVIEW_ZONE);
+        UUID id = tickets.resubmitSolutionFormTicket(
+                        submission.issueKey(),
+                        submission.writerId(),
+                        sections.symptoms(),
+                        sections.rootCause(),
+                        sections.resolutionSteps(),
+                        sections.workaround().isBlank() ? null : sections.workaround(),
+                        sections.scopeOfApplicability(),
+                        today)
+                .orElseThrow(TicketNotResubmittableException::new);
+        drafts.deleteDraft(submission.writerId(), submission.projectId(), submission.issueKey());
+        return new SubmittedSolutionTicket(id, submission.issueKey(), TicketStatus.PENDING_REVIEW);
     }
 
     // The order of the form, so MSG01 is shown under the first empty section (AC-002.3).
