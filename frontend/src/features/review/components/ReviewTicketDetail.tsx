@@ -1,8 +1,9 @@
 import { Button, Flex } from 'antd';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useGetReviewTicketDetail } from '@/shared/api';
 import { useSession } from '@/shared/auth';
+import { showMessage } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui';
 import { useApproveSelectedTickets } from '../hooks/useReviewDecisions';
@@ -29,6 +30,12 @@ export function ReviewTicketDetail({ ticketId }: { ticketId: string }) {
         ticket.status === 'PENDING_REVIEW'));
   const canSubmit = canDecide && !detail.isFetching;
 
+  useEffect(() => {
+    if (detail.error && detail.error.status !== 403 && detail.error.status !== 404) {
+      showMessage('MSG06');
+    }
+  }, [detail.error]);
+
   function handleApprove() {
     if (!canSubmit || submitting.current) return;
     submitting.current = true;
@@ -45,7 +52,9 @@ export function ReviewTicketDetail({ ticketId }: { ticketId: string }) {
   return (
     <Flex vertical gap="large">
       {hasRole('PROJECT_MANAGER') && <Link to={paths.reviewQueue}>Back to Review Queue</Link>}
-      {!validId || detail.error?.status === 404 ? (
+      {detail.error?.status === 403 ? (
+        <EmptyState code="MSG08" />
+      ) : !validId || detail.error?.status === 404 ? (
         <EmptyState />
       ) : detail.isError ? (
         <ErrorState error={detail.error} onRetry={() => void detail.refetch()} />
