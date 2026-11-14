@@ -16,6 +16,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.web.servlet.MultipartProperties;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -79,6 +80,9 @@ class ManualEntryIT {
 
     @Autowired
     private ManualEntryService manualEntries;
+
+    @Autowired
+    private MultipartProperties multipart;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -291,6 +295,13 @@ class ManualEntryIT {
         assertThat(jdbc.queryForList("select file_size from evidence", Long.class))
                 .hasSize(5)
                 .containsOnly(10L * 1024 * 1024);
+    }
+
+    @Test
+    void anyFileTheRequestLimitLetsThroughReachesTheMsg34Check_AC_006_6_BUG_214() {
+        // a file over 10 MB is MSG34 with its name from EvidenceFiles, not 413 MSG28 from the multipart limit
+        assertThat(multipart.getMaxFileSize()).isEqualTo(multipart.getMaxRequestSize());
+        assertThat(multipart.getMaxFileSize().toBytes()).isGreaterThan(EvidenceFiles.MAX_BYTES);
     }
 
     private long saveDraft(TSolveUser user, String fields, List<MultipartFile> files) {

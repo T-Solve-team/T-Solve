@@ -372,6 +372,34 @@ class ManualDraftServiceTest {
     }
 
     @Test
+    void filesAnotherRequestAddedBeforeTheLockCountTowardsFive_AC_006_12_BUG_215() {
+        ImportPreview preview = draft();
+        // another request added 2 files between the first read (2 files) and the lock: 4 + 2 new is over five
+        ImportPreview changed = ImportPreview.manualDraft(OWNER, PROJECT, EARLIER);
+        ReflectionTestUtils.setField(changed, "id", 42L);
+        changed.replaceEvidence(List.of(
+                preview.getEvidence().get(0),
+                preview.getEvidence().get(1),
+                new DraftEvidence(UUID.randomUUID(), "k3", "c.png", "png", 1),
+                new DraftEvidence(UUID.randomUUID(), "k4", "d.png", "png", 1)));
+        when(previews.lockByIdAndOwner(42L, OWNER)).thenReturn(Optional.of(changed));
+        List<MultipartFile> two = List.of(file("e.png", "1"), file("f.png", "1"));
+
+        for (Runnable call : List.<Runnable>of(
+                () -> service.saveDraft(PM, entry("\"draftId\":42"), two),
+                () -> service.save(PM, entry(FULL + ",\"draftId\":42"), two))) {
+            assertThat(catchThrowableOfType(call::run, MessageCodeException.class)
+                            .getCode())
+                    .isEqualTo("MSG72");
+        }
+        assertThat(changed.getEvidence()).hasSize(4);
+        assertThat(storage.objects).containsOnlyKeys("k1", "k2");
+        assertThat(transactions).containsExactly("rollback", "rollback");
+        verify(tickets, never()).save(any());
+        verifyNoInteractions(recorder);
+    }
+
+    @Test
     void aKeptFileTheLockedDraftNoLongerHasIs404AndTheNewFilesAreDeleted_AC_007_9() {
         ImportPreview preview = draft();
         // edge 28: another request removed e1 between the first read and the lock

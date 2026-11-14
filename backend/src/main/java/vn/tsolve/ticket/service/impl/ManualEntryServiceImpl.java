@@ -148,9 +148,10 @@ public class ManualEntryServiceImpl implements ManualEntryService {
         try {
             saved = transaction.execute(status -> {
                 Kept kept = kept(caller, request, previews::lockByIdAndOwner);
+                requireAtMostFive(kept, stored);
                 return new Saved<>(insert(user, valid, kept, stored), kept.removedKeys());
             });
-        } catch (NotFoundException e) {
+        } catch (NotFoundException | ManualEntryRejectedException e) {
             // the Draft or a kept file is gone (AC-007.8, AC-007.9): not a failure of the import, no batch
             evidence.delete(stored);
             throw e;
@@ -193,7 +194,7 @@ public class ManualEntryServiceImpl implements ManualEntryService {
         Saved<Long> saved;
         try {
             saved = transaction.execute(status -> writeDraft(caller, request, stored, now));
-        } catch (NotFoundException e) {
+        } catch (NotFoundException | ManualEntryRejectedException e) {
             evidence.delete(stored);
             throw e;
         } catch (RuntimeException e) {
@@ -254,6 +255,7 @@ public class ManualEntryServiceImpl implements ManualEntryService {
             return new Saved<>(id, List.of());
         }
         Kept kept = kept(caller, request, previews::lockByIdAndOwner);
+        requireAtMostFive(kept, stored);
         ImportPreview draft = kept.draft();
         draft.saveManualDraftAgain(request.projectId(), now);
         draft.replaceEvidence(
@@ -263,6 +265,13 @@ public class ManualEntryServiceImpl implements ManualEntryService {
                 .orElseThrow(ManualEntryServiceImpl::notFound)
                 .replaceValues(values);
         return new Saved<>(draft.getId(), kept.removedKeys());
+    }
+
+    /** Counted again under the lock: files another request added after the first read count too (BUG-215). */
+    private static void requireAtMostFive(Kept kept, List<EvidenceFiles.Stored> stored) {
+        if (kept.files().size() + stored.size() > EvidenceFiles.MAX_FILES) {
+            throw ManualEntryRejectedException.tooManyFiles();
+        }
     }
 
     /**

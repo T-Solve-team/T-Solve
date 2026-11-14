@@ -34,9 +34,9 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.xml
   servlet:
     multipart:
-      # A CSV (MSG28) or an Evidence file (MSG34) is at most 10 MB; the services check that, so a file just above
-      # it gets its own message. A manual entry sends up to 5 Evidence files in one request (UC-22).
-      max-file-size: 11MB
+      # A CSV (MSG28) or an Evidence file (MSG34) is at most 10 MB; the services check that, so any file the request
+      # limit lets through gets its own message (BUG-214). A manual entry sends up to 5 Evidence files (UC-22).
+      max-file-size: 56MB
       max-request-size: 56MB
 
 server:
