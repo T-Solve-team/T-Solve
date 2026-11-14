@@ -19,7 +19,7 @@
   no `identity` table (backend rule: modules meet through services only); tasks.md Task 11 updated.
 - Tests: `SolutionFormTicketIT.listsOpenDraftsNewestFirstAndLeavesOutIssuesWithATicket_AC_011_2_AC_011_3` (green;
   run with `TSOLVE_WORKER_ENABLED=false`, the local `.env` enables the worker).
-- Commit: `default@77be7235`
+- Commit: `default@3d982f13` (rebased onto main 15/11; first recorded as `77be7235`)
 
 ### Blockers
 none

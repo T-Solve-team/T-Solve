@@ -1517,3 +1517,6 @@
 {"ts":"2026-11-14T08:47:36.781Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-job","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T08:51:42.214Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-query","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T08:51:42.478Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-job","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T19:12:47.936Z","type":"spec-approved","module":"jira-app","specHash":"d50241ff212550033a1b215a52daa559bdc48b1d3cc8a01daaf7984d5fcfdad8"}
+{"ts":"2026-11-14T19:13:26.929Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-query","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-14T19:13:27.218Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-job","from":"evaluating","to":"fixing"}

@@ -210,7 +210,7 @@ no longer describes "all empty = Close". Re-check Close, the Draft and Finish on
 one writer — as `(creatorId, issueKey, updatedAt)`, newest first: `solution_draft` rows whose `jira_issue_key` has no
 `ticket` of any source (whether the creator is still ACTIVE is the job's check through `identity`, so `ticket` reads
 no `identity` table). Read-only, no schema change. Tests: AC-011.2 (a Draft with a
-ticket, an inactive creator and a writer with none are left out), ordering for AC-011.3; an IT on PostgreSQL.
+ticket and a writer with none are left out; an inactive creator is left out by the job, Task 12), ordering for AC-011.3; an IT on PostgreSQL.
 **Files:**
 - Modify: `backend/src/main/java/vn/tsolve/ticket/service/SolutionDraftService.java`, its impl,
   `backend/src/main/java/vn/tsolve/ticket/repository/SolutionDraftRepository.java`
@@ -227,13 +227,13 @@ ticket, an inactive creator and a writer with none are left out), ordering for A
 **Description:** In `vn.tsolve.jiraapp`: `DraftReminderRegistration` (recurring id `jira-app-draft-reminder`,
 `0 8 * * *`, Asia/Ho_Chi_Minh, only with `tsolve.worker.enabled`), `DraftReminderDispatchHandler` (one Workspace job per
 active Workspace), `DraftReminderWorkspaceHandler` (one writer job per writer, job id = name-based UUID of workspace +
-account + date; no mailer → one warning, nothing enqueued), `DraftReminderEmailHandler` (active Account email +
-open Drafts → mail; nothing when the writer has none left), `DraftReminderMailer` (`@Profile("worker")`, plain text,
-subject and body of AC-011.3, link from `JIRA_SITE_URL`). Tests: AC-011.1 to AC-011.7 (mail content, singular/plural,
-no link without the site URL, same-day dedupe, per-writer retry, no-sender warning, logs without addresses); check
-locally with the worker profile and a local SMTP catcher.
+account + date), `DraftReminderEmailHandler` (active Account email + open Drafts → plain-text email of AC-011.3,
+link from `JIRA_SITE_URL`, queued with `EmailOutboxService.queue` inside the Workspace; nothing when the writer has
+none left; changed 15/11 from an own SMTP mailer). Tests: AC-011.1 to AC-011.7 (mail content, singular/plural,
+no link without the site URL, same-day dedupe, per-writer retry of the queue call, a rejected address dropped, the
+email queued inside the Workspace, logs without addresses).
 **Files:**
-- Create: `backend/src/main/java/vn/tsolve/jiraapp/reminder/*` (registration, requests, handlers, mailer), tests
+- Create: `backend/src/main/java/vn/tsolve/jiraapp/dto/DraftReminder*Request.java`, `jiraapp/service/impl/DraftReminder*.java`, tests
 **Dependencies:** Task 11
 **Estimated size:** medium
 

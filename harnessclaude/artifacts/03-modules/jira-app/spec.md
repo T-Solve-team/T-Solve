@@ -34,6 +34,7 @@ an issue has at most one.
 | 2026-11-14 | STORY-005, STORY-006 | Close keeps a Draft instead of submitting an empty ticket: AC-005.1 reworded (closing the form — Close or the dialog's close control — stores the Draft and shows MSG41), new AC-005.5 (no Save as draft button, no ticket on close, the server never stores an empty Solution); STORY-006 retired (AC-006.1, AC-006.2, AC-006.3 removed, MSG70 no longer shown); the solution endpoint no longer takes "all empty = Close". The Draft reminder email moves to a separate issue (Out of Scope) | KAN-126 dev-site test (14/11): the team's Review Queue never holds an empty ticket, so the empty Solution of AC-006.2 must not reach it; with Close saving the Draft a separate Save as draft button is redundant (user 14/11). Deviation from the SRS (Save as draft button, MSG70) to agree with the team |
 | 2026-11-14 | STORY-005 | AC-005.1: closing the form shows the flag "Saved as draft" instead of MSG41 | User in the dev-site test (14/11): the short text says what Close did |
 | 2026-11-14 | STORY-011 (new) | Add STORY-011 (KAN-336): a daily worker job emails each writer one plain-text list of their open Drafts (issue key, last saved date, Jira link) at 08:00 Asia/Ho_Chi_Minh; one email per writer per day, retried per writer, no email without an open Draft; `worker` and `identity` added to Required interfaces | User decisions of 14/11: Close keeps a Draft (STORY-005), so writers need a reminder instead of an empty ticket; daily digest per person; the job reuses `worker`'s tenant loop and SMTP settings without changing `worker`'s or `ticket-review`'s jobs |
+| 2026-11-15 | STORY-011 | AC-011.4 and AC-011.6 reworded: the reminder queues each writer's email in the shared email outbox (worker STORY-004, KAN-162) instead of sending it over SMTP itself; delivery retries, the missing-sender case and expiry are the outbox's; queuing is retried per writer. The `worker` row of Required interfaces names `EmailOutboxService` instead of the SMTP settings. The body stays plain text | PR #233 (KAN-162) merged on 15/11; user chose to defer to the outbox (15/11) rather than one more mail path. User: plain text for now, an HTML body is to follow after 16/11 |
 
 ## Requirements
 
@@ -134,9 +135,9 @@ an issue has at most one.
   - AC-011.1: WHILE the worker runs with jobs enabled, THE server SHALL run the reminder job every day at 08:00 Asia/Ho_Chi_Minh, under its own recurring job id (not shared with any other job), once for each active Workspace.
   - AC-011.2: WHEN the reminder job runs for a Workspace, THE server SHALL send exactly one email to each writer of that Workspace and SHALL send no email to an Account without an open Draft, to an inactive Account or for a Draft whose issue's ticket exists.
   - AC-011.3: THE email SHALL go to the writer's Account email, with the subject "You have 1 unsubmitted Solution draft in T-Solve" for one open Draft and "You have N unsubmitted Solution drafts in T-Solve" for N of them (N > 1), and a plain-text body with one line per open Draft, newest saved first — the issue key, the date it was last saved (yyyy-MM-dd, Asia/Ho_Chi_Minh) and, when the Jira site URL is configured, a link made of that URL, `/browse/` and the issue key — followed by the line "Open the issue in Jira and use Continue draft in the T-Solve panel to submit it." It SHALL contain no Solution text.
-  - AC-011.4: IF sending a writer's email fails, THEN THE server SHALL retry that writer's email by itself, without sending again to the other writers.
+  - AC-011.4: THE server SHALL hand each writer's email to the shared email outbox (`worker` STORY-004), whose dispatcher sends it and retries a failed delivery (worker AC-004.4 to AC-004.10). IF queuing a writer's email fails, THEN THE server SHALL retry queuing that writer's email by itself, without queuing again for the other writers.
   - AC-011.5: IF the reminder job runs again for a Workspace on the same day, THEN THE server SHALL not send a writer a second email that day.
-  - AC-011.6: IF no mail sender is configured in the worker, THEN THE reminder job SHALL send nothing and log one warning per run.
+  - AC-011.6: THE reminder job SHALL queue the email whether or not an SMTP sender is configured; without one, the outbox keeps and expires the email by its own rules (worker AC-004.9, AC-004.10) and logs the missing sender itself.
   - AC-011.7: THE reminder job SHALL log only ids, counts and error types — never an email address, an issue key list or Draft content.
 
 ## Out of Scope
@@ -192,7 +193,7 @@ Jira's navigation are checked in a spike first (RESEARCH-004, open questions).
 | `ai` (Trần Hải Anh) | Chat client (`LlmClient`) for the AI draft and rewrite — prompts owned here, a configured stand-in for demos |
 | `chatbot` (Trần Hải Anh) | Answer a question with history for a given T-Solve user (`ChatbotAnswerService`, chatbot STORY-005 to STORY-007), callable from the Jira App API — to agree with the owner |
 | `tracker` | Skip the suggestion job for an issue created with label `tsolve-asked` — a change of tracker AC-011.8 (tracker spec, KAN-22) |
-| `worker` (Phạm Tùng Dương) | Used, not changed: `WorkerTenantService` (active Workspaces, run in a Workspace), `JobRunrRuntime` scheduler for a recurring job and per-writer jobs, the SMTP settings (`spring.mail.*`, `TSOLVE_SMTP_FROM`) of the `worker` profile (STORY-011) |
+| `worker` (Phạm Tùng Dương) | Used, not changed: `WorkerTenantService` (active Workspaces, run in a Workspace), `JobRunrRuntime` scheduler for a recurring job and per-writer jobs, `EmailOutboxService.queue(OutboundEmail)` of the shared email outbox (STORY-011) |
 | `identity` | An Account's email and status by id (STORY-011) |
 
 ## Definition of Done

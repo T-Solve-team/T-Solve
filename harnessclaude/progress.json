@@ -324,10 +324,10 @@
         "issue-panel-ui": "passing",
         "remove-jira-search": "passing",
         "close-keeps-draft": "passing",
-        "draft-reminder-query": "evaluating",
-        "draft-reminder-job": "evaluating"
+        "draft-reminder-query": "fixing",
+        "draft-reminder-job": "fixing"
       },
-      "lastUpdated": "2026-11-14T08:51:42.476Z",
+      "lastUpdated": "2026-11-14T19:13:27.217Z",
       "branch": "feat/KAN-336-jira-app-draft-reminder",
       "repos": [
         "default"
