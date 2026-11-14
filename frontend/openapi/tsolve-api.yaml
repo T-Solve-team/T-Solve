@@ -32,6 +32,8 @@ tags:
     description: Calls from the T-Solve Jira App through Forge Remote (Forge Invocation Token).
   - name: triage
     description: Suggestion History and result detail (KAN-149), served by the backend triage module.
+  - name: projects
+    description: Project Detail and its members (SRS UC-15, screen 3.2).
 paths:
   /api/v1/audit-events:
     get:
@@ -99,6 +101,102 @@ paths:
         '403':
           $ref: '#/components/responses/Problem'
         '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}:
+    get:
+      tags: [projects]
+      operationId: getProject
+      summary: Project Detail header
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The Project.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectSummaryResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}/members:
+    get:
+      tags: [projects]
+      operationId: listProjectMembers
+      summary: Members of a Project
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The Project Manager first, then the other members by full name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProjectMemberResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [projects]
+      operationId: addProjectMembers
+      summary: Add Ticket Resolvers to a Project
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddProjectMembersRequest' }
+      responses:
+        '201':
+          description: Members added; the full member list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProjectMemberResponse' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}/member-candidates:
+    get:
+      tags: [projects]
+      operationId: searchProjectMemberCandidates
+      summary: Active Ticket Resolvers that can be added to a Project
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+        - name: q
+          in: query
+          description: Trimmed, case-insensitive substring of full name or email; at most 20 results.
+          schema: { type: string, maxLength: 100 }
+      responses:
+        '200':
+          description: Candidates by full name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MemberCandidateResponse' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
           $ref: '#/components/responses/Problem'
   /api/v1/users:
     post:
@@ -1627,6 +1725,7 @@ components:
           PERMISSION_CHANGE,
           TRACKER_CONFIGURATION_CHANGE,
           DEPARTMENT_CHANGE,
+          PROJECT_MEMBER_CHANGE,
         ]
     AuditEntry:
       type: object
@@ -1772,6 +1871,40 @@ components:
       required: [name]
       properties:
         name: { type: string, minLength: 1, maxLength: 50 }
+    ProjectSummaryResponse:
+      type: object
+      required: [id, jiraProjectKey, departmentName, projectManagerName, status]
+      properties:
+        id: { type: string, format: uuid }
+        jiraProjectKey: { type: string }
+        departmentName: { type: string }
+        projectManagerName: { type: [string, 'null'] }
+        status: { type: string, enum: [ACTIVE, REMOVED] }
+    ProjectMemberResponse:
+      type: object
+      required: [userId, fullName, email, role, dateAdded]
+      properties:
+        userId: { type: string, format: uuid }
+        fullName: { type: [string, 'null'] }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/ProjectRole' }
+        dateAdded: { type: string, format: date-time }
+    MemberCandidateResponse:
+      type: object
+      required: [userId, fullName, email]
+      properties:
+        userId: { type: string, format: uuid }
+        fullName: { type: [string, 'null'] }
+        email: { type: string, format: email }
+    AddProjectMembersRequest:
+      type: object
+      required: [userIds]
+      properties:
+        userIds:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { type: string, format: uuid }
     CreateUserRequest:
       type: object
       required: [email, roles]

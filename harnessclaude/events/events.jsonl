@@ -1248,3 +1248,17 @@
 {"ts":"2026-11-13T12:58:04.488Z","type":"module-status","module":"platform","from":"planned","to":"implementing"}
 {"ts":"2026-11-13T16:03:48.393Z","type":"feature-status","module":"platform","feature":"staging-cd","from":"pending","to":"in-progress"}
 {"ts":"2026-11-13T16:31:24.816Z","type":"spec-approved","module":"be-foundation","specHash":"045771d2bbca1abf203acc1bc361c2bb5133a937987e910ce56a074869b1c922"}
+{"ts":"2026-11-13T07:04:23.618Z","type":"spec-approved","module":"project-integration","specHash":"b8f05bc98b077a0e9e777c6f275a6a5c08e44bdf905560d2a8f9346963bc7f2c"}
+{"ts":"2026-11-13T07:04:28.647Z","type":"module-status","module":"project-integration","from":"decomposed","to":"planned"}
+{"ts":"2026-11-13T07:04:28.931Z","type":"feature-status","module":"project-integration","feature":"project-members-api","from":null,"to":"pending"}
+{"ts":"2026-11-13T07:04:29.205Z","type":"feature-status","module":"project-integration","feature":"project-members-tab","from":null,"to":"pending"}
+{"ts":"2026-11-13T07:04:29.483Z","type":"module-status","module":"project-integration","from":"planned","to":"implementing"}
+{"ts":"2026-11-13T07:04:29.762Z","type":"feature-status","module":"project-integration","feature":"project-members-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-13T08:15:37.090Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"782e23ff6a94c4981ac521c34c9cece7391a05f8"}
+{"ts":"2026-11-13T08:15:37.362Z","type":"feature-status","module":"project-integration","feature":"project-members-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-13T08:15:43.037Z","type":"feature-status","module":"project-integration","feature":"project-members-tab","from":"pending","to":"in-progress"}
+{"ts":"2026-11-13T09:04:01.790Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"0af04d13dff8d4c4510726293e4af4af25cf3ecd"}
+{"ts":"2026-11-13T09:04:02.148Z","type":"feature-status","module":"project-integration","feature":"project-members-tab","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-13T09:09:47.890Z","type":"feature-status","module":"project-integration","feature":"project-members-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-13T09:09:48.158Z","type":"feature-status","module":"project-integration","feature":"project-members-tab","from":"evaluating","to":"passing"}
+{"ts":"2026-11-13T13:29:41.145Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"0d882fb62e868bbe9e62c400c6d204a88cb89269"}
