@@ -2,7 +2,7 @@ package vn.tsolve.workspace.service.impl;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vn.tsolve.common.lookup.WorkspaceStatusLookup;
+import vn.tsolve.common.session.lookup.WorkspaceStatusLookup;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.workspace.repository.WorkspaceInfoRepository;
 
@@ -18,7 +18,7 @@ public class WorkspaceStatusLookupImpl implements WorkspaceStatusLookup {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean isReady() {
+    public boolean isCompanyInformationEntered() {
         return repository.existsById(scope.currentWorkspaceId());
     }
 }

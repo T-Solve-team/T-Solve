@@ -12,7 +12,6 @@ paths:
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
   - docs/bug-log.md
-  - backend/src/main/java/vn/tsolve/common/lookup/WorkspaceStatusLookup.java
   - backend/src/main/java/vn/tsolve/tracker/client/**
   - backend/src/test/java/vn/tsolve/tracker/client/**
   - backend/src/main/java/vn/tsolve/tracker/service/JiraServiceAccount.java

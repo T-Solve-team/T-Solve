@@ -42,9 +42,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.support.TransactionTemplate;
-import vn.tsolve.common.lookup.WorkspaceStatusLookup;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.WithTSolveUser;
+import vn.tsolve.common.session.lookup.WorkspaceStatusLookup;
 import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.tracker.client.TicketTrackerClient;
@@ -304,10 +304,25 @@ class WorkspaceControllerIT {
     @Test
     @DisplayName("AC-006.1 readiness is false before setup and isolated by tenant after setup")
     void readsReadiness() throws Exception {
-        assertThat(scope.runIn(TwoTenantDatabases.ACME, lookup::isReady)).isFalse();
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, lookup::isCompanyInformationEntered))
+                .isFalse();
         perform(setup(input("Fake company", "https://fake.atlassian.net"))).andExpect(status().isCreated());
-        assertThat(scope.runIn(TwoTenantDatabases.ACME, lookup::isReady)).isTrue();
-        assertThat(scope.runIn(TwoTenantDatabases.BETA, lookup::isReady)).isFalse();
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, lookup::isCompanyInformationEntered))
+                .isTrue();
+        assertThat(scope.runIn(TwoTenantDatabases.BETA, lookup::isCompanyInformationEntered))
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("AC-006.1 /me reports workspaceReady=true once the company information is saved (BUG-206)")
+    void meReportsWorkspaceReadyAfterSetup_BUG_206() throws Exception {
+        perform(get("/api/v1/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.workspaceReady").value(false));
+        perform(setup(input("Fake company", "https://fake.atlassian.net"))).andExpect(status().isCreated());
+        perform(get("/api/v1/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.workspaceReady").value(true));
     }
 
     @Test

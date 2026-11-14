@@ -19,6 +19,7 @@ Covers UC-12 Create Department (Jira KAN-120, STORY-001..STORY-002), the rename 
 | 2026-11-12 | STORY-007, STORY-008 | AC-008.1 names the binding a worker job uses (`WorkerTenantService`, else `TenantScope`); AC-007.5 also covers a stored token that cannot be decrypted (MSG156) | Evaluation of Tasks 5 and 6: the suggestion job binds only `WorkerTenantService`, so `current()` failed in the job; an undecryptable token answered 500. Decisions D28, D29 (user delegated decisions, 12/11) |
 | 2026-11-13 | STORY-003..STORY-009 | KAN-119 stories renumbered from STORY-001..STORY-007 (AC-001.x..AC-007.x become AC-003.x..AC-009.x), wording unchanged | KAN-120 (#202, STORY-001, STORY-002 Departments) reached `main` first; the two specs merge into one |
 | 2026-11-13 | all | Merged the KAN-120 spec (main, #202) with the KAN-119 spec: Out of Scope no longer lists UC-10/UC-11 or the Departments KAN-120 built; requirements, contracts and Definition of Done joined | KAN-119 merges main |
+| 2026-11-15 | STORY-006 | AC-006.1 and the Interface Contracts name `vn.tsolve.common.session.lookup.WorkspaceStatusLookup#isCompanyInformationEntered()` instead of the orphan `common.lookup.WorkspaceStatusLookup#isReady()` | BUG-206: `/me` (`SessionServiceImpl`) reads the `common.session.lookup` interface, so `workspaceReady` stayed false after Setup |
 | 2026-11-15 | STORY-005..STORY-011 | KAN-119 stories renumbered again from STORY-003..STORY-009 (AC-003.x..AC-009.x become AC-005.x..AC-011.x), wording unchanged; the requirements numbered 7..11 become 10..14 | KAN-121 (#206, STORY-003, STORY-004 rename) reached `main` first and took STORY-003 and STORY-004; the specs merge into one |
 | 2026-11-12 | STORY-003, STORY-004 | Add UC-13 rename: read and rename API with the Space (AC-003.1 to AC-003.22) and screen 2.3 Department Detail with the 2.2 link (AC-004.1 to AC-004.14); UC-13 leaves Out of Scope except the default Project; interim limit 6 added; contract gains `getDepartment` and `updateDepartment` | KAN-121, decisions D4 and D6 to D20 |
 
@@ -191,8 +192,8 @@ These are known limits of the code this story builds on. They are not defects of
 - As the web app, I want to know whether the Workspace is set up and read its information, so that it opens Workspace
   Setup or fills Workspace Settings.
 - Acceptance:
-  - AC-006.1: THE `workspace` module SHALL implement `WorkspaceStatusLookup.isReady()`, which answers true exactly
-    when the bound Workspace's tenant database has its `workspace` row (be-foundation AC-005.2).
+  - AC-006.1: THE `workspace` module SHALL implement `vn.tsolve.common.session.lookup.WorkspaceStatusLookup#isCompanyInformationEntered()`, which answers true exactly
+    when the bound Workspace's tenant database has its `workspace` row (be-foundation AC-003.2).
   - AC-006.2: WHEN an Admin calls `GET /api/v1/workspace` while the Workspace is set up, THE backend SHALL answer 200
     with `companyName`, `jiraSiteUrl` and `serviceAccountEmail`, and no field that holds or hints at the token.
   - AC-006.3: IF the Workspace is not set up, THEN THE backend SHALL answer `GET /api/v1/workspace` with 404 and
@@ -241,7 +242,7 @@ These are known limits of the code this story builds on. They are not defects of
 - As the first Admin, I want a Setup screen, so that I enter the information right after my first sign-in.
 - Acceptance:
   - AC-009.1: WHILE a signed-in Admin's `/me` has `workspaceReady` false, THE web app SHALL open 2.1 Workspace Setup
-    and show `MSG60` (existing guard `RequireWorkspace`, fe-foundation AC-005.2).
+    and show `MSG60` (existing guard `RequireWorkspace`, fe-foundation AC-003.2).
   - AC-009.2: THE screen SHALL have the fields Company name (at most 100 characters), Jira site address (at most 200,
     placeholder `https://company.atlassian.net`), Service account email (at most 100) and Service account API token
     (masked input), all required.
@@ -377,7 +378,7 @@ WorkspaceUpdateRequest { companyName, serviceAccountEmail, serviceAccountToken? 
 WorkspaceInfo          { companyName, jiraSiteUrl, serviceAccountEmail }
 Errors: ProblemDetails with code / params / field, as the rest of the API.
 
-vn.tsolve.common.lookup.WorkspaceStatusLookup { boolean isReady(); }        // used by /me (be-foundation)
+vn.tsolve.common.session.lookup.WorkspaceStatusLookup { boolean isCompanyInformationEntered(); }  // used by /me (be-foundation)
 vn.tsolve.tracker.service.JiraServiceAccount  { Optional<JiraAccount> current(); }  // implemented here
 ```
 

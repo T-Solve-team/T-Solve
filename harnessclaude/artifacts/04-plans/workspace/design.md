@@ -163,7 +163,7 @@ WorkspaceController (/api/v1/workspace, @PreAuthorize ADMIN)
         ├─ WorkspaceInfoRepository JPA, table `workspace` (one row)
         ├─ TenantScope             identity: currentWorkspaceId()
         └─ AuditService            TRACKER_CONFIGURATION_CHANGE / WORKSPACE
-WorkspaceStatusLookupImpl  → common/lookup/WorkspaceStatusLookup (for /me)
+WorkspaceStatusLookupImpl  → common/session/lookup/WorkspaceStatusLookup#isCompanyInformationEntered (for /me; BUG-206)
 WorkspaceJiraServiceAccount → tracker/service/JiraServiceAccount (replaces ConfiguredJiraServiceAccount)
 ```
 
@@ -385,7 +385,6 @@ backend/src/main/java/vn/tsolve/workspace/
   service/impl/WorkspaceStatusLookupImpl.java  WorkspaceJiraServiceAccount.java
   site/JiraSiteRule.java  JiraSiteLinker.java  InterimJiraSiteLinker.java  JiraSiteLinkRefusedException.java
   crypto/TokenCipher.java
-backend/src/main/java/vn/tsolve/common/lookup/WorkspaceStatusLookup.java
 backend/src/main/java/vn/tsolve/tracker/client/TicketTrackerClient.java, JiraClient.java   (+ checkServiceAccount)
 backend/src/main/resources/db/changelog/changes/035-workspace-info.sql (+ master include)
 backend/src/main/resources/application.yml  (tsolve.workspace.secret-key: ${WORKSPACE_SECRET_KEY}; remove stand-in keys)
@@ -426,7 +425,7 @@ The user delegated the remaining calls on 12/11 ("tự quyết và note lại").
 | D11 | Audit action | `TRACKER_CONFIGURATION_CHANGE`, target type `WORKSPACE` | add `WORKSPACE_UPDATE` to `AuditAction` | The action list is fixed by the dashboard-audit spec and the OpenAPI enum |
 | D12 | `sign_in_provider` value | `GOOGLE` | null / config | NOT NULL in the DDL; sign-in is Keycloak with Google (ADR-0003) |
 | D13 | Link and insert in one transaction | Link first, then insert, same transaction | insert then link after commit | A refused link stores no row; the left-over risk (commit fails after the link) is a platform change request (AC-004.23 idempotent) |
-| D14 | `WorkspaceStatusLookup` interface does not exist yet | Create it in `common/lookup` with `boolean isReady()` (be-foundation design.md:182 names this file) | wait for be-foundation | Lets `/me` wire it later; path added to `module.md` |
+| D14 | `WorkspaceStatusLookup` interface does not exist yet | Create it in `common/lookup` with `boolean isReady()` (be-foundation design.md:182 names this file) | wait for be-foundation | Lets `/me` wire it later; path added to `module.md` Superseded by BUG-206: `/me` reads `common/session/lookup/WorkspaceStatusLookup#isCompanyInformationEntered`, so the impl implements that and `common/lookup` is deleted. |
 | D15 | Stand-in `ConfiguredJiraServiceAccount` | Delete it, its test and its 3 settings (`application.yml`, `.env.example`) | keep under a profile | Its own Javadoc says to delete it; one bean only (AC-008.2) |
 | D16 | Decrypt failure | Log error, return empty | throw | No Jira call with a broken token; tracker already handles "no account" (AC-012.8) |
 | D17 | Request `jiraSiteUrl` on PUT | Ignored | 400 | Read-only field; a client that echoes the form must not fail |

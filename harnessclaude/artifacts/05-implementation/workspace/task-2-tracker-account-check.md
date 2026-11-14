@@ -13,7 +13,7 @@
   permission throws `JiraRejectedException(403)`; the existing error split is reused; no body or credential leaves.
 - Verify (code commit 787c7db): `mvn -B verify` in a worktree — 1409 unit + 439 IT, BUILD SUCCESS.
 - Deviation: `sdd.ts trace` found AC-011.1/2 ambiguous — `JiraClientTest` is under the paths of both `tracker` and
-  `workspace`, and tracker's spec has its own AC-009.x. Fix-up (e60a44e): the check tests moved unchanged to
+  `workspace`, and tracker's spec has its own AC-007.x. Fix-up (e60a44e): the check tests moved unchanged to
   `backend/src/test/java/vn/tsolve/workspace/jira/JiraServiceAccountCheckTest.java`; the test constructor
   `JiraClient(RestClient.Builder)` became public. `spotless:check` + JiraClientTest 9 / JiraServiceAccountCheckTest 26
   passed; the next full `mvn verify` (Task 5) covers it again.
