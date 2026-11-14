@@ -191,3 +191,18 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** `backend/src/main/resources/mail/review-notification.html`; `backend/src/main/java/vn/tsolve/worker/client/{ReviewNotificationSender,ReviewEmailRenderer,ReviewEmail}.java`; `worker/service/impl/ReviewNotificationJobHandler.java`; `ticket/dto/ReviewNotification.java`; `ticket/repository/ReviewDecisionRecordRepository.java`; `ticket/service/impl/ReviewNotificationServiceImpl.java`; an identity `service/` interface and impl for the Workspace site host, if none exists; `.env.example` (comment: the sender display name is fixed to T-Solve). Tests: `worker/client/ReviewEmailRendererTest.java`, `ReviewNotificationSenderTest.java`, `ReviewNotificationSenderIT.java` (multipart parts and From name), `worker/service/impl/ReviewNotificationJobHandlerTest.java`, plus the notification query IT.
 **Dependencies:** Task 11 (review-email-notification), KAN-162 SMTP sender.
 **Verification:** Tests named AC-010.2, AC-010.7, AC-010.8 and AC-010.9 cover: both decisions; a missing writer name and a missing reviewer name; `<script>` in the title and the reason coming out escaped; line breaks kept; a line break in the key replaced in the subject; no link when there is no host; and the From display name. `mvn verify` passes (tests and Spotless). `sdd.ts trace ticket-review STORY-010` passes.
+
+## Task 20: Jira feedback for a Rejected ticket (STORY-009 change)
+
+**Story:** STORY-009
+**Feature:** jira-rejected-feedback
+**Description:** AC-009.13: `GET /api/v1/jira-app/issues/{issueKey}/review-feedback` also answers the verified writer of a
+Rejected Solution Form ticket with its latest Reject decision as code `REJECTED`, params `manager_name` and `reason`; no
+feedback when the reviewer's name is missing or blank. MSG64 stays as it is.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/ticket/repository/TicketRepository.java`,
+  `ticket/service/TicketReviewReadService.java`, `ticket/service/impl/TicketReviewReadServiceImpl.java`,
+  `ticket/dto/TicketReviewView.java`, `review/controller/JiraReviewFeedbackController.java`, its tests,
+  `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
+**Dependencies:** none (requested by jira-app Task 15)
+**Estimated size:** small

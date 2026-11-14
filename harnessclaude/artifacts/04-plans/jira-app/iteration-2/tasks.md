@@ -232,3 +232,14 @@ submitted. Check the flow on the dev site (Request changes → Edit and resubmit
   `api/tsolveClient.js`, their tests
 **Dependencies:** Task 13
 **Estimated size:** small
+
+## Task 15: Issue Panel — Rejected ticket
+
+**Story:** STORY-008
+**Feature:** panel-rejected
+**Description:** AC-008.9: while the writer's Solution Form ticket is Rejected the panel reads the feedback endpoint and
+shows `Rejected by {manager_name}: "{reason}".` (code `REJECTED`, a Jira App text) with no button.
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, `messages.js`, their tests
+**Dependencies:** ticket-review Task 20
+**Estimated size:** small

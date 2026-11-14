@@ -932,8 +932,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "8ca5fab301424f0d3289249e5235a5ec226b1fb3dd7f6b21964fd453140159fa",
-    "approvedAt": "2026-11-14T08:39:03.092Z",
+    "specHash": "a2cff308dd4118703c1fbd2bf82dbf2263e8a74a576cf362ed7a01ef0c68ecea",
+    "approvedAt": "2026-11-14T17:09:32.415Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -994,6 +994,7 @@
       "AC-009.10": "WHEN the production web application loads or submits a Review action, THE frontend SHALL use the published OpenAPI operations and backend data through the existing generated client.",
       "AC-009.11": "WHEN a Solution Form ticket is first saved as Pending review or transitions back to Pending review, THE tenant database SHALL record that entry time in review_queue_entered_at. WHILE a ticket stays Pending review, THE system SHALL preserve that entry time and SHALL keep the existing review due date rules (GBR-08, GBR-10).",
       "AC-009.12": "WHEN the Review Queue returns a ticket, THE API SHALL expose the recorded entry time as enteredQueueAt. IF an older ticket has no recorded entry time, THEN THE API SHALL return null for enteredQueueAt and THE frontend SHALL show an empty value indicator.",
+      "AC-009.13": "WHEN the verified writer of an issue's Solution Form ticket in Rejected requests , THE API SHALL return the latest Reject decision of that ticket as feedback with code  and params  (the reviewer's full name) and  (the stored reason); IF the reviewer's name is missing or blank, THEN THE API SHALL return no feedback, as it does for MSG64.",
       "AC-010.1": "WHEN a Reject or Request Changes decision commits, THE backend SHALL enqueue, after the commit, one review notification job per decided ticket in the decision's Workspace, identified by that ticket's review decision id. WHEN an Approve decision commits, THE backend SHALL enqueue no notification job.",
       "AC-010.2": "WHEN a review notification job runs, THE worker SHALL load the review decision, its ticket, its Project, the reviewer's account and the writer's account in that Workspace and send one English email through the KAN-162 SMTP sender to the writer's account email, from the display name \"T-Solve\", as a multipart message with an HTML part (AC-010.7) and a plain-text part holding the same facts, with the subject \"[<source ticket key>] Your ticket was rejected\" for Reject and \"[<source ticket key>] Changes requested for your ticket\" for Request Changes.",
       "AC-010.3": "IF enqueueing a notification job fails or job queueing is disabled in the API process, THEN THE decision SHALL stay committed and THE API SHALL return the same success response without sending an email.",
@@ -1213,8 +1214,8 @@
     }
   },
   "jira-app": {
-    "specHash": "a3d60df6378a619c4c347e8e1b0c0c718ace12007456a5e8c76600319a1c9393",
-    "approvedAt": "2026-11-14T14:18:28.895Z",
+    "specHash": "6d641438d6e29034a4d7b933cbe03a2eb2c1aa84edf7c449e6b948142488beae",
+    "approvedAt": "2026-11-14T17:09:32.689Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1243,7 +1244,8 @@
       "AC-008.1": "IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and nothing else.",
       "AC-008.2": "WHILE the issue's ticket is in Pending review, THE panel SHALL show MSG65.",
       "AC-008.3": "WHILE the user has a Draft for the issue and the issue's ticket does not exist, THE panel SHALL show MSG77 with a button that reopens the form with the Draft.",
-      "AC-008.7": "WHILE the issue's Solution Form ticket written by the user is in Changes requested, THE panel SHALL show MSG64 with the Project Manager's name and comment, read from 's .",
+      "AC-008.7": "WHILE the issue's Solution Form ticket written by the user is in Changes requested, THE panel SHALL show MSG64 with the Project Manager's name and comment, read from 's , as  — the SRS text without its last sentence \"Update the solution and resubmit.\" (user, 2026-11-14).",
+      "AC-008.9": "WHILE the issue's Solution Form ticket written by the user is in Rejected, THE panel SHALL show  (a Jira App text, not an SRS message — user, 2026-11-15) with the Project Manager's name and the reason read from 's  (its AC-009.13), and SHALL offer no button that opens the form.",
       "AC-010.1": "THE Jira App SHALL show a project page titled \"Ask T-Solve\" in every Jira project of the site, with a question box, a send button and the note \"Answers from T-Solve Solutions and Wiki\".",
       "AC-010.2": "IF the Jira account is not linked to an active T-Solve user, THEN THE page SHALL show MSG62 instead of the question box and SHALL still show \"Not solved, create ticket\", which opens the Create dialog of AC-010.9 with nothing prefilled.",
       "AC-010.3": "WHEN the user sends a question, THE Jira App SHALL call  with the question and, as history, the earlier turns of the conversation — at most the last 10.",
