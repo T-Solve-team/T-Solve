@@ -38,6 +38,10 @@ public final class WorkerMailpit {
         return Holder.INSTANCE;
     }
 
+    public String host() {
+        return container.getHost();
+    }
+
     public SmtpEmailSender sender() {
         var mail = new JavaMailSenderImpl();
         mail.setHost(container.getHost());

@@ -244,6 +244,7 @@ class EmailOutboxIT {
                         () -> new DataSourceTransactionManager(dataSource))
                 .withPropertyValues(
                         "spring.profiles.active=worker",
+                        "spring.mail.host=" + mailpit.host(),
                         "tsolve.worker.enabled=true",
                         "jobrunr.background-job-server.enabled=true",
                         "tsolve.worker.email.interval=5s",
@@ -252,6 +253,7 @@ class EmailOutboxIT {
                         "tsolve.worker.password=" + database.getPassword())
                 .run(context -> {
                     assertThat(context).hasNotFailed();
+                    assertThat(context).hasSingleBean(SmtpEmailSender.class);
                     var runtime = context.getBean(JobRunrRuntime.class);
                     assertThat(runtime.isRunning()).isTrue();
                     assertThat(org.springframework.aop.support.AopUtils.isAopProxy(
