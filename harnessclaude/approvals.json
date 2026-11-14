@@ -1159,8 +1159,8 @@
     }
   },
   "ticket-repository": {
-    "specHash": "d841e21ef53e72298449a8203e5ad8cfa65ff6d2b418245d2b0062e600c60ae7",
-    "approvedAt": "2026-11-14T21:01:34.642Z",
+    "specHash": "461b76a6d73409b58cc2709baf755808f6ee40a61bffe102fb759d8dc930b7cc",
+    "approvedAt": "2026-11-14T21:35:39.662Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
@@ -1250,7 +1250,17 @@
       "AC-008.7": "WHEN a Jira Finish saves a Ticket, THE system SHALL store the preview row's link to the Jira issue as the Ticket's source link (D30).",
       "AC-008.8": "WHEN Ticket Detail shows a ticket, THE web app SHALL show its Department, resolved date and source link; IF the source link is not an  or  URL, THEN THE web app SHALL show it as plain text, not as a link; an / link SHALL open in a new tab with .",
       "AC-008.9": "WHILE the ticket is Pending review, THE web app SHALL show its review due date; WHILE it is in any other status, THE web app SHALL not show a review due date.",
-      "AC-008.10": "IF Ticket Detail answers HTTP 403, THEN THE web app SHALL show MSG08 inline and no ticket content; IF it fails for another reason than 403 or 404, THEN THE web app SHALL show MSG06 as a toast (D31)."
+      "AC-008.10": "IF Ticket Detail answers HTTP 403, THEN THE web app SHALL show MSG08 inline and no ticket content; IF it fails for another reason than 403 or 404, THEN THE web app SHALL show MSG06 as a toast (D31).",
+      "AC-009.1": "WHEN a Project Manager unpublishes one or more Published Tickets of Projects they manage, THE system SHALL, in one transaction, change each Ticket to Unpublished, store one review decision UNPUBLISH per Ticket with the caller, the time and no reason, record one audit entry of action UNPUBLISH per Ticket, and return the number of Tickets changed.",
+      "AC-009.2": "WHEN a Project Manager re-publishes one or more Unpublished Tickets of Projects they manage, THE system SHALL, in one transaction, change each Ticket to Published without a new review, leaving its Solution, Evidence, feedback and review due date unchanged, store one review decision REPUBLISH per Ticket with the caller, the time and no reason, record one audit entry of action PUBLISH per Ticket, and return the number of Tickets changed.",
+      "AC-009.3": "IF a Ticket of an unpublish request is not Published, or a Ticket of a re-publish request is not Unpublished, THEN THE system SHALL reject the request with HTTP 409 (MSG06) and change no Ticket, store no decision and publish no event (D11).",
+      "AC-009.4": "IF an id of the request is not a Ticket of the caller's Workspace, THEN THE system SHALL reject the request with HTTP 404 (MSG04) and change no Ticket.",
+      "AC-009.5": "IF a Ticket of the request belongs to a Project the caller does not manage (D37), THEN THE system SHALL reject the request with HTTP 403 (MSG08) and change no Ticket.",
+      "AC-009.6": "IF the caller does not have the Project Manager role, THEN THE system SHALL reject the request with HTTP 403.",
+      "AC-009.7": "IF the request names no Ticket, more than 500 Tickets, or the same Ticket twice, THEN THE system SHALL reject it with HTTP 400 and change no Ticket.",
+      "AC-009.8": "WHILE the Ticket Detail shows a Published Ticket of a Project the user is Project Manager of, THE web app SHALL show an Unpublish button; WHEN the user clicks it, THE web app SHALL ask MSG21, and on confirmation send the unpublish request, show MSG22 and show the Ticket as Unpublished; on cancel it SHALL send nothing.",
+      "AC-009.9": "WHILE the Ticket Detail shows an Unpublished Ticket of a Project the user is Project Manager of, THE web app SHALL show a Re-publish button; WHEN the user clicks it, THE web app SHALL ask MSG23, and on confirmation send the re-publish request, show MSG24 and show the Ticket as Published; on cancel it SHALL send nothing.",
+      "AC-009.10": "IF the unpublish or re-publish request is rejected, THEN THE web app SHALL show the message of the error (MSG06 when it names none) and reload the Ticket Detail."
     }
   },
   "jira-app": {

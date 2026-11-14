@@ -14,9 +14,10 @@ GBR-08, GBR-10, GBR-11, GBR-23, UC-25), and **KAN-133 Create a ticket with its S
 UC-22, screen 5.1 Manual entry tab, MSG31, MSG34, MSG41, MSG72, with Evidence through the Workspace file storage of
 `platform` STORY-007, KAN-96), and **KAN-134 View import history**
 (STORY-007, UC-23, screen 5.4, MSG04, MSG08, MSG39) and **KAN-135 View ticket detail** (STORY-008, UC-24, GBR-02,
-screen 5.5, MSG04, MSG06, MSG08).
-CSV import (UC-21) lives in `import-ticket-list`; unpublish / re-publish (UC-25) and the Solution Form submission
-(UC-19) are added later through Change Mode.
+screen 5.5, MSG04, MSG06, MSG08) and **KAN-136 Unpublish / re-publish a
+ticket** (STORY-009, UC-25, GBR-11, screen 5.5 Ticket Detail, MSG21–MSG24).
+CSV import (UC-21) lives in `import-ticket-list`; the Solution Form submission (UC-19) is added later through
+Change Mode.
 
 This spec builds on `import-ticket-list` as changed by PR #110 (KAN-31): the Import Preview, its rows, the
 Needs Solution result, Fill solution, remove-rows, Confirm and the Import Ticket Preview popup. A pulled Jira issue
@@ -35,6 +36,7 @@ is one row of such a preview.
 | 2026-11-14 | STORY-006 | New STORY-006 (KAN-133, UC-22 manual entry): AC-006.1–AC-006.14, decisions D12–D16; manual entry leaves Out of Scope, Evidence stays out (D13) | KAN-133; user decisions 2026-11-14 |
 | 2026-11-14 | STORY-006 | Evidence of manual entry: new AC-006.15–AC-006.22, decisions D17–D21; D13 reworded (Evidence no longer deferred); the save and Save as draft requests become multipart (Interface Contracts); Evidence leaves Out of Scope | File storage (KAN-96, #193) is on `main`; the user asked for Evidence on 2026-11-14 |
 | 2026-11-14 | STORY-007, STORY-008 | New STORY-007 (KAN-134, UC-23 Import History): AC-007.1–AC-007.10; new STORY-008 (KAN-135, UC-24 Ticket Detail): AC-008.1–AC-008.10; decisions D22–D32; Import History and Ticket Detail leave Out of Scope, their excluded parts are listed there; Interface Contracts gain `GET /imports/history` and the extended `GET /tickets/{ticketId}` | KAN-134, KAN-135; user decisions 2026-11-14 |
+| 2026-11-15 | STORY-009 | New STORY-009 (KAN-136, UC-25 unpublish / re-publish): AC-009.1–AC-009.10, decisions D33–D37; unpublish / re-publish leaves Out of Scope | KAN-136; user decisions 2026-11-15 |
 
 ## Decisions taken while planning (2026-11-07, with the user)
 | # | Question | Decision |
@@ -71,6 +73,11 @@ is one row of such a preview.
 | D30 | Source link of a ticket | Map the existing column `ticket.source_link`; Jira Finish copies the preview row's link to the issue into it. Tickets imported before this change keep no link (no backfill) (user decision 2026-11-14). |
 | D31 | Answers of Ticket Detail | Not permitted → 403 (MSG08) "You do not have permission to access this page.", shown inline; no ticket with that id → 404 (MSG04) as today; any other load failure → MSG06 toast. The 403 replaces the 404 the endpoint gave for a ticket the caller may not see; the mock-API 404 of `ticket-review` AC-006.6 no longer matches the real API (user decision 2026-11-14). |
 | D32 | UC-24 lets an Employee, Admin or Knowledge Manager open a ticket from a Chatbot citation; GBR-02 limits tickets to Ticket Resolvers and Project Managers | GBR-02 wins: only Ticket Resolvers and Project Managers. Access through a Chatbot citation is out of scope (user decision 2026-11-14). |
+| D33 | Scope of KAN-136 | The unpublish and re-publish endpoints and the Unpublish / Re-publish buttons of Ticket Detail (screen 5.5) (user decision 2026-11-15). |
+| D34 | "Removed from the index" (KAN-136) | The ticket's vector is kept. Search, AI Solution Suggestion and the Knowledge Chatbot already return only Published tickets (`search` AC-007.1, AC-010.3, AC-011.3), so an Unpublished ticket leaves them at once and a re-published one is back at once. Nothing changes in `search` (user decision 2026-11-15). |
+| D35 | Review History and audit log (UC-25 postcondition) | This module stores one review decision (UNPUBLISH or REPUBLISH) and one audit entry per ticket. Showing these decisions in the Review History list is a Change of `ticket-review` (user decision 2026-11-15). |
+| D36 | Where the endpoints live | `POST /api/v1/reviews/unpublish` and `POST /api/v1/reviews/republish`, next to send-back in `ReviewDecisionController`, with the same request (`ticketIds`, 1–500) and answer (`count`); the rule lives in `TicketDecisionService` of this module. The managed Projects of the caller come from `review`, as for every review decision (user decision 2026-11-15). |
+| D37 | Tickets of a Removed Project (GBR-21) | Not supported yet: "manages the Project" means what it means for Approve, Reject and Send back today — Active Projects only — so such a request answers 403 (MSG08). GBR-21 for Removed Projects is fixed once for all decisions in `ticket-review` (user decision 2026-11-15). |
 
 ## Requirements
 
@@ -82,6 +89,7 @@ is one row of such a preview.
 5. A Project Manager enters one resolved ticket with its Solution by hand into one of their Active Projects; it is Published at once with an approve decision by them (UC-22, GBR-23), and the entry can be saved as a Draft first (GBR-26).
 6. A Project Manager reads the history of the imports of the Projects they manage, newest first, filtered by Project, source and date (UC-23).
 7. A Ticket Resolver or Project Manager opens the detail of a ticket they may see under GBR-02, with its Department, resolved date and link to its source (UC-24).
+8. A Project Manager takes a Published ticket of a Project they manage out of use (Unpublish) and brings an Unpublished one back (Re-publish) from the Ticket Detail; no new review happens (UC-25, GBR-11).
 
 ### Non-Functional
 1. A pull of 100 issues with their comments returns the Import Preview within 60 seconds.
@@ -211,21 +219,39 @@ is one row of such a preview.
   - AC-008.9: WHILE the ticket is Pending review, THE web app SHALL show its review due date; WHILE it is in any other status, THE web app SHALL not show a review due date.
   - AC-008.10: IF Ticket Detail answers HTTP 403, THEN THE web app SHALL show MSG08 inline and no ticket content; IF it fails for another reason than 403 or 404, THEN THE web app SHALL show MSG06 as a toast (D31).
 
+### STORY-009: Unpublish / re-publish a ticket (KAN-136)
+- As a Project Manager, I want to take a Published ticket out of use and bring it back later so that a wrong or outdated Solution is not reused.
+- Acceptance:
+  - AC-009.1: WHEN a Project Manager unpublishes one or more Published Tickets of Projects they manage, THE system SHALL, in one transaction, change each Ticket to Unpublished, store one review decision UNPUBLISH per Ticket with the caller, the time and no reason, record one audit entry of action UNPUBLISH per Ticket, and return the number of Tickets changed.
+  - AC-009.2: WHEN a Project Manager re-publishes one or more Unpublished Tickets of Projects they manage, THE system SHALL, in one transaction, change each Ticket to Published without a new review, leaving its Solution, Evidence, feedback and review due date unchanged, store one review decision REPUBLISH per Ticket with the caller, the time and no reason, record one audit entry of action PUBLISH per Ticket, and return the number of Tickets changed.
+  - AC-009.3: IF a Ticket of an unpublish request is not Published, or a Ticket of a re-publish request is not Unpublished, THEN THE system SHALL reject the request with HTTP 409 (MSG06) and change no Ticket, store no decision and publish no event (D11).
+  - AC-009.4: IF an id of the request is not a Ticket of the caller's Workspace, THEN THE system SHALL reject the request with HTTP 404 (MSG04) and change no Ticket.
+  - AC-009.5: IF a Ticket of the request belongs to a Project the caller does not manage (D37), THEN THE system SHALL reject the request with HTTP 403 (MSG08) and change no Ticket.
+  - AC-009.6: IF the caller does not have the Project Manager role, THEN THE system SHALL reject the request with HTTP 403.
+  - AC-009.7: IF the request names no Ticket, more than 500 Tickets, or the same Ticket twice, THEN THE system SHALL reject it with HTTP 400 and change no Ticket.
+  - AC-009.8: WHILE the Ticket Detail shows a Published Ticket of a Project the user is Project Manager of, THE web app SHALL show an Unpublish button; WHEN the user clicks it, THE web app SHALL ask MSG21, and on confirmation send the unpublish request, show MSG22 and show the Ticket as Unpublished; on cancel it SHALL send nothing.
+  - AC-009.9: WHILE the Ticket Detail shows an Unpublished Ticket of a Project the user is Project Manager of, THE web app SHALL show a Re-publish button; WHEN the user clicks it, THE web app SHALL ask MSG23, and on confirmation send the re-publish request, show MSG24 and show the Ticket as Published; on cancel it SHALL send nothing.
+  - AC-009.10: IF the unpublish or re-publish request is rejected, THEN THE web app SHALL show the message of the error (MSG06 when it names none) and reload the Ticket Detail.
+
+The events of these changes are AC-005.4 and AC-005.5. That an Unpublished ticket is not returned by Search, AI Solution Suggestion and the Knowledge Chatbot, and that a re-published one is, are `search` AC-007.1, AC-010.3 and AC-011.3 (D34).
+
 ## Out of Scope
 - CSV import (UC-21) — `import-ticket-list`; Drafts of a CSV import (GBR-26, UC-21 step 7b) are a later Change there.
 - Downloading or previewing Evidence (Ticket Detail, UC-24).
-- Unpublish / re-publish (UC-25), Solution Form submission (UC-19). (Manual entry, UC-22, is STORY-006 with its
-  Evidence; Import History, UC-23, is STORY-007; Ticket Detail, UC-24, is STORY-008.)
+- Solution Form submission (UC-19). (Manual entry, UC-22, is STORY-006 with its Evidence; Import History, UC-23,
+  is STORY-007; Ticket Detail, UC-24, is STORY-008; unpublish / re-publish, UC-25, is STORY-009.)
 - Import History: per-row error details of an import (D26); a date range for Import Batches recorded before D25.
-- Ticket Detail: the Feedback summary and Give feedback; counting dashboard views; the Unpublish, Re-publish and Send
-  back buttons (UC-25, UC-30); access by an Employee, Admin or Knowledge
+- Ticket Detail: the Feedback summary and Give feedback; counting dashboard views; the Send
+  back button (UC-30; the Unpublish and Re-publish buttons are STORY-009); access by an Employee, Admin or Knowledge
   Manager through a Chatbot citation (D32); a source link for tickets imported before D30 (no backfill).
 - Storing the Jira service account in the database and the UC-10 screen — `workspace`. Until then the connection comes from the environment (D2).
 - The Jira field mapping and "resolution comments field" of a Project — `project-integration` (D5).
 - Linking a Jira assignee to a T-Solve user (D4).
 - Evidence and attachments of Jira issues.
-- Search indexing of new tickets — `search` consumes the "tickets published" event. Removing an Unpublished ticket from search, triage and the chatbot — `search` and the others consume the "tickets unpublished" event later.
-- The unpublish / re-publish endpoints and screens (UC-25) and the Solution Form submission (UC-19): STORY-005 gives them the transition step and the events only.
+- Search indexing of new tickets — `search` consumes the "tickets published" event. An Unpublished ticket leaves search, AI Solution Suggestion and the chatbot through their Published filter (D34); deleting its vector on the "tickets unpublished" event is not done.
+- The Solution Form submission (UC-19): STORY-005 gives it the transition step and the events only.
+- Unpublish / re-publish of several tickets at once from a list, and a reason for the decision: UC-25 has neither.
+- Unpublish / re-publish of the tickets of a Removed Project (GBR-21, D37) and showing these decisions in the Review History list (D35) — `ticket-review`.
 
 ## Interface Contracts
 
@@ -243,6 +269,10 @@ New endpoints:
 | `POST /imports/manual` | `ManualTicketRequest { projectId (uuid), ticketId, title, description, resolvedDate?, symptoms, rootCause, resolutionSteps, workaround?, scope, draftId? }` | 201 `ImportResultResponse` (MSG32) |
 | `POST /imports/manual/drafts` | `ManualTicketRequest` (only `projectId` required; `draftId` updates that Draft) | `DraftSavedResponse` (MSG41) |
 | `GET /imports/manual/drafts/{previewId}` | — | `ManualTicketDraft { previewId, projectId, ticketId?, title?, description?, resolvedDate?, symptoms?, rootCause?, resolutionSteps?, workaround?, scope?, savedAt }` |
+| `POST /reviews/unpublish` | `ApproveTicketsRequest { ticketIds (uuid, 1–500, unique) }` | 200 `ReviewDecisionResult { count }` |
+| `POST /reviews/republish` | `ApproveTicketsRequest` | 200 `ReviewDecisionResult { count }` |
+
+Unpublish / re-publish rejections (tag `review`, D36): invalid `ticketIds` → 400 · no PM role or Project not managed → 403 (MSG08) · unknown Ticket → 404 (MSG04) · wrong status → 409 (MSG06). A request with several faults gets the first of these in that order (400, then 404, then 403, then 409), as send-back does. Every rejected request changes nothing.
 
 | `GET /imports/history` | query `projectId?` (uuid), `source?` (JIRA_IMPORT, CSV, MANUAL), `dateFrom?`, `dateTo?` (ISO dates), `page`, `size` | `ImportHistoryPage { content: ImportHistoryItem[], page: PageMetadata }`; `ImportHistoryItem { batchId, createdAt, performedBy, project { projectId, projectKey }, department { id, name }, source, dateFrom?, dateTo?, fileName?, publishedCount, removedCount, errorCount, status (COMPLETED, FAILED), errorCode? }` |
 
@@ -272,6 +302,8 @@ Rejections of the new endpoints: MSG01, MSG39 → 400 · MSG04 on pull → 404 �
 - `identity` (KAN-118): `ScopeAccessService.canAccessDepartment(accountId, departmentId)` for Ticket Detail (D28).
 - `ticket-review`: the Ticket Detail endpoint, its controller, service, DTO and web components, extended here (D29).
 - `project-integration`: the `project` and `project_membership` tables (Department of a Project, its Project Managers).
+- `ticket-review` (`vn.tsolve.review`): `ReviewDecisionController` and its `ReviewWorkspaceAccess` (the caller's managed Projects), the `review_decision` table, and the Ticket Detail screen (`ReviewTicketDetail`) the buttons of STORY-009 sit above.
+- `search`: returns only Published tickets (D34).
 
 ## Definition of Done
 - [ ] Every acceptance criterion has a test whose name starts with its AC id

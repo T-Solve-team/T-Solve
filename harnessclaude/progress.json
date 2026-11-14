@@ -235,9 +235,12 @@
         "import-history-api": "pending",
         "import-history-page": "pending",
         "ticket-detail-scope": "pending",
-        "ticket-detail-page": "pending"
+        "ticket-detail-page": "pending",
+        "ticket-publication-contract": "pending",
+        "ticket-publication": "pending",
+        "ticket-publication-buttons": "pending"
       },
-      "lastUpdated": "2026-11-14T15:00:55.440Z",
+      "lastUpdated": "2026-11-14T20:12:07.950Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
