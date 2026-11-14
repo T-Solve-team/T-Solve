@@ -58,6 +58,16 @@ the call. Queueing writes independently to the Jobs database; a queue failure ca
 already committed business action. Callers decide how to handle an absent bean or an
 `EmailOutboxException`. Avoid logging the message or transport/database exceptions with mail data.
 
+Review Reject and Request Changes decisions use `ReviewNotificationEnqueuer` after commit. In the
+decision's Workspace it loads the committed notification, renders the subject, plain text and HTML
+with `ReviewEmailRenderer`, and queues one `OutboundEmail` per writer. Approve and missing writer
+accounts queue nothing. Each decision is isolated: a lookup, rendering or queue failure logs only
+counts and the exception class, and the remaining decisions continue. A missing outbox bean skips
+queueing. Delivery and retry use this shared outbox; no review-specific job handler remains.
+Existing review notification jobs in JobRunr storage will fail as unknown handlers; this is accepted
+for the demo data. `ReviewNotificationIT` covers commit/rollback, stored content and SMTP retry
+without changing the committed decision.
+
 The recipient must be exactly one mailbox (a display name is dropped), at most 320 characters.
 The subject must be nonblank, at most 255 characters, without CR/LF; plain text must be nonblank.
 HTML is optional and must be escaped by the caller. Invalid input or no bound Workspace raises
