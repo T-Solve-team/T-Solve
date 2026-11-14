@@ -1146,8 +1146,8 @@
     }
   },
   "ticket-repository": {
-    "specHash": "0dc5471df359acf501a0e65be78bd01eb9bc569958b2ad2f0c20300610900277",
-    "approvedAt": "2026-11-13T21:19:18.066Z",
+    "specHash": "c1e6b7ba8fe209df9d060218884feeecce8e01ff0ac31f5daf3dd94777bb6fd0",
+    "approvedAt": "2026-11-14T07:46:09.678Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
@@ -1209,7 +1209,15 @@
       "AC-006.11": "WHEN the Project Manager reopens a Manual Draft from the Drafts list, THE system SHALL return its Project and every field as saved, and THE web app SHALL show them on the Manual entry tab.",
       "AC-006.12": "WHEN a manual entry reopened from a Draft is saved successfully, THE system SHALL delete that Draft in the same transaction; IF the save is rejected, THEN THE system SHALL keep the Draft unchanged.",
       "AC-006.13": "IF a request names a Manual Draft that belongs to another user, does not exist or is not a Manual Draft, THEN THE system SHALL reject it with HTTP 404 (MSG04); Delete of a Manual Draft works as AC-004.4 and AC-004.5.",
-      "AC-006.14": "WHEN a save or Save as draft is rejected, THE web app SHALL show each message next to its field and keep everything the Project Manager entered; WHEN a save succeeds, THE web app SHALL show MSG32 and clear the form."
+      "AC-006.14": "WHEN a save or Save as draft is rejected, THE web app SHALL show each message next to its field and keep everything the Project Manager entered; WHEN a save succeeds, THE web app SHALL show MSG32 and clear the form.",
+      "AC-006.15": "WHEN a manual entry with Evidence files is saved (AC-006.1), THE system SHALL store each file in the Workspace file storage and save it as Evidence of the new Ticket with its file name, type and size, together with the Evidence the reopened Draft kept (D17, D20).",
+      "AC-006.16": "IF an Evidence file's extension is not one of .png, .jpg, .jpeg, .pdf, .docx, .xlsx, .txt or .log, or a file is larger than 10 MB, THEN THE system SHALL reject the save or the Save as draft with HTTP 400 and MSG34 with that file name, store no file and save nothing (D18, D19).",
+      "AC-006.17": "IF a save or Save as draft would leave the entry with more than 5 Evidence files (the Draft's kept files and the new ones together), THEN THE system SHALL reject it with HTTP 400 and MSG72, store no file and save nothing.",
+      "AC-006.18": "WHEN the Project Manager saves as draft with Evidence files, THE system SHALL store them with the Draft, and WHEN the Draft is reopened, THE system SHALL return each of its Evidence files with its id, file name and size (D20).",
+      "AC-006.19": "WHEN a save or Save as draft of a reopened Draft leaves out some of the Draft's Evidence files, THE system SHALL drop them from the Draft and delete their stored files after the change commits; WHEN a Manual Draft is deleted, THE system SHALL delete its stored files as well.",
+      "AC-006.20": "IF a save or Save as draft fails after some of its files were stored, THEN THE system SHALL delete those files and keep the Draft and its Evidence as they were.",
+      "AC-006.21": "IF the file storage is not configured or does not answer, THEN THE system SHALL reject a save or Save as draft that carries files with HTTP 503 and MSG06 and save nothing (D21).",
+      "AC-006.22": "WHILE an entry has Evidence files, THE web app SHALL list them with their names under Evidence, let the Project Manager add files and remove files before saving, refuse a 6th file with MSG72 and a file of another type or larger than 10 MB with MSG34 before sending, and show a reopened Draft's files in the list."
     }
   },
   "jira-app": {

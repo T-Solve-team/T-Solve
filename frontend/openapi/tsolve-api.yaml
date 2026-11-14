@@ -1311,13 +1311,27 @@ paths:
         Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source
         MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field
         with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project =
-        MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+        MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34,
+        more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ManualTicketRequest'
+              type: object
+              required: [entry]
+              properties:
+                entry:
+                  $ref: '#/components/schemas/ManualTicketRequest'
+                files:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: string
+                    format: binary
+            encoding:
+              entry:
+                contentType: application/json
       responses:
         '201':
           description: Ticket published.
@@ -1326,7 +1340,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ImportResultResponse'
         '400':
-          description: Invalid fields (one fieldErrors entry per field).
+          description: Invalid fields (one fieldErrors entry per field); Evidence type or size = MSG34 with file_name, count = MSG72 (fieldErrors on files).
           content:
             application/problem+json:
               schema:
@@ -1339,6 +1353,12 @@ paths:
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
+        '503':
+          description: Evidence storage is not configured or is unavailable (MSG06); nothing saved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/manual/drafts:
     post:
       tags: [import]
@@ -1346,13 +1366,27 @@ paths:
       summary: >
         Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId,
         updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's
-        Manual Draft = MSG04 (404).
+        Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72
+        (400, fieldErrors on files); storage unavailable = MSG06 (503).
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ManualTicketRequest'
+              type: object
+              required: [entry]
+              properties:
+                entry:
+                  $ref: '#/components/schemas/ManualTicketRequest'
+                files:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: string
+                    format: binary
+            encoding:
+              entry:
+                contentType: application/json
       responses:
         '200':
           description: Draft saved.
@@ -1361,7 +1395,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DraftSavedResponse'
         '400':
-          description: No Project (MSG01 on projectId).
+          description: No Project (MSG01 on projectId); Evidence type or size = MSG34 with file_name, count = MSG72 (fieldErrors on files).
           content:
             application/problem+json:
               schema:
@@ -1372,6 +1406,12 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+        '503':
+          description: Evidence storage is not configured or is unavailable (MSG06); nothing saved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/manual/drafts/{previewId}:
     get:
       tags: [import]
@@ -3051,9 +3091,14 @@ components:
           type: [integer, 'null']
           format: int64
           description: The Manual Draft this entry was reopened from.
+        keepEvidenceIds:
+          type: [array, 'null']
+          items:
+            type: string
+            format: uuid
     ManualTicketDraft:
       type: object
-      required: [previewId, projectId, savedAt]
+      required: [previewId, projectId, savedAt, evidence]
       properties:
         previewId:
           type: integer
@@ -3083,6 +3128,22 @@ components:
         savedAt:
           type: string
           format: date-time
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/ManualEvidence'
+    ManualEvidence:
+      type: object
+      required: [evidenceId, fileName, fileSize]
+      properties:
+        evidenceId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
     ChatbotQuestion:
       type: object
       required: [question, history]

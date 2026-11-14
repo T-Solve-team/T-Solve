@@ -8,11 +8,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Stream;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
@@ -20,27 +25,35 @@ import vn.tsolve.common.exception.InvalidFieldsException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.exception.ProblemDetails.FieldError;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.ticket.csv.CsvRowValidator;
 import vn.tsolve.ticket.dto.DraftSavedResponse;
+import vn.tsolve.ticket.dto.EvidenceUpload;
 import vn.tsolve.ticket.dto.ImportResultResponse;
+import vn.tsolve.ticket.dto.ManualEvidence;
 import vn.tsolve.ticket.dto.ManualTicketDraft;
 import vn.tsolve.ticket.dto.ManualTicketRequest;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportBatch;
 import vn.tsolve.ticket.entity.ImportPreview;
+import vn.tsolve.ticket.entity.ImportPreviewEvidence;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
 import vn.tsolve.ticket.entity.Ticket;
+import vn.tsolve.ticket.entity.TicketEvidence;
 import vn.tsolve.ticket.entity.TicketReviewDecision;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
+import vn.tsolve.ticket.repository.ImportPreviewEvidenceRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
+import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ManualTicketService;
 import vn.tsolve.ticket.service.ProjectAccess;
+import vn.tsolve.ticket.service.impl.EvidenceFiles.StoredEvidence;
 
 /**
  * Manual entry (UC-22). Fields are checked first, all at once (AC-006.6), then the Project (403); the Ticket, its
@@ -65,6 +78,11 @@ public class ManualTicketServiceImpl implements ManualTicketService {
     /** Its zone decides what "today" is for the Resolved date (Vietnam time). */
     private final Clock clock;
 
+    private final ImportPreviewEvidenceRepository draftEvidence;
+    private final TicketEvidenceRepository evidence;
+    private final EvidenceFiles evidenceFiles;
+    private final TransactionTemplate transaction;
+
     public ManualTicketServiceImpl(
             ImportPreviewRepository previews,
             ImportPreviewRowRepository previewRows,
@@ -74,7 +92,11 @@ public class ManualTicketServiceImpl implements ManualTicketService {
             ProjectAccess projects,
             ApplicationEventPublisher events,
             AuditService audit,
-            Clock clock) {
+            Clock clock,
+            ImportPreviewEvidenceRepository draftEvidence,
+            TicketEvidenceRepository evidence,
+            ObjectProvider<FileStorage> storage,
+            PlatformTransactionManager transactions) {
         this.previews = previews;
         this.previewRows = previewRows;
         this.tickets = tickets;
@@ -84,11 +106,14 @@ public class ManualTicketServiceImpl implements ManualTicketService {
         this.events = events;
         this.audit = audit;
         this.clock = clock;
+        this.draftEvidence = draftEvidence;
+        this.evidence = evidence;
+        this.evidenceFiles = new EvidenceFiles(storage);
+        this.transaction = new TransactionTemplate(transactions);
     }
 
     @Override
-    @Transactional
-    public ImportResultResponse create(TSolveUser user, ManualTicketRequest request) {
+    public ImportResultResponse create(TSolveUser user, ManualTicketRequest request, List<EvidenceUpload> files) {
         List<FieldError> errors = validate(request);
         if (!errors.isEmpty()) {
             throw new InvalidFieldsException(errors);
@@ -97,9 +122,22 @@ public class ManualTicketServiceImpl implements ManualTicketService {
         if (!projects.managesActive(owner, request.projectId())) {
             throw new ProjectAccessDeniedException();
         }
-        // locked, so a second save of the same Draft (another tab) waits, then finds it gone (404)
-        ImportPreview draft =
-                request.draftId() == null ? null : manualDraft(previews.lockByIdAndOwner(request.draftId(), owner));
+        checkDraft(owner, request, files);
+        String ticketId = CsvRowValidator.trim(request.ticketId());
+        if (!tickets.findExistingTicketIds(List.of(ticketId)).isEmpty()) {
+            throw ticketIdTaken(ticketId);
+        }
+        return write(files, stored -> createInTransaction(user, request, files, stored));
+    }
+
+    private Saved<ImportResultResponse> createInTransaction(
+            TSolveUser user, ManualTicketRequest request, List<EvidenceUpload> files, List<StoredEvidence> stored) {
+        String owner = user.getName();
+        // Re-read under the lock after storing: a concurrent save may have changed or consumed the Draft.
+        ImportPreview draft = lockedDraft(owner, request);
+        List<ImportPreviewEvidence> previous = evidenceOf(draft);
+        List<ImportPreviewEvidence> kept = kept(request, previous);
+        EvidenceFiles.validate(files, kept.size());
         String ticketId = CsvRowValidator.trim(request.ticketId());
         if (!tickets.findExistingTicketIds(List.of(ticketId)).isEmpty()) {
             throw ticketIdTaken(ticketId);
@@ -133,6 +171,13 @@ public class ManualTicketServiceImpl implements ManualTicketService {
             throw e;
         }
         decisions.save(TicketReviewDecision.approve(ticket.getId(), owner));
+        for (ImportPreviewEvidence file : kept) {
+            evidence.save(TicketEvidence.of(
+                    ticket.getId(), file.getFileName(), file.getFileType(), file.getFileSize(), file.getStorageKey()));
+        }
+        for (StoredEvidence file : stored) {
+            evidence.save(TicketEvidence.of(ticket.getId(), file.fileName(), file.fileType(), file.size(), file.key()));
+        }
         if (draft != null) {
             // rows go through ON DELETE CASCADE (AC-006.12)
             previews.delete(draft);
@@ -144,13 +189,14 @@ public class ManualTicketServiceImpl implements ManualTicketService {
                 "PROJECT",
                 request.projectId(),
                 Map.of("importBatchId", batch.getId(), "created", 1));
-        return new ImportResultResponse(
-                batch.getId(), 1, 0, new MessageRef("MSG32", Map.of("created", 1, "skipped", 0)), null);
+        return new Saved<>(
+                new ImportResultResponse(
+                        batch.getId(), 1, 0, new MessageRef("MSG32", Map.of("created", 1, "skipped", 0)), null),
+                droppedKeys(previous, kept));
     }
 
     @Override
-    @Transactional
-    public DraftSavedResponse saveDraft(TSolveUser user, ManualTicketRequest request) {
+    public DraftSavedResponse saveDraft(TSolveUser user, ManualTicketRequest request, List<EvidenceUpload> files) {
         if (request.projectId() == null) {
             throw new InvalidFieldsException(List.of(required("projectId")));
         }
@@ -158,6 +204,17 @@ public class ManualTicketServiceImpl implements ManualTicketService {
         if (!projects.managesActive(owner, request.projectId())) {
             throw new ProjectAccessDeniedException();
         }
+        checkDraft(owner, request, files);
+        return write(files, stored -> saveDraftInTransaction(user, request, files, stored));
+    }
+
+    private Saved<DraftSavedResponse> saveDraftInTransaction(
+            TSolveUser user, ManualTicketRequest request, List<EvidenceUpload> files, List<StoredEvidence> stored) {
+        String owner = user.getName();
+        ImportPreview draft = lockedDraft(owner, request);
+        List<ImportPreviewEvidence> previous = evidenceOf(draft);
+        List<ImportPreviewEvidence> kept = kept(request, previous);
+        EvidenceFiles.validate(files, kept.size());
         Instant now = Instant.now(clock);
         ImportPreviewRow.Values values = new ImportPreviewRow.Values(
                 request.ticketId(),
@@ -170,17 +227,25 @@ public class ManualTicketServiceImpl implements ManualTicketService {
                 request.resolutionSteps(),
                 request.workaround(),
                 request.scope());
-        ImportPreview draft;
-        if (request.draftId() == null) {
+        if (draft == null) {
             draft = previews.save(ImportPreview.manualDraft(owner, request.projectId(), now));
             previewRows.save(ImportPreviewRow.manualDraft(draft.getId(), values));
         } else {
-            // locked like create: a Save of this Draft in another tab finishes first, then this finds it gone (404)
-            draft = manualDraft(previews.lockByIdAndOwner(request.draftId(), owner));
             draft.moveManualDraft(request.projectId(), now);
             row(draft).rewrite(values);
         }
-        return new DraftSavedResponse(draft.getId(), now, new MessageRef("MSG41", Map.of()));
+        for (ImportPreviewEvidence file : previous) {
+            if (!kept.contains(file)) {
+                draftEvidence.delete(file);
+            }
+        }
+        for (StoredEvidence file : stored) {
+            draftEvidence.save(
+                    ImportPreviewEvidence.of(draft.getId(), file.fileName(), file.fileType(), file.size(), file.key()));
+        }
+        return new Saved<>(
+                new DraftSavedResponse(draft.getId(), now, new MessageRef("MSG41", Map.of())),
+                droppedKeys(previous, kept));
     }
 
     @Override
@@ -205,8 +270,54 @@ public class ManualTicketServiceImpl implements ManualTicketService {
                 v.resolutionSteps(),
                 v.workaround(),
                 v.scope(),
-                draft.getDraftSavedAt());
+                draft.getDraftSavedAt(),
+                evidenceOf(draft).stream()
+                        .map(file -> new ManualEvidence(file.getId(), file.getFileName(), file.getFileSize()))
+                        .toList());
     }
+
+    private void checkDraft(String owner, ManualTicketRequest request, List<EvidenceUpload> files) {
+        ImportPreview draft =
+                request.draftId() == null ? null : manualDraft(previews.findByIdAndOwner(request.draftId(), owner));
+        EvidenceFiles.validate(files, kept(request, evidenceOf(draft)).size());
+    }
+
+    private ImportPreview lockedDraft(String owner, ManualTicketRequest request) {
+        return request.draftId() == null ? null : manualDraft(previews.lockByIdAndOwner(request.draftId(), owner));
+    }
+
+    private List<ImportPreviewEvidence> evidenceOf(ImportPreview draft) {
+        return draft == null ? List.of() : draftEvidence.findByPreviewIdOrderByCreatedAt(draft.getId());
+    }
+
+    private static List<ImportPreviewEvidence> kept(ManualTicketRequest request, List<ImportPreviewEvidence> previous) {
+        List<UUID> ids = request.keepEvidenceIds();
+        return ids == null
+                ? List.of()
+                : previous.stream().filter(file -> ids.contains(file.getId())).toList();
+    }
+
+    private static List<String> droppedKeys(List<ImportPreviewEvidence> previous, List<ImportPreviewEvidence> kept) {
+        return previous.stream()
+                .filter(file -> !kept.contains(file))
+                .map(ImportPreviewEvidence::getStorageKey)
+                .toList();
+    }
+
+    private <T> T write(List<EvidenceUpload> files, Function<List<StoredEvidence>, Saved<T>> action) {
+        List<StoredEvidence> stored = evidenceFiles.store(files);
+        Saved<T> saved;
+        try {
+            saved = transaction.execute(status -> action.apply(stored));
+        } catch (RuntimeException e) {
+            evidenceFiles.delete(stored.stream().map(StoredEvidence::key).toList());
+            throw e;
+        }
+        evidenceFiles.delete(saved.droppedKeys());
+        return saved.response();
+    }
+
+    private record Saved<T>(T response, List<String> droppedKeys) {}
 
     /** Another user's preview, a missing one or one that is not a Manual Draft is "not found" (AC-006.13). */
     private static ImportPreview manualDraft(Optional<ImportPreview> preview) {

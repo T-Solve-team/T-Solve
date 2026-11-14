@@ -214,3 +214,49 @@ repositories. No new table, no migration.
 is compared with today in `Asia/Ho_Chi_Minh` through the injected `Clock`. Two tabs saving the same Draft: the second
 save answers 404 (Draft gone) and saves nothing. Draft of a Project the caller no longer manages: save / Save as draft
 answer 403 (MSG08), the Draft stays.
+
+## Change 2026-11-14 (2): Evidence of manual entry (KAN-133, STORY-006, AC-006.15–AC-006.22)
+
+**Storage.** `platform` `FileStorage` (`store(InputStream) → StoredFile(key, size)`, `delete(key)`), injected as
+`ObjectProvider<FileStorage>`: the bean exists only when `FILE_STORAGE_ENDPOINT` is set (KAN-96 D9), so no bean
+→ a request with files answers 503 MSG06 (AC-006.21). Until `platform` binds a `TenantContext`, `store` itself
+refuses ("no Workspace bound"); that also maps to 503. Tests mock `FileStorage`.
+
+**Schema** (new changeset `NNN-manual-entry-evidence.sql`, author ticket):
+- `evidence` gains `storage_key VARCHAR(100)` (nullable: rows from the review module have none).
+- New `import_preview_evidence`: `import_preview_evidence_id UUID PK DEFAULT gen_random_uuid()`, `preview_id` FK →
+  `import_preview` ON DELETE CASCADE, `file_name`, `file_type`, `file_size`, `storage_key` NOT NULL, timestamps as
+  the tenant-table convention (platform AC-001.20) asks; index on `preview_id`. Follow the convention guard test.
+
+**Request shape (D17).** Multipart: part `entry` = `ManualTicketRequest` JSON (+ `keepEvidenceIds`), part `files`
+= `List<MultipartFile>` (optional). Controller: `@RequestPart("entry") ManualTicketRequest`, `@RequestPart(value =
+"files", required = false) List<MultipartFile>`; `consumes = MULTIPART_FORM_DATA_VALUE`.
+
+**Flow of save and Save as draft.**
+1. Existing checks (fields 400 for save only, Project 403, Draft 404) — before any file is stored.
+2. File rules (AC-006.16, AC-006.17): extension in the D19 list (case-insensitive), size ≤ 10 MB (10,485,760 bytes),
+   kept + new ≤ 5. `keepEvidenceIds` not belonging to the Draft are ignored. Rejection → 400 `InvalidFieldsException`
+   with one entry on field `files` (MSG34 `{file_name}` or MSG72) — nothing stored yet.
+3. Store each new file (outside the transaction) → list of keys. Any storage failure → delete the keys stored so
+   far, 503 MSG06 (`StorageUnavailableException extends MessageCodeException`, status 503; module exception).
+4. The existing transaction (`TransactionTemplate`, not `@Transactional` on the method, so steps 3 and 5 sit
+   outside it): writes Ticket/Draft as today plus Evidence rows (save: `evidence` rows for kept Draft files + new
+   files, with `storage_key`; Save as draft: `import_preview_evidence` rows for new files, delete rows left out of
+   `keepEvidenceIds`). If it throws → delete the keys stored in step 3 (AC-006.20), rethrow.
+5. After commit: delete the stored files of Draft Evidence that was left out (AC-006.19). On a save, kept Draft
+   files are NOT deleted — their keys move to the Ticket's Evidence; the Draft rows go with the Draft (cascade).
+   `ImportDraftServiceImpl.delete` of a Manual Draft deletes its files after commit. A failing delete is logged
+   (key only) and never fails the request. ponytail: an orphan object stays if the process dies between store and
+   commit; a storage sweep can collect keys without a row later.
+
+**Reopen.** `ManualTicketDraft.evidence` = the Draft's `import_preview_evidence` rows (id, file name, size).
+`file_type` = the file's content type as sent (fallback by extension).
+
+**Web app.**
+- New kit component `shared/ui/EvidenceUpload` (antd `Upload` is banned outside `shared/ui`; FE Lead review
+  needed, AGENTS.md rule 10): controlled list of picked files + kept Draft files, `beforeUpload` returns false (no
+  auto upload), checks type/size (MSG34) and count (MSG72) on add, remove button per file.
+- `ManualEntryForm`: Evidence field after the Solution sections; sends multipart through the generated client
+  (orval generates `FormData` for multipart bodies; check the generated signature after `generate:api`).
+  Reopened Draft → its files listed as kept; removing one drops its id from `keepEvidenceIds`. Server
+  `fieldErrors` on `files` show under Evidence.
