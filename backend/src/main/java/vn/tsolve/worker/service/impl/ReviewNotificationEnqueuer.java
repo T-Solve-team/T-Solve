@@ -53,11 +53,12 @@ public class ReviewNotificationEnqueuer {
             }
             WorkerTenantService context = tenants.getIfAvailable();
             Runnable enqueue = () -> {
+                String host = siteHost(context);
                 for (UUID decisionId : event.decisionIds()) {
                     try {
                         notifications
                                 .findNotification(decisionId)
-                                .ifPresent(notification -> queue.queue(render(notification, context)));
+                                .ifPresent(notification -> queue.queue(render(notification, host)));
                     } catch (RuntimeException exception) {
                         // Exception messages and causes may contain private mail or database values.
                         LOG.warn(
@@ -90,16 +91,23 @@ public class ReviewNotificationEnqueuer {
         }
     }
 
-    private OutboundEmail render(ReviewNotification notification, WorkerTenantService context) {
+    private String siteHost(WorkerTenantService context) {
+        try {
+            return (context == null ? Optional.<UUID>empty() : context.currentWorkspaceId())
+                    .flatMap(sites::siteHost)
+                    .filter(value -> !value.isBlank())
+                    .orElse(null);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private OutboundEmail render(ReviewNotification notification, String host) {
         Decision decision =
                 switch (notification.kind()) {
                     case REJECTED -> Decision.REJECT;
                     case CHANGES_REQUESTED -> Decision.REQUEST_CHANGES;
                 };
-        String host = (context == null ? Optional.<UUID>empty() : context.currentWorkspaceId())
-                .flatMap(sites::siteHost)
-                .filter(value -> !value.isBlank())
-                .orElse(null);
         String link = host == null ? null : "https://" + host + "/tickets/" + notification.ticketId();
         var email = new ReviewEmail(
                 decision,

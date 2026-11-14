@@ -142,13 +142,12 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    void stopsAtTheFirstFailedEnqueue_BUG_164() {
+    void continuesAfterAFailedQueueCall_BUG_164() {
         when(outbox.queue(any(OutboundEmail.class))).thenThrow(new IllegalStateException("Jobs DB unavailable"));
         var event = new ReviewFeedbackDecidedEvent(List.of(RECORD_ID, new UUID(0, 4), new UUID(0, 5)));
 
         enqueuer(outbox, null).onDecided(event);
 
-        // Historical BUG-164 name retained; the outbox now isolates failures per decision.
         verify(outbox, times(3)).queue(any(OutboundEmail.class));
     }
 

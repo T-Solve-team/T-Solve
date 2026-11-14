@@ -118,6 +118,28 @@ class ReviewNotificationEnqueuerTest {
     }
 
     @Test
+    void queuesEveryDecisionWithoutLinksWhenSiteLookupThrows_AC_010_8_BUG_223() {
+        UUID workspace = UUID.randomUUID();
+        when(tenants.currentWorkspaceId()).thenReturn(Optional.of(workspace));
+        when(outboxes.getIfAvailable()).thenReturn(outbox);
+        when(sites.siteHost(workspace)).thenThrow(new IllegalStateException());
+        var decisions = List.of(DECISION, UUID.randomUUID(), UUID.randomUUID());
+        for (UUID decision : decisions)
+            when(notifications.findNotification(decision))
+                    .thenReturn(Optional.of(notification(ReviewNotification.Kind.REJECTED)));
+
+        enqueuer.onDecided(new ReviewFeedbackDecidedEvent(decisions));
+
+        var outbound = ArgumentCaptor.forClass(OutboundEmail.class);
+        verify(outbox, times(3)).queue(outbound.capture());
+        verify(sites).siteHost(workspace);
+        assertThat(outbound.getAllValues()).allSatisfy(email -> {
+            assertThat(email.bodyText()).doesNotContain("https://", "/tickets/");
+            assertThat(email.bodyHtml()).doesNotContain("<a ", "https://", "/tickets/");
+        });
+    }
+
+    @Test
     void skipsAbsentOutbox_AC_010_3() {
         assertThatCode(() -> enqueuer.onDecided(new ReviewFeedbackDecidedEvent(List.of(DECISION))))
                 .doesNotThrowAnyException();
