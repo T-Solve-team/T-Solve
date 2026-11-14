@@ -217,10 +217,10 @@
         "manual-ticket-drafts": "passing",
         "manual-entry-tab": "passing",
         "manual-evidence-contract": "passing",
-        "manual-evidence-backend": "in-progress",
+        "manual-evidence-backend": "evaluating",
         "manual-evidence-tab": "pending"
       },
-      "lastUpdated": "2026-11-14T08:18:36.077Z",
+      "lastUpdated": "2026-11-14T09:15:16.619Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
