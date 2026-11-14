@@ -1,5 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { getGetUserDepartmentsQueryKey, useCreateDepartment } from '@/shared/api';
+import {
+  getGetDepartmentQueryKey,
+  getGetUserDepartmentsQueryKey,
+  useCreateDepartment,
+  useUpdateDepartment,
+} from '@/shared/api';
 import { showMessage } from '@/shared/messages';
 
 export function useAddDepartment() {
@@ -10,6 +15,20 @@ export function useAddDepartment() {
       onSuccess: () => {
         showMessage('MSG05');
         return client.invalidateQueries({ queryKey: getGetUserDepartmentsQueryKey() });
+      },
+    },
+  });
+}
+
+export function useRenameDepartment() {
+  const client = useQueryClient();
+  return useUpdateDepartment({
+    mutation: {
+      meta: { handlesOwnErrors: true },
+      onSuccess: (data, variables) => {
+        client.setQueryData(getGetDepartmentQueryKey(variables.departmentId), data);
+        showMessage('MSG05');
+        return client.invalidateQueries();
       },
     },
   });

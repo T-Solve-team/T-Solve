@@ -11,6 +11,7 @@ paths:
   - backend/src/test/java/vn/tsolve/ticket/**/ImportPreviewIssue*
   - backend/src/test/java/vn/tsolve/ticket/**/SolutionRules*
   - backend/src/test/java/vn/tsolve/ticket/jira/**
+  - backend/src/test/java/vn/tsolve/ticket/**/TicketStatus*
   - backend/src/main/java/vn/tsolve/knowledge/**
   - backend/src/test/java/vn/tsolve/knowledge/**
   - frontend/src/features/ticket-import/*.ts

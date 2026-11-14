@@ -42,18 +42,21 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
     private final Clock clock;
     private final ApplicationEventPublisher events;
     private final AuditService audit;
+    private final TicketTransitions transitions;
 
     public TicketDecisionServiceImpl(
             TicketRepository tickets,
             ReviewDecisionRecordRepository decisions,
             Clock clock,
             ApplicationEventPublisher events,
-            AuditService audit) {
+            AuditService audit,
+            TicketTransitions transitions) {
         this.tickets = tickets;
         this.decisions = decisions;
         this.clock = clock;
         this.events = events;
         this.audit = audit;
+        this.transitions = transitions;
     }
 
     @Override
@@ -79,8 +82,9 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
                 };
         Instant now = clock.instant();
         List<ReviewDecisionRecord> history = new ArrayList<>(batch.size());
+        transitions.move(batch, outcome, now);
         for (Ticket ticket : batch) {
-            ticket.applyReview(outcome, text, now);
+            ticket.recordReviewFeedback(outcome, text);
             history.add(new ReviewDecisionRecord(ticket.getId(), reviewerId, action.name(), text, now));
         }
         List<ReviewDecisionRecord> saved = decisions.saveAll(history);

@@ -202,13 +202,36 @@ first admin stay manual (sections 5 and 6). One deploy runs at a time (a second 
 
    (See "Trust model" for who may edit this file.)
 3. In GitHub, Settings, Environments: create `staging`. **Required:** set Deployment branches to "Selected branches" and
-   allow only `main`. Then add these secrets:
-   `STAGING_SSH_HOST`, `STAGING_SSH_USER` (`deploy`), `STAGING_SSH_KEY` (the private key file) and
-   `STAGING_SSH_KNOWN_HOSTS`. Then delete the private key from your machine.
+   allow only `main`. Then add two **secrets**, `STAGING_SSH_KEY` (the private key file) and
+   `STAGING_SSH_KNOWN_HOSTS`, and two **variables** (not secrets: GitHub masks a secret's value in the log, so the user
+   name `deploy` turned into `***`):
+
+   ```
+   gh variable set STAGING_SSH_USER --env staging --repo T-Solve-team/T-Solve --body deploy
+   gh variable set STAGING_SSH_HOST --env staging --repo T-Solve-team/T-Solve --body tsolve.io.vn
+   ```
+
+   Old secrets of the same names: delete them only at the end of the rollout below. Then delete the private key from
+   your machine.
 4. For `STAGING_SSH_KNOWN_HOSTS` (the host, `tsolve.io.vn`, has an RSA host key only) run
    `ssh-keyscan -t rsa <host>`, and compare the fingerprint of the scanned line (pipe it to `ssh-keygen -lf -`) with
    `ssh-keygen -lf /etc/ssh/ssh_host_rsa_key.pub` run on the server. Paste the line only when they match. Windows
-   OpenSSH's `ssh-keyscan` may fail with an unsupported key exchange: use the one from Git Bash.
+   OpenSSH's `ssh-keyscan` may fail with an unsupported key exchange: use the one from Git Bash. In Windows PowerShell
+   5.1, `Tee-Object` and `>` write UTF-16, which `ssh` cannot read: write the file with
+   `Set-Content -Encoding ascii known_hosts` (or paste the line into the secret directly).
+5. Docker for the deploy user: **never run docker with `sudo` on the VPS; the `deploy` user runs docker directly** (it is
+   in the `docker` group). A `sudo docker ...` leaves root-owned files behind and the next deploy cannot write them
+   (BUG-207: `open .../buildx/.lock: permission denied`). The script keeps Docker's config and buildx state in
+   `/srv/tsolve/staging/.docker`, which only it uses, and fails at the step `docker config` when that folder, a file in
+   it, or `/srv/tsolve/staging` is not writable by the user. Fix with
+   `sudo chown -R deploy:deploy /srv/tsolve/staging/.docker` (and the same for `/srv/tsolve/staging`). The new folder
+   starts empty: `docker compose build` uses the default builder and needs no `docker buildx create`. Because the folder
+   is new, the `compose` and `buildx` plugins must be installed **system-wide**
+   (`/usr/libexec/docker/cli-plugins` or `/usr/local/lib/docker/cli-plugins`, from `docker-compose-plugin` and
+   `docker-buildx-plugin`): per-user plugins in `~deploy/.docker/cli-plugins` are not seen, and the step `docker config`
+   fails when either is missing. Check with
+   `ls /usr/libexec/docker/cli-plugins /usr/local/lib/docker/cli-plugins ~deploy/.docker/cli-plugins`. Do not link
+   plugins into `.docker` (the writable check follows the link to a root-owned file).
 
 ### Redeploy or roll back
 
@@ -220,6 +243,19 @@ migrations.
 
 A merged PR does not change the script the key runs. After `infra/scripts/deploy.sh` changes, reinstall it as root (the
 `install` command of step 1) from the checked-out repo.
+
+Rollout of the BUG-207 change (the own `DOCKER_CONFIG` and the `docker config` step), in this order:
+
+1. Set the two variables `STAGING_SSH_USER` and `STAGING_SSH_HOST` (setup step 3) **before** the merge.
+2. Merge the PR. The first run may still fail: the VPS runs the old installed script (it has already checked out the new
+   commit).
+3. On the VPS, reinstall the script from `/srv/tsolve/src`:
+   `git -C /srv/tsolve/src fetch origin main`, then
+   `git -C /srv/tsolve/src show origin/main:infra/scripts/deploy.sh | sudo install -o root -g root -m 755 /dev/stdin /usr/local/sbin/tsolve-deploy`.
+4. "Run workflow" (Actions, "CD staging").
+5. Only after a green run, delete the two old secrets:
+   `gh secret delete STAGING_SSH_USER --env staging --repo T-Solve-team/T-Solve` and the same for `STAGING_SSH_HOST`
+   (a revert of the PR needs them until then).
 
 ### "Manual step needed" warning
 

@@ -31,24 +31,20 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
 
     // Ticket Project ids use project.public_id (UUID); project.project_id remains a numeric storage key.
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query(
-            value =
-                    """
+    @Query(value = """
             update ticket t
             set status = 'PENDING_REVIEW',
                 review_due_date = cast(:today as date) + (case when p.review_range > 0 then p.review_range else 3 end),
                 updated_at = :now
             from project p
-            where p.public_id = t.project_id and t.ticket_id in (:ids)
-            """,
-            nativeQuery = true)
+            where p.public_id = t.project_id and t.ticket_id in (:ids) and t.status = 'EXPIRED'
+            """, nativeQuery = true)
     int sendBack(@Param("ids") Collection<UUID> ids, @Param("today") LocalDate today, @Param("now") Instant now);
 
     @Query("select t from Ticket t where t.id = :id or t.publicId = :id")
     Optional<Ticket> findForReviewDetail(@Param("id") UUID id);
 
-    @Query(
-            """
+    @Query("""
             select new vn.tsolve.ticket.dto.TicketReviewView$QueueRow(
                 t.id, t.ticketId, t.projectId, t.title, t.writer, t.reviewQueueEnteredAt, t.reviewDueDate)
             from Ticket t
@@ -56,8 +52,7 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
             """)
     List<QueueRow> findReviewQueue(@Param("projects") Collection<UUID> projectIds);
 
-    @Query(
-            """
+    @Query("""
             select new vn.tsolve.ticket.dto.TicketReviewView$ExpiredRow(
                 t.id, t.ticketId, t.projectId, t.title, t.writer, t.reviewQueueEnteredAt, t.reviewDueDate, t.updatedAt,
                 t.expiredAt, t.statusBeforeExpiry)
@@ -66,8 +61,7 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
             """)
     List<ExpiredRow> findExpiredTickets(@Param("projects") Collection<UUID> projectIds);
 
-    @Query(
-            """
+    @Query("""
             select new vn.tsolve.ticket.dto.TicketReviewView$Feedback(d.reviewerId, d.feedback)
             from Ticket t, ReviewDecisionRecord d
             where t.id = d.ticketId and t.projectId = :projectId and t.writerId = :writerId
