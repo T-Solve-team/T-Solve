@@ -1,5 +1,6 @@
-// 3.3 Issue Panel (jira-app STORY-001, STORY-008, STORY-012): the issue's Solution status and the way into the Solution
-// Form, including "Edit and resubmit" for the writer's ticket in Changes requested.
+// 3.3 Issue Panel (jira-app STORY-001, STORY-008, STORY-012): the issue's Solution status (Pending review, Changes
+// requested, Rejected, Published) and the way into the Solution Form, including "Edit and resubmit" for the writer's
+// ticket in Changes requested.
 // No Published-ticket search in Jira (spec change 2026-11-14): search is on the T-Solve web app.
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Inline, SectionMessage, Spinner, Stack, Text, useProductContext } from '@forge/react';
@@ -14,6 +15,8 @@ export const PANEL_LABELS = {
   continueDraft: 'Continue draft',
   // A Jira App label, not an SRS message (AC-012.1 — user, 2026-11-14).
   editAndResubmit: 'Edit and resubmit',
+  // A Jira App text, not an SRS message (AC-008.10 — user, 2026-11-15).
+  published: 'Solution approved and published.',
 };
 
 export function IssuePanel() {
@@ -33,7 +36,9 @@ export function IssuePanel() {
       const [state, issueRead] = await Promise.all([getIssuePanel(issueKey), readIssue(requestJira, issueKey)]);
       setPanel(state);
       setIssue(issueRead);
-      setFeedback(state.ticketStatus === 'CHANGES_REQUESTED' ? await getReviewFeedback(issueKey).catch(() => null) : null);
+      // A change request (MSG64, AC-008.7) or a Reject reason (AC-008.9) on the viewer's ticket.
+      const reviewed = state.ticketStatus === 'CHANGES_REQUESTED' || state.ticketStatus === 'REJECTED';
+      setFeedback(reviewed ? await getReviewFeedback(issueKey).catch(() => null) : null);
       setFailed(false);
     } catch {
       setFailed(true);
@@ -112,6 +117,11 @@ export function IssuePanel() {
       {panel.ticketStatus === 'PENDING_REVIEW' && (
         <SectionMessage appearance="information">
           <Text>{message('MSG65')}</Text>
+        </SectionMessage>
+      )}
+      {panel.ticketStatus === 'PUBLISHED' && (
+        <SectionMessage appearance="success">
+          <Text>{PANEL_LABELS.published}</Text>
         </SectionMessage>
       )}
       {feedback && (

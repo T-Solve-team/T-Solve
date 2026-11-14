@@ -209,3 +209,18 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** `backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java`; tests `backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuerTest.java`, `ReviewNotificationEnqueueBugTest.java`; `docs/bug-log.md`.
 **Dependencies:** Task 20.
 **Verification:** test named AC-010.8 with the BUG id; `sdd.ts trace ticket-review STORY-010`.
+
+## Task 22: Jira feedback for a Rejected ticket (STORY-009 change)
+
+**Story:** STORY-009
+**Feature:** jira-rejected-feedback
+**Description:** AC-009.13: `GET /api/v1/jira-app/issues/{issueKey}/review-feedback` also answers the verified writer of a
+Rejected Solution Form ticket with its latest Reject decision as code `REJECTED`, params `manager_name` and `reason`; no
+feedback when the reviewer's name is missing or blank. MSG64 stays as it is.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/ticket/repository/TicketRepository.java`,
+  `ticket/service/TicketReviewReadService.java`, `ticket/service/impl/TicketReviewReadServiceImpl.java`,
+  `ticket/dto/TicketReviewView.java`, `review/controller/JiraReviewFeedbackController.java`, its tests,
+  `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
+**Dependencies:** none (requested by jira-app Task 15)
+**Estimated size:** small

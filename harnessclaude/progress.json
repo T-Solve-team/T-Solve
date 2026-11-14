@@ -139,11 +139,11 @@
         "operator-session": "passing",
         "session-replaced-event": "passing",
         "jira-link-record": "passing",
-        "profile-spaces-backend": "pending",
-        "my-solutions-backend": "pending",
+        "profile-spaces-backend": "passing",
+        "my-solutions-backend": "passing",
         "my-solutions-summary-backend": "pending"
       },
-      "lastUpdated": "2026-11-14T08:07:06.910Z",
+      "lastUpdated": "2026-11-14T18:40:18.990Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -175,10 +175,22 @@
       }
     },
     "project-integration": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:22.778Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "project-members-api": "passing",
+        "project-members-tab": "passing",
+        "project-member-remove-api": "passing",
+        "project-member-remove-tab": "passing"
+      },
+      "lastUpdated": "2026-11-14T07:40:19.466Z",
+      "branch": "feat/KAN-128-project-integration-add-ticket-resolver",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "df750d443b8a988893ec5c35560ba3b86df9b221"
+      }
     },
     "wiki": {
       "status": "planned",
@@ -219,9 +231,20 @@
         "manual-ticket-contract": "passing",
         "manual-ticket-create": "passing",
         "manual-ticket-drafts": "passing",
-        "manual-entry-tab": "passing"
+        "manual-entry-tab": "passing",
+        "manual-evidence-contract": "passing",
+        "manual-evidence-backend": "passing",
+        "manual-evidence-tab": "passing",
+        "import-batch-date-range": "pending",
+        "import-history-api": "pending",
+        "import-history-page": "pending",
+        "ticket-detail-scope": "pending",
+        "ticket-detail-page": "pending",
+        "ticket-publication-contract": "pending",
+        "ticket-publication": "pending",
+        "ticket-publication-buttons": "pending"
       },
-      "lastUpdated": "2026-11-14T06:19:58.944Z",
+      "lastUpdated": "2026-11-14T20:12:07.950Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
@@ -329,10 +352,12 @@
         "remove-jira-search": "passing",
         "close-keeps-draft": "passing",
         "resubmit-backend": "evaluating",
-        "resubmit-forge": "evaluating"
+        "resubmit-forge": "evaluating",
+        "panel-rejected": "evaluating",
+        "panel-published": "evaluating"
       },
       "lastUpdated": "2026-11-14T19:08:51.881Z",
-      "branch": "feat/KAN-130-jira-app-resubmit",
+      "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
       ],
@@ -506,9 +531,10 @@
         "review-expired-stored-columns": "passing",
         "review-email-html": "passing",
         "review-email-outbox": "passing",
-        "review-email-link-fallback": "passing"
+        "review-email-link-fallback": "passing",
+        "jira-rejected-feedback": "evaluating"
       },
-      "lastUpdated": "2026-11-14T14:22:14.009Z",
+      "lastUpdated": "2026-11-14T17:32:18.927Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"

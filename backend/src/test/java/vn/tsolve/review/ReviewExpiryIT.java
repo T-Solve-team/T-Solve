@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
+import vn.tsolve.identity.service.ScopeAccessService;
 import vn.tsolve.review.repository.ReviewExpiryRepository;
 import vn.tsolve.review.service.ReviewExpiryService;
 import vn.tsolve.review.service.impl.ReviewExpiryServiceImpl;
@@ -59,6 +61,9 @@ class ReviewExpiryIT {
             return JdbcClient.create(jdbc);
         }
     }
+
+    @MockBean
+    private ScopeAccessService scopeAccess;
 
     @Autowired
     private ReviewExpiryService expiry;
@@ -219,18 +224,12 @@ class ReviewExpiryIT {
     }
 
     private UUID ticket(UUID project, String status, LocalDate due) {
-        return jdbc.queryForObject(
-                """
+        return jdbc.queryForObject("""
                 insert into ticket(source_ticket_id, project_id, source, status, title, symptoms, root_cause,
                                    resolution_steps, workaround, scope, review_due_date)
                 values (?, ?, 'SOLUTION_FORM', ?, 'Expiry test', 'Symptom', 'Cause', 'Restart', 'Workaround', 'Scope', ?)
                 returning ticket_id
-                """,
-                UUID.class,
-                UUID.randomUUID().toString(),
-                project,
-                status,
-                due);
+                """, UUID.class, UUID.randomUUID().toString(), project, status, due);
     }
 
     private Map<String, Object> row(UUID id) {

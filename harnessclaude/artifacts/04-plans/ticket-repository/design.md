@@ -214,3 +214,244 @@ repositories. No new table, no migration.
 is compared with today in `Asia/Ho_Chi_Minh` through the injected `Clock`. Two tabs saving the same Draft: the second
 save answers 404 (Draft gone) and saves nothing. Draft of a Project the caller no longer manages: save / Save as draft
 answer 403 (MSG08), the Draft stays.
+
+## Change 2026-11-14 (2): Evidence of manual entry (KAN-133, STORY-006, AC-006.15–AC-006.22)
+
+**Storage.** `platform` `FileStorage` (`store(InputStream) → StoredFile(key, size)`, `delete(key)`), injected as
+`ObjectProvider<FileStorage>`: the bean exists only when `FILE_STORAGE_ENDPOINT` is set (KAN-96 D9), so no bean
+→ a request with files answers 503 MSG06 (AC-006.21). Until `platform` binds a `TenantContext`, `store` itself
+refuses ("no Workspace bound"); that also maps to 503. Tests mock `FileStorage`.
+
+**Schema** (new changeset `NNN-manual-entry-evidence.sql`, author ticket):
+- `evidence` gains `storage_key VARCHAR(100)` (nullable: rows from the review module have none).
+- New `import_preview_evidence`: `import_preview_evidence_id UUID PK DEFAULT gen_random_uuid()`, `preview_id` FK →
+  `import_preview` ON DELETE CASCADE, `file_name`, `file_type`, `file_size`, `storage_key` NOT NULL, timestamps as
+  the tenant-table convention (platform AC-001.20) asks; index on `preview_id`. Follow the convention guard test.
+
+**Request shape (D17).** Multipart: part `entry` = `ManualTicketRequest` JSON (+ `keepEvidenceIds`), part `files`
+= `List<MultipartFile>` (optional). Controller: `@RequestPart("entry") ManualTicketRequest`, `@RequestPart(value =
+"files", required = false) List<MultipartFile>`; `consumes = MULTIPART_FORM_DATA_VALUE`.
+
+**Flow of save and Save as draft.**
+1. Existing checks (fields 400 for save only, Project 403, Draft 404) — before any file is stored.
+2. File rules (AC-006.16, AC-006.17): extension in the D19 list (case-insensitive), size ≤ 10 MB (10,485,760 bytes),
+   kept + new ≤ 5. `keepEvidenceIds` not belonging to the Draft are ignored. Rejection → 400 `InvalidFieldsException`
+   with one entry on field `files` (MSG34 `{file_name}` or MSG72) — nothing stored yet.
+3. Store each new file (outside the transaction) → list of keys. Any storage failure → delete the keys stored so
+   far, 503 MSG06 (`StorageUnavailableException extends MessageCodeException`, status 503; module exception).
+4. The existing transaction (`TransactionTemplate`, not `@Transactional` on the method, so steps 3 and 5 sit
+   outside it): writes Ticket/Draft as today plus Evidence rows (save: `evidence` rows for kept Draft files + new
+   files, with `storage_key`; Save as draft: `import_preview_evidence` rows for new files, delete rows left out of
+   `keepEvidenceIds`). If it throws → delete the keys stored in step 3 (AC-006.20), rethrow.
+5. After commit: delete the stored files of Draft Evidence that was left out (AC-006.19). On a save, kept Draft
+   files are NOT deleted — their keys move to the Ticket's Evidence; the Draft rows go with the Draft (cascade).
+   `ImportDraftServiceImpl.delete` of a Manual Draft deletes its files after commit. A failing delete is logged
+   (key only) and never fails the request. ponytail: an orphan object stays if the process dies between store and
+   commit; a storage sweep can collect keys without a row later.
+
+**Reopen.** `ManualTicketDraft.evidence` = the Draft's `import_preview_evidence` rows (id, file name, size).
+`file_type` = the file's content type as sent (fallback by extension).
+
+**Web app.**
+- New kit component `shared/ui/EvidenceUpload` (antd `Upload` is banned outside `shared/ui`; FE Lead review
+  needed, AGENTS.md rule 10): controlled list of picked files + kept Draft files, `beforeUpload` returns false (no
+  auto upload), checks type/size (MSG34) and count (MSG72) on add, remove button per file.
+- `ManualEntryForm`: Evidence field after the Solution sections; sends multipart through the generated client
+  (orval generates `FormData` for multipart bodies; check the generated signature after `generate:api`).
+  Reopened Draft → its files listed as kept; removing one drops its id from `keepEvidenceIds`. Server
+  `fieldErrors` on `files` show under Evidence.
+
+## Change 2026-11-14: Import History and Ticket Detail (KAN-134 STORY-007, KAN-135 STORY-008)
+
+### Import History (STORY-007)
+
+**Shape.** New `ImportHistoryController` (`GET /api/v1/imports/history`, `@PreAuthorize(ImportController.PROJECT_MANAGER)`
+→ 403 MSG08, AC-007.7) → `ImportHistoryService.list(TSolveUser, ImportHistoryQuery)` → one native page query in
+`ImportBatchRepository`. Answer `PagedModel<ImportHistoryItem>` as `GET /api/v1/tickets` (page from 0, size 1–100,
+default 20; D22).
+
+- **Query.** `import_batch b JOIN project p ON (p.public_id = b.project_id OR lpad(to_hex(p.project_id),32,'0')::uuid =
+  b.project_id) JOIN department d ON d.department_id = p.department_id LEFT JOIN app_user u ON u.id::text =
+  b.performed_by WHERE EXISTS (project_membership m WHERE m.project_id = p.public_id AND m.user_id = :caller AND
+  m.role_in_project = 'PROJECT_MANAGER')` + the optional filters, `ORDER BY b.created_at DESC, b.id DESC`, with a
+  count query. The legacy hex form matches the way `ProjectMembershipReviewAccess` keys a Project. `performedBy` =
+  `coalesce(u.full_name, b.performed_by)` (AC-007.3; the `::text` compare never fails on a non-UUID value).
+  - chosen: one native SQL query in `ticket`; alternatives: per-row calls to `project` / `identity` services.
+    Rationale: one page = one query; `ReviewDecisionRecordRepository` already joins `app_user` the same way.
+- **Filters (AC-007.5, AC-007.6).** `projectId` is a filter only: a Project the caller does not manage is cut by the
+  `EXISTS`, so the page is empty. Decided in planning: empty page, not 403 (builder check). `source` binds to
+  `TicketSource` (SOLUTION_FORM gives an empty page; an unknown value → 400 as any bad enum). `dateFrom` / `dateTo` =
+  `LocalDate`, turned into `[from 00:00, to+1 00:00)` in `Asia/Ho_Chi_Minh` through the injected `Clock` zone;
+  `from > to` → `InvalidPullRangeException.invalid()` (400 MSG39).
+- **Error code (AC-007.4, D26).** The service returns the first `MSG\w+` match of `import_batch.error` (stored as
+  "ExceptionName MSGxx" by `ImportBatchRecorder`), else null.
+- **Date range (AC-007.8, D25).** Changeset `032-ticket-import-batch-date-range.sql` (author `ticket`):
+  `ALTER TABLE import_batch ADD COLUMN date_from DATE, ADD COLUMN date_to DATE;` + include in
+  `db.changelog-master.xml`. `ImportBatch` gets both fields; `completed(…)` / `failed(…)` take them (null for CSV and
+  Manual). `ImportBatchRecorder.recordJiraFailed(projectId, user, from, to, error)` gets the pull request's range;
+  `recordFailed(preview, …)` and the Finish `completed(…)` in `ImportConfirmServiceImpl` pass
+  `preview.getResolvedFrom()` / `getResolvedTo()` (null on a CSV preview). No new index:
+  `idx_import_batch_project (project_id, created_at DESC)` serves the per-Project page.
+- **Web app (AC-007.9, AC-007.10).** `ImportHistoryPage` replaces the placeholder: antd `Table` fed by the generated
+  `useGetImportHistory` hook, server paging; filters Project (`useManagedProjectOptions`), Source (Select), Date range
+  (`DatePicker.RangePicker`). Column "Date range / file" = `dateFrom – dateTo` for JIRA_IMPORT, `fileName` for CSV,
+  `—` otherwise. Column "Removed / errors" = `removedCount / errorCount`. Empty page → `EmptyState` (MSG04). Load
+  errors → the app's global query error handler (MSG06 toast). MSW handler and data in `F/mocks/`.
+
+### Ticket Detail (STORY-008)
+
+**Shape.** Extend, do not add (D29). `ReviewReadController.detail` keeps its path and operationId; its guard becomes
+`hasAnyRole(TICKET_RESOLVER, PROJECT_MANAGER)` (AC-008.4 role part; today it is EMPLOYEE). The files are
+`ticket-review`'s (owner Phạm Tùng Dương); module.md `paths` of this module lists them so the gate opens them with
+this spec's approval.
+
+- **Department of the ticket.** New native query `TicketRepository.findPlacement(UUID projectId)` →
+  `Optional<Placement(UUID projectPublicId, String projectKey, UUID departmentId, String departmentName, boolean
+  departmentActive)>`: `project p JOIN department d`, matched by `public_id` or the legacy hex id (as above), with no
+  `p.status` condition: the Department decides (D28). No row = no Department = nobody (AC-008.3).
+- **Visibility in `TicketReviewReadServiceImpl.detail`.** Order: ticket by id, else 404 MSG04 (AC-008.5) → placement
+  missing or `!departmentActive` → 403 MSG08 (AC-008.3) → PUBLISHED: `scopeAccess.canAccessDepartment(accountId,
+  departmentId)`, else 403 (AC-008.1) → not PUBLISHED: `writerId == accountId`, or `managed` of the ticket's Project
+  in the `projects` map (`ReviewWorkspaceAccess.readableProjects` = `project_membership` PROJECT_MANAGER), else 403
+  (AC-008.2). The 403 is Spring's `AccessDeniedException`, which `GlobalExceptionHandler` already
+  answers with 403 MSG08 (`NO_PERMISSION`). `canDecide` and `lastReviewComment` keep their rules.
+  - chosen: `identity` `ScopeAccessService` (a service interface, AGENTS.md); alternatives: the `departmentId` of the
+    `projects` map. Rationale: the map lists only ACTIVE Projects and knows neither Department status nor the GBR-02
+    membership rules KAN-118 already encodes.
+- **New fields (AC-008.6).** `TicketReviewView.Detail` + `Department department` (`record Department(UUID id, String
+  name)`), `LocalDate resolvedDate`, `String sourceLink`; `project` now comes from the placement, so a Published
+  ticket of an inactive Project still shows its key. `TicketReviewMapper.detail` fills them. OpenAPI
+  `ReviewTicketDetail`: the three fields optional and nullable. Decided in planning: optional, so the `ticket-review`
+  mock data still type-checks without edits (builder check).
+- **Source link (AC-008.7, D30).** `Ticket` maps `source_link` (`VARCHAR(500)`, insertable). `Ticket.imported(…)`
+  takes `sourceLink`; `ImportConfirmServiceImpl.toTicket` passes `row.getSourceUrl()` for a Jira preview, null for CSV;
+  manual entry passes null.
+- **Web app (AC-008.8–AC-008.10).** `ReviewTicketContent` adds Department, Resolved date and Source link items; the
+  link renders as `<a target="_blank" rel="noopener noreferrer">` only when `new URL(link).protocol` is `http:` or
+  `https:`, else plain text (the rule of the Evidence links, `ticket-review` AC-006.5). The review due date item
+  renders only for `PENDING_REVIEW`. `ReviewTicketDetail`: `error.status === 403` → MSG08 inline and no content,
+  before the existing 404 → MSG04 branch; other failures keep `ErrorState` with retry plus the global query error
+  handler's MSG06 toast. The tests live in `frontend/src/features/tickets/pages/TicketDetailPage.test.tsx`, which only
+  this module claims, so AC-008.x does not clash in trace with `ticket-review`'s own AC-008.x.
+
+### Edge cases
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 17 | 007 | Data | `performed_by` = "stub-user", or a UUID with no `app_user` | Medium | Stored value shown | Task 22 |
+| 18 | 007 | Authorization | Batch of a Project the PM no longer manages | High | Not listed | Task 22 |
+| 19 | 007 | Data | Batch whose `project_id` is the legacy hex form | Medium | Listed with Project and Department | Task 22 |
+| 20 | 007 | Time | Batch created 23:30 Vietnam time on `dateTo` | Medium | Included | Task 22 |
+| 21 | 008 | Authorization | Published ticket, Ticket Resolver of another Department | High | 403 MSG08 | Task 24 |
+| 22 | 008 | Authorization | Pending ticket, PM of the same Department but not of the Project | High | 403 MSG08 | Task 24 |
+| 23 | 008 | State | Published ticket of an inactive Project in an Active Department | Medium | Visible to that Department | Task 24 |
+| 24 | 008 | State | Department soft-deleted | High | 403 for everyone, the writer and the PM too | Task 24 |
+| 25 | 008 | Security | `sourceLink` = `javascript:alert(1)` | Critical | Plain text, no link | Task 25 |
+| 26 | 008 | Tenancy | Ticket id of another Workspace | High | 404, the same answer as an unknown id (platform AC-015.3) | Task 24 |
+
+### Risks
+
+- `ReviewDecisionApiIT.readsPersistedSolutionAndEvidenceAndHidesUnmanagedPendingTickets_AC_009_2_AC_009_3`
+  (`ticket-review`) expects 404 for an unmanaged pending ticket and 200 for a Published ticket of project
+  `new UUID(0, 20)`, which has no `project` row: both answers become 403. Task 24 updates that test; tell its owner.
+- `CrossModuleIsolationIT` (platform) reads a Published ticket as a Ticket Resolver MEMBER of the Project: still
+  allowed by `canAccessDepartment`; it must stay green.
+- `ticket-review` AC-006.6 describes a mock-API 404 for a hidden ticket; the real API now answers 403 (D31). Its spec
+  is not changed here.
+
+## Change 2026-11-15: Unpublish / re-publish (KAN-136, STORY-009)
+
+**Shape.** Two more decisions next to send-back; no new class on the backend.
+
+```
+web  features/tickets  TicketDetailPage ── TicketPublicationActions (Unpublish / Re-publish + ConfirmDialog)
+                                              │ POST /api/v1/reviews/unpublish | /republish  { ticketIds: [id] }
+backend  review.ReviewDecisionController ──▶ ticket.TicketDecisionService.unpublish / republish
+             (managed Projects of the caller)      └─ lockForReview → scope check → TicketTransitions.move
+                                                      → review_decision rows → audit
+```
+
+- **Service.** `TicketDecisionService` gets `int unpublish(UUID reviewerId, Set<UUID> managedProjectIds, List<UUID>
+  ticketIds)` and `int republish(…)`. Both call one private `changePublication(…, TicketStatus to)` in
+  `TicketDecisionServiceImpl`, in this order, as `sendBack` does: `validatedIds` (400, AC-009.7) →
+  `tickets.lockForReview(ids)` → `validateScope` (404 MSG04, then 403 MSG08; AC-009.4, AC-009.5) →
+  `transitions.move(batch, to, now)` — it checks the whole batch first and throws MSG06 (409) before it changes any
+  Ticket, then publishes the one event (AC-009.3, AC-005.4, AC-005.5) → one `ReviewDecisionRecord` per Ticket
+  (`UNPUBLISH` / `REPUBLISH`, no feedback, `now`) → `audit.record(UNPUBLISH | PUBLISH, "TICKET", id)` per Ticket
+  (AC-009.1, AC-009.2). `Ticket.moveTo` sets only `status` and `updatedAt`, so the Solution, Evidence, feedback and
+  review due date stay (AC-009.2). No source rule: a ticket of any source can be unpublished.
+- **Controller.** `ReviewDecisionController` (`review`, D36) gets `@PostMapping("/unpublish")` (operationId
+  `unpublishTickets`) and `@PostMapping("/republish")` (`republishTickets`), body `ApproveRequest`, answer
+  `DecisionResult`, managed Projects from `managedProjects(actor)` — the same three lines as `sendBack`. The class
+  already carries `@PreAuthorize` Project Manager (AC-009.6).
+- **Data.** Liquibase changeset `ticket:0NN-review-decision-publication` (next free number in
+  `db/changelog/changes`, 034 on 2026-11-15) replaces `ck_review_decision` to allow `'UNPUBLISH', 'REPUBLISH'` beside
+  the four values of changeset 024, with a `--rollback` that restores them. `ReviewDecisionRecord.Decision` gains
+  `UNPUBLISH`, `REPUBLISH` (the column is `VARCHAR(20)`). No new table or column.
+- **Review History (D35).** The history queries of `ReviewDecisionRecordRepository` filter
+  `d.decision in (:decisions)`, so the new rows stay out of the list until `ticket-review` adds them to its filter.
+  Nothing to change here.
+- **Search (D34).** Nothing. `TicketsPublishedListener` embeds a re-published ticket again; the upsert makes that
+  harmless. No listener is added for `TicketsUnpublishedEvent`.
+- **Contract.** `frontend/openapi/tsolve-api.yaml`, tag `review`: the two paths with `ApproveTicketsRequest` →
+  `ReviewDecisionResult`, responses 400, 401, 403, 404, 409 as `sendBackTickets`. `npm run generate:api`.
+- **Web app.** New `features/tickets/components/TicketPublicationActions.tsx`, rendered by `TicketDetailPage` above
+  `ReviewTicketDetail` (not changed: it belongs to `ticket-review`). It reads the ticket with
+  `useGetReviewTicketDetail(ticketId)` — the same query key as `ReviewTicketDetail`, so one request — and shows
+  Unpublish when `status === 'PUBLISHED'`, Re-publish when `'UNPUBLISHED'`, both only when
+  `hasRole('PROJECT_MANAGER') && isProjectManagerOf(ticket.project.projectId)` (the fallback rule `canDecide` uses);
+  otherwise it renders nothing. Click → shared `ConfirmDialog` (`MSG21`, `isDanger`; `MSG23`) → generated
+  `useUnpublishTickets` / `useRepublishTickets` with `{ ticketIds: [ticketId] }` → `showMessage('MSG22' | 'MSG24')`.
+  `onSettled` (success or error): invalidate the detail query, the Ticket List root key and the Review History key,
+  so the page shows the stored status (AC-009.8–AC-009.10). Errors use the global error toast of the app (code of the
+  ProblemDetail, else MSG06). MSW: the generated handlers answer `{ count: 1 }`.
+  `ponytail:` the mock ticket data belongs to `features/review` and does not change status in mock mode; the tests
+  drive the status with per-test MSW overrides. Share the mock state when a demo on mocks needs it.
+
+| Decision | Choice | Alternatives considered | Rationale |
+|----------|--------|-------------------------|-----------|
+| Endpoints (D36, user) | `POST /reviews/unpublish`, `/reviews/republish` in `ReviewDecisionController`, batch body | `POST /tickets/{id}/unpublish` in a new `ticket` controller | `ticket` gets the managed Projects of the caller from `review`; a `ticket` controller would call `review` (wrong direction) or need a real `ProjectAccess` |
+| Index (D34, user) | Keep the vector, rely on the Published filter of `search` | Delete the vector on `TicketsUnpublishedEvent` | No change in `search`; re-publish is instant and needs no Ollama |
+| History (D35, user) | Store `review_decision` rows + audit | Audit only; also list them in Review History | UC-25 needs the record; listing is the contract of `ticket-review` |
+| Removed Project (D37, user) | 403 as every review decision today | Count Removed Projects as managed | One fix for all decisions, in `ticket-review` |
+| Audit action of re-publish | `AuditAction.PUBLISH` | A new `REPUBLISH` action | The enum already has PUBLISH / UNPUBLISH as a pair; the review decision row tells re-publish from Approve |
+| Buttons | Own component in `features/tickets` above `ReviewTicketDetail` | Add them to the action bar of `ReviewTicketDetail` | Keeps `ticket-review` code untouched; the detail query is shared by its key |
+
+**Files.** Modify `T/service/TicketDecisionService.java`, `T/service/impl/TicketDecisionServiceImpl.java`,
+`T/entity/ReviewDecisionRecord.java`, `backend/src/main/java/vn/tsolve/review/controller/ReviewDecisionController.java`,
+`db.changelog-master.xml`, `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`,
+`frontend/src/features/tickets/pages/TicketDetailPage.tsx`. Create `0NN-review-decision-publication.sql`,
+`frontend/src/features/tickets/components/TicketPublicationActions.tsx` (+ `.test.tsx`). Tests
+`TT/service/impl/TicketPublicationTest.java`, `TT/controller/TicketPublicationIT.java` (module.md `paths` gains
+`**/TicketPublication*` and the controller file).
+
+**Edge cases.**
+
+| # | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-----------|----------|----------|-------------------|-----------|
+| P1 | Concurrency | Two PMs (or a double click) unpublish the same ticket | High | Row lock (`lockForReview`); the second sees Unpublished → 409 MSG06, one decision row, one event | Task 27 |
+| P2 | State | Unpublish a Pending review, Rejected, Expired or already Unpublished ticket; re-publish a Published one | High | 409 MSG06, nothing changed, no decision, no event (AC-009.3) | Task 27 |
+| P3 | Authorization | PM of another Project; ticket of another Workspace; Ticket Resolver calls the endpoint | High | 403 MSG08; 404 MSG04; 403 (AC-009.4–AC-009.6) | Task 27 |
+| P4 | Authorization | Ticket of a Removed Project (GBR-21) | Medium | 403 MSG08 (D37) — known gap, `ticket-review` | Task 27 |
+| P5 | Data | Batch with one wrong-status ticket among valid ones | High | Whole batch refused, none changed (AC-009.3) | Task 27 |
+| P6 | Data | Re-publish keeps Solution, Evidence, feedback, review due date; no new review | Medium | Only `status` and `updatedAt` change (AC-009.2) | Task 27 |
+| P7 | Integration | Unpublished ticket in Search / Suggestion / Chatbot; re-published one | High | Left out / returned — `search` AC-007.1, AC-010.3, AC-011.3 (existing tests) | — |
+| P8 | Data | Existing rows and the new check constraint | Medium | Constraint only widens; rollback restores the four values | Task 27 (migration runs in the IT) |
+| P9 | Integration | A report that counts `review_decision` rows without filtering the decision | Medium | Grep the readers of `review_decision` before merging; history and dashboard queries filter by decision | Task 27 |
+| P10 | UI state | Status changed elsewhere while the page is open (stale button) | Medium | 409 → error toast, detail reloaded, the right button shows (AC-009.10) | Task 28 |
+| P11 | UI | Double click on OK in the dialog | Medium | `isConfirming` disables OK while the request runs | Task 28 |
+| P12 | UI roles | Ticket Resolver, or PM of another Project, opens the detail | High | No button (AC-009.8, AC-009.9) | Task 28 |
+
+**Decided in planning (builder check, 2026-11-15).**
+- Decided in planning: `TicketTransitions` (`T/service/impl/`) and `TicketsUnpublishedEvent` already exist (Task 13); Task 27 creates neither (builder check).
+- Decided in planning: the buttons use only the session rule `hasRole('PROJECT_MANAGER') && isProjectManagerOf(projectId)`; `ticket.canDecide` is about review decisions and is not read. A Removed Project the session still lists gets the button and then the 403 of D37, shown as AC-009.10 (builder check).
+- Decided in planning: the button is disabled while the detail query is fetching or the request runs (builder check).
+- Decided in planning: AC-009.7 has two tests — bean validation of the body over HTTP (empty, more than 500) in `TicketPublicationIT`, the duplicate id in `TicketPublicationTest` (builder check).
+- Decided in planning: the tests of AC-009.2 tell re-publish from Approve by the `REPUBLISH` decision row; the audit action is `PUBLISH` for both (builder check).
+- Decided in planning: `TicketPublicationIT` also checks that an UNPUBLISH / REPUBLISH row publishes no `ReviewFeedbackDecidedEvent`, so no writer email is sent (P9) (builder check).
+- Decided in planning: the YAML reuses the schemas `ApproveTicketsRequest` and `ReviewDecisionResult`; the Java records stay `ApproveRequest` / `DecisionResult` (builder check).
+- Decided in planning: MSG21 / MSG23 are shown without params — `msg()` fills `{tracker_name}` from `shared/config/tracker.ts` (builder check).
+- Decided in planning: errors go to the global mutation handler; the component passes `handlesOwnErrors` only if that handler shows nothing for a 4xx without a code, and then shows MSG06 itself (AC-009.10) (builder check).
+- Decided in planning: invalidation uses the generated `getGetReviewTicketDetailQueryKey(ticketId)`, the root of `getGetTicketsQueryKey()` and `getGetReviewHistoryQueryKey()`, as `useReviewDecisions.ts` does (builder check).
+- Decided in planning: the tests of AC-009.8 / AC-009.9 assert the refetched status on screen (the MSW override answers Unpublished / Published on the second read), not only the invalidation (builder check).
+- Decided in planning: the changeset takes the next free number after rebasing on `main`; its rollback restores the four values of changeset 024 (builder check).

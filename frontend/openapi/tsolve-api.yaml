@@ -32,6 +32,8 @@ tags:
     description: Calls from the T-Solve Jira App through Forge Remote (Forge Invocation Token).
   - name: triage
     description: Suggestion History and result detail (KAN-149), served by the backend triage module.
+  - name: projects
+    description: Project Detail and its members (SRS UC-15, screen 3.2).
   - name: dashboard
     description: Knowledge Dashboard figures, screen 9.1.
 paths:
@@ -236,6 +238,126 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DepartmentRef' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}:
+    get:
+      tags: [projects]
+      operationId: getProject
+      summary: Project Detail header
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The Project.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectSummaryResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}/members:
+    get:
+      tags: [projects]
+      operationId: listProjectMembers
+      summary: Members of a Project
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The Project Manager first, then the other members by full name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProjectMemberResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [projects]
+      operationId: addProjectMembers
+      summary: Add Ticket Resolvers to a Project
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddProjectMembersRequest' }
+      responses:
+        '201':
+          description: Members added; the full member list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProjectMemberResponse' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}/members/{userId}:
+    delete:
+      tags: [projects]
+      operationId: removeProjectMember
+      summary: Remove a member from a Project
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Member removed; the full member list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProjectMemberResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}/member-candidates:
+    get:
+      tags: [projects]
+      operationId: searchProjectMemberCandidates
+      summary: Active Ticket Resolvers that can be added to a Project
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+        - name: q
+          in: query
+          description: Trimmed, case-insensitive substring of full name or email; at most 20 results.
+          schema: { type: string, maxLength: 100 }
+      responses:
+        '200':
+          description: Candidates by full name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MemberCandidateResponse' }
+        '400':
+          $ref: '#/components/responses/Problem'
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -622,7 +744,7 @@ paths:
     get:
       tags: [review]
       operationId: getReviewTicketDetail
-      summary: Frontend proposal — read-only Ticket Detail with Workspace and unpublished-content access checks.
+      summary: Read Ticket Detail within the caller's Department or writer and Project Manager access.
       parameters:
         - name: ticketId
           in: path
@@ -934,11 +1056,12 @@ paths:
     get:
       tags: [jira-app]
       operationId: getJiraReviewFeedback
-      summary: Read the latest change request for the verified writer of this issue (MSG64).
+      summary: Read the latest change request (MSG64) or Reject reason (REJECTED) for the verified writer of this issue.
       description: >
         Requires a verified Forge principal, registered Workspace, linked active Account and authorized issue.
-        The Workspace is resolved only from the verified cloudId. Returns no feedback when the issue has no
-        current Changes requested Solution Form owned by that Account in the verified Project.
+        The Workspace is resolved only from the verified cloudId. Returns MSG64 for a Changes requested Solution
+        Form ticket and REJECTED (ticket-review AC-009.13) for a Rejected one, owned by that Account in the
+        verified Project; no feedback otherwise, or when the reviewer has no name.
       security:
         - forgeInvocationToken: []
       parameters:
@@ -1556,6 +1679,49 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/imports/history:
+    get:
+      tags: [import]
+      operationId: getImportHistory
+      summary: Import Batches of the caller's managed Projects, newest first.
+      parameters:
+        - name: projectId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: source
+          in: query
+          description: Import source; SOLUTION_FORM returns an empty page.
+          schema:
+            $ref: '#/components/schemas/TicketSource'
+        - name: dateFrom
+          in: query
+          description: First creation day, inclusive in Vietnam time.
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          description: Last creation day, inclusive in Vietnam time; before dateFrom gives MSG39.
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of Import History.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportHistoryPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/imports/manual:
     post:
       tags: [import]
@@ -1564,13 +1730,27 @@ paths:
         Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source
         MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field
         with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project =
-        MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+        MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34,
+        more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ManualTicketRequest'
+              type: object
+              required: [entry]
+              properties:
+                entry:
+                  $ref: '#/components/schemas/ManualTicketRequest'
+                files:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: string
+                    format: binary
+            encoding:
+              entry:
+                contentType: application/json
       responses:
         '201':
           description: Ticket published.
@@ -1579,7 +1759,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ImportResultResponse'
         '400':
-          description: Invalid fields (one fieldErrors entry per field).
+          description: Invalid fields (one fieldErrors entry per field); Evidence type or size = MSG34 with file_name, count = MSG72 (fieldErrors on files).
           content:
             application/problem+json:
               schema:
@@ -1592,6 +1772,12 @@ paths:
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
+        '503':
+          description: Evidence storage is not configured or is unavailable (MSG06); nothing saved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/manual/drafts:
     post:
       tags: [import]
@@ -1599,13 +1785,27 @@ paths:
       summary: >
         Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId,
         updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's
-        Manual Draft = MSG04 (404).
+        Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72
+        (400, fieldErrors on files); storage unavailable = MSG06 (503).
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ManualTicketRequest'
+              type: object
+              required: [entry]
+              properties:
+                entry:
+                  $ref: '#/components/schemas/ManualTicketRequest'
+                files:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: string
+                    format: binary
+            encoding:
+              entry:
+                contentType: application/json
       responses:
         '200':
           description: Draft saved.
@@ -1614,7 +1814,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DraftSavedResponse'
         '400':
-          description: No Project (MSG01 on projectId).
+          description: No Project (MSG01 on projectId); Evidence type or size = MSG34 with file_name, count = MSG72 (fieldErrors on files).
           content:
             application/problem+json:
               schema:
@@ -1625,6 +1825,12 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+        '503':
+          description: Evidence storage is not configured or is unavailable (MSG06); nothing saved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/manual/drafts/{previewId}:
     get:
       tags: [import]
@@ -2217,6 +2423,7 @@ components:
           PERMISSION_CHANGE,
           TRACKER_CONFIGURATION_CHANGE,
           DEPARTMENT_CHANGE,
+          PROJECT_MEMBER_CHANGE,
         ]
     AuditEntry:
       type: object
@@ -2367,6 +2574,40 @@ components:
       required: [name]
       properties:
         name: { type: string, minLength: 1, maxLength: 50 }
+    ProjectSummaryResponse:
+      type: object
+      required: [id, jiraProjectKey, departmentName, projectManagerName, status]
+      properties:
+        id: { type: string, format: uuid }
+        jiraProjectKey: { type: string }
+        departmentName: { type: string }
+        projectManagerName: { type: [string, 'null'] }
+        status: { type: string, enum: [ACTIVE, REMOVED] }
+    ProjectMemberResponse:
+      type: object
+      required: [userId, fullName, email, role, dateAdded]
+      properties:
+        userId: { type: string, format: uuid }
+        fullName: { type: [string, 'null'] }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/ProjectRole' }
+        dateAdded: { type: string, format: date-time }
+    MemberCandidateResponse:
+      type: object
+      required: [userId, fullName, email]
+      properties:
+        userId: { type: string, format: uuid }
+        fullName: { type: [string, 'null'] }
+        email: { type: string, format: email }
+    AddProjectMembersRequest:
+      type: object
+      required: [userIds]
+      properties:
+        userIds:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { type: string, format: uuid }
     CreateUserRequest:
       type: object
       required: [email, roles]
@@ -2991,6 +3232,14 @@ components:
         title: { type: string }
         description: { type: string }
         project: { $ref: '#/components/schemas/ProjectRef' }
+        department:
+          type: [object, 'null']
+          required: [id, name]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+        resolvedDate: { type: [string, 'null'], format: date }
+        sourceLink: { type: [string, 'null'] }
         source: { $ref: '#/components/schemas/TicketSource' }
         status: { $ref: '#/components/schemas/TicketStatus' }
         authorId: { type: [string, 'null'], format: uuid }
@@ -3019,7 +3268,9 @@ components:
           oneOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
-          description: MSG64 with manager_name and comment from the committed review decision.
+          description: >
+            MSG64 with manager_name and comment from the latest Request Changes decision, or REJECTED (a Jira App
+            text, not an SRS message) with manager_name and reason from the latest Reject decision.
     ReviewDecisionResult:
       type: object
       required: [count]
@@ -3363,6 +3614,69 @@ components:
           oneOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
+    ImportHistoryPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportHistoryItem'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+    ImportHistoryItem:
+      type: object
+      required: [batchId, createdAt, performedBy, project, department, source, publishedCount, removedCount, errorCount, status]
+      properties:
+        batchId:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+        performedBy:
+          type: string
+          description: Account full name, or the stored performer when no account matches.
+        project:
+          type: object
+          required: [projectId, projectKey]
+          properties:
+            projectId:
+              type: string
+              format: uuid
+            projectKey:
+              type: string
+        department:
+          type: object
+          required: [id, name]
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        source:
+          $ref: '#/components/schemas/ImportSource'
+        dateFrom:
+          type: [string, 'null']
+          format: date
+        dateTo:
+          type: [string, 'null']
+          format: date
+        fileName:
+          type: [string, 'null']
+        publishedCount:
+          type: integer
+        removedCount:
+          type: integer
+        errorCount:
+          type: integer
+        status:
+          type: string
+          enum: [COMPLETED, FAILED]
+        errorCode:
+          type: [string, 'null']
+          description: Only the first MSG code in the stored error, or null.
     JiraPullRequest:
       type: object
       required: [projectId, resolvedFrom, resolvedTo]
@@ -3456,9 +3770,14 @@ components:
           type: [integer, 'null']
           format: int64
           description: The Manual Draft this entry was reopened from.
+        keepEvidenceIds:
+          type: [array, 'null']
+          items:
+            type: string
+            format: uuid
     ManualTicketDraft:
       type: object
-      required: [previewId, projectId, savedAt]
+      required: [previewId, projectId, savedAt, evidence]
       properties:
         previewId:
           type: integer
@@ -3488,6 +3807,22 @@ components:
         savedAt:
           type: string
           format: date-time
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/ManualEvidence'
+    ManualEvidence:
+      type: object
+      required: [evidenceId, fileName, fileSize]
+      properties:
+        evidenceId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
     ChatbotQuestion:
       type: object
       required: [question, history]
