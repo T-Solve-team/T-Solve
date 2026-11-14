@@ -1384,3 +1384,10 @@
 {"ts":"2026-11-14T14:41:32.382Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"6ba85f1867fa686c62fbb3d86074f4beb1e681f1"}
 {"ts":"2026-11-14T14:41:32.730Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-drafts","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T14:41:33.053Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T15:16:26.036Z","type":"feature-status","module":"import-ticket-list","feature":"import-tickets-manual-tab","from":null,"to":"pending"}
+{"ts":"2026-11-14T15:16:35.495Z","type":"spec-approved","module":"import-ticket-list","specHash":"746475daa4523b3a31757e1c45c59850235faed5480665df33b5cdd59f5619b5"}
+{"ts":"2026-11-14T15:16:41.369Z","type":"module-status","module":"import-ticket-list","from":"completed","to":"planned"}
+{"ts":"2026-11-14T15:16:41.758Z","type":"module-status","module":"import-ticket-list","from":"planned","to":"implementing"}
+{"ts":"2026-11-14T15:16:42.141Z","type":"feature-status","module":"import-ticket-list","feature":"import-tickets-manual-tab","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T16:46:21.700Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"2fe32cb1dcf04d1d0ab59a68fb075148432174e6"}
+{"ts":"2026-11-14T16:46:22.025Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":"in-progress","to":"evaluating"}
