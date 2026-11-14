@@ -111,3 +111,7 @@ Focused unit/config tests, PostgreSQL-backed JobRunr serialization and dispatch 
 # STORY-003: Active Workspaces for recurring jobs (KAN-157)
 
 See the master's STORY-003 section: one abstract port method, `activeWorkspaceIds()`, implemented by the mock from its Active allow-list. Task 3, feature `active-workspaces`, committed together with ticket-review Task 17.
+
+# STORY-004: Shared email outbox (KAN-162 change)
+
+Master: artifacts/04-plans/worker/design.md, section "STORY-004". Task 4, feature `email-outbox`. ticket-review Task 19 moves the review email onto it on the same branch.
