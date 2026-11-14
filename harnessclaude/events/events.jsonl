@@ -1378,3 +1378,6 @@
 {"ts":"2026-11-14T08:15:07.768Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-save","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T08:15:08.901Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-evidence","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T08:15:25.017Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"aebbbc112cc0481ced6fdc26ef20787cbba90300"}
+{"ts":"2026-11-14T13:48:11.110Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"f7b4cc739491f9336d55ff2fa739cb8df4798afe"}
+{"ts":"2026-11-14T13:48:11.383Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-evidence","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T13:48:11.654Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-drafts","from":"pending","to":"in-progress"}
