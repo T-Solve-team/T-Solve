@@ -82,7 +82,18 @@ class ManualTicketDraftTest {
     static ManualTicketRequest draftRequest(UUID projectId, Long draftId) {
         // invalid on purpose: a Draft is not validated (AC-006.9)
         return new ManualTicketRequest(
-                projectId, " ITSUP-1 ", "  ", "d".repeat(10_001), "not a date", "S", null, null, null, null, draftId);
+                projectId,
+                " ITSUP-1 ",
+                "  ",
+                "d".repeat(10_001),
+                "not a date",
+                "S",
+                null,
+                null,
+                null,
+                null,
+                draftId,
+                null);
     }
 
     static ManualTicketRequest validWithDraft(Long draftId) {
@@ -98,7 +109,8 @@ class ManualTicketDraftTest {
                 v.resolutionSteps(),
                 v.workaround(),
                 v.scope(),
-                draftId);
+                draftId,
+                null);
     }
 
     static ImportPreview draft(String owner, TicketSource source) {
@@ -227,7 +239,8 @@ class ManualTicketDraftTest {
                         null,
                         null,
                         null,
-                        EARLIER));
+                        EARLIER,
+                        List.of()));
     }
 
     @Test

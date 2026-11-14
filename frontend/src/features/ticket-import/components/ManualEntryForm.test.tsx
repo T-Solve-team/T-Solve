@@ -62,8 +62,10 @@ function captureBodies(path: string) {
     if (request.method === 'POST' && new URL(request.url).pathname === path) {
       void request
         .clone()
-        .json()
-        .then((body: ManualTicketRequest) => bodies.push(body));
+        .formData()
+        .then((form) => {
+          bodies.push(JSON.parse(form.get('entry') as string) as ManualTicketRequest);
+        });
     }
   });
   return bodies;
@@ -123,6 +125,7 @@ describe('ManualEntryForm', () => {
       workaround: 'Print to PDF.',
       scope: 'Floor 3.',
       savedAt: '2026-10-16T02:30:00Z',
+      evidence: [],
     };
     server.use(http.get('*/api/v1/imports/manual/drafts/801', () => HttpResponse.json(draft)));
 
@@ -204,6 +207,7 @@ describe('ManualEntryForm', () => {
           projectId: ITSUP_ID,
           title: 'Saved title',
           savedAt: '2026-10-16T02:30:00Z',
+          evidence: [],
         }),
       ),
     );

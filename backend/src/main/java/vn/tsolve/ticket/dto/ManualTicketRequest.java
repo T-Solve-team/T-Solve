@@ -1,5 +1,6 @@
 package vn.tsolve.ticket.dto;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -17,4 +18,5 @@ public record ManualTicketRequest(
         String resolutionSteps,
         String workaround,
         String scope,
-        Long draftId) {}
+        Long draftId,
+        List<UUID> keepEvidenceIds) {}

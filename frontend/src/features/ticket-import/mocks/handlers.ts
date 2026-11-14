@@ -189,7 +189,8 @@ export const handlers: HttpHandler[] = [
   // Manual entry (AC-006.1, AC-006.3, AC-006.7, AC-006.12): every missing field at once; the taken Ticket ID → MSG31.
   http.post('*/api/v1/imports/manual', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
-    const body = (await request.json()) as ManualTicketRequest;
+    const form = await request.formData();
+    const body = JSON.parse(form.get('entry') as string) as ManualTicketRequest;
     const missing = MANUAL_REQUIRED.filter(([field]) => !body[field]?.trim());
     if (missing.length > 0) {
       return problem(400, 'MSG01', {
@@ -224,7 +225,8 @@ export const handlers: HttpHandler[] = [
   // Save as draft (AC-006.9, AC-006.10): only the Project is checked; a draftId rewrites that Draft.
   http.post('*/api/v1/imports/manual/drafts', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
-    const { draftId, ...fields } = (await request.json()) as ManualTicketRequest;
+    const form = await request.formData();
+    const { draftId, ...fields } = JSON.parse(form.get('entry') as string) as ManualTicketRequest;
     if (!fields.projectId) {
       return problem(400, 'MSG01', {
         fieldErrors: [{ field: 'projectId', code: 'MSG01', params: { field_name: 'Project' } }],
@@ -236,7 +238,7 @@ export const handlers: HttpHandler[] = [
     const previewId = draftId ?? (lastManualDraftId += 1);
     const savedAt = new Date().toISOString();
     manualDrafts = [
-      { ...fields, previewId, savedAt },
+      { ...fields, previewId, savedAt, evidence: [] },
       ...manualDrafts.filter((draft) => draft.previewId !== previewId),
     ];
     return HttpResponse.json<DraftSavedResponse>({

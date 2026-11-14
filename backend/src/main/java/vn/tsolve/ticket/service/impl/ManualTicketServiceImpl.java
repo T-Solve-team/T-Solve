@@ -205,7 +205,8 @@ public class ManualTicketServiceImpl implements ManualTicketService {
                 v.resolutionSteps(),
                 v.workaround(),
                 v.scope(),
-                draft.getDraftSavedAt());
+                draft.getDraftSavedAt(),
+                List.of());
     }
 
     /** Another user's preview, a missing one or one that is not a Manual Draft is "not found" (AC-006.13). */

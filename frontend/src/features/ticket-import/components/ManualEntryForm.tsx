@@ -123,7 +123,7 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
   function handleSave(values: ManualValues) {
     send(() =>
       create.mutate(
-        { data: request(values) },
+        { data: { entry: request(values), files: [] } },
         {
           onSettled: () => {
             isSending.current = false;
@@ -159,7 +159,7 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
     }
     send(() =>
       saveDraft.mutate(
-        { data: request(form.getFieldsValue()) },
+        { data: { entry: request(form.getFieldsValue()), files: [] } },
         {
           onSettled: () => {
             isSending.current = false;

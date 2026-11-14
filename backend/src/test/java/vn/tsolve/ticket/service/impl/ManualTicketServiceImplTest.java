@@ -95,6 +95,7 @@ class ManualTicketServiceImplTest {
                 " Restart ",
                 null,
                 " All users ",
+                null,
                 null);
     }
 
@@ -119,6 +120,7 @@ class ManualTicketServiceImplTest {
                 resolutionSteps,
                 workaround,
                 scope,
+                null,
                 null);
     }
 
@@ -218,8 +220,8 @@ class ManualTicketServiceImplTest {
 
     @Test
     void AC_006_3_rejectsEveryMissingOrBlankFieldWithMsg01() {
-        ManualTicketRequest request =
-                new ManualTicketRequest(null, " ", null, "", "  ", "\t", null, " ", "kept as optional", null, null);
+        ManualTicketRequest request = new ManualTicketRequest(
+                null, " ", null, "", "  ", "\t", null, " ", "kept as optional", null, null, null);
 
         List<FieldError> errors = fieldErrorsOf(request);
 

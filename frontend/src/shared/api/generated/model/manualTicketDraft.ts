@@ -6,6 +6,7 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
+import type { ManualEvidence } from './manualEvidence';
 
 export interface ManualTicketDraft {
   previewId: number;
@@ -32,4 +33,5 @@ export interface ManualTicketDraft {
   /** @nullable */
   scope?: string | null;
   savedAt: string;
+  evidence: ManualEvidence[];
 }
