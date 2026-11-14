@@ -517,8 +517,8 @@
     }
   },
   "platform": {
-    "specHash": "ecefdeda0ff924ec9b4c01bfff2f65c119ffbca1480dc1e4b583f29e25c63def",
-    "approvedAt": "2026-11-14T04:07:33.501Z",
+    "specHash": "f5bff144498c653f1a304a88390a8e1c1266cc1b4b2510125852a615f4d48d27",
+    "approvedAt": "2026-11-14T05:04:24.631Z",
     "by": "user",
     "acs": {
       "AC-001.15": "THE catalog database (the Platform / Tenant Registry of the HLA, named ) SHALL hold the table  with  (UUID, primary key),  (not null, unique),  ( or , not null),  (not null, unique),  (not null),  (not null, encrypted as AC-001.24 says),  (the tenant changelog version last applied to that database, not null),  (nullable),  (nullable, unique),  and  (, not null) (GBR-24, GBR-37).",

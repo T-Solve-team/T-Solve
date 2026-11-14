@@ -353,12 +353,14 @@
         "cross-module-isolation": "in-progress",
         "e2e-smoke": "pending"
       },
-      "lastUpdated": "2026-11-14T04:08:50.776Z",
+      "lastUpdated": "2026-11-14T05:04:39.720Z",
       "branch": "feat/platform",
       "repos": [
         "default"
       ],
-      "lastCommit": {}
+      "lastCommit": {
+        "default": "8f75599b196372ea8e734ce06271a336e159674c"
+      }
     },
     "platform-console": {
       "status": "decomposed",
