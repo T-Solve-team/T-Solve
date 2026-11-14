@@ -10,6 +10,9 @@ import vn.tsolve.tracker.dto.JiraAccount;
  */
 public interface TicketTrackerClient {
 
+    /** Checks that the account authenticates and has Browse projects, Create Issues and Modify Reporter. */
+    void checkServiceAccount(JiraAccount account);
+
     /** Adds a comment made of these paragraphs to the issue and returns the new comment's id. */
     String addComment(JiraAccount account, String issueKey, List<String> paragraphs);
 

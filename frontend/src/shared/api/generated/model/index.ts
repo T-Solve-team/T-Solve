@@ -184,3 +184,6 @@ export * from './userProject';
 export * from './userSummary';
 export * from './wikiDocumentCitation';
 export * from './wikiDocumentCitationType';
+export * from './workspaceInfo';
+export * from './workspaceSetupRequest';
+export * from './workspaceUpdateRequest';
