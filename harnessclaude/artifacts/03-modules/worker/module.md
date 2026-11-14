@@ -14,6 +14,7 @@ paths:
   - backend/src/main/java/vn/tsolve/worker/**
   - backend/src/test/java/vn/tsolve/worker/**
   - backend/src/main/resources/db/changelog/**
+  - backend/src/main/resources/db/jobs-changelog/**
   - docs/bug-log.md
 ---
 
