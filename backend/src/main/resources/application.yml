@@ -110,6 +110,7 @@ tsolve:
   # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId", ids as UUIDs. Empty = nobody can import.
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
+    workspace-id: ${TSOLVE_STUB_WORKSPACE_ID:}
     inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}
     # Jira import: "projectId:JIRAKEY,projectId:JIRAKEY". A Project without a key cannot pull from Jira (MSG50).
     jira-keys: ${TSOLVE_STUB_JIRA_KEYS:}
