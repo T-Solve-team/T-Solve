@@ -162,10 +162,10 @@
         "rename-department-screen": "passing",
         "delete-department-api": "passing",
         "delete-department-screen": "passing",
-        "restore-department-api": "evaluating",
-        "restore-department-screen": "evaluating"
+        "restore-department-api": "passing",
+        "restore-department-screen": "passing"
       },
-      "lastUpdated": "2026-11-14T22:42:48.293Z",
+      "lastUpdated": "2026-11-14T22:45:58.745Z",
       "branch": "feat/workspace",
       "repos": [
         "default"

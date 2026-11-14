@@ -1580,3 +1580,5 @@
 {"ts":"2026-11-14T21:35:39.673Z","type":"spec-approved","module":"ticket-repository","specHash":"461b76a6d73409b58cc2709baf755808f6ee40a61bffe102fb759d8dc930b7cc"}
 {"ts":"2026-11-14T22:42:47.994Z","type":"feature-status","module":"workspace","feature":"delete-department-api","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T22:42:48.294Z","type":"feature-status","module":"workspace","feature":"delete-department-screen","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T22:45:58.483Z","type":"feature-status","module":"workspace","feature":"restore-department-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T22:45:58.746Z","type":"feature-status","module":"workspace","feature":"restore-department-screen","from":"evaluating","to":"passing"}
