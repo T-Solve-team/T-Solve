@@ -328,7 +328,7 @@ class ProjectMembersIT {
     }
 
     @Test
-    void refusesAddWhenRoleRemovedWhileWaiting_BUG_208_AC_002_7() throws Exception {
+    void refusesAddWhenRoleRemovedWhileWaiting_BUG_209_AC_002_7() throws Exception {
         // Identity's role removal: lock the account FOR UPDATE, delete its Ticket Resolver role, commit later.
         var context = SecurityContextHolder.getContext();
         try (Connection identity = db.getDataSource().getConnection()) {
