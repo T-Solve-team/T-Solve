@@ -406,9 +406,9 @@
         "tenant-jobs": "passing",
         "active-workspaces": "passing",
         "review-email-html-sender": "passing",
-        "email-outbox": "evaluating"
+        "email-outbox": "passing"
       },
-      "lastUpdated": "2026-11-14T09:00:15.453Z",
+      "lastUpdated": "2026-11-14T13:42:46.041Z",
       "branch": "feat/worker",
       "repos": [
         "default"
@@ -488,9 +488,9 @@
         "review-expiry-job": "passing",
         "review-expired-stored-columns": "passing",
         "review-email-html": "passing",
-        "review-email-outbox": "evaluating"
+        "review-email-outbox": "passing"
       },
-      "lastUpdated": "2026-11-14T13:33:09.447Z",
+      "lastUpdated": "2026-11-14T13:42:46.093Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"

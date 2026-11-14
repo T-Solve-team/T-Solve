@@ -1444,3 +1444,5 @@
 {"ts":"2026-11-14T13:20:30.382Z","type":"feature-status","module":"ticket-review","feature":"review-email-outbox","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T13:32:53.970Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"5cf5c10ba569594a59966e17cdd76e9248e097d0"}
 {"ts":"2026-11-14T13:33:09.448Z","type":"feature-status","module":"ticket-review","feature":"review-email-outbox","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T13:42:46.042Z","type":"feature-status","module":"worker","feature":"email-outbox","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T13:42:46.094Z","type":"feature-status","module":"ticket-review","feature":"review-email-outbox","from":"evaluating","to":"passing"}
