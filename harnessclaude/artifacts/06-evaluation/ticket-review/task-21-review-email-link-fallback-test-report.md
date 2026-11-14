@@ -1,20 +1,20 @@
-# Test Report: ticket-review — Task 21: review-email-link-fallback
+# Test Report: ticket-review — Task 21: review-email-link-fallback (attempt 2)
 
 **Date:** 2026-11-14
-**Code under test:** commit `e9eec864` on `feat/KAN-162-worker-email-outbox` (local `HEAD` `2baa4282`; `git diff --stat e9eec864 2baa4282 -- backend` is empty, so no backend file differs)
+**Code under test:** commit `e9eec864` on `feat/KAN-162-worker-email-outbox`, local `HEAD` `cd8186b4`. `git diff e9eec864..HEAD --stat` on `ReviewNotificationEnqueuer.java` and `ReviewNotification*` tests is empty. Backend changes since `e9eec864` are test-only: `EmailOutboxIT.java` (+2), `WorkerMailpit.java` (+4), from `e6570be1` (BUG-225).
 **Commands (run in `backend/`):**
 - Compile + unit tests: `mvn -q -Dtest='vn.tsolve.worker.**.*Test' -Dsurefire.failIfNoSpecifiedTests=false test`
 - Format: `mvn -q spotless:check`
-- Integration tests: cannot run locally (Docker is off). Evidence: CI of PR #233, run `43602465544`
+- Integration tests: cannot run locally (Docker is off). Evidence: CI of PR #233, run `43603714210`
 - Traceability: `bun harnessclaude/hooks/sdd.ts trace ticket-review STORY-010`
-- Coverage: the project has no coverage command, so coverage was not measured
+- Coverage: no coverage command in the project; not measured
 
 ## Results
 
-### Local (run by the reviewer, 2026-11-14 21:00–21:01 +07)
+### Local (run by the reviewer, 2026-11-14)
 
 - Total: 115 · Passed: 115 · Failed: 0 · Errors: 0 · Skipped: 0 · exit code 0
-- Compile: pass (part of the test run) · Spotless: pass (exit code 0)
+- Compile: pass · Spotless: pass (exit code 0)
 
 | Test class | Tests | Fail | Error | Skip |
 |---|---|---|---|---|
@@ -30,35 +30,36 @@
 | `worker.service.impl.TenantJobServiceImplTest` | 5 | 0 | 0 | 0 |
 | `worker.service.mock.MockWorkerTenantServiceTest` | 2 | 0 | 0 | 0 |
 
-`ReviewNotificationEnqueuerTest` went from 9 to 10 tests (the new BUG-223 case). `ReviewNotificationEnqueueBugTest` stays at 9 (rename only). This run covers the worker package only, not the full backend suite; the evidence for the full suite is the CI below.
+Identical counts to attempt 1.
 
 ### CI of PR #233
 
-Head `2baa42820e1ab8644be5bb43ff3953465da61425`. `gh pr view 233 --json headRefOid` and `gh run view 43602465544 --json headSha` both return it, and it is the local `HEAD`. `git merge-base --is-ancestor e9eec864 2baa4282` succeeds.
+Head `cd8186b484fee04ecaf6778e988d2793a471b798` (`gh pr view 233 --json headRefOid` and `gh run view 43603714210 --json headSha` both return it; run conclusion `success`).
 
 | Check | Result |
 |---|---|
-| backend-tests (unit) | pass (2m10s) |
-| backend-tests (it-keycloak-a) | pass (2m44s) |
-| backend-tests (it-keycloak-b) | pass (3m42s) |
-| **backend-tests (it-other)** | **fail (7m16s), job `132470028372`** |
+| backend-tests (unit) | pass (2m23s) |
+| backend-tests (it-keycloak-a) | pass (2m49s) |
+| backend-tests (it-keycloak-b) | pass (2m47s) |
+| backend-tests (it-other) | pass (6m40s), job `132473741110` |
+| backend | pass |
 | changes, frontend, gitleaks, pr-title | pass |
 | frontend-checks, frontend-tests | skipped (no frontend change) |
 
-From the it-other job log:
+From the it-other job log (grepped):
 
 ```
-[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.445 s -- in vn.tsolve.worker.service.impl.ReviewNotificationIT
-[ERROR] Tests run: 9, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 72.23 s <<< FAILURE! -- in vn.tsolve.worker.EmailOutboxIT
-[ERROR] Tests run: 536, Failures: 0, Errors: 1, Skipped: 0
-[ERROR] BUILD FAILURE
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 29.70 s -- in vn.tsolve.worker.EmailOutboxIT
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.608 s -- in vn.tsolve.worker.service.impl.ReviewNotificationIT
+[INFO] Tests run: 536, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
 ```
 
 ## Coverage
 
 | Metric | Value | Target (from spec) |
 |--------|-------|--------------------|
-| Line / branch coverage | not measured (no coverage tool is configured) | the spec sets none |
+| Line / branch coverage | not measured (no coverage tool configured) | the spec sets none |
 
 ## Acceptance Criteria → Tests
 
@@ -75,20 +76,14 @@ From the it-other job log:
 trace ticket-review (STORY-010): 9/9 acceptance criteria have a test
 ```
 
-(The tool printed full paths under `backend/src/test/java/vn/tsolve/worker/`; they are shortened here.)
+(Paths shortened; the tool prints them under `backend/src/test/java/vn/tsolve/worker/`.)
 
 ## Failures
 
-Local: none.
-
-### `backend/src/test/java/vn/tsolve/worker/EmailOutboxIT.java` — `recurringJobDispatchesThroughJobRunr_AC_004_4_BUG_221` (CI only)
-- Error: `ConditionTimeoutException` at `EmailOutboxIT.java:253 -> :269`. The row was expected to have `status=SENT`, but stayed `status=PENDING`, `attempt_count=0`, `claimed_at=null` for 1 minute.
-- Cause: the recurring `worker-email-outbox` job never claimed the row in the `ApplicationContextRunner` context. This is the test's first CI run (BUG-221: "written and compiled only"). It is in the worker module (commit `c5bfbaee`), outside the `e9eec864` diff.
-- Suggested fix (worker owner): diagnose the recurring registration or the test context so the job runs, then re-run PR #233.
+None, locally or in CI. Attempt 1's CI failure (`EmailOutboxIT.recurringJobDispatchesThroughJobRunr_AC_004_4_BUG_221`) now passes on `cd8186b4` (fix `e6570be1`, BUG-225).
 
 ## Notes
 
-- **Regression test is real (BUG-223), checked by reading the code, not by running it:** before `e9eec864`, `render` called `sites.siteHost` once per decision and the per-decision `catch (RuntimeException)` swallowed the exception, so no email was queued and `siteHost` ran 3 times. Both `verify(outbox, times(3)).queue(...)` and `verify(sites).siteHost(workspace)` (which means exactly once) would fail against the old code. The test was not run against the reverted code, because that would mean changing the working tree.
-- Flaky: none seen locally (one run). The CI failure has been seen once; whether it is flaky or always fails is unknown. Skipped: none. Slow: no unit class above 5 s.
-- The local run printed the expected WARN lines from the failure-path tests; they contain only counts and exception class names.
-- No dependency audit was run; `pom.xml` is unchanged by `e9eec864`.
+- BUG-223 regression evidence remains by reading the code (see attempt 1); not re-run against reverted code.
+- Flaky: none seen. Slow: no unit class above 5 s.
+- No dependency audit; `pom.xml` unchanged since `e9eec864`.

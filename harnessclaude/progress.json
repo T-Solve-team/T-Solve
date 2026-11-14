@@ -407,9 +407,9 @@
         "active-workspaces": "passing",
         "review-email-html-sender": "passing",
         "email-outbox": "passing",
-        "email-outbox-review-fixes": "evaluating"
+        "email-outbox-review-fixes": "passing"
       },
-      "lastUpdated": "2026-11-14T14:13:00.300Z",
+      "lastUpdated": "2026-11-14T14:22:13.956Z",
       "branch": "feat/worker",
       "repos": [
         "default"
@@ -490,9 +490,9 @@
         "review-expired-stored-columns": "passing",
         "review-email-html": "passing",
         "review-email-outbox": "passing",
-        "review-email-link-fallback": "evaluating"
+        "review-email-link-fallback": "passing"
       },
-      "lastUpdated": "2026-11-14T14:13:00.356Z",
+      "lastUpdated": "2026-11-14T14:22:14.009Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"

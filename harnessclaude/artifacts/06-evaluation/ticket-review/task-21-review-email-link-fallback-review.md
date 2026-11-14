@@ -2,8 +2,8 @@
 module: ticket-review
 feature: review-email-link-fallback
 task: 21
-verdict: fail
-attempt: 1
+verdict: pass
+attempt: 2
 date: 2026-11-14
 reviewer: reviewer
 iteration: 1
@@ -13,41 +13,40 @@ iteration: 1
 
 ## Summary
 
-Commit `e9eec864` fixes both task 20 findings it was meant to fix.
+Attempt 2. Attempt 1 failed for one reason only: the backend CI of PR #233 was red (`backend-tests (it-other)`, 1 error in `EmailOutboxIT.recurringJobDispatchesThroughJobRunr_AC_004_4_BUG_221`, worker task 6). That is now resolved. On head `cd8186b4` all backend jobs pass, `it-other` reports `Tests run: 536, Failures: 0, Errors: 0` and `BUILD SUCCESS`, and `ReviewNotificationIT` ran 16/16 with no failures.
 
-- **BUG-223:** `ReviewNotificationEnqueuer` now looks up the site host once per event, inside the bound Workspace. A lookup that throws counts as a missing host, so every email is still queued, without the button and the link (AC-010.8).
-- **BUG-224:** the misleading test is renamed `continuesAfterAFailedQueueCall_BUG_164`.
+The code of this feature is still commit `e9eec864`. `git diff e9eec864..HEAD --stat` on `ReviewNotificationEnqueuer.java` and `ReviewNotification*` tests is empty. The only backend changes since then are test-only (`EmailOutboxIT.java` +1 property `spring.mail.host` and a single-bean assertion; `WorkerMailpit.java` +`host()`), from `e6570be1` (BUG-225). No production code changed, so **attempt 1's code conclusions are reused here unchanged** (Stage 1 table below, same line numbers).
 
-The new regression test would fail against the old code. No STORY-010 criterion is broken. The worker unit tests (115) and Spotless pass locally, and `ReviewNotificationIT` passed 16/16 in CI on a head that contains this commit.
-
-**The verdict is fail for one reason: the backend CI on that head is red.** `backend-tests (it-other)` of PR #233 (run `43602465544`, head `2baa4282`) ends with `BUILD FAILURE`, `Tests run: 536, Failures: 0, Errors: 1`. The erroring test is `EmailOutboxIT.recurringJobDispatchesThroughJobRunr_AC_004_4_BUG_221` (worker module, commit `c5bfbaee`), not code from this feature. The rule is: any failing test gives verdict fail, and no pass on a red build. The code of this feature is otherwise ready to pass. See "Assumptions made" 1.
+Bug log rows BUG-223 and BUG-224 (`docs/bug-log.md:237-238`) now show "Fixed in" `PR #233 (e9eec86)` and still match the code and test names. Attempt 1's issue 3 is resolved for these rows.
 
 ## Criteria
 
 | Criterion | Result | Detail |
 |-----------|--------|--------|
-| Functionality | pass | Both findings fixed; AC-010.1–010.9 still met (Stage 1 below) |
-| Completeness | pass | 9/9 criteria have a test; the AC-010.8 fix has its own test named with AC and bug id; no EXTRA behaviour |
-| Correctness | fail | Local: 115/115 worker unit tests, Spotless clean. CI on head `2baa4282`: `it-other` fails with 1 error in `EmailOutboxIT` (outside this diff); `ReviewNotificationIT` 16/16 passes |
-| Integration | pass | Same interfaces as before (`WorkspaceSiteService.siteHost`, `EmailOutboxService.queue`, `WorkerTenantService`); signature change only of a private method |
+| Functionality | pass | Both task-20 findings fixed; AC-010.1–010.9 met (reused from attempt 1, code unchanged) |
+| Completeness | pass | 9/9 criteria have a test (trace re-run); no EXTRA behaviour |
+| Correctness | pass | Local: 115/115 worker unit tests, Spotless clean. CI on `cd8186b4`: unit, it-keycloak-a, it-keycloak-b, it-other all pass; `ReviewNotificationIT` 16/16, `EmailOutboxIT` 9/9 |
+| Integration | pass | Interfaces unchanged (`WorkspaceSiteService.siteHost`, `EmailOutboxService.queue`, `WorkerTenantService`) |
 
-### Stage 1 — spec compliance
+### Stage 1 — spec compliance (reused from attempt 1; `ReviewNotificationEnqueuer.java` unchanged since `e9eec864`)
 
 | # | Criterion | Status | Evidence |
 |---|-----------|--------|----------|
-| 1 | AC-010.1 after commit, in the decision's Workspace | PASS | `ReviewNotificationEnqueuer.java:56`: the lookup is the first statement of the `enqueue` Runnable, so on an unbound thread it runs inside `context.runIn(workspaceId, enqueue)` (`:82`) and reads `currentWorkspaceId()` of the bound Workspace; on a bound thread it reads that Workspace directly (`:73-74`) |
-| 2 | AC-010.2 compose and queue per writer | PASS | Unchanged except that `render` takes the resolved host (`:105-124`); `passesRenderedContentAndTicketLink_AC_010_1_AC_010_2_AC_010_8` still asserts the exact queued email |
-| 3 | AC-010.3 failure never reaches the API response | PASS | The lookup has its own `catch (RuntimeException)` (`:100-102`) inside the outer catch (`:84-91`); `onDecided` cannot throw. `continuesAfterQueueOrLookupFailure…_AC_010_3…` passes |
-| 4 | AC-010.4 SMTP retries | PASS | Not touched; `ReviewNotificationIT` (CI) 16/16 |
+| 1 | AC-010.1 after commit, in the decision's Workspace | PASS | Lookup is first statement of the `enqueue` Runnable (`ReviewNotificationEnqueuer.java:56`), run inside `context.runIn(workspaceId, enqueue)` (`:82`) or on the bound thread (`:73-74`) |
+| 2 | AC-010.2 compose and queue per writer | PASS | `render` takes the resolved host (`:105-124`); exact-email test passes |
+| 3 | AC-010.3 failure never reaches the API response | PASS | Inner lookup catch (`:100-102`) inside outer catch (`:84-91`) |
+| 4 | AC-010.4 SMTP retries | PASS | Not touched; `ReviewNotificationIT` 16/16 on CI `cd8186b4` |
 | 5 | AC-010.5 no writer, others still queued | PASS | Not touched; unit test passes |
-| 6 | AC-010.6 no private data in logs | PASS | The new catch logs nothing (`:100-102`); existing log lines unchanged. `logsTheCountAndExceptionClassButNeverTheMessage_BUG_164` passes |
+| 6 | AC-010.6 no private data in logs | PASS | New catch logs nothing; existing logs unchanged |
 | 7 | AC-010.7 HTML layout | PASS | Renderer untouched |
-| 8 | AC-010.8 link, or no button and no link when the address cannot be built | PASS | Host null leads to `link = null` (`:111`). Null, empty and blank host: `omitsTicketLinkWhenSiteUnavailable_AC_010_8`. Throwing lookup: new `queuesEveryDecisionWithoutLinksWhenSiteLookupThrows_AC_010_8_BUG_223` asserts 3 emails queued, exactly one `siteHost` call, and no `https://` or `/tickets/` in `bodyText`, and no `<a `, `https://` or `/tickets/` in `bodyHtml` |
+| 8 | AC-010.8 link, or no button/link when address cannot be built | PASS | Null host → `link = null` (`:111`); `queuesEveryDecisionWithoutLinksWhenSiteLookupThrows_AC_010_8_BUG_223` asserts 3 queued, one lookup, no link in text or HTML |
 | 9 | AC-010.9 escaping, subject line breaks | PASS | Untouched; `queuesSubjectWithoutLineBreaks_AC_010_9` passes |
 
-**The regression test is real.** Before the commit, `render` called `sites.siteHost` per decision. The exception was caught by the per-decision `catch` (old lines 57-68), so the old code makes 0 queue calls and 3 lookups. Both `verify(outbox, times(3))` and `verify(sites).siteHost(workspace)` (which means exactly once) fail against it. The bug fix and the test are in one commit, so this was checked by reading the old code, not by running it.
+### Regression check (attempt 2)
 
-**Bug log** (`docs/bug-log.md:237-238`). BUG-223's summary, steps (one lookup expected; lookup per decision and no email actually) and fix description match the code and the test name. BUG-224 is a rename only: the assertions are unchanged, and the BUG-164 row (`:180`) now lists the new name. No other reference to the old name remains in `backend/` or `docs/`. The "Fixed in" column of both rows is wrong (issue 3).
+- `e6570be1` touches only `backend/src/test/java/vn/tsolve/worker/EmailOutboxIT.java` and `WorkerMailpit.java` — test setup for the worker recurring-job IT. It cannot affect this feature's behaviour. All 536 it-other tests and the unit and Keycloak jobs pass on `cd8186b4`.
+- `cd8186b4` touches only `docs/bug-log.md` and harness files.
+- Local worker unit test counts are identical to attempt 1 (115; `ReviewNotificationEnqueuerTest` 10, `ReviewNotificationEnqueueBugTest` 9).
 
 ## Traceability
 
@@ -66,37 +65,32 @@ trace ticket-review (STORY-010): 9/9 acceptance criteria have a test
 
 ## Issues
 
-Blocking:
+Blocking: none. Attempt 1's blocking issue 1 (red CI) is resolved on `cd8186b4`.
 
-1. **CI red on the head that contains this commit.** `backend/src/test/java/vn/tsolve/worker/EmailOutboxIT.java:269` — `recurringJobDispatchesThroughJobRunr_AC_004_4_BUG_221` times out after 60 s. The row stays `status=PENDING`, `attempt_count=0`, `claimed_at=null`, so the recurring `worker-email-outbox` job never claimed it in the test context. This is the first CI run of that test (BUG-221 says "written and compiled only"). It belongs to worker task 6, not to this diff.
-   Fix (worker owner): make the test pass or correct the recurring registration, then re-run PR #233. Once `it-other` is green, re-evaluate this feature as attempt 2. No change to `e9eec864` is needed for that.
+Informational (carried over from attempt 1, still open, do not block). Paths are under `backend/src/`.
 
-Informational (do not block). Paths are under `backend/src/`.
+1. `main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java:100-102` — a throwing site lookup is swallowed without any log line. Fix: one WARN per event with the exception's simple class name only (AC-010.6 safe).
+2. `test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuerTest.java:121-140` — the throwing-lookup case covers only the bound-thread path; no test proves the lookup reads the Workspace bound by `runIn` on the unbound path. Fix: one case with `MockWorkerTenantService(Set.of(A))`, unbound, asserting `siteHost(A)` and the link.
+3. `ReviewNotificationEnqueuerTest.java:127-129` — `for` loop without braces (style only).
+4. Task 20 informational findings 4–8 remain unchanged and out of scope.
 
-2. `main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java:100-102` — a throwing site lookup is swallowed without any log line, so an operator cannot see why every email of the batch lacks its button.
-   Fix: log one WARN per event with the exception's simple class name only, as the other catches do (AC-010.6 safe).
-3. `docs/bug-log.md:237-238` — the "Fixed in" column of BUG-223 and BUG-224 says `Uncommitted`, but the fix is committed in `e9eec864` and is in PR #233. BUG-220 to BUG-222 have the same problem.
-   Fix: set it to `PR #233`.
-4. `test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuerTest.java:121-140` — the throwing-lookup case covers only the bound-thread path. No test proves that the lookup reads the Workspace bound by `runIn` on the unbound path: every `ReviewNotificationEnqueueBugTest` case uses a `WorkspaceSiteService` mock that returns empty. It is correct by reading (`:56` is inside the Runnable).
-   Fix: one case with `MockWorkerTenantService(Set.of(A))`, unbound, asserting `siteHost(A)` and the link.
-5. `ReviewNotificationEnqueuerTest.java:127-129` — a `for` loop without braces (style only; Spotless accepts it).
-6. Task 20 informational findings 4–8 (AFTER_COMMIT work on the request thread, the several-Workspace drop, wasted work when `context == null`, renderer-derived expectations, inline fully qualified annotations) are unchanged. They were not in this task's scope.
+Resolved since attempt 1: issue 3 (bug-log "Fixed in" for BUG-223/224 now `PR #233 (e9eec86)`).
 
-No security findings. The diff adds no log output, endpoint, dependency or user-supplied input path. The link is still built only from the catalog host and the ticket UUID.
+No security findings; no new log output, endpoint, dependency or input path.
 
 ## Assumptions made
 
 These are judgment calls the reviewer could not put to the user. Please confirm or correct them.
 
-1. **A red CI test outside the feature blocks this feature.** The evaluate rules ("any failing test → verdict fail") and the dispatcher's brief (no pass on a red or pending CI) were applied literally, even though the erroring test (`EmailOutboxIT`, worker BUG-221) was not changed by `e9eec864` and the feature's own `ReviewNotificationIT` passed. If the user rules that a worker-module failure should not block ticket-review, this review can be read as a pass on the code: all criteria and both fixes are verified.
-2. **Swallowing a throwing lookup silently** is accepted under AC-010.8 ("the site address cannot be built"). The spec names only "no domain configured or no Workspace slug"; the task 21 description extends it to a throwing lookup, and no criterion changed.
-3. **Regression evidence by reading:** the BUG-223 test was not run against the reverted code, because that would change the working tree. The before-fix behaviour is derived from the removed lines of the diff.
-4. **Coverage:** no tool is configured and the spec sets no threshold, so coverage was not treated as a failure.
+1. **Reuse of attempt 1's code review:** the production and test files of this feature are byte-identical to `e9eec864` (empty `git diff --stat`), so the Stage 1 analysis was not repeated line by line.
+2. **Swallowing a throwing lookup silently** is accepted under AC-010.8 ("the site address cannot be built"), as in attempt 1. The spec names only "no domain configured or no Workspace slug".
+3. **Regression evidence for BUG-223 by reading** (not by running reverted code), as in attempt 1.
+4. **Coverage:** no tool is configured and the spec sets no threshold, so it was not treated as a failure.
 
 ## Test Report
 
 Full detail: `task-21-review-email-link-fallback-test-report.md`.
 
-- Local, `backend/`: `mvn -q -Dtest='vn.tsolve.worker.**.*Test' -Dsurefire.failIfNoSpecifiedTests=false test` exits 0 with 115 tests, 0 failures, 0 errors and 0 skipped (`ReviewNotificationEnqueuerTest` 10, `ReviewNotificationEnqueueBugTest` 9). `mvn -q spotless:check` exits 0.
-- CI, PR #233, head `2baa42820e1ab8644be5bb43ff3953465da61425`. It contains `e9eec864`, and `git diff e9eec864 2baa4282 -- backend` is empty. unit, it-keycloak-a, it-keycloak-b, gitleaks and pr-title pass. **it-other fails**: `Tests run: 536, Failures: 0, Errors: 1`, `BUILD FAILURE`, from `EmailOutboxIT.recurringJobDispatchesThroughJobRunr_AC_004_4_BUG_221`. In the same job `ReviewNotificationIT` ran: `Tests run: 16, Failures: 0, Errors: 0, Skipped: 0`.
-- Not run: the full backend suite locally (Docker is off), any coverage tool, any dependency audit.
+- Local, `backend/`: worker unit tests exit 0, 115 tests, 0 failures/errors/skipped. `mvn -q spotless:check` exits 0.
+- CI, PR #233, head `cd8186b484fee04ecaf6778e988d2793a471b798`, run `43603714210` (conclusion success): unit, it-keycloak-a, it-keycloak-b, it-other, backend, changes, frontend, gitleaks, pr-title pass. it-other log: `ReviewNotificationIT` 16/0/0/0, `EmailOutboxIT` 9/0/0/0, total `536, Failures: 0, Errors: 0`, `BUILD SUCCESS`.
+- Not run: full backend suite locally (Docker off), coverage, dependency audit.
