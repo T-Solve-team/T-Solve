@@ -350,10 +350,10 @@
         "monitoring": "pending",
         "load-test": "pending",
         "forge-security-chain": "pending",
-        "cross-module-isolation": "in-progress",
+        "cross-module-isolation": "evaluating",
         "e2e-smoke": "pending"
       },
-      "lastUpdated": "2026-11-14T05:04:39.720Z",
+      "lastUpdated": "2026-11-14T05:04:56.518Z",
       "branch": "feat/platform",
       "repos": [
         "default"
