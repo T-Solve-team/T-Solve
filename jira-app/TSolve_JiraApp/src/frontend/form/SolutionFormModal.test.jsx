@@ -168,6 +168,47 @@ describe('SolutionFormModal', () => {
     expect(submit).not.toHaveBeenCalled();
   });
 
+  it('AC-012.2 shows the change request (MSG64) above the sections of a resubmission', () => {
+    render(
+      <SolutionFormModal
+        issueKey="ITSUP-12"
+        summary="VPN drops"
+        form={{ mayOpen: true, origin: 'TICKET', sections: FULL, message: null }}
+        resubmit
+        feedback={{ code: 'MSG64', params: { manager_name: 'Le Minh', comment: 'Add steps' } }}
+        onDone={onDone}
+        submit={submit}
+      />,
+    );
+
+    expect(screen.getByText(/Changes requested by Le Minh: "Add steps"/)).toBeInTheDocument();
+    expect(field('Resolution steps')).toHaveValue('Update to 5.2');
+  });
+
+  it('AC-012.4 sends resubmit with Finish and closes the form', async () => {
+    render(
+      <SolutionFormModal issueKey="ITSUP-12" summary="VPN drops" form={{ mayOpen: true, origin: 'TICKET', sections: FULL }} resubmit onDone={onDone} submit={submit} />,
+    );
+
+    click(LABELS.finish);
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith('submitted'));
+    expect(submit).toHaveBeenCalledWith('ITSUP-12', { summary: 'VPN drops', sections: FULL, resubmit: true });
+  });
+
+  it('AC-012.5 shows MSG06 and keeps the content when the ticket can no longer be resubmitted', async () => {
+    submit.mockRejectedValue(new TsolveError('MSG06', { status: 409 }));
+    render(
+      <SolutionFormModal issueKey="ITSUP-12" summary="VPN drops" form={{ mayOpen: true, origin: 'TICKET', sections: FULL }} resubmit onDone={onDone} submit={submit} />,
+    );
+
+    click(LABELS.finish);
+
+    expect(await screen.findByText(message('MSG06'))).toBeInTheDocument();
+    expect(field('Symptoms')).toHaveValue('Drops hourly');
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
   it('AC-007.1 AC-007.2 shows the rewrite next to the Solution and Accept replaces it', async () => {
     rewriteSolution.mockResolvedValue({ ...FULL, symptoms: 'The VPN drops every hour.' });
     open();

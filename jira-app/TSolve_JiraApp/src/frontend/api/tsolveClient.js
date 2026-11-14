@@ -69,34 +69,57 @@ export async function askQuestion(question, history = [], useMock = USE_MOCK) {
   return response.body;
 }
 
-/** Whether the Solution Form may open for the issue and its content `{mayOpen, origin, sections, message}`. */
-export async function openSolutionForm(issueKey, { summary, description }) {
+/**
+ * Whether the Solution Form may open for the issue and its content `{mayOpen, origin, sections, message}`; with
+ * `resubmit`, the resubmission form of the viewer's ticket in Changes requested (AC-012.2).
+ */
+export async function openSolutionForm(issueKey, { summary, description, resubmit = false }) {
   const response = await call({
     path: `${JIRA_APP}/issues/${encodeURIComponent(issueKey)}/solution-form`,
     method: 'POST',
     headers: JSON_HEADERS,
-    body: { summary, description },
+    body: resubmit ? { summary, description, resubmit: true } : { summary, description },
   });
   return response.body;
+}
+
+// After a retry, a resubmission answered 409 MSG06 may mean an earlier try got through: the panel tells (AC-012.4).
+async function earlierResubmissionGotThrough(issueKey) {
+  try {
+    return (await getIssuePanel(issueKey))?.ticketStatus === 'PENDING_REVIEW';
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Finish: creates the issue's ticket `{id, ticketId, status}`. Retries 3 times when T-Solve cannot be
  * reached or fails, then gives MSG69 (AC-004.4). A 409 MSG31 after a retry means an earlier try got through; any other
- * 409 (MSG40: the Project is no longer active) is given back (BUG-217).
+ * 409 (MSG40: the Project is no longer active) is given back (BUG-217). With `resubmit` it puts the viewer's ticket in
+ * Changes requested back into Pending review (AC-012.4); its 409 MSG06 (no longer resubmittable, AC-012.5) is given back
+ * unless, after a retry, the panel shows the ticket already back in Pending review.
  */
-export async function submitSolution(issueKey, { summary, sections }, { sleep = wait } = {}) {
+export async function submitSolution(issueKey, { summary, sections, resubmit = false }, { sleep = wait } = {}) {
   const request = {
     path: `${JIRA_APP}/issues/${encodeURIComponent(issueKey)}/solution`,
     method: 'POST',
     headers: JSON_HEADERS,
-    body: { summary, sections },
+    body: resubmit ? { summary, sections, resubmit: true } : { summary, sections },
   };
   for (let attempt = 0; ; attempt += 1) {
     try {
       return (await call(request)).body;
     } catch (failure) {
-      if (attempt > 0 && failure.status === 409 && failure.code === 'MSG31') {
+      if (attempt > 0 && failure.status === 409 && failure.code === 'MSG31' && !resubmit) {
+        return { ticketId: issueKey, status: 'PENDING_REVIEW' };
+      }
+      if (
+        attempt > 0 &&
+        resubmit &&
+        failure.status === 409 &&
+        failure.code === 'MSG06' &&
+        (await earlierResubmissionGotThrough(issueKey))
+      ) {
         return { ticketId: issueKey, status: 'PENDING_REVIEW' };
       }
       if (!failure.retryable) {
