@@ -169,6 +169,7 @@ export const getGetIssuePanelResponseMock = (
   ]),
   hasDraft: faker.datatype.boolean(),
   mayOpenForm: faker.datatype.boolean(),
+  mayResubmit: faker.datatype.boolean(),
   ...overrideResponse,
 });
 

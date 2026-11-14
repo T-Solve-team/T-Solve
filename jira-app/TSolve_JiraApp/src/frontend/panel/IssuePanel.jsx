@@ -1,4 +1,5 @@
-// 3.3 Issue Panel (jira-app STORY-001, STORY-008): the issue's Solution status and the way into the Solution Form.
+// 3.3 Issue Panel (jira-app STORY-001, STORY-008, STORY-012): the issue's Solution status and the way into the Solution
+// Form, including "Edit and resubmit" for the writer's ticket in Changes requested.
 // No Published-ticket search in Jira (spec change 2026-11-14): search is on the T-Solve web app.
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Inline, SectionMessage, Spinner, Stack, Text, useProductContext } from '@forge/react';
@@ -11,6 +12,8 @@ import { message } from '../messages';
 export const PANEL_LABELS = {
   writeSolution: 'Write Solution',
   continueDraft: 'Continue draft',
+  // A Jira App label, not an SRS message (AC-012.1 — user, 2026-11-14).
+  editAndResubmit: 'Edit and resubmit',
 };
 
 export function IssuePanel() {
@@ -70,6 +73,25 @@ export function IssuePanel() {
     }
   };
 
+  // The writer's ticket in Changes requested: the form opens with the Draft or the ticket's Solution (AC-012.2).
+  const openResubmission = async () => {
+    try {
+      const current = await readIssue(requestJira, issueKey);
+      const opened = await openSolutionForm(issueKey, {
+        summary: current.summary,
+        description: current.description,
+        resubmit: true,
+      });
+      if (opened?.mayOpen) {
+        setForm({ ...opened, resubmit: true });
+      } else {
+        load();
+      }
+    } catch {
+      setFailed(true);
+    }
+  };
+
   if (failed) {
     return (
       <SectionMessage appearance="error">
@@ -94,8 +116,24 @@ export function IssuePanel() {
       )}
       {feedback && (
         <SectionMessage appearance="warning">
-          <Text>{message(feedback.code, feedback.params)}</Text>
+          <Stack space="space.100">
+            <Text>{message(feedback.code, feedback.params)}</Text>
+            {panel.mayResubmit && (
+              <Inline>
+                <Button appearance="primary" onClick={openResubmission}>
+                  {PANEL_LABELS.editAndResubmit}
+                </Button>
+              </Inline>
+            )}
+          </Stack>
         </SectionMessage>
+      )}
+      {!feedback && panel.mayResubmit && (
+        <Inline>
+          <Button appearance="primary" onClick={openResubmission}>
+            {PANEL_LABELS.editAndResubmit}
+          </Button>
+        </Inline>
       )}
       {panel.hasDraft && (
         <SectionMessage appearance="information">
@@ -121,6 +159,8 @@ export function IssuePanel() {
           issueKey={issueKey}
           summary={issue?.summary ?? ''}
           form={form}
+          resubmit={form.resubmit === true}
+          feedback={form.resubmit ? feedback : null}
           onDone={(outcome) => {
             setForm(null);
             showFlag(doneFlag(issueKey, outcome));

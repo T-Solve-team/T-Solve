@@ -12,7 +12,9 @@ public record SolutionFormResponse(boolean mayOpen, Origin origin, SolutionSecti
     public enum Origin {
         DRAFT,
         AI_DRAFT,
-        ISSUE
+        ISSUE,
+        /** The current Solution of the ticket being resubmitted (AC-012.2). */
+        TICKET
     }
 
     public static SolutionFormResponse closed() {

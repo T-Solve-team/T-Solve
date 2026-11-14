@@ -1,7 +1,9 @@
 package vn.tsolve.ticket.service;
 
 import java.util.Optional;
+import java.util.UUID;
 import vn.tsolve.ticket.dto.SolutionFormSubmission;
+import vn.tsolve.ticket.dto.SolutionSections;
 import vn.tsolve.ticket.dto.SubmittedSolutionTicket;
 import vn.tsolve.ticket.entity.TicketStatus;
 
@@ -18,4 +20,17 @@ public interface SolutionFormTicketService {
 
     /** The status of the issue's ticket, or empty when the issue has none (AC-001.2, AC-008.2). */
     Optional<TicketStatus> findStatus(String issueKey);
+
+    /**
+     * The Solution of the writer's Solution Form ticket of the issue while it is in Changes requested, or empty when
+     * the writer may not resubmit it (jira-app AC-012.1 to AC-012.3).
+     */
+    Optional<SolutionSections> findResubmittable(String issueKey, UUID writerId);
+
+    /**
+     * Replaces the Solution of the writer's ticket in Changes requested, puts it back into Pending review with a new
+     * due date and deletes the writer's Draft (AC-012.4); the sections are checked as for {@link #submit}. 409 MSG06
+     * when the ticket is no longer resubmittable (AC-012.5). The caller has checked that the writer is a member.
+     */
+    SubmittedSolutionTicket resubmit(SolutionFormSubmission submission);
 }

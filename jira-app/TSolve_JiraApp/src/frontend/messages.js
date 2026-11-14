@@ -6,7 +6,8 @@ const MESSAGES = {
   MSG06: 'Something went wrong. Please try again later.',
   MSG08: 'You do not have permission to access this page.',
   MSG62: 'Sign in to T-Solve to use the T-Solve panel.',
-  MSG64: 'Changes requested by {manager_name}: "{comment}". Update the solution and resubmit.',
+  // Without the SRS sentence "Update the solution and resubmit.": the panel offers "Edit and resubmit" (AC-008.7).
+  MSG64: 'Changes requested by {manager_name}: "{comment}".',
   MSG65: 'Solution submitted – awaiting review.',
   MSG66: 'Solution submitted. It is now waiting for review.',
   MSG67: 'AI draft is unavailable right now. Please write or edit the solution yourself.',

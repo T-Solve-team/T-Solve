@@ -1510,3 +1510,12 @@
 {"ts":"2026-11-14T14:22:13.957Z","type":"feature-status","module":"worker","feature":"email-outbox-review-fixes","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T14:22:14.010Z","type":"feature-status","module":"ticket-review","feature":"review-email-link-fallback","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T18:12:01.543Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"19215afba9f44eb4f6dfc48ddb6f85e65e68c6b0"}
+{"ts":"2026-11-14T14:18:28.898Z","type":"spec-approved","module":"jira-app","specHash":"a3d60df6378a619c4c347e8e1b0c0c718ace12007456a5e8c76600319a1c9393"}
+{"ts":"2026-11-14T14:19:29.103Z","type":"feature-status","module":"jira-app","feature":"resubmit-backend","from":null,"to":"pending"}
+{"ts":"2026-11-14T14:19:29.494Z","type":"feature-status","module":"jira-app","feature":"resubmit-forge","from":null,"to":"pending"}
+{"ts":"2026-11-14T14:19:29.956Z","type":"feature-status","module":"jira-app","feature":"resubmit-backend","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T19:08:50.846Z","type":"feature-status","module":"jira-app","feature":"resubmit-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T19:08:51.096Z","type":"feature-status","module":"jira-app","feature":"resubmit-forge","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T19:08:51.367Z","type":"feature-status","module":"jira-app","feature":"resubmit-forge","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T19:08:51.882Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"ef1fc5e0db7ee7a071ba4cd4a9ff4932fd7e1f31"}
+{"ts":"2026-11-14T19:12:41.077Z","type":"spec-approved","module":"jira-app","specHash":"3c82dd068c3e4bf5a84bb2e4703a9418a49cbefb42b7eb84e3a643a04e6be5e9"}

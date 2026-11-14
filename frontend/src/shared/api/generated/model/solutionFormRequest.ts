@@ -18,4 +18,6 @@ export interface SolutionFormRequest {
    * @maxLength 32767
    */
   description: string;
+  /** True = open the resubmission form of a ticket in Changes requested ("Edit and resubmit", STORY-012); it opens only while the viewer is a member and the ticket's writer and the ticket is in Changes requested. */
+  resubmit?: boolean;
 }
