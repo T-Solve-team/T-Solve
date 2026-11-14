@@ -54,6 +54,18 @@ public class Folder {
         return id;
     }
 
+    public void edit(String name, UUID parentId, short level, Instant now) {
+        this.name = name;
+        this.parentId = parentId;
+        this.level = level;
+        this.updatedAt = now;
+    }
+
+    public void changeLevel(short level, Instant now) {
+        this.level = level;
+        this.updatedAt = now;
+    }
+
     public Long getSpaceId() {
         return spaceId;
     }

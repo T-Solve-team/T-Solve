@@ -2,6 +2,7 @@ package vn.tsolve.wiki.repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +11,24 @@ import org.springframework.data.repository.query.Param;
 import vn.tsolve.wiki.entity.WikiDocument;
 
 public interface AccessRepository extends Repository<WikiDocument, UUID> {
+    @Query(
+            value = "SELECT s.space_id FROM space s WHERE s.public_id = :spaceId AND " + AccessSql.ACTIVE_SPACE
+                    + " FOR UPDATE OF s",
+            nativeQuery = true)
+    Optional<Long> lockActiveSpace(@Param("spaceId") UUID spaceId);
+
+    @Query(
+            value =
+                    "SELECT s.public_id FROM folder f JOIN space s ON s.space_id = f.space_id WHERE f.folder_id = :folderId",
+            nativeQuery = true)
+    Optional<UUID> findFolderSpace(@Param("folderId") UUID folderId);
+
+    @Query(
+            value = "SELECT EXISTS (SELECT 1 FROM space s WHERE s.space_id = :spaceId AND " + AccessSql.MANAGES_SPACE
+                    + ")",
+            nativeQuery = true)
+    boolean managesSpace(@Param("userId") UUID userId, @Param("spaceId") long spaceId);
+
     @Query(
             value = "SELECT EXISTS (SELECT 1 FROM space s WHERE s.space_id = :spaceId AND " + AccessSql.VIEWABLE_SPACE
                     + ")",
