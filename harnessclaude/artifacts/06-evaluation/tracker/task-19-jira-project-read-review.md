@@ -181,7 +181,7 @@ Run fresh from `backend/` (JAVA_HOME = IntelliJ JBR) on the working tree. `git s
 # Attempt 2 — 2026-11-12
 
 **Verdict: pass** (attempt 2, with an open judgment call on MEDIUM-8). Fix commit `eeaee68d`
-(`eeaee68d^..eeaee68d`), on top of `aa966ab8`. The changes are 4 backend files plus the BUG-207 row in
+(`eeaee68d^..eeaee68d`), on top of `aa966ab8`. The changes are 4 backend files plus the BUG-208 row in
 `docs/bug-log.md`. Decision D45 (`kan-127-decisions.md`) chose to fix MEDIUM-1, LOW-3 and INFO-4 and to leave LOW-2,
 INFO-5 and INFO-6.
 
@@ -208,15 +208,15 @@ Two new findings, both confirmed by my own probe:
 - **MEDIUM-8** (Codex): a site URL with a non-HTTP scheme still throws, now as `IllegalStateException`, which the fix
   does not catch. It is the same class of configuration error as MEDIUM-1. It is non-blocking by the same reasoning
   as attempt 1, but **read strictly (as D45 did), it is a fail** (see Assumptions).
-- **LOW-7** (Claude and Codex): BUG-207's note overstates the effect on `findComment`.
+- **LOW-7** (Claude and Codex): BUG-208's note overstates the effect on `findComment`.
 
 ## Criteria
 
 | Criterion | Result | Detail |
 |-----------|--------|--------|
 | Functionality | pass | AC-013.7/AC-013.8: no exception crosses `findProject` for any attempt-1 input, on either read. A non-HTTP site URL still escapes (MEDIUM-8, a configuration error). AC-013.12: status 0 logs "no answer"; the new tests assert `hasNoCause` and no email or token in the message. |
-| Completeness | pass | 13/13 criteria still have a test. The new tests carry the `BUG_207` id the project rule asks for. Nothing EXTRA. |
-| Correctness | pass | `JiraClientTest` 60/60 and `TrackerProjectServiceImplTest` 24/24 pass in an isolated worktree, with spotless passing too. The full verify log shows 1430 unit and 438 IT passing. With the fix reverted, each new `BUG_207` test fails: it expects `JiraUnavailableException` where the plain exception escaped in attempt 1. No CRITICAL finding. |
+| Completeness | pass | 13/13 criteria still have a test. The new tests carry the `BUG_208` id the project rule asks for. Nothing EXTRA. |
+| Correctness | pass | `JiraClientTest` 60/60 and `TrackerProjectServiceImplTest` 24/24 pass in an isolated worktree, with spotless passing too. The full verify log shows 1430 unit and 438 IT passing. With the fix reverted, each new `BUG_208` test fails: it expects `JiraUnavailableException` where the plain exception escaped in attempt 1. No CRITICAL finding. |
 | Integration | pass | No interface or signature change. The comment path (STORY-012) passes all its existing tests; the behaviour change is limited to the log line (see LOW-7). |
 
 ### Attempt-1 findings
@@ -242,17 +242,17 @@ trace tracker (STORY-013): 13/13 acceptance criteria have a test
 
 No CRITICAL findings. Non-blocking:
 
-7. **LOW-7 — BUG-207's note claims the comment operations are covered too, but `findComment` is not** (Claude and
+7. **LOW-7 — BUG-208's note claims the comment operations are covered too, but `findComment` is not** (Claude and
    Codex independently; Claude's probe)
    - `JiraClient.java:65` builds `RestClient http = http(account)` outside `call`. Spring 6.1.14 runs the
      `defaultHeaders(...)` consumer, and with it `setBasicAuth`, when the client is built. So for an email with `:` or
      a non-Latin-1 character, `findComment` still throws a plain `IllegalArgumentException`.
    - `SuggestionCommentServiceImpl.post` calls `findComment` first, so for these emails the comment path behaves as it
      did before the fix and skips the "Jira answered nothing" log.
-   - The BUG-207 note (`docs/bug-log.md:213`) says "the same inputs there now surface as `JiraUnavailableException(0)`".
+   - The BUG-208 note (`docs/bug-log.md:213`) says "the same inputs there now surface as `JiraUnavailableException(0)`".
      That holds for a scheme-less URL or a bad `Content-Type`, not for the email cases on `findComment`.
    - No user-visible effect: the job treats both exceptions alike. The gap is in STORY-012, not STORY-013.
-   - Fix: correct the BUG-207 note. Optionally, as a STORY-012 quick change, build the client inside the two `call`
+   - Fix: correct the BUG-208 note. Optionally, as a STORY-012 quick change, build the client inside the two `call`
      lambdas of `findComment` and add a test.
 8. **MEDIUM-8 — a site URL with a non-HTTP scheme still escapes `findProject`** (Codex; reproduced by Claude)
    - Probe, through `TrackerProjectServiceImpl` with the production `JiraClient`: `ftp://localhost`,
@@ -315,8 +315,8 @@ is empty). Run from `backend/` with JAVA_HOME set to the IntelliJ JBR:
 # Attempt 3 — 2026-11-13
 
 **Verdict: pass** (attempt 3). Fix commit `ba276218` (`ba276218^..ba276218`), harness commit `7c71b75f`. Three files
-changed: `TrackerProjectServiceImpl.java` (+7), `JiraClientTest.java` (+13), and the BUG-207 row in `docs/bug-log.md`.
-Decision D46 chose to fix MEDIUM-8 and to correct the BUG-207 note for LOW-7.
+changed: `TrackerProjectServiceImpl.java` (+7), `JiraClientTest.java` (+13), and the BUG-208 row in `docs/bug-log.md`.
+Decision D46 chose to fix MEDIUM-8 and to correct the BUG-208 note for LOW-7.
 
 ## Summary
 
@@ -327,12 +327,12 @@ both client calls, so no runtime exception can cross the service boundary anymor
 interface Javadoc ("never thrown", `TrackerProjectService.java:5`). The two specific catches still come first, so
 their outcomes and log lines have not changed.
 
-The new test `returnsUNAVAILABLEWithoutPartialProjectForNonHttpScheme_AC_013_7_BUG_207` (`JiraClientTest.java:525-536`)
+The new test `returnsUNAVAILABLEWithoutPartialProjectForNonHttpScheme_AC_013_7_BUG_208` (`JiraClientTest.java:525-536`)
 runs the production `JiraClient` with an `ftp://` site. `SimpleClientHttpRequestFactory` throws its
 `IllegalStateException` before it connects, so the test needs no network. Without the new catch the exception escapes
 (my attempt-2 probe showed this for `ftp://`, `file:` and `mailto:`), so the test can fail.
 
-LOW-7 is fixed. The BUG-207 note (`docs/bug-log.md:213`) now says that `findComment` builds its client outside `call`
+LOW-7 is fixed. The BUG-208 note (`docs/bug-log.md:213`) now says that `findComment` builds its client outside `call`
 and still throws a raw `IllegalArgumentException` for a bad email (STORY-012, out of scope). The note also describes
 the new catch, and the Test column names the new test.
 
@@ -344,7 +344,7 @@ LOW finding is about test strength only.
 | Criterion | Result | Detail |
 |-----------|--------|--------|
 | Functionality | pass | AC-013.7/AC-013.8: every runtime failure inside `findProject` now becomes `UNAVAILABLE` with no key and no statuses. AC-013.12: the new log line has the key, the outcome and the exception class, with no message, cause, email, token or body. |
-| Completeness | pass | 13/13 criteria have a test (trace below). The new test carries `BUG_207`, as the project rule asks. Nothing EXTRA. |
+| Completeness | pass | 13/13 criteria have a test (trace below). The new test carries `BUG_208`, as the project rule asks. Nothing EXTRA. |
 | Correctness | pass | `JiraClientTest` 61/61 and `TrackerProjectServiceImplTest` 24/24 pass in an isolated worktree at `0dd4f8cc`, and spotless passes. No CRITICAL finding. |
 | Integration | pass | No signature change. The comment path (STORY-012) is untouched by this commit. The only caller, project-integration (`ProjectServiceImpl.readJiraProject`), already maps `UNAVAILABLE` to 503 MSG06. |
 
@@ -358,7 +358,7 @@ LOW finding is about test strength only.
 | INFO-4 "answered 0" | D45 fix | Fixed (attempt 2) | `TrackerProjectServiceImpl.java:59-60` |
 | INFO-5 record invariants | D45 leave | Unchanged, as decided | `tracker/dto` not touched |
 | INFO-6 formatting noise | D45 leave | Unchanged, as decided | — |
-| LOW-7 BUG-207 note overstated | D46 correct the note | **Fixed** | `docs/bug-log.md:213`: the note now names the `findComment` gap as STORY-012 and out of scope |
+| LOW-7 BUG-208 note overstated | D46 correct the note | **Fixed** | `docs/bug-log.md:213`: the note now names the `findComment` gap as STORY-012 and out of scope |
 | MEDIUM-8 non-HTTP scheme escapes | D46 fix | **Fixed** | `TrackerProjectServiceImpl.java:69-76`; test `JiraClientTest.java:525-536` |
 
 ## Traceability
