@@ -212,15 +212,15 @@
         "manual-ticket-contract": "passing",
         "manual-ticket-create": "passing",
         "manual-ticket-drafts": "passing",
-        "manual-entry-tab": "fixing"
+        "manual-entry-tab": "evaluating"
       },
-      "lastUpdated": "2026-11-14T04:28:47.455Z",
+      "lastUpdated": "2026-11-14T06:09:23.857Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "1f040bed5d5924d01192992c9091330b9435bf92"
+        "default": "d6975188e0f34008e0b4bd331a04f4df9a5beeea"
       }
     },
     "search": {
