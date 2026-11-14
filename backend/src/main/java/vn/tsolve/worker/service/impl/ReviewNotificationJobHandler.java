@@ -8,8 +8,9 @@ import vn.tsolve.identity.service.WorkspaceSiteService;
 import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.service.ReviewNotificationService;
 import vn.tsolve.worker.client.ReviewEmail;
+import vn.tsolve.worker.client.ReviewEmail.Decision;
+import vn.tsolve.worker.client.ReviewEmailRenderer;
 import vn.tsolve.worker.client.ReviewNotificationSender;
-import vn.tsolve.worker.client.ReviewNotificationSender.Decision;
 import vn.tsolve.worker.service.TenantJobHandler;
 import vn.tsolve.worker.service.WorkerTenantService;
 
@@ -27,6 +28,7 @@ public class ReviewNotificationJobHandler implements TenantJobHandler {
     private final ObjectProvider<ReviewNotificationSender> senders;
     private final WorkerTenantService tenants;
     private final WorkspaceSiteService sites;
+    private final ReviewEmailRenderer renderer = new ReviewEmailRenderer();
 
     public ReviewNotificationJobHandler(
             ReviewNotificationService notifications,
@@ -65,18 +67,17 @@ public class ReviewNotificationJobHandler implements TenantJobHandler {
                 .filter(value -> !value.isBlank())
                 .orElse(null);
         String link = host == null ? null : "https://" + host + "/tickets/" + notification.ticketId();
-        sender.send(
-                notification.recipient(),
-                new ReviewEmail(
-                        decision,
-                        notification.ticketKey(),
-                        notification.ticketTitle(),
-                        notification.projectName(),
-                        notification.reviewerName(),
-                        notification.writerName(),
-                        notification.decidedAt(),
-                        notification.feedback(),
-                        link,
-                        host));
+        var email = new ReviewEmail(
+                decision,
+                notification.ticketKey(),
+                notification.ticketTitle(),
+                notification.projectName(),
+                notification.reviewerName(),
+                notification.writerName(),
+                notification.decidedAt(),
+                notification.feedback(),
+                link,
+                host);
+        sender.send(notification.recipient(), renderer.subject(email), renderer.plain(email), renderer.html(email));
     }
 }

@@ -2,7 +2,6 @@ package vn.tsolve.worker.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -22,8 +21,9 @@ import vn.tsolve.identity.service.WorkspaceSiteService;
 import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.service.ReviewNotificationService;
 import vn.tsolve.worker.client.ReviewEmail;
+import vn.tsolve.worker.client.ReviewEmail.Decision;
+import vn.tsolve.worker.client.ReviewEmailRenderer;
 import vn.tsolve.worker.client.ReviewNotificationSender;
-import vn.tsolve.worker.client.ReviewNotificationSender.Decision;
 import vn.tsolve.worker.service.WorkerTenantService;
 
 @ExtendWith(OutputCaptureExtension.class)
@@ -59,7 +59,7 @@ class ReviewNotificationJobHandlerTest {
     }
 
     @Test
-    void buildsTicketLinkFromBoundWorkspace_AC_010_8() {
+    void passesRenderedContentAndTicketLink_AC_010_2_AC_010_8() {
         UUID workspace = UUID.randomUUID();
         when(tenants.currentWorkspaceId()).thenReturn(Optional.of(workspace));
         when(sites.siteHost(workspace)).thenReturn(Optional.of("acme.example.test"));
@@ -67,12 +67,20 @@ class ReviewNotificationJobHandlerTest {
         when(notifications.findNotification(DECISION))
                 .thenReturn(Optional.of(notification(ReviewNotification.Kind.REJECTED)));
         handler.execute(DECISION);
-        var email = ArgumentCaptor.forClass(ReviewEmail.class);
-        verify(sender).send(org.mockito.ArgumentMatchers.eq(WRITER), email.capture());
-        assertThat(email.getValue().ticketUrl())
-                .isEqualTo("https://acme.example.test/tickets/00000000-0000-0000-0000-000000000001");
-        assertThat(email.getValue().workspaceName()).isEqualTo("acme.example.test");
-        assertThat(email.getValue().decision()).isEqualTo(Decision.REJECT);
+        var notification = notification(ReviewNotification.Kind.REJECTED);
+        var email = new ReviewEmail(
+                Decision.REJECT,
+                notification.ticketKey(),
+                notification.ticketTitle(),
+                notification.projectName(),
+                notification.reviewerName(),
+                notification.writerName(),
+                notification.decidedAt(),
+                notification.feedback(),
+                "https://acme.example.test/tickets/00000000-0000-0000-0000-000000000001",
+                "acme.example.test");
+        var renderer = new ReviewEmailRenderer();
+        verify(sender).send(WRITER, renderer.subject(email), renderer.plain(email), renderer.html(email));
     }
 
     @Test
@@ -84,11 +92,13 @@ class ReviewNotificationJobHandlerTest {
         when(notifications.findNotification(DECISION))
                 .thenReturn(Optional.of(notification(ReviewNotification.Kind.CHANGES_REQUESTED)));
         handler.execute(DECISION);
-        var email = ArgumentCaptor.forClass(ReviewEmail.class);
-        verify(sender).send(org.mockito.ArgumentMatchers.eq(WRITER), email.capture());
-        assertThat(email.getValue().ticketUrl()).isNull();
-        assertThat(email.getValue().workspaceName()).isNull();
-        assertThat(email.getValue().decision()).isEqualTo(Decision.REQUEST_CHANGES);
+        var subject = ArgumentCaptor.forClass(String.class);
+        var text = ArgumentCaptor.forClass(String.class);
+        var html = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(org.mockito.ArgumentMatchers.eq(WRITER), subject.capture(), text.capture(), html.capture());
+        assertThat(subject.getValue()).isEqualTo("[ITS-1] Changes requested for your ticket");
+        assertThat(text.getValue()).doesNotContain("https://", "in the");
+        assertThat(html.getValue()).doesNotContain("<a ", "https://", "in the");
     }
 
     @Test
@@ -98,7 +108,7 @@ class ReviewNotificationJobHandlerTest {
                 .thenReturn(Optional.of(notification(ReviewNotification.Kind.REJECTED)));
         doThrow(mock(ReviewNotificationSender.DeliveryException.class))
                 .when(sender)
-                .send(anyString(), any(ReviewEmail.class));
+                .send(anyString(), anyString(), anyString(), anyString());
 
         assertThatThrownBy(() -> handler.execute(DECISION)).isInstanceOf(RuntimeException.class);
         assertThat(output.getAll()).doesNotContain(WRITER).doesNotContain(FEEDBACK);

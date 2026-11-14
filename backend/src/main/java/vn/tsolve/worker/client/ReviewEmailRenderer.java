@@ -11,7 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.web.util.HtmlUtils;
-import vn.tsolve.worker.client.ReviewNotificationSender.Decision;
+import vn.tsolve.worker.client.ReviewEmail.Decision;
 
 public final class ReviewEmailRenderer {
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern(
@@ -27,6 +27,17 @@ public final class ReviewEmailRenderer {
         } catch (IOException exception) {
             throw new IllegalStateException("Review email template is unavailable", exception);
         }
+    }
+
+    public String subject(ReviewEmail email) {
+        String decisionSubject =
+                switch (email.decision()) {
+                    case REJECT -> "Your ticket was rejected";
+                    case REQUEST_CHANGES -> "Changes requested for your ticket";
+                };
+        return ("[" + email.ticketKey() + "] " + decisionSubject)
+                .replace('\r', ' ')
+                .replace('\n', ' ');
     }
 
     public String html(ReviewEmail email) {

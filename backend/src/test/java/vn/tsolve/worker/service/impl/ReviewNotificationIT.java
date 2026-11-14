@@ -44,9 +44,8 @@ import vn.tsolve.ticket.service.TicketDecisionService.Action;
 import vn.tsolve.ticket.service.impl.ReviewNotificationServiceImpl;
 import vn.tsolve.ticket.service.impl.TicketDecisionServiceImpl;
 import vn.tsolve.ticket.service.impl.TicketTransitions;
-import vn.tsolve.worker.client.ReviewEmail;
+import vn.tsolve.worker.client.ReviewEmail.Decision;
 import vn.tsolve.worker.client.ReviewNotificationSender;
-import vn.tsolve.worker.client.ReviewNotificationSender.Decision;
 import vn.tsolve.worker.service.TenantJobService;
 import vn.tsolve.worker.service.WorkerTenantService;
 
@@ -173,11 +172,17 @@ class ReviewNotificationIT {
         handler().execute(decisionIds().get(0));
 
         Decision expected = action == Action.REJECTED ? Decision.REJECT : Decision.REQUEST_CHANGES;
-        var email = ArgumentCaptor.forClass(ReviewEmail.class);
-        verify(sender).send(eq(WRITER), email.capture());
-        assertThat(email.getValue().decision()).isEqualTo(expected);
-        assertThat(email.getValue().ticketKey()).isEqualTo("ITS-7");
-        assertThat(email.getValue().feedback()).isEqualTo(FEEDBACK);
+        var subject = ArgumentCaptor.forClass(String.class);
+        var text = ArgumentCaptor.forClass(String.class);
+        var html = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq(WRITER), subject.capture(), text.capture(), html.capture());
+        assertThat(subject.getValue())
+                .isEqualTo(
+                        expected == Decision.REJECT
+                                ? "[ITS-7] Your ticket was rejected"
+                                : "[ITS-7] Changes requested for your ticket");
+        assertThat(text.getValue()).contains("ITS-7", FEEDBACK);
+        assertThat(html.getValue()).contains("ITS-7", FEEDBACK);
     }
 
     @Test

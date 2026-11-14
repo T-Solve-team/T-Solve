@@ -6,7 +6,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import vn.tsolve.worker.client.ReviewNotificationSender.Decision;
+import vn.tsolve.worker.client.ReviewEmail.Decision;
 
 class ReviewEmailRendererTest {
     private final ReviewEmailRenderer renderer = new ReviewEmailRenderer();
@@ -25,6 +25,33 @@ class ReviewEmailRendererTest {
                         ? null
                         : "https://" + host + "/tickets/00000000-0000-0000-0000-000000000001",
                 host);
+    }
+
+    @ParameterizedTest
+    @EnumSource(Decision.class)
+    void rendersDecisionSubject_AC_010_2(Decision decision) {
+        var email = email(decision, null, null, "Title", "Feedback");
+        assertThat(renderer.subject(email))
+                .isEqualTo(
+                        decision == Decision.REJECT
+                                ? "[ITS-1] Your ticket was rejected"
+                                : "[ITS-1] Changes requested for your ticket");
+    }
+
+    @Test
+    void replacesTicketKeyLineBreaksInSubject_AC_010_9() {
+        var email = new ReviewEmail(
+                Decision.REJECT,
+                "ITS\r\n-1\rX\nY",
+                "Title",
+                "ITS",
+                "Reviewer",
+                "Writer",
+                Instant.parse("2026-11-14T18:42:00Z"),
+                "Feedback",
+                null,
+                null);
+        assertThat(renderer.subject(email)).isEqualTo("[ITS  -1 X Y] Your ticket was rejected");
     }
 
     @ParameterizedTest

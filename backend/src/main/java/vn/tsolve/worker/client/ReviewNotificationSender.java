@@ -7,7 +7,6 @@ import java.io.UnsupportedEncodingException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
-import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
@@ -18,26 +17,23 @@ import org.springframework.stereotype.Component;
 public class ReviewNotificationSender {
     private final JavaMailSender mail;
     private final String from;
-    private final ReviewEmailRenderer renderer = new ReviewEmailRenderer();
 
     public ReviewNotificationSender(JavaMailSender mail, @Value("${TSOLVE_SMTP_FROM}") String from) {
         this.mail = mail;
         this.from = singleMailbox(from);
     }
 
-    public void send(String recipient, ReviewEmail email) {
+    public void send(String recipient, String subject, String text, String html) {
         String mailbox = singleMailbox(recipient);
         try {
             var message = mail.createMimeMessage();
             var helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(new InternetAddress(from, "T-Solve"));
             helper.setTo(mailbox);
-            helper.setSubject(("[" + email.ticketKey() + "] " + email.decision().subject)
-                    .replace('\r', ' ')
-                    .replace('\n', ' '));
-            helper.setText(renderer.plain(email), renderer.html(email));
+            helper.setSubject(subject.replace('\r', ' ').replace('\n', ' '));
+            helper.setText(text, html);
             mail.send(message);
-        } catch (MailException | MessagingException | UnsupportedEncodingException ignored) {
+        } catch (RuntimeException | MessagingException | UnsupportedEncodingException ignored) {
             // The transport exception can carry recipient addresses and message details.
             throw new DeliveryException();
         }
@@ -57,17 +53,6 @@ public class ReviewNotificationSender {
             // Report the same validation error without echoing the supplied address.
         }
         throw new IllegalArgumentException("A single mailbox is required");
-    }
-
-    public enum Decision {
-        REJECT("Your ticket was rejected"),
-        REQUEST_CHANGES("Changes requested for your ticket");
-
-        private final String subject;
-
-        Decision(String subject) {
-            this.subject = subject;
-        }
     }
 
     public static final class DeliveryException extends RuntimeException {
