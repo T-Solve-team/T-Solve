@@ -53,8 +53,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
 
     private static final Logger log = LoggerFactory.getLogger(ImportConfirmServiceImpl.class);
     private static final int TITLE_MAX = 200;
-    private static final int WRITER_MAX = 100;
-    private static final String UNIQUE_VIOLATION = "23505";
+    static final int WRITER_MAX = 100;
+    static final String UNIQUE_VIOLATION = "23505";
 
     private final ImportPreviewRepository previews;
     private final ImportPreviewRowRepository previewRows;
@@ -99,6 +99,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
     @Override
     public ImportResultResponse confirm(String user, long previewId) {
         ImportPreview preview = previews.findByIdAndOwner(previewId, user)
+                // a Manual Draft is saved through /imports/manual, with its field checks (AC-006.13)
+                .filter(p -> p.getSource() != TicketSource.MANUAL)
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
@@ -220,7 +222,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         }
     }
 
-    private static String sqlState(Throwable e) {
+    static String sqlState(Throwable e) {
         for (Throwable t = e; t != null; t = t.getCause()) {
             if (t instanceof SQLException sql) {
                 return sql.getSQLState();
@@ -260,12 +262,13 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 user,
                 preview.getSource(),
                 preview.getFileName(),
+                preview.getResolvedFrom(),
+                preview.getResolvedTo(),
                 toImport.size(),
                 (int) (isJira(preview) ? skipped : errorRows),
                 (int) removedRows));
-        List<Ticket> saved = tickets.saveAll(toImport.stream()
-                .map(r -> toTicket(r.getValues(), preview, batch.getId()))
-                .toList());
+        List<Ticket> saved = tickets.saveAll(
+                toImport.stream().map(r -> toTicket(r, preview, batch.getId())).toList());
         List<UUID> ticketIds = saved.stream().map(Ticket::getId).toList();
         decisions.saveAll(ticketIds.stream()
                 .map(id -> TicketReviewDecision.approve(id, user))
@@ -288,14 +291,15 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
      * ticket.title is VARCHAR(200) and ticket.writer VARCHAR(100); a longer Jira summary or assignee is cut on the
      * Ticket only, never inside a character (BUG-190).
      */
-    private static String cut(String text, int max) {
+    static String cut(String text, int max) {
         if (text == null || text.codePointCount(0, text.length()) <= max) {
             return text;
         }
         return text.substring(0, text.offsetByCodePoints(0, max));
     }
 
-    private static Ticket toTicket(ImportPreviewRow.Values v, ImportPreview preview, long batchId) {
+    private static Ticket toTicket(ImportPreviewRow row, ImportPreview preview, long batchId) {
+        var v = row.getValues();
         String resolved = CsvRowValidator.trim(v.resolvedDate());
         return Ticket.imported(
                 CsvRowValidator.trim(v.ticketId()),
@@ -306,6 +310,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 CsvRowValidator.trim(v.description()),
                 cut(CsvRowValidator.trim(v.author()), WRITER_MAX),
                 resolved == null ? null : LocalDate.parse(resolved),
+                isJira(preview) ? row.getSourceUrl() : null,
                 new Ticket.Solution(
                         CsvRowValidator.trim(v.symptoms()),
                         CsvRowValidator.trim(v.rootCause()),

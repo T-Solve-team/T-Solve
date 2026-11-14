@@ -1,11 +1,13 @@
 ---
 module: project-integration
-date: 2026-11-12
+date: 2026-11-13
 owner: BA
 depth: Deep
 ---
 
 # Spec: project-integration
+
+Covers UC-15 Add Ticket Resolver to Project (Jira KAN-128; numbered UC-17 in the Jira title and the module map before the SRS renumbering), STORY-001..STORY-002, and UC-16 Remove a member from a Project (Jira KAN-129, titled UC-18), STORY-003. Source: SRS v3460 (`_context/Report`): UC-15, UC-16, screen 3.2 Project Detail, GBR-02, GBR-20, MSG04, MSG05, MSG06, MSG08, MSG55. The other stories of this module (KAN-125, KAN-126, KAN-127 Add Project) are added later in Change Mode. Decision (user, 13/11): plan and build KAN-128 alone, before KAN-127.
 
 Covers UC-16 Add a Project only (KAN-127), including reconnecting a Removed Project and the add flow on screen 3.1 Jira Integration. Sources: SRS v3460 in `Sua_31-10`, UC-16, screens 3.1 and 3.2 (the initial settings), GBR-04, GBR-10, GBR-14, GBR-20 and GBR-21; `Report_3_BreakDown/System_Messages.docx.md`; the four Jira acceptance criteria in the KAN-127 brief. Verified context: `artifacts/04-plans/project-integration/iteration-1/kan-127-scout.md`. Decisions: `artifacts/04-plans/project-integration/iteration-1/kan-127-decisions.md`, D1-D37; later decisions supersede the scout where they differ. Deep depth is required by the schema change and shared API contract. This run writes the specs and module definitions only; design, tasks, approval and status changes follow separately.
 
@@ -13,13 +15,36 @@ Covers UC-16 Add a Project only (KAN-127), including reconnecting a Removed Proj
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
-| 2026-11-12 | STORY-001..007 | Initial spec: UC-16 Add a Project (KAN-127) | KAN-127 |
-| 2026-11-12 | STORY-001, 002 | Builder check: AC-001.21 and AC-001.22 for a requested key that differs from Jira's canonical key; AC-002.21 orders the local settings checks before the link check and Jira; the Definition of Done names how changeset 029 is proven (D44) | Builder check |
-| 2026-11-12 | STORY-001, 002, 007 | Review of the Codex draft: AC-007.8 no longer puts access before Bean Validation (`@Valid` runs before `@PreAuthorize`); AC-007.3 names a valid body; AC-001.20 and AC-002.16 drop the non-string checks Jackson's scalar coercion does not make (D33, D36 revised) | Framework order and Jackson defaults; the criteria must be testable as written |
+| 2026-11-13 | STORY-001, STORY-002 | Initial spec: UC-15 Add Ticket Resolver to Project | KAN-128; scope "KAN-128 only" chosen by the user on 13/11 |
+| 2026-11-13 | STORY-001, STORY-002 | Builder check (before approval): no Project Manager case and MSG54 removed (only the Project Manager opens 3.2), AC-001.7/001.8 renumbered 001.6/001.7; 404 only for Project Manager callers; null full names last; no Department filter on candidates; `q` trimmed; DB time; ids in order sent; popup loads at once; AC-002.16 audit label | Builder check findings 1, 2, 4, 7, 13–17 |
+| 2026-11-14 | STORY-001, STORY-003 | Added STORY-003 Remove a member (UC-16, KAN-129): `DELETE …/members/{userId}`, MSG55 confirm, audit `{"removed": [...]}`, tickets kept; AC-001.7 reworded (no Remove button on the Project Manager's row, instead of none at all) | KAN-129; scope "remove the membership only" chosen by the user on 14/11 — the Solution Form's membership check belongs to `jira-app` (KAN-126) |
+| 2026-11-12 | STORY-004..010 | Initial spec: UC-16 Add a Project (KAN-127) | KAN-127 |
+| 2026-11-12 | STORY-004, 005 | Builder check: AC-004.21 and AC-004.22 for a requested key that differs from Jira's canonical key; AC-005.21 orders the local settings checks before the link check and Jira; the Definition of Done names how changeset 036 is proven (D44) | Builder check |
+| 2026-11-12 | STORY-004, 005, 010 | Review of the Codex draft: AC-010.8 no longer puts access before Bean Validation (`@Valid` runs before `@PreAuthorize`); AC-010.3 names a valid body; AC-004.20 and AC-005.16 drop the non-string checks Jackson's scalar coercion does not make (D33, D36 revised) | Framework order and Jackson defaults; the criteria must be testable as written |
+| 2026-11-15 | STORY-004..010 | Merged `origin/main` into the KAN-127 branch: this module's KAN-127 stories STORY-001..007 are renumbered STORY-004..010 (AC-00n.m becomes AC-0(n+3).m) after the merged STORY-001..003 of KAN-128/KAN-129; changeset 029 renamed 036 (035 is reserved for PR #215). No criterion changes meaning | Two unmerged specs used the same ids; the unmerged PR renumbers after main |
 
 ## Requirements
 
-### Functional
+### Functional — KAN-128/129 (STORY-001..003)
+1. Only the Project Manager of a Project opens its Project Detail (screen 3.2) and manages its members (GBR-20).
+2. Project Detail shows a read-only header and the Members tab: Full name, Email, Role, Added on of every member. The Project Manager is always a member.
+3. The Project Manager adds one or more Active Ticket Resolver accounts that are not yet members, found by name or email. They become members with role `MEMBER` in `project_membership`.
+4. A new member sees the tickets of the Project's Department. The existing scope check (`ScopeAccessRepository`, KAN-118) already derives this from `project_membership`; this module adds no visibility code.
+5. Each add is recorded in the audit log.
+
+### Non-Functional — KAN-128/129 (STORY-001..003)
+1. The membership rows and the audit entry are written in one database transaction; an add is all-or-nothing.
+2. A Project's members live only in the Workspace's tenant database. The Workspace and the caller never come from request content.
+3. Two adds sent at the same moment for the same person cannot create two rows (primary key `(user_id, project_id)`).
+
+### Interim limits — KAN-128/129 (STORY-001..003)
+These are known limits of the code this story builds on. They are not defects of this story.
+
+1. There is no Projects table on Jira Integration (3.1) until KAN-127. Project Detail is reached by its path `/jira-integration/projects/{projectId}`; Projects come from seed data or test fixtures.
+2. The web app does not send the CSRF header yet, so a browser POST to the real backend gets 403 (workspace decision D17). This story is verified with MSW and backend tests.
+3. The Settings tab of 3.2 (field mapping, Done statuses, review range, Escalation handler) belongs to KAN-127 and is not shown.
+
+### Functional — KAN-127 (STORY-004..010)
 1. A Project Manager tests a Jira project key using the Workspace's service account, without entering a token (GBR-14).
 2. A Project belongs to the caller's own Active Department; adding it makes the caller its Project Manager and a member (GBR-20).
 3. The initial Done statuses are the Jira project's Done-category statuses; the Project Manager can choose one or more of any of its statuses. The review range is a whole number of calendar days, at least 1, initially 3 (GBR-04, GBR-10).
@@ -27,15 +52,14 @@ Covers UC-16 Add a Project only (KAN-127), including reconnecting a Removed Proj
 5. Every successful add or reconnect records one audit entry; failure records no change.
 6. Screen 3.1 shows the caller's Department and its Projects and opens the Add project popup. Admin keeps the existing placeholder (D30).
 
-### Non-Functional
-1. Both Jira reads finish before and outside the write transaction; no outbound call executes with an active database transaction (`backend/AGENTS.md` section 4; AC-002.18).
-2. Project, membership and audit changes commit in exactly one transaction, including reconnect; a failed membership or audit write rolls them all back (AC-002.9, AC-002.10, AC-003.9).
-3. Logs and responses contain neither the service-account email/token nor a Jira response body, on success and on every error path (tracker Non-Functional 9; AC-001.17).
-4. Every Project read and write uses only the bound Workspace's database. No request property, query parameter or body supplies a Workspace or Department to act in (AC-007.6, AC-007.7).
-5. Simultaneous Saves cannot create a second row for one Jira key or a second Project Manager membership for one Project (AC-002.11, AC-003.8).
+### Non-Functional — KAN-127 (STORY-004..010)
+1. Both Jira reads finish before and outside the write transaction; no outbound call executes with an active database transaction (`backend/AGENTS.md` section 4; AC-005.18).
+2. Project, membership and audit changes commit in exactly one transaction, including reconnect; a failed membership or audit write rolls them all back (AC-005.9, AC-005.10, AC-006.9).
+3. Logs and responses contain neither the service-account email/token nor a Jira response body, on success and on every error path (tracker Non-Functional 9; AC-004.17).
+4. Every Project read and write uses only the bound Workspace's database. No request property, query parameter or body supplies a Workspace or Department to act in (AC-010.6, AC-010.7).
+5. Simultaneous Saves cannot create a second row for one Jira key or a second Project Manager membership for one Project (AC-005.11, AC-006.8).
 
-### Interim limits
-
+### Interim limits — KAN-127 (STORY-004..010)
 These are known limits of the current dependencies, not defects of this story.
 
 1. Until KAN-275, only `identity-mock` binds the Workspace for these requests; real sign-in alone cannot complete this flow. Missing binding returns 500 MSG06.
@@ -47,140 +71,194 @@ These are known limits of the current dependencies, not defects of this story.
 
 ## User Stories
 
-### STORY-001: Test the connection to a Jira project
+### STORY-001: View the members of a Project
+- As a Project Manager, I want to see who is a member of my Project so that I know who can write Solutions for it.
+- Acceptance:
+  - AC-001.1: WHEN the Project Manager of a Project requests `GET /api/v1/projects/{projectId}`, THE backend SHALL answer 200 with the Project id, Jira project key, Department name, the Project Manager's full name and the status (`ACTIVE` or `REMOVED`).
+  - AC-001.2: WHEN the Project Manager of a Project requests `GET /api/v1/projects/{projectId}/members`, THE backend SHALL answer 200 with every member of the Project — user id, full name, email, role in the Project (`PROJECT_MANAGER` or `MEMBER`) and date added — the Project Manager first, then the other members by full name, ascending, ignoring letter case, members without a full name last.
+  - AC-001.3: IF the caller is not the Project Manager of the Project (no `PROJECT_MANAGER` membership row for it, or no `PROJECT_MANAGER` role, or an account that is not Active), THEN THE backend SHALL answer 403 to every endpoint of this spec and return no Project data.
+  - AC-001.4: IF a caller with the `PROJECT_MANAGER` role gives a `projectId` no Project has, THEN THE backend SHALL answer 404 to every endpoint of this spec.
+  - AC-001.5: WHEN the Project Manager opens Project Detail, THE web app SHALL show the header (Jira project key, Department, Project Manager, status) and the Members tab with the columns Full name, Email, Role, Added on, with "Added on" as a date in the app time zone.
+  - AC-001.6: IF the backend answers 403, THEN THE web app SHALL show MSG08 in place of the screen; IF it answers 404, THEN THE web app SHALL show MSG04; IF it fails otherwise, THEN THE web app SHALL show MSG06.
+  - AC-001.7: THE web app SHALL show no Remove button on the Project Manager's row of the Members tab.
+
+### STORY-002: Add Ticket Resolvers to a Project
+- As a Project Manager, I want to add Ticket Resolvers to my Project so that only the people who handle its issues write Solutions for it.
+- Acceptance:
+  - AC-002.1: WHEN the Project Manager requests `GET /api/v1/projects/{projectId}/member-candidates?q={text}`, THE backend SHALL answer 200 with at most 20 accounts — user id, full name, email — that are Active, hold the `TICKET_RESOLVER` role, are not members of the Project, and whose full name or email contains `q` (trimmed) literally, ignoring letter case, sorted by full name ascending ignoring letter case, accounts without a full name last. Candidates are not limited to the Project's Department (UC-15 step 6).
+  - AC-002.2: WHERE `q` is missing or blank after trimming, THE backend SHALL apply no name or email filter to the candidates of AC-002.1.
+  - AC-002.3: IF `q` is longer than 100 characters after trimming, THEN THE backend SHALL answer 400 and return no candidates.
+  - AC-002.4: WHEN the Project Manager posts `POST /api/v1/projects/{projectId}/members` with `{"userIds": [...]}` of 1 to 50 distinct ids, each an Active `TICKET_RESOLVER` account that is not a member of the Project, THE backend SHALL add each as a member with role `MEMBER` and date added = the database time of the insert, and answer 201 with the full member list in the form and order of AC-001.2.
+  - AC-002.5: WHEN members are added, THE backend SHALL record one audit entry with action `PROJECT_MEMBER_CHANGE`, target type `PROJECT`, target id the Project id, and details `{"added": [<user ids in the order sent>]}`, in the same transaction as the rows.
+  - AC-002.6: IF `userIds` is missing, empty, longer than 50, or contains a duplicate or a null, THEN THE backend SHALL answer 400 and add nobody.
+  - AC-002.7: IF any id in `userIds` is not an Active account with the `TICKET_RESOLVER` role, or is already a member of the Project, THEN THE backend SHALL answer 409, add nobody and record no audit entry.
+  - AC-002.8: IF the Project is `REMOVED`, THEN THE backend SHALL answer 409 to `POST …/members`, add nobody and record no audit entry.
+  - AC-002.9: WHILE the Project is `ACTIVE`, THE web app SHALL show the "Add member" button in the Members tab; WHILE it is `REMOVED`, THE web app SHALL not show it.
+  - AC-002.10: WHEN the Project Manager clicks "Add member", THE web app SHALL open the Add member popup with a search box (name or email) and the candidate list of AC-002.1, loaded at once with an empty `q` and refreshed 300 ms after the last keystroke, where one or more candidates can be selected.
+  - AC-002.11: IF the candidate list is empty, THEN THE web app SHALL show MSG04 in the popup.
+  - AC-002.12: WHILE no candidate is selected or an add is in progress, THE web app SHALL disable the Add button of the popup.
+  - AC-002.13: WHEN the Project Manager clicks Add and the backend answers 201, THE web app SHALL close the popup, show MSG05 and show the returned member list.
+  - AC-002.14: IF the add fails, THEN THE web app SHALL keep the popup open with the selection and show MSG06 (any error, 409 included).
+  - AC-002.15: WHEN the Project Manager clicks Cancel or closes the popup, THE web app SHALL send no add request and change nothing.
+  - AC-002.16: THE audit log screen SHALL label the action `PROJECT_MEMBER_CHANGE` "Project member change".
+
+### STORY-003: Remove a member from a Project
+- As a Project Manager, I want to remove a member from my Project so that people who no longer handle its issues stop writing Solutions for it.
+- Acceptance:
+  - AC-003.1: WHEN the Project Manager sends `DELETE /api/v1/projects/{projectId}/members/{userId}` for a member with role `MEMBER`, THE backend SHALL delete that membership row and answer 200 with the full member list in the form and order of AC-001.2.
+  - AC-003.2: WHEN a member is removed, THE backend SHALL record one audit entry with action `PROJECT_MEMBER_CHANGE`, target type `PROJECT`, target id the Project id, and details `{"removed": [<user id>]}`, in the same transaction as the delete.
+  - AC-003.3: IF `userId` has no `MEMBER` row in the Project (not a member, already removed, or the Project's `PROJECT_MANAGER` row), THEN THE backend SHALL answer 409, delete nothing and record no audit entry.
+  - AC-003.4: IF the Project is `REMOVED`, THEN THE backend SHALL answer 409 to `DELETE …/members/{userId}`, delete nothing and record no audit entry.
+  - AC-003.5: WHEN a member is removed, THE backend SHALL keep every ticket and Solution in the Project unchanged, those the removed person wrote included.
+  - AC-003.6: WHILE the Project is `ACTIVE`, THE web app SHALL show a Remove button on every `MEMBER` row of the Members tab; WHILE it is `REMOVED`, THE web app SHALL show no Remove button.
+  - AC-003.7: WHEN the Project Manager clicks Remove, THE web app SHALL ask for confirmation with MSG55, where `user_name` is the member's full name (else email) and `project_key` is the Jira project key, and send no request yet.
+  - AC-003.8: WHEN the Project Manager confirms and the backend answers 200, THE web app SHALL show MSG05 and show the returned member list.
+  - AC-003.9: IF the remove fails, THEN THE web app SHALL show MSG06 and keep the member list unchanged (any error, 409 included).
+  - AC-003.10: WHEN the Project Manager cancels the confirmation, THE web app SHALL send no remove request and change nothing.
+
+### STORY-004: Test the connection to a Jira project
 - As a Project Manager, I want to check the Jira project and see its settings before adding a Project to my Department.
 - Acceptance:
-  - AC-001.1: WHEN an authorised caller sends `POST /api/v1/projects/connection-test` with a valid key, THE system SHALL use that key stripped with `String.strip()` and upper-cased with `Locale.ROOT` for the link lookup and `TrackerProjectService.findProject`.
-  - AC-001.2: IF `jiraProjectKey` is missing, null, empty or only whitespace, THEN THE system SHALL answer 400 MSG01 on field `jiraProjectKey` with params `{field_name: "jiraProjectKey"}`, without a Jira call.
-  - AC-001.3: IF a nonblank `jiraProjectKey` exceeds 20 UTF-16 code units as received, THEN THE system SHALL answer 400 MSG02 on field `jiraProjectKey` with params `{field_name: "jiraProjectKey", max_length: 20}`, without a Jira call.
-  - AC-001.4: IF the normalised key fails `[A-Z][A-Z0-9_]*`, THEN THE system SHALL answer 409 MSG48 with params `{tracker_name: "Jira"}` and no field error, without a Jira call.
-  - AC-001.5: IF the normalised key belongs to an Active Project in any Department of the bound Workspace, THEN THE system SHALL answer 409 MSG49 on field `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <owning Department name>}`, without a Jira call.
-  - AC-001.6: IF the normalised key belongs to a Removed Project of another Department, THEN THE system SHALL answer 409 MSG49 on field `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <owning Department name>}`, without a Jira call.
-  - AC-001.7: IF the normalised key belongs to a Removed Project of the caller's Department and its previous Project Manager is a different user who is still Active, holds the Project Manager role and belongs to that Department, THEN THE system SHALL answer 409 MSG49 on field `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <owning Department name>}`, without a Jira call.
-  - AC-001.8: WHEN the local link check allows the key, THE system SHALL obtain the Browse result and project statuses only through `tracker.service.TrackerProjectService.findProject(key)` as defined by tracker STORY-013.
-  - AC-001.9: WHEN the tracker returns `FOUND` for an allowed key, THE system SHALL answer 200 `ProjectConnectionTest` with Jira's canonical `jiraProjectKey` and every returned project status once as `{id, name, done}`.
-  - AC-001.10: WHEN the tested Jira project has no existing Project, THE system SHALL return `reconnect: false` and omit `projectId`.
-  - AC-001.11: WHEN the tested key belongs to an eligible Removed Project of the caller's Department, THE system SHALL return `reconnect: true` and that Project's existing `projectId`.
-  - AC-001.12: WHEN the tested Jira project is new, THE system SHALL prefill `doneStatusIds` with the returned statuses whose `done` is true and `reviewRange` with 3.
-  - AC-001.13: WHEN the tested Jira project reconnects a Removed Project, THE system SHALL prefill `doneStatusIds` with its stored ids still in the returned statuses, falling back to the Done-category ids if no stored id remains.
-  - AC-001.14: WHEN the tested Jira project reconnects a Removed Project, THE system SHALL prefill `reviewRange` with its stored value or 3 if that value is SQL NULL.
-  - AC-001.15: IF the tracker returns `NOT_FOUND` or `DENIED`, THEN THE system SHALL answer 409 MSG48 with params `{tracker_name: "Jira"}` and no field error.
-  - AC-001.16: IF the tracker returns `UNAVAILABLE`, THEN THE system SHALL answer 503 MSG06 with params `{}` and no field error.
-  - AC-001.17: THE system SHALL exclude the service-account email, token and Jira response bodies from all Project responses and logs.
-  - AC-001.18: THE connection test SHALL write no Project, membership, audit entry or other persisted data, on success or failure.
-  - AC-001.19: IF Jira's canonical key differs from the requested normalised key and belongs to a Project refused by AC-001.5, AC-001.6 or AC-001.7, THEN THE system SHALL answer the corresponding 409 MSG49 instead of returning a successful test.
-  - AC-001.20: IF the JSON body is unreadable, THEN THE system SHALL answer 400 MSG06 with params `{}` and no field error, without a Jira call.
-  - AC-001.21: IF the requested normalised key and Jira's canonical key are held by two different Projects, THEN THE system SHALL answer 409 MSG49 on field `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <Department of the Project holding the canonical key>}` and write nothing.
-  - AC-001.22: WHEN exactly one of the requested normalised key and Jira's canonical key is held by a Project and that Project is an eligible Removed Project of the caller's Department, THE system SHALL treat it as the reconnect (`reconnect: true` with its `projectId`), and a Save SHALL store Jira's canonical key on that Project.
+  - AC-004.1: WHEN an authorised caller sends `POST /api/v1/projects/connection-test` with a valid key, THE system SHALL use that key stripped with `String.strip()` and upper-cased with `Locale.ROOT` for the link lookup and `TrackerProjectService.findProject`.
+  - AC-004.2: IF `jiraProjectKey` is missing, null, empty or only whitespace, THEN THE system SHALL answer 400 MSG01 on field `jiraProjectKey` with params `{field_name: "jiraProjectKey"}`, without a Jira call.
+  - AC-004.3: IF a nonblank `jiraProjectKey` exceeds 20 UTF-16 code units as received, THEN THE system SHALL answer 400 MSG02 on field `jiraProjectKey` with params `{field_name: "jiraProjectKey", max_length: 20}`, without a Jira call.
+  - AC-004.4: IF the normalised key fails `[A-Z][A-Z0-9_]*`, THEN THE system SHALL answer 409 MSG48 with params `{tracker_name: "Jira"}` and no field error, without a Jira call.
+  - AC-004.5: IF the normalised key belongs to an Active Project in any Department of the bound Workspace, THEN THE system SHALL answer 409 MSG49 on field `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <owning Department name>}`, without a Jira call.
+  - AC-004.6: IF the normalised key belongs to a Removed Project of another Department, THEN THE system SHALL answer 409 MSG49 on field `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <owning Department name>}`, without a Jira call.
+  - AC-004.7: IF the normalised key belongs to a Removed Project of the caller's Department and its previous Project Manager is a different user who is still Active, holds the Project Manager role and belongs to that Department, THEN THE system SHALL answer 409 MSG49 on field `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <owning Department name>}`, without a Jira call.
+  - AC-004.8: WHEN the local link check allows the key, THE system SHALL obtain the Browse result and project statuses only through `tracker.service.TrackerProjectService.findProject(key)` as defined by tracker STORY-013.
+  - AC-004.9: WHEN the tracker returns `FOUND` for an allowed key, THE system SHALL answer 200 `ProjectConnectionTest` with Jira's canonical `jiraProjectKey` and every returned project status once as `{id, name, done}`.
+  - AC-004.10: WHEN the tested Jira project has no existing Project, THE system SHALL return `reconnect: false` and omit `projectId`.
+  - AC-004.11: WHEN the tested key belongs to an eligible Removed Project of the caller's Department, THE system SHALL return `reconnect: true` and that Project's existing `projectId`.
+  - AC-004.12: WHEN the tested Jira project is new, THE system SHALL prefill `doneStatusIds` with the returned statuses whose `done` is true and `reviewRange` with 3.
+  - AC-004.13: WHEN the tested Jira project reconnects a Removed Project, THE system SHALL prefill `doneStatusIds` with its stored ids still in the returned statuses, falling back to the Done-category ids if no stored id remains.
+  - AC-004.14: WHEN the tested Jira project reconnects a Removed Project, THE system SHALL prefill `reviewRange` with its stored value or 3 if that value is SQL NULL.
+  - AC-004.15: IF the tracker returns `NOT_FOUND` or `DENIED`, THEN THE system SHALL answer 409 MSG48 with params `{tracker_name: "Jira"}` and no field error.
+  - AC-004.16: IF the tracker returns `UNAVAILABLE`, THEN THE system SHALL answer 503 MSG06 with params `{}` and no field error.
+  - AC-004.17: THE system SHALL exclude the service-account email, token and Jira response bodies from all Project responses and logs.
+  - AC-004.18: THE connection test SHALL write no Project, membership, audit entry or other persisted data, on success or failure.
+  - AC-004.19: IF Jira's canonical key differs from the requested normalised key and belongs to a Project refused by AC-004.5, AC-004.6 or AC-004.7, THEN THE system SHALL answer the corresponding 409 MSG49 instead of returning a successful test.
+  - AC-004.20: IF the JSON body is unreadable, THEN THE system SHALL answer 400 MSG06 with params `{}` and no field error, without a Jira call.
+  - AC-004.21: IF the requested normalised key and Jira's canonical key are held by two different Projects, THEN THE system SHALL answer 409 MSG49 on field `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <Department of the Project holding the canonical key>}` and write nothing.
+  - AC-004.22: WHEN exactly one of the requested normalised key and Jira's canonical key is held by a Project and that Project is an eligible Removed Project of the caller's Department, THE system SHALL treat it as the reconnect (`reconnect: true` with its `projectId`), and a Save SHALL store Jira's canonical key on that Project.
 
-### STORY-002: Add the Project
+### STORY-005: Add the Project
 - As a Project Manager, I want to save the Project and its initial settings so that my Department can use its Jira project.
 - Acceptance:
-  - AC-002.1: WHEN an authorised caller sends `POST /api/v1/projects`, THE system SHALL apply AC-001.1 through AC-001.7 and AC-001.19 to `jiraProjectKey` with the same HTTP statuses, codes, params, fields and local-conflict ordering.
-  - AC-002.2: WHEN a Save passes local validation and link checks, THE system SHALL read the Jira project and its statuses again through `TrackerProjectService.findProject` before any write, whether or not a connection test was previously sent.
-  - AC-002.3: IF the Save lookup returns `NOT_FOUND`, `DENIED` or `UNAVAILABLE`, THEN THE system SHALL answer respectively 409 MSG48, 409 MSG48 or 503 MSG06 with the params and absence of field errors defined in AC-001.15 and AC-001.16, and write nothing.
-  - AC-002.4: IF `doneStatusIds` is missing, null or empty, THEN THE system SHALL answer 400 MSG01 on field `doneStatusIds` with params `{field_name: "doneStatusIds"}` and write nothing.
-  - AC-002.5: IF a selected id is null, blank or absent from the project's freshly read statuses, THEN THE system SHALL answer 400 MSG01 on field `doneStatusIds` with params `{field_name: "doneStatusIds"}` and write nothing.
-  - AC-002.6: IF `reviewRange` is missing or null, THEN THE system SHALL answer 400 MSG01 on field `reviewRange` with params `{field_name: "reviewRange"}` and write nothing.
-  - AC-002.7: IF numeric `reviewRange` is fractional, below 1 or above 2,147,483,647, THEN THE system SHALL answer 400 MSG44 on field `reviewRange` with params `{}` and write nothing.
-  - AC-002.8: WHEN a valid Save adds a new Jira project, THE system SHALL insert exactly one `project` row with a generated `projectId`, the caller's Department, Jira's canonical key, the selected ids as a JSONB array in `done_status`, the entered `review_range`, `status = 'ACTIVE'` and `field_mapping = NULL`.
-  - AC-002.9: WHEN a new Project is inserted, THE system SHALL insert exactly one `PROJECT_MANAGER` membership for the caller in the same transaction.
-  - AC-002.10: WHEN a new Project is inserted, THE system SHALL record exactly one audit entry in that transaction with the signed-in caller as actor, action `TRACKER_CONFIGURATION_CHANGE`, target type `PROJECT`, target id its `projectId`, and details `{operation: "CREATE", jiraProjectKey, departmentId, doneStatusIds, reviewRange}` matching the stored values.
-  - AC-002.11: IF two Saves compete to add the same Jira key, THEN THE system SHALL commit one Project, one caller membership and one audit entry, answer the winner 201, and answer the loser 409 MSG49 on `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <winning Department name>}`.
-  - AC-002.12: IF inserting the membership or audit entry fails, THEN THE system SHALL roll back all writes from that Save and answer 500 MSG06 with params `{}` and no field error.
-  - AC-002.13: WHEN a new Project commits, THE system SHALL answer 201 with its `Project` response.
-  - AC-002.14: WHEN a new Project commits, THE existing `ProjectService.findActivePublicIdByJiraProjectKey` SHALL return its `projectId` for the stored canonical key.
-  - AC-002.15: WHEN a Save contains repeated valid status ids, THE system SHALL store and return each id once in first-seen order.
-  - AC-002.16: IF the JSON body is unreadable, `doneStatusIds` is not an array, or `reviewRange` cannot be read as a number (for example `"abc"`), THEN THE system SHALL answer 400 MSG06 with params `{}` and no field error, and write nothing.
-  - AC-002.17: WHEN the write transaction begins after the Jira read, THE system SHALL recheck the caller's eligibility and the current link state before changing any Project or membership.
-  - AC-002.18: THE system SHALL execute every Jira call before and outside any active database transaction in the add and reconnect flows.
-  - AC-002.19: WHEN changeset `029-project-done-statuses.sql` applies to an existing database, THE migration SHALL convert each non-null legacy `done_status` scalar to a JSONB singleton string array and preserve SQL NULL as SQL NULL without changing another column, row or reference.
-  - AC-002.21: IF `reviewRange` breaks AC-002.7 or a selected id is null or blank, THEN THE system SHALL refuse the Save after the Workspace, eligibility and key format checks and before the link check, without a Jira call; an id absent from the project's statuses (AC-002.5) is refused only after the Jira read.
-  - AC-002.20: THE migration SHALL leave `review_range` nullable with no new database CHECK, default or backfill, so existing zero and negative fixtures retain their review fallback behaviour (D20).
+  - AC-005.1: WHEN an authorised caller sends `POST /api/v1/projects`, THE system SHALL apply AC-004.1 through AC-004.7 and AC-004.19 to `jiraProjectKey` with the same HTTP statuses, codes, params, fields and local-conflict ordering.
+  - AC-005.2: WHEN a Save passes local validation and link checks, THE system SHALL read the Jira project and its statuses again through `TrackerProjectService.findProject` before any write, whether or not a connection test was previously sent.
+  - AC-005.3: IF the Save lookup returns `NOT_FOUND`, `DENIED` or `UNAVAILABLE`, THEN THE system SHALL answer respectively 409 MSG48, 409 MSG48 or 503 MSG06 with the params and absence of field errors defined in AC-004.15 and AC-004.16, and write nothing.
+  - AC-005.4: IF `doneStatusIds` is missing, null or empty, THEN THE system SHALL answer 400 MSG01 on field `doneStatusIds` with params `{field_name: "doneStatusIds"}` and write nothing.
+  - AC-005.5: IF a selected id is null, blank or absent from the project's freshly read statuses, THEN THE system SHALL answer 400 MSG01 on field `doneStatusIds` with params `{field_name: "doneStatusIds"}` and write nothing.
+  - AC-005.6: IF `reviewRange` is missing or null, THEN THE system SHALL answer 400 MSG01 on field `reviewRange` with params `{field_name: "reviewRange"}` and write nothing.
+  - AC-005.7: IF numeric `reviewRange` is fractional, below 1 or above 2,147,483,647, THEN THE system SHALL answer 400 MSG44 on field `reviewRange` with params `{}` and write nothing.
+  - AC-005.8: WHEN a valid Save adds a new Jira project, THE system SHALL insert exactly one `project` row with a generated `projectId`, the caller's Department, Jira's canonical key, the selected ids as a JSONB array in `done_status`, the entered `review_range`, `status = 'ACTIVE'` and `field_mapping = NULL`.
+  - AC-005.9: WHEN a new Project is inserted, THE system SHALL insert exactly one `PROJECT_MANAGER` membership for the caller in the same transaction.
+  - AC-005.10: WHEN a new Project is inserted, THE system SHALL record exactly one audit entry in that transaction with the signed-in caller as actor, action `TRACKER_CONFIGURATION_CHANGE`, target type `PROJECT`, target id its `projectId`, and details `{operation: "CREATE", jiraProjectKey, departmentId, doneStatusIds, reviewRange}` matching the stored values.
+  - AC-005.11: IF two Saves compete to add the same Jira key, THEN THE system SHALL commit one Project, one caller membership and one audit entry, answer the winner 201, and answer the loser 409 MSG49 on `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <winning Department name>}`.
+  - AC-005.12: IF inserting the membership or audit entry fails, THEN THE system SHALL roll back all writes from that Save and answer 500 MSG06 with params `{}` and no field error.
+  - AC-005.13: WHEN a new Project commits, THE system SHALL answer 201 with its `Project` response.
+  - AC-005.14: WHEN a new Project commits, THE existing `ProjectService.findActivePublicIdByJiraProjectKey` SHALL return its `projectId` for the stored canonical key.
+  - AC-005.15: WHEN a Save contains repeated valid status ids, THE system SHALL store and return each id once in first-seen order.
+  - AC-005.16: IF the JSON body is unreadable, `doneStatusIds` is not an array, or `reviewRange` cannot be read as a number (for example `"abc"`), THEN THE system SHALL answer 400 MSG06 with params `{}` and no field error, and write nothing.
+  - AC-005.17: WHEN the write transaction begins after the Jira read, THE system SHALL recheck the caller's eligibility and the current link state before changing any Project or membership.
+  - AC-005.18: THE system SHALL execute every Jira call before and outside any active database transaction in the add and reconnect flows.
+  - AC-005.19: WHEN changeset `036-project-done-statuses.sql` applies to an existing database, THE migration SHALL convert each non-null legacy `done_status` scalar to a JSONB singleton string array and preserve SQL NULL as SQL NULL without changing another column, row or reference.
+  - AC-005.21: IF `reviewRange` breaks AC-005.7 or a selected id is null or blank, THEN THE system SHALL refuse the Save after the Workspace, eligibility and key format checks and before the link check, without a Jira call; an id absent from the project's statuses (AC-005.5) is refused only after the Jira read.
+  - AC-005.20: THE migration SHALL leave `review_range` nullable with no new database CHECK, default or backfill, so existing zero and negative fixtures retain their review fallback behaviour (D20).
 
-### STORY-003: Reconnect a Removed Project
+### STORY-006: Reconnect a Removed Project
 - As a Project Manager, I want to reconnect an eligible Removed Project so that its tickets and members remain with the same Project.
 - Acceptance:
-  - AC-003.1: WHEN a valid Save identifies an eligible Removed Project of the caller's Department, THE system SHALL update that row to `ACTIVE` with Jira's canonical key and the saved `doneStatusIds` and `reviewRange`, using all validation and tracker failure rules of STORY-002.
-  - AC-003.2: WHEN a Removed Project reconnects, THE system SHALL keep its existing `projectId`, Department, tickets, Ticket Resolver memberships and `field_mapping` unchanged.
-  - AC-003.3: WHEN the previous Project Manager re-adds the Removed Project, THE system SHALL keep the Project's membership rows unchanged.
-  - AC-003.4: WHEN another eligible Project Manager re-adds the Removed Project, THE system SHALL delete the previous Project Manager membership if present before upserting the caller's membership as `PROJECT_MANAGER`, including when the caller already has a `MEMBER` row.
-  - AC-003.5: WHEN a Removed Project reconnects, THE system SHALL record one audit entry in the same transaction with the signed-in caller as actor, action `TRACKER_CONFIGURATION_CHANGE`, target type `PROJECT`, target id its retained `projectId`, and details `{operation: "RECONNECT", jiraProjectKey, departmentId, doneStatusIds, reviewRange}` matching the saved values.
-  - AC-003.6: WHEN the reconnect commits, THE system SHALL answer 200 with the updated `Project` response.
-  - AC-003.7: IF the Removed Project belongs to another Department or still has another Active Project Manager holding that role in its Department, THEN THE system SHALL answer 409 MSG49 on field `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <owning Department name>}` and write nothing.
-  - AC-003.8: IF simultaneous reconnect or add Saves compete for the same Removed row, THEN THE system SHALL commit one reconnect with one audit entry, answer the winner 200 and the loser 409 MSG49 on `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <owning Department name>}`.
-  - AC-003.9: IF a membership change or the audit write fails while reconnecting, THEN THE system SHALL answer 500 MSG06 with params `{}` and restore the original Removed row, settings and membership rows with no audit entry from that Save.
-  - AC-003.10: WHEN the reconnect commits, THE existing `ProjectService.findActivePublicIdByJiraProjectKey` SHALL return the retained `projectId` for the canonical key.
+  - AC-006.1: WHEN a valid Save identifies an eligible Removed Project of the caller's Department, THE system SHALL update that row to `ACTIVE` with Jira's canonical key and the saved `doneStatusIds` and `reviewRange`, using all validation and tracker failure rules of STORY-005.
+  - AC-006.2: WHEN a Removed Project reconnects, THE system SHALL keep its existing `projectId`, Department, tickets, Ticket Resolver memberships and `field_mapping` unchanged.
+  - AC-006.3: WHEN the previous Project Manager re-adds the Removed Project, THE system SHALL keep the Project's membership rows unchanged.
+  - AC-006.4: WHEN another eligible Project Manager re-adds the Removed Project, THE system SHALL delete the previous Project Manager membership if present before upserting the caller's membership as `PROJECT_MANAGER`, including when the caller already has a `MEMBER` row.
+  - AC-006.5: WHEN a Removed Project reconnects, THE system SHALL record one audit entry in the same transaction with the signed-in caller as actor, action `TRACKER_CONFIGURATION_CHANGE`, target type `PROJECT`, target id its retained `projectId`, and details `{operation: "RECONNECT", jiraProjectKey, departmentId, doneStatusIds, reviewRange}` matching the saved values.
+  - AC-006.6: WHEN the reconnect commits, THE system SHALL answer 200 with the updated `Project` response.
+  - AC-006.7: IF the Removed Project belongs to another Department or still has another Active Project Manager holding that role in its Department, THEN THE system SHALL answer 409 MSG49 on field `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <owning Department name>}` and write nothing.
+  - AC-006.8: IF simultaneous reconnect or add Saves compete for the same Removed row, THEN THE system SHALL commit one reconnect with one audit entry, answer the winner 200 and the loser 409 MSG49 on `jiraProjectKey` with params `{tracker_name: "Jira", department_name: <owning Department name>}`.
+  - AC-006.9: IF a membership change or the audit write fails while reconnecting, THEN THE system SHALL answer 500 MSG06 with params `{}` and restore the original Removed row, settings and membership rows with no audit entry from that Save.
+  - AC-006.10: WHEN the reconnect commits, THE existing `ProjectService.findActivePublicIdByJiraProjectKey` SHALL return the retained `projectId` for the canonical key.
 
-### STORY-004: Projects of my Department
+### STORY-007: Projects of my Department
 - As a Project Manager, I want to list the Projects of my Department so that I can see the result of adding or reconnecting them.
 - Acceptance:
-  - AC-004.1: WHEN an authorised caller sends `GET /api/v1/projects`, THE system SHALL answer 200 `ProjectList` with the caller's own Department as `{departmentId, name}` and all its Active and Removed Projects.
-  - AC-004.2: WHEN the system lists Projects, THE system SHALL order them by `jiraProjectKey` ascending without paging.
-  - AC-004.3: WHEN the system lists a Project, THE system SHALL return its `projectId`, `jiraProjectKey`, `projectManager`, `memberCount` and `status` as `ProjectRow`.
-  - AC-004.4: WHEN a Project's `PROJECT_MANAGER` membership names an Active account, THE system SHALL return that account as `projectManager: {userId, fullName}`.
-  - AC-004.5: IF a Project has no `PROJECT_MANAGER` membership or that account is not Active, THEN THE system SHALL return `projectManager: null`.
-  - AC-004.6: WHEN the system lists a Project, THE system SHALL set `memberCount` to the count of all its membership rows, including the Project Manager.
-  - AC-004.7: IF the caller's Department has no Projects, THEN THE system SHALL answer 200 with its Department and `projects: []`.
-  - AC-004.8: THE Projects list SHALL make no Jira call and write no persisted data.
+  - AC-007.1: WHEN an authorised caller sends `GET /api/v1/projects`, THE system SHALL answer 200 `ProjectList` with the caller's own Department as `{departmentId, name}` and all its Active and Removed Projects.
+  - AC-007.2: WHEN the system lists Projects, THE system SHALL order them by `jiraProjectKey` ascending without paging.
+  - AC-007.3: WHEN the system lists a Project, THE system SHALL return its `projectId`, `jiraProjectKey`, `projectManager`, `memberCount` and `status` as `ProjectRow`.
+  - AC-007.4: WHEN a Project's `PROJECT_MANAGER` membership names an Active account, THE system SHALL return that account as `projectManager: {userId, fullName}`.
+  - AC-007.5: IF a Project has no `PROJECT_MANAGER` membership or that account is not Active, THEN THE system SHALL return `projectManager: null`.
+  - AC-007.6: WHEN the system lists a Project, THE system SHALL set `memberCount` to the count of all its membership rows, including the Project Manager.
+  - AC-007.7: IF the caller's Department has no Projects, THEN THE system SHALL answer 200 with its Department and `projects: []`.
+  - AC-007.8: THE Projects list SHALL make no Jira call and write no persisted data.
 
-### STORY-005: Projects on Jira Integration (web app, screen 3.1)
+### STORY-008: Projects on Jira Integration (web app, screen 3.1)
 - As a Project Manager, I want to see my Department and its Projects on Jira Integration so that I can manage the add flow from one screen.
 - Acceptance:
-  - AC-005.1: WHEN a Project Manager opens `/jira-integration`, THE web app SHALL load `GET /api/v1/projects` and show the returned Department name in a read-only field labelled "Department".
-  - AC-005.2: WHEN the list loads, THE web app SHALL show a Projects table with columns "Project ID", "Jira project key", "Project Manager", "Members" and "Status" using the returned order.
-  - AC-005.3: WHEN a row has a `projectManager`, THE web app SHALL show its `fullName` in the Project Manager column.
-  - AC-005.4: IF a row has `projectManager: null`, THEN THE web app SHALL show MSG54 in that column.
-  - AC-005.5: WHEN a row has status `ACTIVE` or `REMOVED`, THE web app SHALL show respectively "Active" or "Removed".
-  - AC-005.6: WHILE the Projects query is loading, THE web app SHALL show the loading state in place of the table.
-  - AC-005.7: IF the Projects query fails, THEN THE web app SHALL show the returned message by code and an error state with a retry action.
-  - AC-005.8: IF the loaded list is empty, THEN THE web app SHALL show MSG04 in place of the table.
-  - AC-005.9: WHEN an Admin without the Project Manager role opens screen 3.1, THE web app SHALL keep the existing Jira Integration placeholder without sending a Projects request or showing the Add project button.
-  - AC-005.10: IF a signed-in user has neither Admin nor Project Manager role, THEN THE web app SHALL show the route guard's MSG08 no-permission page without sending a Projects request.
+  - AC-008.1: WHEN a Project Manager opens `/jira-integration`, THE web app SHALL load `GET /api/v1/projects` and show the returned Department name in a read-only field labelled "Department".
+  - AC-008.2: WHEN the list loads, THE web app SHALL show a Projects table with columns "Project ID", "Jira project key", "Project Manager", "Members" and "Status" using the returned order.
+  - AC-008.3: WHEN a row has a `projectManager`, THE web app SHALL show its `fullName` in the Project Manager column.
+  - AC-008.4: IF a row has `projectManager: null`, THEN THE web app SHALL show MSG54 in that column.
+  - AC-008.5: WHEN a row has status `ACTIVE` or `REMOVED`, THE web app SHALL show respectively "Active" or "Removed".
+  - AC-008.6: WHILE the Projects query is loading, THE web app SHALL show the loading state in place of the table.
+  - AC-008.7: IF the Projects query fails, THEN THE web app SHALL show the returned message by code and an error state with a retry action.
+  - AC-008.8: IF the loaded list is empty, THEN THE web app SHALL show MSG04 in place of the table.
+  - AC-008.9: WHEN an Admin without the Project Manager role opens screen 3.1, THE web app SHALL keep the existing Jira Integration placeholder without sending a Projects request or showing the Add project button.
+  - AC-008.10: IF a signed-in user has neither Admin nor Project Manager role, THEN THE web app SHALL show the route guard's MSG08 no-permission page without sending a Projects request.
 
-### STORY-006: Add project popup (web app)
+### STORY-009: Add project popup (web app)
 - As a Project Manager, I want to test a key and save the initial settings in a popup so that I can add or reconnect a Project.
 - Acceptance:
-  - AC-006.1: WHEN a Project Manager clicks "Add project" on screen 3.1, THE web app SHALL open a `FormModal` titled "Add project" with an empty required "Project key" field, "Test connection" and Cancel, with settings and Save hidden.
-  - AC-006.2: IF Project key is empty or only whitespace when Test connection is clicked, THEN THE web app SHALL show MSG01 below it with params `{field_name: "Project key"}` and send no request.
-  - AC-006.3: IF a nonblank Project key exceeds 20 UTF-16 code units as typed, THEN THE web app SHALL show MSG02 below it with params `{field_name: "Project key", max_length: 20}`, preserve the whole input and send no request.
-  - AC-006.4: WHEN Test connection is clicked with a locally valid key, THE web app SHALL send one `POST /api/v1/projects/connection-test` with the original `jiraProjectKey`, however often the button is clicked while it runs.
-  - AC-006.5: WHEN the connection test answers 200, THE web app SHALL show MSG47 with params `{tracker_name: "Jira"}` as a toast.
-  - AC-006.6: WHEN the connection test answers 200, THE web app SHALL reveal a "Done statuses" multi-select containing every returned status by name and id, preselected from `doneStatusIds`.
-  - AC-006.7: WHEN the connection test answers 200, THE web app SHALL reveal "Review range" prefilled from `reviewRange` and the Save button.
-  - AC-006.8: WHEN the Project Manager edits Project key after a successful test, THE web app SHALL discard the tested result and hide the settings and Save until another successful test.
-  - AC-006.9: IF no Done status is selected when Save is clicked, THEN THE web app SHALL show MSG01 below Done statuses with params `{field_name: "Done statuses"}` and send no request.
-  - AC-006.10: IF Review range is empty when Save is clicked, THEN THE web app SHALL show MSG01 below it with params `{field_name: "Review range"}` and send no request.
-  - AC-006.11: IF Review range is not a whole number from 1 through 2,147,483,647 when Save is clicked, THEN THE web app SHALL show MSG44 below it with params `{}` and send no request.
-  - AC-006.12: WHEN Save is clicked with tested settings passing local checks, THE web app SHALL send one `POST /api/v1/projects` with `jiraProjectKey` from the tested canonical key, the selected `doneStatusIds` and numeric `reviewRange`, however often Save is clicked while it runs.
-  - AC-006.13: WHEN Save answers 201 or 200, THE web app SHALL close the popup.
-  - AC-006.14: WHEN Save answers 201 or 200, THE web app SHALL show MSG05 as a toast.
-  - AC-006.15: WHEN Save answers 201 or 200, THE web app SHALL invalidate the generated `listProjects` query key so the Projects table refreshes.
-  - AC-006.16: IF either request returns MSG49 on `jiraProjectKey`, THEN THE web app SHALL show that message below Project key with the server's params.
-  - AC-006.17: IF either request returns MSG48, THEN THE web app SHALL show it inline in the popup with the server's params.
-  - AC-006.18: IF either request returns another field error, THEN THE web app SHALL show its message by code and params below the corresponding field.
-  - AC-006.19: IF either request returns another error without a field error, THEN THE web app SHALL show its message by code and params using the shared error handling, falling back to MSG06 when no recognised code exists.
-  - AC-006.20: IF Test connection or Save fails, THEN THE web app SHALL keep the popup open with the entered values and any previously revealed settings intact.
-  - AC-006.21: WHILE Test connection or Save is running, THE web app SHALL prevent field edits and further Test connection or Save requests.
-  - AC-006.22: WHILE Test connection or Save is running, THE web app SHALL ignore Cancel, the close icon, Escape and mask dismissal.
-  - AC-006.23: WHEN the Project Manager dismisses the idle popup, THE web app SHALL close it without a request and clear its values, messages and tested result before the next opening.
-  - AC-006.24: THE Add project popup SHALL contain no token, service-account email, service-account credential or field mapping editor.
+  - AC-009.1: WHEN a Project Manager clicks "Add project" on screen 3.1, THE web app SHALL open a `FormModal` titled "Add project" with an empty required "Project key" field, "Test connection" and Cancel, with settings and Save hidden.
+  - AC-009.2: IF Project key is empty or only whitespace when Test connection is clicked, THEN THE web app SHALL show MSG01 below it with params `{field_name: "Project key"}` and send no request.
+  - AC-009.3: IF a nonblank Project key exceeds 20 UTF-16 code units as typed, THEN THE web app SHALL show MSG02 below it with params `{field_name: "Project key", max_length: 20}`, preserve the whole input and send no request.
+  - AC-009.4: WHEN Test connection is clicked with a locally valid key, THE web app SHALL send one `POST /api/v1/projects/connection-test` with the original `jiraProjectKey`, however often the button is clicked while it runs.
+  - AC-009.5: WHEN the connection test answers 200, THE web app SHALL show MSG47 with params `{tracker_name: "Jira"}` as a toast.
+  - AC-009.6: WHEN the connection test answers 200, THE web app SHALL reveal a "Done statuses" multi-select containing every returned status by name and id, preselected from `doneStatusIds`.
+  - AC-009.7: WHEN the connection test answers 200, THE web app SHALL reveal "Review range" prefilled from `reviewRange` and the Save button.
+  - AC-009.8: WHEN the Project Manager edits Project key after a successful test, THE web app SHALL discard the tested result and hide the settings and Save until another successful test.
+  - AC-009.9: IF no Done status is selected when Save is clicked, THEN THE web app SHALL show MSG01 below Done statuses with params `{field_name: "Done statuses"}` and send no request.
+  - AC-009.10: IF Review range is empty when Save is clicked, THEN THE web app SHALL show MSG01 below it with params `{field_name: "Review range"}` and send no request.
+  - AC-009.11: IF Review range is not a whole number from 1 through 2,147,483,647 when Save is clicked, THEN THE web app SHALL show MSG44 below it with params `{}` and send no request.
+  - AC-009.12: WHEN Save is clicked with tested settings passing local checks, THE web app SHALL send one `POST /api/v1/projects` with `jiraProjectKey` from the tested canonical key, the selected `doneStatusIds` and numeric `reviewRange`, however often Save is clicked while it runs.
+  - AC-009.13: WHEN Save answers 201 or 200, THE web app SHALL close the popup.
+  - AC-009.14: WHEN Save answers 201 or 200, THE web app SHALL show MSG05 as a toast.
+  - AC-009.15: WHEN Save answers 201 or 200, THE web app SHALL invalidate the generated `listProjects` query key so the Projects table refreshes.
+  - AC-009.16: IF either request returns MSG49 on `jiraProjectKey`, THEN THE web app SHALL show that message below Project key with the server's params.
+  - AC-009.17: IF either request returns MSG48, THEN THE web app SHALL show it inline in the popup with the server's params.
+  - AC-009.18: IF either request returns another field error, THEN THE web app SHALL show its message by code and params below the corresponding field.
+  - AC-009.19: IF either request returns another error without a field error, THEN THE web app SHALL show its message by code and params using the shared error handling, falling back to MSG06 when no recognised code exists.
+  - AC-009.20: IF Test connection or Save fails, THEN THE web app SHALL keep the popup open with the entered values and any previously revealed settings intact.
+  - AC-009.21: WHILE Test connection or Save is running, THE web app SHALL prevent field edits and further Test connection or Save requests.
+  - AC-009.22: WHILE Test connection or Save is running, THE web app SHALL ignore Cancel, the close icon, Escape and mask dismissal.
+  - AC-009.23: WHEN the Project Manager dismisses the idle popup, THE web app SHALL close it without a request and clear its values, messages and tested result before the next opening.
+  - AC-009.24: THE Add project popup SHALL contain no token, service-account email, service-account credential or field mapping editor.
 
-### STORY-007: Restrict Project operations to the caller's Workspace and Department
+### STORY-010: Restrict Project operations to the caller's Workspace and Department
 - As the Workspace, I want all three Project endpoints restricted to eligible Project Managers so that Project links cannot cross Departments or Workspaces.
 - Acceptance:
-  - AC-007.1: THE handlers for `POST /api/v1/projects/connection-test`, `POST /api/v1/projects` and `GET /api/v1/projects` SHALL each declare `@PreAuthorize` using `Roles.PROJECT_MANAGER`.
-  - AC-007.2: IF the caller has no signed-in session, THEN THE system SHALL answer 401 MSG07 with params `{}` and no field error, without a write or Jira call.
-  - AC-007.3: IF a signed-in caller without the Project Manager role sends a request with a valid body, THEN THE system SHALL answer 403 MSG08 with params `{}` and no field error, without a write or Jira call.
-  - AC-007.4: IF an authenticated Project Manager has no Department, the Department is not Active, or the caller account is not Active or no longer holds that role, THEN THE system SHALL answer 403 MSG08 with params `{}` and no field error, without a write or Jira call.
-  - AC-007.5: IF no Workspace is bound for an authenticated Project Manager, THEN THE system SHALL answer 500 MSG06 with params `{}` and no field error, without a write or Jira call.
-  - AC-007.6: WHILE any of the three endpoints runs in a bound Workspace, THE system SHALL read and write Project, Department, membership and audit data only in that Workspace's database, allowing the same Jira key in a different Workspace database.
-  - AC-007.7: THE system SHALL derive the Workspace from `TenantScope` and the caller's own Department from `app_user.department_id` joined to `department`, without accepting either scope from request content.
-  - AC-007.8: THE system SHALL check the bound Workspace and the caller's eligibility (AC-007.4) before the key format check, the link check and any Jira call, for all three endpoints.
+  - AC-010.1: THE handlers for `POST /api/v1/projects/connection-test`, `POST /api/v1/projects` and `GET /api/v1/projects` SHALL each declare `@PreAuthorize` using `Roles.PROJECT_MANAGER`.
+  - AC-010.2: IF the caller has no signed-in session, THEN THE system SHALL answer 401 MSG07 with params `{}` and no field error, without a write or Jira call.
+  - AC-010.3: IF a signed-in caller without the Project Manager role sends a request with a valid body, THEN THE system SHALL answer 403 MSG08 with params `{}` and no field error, without a write or Jira call.
+  - AC-010.4: IF an authenticated Project Manager has no Department, the Department is not Active, or the caller account is not Active or no longer holds that role, THEN THE system SHALL answer 403 MSG08 with params `{}` and no field error, without a write or Jira call.
+  - AC-010.5: IF no Workspace is bound for an authenticated Project Manager, THEN THE system SHALL answer 500 MSG06 with params `{}` and no field error, without a write or Jira call.
+  - AC-010.6: WHILE any of the three endpoints runs in a bound Workspace, THE system SHALL read and write Project, Department, membership and audit data only in that Workspace's database, allowing the same Jira key in a different Workspace database.
+  - AC-010.7: THE system SHALL derive the Workspace from `TenantScope` and the caller's own Department from `app_user.department_id` joined to `department`, without accepting either scope from request content.
+  - AC-010.8: THE system SHALL check the bound Workspace and the caller's eligibility (AC-010.4) before the key format check, the link check and any Jira call, for all three endpoints.
 
 ## Out of Scope
 
-- UC-17 and UC-18: adding/removing Ticket Resolver members (KAN-128/KAN-129).
+KAN-128/129:
+- Editing a Project's settings after it is added (the Settings tab of 3.2) and removing a Project. Adding a Project, reconnecting it and the Projects table of 3.1 are KAN-127 (STORY-004..010 below).
+- The Escalation handler — no Project setting holds it yet (KAN-127 Settings).
+- Refusing the Solution Form and its resubmission to a removed member — `jira-app` (KAN-126, UC-19) checks `project_membership`; this module only removes the row (contract below).
+- Ticket visibility of members — already derived from `project_membership` by identity's scope check (KAN-118, GBR-02).
+- The Solution Form and who sees it — `jira-app` (UC-19).
+- Emailing or notifying the added people.
+
+KAN-127:
+- UC-15 and UC-16 member management (add and remove Ticket Resolvers on 3.2): KAN-128/KAN-129, STORY-001..003 above.
 - Screen 3.2 Project Detail, including its Settings tab and editing settings after adding (D15). No current story owns that edit; it is a backlog gap.
 - Connection status, Last import, per-row Test connection and Remove on screen 3.1 (D13).
 - A field mapping editor; a new Project stores NULL for standard Jira fields (D14).
@@ -193,8 +271,22 @@ These are known limits of the current dependencies, not defects of this story.
 
 ## Interface Contracts
 
-### Exposed by this module
+### Exposed by this module — KAN-128/129 (STORY-001..003)
+- REST, tag `projects`, all `@PreAuthorize` `PROJECT_MANAGER` role plus the per-Project check of AC-001.3:
+  - `GET /api/v1/projects/{projectId}` → `ProjectSummaryResponse { id: UUID, jiraProjectKey, departmentName, projectManagerName, status: ACTIVE|REMOVED }`
+  - `GET /api/v1/projects/{projectId}/members` → `ProjectMemberResponse[] { userId: UUID, fullName, email, role: PROJECT_MANAGER|MEMBER, dateAdded: Instant }`
+  - `GET /api/v1/projects/{projectId}/member-candidates?q=` → `MemberCandidateResponse[] { userId: UUID, fullName, email }`
+  - `POST /api/v1/projects/{projectId}/members` body `AddProjectMembersRequest { userIds: UUID[] }` → 201 `ProjectMemberResponse[]`
+  - `DELETE /api/v1/projects/{projectId}/members/{userId}` → 200 `ProjectMemberResponse[]`
+- `project_membership` is the source of truth for who may write Solutions for a Project: a person without a row for the Project is not a member. The Solution Form (`jira-app`, KAN-126) must refuse to show or accept a submission or resubmission from a non-member.
+- `AuditAction.PROJECT_MEMBER_CHANGE` (backend enum, DB check constraint, audit-log screen label "Project member change").
 
+### Required from other modules — KAN-128/129 (STORY-001..003)
+- `identity`: `app_user` (status, full name, email), `user_role`, the signed-in caller id; `project_membership` table (017, 023). Not changed.
+- `be-foundation`: `AuditService`.
+- `fe-foundation`: route `paths.projectDetail()` with role `PROJECT_MANAGER` (exists), shared UI, MSG texts.
+
+### Exposed by this module — KAN-127 (STORY-004..010)
 Exactly three operations are added to `frontend/openapi/tsolve-api.yaml` before implementation, all tagged `projects`, all requiring the Project Manager role. The browser uses generated API code through `@/shared/api` and TanStack Query. No Project credential or caller-supplied Department/Workspace property is in a request schema.
 
 | Method and path | operationId | Request | Success |
@@ -426,12 +518,11 @@ Conflict response (same envelope for both POST operations):
 
 ### Persistence contract
 
-Changeset `029-project-done-statuses.sql`, author `project`, id `029-project-done-statuses`, is included last in `db.changelog-master.xml` (D19). It changes `done_status` from VARCHAR to JSONB with the preservation rules in AC-002.19; no applied changeset is edited. No new review-range CHECK is permitted (D20).
+Changeset `036-project-done-statuses.sql`, author `project`, id `036-project-done-statuses`, is included last in `db.changelog-master.xml` (D19). It changes `done_status` from VARCHAR to JSONB with the preservation rules in AC-005.19; no applied changeset is edited. No new review-range CHECK is permitted (D20).
 
 `ProjectLinkRepository` uses `NamedParameterJdbcTemplate` (D22), deliberately differing from the JPA repository default in `backend/AGENTS.md` section 3. The existing `Project` entity remains unchanged. Insert uses `ON CONFLICT (jira_project_key) DO NOTHING RETURNING`; no returned row means 409 MSG49, not a swallowed failed transaction. Reconnect uses a conditional `UPDATE ... WHERE status = 'REMOVED'` on the identified row, after eligibility checks. No updated row means 409 MSG49. A losing insert never turns into an implicit reconnect. Membership replacement deletes the old Project Manager row before `ON CONFLICT (user_id, project_id) DO UPDATE` upserts the caller; it respects `uq_membership_one_manager`. Conditional writes and audit share one transaction. The test never calls these writes.
 
-### Required from other modules
-
+### Required from other modules — KAN-127 (STORY-004..010)
 | Owner | Required interface | Use |
 |-------|--------------------|-----|
 | tracker | `tracker.service.TrackerProjectService.findProject(String projectKey)` returning `tracker.dto.TrackerProjectLookup(outcome, key, statuses)` | New tracker STORY-013, D28. `FOUND`, `NOT_FOUND`, `DENIED`, `UNAVAILABLE`; no client or exception leaks into Project. |
@@ -446,13 +537,17 @@ Tracker already calls `ProjectService.findActivePublicIdByJiraProjectKey` for is
 
 ## Definition of Done
 
-- [ ] Every acceptance criterion has a behavioural test naming its AC id: backend suffix such as `_AC_001_7`, frontend prefix such as `AC-005.3`.
+- [ ] Every acceptance criterion has a test whose name starts with its AC id
+- [ ] `mvn verify` passes in `backend/` (tests + `spotless:check`)
+- [ ] In `frontend/`: `npm run format:check`, `lint`, `typecheck`, `test`, `build` pass, and `npm run generate:api` leaves no diff in `src/shared/api/generated`
+- [ ] `bun harnessclaude/hooks/sdd.ts trace project-integration` reports every criterion covered
+- [ ] Every acceptance criterion has a behavioural test naming its AC id: backend suffix such as `_AC_004_7`, frontend prefix such as `AC-008.3`.
 - [ ] `bun harnessclaude/hooks/sdd.ts check project-integration` and `check tracker` pass; specs are approved separately before code is written.
 - [ ] `sdd.ts trace project-integration` and tracker STORY-013 trace pass using each module's code and test paths.
 - [ ] Backend `mvn verify` passes, including tests and `mvn spotless:check`; PostgreSQL tests prove rollback, concurrency and Workspace isolation using the existing shared-container test setup.
 - [ ] Frontend `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run test` and `npm run build` pass in `frontend/`.
 - [ ] `npm run generate:api` leaves no diff in `src/shared/api/generated` after generation from the updated YAML contract.
-- [ ] Changeset 029 applies on an empty database (every IT starts on the full changelog) and its statements convert a pre-029 `project` shape holding NULL and non-null legacy Done status values with every other column unchanged; existing zero/negative review fallback fixtures still work.
+- [ ] Changeset 036 applies on an empty database (every IT starts on the full changelog) and its statements convert a pre-036 `project` shape holding NULL and non-null legacy Done status values with every other column unchanged; existing zero/negative review fallback fixtures still work.
 - [ ] MSW supports list, test, create and reconnect consistently, including a Removed fixture of the caller's Department; page tests verify refresh and error retention.
 - [ ] The separate D29 MSG48 catalog quick change is complete before the screen task; the interim limits and GBR-04 follow-up remain visible in the implementation handoff.
 - [ ] Each feature stops after verification for user agreement on its commit, with one feature per code commit plus its harness commit; no push, merge or pull request without an explicit request.

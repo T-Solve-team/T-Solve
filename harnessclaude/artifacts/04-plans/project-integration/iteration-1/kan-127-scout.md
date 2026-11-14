@@ -175,7 +175,7 @@ Current `project` (`C/002-tenant-project-suggestion.sql:16-26` + `C/008-search-p
 | `review_range` | INT, nullable, **no default, no check** | same | The default 3 and the rule ≥ 1 are enforced in the app only (Q5) |
 | `status` | VARCHAR(20) DEFAULT 'ACTIVE' | same | none |
 | Jira project id | absent | absent | A Jira key rename breaks the link (Q13) |
-| created / updated time | absent | absent | AC-001.20 no longer requires them (memory 04/11). "Added on" of the PM comes from `project_membership.date_added` |
+| created / updated time | absent | absent | AC-004.20 no longer requires them (memory 04/11). "Added on" of the PM comes from `project_membership.date_added` |
 
 `project_membership` (`C/017-project-membership.sql:7-15`): PK `(user_id, project_id)`, role `PROJECT_MANAGER` or `MEMBER`, `date_added`. `uq_membership_one_manager` allows at most one PM per Project (`C/023-identity-one-project-manager.sql:4-5`). On reconnect the old PM row must therefore go before the new PM row is inserted, as `UserRoleUpdateRepository.transferProject` does (lines 103-119).
 

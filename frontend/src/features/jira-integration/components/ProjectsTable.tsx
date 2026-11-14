@@ -2,7 +2,7 @@ import type { ProjectRow } from '@/shared/api';
 import { msg } from '@/shared/messages';
 import { cells, DataTable, type DataTableColumn } from '@/shared/ui';
 
-/** Screen 3.1 Projects table (spec AC-005.2–AC-005.5); no paging or client sorting (D26). */
+/** Screen 3.1 Projects table (spec AC-008.2–AC-008.5); no paging or client sorting (D26). */
 const COLUMNS: DataTableColumn<ProjectRow>[] = [
   { key: 'projectId', title: 'Project ID', width: 320, render: (_, p) => cells.text(p.projectId) },
   {

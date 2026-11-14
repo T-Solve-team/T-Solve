@@ -123,13 +123,13 @@ KAN-127, UC-16: test/add/reconnect a Jira Project and list the caller's Departme
 | Task | Assignee | Status |
 |------|----------|--------|
 | tracker 19 · jira-project-read — Read a Jira project and statuses (KAN-127) | Đặng Tấn Bình | pending |
-| 1 · project-done-statuses-schema — Preserve legacy settings as JSONB (KAN-127) | Đặng Tấn Bình | pending |
-| 2 · project-connection-test — Connection test and prefill (KAN-127) | Đặng Tấn Bình | pending |
-| 3 · project-create — Project, membership and audit transaction (KAN-127) | Đặng Tấn Bình | pending |
-| 4 · project-reconnect — Reconnect the retained Project and manager membership (KAN-127) | Đặng Tấn Bình | pending |
-| 5 · project-list — Own Department Projects (KAN-127) | Đặng Tấn Bình | pending |
-| 6 · jira-integration-projects-table — Department, table and states (KAN-127) | Đặng Tấn Bình | pending |
-| 7 · jira-integration-add-project — Test and Save popup (KAN-127) | Đặng Tấn Bình | pending |
+| 5 · project-done-statuses-schema — Preserve legacy settings as JSONB (KAN-127) | Đặng Tấn Bình | pending |
+| 6 · project-connection-test — Connection test and prefill (KAN-127) | Đặng Tấn Bình | pending |
+| 7 · project-create — Project, membership and audit transaction (KAN-127) | Đặng Tấn Bình | pending |
+| 8 · project-reconnect — Reconnect the retained Project and manager membership (KAN-127) | Đặng Tấn Bình | pending |
+| 9 · project-list — Own Department Projects (KAN-127) | Đặng Tấn Bình | pending |
+| 10 · jira-integration-projects-table — Department, table and states (KAN-127) | Đặng Tấn Bình | pending |
+| 11 · jira-integration-add-project — Test and Save popup (KAN-127) | Đặng Tấn Bình | pending |
 ### workspace (added 2026-11-11)
 
 UC-12 Create Department. Spec: `artifacts/03-modules/workspace/spec.md`; plan: `artifacts/04-plans/workspace/iteration-1/tasks.md`.
@@ -138,6 +138,25 @@ UC-12 Create Department. Spec: `artifacts/03-modules/workspace/spec.md`; plan: `
 |------|----------|--------|
 | 1 · Create Department API, Space and audit (KAN-120) | Đặng Tấn Bình | pending |
 | 2 · New Department on Workspace Settings (KAN-120) | Đặng Tấn Bình | pending |
+
+### wiki (added 2026-11-13)
+
+UC-38 to UC-50. Spec: `artifacts/03-modules/wiki/spec.md`; plan: `artifacts/04-plans/wiki/iteration-1/tasks.md`. Tasks 6 and 9 wait for `FileStorage` (KAN-96).
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| 1 · View rule, tables and retrieval ports (KAN-170) | Đặng Nhật Minh | pending |
+| 2 · Browse, search and read API (KAN-170) | Đặng Nhật Minh | pending |
+| 3 · Wiki Home and Wiki Document screens (KAN-170, KAN-171) | Đặng Nhật Minh | pending |
+| 4 · Folder API (KAN-166, KAN-172, KAN-174) | Đặng Nhật Minh | pending |
+| 5 · Folder popup and actions (KAN-166, KAN-172, KAN-174) | Đặng Nhật Minh | pending |
+| 6 · Upload API and download (KAN-167, KAN-168, KAN-169) | Đặng Nhật Minh | pending |
+| 7 · Indexing job (KAN-169) | Đặng Nhật Minh | pending |
+| 8 · Upload Documents screen (KAN-167, KAN-168) | Đặng Nhật Minh | pending |
+| 9 · Trash API (KAN-173, KAN-175 to KAN-177) | Đặng Nhật Minh | pending |
+| 10 · Delete button and Trash tab (KAN-173, KAN-175 to KAN-177) | Đặng Nhật Minh | pending |
+| 11 · Space permissions API (KAN-163 to KAN-165) | Đặng Nhật Minh | pending |
+| 12 · Permissions tab (KAN-163 to KAN-165) | Đặng Nhật Minh | pending |
 
 ## Order — feedback first
 
@@ -226,6 +245,11 @@ UC-12 Create Department. Spec: `artifacts/03-modules/workspace/spec.md`; plan: `
 ### workspace
 1. `mvn verify` in `backend/`: `DepartmentCreationIT` shows one Department, Space and audit entry per create; MSG43 for Active, Deleted, case-only and concurrent duplicates; and a rollback when the audit write fails.
 2. Mock mode, Admin, Workspace Settings: New Department, Save empty shows MSG01; an existing name such as `it` shows MSG43; a new name closes the popup with MSG05. In mock mode the table does not gain the row; `WorkspaceSettingsPage.test.tsx` proves the refresh.
+
+### wiki
+1. `mvn verify` in `backend/`: `WikiAccessIT` shows who sees which Space and document (manager, own Department, Department and user permissions, deactivated user, Company-wide only for AI Solution Suggestion).
+2. Mock mode, Employee: Wiki Home shows the Company-wide view, the viewable Spaces, a folder tree and search; a document opens with Download.
+3. Mock mode, Knowledge Manager: create a folder (MSG85, MSG86 on errors), upload two files (MSG88, MSG89, MSG90 rows, MSG95), delete a document (MSG100, MSG101), restore it from the Trash tab (MSG102), grant and remove a Department (MSG106, MSG107 on the own Department).
 
 ## Actual Outcomes
 <!-- filled at end of iteration, split by module -->

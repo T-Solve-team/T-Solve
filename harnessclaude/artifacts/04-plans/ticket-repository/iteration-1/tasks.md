@@ -1,7 +1,7 @@
 ---
 module: ticket-repository
 date: 2026-11-07
-total_tasks: 11
+total_tasks: 28
 owner: Dev
 ---
 
@@ -171,4 +171,297 @@ Order: Tasks 1–4 and 7 need nothing else. Tasks 5, 6, 8 and 9 start after the 
 - Modify: `T/service/JiraIssueSource.java`, `T/client/JiraRestIssueSource.java`, `T/service/impl/JiraImportServiceImpl.java`
 - Test: `TT/client/JiraRestIssueSourceTest.java`, `TT/service/impl/JiraImportServiceImplTest.java` (AC-001.13)
 **Dependencies:** Task 11
+**Estimated size:** small
+
+## Task 13: Ticket status model — one state machine for submit, review and import
+
+**Story:** STORY-005
+**Feature:** ticket-status-model
+**Description:** KAN-132, master design "Change 2026-11-13". `TicketStatus.canMoveTo` with the AC-005.1 table;
+`Ticket.moveTo(to, at)` throws `BusinessRuleException("MSG06")` on a forbidden change; `applyReview` goes through it.
+New `TicketTransitions.move(tickets, to, at)`: check all, then move all, then publish one `TicketsPublishedEvent`
+(to PUBLISHED) or new `TicketsUnpublishedEvent` (to UNPUBLISHED) with every id. `TicketDecisionServiceImpl.decide`
+uses it, so review Approve publishes `TicketsPublishedEvent`. Bulk SQL (expiry, send back) and import Finish unchanged.
+**Files:**
+- Create: `T/service/impl/TicketTransitions.java`, `T/event/TicketsUnpublishedEvent.java`
+- Modify: `T/entity/TicketStatus.java`, `T/entity/Ticket.java`, `T/service/impl/TicketDecisionServiceImpl.java`, `T/event/TicketsPublishedEvent.java`
+- Test: `TT/entity/TicketStatusTest.java` (AC-005.1 every one of the 36 pairs, AC-005.2 `Ticket.imported`),
+  `TT/service/impl/TicketTransitionsTest.java` (AC-005.3 mixed batch → MSG06 and no status changed, AC-005.4 one
+  event with all ids, AC-005.5 one unpublished event, no event for REJECTED/CHANGES_REQUESTED); existing
+  `review/TicketDecisionIT` and `ImportConfirm*` tests stay green.
+**Dependencies:** none
+**Estimated size:** small
+
+## Task 14: Manual entry contract
+
+**Story:** STORY-006
+**Feature:** manual-ticket-contract
+**Description:** KAN-133, master design "Change 2026-11-14". In `frontend/openapi/tsolve-api.yaml` (tag `import`):
+`POST /imports/manual` (`ManualTicketRequest` → 201 `ImportResultResponse`; 400 with `fieldErrors`, 403, 404, 409),
+`POST /imports/manual/drafts` (`ManualTicketRequest` → `DraftSavedResponse`; 403, 404),
+`GET /imports/manual/drafts/{previewId}` (→ `ManualTicketDraft`; 403, 404); the `source` enum of
+`ImportDraftSummary` gains `MANUAL`. Field shapes as in the spec's Interface Contracts. Run `npm run generate:api`
+and keep the generated client. Backend DTO records match the schema.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
+- Create: `T/dto/ManualTicketRequest.java`, `T/dto/ManualTicketDraft.java`
+**Dependencies:** none
+**Estimated size:** small
+
+## Task 15: Save a manual ticket
+
+**Story:** STORY-006
+**Feature:** manual-ticket-create
+**Description:** Master design "Change 2026-11-14" (Save, Writer). `ManualTicketController.create` +
+`ManualTicketService.create(TSolveUser, ManualTicketRequest)`. Validation reports every invalid field at once
+(AC-006.3–AC-006.6); 409 MSG31 on a taken Ticket ID, also on a unique-violation race (AC-006.7); 403 MSG08
+(AC-006.8); Published Ticket + approve decision + Completed MANUAL batch + MSG32 (AC-006.1); one
+`TicketsPublishedEvent` (AC-006.2). `Ticket.writerId` insertable and set. `draftId` is Task 16 — ignore it here.
+**Files:**
+- Create: `T/controller/ManualTicketController.java`, `T/service/ManualTicketService.java`,
+  `T/service/impl/ManualTicketServiceImpl.java`
+- Modify: `T/entity/Ticket.java`
+- Test: `TT/service/impl/ManualTicketServiceImplTest.java` (AC-006.1–AC-006.8),
+  `TT/controller/ManualTicketControllerIT.java` (AC-006.1, AC-006.3, AC-006.7, AC-006.8 over HTTP with the real DB)
+**Dependencies:** Task 14
+**Estimated size:** medium
+
+## Task 16: Manual entry Drafts
+
+**Story:** STORY-006
+**Feature:** manual-ticket-drafts
+**Description:** Master design "Change 2026-11-14" (Drafts). `POST /imports/manual/drafts` creates or updates (by
+`draftId`) a Manual Draft, checks only the Project, answers MSG41 (AC-006.9, AC-006.10);
+`GET /imports/manual/drafts/{id}` (AC-006.11); `create` with `draftId` deletes the Draft in its transaction and keeps
+it on any rejection (AC-006.12); 404 MSG04 for another user's, a missing or a non-Manual Draft (AC-006.13).
+`ImportDraftServiceImpl.list` and `delete` accept MANUAL; a CSV preview stays 404.
+**Files:**
+- Modify: `T/controller/ManualTicketController.java`, `T/service/ManualTicketService.java`,
+  `T/service/impl/ManualTicketServiceImpl.java`, `T/service/impl/ImportDraftServiceImpl.java`,
+  `T/entity/ImportPreview.java`, `T/entity/ImportPreviewRow.java`
+- Test: `TT/service/impl/ManualTicketDraftTest.java` (AC-006.9–AC-006.13), extend `ManualTicketControllerIT`
+  (save draft → list shows MANUAL → reopen → save → Draft gone)
+**Dependencies:** Task 15
+**Estimated size:** medium
+
+## Task 17: Manual entry tab
+
+**Story:** STORY-006
+**Feature:** manual-entry-tab
+**Description:** Master design "Change 2026-11-14" (Web app). Enable the Manual entry tab of `ImportTicketsPage`
+with `ManualEntryForm`; the tab and the Draft come from `?tab=manual&draftId=N`; `DraftsList` labels MANUAL
+"Manual" and opens it on that tab. MSW handlers and data for the three endpoints. Server `fieldErrors` shown under
+each field with the input kept (AC-006.14).
+**Files:**
+- Create: `F/components/ManualEntryForm.tsx`, `F/components/ManualEntryForm.test.tsx`
+- Modify: `F/pages/ImportTicketsPage.tsx`, `F/pages/ImportTicketsPage.test.tsx`, `F/components/DraftsList.tsx`,
+  `F/api/**` (API helpers, if the feature keeps them there), `F/mocks/handlers.ts`, `F/mocks/data.ts`
+- Test: `ManualEntryForm.test.tsx` (AC-006.9, AC-006.11, AC-006.14 — test names cite the ids)
+**Dependencies:** Task 14 (Tasks 15–16 only for a live run)
+**Estimated size:** medium
+
+## Task 18: Evidence contract and schema
+
+**Story:** STORY-006
+**Feature:** manual-evidence-contract
+**Description:** Master design "Change 2026-11-14 (2)". `frontend/openapi/tsolve-api.yaml`: `createManualTicket` and
+`saveManualTicketDraft` take `multipart/form-data` (part `entry` = `ManualTicketRequest` as JSON, part `files` =
+array of binary, 0–5); `ManualTicketRequest` gains `keepEvidenceIds` (uuid[], optional); `ManualTicketDraft`
+gains `evidence` (array of `{ evidenceId uuid, fileName, fileSize int64 }`, required, may be empty); 503 on both.
+`npm run generate:api`. New Liquibase changeset: `evidence.storage_key`, table `import_preview_evidence`. Backend
+DTO changes (`ManualTicketRequest.keepEvidenceIds`, `ManualTicketDraft.evidence` + record `ManualEvidence`) and
+entities (`TicketEvidence` gets a constructor and `storage_key`; new `ImportPreviewEvidence` + repository).
+Existing callers compile; frontend compiles (the form may send an empty `files` for now).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`, `T/dto/ManualTicketRequest.java`, `T/dto/ManualTicketDraft.java`, `T/entity/TicketEvidence.java`
+- Create: `backend/src/main/resources/db/changelog/changes/NNN-manual-entry-evidence.sql` (+ master include), `T/dto/ManualEvidence.java`, `T/entity/ImportPreviewEvidence.java`, `T/repository/ImportPreviewEvidenceRepository.java`
+**Dependencies:** none
+**Estimated size:** small
+
+## Task 19: Store Evidence on save and Save as draft
+
+**Story:** STORY-006
+**Feature:** manual-evidence-backend
+**Description:** Master design "Change 2026-11-14 (2)" (Flow, Reopen). Controller takes multipart. File rules
+(AC-006.16, AC-006.17), store outside the transaction, compensate on failure (AC-006.20), 503 MSG06 when storage is
+missing or failing (AC-006.21), Evidence rows on save (AC-006.15) and on Save as draft (AC-006.18), dropped Draft
+files deleted after commit and on Draft delete (AC-006.19), reopen lists Evidence (AC-006.18).
+**Files:**
+- Modify: `T/controller/ManualTicketController.java`, `T/service/ManualTicketService.java`, `T/service/impl/ManualTicketServiceImpl.java`, `T/service/impl/ImportDraftServiceImpl.java`
+- Create: `T/exception/StorageUnavailableException.java` (if no fitting base/exception exists)
+- Test: `TT/service/impl/ManualTicketEvidenceTest.java` (AC-006.15–AC-006.21, FileStorage mocked), extend `TT/controller/ManualTicketControllerIT.java` (multipart save with a mocked `FileStorage` bean: Evidence rows with storage keys; MSG34/MSG72 400; 503 without storage)
+**Dependencies:** Task 18
+**Estimated size:** medium
+
+## Task 20: Evidence on the Manual entry tab
+
+**Story:** STORY-006
+**Feature:** manual-evidence-tab
+**Description:** Master design "Change 2026-11-14 (2)" (Web app). Kit component `shared/ui/EvidenceUpload` (FE Lead
+review); `ManualEntryForm` Evidence field, multipart send, kept Draft files, `files` field errors; MSW handlers
+accept multipart and return Draft evidence (AC-006.22, AC-006.18 on screen).
+**Files:**
+- Create: `frontend/src/shared/ui/EvidenceUpload/EvidenceUpload.tsx`, `index.ts`, `EvidenceUpload.test.tsx`
+- Modify: `frontend/src/shared/ui/index.ts`, `F/components/ManualEntryForm.tsx`, `F/components/ManualEntryForm.test.tsx`, `F/mocks/handlers.ts`
+- Test: `ManualEntryForm.test.tsx` (AC-006.22, AC-006.18), `EvidenceUpload.test.tsx`
+**Dependencies:** Task 18
+**Estimated size:** medium
+
+## Task 21: Date range on Import Batches
+
+**Story:** STORY-007
+**Feature:** import-batch-date-range
+**Description:** KAN-134, master design "Change 2026-11-14: Import History and Ticket Detail" (Date range, D25).
+Changeset `032-ticket-import-batch-date-range.sql` adds `import_batch.date_from` / `date_to` (DATE, nullable).
+`ImportBatch` maps them; `completed(…)` / `failed(…)` take them. Jira Finish (Completed and Failed) passes the
+preview's `resolvedFrom` / `resolvedTo`; `ImportBatchRecorder.recordJiraFailed` takes the pull request's range; CSV
+and Manual pass null (AC-007.8).
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/032-ticket-import-batch-date-range.sql`
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `T/entity/ImportBatch.java`,
+  `T/service/impl/ImportBatchRecorder.java`, `T/service/impl/JiraImportServiceImpl.java`,
+  `T/service/impl/ImportConfirmServiceImpl.java`, `T/service/impl/ManualTicketServiceImpl.java`
+- Test: `TT/service/impl/ImportHistoryDateRangeIT.java` (AC-007.8: Jira Finish Completed and Failed carry the range,
+  a failed pull carries the request's range, CSV and Manual batches keep none); existing `ImportConfirm*`,
+  `Jira*` and `Manual*` tests stay green.
+**Dependencies:** none
+**Estimated size:** small
+
+## Task 22: Import History API
+
+**Story:** STORY-007
+**Feature:** import-history-api
+**Description:** Master design "Change 2026-11-14: Import History and Ticket Detail" (Shape, Query, Filters, Error
+code). OpenAPI first: `GET /imports/history` (tag `import`, operationId `getImportHistory`, query `projectId`,
+`source`, `dateFrom`, `dateTo`, `Page`, `Size`; 200 `ImportHistoryPage`, 400, 403) and the schemas
+`ImportHistoryPage`, `ImportHistoryItem` of the spec's Interface Contracts; `npm run generate:api`. Then
+`ImportHistoryController` (PM guard), `ImportHistoryService` + impl, the native page and count query in
+`ImportBatchRepository` (managed Projects through `project_membership`, legacy hex Project ids, `app_user` name or the
+stored value, newest first), MSG code extraction, Vietnam-time date filter, `from > to` → 400 MSG39.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (generated only),
+  `T/repository/ImportBatchRepository.java`
+- Create: `T/controller/ImportHistoryController.java`, `T/service/ImportHistoryService.java`,
+  `T/service/impl/ImportHistoryServiceImpl.java`, `T/dto/ImportHistoryItem.java`, `T/dto/ImportHistoryQuery.java`
+- Test: `TT/service/impl/ImportHistoryServiceImplTest.java` (AC-007.3 name or raw value, AC-007.4 MSG code only,
+  AC-007.6 MSG39), `TT/controller/ImportHistoryControllerIT.java` with the real DB (AC-007.1 only managed Projects,
+  newest first, paging; AC-007.2 every field incl. Department and legacy hex Project id; AC-007.3; AC-007.5 each
+  filter, 23:30 Vietnam time on `dateTo`, unmanaged `projectId` → empty page; AC-007.6; AC-007.7 TR → 403)
+**Dependencies:** Task 21
+**Estimated size:** medium
+
+## Task 23: Import History screen
+
+**Story:** STORY-007
+**Feature:** import-history-page
+**Description:** Master design "Change 2026-11-14: Import History and Ticket Detail" (Web app, Import History).
+Replace the placeholder `ImportHistoryPage` with the filters (Project, Source, Date range) and the server-paged
+table of AC-007.9 through the generated `useGetImportHistory`; "Date range / file" column (Jira range, CSV file
+name); empty page → MSG04 (AC-007.10). MSW handler and data for `GET /imports/history`.
+**Files:**
+- Modify: `F/pages/ImportHistoryPage.tsx`, `F/mocks/handlers.ts`, `F/mocks/data.ts`
+- Test: `F/pages/ImportHistoryPage.test.tsx` (AC-007.9 columns, Jira range vs CSV file name, filters sent as query
+  params; AC-007.10 MSG04 — test names cite the ids)
+**Dependencies:** Task 22 (Task 22's generated client; the backend only for a live run)
+**Estimated size:** medium
+
+## Task 24: Ticket Detail visibility and fields
+
+**Story:** STORY-008
+**Feature:** ticket-detail-scope
+**Description:** Master design "Change 2026-11-14: Import History and Ticket Detail" (Ticket Detail). Extends
+`ticket-review` code (D29, owner Phạm Tùng Dương). OpenAPI `ReviewTicketDetail` + optional nullable `department`
+`{id, name}`, `resolvedDate`, `sourceLink`, and 403 on `getReviewTicketDetail`; `npm run generate:api`.
+`ReviewReadController.detail` guard → `hasAnyRole(TICKET_RESOLVER, PROJECT_MANAGER)`.
+`TicketRepository.findPlacement`; `TicketReviewReadServiceImpl.detail` applies AC-008.1–AC-008.5 in the design's
+order with `ScopeAccessService.canAccessDepartment` and answers `AccessDeniedException` (403 MSG08);
+`TicketReviewView.Detail` + `Department`, `resolvedDate`, `sourceLink` filled by `TicketReviewMapper` (AC-008.6);
+`Ticket` maps `source_link` and `ImportConfirmServiceImpl.toTicket` copies the Jira row's `sourceUrl` (AC-008.7).
+`canDecide` unchanged. Update the `ReviewDecisionApiIT` assertions that change (design Risks).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (generated only),
+  `backend/src/main/java/vn/tsolve/review/controller/ReviewReadController.java`, `T/service/TicketReviewReadService.java`,
+  `T/service/impl/TicketReviewReadServiceImpl.java`, `T/dto/TicketReviewView.java`, `T/mapper/TicketReviewMapper.java`,
+  `T/repository/TicketRepository.java`, `T/entity/Ticket.java`, `T/service/impl/ImportConfirmServiceImpl.java`,
+  `T/service/impl/ManualTicketServiceImpl.java` (passes a null source link, if `Ticket.imported` changes signature),
+  `backend/src/test/java/vn/tsolve/review/ReviewDecisionApiIT.java`
+- Test: `TT/service/impl/TicketDetailVisibilityTest.java` (AC-008.1–AC-008.5 with mocks: TR of the Department, TR of
+  another Department, writer of a pending ticket, PM of the Project, PM of the Department but not the Project,
+  Employee-only caller, inactive Department, no Project row, unknown id), `TT/controller/TicketDetailIT.java` with the
+  real DB (AC-008.1, AC-008.3, AC-008.4, AC-008.5 over HTTP; AC-008.6 the three fields and `canDecide`; AC-008.7 a
+  Jira Finish stores the issue link); `CrossModuleIsolationIT` and the other `review/` tests stay green.
+**Dependencies:** none
+**Estimated size:** medium
+
+## Task 25: Ticket Detail screen
+
+**Story:** STORY-008
+**Feature:** ticket-detail-page
+**Description:** Master design "Change 2026-11-14: Import History and Ticket Detail" (Web app, Ticket Detail).
+`ReviewTicketContent` shows Department, Resolved date and Source link (http/https only as a link, new tab,
+`rel="noopener noreferrer"`; anything else as text) and the review due date only while `PENDING_REVIEW`.
+`ReviewTicketDetail` shows MSG08 inline with no content on 403; other failures keep `ErrorState` and the global
+MSG06 toast. Decision buttons unchanged.
+**Files:**
+- Modify: `frontend/src/features/review/components/ReviewTicketContent.tsx`,
+  `frontend/src/features/review/components/ReviewTicketDetail.tsx`
+- Test: `frontend/src/features/tickets/pages/TicketDetailPage.test.tsx` (AC-008.8 fields, `javascript:` link as
+  text, https link attributes; AC-008.9 due date only for PENDING_REVIEW; AC-008.10 403 → MSG08 and no content, 500 →
+  MSG06 toast — test names cite the ids); the existing `ReviewTicketDetail.test.tsx` stays green.
+**Dependencies:** Task 24 (its generated client; the backend only for a live run)
+**Estimated size:** small
+
+## Task 26: Unpublish / re-publish contract
+
+**Story:** STORY-009
+**Feature:** ticket-publication-contract
+**Description:** KAN-136, master design "Change 2026-11-15" (Contract). In `frontend/openapi/tsolve-api.yaml`, tag
+`review`: `POST /api/v1/reviews/unpublish` (operationId `unpublishTickets`) and `POST /api/v1/reviews/republish`
+(`republishTickets`), request `ApproveTicketsRequest`, 200 `ReviewDecisionResult`, responses 400, 401, 403, 404, 409
+as `sendBackTickets`; the description names the status rule and MSG06 / MSG04 / MSG08. Run `npm run generate:api`
+and keep the generated client.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (generated only)
+**Dependencies:** none
+**Estimated size:** small
+
+## Task 27: Unpublish / re-publish on the backend
+
+**Story:** STORY-009
+**Feature:** ticket-publication
+**Description:** Master design "Change 2026-11-15" (Service, Controller, Data). `TicketDecisionService.unpublish` /
+`republish` through one private `changePublication` in `TicketDecisionServiceImpl`: ids → lock → scope →
+`TicketTransitions.move` → `ReviewDecisionRecord` (`UNPUBLISH` / `REPUBLISH`) → audit (`UNPUBLISH` / `PUBLISH`).
+`ReviewDecisionRecord.Decision` + the two values; changeset `0NN-review-decision-publication.sql` widens
+`ck_review_decision` (with rollback) and is included in the master changelog. Two `@PostMapping`s in
+`ReviewDecisionController`.
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/0NN-review-decision-publication.sql`
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `T/entity/ReviewDecisionRecord.java`,
+  `T/service/TicketDecisionService.java`, `T/service/impl/TicketDecisionServiceImpl.java`,
+  `backend/src/main/java/vn/tsolve/review/controller/ReviewDecisionController.java`
+- Test: `TT/service/impl/TicketPublicationTest.java` (AC-009.1, AC-009.2 incl. due date / feedback untouched and the
+  event of AC-005.4 / AC-005.5, AC-009.3 every wrong status and a mixed batch, AC-009.4, AC-009.5, AC-009.7),
+  `TT/controller/TicketPublicationIT.java` (over HTTP with the real DB: AC-009.1 and AC-009.2 round trip with the
+  stored decision and audit rows, AC-009.3 second unpublish → 409, AC-009.5 other Project and Removed Project → 403,
+  AC-009.6 Ticket Resolver → 403). Test names cite the AC ids.
+**Dependencies:** Task 13 (done); Task 26 for the names only
+**Estimated size:** small
+
+## Task 28: Unpublish / Re-publish buttons on Ticket Detail
+
+**Story:** STORY-009
+**Feature:** ticket-publication-buttons
+**Description:** Master design "Change 2026-11-15" (Web app). `TicketPublicationActions` above `ReviewTicketDetail`
+in `TicketDetailPage`: Unpublish for a Published ticket, Re-publish for an Unpublished one, only for the Project
+Manager of the Project of the ticket; `ConfirmDialog` MSG21 (danger) / MSG23; MSG22 / MSG24 on success; on success or
+error invalidate the detail, Ticket List and Review History queries. `ReviewTicketDetail` is not changed.
+**Files:**
+- Create: `frontend/src/features/tickets/components/TicketPublicationActions.tsx`,
+  `frontend/src/features/tickets/components/TicketPublicationActions.test.tsx`
+- Modify: `frontend/src/features/tickets/pages/TicketDetailPage.tsx`
+- Test: `TicketPublicationActions.test.tsx` (AC-009.8 button, MSG21, cancel sends nothing, confirm → request + MSG22;
+  AC-009.9 the same for Re-publish with MSG23 / MSG24; no button for a Ticket Resolver, the PM of another Project or
+  another status; AC-009.10 a 409 shows the error and refetches the detail)
+**Dependencies:** Task 26 (Task 27 only for a live run)
 **Estimated size:** small

@@ -8,7 +8,7 @@ import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 import { MOCK_PROJECT_IDS } from '../mocks/handlers';
 
-/** Add project popup on 3.1 (spec STORY-006): the normal flow. Errors are in AddProjectModalErrors.test.tsx. */
+/** Add project popup on 3.1 (spec STORY-009): the normal flow. Errors are in AddProjectModalErrors.test.tsx. */
 
 type User = ReturnType<typeof userEvent.setup>;
 const PROJECTS = '/api/v1/projects';
@@ -133,7 +133,7 @@ describe('AddProjectModal', () => {
     server.events.removeAllListeners();
   });
 
-  it('AC-006.1 AC-006.24 opens "Add project" with a required empty Project key, Test connection and Cancel only', async () => {
+  it('AC-009.1 AC-009.24 opens "Add project" with a required empty Project key, Test connection and Cancel only', async () => {
     const { dialog, spy } = await renderPopup();
 
     expect(keyInput(dialog)).toHaveValue('');
@@ -149,7 +149,7 @@ describe('AddProjectModal', () => {
     expect(spy.tests).toHaveLength(0);
   });
 
-  it('AC-006.2 shows MSG01 for an empty, whitespace-only or 21-space key and sends no request', async () => {
+  it('AC-009.2 shows MSG01 for an empty, whitespace-only or 21-space key and sends no request', async () => {
     const { user, dialog, spy } = await renderPopup();
 
     await click(user, dialog, 'Test connection');
@@ -166,7 +166,7 @@ describe('AddProjectModal', () => {
     expect(spy.tests).toHaveLength(0);
   });
 
-  it('AC-006.3 shows MSG02 for 21 UTF-16 code units, keeps the pasted value and sends no request; 20 are sent', async () => {
+  it('AC-009.3 shows MSG02 for 21 UTF-16 code units, keeps the pasted value and sends no request; 20 are sent', async () => {
     const { user, dialog, spy } = await renderPopup();
     const tooLong = `${'A'.repeat(19)}😀`; // 20 characters, 21 UTF-16 code units
 
@@ -184,7 +184,7 @@ describe('AddProjectModal', () => {
     await waitFor(() => expect(spy.tests).toEqual([{ jiraProjectKey: longest }]));
   });
 
-  it('AC-006.4 AC-006.5 sends one connection test with the original key and shows MSG47 once', async () => {
+  it('AC-009.4 AC-009.5 sends one connection test with the original key and shows MSG47 once', async () => {
     const { user, dialog, spy } = await renderPopup();
 
     await testKey(user, dialog, ' new1 ');
@@ -194,7 +194,7 @@ describe('AddProjectModal', () => {
     expect(spy.creates).toHaveLength(0);
   });
 
-  it('AC-006.6 AC-006.7 reveals every status preselected from doneStatusIds, the prefilled Review range and Save', async () => {
+  it('AC-009.6 AC-009.7 reveals every status preselected from doneStatusIds, the prefilled Review range and Save', async () => {
     const { user, dialog } = await renderPopup();
 
     await testKey(user, dialog, 'new1');
@@ -209,7 +209,7 @@ describe('AddProjectModal', () => {
     });
   });
 
-  it('AC-006.6 AC-006.7 prefills the reconnect settings of a Removed Project', async () => {
+  it('AC-009.6 AC-009.7 prefills the reconnect settings of a Removed Project', async () => {
     const { user, dialog } = await renderPopup();
 
     await testKey(user, dialog, 'old');
@@ -222,7 +222,7 @@ describe('AddProjectModal', () => {
     });
   });
 
-  it('AC-006.6 labels statuses that share a name as name (id)', async () => {
+  it('AC-009.6 labels statuses that share a name as name (id)', async () => {
     const answer: ProjectConnectionTest = {
       jiraProjectKey: 'TWIN',
       statuses: [
@@ -245,7 +245,7 @@ describe('AddProjectModal', () => {
     });
   });
 
-  it('AC-006.6 AC-006.9 asks for a Done status when Jira returns no statuses (row 14)', async () => {
+  it('AC-009.6 AC-009.9 asks for a Done status when Jira returns no statuses (row 14)', async () => {
     server.use(
       getTestProjectConnectionMockHandler({
         jiraProjectKey: 'EMPTY',
@@ -265,7 +265,7 @@ describe('AddProjectModal', () => {
     expect(spy.creates).toHaveLength(0);
   });
 
-  it('AC-006.7 AC-006.11 requires a legacy invalid prefilled range to be corrected before Save (row 37)', async () => {
+  it('AC-009.7 AC-009.11 requires a legacy invalid prefilled range to be corrected before Save (row 37)', async () => {
     server.use(
       getTestProjectConnectionMockHandler({
         jiraProjectKey: 'NEW1',
@@ -292,7 +292,7 @@ describe('AddProjectModal', () => {
     );
   });
 
-  it('AC-006.8 hides the settings and Save when the key is edited after a test, until the next test (row 18)', async () => {
+  it('AC-009.8 hides the settings and Save when the key is edited after a test, until the next test (row 18)', async () => {
     const { user, dialog, spy } = await renderPopup();
 
     await testKey(user, dialog, 'new1');
@@ -309,7 +309,7 @@ describe('AddProjectModal', () => {
     expect(spy.tests).toEqual([{ jiraProjectKey: 'new1' }, { jiraProjectKey: 'new12' }]);
   });
 
-  it('AC-006.9 shows MSG01 below Done statuses when none is selected and sends no Save', async () => {
+  it('AC-009.9 shows MSG01 below Done statuses when none is selected and sends no Save', async () => {
     const { user, dialog, spy } = await renderPopup();
 
     await testKey(user, dialog, 'new1');
@@ -323,7 +323,7 @@ describe('AddProjectModal', () => {
     expect(spy.creates).toHaveLength(0);
   });
 
-  it('AC-006.10 shows MSG01 below Review range when it is empty and sends no Save', async () => {
+  it('AC-009.10 shows MSG01 below Review range when it is empty and sends no Save', async () => {
     const { user, dialog, spy } = await renderPopup();
 
     await testKey(user, dialog, 'new1');
@@ -335,7 +335,7 @@ describe('AddProjectModal', () => {
     expect(spy.creates).toHaveLength(0);
   });
 
-  it('AC-006.11 shows MSG44 for 0, -1, 2.5 and 2147483648 without rounding, then saves 2147483647', async () => {
+  it('AC-009.11 shows MSG44 for 0, -1, 2.5 and 2147483648 without rounding, then saves 2147483647', async () => {
     const { user, dialog, spy } = await renderPopup();
 
     await testKey(user, dialog, 'new1');
@@ -355,7 +355,7 @@ describe('AddProjectModal', () => {
     );
   });
 
-  it('AC-006.12 saves once with the tested canonical key, the selected ids including a non-Done status and a numeric range', async () => {
+  it('AC-009.12 saves once with the tested canonical key, the selected ids including a non-Done status and a numeric range', async () => {
     const { user, dialog, spy } = await renderPopup();
 
     await testKey(user, dialog, ' new1 ');
@@ -371,7 +371,7 @@ describe('AddProjectModal', () => {
     ]);
   });
 
-  it('AC-006.13 AC-006.14 AC-006.15 closes, shows MSG05 once and refreshes the table after a new Project (201)', async () => {
+  it('AC-009.13 AC-009.14 AC-009.15 closes, shows MSG05 once and refreshes the table after a new Project (201)', async () => {
     const { user, dialog, spy } = await renderPopup();
     expect(spy.lists).toBe(1);
 
@@ -385,7 +385,7 @@ describe('AddProjectModal', () => {
     expect(spy.lists).toBe(2);
   });
 
-  it('AC-006.13 AC-006.14 AC-006.15 reconnects OLD (200) and keeps its Project ID and member count (row 19)', async () => {
+  it('AC-009.13 AC-009.14 AC-009.15 reconnects OLD (200) and keeps its Project ID and member count (row 19)', async () => {
     const { user, dialog, spy } = await renderPopup();
 
     await testKey(user, dialog, 'old');
@@ -404,7 +404,7 @@ describe('AddProjectModal', () => {
     expect(spy.lists).toBe(2);
   });
 
-  it('AC-006.4 AC-006.21 AC-006.22 locks the popup while the connection test runs (rows 12, 20)', async () => {
+  it('AC-009.4 AC-009.21 AC-009.22 locks the popup while the connection test runs (rows 12, 20)', async () => {
     const { user, dialog, spy } = await renderPopup();
     await enterKey(user, dialog, 'new1');
     const release = holdNext(TEST);
@@ -426,7 +426,7 @@ describe('AddProjectModal', () => {
     expect(keyInput(dialog)).toBeEnabled();
   });
 
-  it('AC-006.12 AC-006.21 AC-006.22 locks the popup while Save runs, including a mask click (rows 12, 20)', async () => {
+  it('AC-009.12 AC-009.21 AC-009.22 locks the popup while Save runs, including a mask click (rows 12, 20)', async () => {
     const { user, dialog, spy } = await renderPopup();
     await testKey(user, dialog, 'new1');
     const release = holdNext(PROJECTS);
@@ -450,7 +450,7 @@ describe('AddProjectModal', () => {
     expect(spy.creates).toHaveLength(1);
   });
 
-  it('AC-006.23 closes the idle popup by Cancel and the close icon without a request and reopens empty (row 18)', async () => {
+  it('AC-009.23 closes the idle popup by Cancel and the close icon without a request and reopens empty (row 18)', async () => {
     const { user, dialog, spy } = await renderPopup();
     await click(user, dialog, 'Test connection');
     expect(await within(dialog).findByText(projectKeyRequired)).toBeInTheDocument();
@@ -473,7 +473,7 @@ describe('AddProjectModal', () => {
     expect(spy.creates).toHaveLength(0);
   });
 
-  it('AC-006.23 closes the idle popup by Escape and a mask click without a request (row 20)', async () => {
+  it('AC-009.23 closes the idle popup by Escape and a mask click without a request (row 20)', async () => {
     const { user, dialog, spy } = await renderPopup();
     await enterKey(user, dialog, 'draft');
     await user.keyboard('{Escape}');

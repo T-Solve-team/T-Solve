@@ -10,12 +10,16 @@ import {
   type ProjectManagerRef,
   type ProjectRow,
   type TrackerStatus,
+  type MemberCandidateResponse,
+  type ProjectMemberResponse,
+  type ProjectSummaryResponse,
 } from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
+import { initialMembers, PROJECTS, TICKET_RESOLVERS } from './data';
 
 /**
  * MSW mock handlers of the "jira-integration" feature (guideline 10 §5): the Projects of screen 3.1 and the
- * Add project popup's connection test and Save, with the backend's checks in its order (spec STORY-001–004).
+ * Add project popup's connection test and Save, with the backend's checks in its order (spec STORY-004–007).
  */
 
 /** Public ids of the seeded Projects. */
@@ -97,12 +101,29 @@ function seedProjects(): MockProject[] {
   ];
 }
 
+let members = initialMembers();
+
+/** Full name ascending ignoring case, without a full name last (spec AC-001.2, AC-002.1). */
+function byName(a: { fullName: string | null }, b: { fullName: string | null }): number {
+  if (a.fullName === null || b.fullName === null) return a.fullName === null ? 1 : -1;
+  return a.fullName.localeCompare(b.fullName, 'en', { sensitivity: 'base' });
+}
+
+function sorted(list: ProjectMemberResponse[]): ProjectMemberResponse[] {
+  const manager = list.filter((member) => member.role === 'PROJECT_MANAGER');
+  return [...manager, ...list.filter((member) => member.role === 'MEMBER').sort(byName)];
+}
+
+/** Unknown Project → 404 MSG04, like the backend (AC-001.4). */
+const notFound = () => problem(404, 'MSG04');
+
 const store = { projects: seedProjects(), created: 0 };
 
 /** Restores this feature's mock data to its starting state — called after every test (src/test/setup.ts). */
 export function resetMockData(): void {
   store.projects = seedProjects();
   store.created = 0;
+  members = initialMembers();
 }
 
 type Refusal = ReturnType<typeof problem>;
@@ -136,7 +157,7 @@ function fieldError(
   return problem(status, code, { params, fieldErrors: [{ field, code, params }] });
 }
 
-/** Checks the key like the backend (AC-001.2–AC-001.7) and answers the normalised key or a refusal. */
+/** Checks the key like the backend (AC-004.2–AC-004.7) and answers the normalised key or a refusal. */
 function checkKey(raw: unknown, user: CurrentUser): { key: string; held?: MockProject } | Refusal {
   const params = { field_name: 'jiraProjectKey' };
   if (typeof raw !== 'string' || raw.trim() === '')
@@ -175,7 +196,7 @@ function toRow({
   return { projectId, jiraProjectKey, projectManager, memberCount, status };
 }
 
-/** Checks the Save settings (AC-002.4–AC-002.7, AC-002.16) and answers the unique ids and the range. */
+/** Checks the Save settings (AC-005.4–AC-005.7, AC-005.16) and answers the unique ids and the range. */
 function checkSettings(body: Record<string, unknown>): { ids: string[]; range: number } | Refusal {
   const { doneStatusIds: ids, reviewRange: range } = body;
   if (ids !== undefined && ids !== null && !Array.isArray(ids)) return problem(400, 'MSG06');
@@ -195,7 +216,7 @@ function checkSettings(body: Record<string, unknown>): { ids: string[]; range: n
   return { ids: [...new Set(ids)], range };
 }
 
-export const handlers: HttpHandler[] = [
+const projectHandlers: HttpHandler[] = [
   http.get('*/api/v1/projects', async () => {
     await delay(MOCK_DELAY_MS);
     const user = await projectManager();
@@ -253,7 +274,7 @@ export const handlers: HttpHandler[] = [
     const caller = { userId: user.user.id, fullName: user.user.fullName };
     let projectId: string;
     if (held) {
-      // Reconnect (AC-003.1–AC-003.4): same id and members; a Project without a manager gets the caller.
+      // Reconnect (AC-006.1–AC-006.4): same id and members; a Project without a manager gets the caller.
       projectId = held.projectId;
       if (held.projectManager === null) held.memberCount += 1;
       Object.assign(held, saved, { projectManager: caller });
@@ -274,3 +295,87 @@ export const handlers: HttpHandler[] = [
     );
   }),
 ];
+
+const memberHandlers: HttpHandler[] = [
+  http.get<{ projectId: string }>('*/api/v1/projects/:projectId', async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const project = PROJECTS.find((item) => item.id === params.projectId);
+    if (!project) return notFound();
+    return HttpResponse.json<ProjectSummaryResponse>(project);
+  }),
+  http.get<{ projectId: string }>('*/api/v1/projects/:projectId/members', async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const list = members[params.projectId];
+    if (!list) return notFound();
+    return HttpResponse.json<ProjectMemberResponse[]>(sorted(list));
+  }),
+  http.get<{ projectId: string }>(
+    '*/api/v1/projects/:projectId/member-candidates',
+    async ({ params, request }) => {
+      await delay(MOCK_DELAY_MS);
+      const list = members[params.projectId];
+      if (!list) return notFound();
+      const q = (new URL(request.url).searchParams.get('q') ?? '').trim().toLowerCase();
+      if (q.length > 100) return problem(400, 'MSG06');
+      const candidates = TICKET_RESOLVERS.filter(
+        (account) =>
+          !list.some((member) => member.userId === account.userId) &&
+          [account.fullName ?? '', account.email].some((text) => text.toLowerCase().includes(q)),
+      );
+      return HttpResponse.json<MemberCandidateResponse[]>(candidates.sort(byName).slice(0, 20));
+    },
+  ),
+  http.post<{ projectId: string }>(
+    '*/api/v1/projects/:projectId/members',
+    async ({ params, request }) => {
+      await delay(MOCK_DELAY_MS);
+      const list = members[params.projectId];
+      const project = PROJECTS.find((item) => item.id === params.projectId);
+      if (!list || !project) return notFound();
+      const input: unknown = await request.json().catch(() => null);
+      const userIds =
+        typeof input === 'object' && input !== null && 'userIds' in input ? input.userIds : null;
+      if (
+        !Array.isArray(userIds) ||
+        userIds.length < 1 ||
+        userIds.length > 50 ||
+        new Set(userIds).size !== userIds.length
+      )
+        return problem(400, 'MSG06');
+      if (project.status === 'REMOVED') return problem(409, 'MSG06');
+      const accounts = userIds.map((id) =>
+        TICKET_RESOLVERS.find(
+          (account) =>
+            account.userId === id && !list.some((member) => member.userId === account.userId),
+        ),
+      );
+      if (accounts.some((account) => account === undefined)) return problem(409, 'MSG06');
+      const dateAdded = new Date().toISOString();
+      const added = accounts.flatMap((account) =>
+        account ? [{ ...account, role: 'MEMBER' as const, dateAdded }] : [],
+      );
+      const updated = sorted([...list, ...added]);
+      members = { ...members, [params.projectId]: updated };
+      return HttpResponse.json<ProjectMemberResponse[]>(updated, { status: 201 });
+    },
+  ),
+  http.delete<{ projectId: string; userId: string }>(
+    '*/api/v1/projects/:projectId/members/:userId',
+    async ({ params }) => {
+      await delay(MOCK_DELAY_MS);
+      const list = members[params.projectId];
+      const project = PROJECTS.find((item) => item.id === params.projectId);
+      if (!list || !project) return notFound();
+      // Removed Project, the Project Manager's row or not a member → 409, like the backend (AC-003.3, AC-003.4).
+      const isMember = list.some(
+        (member) => member.userId === params.userId && member.role === 'MEMBER',
+      );
+      if (project.status === 'REMOVED' || !isMember) return problem(409, 'MSG06');
+      const updated = sorted(list.filter((member) => member.userId !== params.userId));
+      members = { ...members, [params.projectId]: updated };
+      return HttpResponse.json<ProjectMemberResponse[]>(updated);
+    },
+  ),
+];
+
+export const handlers: HttpHandler[] = [...projectHandlers, ...memberHandlers];

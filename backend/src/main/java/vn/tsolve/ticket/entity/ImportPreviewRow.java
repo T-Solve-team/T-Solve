@@ -18,7 +18,9 @@ import vn.tsolve.ticket.csv.RowError;
 public class ImportPreviewRow {
 
     @Embeddable
-    public record Id(@Column(name = "preview_id") Long previewId, @Column(name = "row_no") int rowNo) {}
+    public record Id(
+            @Column(name = "preview_id") Long previewId,
+            @Column(name = "row_no") int rowNo) {}
 
     @EmbeddedId
     private Id id;
@@ -27,19 +29,19 @@ public class ImportPreviewRow {
     @Column(nullable = false)
     private PreviewRowStatus status;
 
-    @Column(name = "ticket_id", updatable = false, columnDefinition = "text")
+    @Column(name = "ticket_id", columnDefinition = "text")
     private String ticketId;
 
-    @Column(updatable = false, columnDefinition = "text")
+    @Column(columnDefinition = "text")
     private String title;
 
-    @Column(updatable = false, columnDefinition = "text")
+    @Column(columnDefinition = "text")
     private String description;
 
     @Column(updatable = false, columnDefinition = "text")
     private String author;
 
-    @Column(name = "resolved_date", updatable = false, columnDefinition = "text")
+    @Column(name = "resolved_date", columnDefinition = "text")
     private String resolvedDate;
 
     @Column(columnDefinition = "text")
@@ -93,6 +95,24 @@ public class ImportPreviewRow {
         row.sourceUrl = sourceUrl;
         row.comments = List.copyOf(comments);
         return row;
+    }
+
+    /** The one row of a Manual Draft (D14): the fields as typed, not validated. */
+    public static ImportPreviewRow manualDraft(Long previewId, Values values) {
+        return new ImportPreviewRow(previewId, 1, values, List.of(), ImportType.WITH_SOLUTION);
+    }
+
+    /** Save as draft again on a Manual Draft (AC-006.10): every field is replaced by what is typed now. */
+    public void rewrite(Values values) {
+        this.ticketId = values.ticketId();
+        this.title = values.title();
+        this.description = values.description();
+        this.resolvedDate = values.resolvedDate();
+        this.symptoms = values.symptoms();
+        this.rootCause = values.rootCause();
+        this.resolutionSteps = values.resolutionSteps();
+        this.workaround = values.workaround();
+        this.scope = values.scope();
     }
 
     private static PreviewRowStatus initialStatus(List<RowError> errors, ImportType importType) {

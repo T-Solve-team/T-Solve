@@ -5,7 +5,7 @@ import { useProjects } from '../hooks/useProjects';
 import { AddProjectModal } from './AddProjectModal';
 import { ProjectsTable } from './ProjectsTable';
 
-/** Screen 3.1 for a Project Manager: the read-only Department, its Projects and Add project (STORY-005, STORY-006). */
+/** Screen 3.1 for a Project Manager: the read-only Department, its Projects and Add project (STORY-008, STORY-009). */
 export function DepartmentProjects() {
   const projects = useProjects();
   const [isAddOpen, setAddOpen] = useState(false);

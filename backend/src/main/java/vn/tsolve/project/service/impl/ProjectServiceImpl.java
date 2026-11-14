@@ -79,7 +79,7 @@ public class ProjectServiceImpl implements ProjectService {
         this.writeTransaction.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
 
-    /** The caller, their own eligible Department and the normalised key, checked in the AC-007.8 order. */
+    /** The caller, their own eligible Department and the normalised key, checked in the AC-010.8 order. */
     private record CheckedKey(UUID caller, CallerDepartment department, String key) {}
 
     private record CallerScope(UUID caller, CallerDepartment department) {}
@@ -121,7 +121,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         Optional<Link> requested = links.findLink(key);
         requested.ifPresent(link -> refuseIfLinked(link, checked.department(), caller));
-        TrackerProjectLookup jira = readJiraProject(key); // always a fresh read, outside any transaction (AC-002.18)
+        TrackerProjectLookup jira = readJiraProject(key); // always a fresh read, outside any transaction (AC-005.18)
         checkCanonicalLink(key, jira.key(), requested, links::findLink, checked.department(), caller);
         List<String> available = jira.statuses().stream().map(TrackerStatus::id).toList();
         if (!available.containsAll(ids)) {
@@ -184,9 +184,9 @@ public class ProjectServiceImpl implements ProjectService {
         return new CheckedKey(caller, department, key);
     }
 
-    /** The bound Workspace, then the caller's own eligible Department, both from the server side (AC-007.7). */
+    /** The bound Workspace, then the caller's own eligible Department, both from the server side (AC-010.7). */
     private CallerScope checkScope() {
-        scope.currentWorkspaceId(); // throws when no Workspace is bound: 500 MSG06 before any read (AC-007.5)
+        scope.currentWorkspaceId(); // throws when no Workspace is bound: 500 MSG06 before any read (AC-010.5)
         UUID caller = TSolveUser.current()
                 .orElseThrow(ProjectAccessDeniedException::new)
                 .id();
@@ -205,7 +205,7 @@ public class ProjectServiceImpl implements ProjectService {
         return jira;
     }
 
-    /** The one Project the requested and canonical keys resolve to, if allowed (AC-001.19, AC-001.21, AC-001.22). */
+    /** The one Project the requested and canonical keys resolve to, if allowed (AC-004.19, AC-004.21, AC-004.22). */
     private Optional<Link> checkCanonicalLink(
             String key,
             String canonicalKey,
@@ -226,7 +226,7 @@ public class ProjectServiceImpl implements ProjectService {
         return canonical.or(() -> requested);
     }
 
-    /** Inside the write transaction: lock and re-read both links, then apply the same rules (AC-002.17). */
+    /** Inside the write transaction: lock and re-read both links, then apply the same rules (AC-005.17). */
     private Optional<Link> recheckLinks(String key, String canonicalKey, CallerDepartment department, UUID caller) {
         Optional<Link> requested = lockedLink(key);
         requested.ifPresent(link -> refuseIfLinked(link, department, caller));
@@ -261,7 +261,7 @@ public class ProjectServiceImpl implements ProjectService {
         return range.intValueExact();
     }
 
-    /** Exact ids, never trimmed; duplicates collapse in first-seen order (AC-002.15). */
+    /** Exact ids, never trimmed; duplicates collapse in first-seen order (AC-005.15). */
     private static List<String> requireSelectedIds(List<String> ids) {
         if (ids == null || ids.isEmpty() || ids.stream().anyMatch(id -> id == null || id.isBlank())) {
             throw required(DONE_STATUS_IDS);

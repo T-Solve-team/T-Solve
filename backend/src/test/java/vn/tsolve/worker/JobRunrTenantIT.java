@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.sql.DataSource;
 import org.jobrunr.jobs.mappers.JobMapper;
 import org.jobrunr.utils.mapper.jackson.JacksonJsonMapper;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -34,8 +33,7 @@ import vn.tsolve.worker.service.TenantJobService;
 import vn.tsolve.worker.service.WorkerTenantService;
 
 class JobRunrTenantIT {
-    private static final PostgreSQLContainer<?> DB =
-            new PostgreSQLContainer<>("postgres:16-alpine").withDatabaseName("jobs");
+    private static final PostgreSQLContainer<?> DB = WorkerJobsDatabase.instance();
     private static final UUID A = UUID.randomUUID();
     private static final UUID B = UUID.randomUUID();
     private static final UUID FIRST = UUID.randomUUID();
@@ -44,16 +42,10 @@ class JobRunrTenantIT {
 
     @BeforeAll
     static void startDatabase() throws Exception {
-        DB.start();
         try (var connection = DriverManager.getConnection(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword());
                 var statement = connection.createStatement()) {
             statement.execute("CREATE DATABASE business");
         }
-    }
-
-    @AfterAll
-    static void stopDatabase() {
-        DB.stop();
     }
 
     @Test

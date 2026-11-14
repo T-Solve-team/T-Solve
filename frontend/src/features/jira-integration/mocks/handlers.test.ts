@@ -21,7 +21,7 @@ describe('jira-integration mock contract', () => {
     server.events.removeAllListeners();
   });
 
-  it('AC-005.1 lists only the own Department Projects, sorted by key, with typed rows', async () => {
+  it('AC-008.1 lists only the own Department Projects, sorted by key, with typed rows', async () => {
     const list = await listProjects();
     expect(list.department.name).toBe('IT Operations');
     expect(keys(list)).toEqual(['OLD', 'OPS']);
@@ -34,7 +34,7 @@ describe('jira-integration mock contract', () => {
     });
   });
 
-  it('AC-005.1 refuses a signed-out caller and a caller without the Project Manager role', async () => {
+  it('AC-008.1 refuses a signed-out caller and a caller without the Project Manager role', async () => {
     setDevUser(null);
     await expect(listProjects()).rejects.toMatchObject({ status: 401, code: 'MSG07' });
     setDevUser('admin');

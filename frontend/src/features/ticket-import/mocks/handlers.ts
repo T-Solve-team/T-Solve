@@ -9,13 +9,20 @@ import type {
   ImportResultResponse,
   ImportType,
   JiraPullRequest,
+  ManualEvidence,
+  ManualTicketDraft,
+  ManualTicketRequest,
   RemoveRowsRequest,
 } from '@/shared/api';
+import { getMe, isApiError, TicketSource } from '@/shared/api';
 import { getDownloadCsvTemplateMockHandler } from '@/shared/api/generated/import/import.msw';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
+import { APP_TIME_ZONE, PAGE_SIZE } from '@/shared/lib';
+import dayjs from 'dayjs';
 import {
   CSV_TEMPLATE,
   CSV_TEMPLATE_WITHOUT_SOLUTION,
+  IMPORT_HISTORY,
   previewResponse,
   rowPage,
   seedImport,
@@ -42,6 +49,9 @@ let preview: MockPreview = seedImport();
 let isConfirmed = false;
 let lastBatchId = 0;
 let drafts: MockPreview[] = seedDrafts();
+/** The PM's Manual Drafts (AC-006.9), listed with the other Drafts. */
+let manualDrafts: ManualTicketDraft[] = [];
+let lastManualDraftId = 800;
 
 /** Back to the starting preview — called after every test (src/test/setup.ts). */
 export function resetMockData(): void {
@@ -49,6 +59,59 @@ export function resetMockData(): void {
   isConfirmed = false;
   lastBatchId = 0;
   drafts = seedDrafts();
+  manualDrafts = [];
+  lastManualDraftId = 800;
+}
+
+/** A Ticket ID the mock repository already holds: MSG31 on a manual save (AC-006.7). */
+const TAKEN_TICKET_ID = 'ITSUP-0871';
+
+/** The manual entry fields Save requires (AC-006.3), with their labels. */
+const MANUAL_REQUIRED = [
+  ['projectId', 'Project'],
+  ['ticketId', 'Ticket ID'],
+  ['title', 'Title'],
+  ['description', 'Description'],
+  ['symptoms', 'Symptoms'],
+  ['rootCause', 'Root cause'],
+  ['resolutionSteps', 'Resolution steps'],
+  ['scope', 'Scope'],
+] as const;
+
+/** Evidence rules run before changing a Ticket or Draft (AC-006.16–AC-006.19). */
+function manualEvidence(body: ManualTicketRequest, form: FormData) {
+  const kept =
+    manualDrafts
+      .find((draft) => draft.previewId === body.draftId)
+      ?.evidence.filter((file) => body.keepEvidenceIds?.includes(file.evidenceId)) ?? [];
+  const files = form.getAll('files').filter((file): file is File => typeof file !== 'string');
+  const invalid = files.find(
+    (file) =>
+      !/\.(png|jpe?g|pdf|docx|xlsx|txt|log)$/i.test(file.name) || file.size > 10 * 1024 * 1024,
+  );
+  if (invalid) {
+    return {
+      error: problem(400, 'MSG34', {
+        fieldErrors: [{ field: 'files', code: 'MSG34', params: { file_name: invalid.name } }],
+      }),
+    };
+  }
+  if (kept.length + files.length > 5) {
+    return {
+      error: problem(400, 'MSG72', {
+        fieldErrors: [{ field: 'files', code: 'MSG72', params: {} }],
+      }),
+    };
+  }
+  const evidence: ManualEvidence[] = [
+    ...kept,
+    ...files.map((file) => ({
+      evidenceId: crypto.randomUUID(),
+      fileName: file.name,
+      fileSize: file.size,
+    })),
+  ];
+  return { evidence };
 }
 
 /** The open preview or one of the Drafts, for the read endpoints (a reopened Draft, AC-004.3). */
@@ -91,6 +154,56 @@ function isCurrent(previewId: string | readonly string[] | undefined): boolean {
  * "import-fails" → MSG33 on Confirm. Any other file gets the seed rows.
  */
 export const handlers: HttpHandler[] = [
+  http.get('*/api/v1/imports/history', async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    try {
+      const user = await getMe();
+      if (!user.roles.includes('PROJECT_MANAGER')) return problem(403, 'MSG08');
+      const managed = new Set(
+        user.projects
+          .filter((project) => project.roleInProject === 'PROJECT_MANAGER')
+          .map((project) => project.projectId),
+      );
+      const params = new URL(request.url).searchParams;
+      const project = params.get('projectId');
+      const source = params.get('source');
+      const from = params.get('dateFrom');
+      const to = params.get('dateTo');
+      const page = Number(params.get('page') ?? 0);
+      const size = Number(params.get('size') ?? PAGE_SIZE);
+      if (
+        !Number.isInteger(page) ||
+        page < 0 ||
+        !Number.isInteger(size) ||
+        size < 1 ||
+        size > 100 ||
+        (source && !Object.values(TicketSource).some((value) => value === source))
+      )
+        return problem(400, 'MSG06');
+      if (from && to && from > to) return problem(400, 'MSG39');
+      const rows = IMPORT_HISTORY.filter((row) => {
+        const day = dayjs(row.createdAt).tz(APP_TIME_ZONE).format('YYYY-MM-DD');
+        return (
+          managed.has(row.project.projectId) &&
+          (!project || project === row.project.projectId) &&
+          (!source || row.source === source) &&
+          (!from || day >= from) &&
+          (!to || day <= to)
+        );
+      });
+      return HttpResponse.json({
+        content: rows.slice(page * size, page * size + size),
+        page: {
+          size,
+          number: page,
+          totalElements: rows.length,
+          totalPages: Math.ceil(rows.length / size),
+        },
+      });
+    } catch (error) {
+      return isApiError(error) ? problem(error.status, error.code) : problem(500, 'MSG06');
+    }
+  }),
   getDownloadCsvTemplateMockHandler(({ request }) =>
     new URL(request.url).searchParams.get('importType') === 'WITHOUT_SOLUTION'
       ? CSV_TEMPLATE_WITHOUT_SOLUTION
@@ -137,24 +250,105 @@ export const handlers: HttpHandler[] = [
   http.get('*/api/v1/imports/drafts', async () => {
     await delay(MOCK_DELAY_MS);
     const saved = !isConfirmed && preview.draftSavedAt ? [preview, ...drafts] : drafts;
-    return HttpResponse.json<ImportDraftSummary[]>(
-      saved.map((draft) => ({
+    return HttpResponse.json<ImportDraftSummary[]>([
+      ...manualDrafts.map((draft) => ({
+        previewId: draft.previewId,
+        source: 'MANUAL' as const,
+        projectId: draft.projectId,
+        rowCount: 1,
+        savedAt: draft.savedAt,
+      })),
+      ...saved.map((draft) => ({
         previewId: draft.previewId,
         source: draft.source ?? 'CSV',
         projectId: draft.projectId,
         rowCount: draft.rows.filter((row) => row.status !== 'REMOVED').length,
         savedAt: draft.draftSavedAt ?? '',
       })),
-    );
+    ]);
   }),
 
   http.delete('*/api/v1/imports/drafts/:previewId', async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    if (!drafts.some((draft) => String(draft.previewId) === params.previewId)) {
+    const isDraft = (draft: { previewId: number }) => String(draft.previewId) === params.previewId;
+    if (!drafts.some(isDraft) && !manualDrafts.some(isDraft)) return problem(404, 'MSG04');
+    drafts = drafts.filter((draft) => !isDraft(draft));
+    manualDrafts = manualDrafts.filter((draft) => !isDraft(draft));
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // Manual entry (AC-006.1, AC-006.3, AC-006.7, AC-006.12): every missing field at once; the taken Ticket ID → MSG31.
+  http.post('*/api/v1/imports/manual', async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    const form = await request.formData();
+    const body = JSON.parse(form.get('entry') as string) as ManualTicketRequest;
+    const missing = MANUAL_REQUIRED.filter(([field]) => !body[field]?.trim());
+    if (missing.length > 0) {
+      return problem(400, 'MSG01', {
+        fieldErrors: missing.map(([field, label]) => ({
+          field,
+          code: 'MSG01',
+          params: { field_name: label },
+        })),
+      });
+    }
+    const ticketId = body.ticketId?.trim();
+    if (ticketId === TAKEN_TICKET_ID) {
+      const params = { ticket_id: ticketId };
+      return problem(409, 'MSG31', {
+        params,
+        fieldErrors: [{ field: 'ticketId', code: 'MSG31', params }],
+      });
+    }
+    const result = manualEvidence(body, form);
+    if (result.error) return result.error;
+    manualDrafts = manualDrafts.filter((draft) => draft.previewId !== body.draftId);
+    lastBatchId += 1;
+    return HttpResponse.json<ImportResultResponse>(
+      {
+        importBatchId: lastBatchId,
+        created: 1,
+        skipped: 0,
+        message: { code: 'MSG32', params: { created: 1, skipped: 0 } },
+      },
+      { status: 201 },
+    );
+  }),
+
+  // Save as draft (AC-006.9, AC-006.10): only the Project is checked; a draftId rewrites that Draft.
+  http.post('*/api/v1/imports/manual/drafts', async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    const form = await request.formData();
+    const body = JSON.parse(form.get('entry') as string) as ManualTicketRequest;
+    const { draftId, keepEvidenceIds: _keepEvidenceIds, ...fields } = body;
+    if (!fields.projectId) {
+      return problem(400, 'MSG01', {
+        fieldErrors: [{ field: 'projectId', code: 'MSG01', params: { field_name: 'Project' } }],
+      });
+    }
+    if (draftId && !manualDrafts.some((draft) => draft.previewId === draftId)) {
       return problem(404, 'MSG04');
     }
-    drafts = drafts.filter((draft) => String(draft.previewId) !== params.previewId);
-    return new HttpResponse(null, { status: 204 });
+    const result = manualEvidence(body, form);
+    if (result.error) return result.error;
+    const previewId = draftId ?? (lastManualDraftId += 1);
+    const savedAt = new Date().toISOString();
+    manualDrafts = [
+      { ...fields, previewId, savedAt, evidence: result.evidence },
+      ...manualDrafts.filter((draft) => draft.previewId !== previewId),
+    ];
+    return HttpResponse.json<DraftSavedResponse>({
+      previewId,
+      savedAt,
+      message: { code: 'MSG41', params: {} },
+    });
+  }),
+
+  http.get('*/api/v1/imports/manual/drafts/:previewId', async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const found = manualDrafts.find((draft) => String(draft.previewId) === params.previewId);
+    if (!found) return problem(404, 'MSG04');
+    return HttpResponse.json<ManualTicketDraft>(found);
   }),
 
   http.get('*/api/v1/imports/previews/:previewId', async ({ params }) => {

@@ -116,7 +116,7 @@ class ProjectListIT {
 
     @Test
     void
-            listsTheOwnDepartmentProjectsByKeyWithActiveManagersAndAllMemberships_AC_004_1_AC_004_2_AC_004_3_AC_004_4_AC_004_5_AC_004_6()
+            listsTheOwnDepartmentProjectsByKeyWithActiveManagersAndAllMemberships_AC_007_1_AC_007_2_AC_007_3_AC_007_4_AC_007_5_AC_007_6()
                     throws Exception {
         String body = perform(TwoTenantDatabases.ACME, CALLER, list())
                 .andExpect(status().isOk())
@@ -138,7 +138,7 @@ class ProjectListIT {
     }
 
     @Test
-    void failsLoudlyOnAnUnknownStoredStatusInsteadOfSendingOrHidingIt_AC_004_1() throws Exception {
+    void failsLoudlyOnAnUnknownStoredStatusInsteadOfSendingOrHidingIt_AC_007_1() throws Exception {
         project(TwoTenantDatabases.tenantA(), "PLSODD", OWN, "DISABLED", null);
         perform(TwoTenantDatabases.ACME, CALLER, list())
                 .andExpect(status().isInternalServerError())
@@ -148,7 +148,7 @@ class ProjectListIT {
     }
 
     @Test
-    void readsWithoutJiraOrAnyPersistedChange_AC_004_8() throws Exception {
+    void readsWithoutJiraOrAnyPersistedChange_AC_007_8() throws Exception {
         List<Map<String, Object>> tenant = snapshot(TwoTenantDatabases.tenantA());
         List<Map<String, Object>> main = snapshot(TwoTenantDatabases.main());
         perform(TwoTenantDatabases.ACME, CALLER, list()).andExpect(status().isOk());
@@ -158,7 +158,7 @@ class ProjectListIT {
     }
 
     @Test
-    void returnsTheDepartmentWithAnEmptyProjectList_AC_004_7() throws Exception {
+    void returnsTheDepartmentWithAnEmptyProjectList_AC_007_7() throws Exception {
         perform(TwoTenantDatabases.ACME, LONELY, list())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.department.departmentId").value(EMPTY.toString()))
@@ -169,7 +169,7 @@ class ProjectListIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"account", "role", "department-null", "department-inactive"})
-    void refusesAnIneligibleCallerWithoutReadingProjects_AC_007_4(String change) throws Exception {
+    void refusesAnIneligibleCallerWithoutReadingProjects_AC_010_4(String change) throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         switch (change) {
             case "account" -> db.update("UPDATE app_user SET status = 'DEACTIVATED' WHERE id = ?", CALLER);
@@ -191,7 +191,7 @@ class ProjectListIT {
     }
 
     @Test
-    void failsUnboundWithoutReadingAnyDatabase_AC_007_5() throws Exception {
+    void failsUnboundWithoutReadingAnyDatabase_AC_010_5() throws Exception {
         List<Map<String, Object>> main = snapshot(TwoTenantDatabases.main());
         mvc.perform(list())
                 .andExpect(status().isInternalServerError())
@@ -204,7 +204,7 @@ class ProjectListIT {
     }
 
     @Test
-    void listsOnlyTheBoundWorkspaceDatabase_AC_007_6() throws Exception {
+    void listsOnlyTheBoundWorkspaceDatabase_AC_010_6() throws Exception {
         UUID beta = project(TwoTenantDatabases.tenantB(), "PLSB", OWN, "ACTIVE", null);
         perform(TwoTenantDatabases.BETA, CALLER, list())
                 .andExpect(status().isOk())
@@ -219,7 +219,7 @@ class ProjectListIT {
     }
 
     @Test
-    void ignoresDepartmentAndWorkspaceScopeFromTheRequest_AC_007_7() throws Exception {
+    void ignoresDepartmentAndWorkspaceScopeFromTheRequest_AC_010_7() throws Exception {
         perform(
                         TwoTenantDatabases.ACME,
                         CALLER,

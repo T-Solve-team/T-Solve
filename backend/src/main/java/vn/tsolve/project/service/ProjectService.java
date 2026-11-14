@@ -19,7 +19,7 @@ public interface ProjectService {
      */
     ProjectSaveResult create(CreateProjectRequest request);
 
-    /** The caller's own Department and all its Active and Removed Projects, by key, read only (STORY-004). */
+    /** The caller's own Department and all its Active and Removed Projects, by key, read only (STORY-007). */
     ProjectListResponse list();
 
     /** The public id of the ACTIVE Project linked to this Jira project key; empty when none is. */

@@ -6,7 +6,7 @@ import { problem } from '@/shared/api/mocks';
 import { msg, type MsgCode } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 
-/** Add project popup on 3.1 (spec STORY-006): server errors of the connection test and Save. */
+/** Add project popup on 3.1 (spec STORY-009): server errors of the connection test and Save. */
 
 type User = ReturnType<typeof userEvent.setup>;
 const PROJECTS = '/api/v1/projects';
@@ -64,7 +64,7 @@ async function testAndEdit(user: User, dialog: HTMLElement, key: string) {
   await user.type(range(dialog), '9');
 }
 
-/** The tested settings and the key are still in the open popup (AC-006.20). */
+/** The tested settings and the key are still in the open popup (AC-009.20). */
 function expectSettingsKept(dialog: HTMLElement, key: string) {
   expect(screen.getByRole('dialog', { name: 'Add project' })).toBe(dialog);
   expect(keyInput(dialog)).toHaveValue(key);
@@ -99,7 +99,7 @@ describe('AddProjectModal errors', () => {
     server.events.removeAllListeners();
   });
 
-  it('AC-006.16 AC-006.20 shows MSG49 of the connection test below Project key with the server params (row 36)', async () => {
+  it('AC-009.16 AC-009.20 shows MSG49 of the connection test below Project key with the server params (row 36)', async () => {
     const { user, dialog } = await renderPopup();
 
     await enterKey(user, dialog, 'sup');
@@ -110,7 +110,7 @@ describe('AddProjectModal errors', () => {
     expect(statuses(dialog)).not.toBeInTheDocument();
   });
 
-  it('AC-006.16 AC-006.20 shows MSG49 of Save below Project key and keeps the tested settings', async () => {
+  it('AC-009.16 AC-009.20 shows MSG49 of Save below Project key and keeps the tested settings', async () => {
     const { user, dialog, spy } = await renderPopup();
     await testAndEdit(user, dialog, 'new1');
     const params = { ...JIRA, department_name: 'Customer Support' };
@@ -128,7 +128,7 @@ describe('AddProjectModal errors', () => {
     expect(spy.creates).toBe(1);
   });
 
-  it('AC-006.17 AC-006.20 shows MSG48 of the connection test inline in the popup', async () => {
+  it('AC-009.17 AC-009.20 shows MSG48 of the connection test inline in the popup', async () => {
     const { user, dialog } = await renderPopup();
 
     await enterKey(user, dialog, 'missing');
@@ -139,7 +139,7 @@ describe('AddProjectModal errors', () => {
     expect(statuses(dialog)).not.toBeInTheDocument();
   });
 
-  it('AC-006.17 AC-006.20 shows MSG48 of Save inline and keeps the tested settings', async () => {
+  it('AC-009.17 AC-009.20 shows MSG48 of Save inline and keeps the tested settings', async () => {
     const { user, dialog } = await renderPopup();
     await testAndEdit(user, dialog, 'new1');
     answerNext(PROJECTS, () => problem(409, 'MSG48', { params: JIRA }));
@@ -150,7 +150,7 @@ describe('AddProjectModal errors', () => {
     expectSettingsKept(dialog, 'new1');
   });
 
-  it('AC-006.8 AC-006.20 shows no settings of an earlier key when the next key fails (row 12)', async () => {
+  it('AC-009.8 AC-009.20 shows no settings of an earlier key when the next key fails (row 12)', async () => {
     const { user, dialog } = await renderPopup();
     await testAndEdit(user, dialog, 'new1');
 
@@ -161,7 +161,7 @@ describe('AddProjectModal errors', () => {
     expect(within(dialog).queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
   });
 
-  it('AC-006.18 shows another field error of the connection test below Project key by code and params', async () => {
+  it('AC-009.18 shows another field error of the connection test below Project key by code and params', async () => {
     const params = { field_name: 'jiraProjectKey', max_length: 20 };
     answerNext(TEST, () =>
       problem(400, 'MSG02', {
@@ -177,7 +177,7 @@ describe('AddProjectModal errors', () => {
     expect(keyInput(dialog)).toHaveValue('new1');
   });
 
-  it('AC-006.18 AC-006.20 shows Save field errors below Done statuses and Review range', async () => {
+  it('AC-009.18 AC-009.20 shows Save field errors below Done statuses and Review range', async () => {
     const { user, dialog } = await renderPopup();
     await testAndEdit(user, dialog, 'new1');
     const required = { field_name: 'doneStatusIds' };
@@ -198,7 +198,7 @@ describe('AddProjectModal errors', () => {
   });
 
   it.each(NON_FIELD)(
-    'AC-006.19 AC-006.20 shows the connection test error $name once by its code and keeps the key (rows 21, 24)',
+    'AC-009.19 AC-009.20 shows the connection test error $name once by its code and keeps the key (rows 21, 24)',
     async ({ response, code }) => {
       answerNext(TEST, response);
       const { user, dialog, spy } = await renderPopup();
@@ -215,7 +215,7 @@ describe('AddProjectModal errors', () => {
     },
   );
 
-  it('AC-006.19 leaves a 401 to the shared MSG07 dialog with no toast of its own', async () => {
+  it('AC-009.19 leaves a 401 to the shared MSG07 dialog with no toast of its own', async () => {
     answerNext(TEST, () => problem(401, 'MSG07'));
     const { user, dialog } = await renderPopup();
 
@@ -231,7 +231,7 @@ describe('AddProjectModal errors', () => {
   });
 
   it.each(NON_FIELD)(
-    'AC-006.19 AC-006.20 shows the Save error $name once by its code and keeps the settings (rows 21, 24)',
+    'AC-009.19 AC-009.20 shows the Save error $name once by its code and keeps the settings (rows 21, 24)',
     async ({ response, code }) => {
       const { user, dialog, spy } = await renderPopup();
       await testAndEdit(user, dialog, 'new1');

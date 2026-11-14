@@ -133,7 +133,7 @@ public class ProjectLinkRepository {
                         .addValue("range", reviewRange));
     }
 
-    /** Removes only the previous manager's row, so the caller can take the one manager place (AC-003.4). */
+    /** Removes only the previous manager's row, so the caller can take the one manager place (AC-006.4). */
     public void deleteManager(UUID projectId, UUID managerId) {
         jdbc.update("""
                 DELETE FROM project_membership
@@ -173,7 +173,7 @@ public class ProjectLinkRepository {
     /**
      * All Active and Removed Projects of one Department, by key in code-point order (keys are {@code [A-Z0-9_]}, so
      * {@code COLLATE "C"} does not depend on the database locale). The manager is shown only while the account is
-     * Active; the count covers every membership row, whatever the account status (AC-004.4 to AC-004.6).
+     * Active; the count covers every membership row, whatever the account status (AC-007.4 to AC-007.6).
      */
     public List<ProjectRowResponse> listProjects(long departmentId) {
         return jdbc.query("""

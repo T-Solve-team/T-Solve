@@ -131,7 +131,7 @@ class ProjectCreationIT {
     }
 
     @Test
-    void insertsOneProjectMembershipAndAuditAndAnswers201_AC_002_8_AC_002_9_AC_002_10_AC_002_13_AC_002_15()
+    void insertsOneProjectMembershipAndAuditAndAnswers201_AC_005_8_AC_005_9_AC_005_10_AC_005_13_AC_005_15()
             throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         String response = perform(
@@ -204,7 +204,7 @@ class ProjectCreationIT {
     }
 
     @Test
-    void storesTheCanonicalKeyAndFindsTheCommittedProjectByIt_AC_002_8_AC_002_14() throws Exception {
+    void storesTheCanonicalKeyAndFindsTheCommittedProjectByIt_AC_005_8_AC_005_14() throws Exception {
         UUID id = created(perform(TwoTenantDatabases.ACME, CALLER, body("PCRALIAS"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.jiraProjectKey").value("PCRCANON")));
@@ -218,7 +218,7 @@ class ProjectCreationIT {
     }
 
     @Test
-    void writesProjectMembershipAndAuditInOneTransactionAfterJira_AC_002_18() throws Exception {
+    void writesProjectMembershipAndAuditInOneTransactionAfterJira_AC_005_18() throws Exception {
         UUID id =
                 created(perform(TwoTenantDatabases.ACME, CALLER, body("PCRNEW")).andExpect(status().isCreated()));
         JdbcTemplate db = TwoTenantDatabases.tenantA();
@@ -234,7 +234,7 @@ class ProjectCreationIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"same-department", "other-department", "aliases"})
-    void competingSavesCommitOneProjectAndAnswerOneConflict_AC_002_11(String variant) throws Exception {
+    void competingSavesCommitOneProjectAndAnswerOneConflict_AC_005_11(String variant) throws Exception {
         String keyA = "PCRRACE";
         String keyB = variant.equals("aliases") ? "PCRRACEA" : "PCRRACE";
         UUID callerB = variant.equals("other-department") ? FOREIGN : SECOND;
@@ -288,7 +288,7 @@ class ProjectCreationIT {
 
     /** Forces the lost insert: the Save's ON CONFLICT waits on an uncommitted holder row, then finds it committed. */
     @Test
-    void refusesALostInsertNamingTheCommittedWinnerWithoutWrites_AC_002_11() throws Exception {
+    void refusesALostInsertNamingTheCommittedWinnerWithoutWrites_AC_005_11() throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         int auditsBefore = auditCount();
         UUID winner;
@@ -331,7 +331,7 @@ class ProjectCreationIT {
     }
 
     @Test
-    void refusesToReadAProjectWithAnUnknownStoredStatus_AC_002_13() {
+    void refusesToReadAProjectWithAnUnknownStoredStatus_AC_005_13() {
         UUID id = TwoTenantDatabases.tenantA()
                 .queryForObject(
                         "INSERT INTO project(department_id, jira_project_key, done_status, review_range, status)"
@@ -345,7 +345,7 @@ class ProjectCreationIT {
     }
 
     @Test
-    void rollsBackProjectAndMembershipWhenTheAuditFails_AC_002_12() {
+    void rollsBackProjectAndMembershipWhenTheAuditFails_AC_005_12() {
         int auditsBefore = auditCount();
         // The caller is read before the Jira read; the real AuditService then finds no signed-in user.
         tracker.beforeAnswer(SecurityContextHolder::clearContext);
@@ -367,7 +367,7 @@ class ProjectCreationIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"account", "role", "department-null", "department-inactive", "claimed"})
-    void rechecksEligibilityAndLinkInsideTheWriteTransaction_AC_002_17(String change) throws Exception {
+    void rechecksEligibilityAndLinkInsideTheWriteTransaction_AC_005_17(String change) throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         int auditsBefore = auditCount();
         tracker.beforeAnswer(() -> {
@@ -417,7 +417,7 @@ class ProjectCreationIT {
     }
 
     @Test
-    void savesTheSameKeyInEachWorkspaceDatabaseOnly_AC_007_6() throws Exception {
+    void savesTheSameKeyInEachWorkspaceDatabaseOnly_AC_010_6() throws Exception {
         List<Map<String, Object>> main = snapshot(TwoTenantDatabases.main());
         perform(TwoTenantDatabases.ACME, CALLER, body("PCRSAME")).andExpect(status().isCreated());
         perform(TwoTenantDatabases.BETA, CALLER, body("PCRSAME")).andExpect(status().isCreated());
@@ -430,7 +430,7 @@ class ProjectCreationIT {
     }
 
     @Test
-    void failsUnboundWithoutDefaultDatabaseOrJiraUse_AC_007_5() throws Exception {
+    void failsUnboundWithoutDefaultDatabaseOrJiraUse_AC_010_5() throws Exception {
         List<Map<String, Object>> main = snapshot(TwoTenantDatabases.main());
         mvc.perform(post("/api/v1/projects")
                         .with(csrf())
@@ -446,7 +446,7 @@ class ProjectCreationIT {
     }
 
     @Test
-    void refusesAnInactiveOwnDepartmentBeforeJiraOrWrites_AC_007_4_AC_007_8() throws Exception {
+    void refusesAnInactiveOwnDepartmentBeforeJiraOrWrites_AC_010_4_AC_010_8() throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         db.update("UPDATE department SET status = 'DEACTIVATED' WHERE public_id = ?", OWN);
         List<Map<String, Object>> before = snapshot(db);

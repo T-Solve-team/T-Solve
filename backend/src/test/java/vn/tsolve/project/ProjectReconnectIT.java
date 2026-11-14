@@ -136,7 +136,7 @@ class ProjectReconnectIT {
     }
 
     @Test
-    void reconnectsForTheSamePreviousManagerKeepingEverything_AC_003_1_AC_003_2_AC_003_3_AC_003_5_AC_003_6_AC_003_10()
+    void reconnectsForTheSamePreviousManagerKeepingEverything_AC_006_1_AC_006_2_AC_006_3_AC_006_5_AC_006_6_AC_006_10()
             throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         UUID id = removed(db, "PRCROLD", OWN, CALLER);
@@ -188,7 +188,7 @@ class ProjectReconnectIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"none", "deactivated", "moved", "role-removed", "caller-member"})
-    void replacesAnIneligiblePreviousManagerKeepingOtherMembers_AC_003_4_AC_002_18(String previous) throws Exception {
+    void replacesAnIneligiblePreviousManagerKeepingOtherMembers_AC_006_4_AC_005_18(String previous) throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         UUID id = removed(db, "PRCROLD", OWN, previous.equals("none") ? null : OLD_PM);
         switch (previous) {
@@ -247,7 +247,7 @@ class ProjectReconnectIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"protected", "foreign", "active"})
-    void refusesProtectedForeignOrActiveProjectsBeforeJiraOrWrites_AC_003_7(String variant) throws Exception {
+    void refusesProtectedForeignOrActiveProjectsBeforeJiraOrWrites_AC_006_7(String variant) throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         UUID id = removed(
                 db, "PRCROLD", variant.equals("foreign") ? OTHER : OWN, variant.equals("protected") ? SECOND : null);
@@ -268,7 +268,7 @@ class ProjectReconnectIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"same-key", "alias", "alias-and-create"})
-    void competingSavesCommitOneReconnectOrCreateAndRefuseTheOther_AC_003_8(String variant) throws Exception {
+    void competingSavesCommitOneReconnectOrCreateAndRefuseTheOther_AC_006_8(String variant) throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         boolean create = variant.equals("alias-and-create");
         // alias-and-create: one Save reconnects PRCRALIAS onto Jira's PRCRCANON, the other creates PRCRCANON.
@@ -340,7 +340,7 @@ class ProjectReconnectIT {
     }
 
     @Test
-    void restoresTheRemovedProjectAndMembersWhenTheAuditFails_AC_003_9() {
+    void restoresTheRemovedProjectAndMembersWhenTheAuditFails_AC_006_9() {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         UUID id = removed(db, "PRCRFAIL", OWN, OLD_PM);
         db.update("UPDATE app_user SET status = 'DEACTIVATED' WHERE id = ?", OLD_PM);
@@ -368,7 +368,7 @@ class ProjectReconnectIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"role", "claimed", "activated"})
-    void rechecksEligibilityAndLinkBeforeReconnecting_AC_002_17_AC_003_1(String change) throws Exception {
+    void rechecksEligibilityAndLinkBeforeReconnecting_AC_005_17_AC_006_1(String change) throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         UUID id = removed(db, "PRCRCHK", OWN, null);
         int auditsBefore = auditCount();
@@ -414,7 +414,7 @@ class ProjectReconnectIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"missing", "unknown-id"})
-    void refusesReconnectAfterAFailedFreshJiraCheck_AC_002_2_AC_002_3_AC_002_5_AC_003_1(String failure)
+    void refusesReconnectAfterAFailedFreshJiraCheck_AC_005_2_AC_005_3_AC_005_5_AC_006_1(String failure)
             throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         String key = failure.equals("missing") ? "PRCRMISS" : "PRCRSWAP";
@@ -436,8 +436,8 @@ class ProjectReconnectIT {
     }
 
     @Test
-    void reconnectsOnlyInTheBoundWorkspaceDatabase_AC_007_6() throws Exception {
-        // A deactivated previous manager in both databases, so the reconnect also writes memberships (AC-003.4).
+    void reconnectsOnlyInTheBoundWorkspaceDatabase_AC_010_6() throws Exception {
+        // A deactivated previous manager in both databases, so the reconnect also writes memberships (AC-006.4).
         UUID acme = removed(TwoTenantDatabases.tenantA(), "PRCRSAME", OWN, OLD_PM);
         removed(TwoTenantDatabases.tenantB(), "PRCRSAME", OWN, OLD_PM);
         for (JdbcTemplate db : List.of(TwoTenantDatabases.tenantA(), TwoTenantDatabases.tenantB())) {
@@ -463,7 +463,7 @@ class ProjectReconnectIT {
     }
 
     @Test
-    void reconnectsAnAliasUnderJirasCanonicalKey_AC_003_1_AC_003_10() throws Exception {
+    void reconnectsAnAliasUnderJirasCanonicalKey_AC_006_1_AC_006_10() throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         UUID id = removed(db, "PRCRALIAS", OWN, CALLER);
         perform(TwoTenantDatabases.ACME, CALLER, body("PRCRALIAS"))
@@ -481,7 +481,7 @@ class ProjectReconnectIT {
     }
 
     @Test
-    void conditionalReconnectUpdatesNothingOnAnActiveRow_AC_003_8() {
+    void conditionalReconnectUpdatesNothingOnAnActiveRow_AC_006_8() {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         UUID id = removed(db, "PRCRCHK", OWN, null);
         db.update("UPDATE project SET status = 'ACTIVE' WHERE public_id = ?", id);
@@ -494,7 +494,7 @@ class ProjectReconnectIT {
 
     /** Forces the waiter: the Save blocks on the Removed row's lock while another transaction activates it. */
     @Test
-    void refusesAReconnectThatWaitedForAConcurrentActivation_AC_003_8() throws Exception {
+    void refusesAReconnectThatWaitedForAConcurrentActivation_AC_006_8() throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         UUID id = removed(db, "PRCRWAIT", OWN, null);
         List<String> members = memberships(db, id);

@@ -7,9 +7,11 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
+import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.identity.dto.DepartmentRefResponse;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.workspace.dto.CreateDepartmentRequest;
+import vn.tsolve.workspace.dto.UpdateDepartmentRequest;
 import vn.tsolve.workspace.repository.DepartmentRepository;
 import vn.tsolve.workspace.service.DepartmentService;
 
@@ -40,5 +42,42 @@ public class DepartmentServiceImpl implements DepartmentService {
                 department.publicId(),
                 Map.of("operation", "CREATE", "name", name, "spaceId", spaceId));
         return new DepartmentRefResponse(department.publicId(), name);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DepartmentRefResponse get(UUID departmentId) {
+        scope.currentWorkspaceId(); // AC-003.21
+        DepartmentRepository.Current current =
+                repository.findActive(departmentId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+        return new DepartmentRefResponse(departmentId, current.name());
+    }
+
+    @Override
+    @Transactional
+    public DepartmentRefResponse update(UUID departmentId, UpdateDepartmentRequest request) {
+        scope.currentWorkspaceId(); // AC-003.21: throws before any repository call
+        String name = request.name().strip();
+        DepartmentRepository.Current current =
+                repository.lockActive(departmentId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+        if (name.equals(current.name())) {
+            return new DepartmentRefResponse(departmentId, name); // AC-003.14
+        }
+        repository.renameDepartment(current.id(), name);
+        UUID spaceId = repository.renameSpace(current.id(), name);
+        audit.record(
+                AuditAction.DEPARTMENT_CHANGE,
+                "DEPARTMENT",
+                departmentId,
+                Map.of(
+                        "operation",
+                        "UPDATE",
+                        "before",
+                        Map.of("name", current.name()),
+                        "after",
+                        Map.of("name", name),
+                        "spaceId",
+                        spaceId));
+        return new DepartmentRefResponse(departmentId, name);
     }
 }

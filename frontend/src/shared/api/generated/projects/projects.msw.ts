@@ -11,14 +11,18 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
-import { ProjectStatus } from '../model';
+import { ProjectRole, ProjectStatus } from '../model';
 import type {
+  AddProjectMembersRequest,
   CreateProjectRequest,
+  MemberCandidateResponse,
   Project,
   ProjectConnectionTest,
   ProjectConnectionTestRequest,
   ProjectList,
   ProjectManagerRef,
+  ProjectMemberResponse,
+  ProjectSummaryResponse,
 } from '../model';
 
 export const getTestProjectConnectionResponseMock = (
@@ -103,6 +107,66 @@ export const getListProjectsResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetProjectResponseMock = (
+  overrideResponse: Partial<Extract<ProjectSummaryResponse, object>> = {},
+): ProjectSummaryResponse => ({
+  id: faker.string.uuid(),
+  jiraProjectKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  departmentName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  projectManagerName: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  status: faker.helpers.arrayElement(['ACTIVE', 'REMOVED'] as const),
+  ...overrideResponse,
+});
+
+export const getListProjectMembersResponseMock = (): ProjectMemberResponse[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    userId: faker.string.uuid(),
+    fullName: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    email: faker.internet.email(),
+    role: faker.helpers.arrayElement(Object.values(ProjectRole)),
+    dateAdded: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  }));
+
+export const getAddProjectMembersResponseMock = (): ProjectMemberResponse[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    userId: faker.string.uuid(),
+    fullName: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    email: faker.internet.email(),
+    role: faker.helpers.arrayElement(Object.values(ProjectRole)),
+    dateAdded: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  }));
+
+export const getRemoveProjectMemberResponseMock = (): ProjectMemberResponse[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    userId: faker.string.uuid(),
+    fullName: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    email: faker.internet.email(),
+    role: faker.helpers.arrayElement(Object.values(ProjectRole)),
+    dateAdded: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  }));
+
+export const getSearchProjectMemberCandidatesResponseMock = (): MemberCandidateResponse[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    userId: faker.string.uuid(),
+    fullName: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    email: faker.internet.email(),
+  }));
+
 export const getTestProjectConnectionMockHandler = (
   overrideResponse?:
     | ProjectConnectionTest
@@ -172,8 +236,135 @@ export const getListProjectsMockHandler = (
     options,
   );
 };
+
+export const getGetProjectMockHandler = (
+  overrideResponse?:
+    | ProjectSummaryResponse
+    | ((
+        info: Parameters<HttpResponseResolver<{ projectId: string }>>[0],
+      ) => Promise<ProjectSummaryResponse> | ProjectSummaryResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ projectId: string }>(
+    '*/api/v1/projects/:projectId',
+    async (info: Parameters<HttpResponseResolver<{ projectId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetProjectResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListProjectMembersMockHandler = (
+  overrideResponse?:
+    | ProjectMemberResponse[]
+    | ((
+        info: Parameters<HttpResponseResolver<{ projectId: string }>>[0],
+      ) => Promise<ProjectMemberResponse[]> | ProjectMemberResponse[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ projectId: string }>(
+    '*/api/v1/projects/:projectId/members',
+    async (info: Parameters<HttpResponseResolver<{ projectId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListProjectMembersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getAddProjectMembersMockHandler = (
+  overrideResponse?:
+    | ProjectMemberResponse[]
+    | ((
+        info: Parameters<HttpResponseResolver<{ projectId: string }, AddProjectMembersRequest>>[0],
+      ) => Promise<ProjectMemberResponse[]> | ProjectMemberResponse[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ projectId: string }, AddProjectMembersRequest>(
+    '*/api/v1/projects/:projectId/members',
+    async (
+      info: Parameters<HttpResponseResolver<{ projectId: string }, AddProjectMembersRequest>>[0],
+    ) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAddProjectMembersResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRemoveProjectMemberMockHandler = (
+  overrideResponse?:
+    | ProjectMemberResponse[]
+    | ((
+        info: Parameters<HttpResponseResolver<{ projectId: string; userId: string }>>[0],
+      ) => Promise<ProjectMemberResponse[]> | ProjectMemberResponse[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete<{ projectId: string; userId: string }>(
+    '*/api/v1/projects/:projectId/members/:userId',
+    async (info: Parameters<HttpResponseResolver<{ projectId: string; userId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRemoveProjectMemberResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSearchProjectMemberCandidatesMockHandler = (
+  overrideResponse?:
+    | MemberCandidateResponse[]
+    | ((
+        info: Parameters<HttpResponseResolver<{ projectId: string }>>[0],
+      ) => Promise<MemberCandidateResponse[]> | MemberCandidateResponse[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ projectId: string }>(
+    '*/api/v1/projects/:projectId/member-candidates',
+    async (info: Parameters<HttpResponseResolver<{ projectId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSearchProjectMemberCandidatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getProjectsMock = () => [
   getTestProjectConnectionMockHandler(),
   getCreateProjectMockHandler(),
   getListProjectsMockHandler(),
+  getGetProjectMockHandler(),
+  getListProjectMembersMockHandler(),
+  getAddProjectMembersMockHandler(),
+  getRemoveProjectMemberMockHandler(),
+  getSearchProjectMemberCandidatesMockHandler(),
 ];

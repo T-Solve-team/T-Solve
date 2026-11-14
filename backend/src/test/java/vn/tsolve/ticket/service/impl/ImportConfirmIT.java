@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.context.annotation.Bean;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -30,10 +30,9 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.exception.MessageCodeException;
 import vn.tsolve.common.exception.NotFoundException;
+import vn.tsolve.ticket.TicketTestDatabase;
 import vn.tsolve.ticket.dto.FillSolutionRequest;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
 import vn.tsolve.ticket.dto.ImportPreviewRowResponse;
@@ -65,18 +64,10 @@ import vn.tsolve.ticket.service.ImportPreviewService;
             "DB_USER=unused",
             "DB_PASSWORD=unused"
         })
+@ImportTestcontainers(TicketTestDatabase.class)
 class ImportConfirmIT {
     @org.springframework.boot.test.mock.mockito.MockBean
     private vn.tsolve.common.audit.AuditService audit;
-
-    // started once for the class and stopped by Testcontainers' Ryuk; no org.testcontainers:junit-jupiter needed
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
-
-    static {
-        DB.start();
-    }
 
     private static final String HEADER = "ticket_id,title,symptoms,root_cause,resolution_steps,scope\n";
 

@@ -23,12 +23,17 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AddProjectMembersRequest,
   CreateProjectRequest,
+  MemberCandidateResponse,
   ProblemResponse,
   Project,
   ProjectConnectionTest,
   ProjectConnectionTestRequest,
   ProjectList,
+  ProjectMemberResponse,
+  ProjectSummaryResponse,
+  SearchProjectMemberCandidatesParams,
 } from '../model';
 
 import { http } from '../../http';
@@ -368,6 +373,624 @@ export function useListProjects<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListProjectsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetProjectUrl = (projectId: string) => {
+  return `/api/v1/projects/${projectId}`;
+};
+
+/**
+ * @summary Project Detail header
+ */
+export const getProject = async (
+  projectId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectSummaryResponse> => {
+  return http<ProjectSummaryResponse>(getGetProjectUrl(projectId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetProjectQueryKey = (projectId: string) => {
+  return [`/api/v1/projects/${projectId}`] as const;
+};
+
+export const getGetProjectQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProject>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetProjectQueryKey(projectId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getProject>>> = ({ signal }) =>
+    getProject(projectId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: projectId !== null && projectId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetProjectQueryResult = NonNullable<Awaited<ReturnType<typeof getProject>>>;
+export type GetProjectQueryError = ErrorType<ProblemResponse>;
+
+export function useGetProject<
+  TData = Awaited<ReturnType<typeof getProject>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProject>>,
+          TError,
+          Awaited<ReturnType<typeof getProject>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetProject<
+  TData = Awaited<ReturnType<typeof getProject>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProject>>,
+          TError,
+          Awaited<ReturnType<typeof getProject>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetProject<
+  TData = Awaited<ReturnType<typeof getProject>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Project Detail header
+ */
+
+export function useGetProject<
+  TData = Awaited<ReturnType<typeof getProject>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetProjectQueryOptions(projectId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListProjectMembersUrl = (projectId: string) => {
+  return `/api/v1/projects/${projectId}/members`;
+};
+
+/**
+ * @summary Members of a Project
+ */
+export const listProjectMembers = async (
+  projectId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectMemberResponse[]> => {
+  return http<ProjectMemberResponse[]>(getListProjectMembersUrl(projectId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getListProjectMembersQueryKey = (projectId: string) => {
+  return [`/api/v1/projects/${projectId}/members`] as const;
+};
+
+export const getListProjectMembersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listProjectMembers>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectMembers>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListProjectMembersQueryKey(projectId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectMembers>>> = ({ signal }) =>
+    listProjectMembers(projectId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: projectId !== null && projectId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof listProjectMembers>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListProjectMembersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listProjectMembers>>
+>;
+export type ListProjectMembersQueryError = ErrorType<ProblemResponse>;
+
+export function useListProjectMembers<
+  TData = Awaited<ReturnType<typeof listProjectMembers>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectMembers>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProjectMembers>>,
+          TError,
+          Awaited<ReturnType<typeof listProjectMembers>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListProjectMembers<
+  TData = Awaited<ReturnType<typeof listProjectMembers>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectMembers>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProjectMembers>>,
+          TError,
+          Awaited<ReturnType<typeof listProjectMembers>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListProjectMembers<
+  TData = Awaited<ReturnType<typeof listProjectMembers>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectMembers>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Members of a Project
+ */
+
+export function useListProjectMembers<
+  TData = Awaited<ReturnType<typeof listProjectMembers>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectMembers>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListProjectMembersQueryOptions(projectId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getAddProjectMembersUrl = (projectId: string) => {
+  return `/api/v1/projects/${projectId}/members`;
+};
+
+/**
+ * @summary Add Ticket Resolvers to a Project
+ */
+export const addProjectMembers = async (
+  projectId: string,
+  addProjectMembersRequest: AddProjectMembersRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectMemberResponse[]> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ProjectMemberResponse[]>(getAddProjectMembersUrl(projectId), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(addProjectMembersRequest),
+  });
+};
+
+export const getAddProjectMembersMutationKey = () => ['addProjectMembers'] as const;
+
+export const getAddProjectMembersMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addProjectMembers>>,
+    TError,
+    AddProjectMembersMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addProjectMembers>>,
+  TError,
+  AddProjectMembersMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAddProjectMembersMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addProjectMembers>>,
+    AddProjectMembersMutationVariables
+  > = (props) => {
+    const { projectId, data } = props ?? {};
+
+    return addProjectMembers(projectId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddProjectMembersMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addProjectMembers>>
+>;
+export type AddProjectMembersMutationBody = AddProjectMembersRequest;
+export type AddProjectMembersMutationError = ErrorType<ProblemResponse>;
+export type AddProjectMembersMutationVariables = {
+  projectId: string;
+  data: AddProjectMembersRequest;
+};
+
+/**
+ * @summary Add Ticket Resolvers to a Project
+ */
+export const useAddProjectMembers = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof addProjectMembers>>,
+      TError,
+      AddProjectMembersMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof addProjectMembers>>,
+  TError,
+  AddProjectMembersMutationVariables,
+  TContext
+> => {
+  return useMutation(getAddProjectMembersMutationOptions(options), queryClient);
+};
+export const getRemoveProjectMemberUrl = (projectId: string, userId: string) => {
+  return `/api/v1/projects/${projectId}/members/${userId}`;
+};
+
+/**
+ * @summary Remove a member from a Project
+ */
+export const removeProjectMember = async (
+  projectId: string,
+  userId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectMemberResponse[]> => {
+  return http<ProjectMemberResponse[]>(getRemoveProjectMemberUrl(projectId, userId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getRemoveProjectMemberMutationKey = () => ['removeProjectMember'] as const;
+
+export const getRemoveProjectMemberMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeProjectMember>>,
+    TError,
+    RemoveProjectMemberMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeProjectMember>>,
+  TError,
+  RemoveProjectMemberMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRemoveProjectMemberMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeProjectMember>>,
+    RemoveProjectMemberMutationVariables
+  > = (props) => {
+    const { projectId, userId } = props ?? {};
+
+    return removeProjectMember(projectId, userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveProjectMemberMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeProjectMember>>
+>;
+
+export type RemoveProjectMemberMutationError = ErrorType<ProblemResponse>;
+export type RemoveProjectMemberMutationVariables = { projectId: string; userId: string };
+
+/**
+ * @summary Remove a member from a Project
+ */
+export const useRemoveProjectMember = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof removeProjectMember>>,
+      TError,
+      RemoveProjectMemberMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof removeProjectMember>>,
+  TError,
+  RemoveProjectMemberMutationVariables,
+  TContext
+> => {
+  return useMutation(getRemoveProjectMemberMutationOptions(options), queryClient);
+};
+export const getSearchProjectMemberCandidatesUrl = (
+  projectId: string,
+  params?: SearchProjectMemberCandidatesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/member-candidates?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/member-candidates`;
+};
+
+/**
+ * @summary Active Ticket Resolvers that can be added to a Project
+ */
+export const searchProjectMemberCandidates = async (
+  projectId: string,
+  params?: SearchProjectMemberCandidatesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<MemberCandidateResponse[]> => {
+  return http<MemberCandidateResponse[]>(getSearchProjectMemberCandidatesUrl(projectId, params), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getSearchProjectMemberCandidatesQueryKey = (
+  projectId: string,
+  params?: SearchProjectMemberCandidatesParams,
+) => {
+  return [`/api/v1/projects/${projectId}/member-candidates`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchProjectMemberCandidatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchProjectMemberCandidates>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  params?: SearchProjectMemberCandidatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchProjectMemberCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getSearchProjectMemberCandidatesQueryKey(projectId, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchProjectMemberCandidates>>> = ({
+    signal,
+  }) => searchProjectMemberCandidates(projectId, params, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: projectId !== null && projectId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof searchProjectMemberCandidates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchProjectMemberCandidatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchProjectMemberCandidates>>
+>;
+export type SearchProjectMemberCandidatesQueryError = ErrorType<ProblemResponse>;
+
+export function useSearchProjectMemberCandidates<
+  TData = Awaited<ReturnType<typeof searchProjectMemberCandidates>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  params: undefined | SearchProjectMemberCandidatesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchProjectMemberCandidates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchProjectMemberCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof searchProjectMemberCandidates>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchProjectMemberCandidates<
+  TData = Awaited<ReturnType<typeof searchProjectMemberCandidates>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  params?: SearchProjectMemberCandidatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchProjectMemberCandidates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchProjectMemberCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof searchProjectMemberCandidates>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchProjectMemberCandidates<
+  TData = Awaited<ReturnType<typeof searchProjectMemberCandidates>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  params?: SearchProjectMemberCandidatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchProjectMemberCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Active Ticket Resolvers that can be added to a Project
+ */
+
+export function useSearchProjectMemberCandidates<
+  TData = Awaited<ReturnType<typeof searchProjectMemberCandidates>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  params?: SearchProjectMemberCandidatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchProjectMemberCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchProjectMemberCandidatesQueryOptions(projectId, params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

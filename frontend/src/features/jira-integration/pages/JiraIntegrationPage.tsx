@@ -5,7 +5,7 @@ import { DepartmentProjects } from '../components/DepartmentProjects';
 
 export function JiraIntegrationPage() {
   const { hasRole } = useSession();
-  // An Admin-only session keeps the placeholder and never mounts the Projects query (AC-005.9).
+  // An Admin-only session keeps the placeholder and never mounts the Projects query (AC-008.9).
   if (!hasRole('PROJECT_MANAGER'))
     return <ScreenPlaceholder number="3.1" name="Jira Integration" />;
   return <DepartmentProjects />;

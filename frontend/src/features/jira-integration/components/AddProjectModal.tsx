@@ -10,10 +10,10 @@ import { useAddProject, useProjectConnectionTest } from '../hooks/useProjectMuta
 type AddProjectValues = { jiraProjectKey: string; doneStatusIds?: string[]; reviewRange?: number };
 
 const KEY_MAX = 20;
-/** The `INT` column's maximum (AC-006.11). */
+/** The `INT` column's maximum (AC-009.11). */
 const RANGE_MAX = 2_147_483_647;
 
-/** MSG02 by UTF-16 code units as typed (AC-006.3); antd's own `max` counts code points. */
+/** MSG02 by UTF-16 code units as typed (AC-009.3); antd's own `max` counts code points. */
 const keyLength: FormRule = {
   validator: (_rule, value: unknown) =>
     typeof value === 'string' && value.length > KEY_MAX
@@ -21,7 +21,7 @@ const keyLength: FormRule = {
       : Promise.resolve(),
 };
 
-/** MSG44 above the `INT` maximum; `rules.wholeNumberMin(1)` covers the rest of AC-006.11. */
+/** MSG44 above the `INT` maximum; `rules.wholeNumberMin(1)` covers the rest of AC-009.11. */
 const rangeMax: FormRule = {
   validator: (_rule, value: unknown) =>
     typeof value === 'number' && value > RANGE_MAX
@@ -40,7 +40,7 @@ function statusOptions(statuses: TrackerStatus[]) {
 type AddProjectModalProps = { isOpen: boolean; onClose: () => void };
 
 /**
- * 3.1 Add project (popup) — spec STORY-006, D30/D37/D40. The primary action is Test connection until a test
+ * 3.1 Add project (popup) — spec STORY-009, D30/D37/D40. The primary action is Test connection until a test
  * succeeds, then Save; editing the key discards the tested result. While a request runs the popup is locked.
  */
 export function AddProjectModal({ isOpen, onClose }: AddProjectModalProps) {

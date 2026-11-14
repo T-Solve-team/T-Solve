@@ -87,7 +87,7 @@ class ProjectControllerTest {
                 "{\"jiraProjectKey\":\"                     \"}"
             })
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void refusesBlankKey_AC_001_2(String body) throws Exception {
+    void refusesBlankKey_AC_004_2(String body) throws Exception {
         assertKeyError(perform(body), "MSG01", Map.of("field_name", "jiraProjectKey"));
         verifyNoInteractions(service);
     }
@@ -95,7 +95,7 @@ class ProjectControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"AAAAAAAAAAAAAAAAAAAAA", "😀😀😀😀😀😀😀😀😀😀😀"})
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void refusesMoreThanTwentyUtf16Units_AC_001_3(String key) throws Exception {
+    void refusesMoreThanTwentyUtf16Units_AC_004_3(String key) throws Exception {
         assertKeyError(perform(keyBody(key)), "MSG02", Map.of("field_name", "jiraProjectKey", "max_length", 20));
         verifyNoInteractions(service);
     }
@@ -103,7 +103,7 @@ class ProjectControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"AAAAAAAAAAAAAAAAAAAA", "😀😀😀😀😀😀😀😀😀😀"})
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void acceptsTwentyUtf16UnitsWithoutLengthError_AC_001_3(String key) throws Exception {
+    void acceptsTwentyUtf16UnitsWithoutLengthError_AC_004_3(String key) throws Exception {
         when(service.testConnection(any())).thenReturn(newResponse());
         perform(keyBody(key))
                 .andExpect(status().isOk())
@@ -114,13 +114,13 @@ class ProjectControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"", "{", "{\"jiraProjectKey\":}", "["})
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void refusesUnreadableJson_AC_001_20(String body) throws Exception {
+    void refusesUnreadableJson_AC_004_20(String body) throws Exception {
         assertNoFieldProblem(perform(body), 400, "MSG06");
         verifyNoInteractions(service);
     }
 
     @Test
-    void declaresProjectManagerMethodAccess_AC_007_1() {
+    void declaresProjectManagerMethodAccess_AC_010_1() {
         Method method = Arrays.stream(ProjectController.class.getMethods())
                 .filter(candidate -> candidate.getName().equals("testConnection")
                         && Arrays.equals(
@@ -136,42 +136,42 @@ class ProjectControllerTest {
     }
 
     @Test
-    void refusesAnonymous_AC_007_2() throws Exception {
+    void refusesAnonymous_AC_010_2() throws Exception {
         assertNoFieldProblem(perform(VALID), 401, "MSG07");
         verifyNoInteractions(service);
     }
 
     @Test
     @WithTSolveUser
-    void refusesEmployeeWithValidBody_AC_007_3() throws Exception {
+    void refusesEmployeeWithValidBody_AC_010_3() throws Exception {
         assertNoFieldProblem(perform(VALID), 403, "MSG08");
         verifyNoInteractions(service);
     }
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    void refusesAdminWithValidBody_AC_007_3() throws Exception {
+    void refusesAdminWithValidBody_AC_010_3() throws Exception {
         assertNoFieldProblem(perform(VALID), 403, "MSG08");
         verifyNoInteractions(service);
     }
 
     @Test
     @WithTSolveUser
-    void validatesEmployeeBodyBeforeMethodAccess_AC_001_2() throws Exception {
+    void validatesEmployeeBodyBeforeMethodAccess_AC_004_2() throws Exception {
         assertKeyError(perform("{}"), "MSG01", Map.of("field_name", "jiraProjectKey"));
         verifyNoInteractions(service);
     }
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    void validatesAdminBodyBeforeMethodAccess_AC_001_2() throws Exception {
+    void validatesAdminBodyBeforeMethodAccess_AC_004_2() throws Exception {
         assertKeyError(perform("{}"), "MSG01", Map.of("field_name", "jiraProjectKey"));
         verifyNoInteractions(service);
     }
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersUnreachableProjectConflict_AC_001_15() throws Exception {
+    void rendersUnreachableProjectConflict_AC_004_15() throws Exception {
         when(service.testConnection(any()))
                 .thenThrow(new BusinessRuleException("MSG48", Map.of("tracker_name", "Jira")));
         perform(VALID)
@@ -184,7 +184,7 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersLinkedProjectConflictEnvelope_AC_001_5() throws Exception {
+    void rendersLinkedProjectConflictEnvelope_AC_004_5() throws Exception {
         Map<String, Object> params = Map.of("tracker_name", "Jira", "department_name", "IT Operations");
         when(service.testConnection(any())).thenThrow(new BusinessRuleException("MSG49", params, "jiraProjectKey"));
         perform(VALID)
@@ -202,28 +202,28 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersTrackerUnavailable_AC_001_16() throws Exception {
+    void rendersTrackerUnavailable_AC_004_16() throws Exception {
         when(service.testConnection(any())).thenThrow(new ProjectTrackerUnavailableException());
         assertNoFieldProblem(perform(VALID), 503, "MSG06");
     }
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersIneligibleCaller_AC_007_4() throws Exception {
+    void rendersIneligibleCaller_AC_010_4() throws Exception {
         when(service.testConnection(any())).thenThrow(new ProjectAccessDeniedException());
         assertNoFieldProblem(perform(VALID), 403, "MSG08");
     }
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersUnboundWorkspace_AC_007_5() throws Exception {
+    void rendersUnboundWorkspace_AC_010_5() throws Exception {
         when(service.testConnection(any())).thenThrow(new IllegalStateException("no Workspace is bound"));
         assertNoFieldProblem(perform(VALID), 500, "MSG06");
     }
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void returnsNewProjectExampleWithoutProjectId_AC_001_9_AC_001_10() throws Exception {
+    void returnsNewProjectExampleWithoutProjectId_AC_004_9_AC_004_10() throws Exception {
         when(service.testConnection(any())).thenReturn(newResponse());
         perform(VALID)
                 .andExpect(status().isOk())
@@ -239,7 +239,7 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void returnsReconnectWithExistingId_AC_001_9_AC_001_11() throws Exception {
+    void returnsReconnectWithExistingId_AC_004_9_AC_004_11() throws Exception {
         var statuses =
                 List.of(new TrackerStatus("10001", "In Review", false), new TrackerStatus("10002", "Done", true));
         when(service.testConnection(any()))
@@ -303,7 +303,7 @@ class ProjectControllerTest {
     @NullSource
     @ValueSource(strings = {"missing", "", "   ", "                     "})
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void refusesBlankCreateKey_AC_002_1(String key) throws Exception {
+    void refusesBlankCreateKey_AC_005_1(String key) throws Exception {
         var body = createBody();
         if ("missing".equals(key)) {
             body.remove("jiraProjectKey");
@@ -326,7 +326,7 @@ class ProjectControllerTest {
                 "\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00"
             })
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void refusesLongCreateKey_AC_002_1(String key) throws Exception {
+    void refusesLongCreateKey_AC_005_1(String key) throws Exception {
         var body = createBody();
         body.put("jiraProjectKey", key);
         assertCreateField(
@@ -341,7 +341,7 @@ class ProjectControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"missing", "null", "empty"})
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void requiresCreateDoneStatuses_AC_002_4(String variant) throws Exception {
+    void requiresCreateDoneStatuses_AC_005_4(String variant) throws Exception {
         var body = createBody();
         switch (variant) {
             case "missing" -> body.remove("doneStatusIds");
@@ -361,7 +361,7 @@ class ProjectControllerTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void requiresCreateReviewRange_AC_002_6(boolean missing) throws Exception {
+    void requiresCreateReviewRange_AC_005_6(boolean missing) throws Exception {
         var body = createBody();
         if (missing) {
             body.remove("reviewRange");
@@ -390,7 +390,7 @@ class ProjectControllerTest {
                 "{\"jiraProjectKey\":\"OPS\",\"doneStatusIds\":[\"10002\"],\"reviewRange\":{}}"
             })
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void refusesUnreadableCreateBody_AC_002_16(String body) throws Exception {
+    void refusesUnreadableCreateBody_AC_005_16(String body) throws Exception {
         assertNoFieldProblem(createRequest(body), 400, "MSG06");
         verifyNoInteractions(service);
     }
@@ -398,7 +398,7 @@ class ProjectControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"2.5", "2147483648", "0", "-1", "\"3\""})
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void passesCreateNumbersWithoutTruncation_AC_002_7_AC_002_16(String number) throws Exception {
+    void passesCreateNumbersWithoutTruncation_AC_005_7_AC_005_16(String number) throws Exception {
         when(service.create(any())).thenReturn(new ProjectSaveResult(savedProject(), true));
         createRequest("{\"jiraProjectKey\":\"OPS\",\"doneStatusIds\":[\"10002\"],\"reviewRange\":" + number + "}")
                 .andExpect(status().isCreated());
@@ -408,7 +408,7 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersCreateRangeFieldError_AC_002_7() throws Exception {
+    void rendersCreateRangeFieldError_AC_005_7() throws Exception {
         when(service.create(any()))
                 .thenThrow(new FieldMessageCodeException(HttpStatus.BAD_REQUEST, "MSG44", Map.of(), "reviewRange"));
         assertCreateField(createRequest(validCreate()), 400, "MSG44", "reviewRange", Map.of());
@@ -416,7 +416,7 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersCreateSelectionFieldError_AC_002_5() throws Exception {
+    void rendersCreateSelectionFieldError_AC_005_5() throws Exception {
         Map<String, Object> params = Map.of("field_name", "doneStatusIds");
         when(service.create(any()))
                 .thenThrow(new FieldMessageCodeException(HttpStatus.BAD_REQUEST, "MSG01", params, "doneStatusIds"));
@@ -425,7 +425,7 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersCreateTrackerConflict_AC_002_3() throws Exception {
+    void rendersCreateTrackerConflict_AC_005_3() throws Exception {
         when(service.create(any())).thenThrow(new BusinessRuleException("MSG48", Map.of("tracker_name", "Jira")));
         createRequest(validCreate())
                 .andExpect(status().isConflict())
@@ -437,14 +437,14 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersCreateTrackerUnavailable_AC_002_3() throws Exception {
+    void rendersCreateTrackerUnavailable_AC_005_3() throws Exception {
         when(service.create(any())).thenThrow(new ProjectTrackerUnavailableException());
         assertNoFieldProblem(createRequest(validCreate()), 503, "MSG06");
     }
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersCreateLostInsertEnvelope_AC_002_11_AC_003_7_AC_003_8() throws Exception {
+    void rendersCreateLostInsertEnvelope_AC_005_11_AC_006_7_AC_006_8() throws Exception {
         Map<String, Object> params = Map.of("tracker_name", "Jira", "department_name", "IT Operations");
         when(service.create(any())).thenThrow(new BusinessRuleException("MSG49", params, "jiraProjectKey"));
         assertCreateField(createRequest(validCreate()), 409, "MSG49", "jiraProjectKey", params)
@@ -455,7 +455,7 @@ class ProjectControllerTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersCreateWriteFailure_AC_002_12_AC_003_9(boolean integrity) throws Exception {
+    void rendersCreateWriteFailure_AC_005_12_AC_006_9(boolean integrity) throws Exception {
         RuntimeException failure =
                 integrity ? new DataIntegrityViolationException("membership") : new IllegalStateException("audit");
         when(service.create(any())).thenThrow(failure);
@@ -464,20 +464,20 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void returnsOnlyCreatedProject_AC_002_13() throws Exception {
+    void returnsOnlyCreatedProject_AC_005_13() throws Exception {
         when(service.create(any())).thenReturn(new ProjectSaveResult(savedProject(), true));
         assertSavedBody(createRequest(validCreate()).andExpect(status().isCreated()));
     }
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void answers200WithTheReconnectedProject_AC_003_6() throws Exception {
+    void answers200WithTheReconnectedProject_AC_006_6() throws Exception {
         when(service.create(any())).thenReturn(new ProjectSaveResult(savedProject(), false));
         assertSavedBody(createRequest(validCreate()).andExpect(status().isOk()));
     }
 
     @Test
-    void declaresCreateProjectManagerAccess_AC_007_1() throws Exception {
+    void declaresCreateProjectManagerAccess_AC_010_1() throws Exception {
         Method method = ProjectController.class.getMethod("create", CreateProjectRequest.class);
         PreAuthorize access = method.getAnnotation(PreAuthorize.class);
         assertThat(access).isNotNull();
@@ -485,28 +485,28 @@ class ProjectControllerTest {
     }
 
     @Test
-    void refusesAnonymousCreate_AC_007_2() throws Exception {
+    void refusesAnonymousCreate_AC_010_2() throws Exception {
         assertNoFieldProblem(createRequest(validCreate()), 401, "MSG07");
         verifyNoInteractions(service);
     }
 
     @Test
     @WithTSolveUser
-    void refusesEmployeeCreate_AC_007_3() throws Exception {
+    void refusesEmployeeCreate_AC_010_3() throws Exception {
         assertNoFieldProblem(createRequest(validCreate()), 403, "MSG08");
         verifyNoInteractions(service);
     }
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    void refusesAdminCreate_AC_007_3() throws Exception {
+    void refusesAdminCreate_AC_010_3() throws Exception {
         assertNoFieldProblem(createRequest(validCreate()), 403, "MSG08");
         verifyNoInteractions(service);
     }
 
     @Test
     @WithTSolveUser
-    void validatesEmployeeCreateBeforeMethodSecurity_AC_002_1() throws Exception {
+    void validatesEmployeeCreateBeforeMethodSecurity_AC_005_1() throws Exception {
         var body = createBody();
         body.remove("jiraProjectKey");
         assertCreateField(
@@ -520,7 +520,7 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    void validatesAdminCreateBeforeMethodSecurity_AC_002_1() throws Exception {
+    void validatesAdminCreateBeforeMethodSecurity_AC_005_1() throws Exception {
         var body = createBody();
         body.remove("jiraProjectKey");
         assertCreateField(
@@ -534,14 +534,14 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersIneligibleCreateCaller_AC_007_4() throws Exception {
+    void rendersIneligibleCreateCaller_AC_010_4() throws Exception {
         when(service.create(any())).thenThrow(new ProjectAccessDeniedException());
         assertNoFieldProblem(createRequest(validCreate()), 403, "MSG08");
     }
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersUnboundCreateWorkspace_AC_007_5() throws Exception {
+    void rendersUnboundCreateWorkspace_AC_010_5() throws Exception {
         when(service.create(any())).thenThrow(new IllegalStateException("no Workspace is bound"));
         assertNoFieldProblem(createRequest(validCreate()), 500, "MSG06");
     }
@@ -610,7 +610,7 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void returnsTheListExampleWithANullManager_AC_004_1_AC_004_3_AC_004_4_AC_004_5() throws Exception {
+    void returnsTheListExampleWithANullManager_AC_007_1_AC_007_3_AC_007_4_AC_007_5() throws Exception {
         UUID department = UUID.fromString("3f2a7c1e-52d1-4b7e-9d1f-0a4ab3c1d201");
         UUID old = UUID.fromString("8d1b5d72-6c12-4b95-83e4-c9a6b1181001");
         UUID ops = UUID.fromString("8d1b5d72-6c12-4b95-83e4-c9a6b1181002");
@@ -641,7 +641,7 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void returnsTheDepartmentWithAnEmptyArray_AC_004_7() throws Exception {
+    void returnsTheDepartmentWithAnEmptyArray_AC_007_7() throws Exception {
         when(service.list())
                 .thenReturn(new ProjectListResponse(new DepartmentRefResponse(PROJECT, "IT Operations"), List.of()));
         listRequest()
@@ -655,7 +655,7 @@ class ProjectControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void ignoresClientPagingAndScopeParameters_AC_004_2_AC_007_7() throws Exception {
+    void ignoresClientPagingAndScopeParameters_AC_007_2_AC_010_7() throws Exception {
         when(service.list())
                 .thenReturn(new ProjectListResponse(new DepartmentRefResponse(PROJECT, "IT Operations"), List.of()));
         mvc.perform(get("/api/v1/projects")
@@ -670,7 +670,7 @@ class ProjectControllerTest {
     }
 
     @Test
-    void declaresListProjectManagerAccess_AC_007_1() {
+    void declaresListProjectManagerAccess_AC_010_1() {
         Method method = Arrays.stream(ProjectController.class.getMethods())
                 .filter(candidate -> candidate.getName().equals("list") && candidate.getParameterCount() == 0)
                 .findFirst()
@@ -682,35 +682,35 @@ class ProjectControllerTest {
     }
 
     @Test
-    void refusesAnonymousList_AC_007_2() throws Exception {
+    void refusesAnonymousList_AC_010_2() throws Exception {
         assertNoFieldProblem(listRequest(), 401, "MSG07");
         verifyNoInteractions(service);
     }
 
     @Test
     @WithTSolveUser
-    void refusesEmployeeList_AC_007_3() throws Exception {
+    void refusesEmployeeList_AC_010_3() throws Exception {
         assertNoFieldProblem(listRequest(), 403, "MSG08");
         verifyNoInteractions(service);
     }
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    void refusesAdminList_AC_007_3() throws Exception {
+    void refusesAdminList_AC_010_3() throws Exception {
         assertNoFieldProblem(listRequest(), 403, "MSG08");
         verifyNoInteractions(service);
     }
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersIneligibleListCaller_AC_007_4() throws Exception {
+    void rendersIneligibleListCaller_AC_010_4() throws Exception {
         when(service.list()).thenThrow(new ProjectAccessDeniedException());
         assertNoFieldProblem(listRequest(), 403, "MSG08");
     }
 
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
-    void rendersUnboundListWorkspace_AC_007_5() throws Exception {
+    void rendersUnboundListWorkspace_AC_010_5() throws Exception {
         when(service.list()).thenThrow(new IllegalStateException("no Workspace is bound"));
         assertNoFieldProblem(listRequest(), 500, "MSG06");
     }

@@ -141,7 +141,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void findsTheActiveProjectOfAJiraKey_AC_002_14() {
+    void findsTheActiveProjectOfAJiraKey_AC_005_14() {
         Project project = mock(Project.class);
         given(project.getPublicId()).willReturn(PROJECT);
         given(projectRepository.findByJiraProjectKeyAndStatus("ITSUP", ProjectStatus.ACTIVE))
@@ -157,14 +157,14 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void stripsAndUpperCasesTheKey_AC_001_1() {
+    void stripsAndUpperCasesTheKey_AC_004_1() {
         succeeds(" ops ");
         verify(links).findLink("OPS");
         verify(tracker).findProject("OPS");
     }
 
     @Test
-    void upperCasesWithRootEvenUnderTurkishLocale_AC_001_1() {
+    void upperCasesWithRootEvenUnderTurkishLocale_AC_004_1() {
         Locale previous = Locale.getDefault();
         try {
             Locale.setDefault(Locale.forLanguageTag("tr"));
@@ -178,7 +178,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"1OPS", "OP-S", "Ö", "A B", "x'; drop"})
-    void refusesInvalidFormatBeforeLinkOrJira_AC_001_4(String key) {
+    void refusesInvalidFormatBeforeLinkOrJira_AC_004_4(String key) {
         refusesUnavailableKey(key);
         verify(links, never()).findLink(anyString());
         verifyNoInteractions(tracker);
@@ -186,21 +186,21 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(longs = {1, 2})
-    void refusesActiveLinksInAnyDepartment_AC_001_5(long departmentId) {
+    void refusesActiveLinksInAnyDepartment_AC_004_5(long departmentId) {
         given(links.findLink("OPS")).willReturn(Optional.of(link(departmentId, "ACTIVE", OTHER, true, null, null)));
         refusesConflict("OPS", "Link Department");
         verifyNoInteractions(tracker);
     }
 
     @Test
-    void refusesRemovedLinkInAnotherDepartment_AC_001_6() {
+    void refusesRemovedLinkInAnotherDepartment_AC_004_6() {
         given(links.findLink("OPS")).willReturn(Optional.of(link(2, "REMOVED", CALLER, false, null, null)));
         refusesConflict("OPS", "Link Department");
         verifyNoInteractions(tracker);
     }
 
     @Test
-    void protectsAnotherEligibleManager_AC_001_7() {
+    void protectsAnotherEligibleManager_AC_004_7() {
         given(links.findLink("OPS")).willReturn(Optional.of(link(1, "REMOVED", OTHER, true, null, null)));
         refusesConflict("OPS", "Link Department");
         verifyNoInteractions(tracker);
@@ -208,7 +208,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @CsvSource({"caller,true", "caller,false", "other,false", "none,false"})
-    void allowsEligibleRemovedManagers_AC_001_7_AC_001_11(String manager, boolean protectedManager) {
+    void allowsEligibleRemovedManagers_AC_004_7_AC_004_11(String manager, boolean protectedManager) {
         UUID managerId =
                 switch (manager) {
                     case "caller" -> CALLER;
@@ -222,7 +222,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void callsTrackerExactlyOnceAfterTheLocalLinkCheck_AC_001_8() {
+    void callsTrackerExactlyOnceAfterTheLocalLinkCheck_AC_004_8() {
         succeeds(" ops ");
         InOrder order = inOrder(links, tracker);
         order.verify(links).findCallerDepartment(CALLER);
@@ -233,7 +233,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void returnsCanonicalKeyAndAllStatusesInOrder_AC_001_9() {
+    void returnsCanonicalKeyAndAllStatusesInOrder_AC_004_9() {
         given(tracker.findProject("ALIAS")).willReturn(TrackerProjectLookup.found("OPS", STATUSES));
         ProjectConnectionTestResponse response = succeeds("ALIAS");
         assertThat(response.jiraProjectKey()).isEqualTo("OPS");
@@ -241,7 +241,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void prefillsNewProjectWithDoneCategoryAndThreeDays_AC_001_10_AC_001_12() {
+    void prefillsNewProjectWithDoneCategoryAndThreeDays_AC_004_10_AC_004_12() {
         ProjectConnectionTestResponse response = succeeds("OPS");
         assertThat(response.reconnect()).isFalse();
         assertThat(response.projectId()).isNull();
@@ -250,7 +250,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void omitsNewProjectIdFromPlainJacksonJson_AC_001_10() throws Exception {
+    void omitsNewProjectIdFromPlainJacksonJson_AC_004_10() throws Exception {
         ObjectMapper mapper = JsonMapper.builder().findAndAddModules().build();
         var response = new ProjectConnectionTestResponse("OPS", STATUSES, false, null, List.of("10002"), 3);
         assertThat(mapper.readTree(mapper.writeValueAsString(response)).has("projectId"))
@@ -258,7 +258,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void retainsStoredIdsOnceInFirstSeenOrderAndRange_AC_001_11_AC_001_13_AC_001_14() {
+    void retainsStoredIdsOnceInFirstSeenOrderAndRange_AC_004_11_AC_004_13_AC_004_14() {
         given(links.findLink("OPS"))
                 .willReturn(Optional.of(link(1, "REMOVED", CALLER, true, List.of("10001", "STALE", "10001"), 5)));
         ProjectConnectionTestResponse response = succeeds("OPS");
@@ -271,7 +271,7 @@ class ProjectServiceImplTest {
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = "STALE")
-    void fallsBackToDoneIdsWhenNoStoredIdRemains_AC_001_13(String stored) {
+    void fallsBackToDoneIdsWhenNoStoredIdRemains_AC_004_13(String stored) {
         List<String> ids = stored == null ? null : stored.isEmpty() ? List.of() : List.of(stored);
         given(links.findLink("OPS")).willReturn(Optional.of(link(1, "REMOVED", CALLER, true, ids, 5)));
         assertThat(succeeds("OPS").doneStatusIds()).containsExactly("10002");
@@ -281,20 +281,20 @@ class ProjectServiceImplTest {
     @CsvSource(
             value = {"NULL,3", "0,0", "-1,-1"},
             nullValues = "NULL")
-    void defaultsOnlyNullStoredRange_AC_001_14(Integer stored, int expected) {
+    void defaultsOnlyNullStoredRange_AC_004_14(Integer stored, int expected) {
         given(links.findLink("OPS")).willReturn(Optional.of(link(1, "REMOVED", CALLER, true, null, stored)));
         assertThat(succeeds("OPS").reviewRange()).isEqualTo(expected);
     }
 
     @Test
-    void prefillsNoIdsWhenJiraStatusesAreEmpty_AC_001_13() {
+    void prefillsNoIdsWhenJiraStatusesAreEmpty_AC_004_13() {
         given(links.findLink("OPS")).willReturn(Optional.of(link(1, "REMOVED", CALLER, true, List.of("10001"), 5)));
         given(tracker.findProject("OPS")).willReturn(TrackerProjectLookup.found("OPS", List.of()));
         assertThat(succeeds("OPS").doneStatusIds()).isEmpty();
     }
 
     @Test
-    void writesUnderReadCommittedSoTheLostInsertReReadSeesTheWinner_AC_002_11() {
+    void writesUnderReadCommittedSoTheLostInsertReReadSeesTheWinner_AC_005_11() {
         save(create("OPS", List.of("10002"), "3"));
         verify(transactionManager)
                 .getTransaction(argThat(definition ->
@@ -305,14 +305,14 @@ class ProjectServiceImplTest {
     @EnumSource(
             value = Outcome.class,
             names = {"NOT_FOUND", "DENIED"})
-    void refusesMissingOrDeniedJiraProject_AC_001_15(Outcome outcome) {
+    void refusesMissingOrDeniedJiraProject_AC_004_15(Outcome outcome) {
         given(tracker.findProject("OPS")).willReturn(TrackerProjectLookup.failed(outcome));
         refusesUnavailableKey("OPS");
         verify(tracker).findProject("OPS");
     }
 
     @Test
-    void mapsUnavailableTrackerTo503_AC_001_16() {
+    void mapsUnavailableTrackerTo503_AC_004_16() {
         given(tracker.findProject("OPS")).willReturn(TrackerProjectLookup.failed(Outcome.UNAVAILABLE));
         assertThatThrownBy(() -> service().testConnection(new ProjectConnectionTestRequest("OPS")))
                 .isInstanceOfSatisfying(ProjectTrackerUnavailableException.class, error -> {
@@ -325,7 +325,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @CsvSource({"2,ACTIVE,false", "2,REMOVED,false", "1,REMOVED,true"})
-    void refusesCanonicalLinkConflicts_AC_001_19(long departmentId, String status, boolean protectedManager) {
+    void refusesCanonicalLinkConflicts_AC_004_19(long departmentId, String status, boolean protectedManager) {
         given(tracker.findProject("OPS")).willReturn(TrackerProjectLookup.found("LEGACY", STATUSES));
         given(links.findLink("LEGACY"))
                 .willReturn(Optional.of(link(departmentId, status, OTHER, protectedManager, null, null)));
@@ -335,7 +335,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"ACTIVE", "REMOVED"})
-    void refusesDistinctRequestedAndCanonicalProjectsNamingCanonicalDepartment_AC_001_21(String status) {
+    void refusesDistinctRequestedAndCanonicalProjectsNamingCanonicalDepartment_AC_004_21(String status) {
         given(links.findLink("OPS")).willReturn(Optional.of(link(1, "REMOVED", CALLER, true, null, null)));
         given(tracker.findProject("OPS")).willReturn(TrackerProjectLookup.found("LEGACY", STATUSES));
         given(links.findLink("LEGACY"))
@@ -346,7 +346,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void reconnectsTheOnlyEligibleAliasLink_AC_001_22(boolean requestedOwnsLink) {
+    void reconnectsTheOnlyEligibleAliasLink_AC_004_22(boolean requestedOwnsLink) {
         String storedKey = requestedOwnsLink ? "OPS" : "LEGACY";
         given(links.findLink(storedKey))
                 .willReturn(Optional.of(
@@ -361,7 +361,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void refusesIneligibleCallerBeforeEvenInvalidKeyFormat_AC_007_4_AC_007_8() {
+    void refusesIneligibleCallerBeforeEvenInvalidKeyFormat_AC_010_4_AC_010_8() {
         given(links.findCallerDepartment(CALLER)).willReturn(Optional.empty());
         refusesAccess("1BAD");
         verify(links, never()).findLink(anyString());
@@ -369,7 +369,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void refusesMissingPrincipalBeforeRepositoryOrTracker_AC_007_4_AC_007_8() {
+    void refusesMissingPrincipalBeforeRepositoryOrTracker_AC_010_4_AC_010_8() {
         SecurityContextHolder.clearContext();
         refusesAccess("1BAD");
         verify(scope).currentWorkspaceId();
@@ -377,7 +377,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void propagatesUnboundWorkspaceBeforeAnyLookup_AC_007_5() {
+    void propagatesUnboundWorkspaceBeforeAnyLookup_AC_010_5() {
         IllegalStateException failure = new IllegalStateException("no Workspace is bound");
         given(scope.currentWorkspaceId()).willThrow(failure);
         assertThatThrownBy(() -> service().testConnection(new ProjectConnectionTestRequest("OPS")))
@@ -386,7 +386,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void acceptsOnlyProjectFieldsInRequestRecords_AC_007_7() {
+    void acceptsOnlyProjectFieldsInRequestRecords_AC_010_7() {
         assertThat(Arrays.stream(ProjectConnectionTestRequest.class.getRecordComponents())
                         .map(c -> c.getName()))
                 .containsExactly("jiraProjectKey");
@@ -396,7 +396,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void derivesCallerFromSessionAfterWorkspaceBinding_AC_007_7_AC_007_8() {
+    void derivesCallerFromSessionAfterWorkspaceBinding_AC_010_7_AC_010_8() {
         succeeds("OPS");
         InOrder order = inOrder(scope, links);
         order.verify(scope).currentWorkspaceId();
@@ -405,7 +405,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @NullAndEmptySource
-    void requiresNonemptyDoneSelection_AC_002_4(List<String> ids) {
+    void requiresNonemptyDoneSelection_AC_005_4(List<String> ids) {
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             var violations = factory.getValidator().validate(new CreateProjectRequest("OPS", ids, BigDecimal.ONE));
             assertThat(violations).anySatisfy(violation -> {
@@ -422,7 +422,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void requiresReviewRange_AC_002_6() {
+    void requiresReviewRange_AC_005_6() {
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             var violations = factory.getValidator().validate(new CreateProjectRequest("OPS", List.of("10002"), null));
             assertThat(violations).anySatisfy(violation -> {
@@ -439,7 +439,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void acceptsValidCreateRequest_AC_002_4_AC_002_6() {
+    void acceptsValidCreateRequest_AC_005_4_AC_005_6() {
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             assertThat(factory.getValidator()
                             .validate(new CreateProjectRequest("OPS", List.of("10002"), BigDecimal.ONE)))
@@ -496,7 +496,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"1OPS", "OP-S", "A B", "x'; drop"})
-    void refusesCreateFormatBeforeLinksOrJira_AC_002_1_AC_002_21(String key) {
+    void refusesCreateFormatBeforeLinksOrJira_AC_005_1_AC_005_21(String key) {
         assertCreateConflict(create(key, List.of("10002"), "3"), "MSG48", null);
         verify(links, never()).findLink(anyString());
         assertBeforeJiraRefusal();
@@ -504,7 +504,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @CsvSource({"1,ACTIVE,false", "2,ACTIVE,false", "2,REMOVED,false", "1,REMOVED,true"})
-    void refusesCreateLinkedProjectsBeforeJira_AC_002_1(long department, String status, boolean protectedManager) {
+    void refusesCreateLinkedProjectsBeforeJira_AC_005_1(long department, String status, boolean protectedManager) {
         given(links.findLink("OPS"))
                 .willReturn(Optional.of(link(department, status, OTHER, protectedManager, null, null)));
         assertCreateConflict(create("OPS", List.of("10002"), "3"), "MSG49", "Link Department");
@@ -513,7 +513,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @CsvSource({"2,ACTIVE,false", "2,REMOVED,false", "1,REMOVED,true"})
-    void refusesCreateCanonicalConflicts_AC_002_1(long department, String status, boolean protectedManager) {
+    void refusesCreateCanonicalConflicts_AC_005_1(long department, String status, boolean protectedManager) {
         given(tracker.findProject("OPSALIAS")).willReturn(TrackerProjectLookup.found("OPS", STATUSES));
         given(links.findLink("OPS"))
                 .willReturn(Optional.of(link(department, status, OTHER, protectedManager, null, null)));
@@ -524,7 +524,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"ACTIVE", "REMOVED"})
-    void refusesCreateDistinctProjectsNamingCanonicalDepartment_AC_002_1(String status) {
+    void refusesCreateDistinctProjectsNamingCanonicalDepartment_AC_005_1(String status) {
         given(links.findLink("OPSALIAS")).willReturn(Optional.of(link(1, "REMOVED", CALLER, true, null, null)));
         given(tracker.findProject("OPSALIAS")).willReturn(TrackerProjectLookup.found("OPS", STATUSES));
         given(links.findLink("OPS"))
@@ -536,7 +536,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void normalizesCreateKeyWithRootLocale_AC_002_1() {
+    void normalizesCreateKeyWithRootLocale_AC_005_1() {
         Locale previous = Locale.getDefault();
         try {
             Locale.setDefault(Locale.forLanguageTag("tr"));
@@ -552,7 +552,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void readsJiraOnceBeforeTheSingleWriteTransaction_AC_002_2_AC_002_18() {
+    void readsJiraOnceBeforeTheSingleWriteTransaction_AC_005_2_AC_005_18() {
         save(create("OPS", List.of("10002"), "3"));
         InOrder order = inOrder(links, tracker, transactionManager);
         order.verify(links).findLink("OPS");
@@ -569,7 +569,7 @@ class ProjectServiceImplTest {
     @EnumSource(
             value = Outcome.class,
             names = {"NOT_FOUND", "DENIED"})
-    void refusesCreateMissingOrDeniedJira_AC_002_3(Outcome outcome) {
+    void refusesCreateMissingOrDeniedJira_AC_005_3(Outcome outcome) {
         given(tracker.findProject("OPS")).willReturn(TrackerProjectLookup.failed(outcome));
         assertCreateConflict(create("OPS", List.of("10002"), "3"), "MSG48", null);
         verify(tracker).findProject("OPS");
@@ -577,7 +577,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void refusesCreateUnavailableJira_AC_002_3() {
+    void refusesCreateUnavailableJira_AC_005_3() {
         given(tracker.findProject("OPS")).willReturn(TrackerProjectLookup.failed(Outcome.UNAVAILABLE));
         assertThatThrownBy(() -> service().create(create("OPS", List.of("10002"), "3")))
                 .isInstanceOfSatisfying(ProjectTrackerUnavailableException.class, error -> {
@@ -592,7 +592,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @NullAndEmptySource
-    void refusesDirectCreateWithoutIds_AC_002_4(List<String> ids) {
+    void refusesDirectCreateWithoutIds_AC_005_4(List<String> ids) {
         assertCreateField(create("OPS", ids, "3"), "MSG01", "doneStatusIds");
         assertBeforeJiraRefusal();
     }
@@ -603,28 +603,28 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @MethodSource("invalidCreateIds")
-    void refusesDirectCreateBlankIds_AC_002_5_AC_002_21(List<String> ids) {
+    void refusesDirectCreateBlankIds_AC_005_5_AC_005_21(List<String> ids) {
         assertCreateField(create("OPS", ids, "3"), "MSG01", "doneStatusIds");
         verify(links, never()).findLink(anyString());
         assertBeforeJiraRefusal();
     }
 
     @Test
-    void refusesUnknownCreateIdAfterJira_AC_002_5_AC_002_21() {
+    void refusesUnknownCreateIdAfterJira_AC_005_5_AC_005_21() {
         assertCreateField(create("OPS", List.of("99999"), "3"), "MSG01", "doneStatusIds");
         verify(tracker).findProject("OPS");
         assertBeforeTransactionRefusal();
     }
 
     @Test
-    void refusesDirectCreateWithoutRange_AC_002_6() {
+    void refusesDirectCreateWithoutRange_AC_005_6() {
         assertCreateField(create("OPS", List.of("10002"), null), "MSG01", "reviewRange");
         assertBeforeJiraRefusal();
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"0", "-1", "2.5", "1.5", "2147483648", "1E+10"})
-    void refusesCreateRangeWithoutTruncation_AC_002_7_AC_002_21(String range) {
+    void refusesCreateRangeWithoutTruncation_AC_005_7_AC_005_21(String range) {
         assertCreateField(create("OPS", List.of("10002"), range), "MSG44", "reviewRange");
         verify(links, never()).findLink(anyString());
         assertBeforeJiraRefusal();
@@ -632,13 +632,13 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @CsvSource({"2147483647,2147483647", "1,1", "1.0,1"})
-    void storesExactWholeCreateRange_AC_002_7(String range, int expected) {
+    void storesExactWholeCreateRange_AC_005_7(String range, int expected) {
         save(create("OPS", List.of("10002"), range));
         verify(links).insertProject(DEPARTMENT.departmentId(), "OPS", List.of("10002"), expected);
     }
 
     @Test
-    void checksCreateEligibilityBeforeRange_AC_002_21_AC_007_4_AC_007_8() {
+    void checksCreateEligibilityBeforeRange_AC_005_21_AC_010_4_AC_010_8() {
         given(links.findCallerDepartment(CALLER)).willReturn(Optional.empty());
         assertCreateAccess(create("1BAD", List.of("10002"), "0"));
         verify(links, never()).findLink(anyString());
@@ -646,14 +646,14 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void checksCreateFormatBeforeRange_AC_002_21() {
+    void checksCreateFormatBeforeRange_AC_005_21() {
         assertCreateConflict(create("1BAD", List.of("10002"), "0"), "MSG48", null);
         verify(links, never()).findLink(anyString());
         assertBeforeJiraRefusal();
     }
 
     @Test
-    void checksCreateRangeBeforeActiveLink_AC_002_21() {
+    void checksCreateRangeBeforeActiveLink_AC_005_21() {
         lenient().when(links.findLink("OPS")).thenReturn(Optional.of(link(2, "ACTIVE", OTHER, true, null, null)));
         assertCreateField(create("OPS", List.of("10002"), "0"), "MSG44", "reviewRange");
         verify(links, never()).findLink(anyString());
@@ -661,7 +661,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void checksBlankCreateIdBeforeActiveLink_AC_002_21() {
+    void checksBlankCreateIdBeforeActiveLink_AC_005_21() {
         lenient().when(links.findLink("OPS")).thenReturn(Optional.of(link(2, "ACTIVE", OTHER, true, null, null)));
         assertCreateField(create("OPS", List.of(" "), "3"), "MSG01", "doneStatusIds");
         verify(links, never()).findLink(anyString());
@@ -669,14 +669,14 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void checksActiveLinkBeforeUnknownCreateId_AC_002_21() {
+    void checksActiveLinkBeforeUnknownCreateId_AC_005_21() {
         given(links.findLink("OPS")).willReturn(Optional.of(link(2, "ACTIVE", OTHER, true, null, null)));
         assertCreateConflict(create("OPS", List.of("99999"), "3"), "MSG49", "Link Department");
         assertBeforeJiraRefusal();
     }
 
     @Test
-    void insertsCanonicalCreateKey_AC_002_8() {
+    void insertsCanonicalCreateKey_AC_005_8() {
         given(tracker.findProject("OPSALIAS")).willReturn(TrackerProjectLookup.found("OPS", STATUSES));
         save(create("OPSALIAS", List.of("10002"), "3"));
         verify(links).insertProject(DEPARTMENT.departmentId(), "OPS", List.of("10002"), 3);
@@ -689,7 +689,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void maintainsManagerThenAuditsTheSavedProjection_AC_002_9_AC_002_10_AC_002_13() {
+    void maintainsManagerThenAuditsTheSavedProjection_AC_005_9_AC_005_10_AC_005_13() {
         ProjectResponse projection = saved("STORED", List.of("10001"), 7);
         given(links.readProject(NEW_ID)).willReturn(Optional.of(projection));
         assertThat(save(create("OPS", List.of("10002"), "3"))).isEqualTo(new ProjectSaveResult(projection, true));
@@ -705,7 +705,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void refusesLostInsertWithoutReconnectingAndRollsBack_AC_002_11() {
+    void refusesLostInsertWithoutReconnectingAndRollsBack_AC_005_11() {
         given(links.insertProject(anyLong(), anyString(), anyList(), anyInt())).willReturn(Optional.empty());
         given(links.findLink("OPS"))
                 .willReturn(
@@ -721,7 +721,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void propagatesMembershipFailureAndRollsBack_AC_002_12() {
+    void propagatesMembershipFailureAndRollsBack_AC_005_12() {
         var failure = new DataIntegrityViolationException("membership");
         doThrow(failure).when(links).upsertManager(CALLER, NEW_ID);
         assertThatThrownBy(() -> service().create(create("OPS", List.of("10002"), "3")))
@@ -733,7 +733,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void propagatesAuditFailureAndRollsBack_AC_002_12() {
+    void propagatesAuditFailureAndRollsBack_AC_005_12() {
         var failure = new IllegalStateException("audit");
         doThrow(failure).when(audit).record(any(), anyString(), any(), any());
         assertThatThrownBy(() -> service().create(create("OPS", List.of("10002"), "3")))
@@ -744,7 +744,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void deduplicatesCreateIdsInFirstSeenOrder_AC_002_15() {
+    void deduplicatesCreateIdsInFirstSeenOrder_AC_005_15() {
         List<String> unique = List.of("10002", "10001");
         ProjectResponse projection = saved("OPS", unique, 3);
         given(links.readProject(NEW_ID)).willReturn(Optional.of(projection));
@@ -756,7 +756,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void refusesLostCreateEligibilityInsideTransaction_AC_002_17() {
+    void refusesLostCreateEligibilityInsideTransaction_AC_005_17() {
         given(links.findCallerDepartment(CALLER)).willReturn(Optional.of(DEPARTMENT), Optional.empty());
         assertCreateAccess(create("OPS", List.of("10002"), "3"));
         InOrder order = inOrder(links, transactionManager);
@@ -769,7 +769,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void locksAndRereadsRequestedOrCanonicalLinkInsideTransaction_AC_002_17(boolean alias) {
+    void locksAndRereadsRequestedOrCanonicalLinkInsideTransaction_AC_005_17(boolean alias) {
         String requested = alias ? "OPSALIAS" : "OPS";
         if (alias) {
             given(tracker.findProject(requested)).willReturn(TrackerProjectLookup.found("OPS", STATUSES));
@@ -791,7 +791,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void usesDepartmentReReadInsideTransaction_AC_002_17() {
+    void usesDepartmentReReadInsideTransaction_AC_005_17() {
         CallerDepartment moved = new CallerDepartment(2, OTHER, "New Department");
         given(links.findCallerDepartment(CALLER)).willReturn(Optional.of(DEPARTMENT), Optional.of(moved));
         save(create("OPS", List.of("10002"), "3"));
@@ -799,7 +799,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void reconnectsForThePreviousManagerWithoutTouchingMemberships_AC_003_1_AC_003_3_AC_003_5_AC_003_6() {
+    void reconnectsForThePreviousManagerWithoutTouchingMemberships_AC_006_1_AC_006_3_AC_006_5_AC_006_6() {
         givenRemoved("OPS", removed(CALLER, true));
         ProjectResponse projection = reconnected(List.of("10001", "10002"), 5);
         given(links.readProject(PROJECT)).willReturn(Optional.of(projection));
@@ -825,7 +825,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void replacesAnUnprotectedPreviousManagerBeforeUpsertingTheCaller_AC_003_4(boolean hadManager) {
+    void replacesAnUnprotectedPreviousManagerBeforeUpsertingTheCaller_AC_006_4(boolean hadManager) {
         givenRemoved("OPS", removed(hadManager ? OTHER : null, false));
         save(create("OPS", List.of("10002"), "3"));
         InOrder order = inOrder(links, audit);
@@ -841,7 +841,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void storesJiraCanonicalKeyOnTheReconnectedRow_AC_003_1() {
+    void storesJiraCanonicalKeyOnTheReconnectedRow_AC_006_1() {
         given(tracker.findProject("OPSALIAS")).willReturn(TrackerProjectLookup.found("OPS", STATUSES));
         givenRemoved("OPSALIAS", removed(CALLER, true));
         save(create("opsalias", List.of("10002"), "3"));
@@ -851,7 +851,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @CsvSource({"2, REMOVED, false", "1, REMOVED, true", "1, ACTIVE, false"})
-    void refusesForeignProtectedOrActiveProjectsBeforeJira_AC_003_7(
+    void refusesForeignProtectedOrActiveProjectsBeforeJira_AC_006_7(
             long department, String status, boolean protectedManager) {
         given(links.findLink("OPS"))
                 .willReturn(Optional.of(link(department, status, OTHER, protectedManager, null, 9)));
@@ -861,7 +861,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void refusesWhenTheConditionalReconnectMatchesNoRow_AC_003_8() {
+    void refusesWhenTheConditionalReconnectMatchesNoRow_AC_006_8() {
         givenRemoved("OPS", removed(CALLER, true));
         given(links.reconnectProject(any(), anyString(), anyList(), anyInt())).willReturn(0);
         assertCreateConflict(create("OPS", List.of("10002"), "3"), "MSG49", "Link Department");
@@ -875,7 +875,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"activated", "managed"})
-    void loserRereadsStateAndManagerAfterTheLock_AC_003_8(String change) {
+    void loserRereadsStateAndManagerAfterTheLock_AC_006_8(String change) {
         Link before = removed(null, false);
         Link after = change.equals("activated") ? link(1, "ACTIVE", CALLER, true, null, 9) : removed(OTHER, true);
         given(links.findLink("OPS")).willReturn(Optional.of(before), Optional.of(before), Optional.of(after));
@@ -891,7 +891,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void translatesALostCanonicalKeyUpdateAfterRollback_AC_003_8() {
+    void translatesALostCanonicalKeyUpdateAfterRollback_AC_006_8() {
         given(tracker.findProject("OPSALIAS")).willReturn(TrackerProjectLookup.found("OPS", STATUSES));
         givenRemoved("OPSALIAS", removed(CALLER, true));
         // Before Jira, inside the transaction, then after the rollback: the committed winner.
@@ -911,7 +911,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"delete", "upsert", "audit"})
-    void rollsBackTheReconnectWhenAWriteFails_AC_003_9(String step) {
+    void rollsBackTheReconnectWhenAWriteFails_AC_006_9(String step) {
         givenRemoved("OPS", removed(OTHER, false));
         RuntimeException failure =
                 switch (step) {
@@ -941,7 +941,7 @@ class ProjectServiceImplTest {
     @EnumSource(
             value = Outcome.class,
             names = {"NOT_FOUND", "DENIED", "UNAVAILABLE"})
-    void refusesReconnectWhenTheFreshJiraReadFails_AC_002_3_AC_003_1(Outcome outcome) {
+    void refusesReconnectWhenTheFreshJiraReadFails_AC_005_3_AC_006_1(Outcome outcome) {
         givenRemoved("OPS", removed(CALLER, true));
         given(tracker.findProject("OPS")).willReturn(TrackerProjectLookup.failed(outcome));
         assertThatThrownBy(() -> service().create(create("OPS", List.of("10002"), "3")))
@@ -955,7 +955,7 @@ class ProjectServiceImplTest {
 
     @ParameterizedTest
     @CsvSource({"10009, 3, MSG01, doneStatusIds", "10002, 2.5, MSG44, reviewRange"})
-    void refusesReconnectWithAnUnknownIdOrInvalidRange_AC_002_5_AC_002_7_AC_003_1(
+    void refusesReconnectWithAnUnknownIdOrInvalidRange_AC_005_5_AC_005_7_AC_006_1(
             String id, String range, String code, String field) {
         givenRemoved("OPS", removed(CALLER, true));
         assertCreateField(create("OPS", List.of(id), range), code, field);
@@ -964,7 +964,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void rechecksReconnectEligibilityInsideTheTransaction_AC_002_17_AC_003_1() {
+    void rechecksReconnectEligibilityInsideTheTransaction_AC_005_17_AC_006_1() {
         givenRemoved("OPS", removed(CALLER, true));
         given(links.findCallerDepartment(CALLER)).willReturn(Optional.of(DEPARTMENT), Optional.empty());
         assertCreateAccess(create("OPS", List.of("10002"), "3"));
@@ -994,7 +994,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void refusesMissingCreatePrincipalBeforeInvalidSettings_AC_007_4_AC_007_8() {
+    void refusesMissingCreatePrincipalBeforeInvalidSettings_AC_010_4_AC_010_8() {
         SecurityContextHolder.clearContext();
         assertCreateAccess(create("1BAD", List.of("10002"), "0"));
         verify(scope).currentWorkspaceId();
@@ -1002,7 +1002,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void propagatesUnboundCreateWorkspaceBeforeAnyLookup_AC_007_5() {
+    void propagatesUnboundCreateWorkspaceBeforeAnyLookup_AC_010_5() {
         var failure = new IllegalStateException("no Workspace is bound");
         given(scope.currentWorkspaceId()).willThrow(failure);
         assertThatThrownBy(() -> service().create(create("OPS", List.of("10002"), "3")))
@@ -1011,7 +1011,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void checksCreateWorkspaceBeforeCallerDepartment_AC_007_8() {
+    void checksCreateWorkspaceBeforeCallerDepartment_AC_010_8() {
         save(create("OPS", List.of("10002"), "3"));
         InOrder order = inOrder(scope, links);
         order.verify(scope).currentWorkspaceId();
@@ -1102,7 +1102,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void listsTheOwnDepartmentAndItsRowsWithoutJiraOrWrites_AC_004_1_AC_004_3_AC_004_8() {
+    void listsTheOwnDepartmentAndItsRowsWithoutJiraOrWrites_AC_007_1_AC_007_3_AC_007_8() {
         var rows = List.of(
                 new ProjectRowResponse(PROJECT, "OLD", null, 2, "REMOVED"),
                 new ProjectRowResponse(NEW_ID, "OPS", new ProjectManagerRef(CALLER, "Alex Nguyen"), 1, "ACTIVE"));
@@ -1118,7 +1118,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void returnsTheDepartmentWhenItHasNoProjects_AC_004_7() {
+    void returnsTheDepartmentWhenItHasNoProjects_AC_007_7() {
         given(links.listProjects(DEPARTMENT.departmentId())).willReturn(List.of());
         ProjectListResponse list = service().list();
         assertThat(list.department())
@@ -1128,7 +1128,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void refusesAnIneligibleListCallerBeforeReadingProjects_AC_007_4_AC_007_8() {
+    void refusesAnIneligibleListCallerBeforeReadingProjects_AC_010_4_AC_010_8() {
         given(links.findCallerDepartment(CALLER)).willReturn(Optional.empty());
         assertListAccess();
         verify(links, never()).listProjects(anyLong());
@@ -1136,7 +1136,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void refusesAMissingListPrincipalBeforeAnyRead_AC_007_4_AC_007_8() {
+    void refusesAMissingListPrincipalBeforeAnyRead_AC_010_4_AC_010_8() {
         SecurityContextHolder.clearContext();
         assertListAccess();
         verify(scope).currentWorkspaceId();
@@ -1144,7 +1144,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void propagatesAnUnboundListWorkspaceBeforeAnyRead_AC_007_5() {
+    void propagatesAnUnboundListWorkspaceBeforeAnyRead_AC_010_5() {
         var failure = new IllegalStateException("no Workspace is bound");
         given(scope.currentWorkspaceId()).willThrow(failure);
         assertThatThrownBy(() -> service().list()).isSameAs(failure);
@@ -1152,7 +1152,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void derivesTheListScopeFromTheBindingAndSessionOnly_AC_007_7_AC_007_8() throws Exception {
+    void derivesTheListScopeFromTheBindingAndSessionOnly_AC_010_7_AC_010_8() throws Exception {
         given(links.listProjects(DEPARTMENT.departmentId())).willReturn(List.of());
         service().list();
         InOrder order = inOrder(scope, links);

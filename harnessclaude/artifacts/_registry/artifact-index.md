@@ -4,6 +4,11 @@ Master registry of all artifacts in this workspace.
 
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
+| — | spec | wiki | approved | artifacts/03-modules/wiki/spec.md |
+| — | design | wiki | approved | artifacts/04-plans/wiki/design.md |
+| — | design | wiki | approved | artifacts/04-plans/wiki/iteration-1/design.md |
+| — | decisions | wiki | approved | artifacts/04-plans/wiki/iteration-1/kan-91-decisions.md |
+| — | tasks | wiki | approved | artifacts/04-plans/wiki/iteration-1/tasks.md |
 | IMPL-REVIEW-10 | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-10-review-jira-feedback.md |
 | IMPL-REVIEW-9 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-9-review-production-api.md |
 | IMPL-REVIEW-8 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-8-review-queue-entry-time.md |
@@ -45,6 +50,8 @@ Master registry of all artifacts in this workspace.
 | — | design | jira-app | draft | artifacts/04-plans/jira-app/design.md |
 | — | design | jira-app | draft | artifacts/04-plans/jira-app/iteration-1/design.md |
 | — | tasks | jira-app | draft | artifacts/04-plans/jira-app/iteration-1/tasks.md |
+| — | design | jira-app | draft | artifacts/04-plans/jira-app/iteration-2/design.md |
+| — | tasks | jira-app | draft | artifacts/04-plans/jira-app/iteration-2/tasks.md |
 | — | module | dashboard-audit | draft | artifacts/03-modules/dashboard-audit/module.md |
 | — | module | platform | draft | artifacts/03-modules/platform/module.md |
 | — | module | platform-console | cancelled | artifacts/03-modules/platform-console/module.md |
@@ -193,6 +200,7 @@ Master registry of all artifacts in this workspace.
 | — | test-report | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-test-report.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-16-viewable-spaces.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-17-21-my-solutions.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-19-my-solutions-backend.md |
 | — | module | tracker | draft | artifacts/03-modules/tracker/module.md |
 | — | spec | tracker | draft | artifacts/03-modules/tracker/spec.md |
 | — | design | tracker | draft | artifacts/04-plans/tracker/design.md |
@@ -255,6 +263,8 @@ Master registry of all artifacts in this workspace.
 | — | tasks | workspace | draft | artifacts/04-plans/workspace/iteration-1/tasks.md |
 | — | research | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-120-scout.md |
 | — | decisions | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-120-decisions.md |
+| — | decisions | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-121-decisions.md |
+| — | research | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-121-scout.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-26a-web-session.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-26b-user-role.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-30a-jira-link-sign-in.md |

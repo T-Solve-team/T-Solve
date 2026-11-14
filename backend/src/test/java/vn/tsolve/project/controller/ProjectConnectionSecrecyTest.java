@@ -54,7 +54,7 @@ import vn.tsolve.tracker.dto.JiraAccount;
 import vn.tsolve.tracker.service.impl.TrackerProjectServiceImpl;
 
 /**
- * AC-001.17 end to end without a Spring context (D43): the real tracker service and Jira client talk to a fake Jira
+ * AC-004.17 end to end without a Spring context (D43): the real tracker service and Jira client talk to a fake Jira
  * that echoes the service account's credentials in its bodies, and the Project's answers are rendered by the real
  * controller and {@link GlobalExceptionHandler}. Nothing planted may reach a response or any log line.
  */
@@ -141,7 +141,7 @@ class ProjectConnectionSecrecyTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("jiraAnswers")
-    void keepsCredentialsAndJiraBodiesOutOfResponsesAndLogs_AC_001_17(
+    void keepsCredentialsAndJiraBodiesOutOfResponsesAndLogs_AC_004_17(
             String path, int projectStatus, String projectBody, int statusesStatus, int expected, String code)
             throws Exception {
         String canonicalKey = projectBody.contains("LEGACY") ? "LEGACY" : "OPS";

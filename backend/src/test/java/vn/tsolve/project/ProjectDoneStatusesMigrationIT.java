@@ -27,8 +27,8 @@ import vn.tsolve.identity.TwoTenantDatabases;
 class ProjectDoneStatusesMigrationIT {
 
     @Test
-    @DisplayName("AC-002.19 converts legacy Done statuses to singleton strings without changing other data")
-    void preservesLegacyRows_AC_002_19() throws Throwable {
+    @DisplayName("AC-005.19 converts legacy Done statuses to singleton strings without changing other data")
+    void preservesLegacyRows_AC_005_19() throws Throwable {
         List<String> sql = readChangeset();
         withScratchSchema(connection -> {
             List<Map<String, Object>> before = snapshot(connection);
@@ -80,8 +80,8 @@ class ProjectDoneStatusesMigrationIT {
     }
 
     @Test
-    @DisplayName("AC-002.19 includes changeset 029 exactly once and after 026 in the master changelog")
-    void includesChangesetOnceAfter026_AC_002_19() throws Exception {
+    @DisplayName("AC-005.19 includes changeset 036 exactly once and after 026 in the master changelog")
+    void includesChangesetOnceAfter026_AC_005_19() throws Exception {
         URL url = getClass().getClassLoader().getResource("db/changelog/db.changelog-master.xml");
         assertThat(url).as("master changelog resource").isNotNull();
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -96,14 +96,14 @@ class ProjectDoneStatusesMigrationIT {
             }
         }
         assertThat(includes)
-                .containsOnlyOnce("changes/029-project-done-statuses.sql")
+                .containsOnlyOnce("changes/036-project-done-statuses.sql")
                 .containsSubsequence(
-                        "changes/026-identity-app-user-keycloak-sub.sql", "changes/029-project-done-statuses.sql");
+                        "changes/026-identity-app-user-keycloak-sub.sql", "changes/036-project-done-statuses.sql");
     }
 
     @Test
-    @DisplayName("AC-002.20 leaves review ranges nullable without a CHECK, default or backfill")
-    void preservesUnrestrictedReviewRanges_AC_002_20() throws Throwable {
+    @DisplayName("AC-005.20 leaves review ranges nullable without a CHECK, default or backfill")
+    void preservesUnrestrictedReviewRanges_AC_005_20() throws Throwable {
         List<String> sql = readChangeset();
         withScratchSchema(connection -> {
             List<Map<String, Object>> before = snapshot(connection);
@@ -165,8 +165,8 @@ class ProjectDoneStatusesMigrationIT {
     }
 
     @Test
-    @DisplayName("AC-002.19 restores exact legacy VARCHAR values on rollback and singleton arrays on reapply")
-    void rollsBackAndReapplies_AC_002_19() throws Throwable {
+    @DisplayName("AC-005.19 restores exact legacy VARCHAR values on rollback and singleton arrays on reapply")
+    void rollsBackAndReapplies_AC_005_19() throws Throwable {
         List<String> sql = readChangeset();
         withScratchSchema(connection -> {
             List<Map<String, Object>> legacy = snapshot(connection);
@@ -193,8 +193,8 @@ class ProjectDoneStatusesMigrationIT {
     }
 
     @Test
-    @DisplayName("AC-002.19 rollback of several Done statuses retains only element zero")
-    void documentsLossyRollback_AC_002_19() throws Throwable {
+    @DisplayName("AC-005.19 rollback of several Done statuses retains only element zero")
+    void documentsLossyRollback_AC_005_19() throws Throwable {
         // Rollback keeps element zero only, so it is for development / scratch databases.
         List<String> sql = readChangeset();
         withScratchSchema(connection -> {
@@ -215,7 +215,7 @@ class ProjectDoneStatusesMigrationIT {
     }
 
     private void withScratchSchema(ThrowingConsumer<Connection> work) throws Throwable {
-        String schema = "mig029_" + UUID.randomUUID().toString().replace("-", "");
+        String schema = "mig036_" + UUID.randomUUID().toString().replace("-", "");
         try (Connection connection = TwoTenantDatabases.main().getDataSource().getConnection();
                 Statement statement = connection.createStatement()) {
             statement.execute("CREATE SCHEMA " + schema);
@@ -257,8 +257,8 @@ class ProjectDoneStatusesMigrationIT {
     }
 
     private List<String> readChangeset() throws Exception {
-        URL url = getClass().getClassLoader().getResource("db/changelog/changes/029-project-done-statuses.sql");
-        assertThat(url).as("029 changeset resource").isNotNull();
+        URL url = getClass().getClassLoader().getResource("db/changelog/changes/036-project-done-statuses.sql");
+        assertThat(url).as("036 changeset resource").isNotNull();
         StringBuilder forward = new StringBuilder();
         String rollback = "";
         boolean afterChangeset = false;
@@ -276,8 +276,8 @@ class ProjectDoneStatusesMigrationIT {
                 }
             }
         }
-        assertThat(forward.toString()).as("029 forward statement").isNotBlank();
-        assertThat(rollback).as("029 rollback statement").isNotBlank();
+        assertThat(forward.toString()).as("036 forward statement").isNotBlank();
+        assertThat(rollback).as("036 rollback statement").isNotBlank();
         return List.of(forward.toString().trim(), rollback);
     }
 

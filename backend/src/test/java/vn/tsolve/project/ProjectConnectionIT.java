@@ -102,7 +102,7 @@ class ProjectConnectionIT {
     }
 
     @Test
-    void preservesProjectMembershipAndAuditForSuccessAndFailure_AC_001_18_AC_001_8() throws Exception {
+    void preservesProjectMembershipAndAuditForSuccessAndFailure_AC_004_18_AC_004_8() throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         List<Map<String, Object>> before = snapshot(db);
         perform(TwoTenantDatabases.ACME, body("PCTNEW")).andExpect(status().isOk());
@@ -126,7 +126,7 @@ class ProjectConnectionIT {
     }
 
     @Test
-    void usesOnlyBoundWorkspaceForTheSameJiraKey_AC_007_6_AC_001_8() throws Exception {
+    void usesOnlyBoundWorkspaceForTheSameJiraKey_AC_010_6_AC_004_8() throws Exception {
         perform(TwoTenantDatabases.ACME, body("PCTNEW"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reconnect").value(false));
@@ -138,7 +138,7 @@ class ProjectConnectionIT {
     }
 
     @Test
-    void failsUnboundWithoutDefaultDatabaseOrJiraUse_AC_007_5() throws Exception {
+    void failsUnboundWithoutDefaultDatabaseOrJiraUse_AC_010_5() throws Exception {
         List<Map<String, Object>> before = snapshot(TwoTenantDatabases.main());
         mvc.perform(post("/api/v1/projects/connection-test")
                         .with(csrf())
@@ -154,7 +154,7 @@ class ProjectConnectionIT {
     }
 
     @Test
-    void readsStoredJsonbIdsAndPreservesZeroRange_AC_001_13_AC_001_14_AC_001_8() throws Exception {
+    void readsStoredJsonbIdsAndPreservesZeroRange_AC_004_13_AC_004_14_AC_004_8() throws Exception {
         perform(TwoTenantDatabases.ACME, body("PCTOLD"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reconnect").value(true))
@@ -165,7 +165,7 @@ class ProjectConnectionIT {
     }
 
     @Test
-    void fallsBackOnlyForNullSettings_AC_001_13_AC_001_14_AC_001_8() throws Exception {
+    void fallsBackOnlyForNullSettings_AC_004_13_AC_004_14_AC_004_8() throws Exception {
         perform(TwoTenantDatabases.ACME, body("PCTNUL"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reconnect").value(true))
@@ -176,7 +176,7 @@ class ProjectConnectionIT {
     }
 
     @Test
-    void protectsActiveManagerAndAllowsReconnectAfterDeactivation_AC_001_7_AC_001_8() throws Exception {
+    void protectsActiveManagerAndAllowsReconnectAfterDeactivation_AC_004_7_AC_004_8() throws Exception {
         perform(TwoTenantDatabases.ACME, body("PCTPRO"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("MSG49"))
@@ -193,7 +193,7 @@ class ProjectConnectionIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"department", "account", "role"})
-    void rechecksDatabaseEligibilityDespiteSessionRole_AC_007_4(String change) throws Exception {
+    void rechecksDatabaseEligibilityDespiteSessionRole_AC_010_4(String change) throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         switch (change) {
             case "department" -> db.update("UPDATE department SET status='DEACTIVATED' WHERE public_id=?", OWN);
