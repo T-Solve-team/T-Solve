@@ -153,9 +153,9 @@ criterion.
      is bypassed. Cosmetic.
 
 9. **INFO — the Done watcher reads the issue every 4 s while the issue view is visible.**
-   - **Where:** `background/BackgroundApp.jsx:14` and `:67` (from the BUG-212 fix `a5a6d4ca`, in this task's file).
+   - **Where:** `background/BackgroundApp.jsx:14` and `:67` (from the BUG-214 fix `a5a6d4ca`, in this task's file).
    - One `requestJira` status read per visible issue view per 4 s, as the viewer, stopping once the form was offered. It
-     is a deliberate workaround (BUG-212); watch for Jira rate-limit responses on busy users.
+     is a deliberate workaround (BUG-214); watch for Jira rate-limit responses on busy users.
 
 10. **INFO — the session log was written after the fact.** `harnessclaude/artifacts/05-implementation/jira-app/task-7-solution-form-ui.md`
     says it was reconstructed on 14/11 from the commits. This review does not rely on it.

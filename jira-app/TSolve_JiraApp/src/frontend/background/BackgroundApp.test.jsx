@@ -103,7 +103,7 @@ describe('BackgroundApp', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(showFlag).not.toHaveBeenCalled();
   });
-  it('opens the form when Jira reloads the script right after the viewer moved the issue into Done (BUG-212)', async () => {
+  it('opens the form when Jira reloads the script right after the viewer moved the issue into Done (BUG-214)', async () => {
     category = 'done';
     movedAt = Date.now() - 3000;
 
@@ -113,7 +113,7 @@ describe('BackgroundApp', () => {
     expect(openSolutionForm).toHaveBeenCalledTimes(1);
   });
 
-  describe('when Jira sends no event and does not reload the script (BUG-212)', () => {
+  describe('when Jira sends no event and does not reload the script (BUG-214)', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
 
@@ -140,7 +140,7 @@ describe('BackgroundApp', () => {
       expect(openSolutionForm).not.toHaveBeenCalled();
     });
 
-    it('asks again when the viewer moves the issue out of Done and back in the same page load (BUG-218)', async () => {
+    it('asks again when the viewer moves the issue out of Done and back in the same page load (BUG-220)', async () => {
       openSolutionForm.mockResolvedValue({ mayOpen: false, origin: null, sections: null, message: null });
       await moveIntoDone('me');
       expect(openSolutionForm).toHaveBeenCalledTimes(1);
@@ -171,7 +171,7 @@ describe('BackgroundApp', () => {
     });
   });
 
-  it('does not open on load for an issue moved into Done long ago (AC-001.5, BUG-212)', async () => {
+  it('does not open on load for an issue moved into Done long ago (AC-001.5, BUG-214)', async () => {
     category = 'done';
     movedAt = Date.now() - 10 * 60 * 1000;
     await start();
@@ -179,7 +179,7 @@ describe('BackgroundApp', () => {
     expect(openSolutionForm).not.toHaveBeenCalled();
   });
 
-  it('does not open on load when someone else just moved the issue into Done (BUG-212)', async () => {
+  it('does not open on load when someone else just moved the issue into Done (BUG-214)', async () => {
     category = 'done';
     movedAt = Date.now() - 3000;
     movedBy = 'other';

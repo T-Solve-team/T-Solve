@@ -54,7 +54,7 @@ describe('watchDone', () => {
     expect(issue).toEqual({ category: 'done', summary: 'VPN drops', description: 'After sleep\nEvery hour' });
   });
 
-  it('reads when the status category changed and who changed the status last, newest first (BUG-212)', async () => {
+  it('reads when the status category changed and who changed the status last, newest first (BUG-214)', async () => {
     const requestJira = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -83,7 +83,7 @@ describe('watchDone', () => {
     expect(issue.lastStatusChange).toEqual({ accountId: 'me', at: Date.parse('2026-11-14T05:00:00.000Z') });
   });
 
-  describe('recentlyMovedIntoDone (BUG-212: Jira reloads the script after the move into Done)', () => {
+  describe('recentlyMovedIntoDone (BUG-214: Jira reloads the script after the move into Done)', () => {
     const NOW = Date.parse('2026-11-14T05:00:10.000Z');
     const moved = (overrides = {}) => ({
       category: DONE,

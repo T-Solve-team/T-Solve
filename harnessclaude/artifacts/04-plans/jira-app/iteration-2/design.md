@@ -140,7 +140,7 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
 | # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
 |---|-------|-----------|----------|----------|-------------------|-----------|
 | 1 | STORY-001 | Authorization | Non-member calls `POST …/solution` directly | Critical | 403 MSG08, nothing stored | Task 5 |
-| 2 | STORY-004 | Timing | Two Finish calls race (double click, retry after a slow 201) | High | One ticket (`uq_ticket_ticket_id`, `ON CONFLICT DO NOTHING`), the other 409 MSG31; the client counts only a 409 MSG31 after a retry as success (BUG-215) | Task 2, Task 7 |
+| 2 | STORY-004 | Timing | Two Finish calls race (double click, retry after a slow 201) | High | One ticket (`uq_ticket_ticket_id`, `ON CONFLICT DO NOTHING`), the other 409 MSG31; the client counts only a 409 MSG31 after a retry as success (BUG-217) | Task 2, Task 7 |
 | 3 | STORY-004 | Integration | Ticket created but not visible in the Review Queue | High | `SOLUTION_FORM`, `PENDING_REVIEW`, entry time and due date set; queue IT reads it | Task 2 |
 | 4 | STORY-002 | Input extremes | Exactly 10,000 characters; emoji / surrogate pairs | Medium | Code points counted; 10,000 accepted, 10,001 → MSG02 | Task 2, Task 7 |
 | 5 | STORY-001 | Timing | Issue moved to Done from the board | Medium | No popup; the panel button opens the form | Task 6, Task 8 |

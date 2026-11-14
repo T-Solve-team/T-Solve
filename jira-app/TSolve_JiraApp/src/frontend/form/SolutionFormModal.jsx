@@ -63,7 +63,7 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
   const [step, setStep] = useState('form');
   const [rewritten, setRewritten] = useState(null);
   const [busy, setBusy] = useState(false);
-  // Set at once, unlike `busy`, whose re-render reaches Forge later: Finish and Close never both run (BUG-219).
+  // Set at once, unlike `busy`, whose re-render reaches Forge later: Finish and Close never both run (BUG-221).
   const leaving = useRef(false);
   const [fieldError, setFieldError] = useState(null);
   const [notice, setNotice] = useState(form?.message ? { appearance: 'warning', code: form.message.code } : null);

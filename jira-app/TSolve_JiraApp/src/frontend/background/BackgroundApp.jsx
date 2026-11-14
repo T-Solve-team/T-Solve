@@ -1,6 +1,6 @@
 // jira:issueViewBackgroundScript: opens the Solution Form by itself when the viewer moves the issue into Done
 // (AC-001.1, AC-001.5). Board drags never reach it; the Issue Panel button covers them (AC-001.4, RESEARCH-003).
-// Jira neither sends JIRA_ISSUE_CHANGED reliably nor always keeps this script after a transition (BUG-212), so a move
+// Jira neither sends JIRA_ISSUE_CHANGED reliably nor always keeps this script after a transition (BUG-214), so a move
 // is caught three ways: the event, on load an issue the viewer moved into Done moments ago, and a status check every
 // POLL_MS while the issue view is visible.
 import React, { useEffect, useRef, useState } from 'react';
@@ -10,7 +10,7 @@ import { openSolutionForm } from '../api/tsolveClient';
 import { doneFlag, SolutionFormModal } from '../form/SolutionFormModal';
 import { DONE, isOwnChange, movedIntoDone, readIssue, recentlyMovedIntoDone } from './watchDone';
 
-/** How often the visible issue view re-reads the status (BUG-212): one small Jira read as the viewer. */
+/** How often the visible issue view re-reads the status (BUG-214): one small Jira read as the viewer. */
 export const POLL_MS = 4000;
 
 export function BackgroundApp() {
@@ -27,7 +27,7 @@ export function BackgroundApp() {
     let active = true;
     let asked = false;
     // One ask per move into Done: the event and the checks can all see the same move. Leaving Done allows the next
-    // move to ask again (BUG-218).
+    // move to ask again (BUG-220).
     const offerForm = async (issue) => {
       if (asked) {
         return;

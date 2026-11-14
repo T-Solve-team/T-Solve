@@ -11,7 +11,7 @@ iteration: 2
 
 # Review: jira-app — Task 6: Forge client, manifest and background script (solution-forge-client, KAN-126)
 
-Scope: commits `215d7051`, `ccfee5d6` (the BUG-215 client part) and `a5a6d4ca` (BUG-212), repo `default`, judged on
+Scope: commits `215d7051`, `ccfee5d6` (the BUG-217 client part) and `a5a6d4ca` (BUG-214), repo `default`, judged on
 HEAD `622c71e6` of `feat/KAN-126-jira-app-solution-form-v2`. Files: `jira-app/TSolve_JiraApp/src/frontend/api/tsolveClient.js`,
 `src/frontend/background/watchDone.js`, `BackgroundApp.jsx`, `index.jsx`, `src/frontend/messages.js`, `manifest.yml`
 and their tests.
@@ -27,13 +27,13 @@ enforces authorization (Task 5).
 The Forge side of STORY-001 and STORY-004 does what the spec asks:
 
 - **AC-001.1.** The background script asks `POST …/solution-form` and opens the form Modal only when the viewer's
-  own change moves the issue into the Done category. Because of BUG-212 it catches the move three ways: the
+  own change moves the issue into the Done category. Because of BUG-214 it catches the move three ways: the
   `JIRA_ISSUE_CHANGED` event, a load-time check (the viewer's status change in the last 60 s), and a 4 s poll while the
   view is visible. All three are tested.
 - **AC-001.3 and AC-001.5.** The client opens only when the server says `mayOpen`. An issue that was already Done when
   the page loaded does not open the form, and neither does an old move or someone else's move.
 - **AC-004.4.** Submit retries network errors, timeouts and 5xx three times (1 s, 2 s, 4 s), then gives MSG69. It
-  never retries a 4xx. After a retry only a 409 **MSG31** counts as submitted, and a 409 MSG40 is given back (BUG-215).
+  never retries a 4xx. After a retry only a 409 **MSG31** counts as submitted, and a 409 MSG40 is given back (BUG-217).
 - **NF 3.** All server calls go through the one client module, and nothing logs issue or Solution text.
 - **Messages.** `messages.js` matches the SRS catalog word for word for all 13 codes.
 - **Manifest.** It declares `jira:issueViewBackgroundScript`, the issue panel and the UI endpoint, with only the
@@ -50,7 +50,7 @@ record as a judgment call instead of failing on it.
 |-----------|--------|--------|
 | Functionality | pass | **AC-001.1:** event path `BackgroundApp.jsx:68-82`, load path `:40-47`, poll path `:49-66`. All three end in `offerForm` (`:30-39`), which opens only when `form.mayOpen` is true. **AC-001.3:** a server `mayOpen:false` gives no dialog and no flag (`BackgroundApp.test.jsx:96-105`). **AC-001.5:** `movedIntoDone` needs a known previous category that is not Done (`watchDone.js:12-14`), and `recentlyMovedIntoDone` needs a recent move by the viewer (`:61-70`). The server's "ticket exists → no form" rule is in Task 5. **AC-004.3 and AC-004.4:** `tsolveClient.js:88-111`. **AC-004.2 and AC-005.1:** the flag after the Modal closes (`BackgroundApp.jsx:101-105`). See Issue 1 for a second move into Done in the same page load. |
 | Completeness | pass | Every call the task lists is in `tsolveClient.js`: solution-form, solution, solution-draft, solution-rewrites, panel and review-feedback (`:73-147`). The Task 9 change (14/11) removed search and preview, so the "seven calls" are now five plus review-feedback. The manifest has the background script (`manifest.yml:9-14`), the issue panel and `tsolve-ui-endpoint` (`:35-36`). The design's `background/index.jsx` exists (it renders `BackgroundApp`), and the hello-world panel is gone. `messages.js` has the codes the current spec still shows. MSG41, MSG70 and MSG76 were dropped with the 14/11 changes, and MSG04 belonged to the removed search. |
-| Correctness | pass | `npx jest`: 12 suites, 141/141. `npm run lint`: exit 0. The BUG-215 test passes (`solutionClient.test.js:75-82`), and so do the BUG-212 tests (`watchDone.test.js:193-254`, `BackgroundApp.test.jsx:106-169`). I did not run `mvn verify` (dispatcher rule), and this task changes no backend code. |
+| Correctness | pass | `npx jest`: 12 suites, 141/141. `npm run lint`: exit 0. The BUG-217 test passes (`solutionClient.test.js:75-82`), and so do the BUG-214 tests (`watchDone.test.js:193-254`, `BackgroundApp.test.jsx:106-169`). I did not run `mvn verify` (dispatcher rule), and this task changes no backend code. |
 | Integration | pass | The paths, methods and bodies match the contract table in spec.md and the Task 5 controllers: `solution-form` POST {summary, description}, `solution` POST {summary, sections}, `solution-draft` PUT sections, `solution-rewrites` POST sections, `panel` GET and `review-feedback` GET → `feedback`. Error codes reach the UI from the backend's `ProblemDetail` `code` and `fieldErrors[0].field` (`tsolveClient.js:174-183`). A 5xx keeps only MSG68 (`:177`), which AC-007.4 needs. |
 
 ### Stage 1: Spec compliance
@@ -66,7 +66,7 @@ record as a judgment call instead of failing on it.
 | NF 3 | PASS | `invokeRemote` is used only in `tsolveClient.js`, and the client and the background script do not log |
 
 EXTRA: the 4 s status poll while the issue view is visible (`BackgroundApp.jsx:14,49-67`). It is not in the task text
-but is in BUG-212 and the commit, and it serves AC-001.1. Accepted.
+but is in BUG-214 and the commit, and it serves AC-001.1. Accepted.
 
 ## Traceability
 
@@ -158,7 +158,7 @@ None.
 - **"Seven calls" in the task text.** I read it against the design's 14/11 Change sections. Search and preview were
   removed (Task 9), and the separate Save as draft button went with AC-005.5 (Task 10). So I treat five calls plus
   review-feedback as complete.
-- **The BUG-212 poll and changelog read are in scope** as part of AC-001.1, even though they came after the task text.
+- **The BUG-214 poll and changelog read are in scope** as part of AC-001.1, even though they came after the task text.
 - **The backend is not re-checked.** This task changes no backend code. I did not run `mvn verify` (dispatcher rule),
   so the backend tests listed in the trace are taken as green from Task 5's review and CI.
 

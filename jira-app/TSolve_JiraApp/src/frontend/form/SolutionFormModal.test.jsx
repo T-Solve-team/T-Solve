@@ -141,7 +141,7 @@ describe('SolutionFormModal', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  it('does not save a Draft when Close comes while Finish is still sending (BUG-219)', async () => {
+  it('does not save a Draft when Close comes while Finish is still sending (BUG-221)', async () => {
     let finishSent;
     submit.mockImplementation(() => new Promise((resolve) => (finishSent = resolve)));
     saveSolutionDraft.mockResolvedValue(undefined);

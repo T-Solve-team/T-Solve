@@ -21,7 +21,7 @@
 
 ## Session 2026-11-14
 
-### Working on: BUG-213 (found in the dev-site test)
+### Working on: BUG-215 (found in the dev-site test)
 - Write Solution re-reads the status and hides itself once the issue left Done; the panel reloads on
   `JIRA_ISSUE_CHANGED`. Checked live with SAM1-99.
 - Commit: `default@a5a6d4ca`

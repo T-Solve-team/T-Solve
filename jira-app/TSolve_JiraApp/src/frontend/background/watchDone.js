@@ -14,7 +14,7 @@ export function movedIntoDone(previous, current) {
 }
 
 /**
- * How long after the move into Done a freshly loaded script still opens the form (BUG-212). Jira reloads the
+ * How long after the move into Done a freshly loaded script still opens the form (BUG-214). Jira reloads the
  * background script after a transition, so the new script finds the issue already Done and no event comes.
  */
 export const RECENT_MS = 60_000;
@@ -54,7 +54,7 @@ export async function readIssue(requestJira, issueKey, { changelog = false } = {
 }
 
 /**
- * The script was (re)loaded just after the viewer moved the issue into Done (BUG-212): the status category changed
+ * The script was (re)loaded just after the viewer moved the issue into Done (BUG-214): the status category changed
  * within {@link RECENT_MS} and the newest status change is the viewer's. An issue Done for longer stays closed
  * (AC-001.5); someone else's move opens nothing, as for the event.
  */

@@ -11,7 +11,7 @@ reviewer: harnessclaude-reviewer (subagent, run-tests)
 # Test Report: jira-app — Task 6 "Forge client, manifest and background script" (KAN-126)
 
 Branch `feat/KAN-126-jira-app-solution-form-v2`, head `622c71e6` (repo `default`, monorepo). The feature's code is in
-`215d7051`, `ccfee5d6` (BUG-215 part) and `a5a6d4ca` (BUG-212), judged as it is at HEAD. Run on 2026-11-14 by the
+`215d7051`, `ccfee5d6` (BUG-217 part) and `a5a6d4ca` (BUG-214), judged as it is at HEAD. Run on 2026-11-14 by the
 reviewer subagent; the review is `task-6-solution-forge-client-review.md`.
 
 The working tree had one uncommitted change, `jira-app/TSolve_JiraApp/package-lock.json` (not part of this task). The
@@ -22,9 +22,9 @@ tests ran with it in place.
 | Check | Command (directory) | Result |
 |-------|---------------------|--------|
 | Forge app tests | `npx jest` (`jira-app/TSolve_JiraApp`) | PASS. 12 suites, 141 tests, 13.3 s |
-| `solutionClient.test.js` | (in the run above) | PASS. 12/12, including the BUG-215 (MSG40 after a retry) test |
-| `watchDone.test.js` | | PASS. Including the BUG-212 changelog read and `recentlyMovedIntoDone` cases |
-| `BackgroundApp.test.jsx` | | PASS. Event path, load path (BUG-212) and the 4 s poll path with fake timers |
+| `solutionClient.test.js` | (in the run above) | PASS. 12/12, including the BUG-217 (MSG40 after a retry) test |
+| `watchDone.test.js` | | PASS. Including the BUG-214 changelog read and `recentlyMovedIntoDone` cases |
+| `BackgroundApp.test.jsx` | | PASS. Event path, load path (BUG-214) and the 4 s poll path with fake timers |
 | `messages.test.js` | | PASS |
 | Forge app ESLint | `npm run lint` (`jira-app/TSolve_JiraApp`) | PASS (exit 0, no findings) |
 | SRS wording | script comparing `src/frontend/messages.js` with `frontend/src/shared/messages/report3-messages.json` | PASS. MSG01, 02, 06, 08, 62, 64, 65, 66, 67, 68, 69, 77, 109 match word for word |

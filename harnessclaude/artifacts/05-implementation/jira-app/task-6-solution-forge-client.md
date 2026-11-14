@@ -22,13 +22,13 @@
 
 ## Session 2026-11-13
 
-### Working on: review fix of Task 1 (BUG-215, logged on the branch as BUG-204)
+### Working on: review fix of Task 1 (BUG-217, logged on the branch as BUG-204)
 - Only a 409 MSG31 after a retry counts as submitted; a 409 MSG40 is given back.
 - Commit: `default@ccfee5d6`
 
 ## Session 2026-11-14
 
-### Working on: BUG-212 (found in the dev-site test)
+### Working on: BUG-214 (found in the dev-site test)
 - `JIRA_ISSUE_CHANGED` never reached the background script, and Jira sometimes reloads the script after a
   transition, so the form never opened by itself. `readIssue` can also read `statuscategorychangedate` and the
   changelog; `recentlyMovedIntoDone` (60 s, the viewer's own change) opens the form on load; the visible issue view

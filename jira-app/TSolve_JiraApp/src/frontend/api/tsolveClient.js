@@ -83,7 +83,7 @@ export async function openSolutionForm(issueKey, { summary, description }) {
 /**
  * Finish: creates the issue's ticket `{id, ticketId, status}`. Retries 3 times when T-Solve cannot be
  * reached or fails, then gives MSG69 (AC-004.4). A 409 MSG31 after a retry means an earlier try got through; any other
- * 409 (MSG40: the Project is no longer active) is given back (BUG-215).
+ * 409 (MSG40: the Project is no longer active) is given back (BUG-217).
  */
 export async function submitSolution(issueKey, { summary, sections }, { sleep = wait } = {}) {
   const request = {

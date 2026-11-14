@@ -89,5 +89,5 @@ SolutionFormModal:
 BackgroundApp:
 - AC-001.1 opens the form when the viewer moves the issue into Done; AC-001.1 ignores a change made by someone else
 - AC-001.5 does not open for an issue that was already Done; AC-001.3 does not open when the server says the form may not open
-- BUG-212: opens on reload right after the viewer's move; not on load for an old move; not on load for someone else's move;
+- BUG-214: opens on reload right after the viewer's move; not on load for an old move; not on load for someone else's move;
   notices the move on its own check; opens nothing for someone else's move; asks only once when event and check both see it

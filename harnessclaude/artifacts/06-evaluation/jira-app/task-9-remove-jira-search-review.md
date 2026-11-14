@@ -67,7 +67,7 @@ over the whole repo except `harnessclaude/` and `docs/`:
 | `jira-app/TSolve_JiraApp/src` | none; no `MSG04`, `MSG76`, `searchTickets` or `/tickets` either |
 | `.env.example` | none |
 | `e2e/`, `infra/` | Only `webOrigin` in the e2e settings and `webOrigins` in the Keycloak realms. Neither is related. |
-| `docs/bug-log.md:229` | BUG-216 (formerly BUG-205 on the branch) is Fixed and notes that "The code and test went away with the Jira search (spec change 14/11, commit 94dd213a)". This is consistent. |
+| `docs/bug-log.md:229` | BUG-218 (formerly BUG-205 on the branch) is Fixed and notes that "The code and test went away with the Jira search (spec change 14/11, commit 94dd213a)". This is consistent. |
 
 ## Traceability
 

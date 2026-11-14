@@ -11,8 +11,8 @@ iteration: 2
 
 # Review: jira-app — Task 8: Issue Panel (issue-panel-ui, KAN-126)
 
-Scope: the commit `3c4aaa7c` (panel, test, manifest, hello-world removed) and the BUG-213 part of `a5a6d4ca`
-(`IssuePanel.jsx`, `IssuePanel.test.jsx`, the BUG-213 row of `docs/bug-log.md`). Repo `default`. I judged the code at
+Scope: the commit `3c4aaa7c` (panel, test, manifest, hello-world removed) and the BUG-215 part of `a5a6d4ca`
+(`IssuePanel.jsx`, `IssuePanel.test.jsx`, the BUG-215 row of `docs/bug-log.md`). Repo `default`. I judged the code at
 HEAD `622c71e6` of `feat/KAN-126-jira-app-solution-form-v2`, after Task 9 removed the search and the 3.4 preview.
 Files: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, `panel/index.jsx`, `manifest.yml`,
 `panel/IssuePanel.test.jsx`. Contract read: `JiraAppPanelController.java`, `JiraAppSolutionServiceImpl.panel`
@@ -31,7 +31,7 @@ The panel meets every criterion that is left for STORY-001 and STORY-008 after t
 - MSG64 with the manager's name and comment from `ticket-review`'s feedback endpoint (AC-008.7).
 - "Write Solution" only while the issue is Done, the user may open the form and no ticket exists (AC-001.4).
 
-The BUG-213 fix is correct. The button re-reads the issue's status before it opens the form, and the panel reloads on
+The BUG-215 fix is correct. The button re-reads the issue's status before it opens the form, and the panel reloads on
 `JIRA_ISSUE_CHANGED`. Both have a test with the bug id, and the bug's row is updated in the same commit.
 
 No search box, results, MSG04, MSG76 or preview code is left in the panel, and a test checks it.
@@ -52,7 +52,7 @@ findings below are minor robustness points, test gaps and two judgment calls.
 
 | AC | Verdict | Evidence |
 |----|---------|----------|
-| AC-001.4 | PASS | `IssuePanel.jsx:112-118` shows the button only when `!hasDraft && mayOpenForm && done`. `mayOpenForm` = member and no ticket of any source (`JiraAppSolutionServiceImpl.java:103,108`). `done` comes from the viewer's `requestJira` status read (`:30,87`). The click re-checks Done (`:57-61`). Tests: `IssuePanel.test.jsx:85-95`, and the BUG-213 tests at `:97-116`. |
+| AC-001.4 | PASS | `IssuePanel.jsx:112-118` shows the button only when `!hasDraft && mayOpenForm && done`. `mayOpenForm` = member and no ticket of any source (`JiraAppSolutionServiceImpl.java:103,108`). `done` comes from the viewer's `requestJira` status read (`:30,87`). The click re-checks Done (`:57-61`). Tests: `IssuePanel.test.jsx:85-95`, and the BUG-215 tests at `:97-116`. |
 | AC-008.1 | PASS | `IssuePanel.jsx:83-85` renders only `<Text>` MSG62. Test `:52-57`. |
 | AC-008.2 | PASS | `IssuePanel.jsx:90-94`. Test `:59-64`, which also checks that the button is hidden. |
 | AC-008.3 | PASS | `IssuePanel.jsx:100-111` shows MSG77 and "Continue draft". `openForm` skips the Done check when there is a Draft (`:58`), and the server answers with the Draft (`origin: DRAFT`). Backend `hasDraft` requires member and no ticket (`JiraAppSolutionServiceImpl.java:104-107`). Test `:74-83` checks that the modal opens with the Draft's Symptoms. |
@@ -93,7 +93,7 @@ None.
      "not Done".
 2. **[Robustness, Low] One failed click replaces the whole panel with MSG06.**
    - `openForm`'s `catch` sets `failed` (`IssuePanel.jsx:68-70`), and `:73-79` then renders only MSG06. MSG77 and the
-     status disappear until a later `load` succeeds. Per BUG-212, `JIRA_ISSUE_CHANGED` does not always arrive, so in
+     status disappear until a later `load` succeeds. Per BUG-214, `JIRA_ISSUE_CHANGED` does not always arrive, so in
      practice that means a page reload.
    - Fix: show the error next to the button (local state) and keep the panel.
 3. **[Robustness, Low] No busy guard and no ordering on loads.**
@@ -114,8 +114,8 @@ None.
      (`:33` `.catch(() => null)`), `openSolutionForm` answering `mayOpen: false` (`:65-67`, which reloads), or
      `onDone` showing the flag and reloading (`:124-128`).
    - AC-008.1's "nothing else" is checked only as "no button".
-6. **[Behaviour, Low] The BUG-213 reload depends on an event that BUG-212 says may not arrive.**
-   - The panel's reload on `JIRA_ISSUE_CHANGED` (`IssuePanel.jsx:45-52`) uses the same event that BUG-212 found
+6. **[Behaviour, Low] The BUG-215 reload depends on an event that BUG-214 says may not arrive.**
+   - The panel's reload on `JIRA_ISSUE_CHANGED` (`IssuePanel.jsx:45-52`) uses the same event that BUG-214 found
      never reaching the background script.
    - If the panel does not get it either, a stale "Write Solution" stays visible until it is clicked. The click then
      re-checks the status and hides it (`:57-61`), so no form opens on a non-Done issue.
