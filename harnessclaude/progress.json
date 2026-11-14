@@ -180,7 +180,7 @@
         "project-member-remove-tab": "passing"
       },
       "lastUpdated": "2026-11-14T07:40:19.466Z",
-      "branch": "feat/project-integration",
+      "branch": "feat/KAN-128-project-integration-add-ticket-resolver",
       "repos": [
         "default"
       ],

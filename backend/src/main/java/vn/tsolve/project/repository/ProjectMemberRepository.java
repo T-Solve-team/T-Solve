@@ -6,9 +6,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
+import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.project.dto.MemberCandidateResponse;
 import vn.tsolve.project.dto.ProjectMemberResponse;
 import vn.tsolve.project.dto.ProjectSummaryResponse;
@@ -104,15 +106,37 @@ public class ProjectMemberRepository {
     }
 
     /**
+     * Locks the Project row FOR SHARE so a concurrent status change waits for this request. A lock timeout or
+     * deadlock answers 409 (MSG06) instead of 500.
+     */
+    public void lockProject(UUID projectId) {
+        lock("SELECT public_id FROM project WHERE public_id = :id FOR SHARE", Map.of("id", projectId));
+    }
+
+    /**
+     * Locks the accounts FOR SHARE in ascending id order (one order for every caller, so two requests cannot
+     * deadlock on each other); identity's role removal takes {@code FOR UPDATE} in the same order. A lock timeout or
+     * deadlock answers 409 (MSG06).
+     */
+    public void lockAccounts(List<UUID> userIds) {
+        lock("SELECT id FROM app_user WHERE id IN (:ids) ORDER BY id FOR SHARE", Map.of("ids", userIds));
+    }
+
+    private void lock(String sql, Map<String, ?> params) {
+        try {
+            jdbc.query(sql, params, (rs, row) -> rs.getObject(1, UUID.class));
+        } catch (PessimisticLockingFailureException lockFailure) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+    }
+
+    /**
      * How many of {@code userIds} may be added. Locks those accounts FOR SHARE so identity's role removal
      * ({@code FOR UPDATE}) cannot interleave with the add. The lock and the check are separate statements
      * (BUG-209): under READ COMMITTED the check must take a fresh snapshot after any wait on the lock.
      */
     public int lockEligible(UUID projectId, List<UUID> userIds) {
-        jdbc.query(
-                "SELECT id FROM app_user WHERE id IN (:ids) ORDER BY id FOR SHARE",
-                Map.of("ids", userIds),
-                (rs, row) -> rs.getObject(1, UUID.class));
+        lockAccounts(userIds);
         return jdbc.queryForObject(
                 "SELECT count(*) FROM app_user u WHERE u.id IN (:ids) AND " + ELIGIBLE,
                 Map.of("project", projectId, "ids", userIds),

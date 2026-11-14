@@ -74,8 +74,13 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         if (new HashSet<>(userIds).size() != userIds.size()) {
             throw new FieldMessageCodeException(HttpStatus.BAD_REQUEST, "MSG06", Map.of(), "userIds");
         }
-        if (project.status() == ProjectStatus.REMOVED
-                || repository.lockEligible(projectId, userIds) != userIds.size()) {
+        if (project.status() == ProjectStatus.REMOVED) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+        repository.lockProject(projectId);
+        int eligible = repository.lockEligible(projectId, userIds);
+        // The reads above ran before the locks; re-read status and manager now that the waits are over.
+        if (requireManagedProject(projectId).status() == ProjectStatus.REMOVED || eligible != userIds.size()) {
             throw new BusinessRuleException("MSG06", Map.of());
         }
         try {
@@ -93,7 +98,14 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     public List<ProjectMemberResponse> removeMember(UUID projectId, UUID userId) {
         ProjectSummaryResponse project = requireManagedProject(projectId);
         // Design D14: one delete covers "not a member", "already removed" and "the Project Manager's row".
-        if (project.status() == ProjectStatus.REMOVED || repository.removeMember(projectId, userId) == 0) {
+        if (project.status() == ProjectStatus.REMOVED) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+        repository.lockProject(projectId);
+        repository.lockAccounts(List.of(userId));
+        // Re-read status and manager now that the lock waits are over.
+        if (requireManagedProject(projectId).status() == ProjectStatus.REMOVED
+                || repository.removeMember(projectId, userId) == 0) {
             throw new BusinessRuleException("MSG06", Map.of());
         }
         audit.record(AuditAction.PROJECT_MEMBER_CHANGE, "PROJECT", projectId, Map.of("removed", List.of(userId)));

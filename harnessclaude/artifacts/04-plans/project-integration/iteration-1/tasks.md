@@ -16,7 +16,7 @@ Branch: `feat/KAN-128-project-integration-add-ticket-resolver`. One commit per t
   - create `backend/src/main/java/vn/tsolve/project/service/ProjectMemberService.java`, `service/impl/ProjectMemberServiceImpl.java`
   - create `backend/src/main/java/vn/tsolve/project/repository/ProjectMemberRepository.java`
   - modify `backend/src/main/java/vn/tsolve/common/audit/AuditAction.java`
-  - create `backend/src/main/resources/db/changelog/changes/030-project-audit-member-change.sql`; modify the master changelog
+  - create `backend/src/main/resources/db/changelog/changes/034-project-audit-member-change.sql`; modify the master changelog
   - create tests under `backend/src/test/java/vn/tsolve/project/`
 - **Verify:** `mvn verify` in `backend/`.
 - **Depends on:** —

@@ -1,7 +1,11 @@
-import { keepPreviousData } from '@tanstack/react-query';
+import { keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { Flex, Form, Input } from 'antd';
 import { useEffect, useState } from 'react';
-import { useSearchProjectMemberCandidates, type MemberCandidateResponse } from '@/shared/api';
+import {
+  getSearchProjectMemberCandidatesQueryKey,
+  useSearchProjectMemberCandidates,
+  type MemberCandidateResponse,
+} from '@/shared/api';
 import { cells, DataTable, FormModal, type DataTableColumn } from '@/shared/ui';
 import { useAddMembersToProject } from '../hooks/useAddMembersToProject';
 
@@ -26,6 +30,7 @@ export function AddMemberModal({ projectId, onClose }: AddMemberModalProps) {
     { query: { placeholderData: keepPreviousData } },
   );
   const add = useAddMembersToProject(projectId);
+  const client = useQueryClient();
 
   useEffect(() => {
     const timer = setTimeout(() => setQ(search.trim()), SEARCH_DELAY_MS);
@@ -34,7 +39,21 @@ export function AddMemberModal({ projectId, onClose }: AddMemberModalProps) {
 
   function handleSubmit() {
     if (selectedIds.length === 0 || add.isPending) return;
-    add.mutate({ projectId, data: { userIds: selectedIds } }, { onSuccess: onClose });
+    add.mutate(
+      { projectId, data: { userIds: selectedIds } },
+      {
+        onSuccess: onClose,
+        // The hook has reloaded the candidates by now: keep only the people still listed.
+        onError: () => {
+          const listed = client.getQueryData<MemberCandidateResponse[]>(
+            getSearchProjectMemberCandidatesQueryKey(projectId, { q }),
+          );
+          if (!listed) return;
+          const listedIds = new Set(listed.map((row) => row.userId));
+          setSelectedIds((current) => current.filter((id) => listedIds.has(id)));
+        },
+      },
+    );
   }
 
   return (

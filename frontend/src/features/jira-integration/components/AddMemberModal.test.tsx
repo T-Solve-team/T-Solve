@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
@@ -119,6 +119,57 @@ describe('AddMemberModal', () => {
     await waitFor(() => expect(requests.searches).toEqual(['']));
     expect(screen.getByRole('dialog', { name: 'Add member' })).toBeInTheDocument();
     expect(within(dialog).getByRole('checkbox', { name: 'Select Phạm Quốc Bảo' })).toBeChecked();
+  });
+
+  it('AC-002.14 drops a selected person who is no longer listed after the 409 reload, keeps the rest', async () => {
+    server.use(http.post('*/api/v1/projects/:projectId/members', () => problem(409, 'MSG06')));
+    const { user, dialog } = await openPopup();
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Select Phạm Quốc Bảo' }));
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Select Ngô Thị Mai' }));
+    server.use(
+      http.get('*/api/v1/projects/:projectId/member-candidates', () =>
+        HttpResponse.json([
+          {
+            userId: '00000000-0000-4000-8000-000000000302',
+            fullName: 'Ngô Thị Mai',
+            email: 'mai.ngo@company.example',
+          },
+        ]),
+      ),
+    );
+    await user.click(addButton(dialog));
+    expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        within(dialog).queryByRole('checkbox', { name: 'Select Phạm Quốc Bảo' }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(within(dialog).getByRole('checkbox', { name: 'Select Ngô Thị Mai' })).toBeChecked();
+    expect(addButton(dialog)).toBeEnabled();
+    // Only Mai is sent on the next try.
+    const sent: unknown[] = [];
+    server.use(
+      http.post('*/api/v1/projects/:projectId/members', async ({ request }) => {
+        sent.push(await request.json());
+        return problem(409, 'MSG06');
+      }),
+    );
+    await user.click(addButton(dialog));
+    await waitFor(() =>
+      expect(sent).toEqual([{ userIds: ['00000000-0000-4000-8000-000000000302'] }]),
+    );
+  });
+
+  it('AC-002.14 disables Add when the 409 reload lists none of the selected people', async () => {
+    server.use(http.post('*/api/v1/projects/:projectId/members', () => problem(409, 'MSG06')));
+    const { user, dialog } = await openPopup();
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Select Phạm Quốc Bảo' }));
+    server.use(
+      http.get('*/api/v1/projects/:projectId/member-candidates', () => HttpResponse.json([])),
+    );
+    await user.click(addButton(dialog));
+    expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+    await waitFor(() => expect(addButton(dialog)).toBeDisabled());
   });
 
   it('AC-002.15 sends no add request and changes nothing on Cancel or close', async () => {

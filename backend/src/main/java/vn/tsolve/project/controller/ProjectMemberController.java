@@ -28,10 +28,10 @@ import vn.tsolve.project.service.ProjectMemberService;
 @RestController
 @Tag(name = "projects")
 @RequestMapping("/api/v1/projects/{projectId}")
-public class ProjectController {
+public class ProjectMemberController {
     private final ProjectMemberService service;
 
-    public ProjectController(ProjectMemberService service) {
+    public ProjectMemberController(ProjectMemberService service) {
         this.service = service;
     }
 

@@ -171,6 +171,83 @@ class ProjectMemberServiceImplTest {
         verifyNoInteractions(audit);
     }
 
+    private static ProjectSummaryResponse summary(ProjectStatus status) {
+        return new ProjectSummaryResponse(PROJECT, "KEY", "Dept", "PM", status);
+    }
+
+    @Test
+    void locksProjectThenAccountsBeforeAdding_AC_002_8() {
+        project(ProjectStatus.ACTIVE, true);
+        when(repository.lockEligible(PROJECT, List.of(A))).thenReturn(1);
+
+        service.addMembers(PROJECT, new AddProjectMembersRequest(List.of(A)));
+
+        var order = inOrder(repository);
+        order.verify(repository).lockProject(PROJECT);
+        order.verify(repository).lockEligible(PROJECT, List.of(A));
+        order.verify(repository).addMembers(PROJECT, List.of(A));
+    }
+
+    @Test
+    void refusesAddWhenProjectRemovedWhileWaitingForLocks_AC_002_8() {
+        when(repository.findProject(PROJECT))
+                .thenReturn(Optional.of(summary(ProjectStatus.ACTIVE)), Optional.of(summary(ProjectStatus.REMOVED)));
+        when(repository.isManager(CALLER, PROJECT)).thenReturn(true);
+        when(repository.lockEligible(PROJECT, List.of(A))).thenReturn(1);
+
+        assertThatThrownBy(() -> service.addMembers(PROJECT, new AddProjectMembersRequest(List.of(A))))
+                .isInstanceOfSatisfying(BusinessRuleException.class, e -> assertThat(e.getCode())
+                        .isEqualTo("MSG06"));
+        verify(repository, never()).addMembers(any(), any());
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void refusesAddWhenManagerLostRoleWhileWaitingForLocks_AC_001_3() {
+        when(repository.findProject(PROJECT)).thenReturn(Optional.of(summary(ProjectStatus.ACTIVE)));
+        when(repository.isManager(CALLER, PROJECT)).thenReturn(true, false);
+        when(repository.lockEligible(PROJECT, List.of(A))).thenReturn(1);
+
+        assertThatThrownBy(() -> service.addMembers(PROJECT, new AddProjectMembersRequest(List.of(A))))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(repository, never()).addMembers(any(), any());
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void locksProjectThenAccountBeforeRemoving_AC_003_1() {
+        project(ProjectStatus.ACTIVE, true);
+        when(repository.removeMember(PROJECT, A)).thenReturn(1);
+
+        service.removeMember(PROJECT, A);
+
+        var order = inOrder(repository);
+        order.verify(repository).lockProject(PROJECT);
+        order.verify(repository).lockAccounts(List.of(A));
+        order.verify(repository).removeMember(PROJECT, A);
+    }
+
+    @Test
+    void refusesRemoveWhenProjectRemovedWhileWaitingForLocks_AC_003_4() {
+        when(repository.findProject(PROJECT))
+                .thenReturn(Optional.of(summary(ProjectStatus.ACTIVE)), Optional.of(summary(ProjectStatus.REMOVED)));
+        when(repository.isManager(CALLER, PROJECT)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.removeMember(PROJECT, A)).isInstanceOf(BusinessRuleException.class);
+        verify(repository, never()).removeMember(any(), any());
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void refusesRemoveWhenManagerLostRoleWhileWaitingForLocks_AC_001_3() {
+        when(repository.findProject(PROJECT)).thenReturn(Optional.of(summary(ProjectStatus.ACTIVE)));
+        when(repository.isManager(CALLER, PROJECT)).thenReturn(true, false);
+
+        assertThatThrownBy(() -> service.removeMember(PROJECT, A)).isInstanceOf(AccessDeniedException.class);
+        verify(repository, never()).removeMember(any(), any());
+        verifyNoInteractions(audit);
+    }
+
     @Test
     void refusesAddToRemovedProject_AC_002_8() {
         project(ProjectStatus.REMOVED, true);
