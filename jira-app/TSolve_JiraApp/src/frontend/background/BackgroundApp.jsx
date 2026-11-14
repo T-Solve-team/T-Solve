@@ -8,7 +8,7 @@ import { useProductContext } from '@forge/react';
 import { events, requestJira, showFlag } from '@forge/bridge';
 import { openSolutionForm } from '../api/tsolveClient';
 import { doneFlag, SolutionFormModal } from '../form/SolutionFormModal';
-import { isOwnChange, movedIntoDone, readIssue, recentlyMovedIntoDone } from './watchDone';
+import { DONE, isOwnChange, movedIntoDone, readIssue, recentlyMovedIntoDone } from './watchDone';
 
 /** How often the visible issue view re-reads the status (BUG-212): one small Jira read as the viewer. */
 export const POLL_MS = 4000;
@@ -26,7 +26,8 @@ export function BackgroundApp() {
     }
     let active = true;
     let asked = false;
-    // One ask per load: the event and the load check can both see the same move.
+    // One ask per move into Done: the event and the checks can all see the same move. Leaving Done allows the next
+    // move to ask again (BUG-218).
     const offerForm = async (issue) => {
       if (asked) {
         return;
@@ -47,13 +48,16 @@ export function BackgroundApp() {
       });
     // A move into Done seen by the check: the changelog tells whether it was the viewer's (as for the event).
     const check = async () => {
-      if (asked || (typeof document !== 'undefined' && document.hidden)) {
+      if (typeof document !== 'undefined' && document.hidden) {
         return;
       }
       try {
         const issue = await readIssue(requestJira, issueKey);
         const previous = lastCategory.current;
         lastCategory.current = issue.category;
+        if (issue.category !== DONE) {
+          asked = false;
+        }
         if (movedIntoDone(previous, issue.category)) {
           const read = await readIssue(requestJira, issueKey, { changelog: true });
           if (recentlyMovedIntoDone(read, accountId)) {
@@ -73,6 +77,9 @@ export function BackgroundApp() {
         const issue = await readIssue(requestJira, issueKey);
         const previous = lastCategory.current;
         lastCategory.current = issue.category;
+        if (issue.category !== DONE) {
+          asked = false;
+        }
         if (movedIntoDone(previous, issue.category)) {
           await offerForm(issue);
         }

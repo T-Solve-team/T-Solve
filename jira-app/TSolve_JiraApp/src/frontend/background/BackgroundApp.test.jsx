@@ -140,6 +140,26 @@ describe('BackgroundApp', () => {
       expect(openSolutionForm).not.toHaveBeenCalled();
     });
 
+    it('asks again when the viewer moves the issue out of Done and back in the same page load (BUG-218)', async () => {
+      openSolutionForm.mockResolvedValue({ mayOpen: false, origin: null, sections: null, message: null });
+      await moveIntoDone('me');
+      expect(openSolutionForm).toHaveBeenCalledTimes(1);
+
+      category = 'indeterminate';
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(POLL_MS);
+      });
+      category = 'done';
+      movedAt = Date.now();
+      openSolutionForm.mockResolvedValue(FORM);
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(POLL_MS);
+      });
+
+      expect(openSolutionForm).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
     it('asks only once when the event and the check both see the move', async () => {
       await moveIntoDone('me');
       await act(() => onChange({ changes: [{ changeType: 'updated', atlassianId: 'me' }] }));

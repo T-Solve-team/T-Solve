@@ -23,6 +23,6 @@ public interface JiraAppSolutionService {
     /** Rewrite with AI (AC-007.1); 503 MSG68 when it fails (AC-007.4). */
     SolutionSections rewrite(JiraAppPrincipal caller, SolutionSections sections);
 
-    /** What the Issue Panel shows (AC-001.4, AC-008.1 to AC-008.3, AC-008.6). */
+    /** What the Issue Panel shows (AC-001.4, AC-008.1 to AC-008.3). */
     IssuePanelResponse panel(JiraAppPrincipal caller, String issueKey);
 }

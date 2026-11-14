@@ -1,6 +1,6 @@
 // 4.1 Solution Form and 4.2 AI Rewrite Preview (jira-app STORY-002, STORY-004, STORY-005, STORY-007), in one UI Kit
 // Modal. Closing it keeps a Draft and never submits (AC-005.1, AC-005.5).
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -63,6 +63,8 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
   const [step, setStep] = useState('form');
   const [rewritten, setRewritten] = useState(null);
   const [busy, setBusy] = useState(false);
+  // Set at once, unlike `busy`, whose re-render reaches Forge later: Finish and Close never both run (BUG-219).
+  const leaving = useRef(false);
   const [fieldError, setFieldError] = useState(null);
   const [notice, setNotice] = useState(form?.message ? { appearance: 'warning', code: form.message.code } : null);
 
@@ -74,6 +76,10 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
   };
 
   const send = async (content) => {
+    if (leaving.current) {
+      return;
+    }
+    leaving.current = true;
     setBusy(true);
     try {
       await submit(issueKey, { summary, sections: content });
@@ -85,6 +91,7 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
         setNotice({ appearance: 'error', code: failure.code === 'MSG69' ? 'MSG69' : 'MSG06' });
       }
       setStep('form');
+      leaving.current = false;
     } finally {
       setBusy(false);
     }
@@ -101,9 +108,10 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
   // Close and the dialog's own close control keep what was typed as the Draft (AC-005.1); on failure the form stays
   // open with its content (AC-005.4).
   const close = async () => {
-    if (busy) {
+    if (busy || leaving.current) {
       return;
     }
+    leaving.current = true;
     setBusy(true);
     try {
       await saveSolutionDraft(issueKey, sections);
@@ -112,6 +120,7 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
       setNotice({ appearance: 'error', code: 'MSG06' });
       setStep('form');
       setBusy(false);
+      leaving.current = false;
     }
   };
 

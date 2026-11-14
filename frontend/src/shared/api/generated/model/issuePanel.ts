@@ -11,10 +11,10 @@ import type { TicketStatus } from './ticketStatus';
 export interface IssuePanel {
   /** False = the Jira account is not linked to an active T-Solve Account (MSG62); the other fields are false/null. */
   linked: boolean;
-  /** The status of the issue's Solution Form ticket; null = none. CHANGES_REQUESTED makes the Jira App read getJiraReviewFeedback for MSG64. */
+  /** The status of the issue's ticket, of any source (its Ticket ID is the issue key); null = none. CHANGES_REQUESTED makes the Jira App read getJiraReviewFeedback for MSG64. */
   ticketStatus: TicketStatus | null;
   /** The viewer has a Draft for the issue (MSG77). */
   hasDraft: boolean;
-  /** The viewer is a member of the issue's Project and no Solution Form ticket exists. The Jira App also checks that the issue is Done before it shows the button. */
+  /** The viewer is a member of the issue's Project and the issue has no ticket of any source. The Jira App also checks that the issue is Done before it shows the button. */
   mayOpenForm: boolean;
 }

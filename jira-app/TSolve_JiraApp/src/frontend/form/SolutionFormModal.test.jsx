@@ -141,6 +141,21 @@ describe('SolutionFormModal', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
+  it('does not save a Draft when Close comes while Finish is still sending (BUG-219)', async () => {
+    let finishSent;
+    submit.mockImplementation(() => new Promise((resolve) => (finishSent = resolve)));
+    saveSolutionDraft.mockResolvedValue(undefined);
+    open();
+
+    click(LABELS.finish);
+    click('Close dialog');
+    finishSent({ ticketId: 'ITSUP-12', status: 'PENDING_REVIEW' });
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith('submitted'));
+    expect(saveSolutionDraft).not.toHaveBeenCalled();
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
   it('AC-005.5 offers no Save as draft button, asks nothing on Close and never submits on Close', async () => {
     saveSolutionDraft.mockResolvedValue(undefined);
     open();

@@ -765,7 +765,7 @@ export const getSaveSolutionDraftUrl = (issueKey: string) => {
 };
 
 /**
- * @summary Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed (MSG41, STORY-005).
+ * @summary Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed; the Jira App then shows "Saved as draft" (STORY-005).
  */
 export const saveSolutionDraft = async (
   issueKey: string,
@@ -845,7 +845,7 @@ export type SaveSolutionDraftMutationError = ErrorType<ProblemResponse | Problem
 export type SaveSolutionDraftMutationVariables = { issueKey: string; data: SolutionSections };
 
 /**
- * @summary Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed (MSG41, STORY-005).
+ * @summary Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed; the Jira App then shows "Saved as draft" (STORY-005).
  */
 export const useSaveSolutionDraft = <
   TError = ErrorType<ProblemResponse | ProblemDetail>,

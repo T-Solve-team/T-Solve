@@ -1091,7 +1091,7 @@ paths:
     put:
       tags: [jira-app]
       operationId: saveSolutionDraft
-      summary: Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed (MSG41, STORY-005).
+      summary: Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed; the Jira App then shows "Saved as draft" (STORY-005).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -3033,7 +3033,8 @@ components:
             - $ref: '#/components/schemas/TicketStatus'
             - type: 'null'
           description: >
-            The status of the issue's Solution Form ticket; null = none. CHANGES_REQUESTED makes the Jira App read
+            The status of the issue's ticket, of any source (its Ticket ID is the issue key); null = none.
+            CHANGES_REQUESTED makes the Jira App read
             getJiraReviewFeedback for MSG64.
         hasDraft:
           type: boolean
@@ -3041,7 +3042,7 @@ components:
         mayOpenForm:
           type: boolean
           description: >
-            The viewer is a member of the issue's Project and no Solution Form ticket exists. The Jira App also checks
+            The viewer is a member of the issue's Project and the issue has no ticket of any source. The Jira App also checks
             that the issue is Done before it shows the button.
     MessageRef:
       type: object

@@ -81,7 +81,7 @@ export async function openSolutionForm(issueKey, { summary, description }) {
 }
 
 /**
- * Finish or Close: creates the issue's ticket `{id, ticketId, status}`. Retries 3 times when T-Solve cannot be
+ * Finish: creates the issue's ticket `{id, ticketId, status}`. Retries 3 times when T-Solve cannot be
  * reached or fails, then gives MSG69 (AC-004.4). A 409 MSG31 after a retry means an earlier try got through; any other
  * 409 (MSG40: the Project is no longer active) is given back (BUG-215).
  */
@@ -110,7 +110,7 @@ export async function submitSolution(issueKey, { summary, sections }, { sleep = 
   }
 }
 
-/** Save as draft (AC-005.1). */
+/** Keeps the Draft when the form is closed (AC-005.1). */
 export async function saveSolutionDraft(issueKey, sections) {
   await call({
     path: `${JIRA_APP}/issues/${encodeURIComponent(issueKey)}/solution-draft`,
