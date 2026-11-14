@@ -1530,3 +1530,7 @@
 {"ts":"2026-11-14T14:40:51.976Z","type":"feature-status","module":"workspace","feature":"restore-department-api","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T20:15:02.302Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"d2b78999a99638f1477c5e85e0013a3aab611f81"}
 {"ts":"2026-11-14T20:15:02.590Z","type":"feature-status","module":"workspace","feature":"delete-department-screen","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T20:36:50.397Z","type":"feature-status","module":"workspace","feature":"restore-department-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T20:36:50.664Z","type":"feature-status","module":"workspace","feature":"restore-department-screen","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T20:36:50.938Z","type":"feature-status","module":"workspace","feature":"restore-department-screen","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T20:36:51.386Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"9a59a55a72b9c111bc0428fc5daf67984fccd27b"}

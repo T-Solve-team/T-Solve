@@ -162,16 +162,16 @@
         "rename-department-screen": "passing",
         "delete-department-api": "evaluating",
         "delete-department-screen": "evaluating",
-        "restore-department-api": "in-progress",
-        "restore-department-screen": "pending"
+        "restore-department-api": "evaluating",
+        "restore-department-screen": "evaluating"
       },
-      "lastUpdated": "2026-11-14T20:15:02.589Z",
+      "lastUpdated": "2026-11-14T20:36:51.384Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "d2b78999a99638f1477c5e85e0013a3aab611f81"
+        "default": "9a59a55a72b9c111bc0428fc5daf67984fccd27b"
       }
     },
     "project-integration": {
