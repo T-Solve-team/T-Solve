@@ -30,6 +30,13 @@ public interface DepartmentService {
     void delete(UUID departmentId);
 
     /**
+     * Restores a Deleted Department in one transaction: status Active, Space Active, audit entry. Its Projects stay
+     * as they are. A missing or Active one throws NotFoundException (MSG04). In-process callers check the Admin role
+     * themselves.
+     */
+    DepartmentRefResponse restore(UUID departmentId);
+
+    /**
      * Renames an Active Department and its Space and records the audit entry in one transaction. A name equal to the
      * current one changes nothing. In-process callers must pass a request already validated against the {@code @Valid}
      * rules of {@link UpdateDepartmentRequest} and check the Admin role themselves, as DepartmentController does.

@@ -56,6 +56,15 @@ export const handlers: HttpHandler[] = [
       .map(({ departmentId, name, status }) => ({ departmentId, name, status }));
     return HttpResponse.json<DepartmentSummary[]>(rows);
   }),
+  http.post('*/api/v1/departments/:departmentId/restore', async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const found = departments.find(
+      (d) => d.departmentId === params.departmentId && d.status === 'DELETED',
+    );
+    if (!found) return problem(404, 'MSG04');
+    found.status = 'ACTIVE';
+    return HttpResponse.json<DepartmentRef>(ref(found));
+  }),
   http.post('*/api/v1/departments', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const name = nameOf(await request.json().catch(() => null));

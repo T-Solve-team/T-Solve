@@ -111,6 +111,11 @@ public class DepartmentRepository {
                 Map.of("id", id));
     }
 
+    /** Restore touches neither the Projects nor the default Project (AC-007.3). */
+    public void markActive(long id) {
+        jdbc.update("UPDATE department SET status = 'ACTIVE' WHERE department_id = :id", Map.of("id", id));
+    }
+
     /** Active Projects become Removed; Projects already Removed stay as they are (AC-005.3). */
     public List<UUID> removeActiveProjects(long departmentId) {
         return jdbc.query("""

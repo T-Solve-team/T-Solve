@@ -265,4 +265,56 @@ class DepartmentServiceImplTest {
         assertThatThrownBy(() -> service.delete(ID)).isSameAs(failure);
         verifyNoInteractions(repository, audit);
     }
+
+    @Test
+    void restoresDepartmentAndSpaceAndAudits_AC_007_1_AC_007_2_AC_007_4() {
+        UUID spaceId = UUID.randomUUID();
+        when(repository.lockInStatus(ID, "DELETED"))
+                .thenReturn(Optional.of(new DepartmentRepository.Current(42L, "IT")));
+        when(repository.setSpaceStatus(42L, "ACTIVE")).thenReturn(spaceId);
+
+        var result = service.restore(ID);
+
+        assertThat(result.departmentId()).isEqualTo(ID);
+        assertThat(result.name()).isEqualTo("IT");
+        verify(repository).markActive(42L);
+        verify(repository, never()).removeActiveProjects(anyLong());
+        verify(audit)
+                .record(
+                        AuditAction.DEPARTMENT_CHANGE,
+                        "DEPARTMENT",
+                        ID,
+                        Map.of("operation", "RESTORE", "name", "IT", "spaceId", spaceId));
+    }
+
+    @Test
+    void throwsNotFoundWhenRestoringNoDeletedDepartment_AC_007_6() {
+        when(repository.lockInStatus(ID, "DELETED")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.restore(ID))
+                .isInstanceOfSatisfying(NotFoundException.class, error -> assertThat(error.getCode())
+                        .isEqualTo("MSG04"));
+        verify(repository, never()).markActive(anyLong());
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void recordsNoAuditWhenSpaceIsMissingOnRestore_AC_007_8() {
+        when(repository.lockInStatus(ID, "DELETED"))
+                .thenReturn(Optional.of(new DepartmentRepository.Current(42L, "IT")));
+        var failure = new IllegalStateException("no Space");
+        when(repository.setSpaceStatus(42L, "ACTIVE")).thenThrow(failure);
+
+        assertThatThrownBy(() -> service.restore(ID)).isSameAs(failure);
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void restoreFailsBeforeAnyRepositoryCallWithoutWorkspace_AC_007_11() {
+        var failure = new IllegalStateException("no Workspace is bound");
+        when(scope.currentWorkspaceId()).thenThrow(failure);
+
+        assertThatThrownBy(() -> service.restore(ID)).isSameAs(failure);
+        verifyNoInteractions(repository, audit);
+    }
 }

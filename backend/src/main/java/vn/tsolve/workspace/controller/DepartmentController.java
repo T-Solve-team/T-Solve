@@ -96,6 +96,24 @@ public class DepartmentController {
         return service.update(departmentId, request);
     }
 
+    @PostMapping(DEPARTMENT_PATH + "/restore")
+    @Operation(
+            operationId = "restoreDepartment",
+            summary = "Restore a Deleted Department and show its Space again; its Projects stay Removed")
+    @ApiResponse(responseCode = "403", description = "Admin role required")
+    @ApiResponse(responseCode = "404", description = "Department not found")
+    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+    public DepartmentRefResponse restore(@PathVariable UUID departmentId) {
+        return service.restore(departmentId);
+    }
+
+    @PostMapping("/{invalidDepartmentId:(?!" + UUID_PATTERN + "$).+}/restore")
+    @io.swagger.v3.oas.annotations.Hidden
+    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+    public DepartmentRefResponse invalidRestoreId() {
+        throw new NotFoundException("MSG04", Map.of());
+    }
+
     // Disjoint from DEPARTMENT_PATH: an id that is not a UUID is a missing Department, not a 400 (AC-003.2).
     @RequestMapping(
             value = "/{invalidDepartmentId:(?!" + UUID_PATTERN + "$).+}",
