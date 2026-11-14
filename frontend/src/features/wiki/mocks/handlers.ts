@@ -6,6 +6,8 @@ import {
   type WikiDocumentDetail,
   type WikiFolder,
   type WikiSpace,
+  type WikiPublishMetadata,
+  type WikiUploadPreview,
 } from '@/shared/api';
 import {
   getGetWikiDocumentMockHandler,
@@ -17,6 +19,8 @@ import {
   getCreateWikiFolderMockHandler,
   getUpdateWikiFolderMockHandler,
   getDeleteWikiFolderMockHandler,
+  getExtractWikiUploadsMockHandler,
+  getPublishWikiDocumentsMockHandler,
 } from '@/shared/api/generated/wiki/wiki.msw';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { getDevUser } from '@/shared/auth';
@@ -36,7 +40,7 @@ const folders: WikiFolder[] = [
   { folderId: VPN, parentId: NETWORK, name: 'VPN', level: 3 },
 ];
 const folderState = new Map<string, WikiFolder[]>();
-const documents: WikiDocumentDetail[] = [
+const initialDocuments: WikiDocumentDetail[] = [
   {
     documentId: '00000000-0000-4000-8000-000000009001',
     title: 'VPN connection guide',
@@ -85,6 +89,79 @@ const documents: WikiDocumentDetail[] = [
     canDelete: false,
   },
 ];
+let documents = initialDocuments.map((document) => ({ ...document }));
+
+async function uploadFiles(request: Request): Promise<File[] | Response> {
+  const parts = (await request.clone().formData()).getAll('files');
+  if (!parts.length)
+    return problem(400, 'MSG01', {
+      fieldErrors: [{ field: 'files', code: 'MSG01', params: { field_name: 'Files' } }],
+    });
+  if (parts.length > 10) return problem(400, 'MSG88');
+  const files: File[] = [];
+  for (const part of parts) {
+    if (typeof part === 'string') return problem(400, 'MSG89', { params: { file_name: part } });
+    if (part.size > 10 * 1024 * 1024) return problem(413, 'MSG28');
+    const start = await part.slice(0, 5).text();
+    const isPdf = /\.pdf$/i.test(part.name) && start.startsWith('%PDF-');
+    const isDocx = /\.docx$/i.test(part.name) && start.startsWith('PK\u0003\u0004');
+    if (!isPdf && !isDocx) return problem(400, 'MSG89', { params: { file_name: part.name } });
+    files.push(part);
+  }
+  return files;
+}
+
+/** Mock mode uses a fixed excerpt; named scanned/encrypted fixtures exercise UNREADABLE without a browser PDF parser. */
+function uploadPreview(file: File): WikiUploadPreview {
+  const isUnreadable = /scanned|encrypted|unreadable/i.test(file.name);
+  const excerpt = isUnreadable ? '' : 'Connect to the company VPN before opening internal tools.';
+  return {
+    fileName: file.name,
+    title: file.name.replace(/\.(pdf|docx)$/i, '').slice(0, 200),
+    excerpt,
+    wordCount: isUnreadable ? 0 : excerpt.split(/\s+/).length,
+    result: isUnreadable ? 'UNREADABLE' : 'READY',
+  };
+}
+
+async function uploadMetadata(request: Request): Promise<WikiPublishMetadata | Response> {
+  const part = (await request.clone().formData()).get('metadata');
+  const missing = () =>
+    problem(400, 'MSG01', {
+      fieldErrors: [{ field: 'metadata', code: 'MSG01', params: { field_name: 'Metadata' } }],
+    });
+  if (!part) return missing();
+  let value: unknown;
+  try {
+    value = JSON.parse(typeof part === 'string' ? part : await part.text());
+  } catch {
+    return missing();
+  }
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('documents' in value) ||
+    !Array.isArray(value.documents)
+  )
+    return missing();
+  const rows: WikiPublishMetadata['documents'] = [];
+  const entries: unknown[] = value.documents;
+  for (const row of entries) {
+    if (
+      typeof row !== 'object' ||
+      row === null ||
+      !('title' in row) ||
+      typeof row.title !== 'string' ||
+      !('visibility' in row) ||
+      (row.visibility !== 'DEPARTMENT' && row.visibility !== 'COMPANY_WIDE')
+    )
+      return missing();
+    rows.push({ title: row.title, visibility: row.visibility });
+  }
+  const folderId = 'folderId' in value ? value.folderId : null;
+  if (folderId !== null && typeof folderId !== 'string') return missing();
+  return { folderId, documents: rows };
+}
 
 /** The same /me projection used by the guards, including role and manager changes in mock mode. */
 async function viewableSpaces(): Promise<WikiSpace[]> {
@@ -272,6 +349,92 @@ export const handlers: HttpHandler[] = [
       request,
     );
   }),
+  http.post('*/api/v1/wiki/spaces/:spaceId/uploads/extract', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const error = await managerError(String(params.spaceId));
+    if (error) return error;
+    const files = await uploadFiles(request);
+    if (files instanceof Response) return files;
+    return getResponse([getExtractWikiUploadsMockHandler(files.map(uploadPreview))], request);
+  }),
+  http.post('*/api/v1/wiki/spaces/:spaceId/documents', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const spaceId = String(params.spaceId);
+    const error = await managerError(spaceId);
+    if (error) return error;
+    const files = await uploadFiles(request);
+    if (files instanceof Response) return files;
+    const metadata = await uploadMetadata(request);
+    if (metadata instanceof Response) return metadata;
+    if (metadata.documents.length !== files.length)
+      return problem(400, 'MSG01', {
+        fieldErrors: [{ field: 'metadata', code: 'MSG01', params: { field_name: 'Metadata' } }],
+      });
+    const folderId = metadata.folderId ?? null;
+    const folder = folderState.get(spaceId)?.find((item) => item.folderId === folderId);
+    if (folderId && !folder) return problem(404, 'MSG04');
+    const titles = new Set(
+      documents
+        .filter((document) => document.spaceId === spaceId && document.folderId === folderId)
+        .map((document) => document.title.toLowerCase()),
+    );
+    for (const [index, row] of metadata.documents.entries()) {
+      const title = row.title.trim();
+      const code = !title
+        ? 'MSG01'
+        : title.length > 200
+          ? 'MSG02'
+          : titles.has(title.toLowerCase())
+            ? 'MSG84'
+            : null;
+      if (code)
+        return problem(code === 'MSG84' ? 409 : 400, code, {
+          fieldErrors: [
+            {
+              field: `documents[${index}].title`,
+              code,
+              params: { field_name: 'Title', max_length: 200 },
+            },
+          ],
+        });
+      titles.add(title.toLowerCase());
+    }
+    const previews = files.map(uploadPreview);
+    const unreadable = previews.find((preview) => preview.result === 'UNREADABLE');
+    if (unreadable) return problem(400, 'MSG90', { params: { file_name: unreadable.fileName } });
+    const me = await getMe();
+    const created = files.flatMap((file, index): WikiDocumentDetail[] => {
+      const row = metadata.documents[index];
+      const preview = previews[index];
+      if (!row || !preview) return [];
+      return [
+        {
+          documentId: crypto.randomUUID(),
+          title: row.title.trim(),
+          visibility: row.visibility,
+          spaceId,
+          spaceName: spaces.find((space) => space.spaceId === spaceId)?.name ?? '',
+          folderId,
+          folderName: folder?.name ?? null,
+          owner: me.user.fullName,
+          updatedAt: new Date().toISOString(),
+          content: preview.excerpt,
+          fileName: file.name,
+          fileSize: file.size,
+          canDelete: true,
+        },
+      ];
+    });
+    documents.push(...created);
+    return getResponse(
+      [
+        getPublishWikiDocumentsMockHandler(
+          created.map(({ documentId, title }) => ({ documentId, title })),
+        ),
+      ],
+      request,
+    );
+  }),
   http.get('*/api/v1/wiki/documents/search', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const q = new URL(request.url).searchParams.get('q') ?? '';
@@ -314,6 +477,7 @@ export const handlers: HttpHandler[] = [
 ];
 
 export function resetMockData(): void {
+  documents = initialDocuments.map((document) => ({ ...document }));
   folderState.clear();
   folderState.set(
     IT,
