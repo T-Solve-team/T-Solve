@@ -205,15 +205,16 @@
         "jira-import-preview-page": "passing",
         "jira-import-verify": "passing",
         "jira-gateway-auth": "passing",
-        "jira-pull-deadline": "evaluating"
+        "jira-pull-deadline": "evaluating",
+        "ticket-status-model": "passing"
       },
-      "lastUpdated": "2026-11-09T17:11:49.645Z",
+      "lastUpdated": "2026-11-13T21:06:56.729Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "125f4e28d12316d33b41f00d02e21e6fbc05df64"
+        "default": "034b0f18dd6bbb7861dfcdae3fb89ad705c04874"
       }
     },
     "search": {

@@ -1275,6 +1275,12 @@
 {"ts":"2026-11-13T12:58:04.488Z","type":"module-status","module":"platform","from":"planned","to":"implementing"}
 {"ts":"2026-11-13T16:03:48.393Z","type":"feature-status","module":"platform","feature":"staging-cd","from":"pending","to":"in-progress"}
 {"ts":"2026-11-13T16:31:24.816Z","type":"spec-approved","module":"be-foundation","specHash":"045771d2bbca1abf203acc1bc361c2bb5133a937987e910ce56a074869b1c922"}
+{"ts":"2026-11-13T15:41:50.019Z","type":"spec-approved","module":"ticket-repository","specHash":"63372498dc9cf51510517898382c0ea11936bfd77fa29bad887763e888bed21b"}
+{"ts":"2026-11-13T15:41:50.292Z","type":"feature-status","module":"ticket-repository","feature":"ticket-status-model","from":null,"to":"pending"}
+{"ts":"2026-11-13T15:41:56.478Z","type":"feature-status","module":"ticket-repository","feature":"ticket-status-model","from":"pending","to":"in-progress"}
+{"ts":"2026-11-13T20:39:04.142Z","type":"feature-status","module":"ticket-repository","feature":"ticket-status-model","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-13T20:39:04.534Z","type":"feature-status","module":"ticket-repository","feature":"ticket-status-model","from":"evaluating","to":"passing"}
+{"ts":"2026-11-13T21:06:56.734Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"034b0f18dd6bbb7861dfcdae3fb89ad705c04874"}
 {"ts":"2026-11-13T16:52:16.338Z","type":"spec-approved","module":"wiki","specHash":"738c6855e3ba311e6970275f82be45f9da387a16001c546abec8ce630f16b529"}
 {"ts":"2026-11-13T16:53:04.258Z","type":"module-status","module":"wiki","from":"decomposed","to":"planned"}
 {"ts":"2026-11-13T16:53:04.609Z","type":"feature-status","module":"wiki","feature":"wiki-view-rule","from":null,"to":"pending"}

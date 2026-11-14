@@ -89,7 +89,7 @@ describe('http and CSRF', () => {
     document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
   });
 
-  it('sends the XSRF-TOKEN cookie as X-XSRF-TOKEN on POST, PUT, PATCH and DELETE (BUG-208)', async () => {
+  it('sends the XSRF-TOKEN cookie as X-XSRF-TOKEN on POST, PUT, PATCH and DELETE (BUG-211)', async () => {
     document.cookie = 'XSRF-TOKEN=token%2Bwith%2Fencoding%3D; path=/';
     const requests = captureRequests();
     const methods = ['POST', 'PUT', 'PATCH', 'DELETE', 'post'];
@@ -102,7 +102,7 @@ describe('http and CSRF', () => {
     }
   });
 
-  it('sends no X-XSRF-TOKEN on GET (BUG-208)', async () => {
+  it('sends no X-XSRF-TOKEN on GET (BUG-211)', async () => {
     document.cookie = 'XSRF-TOKEN=token; path=/';
     const requests = captureRequests();
 
@@ -114,7 +114,7 @@ describe('http and CSRF', () => {
     for (const request of requests) expect(request.headers.has('X-XSRF-TOKEN')).toBe(false);
   });
 
-  it('sends no X-XSRF-TOKEN when there is no XSRF-TOKEN cookie (BUG-208)', async () => {
+  it('sends no X-XSRF-TOKEN when there is no XSRF-TOKEN cookie (BUG-211)', async () => {
     document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
     const requests = captureRequests();
 
@@ -124,7 +124,7 @@ describe('http and CSRF', () => {
     expect(requests[0]?.headers.has('X-XSRF-TOKEN')).toBe(false);
   });
 
-  it('keeps an X-XSRF-TOKEN the caller set (BUG-208)', async () => {
+  it('keeps an X-XSRF-TOKEN the caller set (BUG-211)', async () => {
     document.cookie = 'XSRF-TOKEN=cookie-token; path=/';
     const requests = captureRequests();
 
