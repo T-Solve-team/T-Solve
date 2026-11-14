@@ -932,8 +932,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "8ca5fab301424f0d3289249e5235a5ec226b1fb3dd7f6b21964fd453140159fa",
-    "approvedAt": "2026-11-14T08:39:03.092Z",
+    "specHash": "de462e28b43437f5706e1b6f2d226d644cbf08aa8d77a6030e3887c80939aef8",
+    "approvedAt": "2026-11-14T13:20:19.707Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -994,15 +994,15 @@
       "AC-009.10": "WHEN the production web application loads or submits a Review action, THE frontend SHALL use the published OpenAPI operations and backend data through the existing generated client.",
       "AC-009.11": "WHEN a Solution Form ticket is first saved as Pending review or transitions back to Pending review, THE tenant database SHALL record that entry time in review_queue_entered_at. WHILE a ticket stays Pending review, THE system SHALL preserve that entry time and SHALL keep the existing review due date rules (GBR-08, GBR-10).",
       "AC-009.12": "WHEN the Review Queue returns a ticket, THE API SHALL expose the recorded entry time as enteredQueueAt. IF an older ticket has no recorded entry time, THEN THE API SHALL return null for enteredQueueAt and THE frontend SHALL show an empty value indicator.",
-      "AC-010.1": "WHEN a Reject or Request Changes decision commits, THE backend SHALL enqueue, after the commit, one review notification job per decided ticket in the decision's Workspace, identified by that ticket's review decision id. WHEN an Approve decision commits, THE backend SHALL enqueue no notification job.",
-      "AC-010.2": "WHEN a review notification job runs, THE worker SHALL load the review decision, its ticket, its Project, the reviewer's account and the writer's account in that Workspace and send one English email through the KAN-162 SMTP sender to the writer's account email, from the display name \"T-Solve\", as a multipart message with an HTML part (AC-010.7) and a plain-text part holding the same facts, with the subject \"[<source ticket key>] Your ticket was rejected\" for Reject and \"[<source ticket key>] Changes requested for your ticket\" for Request Changes.",
-      "AC-010.3": "IF enqueueing a notification job fails or job queueing is disabled in the API process, THEN THE decision SHALL stay committed and THE API SHALL return the same success response without sending an email.",
-      "AC-010.4": "IF SMTP delivery fails while a job runs, THEN THE worker SHALL fail that job so the job queue retries it, and THE committed decision SHALL be unaffected.",
-      "AC-010.5": "IF the decision no longer exists, is an Approve decision, or its ticket has no writer account, THEN THE job SHALL complete without sending an email.",
-      "AC-010.6": "THE notification enqueue and job SHALL not write the recipient address, reason or comment to application logs.",
+      "AC-010.1": "WHEN a Reject or Request Changes decision commits, THE backend SHALL, after the commit and in the decision's Workspace, queue one email per decided ticket in the worker email outbox (worker STORY-004). WHEN an Approve decision commits, THE backend SHALL queue no email.",
+      "AC-010.2": "WHEN the backend queues a review email, THE backend SHALL load the committed review decision, its ticket, its Project, the reviewer's account and the writer's account in that Workspace and compose one English email addressed to the writer's account email, with an HTML body (AC-010.7) and a plain-text body holding the same facts, with the subject \"[<source ticket key>] Your ticket was rejected\" for Reject and \"[<source ticket key>] Changes requested for your ticket\" for Request Changes. THE worker SHALL send it from the display name \"T-Solve\" (worker AC-001.1).",
+      "AC-010.3": "IF queueing a review email fails or job queueing is disabled in the API process, THEN THE decision SHALL stay committed and THE API SHALL return the same success response without sending an email.",
+      "AC-010.4": "IF SMTP delivery of a queued review email fails, THEN THE worker email outbox SHALL retry it under worker AC-004.7, and THE committed decision SHALL be unaffected.",
+      "AC-010.5": "IF a decided ticket has no writer account, THEN THE backend SHALL queue no email for that ticket and SHALL still queue the emails of the other decided tickets.",
+      "AC-010.6": "THE review email queueing SHALL not write the recipient address, reason or comment to application logs.",
       "AC-010.7": "THE HTML part SHALL show, in this order: a header with a \"T\" mark and the name T-Solve in the brand colour #5577FF; a status badge (\"Rejected\" in red or \"Changes requested\" in amber); a heading and a greeting with the writer's full name (\"Hi there\" when no name is stored); a ticket card with the source ticket key, the Project name, the ticket title, the reviewer's full name (the reviewer's email when the stored name is missing or blank; no \"Reviewed by\" text when the reviewer's account no longer exists) and the decision time in Vietnam time (UTC+7) as \"d MMM yyyy, HH:mm (GMT+7)\"; the stored reason under \"Rejection reason\" or the stored comment under \"Review comment\"; a button \"Open ticket\" (Reject) or \"Update ticket\" (Request Changes); and a footer naming the Workspace and saying the message is automated. It SHALL use table layout with inline styles and no images or external resources.",
-      "AC-010.8": "THE button SHALL link to the ticket's Ticket Detail page on the Workspace's own site, https://<Workspace slug>.<TSOLVE_DOMAIN>/tickets/<ticket id>, and the plain-text part SHALL carry the same link. IF the site address cannot be built (no domain configured or no Workspace slug), THEN THE worker SHALL send the email without the button and the link.",
-      "AC-010.9": "THE worker SHALL HTML-escape every stored value placed in the HTML part (names, ticket title, Project and Workspace names, reason, comment), keep the line breaks of the reason or comment, and SHALL replace any line break in the subject with a space.",
+      "AC-010.8": "THE button SHALL link to the ticket's Ticket Detail page on the Workspace's own site, https://<Workspace slug>.<TSOLVE_DOMAIN>/tickets/<ticket id>, and the plain-text part SHALL carry the same link. IF the site address cannot be built (no domain configured or no Workspace slug), THEN THE backend SHALL compose the email without the button and the link.",
+      "AC-010.9": "THE backend SHALL HTML-escape every stored value placed in the HTML part (names, ticket title, Project and Workspace names, reason, comment), keep the line breaks of the reason or comment, and SHALL replace any line break in the subject with a space.",
       "AC-011.1": "WHEN a Project Manager queries Review History, THE API SHALL use the signed-in Workspace and return only review decisions on tickets of Projects they manage, newest first by default with the decision UUID as tie-breaker, paged with the existing page and size conventions.",
       "AC-011.2": "WHEN a stored decision is returned, THE API SHALL report Approve, Reject and Request Changes as APPROVE, REJECT and REQUEST_CHANGES, the stored text as reason only for REJECT and as comment only for REQUEST_CHANGES, the reviewer's full name as actorName (the reviewer's email when no name is stored), the ticket writer as authorName, and the ticket's source key, title and Project.",
       "AC-011.3": "WHEN Department, decision or a paired dateFrom and dateTo are supplied, THE API SHALL filter by them, with both calendar dates inclusive in Vietnam time. IF only one date is supplied, a date is not a yyyy-MM-dd calendar date or dateFrom is after dateTo, THEN THE API SHALL refuse the request with 400 and MSG39. IF the Department has no Project the caller manages, THEN THE API SHALL return an empty page.",
@@ -1114,11 +1114,11 @@
     }
   },
   "worker": {
-    "specHash": "47cb2ae30d0834749a18e7725b15d8fa1a68fe70ef9d46d61efb45ba6f5a5df0",
-    "approvedAt": "2026-11-14T08:39:00.688Z",
+    "specHash": "b048853538841e767a735e04aaf1fbe67bc37ce5b082b04a7c4fa825f1065dd1",
+    "approvedAt": "2026-11-14T13:20:12.328Z",
     "by": "user",
     "acs": {
-      "AC-001.1": "WHEN the caller submits an email with one recipient, a subject, a plain-text body and an HTML body, THE SMTP sender SHALL send one multipart email holding that plain-text part and that HTML part to the recipient, from the display name \"T-Solve\" at the configured sender address, with that subject.",
+      "AC-001.1": "WHEN the caller submits an email with one recipient, a subject, a plain-text body and an HTML body, THE SMTP sender SHALL send one multipart email holding that plain-text part and that HTML part to the recipient, from the display name \"T-Solve\" at the configured sender address, with that subject. WHEN the submitted email has no HTML body, THE SMTP sender SHALL send it as one plain-text email from the same sender.",
       "AC-001.2": "THE SMTP sender SHALL send both bodies exactly as submitted and the subject as submitted except that each line break in it is replaced with a space, and SHALL add no review-specific content; the review email subject, layout and content are defined by ticket-review AC-010.2 and AC-010.7–010.9 and rendered before the sender is called.",
       "AC-001.3": "IF the supplied recipient does not represent exactly one mailbox, THEN THE SMTP sender SHALL reject the request before attempting delivery.",
       "AC-001.4": "IF the SMTP server refuses delivery or the send times out, THEN THE SMTP sender SHALL report a delivery failure to the caller after one attempt, with no recipient address, message content or credentials in the reported error.",
@@ -1142,7 +1142,19 @@
       "AC-002.15": "IF a persisted job names an unknown handler or has a null workspace or record UUID, THEN THE worker SHALL fail it without invoking a handler.",
       "AC-002.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked.",
       "AC-003.1": "WHEN a caller asks the worker tenant port for the Active Workspaces, THE port SHALL return the UUIDs of the Workspaces that are Active at that moment, without binding a Workspace on the calling thread.",
-      "AC-003.2": "WHILE the worker-mock profile is active, THE mock SHALL return exactly its configured Active allow-list and no Suspended or unlisted Workspace."
+      "AC-003.2": "WHILE the worker-mock profile is active, THE mock SHALL return exactly its configured Active allow-list and no Suspended or unlisted Workspace.",
+      "AC-004.1": "WHEN a caller queues an email while a Workspace is bound, THE email outbox SHALL store one PENDING row in the Jobs database with that Workspace UUID, the recipient, the subject, the plain-text body, the optional HTML body, an attempt count of zero and the creation time, and SHALL return the row's UUID.",
+      "AC-004.2": "IF a queue call has no bound Workspace, a recipient that is not exactly one mailbox, a blank subject or one containing a line break, or a blank plain-text body, THEN THE email outbox SHALL reject it without storing a row.",
+      "AC-004.3": "IF the Jobs database is not configured or cannot store the row, THEN THE email outbox SHALL report the failure to the caller without storing a partial row.",
+      "AC-004.4": "WHILE job processing is enabled, THE outbox dispatcher SHALL run at a configured interval (default 30 seconds) and attempt every PENDING row whose next attempt time has come, oldest first.",
+      "AC-004.5": "WHEN the dispatcher attempts a row, THE dispatcher SHALL send it through the SMTP sender using only the data stored in that row, without reading any Workspace database.",
+      "AC-004.6": "WHEN the SMTP sender accepts a row's message, THE dispatcher SHALL mark the row SENT with the send time.",
+      "AC-004.7": "IF delivery of a row fails, THEN THE dispatcher SHALL increase its attempt count and set its next attempt time after the configured backoff. IF that was the third attempt, or the failure happened more than 60 minutes after the row was created, THEN THE dispatcher SHALL mark the row FAILED and attempt it no more. IF a claimed attempt reports no outcome before its lease expires, THEN THE dispatcher SHALL count it as a failed attempt under the same rules.",
+      "AC-004.8": "WHILE more than one dispatcher runs at the same time, THE dispatcher SHALL let only one of them claim a due row for a given attempt.",
+      "AC-004.9": "IF a row's Workspace is Suspended or unknown when the row is due, or its eligibility cannot be checked, THEN THE dispatcher SHALL leave the row PENDING without attempting it or increasing its attempt count (GBR-38). IF such a row is still unattempted 60 minutes after it was created, THEN THE dispatcher SHALL mark it FAILED.",
+      "AC-004.10": "WHEN a SENT or FAILED row has been finished for longer than the configured retention (default 30 days), THE dispatcher SHALL delete the row.",
+      "AC-004.11": "THE email outbox and dispatcher SHALL omit recipient addresses, subjects and bodies from logs and from the errors they report.",
+      "AC-004.12": "THE test suite SHALL demonstrate queueing, dispatch, retry to FAILED, retention and a concurrent claim against PostgreSQL-backed Jobs storage and a local SMTP server."
     }
   },
   "ticket-repository": {
