@@ -25,6 +25,7 @@ paths:
   - frontend/src/features/ticket-import/api/**
   - frontend/src/features/ticket-import/mocks/**
   - frontend/src/features/tickets/**
+  - frontend/src/shared/ui/EvidenceUpload/**
   - backend/src/main/resources/db/changelog/**
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**

@@ -1,35 +1,52 @@
 package vn.tsolve.ticket.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.testcontainers.context.ImportTestcontainers;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.mock.web.MockPart;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.platform.dto.StoredFile;
+import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.ticket.TicketTestDatabase;
 
 /** Manual entry over HTTP against a real PostgreSQL: status codes, ProblemDetail bodies and what is stored. */
@@ -69,6 +86,9 @@ class ManualTicketControllerIT {
     @MockBean
     private AuditService audit;
 
+    @MockBean
+    private FileStorage storage;
+
     @Autowired
     private MockMvc mvc;
 
@@ -88,6 +108,20 @@ class ManualTicketControllerIT {
                 PM.id(),
                 PM.email(),
                 PM.fullName());
+        AtomicInteger keys = new AtomicInteger();
+        when(storage.store(any(InputStream.class))).thenAnswer(call -> {
+            assertThat(TransactionSynchronizationManager.isActualTransactionActive())
+                    .isFalse();
+            InputStream content = call.getArgument(0);
+            return new StoredFile("workspace/manual-" + keys.incrementAndGet(), content.readAllBytes().length);
+        });
+        doAnswer(call -> {
+                    assertThat(TransactionSynchronizationManager.isActualTransactionActive())
+                            .isFalse();
+                    return null;
+                })
+                .when(storage)
+                .delete(any());
     }
 
     static String body(String projectId, String ticketId, String title) {
@@ -102,12 +136,14 @@ class ManualTicketControllerIT {
         return value == null ? "null" : "\"" + value + "\"";
     }
 
-    ResultActions postAs(TSolveUser user, String url, String json) throws Exception {
-        return mvc.perform(post(url)
-                .with(authentication(new UsernamePasswordAuthenticationToken(user, null, user.authorities())))
-                .with(csrf())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json));
+    ResultActions postAs(TSolveUser user, String url, String json, MockMultipartFile... files) throws Exception {
+        // The web client appends a string, without an entry part Content-Type.
+        MockMultipartHttpServletRequestBuilder request =
+                multipart(url).part(new MockPart("entry", json.getBytes(StandardCharsets.UTF_8)));
+        for (MockMultipartFile file : files) {
+            request.file(file);
+        }
+        return as(user, request);
     }
 
     int count(String table) {
@@ -275,5 +311,188 @@ class ManualTicketControllerIT {
         as(PM, delete("/api/v1/imports/drafts/" + draft)).andExpect(status().isNoContent());
         assertThat(count("import_preview")).isZero();
         assertThat(count("import_preview_row")).isZero();
+    }
+
+    static MockMultipartFile file(String name, String type) {
+        return new MockMultipartFile("files", name, type, new byte[] {1, 2, 3});
+    }
+
+    @Test
+    void AC_006_15_multipartSaveStoresTwoEvidenceRowsWithStorageKeys() throws Exception {
+        postAs(
+                        PM,
+                        "/api/v1/imports/manual",
+                        body(PROJECT, "ITSUP-9", "Login fails"),
+                        file("screen.PNG", "image/png"),
+                        file("error.log", null))
+                .andExpect(status().isCreated());
+
+        assertThat(jdbc.queryForList("select e.file_name, e.file_type, e.file_size, e.storage_key, t.source_ticket_id"
+                        + " from evidence e join ticket t on t.ticket_id = e.ticket_id order by e.storage_key"))
+                .satisfiesExactly(
+                        row -> assertThat(row)
+                                .containsEntry("file_name", "screen.PNG")
+                                .containsEntry("file_type", "image/png")
+                                .containsEntry("file_size", 3L)
+                                .containsEntry("storage_key", "workspace/manual-1")
+                                .containsEntry("source_ticket_id", "ITSUP-9"),
+                        row -> assertThat(row)
+                                .containsEntry("file_name", "error.log")
+                                .containsEntry("file_type", "text/plain")
+                                .containsEntry("file_size", 3L)
+                                .containsEntry("storage_key", "workspace/manual-2"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/imports/manual", "/api/v1/imports/manual/drafts"})
+    void AC_006_16_multipartRejectsBadTypeAndOversizeWithFileFieldErrors(String url) throws Exception {
+        for (MockMultipartFile bad : new MockMultipartFile[] {
+            file("bad.exe", "text/plain"),
+            new MockMultipartFile("files", "large.png", "image/png", new byte[10_485_761])
+        }) {
+            postAs(PM, url, body(PROJECT, "ITSUP-9", "Login fails"), file("good.txt", null), bad)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("MSG34"))
+                    .andExpect(jsonPath("$.fieldErrors.length()").value(1))
+                    .andExpect(jsonPath("$.fieldErrors[0].field").value("files"))
+                    .andExpect(jsonPath("$.fieldErrors[0].code").value("MSG34"))
+                    .andExpect(jsonPath("$.fieldErrors[0].params.file_name").value(bad.getOriginalFilename()));
+        }
+        verifyNoInteractions(storage);
+        assertThat(count("evidence")).isZero();
+        assertThat(count("import_preview")).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/imports/manual", "/api/v1/imports/manual/drafts"})
+    void AC_006_17_multipartRejectsSixFilesWithMsg72(String url) throws Exception {
+        postAs(
+                        PM,
+                        url,
+                        body(PROJECT, "ITSUP-9", "Login fails"),
+                        file("1.txt", null),
+                        file("2.txt", null),
+                        file("3.txt", null),
+                        file("4.txt", null),
+                        file("5.txt", null),
+                        file("6.txt", null))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG72"))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("files"))
+                .andExpect(jsonPath("$.fieldErrors[0].code").value("MSG72"))
+                .andExpect(jsonPath("$.fieldErrors[0].params").isEmpty());
+        verifyNoInteractions(storage);
+    }
+
+    private long evidenceDraft() throws Exception {
+        String answer = postAs(
+                        PM,
+                        "/api/v1/imports/manual/drafts",
+                        "{\"projectId\": \"" + PROJECT + "\"}",
+                        file("saved.pdf", "application/pdf"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return ((Number) JsonPath.read(answer, "$.previewId")).longValue();
+    }
+
+    @Test
+    void AC_006_18_multipartDraftReopensWithItsEvidence() throws Exception {
+        long draft = evidenceDraft();
+        String evidenceId = jdbc.queryForObject(
+                "select import_preview_evidence_id::text from import_preview_evidence", String.class);
+
+        as(PM, get("/api/v1/imports/manual/drafts/" + draft))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.evidence.length()").value(1))
+                .andExpect(jsonPath("$.evidence[0].evidenceId").value(evidenceId))
+                .andExpect(jsonPath("$.evidence[0].fileName").value("saved.pdf"))
+                .andExpect(jsonPath("$.evidence[0].fileSize").value(3));
+    }
+
+    @Test
+    void AC_006_15_keepsDraftEvidenceOnTheTicketWhenSaving() throws Exception {
+        long draft = evidenceDraft();
+        String evidenceId = jdbc.queryForObject(
+                "select import_preview_evidence_id::text from import_preview_evidence", String.class);
+        String entry = withDraft(body(PROJECT, "ITSUP-9", "Login fails"), draft);
+        entry = entry.substring(0, entry.lastIndexOf('}')) + ", \"keepEvidenceIds\": [\"" + evidenceId + "\"]}";
+
+        postAs(PM, "/api/v1/imports/manual", entry, file("new.txt", null)).andExpect(status().isCreated());
+
+        assertThat(count("import_preview_evidence")).isZero();
+        assertThat(count("import_preview")).isZero();
+        assertThat(jdbc.queryForList("select storage_key from evidence order by storage_key", String.class))
+                .containsExactly("workspace/manual-1", "workspace/manual-2");
+        verify(storage, never()).delete(any());
+    }
+
+    @Test
+    void AC_006_19_updatingAndDeletingADraftDeletesItsDroppedObjects() throws Exception {
+        long draft = evidenceDraft();
+
+        postAs(
+                        PM,
+                        "/api/v1/imports/manual/drafts",
+                        withDraft("{\"projectId\": \"" + PROJECT + "\"}", draft),
+                        file("replacement.txt", null))
+                .andExpect(status().isOk());
+
+        assertThat(jdbc.queryForList("select storage_key from import_preview_evidence", String.class))
+                .containsExactly("workspace/manual-2");
+        verify(storage).delete("workspace/manual-1");
+
+        as(PM, delete("/api/v1/imports/drafts/" + draft)).andExpect(status().isNoContent());
+        assertThat(count("import_preview_evidence")).isZero();
+        verify(storage).delete("workspace/manual-2");
+    }
+
+    @Test
+    void AC_006_20_databaseFailureRollsBackDraftAndEvidenceAndCompensatesNewFiles() throws Exception {
+        long draft = evidenceDraft();
+        doThrow(new IllegalStateException("audit unavailable")).when(audit).record(any(), any(), any(), any());
+
+        postAs(
+                        PM,
+                        "/api/v1/imports/manual",
+                        withDraft(body(PROJECT, "ITSUP-9", "Login fails"), draft),
+                        file("new.txt", null))
+                .andExpect(status().isInternalServerError());
+
+        assertThat(count("ticket")).isZero();
+        assertThat(count("import_batch")).isZero();
+        assertThat(count("import_preview")).isEqualTo(1);
+        assertThat(jdbc.queryForList("select storage_key from import_preview_evidence", String.class))
+                .containsExactly("workspace/manual-1");
+        verify(storage).delete("workspace/manual-2");
+        verify(storage, never()).delete("workspace/manual-1");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/imports/manual", "/api/v1/imports/manual/drafts"})
+    void AC_006_21_storageFailureIs503Msg06AndSavesNothing(String url) throws Exception {
+        doThrow(new IllegalStateException("No Workspace is bound"))
+                .when(storage)
+                .store(any());
+
+        postAs(PM, url, body(PROJECT, "ITSUP-9", "Login fails"), file("screen.png", "image/png"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("MSG06"));
+
+        assertThat(count("ticket")).isZero();
+        assertThat(count("import_preview")).isZero();
+        assertThat(count("evidence")).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/imports/manual", "/api/v1/imports/manual/drafts"})
+    void AC_006_16_unreadableEntryUsesTheBadBodyProblemDetail(String url) throws Exception {
+        for (String entry : new String[] {"{", "null", "{\"projectId\":\"not-a-uuid\"}"}) {
+            postAs(PM, url, entry)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("MSG06"));
+        }
+        verifyNoInteractions(storage);
     }
 }

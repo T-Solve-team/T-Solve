@@ -13,6 +13,7 @@ import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'ms
 
 import { ImportPreviewRowStatus, ImportSource, ImportType } from '../model';
 import type {
+  CreateManualTicketBody,
   DraftSavedResponse,
   FillSolutionRequest,
   ImportDraftSummary,
@@ -22,9 +23,9 @@ import type {
   ImportResultResponse,
   JiraPullRequest,
   ManualTicketDraft,
-  ManualTicketRequest,
   MessageRef,
   RemoveRowsRequest,
+  SaveManualTicketDraftBody,
   UploadCsvImportBody,
 } from '../model';
 
@@ -858,6 +859,13 @@ export const getGetManualTicketDraftResponseMock = (
   ]),
   scope: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   savedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  evidence: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      evidenceId: faker.string.uuid(),
+      fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      fileSize: faker.number.int(),
+    }),
+  ),
   ...overrideResponse,
 });
 
@@ -1148,13 +1156,13 @@ export const getCreateManualTicketMockHandler = (
   overrideResponse?:
     | ImportResultResponse
     | ((
-        info: Parameters<HttpResponseResolver<PathParams, ManualTicketRequest>>[0],
+        info: Parameters<HttpResponseResolver<PathParams, CreateManualTicketBody>>[0],
       ) => Promise<ImportResultResponse> | ImportResultResponse),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post<PathParams, ManualTicketRequest>(
+  return http.post<PathParams, CreateManualTicketBody>(
     '*/api/v1/imports/manual',
-    async (info: Parameters<HttpResponseResolver<PathParams, ManualTicketRequest>>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, CreateManualTicketBody>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -1172,13 +1180,13 @@ export const getSaveManualTicketDraftMockHandler = (
   overrideResponse?:
     | DraftSavedResponse
     | ((
-        info: Parameters<HttpResponseResolver<PathParams, ManualTicketRequest>>[0],
+        info: Parameters<HttpResponseResolver<PathParams, SaveManualTicketDraftBody>>[0],
       ) => Promise<DraftSavedResponse> | DraftSavedResponse),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post<PathParams, ManualTicketRequest>(
+  return http.post<PathParams, SaveManualTicketDraftBody>(
     '*/api/v1/imports/manual/drafts',
-    async (info: Parameters<HttpResponseResolver<PathParams, ManualTicketRequest>>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, SaveManualTicketDraftBody>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'

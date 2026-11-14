@@ -23,6 +23,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CreateManualTicketBody,
   DownloadCsvTemplateParams,
   DraftSavedResponse,
   FillSolutionRequest,
@@ -34,10 +35,10 @@ import type {
   ImportResultResponse,
   JiraPullRequest,
   ManualTicketDraft,
-  ManualTicketRequest,
   ProblemDetail,
   ProblemResponse,
   RemoveRowsRequest,
+  SaveManualTicketDraftBody,
   UploadCsvImportBody,
 } from '../model';
 
@@ -1443,37 +1444,23 @@ export const getCreateManualTicketUrl = () => {
 };
 
 /**
- * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
 
  */
 export const createManualTicket = async (
-  manualTicketRequest: ManualTicketRequest,
+  createManualTicketBody: CreateManualTicketBody,
   options?: Parameters<typeof http>[1],
 ): Promise<ImportResultResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit['headers']>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
+  const formData = new FormData();
+  formData.append(`entry`, JSON.stringify(createManualTicketBody.entry));
+  if (createManualTicketBody.files !== undefined) {
+    createManualTicketBody.files.forEach((value) => formData.append(`files`, value));
+  }
+
   return http<ImportResultResponse>(getCreateManualTicketUrl(), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(manualTicketRequest),
+    body: formData,
   });
 };
 
@@ -1518,12 +1505,12 @@ export const getCreateManualTicketMutationOptions = <
 export type CreateManualTicketMutationResult = NonNullable<
   Awaited<ReturnType<typeof createManualTicket>>
 >;
-export type CreateManualTicketMutationBody = ManualTicketRequest;
+export type CreateManualTicketMutationBody = CreateManualTicketBody;
 export type CreateManualTicketMutationError = ErrorType<ProblemDetail | ProblemResponse>;
-export type CreateManualTicketMutationVariables = { data: ManualTicketRequest };
+export type CreateManualTicketMutationVariables = { data: CreateManualTicketBody };
 
 /**
- * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
 
  */
 export const useCreateManualTicket = <
@@ -1553,37 +1540,23 @@ export const getSaveManualTicketDraftUrl = () => {
 };
 
 /**
- * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
 
  */
 export const saveManualTicketDraft = async (
-  manualTicketRequest: ManualTicketRequest,
+  saveManualTicketDraftBody: SaveManualTicketDraftBody,
   options?: Parameters<typeof http>[1],
 ): Promise<DraftSavedResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit['headers']>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
+  const formData = new FormData();
+  formData.append(`entry`, JSON.stringify(saveManualTicketDraftBody.entry));
+  if (saveManualTicketDraftBody.files !== undefined) {
+    saveManualTicketDraftBody.files.forEach((value) => formData.append(`files`, value));
+  }
+
   return http<DraftSavedResponse>(getSaveManualTicketDraftUrl(), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(manualTicketRequest),
+    body: formData,
   });
 };
 
@@ -1628,12 +1601,12 @@ export const getSaveManualTicketDraftMutationOptions = <
 export type SaveManualTicketDraftMutationResult = NonNullable<
   Awaited<ReturnType<typeof saveManualTicketDraft>>
 >;
-export type SaveManualTicketDraftMutationBody = ManualTicketRequest;
+export type SaveManualTicketDraftMutationBody = SaveManualTicketDraftBody;
 export type SaveManualTicketDraftMutationError = ErrorType<ProblemDetail | ProblemResponse>;
-export type SaveManualTicketDraftMutationVariables = { data: ManualTicketRequest };
+export type SaveManualTicketDraftMutationVariables = { data: SaveManualTicketDraftBody };
 
 /**
- * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
 
  */
 export const useSaveManualTicketDraft = <

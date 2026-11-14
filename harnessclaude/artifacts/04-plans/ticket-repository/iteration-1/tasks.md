@@ -1,7 +1,7 @@
 ---
 module: ticket-repository
 date: 2026-11-07
-total_tasks: 17
+total_tasks: 20
 owner: Dev
 ---
 
@@ -258,4 +258,51 @@ each field with the input kept (AC-006.14).
   `F/api/**` (API helpers, if the feature keeps them there), `F/mocks/handlers.ts`, `F/mocks/data.ts`
 - Test: `ManualEntryForm.test.tsx` (AC-006.9, AC-006.11, AC-006.14 — test names cite the ids)
 **Dependencies:** Task 14 (Tasks 15–16 only for a live run)
+**Estimated size:** medium
+
+## Task 18: Evidence contract and schema
+
+**Story:** STORY-006
+**Feature:** manual-evidence-contract
+**Description:** Master design "Change 2026-11-14 (2)". `frontend/openapi/tsolve-api.yaml`: `createManualTicket` and
+`saveManualTicketDraft` take `multipart/form-data` (part `entry` = `ManualTicketRequest` as JSON, part `files` =
+array of binary, 0–5); `ManualTicketRequest` gains `keepEvidenceIds` (uuid[], optional); `ManualTicketDraft`
+gains `evidence` (array of `{ evidenceId uuid, fileName, fileSize int64 }`, required, may be empty); 503 on both.
+`npm run generate:api`. New Liquibase changeset: `evidence.storage_key`, table `import_preview_evidence`. Backend
+DTO changes (`ManualTicketRequest.keepEvidenceIds`, `ManualTicketDraft.evidence` + record `ManualEvidence`) and
+entities (`TicketEvidence` gets a constructor and `storage_key`; new `ImportPreviewEvidence` + repository).
+Existing callers compile; frontend compiles (the form may send an empty `files` for now).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`, `T/dto/ManualTicketRequest.java`, `T/dto/ManualTicketDraft.java`, `T/entity/TicketEvidence.java`
+- Create: `backend/src/main/resources/db/changelog/changes/NNN-manual-entry-evidence.sql` (+ master include), `T/dto/ManualEvidence.java`, `T/entity/ImportPreviewEvidence.java`, `T/repository/ImportPreviewEvidenceRepository.java`
+**Dependencies:** none
+**Estimated size:** small
+
+## Task 19: Store Evidence on save and Save as draft
+
+**Story:** STORY-006
+**Feature:** manual-evidence-backend
+**Description:** Master design "Change 2026-11-14 (2)" (Flow, Reopen). Controller takes multipart. File rules
+(AC-006.16, AC-006.17), store outside the transaction, compensate on failure (AC-006.20), 503 MSG06 when storage is
+missing or failing (AC-006.21), Evidence rows on save (AC-006.15) and on Save as draft (AC-006.18), dropped Draft
+files deleted after commit and on Draft delete (AC-006.19), reopen lists Evidence (AC-006.18).
+**Files:**
+- Modify: `T/controller/ManualTicketController.java`, `T/service/ManualTicketService.java`, `T/service/impl/ManualTicketServiceImpl.java`, `T/service/impl/ImportDraftServiceImpl.java`
+- Create: `T/exception/StorageUnavailableException.java` (if no fitting base/exception exists)
+- Test: `TT/service/impl/ManualTicketEvidenceTest.java` (AC-006.15–AC-006.21, FileStorage mocked), extend `TT/controller/ManualTicketControllerIT.java` (multipart save with a mocked `FileStorage` bean: Evidence rows with storage keys; MSG34/MSG72 400; 503 without storage)
+**Dependencies:** Task 18
+**Estimated size:** medium
+
+## Task 20: Evidence on the Manual entry tab
+
+**Story:** STORY-006
+**Feature:** manual-evidence-tab
+**Description:** Master design "Change 2026-11-14 (2)" (Web app). Kit component `shared/ui/EvidenceUpload` (FE Lead
+review); `ManualEntryForm` Evidence field, multipart send, kept Draft files, `files` field errors; MSW handlers
+accept multipart and return Draft evidence (AC-006.22, AC-006.18 on screen).
+**Files:**
+- Create: `frontend/src/shared/ui/EvidenceUpload/EvidenceUpload.tsx`, `index.ts`, `EvidenceUpload.test.tsx`
+- Modify: `frontend/src/shared/ui/index.ts`, `F/components/ManualEntryForm.tsx`, `F/components/ManualEntryForm.test.tsx`, `F/mocks/handlers.ts`
+- Test: `ManualEntryForm.test.tsx` (AC-006.22, AC-006.18), `EvidenceUpload.test.tsx`
+**Dependencies:** Task 18
 **Estimated size:** medium

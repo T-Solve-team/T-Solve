@@ -11,7 +11,8 @@ Preview, 5.3 Import Ticket Preview, MSG01, MSG02, MSG04, MSG08, MSG32, MSG33, MS
 This version covers **KAN-45 Import resolved issues from Jira (UC-20)**, including Drafts of a Jira import, and
 **KAN-132 Ticket status model** (STORY-005: the one Ticket state machine shared by submit, review and import, GBR-07,
 GBR-08, GBR-10, GBR-11, GBR-23, UC-25), and **KAN-133 Create a ticket with its Solution manually** (STORY-006,
-UC-22, screen 5.1 Manual entry tab, MSG31, MSG41; Evidence deferred, D13).
+UC-22, screen 5.1 Manual entry tab, MSG31, MSG34, MSG41, MSG72, with Evidence through the Workspace file storage of
+`platform` STORY-007, KAN-96).
 CSV import (UC-21) lives in `import-ticket-list`; Import History screen (UC-23), Ticket Detail (UC-24), unpublish /
 re-publish (UC-25) and the Solution Form submission (UC-19) are added later through Change Mode.
 
@@ -30,6 +31,7 @@ is one row of such a preview.
 | 2026-11-08 | STORY-001 | New AC-001.13: a pull stops reading Jira after 60 seconds in total and answers MSG50 as in AC-001.7 | PR #166 review (trhieudev1309), BUG-189: up to 20 pages plus comment calls, each with a 30 s timeout and 2 retries, could hold a request thread for minutes; user decision 2026-11-08 |
 | 2026-11-13 | STORY-005 | New STORY-005 (KAN-132): AC-005.1–AC-005.5, decisions D9–D11 | One Ticket state machine for submit, review and import; review Approve did not publish the "tickets published" event, so approved tickets were never indexed for search; user decisions 2026-11-13 |
 | 2026-11-14 | STORY-006 | New STORY-006 (KAN-133, UC-22 manual entry): AC-006.1–AC-006.14, decisions D12–D16; manual entry leaves Out of Scope, Evidence stays out (D13) | KAN-133; user decisions 2026-11-14 |
+| 2026-11-14 | STORY-006 | Evidence of manual entry: new AC-006.15–AC-006.22, decisions D17–D21; D13 reworded (Evidence no longer deferred); the save and Save as draft requests become multipart (Interface Contracts); Evidence leaves Out of Scope | File storage (KAN-96, #193) is on `main`; the user asked for Evidence on 2026-11-14 |
 
 ## Decisions taken while planning (2026-11-07, with the user)
 | # | Question | Decision |
@@ -46,7 +48,12 @@ is one row of such a preview.
 | D10 | Where the "tickets published / unpublished" events are published | The rule lives in `TicketStatus` and `Ticket`; one shared transition step moves a batch of Tickets and publishes ONE event with all their ids, as Finish already does (AC-003.9). Not one Spring `@DomainEvents` event per Ticket: it needs `save()`, which review does not call, and it would split a 100-ticket import into 100 events (user decision 2026-11-13). |
 | D11 | Answer to a status change the table does not allow | HTTP 409 with MSG06, no Ticket of the request changed — the answer review already gives for a Ticket that is not Pending review (UC-30 step 3). |
 | D12 | Scope of KAN-133 | The manual entry endpoints, their Drafts, and the Manual entry tab of screen 5.1 (user decision 2026-11-14). |
-| D13 | Evidence of a manual ticket (UC-22 step 3, MSG34, MSG72) | Deferred: file storage (KAN-96, `platform`) does not exist yet. A later Change adds Evidence to manual entry and its Drafts (user decision 2026-11-14). |
+| D13 | Evidence of a manual ticket (UC-22 step 3, MSG34, MSG72) | First deferred while file storage did not exist; added by the Change of 2026-11-14 (AC-006.15–AC-006.22) once KAN-96 was on `main` (user decision 2026-11-14). |
+| D17 | How files reach the server | In the same request as the entry: Save and Save as draft are `multipart/form-data` with the entry as JSON and 0–5 files, so a ticket and its Evidence are saved together. Files go to `platform` `FileStorage` before the database transaction and are deleted again if it fails (no outbound call inside a transaction, backend AGENTS.md §4). |
+| D18 | File rules on Save as draft | The file rules (MSG34, MSG72) apply on Save as draft too, although other fields are not checked: a file must be stored to be kept, and the storage limit is the same (decided 2026-11-14). |
+| D19 | Allowed types | By file extension, case-insensitive: .png, .jpg, .jpeg, .pdf, .docx, .xlsx, .txt, .log (MSG34's list; .jpeg counts as JPG). |
+| D20 | Evidence of a Draft | Kept with the Draft (one record per file with its storage key); listed when the Draft is reopened; removed by leaving it out of the kept list on the next save. On Save they become the new Ticket's Evidence, which no endpoint can remove ("locks the Evidence"). |
+| D21 | File storage not configured or failing | A request with files is rejected with HTTP 503 and MSG06 and saves nothing; a request without files works as before. |
 | D14 | Where a manual entry Draft is stored | As an Import Preview of source Manual with one row holding the entered fields, marked a Draft when it is created. The Drafts list and Delete of STORY-004 serve it as they are (user decision 2026-11-14). |
 | D15 | Writer of a manual ticket ("writer = Project Manager") | `writer` = the caller's full name, `writer_id` = the caller's user id (user decision 2026-11-14). |
 | D16 | Message for a Resolved date in the future (screen 5.1 names none) | MSG39 (user decision 2026-11-14). |
@@ -151,10 +158,18 @@ is one row of such a preview.
   - AC-006.12: WHEN a manual entry reopened from a Draft is saved successfully, THE system SHALL delete that Draft in the same transaction; IF the save is rejected, THEN THE system SHALL keep the Draft unchanged.
   - AC-006.13: IF a request names a Manual Draft that belongs to another user, does not exist or is not a Manual Draft, THEN THE system SHALL reject it with HTTP 404 (MSG04); Delete of a Manual Draft works as AC-004.4 and AC-004.5.
   - AC-006.14: WHEN a save or Save as draft is rejected, THE web app SHALL show each message next to its field and keep everything the Project Manager entered; WHEN a save succeeds, THE web app SHALL show MSG32 and clear the form.
+  - AC-006.15: WHEN a manual entry with Evidence files is saved (AC-006.1), THE system SHALL store each file in the Workspace file storage and save it as Evidence of the new Ticket with its file name, type and size, together with the Evidence the reopened Draft kept (D17, D20).
+  - AC-006.16: IF an Evidence file's extension is not one of .png, .jpg, .jpeg, .pdf, .docx, .xlsx, .txt or .log, or a file is larger than 10 MB, THEN THE system SHALL reject the save or the Save as draft with HTTP 400 and MSG34 with that file name, store no file and save nothing (D18, D19).
+  - AC-006.17: IF a save or Save as draft would leave the entry with more than 5 Evidence files (the Draft's kept files and the new ones together), THEN THE system SHALL reject it with HTTP 400 and MSG72, store no file and save nothing.
+  - AC-006.18: WHEN the Project Manager saves as draft with Evidence files, THE system SHALL store them with the Draft, and WHEN the Draft is reopened, THE system SHALL return each of its Evidence files with its id, file name and size (D20).
+  - AC-006.19: WHEN a save or Save as draft of a reopened Draft leaves out some of the Draft's Evidence files, THE system SHALL drop them from the Draft and delete their stored files after the change commits; WHEN a Manual Draft is deleted, THE system SHALL delete its stored files as well.
+  - AC-006.20: IF a save or Save as draft fails after some of its files were stored, THEN THE system SHALL delete those files and keep the Draft and its Evidence as they were.
+  - AC-006.21: IF the file storage is not configured or does not answer, THEN THE system SHALL reject a save or Save as draft that carries files with HTTP 503 and MSG06 and save nothing (D21).
+  - AC-006.22: WHILE an entry has Evidence files, THE web app SHALL list them with their names under Evidence, let the Project Manager add files and remove files before saving, refuse a 6th file with MSG72 and a file of another type or larger than 10 MB with MSG34 before sending, and show a reopened Draft's files in the list.
 
 ## Out of Scope
 - CSV import (UC-21) — `import-ticket-list`; Drafts of a CSV import (GBR-26, UC-21 step 7b) are a later Change there.
-- Evidence of a manually entered ticket and of its Draft (UC-22 step 3, MSG34, MSG72) — waits for file storage (KAN-96, D13).
+- Downloading or previewing Evidence (Ticket Detail, UC-24).
 - Import History screen (UC-23), Ticket Detail (UC-24), unpublish / re-publish (UC-25), Solution Form submission (UC-19).
   (Manual entry, UC-22, is STORY-006 without its Evidence.)
 - Storing the Jira service account in the database and the UC-10 screen — `workspace`. Until then the connection comes from the environment (D2).
@@ -182,6 +197,8 @@ New endpoints:
 | `GET /imports/manual/drafts/{previewId}` | — | `ManualTicketDraft { previewId, projectId, ticketId?, title?, description?, resolvedDate?, symptoms?, rootCause?, resolutionSteps?, workaround?, scope?, savedAt }` |
 
 Manual entry rejections: invalid fields → 400 ProblemDetail listing every field with its MSG01 / MSG02 / MSG39 (AC-006.6) · Ticket ID taken → 409 (MSG31) · no PM role, Project not Active or not managed → 403 (MSG08) · Draft not found, another user's or not Manual → 404 (MSG04). `ImportDraftSummary.source` gains `MANUAL`.
+
+Evidence (Change 2026-11-14, D17): `POST /imports/manual` and `POST /imports/manual/drafts` take `multipart/form-data` with part `entry` (JSON `ManualTicketRequest`, which gains `keepEvidenceIds` (uuid[]) — the Draft's Evidence to keep) and part `files` (0–5 binary files). `ManualTicketDraft` gains `evidence: [{ evidenceId (uuid), fileName, fileSize }]`. Rejections: MSG34 / MSG72 → 400 (a `fieldErrors` entry on `files`) · file storage not configured or failing → 503 (MSG06).
 
 Endpoints of `import-ticket-list` that also serve a Jira preview: `GET /imports/previews/{previewId}`,
 `GET …/rows`, `GET …/rows/{rowNo}`, `POST …/fill-solution`, `POST …/remove-rows`, `POST …/confirm` (Finish).
