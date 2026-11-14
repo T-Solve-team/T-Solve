@@ -57,8 +57,8 @@ Spec: artifacts/03-modules/identity/spec.md, STORY-003 / AC-003.1–003.14 and A
 Tasks 15–18: the web app on MSW mocks (D1), stacked on `chore/KAN-231-identity-plan` (PR #94). Two new endpoints
 under tag `profile` (`getMyViewableSpaces`, `getMySolutions`), each in its screen's PR; feature-local mocks read the
 dev user with `getDevUser()`. No shared edit: in My Solutions only the Ticket ID of a `canOpen` row is a link
-(`cells.link`, R1 A). Edge-case rows 53–81 of the master apply. Task 19 (backend
-AC-003.4–.10) is a stub with no feature until it has a Jira issue.
+(`cells.link`, R1 A). Edge-case rows 53–81 of the master apply. The backend
+(AC-003.4–.10, .17–.19) is Tasks 19a, 19b and 19c (KAN-301 plan, 2026-11-14).
 
 ## HLA change — Tasks 9b, 10, 11, 12, 14 (2026-11-03)
 

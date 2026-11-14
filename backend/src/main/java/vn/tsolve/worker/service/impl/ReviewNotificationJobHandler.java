@@ -4,11 +4,15 @@ import java.util.UUID;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import vn.tsolve.identity.service.WorkspaceSiteService;
 import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.service.ReviewNotificationService;
+import vn.tsolve.worker.client.ReviewEmail;
+import vn.tsolve.worker.client.ReviewEmail.Decision;
+import vn.tsolve.worker.client.ReviewEmailRenderer;
 import vn.tsolve.worker.client.ReviewNotificationSender;
-import vn.tsolve.worker.client.ReviewNotificationSender.Decision;
 import vn.tsolve.worker.service.TenantJobHandler;
+import vn.tsolve.worker.service.WorkerTenantService;
 
 /**
  * Sends one writer email per review decision id. Registered wherever jobs are enabled, because the API process
@@ -22,11 +26,19 @@ public class ReviewNotificationJobHandler implements TenantJobHandler {
 
     private final ReviewNotificationService notifications;
     private final ObjectProvider<ReviewNotificationSender> senders;
+    private final WorkerTenantService tenants;
+    private final WorkspaceSiteService sites;
+    private final ReviewEmailRenderer renderer = new ReviewEmailRenderer();
 
     public ReviewNotificationJobHandler(
-            ReviewNotificationService notifications, ObjectProvider<ReviewNotificationSender> senders) {
+            ReviewNotificationService notifications,
+            ObjectProvider<ReviewNotificationSender> senders,
+            WorkerTenantService tenants,
+            WorkspaceSiteService sites) {
         this.notifications = notifications;
         this.senders = senders;
+        this.tenants = tenants;
+        this.sites = sites;
     }
 
     @Override
@@ -50,6 +62,22 @@ public class ReviewNotificationJobHandler implements TenantJobHandler {
                     case CHANGES_REQUESTED -> Decision.REQUEST_CHANGES;
                 };
         // A DeliveryException fails the job, so JobRunr retries it; the decision is already committed.
-        sender.send(decision, notification.recipient(), notification.ticketKey(), notification.feedback());
+        String host = tenants.currentWorkspaceId()
+                .flatMap(sites::siteHost)
+                .filter(value -> !value.isBlank())
+                .orElse(null);
+        String link = host == null ? null : "https://" + host + "/tickets/" + notification.ticketId();
+        var email = new ReviewEmail(
+                decision,
+                notification.ticketKey(),
+                notification.ticketTitle(),
+                notification.projectName(),
+                notification.reviewerName(),
+                notification.writerName(),
+                notification.decidedAt(),
+                notification.feedback(),
+                link,
+                host);
+        sender.send(notification.recipient(), renderer.subject(email), renderer.plain(email), renderer.html(email));
     }
 }
