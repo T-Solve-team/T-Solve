@@ -198,4 +198,49 @@ class ProjectMemberServiceImplTest {
                 .record(AuditAction.PROJECT_MEMBER_CHANGE, "PROJECT", PROJECT, Map.of("added", List.of(B, A)));
         order.verify(repository).members(PROJECT);
     }
+
+    @Test
+    void refusesRemoveWhenNoMemberRowIsDeletedWithoutAudit_AC_003_3() {
+        project(ProjectStatus.ACTIVE, true);
+        when(repository.removeMember(PROJECT, A)).thenReturn(0);
+
+        assertThatThrownBy(() -> service.removeMember(PROJECT, A))
+                .isInstanceOfSatisfying(BusinessRuleException.class, e -> assertThat(e.getCode())
+                        .isEqualTo("MSG06"));
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void refusesRemoveFromRemovedProjectBeforeDelete_AC_003_4() {
+        project(ProjectStatus.REMOVED, true);
+
+        assertThatThrownBy(() -> service.removeMember(PROJECT, A)).isInstanceOf(BusinessRuleException.class);
+        verify(repository, never()).removeMember(any(), any());
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void refusesRemoveByNonManagerBeforeDelete_AC_001_3() {
+        project(ProjectStatus.ACTIVE, false);
+
+        assertThatThrownBy(() -> service.removeMember(PROJECT, A)).isInstanceOf(AccessDeniedException.class);
+        verify(repository, never()).removeMember(any(), any());
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void removesMemberRecordsOneAuditAndReturnsList_AC_003_1_AC_003_2() {
+        project(ProjectStatus.ACTIVE, true);
+        when(repository.removeMember(PROJECT, A)).thenReturn(1);
+        var members = List.<ProjectMemberResponse>of();
+        when(repository.members(PROJECT)).thenReturn(members);
+
+        assertThat(service.removeMember(PROJECT, A)).isSameAs(members);
+
+        var order = inOrder(repository, audit);
+        order.verify(repository).removeMember(PROJECT, A);
+        order.verify(audit)
+                .record(AuditAction.PROJECT_MEMBER_CHANGE, "PROJECT", PROJECT, Map.of("removed", List.of(A)));
+        order.verify(repository).members(PROJECT);
+    }
 }
