@@ -243,3 +243,14 @@ shows `Rejected by {manager_name}: "{reason}".` (code `REJECTED`, a Jira App tex
 - Modify: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, `messages.js`, their tests
 **Dependencies:** ticket-review Task 20
 **Estimated size:** small
+
+## Task 16: Issue Panel — Published ticket
+
+**Story:** STORY-008
+**Feature:** panel-published
+**Description:** AC-008.10: while the issue's ticket is Published, whatever its source, the panel shows "Solution
+approved and published." (a Jira App text) with no button. No server change: the panel already reads `ticketStatus`.
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, its test
+**Dependencies:** none
+**Estimated size:** small

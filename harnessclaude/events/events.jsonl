@@ -1491,3 +1491,7 @@
 {"ts":"2026-11-14T17:15:01.143Z","type":"feature-status","module":"jira-app","feature":"panel-rejected","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T17:32:18.950Z","type":"feature-status","module":"ticket-review","feature":"jira-rejected-feedback","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T17:32:19.830Z","type":"feature-status","module":"jira-app","feature":"panel-rejected","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T17:37:23.870Z","type":"spec-approved","module":"jira-app","specHash":"4f83401b7f2bd389c55664c7973bd1e9fd965bdc1c996983bb30f736d4960f73"}
+{"ts":"2026-11-14T17:37:34.252Z","type":"feature-status","module":"jira-app","feature":"panel-published","from":null,"to":"pending"}
+{"ts":"2026-11-14T17:37:34.558Z","type":"feature-status","module":"jira-app","feature":"panel-published","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T17:39:51.397Z","type":"feature-status","module":"jira-app","feature":"panel-published","from":"in-progress","to":"evaluating"}
