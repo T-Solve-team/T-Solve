@@ -105,3 +105,28 @@ describe('EvidenceUpload', () => {
     expect(screen.getByRole('button', { name: 'Remove saved.txt' })).toBeDisabled();
   });
 });
+
+function ResettableField() {
+  const [value, setValue] = useState<EvidenceUploadValue>({ keptFiles: [], newFiles: [] });
+  return (
+    <>
+      <EvidenceUpload value={value} onChange={setValue} />
+      <button type="button" onClick={() => setValue({ keptFiles: [], newFiles: [] })}>
+        Reset
+      </button>
+    </>
+  );
+}
+
+describe('EvidenceUpload reset', () => {
+  it('AC-006.14 drops a refused-file message when the form replaces the value', async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    renderWithProviders(<ResettableField />);
+
+    await user.upload(input(), file('tool.exe'));
+    expect(await screen.findByText(msg('MSG34', { file_name: 'tool.exe' }))).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(screen.queryByText(msg('MSG34', { file_name: 'tool.exe' }))).not.toBeInTheDocument();
+  });
+});

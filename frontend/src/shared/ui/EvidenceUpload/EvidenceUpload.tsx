@@ -44,7 +44,12 @@ export function EvidenceUpload({
   disabled = false,
   id,
 }: EvidenceUploadProps) {
-  const [validationError, setValidationError] = useState<string | null>(null);
+  // The error belongs to the value it was raised for, so a value replaced from outside (a form reset) drops it.
+  const [validation, setValidation] = useState<{
+    error: string;
+    value: EvidenceUploadValue;
+  } | null>(null);
+  const validationError = validation?.value === value ? validation.error : null;
 
   function add(files: File[]) {
     if (disabled) return;
@@ -64,13 +69,15 @@ export function EvidenceUpload({
         newFiles.push(file);
       }
     }
-    setValidationError([...new Set(errors)].join(' ') || null);
-    if (newFiles.length !== value.newFiles.length) onChange?.({ ...value, newFiles });
+    const next = newFiles.length !== value.newFiles.length ? { ...value, newFiles } : value;
+    const message = [...new Set(errors)].join(' ');
+    setValidation(message ? { error: message, value: next } : null);
+    if (next !== value) onChange?.(next);
   }
 
   function remove(next: EvidenceUploadValue) {
     if (disabled) return;
-    setValidationError(null);
+    setValidation(null);
     onChange?.(next);
   }
 
