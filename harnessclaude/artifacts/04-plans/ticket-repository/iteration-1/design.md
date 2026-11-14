@@ -15,3 +15,6 @@ deferred to a later iteration.
 Change 2026-11-13 (KAN-132, STORY-005, Task 13): the ticket status model — master design section "Change 2026-11-13".
 
 Change 2026-11-14 (KAN-133, STORY-006, Tasks 14–17): manual entry — master design section "Change 2026-11-14".
+
+Change 2026-11-14 (KAN-134 STORY-007, KAN-135 STORY-008, Tasks 18–22): Import History and Ticket Detail — master
+design section "Change 2026-11-14: Import History and Ticket Detail".

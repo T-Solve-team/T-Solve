@@ -11,9 +11,11 @@ Preview, 5.3 Import Ticket Preview, MSG01, MSG02, MSG04, MSG08, MSG32, MSG33, MS
 This version covers **KAN-45 Import resolved issues from Jira (UC-20)**, including Drafts of a Jira import, and
 **KAN-132 Ticket status model** (STORY-005: the one Ticket state machine shared by submit, review and import, GBR-07,
 GBR-08, GBR-10, GBR-11, GBR-23, UC-25), and **KAN-133 Create a ticket with its Solution manually** (STORY-006,
-UC-22, screen 5.1 Manual entry tab, MSG31, MSG41; Evidence deferred, D13).
-CSV import (UC-21) lives in `import-ticket-list`; Import History screen (UC-23), Ticket Detail (UC-24), unpublish /
-re-publish (UC-25) and the Solution Form submission (UC-19) are added later through Change Mode.
+UC-22, screen 5.1 Manual entry tab, MSG31, MSG41; Evidence deferred, D13), and **KAN-134 View import history**
+(STORY-007, UC-23, screen 5.4, MSG04, MSG08, MSG39) and **KAN-135 View ticket detail** (STORY-008, UC-24, GBR-02,
+screen 5.5, MSG04, MSG06, MSG08).
+CSV import (UC-21) lives in `import-ticket-list`; unpublish / re-publish (UC-25) and the Solution Form submission
+(UC-19) are added later through Change Mode.
 
 This spec builds on `import-ticket-list` as changed by PR #110 (KAN-31): the Import Preview, its rows, the
 Needs Solution result, Fill solution, remove-rows, Confirm and the Import Ticket Preview popup. A pulled Jira issue
@@ -30,6 +32,7 @@ is one row of such a preview.
 | 2026-11-08 | STORY-001 | New AC-001.13: a pull stops reading Jira after 60 seconds in total and answers MSG50 as in AC-001.7 | PR #166 review (trhieudev1309), BUG-189: up to 20 pages plus comment calls, each with a 30 s timeout and 2 retries, could hold a request thread for minutes; user decision 2026-11-08 |
 | 2026-11-13 | STORY-005 | New STORY-005 (KAN-132): AC-005.1–AC-005.5, decisions D9–D11 | One Ticket state machine for submit, review and import; review Approve did not publish the "tickets published" event, so approved tickets were never indexed for search; user decisions 2026-11-13 |
 | 2026-11-14 | STORY-006 | New STORY-006 (KAN-133, UC-22 manual entry): AC-006.1–AC-006.14, decisions D12–D16; manual entry leaves Out of Scope, Evidence stays out (D13) | KAN-133; user decisions 2026-11-14 |
+| 2026-11-14 | STORY-007, STORY-008 | New STORY-007 (KAN-134, UC-23 Import History): AC-007.1–AC-007.10; new STORY-008 (KAN-135, UC-24 Ticket Detail): AC-008.1–AC-008.10; decisions D17–D27; Import History and Ticket Detail leave Out of Scope, their excluded parts are listed there; Interface Contracts gain `GET /imports/history` and the extended `GET /tickets/{ticketId}` | KAN-134, KAN-135; user decisions 2026-11-14 |
 
 ## Decisions taken while planning (2026-11-07, with the user)
 | # | Question | Decision |
@@ -50,6 +53,17 @@ is one row of such a preview.
 | D14 | Where a manual entry Draft is stored | As an Import Preview of source Manual with one row holding the entered fields, marked a Draft when it is created. The Drafts list and Delete of STORY-004 serve it as they are (user decision 2026-11-14). |
 | D15 | Writer of a manual ticket ("writer = Project Manager") | `writer` = the caller's full name, `writer_id` = the caller's user id (user decision 2026-11-14). |
 | D16 | Message for a Resolved date in the future (screen 5.1 names none) | MSG39 (user decision 2026-11-14). |
+| D17 | Who sees Import History and which batches (KAN-134) | Only a Project Manager. The list holds the Import Batches of the Projects where the caller is `PROJECT_MANAGER` in the table `project_membership` (the real table, not `StubProjectAccess`), newest first (`created_at` DESC), page by page as `GET /api/v1/tickets` (page from 0, size 1–100, default 20). No PM role → 403 (MSG08) by the role guard the import endpoints already use (user decision 2026-11-14). |
+| D18 | Filters and columns of Import History | Filters: Project, source (JIRA_IMPORT / CSV / MANUAL), date range on `created_at`. Columns: date, Project Manager, Project, Department, source, date range (Jira) or file name (CSV), published count, removed / error count, status (COMPLETED / FAILED), error. No result → MSG04 "No results found." (user decision 2026-11-14). |
+| D19 | Name in the Project Manager column (`import_batch.performed_by` is a string) | When `performed_by` is a UUID that is the id of an `app_user`, that user's full name; otherwise the stored value as it is (user decision 2026-11-14). |
+| D20 | Date range of a Jira import in history (`import_batch` has no such column) | A new Liquibase changeset adds `date_from` and `date_to` (DATE, nullable) to `import_batch`. Jira Finish and a failed Jira pull or Finish store the pull's Resolved from / Resolved to; other sources leave them empty. No backfill of older batches. Changeset number 032: 029–031 are taken by open branches, 030 is the highest on `main` (user decision 2026-11-14). |
+| D21 | Error column of Import History | Only the MSG code stored in `import_batch.error` (e.g. MSG50), never the rest of the stored text and no per-row error details (user decision 2026-11-14). |
+| D22 | Import History endpoint and screen | `GET /api/v1/imports/history` next to the other `/api/v1/imports` endpoints; the web app replaces the placeholder `ImportHistoryPage` with the table, through the generated API client (user decision 2026-11-14). |
+| D23 | Who may open a ticket's detail (KAN-135, UC-24) | GBR-02 only: a Ticket Resolver or Project Manager. A Published ticket → every Ticket Resolver / Project Manager who can access the ticket's Department (the Project's `department_id`, checked by `identity` `ScopeAccessService.canAccessDepartment`, KAN-118). Not Published → only the Solution writer (`writer_id`) and the Project Manager of the ticket's Project (`PROJECT_MANAGER` in `project_membership`). A ticket whose Department is deleted or not Active → nobody (user decision 2026-11-14). |
+| D24 | Where Ticket Detail is served | Extend the existing `GET /api/v1/tickets/{ticketId}` (operationId `getReviewTicketDetail`: `review/controller/ReviewReadController`, `ticket/service/impl/TicketReviewReadServiceImpl.detail`, `TicketReviewView.Detail`) with `department {id, name}`, `resolvedDate` and `sourceLink`; no new endpoint. `canDecide` and the review decision buttons (KAN-24) stay as they are. These files are in the `paths` of module `ticket-review` (owner Phạm Tùng Dương); the user decided to extend them anyway (user decision 2026-11-14). |
+| D25 | Source link of a ticket | Map the existing column `ticket.source_link`; Jira Finish copies the preview row's link to the issue into it. Tickets imported before this change keep no link (no backfill) (user decision 2026-11-14). |
+| D26 | Answers of Ticket Detail | Not permitted → 403 (MSG08) "You do not have permission to access this page.", shown inline; no ticket with that id → 404 (MSG04) as today; any other load failure → MSG06 toast. The 403 replaces the 404 the endpoint gave for a ticket the caller may not see; the mock-API 404 of `ticket-review` AC-006.6 no longer matches the real API (user decision 2026-11-14). |
+| D27 | UC-24 lets an Employee, Admin or Knowledge Manager open a ticket from a Chatbot citation; GBR-02 limits tickets to Ticket Resolvers and Project Managers | GBR-02 wins: only Ticket Resolvers and Project Managers. Access through a Chatbot citation is out of scope (user decision 2026-11-14). |
 
 ## Requirements
 
@@ -59,6 +73,8 @@ is one row of such a preview.
 3. Finish (Confirm of a Jira preview) saves every remaining issue as a Published Ticket with an approve decision by the Project Manager (GBR-23), skips issues that got a Ticket in the meantime, and records exactly one Import Batch.
 4. The Project Manager can save the import as a Draft, reopen it later without pulling from Jira again, and delete it (GBR-26).
 5. A Project Manager enters one resolved ticket with its Solution by hand into one of their Active Projects; it is Published at once with an approve decision by them (UC-22, GBR-23), and the entry can be saved as a Draft first (GBR-26).
+6. A Project Manager reads the history of the imports of the Projects they manage, newest first, filtered by Project, source and date (UC-23).
+7. A Ticket Resolver or Project Manager opens the detail of a ticket they may see under GBR-02, with its Department, resolved date and link to its source (UC-24).
 
 ### Non-Functional
 1. A pull of 100 issues with their comments returns the Import Preview within 60 seconds.
@@ -152,11 +168,43 @@ is one row of such a preview.
   - AC-006.13: IF a request names a Manual Draft that belongs to another user, does not exist or is not a Manual Draft, THEN THE system SHALL reject it with HTTP 404 (MSG04); Delete of a Manual Draft works as AC-004.4 and AC-004.5.
   - AC-006.14: WHEN a save or Save as draft is rejected, THE web app SHALL show each message next to its field and keep everything the Project Manager entered; WHEN a save succeeds, THE web app SHALL show MSG32 and clear the form.
 
+### STORY-007: View import history (KAN-134)
+- As a Project Manager, I want to see the history of the imports into my Projects so that I can check what was published, when, by whom and what failed.
+- Acceptance:
+  - AC-007.1: WHEN a Project Manager requests Import History, THE system SHALL return the Import Batches of every Project where the caller is `PROJECT_MANAGER` in `project_membership`, newest first by creation time, page by page (page from 0, size 1–100, default 20) (D17).
+  - AC-007.2: WHEN Import History returns an Import Batch, THE system SHALL include its creation time, Project Manager name (AC-007.3), Project, Department of the Project, source, Jira date range (Resolved from / Resolved to) or file name, published count, removed count, error count, status (Completed or Failed) and error code (AC-007.4) (D18).
+  - AC-007.3: WHEN the stored `performed_by` of an Import Batch is the id of an `app_user`, THE system SHALL return that user's full name as the Project Manager; IF it is not a UUID or no `app_user` has that id, THEN THE system SHALL return the stored value unchanged (D19).
+  - AC-007.4: WHEN an Import Batch has a stored error, THE system SHALL return only the MSG code it contains (e.g. `MSG50`) as the error, and no error when it contains none (D21).
+  - AC-007.5: WHEN the request names a Project, a source (JIRA_IMPORT, CSV or MANUAL), a date from or a date to, THE system SHALL return only the Import Batches that match every given filter; the dates are calendar days in Vietnam time and both are included; a Project the caller does not manage gives an empty page.
+  - AC-007.6: IF the date from is after the date to, THEN THE system SHALL reject the request with HTTP 400 and MSG39.
+  - AC-007.7: IF the caller does not have the Project Manager role, THEN THE system SHALL reject the request with HTTP 403 (MSG08).
+  - AC-007.8: WHEN a Jira Finish succeeds or fails, or a Jira pull fails, THE system SHALL store the pull's Resolved from and Resolved to on the Import Batch it records (D20); Import Batches of other sources SHALL keep no date range.
+  - AC-007.9: WHEN the Import History screen loads, THE web app SHALL show one row per Import Batch with the columns of AC-007.2 — the date range for a Jira import and the file name for a CSV import in the same column — and the filters Project (the Projects the user manages), Source and Date range.
+  - AC-007.10: IF Import History returns no Import Batch, THEN THE web app SHALL show MSG04 "No results found." instead of the table rows.
+
+### STORY-008: View ticket detail (KAN-135)
+- As a Ticket Resolver or Project Manager, I want to open the detail of a ticket I may see so that I can read its Solution with its Department, resolved date and source.
+- Acceptance:
+  - AC-008.1: WHEN a Ticket Resolver or Project Manager opens a Published ticket and `ScopeAccessService.canAccessDepartment` allows the caller the Department of the ticket's Project, THE system SHALL return the Ticket Detail (D23).
+  - AC-008.2: WHEN a ticket is not Published, THE system SHALL return its Ticket Detail only to its Solution writer (`writer_id` = the caller) and to a Project Manager who is `PROJECT_MANAGER` of the ticket's Project in `project_membership` (D23).
+  - AC-008.3: IF the ticket's Project or its Department does not exist, or the Department is deleted or not Active, THEN THE system SHALL return the Ticket Detail to nobody and answer HTTP 403 (MSG08) (D23).
+  - AC-008.4: IF the caller has neither the Ticket Resolver nor the Project Manager role, or AC-008.1 and AC-008.2 do not allow the caller the ticket, THEN THE system SHALL answer HTTP 403 (MSG08) with no ticket data (D26).
+  - AC-008.5: IF no ticket has the requested id, THEN THE system SHALL answer HTTP 404 (MSG04).
+  - AC-008.6: WHEN the system returns a Ticket Detail, THE system SHALL include the Department of the ticket's Project (id and name), the ticket's resolved date and its source link, together with the fields and `canDecide` it returned before (D24).
+  - AC-008.7: WHEN a Jira Finish saves a Ticket, THE system SHALL store the preview row's link to the Jira issue as the Ticket's source link (D25).
+  - AC-008.8: WHEN Ticket Detail shows a ticket, THE web app SHALL show its Department, resolved date and source link; IF the source link is not an `http` or `https` URL, THEN THE web app SHALL show it as plain text, not as a link; an `http`/`https` link SHALL open in a new tab with `rel="noopener noreferrer"`.
+  - AC-008.9: WHILE the ticket is Pending review, THE web app SHALL show its review due date; WHILE it is in any other status, THE web app SHALL not show a review due date.
+  - AC-008.10: IF Ticket Detail answers HTTP 403, THEN THE web app SHALL show MSG08 inline and no ticket content; IF it fails for another reason than 403 or 404, THEN THE web app SHALL show MSG06 as a toast (D26).
+
 ## Out of Scope
 - CSV import (UC-21) — `import-ticket-list`; Drafts of a CSV import (GBR-26, UC-21 step 7b) are a later Change there.
 - Evidence of a manually entered ticket and of its Draft (UC-22 step 3, MSG34, MSG72) — waits for file storage (KAN-96, D13).
-- Import History screen (UC-23), Ticket Detail (UC-24), unpublish / re-publish (UC-25), Solution Form submission (UC-19).
-  (Manual entry, UC-22, is STORY-006 without its Evidence.)
+- Unpublish / re-publish (UC-25), Solution Form submission (UC-19). (Manual entry, UC-22, is STORY-006 without its
+  Evidence; Import History, UC-23, is STORY-007; Ticket Detail, UC-24, is STORY-008.)
+- Import History: per-row error details of an import (D21); a date range for Import Batches recorded before D20.
+- Ticket Detail: the Feedback summary and Give feedback; counting dashboard views; the Unpublish, Re-publish and Send
+  back buttons (UC-25, UC-30); download URLs of Evidence (waits for PR #234); access by an Employee, Admin or Knowledge
+  Manager through a Chatbot citation (D27); a source link for tickets imported before D25 (no backfill).
 - Storing the Jira service account in the database and the UC-10 screen — `workspace`. Until then the connection comes from the environment (D2).
 - The Jira field mapping and "resolution comments field" of a Project — `project-integration` (D5).
 - Linking a Jira assignee to a T-Solve user (D4).
@@ -181,6 +229,15 @@ New endpoints:
 | `POST /imports/manual/drafts` | `ManualTicketRequest` (only `projectId` required; `draftId` updates that Draft) | `DraftSavedResponse` (MSG41) |
 | `GET /imports/manual/drafts/{previewId}` | — | `ManualTicketDraft { previewId, projectId, ticketId?, title?, description?, resolvedDate?, symptoms?, rootCause?, resolutionSteps?, workaround?, scope?, savedAt }` |
 
+| `GET /imports/history` | query `projectId?` (uuid), `source?` (JIRA_IMPORT, CSV, MANUAL), `dateFrom?`, `dateTo?` (ISO dates), `page`, `size` | `ImportHistoryPage { content: ImportHistoryItem[], page: PageMetadata }`; `ImportHistoryItem { batchId, createdAt, performedBy, project { projectId, projectKey }, department { id, name }, source, dateFrom?, dateTo?, fileName?, publishedCount, removedCount, errorCount, status (COMPLETED, FAILED), errorCode? }` |
+
+Import History rejections: date from after date to → 400 (MSG39) · no PM role → 403 (MSG08).
+
+Extended endpoint (D24), owned by `ticket-review` code: `GET /tickets/{ticketId}` (operationId `getReviewTicketDetail`,
+roles Ticket Resolver or Project Manager) — `ReviewTicketDetail` gains `department { id, name }`, `resolvedDate`
+(ISO date, nullable) and `sourceLink` (string, nullable); every existing field and `canDecide` stay. Rejections: not
+allowed (AC-008.3, AC-008.4) → 403 (MSG08) · unknown id → 404 (MSG04).
+
 Manual entry rejections: invalid fields → 400 ProblemDetail listing every field with its MSG01 / MSG02 / MSG39 (AC-006.6) · Ticket ID taken → 409 (MSG31) · no PM role, Project not Active or not managed → 403 (MSG08) · Draft not found, another user's or not Manual → 404 (MSG04). `ImportDraftSummary.source` gains `MANUAL`.
 
 Endpoints of `import-ticket-list` that also serve a Jira preview: `GET /imports/previews/{previewId}`,
@@ -195,6 +252,9 @@ Rejections of the new endpoints: MSG01, MSG39 → 400 · MSG04 on pull → 404 �
 - `project` (existing code, owned by `project-integration` later): the Project's Jira project key, through `ProjectService`.
 - `import-ticket-list` (PR #110, `vn.tsolve.ticket`): `ProjectAccess`, the `ticket`, `ticket_import_decision`, `import_batch`, `import_preview` and `import_preview_row` tables, the preview endpoints and screens, and `TicketsPublishedEvent`, extended by this module.
 - `workspace` (later): the stored Jira service account behind `JiraIssueSource` (D2).
+- `identity` (KAN-118): `ScopeAccessService.canAccessDepartment(accountId, departmentId)` for Ticket Detail (D23).
+- `ticket-review`: the Ticket Detail endpoint, its controller, service, DTO and web components, extended here (D24).
+- `project-integration`: the `project` and `project_membership` tables (Department of a Project, its Project Managers).
 
 ## Definition of Done
 - [ ] Every acceptance criterion has a test whose name starts with its AC id

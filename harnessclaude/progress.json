@@ -215,9 +215,14 @@
         "manual-ticket-contract": "passing",
         "manual-ticket-create": "passing",
         "manual-ticket-drafts": "passing",
-        "manual-entry-tab": "passing"
+        "manual-entry-tab": "passing",
+        "import-batch-date-range": "pending",
+        "import-history-api": "pending",
+        "import-history-page": "pending",
+        "ticket-detail-scope": "pending",
+        "ticket-detail-page": "pending"
       },
-      "lastUpdated": "2026-11-14T06:19:58.944Z",
+      "lastUpdated": "2026-11-14T15:00:55.440Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
