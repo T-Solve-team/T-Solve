@@ -101,9 +101,8 @@ describe('route map', () => {
     expect(named).toHaveLength(8);
   });
 
-  // The placeholder screens not built yet: a module that builds its screen removes its row (12.1: chatbot, KAN-71; 10.1: triage, KAN-149).
+  // The placeholder screens not built yet: a module that builds its screen removes its row (12.1: chatbot, KAN-71; 10.1: triage, KAN-149; 2.1: workspace, KAN-119).
   it.each([
-    ['2.1', 'Workspace Setup', '/workspace-setup', 'ADMIN'],
     ['11.1', 'Wiki Home', '/wiki', 'EMPLOYEE'],
     ['11.2', 'Wiki Document', '/wiki/documents/7', 'EMPLOYEE'],
     ['11.4', 'Upload Documents', '/wiki/upload', 'KNOWLEDGE_MANAGER'],

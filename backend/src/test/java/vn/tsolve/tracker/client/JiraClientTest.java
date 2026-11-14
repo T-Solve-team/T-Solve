@@ -48,7 +48,6 @@ class JiraClientTest {
             + Base64.getEncoder().encodeToString("bot@acme.test:secret-token".getBytes(StandardCharsets.UTF_8));
     private static final String COMMENTS =
             "https://acme.atlassian.net/rest/api/3/issue/ITSUP-1/comment?orderBy=-created&maxResults=100";
-
     private MockRestServiceServer jira;
     private JiraClient client;
 
