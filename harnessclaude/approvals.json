@@ -699,8 +699,8 @@
     }
   },
   "search": {
-    "specHash": "64927cb1a4240a3d0066006a42edcec4586372b910518ce5f4d9fae5ac0bf6bd",
-    "approvedAt": "2026-11-06T16:47:00.297Z",
+    "specHash": "a5a63c6de4269f0a6535e5c37b2c1f21f34f2f2758b35282029a93be35103a95",
+    "approvedAt": "2026-11-07T19:09:11.462Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -791,7 +791,12 @@
       "AC-010.2": "THE backend SHALL return each hit with the ticket's Symptoms, Root cause, Resolution steps, Workaround",
       "AC-010.3": "IF a ticket is unpublished, inactive or too far, THEN THE backend SHALL leave it out (not",
       "AC-010.5": "IF an argument is out of range, THEN THE service SHALL throw  and SHALL run",
-      "AC-010.4": "THE service SHALL take no user, Workspace or Department argument and SHALL call no"
+      "AC-010.4": "THE service SHALL take no user, Workspace or Department argument and SHALL call no",
+      "AC-011.1": "WHEN  is called, THE backend SHALL return at most  Department Solutions of the Project whose  is",
+      "AC-011.2": "THE backend SHALL return each hit with the ticket's , Symptoms, Root cause, Resolution steps,",
+      "AC-011.3": "IF a ticket is unpublished, of another Department, of an inactive Department or below , THEN THE backend SHALL leave it out, and SHALL return an empty list when no Project has  .",
+      "AC-011.4": "IF an argument is out of range, THEN THE service SHALL throw  and SHALL run",
+      "AC-011.5": "THE service SHALL take no user argument and SHALL call no , write no"
     }
   },
   "dashboard-audit": {
@@ -875,10 +880,11 @@
       "AC-001.5": "IF the FIT is expired or not yet valid, or has no , THEN THE tracker SHALL respond 401 with MSG08.",
       "AC-001.7": "THE tracker SHALL never write a FIT to a log or to an error response.",
       "AC-001.8": "IF Atlassian's JWKS cannot be fetched and no cached key matches, THEN THE tracker SHALL respond 503 with MSG06 and record the error type.",
-      "AC-003.1": "WHEN an \"issue created\" event arrives whose  is the Jira project key of an ACTIVE T-Solve Project, THE tracker SHALL store a suggestion result with that Project, the issue key, no sources, no suggested solution and no reporter answer, and respond 202.",
+      "AC-003.1": "WHEN an \"issue created\" event arrives whose  is the Jira project key of an ACTIVE T-Solve Project, THE tracker SHALL store a suggestion result with that Project, the issue key,  as ,  as  (null when absent), no sources, no suggested solution and no reporter answer, and respond 202.",
       "AC-003.4": "IF a suggestion result for the event's issue key already exists (Forge delivered the event again), THEN THE tracker SHALL respond 202 without storing a second one or changing the existing one.",
-      "AC-003.6": "IF the event body is not a valid \"issue created\" event (no issue key, an issue key longer than 50 characters, or no ), THEN THE tracker SHALL respond 400 with the team's validation message code (missing field MSG01, too long MSG02, unreadable body MSG06) and store nothing.",
+      "AC-003.6": "IF the event body is not a valid \"issue created\" event (no issue key, an issue key longer than 50 characters, no , a blank or missing , a summary longer than 255 characters, or a  that is a JSON object or array or is longer than 32767 characters), THEN THE tracker SHALL respond 400 with the team's validation message code (missing field MSG01, too long MSG02, unreadable body MSG06) and store nothing.",
       "AC-003.8": "IF the event's project key is not the Jira project key of an ACTIVE T-Solve Project, THEN THE tracker SHALL respond 202 and store nothing.",
+      "AC-003.9": "WHEN the tracker has stored a new suggestion result (AC-003.1), THE tracker SHALL publish one  with that result's  after the row is committed, and SHALL publish none for AC-003.4, AC-003.6 or AC-003.8; IF a listener of the event fails, THEN THE tracker SHALL still respond 202 and keep the row.",
       "AC-007.1": "WHEN a principal linked to an active T-Solve user requests panel data for an issue of a T-Solve Project, THE tracker SHALL return the stored suggestions (as search allows that user, including MSG76 when search is not available to them) and the Solution Form state from the ticket package: AI draft or MSG67, unsubmitted draft (MSG77), submitted and awaiting review (MSG65), or changes requested (MSG64).",
       "AC-007.2": "IF the principal is not linked to a T-Solve user, THEN THE tracker SHALL return panel data that only asks the user to sign in (MSG62), plus the MSG81 question when STORY-010 applies.",
       "AC-007.3": "IF the principal is linked to a deactivated T-Solve user, THEN THE tracker SHALL return panel data with MSG10 and nothing else.",
@@ -1046,8 +1052,8 @@
     }
   },
   "triage": {
-    "specHash": "cf15ceed7867e474f6e446a10b65fa6d5851f5a7a007ada778357f66748b3156",
-    "approvedAt": "2026-11-04T10:43:49.142Z",
+    "specHash": "6d573c26e1340a3f00cf97331b5f77ed997af8b30dc2b5f0970951172af387c3",
+    "approvedAt": "2026-11-07T19:30:42.167Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager opens , THE frontend SHALL show screen 10.1 with columns Issue, Sources, Suggested solution and Reporter's answer, ordered by newest result first.",
@@ -1079,7 +1085,17 @@
       "AC-004.1": "WHEN a Project Manager calls  for an issue of a Project they manage, THE backend SHALL return the AC-003.5 fields plus the full  and one  entry (, , ) per  item in , and no Ticket source details.",
       "AC-004.2": "IF the issue has no result, belongs to a Project the caller does not manage, or the caller lacks PROJECT_MANAGER, THEN THE backend SHALL return 404/MSG04 without revealing whether a result exists.",
       "AC-004.3": "THE backend SHALL set  from the wiki module's document-access port for the caller; WHILE the wiki module provides no implementation, THE default SHALL answer false for every document.",
-      "AC-004.4": "IF  holds an item it cannot read (unknown  or missing ), THEN THE backend SHALL skip that item in the counts and the list and still return the result."
+      "AC-004.4": "IF  holds an item it cannot read (unknown  or missing ), THEN THE backend SHALL skip that item in the counts and the list and still return the result.",
+      "AC-005.3": "WHEN the tracker asks  with a non-blank summary, THE backend SHALL embed the issue text: the summary, a blank line and the description (summary alone when the description is blank), cut to its first 8000 characters.",
+      "AC-005.4": "WHEN the issue is embedded, THE backend SHALL retrieve the Department Solutions of the Project whose  is  through  and the Company-wide Wiki documents through , each at or above , and SHALL keep at most 5 of them together, most similar first.",
+      "AC-005.5": "WHEN at least one source is kept, THE backend SHALL ask the chat model for a plain-text suggested solution built only from the issue text of AC-005.3 and the kept sources, and SHALL return the kept sources and that text as the .",
+      "AC-005.6": "THE backend SHALL return each kept ticket as  and each kept Wiki document as , and SHALL give the chat model no ticket id, ticket Jira key or ticket title (only the five Solution sections), and Wiki documents by title only.",
+      "AC-005.7": "IF no source reaches , THEN THE backend SHALL call no chat model and return no suggestion.",
+      "AC-005.8": "IF the embedding or chat model fails or answers a blank text, THEN THE backend SHALL throw an exception whose message holds no issue, source or model text, so that the tracker's job fails and is retried (tracker AC-011.6).",
+      "AC-005.11": "THE backend SHALL read  (default 0.7); IF it is not a number from 0 to 1, THEN THE backend SHALL fail to start.",
+      "AC-005.12": "WHILE the wiki module provides no , THE stand-in  SHALL return no document, so the sources are tickets only.",
+      "AC-005.13": "IF the summary is blank (a result recorded before the issue text was stored), THEN THE backend SHALL call no model and return no suggestion.",
+      "AC-005.14": "THE backend SHALL provide the only  bean; the tracker's stand-in  and its setting  SHALL no longer exist."
     }
   },
   "worker": {
