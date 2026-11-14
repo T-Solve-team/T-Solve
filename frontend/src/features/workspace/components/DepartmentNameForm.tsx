@@ -1,5 +1,5 @@
 import { Button, Descriptions, Flex, Form, Input } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { DepartmentRef, UpdateDepartmentRequest } from '@/shared/api';
 import { applyApiErrors, rules } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
@@ -8,10 +8,14 @@ import { useRenameDepartment } from '../hooks/useDepartmentMutations';
 
 type DepartmentFormValues = Pick<UpdateDepartmentRequest, 'name'>;
 
-type DepartmentNameFormProps = { department: DepartmentRef };
+type DepartmentNameFormProps = {
+  department: DepartmentRef;
+  /** Buttons shown beside Edit; hidden while the form is open (AC-006.7). */
+  actions?: ReactNode;
+};
 
 /** 2.3 Department Detail — the name and its inline rename form, UC-13. */
-export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
+export function DepartmentNameForm({ department, actions }: DepartmentNameFormProps) {
   const [form] = Form.useForm<DepartmentFormValues>();
   const [isEditing, setIsEditing] = useState(false);
   const rename = useRenameDepartment();
@@ -61,9 +65,12 @@ export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
           column={1}
           items={[{ key: 'name', label: 'Name', children: department.name }]}
         />
-        <Button ref={editButtonRef} onClick={() => setIsEditing(true)}>
-          Edit
-        </Button>
+        <Flex gap="small">
+          <Button ref={editButtonRef} onClick={() => setIsEditing(true)}>
+            Edit
+          </Button>
+          {actions}
+        </Flex>
       </Flex>
     );
   }

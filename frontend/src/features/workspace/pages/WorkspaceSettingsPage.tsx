@@ -1,12 +1,12 @@
 /** 2.2 Workspace Settings — New Department, UC-12; SRS v3460 layout. */
 import { Button, Flex } from 'antd';
 import { useState } from 'react';
-import { useGetUserDepartments, type DepartmentRef } from '@/shared/api';
+import { useListDepartments, type DepartmentSummary } from '@/shared/api';
 import { paths } from '@/shared/routing';
 import { cells, DataTable, LoadingState, type DataTableColumn } from '@/shared/ui';
 import { NewDepartmentModal } from '../components/NewDepartmentModal';
 
-const COLUMNS: DataTableColumn<DepartmentRef>[] = [
+const COLUMNS: DataTableColumn<DepartmentSummary>[] = [
   {
     key: 'name',
     title: 'Name',
@@ -15,7 +15,7 @@ const COLUMNS: DataTableColumn<DepartmentRef>[] = [
 ];
 
 export function WorkspaceSettingsPage() {
-  const departments = useGetUserDepartments();
+  const departments = useListDepartments();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -28,7 +28,7 @@ export function WorkspaceSettingsPage() {
       {departments.isPending ? (
         <LoadingState />
       ) : (
-        <DataTable<DepartmentRef>
+        <DataTable<DepartmentSummary>
           label="Departments"
           columns={COLUMNS}
           rows={departments.data}

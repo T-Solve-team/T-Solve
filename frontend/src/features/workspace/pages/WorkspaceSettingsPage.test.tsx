@@ -2,14 +2,14 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
-import { getGetUserDepartmentsQueryKey, type DepartmentRef } from '@/shared/api';
+import { getListDepartmentsQueryKey, type DepartmentRef } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { renderApp } from '@/test/render';
 
 const DEPARTMENTS_URL = '*/api/v1/departments';
-const DEPARTMENT_LIST_URL = '*/api/v1/users/departments';
+const DEPARTMENT_LIST_URL = '*/api/v1/departments';
 
 function recordDepartmentPosts() {
   const requests: Request[] = [];
@@ -206,7 +206,7 @@ describe('WorkspaceSettingsPage', () => {
     expect(requests).toHaveLength(1);
   });
 
-  it('AC-002.9 closes on 201, shows MSG05 and refreshes the shared Departments query and table', async () => {
+  it('AC-002.9 closes on 201, shows MSG05 and refreshes every query and the table', async () => {
     const departments: DepartmentRef[] = [{ departmentId: 'd-1', name: 'IT' }];
     let getCalls = 0;
     let getCallsAtPost = 0;
@@ -238,7 +238,7 @@ describe('WorkspaceSettingsPage', () => {
     ).toBeInTheDocument();
     expect(getCallsAtPost).toBeGreaterThan(0);
     expect(getCalls).toBeGreaterThan(getCallsAtPost);
-    expect(queryClient.getQueryData(getGetUserDepartmentsQueryKey())).toEqual(departments);
+    expect(queryClient.getQueryData(getListDepartmentsQueryKey())).toEqual(departments);
   });
 
   it('AC-002.10 shows MSG43 below the name on 409 and keeps the popup and typed name', async () => {

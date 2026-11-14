@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router';
 import { useGetDepartment } from '@/shared/api';
 import { paths } from '@/shared/routing';
 import { ErrorState, LoadingState, SectionCard } from '@/shared/ui';
+import { DeleteDepartmentButton } from '../components/DeleteDepartmentButton';
 import { DepartmentNameForm } from '../components/DepartmentNameForm';
 
 export function DepartmentDetailPage() {
@@ -16,7 +17,10 @@ export function DepartmentDetailPage() {
     <Flex vertical gap="middle">
       <Link to={paths.workspaceSettings}>Back to Workspace Settings</Link>
       <SectionCard title="Department Detail">
-        <DepartmentNameForm department={department.data} />
+        <DepartmentNameForm
+          department={department.data}
+          actions={<DeleteDepartmentButton department={department.data} />}
+        />
       </SectionCard>
     </Flex>
   );

@@ -404,7 +404,7 @@ describe('Department mock handlers', () => {
         fieldErrors: [{ field: 'name', code }],
       });
     }
-    expect(await getDepartment(IT_ID)).toEqual({ departmentId: IT_ID, name: 'IT' });
+    expect(await getDepartment(IT_ID)).toMatchObject({ departmentId: IT_ID, name: 'IT' });
   });
 
   it('reserves seeded and newly created names ignoring case, and allows a case-only rename of itself', async () => {
@@ -422,7 +422,7 @@ describe('Department mock handlers', () => {
       departmentId: IT_ID,
       name: 'it',
     });
-    expect(await getDepartment(IT_ID)).toEqual({ departmentId: IT_ID, name: 'it' });
+    expect(await getDepartment(IT_ID)).toMatchObject({ departmentId: IT_ID, name: 'it' });
   });
 
   it('restores both seeds and removes created Departments on reset', async () => {
@@ -430,8 +430,8 @@ describe('Department mock handlers', () => {
     await updateDepartment(IT_ID, { name: 'Engineering' });
     await updateDepartment(HR_ID, { name: 'People' });
     resetMockData();
-    expect(await getDepartment(IT_ID)).toEqual({ departmentId: IT_ID, name: 'IT' });
-    expect(await getDepartment(HR_ID)).toEqual({ departmentId: HR_ID, name: 'HR' });
+    expect(await getDepartment(IT_ID)).toMatchObject({ departmentId: IT_ID, name: 'IT' });
+    expect(await getDepartment(HR_ID)).toMatchObject({ departmentId: HR_ID, name: 'HR' });
     await expect(getDepartment(created.departmentId)).rejects.toMatchObject({
       status: 404,
       code: 'MSG04',
