@@ -8,8 +8,8 @@ depth: Normal
 # Spec: jira-app
 
 The T-Solve Jira App (Forge UI Kit, `jira-app/`) and the Jira App API endpoints it calls
-(`/api/v1/jira-app/**`). STORY-001 to STORY-008 (KAN-126): Solution Form, AI Rewrite, Issue Panel (STORY-003 and
-STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
+(`/api/v1/jira-app/**`). STORY-001 to STORY-008 (KAN-126): Solution Form, AI Rewrite, Issue Panel (STORY-003, STORY-006
+and STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
 33, 36, System Messages), RESEARCH-003, RESEARCH-004, the `ticket-review` spec (STORY-009, STORY-012), the `chatbot`
 spec (STORY-005 to STORY-007). Terms: **user** = the active T-Solve Account linked to the Jira account in the FIT
 `principal`; **Project** = the ACTIVE T-Solve Project whose `jira_project_key` is the issue's project key;
@@ -31,14 +31,16 @@ an issue has at most one.
 | 2026-11-11 | STORY-001..009 | Port STORY-001 to STORY-009 from `feat/KAN-126-jira-app-solution-form` (spec of 01/11, Evidence removed, STORY-003 stays retired) and re-base them on `main`: the user and Project membership come from `project_membership`, the linked Account from the Jira App link stand-in; Finish and Close create a Solution Form ticket that enters `ticket-review`'s Review Queue (AC-004.1, AC-006.2); the panel also shows a change request (MSG64, new AC-008.7) through `ticket-review`'s feedback endpoint; panel search reuses the `search` module's ranked ticket search; the AI draft and rewrite call the `ai` module's chat client with a configured stand-in | KAN-126 resumed on a fresh branch from `main` (user, 11/11): the old branch was 61 commits behind and its ticket services predate `ticket-review`'s ticket storage. User decisions 11/11: show MSG64, reuse search, use the ai chat client, keep Evidence out |
 | 2026-11-13 | STORY-001, STORY-004, STORY-008 | New term "the issue's ticket" (the ticket whose Ticket ID is the issue key, of any source). AC-001.2 to AC-001.5, AC-004.3, AC-008.2 and AC-008.3 use it instead of "a Solution Form ticket … in that Project"; AC-004.3 names MSG31. AC-004.1, AC-006.2 and AC-008.7 still mean the Solution Form ticket | KAN-126 PR review: the criteria said only a Solution Form ticket blocks the form, but a Jira-import or CSV ticket with the same key does too, because `ticket.ticket_id` is unique across sources and Projects (changeset 003). A second ticket for the key cannot be stored, so the spec follows the schema; the code (`TicketRepository.findStatusByTicketId`) already does this. User chose to reword the spec, not filter by source (13/11) |
 | 2026-11-14 | STORY-008, STORY-009 | Remove the Published-ticket search from the Jira App: AC-008.4, AC-008.5, AC-008.6 and AC-008.8 are removed, STORY-009 (3.4 Published Ticket Preview, AC-009.1, AC-009.2) is retired. The panel keeps the Solution status only (AC-008.1 to AC-008.3, AC-008.7); `GET /api/v1/jira-app/tickets/search`, `GET /api/v1/jira-app/tickets/{ticketId}` and the panel's "search allowed" flag are removed; `search` is no longer a dependency. Out of Scope gains the search | User decision in the KAN-126 dev-site test (14/11): no Published-ticket search in Jira; it stays on the T-Solve web app. The SRS puts UC-26 search, 3.4 and MSG76 in the Jira App — this is a deviation the user will agree with the team. User chose to remove the UI and the backend endpoints, so no code is left that nothing calls |
+| 2026-11-14 | STORY-005, STORY-006 | Close keeps a Draft instead of submitting an empty ticket: AC-005.1 reworded (closing the form — Close or the dialog's close control — stores the Draft and shows MSG41), new AC-005.5 (no Save as draft button, no ticket on close, the server never stores an empty Solution); STORY-006 retired (AC-006.1, AC-006.2, AC-006.3 removed, MSG70 no longer shown); the solution endpoint no longer takes "all empty = Close". The Draft reminder email moves to a separate issue (Out of Scope) | KAN-126 dev-site test (14/11): the team's Review Queue never holds an empty ticket, so the empty Solution of AC-006.2 must not reach it; with Close saving the Draft a separate Save as draft button is redundant (user 14/11). Deviation from the SRS (Save as draft button, MSG70) to agree with the team |
 
 ## Requirements
 
 ### Functional
 1. The form opens by itself when an issue of a Project moves to a Done status, only for members of that Project,
    and only while the issue has no ticket of any source (STORY-001).
-2. The form edits the five-section Solution, pre-filled by a Draft, the AI draft or the issue; it can Finish, Save
-   as draft or Close (STORY-002, STORY-004 to STORY-006). Finish and Close hand the ticket to `ticket-review`.
+2. The form edits the five-section Solution, pre-filled by a Draft, the AI draft or the issue; it can Finish or
+   Close, and Close keeps the content as the user's Draft (STORY-002, STORY-004, STORY-005). Only Finish hands a
+   ticket to `ticket-review`.
 3. Rewrite with AI shows 4.2 AI Rewrite Preview (STORY-007).
 4. The panel shows the issue's Solution status, including a Project Manager's change request (STORY-008).
 5. An "Ask T-Solve" page in each Jira project lets a linked user ask the Knowledge Chatbot before creating an issue;
@@ -80,20 +82,14 @@ an issue has at most one.
   - AC-004.3: IF the issue's ticket already exists, THEN THE server SHALL not create a Solution Form ticket and SHALL answer 409 MSG31.
   - AC-004.4: IF the server cannot be reached or answers 5xx, THEN THE Jira App SHALL retry automatically up to 3 times and, if it still fails, show MSG69 and keep the form open with its content.
 
-### STORY-005: Save as draft
-- As a Ticket Resolver, I want to save my unfinished Solution so that I can finish it later.
+### STORY-005: Keep a Draft
+- As a Ticket Resolver, I want what I wrote to be kept when I close the form so that I can finish it later.
 - Acceptance:
-  - AC-005.1: WHEN the user clicks Save as draft, THE server SHALL store the five sections as the user's only Solution Form Draft for the issue, without validation and without creating a ticket, and THE Jira App SHALL show MSG41.
+  - AC-005.1: WHEN the user closes the form (its Close button or the dialog's close control), THE server SHALL store the five sections as the user's only Solution Form Draft for the issue, without validation and without creating a ticket, and THE Jira App SHALL close the form and show MSG41.
   - AC-005.2: WHEN the form opens and the user has a Draft for the issue, THE Jira App SHALL fill the sections from the Draft instead of the AI draft.
   - AC-005.3: THE server SHALL show a Draft only to its creator.
   - AC-005.4: IF saving the Draft fails, THEN THE Jira App SHALL show MSG06 and keep the form open with its content.
-
-### STORY-006: Close the form
-- As a Ticket Resolver, I want closing the form to still leave a ticket so that every resolved issue is reviewed (GBR-04).
-- Acceptance:
-  - AC-006.1: WHEN the user closes the form that opened after the issue moved to Done, THE Jira App SHALL ask MSG70.
-  - AC-006.2: WHEN the user confirms MSG70, THE server SHALL create the issue's Solution Form ticket in Pending review as in AC-004.1, with every Solution section empty.
-  - AC-006.3: IF the user cancels MSG70, THEN THE Jira App SHALL keep the form open with its content.
+  - AC-005.5: THE Jira App SHALL offer no separate Save as draft button and SHALL never create a ticket when the form is closed; THE server SHALL create a Solution Form ticket only from a submission that passes AC-002.5, so a Solution with every section empty never enters the Review Queue.
 
 ### STORY-007: Rewrite with AI
 - As a Ticket Resolver, I want AI to improve my Solution's wording so that it is clearer, while I stay in control (GBR-12).
@@ -139,7 +135,8 @@ an issue has at most one.
   MSG04 and MSG76 in the panel; formerly AC-008.4 to AC-008.6, AC-008.8 and STORY-009): search stays on the T-Solve
   web app (UC-26) — user, 2026-11-14; a deviation from the SRS to agree with the team.
 - Evidence download — web app.
-- A reminder for Done issues without a Solution — to propose to the team (worker, email).
+- Reminding writers of their unsubmitted Drafts — a daily email digest per writer from a worker job, in a separate
+  Jira issue (user, 2026-11-14); it does not change `worker`'s or `ticket-review`'s existing jobs.
 - Images in the question (OCR or a vision model, attaching them to the created issue) — a later version
   (RESEARCH-004).
 - Recording "Solved" on the server — after the chatbot ratings backend (KAN-182).
@@ -158,8 +155,8 @@ feedback endpoint (AC-008.7).
 | Endpoint | Screen | Story |
 |----------|--------|-------|
 | `POST /api/v1/jira-app/issues/{issueKey}/solution-form` (issue summary + description) → may open, Draft or AI draft or prefill, MSG67 flag | 4.1 | 001, 002, 005 |
-| `POST /api/v1/jira-app/issues/{issueKey}/solution` (JSON: five sections; all empty = Close) | 4.1 | 004, 006 |
-| `PUT /api/v1/jira-app/issues/{issueKey}/solution-draft` | 4.1 | 005 |
+| `POST /api/v1/jira-app/issues/{issueKey}/solution` (JSON: five sections) | 4.1 | 004 |
+| `PUT /api/v1/jira-app/issues/{issueKey}/solution-draft` (on Close) | 4.1 | 005 |
 | `POST /api/v1/jira-app/solution-rewrites` (five sections → rewritten five sections) | 4.2 | 007 |
 | `GET /api/v1/jira-app/issues/{issueKey}/panel` → linked, ticket status, Draft, may open | 3.3 | 001, 008 |
 | `GET /api/v1/jira-app/questions/eligibility` (→ `linked`: whether the FIT user is linked to an active T-Solve user; calls no AI) | Ask T-Solve (on open, AC-010.2) | 010 |

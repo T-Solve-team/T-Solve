@@ -7,8 +7,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useProductContext } from '@forge/react';
 import { events, requestJira, showFlag } from '@forge/bridge';
 import { openSolutionForm } from '../api/tsolveClient';
-import { SolutionFormModal } from '../form/SolutionFormModal';
-import { message } from '../messages';
+import { doneFlag, SolutionFormModal } from '../form/SolutionFormModal';
 import { isOwnChange, movedIntoDone, readIssue, recentlyMovedIntoDone } from './watchDone';
 
 /** How often the visible issue view re-reads the status (BUG-212): one small Jira read as the viewer. */
@@ -99,10 +98,10 @@ export function BackgroundApp() {
       issueKey={issueKey}
       summary={open.summary}
       form={open.form}
-      onDone={() => {
+      onDone={(outcome) => {
         setOpen(null);
-        // The background script itself is invisible, so MSG66 is a Jira flag (AC-004.2).
-        showFlag({ id: `tsolve-submitted-${issueKey}`, title: message('MSG66'), type: 'success', isAutoDismiss: true });
+        // The background script itself is invisible, so MSG66 or "Saved as draft" is a Jira flag (AC-004.2, AC-005.1).
+        showFlag(doneFlag(issueKey, outcome));
       }}
     />
   );

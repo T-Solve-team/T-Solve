@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { rewriteSolution, saveSolutionDraft, TsolveError } from '../api/tsolveClient';
 import { message } from '../messages';
-import { LABELS, SolutionFormModal } from './SolutionFormModal';
+import { doneFlag, LABELS, SolutionFormModal } from './SolutionFormModal';
 import { EMPTY_SECTIONS, validateSections } from './sections';
 
 jest.mock('../api/tsolveClient', () => {
@@ -99,54 +99,57 @@ describe('SolutionFormModal', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('The Resolution steps field is required.');
   });
 
-  it('AC-005.1 saves the draft and shows MSG41', async () => {
+  it('AC-005.1 saves the Draft when Close is clicked and closes the form', async () => {
     saveSolutionDraft.mockResolvedValue(undefined);
     open();
 
-    click(LABELS.saveDraft);
+    click(LABELS.close);
 
-    expect(await screen.findByText(message('MSG41'))).toBeInTheDocument();
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith('closed'));
     expect(saveSolutionDraft).toHaveBeenCalledWith('ITSUP-12', FULL);
     expect(submit).not.toHaveBeenCalled();
   });
 
-  it('AC-005.4 shows MSG06 and keeps the content when saving fails', async () => {
-    saveSolutionDraft.mockRejectedValue(new TsolveError('MSG06'));
-    open();
-
-    click(LABELS.saveDraft);
-
-    expect(await screen.findByText(message('MSG06'))).toBeInTheDocument();
-    expect(field('Root cause')).toHaveValue('Old client');
-  });
-
-  it('AC-006.1 AC-006.2 asks MSG70 on Close, then submits an empty Solution', async () => {
-    open();
-
-    click(LABELS.close);
-    expect(screen.getByText(message('MSG70'))).toBeInTheDocument();
-    click(LABELS.confirmClose);
-
-    await waitFor(() => expect(onDone).toHaveBeenCalledWith('submitted'));
-    expect(submit).toHaveBeenCalledWith('ITSUP-12', { summary: 'VPN drops', sections: EMPTY_SECTIONS });
-  });
-
-  it('AC-006.1 asks MSG70 when the dialog itself is closed', () => {
+  it('AC-005.1 saves the Draft when the dialog itself is closed', async () => {
+    saveSolutionDraft.mockResolvedValue(undefined);
     open();
 
     click('Close dialog');
 
-    expect(screen.getByText(message('MSG70'))).toBeInTheDocument();
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith('closed'));
+    expect(saveSolutionDraft).toHaveBeenCalledWith('ITSUP-12', FULL);
   });
 
-  it('AC-006.3 keeps the form and its content when MSG70 is cancelled', () => {
+  it('AC-005.1 keeps what was typed, not what the form opened with', async () => {
+    saveSolutionDraft.mockResolvedValue(undefined);
+    open();
+    fireEvent.change(field('Workaround'), { target: { value: 'Use the web VPN' } });
+
+    click(LABELS.close);
+
+    await waitFor(() => expect(saveSolutionDraft).toHaveBeenCalledWith('ITSUP-12', { ...FULL, workaround: 'Use the web VPN' }));
+  });
+
+  it('AC-005.4 shows MSG06 and keeps the form open with its content when saving fails', async () => {
+    saveSolutionDraft.mockRejectedValue(new TsolveError('MSG06'));
     open();
 
     click(LABELS.close);
-    click(LABELS.cancel);
 
-    expect(screen.queryByText(message('MSG70'))).not.toBeInTheDocument();
-    expect(field('Symptoms')).toHaveValue('Drops hourly');
+    expect(await screen.findByText(message('MSG06'))).toBeInTheDocument();
+    expect(field('Root cause')).toHaveValue('Old client');
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('AC-005.5 offers no Save as draft button, asks nothing on Close and never submits on Close', async () => {
+    saveSolutionDraft.mockResolvedValue(undefined);
+    open();
+
+    expect(screen.queryByRole('button', { name: 'Save as draft' })).not.toBeInTheDocument();
+    click(LABELS.close);
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith('closed'));
+    expect(screen.queryByText(/An empty solution will be submitted/)).not.toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();
   });
 
@@ -182,6 +185,13 @@ describe('SolutionFormModal', () => {
 
     expect(await screen.findByText(message('MSG68'))).toBeInTheDocument();
     expect(field('Symptoms')).toHaveValue('Drops hourly');
+  });
+});
+
+describe('doneFlag', () => {
+  it('AC-004.2 AC-005.1 shows MSG66 after Finish and "Saved as draft" after Close', () => {
+    expect(doneFlag('ITSUP-12', 'submitted')).toMatchObject({ title: message('MSG66'), type: 'success' });
+    expect(doneFlag('ITSUP-12', 'closed')).toMatchObject({ title: 'Saved as draft', type: 'info' });
   });
 });
 

@@ -1184,8 +1184,8 @@
     }
   },
   "jira-app": {
-    "specHash": "06addd6be180dfc370a4c0edd5ec46d380a11255e11b00710134a1425d9c6869",
-    "approvedAt": "2026-11-14T06:32:20.746Z",
+    "specHash": "bf9f83eec4a3f7e215529ac337c6df763927139d7812c0ffa230a34de307b6c8",
+    "approvedAt": "2026-11-14T07:44:40.691Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1202,13 +1202,11 @@
       "AC-004.2": "WHEN the submission succeeds, THE Jira App SHALL close the form and show MSG66.",
       "AC-004.3": "IF the issue's ticket already exists, THEN THE server SHALL not create a Solution Form ticket and SHALL answer 409 MSG31.",
       "AC-004.4": "IF the server cannot be reached or answers 5xx, THEN THE Jira App SHALL retry automatically up to 3 times and, if it still fails, show MSG69 and keep the form open with its content.",
-      "AC-005.1": "WHEN the user clicks Save as draft, THE server SHALL store the five sections as the user's only Solution Form Draft for the issue, without validation and without creating a ticket, and THE Jira App SHALL show MSG41.",
+      "AC-005.1": "WHEN the user closes the form (its Close button or the dialog's close control), THE server SHALL store the five sections as the user's only Solution Form Draft for the issue, without validation and without creating a ticket, and THE Jira App SHALL close the form and show MSG41.",
       "AC-005.2": "WHEN the form opens and the user has a Draft for the issue, THE Jira App SHALL fill the sections from the Draft instead of the AI draft.",
       "AC-005.3": "THE server SHALL show a Draft only to its creator.",
       "AC-005.4": "IF saving the Draft fails, THEN THE Jira App SHALL show MSG06 and keep the form open with its content.",
-      "AC-006.1": "WHEN the user closes the form that opened after the issue moved to Done, THE Jira App SHALL ask MSG70.",
-      "AC-006.2": "WHEN the user confirms MSG70, THE server SHALL create the issue's Solution Form ticket in Pending review as in AC-004.1, with every Solution section empty.",
-      "AC-006.3": "IF the user cancels MSG70, THEN THE Jira App SHALL keep the form open with its content.",
+      "AC-005.5": "THE Jira App SHALL offer no separate Save as draft button and SHALL never create a ticket when the form is closed; THE server SHALL create a Solution Form ticket only from a submission that passes AC-002.5, so a Solution with every section empty never enters the Review Queue.",
       "AC-007.1": "WHEN the user clicks Rewrite with AI, THE Jira App SHALL show 4.2 AI Rewrite Preview with the current Solution and the rewritten Solution section by section.",
       "AC-007.2": "WHEN the user clicks Accept, THE Jira App SHALL replace the form's five sections with the rewritten ones and go back to the form.",
       "AC-007.3": "WHEN the user clicks Discard, THE Jira App SHALL go back to the form with the Solution unchanged.",

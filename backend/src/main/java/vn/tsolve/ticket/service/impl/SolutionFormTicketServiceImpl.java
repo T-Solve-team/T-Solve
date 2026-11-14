@@ -44,9 +44,8 @@ public class SolutionFormTicketServiceImpl implements SolutionFormTicketService 
     @Transactional
     public SubmittedSolutionTicket submit(SolutionFormSubmission submission) {
         SolutionSections sections = submission.sections();
-        if (!sections.isEmpty()) {
-            requireSections(sections);
-        }
+        // Every submission is checked, so an empty Solution never reaches the Review Queue (AC-005.5).
+        requireSections(sections);
         LocalDate today = LocalDate.ofInstant(clock.instant(), REVIEW_ZONE);
         UUID id = tickets.insertSolutionFormTicket(
                         submission.projectId(),

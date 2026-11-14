@@ -24,10 +24,10 @@ class SolutionSectionsTest {
     }
 
     @Test
-    void treatsMissingSectionsAsEmpty_AC_006_2() {
+    void treatsMissingSectionsAsEmptyText_AC_002_5() {
         SolutionSections sections = new SolutionSections(null, " ", null, null, "");
 
-        assertThat(sections.isEmpty()).isTrue();
+        assertThat(sections.symptoms()).isEmpty();
         assertThat(sections.length()).isEqualTo(1);
     }
 }

@@ -656,7 +656,7 @@ export const getSubmitSolutionUrl = (issueKey: string) => {
 };
 
 /**
- * @summary Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and deletes the viewer's Draft (STORY-004). Five empty sections = the form was closed: the ticket gets an empty Solution (STORY-006).
+ * @summary Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and deletes the viewer's Draft (STORY-004). Every required section must be filled (400 MSG01), so an empty Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead.
 
  */
 export const submitSolution = async (
@@ -735,7 +735,7 @@ export type SubmitSolutionMutationError = ErrorType<ProblemDetail | ProblemRespo
 export type SubmitSolutionMutationVariables = { issueKey: string; data: SubmitSolutionRequest };
 
 /**
- * @summary Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and deletes the viewer's Draft (STORY-004). Five empty sections = the form was closed: the ticket gets an empty Solution (STORY-006).
+ * @summary Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and deletes the viewer's Draft (STORY-004). Every required section must be filled (400 MSG01), so an empty Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead.
 
  */
 export const useSubmitSolution = <
@@ -765,7 +765,7 @@ export const getSaveSolutionDraftUrl = (issueKey: string) => {
 };
 
 /**
- * @summary Stores the five sections, unvalidated, as the viewer's only Draft for the issue (MSG41, STORY-005).
+ * @summary Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed (MSG41, STORY-005).
  */
 export const saveSolutionDraft = async (
   issueKey: string,
@@ -845,7 +845,7 @@ export type SaveSolutionDraftMutationError = ErrorType<ProblemResponse | Problem
 export type SaveSolutionDraftMutationVariables = { issueKey: string; data: SolutionSections };
 
 /**
- * @summary Stores the five sections, unvalidated, as the viewer's only Draft for the issue (MSG41, STORY-005).
+ * @summary Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed (MSG41, STORY-005).
  */
 export const useSaveSolutionDraft = <
   TError = ErrorType<ProblemResponse | ProblemDetail>,

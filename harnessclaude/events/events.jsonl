@@ -1397,3 +1397,6 @@
 {"ts":"2026-11-14T05:03:52.212Z","type":"feature-status","module":"jira-app","feature":"remove-jira-search","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T05:15:05.107Z","type":"feature-status","module":"jira-app","feature":"remove-jira-search","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T06:32:20.755Z","type":"spec-approved","module":"jira-app","specHash":"06addd6be180dfc370a4c0edd5ec46d380a11255e11b00710134a1425d9c6869"}
+{"ts":"2026-11-14T07:44:24.641Z","type":"feature-status","module":"jira-app","feature":"close-keeps-draft","from":null,"to":"pending"}
+{"ts":"2026-11-14T07:44:40.693Z","type":"spec-approved","module":"jira-app","specHash":"bf9f83eec4a3f7e215529ac337c6df763927139d7812c0ffa230a34de307b6c8"}
+{"ts":"2026-11-14T07:54:38.493Z","type":"feature-status","module":"jira-app","feature":"close-keeps-draft","from":"pending","to":"in-progress"}

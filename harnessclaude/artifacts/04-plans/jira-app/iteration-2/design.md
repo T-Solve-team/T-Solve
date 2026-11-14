@@ -148,7 +148,7 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
 | 7 | ~~STORY-009~~ | — | Removed 14/11 with the Jira search (Task 9) | — | — | — |
 | 8 | STORY-007 | Error cascades | AI hangs or Ollama is down | Medium | Deadline inside 20 s → MSG68 / MSG67, form still usable | Task 4 |
 | 9 | STORY-008 | — | Removed 14/11 with the Jira search (Task 9) | — | — | — |
-| 10 | STORY-006 | Data integrity | Close after a Draft exists | Medium | Empty ticket created; the Draft deleted | Task 2 |
+| 10 | STORY-005 | Data integrity | Close after a Draft exists | Medium | The Draft is overwritten with the current content; no ticket (Task 10, was "empty ticket" before 14/11) | Task 10 |
 | 11 | STORY-008 | Integration | MSG64 for a ticket written by someone else | High | No feedback (ticket-review filters by writer); panel shows status only | Task 3, Task 8 |
 | 12 | All | Integration | FIT without `principal` (app-level call) | High | 401/403, no data | Task 5 |
 | 13 | All | Integration | FIT from a Jira site with no registered Workspace | High | 403 MSG08 before any read (`TSOLVE_STUB_JIRA_SITES` until platform's registry) | Task 3 |
@@ -167,7 +167,7 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
   Resolver, PROJECT_MANAGER needs Project Manager); `AccountLookupService.findName` reads a former manager's name for
   MSG64; `ReviewDecisionApiIT`'s test `ReviewJiraAccess` is marked `@Primary` next to the production adapter.
 - Open for the team, not blocking: tracker spec STORY-007/008 (Issue Panel status, Solution Form close) overlap
-  this spec's STORY-008/STORY-006 — a change request removes them from the tracker spec before Task 8 lands.
+  this spec's STORY-008 and the Close story — a change request removes them from the tracker spec before Task 8 lands.
 
 ## Change — 2026-11-14: no Published-ticket search in Jira (Task 9)
 - Spec: AC-008.4, AC-008.5, AC-008.6, AC-008.8 removed; STORY-009 (3.4 Published Ticket Preview) retired. User
@@ -178,3 +178,13 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
 - The panel now shows only the Solution status: MSG62, MSG65, MSG64, MSG77 + reopen, and the open-form button.
   The diagram's search and preview arrows and the Builder Check note on `JiraProjectDepartmentRepository` and
   `PublishedTicketService` (Task 5) describe the 11/11 design and no longer apply.
+
+## Change — 2026-11-14: Close keeps a Draft (Task 10)
+- Spec: AC-005.1 reworded (Close and the dialog's close control save the Draft, MSG41), AC-005.5 new; the Close story
+  (AC-006.1 to AC-006.3, MSG70) retired. The team's Review Queue never holds an empty ticket.
+- Chosen: Close saves the Draft and the Save as draft button goes. Alternatives: keep both buttons; discard on Close
+  and only record it. Rationale: user 14/11 — nothing typed is lost and one button does it.
+- The server stops accepting an all-empty Solution (`submit` always checks the required sections), so no client can
+  put an empty ticket in the Review Queue.
+- The daily Draft reminder email (worker job, own recurring id and mail sender, reuses `WorkerTenantService` only) is
+  a separate Jira issue.

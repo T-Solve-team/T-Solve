@@ -17,16 +17,6 @@ public record SolutionSections(
         scopeOfApplicability = orEmpty(scopeOfApplicability);
     }
 
-    /** All five sections empty: the form was closed without a Solution (AC-006.2). Not a JSON property. */
-    @JsonIgnore
-    public boolean isEmpty() {
-        return symptoms.isBlank()
-                && rootCause.isBlank()
-                && resolutionSteps.isBlank()
-                && workaround.isBlank()
-                && scopeOfApplicability.isBlank();
-    }
-
     /** The length of the five sections together, in code points, so an emoji counts once (MSG02). */
     @JsonIgnore
     public int length() {

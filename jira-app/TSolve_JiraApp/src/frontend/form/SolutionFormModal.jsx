@@ -1,4 +1,5 @@
-// 4.1 Solution Form and 4.2 AI Rewrite Preview (jira-app STORY-002, STORY-004 to STORY-007), in one UI Kit Modal.
+// 4.1 Solution Form and 4.2 AI Rewrite Preview (jira-app STORY-002, STORY-004, STORY-005, STORY-007), in one UI Kit
+// Modal. Closing it keeps a Draft and never submits (AC-005.1, AC-005.5).
 import React, { useState } from 'react';
 import {
   Box,
@@ -29,22 +30,33 @@ export const LABELS = {
   formTitle: 'Solution Form',
   rewriteTitle: 'AI Rewrite Preview',
   finish: 'Finish',
-  saveDraft: 'Save as draft',
   close: 'Close',
   rewrite: 'Rewrite with AI',
   accept: 'Accept',
   discard: 'Discard',
   current: 'Current',
   rewritten: 'Rewritten',
-  confirmClose: 'Close and submit',
-  cancel: 'Cancel',
+  // Shown after Close; a Jira App label, not an SRS message (AC-005.1 — user, 2026-11-14).
+  savedAsDraft: 'Saved as draft',
 };
 
 const columnStyle = xcss({ flexGrow: 1 });
 
+/** The Jira flag shown once the form is gone: MSG66 after Finish (AC-004.2), "Saved as draft" after Close (AC-005.1). */
+export function doneFlag(issueKey, outcome) {
+  const closed = outcome === 'closed';
+  return {
+    id: `tsolve-${closed ? 'draft' : 'submitted'}-${issueKey}`,
+    title: closed ? LABELS.savedAsDraft : message('MSG66'),
+    type: closed ? 'info' : 'success',
+    isAutoDismiss: true,
+  };
+}
+
 /**
  * The form for `issueKey`. `form` is the answer of openSolutionForm (`sections`, `message`); `onDone(outcome)` is
- * called with 'submitted' after Finish or Close, so the caller shows MSG66 and removes the Modal.
+ * called with 'submitted' after Finish (the caller shows MSG66) or 'closed' once Close has kept the Draft (the
+ * caller shows "Saved as draft"); either way the caller removes the Modal.
  */
 export function SolutionFormModal({ issueKey, summary, form, onDone, submit = submitSolution }) {
   const [sections, setSections] = useState(normalize(form?.sections ?? EMPTY_SECTIONS));
@@ -86,14 +98,19 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
     }
   };
 
-  const saveDraft = async () => {
+  // Close and the dialog's own close control keep what was typed as the Draft (AC-005.1); on failure the form stays
+  // open with its content (AC-005.4).
+  const close = async () => {
+    if (busy) {
+      return;
+    }
     setBusy(true);
     try {
       await saveSolutionDraft(issueKey, sections);
-      setNotice({ appearance: 'success', code: 'MSG41' });
+      onDone('closed');
     } catch {
       setNotice({ appearance: 'error', code: 'MSG06' });
-    } finally {
+      setStep('form');
       setBusy(false);
     }
   };
@@ -118,7 +135,7 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
 
   return (
     <ModalTransition>
-      <Modal onClose={() => setStep('confirmClose')} width="x-large">
+      <Modal onClose={close} width="x-large">
         <ModalHeader>
           <ModalTitle>{step === 'rewrite' ? LABELS.rewriteTitle : `${LABELS.formTitle} · ${issueKey}`}</ModalTitle>
         </ModalHeader>
@@ -133,11 +150,6 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
               <ErrorMessage>{message(fieldError.code, fieldError.params)}</ErrorMessage>
             )}
             {busy && <Spinner label="loading" />}
-            {step === 'confirmClose' && (
-              <SectionMessage appearance="warning">
-                <Text>{message('MSG70')}</Text>
-              </SectionMessage>
-            )}
             {step === 'rewrite' && <RewritePreview current={sections} rewritten={rewritten} />}
             {step !== 'rewrite' &&
               SECTIONS.map(({ field, label, required }) => (
@@ -147,7 +159,7 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
                     id={`solution-${field}`}
                     value={sections[field]}
                     onChange={(event) => edit(field, event.target.value)}
-                    isDisabled={busy || step === 'confirmClose'}
+                    isDisabled={busy}
                     isInvalid={fieldError?.field === field}
                     minimumRows={3}
                     resize="smart"
@@ -165,10 +177,7 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
               <Button onClick={rewrite} isDisabled={busy}>
                 {LABELS.rewrite}
               </Button>
-              <Button onClick={saveDraft} isDisabled={busy}>
-                {LABELS.saveDraft}
-              </Button>
-              <Button onClick={() => setStep('confirmClose')} isDisabled={busy}>
+              <Button onClick={close} isDisabled={busy}>
                 {LABELS.close}
               </Button>
               <Button appearance="primary" onClick={finish} isDisabled={busy}>
@@ -181,16 +190,6 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, submit = su
               <Button onClick={() => setStep('form')}>{LABELS.discard}</Button>
               <Button appearance="primary" onClick={accept}>
                 {LABELS.accept}
-              </Button>
-            </ButtonGroup>
-          )}
-          {step === 'confirmClose' && (
-            <ButtonGroup>
-              <Button onClick={() => setStep('form')} isDisabled={busy}>
-                {LABELS.cancel}
-              </Button>
-              <Button appearance="warning" onClick={() => send(EMPTY_SECTIONS)} isDisabled={busy}>
-                {LABELS.confirmClose}
               </Button>
             </ButtonGroup>
           )}

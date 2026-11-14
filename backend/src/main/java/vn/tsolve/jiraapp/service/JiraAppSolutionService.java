@@ -14,10 +14,10 @@ public interface JiraAppSolutionService {
     /** Whether the form may open, and its content: Draft, else AI draft, else the issue text with MSG67. */
     SolutionFormResponse openForm(JiraAppPrincipal caller, String issueKey, SolutionFormRequest request);
 
-    /** Finish or Close: creates the issue's Solution Form ticket for the Review Queue (AC-004.1, AC-006.2). */
+    /** Finish: creates the issue's Solution Form ticket for the Review Queue (AC-004.1). */
     SubmittedTicketResponse submit(JiraAppPrincipal caller, String issueKey, SubmitSolutionRequest request);
 
-    /** Save as draft (AC-005.1). */
+    /** Keeps the Draft when the form is closed (AC-005.1). */
     void saveDraft(JiraAppPrincipal caller, String issueKey, SolutionSections sections);
 
     /** Rewrite with AI (AC-007.1); 503 MSG68 when it fails (AC-007.4). */

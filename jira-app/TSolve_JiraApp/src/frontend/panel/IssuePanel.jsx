@@ -5,7 +5,7 @@ import { Button, Inline, SectionMessage, Spinner, Stack, Text, useProductContext
 import { events, requestJira, showFlag } from '@forge/bridge';
 import { getIssuePanel, getReviewFeedback, openSolutionForm } from '../api/tsolveClient';
 import { DONE, readIssue } from '../background/watchDone';
-import { SolutionFormModal } from '../form/SolutionFormModal';
+import { doneFlag, SolutionFormModal } from '../form/SolutionFormModal';
 import { message } from '../messages';
 
 export const PANEL_LABELS = {
@@ -121,9 +121,9 @@ export function IssuePanel() {
           issueKey={issueKey}
           summary={issue?.summary ?? ''}
           form={form}
-          onDone={() => {
+          onDone={(outcome) => {
             setForm(null);
-            showFlag({ id: `tsolve-submitted-${issueKey}`, title: message('MSG66'), type: 'success', isAutoDismiss: true });
+            showFlag(doneFlag(issueKey, outcome));
             load();
           }}
         />

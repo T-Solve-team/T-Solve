@@ -1,7 +1,7 @@
 ---
 module: jira-app
 date: 2026-11-11
-total_tasks: 9
+total_tasks: 10
 owner: Dev
 ---
 
@@ -15,7 +15,7 @@ tests start with it (`it('AC-002.3 shows MSG01 under an empty section', …)`). 
 
 ## Task 1: Contract
 
-**Story:** STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008
+**Story:** STORY-001, STORY-002, STORY-004, STORY-005, STORY-007, STORY-008
 **Feature:** solution-contract
 **Description:** Add the seven paths of the spec's Exposed table to the OpenAPI file, tag `jira-app`, FIT security:
 `POST /issues/{issueKey}/solution-form` (body `{summary, description}` → `{mayOpen, origin: DRAFT|AI|ISSUE,
@@ -35,7 +35,7 @@ mayOpen, searchAllowed}`), `GET /tickets/search?q=` (list of `{ticketId, publicI
 
 ## Task 2: Solution Form ticket storage and Drafts
 
-**Story:** STORY-002, STORY-004, STORY-005, STORY-006
+**Story:** STORY-002, STORY-004, STORY-005
 **Feature:** solution-ticket-storage
 **Description:** Changeset `031-jira-app-solution-draft.sql` (table `solution_draft`; no new ticket index — `uq_ticket_ticket_id`
 keeps one ticket per issue key, of any source, as the design decides). In `ticket`:
@@ -93,7 +93,7 @@ AC-002.2 (unavailable → caller falls back), AC-007.4 (timeout, malformed JSON)
 
 ## Task 5: Jira App endpoints
 
-**Story:** STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008
+**Story:** STORY-001, STORY-002, STORY-004, STORY-005, STORY-007, STORY-008
 **Feature:** solution-endpoints
 **Description:** `JiraAppSolutionController` (solution-form: may-open rule + Draft, else AI draft, else Symptoms from
 summary + description with `aiUnavailable`; solution; solution-draft; solution-rewrites), `JiraAppPanelController`
@@ -128,7 +128,7 @@ and only on a change into `done` ask `solution-form` and open the form Modal. Te
 
 ## Task 7: Solution Form and AI Rewrite Preview
 
-**Story:** STORY-002, STORY-004, STORY-005, STORY-006, STORY-007
+**Story:** STORY-002, STORY-004, STORY-005, STORY-007
 **Feature:** solution-form-ui
 **Description:** 4.1 in a UI Kit Modal: five `TextArea`s (Workaround optional), Finish, Save as draft, Close,
 Rewrite with AI; client checks MSG01 under the section and MSG02 (code points); MSG67 banner when prefilled from
@@ -180,3 +180,22 @@ stay green.
   `tsolveClient.js`, `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`, `.env.example`
 **Dependencies:** Task 8
 **Estimated size:** medium
+
+---
+
+## Task 10: Close keeps a Draft; no empty ticket
+
+**Story:** STORY-005
+**Feature:** close-keeps-draft
+**Description:** Spec change of 14/11 (AC-005.1 reworded, AC-005.5 new, the Close story retired). Jira App: the Solution Form
+has Rewrite with AI, Close and Finish only; Close and the dialog's close control save the Draft (`PUT …/solution-draft`),
+close the form and show MSG41 as a flag; on failure MSG06 and the form stays open (AC-005.4); no MSG70. Backend:
+`SolutionFormTicketServiceImpl.submit` always checks the required sections, so an all-empty submission is 400 MSG01
+and never reaches the Review Queue; the AC-006.2 tests go and AC-005.5 tests come in. OpenAPI: the solution endpoint
+no longer describes "all empty = Close". Re-check Close, the Draft and Finish on the dev site.
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/form/SolutionFormModal.jsx`, its test, `src/frontend/messages.js`,
+  `backend/src/main/java/vn/tsolve/ticket/service/impl/SolutionFormTicketServiceImpl.java`, its tests,
+  `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
+**Dependencies:** Task 9
+**Estimated size:** small

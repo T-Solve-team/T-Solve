@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -105,25 +104,14 @@ class SolutionFormTicketServiceImplTest {
     }
 
     @Test
-    void storesAnEmptySolutionWhenTheFormWasClosed_AC_006_2() {
-        givenInserted();
+    void refusesAnAllEmptySolutionSoItNeverReachesTheReviewQueue_AC_005_5() {
+        assertThatThrownBy(() -> service.submit(submission("VPN", new SolutionSections(null, "", " ", null, ""))))
+                .isInstanceOfSatisfying(
+                        CodedException.class, e -> assertThat(e.getCode()).isEqualTo("MSG01"));
 
-        service.submit(submission("VPN", new SolutionSections(null, "", " ", null, "")));
-
-        verify(tickets)
-                .insertSolutionFormTicket(
-                        eq(PROJECT),
-                        eq(ISSUE),
-                        any(),
-                        any(),
-                        eq(WRITER),
-                        eq(""),
-                        eq(""),
-                        eq(" "),
-                        isNull(),
-                        eq(""),
-                        eq(VIETNAM_TODAY));
-        verify(drafts).deleteDraft(WRITER, PROJECT, ISSUE);
+        verify(tickets, never())
+                .insertSolutionFormTicket(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+        verify(drafts, never()).deleteDraft(any(), any(), any());
     }
 
     @Test

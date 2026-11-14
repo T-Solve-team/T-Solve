@@ -1040,8 +1040,8 @@ paths:
       operationId: submitSolution
       summary: >
         Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and
-        deletes the viewer's Draft (STORY-004). Five empty sections = the form was closed: the ticket gets an empty
-        Solution (STORY-006).
+        deletes the viewer's Draft (STORY-004). Every required section must be filled (400 MSG01), so an empty
+        Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead.
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -1091,7 +1091,7 @@ paths:
     put:
       tags: [jira-app]
       operationId: saveSolutionDraft
-      summary: Stores the five sections, unvalidated, as the viewer's only Draft for the issue (MSG41, STORY-005).
+      summary: Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed (MSG41, STORY-005).
       security:
         - forgeInvocationToken: []
       requestBody:

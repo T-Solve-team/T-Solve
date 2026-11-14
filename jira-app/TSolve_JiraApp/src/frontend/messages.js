@@ -5,7 +5,6 @@ const MESSAGES = {
   MSG02: '{field_name} must not exceed {max_length} characters.',
   MSG06: 'Something went wrong. Please try again later.',
   MSG08: 'You do not have permission to access this page.',
-  MSG41: 'Draft saved. Only you can see it.',
   MSG62: 'Sign in to T-Solve to use the T-Solve panel.',
   MSG64: 'Changes requested by {manager_name}: "{comment}". Update the solution and resubmit.',
   MSG65: 'Solution submitted – awaiting review.',
@@ -14,8 +13,6 @@ const MESSAGES = {
   MSG68: 'AI rewrite is unavailable right now. Your solution has not been changed.',
   MSG69:
     'Could not reach T-Solve after several attempts. The issue stays resolved in {tracker_name}, but the solution was not submitted.',
-  MSG70:
-    'Close the form? An empty solution will be submitted for review. To keep your work for later, use Save as draft instead.',
   MSG77: 'You have an unsubmitted draft for this issue. Continue the draft to submit your solution.',
   MSG109:
     'I could not find an answer in the knowledge you can access. You can create an issue in {tracker_name} to ask for help.',
