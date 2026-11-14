@@ -37,9 +37,12 @@ public class ImportBatchRecorder {
                 error));
     }
 
-    /** A Jira pull that got no usable answer (AC-001.7): no preview exists yet, so nothing was published or removed. */
+    /**
+     * A failure with no preview to count rows from, so nothing was published or removed: a Jira pull that got no
+     * usable answer (AC-001.7) or a manual entry that could not be saved (AC-006.11).
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordJiraFailed(UUID projectId, String user, String error) {
-        batches.save(ImportBatch.failed(projectId, user, TicketSource.JIRA_IMPORT, null, 0, 0, error));
+    public void recordFailedWithoutPreview(UUID projectId, String user, TicketSource source, String error) {
+        batches.save(ImportBatch.failed(projectId, user, source, null, 0, 0, error));
     }
 }
