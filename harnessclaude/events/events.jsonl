@@ -1421,3 +1421,7 @@
 {"ts":"2026-11-14T08:14:45.633Z","type":"spec-approved","module":"worker","specHash":"5033b810492a0269525db73446412a8072725fb1012187e5d97045ed300c86cf"}
 {"ts":"2026-11-14T08:24:17.454Z","type":"commit-recorded","module":"worker","repo":"default","sha":"4a36c9cc5d6396ed44738a1845c39571431a6a82"}
 {"ts":"2026-11-14T08:24:17.666Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"4a36c9cc5d6396ed44738a1845c39571431a6a82"}
+{"ts":"2026-11-14T08:33:10.421Z","type":"feature-status","module":"ticket-review","feature":"review-email-html","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T08:33:10.469Z","type":"feature-status","module":"worker","feature":"review-email-html-sender","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T08:37:24.584Z","type":"feature-status","module":"ticket-review","feature":"review-email-html","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T08:37:24.632Z","type":"feature-status","module":"worker","feature":"review-email-html-sender","from":"evaluating","to":"passing"}
