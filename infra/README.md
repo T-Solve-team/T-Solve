@@ -151,3 +151,79 @@ docker stats --no-stream
 
 Each container keeps at most 3 files of 10 MB. Stop without losing data: `dc down`. `dc down -v` also deletes the
 volumes (database, Redis, models, certificates): only for a full reset.
+
+## 12. Continuous deploy (CD)
+
+`.github/workflows/cd-staging.yml` deploys staging by itself. It starts when the `CI` workflow finishes successfully
+for a push to `main` (never for a pull request), or by hand ("Run workflow", optional `sha`). A GitHub-hosted job
+connects over SSH with a dedicated deploy key and sends the commit SHA. The key can run one program only,
+`/usr/local/sbin/tsolve-deploy` (source: `infra/scripts/deploy.sh`), which:
+
+1. refuses a SHA that is not on `origin/main`, checks the commit out in `/srv/tsolve/src` (detached) and prints the
+   previous commit (the one in `DEPLOYED`, the last successful deploy);
+2. fails, naming the variables, when `/srv/tsolve/staging/.env` lacks a name that `staging.env.example` has (it never
+   prints values);
+3. builds `backend` and `web`, then `up -d --wait --no-deps backend worker web` (so the compose file of the new commit
+   does apply to these three); recreates `caddy` when `infra/caddy/` changed, or when no valid `DEPLOYED` exists;
+4. runs the smoke checks (`api.<domain>/actuator/health` UP, `<slug>.<domain>/` 200, `<slug>.<domain>/api/v1/me` 401
+   with `"code":"MSG07"`), removes dangling images (`docker image prune -f`, never volumes), writes the SHA to
+   `/srv/tsolve/staging/DEPLOYED` and a line per step to `/srv/tsolve/staging/deploy.log`.
+
+A run for a push that is no longer the head of `main` (a late CI run) is skipped with a notice and stays green.
+
+### Trust model
+
+- The forced command only limits a stolen key to "deploy a commit of `main`".
+- The protection of `main` (required reviews and checks) is the real boundary: every deploy builds and runs code from
+  `main` (Dockerfiles, and the compose file for backend, worker and web) as a member of the `docker` group, which is
+  root-equivalent on the VPS and can read `.env`.
+- `~deploy/.ssh/authorized_keys` is owned by `deploy`, so anyone who gets a shell as `deploy` can change the key's
+  options. Recommended: a root-owned `AuthorizedKeysFile` for this user (`/etc/ssh/authorized_keys/%u`, mode 644, owned
+  by root). Otherwise accept this limit.
+- The script lives in `/usr/local/sbin`, outside `/srv/tsolve` (which belongs to the login user), so `deploy` cannot
+  replace it.
+- The `staging` environment's deployment-branch rule "main only" is load-bearing (setup step 3): without it, any branch
+  could use the secrets.
+
+There is no automatic migrate, seed or rollback: Liquibase runs at backend start (section 8); the AI models and the
+first admin stay manual (sections 5 and 6). One deploy runs at a time (a second one fails at once).
+
+### One-time setup
+
+1. On the VPS, as root: `install -o root -g root -m 755 infra/scripts/deploy.sh /usr/local/sbin/tsolve-deploy`. The
+   `deploy` user must not be able to write it.
+2. The `deploy` user (member of the `docker` group, owner of `/srv/tsolve/src` and `/srv/tsolve/staging`) gets the
+   key. On your machine: `ssh-keygen -t ed25519 -f tsolve-deploy -C tsolve-cd-staging -N ""`. In
+   `~deploy/.ssh/authorized_keys` add the public key on one line:
+
+   ```
+   restrict,command="/usr/local/sbin/tsolve-deploy" ssh-ed25519 AAAA... tsolve-cd-staging
+   ```
+
+   (See "Trust model" for who may edit this file.)
+3. In GitHub, Settings, Environments: create `staging`. **Required:** set Deployment branches to "Selected branches" and
+   allow only `main`. Then add these secrets:
+   `STAGING_SSH_HOST`, `STAGING_SSH_USER` (`deploy`), `STAGING_SSH_KEY` (the private key file) and
+   `STAGING_SSH_KNOWN_HOSTS`. Then delete the private key from your machine.
+4. For `STAGING_SSH_KNOWN_HOSTS` (the host, `tsolve.io.vn`, has an RSA host key only) run
+   `ssh-keyscan -t rsa <host>`, and compare the fingerprint of the scanned line (pipe it to `ssh-keygen -lf -`) with
+   `ssh-keygen -lf /etc/ssh/ssh_host_rsa_key.pub` run on the server. Paste the line only when they match. Windows
+   OpenSSH's `ssh-keyscan` may fail with an unsupported key exchange: use the one from Git Bash.
+
+### Redeploy or roll back
+
+Actions, "CD staging", "Run workflow", and enter the `sha` (empty means the latest `main`). To roll back, enter the
+previous SHA from the run summary or `deploy.log`; it must still be on `main`. A rollback does not undo database
+migrations.
+
+### When the script changes
+
+A merged PR does not change the script the key runs. After `infra/scripts/deploy.sh` changes, reinstall it as root (the
+`install` command of step 1) from the checked-out repo.
+
+### "Manual step needed" warning
+
+Backend, worker and web are deployed (the new compose file applies to them), but `compose.staging.yml` (for the other
+services), a `keycloak/(staging/)realm-*.json` file, `keycloak/themes/` or `postgres/init/` changed and CD did not apply
+it. With no valid `DEPLOYED` file the warning lists every such file. Read the change (`git -C /srv/tsolve/src diff <previous> <sha> -- <file>`) and apply
+it by hand as in sections 4, 8 and 10 (for the compose file, `dc up -d --wait`; a realm file needs a realm reset).
