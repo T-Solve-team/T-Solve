@@ -290,6 +290,7 @@ class EmailOutboxIT {
                         EmailOutboxRegistration.class,
                         Transactions.class)
                 .withBean(WorkerTenantService.class, () -> tenants)
+                .withBean("clock", Clock.class, Clock::systemUTC)
                 .withBean(SmtpEmailSender.class, mailpit::sender)
                 .withBean(
                         "transactionManager",
