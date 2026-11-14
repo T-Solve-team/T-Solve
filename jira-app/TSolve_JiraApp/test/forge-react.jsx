@@ -40,6 +40,26 @@ export const TextArea = ({ id, value, onChange, isDisabled, isInvalid, placehold
   />
 );
 
+export const Textfield = ({ id, value, onChange, isDisabled, placeholder }) => (
+  <input id={id} value={value} onChange={onChange} disabled={isDisabled} placeholder={placeholder} />
+);
+export const Link = ({ href, children }) => <a href={href}>{children}</a>;
+export const Lozenge = ({ children }) => <span>{children}</span>;
+// The Modal opens as a dialog; its close (X) is a button named "Close dialog", which calls onClose.
+export const ModalTransition = Pass;
+export const Modal = ({ onClose, children }) => (
+  <div role="dialog">
+    <button type="button" onClick={onClose}>
+      Close dialog
+    </button>
+    {children}
+  </div>
+);
+export const ModalHeader = Pass;
+export const ModalTitle = ({ children }) => <h1>{children}</h1>;
+export const ModalBody = Pass;
+export const ModalFooter = Pass;
+
 export const useProductContext = jest.fn();
 
 export default { render: jest.fn() };

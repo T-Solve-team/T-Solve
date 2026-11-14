@@ -20,14 +20,7 @@ public class JobRunrRuntime implements SmartLifecycle, AutoCloseable {
     private final BackgroundJobServer server;
 
     public JobRunrRuntime(WorkerProperties properties, JobActivator activator, boolean processJobs) {
-        HikariConfig config = new HikariConfig();
-        config.setPoolName("tsolve-jobs");
-        config.setJdbcUrl(properties.jdbcUrl());
-        config.setUsername(properties.username());
-        config.setPassword(properties.password());
-        config.setMaximumPoolSize(properties.workerCount() + 2);
-        config.setMinimumIdle(0);
-        pool = new HikariDataSource(config);
+        pool = new HikariDataSource(poolConfig(properties));
         StorageProvider initializedStorage = null;
         try {
             var json = new JacksonJsonMapper();
@@ -55,8 +48,25 @@ public class JobRunrRuntime implements SmartLifecycle, AutoCloseable {
         }
     }
 
+    /** A short connection timeout keeps a Jobs outage from holding a request thread for Hikari's 30 s default. */
+    static HikariConfig poolConfig(WorkerProperties properties) {
+        HikariConfig config = new HikariConfig();
+        config.setPoolName("tsolve-jobs");
+        config.setJdbcUrl(properties.jdbcUrl());
+        config.setUsername(properties.username());
+        config.setPassword(properties.password());
+        config.setMaximumPoolSize(properties.workerCount() + 2);
+        config.setMinimumIdle(0);
+        config.setConnectionTimeout(properties.connectionTimeout().toMillis());
+        return config;
+    }
+
     public JobRequestScheduler scheduler() {
         return scheduler;
+    }
+
+    public javax.sql.DataSource jobsDataSource() {
+        return pool;
     }
 
     @Override

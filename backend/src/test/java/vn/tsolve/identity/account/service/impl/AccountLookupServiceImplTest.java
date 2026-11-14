@@ -60,6 +60,23 @@ class AccountLookupServiceImplTest {
                 .hasValueSatisfying(found -> assertThat(found.fullName()).isEmpty());
     }
 
+    @Test
+    void readsTheNameOfADeactivatedAccountToo() throws Exception {
+        when(repository.findById(ID))
+                .thenReturn(Optional.of(account("an@t-solve.vn", "Nguyễn An", AccountStatus.DEACTIVATED)));
+
+        assertThat(service.findName(ID)).contains("Nguyễn An");
+    }
+
+    @Test
+    void hasNoNameForAnUnknownOrUnnamedAccount() throws Exception {
+        when(repository.findById(ID)).thenReturn(Optional.empty());
+        assertThat(service.findName(ID)).isEmpty();
+
+        when(repository.findById(ID)).thenReturn(Optional.of(account("an@t-solve.vn", null, AccountStatus.ACTIVE)));
+        assertThat(service.findName(ID)).isEmpty();
+    }
+
     private static Account account(String email, String fullName, AccountStatus status) throws Exception {
         Account account = new Account(email, fullName, status, Instant.parse("2026-11-01T00:00:00Z"));
         Field id = Account.class.getDeclaredField("id");

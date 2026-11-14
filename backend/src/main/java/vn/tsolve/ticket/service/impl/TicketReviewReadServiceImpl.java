@@ -248,6 +248,12 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
                 .findFirst();
     }
 
+    @Override
+    public Optional<Feedback> jiraRejection(UUID projectId, UUID writerId, String issueKey) {
+        return tickets.findJiraRejection(projectId, writerId, issueKey, PageRequest.of(0, 1)).stream()
+                .findFirst();
+    }
+
     private List<QueueRow> queueRows(Map<UUID, ProjectAccess> projects, UUID departmentId) {
         List<UUID> managed = managedProjects(projects, departmentId);
         return managed.isEmpty() ? List.of() : tickets.findReviewQueue(managed);
