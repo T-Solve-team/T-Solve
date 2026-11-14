@@ -88,6 +88,18 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         return repository.members(projectId);
     }
 
+    @Override
+    @Transactional
+    public List<ProjectMemberResponse> removeMember(UUID projectId, UUID userId) {
+        ProjectSummaryResponse project = requireManagedProject(projectId);
+        // Design D14: one delete covers "not a member", "already removed" and "the Project Manager's row".
+        if (project.status() == ProjectStatus.REMOVED || repository.removeMember(projectId, userId) == 0) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+        audit.record(AuditAction.PROJECT_MEMBER_CHANGE, "PROJECT", projectId, Map.of("removed", List.of(userId)));
+        return repository.members(projectId);
+    }
+
     // Design D4: an unknown Project is 404 before the manager check answers 403.
     private ProjectSummaryResponse requireManagedProject(UUID projectId) {
         scope.currentWorkspaceId(); // throws when no Workspace is bound, before any read

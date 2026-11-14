@@ -6,7 +6,7 @@ owner: BA
 
 # Spec: project-integration
 
-Covers UC-15 Add Ticket Resolver to Project (Jira KAN-128; numbered UC-17 in the Jira title and the module map before the SRS renumbering), STORY-001..STORY-002. Source: SRS v3460 (`_context/Report`): UC-15, screen 3.2 Project Detail, GBR-02, GBR-20, MSG04, MSG05, MSG06, MSG08. The other stories of this module (KAN-125, KAN-126, KAN-127 Add Project, KAN-129 Remove member) are added later in Change Mode. Decision (user, 13/11): plan and build KAN-128 alone, before KAN-127.
+Covers UC-15 Add Ticket Resolver to Project (Jira KAN-128; numbered UC-17 in the Jira title and the module map before the SRS renumbering), STORY-001..STORY-002, and UC-16 Remove a member from a Project (Jira KAN-129, titled UC-18), STORY-003. Source: SRS v3460 (`_context/Report`): UC-15, UC-16, screen 3.2 Project Detail, GBR-02, GBR-20, MSG04, MSG05, MSG06, MSG08, MSG55. The other stories of this module (KAN-125, KAN-126, KAN-127 Add Project) are added later in Change Mode. Decision (user, 13/11): plan and build KAN-128 alone, before KAN-127.
 
 ## Changelog
 
@@ -14,6 +14,7 @@ Covers UC-15 Add Ticket Resolver to Project (Jira KAN-128; numbered UC-17 in the
 |------|-------|--------|--------|
 | 2026-11-13 | STORY-001, STORY-002 | Initial spec: UC-15 Add Ticket Resolver to Project | KAN-128; scope "KAN-128 only" chosen by the user on 13/11 |
 | 2026-11-13 | STORY-001, STORY-002 | Builder check (before approval): no Project Manager case and MSG54 removed (only the Project Manager opens 3.2), AC-001.7/001.8 renumbered 001.6/001.7; 404 only for Project Manager callers; null full names last; no Department filter on candidates; `q` trimmed; DB time; ids in order sent; popup loads at once; AC-002.16 audit label | Builder check findings 1, 2, 4, 7, 13–17 |
+| 2026-11-14 | STORY-001, STORY-003 | Added STORY-003 Remove a member (UC-16, KAN-129): `DELETE …/members/{userId}`, MSG55 confirm, audit `{"removed": [...]}`, tickets kept; AC-001.7 reworded (no Remove button on the Project Manager's row, instead of none at all) | KAN-129; scope "remove the membership only" chosen by the user on 14/11 — the Solution Form's membership check belongs to `jira-app` (KAN-126) |
 
 ## Requirements
 
@@ -47,7 +48,7 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-001.4: IF a caller with the `PROJECT_MANAGER` role gives a `projectId` no Project has, THEN THE backend SHALL answer 404 to every endpoint of this spec.
   - AC-001.5: WHEN the Project Manager opens Project Detail, THE web app SHALL show the header (Jira project key, Department, Project Manager, status) and the Members tab with the columns Full name, Email, Role, Added on, with "Added on" as a date in the app time zone.
   - AC-001.6: IF the backend answers 403, THEN THE web app SHALL show MSG08 in place of the screen; IF it answers 404, THEN THE web app SHALL show MSG04; IF it fails otherwise, THEN THE web app SHALL show MSG06.
-  - AC-001.7: THE web app SHALL show no Remove button in the Members tab (removing members is KAN-129).
+  - AC-001.7: THE web app SHALL show no Remove button on the Project Manager's row of the Members tab.
 
 ### STORY-002: Add Ticket Resolvers to a Project
 - As a Project Manager, I want to add Ticket Resolvers to my Project so that only the people who handle its issues write Solutions for it.
@@ -69,9 +70,24 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-002.15: WHEN the Project Manager clicks Cancel or closes the popup, THE web app SHALL send no add request and change nothing.
   - AC-002.16: THE audit log screen SHALL label the action `PROJECT_MEMBER_CHANGE` "Project member change".
 
+### STORY-003: Remove a member from a Project
+- As a Project Manager, I want to remove a member from my Project so that people who no longer handle its issues stop writing Solutions for it.
+- Acceptance:
+  - AC-003.1: WHEN the Project Manager sends `DELETE /api/v1/projects/{projectId}/members/{userId}` for a member with role `MEMBER`, THE backend SHALL delete that membership row and answer 200 with the full member list in the form and order of AC-001.2.
+  - AC-003.2: WHEN a member is removed, THE backend SHALL record one audit entry with action `PROJECT_MEMBER_CHANGE`, target type `PROJECT`, target id the Project id, and details `{"removed": [<user id>]}`, in the same transaction as the delete.
+  - AC-003.3: IF `userId` has no `MEMBER` row in the Project (not a member, already removed, or the Project's `PROJECT_MANAGER` row), THEN THE backend SHALL answer 409, delete nothing and record no audit entry.
+  - AC-003.4: IF the Project is `REMOVED`, THEN THE backend SHALL answer 409 to `DELETE …/members/{userId}`, delete nothing and record no audit entry.
+  - AC-003.5: WHEN a member is removed, THE backend SHALL keep every ticket and Solution in the Project unchanged, those the removed person wrote included.
+  - AC-003.6: WHILE the Project is `ACTIVE`, THE web app SHALL show a Remove button on every `MEMBER` row of the Members tab; WHILE it is `REMOVED`, THE web app SHALL show no Remove button.
+  - AC-003.7: WHEN the Project Manager clicks Remove, THE web app SHALL ask for confirmation with MSG55, where `user_name` is the member's full name (else email) and `project_key` is the Jira project key, and send no request yet.
+  - AC-003.8: WHEN the Project Manager confirms and the backend answers 200, THE web app SHALL show MSG05 and show the returned member list.
+  - AC-003.9: IF the remove fails, THEN THE web app SHALL show MSG06 and keep the member list unchanged (any error, 409 included).
+  - AC-003.10: WHEN the Project Manager cancels the confirmation, THE web app SHALL send no remove request and change nothing.
+
 ## Out of Scope
 - Adding, configuring, re-adding or removing Projects, the Projects table of 3.1 and the Settings tab of 3.2 — KAN-127 (UC-14).
-- Removing members, MSG55, the Escalation handler — KAN-129 (UC-16).
+- The Escalation handler — no Project setting holds it yet (KAN-127 Settings).
+- Refusing the Solution Form and its resubmission to a removed member — `jira-app` (KAN-126, UC-19) checks `project_membership`; this module only removes the row (contract below).
 - Ticket visibility of members — already derived from `project_membership` by identity's scope check (KAN-118, GBR-02).
 - The Solution Form and who sees it — `jira-app` (UC-19).
 - Emailing or notifying the added people.
@@ -84,6 +100,8 @@ These are known limits of the code this story builds on. They are not defects of
   - `GET /api/v1/projects/{projectId}/members` → `ProjectMemberResponse[] { userId: UUID, fullName, email, role: PROJECT_MANAGER|MEMBER, dateAdded: Instant }`
   - `GET /api/v1/projects/{projectId}/member-candidates?q=` → `MemberCandidateResponse[] { userId: UUID, fullName, email }`
   - `POST /api/v1/projects/{projectId}/members` body `AddProjectMembersRequest { userIds: UUID[] }` → 201 `ProjectMemberResponse[]`
+  - `DELETE /api/v1/projects/{projectId}/members/{userId}` → 200 `ProjectMemberResponse[]`
+- `project_membership` is the source of truth for who may write Solutions for a Project: a person without a row for the Project is not a member. The Solution Form (`jira-app`, KAN-126) must refuse to show or accept a submission or resubmission from a non-member.
 - `AuditAction.PROJECT_MEMBER_CHANGE` (backend enum, DB check constraint, audit-log screen label "Project member change").
 
 ### Required from other modules

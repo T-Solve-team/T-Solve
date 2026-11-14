@@ -86,6 +86,23 @@ export const handlers: HttpHandler[] = [
       return HttpResponse.json<ProjectMemberResponse[]>(updated, { status: 201 });
     },
   ),
+  http.delete<{ projectId: string; userId: string }>(
+    '*/api/v1/projects/:projectId/members/:userId',
+    async ({ params }) => {
+      await delay(MOCK_DELAY_MS);
+      const list = members[params.projectId];
+      const project = PROJECTS.find((item) => item.id === params.projectId);
+      if (!list || !project) return notFound();
+      // Removed Project, the Project Manager's row or not a member → 409, like the backend (AC-003.3, AC-003.4).
+      const isMember = list.some(
+        (member) => member.userId === params.userId && member.role === 'MEMBER',
+      );
+      if (project.status === 'REMOVED' || !isMember) return problem(409, 'MSG06');
+      const updated = sorted(list.filter((member) => member.userId !== params.userId));
+      members = { ...members, [params.projectId]: updated };
+      return HttpResponse.json<ProjectMemberResponse[]>(updated);
+    },
+  ),
 ];
 
 /** Restores this feature's mock data to its starting state — called after every test (src/test/setup.ts). */

@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -75,5 +76,16 @@ public class ProjectController {
     public ResponseEntity<List<ProjectMemberResponse>> addProjectMembers(
             @PathVariable UUID projectId, @Valid @RequestBody AddProjectMembersRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.addMembers(projectId, request));
+    }
+
+    @DeleteMapping("/members/{userId}")
+    @Operation(operationId = "removeProjectMember", summary = "Remove a member from a Project")
+    @ApiResponse(responseCode = "403", description = "Not the Project Manager of this Project")
+    @ApiResponse(responseCode = "404", description = "Unknown Project")
+    @ApiResponse(responseCode = "409", description = "Project removed, or the id has no MEMBER row")
+    @PreAuthorize("hasRole('" + Roles.PROJECT_MANAGER + "')")
+    public ResponseEntity<List<ProjectMemberResponse>> removeProjectMember(
+            @PathVariable UUID projectId, @PathVariable UUID userId) {
+        return ResponseEntity.ok(service.removeMember(projectId, userId));
     }
 }

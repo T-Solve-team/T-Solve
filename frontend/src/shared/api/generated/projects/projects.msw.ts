@@ -57,6 +57,18 @@ export const getAddProjectMembersResponseMock = (): ProjectMemberResponse[] =>
     dateAdded: faker.date.past().toISOString().slice(0, 19) + 'Z',
   }));
 
+export const getRemoveProjectMemberResponseMock = (): ProjectMemberResponse[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    userId: faker.string.uuid(),
+    fullName: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    email: faker.internet.email(),
+    role: faker.helpers.arrayElement(Object.values(ProjectRole)),
+    dateAdded: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  }));
+
 export const getSearchProjectMemberCandidatesResponseMock = (): MemberCandidateResponse[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     userId: faker.string.uuid(),
@@ -141,6 +153,30 @@ export const getAddProjectMembersMockHandler = (
   );
 };
 
+export const getRemoveProjectMemberMockHandler = (
+  overrideResponse?:
+    | ProjectMemberResponse[]
+    | ((
+        info: Parameters<HttpResponseResolver<{ projectId: string; userId: string }>>[0],
+      ) => Promise<ProjectMemberResponse[]> | ProjectMemberResponse[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete<{ projectId: string; userId: string }>(
+    '*/api/v1/projects/:projectId/members/:userId',
+    async (info: Parameters<HttpResponseResolver<{ projectId: string; userId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRemoveProjectMemberResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getSearchProjectMemberCandidatesMockHandler = (
   overrideResponse?:
     | MemberCandidateResponse[]
@@ -168,5 +204,6 @@ export const getProjectsMock = () => [
   getGetProjectMockHandler(),
   getListProjectMembersMockHandler(),
   getAddProjectMembersMockHandler(),
+  getRemoveProjectMemberMockHandler(),
   getSearchProjectMemberCandidatesMockHandler(),
 ];

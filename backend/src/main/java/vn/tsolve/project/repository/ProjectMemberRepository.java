@@ -128,4 +128,12 @@ public class ProjectMemberRepository {
                         .map(user -> new MapSqlParameterSource("user", user).addValue("project", projectId))
                         .toArray(MapSqlParameterSource[]::new));
     }
+
+    /** Deletes only a {@code MEMBER} row, so the Project Manager's row is never removed; answers rows deleted. */
+    public int removeMember(UUID projectId, UUID userId) {
+        return jdbc.update("""
+                DELETE FROM project_membership
+                WHERE project_id = :project AND user_id = :user AND role_in_project = 'MEMBER'
+                """, Map.of("project", projectId, "user", userId));
+    }
 }

@@ -3,6 +3,7 @@ package vn.tsolve.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.securityContext;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -105,6 +106,7 @@ class ProjectMembersIT {
                                 "DELETE FROM audit_log_entry WHERE target_id IN (?,?,?)", PROJECT, REMOVED, OTHER);
                         tenant.execute("ALTER TABLE audit_log_entry ENABLE TRIGGER audit_log_entry_no_update_delete");
                     });
+            tenant.update("DELETE FROM ticket WHERE project_id IN (?,?,?)", PROJECT, REMOVED, OTHER);
             tenant.update("DELETE FROM app_user WHERE email LIKE ?", "%" + FIXTURE);
             tenant.update("DELETE FROM project_membership WHERE project_id IN (?,?,?)", PROJECT, REMOVED, OTHER);
             tenant.update("DELETE FROM project WHERE public_id IN (?,?,?)", PROJECT, REMOVED, OTHER);
@@ -203,6 +205,7 @@ class ProjectMembersIT {
         perform(get("/api/v1/projects/" + unknown + "/members")).andExpect(status().isNotFound());
         perform(get("/api/v1/projects/" + unknown + "/member-candidates")).andExpect(status().isNotFound());
         perform(add(unknown, List.of(CAROL))).andExpect(status().isNotFound());
+        perform(remove(unknown, ALICE)).andExpect(status().isNotFound());
         perform(get("/api/v1/projects/not-a-uuid/members")).andExpect(status().isBadRequest());
         assertThat(memberCount(unknown)).isZero();
     }
@@ -381,6 +384,81 @@ class ProjectMembersIT {
         assertThat(auditCount(REMOVED)).isZero();
     }
 
+    @Test
+    void removesMemberRowAndReturnsFullList_AC_003_1() throws Exception {
+        JsonNode body = json(perform(remove(PROJECT, BOB)).andExpect(status().isOk()));
+        assertThat(ids(body, "userId")).containsExactly(PM, ALICE, NAMELESS_MEMBER);
+        assertThat(body.get(0).get("role").asText()).isEqualTo("PROJECT_MANAGER");
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM project_membership WHERE user_id = ? AND project_id = ?",
+                        Integer.class,
+                        BOB,
+                        PROJECT))
+                .isZero();
+    }
+
+    @Test
+    void recordsOneAuditEntryWithRemovedId_AC_003_2() throws Exception {
+        perform(remove(PROJECT, ALICE)).andExpect(status().isOk());
+        List<Map<String, Object>> audits = db.queryForList("""
+                SELECT action, target_type, actor_id, details ->> 'removed' AS removed, details -> 'added' IS NOT NULL AS has_added
+                FROM audit_log_entry WHERE target_id = ?
+                """, PROJECT);
+        assertThat(audits).hasSize(1);
+        assertThat(audits.get(0))
+                .containsEntry("action", "PROJECT_MEMBER_CHANGE")
+                .containsEntry("target_type", "PROJECT")
+                .containsEntry("actor_id", PM)
+                .containsEntry("has_added", false);
+        assertThat(mapper.readValue((String) audits.get(0).get("removed"), String[].class))
+                .containsExactly(ALICE.toString());
+    }
+
+    @Test
+    void refusesNonMemberAlreadyRemovedOrManagerRow_AC_003_3() throws Exception {
+        // Design E12 (the Project Manager's row) and E13 (a second remove of the same member).
+        perform(remove(PROJECT, BOB)).andExpect(status().isOk());
+        int auditsAfterFirstRemove = auditCount(PROJECT);
+        for (UUID refused : List.of(BOB, PM, CAROL, UUID.randomUUID())) {
+            perform(remove(PROJECT, refused))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("MSG06"));
+        }
+        assertThat(memberCount(PROJECT)).isEqualTo(3);
+        assertThat(auditCount(PROJECT)).isEqualTo(auditsAfterFirstRemove);
+    }
+
+    @Test
+    void refusesRemoveFromRemovedProject_AC_003_4() throws Exception {
+        membership(ALICE, REMOVED, "MEMBER");
+        perform(remove(REMOVED, ALICE))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("MSG06"));
+        assertThat(memberCount(REMOVED)).isEqualTo(2);
+        assertThat(auditCount(REMOVED)).isZero();
+    }
+
+    @Test
+    void keepsTicketsAndSolutionsOfRemovedMember_AC_003_5() throws Exception {
+        String ticketSql = """
+                INSERT INTO ticket(source_ticket_id, project_id, source, status, title, symptoms, root_cause,
+                    resolution_steps, scope, writer_id)
+                VALUES (?, ?, ?, ?, 'KAN129 ticket', 'Symptom', 'Cause', 'Fix', 'Scope', ?)
+                RETURNING ticket_id
+                """;
+        UUID solution = db.queryForObject(
+                ticketSql, UUID.class, "K128A-SOL", PROJECT, "SOLUTION_FORM", "PENDING_REVIEW", ALICE);
+        UUID published = db.queryForObject(ticketSql, UUID.class, "K128A-PUB", PROJECT, "CSV", "PUBLISHED", ALICE);
+        String rowSql = "SELECT * FROM ticket WHERE ticket_id IN (?,?) ORDER BY source_ticket_id";
+        List<Map<String, Object>> before = db.queryForList(rowSql, solution, published);
+
+        perform(remove(PROJECT, ALICE)).andExpect(status().isOk());
+
+        assertThat(db.queryForList(rowSql, solution, published))
+                .isEqualTo(before)
+                .hasSize(2);
+    }
+
     private void expectForbiddenEverywhere(UUID project) throws Exception {
         perform(get("/api/v1/projects/" + project))
                 .andExpect(status().isForbidden())
@@ -393,6 +471,7 @@ class ProjectMembersIT {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$[0]").doesNotExist());
         perform(add(project, List.of(CAROL))).andExpect(status().isForbidden());
+        perform(remove(project, BOB)).andExpect(status().isForbidden());
         assertThat(memberCount(project)).isEqualTo(4);
         assertThat(auditCount(project)).isZero();
     }
@@ -412,6 +491,10 @@ class ProjectMembersIT {
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(Map.of("userIds", userIds)));
+    }
+
+    private MockHttpServletRequestBuilder remove(UUID project, UUID userId) {
+        return delete("/api/v1/projects/" + project + "/members/" + userId).with(csrf());
     }
 
     // Candidates are Workspace-wide and tenant A is shared with other ITs: only this class's accounts are compared.

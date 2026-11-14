@@ -35,3 +35,31 @@ Branch: `feat/KAN-128-project-integration-add-ticket-resolver`. One commit per t
   - modify `frontend/src/features/audit-log/hooks/audit-filters.ts` (and audit-log mocks/tests that list every action)
 - **Verify:** in `frontend/`: `npm run format:check`, `lint`, `typecheck`, `test`, `build`; `npm run generate:api` leaves no diff.
 - **Depends on:** Task 1
+
+## Task 3: Remove member API (KAN-129)
+
+- **Story:** STORY-003
+- **Feature:** `project-member-remove-api`
+- **Covers:** AC-003.1–AC-003.5
+- **Description:** `DELETE /api/v1/projects/{projectId}/members/{userId}` with the manager check (D3, D4), the one-statement delete of the `MEMBER` row (D14), 409 for a Removed Project (D15), audit `{"removed": [id]}` in the same transaction (D16). An IT proves a ticket by the removed member is unchanged (D17). Branch `feat/KAN-129-project-integration-remove-member`. Tests first; every test name starts with its AC id; E12–E13 have a test.
+- **Files:**
+  - modify `backend/src/main/java/vn/tsolve/project/controller/ProjectController.java`
+  - modify `backend/src/main/java/vn/tsolve/project/service/ProjectMemberService.java`, `service/impl/ProjectMemberServiceImpl.java`
+  - modify `backend/src/main/java/vn/tsolve/project/repository/ProjectMemberRepository.java`
+  - modify `backend/src/test/java/vn/tsolve/project/ProjectMembersIT.java`, `service/impl/ProjectMemberServiceImplTest.java`
+- **Verify:** `mvn verify` in `backend/`.
+- **Depends on:** Task 1
+
+## Task 4: Remove button on the Members tab (KAN-129)
+
+- **Story:** STORY-001, STORY-003
+- **Feature:** `project-member-remove-tab`
+- **Covers:** AC-001.7, AC-003.6–AC-003.10
+- **Description:** Add the DELETE to `frontend/openapi/tsolve-api.yaml`, regenerate, a Remove button on `MEMBER` rows while the Project is Active, MSG55 confirm (D18), MSG05 / MSG06, MSW handler. Tests first; every test name starts with its AC id.
+- **Files:**
+  - modify `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
+  - modify `frontend/src/features/jira-integration/components/MembersTable.tsx`, `pages/ProjectDetailPage.tsx` (+ tests)
+  - create `frontend/src/features/jira-integration/hooks/useRemoveMemberFromProject.ts`
+  - modify `frontend/src/features/jira-integration/mocks/handlers.ts`
+- **Verify:** in `frontend/`: `npm run format:check`, `lint`, `typecheck`, `test`, `build`; `npm run generate:api` leaves no diff.
+- **Depends on:** Task 3
