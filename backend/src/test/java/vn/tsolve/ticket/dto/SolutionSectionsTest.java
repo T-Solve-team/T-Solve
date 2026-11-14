@@ -11,7 +11,7 @@ class SolutionSectionsTest {
     private final ObjectMapper json = new ObjectMapper();
 
     @Test
-    void writesOnlyTheFiveSections_BUG_200() throws Exception {
+    void writesOnlyTheFiveSections_BUG_214() throws Exception {
         SolutionSections sections = new SolutionSections("Drops", "Old", "Update", "", "Laptops");
 
         JsonNode written = json.valueToTree(sections);

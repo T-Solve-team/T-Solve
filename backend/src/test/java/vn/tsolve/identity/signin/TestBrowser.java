@@ -81,11 +81,25 @@ final class TestBrowser {
         String hostPort = uri.getHost() + (uri.getPort() < 0 ? "" : ":" + uri.getPort());
         String real = hostRewrites.get(hostPort);
         URI target = real == null ? uri : URI.create(uri.toString().replace("//" + hostPort, "//" + real));
-        Reply reply = send(target, uri.getHost(), Map.of());
+        Reply reply = send(target, uri.getHost(), Map.of(), null);
         if (reply.status() == 200) {
             pagesShown.add(url);
         }
         return reply;
+    }
+
+    /** A urlencoded form POST to any URL; the cookies are those of the URL's host name. */
+    Reply post(String url, Map<String, String> form) {
+        lastUrl = url;
+        URI uri = URI.create(url);
+        String hostPort = uri.getHost() + (uri.getPort() < 0 ? "" : ":" + uri.getPort());
+        String real = hostRewrites.get(hostPort);
+        URI target = real == null ? uri : URI.create(uri.toString().replace("//" + hostPort, "//" + real));
+        String body = form.entrySet().stream()
+                .map(e -> java.net.URLEncoder.encode(e.getKey(), java.nio.charset.StandardCharsets.UTF_8) + "="
+                        + java.net.URLEncoder.encode(e.getValue(), java.nio.charset.StandardCharsets.UTF_8))
+                .collect(java.util.stream.Collectors.joining("&"));
+        return send(target, uri.getHost(), Map.of(), body);
     }
 
     /** The URL of every page (a 200 answer) the browser has been shown, in order. */
@@ -105,12 +119,17 @@ final class TestBrowser {
         extra.put("X-Forwarded-Host", pub.getHost());
         extra.put("X-Forwarded-Port", String.valueOf(pub.getPort() < 0 ? 80 : pub.getPort()));
         extra.put("X-Forwarded-Proto", pub.getScheme());
-        return send(target, pub.getHost(), extra);
+        return send(target, pub.getHost(), extra, null);
     }
 
-    private Reply send(URI target, String cookieHost, Map<String, String> extraHeaders) {
-        HttpRequest.Builder builder =
-                HttpRequest.newBuilder(target).timeout(Duration.ofSeconds(60)).GET();
+    private Reply send(URI target, String cookieHost, Map<String, String> extraHeaders, String formBody) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(target).timeout(Duration.ofSeconds(60));
+        if (formBody == null) {
+            builder.GET();
+        } else {
+            builder.header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(formBody));
+        }
         extraHeaders.forEach(builder::header);
         Map<String, String> cookies = jar.get(cookieHost);
         if (cookies != null && !cookies.isEmpty()) {

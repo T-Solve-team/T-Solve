@@ -12,7 +12,10 @@ import static vn.tsolve.identity.session.SessionTestFixtures.url;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
+import java.sql.Timestamp;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +31,7 @@ import org.mockito.invocation.Invocation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -43,8 +47,8 @@ import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
 import vn.tsolve.identity.signin.port.WorkspaceRef;
 
 /**
- * The Jira link endpoints on the whole chain, with the real session filter and CSRF filter (AC-001.38, .72, .75).
- * Task 30a answers 501 after it has consumed a valid request: the account link itself is Task 30b.
+ * The Jira link endpoints on the whole chain, with the real session filter and CSRF filter (AC-001.38, .71, .72, .75;
+ * AC-002.5 for the logout that keeps the links).
  */
 @TestPropertySource(properties = "TSOLVE_SITE_ORIGIN_TEMPLATE=http://{slug}.localhost:8080")
 class JiraLinkControllerTest extends AbstractSessionIT {
@@ -53,9 +57,11 @@ class JiraLinkControllerTest extends AbstractSessionIT {
     private static final WorkspaceRef BETA = InMemoryWorkspaceLookup.BETA;
     private static final String CONFIRM = "/api/v1/auth/jira-link/confirm";
     private static final String READ = "/api/v1/auth/jira-link/";
+    private static final String LOGOUT = "/api/v1/auth/logout";
     private static final String JIRA_USER = "Nguyen Van A";
     private static final String SITE = "acme-corp";
     private static final String KEY_PREFIX = "tsolve:jiralink:";
+    private static final String LAN = "lan@acme.example";
     private static final String MSG141_TEXT =
             "This sign-in request is not valid or has expired. Please start the sign-in again.";
     private static final String MSG07_TEXT = "Your session has expired. Please log in again.";
@@ -76,21 +82,27 @@ class JiraLinkControllerTest extends AbstractSessionIT {
 
     @BeforeEach
     void cleanTenants() {
+        TwoTenantDatabases.tenantA().update("TRUNCATE jira_account_links");
+        TwoTenantDatabases.tenantB().update("TRUNCATE jira_account_links");
         TwoTenantDatabases.tenantA().update("TRUNCATE app_user CASCADE");
         TwoTenantDatabases.tenantB().update("TRUNCATE app_user CASCADE");
     }
 
     // ---- helpers
 
-    /** A signed-in ACME person: an Account in acme's database and a session for it; returns the cookie value. */
+    /** A signed-in ACME person (Lan): an Account in acme's database and a session for it; returns the cookie value. */
     private String acmeSession() {
+        return acmeSession(LAN, "Lan");
+    }
+
+    private String acmeSession(String email, String fullName) {
         UUID account = UUID.randomUUID();
         TwoTenantDatabases.tenantA()
                 .update(
                         "INSERT INTO app_user (id, email, full_name, status, created_at) VALUES (?, ?, ?, ?, now())",
                         account,
-                        "lan@acme.example",
-                        "Lan",
+                        email,
+                        fullName,
                         "ACTIVE");
         return store.create(new WebSession(
                 WebSession.Kind.WORKSPACE,
@@ -103,9 +115,28 @@ class JiraLinkControllerTest extends AbstractSessionIT {
                 clock.instant()));
     }
 
+    private static UUID accountOf(String email) {
+        return TwoTenantDatabases.tenantA()
+                .queryForObject("SELECT id FROM app_user WHERE email = ?", UUID.class, email);
+    }
+
+    /** Every column of every Jira link row of one company database, in a fixed order. */
+    private static List<Map<String, Object>> linkRows(JdbcTemplate db) {
+        return db.queryForList("SELECT * FROM jira_account_links ORDER BY tracker_account_id, account_id");
+    }
+
+    private static Instant at(Object timestamp) {
+        return ((Timestamp) timestamp).toInstant().truncatedTo(ChronoUnit.MILLIS);
+    }
+
     /** Makes a link request through the service and returns its id. */
     private String requestFor(WorkspaceRef workspace) {
         String url = service.create(workspace.id(), "jira-acct-1", JIRA_USER, SITE);
+        return url.substring(url.indexOf("request=") + "request=".length());
+    }
+
+    private String requestForTracker(String trackerAccountId) {
+        String url = service.create(ACME.id(), trackerAccountId, JIRA_USER, SITE);
         return url.substring(url.indexOf("request=") + "request=".length());
     }
 
@@ -184,12 +215,14 @@ class JiraLinkControllerTest extends AbstractSessionIT {
                     }
                     case "used" -> {
                         String id = requestFor(ACME);
-                        assertThat(confirmAsAcme(session, id).getStatus()).isEqualTo(501);
+                        assertThat(confirmAsAcme(session, id).getStatus()).isEqualTo(200);
                         yield body(Map.of("requestId", id));
                     }
                     default -> body(Map.of("requestId", requestFor(BETA)));
                 };
         Set<String> keysBefore = allKeys();
+        List<Map<String, Object>> aBefore = linkRows(TwoTenantDatabases.tenantA());
+        List<Map<String, Object>> bBefore = linkRows(TwoTenantDatabases.tenantB());
 
         MockHttpServletResponse response = perform(confirm(ACME.siteHost(), session, body, true));
 
@@ -199,6 +232,12 @@ class JiraLinkControllerTest extends AbstractSessionIT {
                 .isEmpty();
         assertThat(redis.hasKey(keyOf(session))).isTrue();
         assertThat(allKeys()).as("no other Redis key is created").isSubsetOf(keysBefore);
+        assertThat(linkRows(TwoTenantDatabases.tenantA()))
+                .as("no link is recorded")
+                .isEqualTo(aBefore);
+        assertThat(linkRows(TwoTenantDatabases.tenantB()))
+                .as("no link is recorded in the other Workspace")
+                .isEqualTo(bBefore);
     }
 
     @ParameterizedTest
@@ -243,6 +282,12 @@ class JiraLinkControllerTest extends AbstractSessionIT {
                 .as("the existing request is untouched")
                 .isTrue();
         assertThat(allKeys()).as("no key is created or removed").isEqualTo(keysBefore);
+        assertThat(linkRows(TwoTenantDatabases.tenantA()))
+                .as("no link is recorded")
+                .isEmpty();
+        assertThat(linkRows(TwoTenantDatabases.tenantB()))
+                .as("no link is recorded")
+                .isEmpty();
     }
 
     // ---- AC-001.72: the 401 and the 403, and which one wins
@@ -281,6 +326,12 @@ class JiraLinkControllerTest extends AbstractSessionIT {
         assertThat(requestExists(id))
                 .as("a refused POST never burns the request")
                 .isTrue();
+        assertThat(linkRows(TwoTenantDatabases.tenantA()))
+                .as("no link is recorded")
+                .isEmpty();
+        assertThat(linkRows(TwoTenantDatabases.tenantB()))
+                .as("no link is recorded")
+                .isEmpty();
     }
 
     @ParameterizedTest
@@ -302,6 +353,12 @@ class JiraLinkControllerTest extends AbstractSessionIT {
         } else {
             assertMsg141(response);
         }
+        assertThat(linkRows(TwoTenantDatabases.tenantA()))
+                .as("no link is recorded")
+                .isEmpty();
+        assertThat(linkRows(TwoTenantDatabases.tenantB()))
+                .as("no link is recorded")
+                .isEmpty();
     }
 
     // ---- AC-001.38: the Workspace and the tracker account come from the stored request only
@@ -332,9 +389,18 @@ class JiraLinkControllerTest extends AbstractSessionIT {
                         "trackerAccountId",
                         "evil",
                         "workspaceId",
-                        BETA.id().toString())),
+                        BETA.id().toString(),
+                        "accountId",
+                        UUID.randomUUID().toString())),
                 true));
-        assertThat(accepted.getStatus()).isEqualTo(501);
+        assertThat(accepted.getStatus()).isEqualTo(200);
+
+        // the row holds the stored tracker account and the session's Account, in the host's Workspace only
+        List<Map<String, Object>> rows = linkRows(TwoTenantDatabases.tenantA());
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).get("tracker_account_id")).isEqualTo("jira-acct-1");
+        assertThat(rows.get(0).get("account_id")).isEqualTo(accountOf(LAN));
+        assertThat(linkRows(TwoTenantDatabases.tenantB())).isEmpty();
 
         // the service saw only the request id and the Workspace of the host/session, never a client-sent value
         List<Invocation> consumes = Mockito.mockingDetails(service).getInvocations().stream()
@@ -345,22 +411,146 @@ class JiraLinkControllerTest extends AbstractSessionIT {
         assertThat(consumes.get(1).getArguments()).containsExactly(forAcme, ACME.id());
     }
 
-    // ---- AC-001.72: the 501 of Task 30a
+    // ---- AC-001.71: the link is recorded
 
     @Test
-    @DisplayName("AC-001.72 a valid request answers 501, uses the request up and records nothing until Task 30b")
-    void aValidRequestAnswers501AndRecordsNothingUntilTask30b() throws Exception {
+    @DisplayName("AC-001.71 confirm records the link, answers 200 MSG75 and creates no new session")
+    void confirmRecordsTheLinkAnswers200Msg75AndCreatesNoNewSession() throws Exception {
         String session = acmeSession();
         String id = requestFor(ACME);
+        Set<String> keysBefore = allKeys();
+        assertThat(keysBefore).contains(keyOf(session), requestKey(id));
 
         MockHttpServletResponse response = confirmAsAcme(session, id);
 
-        assertThat(response.getStatus()).isEqualTo(501);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(tree(response).path("code").asText()).isEqualTo("MSG75");
         assertThat(SignInTestFixtures.setCookie(response, SESSION_COOKIE))
                 .as("no new session")
                 .isEmpty();
-        assertThat(requestExists(id)).as("the request is consumed").isFalse();
+        Set<String> expected = new HashSet<>(keysBefore);
+        expected.remove(requestKey(id));
+        assertThat(allKeys()).as("only the request key is gone").isEqualTo(expected);
+        assertThat(redis.hasKey(keyOf(session))).isTrue();
+        List<Map<String, Object>> rows = linkRows(TwoTenantDatabases.tenantA());
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).get("tracker_account_id")).isEqualTo("jira-acct-1");
+        assertThat(rows.get(0).get("account_id")).isEqualTo(accountOf(LAN));
+        assertThat(at(rows.get(0).get("linked_at"))).isEqualTo(clock.instant().truncatedTo(ChronoUnit.MILLIS));
+        assertThat(linkRows(TwoTenantDatabases.tenantB())).isEmpty();
+
         assertMsg141(confirmAsAcme(session, id));
+        assertThat(linkRows(TwoTenantDatabases.tenantA()))
+                .as("a second confirm adds no row")
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("AC-001.71 a confirm from another Account replaces the earlier link of the same tracker account")
+    void aConfirmFromAnotherAccountReplacesTheEarlierLink() throws Exception {
+        String lan = acmeSession();
+        assertThat(confirmAsAcme(lan, requestFor(ACME)).getStatus()).isEqualTo(200);
+        String minh = acmeSession("minh@acme.example", "Minh");
+
+        MockHttpServletResponse second = confirmAsAcme(minh, requestFor(ACME));
+
+        assertThat(second.getStatus()).isEqualTo(200);
+        List<Map<String, Object>> rows = linkRows(TwoTenantDatabases.tenantA());
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).get("tracker_account_id")).isEqualTo("jira-acct-1");
+        assertThat(rows.get(0).get("account_id")).isEqualTo(accountOf("minh@acme.example"));
+    }
+
+    @Test
+    @DisplayName(
+            "AC-001.71 edge 3 a failure while recording answers 500 MSG06, keeps the request used up and records nothing")
+    void aFailureWhileRecordingAnswers500Msg06AndRecordsNothing() throws Exception {
+        String session = acmeSession();
+        String id = requestFor(ACME);
+        // a trigger makes the insert fail inside the database, whatever way the code writes the row
+        JdbcTemplate a = TwoTenantDatabases.tenantA();
+        a.execute("CREATE OR REPLACE FUNCTION fail_link_insert() RETURNS trigger AS $$ BEGIN "
+                + "RAISE EXCEPTION 'secret sql failure'; END $$ LANGUAGE plpgsql");
+        a.execute("CREATE TRIGGER fail_link_insert BEFORE INSERT OR UPDATE ON jira_account_links "
+                + "FOR EACH ROW EXECUTE FUNCTION fail_link_insert()");
+        MockHttpServletResponse response;
+        try {
+            response = confirmAsAcme(session, id);
+        } finally {
+            a.execute("DROP TRIGGER IF EXISTS fail_link_insert ON jira_account_links");
+            a.execute("DROP FUNCTION IF EXISTS fail_link_insert()");
+        }
+
+        assertThat(response.getStatus()).isEqualTo(500);
+        assertThat(tree(response).path("code").asText()).isEqualTo("MSG06");
+        assertThat(response.getContentAsString()).doesNotContain("secret sql").doesNotContain("jira_account_links");
+        assertThat(requestExists(id)).as("the request stays used up").isFalse();
+        assertThat(linkRows(TwoTenantDatabases.tenantA())).isEmpty();
+        assertThat(linkRows(TwoTenantDatabases.tenantB())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("AC-001.71 a new confirm of the same tracker account by the same Account refreshes linked_at")
+    void aNewConfirmBySameAccountRefreshesLinkedAt() throws Exception {
+        String session = acmeSession();
+        assertThat(confirmAsAcme(session, requestFor(ACME)).getStatus()).isEqualTo(200);
+        Instant first = clock.instant().truncatedTo(ChronoUnit.MILLIS);
+        clock.advance(Duration.ofMinutes(5));
+
+        assertThat(confirmAsAcme(session, requestFor(ACME)).getStatus()).isEqualTo(200);
+
+        List<Map<String, Object>> rows = linkRows(TwoTenantDatabases.tenantA());
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).get("account_id")).isEqualTo(accountOf(LAN));
+        assertThat(at(rows.get(0).get("linked_at")))
+                .isEqualTo(first.plus(Duration.ofMinutes(5)))
+                .isAfter(first);
+    }
+
+    @Test
+    @DisplayName("AC-001.71 edge 2 one Account keeps several links, and relinking one leaves the others")
+    void oneAccountKeepsSeveralLinks() throws Exception {
+        String lan = acmeSession();
+        String minh = acmeSession("minh@acme.example", "Minh");
+        assertThat(confirmAsAcme(lan, requestForTracker("jira-acct-1")).getStatus())
+                .isEqualTo(200);
+        assertThat(confirmAsAcme(lan, requestForTracker("jira-acct-2")).getStatus())
+                .isEqualTo(200);
+        assertThat(linkRows(TwoTenantDatabases.tenantA())).hasSize(2);
+
+        assertThat(confirmAsAcme(minh, requestForTracker("jira-acct-1")).getStatus())
+                .isEqualTo(200);
+
+        List<Map<String, Object>> rows = linkRows(TwoTenantDatabases.tenantA());
+        assertThat(rows)
+                .extracting(row -> row.get("tracker_account_id"), row -> row.get("account_id"))
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("jira-acct-1", accountOf("minh@acme.example")),
+                        org.assertj.core.groups.Tuple.tuple("jira-acct-2", accountOf(LAN)));
+    }
+
+    // ---- AC-002.5: logout keeps the links
+
+    @Test
+    @DisplayName("AC-002.5 logout keeps the Account's Jira links")
+    void logoutKeepsTheAccountsJiraLinks() throws Exception {
+        String session = acmeSession();
+        assertThat(confirmAsAcme(session, requestFor(ACME)).getStatus()).isEqualTo(200);
+        TwoTenantDatabases.tenantA()
+                .update(
+                        "INSERT INTO jira_account_links (tracker_account_id, account_id, linked_at) VALUES (?, ?, ?)",
+                        "jira-acct-2",
+                        accountOf(LAN),
+                        Timestamp.from(clock.instant()));
+        List<Map<String, Object>> before = linkRows(TwoTenantDatabases.tenantA());
+        assertThat(before).hasSize(2);
+
+        MockHttpServletResponse response =
+                perform(post(url(ACME.siteHost(), LOGOUT)).with(csrf()).cookie(new Cookie(SESSION_COOKIE, session)));
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(redis.hasKey(keyOf(session))).as("the session is gone").isFalse();
+        assertThat(linkRows(TwoTenantDatabases.tenantA())).isEqualTo(before);
     }
 
     // ---- AC-001.75: the GET
@@ -383,7 +573,7 @@ class JiraLinkControllerTest extends AbstractSessionIT {
         assertThat(requestExists(id)).as("the GET does not consume").isTrue();
         assertThat(confirmAsAcme(session, id).getStatus())
                 .as("the confirm still finds it")
-                .isEqualTo(501);
+                .isEqualTo(200);
 
         // 400 rows: unknown, used (just confirmed), other Workspace
         assertMsg141(read(ACME.siteHost(), session, SessionTestFixtures.randomCookieValue()));

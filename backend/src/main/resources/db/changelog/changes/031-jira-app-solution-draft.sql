@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset ticket:027-jira-app-solution-draft
+--changeset ticket:031-jira-app-solution-draft
 
 -- jira-app STORY-005 (KAN-126): a Solution Form Draft, one per creator and Jira issue, saved unvalidated (GBR-26).
 -- The Solution Form ticket itself is a `ticket` row (source SOLUTION_FORM); `uq_ticket_ticket_id` on

@@ -4,6 +4,11 @@ Master registry of all artifacts in this workspace.
 
 | ID | Type | Module | Status | Path |
 |----|------|--------|--------|------|
+| — | spec | wiki | approved | artifacts/03-modules/wiki/spec.md |
+| — | design | wiki | approved | artifacts/04-plans/wiki/design.md |
+| — | design | wiki | approved | artifacts/04-plans/wiki/iteration-1/design.md |
+| — | decisions | wiki | approved | artifacts/04-plans/wiki/iteration-1/kan-91-decisions.md |
+| — | tasks | wiki | approved | artifacts/04-plans/wiki/iteration-1/tasks.md |
 | IMPL-REVIEW-10 | session-log | ticket-review | in-progress | artifacts/05-implementation/ticket-review/task-10-review-jira-feedback.md |
 | IMPL-REVIEW-9 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-9-review-production-api.md |
 | IMPL-REVIEW-8 | session-log | ticket-review | evaluating | artifacts/05-implementation/ticket-review/task-8-review-queue-entry-time.md |
@@ -89,6 +94,8 @@ Master registry of all artifacts in this workspace.
 | — | tasks | platform | draft | artifacts/04-plans/platform/iteration-1/tasks.md |
 | — | design | platform | draft | artifacts/04-plans/platform/iteration-2/design.md |
 | — | tasks | platform | draft | artifacts/04-plans/platform/iteration-2/tasks.md |
+| — | session-log | platform | passing | artifacts/05-implementation/platform/task-7-kan-317-vps-deploy.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/kan-317-vps-deploy-review.md |
 | — | session-log | chatbot | passing | artifacts/05-implementation/chatbot/task-1-ask-answer.md |
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-6-placeholder-rule.md |
 | — | review | chatbot | pass | artifacts/06-evaluation/chatbot/task-1-ask-answer-review.md |
@@ -225,6 +232,9 @@ Master registry of all artifacts in this workspace.
 | — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-2-roles-security-review.md |
 | — | test-report | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-2-roles-security-test-report.md |
 | — | session-log | be-foundation | passing | artifacts/05-implementation/be-foundation/task-2-roles-security.md |
+| — | session-log | be-foundation | passing | artifacts/05-implementation/be-foundation/task-3-me-session.md |
+| — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-3-me-session-review.md |
+| — | test-report | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-3-me-session-test-report.md |
 | SPEC-WORKER-102 | spec | worker | draft | artifacts/03-modules/worker/spec.md |
 | DESIGN-WORKER-102 | design | worker | approved | artifacts/04-plans/worker/design.md |
 | DESIGN-WORKER-102-I1 | design | worker | approved | artifacts/04-plans/worker/iteration-1/design.md |
@@ -246,6 +256,29 @@ Master registry of all artifacts in this workspace.
 | — | review | identity | fail | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-review.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-review2.md |
 | — | test-report | identity | pass-with-open-format | artifacts/06-evaluation/identity/task-25b-callback-workspace-checks-test-report.md |
+| — | spec | workspace | draft | artifacts/03-modules/workspace/spec.md |
+| — | design | workspace | draft | artifacts/04-plans/workspace/design.md |
+| — | design | workspace | draft | artifacts/04-plans/workspace/iteration-1/design.md |
+| — | tasks | workspace | draft | artifacts/04-plans/workspace/iteration-1/tasks.md |
+| — | research | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-120-scout.md |
+| — | decisions | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-120-decisions.md |
+| — | decisions | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-121-decisions.md |
+| — | research | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-121-scout.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-26a-web-session.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-26b-user-role.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-30a-jira-link-sign-in.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-30b-jira-link-record.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-30b-jira-link-record-review.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-29a-operator-sign-in.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-29a-operator-sign-in-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-29a-operator-sign-in-test-report.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-27a-logout.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-27b-session-expiry.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-29b-operator-session.md |
+| — | review | identity | pass | artifacts/06-evaluation/identity/task-29b-operator-session-review.md |
+| — | test-report | identity | pass | artifacts/06-evaluation/identity/task-29b-operator-session-test-report.md |
+| — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-12-logout-url.md |
+| — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-12-logout-url-review.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/kan-14-staging-cd-review.md |
+| — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-bug-205-stub-workspace-ready-review.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/kan-14-bug-207-cd-docker-config-review.md |

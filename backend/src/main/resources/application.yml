@@ -64,6 +64,15 @@ management:
         include: health,info
 
 tsolve:
+  # File storage (STORY-007) on Garage through the S3 API. Empty endpoint = no storage beans (see StorageConfig).
+  storage:
+    endpoint: ${FILE_STORAGE_ENDPOINT:}
+    access-key: ${FILE_STORAGE_ACCESS_KEY:}
+    secret-key: ${FILE_STORAGE_SECRET_KEY:}
+    bucket: ${FILE_STORAGE_BUCKET:}
+    public-url-pattern: ${FILE_STORAGE_PUBLIC_URL_PATTERN:}
+    url-ttl-seconds: ${FILE_STORAGE_URL_TTL_SECONDS:300}
+    max-bytes: ${FILE_STORAGE_MAX_BYTES:10485760}
   worker:
     enabled: ${TSOLVE_WORKER_ENABLED:false}
     # Optional until enabled; validation rejects missing Jobs credentials without a fallback.
@@ -97,15 +106,22 @@ tsolve:
     admin-origin: ${TSOLVE_ADMIN_ORIGIN}
     operator-emails: ${PLATFORM_OPERATOR_EMAILS}
     keycloak-web-client-secret: ${KEYCLOAK_WEB_CLIENT_SECRET}
+    keycloak-console-client-secret: ${KEYCLOAK_CONSOLE_CLIENT_SECRET}
   # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId", ids as UUIDs. Empty = nobody can import.
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
     inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}
     # Jira import: "projectId:JIRAKEY,projectId:JIRAKEY". A Project without a key cannot pull from Jira (MSG50).
     jira-keys: ${TSOLVE_STUB_JIRA_KEYS:}
-    # Until search builds the AI Solution Suggestion (KAN-47): empty = no suggestion, "unavailable" = search fails,
-    # any other text = that suggested solution for every new issue (tracker STORY-011).
-    suggestion: ${TSOLVE_STUB_SUGGESTION:}
+    # Workspaces until the platform module's Tenant Resolver (outside the dev profile). Entries separated by ";":
+    # siteHost|slug|workspaceUuid|googleDomain|keycloakOrganizationId. Empty = no Workspace.
+    workspaces: ${TSOLVE_STUB_WORKSPACES:}
+    # Staging only (BUG-205 / KAN-329): true makes /me report the Workspace as set up until the Workspace module's
+    # lookup exists. Default false.
+    workspace-ready: ${TSOLVE_STUB_WORKSPACE_READY:false}
+  triage:
+    # Cosine similarity (0 to 1) a Solution or Wiki document needs to be a source of the AI Solution Suggestion.
+    min-similarity: ${SUGGESTION_MIN_SIMILARITY:0.7}
 
 ---
 # Keycloak provisioning of a Workspace's sign-in (AC-001.58, .60, .61). This document is active only in the `ops`

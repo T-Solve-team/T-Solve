@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,7 +19,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.common.exception.ProblemDetails;
+import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.identity.signin.AuthHosts;
+import vn.tsolve.identity.signin.IdentityClock;
 import vn.tsolve.identity.signin.port.WorkspaceLookup;
 import vn.tsolve.identity.signin.port.WorkspaceRef;
 
@@ -26,7 +29,7 @@ import vn.tsolve.identity.signin.port.WorkspaceRef;
  * The Jira link confirm page's two calls (AC-001.72, AC-001.75, AC-001.38). The session and the CSRF token are checked
  * by the filters before this runs (401, then 403); a missing, expired, used, other-Workspace or malformed request is
  * 400 MSG141. The Workspace is the one of the host, which the session filter has matched to the session; the tracker
- * account comes only from the stored request. The confirm answers 501 for a valid request until Task 30b.
+ * account comes only from the stored request. The confirm records the link for the session's Account (AC-001.71).
  */
 @RestController
 @RequestMapping("/api/v1/auth/jira-link")
@@ -37,14 +40,25 @@ public class JiraLinkController {
     private static final String MSG141_TEXT =
             "This sign-in request is not valid or has expired. Please start the sign-in again.";
 
+    private static final String MSG75 = "MSG75";
+
     private final JiraLinkRequestService requests;
+    private final JiraAccountLinkService links;
+    private final IdentityClock clock;
     private final AuthHosts hosts;
     private final WorkspaceLookup workspaces;
     private final ObjectMapper json;
 
     public JiraLinkController(
-            JiraLinkRequestService requests, AuthHosts hosts, WorkspaceLookup workspaces, ObjectMapper json) {
+            JiraLinkRequestService requests,
+            JiraAccountLinkService links,
+            IdentityClock clock,
+            AuthHosts hosts,
+            WorkspaceLookup workspaces,
+            ObjectMapper json) {
         this.requests = requests;
+        this.links = links;
+        this.clock = clock;
         this.hosts = hosts;
         this.workspaces = workspaces;
         this.json = json;
@@ -62,14 +76,21 @@ public class JiraLinkController {
 
     @PostMapping("/confirm")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> confirm(@RequestBody(required = false) String body, HttpServletRequest request) {
+    public ResponseEntity<?> confirm(
+            @RequestBody(required = false) String body,
+            @AuthenticationPrincipal TSolveUser user,
+            HttpServletRequest request) {
         Optional<UUID> workspace = workspaceOf(request);
         String requestId = requestIdOf(body);
         // consume runs for every well-formed id, so another Workspace's request is burned (AC-001.72)
-        if (workspace.isEmpty() || requests.consume(requestId, workspace.get()).isEmpty()) {
+        Optional<JiraLinkRequest> found =
+                workspace.isEmpty() ? Optional.empty() : requests.consume(requestId, workspace.get());
+        if (found.isEmpty()) {
             return invalid();
         }
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        // the tracker account is the stored one; the Account is the session's (AC-001.38)
+        links.link(found.get().trackerAccountId(), user.id(), clock.now());
+        return ResponseEntity.ok(Map.of("code", MSG75));
     }
 
     private Optional<UUID> workspaceOf(HttpServletRequest request) {

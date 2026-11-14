@@ -37,7 +37,7 @@ mayOpen, searchAllowed}`), `GET /tickets/search?q=` (list of `{ticketId, publicI
 
 **Story:** STORY-002, STORY-004, STORY-005, STORY-006
 **Feature:** solution-ticket-storage
-**Description:** Changeset `027-jira-app-solution-draft.sql` (table `solution_draft`; no new ticket index — `uq_ticket_ticket_id`
+**Description:** Changeset `031-jira-app-solution-draft.sql` (table `solution_draft`; no new ticket index — `uq_ticket_ticket_id`
 keeps one ticket per issue key, of any source, as the design decides). In `ticket`:
 `Ticket.submitted(...)`; `SolutionFormTicketService.submit(project, issueKey, title, writer, sections)` — validates
 required sections (MSG01 with `field_name`) and 10,000 code points (MSG02) unless all five are empty (Close), sets
@@ -47,7 +47,7 @@ required sections (MSG01 with `field_name`) and 10,000 code points (MSG02) unles
 Testcontainers base): the new ticket appears in `TicketReviewReadService.queue` with entry time and due date;
 two concurrent submits → one ticket. Tests: AC-002.5, AC-004.1, AC-004.3, AC-005.1, AC-005.3, AC-006.2.
 **Files:**
-- Create: `backend/src/main/resources/db/changelog/changes/027-jira-app-solution-draft.sql`,
+- Create: `backend/src/main/resources/db/changelog/changes/031-jira-app-solution-draft.sql`,
   `backend/src/main/java/vn/tsolve/ticket/{entity/SolutionDraft,repository/SolutionDraftRepository,service/SolutionFormTicketService,service/SolutionDraftService,service/impl/*Impl}.java`, tests
 - Modify: `db.changelog-master.xml`, `ticket/entity/Ticket.java`, `ticket/repository/TicketRepository.java`
 **Dependencies:** none

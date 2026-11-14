@@ -1,0 +1,48 @@
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 120px 1fr 260px;
+  gap: var(--ant-margin-sm);
+  align-items: center;
+  padding: var(--ant-padding-xxs) 0;
+}
+
+.track {
+  display: flex;
+  height: var(--ant-margin-sm);
+  border-radius: var(--ant-border-radius-sm);
+  background: var(--ant-color-fill-alter);
+  overflow: hidden;
+}
+
+.legend {
+  display: flex;
+  gap: var(--ant-margin);
+  margin-bottom: var(--ant-margin-xs);
+}
+
+.swatch {
+  display: inline-block;
+  width: var(--ant-margin-sm);
+  height: var(--ant-margin-sm);
+  margin-right: var(--ant-margin-xxs);
+  border-radius: var(--ant-border-radius-sm);
+}
+
+/* One colour per series, in the order the series are given. */
+.series0 {
+  background: var(--ant-color-success);
+}
+
+.series1 {
+  background: var(--ant-color-error);
+}
+
+.series2 {
+  background: var(--ant-color-warning);
+}

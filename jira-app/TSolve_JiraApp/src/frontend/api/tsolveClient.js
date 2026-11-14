@@ -2,6 +2,8 @@
 // manifest's endpoint to the tsolve-backend remote; Forge adds the FIT. Nothing here logs: questions, answers, issue
 // text and Solutions are personal text (AC-010.12, NF 3).
 import { invokeRemote } from '@forge/bridge';
+import { MOCK_DELAY_MS, mockAnswer } from './mockAnswers';
+import { USE_MOCK } from './mode';
 
 /** A UI call gives up after this long and shows MSG06 (AC-010.8, NF 2); the backend stops at 18 s. */
 export const ASK_TIMEOUT_MS = 20000;
@@ -37,7 +39,10 @@ export class TsolveError extends Error {
 }
 
 /** Whether the viewer may ask (AC-010.2). */
-export async function getEligibility() {
+export async function getEligibility(useMock = USE_MOCK) {
+  if (useMock) {
+    return { linked: true };
+  }
   const response = await call({ path: `${QUESTIONS}/eligibility`, method: 'GET' });
   return { linked: response.body?.linked === true };
 }
@@ -46,7 +51,15 @@ export async function getEligibility() {
  * The Knowledge Chatbot's answer `{answerId, outcome, text, citations}` to `question`, sent with the last 10 of the
  * earlier `{question, answer}` turns (AC-010.3, AC-010.4).
  */
-export async function askQuestion(question, history = []) {
+export async function askQuestion(question, history = [], useMock = USE_MOCK) {
+  if (useMock) {
+    await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS));
+    const answer = mockAnswer(question);
+    if (!answer) {
+      throw new TsolveError('MSG06');
+    }
+    return answer;
+  }
   const response = await call({
     path: QUESTIONS,
     method: 'POST',
@@ -70,7 +83,7 @@ export async function openSolutionForm(issueKey, { summary, description }) {
 /**
  * Finish or Close: creates the issue's ticket `{id, ticketId, status}`. Retries 3 times when T-Solve cannot be
  * reached or fails, then gives MSG69 (AC-004.4). A 409 MSG31 after a retry means an earlier try got through; any other
- * 409 (MSG40: the Project is no longer active) is given back (BUG-204).
+ * 409 (MSG40: the Project is no longer active) is given back (BUG-215).
  */
 export async function submitSolution(issueKey, { summary, sections }, { sleep = wait } = {}) {
   const request = {

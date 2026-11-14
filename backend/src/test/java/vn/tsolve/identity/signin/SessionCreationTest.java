@@ -109,7 +109,9 @@ class SessionCreationTest extends AbstractSessionIT {
     }
 
     private Set<String> sessionKeys() {
-        return redis.keys(SESSION_KEYS);
+        Set<String> keys = new java.util.HashSet<>(redis.keys(SESSION_KEYS));
+        keys.remove(SessionTestFixtures.EXPIRY_INDEX);
+        return keys;
     }
 
     // ---- tests

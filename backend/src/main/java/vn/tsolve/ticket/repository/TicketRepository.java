@@ -38,7 +38,7 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
                 review_due_date = cast(:today as date) + (case when p.review_range > 0 then p.review_range else 3 end),
                 updated_at = :now
             from project p
-            where p.public_id = t.project_id and t.ticket_id in (:ids)
+            where p.public_id = t.project_id and t.ticket_id in (:ids) and t.status = 'EXPIRED'
             """, nativeQuery = true)
     int sendBack(@Param("ids") Collection<UUID> ids, @Param("today") LocalDate today, @Param("now") Instant now);
 

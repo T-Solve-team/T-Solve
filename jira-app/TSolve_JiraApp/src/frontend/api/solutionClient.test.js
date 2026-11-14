@@ -72,7 +72,7 @@ describe('tsolveClient — Solution Form and Issue Panel', () => {
     });
   });
 
-  it('gives MSG40 back after a retry instead of counting it as submitted (BUG-204)', async () => {
+  it('gives MSG40 back after a retry instead of counting it as submitted (BUG-215)', async () => {
     invokeRemote.mockResolvedValueOnce(answer(502, {})).mockResolvedValueOnce(answer(409, { code: 'MSG40' }));
 
     await expect(submitSolution('ITSUP-12', { summary: 'VPN', sections: SECTIONS }, { sleep })).rejects.toMatchObject({

@@ -41,6 +41,7 @@ import org.springframework.core.io.ClassPathResource;
 class DiscoveryCheckTest {
 
     private static final String DISCOVERY_PATH = "/realms/tsolve/.well-known/openid-configuration";
+    private static final String OPS_DISCOVERY_PATH = "/realms/tsolve-ops/.well-known/openid-configuration";
     private static final String OTHER_ISSUER = "http://keycloak:8080/realms/tsolve";
 
     private static WireMockServer keycloak;
@@ -59,6 +60,15 @@ class DiscoveryCheckTest {
     @BeforeEach
     void resetKeycloak() {
         keycloak.resetAll();
+        // Task 29a: start-up also checks tsolve-ops; every test below serves a good one unless it says otherwise
+        serveOpsDiscovery(baseUrl() + "/realms/tsolve-ops");
+    }
+
+    private static void serveOpsDiscovery(String issuer) {
+        keycloak.stubFor(get(urlEqualTo(OPS_DISCOVERY_PATH))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"issuer\":\"" + issuer + "\"}")));
     }
 
     private static String baseUrl() {
@@ -85,6 +95,7 @@ class DiscoveryCheckTest {
         env.put("GOOGLE_CLIENT_SECRET", "test-secret");
         env.put("PLATFORM_OPERATOR_EMAILS", "ops@example.test");
         env.put("KEYCLOAK_WEB_CLIENT_SECRET", "test-keycloak-secret");
+        env.put("KEYCLOAK_CONSOLE_CLIENT_SECRET", "test-keycloak-console-secret");
         return new ApplicationContextRunner()
                 .withInitializer(DiscoveryCheckTest::onlyApplicationYml)
                 .withPropertyValues(env.entrySet().stream()
@@ -116,8 +127,11 @@ class DiscoveryCheckTest {
     }
 
     private static long warnLinesNaming(CapturedOutput output, String issuer) {
+        // not followed by "-": the issuer of tsolve-ops starts with the issuer of tsolve
+        java.util.regex.Pattern naming =
+                java.util.regex.Pattern.compile(java.util.regex.Pattern.quote(issuer) + "(?!-)");
         return Arrays.stream(output.getAll().split("\\R"))
-                .filter(line -> line.contains("WARN") && line.contains(issuer))
+                .filter(line -> line.contains("WARN") && naming.matcher(line).find())
                 .count();
     }
 
@@ -169,15 +183,18 @@ class DiscoveryCheckTest {
             default -> {
                 origin = baseUrl();
                 switch (how) {
-                    case "503" -> keycloak.stubFor(get(urlEqualTo(DISCOVERY_PATH))
-                            .willReturn(aResponse().withStatus(503)));
-                    case "500" -> keycloak.stubFor(get(urlEqualTo(DISCOVERY_PATH))
-                            .willReturn(aResponse().withStatus(500)));
-                    default -> keycloak.stubFor(get(urlEqualTo(DISCOVERY_PATH))
-                            .willReturn(aResponse()
-                                    .withFixedDelay(7_000)
-                                    .withHeader("Content-Type", "application/json")
-                                    .withBody("{\"issuer\":\"" + baseUrl() + "/realms/tsolve\"}")));
+                    case "503" ->
+                        keycloak.stubFor(get(urlEqualTo(DISCOVERY_PATH))
+                                .willReturn(aResponse().withStatus(503)));
+                    case "500" ->
+                        keycloak.stubFor(get(urlEqualTo(DISCOVERY_PATH))
+                                .willReturn(aResponse().withStatus(500)));
+                    default ->
+                        keycloak.stubFor(get(urlEqualTo(DISCOVERY_PATH))
+                                .willReturn(aResponse()
+                                        .withFixedDelay(7_000)
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody("{\"issuer\":\"" + baseUrl() + "/realms/tsolve\"}")));
                 }
             }
         }
@@ -196,19 +213,55 @@ class DiscoveryCheckTest {
     @DisplayName("edge 111 refuses a reachable answer that is not a discovery document and names the discovery URL")
     void refusesAnswerThatIsNotADiscoveryDocument_edge111(String how) {
         switch (how) {
-            case "404" -> keycloak.stubFor(
-                    get(urlEqualTo(DISCOVERY_PATH)).willReturn(aResponse().withStatus(404)));
-            case "200 that is not JSON" -> keycloak.stubFor(get(urlEqualTo(DISCOVERY_PATH))
-                    .willReturn(aResponse().withStatus(200).withBody("<html>Not Keycloak</html>")));
-            default -> keycloak.stubFor(get(urlEqualTo(DISCOVERY_PATH))
-                    .willReturn(aResponse()
-                            .withHeader("Content-Type", "application/json")
-                            .withBody("{\"authorization_endpoint\":\"" + baseUrl() + "/x\"}")));
+            case "404" ->
+                keycloak.stubFor(
+                        get(urlEqualTo(DISCOVERY_PATH)).willReturn(aResponse().withStatus(404)));
+            case "200 that is not JSON" ->
+                keycloak.stubFor(get(urlEqualTo(DISCOVERY_PATH))
+                        .willReturn(aResponse().withStatus(200).withBody("<html>Not Keycloak</html>")));
+            default ->
+                keycloak.stubFor(get(urlEqualTo(DISCOVERY_PATH))
+                        .willReturn(aResponse()
+                                .withHeader("Content-Type", "application/json")
+                                .withBody("{\"authorization_endpoint\":\"" + baseUrl() + "/x\"}")));
         }
 
         runner(baseUrl()).run(context -> {
             assertThat(context.getStartupFailure()).as("startup failure").isNotNull();
             assertThat(failureText(context.getStartupFailure())).contains(discoveryUrl(baseUrl()));
+        });
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @ValueSource(strings = {"tsolve-ops names another issuer", "tsolve-ops answers 503"})
+    @DisplayName("AC-001.28 edge 111 refuses to start when the tsolve-ops discovery names another issuer, and starts "
+            + "with one WARN when tsolve-ops cannot be reached")
+    void checksTheOpsRealmDiscoveryIssuer_AC_001_28_edge111(String how, CapturedOutput output) {
+        String expectedOps = baseUrl() + "/realms/tsolve-ops";
+        serveDiscovery(baseUrl() + "/realms/tsolve");
+        boolean wrongIssuer = how.endsWith("another issuer");
+        if (wrongIssuer) {
+            serveOpsDiscovery("http://keycloak:8080/realms/tsolve-ops");
+        } else {
+            keycloak.stubFor(
+                    get(urlEqualTo(OPS_DISCOVERY_PATH)).willReturn(aResponse().withStatus(503)));
+        }
+
+        runner(baseUrl()).run(context -> {
+            keycloak.verify(1, getRequestedFor(urlEqualTo(OPS_DISCOVERY_PATH)));
+            if (wrongIssuer) {
+                assertThat(context.getStartupFailure()).as("startup failure").isNotNull();
+                assertThat(failureText(context.getStartupFailure()))
+                        .contains(expectedOps)
+                        .contains("http://keycloak:8080/realms/tsolve-ops")
+                        .contains("TSOLVE_LOGIN_ORIGIN");
+            } else {
+                assertThat(context).hasNotFailed();
+                long warns = Arrays.stream(output.getAll().split("\\R"))
+                        .filter(line -> line.contains("WARN") && line.contains(expectedOps))
+                        .count();
+                assertThat(warns).as("WARN lines naming " + expectedOps).isEqualTo(1);
+            }
         });
     }
 }

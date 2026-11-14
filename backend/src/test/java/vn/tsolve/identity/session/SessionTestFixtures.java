@@ -13,6 +13,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -32,6 +33,9 @@ public final class SessionTestFixtures {
 
     public static final String SESSION_COOKIE = "__Host-TSOLVE_SESSION";
     public static final String KEY_PREFIX = "tsolve:session:";
+    /** The sorted set the expiry sweep reads (Task 27b); not a session key. */
+    public static final String EXPIRY_INDEX = "tsolve:session:expiry";
+
     public static final String REDIS_PASSWORD = "test-redis-password";
     public static final int PORT = 8081;
 
@@ -61,6 +65,16 @@ public final class SessionTestFixtures {
 
     public static String keyOf(String cookieValue) {
         return KEY_PREFIX + sha256Hex(cookieValue);
+    }
+
+    /** The member of the expiry index: {@code <sha256Hex(cookie)>|<workspaceId>|<accountId>}. */
+    public static String memberOf(String cookieValue, UUID workspaceId, UUID accountId) {
+        return sha256Hex(cookieValue) + "|" + workspaceId + "|" + accountId;
+    }
+
+    /** The index score of a deadline: epoch milliseconds. */
+    public static double scoreOf(Instant deadline) {
+        return deadline.toEpochMilli();
     }
 
     public static String url(String host, String path) {

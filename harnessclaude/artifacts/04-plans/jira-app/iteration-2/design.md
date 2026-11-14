@@ -57,7 +57,7 @@ backend /api/v1/jira-app/** (FIT chain, Roles.JIRA_APP) ─► vn.tsolve.jiraapp
 
 ## Data Model
 
-New changeset `027-jira-app-solution-draft.sql` (author `ticket`), tenant-table convention (AC-001.20):
+New changeset `031-jira-app-solution-draft.sql` (author `ticket`), tenant-table convention (AC-001.20):
 
 ```sql
 CREATE TABLE solution_draft (                         -- Solution Form Draft (GBR-26), one per creator and issue
@@ -119,7 +119,7 @@ backend/src/main/java/vn/tsolve/
     ├── entity/          Ticket.submitted(...), SolutionDraft
     ├── repository/      SolutionDraftRepository (+ TicketRepository finders by project and issue key)
     └── service/(impl/)  SolutionFormTicketService, SolutionDraftService
-backend/src/main/resources/db/changelog/changes/027-jira-app-solution-draft.sql
+backend/src/main/resources/db/changelog/changes/031-jira-app-solution-draft.sql
 frontend/openapi/tsolve-api.yaml    seven jira-app paths
 .env.example                        TSOLVE_STUB_AI
 ```
@@ -140,7 +140,7 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
 | # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
 |---|-------|-----------|----------|----------|-------------------|-----------|
 | 1 | STORY-001 | Authorization | Non-member calls `POST …/solution` directly | Critical | 403 MSG08, nothing stored | Task 5 |
-| 2 | STORY-004 | Timing | Two Finish calls race (double click, retry after a slow 201) | High | One ticket (`uq_ticket_ticket_id`, `ON CONFLICT DO NOTHING`), the other 409 MSG31; the client counts only a 409 MSG31 after a retry as success (BUG-204) | Task 2, Task 7 |
+| 2 | STORY-004 | Timing | Two Finish calls race (double click, retry after a slow 201) | High | One ticket (`uq_ticket_ticket_id`, `ON CONFLICT DO NOTHING`), the other 409 MSG31; the client counts only a 409 MSG31 after a retry as success (BUG-215) | Task 2, Task 7 |
 | 3 | STORY-004 | Integration | Ticket created but not visible in the Review Queue | High | `SOLUTION_FORM`, `PENDING_REVIEW`, entry time and due date set; queue IT reads it | Task 2 |
 | 4 | STORY-002 | Input extremes | Exactly 10,000 characters; emoji / surrogate pairs | Medium | Code points counted; 10,000 accepted, 10,001 → MSG02 | Task 2, Task 7 |
 | 5 | STORY-001 | Timing | Issue moved to Done from the board | Medium | No popup; the panel button opens the form | Task 6, Task 8 |

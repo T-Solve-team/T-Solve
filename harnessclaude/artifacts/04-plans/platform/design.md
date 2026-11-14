@@ -359,7 +359,9 @@ another's; no such use exists yet (see Out of Scope of the spec).
 - Images: `tsolve-backend` (also worker, migrate, seed and ops, by profile), `tsolve-frontend`, `tsolve-caddy`, built in
   CI and pushed to GHCR under the repository owner (`ghcr.io/<owner>/…`, tags `sha-<commit>` and `staging`) (decision
   P9).
-- Deploy: the `cd-staging` workflow runs on a self-hosted runner on the application VPS (label `tsolve-deploy`,
+- Deploy (as built for KAN-14, user decision 13/11: an SSH forced-command deploy key instead of the runner below, build
+  on the VPS instead of GHCR, no migrate or seed step; see Key Decisions "KAN-14 CD deviation"): the `cd-staging`
+  workflow runs on a self-hosted runner on the application VPS (label `tsolve-deploy`,
   non-root `deploy` user, systemd service with CPU and memory limits): pull → migrate (profile `migrate`: Registry
   changelog, then the tenant changelog for every Workspace, stopping and naming the first failing Workspace) → up →
   health → seed → smoke test.
@@ -393,6 +395,7 @@ another's; no such use exists yet (see Out of Scope of the spec).
 | H-Q4 Object storage | Garage (S3-compatible; ADR-014); one per environment; object names `<workspaceId>/<uuid>`; signed URLs; no local files | Local volume; a cloud bucket; the store first named on 4/11 (its community images stopped) | Hiếu, 4/11 and the user, 4/11 (Q1); any API replica can serve any file |
 | H-Q5 Provisioning | One `WorkspaceProvisioning` service; the script and the Console both call it; the first Admin is invited | Script with its own SQL | Hiếu, 4/11 |
 | H-Q6 Row guard | One-row `tenant_identity`; policy `tenant_guard` on every tenant table comparing it with the transaction's `app.tenant_id`; no `BYPASSRLS`; guard test enforces it | Boundary only | Hiếu, 4/11 |
+| KAN-14 CD deviation | The `cd-staging` workflow SSHes from a GitHub-hosted job to the VPS with a dedicated deploy key whose forced command is `/usr/local/sbin/tsolve-deploy` (root-owned, installed by hand); images are built on the VPS, not pushed to GHCR; CD runs no migrate or seed step and no automatic rollback | Self-hosted runner and GHCR (DevOps design §5.5, P9) | User, 13/11 (KAN-14). STORY-010 AC-010.2 – AC-010.6 are knowingly not met yet; the spec is unchanged by the user's choice |
 | P1 Shared changeset 001 | `be-foundation` (Trần Hải Anh) owns the master and decides who edits changeset 001; the legacy `workspace` table leaves the tenant changelog, its company data stays with `workspace`; platform's changesets are added after it | platform rewrites 001 | Ownership stays with `be-foundation` (user, 25/10) |
 | P2 Shared files | `backend/pom.xml`, `backend/src/main/resources/application*.yml`, `backend/.dockerignore` stay in platform `paths`; `be-foundation` stays the owner | quick change per edit | The gate needs them open (user, 25/10) |
 | P3 JWT library | `spring-security-oauth2-jose` (Nimbus `NimbusJwtDecoder.withJwkSource`), version from the Spring Boot BOM — approved by the user, 25/10 | full resource-server starter; jjwt | Key-set cache with one refetch on an unknown key id (AC-005.4) |
