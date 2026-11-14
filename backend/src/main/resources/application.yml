@@ -110,6 +110,9 @@ tsolve:
     # Workspaces until the platform module's Tenant Resolver (outside the dev profile). Entries separated by ";":
     # siteHost|slug|workspaceUuid|googleDomain|keycloakOrganizationId. Empty = no Workspace.
     workspaces: ${TSOLVE_STUB_WORKSPACES:}
+    # Staging only (BUG-205 / KAN-329): true makes /me report the Workspace as set up until the Workspace module's
+    # lookup exists. Default false.
+    workspace-ready: ${TSOLVE_STUB_WORKSPACE_READY:false}
 
 ---
 # Keycloak provisioning of a Workspace's sign-in (AC-001.58, .60, .61). This document is active only in the `ops`
