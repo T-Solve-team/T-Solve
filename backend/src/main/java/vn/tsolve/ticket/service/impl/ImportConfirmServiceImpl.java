@@ -53,8 +53,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
 
     private static final Logger log = LoggerFactory.getLogger(ImportConfirmServiceImpl.class);
     private static final int TITLE_MAX = 200;
-    private static final int WRITER_MAX = 100;
-    private static final String UNIQUE_VIOLATION = "23505";
+    static final int WRITER_MAX = 100;
+    static final String UNIQUE_VIOLATION = "23505";
 
     private final ImportPreviewRepository previews;
     private final ImportPreviewRowRepository previewRows;
@@ -99,6 +99,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
     @Override
     public ImportResultResponse confirm(String user, long previewId) {
         ImportPreview preview = previews.findByIdAndOwner(previewId, user)
+                // a Manual Draft is saved through /imports/manual, with its field checks (AC-006.13)
+                .filter(p -> p.getSource() != TicketSource.MANUAL)
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
@@ -220,7 +222,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         }
     }
 
-    private static String sqlState(Throwable e) {
+    static String sqlState(Throwable e) {
         for (Throwable t = e; t != null; t = t.getCause()) {
             if (t instanceof SQLException sql) {
                 return sql.getSQLState();
@@ -288,7 +290,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
      * ticket.title is VARCHAR(200) and ticket.writer VARCHAR(100); a longer Jira summary or assignee is cut on the
      * Ticket only, never inside a character (BUG-190).
      */
-    private static String cut(String text, int max) {
+    static String cut(String text, int max) {
         if (text == null || text.codePointCount(0, text.length()) <= max) {
             return text;
         }

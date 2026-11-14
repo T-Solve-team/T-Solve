@@ -77,8 +77,8 @@
     }
   },
   "import-ticket-list": {
-    "specHash": "ed6e2613d6a321dc8f8066573942c55aaf83be8e14661e28e10d8d85c8e9542e",
-    "approvedAt": "2026-11-07T15:29:26.530Z",
+    "specHash": "8ff44b66546cf9e272878da4ad8a0d5eb1c458917aa88ff604c40151b7760a8b",
+    "approvedAt": "2026-11-14T03:02:33.598Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager uploads a file with the  extension that is valid UTF-8, at most 10 MB, has every required column and at least one data row, for a Project they manage, THE system SHALL create an Import Preview and return its counts and the first page of its rows.",
@@ -129,7 +129,7 @@
       "AC-007.1": "WHEN a Project Manager reads their unconfirmed preview, THE system SHALL return its Project, file name, Valid, Error and Removed counts, MSG30 when at least one row is Error, and the first page of its rows, as in AC-001.1.",
       "AC-007.2": "IF the preview belongs to another user, has been confirmed, or no longer exists, THEN THE system SHALL reject the read with HTTP 404.",
       "AC-007.3": "IF the caller no longer manages the preview's Project or the Project is no longer Active, THEN THE system SHALL reject the read with HTTP 403 (MSG08).",
-      "AC-008.1": "WHEN a Project Manager opens Import Tickets, THE web app SHALL show the tabs Jira, CSV and Manual entry with CSV selected and Manual entry disabled; the Jira tab and the Drafts list behave as  STORY-001 and STORY-004 say.",
+      "AC-008.1": "WHEN a Project Manager opens Import Tickets, THE web app SHALL show the tabs Jira, CSV and Manual entry with CSV selected; the Jira tab and the Drafts list behave as  STORY-001 and STORY-004 say, and the Manual entry tab as  STORY-006 says.",
       "AC-008.2": "THE web app SHALL offer in the Project drop-down only the Projects of the signed-in user whose role in the Project is Project Manager, each shown with its Jira project key and Department name.",
       "AC-008.3": "WHEN the Project Manager clicks Download template, THE web app SHALL save the file returned by the template endpoint as .",
       "AC-008.4": "IF the Project Manager clicks Upload without a Project or without a file, THEN THE web app SHALL show MSG01 at each missing field and send nothing.",
@@ -517,8 +517,8 @@
     }
   },
   "platform": {
-    "specHash": "de0015edeb29635061b3f6aac6d3850d69d016fc212bd55f6e653e031353b035",
-    "approvedAt": "2026-11-05T15:23:53.467Z",
+    "specHash": "f5bff144498c653f1a304a88390a8e1c1266cc1b4b2510125852a615f4d48d27",
+    "approvedAt": "2026-11-14T05:04:24.631Z",
     "by": "user",
     "acs": {
       "AC-001.15": "THE catalog database (the Platform / Tenant Registry of the HLA, named ) SHALL hold the table  with  (UUID, primary key),  (not null, unique),  ( or , not null),  (not null, unique),  (not null),  (not null, encrypted as AC-001.24 says),  (the tenant changelog version last applied to that database, not null),  (nullable),  (nullable, unique),  and  (, not null) (GBR-24, GBR-37).",
@@ -695,7 +695,19 @@
       "AC-014.10": "THE Caddy SHALL close a request that exceeds the read, write or idle time set by .",
       "AC-014.11": "IF one client IP address sends more than  requests within , or the requests to one Workspace site (all its clients together) exceed  within it, THEN THE Caddy SHALL answer 429 with a  header and pass nothing to the backend. The rates are values in ; Caddy runs as an image with the rate-limit module (decision Q8).",
       "AC-014.12": "THE repository SHALL hold a load-test script under  for sign-in, the ticket list and a call of the Jira App path, with the thresholds in the script: 500 concurrent users, 95th percentile of the response time under 1 second, error rate under 1 % (decision Q7; Hiếu confirms the numbers).",
-      "AC-014.13": "WHEN the load-test script runs against the staging environment, THE script SHALL exit non-zero if a threshold of AC-014.12 is missed, and the result of one run SHALL be recorded in a report under ."
+      "AC-014.13": "WHEN the load-test script runs against the staging environment, THE script SHALL exit non-zero if a threshold of AC-014.12 is missed, and the result of one run SHALL be recorded in a report under .",
+      "AC-015.1": "THE cross-module isolation test SHALL start the backend with two Workspace databases, ACME and BETA, each migrated with the application changelog, and SHALL send every request of a signed-in ACME Account with a Workspace session of ACME, so that its queries reach ACME's database only.",
+      "AC-015.2": "WHEN a Ticket Resolver of ACME sends  while BETA's database holds a Published ticket whose title matches an ACME ticket, THE answer SHALL list ACME's Published tickets and none of BETA's.",
+      "AC-015.3": "IF an ACME Account sends  or  with the id of a BETA ticket, THEN THE backend SHALL answer with the same status and  as for a ticket id that exists in no Workspace, and SHALL write no row in BETA's database.",
+      "AC-015.4": "WHEN a Ticket Resolver of ACME sends  with a keyword that matches tickets of both Workspaces, THE results SHALL hold only ACME's tickets, and THE search log row of that request SHALL be in ACME's database and not in BETA's.",
+      "AC-015.5": "WHEN an ACME Account asks the chatbot with  a question that matches tickets of both Workspaces, THE context given to the chat model and the cited sources of the answer SHALL hold only ACME's data, and THE stored answer SHALL be in ACME's database and not in BETA's. The chat and embedding models are test stubs that record what they receive.",
+      "AC-015.6": "WHEN a Project Manager of ACME sends  while BETA's database holds a ticket waiting for review, THE queue SHALL list only ACME's tickets.",
+      "AC-015.7": "IF a request to an endpoint of AC-015.2 – AC-015.6 carries no Workspace session, THEN THE backend SHALL answer 401 and SHALL write no row in either Workspace database.",
+      "AC-015.8": "THE repository SHALL hold a Playwright suite under  with its own , run by  against the local stack (Docker Compose , , , ; the backend in the  profile; the web app dev server), and  SHALL give the commands that start that stack and the suite.",
+      "AC-015.9": "WHEN the suite signs in as  through Keycloak and the fake Google on the ACME site, THE suite SHALL reach the home page and open the Ticket List, Search, Chatbot and User List pages, and each page SHALL show its content and no error message.",
+      "AC-015.10": "IF the suite, signed in on the ACME site, sends a request with ACME's session cookie to the BETA site, THEN THE backend SHALL treat it as a request with no session (identity AC-001.20) and return no BETA data.",
+      "AC-015.11": "IF the local stack is not running when  starts, THEN THE suite SHALL stop before any test and name the service it could not reach.",
+      "AC-015.12": "WHEN the suite has run, THE suite SHALL write an HTML report under  (not committed) and THE result of the run of 14/11 SHALL be recorded in  with the date, the commit and the pass or fail of each test."
     }
   },
   "search": {
@@ -1134,8 +1146,8 @@
     }
   },
   "ticket-repository": {
-    "specHash": "63372498dc9cf51510517898382c0ea11936bfd77fa29bad887763e888bed21b",
-    "approvedAt": "2026-11-13T15:41:50.016Z",
+    "specHash": "0dc5471df359acf501a0e65be78bd01eb9bc569958b2ad2f0c20300610900277",
+    "approvedAt": "2026-11-13T21:19:18.066Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
@@ -1183,7 +1195,21 @@
       "AC-005.2": "WHEN a Ticket is created by an import, THE system SHALL create it in Published (GBR-23).",
       "AC-005.3": "IF a request would change a Ticket's status in a way AC-005.1 does not allow, THEN THE system SHALL reject the request with HTTP 409 (MSG06) and change the status of none of the Tickets of that request (D11).",
       "AC-005.4": "WHEN a request moves one or more Tickets to Published (review Approve, re-publish), THE system SHALL publish one \"tickets published\" event with the ids of all those Tickets, for listeners to handle after the transaction commits.",
-      "AC-005.5": "WHEN a request moves one or more Tickets to Unpublished, THE system SHALL publish one \"tickets unpublished\" event with the ids of all those Tickets, for listeners to handle after the transaction commits."
+      "AC-005.5": "WHEN a request moves one or more Tickets to Unpublished, THE system SHALL publish one \"tickets unpublished\" event with the ids of all those Tickets, for listeners to handle after the transaction commits.",
+      "AC-006.1": "WHEN a Project Manager saves a manual entry with valid fields for an Active Project they manage, THE system SHALL, in one transaction, save a Ticket of that Project with the entered Ticket ID, title, description, resolved date and Solution, source Manual, status Published, writer = the caller's full name and writer id = the caller's user id (D15); record an approve decision by the caller; record one Import Batch of source Manual with status Completed, 1 published, 0 skipped and 0 removed; and return MSG32 (1 published, 0 skipped).",
+      "AC-006.2": "WHEN a manual entry is saved, THE system SHALL publish one \"tickets published\" event with the new Ticket's id, for listeners to handle after the transaction commits.",
+      "AC-006.3": "IF Project, Ticket ID, Title, Description, Symptoms, Root cause, Resolution steps or Scope is missing or blank after trimming, THEN THE system SHALL reject the save with HTTP 400 and MSG01 for each missing field and save nothing.",
+      "AC-006.4": "IF the Ticket ID is longer than 50 characters, the Title longer than 200, the Description longer than 10,000, or the Solution sections longer than 10,000 characters in total, THEN THE system SHALL reject the save with HTTP 400 and MSG02 for each such field with its limit, and save nothing.",
+      "AC-006.5": "IF the Resolved date is after today (Vietnam time), THEN THE system SHALL reject the save with HTTP 400 and MSG39 for that field and save nothing (D16). A missing Resolved date is allowed.",
+      "AC-006.6": "WHEN a save is rejected for invalid fields, THE system SHALL report every invalid field of the request in the one answer, each with its message.",
+      "AC-006.7": "IF the Ticket ID (after trimming) is already a Ticket ID, including when another request takes it while this one is saved, THEN THE system SHALL reject the save with HTTP 409 and MSG31 with that Ticket ID, save nothing and record no Import Batch.",
+      "AC-006.8": "IF the caller does not have the Project Manager role, or the selected Project is not Active or not managed by the caller, THEN THE system SHALL reject the save or the Save as draft with HTTP 403 (MSG08) and save nothing.",
+      "AC-006.9": "WHEN the Project Manager clicks Save as draft on the Manual entry tab with a Project they manage, THE system SHALL save the entered fields as a Draft of type Manual with the save time without validating any other field (D14), and return MSG41 with the Draft's id.",
+      "AC-006.10": "WHEN the Project Manager saves as draft an entry reopened from a Draft, THE system SHALL update that same Draft, its fields and its save time instead of creating a second one.",
+      "AC-006.11": "WHEN the Project Manager reopens a Manual Draft from the Drafts list, THE system SHALL return its Project and every field as saved, and THE web app SHALL show them on the Manual entry tab.",
+      "AC-006.12": "WHEN a manual entry reopened from a Draft is saved successfully, THE system SHALL delete that Draft in the same transaction; IF the save is rejected, THEN THE system SHALL keep the Draft unchanged.",
+      "AC-006.13": "IF a request names a Manual Draft that belongs to another user, does not exist or is not a Manual Draft, THEN THE system SHALL reject it with HTTP 404 (MSG04); Delete of a Manual Draft works as AC-004.4 and AC-004.5.",
+      "AC-006.14": "WHEN a save or Save as draft is rejected, THE web app SHALL show each message next to its field and keep everything the Project Manager entered; WHEN a save succeeds, THE web app SHALL show MSG32 and clear the form."
     }
   },
   "jira-app": {

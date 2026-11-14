@@ -12,6 +12,7 @@ paths:
   - backend/src/test/java/vn/tsolve/ticket/**/SolutionRules*
   - backend/src/test/java/vn/tsolve/ticket/jira/**
   - backend/src/test/java/vn/tsolve/ticket/**/TicketStatus*
+  - backend/src/test/java/vn/tsolve/ticket/**/Manual*
   - backend/src/main/java/vn/tsolve/knowledge/**
   - backend/src/test/java/vn/tsolve/knowledge/**
   - frontend/src/features/ticket-import/*.ts
@@ -20,6 +21,7 @@ paths:
   - frontend/src/features/ticket-import/components/Jira*
   - frontend/src/features/ticket-import/components/*Draft*
   - frontend/src/features/ticket-import/components/SolutionFields*
+  - frontend/src/features/ticket-import/components/Manual*
   - frontend/src/features/ticket-import/api/**
   - frontend/src/features/ticket-import/mocks/**
   - frontend/src/features/tickets/**

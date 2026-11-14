@@ -208,15 +208,19 @@
         "jira-import-verify": "passing",
         "jira-gateway-auth": "passing",
         "jira-pull-deadline": "evaluating",
-        "ticket-status-model": "passing"
+        "ticket-status-model": "passing",
+        "manual-ticket-contract": "passing",
+        "manual-ticket-create": "passing",
+        "manual-ticket-drafts": "passing",
+        "manual-entry-tab": "passing"
       },
-      "lastUpdated": "2026-11-13T21:06:56.729Z",
+      "lastUpdated": "2026-11-14T06:19:58.944Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "034b0f18dd6bbb7861dfcdae3fb89ad705c04874"
+        "default": "d6975188e0f34008e0b4bd331a04f4df9a5beeea"
       }
     },
     "search": {
@@ -372,14 +376,18 @@
         "backup-restore": "pending",
         "monitoring": "pending",
         "load-test": "pending",
-        "forge-security-chain": "pending"
+        "forge-security-chain": "pending",
+        "cross-module-isolation": "passing",
+        "e2e-smoke": "passing"
       },
-      "lastUpdated": "2026-11-13T16:03:48.381Z",
-      "branch": "feat/KAN-96-platform-file-storage",
+      "lastUpdated": "2026-11-14T06:06:15.574Z",
+      "branch": "feat/platform",
       "repos": [
         "default"
       ],
-      "lastCommit": {}
+      "lastCommit": {
+        "default": "f6dd0fc4f74ad3539e99bee73ea6e016b97902c0"
+      }
     },
     "platform-console": {
       "status": "decomposed",

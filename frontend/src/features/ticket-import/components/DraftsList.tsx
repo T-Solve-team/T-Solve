@@ -14,11 +14,15 @@ import { cells, ConfirmDialog, DataTable, type DataTableColumn } from '@/shared/
 import { useManagedProjectOptions } from '../hooks/useManagedProjects';
 
 /** "Type (Jira / CSV / Manual)" of SRS III.5.1 Drafts. */
-const TYPE_LABELS: Record<ImportSource, string> = { JIRA_IMPORT: 'Jira', CSV: 'CSV' };
+const TYPE_LABELS: Record<ImportSource, string> = {
+  JIRA_IMPORT: 'Jira',
+  CSV: 'CSV',
+  MANUAL: 'Manual',
+};
 
 /**
  * Drafts of 5.1 Import Tickets — SRS III.5.1, AC-004.2…AC-004.5: the caller's own Drafts, newest first; Open goes
- * to the Import Preview, Delete asks MSG42 first.
+ * to the Import Preview (a Manual Draft: the Manual entry tab, AC-006.11), Delete asks MSG42 first.
  */
 export function DraftsList() {
   const navigate = useNavigate();
@@ -62,7 +66,13 @@ export function DraftsList() {
           <Button
             type="link"
             aria-label={`Open ${draftName(draft)}`}
-            onClick={() => void navigate(`${paths.importPreview}?previewId=${draft.previewId}`)}
+            onClick={() =>
+              void navigate(
+                draft.source === 'MANUAL'
+                  ? `${paths.importTickets}?tab=manual&draftId=${draft.previewId}`
+                  : `${paths.importPreview}?previewId=${draft.previewId}`,
+              )
+            }
           >
             Open
           </Button>

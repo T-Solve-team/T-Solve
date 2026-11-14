@@ -12,4 +12,5 @@ export type ImportSource = (typeof ImportSource)[keyof typeof ImportSource];
 export const ImportSource = {
   JIRA_IMPORT: 'JIRA_IMPORT',
   CSV: 'CSV',
+  MANUAL: 'MANUAL',
 } as const;

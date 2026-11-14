@@ -60,12 +60,12 @@ describe('ImportTicketsPage', () => {
     server.events.removeAllListeners();
   });
 
-  it('AC-008.1 shows the tabs Jira, CSV and Manual entry with CSV selected and Manual entry disabled', async () => {
+  it('AC-008.1 shows the tabs Jira, CSV and Manual entry with CSV selected', async () => {
     await openImport();
     expect(screen.getByRole('tab', { name: 'CSV' })).toHaveAttribute('aria-selected', 'true');
-    // the Jira tab works since KAN-45 (ticket-repository)
+    // the Jira tab works since KAN-45, Manual entry since KAN-133 (ticket-repository)
     expect(screen.getByRole('tab', { name: 'Jira' })).not.toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByRole('tab', { name: 'Manual entry' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Manual entry' })).not.toHaveAttribute(
       'aria-disabled',
       'true',
     );
