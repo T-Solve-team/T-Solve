@@ -31,6 +31,7 @@ is one row of such a preview.
 | 2026-11-08 | STORY-001 | New AC-001.13: a pull stops reading Jira after 60 seconds in total and answers MSG50 as in AC-001.7 | PR #166 review (trhieudev1309), BUG-189: up to 20 pages plus comment calls, each with a 30 s timeout and 2 retries, could hold a request thread for minutes; user decision 2026-11-08 |
 | 2026-11-13 | STORY-005 | New STORY-005 (KAN-132): AC-005.1–AC-005.5, decisions D9–D11 | One Ticket state machine for submit, review and import; review Approve did not publish the "tickets published" event, so approved tickets were never indexed for search; user decisions 2026-11-13 |
 | 2026-11-14 | STORY-006, STORY-007 | New STORY-006 (manual entry, AC-006.1–AC-006.12) and STORY-007 (its Drafts, AC-007.1–AC-007.8) for KAN-133; decisions D12–D18; manual entry leaves Out of Scope; new endpoints under `/imports/manual`; Drafts list and delete also serve a Manual Draft | KAN-133 (UC-22); decisions taken by Claude under the user's standing instruction of 2026-11-11, logged in `04-plans/ticket-repository/kan-133-decisions.md` |
+| 2026-11-14 | STORY-006, STORY-007 | AC-006.5 also rejects a resolved date that is not a valid date; new AC-007.9 (two requests on one Manual Draft); `keepEvidenceIds` left out = keep every file; `FileStorage` contract corrected (`StoredFile`), PR #193 merged | Plan review of 2026-11-14 against the code and `main` (decisions 13–18 of `kan-133-decisions.md`); the user chose to fix the plan |
 
 ## Decisions taken while planning (2026-11-07, with the user)
 | # | Question | Decision |
@@ -46,7 +47,7 @@ is one row of such a preview.
 | D9 | Which status changes are allowed (KAN-132) | The table of AC-005.1, taken from SRS v3460 GBR-08, GBR-10, GBR-11, GBR-23, UC-19, UC-25 and UC-30. Rejected is final; Unpublished only goes back to Published (user decision 2026-11-13). |
 | D10 | Where the "tickets published / unpublished" events are published | The rule lives in `TicketStatus` and `Ticket`; one shared transition step moves a batch of Tickets and publishes ONE event with all their ids, as Finish already does (AC-003.9). Not one Spring `@DomainEvents` event per Ticket: it needs `save()`, which review does not call, and it would split a 100-ticket import into 100 events (user decision 2026-11-13). |
 | D11 | Answer to a status change the table does not allow | HTTP 409 with MSG06, no Ticket of the request changed — the answer review already gives for a Ticket that is not Pending review (UC-30 step 3). |
-| D12 | Evidence in KAN-133 (2026-11-14) | Included. Files go through the `platform` `FileStorage` (STORY-007 of `platform`, KAN-96, PR #193); only the storage key, file name, type and size are kept in the database. The Evidence parts are built after PR #193 is merged. |
+| D12 | Evidence in KAN-133 (2026-11-14) | Included. Files go through the `platform` `FileStorage` (STORY-007 of `platform`, KAN-96, PR #193); only the storage key, file name, type and size are kept in the database. PR #193 was merged on 2026-11-14, so nothing waits for it. |
 | D13 | Where a Manual Draft lives | An Import Preview of source Manual with exactly one row holding the entered fields, plus the Draft's Evidence list on the preview. The Drafts list, delete, ownership and the cleanup exemption of STORY-004 apply to it. |
 | D14 | Writer of a manual Ticket | The caller: writer = their full name, writer id = their user id (UC-22 step 6). |
 | D15 | Resolved date in the future | Rejected with MSG39 (its text already says no date may be in the future); the web app's date picker offers no future day. SRS screen 5.1 names no other message. |
@@ -145,7 +146,7 @@ is one row of such a preview.
   - AC-006.2: WHEN a manual entry with Evidence files is saved as in AC-006.1, THE system SHALL store each file through the Workspace file storage (D12) and record it as Evidence of the new Ticket with its file name, type (D18) and size, in the same save.
   - AC-006.3: IF the Project, Ticket ID, title, description, Symptoms, Root cause, Resolution steps or Scope is missing or blank after trimming, THEN THE system SHALL reject the save with HTTP 400 and MSG01 naming every missing field, save nothing, store no file and record no Import Batch.
   - AC-006.4: IF the Ticket ID is longer than 50 characters, the title longer than 200, the description longer than 10,000, or the Solution sections longer than 10,000 characters in total, THEN THE system SHALL reject the save with HTTP 400 and MSG02 naming the field and its limit, save nothing, store no file and record no Import Batch.
-  - AC-006.5: IF the resolved date is after today (Vietnam time), THEN THE system SHALL reject the save with HTTP 400 and MSG39 (D15), save nothing, store no file and record no Import Batch.
+  - AC-006.5: IF the resolved date is not a valid calendar date or is after today (Vietnam time), THEN THE system SHALL reject the save with HTTP 400 and MSG39 (D15), save nothing, store no file and record no Import Batch.
   - AC-006.6: IF an Evidence file has a name whose extension is not one of D18, or is larger than 10 MB, THEN THE system SHALL reject the save with HTTP 400 and MSG34 naming that file, save nothing, store no file and record no Import Batch.
   - AC-006.7: IF the entry has more than 5 Evidence files, THEN THE system SHALL reject the save with HTTP 400 and MSG72, save nothing, store no file and record no Import Batch.
   - AC-006.8: IF the trimmed Ticket ID is already the Ticket ID of a Ticket, including one saved by another request while this save runs, THEN THE system SHALL reject the save with HTTP 409 and MSG31 with that Ticket ID, save no Ticket, keep no file it stored for this save, and record no Import Batch.
@@ -165,6 +166,7 @@ is one row of such a preview.
   - AC-007.6: WHEN a reopened Manual Draft is saved as a Ticket as in AC-006.1, THE system SHALL make the Draft's kept Evidence files and the new ones the Ticket's Evidence, delete the files the Project Manager removed, and delete the Draft in the same transaction; IF the save is rejected or fails, THEN the Draft SHALL stay as it was saved.
   - AC-007.7: WHEN the Project Manager deletes a Manual Draft after confirming MSG42, THE system SHALL delete the Draft and its Evidence files from file storage.
   - AC-007.8: IF a Manual Draft request names a Draft of another user, a preview that is not a Manual Draft, or none at all, THEN THE system SHALL reject it with HTTP 404 (MSG04); and the Import Preview endpoints (`GET /imports/previews/{previewId}` and its rows, fill-solution, remove-rows, draft, confirm) SHALL reject a Manual Draft with HTTP 404 (MSG04).
+  - AC-007.9: WHEN two requests save or change the same Manual Draft at the same time, THE system SHALL handle them one after the other, so that no Ticket and no Draft names an Evidence file that was deleted; IF a request then names an Evidence file to keep that the Draft no longer has, THEN THE system SHALL reject it with HTTP 404 (MSG04), change nothing and keep no file it stored for that request.
 
 ## Out of Scope
 - CSV import (UC-21) — `import-ticket-list`; Drafts of a CSV import (GBR-26, UC-21 step 7b) are a later Change there.
@@ -207,8 +209,9 @@ Manual entry (KAN-133) — multipart requests: part `entry` (JSON) and zero or m
 | `GET /imports/manual/drafts/{previewId}` | — | `ManualDraftResponse { previewId, projectId, ticketId?, title?, description?, resolvedDate?, symptoms?, rootCause?, resolutionSteps?, workaround?, scope?, evidence: [{ id (uuid), fileName, fileType, fileSize }], savedAt }` |
 
 `GET /imports/drafts` also lists Manual Drafts (`source` MANUAL, `rowCount` 1) and `DELETE /imports/drafts/{previewId}`
-also deletes them. `keepEvidenceIds` names the Draft's Evidence files to keep; the others are removed. A `resolvedDate`
-the Draft holds that is not a valid date is kept as text and rejected only on Save (MSG39).
+also deletes them. `keepEvidenceIds` names the Draft's Evidence files to keep; the others are removed. Left out
+(null), every Evidence file of the Draft is kept; an empty list removes them all. `resolvedDate` is text
+(`yyyy-MM-dd`): a Draft keeps it as entered, and Save rejects one that is not a valid date (MSG39, AC-006.5).
 Rejections: MSG01, MSG02, MSG34, MSG39, MSG72 → 400 · MSG31 → 409 · no PM role or Project not Active / not managed →
 403 (MSG08) · Draft not found, another user's or not Manual → 404 (MSG04) · MSG33 → 500. Only MSG33 records a Failed
 Import Batch.
@@ -219,7 +222,7 @@ Rejections of the new endpoints: MSG01, MSG39 → 400 · MSG04 on pull → 404 �
 - `project` (existing code, owned by `project-integration` later): the Project's Jira project key, through `ProjectService`.
 - `import-ticket-list` (PR #110, `vn.tsolve.ticket`): `ProjectAccess`, the `ticket`, `ticket_import_decision`, `import_batch`, `import_preview` and `import_preview_row` tables, the preview endpoints and screens, and `TicketsPublishedEvent`, extended by this module.
 - `workspace` (later): the stored Jira service account behind `JiraIssueSource` (D2).
-- `platform` (KAN-96, PR #193): `vn.tsolve.platform.service.FileStorage` — `store(InputStream)` → a key, `delete(key)` — for Evidence files (D12).
+- `platform` (KAN-96, PR #193): `vn.tsolve.platform.service.FileStorage` — `store(InputStream)` → `StoredFile(key, sizeBytes)`, `delete(key)`, both inside the caller's Workspace — for Evidence files (D12). Merged into `main` on 2026-11-14.
 - `common.security.TSolveUser`: the caller's user id and full name (D14).
 
 ## Definition of Done

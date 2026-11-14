@@ -24,3 +24,19 @@ before approving the spec.
 | 10 | Multipart limits | Keep 10 MB / 11 MB; raise | `max-file-size: 11MB`, `max-request-size: 56MB`; the service checks 10 MB per file (MSG34) | 5 × 10 MB must fit one request; above 11 MB the global handler still answers MSG28 (web app pre-checks, so users meet MSG34) |
 | 11 | Risk review | Run risk-review; skip | Skip; edge-cases run inline | Not auth/payments/migration of data; the upload trust boundary is covered by AC-006.6/006.7 and edge cases |
 | 12 | Builder check | Subagent; inline | Inline | Session rule: no subagents unless the user asks |
+
+## After the plan review (2026-11-14)
+
+The plan was checked against the code and `origin/main`; the user chose "fix the plan". Decision 3 changed: PR #193
+merged at 12:06, the branch was rebased onto `origin/main` (it was not pushed), so no task waits.
+
+| # | Question | Options | Choice | Why |
+|---|----------|---------|--------|-----|
+| 13 | Caddy stops `/api/*` bodies above 12 MB | A) a 57 MB block for `/api/v1/imports/manual*`; B) raise `/api/*`; C) one file per request | A | Smallest opening; one request stays one transaction; `infra/caddy/Caddyfile` added to the module paths |
+| 14 | The JSON `entry` part | A) backend reads it as `String` and parses it; B) `@RequestPart` object + a part content type from the client | A | B fails with 415 when the browser sends the part without `application/json`; A works with any generated client |
+| 15 | Two requests on one Manual Draft (AC-007.9) | A) `lockByIdAndOwner` in each write, a kept id that is gone → 404 MSG04; B) no lock | A | Without it a Ticket can keep a file another request deletes after commit; MSG04 is the existing "not found" answer |
+| 16 | `keepEvidenceIds` left out | A) keep every file; B) remove every file | A | A client that forgets the field must not delete Evidence; an empty list still removes all |
+| 17 | Resolved date that is not a date (AC-006.5) | A) MSG39, the field is a string; B) Jackson's 400 | A | The contract already said MSG39; a `LocalDate` field would answer MSG06 before the validator runs |
+| 18 | Stored Evidence type | A) lower-cased extension (`pdf`, `jpg`); B) MIME type | A | D18: the type follows the extension; no MIME table needed until Evidence is served inline |
+| 19 | Failed batch without a preview | A) `recordJiraFailed` takes the source (`recordFailedWithoutPreview`); B) a second `recordManualFailed` | A | One method, not two copies |
+| 20 | Ticket ID pre-check | A) existing `findExistingTicketIds`; B) new `existsByTicketId` | A | Already in `TicketRepository` |

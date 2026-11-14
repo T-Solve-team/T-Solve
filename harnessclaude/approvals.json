@@ -1131,8 +1131,8 @@
     }
   },
   "ticket-repository": {
-    "specHash": "147fccd4faa527200ff40df887a7d728aa4fbb44016c0d8ea304de076dff341d",
-    "approvedAt": "2026-11-14T05:11:26.008Z",
+    "specHash": "ffa35de6133303735a4de1a481231ac093c6ff6cf6f1d6b974401dc9c5559394",
+    "approvedAt": "2026-11-14T05:27:25.683Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
@@ -1185,7 +1185,7 @@
       "AC-006.2": "WHEN a manual entry with Evidence files is saved as in AC-006.1, THE system SHALL store each file through the Workspace file storage (D12) and record it as Evidence of the new Ticket with its file name, type (D18) and size, in the same save.",
       "AC-006.3": "IF the Project, Ticket ID, title, description, Symptoms, Root cause, Resolution steps or Scope is missing or blank after trimming, THEN THE system SHALL reject the save with HTTP 400 and MSG01 naming every missing field, save nothing, store no file and record no Import Batch.",
       "AC-006.4": "IF the Ticket ID is longer than 50 characters, the title longer than 200, the description longer than 10,000, or the Solution sections longer than 10,000 characters in total, THEN THE system SHALL reject the save with HTTP 400 and MSG02 naming the field and its limit, save nothing, store no file and record no Import Batch.",
-      "AC-006.5": "IF the resolved date is after today (Vietnam time), THEN THE system SHALL reject the save with HTTP 400 and MSG39 (D15), save nothing, store no file and record no Import Batch.",
+      "AC-006.5": "IF the resolved date is not a valid calendar date or is after today (Vietnam time), THEN THE system SHALL reject the save with HTTP 400 and MSG39 (D15), save nothing, store no file and record no Import Batch.",
       "AC-006.6": "IF an Evidence file has a name whose extension is not one of D18, or is larger than 10 MB, THEN THE system SHALL reject the save with HTTP 400 and MSG34 naming that file, save nothing, store no file and record no Import Batch.",
       "AC-006.7": "IF the entry has more than 5 Evidence files, THEN THE system SHALL reject the save with HTTP 400 and MSG72, save nothing, store no file and record no Import Batch.",
       "AC-006.8": "IF the trimmed Ticket ID is already the Ticket ID of a Ticket, including one saved by another request while this save runs, THEN THE system SHALL reject the save with HTTP 409 and MSG31 with that Ticket ID, save no Ticket, keep no file it stored for this save, and record no Import Batch.",
@@ -1200,7 +1200,8 @@
       "AC-007.5": "WHEN the Project Manager saves a reopened Manual Draft again, THE system SHALL update that same Draft and its save time, add the new Evidence files, and delete from the Draft and from file storage the Evidence files the Project Manager removed; the kept and new files together SHALL obey AC-006.7.",
       "AC-007.6": "WHEN a reopened Manual Draft is saved as a Ticket as in AC-006.1, THE system SHALL make the Draft's kept Evidence files and the new ones the Ticket's Evidence, delete the files the Project Manager removed, and delete the Draft in the same transaction; IF the save is rejected or fails, THEN the Draft SHALL stay as it was saved.",
       "AC-007.7": "WHEN the Project Manager deletes a Manual Draft after confirming MSG42, THE system SHALL delete the Draft and its Evidence files from file storage.",
-      "AC-007.8": "IF a Manual Draft request names a Draft of another user, a preview that is not a Manual Draft, or none at all, THEN THE system SHALL reject it with HTTP 404 (MSG04); and the Import Preview endpoints ( and its rows, fill-solution, remove-rows, draft, confirm) SHALL reject a Manual Draft with HTTP 404 (MSG04)."
+      "AC-007.8": "IF a Manual Draft request names a Draft of another user, a preview that is not a Manual Draft, or none at all, THEN THE system SHALL reject it with HTTP 404 (MSG04); and the Import Preview endpoints ( and its rows, fill-solution, remove-rows, draft, confirm) SHALL reject a Manual Draft with HTTP 404 (MSG04).",
+      "AC-007.9": "WHEN two requests save or change the same Manual Draft at the same time, THE system SHALL handle them one after the other, so that no Ticket and no Draft names an Evidence file that was deleted; IF a request then names an Evidence file to keep that the Draft no longer has, THEN THE system SHALL reject it with HTTP 404 (MSG04), change nothing and keep no file it stored for that request."
     }
   },
   "jira-app": {

@@ -15,4 +15,4 @@ deferred to a later iteration.
 Change 2026-11-13 (KAN-132, STORY-005, Task 13): the ticket status model — master design section "Change 2026-11-13".
 
 Change 2026-11-14 (KAN-133, STORY-006 and STORY-007, Tasks 14–19): manual entry with Evidence and its Drafts — master
-design section "Change 2026-11-14". Tasks 17 and 18 wait for PR #193 (KAN-96 `FileStorage`).
+design section "Change 2026-11-14". PR #193 (KAN-96 `FileStorage`) is merged; no task waits for it.

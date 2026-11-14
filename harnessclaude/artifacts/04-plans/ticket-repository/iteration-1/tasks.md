@@ -196,7 +196,7 @@ uses it, so review Approve publishes `TicketsPublishedEvent`. Bulk SQL (expiry, 
 
 **Story:** STORY-006, STORY-007
 **Feature:** manual-entry-contract
-**Description:** KAN-133, spec Interface Contracts "Manual entry". Multipart `POST /imports/manual` (part `entry` = `ManualEntryRequest`, parts `files`) → 201 `ManualEntryResponse`; multipart `POST /imports/manual/drafts` → `DraftSavedResponse`; `GET /imports/manual/drafts/{previewId}` → `ManualDraftResponse` with `evidence[]`; `ImportDraftSummary.source` gains `MANUAL`. Errors 400 / 403 / 404 / 409 / 500 as listed. Regenerate the client.
+**Description:** KAN-133, spec Interface Contracts "Manual entry". Multipart `POST /imports/manual` (part `entry` = `ManualEntryRequest`, parts `files`) → 201 `ManualEntryResponse`; multipart `POST /imports/manual/drafts` → `DraftSavedResponse`; `GET /imports/manual/drafts/{previewId}` → `ManualDraftResponse` with `evidence[]`; `ImportDraftSummary.source` gains `MANUAL`. Errors 400 / 403 / 404 / 409 / 500 as listed. `resolvedDate` is a plain string; `keepEvidenceIds` is nullable (null = keep all). Regenerate the client and check the generated call sends the `entry` part as JSON text — the backend reads it as a `String` (design), so no part content type is needed.
 **Files:**
 - Modify: `frontend/openapi/tsolve-api.yaml`
 - Modify: `frontend/src/shared/api/generated/**` (generated only)
@@ -207,10 +207,10 @@ uses it, so review Approve publishes `TicketsPublishedEvent`. Bulk SQL (expiry, 
 
 **Story:** STORY-006, STORY-007
 **Feature:** manual-entry-schema
-**Description:** Changeset `031-ticket-manual-entry.sql` (next free number when built): `evidence.storage_key`, `import_preview.evidence JSONB NOT NULL DEFAULT '[]'` (master design "Change 2026-11-14"). `TicketEvidence` gets `storageKey`, a generated UUID id and `of(…)`; `ImportPreview` gets `evidence` (list of `DraftEvidence`) and `manualDraft(owner, projectId, now)`; `Ticket.enteredManually(…)` (source MANUAL, PUBLISHED, writer + writerId). `application.yml`: multipart `max-file-size: 11MB`, `max-request-size: 56MB`.
+**Description:** Changeset `031-ticket-manual-entry.sql` (next free number when built): `evidence.storage_key`, `import_preview.evidence JSONB NOT NULL DEFAULT '[]'` (master design "Change 2026-11-14"). `TicketEvidence` gets `storageKey`, `fileType` (the NOT NULL `file_type` column it does not map yet), a generated UUID id and `of(…)`; `ImportPreview` gets `evidence` (list of `DraftEvidence`) and `manualDraft(owner, projectId, now)`; `Ticket.enteredManually(…)` (source MANUAL, PUBLISHED, writer + writerId). `application.yml`: multipart `max-file-size: 11MB`, `max-request-size: 56MB`. `infra/caddy/Caddyfile`: a `@manual` block with `request_body { max_size 57MB }` for `/api/v1/imports/manual` and `/api/v1/imports/manual/*`, before `handle /api/*` (which keeps 12 MB); update `infra/tests` if it checks the body limit (edge 29).
 **Files:**
 - Create: `backend/src/main/resources/db/changelog/changes/031-ticket-manual-entry.sql`
-- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `backend/src/main/resources/application.yml`, `T/entity/TicketEvidence.java`, `T/entity/ImportPreview.java`, `T/entity/Ticket.java`
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `backend/src/main/resources/application.yml`, `infra/caddy/Caddyfile`, `T/entity/TicketEvidence.java`, `T/entity/ImportPreview.java`, `T/entity/Ticket.java`
 - Test: `TT/entity/ManualEntryTicketTest.java` (AC-006.1 factory: MANUAL, PUBLISHED, writer cut to 100, writerId)
 **Dependencies:** none
 **Estimated size:** small
@@ -219,11 +219,11 @@ uses it, so review Approve publishes `TicketsPublishedEvent`. Bulk SQL (expiry, 
 
 **Story:** STORY-006
 **Feature:** manual-entry-save
-**Description:** `ManualEntryController` (`@PreAuthorize` PM, `@AuthenticationPrincipal TSolveUser`, multipart) → `ManualEntryService.save`. `ManualEntryValidator`: MSG01 → MSG02 → MSG39 (Vietnam today from the `Clock`), code-point lengths, trimmed values. Access 403, MSG31 pre-check, one transaction (Ticket, approve decision, Completed batch, `TicketsPublishedEvent`, audit IMPORT), unique violation → MSG31, other failure → `ImportBatchRecorder.recordManualFailed` + MSG33. The controller takes only the `entry` part here; Task 17 adds the `files` parts.
+**Description:** `ManualEntryController` (`@PreAuthorize` PM, `@AuthenticationPrincipal TSolveUser`, multipart) → `ManualEntryService.save`. The `entry` part is a `String` parsed with the `ObjectMapper` (unreadable JSON → 400 MSG06). `ManualEntryValidator`: MSG01 → MSG02 → MSG39 (`resolvedDate` is a `String`: not a valid `yyyy-MM-dd` date, or after Vietnam today from the `Clock`), code-point lengths, trimmed values. Access 403, MSG31 pre-check with the existing `findExistingTicketIds`, one transaction (Ticket, approve decision, Completed batch, `TicketsPublishedEvent`, audit IMPORT), `DataIntegrityViolationException` on `uq_ticket_ticket_id` → MSG31, other failure → `ImportBatchRecorder.recordFailedWithoutPreview(…, MANUAL, …)` (rename of `recordJiraFailed` with the source as a parameter) + MSG33. The controller takes only the `entry` part here; Task 17 adds the `files` parts.
 **Files:**
 - Create: `T/controller/ManualEntryController.java`, `T/dto/ManualEntryRequest.java`, `T/dto/ManualEntryResponse.java`, `T/service/ManualEntryService.java`, `T/service/impl/ManualEntryServiceImpl.java`, `T/service/impl/ManualEntryValidator.java`
-- Modify: `T/service/impl/ImportBatchRecorder.java`, `T/repository/TicketRepository.java` (`existsByTicketId`)
-- Test: `TT/service/impl/ManualEntryValidatorTest.java` (AC-006.3, AC-006.4, AC-006.5, edge 20–22), `TT/service/impl/ManualEntryServiceImplTest.java` (AC-006.1, AC-006.8 pre-check, AC-006.9, AC-006.10, AC-006.11), `TT/controller/ManualEntryControllerTest.java` (`@WebMvcTest`: 403 without PM role, 400 mapping), `TT/ManualEntryIT.java` (AC-006.1 rows + after-commit event, AC-006.8 race through the unique index, AC-006.11 rollback + Failed batch)
+- Modify: `T/service/impl/ImportBatchRecorder.java`, `T/service/impl/JiraImportServiceImpl.java` (the renamed recorder call)
+- Test: `TT/service/impl/ManualEntryValidatorTest.java` (AC-006.3, AC-006.4, AC-006.5 future and invalid date, edge 20–22), `TT/service/impl/ManualEntryServiceImplTest.java` (AC-006.1, AC-006.8 pre-check, AC-006.9, AC-006.10, AC-006.11), `TT/controller/ManualEntryControllerTest.java` (`@WebMvcTest`: 403 without PM role, 400 mapping), `TT/ManualEntryIT.java` (AC-006.1 rows + after-commit event, AC-006.8 race through the unique index, AC-006.11 rollback + Failed batch)
 **Dependencies:** Task 14, Task 15
 **Estimated size:** medium
 
@@ -231,23 +231,23 @@ uses it, so review Approve publishes `TicketsPublishedEvent`. Bulk SQL (expiry, 
 
 **Story:** STORY-006
 **Feature:** manual-entry-evidence
-**Description:** Starts after PR #193 (KAN-96 `FileStorage`) is merged. `EvidenceFiles`: count ≤ 5 (MSG72), extension allow-list D18 lower-cased after the last dot and size ≤ 10 MB (MSG34 with the file name), then `FileStorage.store` each file outside the transaction; on any later failure delete the stored keys. `ManualEntryServiceImpl.save` inserts one `TicketEvidence` per file in its transaction. Controller takes the `files` parts.
+**Description:** `FileStorage` (KAN-96) is on `main`. `EvidenceFiles`: count ≤ 5 (MSG72), extension allow-list D18 lower-cased after the last dot and size ≤ 10 MB (MSG34 with the file name), then `FileStorage.store` each file outside the transaction, keeping `StoredFile.key()`; on any later failure delete the stored keys. `ManualEntryServiceImpl.save` inserts one `TicketEvidence` per file in its transaction. Controller takes the `files` parts.
 **Files:**
 - Create: `T/service/impl/EvidenceFiles.java`
 - Modify: `T/controller/ManualEntryController.java`, `T/service/impl/ManualEntryServiceImpl.java`
 - Test: `TT/service/impl/ManualEntryEvidenceTest.java` (AC-006.2, AC-006.6 incl. edge 17, AC-006.7, AC-006.8 and AC-006.11 delete stored keys, edge 19), `TT/ManualEntryIT.java` (AC-006.2 evidence rows with storage keys; 5 × 10 MB accepted, edge 26)
-**Dependencies:** Task 16, PR #193
+**Dependencies:** Task 16
 **Estimated size:** medium
 
 ## Task 18: Drafts of a manual entry
 
 **Story:** STORY-007
 **Feature:** manual-entry-drafts
-**Description:** `POST /imports/manual/drafts` (create, or update with `draftId`: row values, `draft_saved_at`, Evidence list; removed files deleted after commit), `GET /imports/manual/drafts/{previewId}`; Save with `draftId` + `keepEvidenceIds` moves kept files to the Ticket and deletes the Draft in the transaction. `ImportDraftServiceImpl.list` / `delete` accept MANUAL (delete removes the Draft's files after commit). `ImportPreviewServiceImpl`, `ImportConfirmServiceImpl` and `ImportDraftServiceImpl.save` answer 404 for a MANUAL preview.
+**Description:** `POST /imports/manual/drafts` (create, or update with `draftId`: row values, `draft_saved_at`, Evidence list; removed files deleted after commit), `GET /imports/manual/drafts/{previewId}`; Save with `draftId` + `keepEvidenceIds` moves kept files to the Ticket and deletes the Draft in the transaction. `ImportDraftServiceImpl.list` / `delete` accept MANUAL (delete removes the Draft's files after commit). `ImportPreviewServiceImpl`, `ImportConfirmServiceImpl` and `ImportDraftServiceImpl.save` answer 404 for a MANUAL preview. Every write on an existing Draft (update, Save as Ticket, delete) takes `lockByIdAndOwner` first; `keepEvidenceIds` null keeps every file, and a kept id the locked Draft no longer has is 404 with the new keys deleted (AC-007.9).
 **Files:**
 - Create: `T/dto/ManualDraftResponse.java`, `T/dto/DraftEvidence.java`
 - Modify: `T/controller/ManualEntryController.java`, `T/service/ManualEntryService.java`, `T/service/impl/ManualEntryServiceImpl.java`, `T/service/impl/ImportDraftServiceImpl.java`, `T/service/impl/ImportPreviewServiceImpl.java`, `T/service/impl/ImportConfirmServiceImpl.java`, `T/repository/ImportPreviewRepository.java`
-- Test: `TT/service/impl/ManualDraftServiceTest.java` (AC-007.1, AC-007.2, AC-007.4, AC-007.5, AC-007.6, AC-007.7, AC-007.8, edge 23–25), `TT/ManualDraftIT.java` (AC-007.3 listed with Jira Drafts, AC-007.6 Draft deleted in the save transaction, edge 27 cleanup keeps it)
+- Test: `TT/service/impl/ManualDraftServiceTest.java` (AC-007.1, AC-007.2, AC-007.4, AC-007.5, AC-007.6, AC-007.7, AC-007.8, edge 23–25), `TT/ManualDraftIT.java` (AC-007.3 listed with Jira Drafts, AC-007.6 Draft deleted in the save transaction, AC-007.9 two requests on one Draft — edge 28, edge 27 cleanup keeps it)
 **Dependencies:** Task 16, Task 17
 **Estimated size:** medium
 
@@ -255,7 +255,7 @@ uses it, so review Approve publishes `TicketsPublishedEvent`. Bulk SQL (expiry, 
 
 **Story:** STORY-006, STORY-007
 **Feature:** manual-entry-tab
-**Description:** Enable the Manual entry tab of Import Tickets: `ManualEntryForm` — Project (Active managed Projects, `useManagedProjects`), Ticket ID (50), Title (200), Description (10,000), Resolved date (no future day), `SolutionFields` extracted from `SolutionFormModal` and shared, Evidence upload with type / size / count checks (MSG34, MSG72) before sending; Save (MSG32 toast, form reset) and Save as draft (MSG41); server rejections shown next to their fields, every value and file kept. `DraftsList`: type Manual, Open loads the Draft into the tab (kept files listed, removable), Delete as today. MSW handlers for the new endpoints.
+**Description:** Enable the Manual entry tab of Import Tickets: `ManualEntryForm` — Project (Active managed Projects, `useManagedProjects`), Ticket ID (50), Title (200), Description (10,000), Resolved date (no future day), `SolutionFields` extracted from `SolutionFormModal` and shared, Evidence upload with type / size / count checks (MSG34, MSG72) before sending; Save (MSG32 toast, form reset) and Save as draft (MSG41); server rejections shown next to their fields, every value and file kept. `DraftsList`: type Manual, Open loads the Draft into the tab (kept files listed, removable; every request with a `draftId` sends `keepEvidenceIds`), Delete as today. MSW handlers for the new endpoints.
 **Files:**
 - Create: `F/components/ManualEntryForm.tsx`, `F/components/ManualEntryForm.test.tsx`, `F/components/SolutionFields.tsx`
 - Modify: `F/pages/ImportTicketsPage.tsx`, `F/components/SolutionFormModal.tsx`, `F/components/DraftsList.tsx`, `F/components/DraftsList.test.tsx`, `F/api/**`, `F/mocks/handlers.ts`, `F/mocks/data.ts`

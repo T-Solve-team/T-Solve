@@ -31,6 +31,7 @@ paths:
   - docs/bug-log.md
   - backend/src/main/java/vn/tsolve/project/service/**
   - backend/src/main/resources/application.yml
+  - infra/caddy/Caddyfile
   - .env.example
 ---
 
