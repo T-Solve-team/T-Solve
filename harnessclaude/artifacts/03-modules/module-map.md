@@ -40,7 +40,7 @@ owner (see "Stories → module"). Owners can change: edit the Owner column and t
 | `platform-console` | Platform Console on `admin.` (restored 04/11, HLA): Workspace list, create, suspend / reactivate, invite the first Admin (UC-54…56); Operator sign-in is `identity` Task 11 (KAN-233) | Đặng Tấn Bình | medium | default | platform, identity, worker, fe-foundation |
 | `workspace` | Workspace & Department Management · UC-10–15 | Đặng Tấn Bình | medium | default | identity |
 | `project-integration` | Ticket tracker integration · UC-16–18; tracker client and issue events | Đặng Tấn Bình | medium | default | workspace, worker |
-| `wiki` | Space Management + Wiki Document Management · UC-38–50 | Đặng Nhật Minh | large | default | workspace, ai |
+| `wiki` | Space Management + Wiki Document Management · UC-38–50 | Đặng Nhật Minh | large | default | workspace, identity, ai, platform, worker |
 | `ticket-repository` | Ticket Import & Repository · UC-20–25 | Đặng Nhật Minh | large | default | project-integration |
 | `search` | Intelligent Retrieval + Reuse & Feedback · UC-26–28; embedding pipeline of tickets | Trần Hải Anh | large | default | ticket-repository, ai, worker |
 | `ticket-review` | Review & Approval Workflow · UC-29–33 | Phạm Tùng Dương | large | default | be-foundation, identity, project-integration, ticket-repository, worker |
