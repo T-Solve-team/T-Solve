@@ -3,7 +3,6 @@ package vn.tsolve.jiraapp.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willAnswer;
@@ -27,12 +26,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.identity.account.service.AccountLookupService;
-import vn.tsolve.jiraapp.client.DraftReminderMailClient;
 import vn.tsolve.jiraapp.dto.DraftReminderDispatchRequest;
 import vn.tsolve.jiraapp.dto.DraftReminderEmailRequest;
 import vn.tsolve.jiraapp.dto.DraftReminderWorkspaceRequest;
@@ -40,6 +37,10 @@ import vn.tsolve.review.service.impl.ReviewExpiryRegistration;
 import vn.tsolve.ticket.dto.OpenDraft;
 import vn.tsolve.ticket.service.SolutionDraftService;
 import vn.tsolve.worker.config.JobRunrRuntime;
+import vn.tsolve.worker.dto.OutboundEmail;
+import vn.tsolve.worker.exception.EmailOutboxUnavailableException;
+import vn.tsolve.worker.exception.InvalidOutboundEmailException;
+import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.TenantExecutionService;
 import vn.tsolve.worker.service.WorkerTenantService;
 
@@ -62,17 +63,13 @@ class DraftReminderHandlersTest {
     private final JobRequestScheduler scheduler = mock(JobRequestScheduler.class);
     private final SolutionDraftService drafts = mock(SolutionDraftService.class);
     private final AccountLookupService accounts = mock(AccountLookupService.class);
-    private final DraftReminderMailClient mail = mock(DraftReminderMailClient.class);
-
-    @SuppressWarnings("unchecked")
-    private final ObjectProvider<DraftReminderMailClient> mailers = mock(ObjectProvider.class);
+    private final EmailOutboxService outbox = mock(EmailOutboxService.class);
 
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @BeforeEach
     void wire() {
         given(runtime.scheduler()).willReturn(scheduler);
-        given(mailers.getIfAvailable()).willReturn(mail);
         given(tenants.isWorkspaceActive(WORKSPACE)).willReturn(true);
         willAnswer(call -> {
                     ((Runnable) call.getArgument(1)).run();
@@ -116,14 +113,29 @@ class DraftReminderHandlersTest {
     }
 
     @Test
-    void sendsNothingAndWarnsOnceWithoutAMailSender_AC_011_6(CapturedOutput output) {
-        given(mailers.getIfAvailable()).willReturn(null);
-        given(tenants.activeWorkspaceIds()).willReturn(Set.of(WORKSPACE, OTHER_WORKSPACE));
+    void queuesTheEmailInTheOutboxInsideTheWritersWorkspace_AC_011_4_AC_011_6() {
+        given(accounts.findActive(WRITER)).willReturn(Optional.of(new TSolveUser(WRITER, EMAIL, "Ngo Bao", Set.of())));
+        // The outbox reads the bound Workspace, so the queue call must run inside runInTenant.
+        boolean[] inTenant = {false};
+        willAnswer(call -> {
+                    inTenant[0] = true;
+                    ((Runnable) call.getArgument(1)).run();
+                    inTenant[0] = false;
+                    return null;
+                })
+                .given(execution)
+                .runInTenant(eq(WORKSPACE), any());
+        given(drafts.findOpenDrafts(WRITER)).willReturn(List.of(DRAFT));
+        willAnswer(call -> {
+                    assertThat(inTenant[0]).isTrue();
+                    return UUID.randomUUID();
+                })
+                .given(outbox)
+                .queue(any());
 
-        dispatch().run(new DraftReminderDispatchRequest());
+        email("").run(new DraftReminderEmailRequest(WORKSPACE, WRITER, TODAY));
 
-        verifyNoInteractions(scheduler);
-        assertThat(output.getAll().split("no mail sender", -1)).hasSize(2);
+        verify(outbox).queue(any());
     }
 
     @Test
@@ -162,7 +174,12 @@ class DraftReminderHandlersTest {
 
         email("https://acme.atlassian.net").run(new DraftReminderEmailRequest(WORKSPACE, WRITER, TODAY));
 
-        verify(mail).send(eq(EMAIL), eq("You have 1 unsubmitted Solution draft in T-Solve"), anyString());
+        ArgumentCaptor<OutboundEmail> queued = ArgumentCaptor.forClass(OutboundEmail.class);
+        verify(outbox).queue(queued.capture());
+        assertThat(queued.getValue().recipient()).isEqualTo(EMAIL);
+        assertThat(queued.getValue().subject()).isEqualTo("You have 1 unsubmitted Solution draft in T-Solve");
+        assertThat(queued.getValue().bodyText()).contains("SAM1-16", "https://acme.atlassian.net/browse/SAM1-16");
+        assertThat(queued.getValue().bodyHtml()).isNull();
     }
 
     @Test
@@ -174,25 +191,34 @@ class DraftReminderHandlersTest {
         email("").run(new DraftReminderEmailRequest(WORKSPACE, WRITER, TODAY));
         email("").run(new DraftReminderEmailRequest(WORKSPACE, SECOND, TODAY));
 
-        verify(mail, never()).send(anyString(), anyString(), anyString());
+        verify(outbox, never()).queue(any());
     }
 
     @Test
     void failsOnlyThisWritersJobSoJobRunrRetriesItAndLogsNoAddress_AC_011_4_AC_011_7(CapturedOutput output) {
         given(accounts.findActive(WRITER)).willReturn(Optional.of(new TSolveUser(WRITER, EMAIL, "Ngo Bao", Set.of())));
         given(drafts.findOpenDrafts(WRITER)).willReturn(List.of(DRAFT));
-        willThrow(new IllegalStateException("smtp down for " + EMAIL))
-                .given(mail)
-                .send(anyString(), anyString(), anyString());
+        willThrow(new EmailOutboxUnavailableException()).given(outbox).queue(any());
 
         assertThatThrownBy(() -> email("").run(new DraftReminderEmailRequest(WORKSPACE, WRITER, TODAY)))
-                .isInstanceOf(DraftReminderEmailHandler.EmailNotSentException.class)
+                .isInstanceOf(DraftReminderEmailHandler.EmailNotQueuedException.class)
                 .hasMessageNotContaining(EMAIL);
         assertThat(output.getAll()).doesNotContain(EMAIL).doesNotContain("SAM1-16");
     }
 
+    @Test
+    void dropsAnAddressTheOutboxRejectsInsteadOfRetryingForever_AC_011_4_AC_011_7(CapturedOutput output) {
+        given(accounts.findActive(WRITER)).willReturn(Optional.of(new TSolveUser(WRITER, EMAIL, "Ngo Bao", Set.of())));
+        given(drafts.findOpenDrafts(WRITER)).willReturn(List.of(DRAFT));
+        willThrow(new InvalidOutboundEmailException()).given(outbox).queue(any());
+
+        email("").run(new DraftReminderEmailRequest(WORKSPACE, WRITER, TODAY));
+
+        assertThat(output.getAll()).contains("invalid email").doesNotContain(EMAIL);
+    }
+
     private DraftReminderDispatchHandler dispatch() {
-        return new DraftReminderDispatchHandler(tenants, runtime, mailers, clock);
+        return new DraftReminderDispatchHandler(tenants, runtime, clock);
     }
 
     private DraftReminderWorkspaceHandler workspace() {
@@ -200,6 +226,6 @@ class DraftReminderHandlersTest {
     }
 
     private DraftReminderEmailHandler email(String site) {
-        return new DraftReminderEmailHandler(tenants, execution, drafts, accounts, mailers, site);
+        return new DraftReminderEmailHandler(tenants, execution, drafts, accounts, outbox, site);
     }
 }

@@ -72,6 +72,7 @@ public class DraftReminderWorkspaceHandler implements JobRequestHandler<DraftRem
                             jobId(workspace, writer, request.day()),
                             new DraftReminderEmailRequest(workspace, writer, request.day()));
         }
-        log.info("Draft reminder queued {} emails in Workspace {}", writers.size(), workspace);
+        // JobRunr skips an id it already has, and the email job drops inactive Accounts, so this counts writers found.
+        log.info("Draft reminder found {} writers in Workspace {}", writers.size(), workspace);
     }
 }
