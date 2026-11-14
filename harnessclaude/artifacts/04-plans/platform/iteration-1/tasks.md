@@ -1,7 +1,7 @@
 ---
 module: platform
 date: 2026-11-04
-total_tasks: 22
+total_tasks: 24
 owner: Dev
 iteration: 1
 ---
@@ -757,3 +757,51 @@ The chat-model pull and the completion check wait for KAN-140; the `bge-m3` part
 **Dependencies:** Task 13; KAN-140 model choice
 **Estimated size:** medium
 **Done when:** `ai-vps.test.sh` passes after a reboot.
+
+---
+
+## Task 23: Cross-module tenant-isolation IT
+
+**Story:** STORY-015
+**Feature:** cross-module-isolation
+**Assignee:** Phạm Tùng Dương (KAN-186)
+**After this task you can:** run `mvn -Dit.test=CrossModuleIsolationIT verify` and see an ACME session read no BETA row
+through the Ticket List, ticket detail and feedback, Search, Chatbot and Review Queue.
+**Covers:** AC-015.1 – AC-015.7
+**Design:** KAN-186, Part 1.
+**Description:** One IT on `TwoTenantDatabases` with a Redis Testcontainer and a real ACME Workspace session; the same
+data in `tenant_a` and `tenant_b`; AI clients mocked; row counts in `tenant_b` before and after each request.
+**Tests (about 9):** one per AC-015.2 – AC-015.6, AC-015.3 for detail and feedback, AC-015.7 for each endpoint
+(parameterised), all names citing the id; AC-015.1 in the class setup check (a request reaches `tenant_a`).
+**Files:**
+- Test: `backend/src/test/java/vn/tsolve/platform/isolation/CrossModuleIsolationIT.java` (and a fixture class beside it
+  if the data set grows)
+- No production code. If a test shows a leak, stop: it is a bug (log it in `docs/bug-log.md`), not a change here.
+**Dependencies:** identity Task 26a (web session), search, chatbot, ticket-review APIs on `main`
+**Estimated size:** medium
+**Done when:** `mvn verify` passes with the IT and `sdd.ts trace platform` lists AC-015.1 – AC-015.7 as tested.
+
+---
+
+## Task 24: Playwright E2E smoke on the local stack
+
+**Story:** STORY-015
+**Feature:** e2e-smoke
+**Assignee:** Phạm Tùng Dương (KAN-186)
+**After this task you can:** start the local stack, run `cd e2e && npm ci && npm run e2e`, and open the HTML report.
+**Covers:** AC-015.8 – AC-015.12
+**Design:** KAN-186, Part 2.
+**Description:** Standalone `e2e/` package; a global setup that checks the stack and writes the missing dev data; sign-in
+through Keycloak and the fake Google as Alice; the five pages; ACME's cookie on the BETA host; the HTML report; the run
+recorded in `artifacts/06-evaluation/platform/`.
+**Tests (about 7):** `e2e/tests/smoke.spec.ts` (AC-015.9, one test per page), `e2e/tests/site-bound-session.spec.ts`
+(AC-015.10), `e2e/global-setup.ts` check (AC-015.11) with a unit-style test that the missing-service message names the
+service; test titles cite the id.
+**Files:**
+- Create: `e2e/package.json`, `e2e/package-lock.json`, `e2e/playwright.config.ts`, `e2e/global-setup.ts`,
+  `e2e/fixtures/dev-data.ts`, `e2e/tests/*.spec.ts`, `e2e/README.md`, `e2e/.gitignore`
+- Modify: root `.gitignore` only if `e2e/.gitignore` is not enough
+**Dependencies:** Task 23 not required; the local stack of `README.md` (Keycloak, fake Google, Redis, db)
+**Estimated size:** medium
+**Done when:** `npm run e2e` passes on the local stack and the report of the run is in
+`artifacts/06-evaluation/platform/task-24-e2e-smoke-test-report.md`.

@@ -24,6 +24,7 @@ import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
 import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
+import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.exception.SolutionTooLongException;
 import vn.tsolve.ticket.mapper.ImportPreviewMapper;
@@ -136,6 +137,8 @@ public class ImportPreviewServiceImpl implements ImportPreviewService {
     private ImportPreview owned(String user, long previewId) {
         // another user's preview is "not found", so ids cannot be probed (design: Cross-user access)
         ImportPreview preview = previews.findByIdAndOwner(previewId, user)
+                // a Manual Draft is not a preview: it is reopened through /imports/manual/drafts (AC-006.13)
+                .filter(p -> p.getSource() != TicketSource.MANUAL)
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         if (!projects.managesActive(user, preview.getProjectId())) {
             throw new ProjectAccessDeniedException();

@@ -118,6 +118,87 @@ class SolutionRetrievalRepositoryIT {
                 .isZero();
     }
 
+    @Test
+    void returnsNearestOfTheProjectsDepartment_AC_011_1() {
+        long department = department("IT", "ACTIVE");
+        UUID project = project(department, "ITA");
+        UUID sibling = project(department, "ITB");
+        UUID first = ticket(project, "FIRST", "PUBLISHED", 1, 0);
+        UUID tie = ticket(sibling, "TIE", "PUBLISHED", 1, 0);
+        UUID next = ticket(project, "NEXT", "PUBLISHED", 0.8f, 0.6f);
+        ticket(project, "FAR", "PUBLISHED", 0, 1);
+        // A ticket imported before changeset 008 holds the hex form of the internal project id.
+        UUID legacy = ticket(legacyId(project), "LEGACY", "PUBLISHED", 0.75f, 0.6614f);
+
+        // Equal similarity: the internal ticket id breaks the tie; the public id is what comes back.
+        List<UUID> tieOrder = jdbc.queryForList(
+                "SELECT public_id FROM ticket WHERE public_id IN (?, ?) ORDER BY ticket_id", UUID.class, first, tie);
+        assertThat(repository.nearestInProjectDepartment(project, vector(1, 0), 0.7, 2))
+                .extracting(SolutionRetrievalRepository.TicketSolutionRow::getTicketId)
+                .containsExactlyElementsOf(tieOrder);
+        var rows = repository.nearestInProjectDepartment(project, vector(1, 0), 0.7, 5);
+        assertThat(rows)
+                .extracting(SolutionRetrievalRepository.TicketSolutionRow::getTicketId)
+                .containsExactly(tieOrder.get(0), tieOrder.get(1), next, legacy);
+        var top = rows.getFirst();
+        assertThat(top.getSimilarity()).isEqualTo(1);
+        assertThat(top.getRootCause()).isEqualTo("Root cause");
+        assertThat(top.getResolutionSteps()).isEqualTo("Resolution");
+        assertThat(top.getWorkaround()).isBlank();
+        assertThat(top.getScopeOfApplicability()).isEqualTo("Scope");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM search_log", Integer.class))
+                .isZero();
+    }
+
+    @Test
+    void leavesOutOtherDepartmentsUnpublishedInactiveOrFar_AC_011_3() {
+        UUID project = project(department("IT", "ACTIVE"), "ITA");
+        ticket(project, "UNPUBLISHED", "UNPUBLISHED", 1, 0);
+        ticket(project, "FAR", "PUBLISHED", 0, 1);
+        ticket(project(department("HR", "ACTIVE"), "HRA"), "OTHER", "PUBLISHED", 1, 0);
+        UUID deleted = project(department("OLD", "DELETED"), "OLDA");
+        ticket(deleted, "INACTIVE", "PUBLISHED", 1, 0);
+
+        assertThat(repository.nearestInProjectDepartment(project, vector(1, 0), 0.7, 5))
+                .isEmpty();
+        assertThat(repository.nearestInProjectDepartment(deleted, vector(1, 0), 0.7, 5))
+                .isEmpty();
+        assertThat(repository.nearestInProjectDepartment(UUID.randomUUID(), vector(1, 0), 0.7, 5))
+                .isEmpty();
+    }
+
+    private long department(String name, String status) {
+        return jdbc.queryForObject(
+                "INSERT INTO department(name, status) VALUES (?, ?) RETURNING department_id", Long.class, name, status);
+    }
+
+    private UUID project(long department, String key) {
+        return jdbc.queryForObject(
+                "INSERT INTO project(department_id, jira_project_key) VALUES (?, ?) RETURNING public_id",
+                UUID.class,
+                department,
+                key);
+    }
+
+    private UUID legacyId(UUID project) {
+        return jdbc.queryForObject(
+                "SELECT lpad(to_hex(project_id), 32, '0')::uuid FROM project WHERE public_id = ?", UUID.class, project);
+    }
+
+    private UUID ticket(UUID projectId, String key, String status, float x, float y) {
+        var ids = jdbc.queryForMap("""
+                INSERT INTO ticket(source_ticket_id, project_id, source, status, title,
+                                   symptoms, root_cause, resolution_steps, workaround, scope)
+                VALUES (?, ?, 'CSV', ?, 'Private title', ?, 'Root cause', 'Resolution', '  ', 'Scope')
+                RETURNING ticket_id, public_id
+                """, key, projectId, status, key);
+        jdbc.update(
+                "INSERT INTO ticket_embedding(ticket_id, embedding, model) VALUES (?, CAST(? AS vector), 'bge-m3')",
+                ids.get("ticket_id"),
+                vector(x, y));
+        return (UUID) ids.get("public_id");
+    }
+
     private List<SolutionRetrievalRepository.SolutionRow> nearest(double minimum, int limit) {
         return repository.nearest(vector(1, 0), minimum, limit);
     }
@@ -133,18 +214,12 @@ class SolutionRetrievalRepositoryIT {
                 UUID.class,
                 department,
                 key);
-        UUID ticket = jdbc.queryForObject(
-                """
+        UUID ticket = jdbc.queryForObject("""
                 INSERT INTO ticket(source_ticket_id, project_id, source, status, title,
                                    symptoms, root_cause, resolution_steps, workaround, scope)
                 VALUES (?, ?, 'CSV', ?, 'Private title', ?, 'Root cause', 'Resolution', '  ', 'Scope')
                 RETURNING ticket_id
-                """,
-                UUID.class,
-                key,
-                project,
-                ticketStatus,
-                key);
+                """, UUID.class, key, project, ticketStatus, key);
         jdbc.update(
                 "INSERT INTO ticket_embedding(ticket_id, embedding, model) VALUES (?, CAST(? AS vector), 'bge-m3')",
                 ticket,

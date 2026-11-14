@@ -9,4 +9,7 @@ public interface AccountLookupService {
 
     /** The Account as a user (Employee only, until identity serves roles), or empty when unknown or deactivated. */
     Optional<TSolveUser> findActive(UUID accountId);
+
+    /** The stored full name of any Account, deactivated ones included (a former Project Manager's MSG64). */
+    Optional<String> findName(UUID accountId);
 }

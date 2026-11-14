@@ -19,19 +19,19 @@ The reviewer did not re-run the suites (dispatcher brief: low-RAM machine, no np
 Session log: the 10 new tests failed against the placeholder page before the implementation, then passed.
 
 ## Tests added by this commit
-- `src/features/workspace/pages/WorkspaceSettingsPage.test.tsx` — 10 cases (AC-008.1, AC-008.2, AC-008.3 ×2 incl. edge 19, AC-008.4 ×4, AC-008.5, AC-008.6)
+- `src/features/workspace/pages/WorkspaceSettingsPage.test.tsx` — 10 cases (AC-010.1, AC-010.2, AC-010.3 ×2 incl. edge 19, AC-010.4 ×4, AC-010.5, AC-010.6)
 
 ## Traceability (run by the reviewer)
 ```
-$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-008
-  ✓ AC-008.1  frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx
-  ✓ AC-008.2  frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx
-  ✓ AC-008.3  frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx
-  ✓ AC-008.4  frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx
-  ✓ AC-008.5  frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx
-  ✓ AC-008.6  frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx
-trace workspace (STORY-008): 6/6 acceptance criteria have a test
+$ bun harnessclaude/hooks/sdd.ts trace workspace STORY-010
+  ✓ AC-010.1  frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx
+  ✓ AC-010.2  frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx
+  ✓ AC-010.3  frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx
+  ✓ AC-010.4  frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx
+  ✓ AC-010.5  frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx
+  ✓ AC-010.6  frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx
+trace workspace (STORY-010): 6/6 acceptance criteria have a test
 ```
 
 ## Coverage
-Not measured (no coverage run recorded). Every STORY-008 criterion has a page-level test that asserts the behaviour.
+Not measured (no coverage run recorded). Every STORY-010 criterion has a page-level test that asserts the behaviour.

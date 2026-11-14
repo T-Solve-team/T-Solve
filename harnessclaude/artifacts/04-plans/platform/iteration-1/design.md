@@ -68,3 +68,6 @@ all as in the master's Data Model.
 Master rows 1 – 55, 57 – 64 and 69 – 71 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
 STORY-009, STORY-010, STORY-011, STORY-012 without the contributors, STORY-013 and the edge limits of STORY-014). Rows 45
 (also in Task 25), 56 and 65 – 68 belong to iteration 2.
+
+## KAN-186 (STORY-015)
+See the master design, section "KAN-186: cross-module isolation tests and the E2E smoke" — Tasks 23 and 24.

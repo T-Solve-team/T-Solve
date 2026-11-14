@@ -1,5 +1,6 @@
 package vn.tsolve.ticket.service.impl;
 
+import java.time.LocalDate;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -32,6 +33,8 @@ public class ImportBatchRecorder {
                 preview.getOwner(),
                 preview.getSource(),
                 preview.getFileName(),
+                preview.getResolvedFrom(),
+                preview.getResolvedTo(),
                 (int) counts.errorRows(),
                 (int) counts.removedRows(),
                 error));
@@ -39,7 +42,7 @@ public class ImportBatchRecorder {
 
     /** A Jira pull that got no usable answer (AC-001.7): no preview exists yet, so nothing was published or removed. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordJiraFailed(UUID projectId, String user, String error) {
-        batches.save(ImportBatch.failed(projectId, user, TicketSource.JIRA_IMPORT, null, 0, 0, error));
+    public void recordJiraFailed(UUID projectId, String user, LocalDate from, LocalDate to, String error) {
+        batches.save(ImportBatch.failed(projectId, user, TicketSource.JIRA_IMPORT, null, from, to, 0, 0, error));
     }
 }

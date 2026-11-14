@@ -11,9 +11,25 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
-import type { CreateDepartmentRequest, DepartmentRef } from '../model';
+import type { CreateDepartmentRequest, DepartmentRef, UpdateDepartmentRequest } from '../model';
 
 export const getCreateDepartmentResponseMock = (
+  overrideResponse: Partial<Extract<DepartmentRef, object>> = {},
+): DepartmentRef => ({
+  departmentId: faker.string.uuid(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getGetDepartmentResponseMock = (
+  overrideResponse: Partial<Extract<DepartmentRef, object>> = {},
+): DepartmentRef => ({
+  departmentId: faker.string.uuid(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getUpdateDepartmentResponseMock = (
   overrideResponse: Partial<Extract<DepartmentRef, object>> = {},
 ): DepartmentRef => ({
   departmentId: faker.string.uuid(),
@@ -44,4 +60,60 @@ export const getCreateDepartmentMockHandler = (
     options,
   );
 };
-export const getDepartmentsMock = () => [getCreateDepartmentMockHandler()];
+
+export const getGetDepartmentMockHandler = (
+  overrideResponse?:
+    | DepartmentRef
+    | ((
+        info: Parameters<HttpResponseResolver<{ departmentId: string }>>[0],
+      ) => Promise<DepartmentRef> | DepartmentRef),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ departmentId: string }>(
+    '*/api/v1/departments/:departmentId',
+    async (info: Parameters<HttpResponseResolver<{ departmentId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetDepartmentResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateDepartmentMockHandler = (
+  overrideResponse?:
+    | DepartmentRef
+    | ((
+        info: Parameters<
+          HttpResponseResolver<{ departmentId: string }, UpdateDepartmentRequest>
+        >[0],
+      ) => Promise<DepartmentRef> | DepartmentRef),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put<{ departmentId: string }, UpdateDepartmentRequest>(
+    '*/api/v1/departments/:departmentId',
+    async (
+      info: Parameters<HttpResponseResolver<{ departmentId: string }, UpdateDepartmentRequest>>[0],
+    ) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateDepartmentResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+export const getDepartmentsMock = () => [
+  getCreateDepartmentMockHandler(),
+  getGetDepartmentMockHandler(),
+  getUpdateDepartmentMockHandler(),
+];

@@ -10,7 +10,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
+import vn.tsolve.common.exception.BusinessRuleException;
 
 /** A resolved issue with its Solution (GBR-33). projectId points at the workspace module's Project. */
 @Entity
@@ -50,6 +52,9 @@ public class Ticket {
     @Column(name = "resolved_date")
     private LocalDate resolvedDate;
 
+    @Column(name = "source_link", length = 500, updatable = false)
+    private String sourceLink;
+
     @Column(nullable = false, columnDefinition = "text")
     private String symptoms;
 
@@ -80,7 +85,7 @@ public class Ticket {
     @Column(name = "change_request_comment", columnDefinition = "text")
     private String changeRequestComment;
 
-    @Column(name = "writer_id", insertable = false, updatable = false)
+    @Column(name = "writer_id", updatable = false)
     private UUID writerId;
 
     @Column(name = "review_due_date", insertable = false, updatable = false)
@@ -109,6 +114,21 @@ public class Ticket {
             String writer,
             LocalDate resolvedDate,
             Solution solution) {
+        return imported(
+                ticketId, projectId, source, importBatchId, title, description, writer, resolvedDate, null, solution);
+    }
+
+    public static Ticket imported(
+            String ticketId,
+            UUID projectId,
+            TicketSource source,
+            Long importBatchId,
+            String title,
+            String description,
+            String writer,
+            LocalDate resolvedDate,
+            String sourceLink,
+            Solution solution) {
         Ticket t = new Ticket();
         t.ticketId = ticketId;
         t.projectId = projectId;
@@ -119,6 +139,7 @@ public class Ticket {
         t.description = description;
         t.writer = writer;
         t.resolvedDate = resolvedDate;
+        t.sourceLink = sourceLink;
         t.symptoms = solution.symptoms();
         t.rootCause = solution.rootCause();
         t.resolutionSteps = solution.resolutionSteps();
@@ -127,15 +148,54 @@ public class Ticket {
         return t;
     }
 
+    /** A ticket entered by hand by its Project Manager (UC-22): Published at once; they are its writer (D15). */
+    public static Ticket manual(
+            String ticketId,
+            UUID projectId,
+            Long importBatchId,
+            String title,
+            String description,
+            String writer,
+            UUID writerId,
+            LocalDate resolvedDate,
+            Solution solution) {
+        Ticket t = imported(
+                ticketId,
+                projectId,
+                TicketSource.MANUAL,
+                importBatchId,
+                title,
+                description,
+                writer,
+                resolvedDate,
+                solution);
+        t.writerId = writerId;
+        return t;
+    }
+
     /** The five Solution sections (GBR-33); Workaround is the only optional one. */
     public record Solution(
             String symptoms, String rootCause, String resolutionSteps, String workaround, String scope) {}
 
-    public void applyReview(TicketStatus outcome, String feedback, Instant decidedAt) {
-        status = outcome;
+    /** Changes the status, only as {@link TicketStatus#canMoveTo} allows (STORY-005); otherwise MSG06. */
+    public void moveTo(TicketStatus to, Instant at) {
+        if (!status.canMoveTo(to)) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+        status = to;
+        updatedAt = at;
+    }
+
+    /**
+     * Keeps the reviewer's feedback of the decision that moved this ticket to {@code outcome}. Only after
+     * {@link #moveTo} reached {@code outcome}, so a reason never sits on a ticket in another status.
+     */
+    public void recordReviewFeedback(TicketStatus outcome, String feedback) {
+        if (status != outcome) {
+            throw new IllegalStateException("Feedback for " + outcome + " on a ticket that is " + status);
+        }
         rejectionReason = outcome == TicketStatus.REJECTED ? feedback : null;
         changeRequestComment = outcome == TicketStatus.CHANGES_REQUESTED ? feedback : null;
-        updatedAt = decidedAt;
     }
 
     public UUID getId() {
@@ -196,6 +256,10 @@ public class Ticket {
 
     public LocalDate getResolvedDate() {
         return resolvedDate;
+    }
+
+    public String getSourceLink() {
+        return sourceLink;
     }
 
     public Solution getSolution() {

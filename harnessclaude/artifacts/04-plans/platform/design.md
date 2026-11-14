@@ -359,7 +359,9 @@ another's; no such use exists yet (see Out of Scope of the spec).
 - Images: `tsolve-backend` (also worker, migrate, seed and ops, by profile), `tsolve-frontend`, `tsolve-caddy`, built in
   CI and pushed to GHCR under the repository owner (`ghcr.io/<owner>/…`, tags `sha-<commit>` and `staging`) (decision
   P9).
-- Deploy: the `cd-staging` workflow runs on a self-hosted runner on the application VPS (label `tsolve-deploy`,
+- Deploy (as built for KAN-14, user decision 13/11: an SSH forced-command deploy key instead of the runner below, build
+  on the VPS instead of GHCR, no migrate or seed step; see Key Decisions "KAN-14 CD deviation"): the `cd-staging`
+  workflow runs on a self-hosted runner on the application VPS (label `tsolve-deploy`,
   non-root `deploy` user, systemd service with CPU and memory limits): pull → migrate (profile `migrate`: Registry
   changelog, then the tenant changelog for every Workspace, stopping and naming the first failing Workspace) → up →
   health → seed → smoke test.
@@ -393,6 +395,7 @@ another's; no such use exists yet (see Out of Scope of the spec).
 | H-Q4 Object storage | Garage (S3-compatible; ADR-014); one per environment; object names `<workspaceId>/<uuid>`; signed URLs; no local files | Local volume; a cloud bucket; the store first named on 4/11 (its community images stopped) | Hiếu, 4/11 and the user, 4/11 (Q1); any API replica can serve any file |
 | H-Q5 Provisioning | One `WorkspaceProvisioning` service; the script and the Console both call it; the first Admin is invited | Script with its own SQL | Hiếu, 4/11 |
 | H-Q6 Row guard | One-row `tenant_identity`; policy `tenant_guard` on every tenant table comparing it with the transaction's `app.tenant_id`; no `BYPASSRLS`; guard test enforces it | Boundary only | Hiếu, 4/11 |
+| KAN-14 CD deviation | The `cd-staging` workflow SSHes from a GitHub-hosted job to the VPS with a dedicated deploy key whose forced command is `/usr/local/sbin/tsolve-deploy` (root-owned, installed by hand); images are built on the VPS, not pushed to GHCR; CD runs no migrate or seed step and no automatic rollback | Self-hosted runner and GHCR (DevOps design §5.5, P9) | User, 13/11 (KAN-14). STORY-010 AC-010.2 – AC-010.6 are knowingly not met yet; the spec is unchanged by the user's choice |
 | P1 Shared changeset 001 | `be-foundation` (Trần Hải Anh) owns the master and decides who edits changeset 001; the legacy `workspace` table leaves the tenant changelog, its company data stays with `workspace`; platform's changesets are added after it | platform rewrites 001 | Ownership stays with `be-foundation` (user, 25/10) |
 | P2 Shared files | `backend/pom.xml`, `backend/src/main/resources/application*.yml`, `backend/.dockerignore` stay in platform `paths`; `be-foundation` stays the owner | quick change per edit | The gate needs them open (user, 25/10) |
 | P3 JWT library | `spring-security-oauth2-jose` (Nimbus `NimbusJwtDecoder.withJwkSource`), version from the Spring Boot BOM — approved by the user, 25/10 | full resource-server starter; jjwt | Key-set cache with one refetch on an unknown key id (AC-005.4) |
@@ -662,3 +665,48 @@ Open questions for the spec owner: none (the spec settles the Redis cache as out
 | AC-013.1 – .20 (provisioning, first Admin, invitation, race) | Provisioning; R9, R10 |
 | AC-014.1 – .13 (backup, restore, monitoring, edge limits, load test) | Infrastructure — Edge limits, Operations; Tooling decisions (W1 – W5) |
 | Non-functional 1 – 7 | Data Model; Edge Cases & Risks rows 1 – 15 |
+
+## KAN-186: cross-module isolation tests and the E2E smoke (STORY-015; AC-015.1 – AC-015.12)
+
+Added 14/11 (Change Mode, user decisions of 14/11). Two parts, one Jira task, one branch
+`test/KAN-186-platform-e2e-isolation`.
+
+### Part 1 — `CrossModuleIsolationIT` (AC-015.1 – AC-015.7)
+- **Chosen:** one Spring Boot IT, `backend/src/test/java/vn/tsolve/platform/isolation/CrossModuleIsolationIT.java`,
+  built like the identity session ITs (`AbstractSessionIT`): `TwoTenantDatabases` (ACME → `tenant_a`, BETA →
+  `tenant_b`), `SessionTestFixtures.Beans`, a Redis Testcontainer through `@DynamicPropertySource`, and a **real
+  Workspace session** (the cookie of the web session of identity Task 26a) on the ACME site host for every request, so
+  the binding comes from `WebSessionFilter` (identity AC-001.76), not from `@WithTSolveUser`. **Alternatives:**
+  `@WithTSolveUser` + `TenantScope.runIn` (skips the session binding the AC asks for); one IT per module (more start-ups,
+  no shared fixture). **Rationale:** AC-015.1 says "a Workspace session of ACME"; one context keeps the run short.
+- **Data:** written with `TwoTenantDatabases.tenantA()` / `tenantB()` (JDBC), the same shape in both databases:
+  Accounts with their `user_role` rows (Ticket Resolver, Project Manager), a Department and a Project with the
+  membership the module scope rules need, a Published ticket with the same title in both, a ticket waiting for review
+  in both, and the ticket embeddings Search and the Chatbot retrieve. Ids differ per database so a leak is visible.
+- **AI:** `@MockitoBean` for `vn.tsolve.ai` `LlmClient` and `EmbeddingClient`; the test captures the prompt / context
+  the chat model receives (AC-015.5) and returns a fixed vector, so ranking works on both databases.
+- **"Nothing written in BETA"** (AC-015.3, .4, .5, .7): count rows of the touched tables (`ticket_feedback`, the search
+  log, the chatbot answer table) in `tenant_b` before and after the request.
+- **Unknown-ticket answer** (AC-015.3): the test first asks with a random UUID, records status and `code`, then asks with
+  BETA's id and compares — no hard-coded code.
+- Test names cite the id (`ticketList_listsOnlyAcmeTickets_AC_015_2`); the class lives under `platform/` so
+  `sdd.ts trace platform` finds it.
+
+### Part 2 — Playwright suite under `e2e/` (AC-015.8 – AC-015.12)
+- **Chosen:** a standalone npm package `e2e/` (`@playwright/test`, exact version pinned, Chromium only, `pg` for the
+  fixture), `npm run e2e` = `playwright test`. **Alternatives:** inside `frontend/` (mixes Vitest and Playwright, the
+  frontend verify would pick it up); Cypress (no reason to add a second tool). **Rationale:** AC-015.8.
+- **Global setup** (AC-015.11): checks, in order, PostgreSQL `localhost:5432`, Redis `6379`, Keycloak `8180`, the fake
+  Google, the backend `GET /actuator/health` on `8080` and the web app on `5173`; the first one that does not answer
+  stops the run with `local stack not running: <service>`. Then it makes the dev data the pages need, only what is
+  missing: `alice@acme.test` gets the Ticket Resolver and Project Manager Roles in addition to Admin, one Department
+  and one Published ticket for ACME (`Decided in planning: the fixture writes the dev database with SQL, because the
+  demo seed KAN-97 is not built (builder check)`).
+- **Sign-in** (AC-015.9): through Keycloak and the fake Google as in `docs/authentication.md` (organization `acme`);
+  the authenticated storage state is saved once and reused. Pages: home, Ticket List, Search, Chatbot, User List — each
+  asserts a heading or table of the page and no MSG error banner.
+- **Site-bound session** (AC-015.10): with ACME's cookies, `GET /api/v1/me` sent with the BETA site host is answered
+  as a request without a session (401), and contains no BETA data.
+- **Report** (AC-015.12): Playwright HTML reporter to `e2e/playwright-report/` (git-ignored, with `test-results/`).
+  The run of 14/11 is written to `artifacts/06-evaluation/platform/task-24-e2e-smoke-test-report.md`.
+- Out of this part: the Jira App, CI, staging, two databases in the browser run (spec Out of Scope).

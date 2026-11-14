@@ -1,0 +1,299 @@
+# T-Solve staging stack: one Docker Compose project on one VPS (about 16 GB RAM).
+#
+#   docker compose -f infra/compose.staging.yml --env-file /srv/tsolve/staging/.env up -d --build --wait
+#
+# All settings come from ONE env file (template: infra/staging.env.example). Compose reads it twice: `--env-file`
+# fills the ${...} below, `env_file:` hands every name to the backend containers. The path is TSOLVE_ENV_FILE
+# (default /srv/tsolve/staging/.env); when you use another path, set TSOLVE_ENV_FILE in your shell as well.
+#
+# Only Caddy publishes ports to the world (80, 443). The one other published port is Keycloak on the VPS loopback
+# (127.0.0.1:8081) for the SSH tunnel to its Admin Console. Data lives in named volumes.
+name: tsolve-staging
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-backend-env: &backend-env
+  env_file:
+    - ${TSOLVE_ENV_FILE:-/srv/tsolve/staging/.env}
+
+# The env file also holds secrets the backend never uses (the Postgres superuser, the Keycloak database, the Google
+# client and the provisioner client). `environment:` wins over `env_file:`, so blank them here. Blank
+# KEYCLOAK_ADMIN_CLIENT_SECRET / GOOGLE_* only keep Keycloak provisioning off, which this stack does not use.
+x-no-unrelated-secrets: &no-unrelated-secrets
+  POSTGRES_PASSWORD: ""
+  KEYCLOAK_DB_PASSWORD: ""
+  GOOGLE_CLIENT_ID: ""
+  GOOGLE_CLIENT_SECRET: ""
+  KEYCLOAK_ADMIN_CLIENT_SECRET: ""
+
+services:
+  caddy:
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    mem_limit: ${CADDY_MEM_LIMIT:-128m}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      TSOLVE_DOMAIN: ${TSOLVE_DOMAIN:?set TSOLVE_DOMAIN in the env file}
+      TSOLVE_SITE_HOSTS: ${TSOLVE_SITE_HOSTS:?set TSOLVE_SITE_HOSTS in the env file}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      tsolve:
+        # The backend calls https://login.<domain> for the token and the keys from inside Docker, and the token's
+        # issuer must equal that origin: this alias sends the call to Caddy, which holds the public certificate.
+        aliases:
+          - login.${TSOLVE_DOMAIN}
+    healthcheck:
+      # Caddy's admin endpoint listens on 127.0.0.1:2019 inside the container.
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    logging: *logging
+
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    mem_limit: ${DB_MEM_LIMIT:-2g}
+    # Superuser is `postgres`; the app, Keycloak and Jobs databases and users are created by the init script,
+    # which runs ONLY when the data volume is empty (see infra/README.md).
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${PG_SHARED_BUFFERS:-512MB}
+      - -c
+      - effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-1GB}
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - max_connections=100
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}
+      DB_NAME: ${DB_NAME:?set DB_NAME in the env file}
+      DB_USER: ${DB_USER:?set DB_USER in the env file}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in the env file}
+      KEYCLOAK_DB_NAME: ${KEYCLOAK_DB_NAME:-keycloak}
+      KEYCLOAK_DB_USER: ${KEYCLOAK_DB_USER:-keycloak}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD in the env file}
+      JOBS_DB_NAME: ${JOBS_DB_NAME:-tsolve_staging_jobs}
+      JOBS_DB_USER: ${JOBS_DB_USER:?set JOBS_DB_USER in the env file}
+      JOBS_DB_PASSWORD: ${JOBS_DB_PASSWORD:?set JOBS_DB_PASSWORD in the env file}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    networks: [tsolve]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${DB_NAME:-tsolve}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    logging: *logging
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    mem_limit: ${REDIS_MEM_LIMIT:-192m}
+    # The password is read from the container environment, so it is not in `docker inspect` args or `ps`.
+    command:
+      - sh
+      - -c
+      - exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in the env file}
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    networks: [tsolve]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging: *logging
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.7
+    restart: unless-stopped
+    mem_limit: ${KEYCLOAK_MEM_LIMIT:-1536m}
+    command: ["start", "--import-realm"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/${KEYCLOAK_DB_NAME:-keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD in the env file}
+      KC_HOSTNAME: https://login.${TSOLVE_DOMAIN}
+      # The Admin Console is reached only through the SSH tunnel (infra/README.md section 9): its links use that address.
+      KC_HOSTNAME_ADMIN: http://localhost:8081
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      JAVA_OPTS_KC_HEAP: "-Xms256m -Xmx1g"
+      # Read by the realm import (infra/keycloak/staging/README.md)
+      TSOLVE_DOMAIN: ${TSOLVE_DOMAIN}
+      TSOLVE_DEMO_SLUG: ${TSOLVE_DEMO_SLUG:?set TSOLVE_DEMO_SLUG in the env file}
+      TSOLVE_DEMO_GOOGLE_DOMAIN: ${TSOLVE_DEMO_GOOGLE_DOMAIN:?set TSOLVE_DEMO_GOOGLE_DOMAIN in the env file}
+      TSOLVE_DEMO_ORG_ID: ${TSOLVE_DEMO_ORG_ID:?set TSOLVE_DEMO_ORG_ID in the env file}
+      TSOLVE_WEB_BASE_URL: ${TSOLVE_WEB_BASE_URL:-https://${TSOLVE_DEMO_SLUG}.${TSOLVE_DOMAIN}/}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?set GOOGLE_CLIENT_ID in the env file}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?set GOOGLE_CLIENT_SECRET in the env file}
+      KEYCLOAK_WEB_CLIENT_SECRET: ${KEYCLOAK_WEB_CLIENT_SECRET:?set KEYCLOAK_WEB_CLIENT_SECRET in the env file}
+      KEYCLOAK_CONSOLE_CLIENT_SECRET: ${KEYCLOAK_CONSOLE_CLIENT_SECRET:?set KEYCLOAK_CONSOLE_CLIENT_SECRET in the env file}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?set KEYCLOAK_ADMIN_CLIENT_SECRET in the env file}
+    ports:
+      # Loopback only: reach the Admin Console with `ssh -L 8081:127.0.0.1:8081 <vps>`. Caddy blocks /admin.
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - ./keycloak/staging/realm-tsolve.json:/opt/keycloak/data/import/realm-tsolve.json:ro
+      - ./keycloak/staging/realm-tsolve-ops.json:/opt/keycloak/data/import/realm-tsolve-ops.json:ro
+      - ./keycloak/themes/tsolve:/opt/keycloak/themes/tsolve:ro
+    networks: [tsolve]
+    healthcheck:
+      # The image has no curl: open the management port (9000) and ask /health/ready
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '\"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 40
+      start_period: 60s
+    logging: *logging
+
+  backend:
+    build:
+      context: ../backend
+    image: tsolve-backend:staging
+    restart: unless-stopped
+    mem_limit: ${BACKEND_MEM_LIMIT:-1536m}
+    <<: *backend-env
+    environment:
+      # The web process runs with NO Spring profile (never dev, never identity-mock).
+      SPRING_PROFILES_ACTIVE: ""
+      <<: *no-unrelated-secrets
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      SERVER_PORT: "8080"
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=65"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      caddy:
+        condition: service_healthy
+    networks: [tsolve]
+    healthcheck:
+      # Liquibase runs at startup of this process, so allow a long first start.
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 90s
+    logging: *logging
+
+  # Same image as the backend, run with the worker profile (JobRunr, notifications). It starts only when the
+  # backend is healthy, so it never races the backend's Liquibase run.
+  worker:
+    image: tsolve-backend:staging
+    restart: unless-stopped
+    mem_limit: ${WORKER_MEM_LIMIT:-1g}
+    <<: *backend-env
+    environment:
+      SPRING_PROFILES_ACTIVE: worker,worker-mock
+      <<: *no-unrelated-secrets
+      TSOLVE_WORKER_ENABLED: "true"
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      SERVER_PORT: "8080"
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=65"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks: [tsolve]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 60s
+    logging: *logging
+
+  web:
+    build:
+      context: ../frontend
+    image: tsolve-web:staging
+    restart: unless-stopped
+    mem_limit: ${WEB_MEM_LIMIT:-64m}
+    networks: [tsolve]
+    # The image's own HEALTHCHECK (GET /healthz) applies.
+    logging: *logging
+
+  ollama:
+    image: ollama/ollama:0.12.6
+    restart: unless-stopped
+    mem_limit: ${OLLAMA_MEM_LIMIT:-6g}
+    environment:
+      OLLAMA_KEEP_ALIVE: "-1"
+      OLLAMA_NUM_PARALLEL: "1"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks: [tsolve]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    logging: *logging
+
+  # One-off: pulls the two models into the ollama volume. Not part of `up`; run it with
+  #   docker compose -f infra/compose.staging.yml --env-file <env> --profile models run --rm ollama-pull
+  ollama-pull:
+    image: ollama/ollama:0.12.6
+    profiles: ["models"]
+    restart: "no"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-bge-m3}
+      CHAT_MODEL: ${OLLAMA_CHAT_MODEL:?set OLLAMA_CHAT_MODEL in the env file}
+    entrypoint: ["sh", "-ec"]
+    command:
+      - |
+        ollama pull "$$EMBED_MODEL"
+        ollama pull "$$CHAT_MODEL"
+    networks: [tsolve]
+    logging: *logging
+
+networks:
+  tsolve:
+
+volumes:
+  db-data:
+  redis-data:
+  ollama-data:
+  caddy-data:
+  caddy-config:

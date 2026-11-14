@@ -77,7 +77,7 @@ class ReviewQueueEventsIT {
     private static final UUID OPS = new UUID(0, 710);
     private static final UUID SUPPORT = new UUID(0, 711);
     private static final UUID UNMANAGED = new UUID(0, 712);
-    private static final Pattern DATA = Pattern.compile("(?m)^data:(.*)$");
+    private static final Pattern DATA = Pattern.compile("(?m)^data:([^\n]*)\n");
     private static final long WAIT_MS = 5_000;
 
     @Autowired
@@ -221,10 +221,11 @@ class ReviewQueueEventsIT {
     }
 
     @Test
-    void streamOpensAsEventStreamAndSendsHeartbeats_AC_012_1() throws Exception {
+    void streamOpensAsEventStreamAndSendsHeartbeats_AC_012_1_BUG_241() throws Exception {
         Stream stream = open();
-        assertThat(stream.result.getResponse().getContentType()).startsWith("text/event-stream");
+        // asyncStarted is true before the first write commits the headers, so the type is read after the heartbeat.
         stream.awaitHeartbeat();
+        assertThat(stream.result.getResponse().getContentType()).startsWith("text/event-stream");
         int first = countOf(stream.body(), ":hb");
         awaitUntil(() -> countOf(stream.body(), ":hb") > first);
         assertThat(stream.eventNames()).isZero();
@@ -377,7 +378,7 @@ class ReviewQueueEventsIT {
     }
 
     @Test
-    void edge8_listenerReconnectResyncsEveryProjectOfTheStream_AC_012_2() throws Exception {
+    void edge8_listenerReconnectResyncsEveryProjectOfTheStream_AC_012_2_BUG_238() throws Exception {
         Stream stream = openReady();
         assertThat(stream.eventNames()).isZero();
         TwoTenantDatabases.tenantA()
@@ -488,16 +489,11 @@ class ReviewQueueEventsIT {
     }
 
     private static UUID ticket(JdbcTemplate db, UUID project, String key, String status) {
-        return db.queryForObject(
-                """
+        return db.queryForObject("""
                 insert into ticket (source_ticket_id, project_id, source, status, writer, title, symptoms,
                                     root_cause, resolution_steps, scope)
                 values (?, ?, 'SOLUTION_FORM', ?, 'Minh Tran', 'Login fails', 'Error', 'Token', 'Restart', 'Users')
                 returning ticket_id
-                """,
-                UUID.class,
-                key,
-                project,
-                status);
+                """, UUID.class, key, project, status);
     }
 }

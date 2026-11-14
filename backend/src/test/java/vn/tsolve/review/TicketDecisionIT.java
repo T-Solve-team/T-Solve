@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -23,24 +24,36 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.server.ResponseStatusException;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.config.TicketClockConfig;
+import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.exception.ReviewSourceNotEligibleException;
 import vn.tsolve.ticket.service.TicketDecisionService;
 import vn.tsolve.ticket.service.TicketDecisionService.Action;
 import vn.tsolve.ticket.service.impl.TicketDecisionServiceImpl;
+import vn.tsolve.ticket.service.impl.TicketTransitions;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({TicketClockConfig.class, TicketDecisionServiceImpl.class})
+@Import({
+    TicketClockConfig.class,
+    TicketDecisionServiceImpl.class,
+    TicketTransitions.class,
+    TicketDecisionIT.AfterCommitProbe.class
+})
+@RecordApplicationEvents
 class TicketDecisionIT {
     @org.springframework.boot.test.mock.mockito.MockBean
     private vn.tsolve.common.audit.AuditService audit;
@@ -59,10 +72,17 @@ class TicketDecisionIT {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private ApplicationEvents events;
+
+    @Autowired
+    private AfterCommitProbe afterCommit;
+
     private UUID reviewerId;
 
     @BeforeEach
     void seedReviewer() {
+        afterCommit.published.clear();
         jdbc.update("delete from review_decision");
         jdbc.update("delete from evidence");
         jdbc.update("delete from ticket");
@@ -106,13 +126,11 @@ class TicketDecisionIT {
 
         String expectedStatus = action == Action.APPROVED ? "PUBLISHED" : action.name();
         for (UUID ticketId : List.of(first, second)) {
-            assertThat(jdbc.queryForMap(
-                            """
+            assertThat(jdbc.queryForMap("""
                     select status, resolution_steps, review_due_date::text as due,
                            rejection_reason, change_request_comment
                     from ticket where ticket_id = ?
-                    """,
-                            ticketId))
+                    """, ticketId))
                     .containsEntry("status", expectedStatus)
                     .containsEntry("resolution_steps", "Restart")
                     .containsEntry("due", "2026-11-12")
@@ -128,6 +146,22 @@ class TicketDecisionIT {
         }
         assertThat(jdbc.queryForObject("select file_name from evidence where ticket_id = ?", String.class, first))
                 .isEqualTo("error.png");
+    }
+
+    @Test
+    void approvePublishesOneTicketsPublishedEventAfterCommitAndRejectNone_AC_005_4_BUG_210() {
+        UUID first = ticket("TEST-1", 10, "PENDING_REVIEW", null);
+        UUID second = ticket("TEST-2", 10, "PENDING_REVIEW", null);
+        UUID rejected = ticket("TEST-3", 10, "PENDING_REVIEW", null);
+
+        service.decide(reviewerId, Set.of(new UUID(0, 10)), List.of(first, second), Action.APPROVED, null);
+        service.decide(reviewerId, Set.of(new UUID(0, 10)), List.of(rejected), Action.REJECTED, "Wrong cause");
+
+        assertThat(events.stream(TicketsPublishedEvent.class))
+                .singleElement()
+                .satisfies(event -> assertThat(event.ticketIds()).containsExactlyInAnyOrder(first, second));
+        assertThat(afterCommit.published).singleElement().satisfies(ids -> assertThat(ids)
+                .containsExactlyInAnyOrder(first, second));
     }
 
     @Test
@@ -180,8 +214,7 @@ class TicketDecisionIT {
     void rollsBackDecisionsIfAnyTicketUpdateFails_AC_009_8() {
         UUID first = ticket("TEST-1", 10, "PENDING_REVIEW", null);
         UUID second = ticket("TEST-2", 10, "PENDING_REVIEW", null);
-        jdbc.execute(
-                """
+        jdbc.execute("""
                 alter table ticket add constraint test_reject_publish
                 check (source_ticket_id <> 'TEST-2' or status <> 'PUBLISHED')
                 """);
@@ -193,6 +226,7 @@ class TicketDecisionIT {
             assertThat(status(first)).isEqualTo("PENDING_REVIEW");
             assertThat(status(second)).isEqualTo("PENDING_REVIEW");
             assertThat(decisionCount()).isZero();
+            assertThat(afterCommit.published).isEmpty();
         } finally {
             jdbc.execute("alter table ticket drop constraint test_reject_publish");
         }
@@ -224,18 +258,12 @@ class TicketDecisionIT {
     }
 
     private UUID ticket(String key, long projectId, String status, UUID writerId) {
-        return jdbc.queryForObject(
-                """
+        return jdbc.queryForObject("""
                 insert into ticket (source_ticket_id, project_id, source, status, writer_id, title, symptoms,
                                     root_cause, resolution_steps, scope, review_due_date)
                 values (?, ?, 'SOLUTION_FORM', ?, ?, 'Login fails', 'Error', 'Token', 'Restart', 'Users', '2026-11-12')
                 returning ticket_id
-                """,
-                UUID.class,
-                key,
-                new UUID(0, projectId),
-                status,
-                writerId);
+                """, UUID.class, key, new UUID(0, projectId), status, writerId);
     }
 
     private String status(UUID ticketId) {
@@ -249,5 +277,15 @@ class TicketDecisionIT {
 
     private int decisionCount() {
         return jdbc.queryForObject("select count(*) from review_decision", Integer.class);
+    }
+
+    /** Receives TicketsPublishedEvent only after the decision commits, as the real listeners do (AC-005.4). */
+    static class AfterCommitProbe {
+        final List<List<UUID>> published = new CopyOnWriteArrayList<>();
+
+        @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+        void on(TicketsPublishedEvent event) {
+            published.add(List.copyOf(event.ticketIds()));
+        }
     }
 }

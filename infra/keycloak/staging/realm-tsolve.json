@@ -1,0 +1,223 @@
+{
+  "realm": "tsolve",
+  "enabled": true,
+  "sslRequired": "all",
+  "loginTheme": "tsolve",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "ssoSessionMaxLifespan": 28800,
+  "ssoSessionIdleTimeout": 3600,
+  "organizationsEnabled": true,
+  "browserFlow": "tsolve browser",
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"validations\":{\"length\":{\"min\":3,\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"email\",\"validations\":{\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}},{\"name\":\"firstName\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"lastName\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"hd\",\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]}}]}"
+          ]
+        }
+      }
+    ]
+  },
+  "authenticationFlows": [
+    {
+      "alias": "tsolve browser",
+      "description": "Cookie, then the identity provider named by kc_idp_hint; no form of any kind",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "auth-cookie", "authenticatorFlow": false, "requirement": "ALTERNATIVE", "priority": 10, "userSetupAllowed": false },
+        { "authenticator": "identity-provider-redirector", "authenticatorFlow": false, "requirement": "ALTERNATIVE", "priority": 20, "userSetupAllowed": false }
+      ]
+    },
+    {
+      "alias": "tsolve first broker login",
+      "description": "Create the user and add it to the Organization; never review, never link by email",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "idp-create-user-if-unique", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 10, "userSetupAllowed": false },
+        { "authenticator": "idp-add-organization-member", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 20, "userSetupAllowed": false }
+      ]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "email",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": { "user.attribute": "email", "claim.name": "email", "jsonType.label": "String", "id.token.claim": "true", "access.token.claim": "true", "userinfo.token.claim": "true" }
+        },
+        {
+          "name": "email verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": { "user.attribute": "emailVerified", "claim.name": "email_verified", "jsonType.label": "boolean", "id.token.claim": "true", "access.token.claim": "true", "userinfo.token.claim": "true" }
+        }
+      ]
+    },
+    {
+      "name": "profile",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "full name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-full-name-mapper",
+          "consentRequired": false,
+          "config": { "id.token.claim": "true", "access.token.claim": "true", "userinfo.token.claim": "true" }
+        }
+      ]
+    },
+    {
+      "name": "organization",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "organization",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-organization-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "addOrganizationId": "true",
+            "claim.name": "organization",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "tsolve-web",
+      "name": "T-Solve web",
+      "baseUrl": "https://${TSOLVE_DEMO_SLUG}.${TSOLVE_DOMAIN}/",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KEYCLOAK_WEB_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://${TSOLVE_DEMO_SLUG}.${TSOLVE_DOMAIN}/api/v1/auth/callback"
+      ],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://${TSOLVE_DEMO_SLUG}.${TSOLVE_DOMAIN}/login"
+      },
+      "defaultClientScopes": ["email", "profile", "organization"],
+      "protocolMappers": [
+        {
+          "name": "hd",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "hd",
+            "claim.name": "hd",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "tsolve-provisioner",
+      "name": "T-Solve provisioner",
+      "description": "Creates and removes the Organization, the Google identity provider and the tsolve-web URIs of a Workspace (Admin API, service account only)",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KEYCLOAK_ADMIN_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "redirectUris": [],
+      "webOrigins": []
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "google-${TSOLVE_DEMO_SLUG}",
+      "displayName": "Google (${TSOLVE_DEMO_SLUG})",
+      "providerId": "google",
+      "enabled": true,
+      "hideOnLogin": true,
+      "trustEmail": true,
+      "firstBrokerLoginFlowAlias": "tsolve first broker login",
+      "config": {
+        "clientId": "${GOOGLE_CLIENT_ID}",
+        "clientSecret": "${GOOGLE_CLIENT_SECRET}",
+        "hostedDomain": "${TSOLVE_DEMO_GOOGLE_DOMAIN}",
+        "syncMode": "IMPORT",
+        "kc.org.domain": "${TSOLVE_DEMO_GOOGLE_DOMAIN}"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "hd",
+      "identityProviderAlias": "google-${TSOLVE_DEMO_SLUG}",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": { "claim": "hd", "user.attribute": "hd", "syncMode": "INHERIT" }
+    }
+  ],
+  "organizations": [
+    {
+      "id": "${TSOLVE_DEMO_ORG_ID}",
+      "name": "${TSOLVE_DEMO_SLUG}",
+      "alias": "${TSOLVE_DEMO_SLUG}",
+      "enabled": true,
+      "domains": [{ "name": "${TSOLVE_DEMO_GOOGLE_DOMAIN}", "verified": false }],
+      "identityProviders": [{ "alias": "google-${TSOLVE_DEMO_SLUG}", "config": { "kc.org.domain": "${TSOLVE_DEMO_GOOGLE_DOMAIN}" } }]
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-tsolve-provisioner",
+      "enabled": true,
+      "serviceAccountClientId": "tsolve-provisioner",
+      "clientRoles": {
+        "realm-management": [
+          "manage-identity-providers",
+          "view-identity-providers",
+          "manage-clients",
+          "view-clients",
+          "manage-users",
+          "view-users",
+          "query-users",
+          "manage-realm"
+        ]
+      }
+    }
+  ]
+}

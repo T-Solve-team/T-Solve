@@ -12,7 +12,7 @@ import vn.tsolve.workspace.repository.WorkspaceInfoRepository;
 
 class WorkspaceStatusLookupImplTest {
     @Test
-    @DisplayName("AC-004.1 readiness follows the row in the currently bound Workspace")
+    @DisplayName("AC-006.1 readiness follows the row in the currently bound Workspace")
     void readsBoundWorkspace() {
         var scope = mock(TenantScope.class);
         var repository = mock(WorkspaceInfoRepository.class);

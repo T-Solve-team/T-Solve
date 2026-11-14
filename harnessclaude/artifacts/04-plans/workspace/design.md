@@ -5,7 +5,7 @@ date: 2026-11-13
 
 # Design: workspace
 
-Spec: `artifacts/03-modules/workspace/spec.md`. The module holds UC-12 Create Department (KAN-120, STORY-001..STORY-002) and UC-10/UC-11 Workspace Setup and Settings (KAN-119, STORY-003..STORY-009); later UCs extend this file through Change Mode. KAN-120: facts about the existing code `iteration-1/kan-120-scout.md`, decisions `iteration-1/kan-120-decisions.md` and Key Decisions (KAN-120) below. KAN-119: plan `iteration-1/kan-119/`, decisions Key Decisions (KAN-119) and "Decisions made without the user (KAN-119)" below. Decision ids (D…) are numbered per Jira story: say "KAN-119 D28" or "KAN-120 D7" when it is not clear.
+Spec: `artifacts/03-modules/workspace/spec.md`. The module holds UC-12 Create Department (KAN-120, STORY-001..STORY-002), the UC-13 rename (KAN-121, STORY-003..STORY-004) and UC-10/UC-11 Workspace Setup and Settings (KAN-119, STORY-005..STORY-011); later UCs extend this file through Change Mode. Facts about the existing code: `iteration-1/kan-120-scout.md`, `iteration-1/kan-121-scout.md`. KAN-120 decisions: `iteration-1/kan-120-decisions.md` and Key Decisions (KAN-120) below. KAN-121 decisions: `iteration-1/kan-121-decisions.md`, written `K121-D6` and so on in this file. KAN-119: plan `iteration-1/kan-119/`, decisions Key Decisions (KAN-119) and "Decisions made without the user (KAN-119)" below. Decision ids (D…) are numbered per Jira story: say "KAN-119 D28" or "KAN-120 D7" when it is not clear.
 
 ## Architecture Overview
 
@@ -68,13 +68,96 @@ RETURNING public_id;
 
 Field `name` is the API property name. The label is "Department name". The modal sends `{ name: values.name.trim() }`. Button "New Department", title "New Department", field max 50 with `count={{ show: true, max: 50 }}`, no native `maxLength`.
 
+### KAN-121: read and rename (STORY-003, STORY-004)
+
+```
+GET /api/v1/departments/{departmentId}
+  DepartmentController.get      @PreAuthorize Admin, 200
+    DepartmentServiceImpl.get   @Transactional(readOnly = true)
+      scope.currentWorkspaceId()                 AC-003.21
+      repository.findActive(id)                  empty: NotFoundException("MSG04", Map.of())  AC-003.2
+
+PUT /api/v1/departments/{departmentId}
+  DepartmentController.update   @PreAuthorize Admin, @Valid UpdateDepartmentRequest, 200
+    DepartmentServiceImpl.update  @Transactional
+      scope.currentWorkspaceId()                 AC-003.21
+      name = request.name().strip()
+      repository.lockActive(id)                  empty: NotFoundException MSG04 (AC-003.2); row lock (K121-D7)
+      name.equals(current.name()): return        AC-003.14, no write (K121-D12)
+      repository.renameDepartment(rowId, name)   23505: BusinessRuleException("MSG43", Map.of(), "name") (K121-D9)
+      repository.renameSpace(rowId, name)        no row: IllegalStateException, 500 MSG06 (K121-D10)
+      audit.record(DEPARTMENT_CHANGE, "DEPARTMENT", id, details)   (K121-D11)
+      return DepartmentRefResponse(id, name)
+
+/api/v1/departments/{not a UUID}  GET, PUT    regex route, @PreAuthorize Admin, NotFoundException MSG04 (K121-D8)
+```
+
+The service body of `update`:
+
+```java
+@Override
+@Transactional
+public DepartmentRefResponse update(UUID departmentId, UpdateDepartmentRequest request) {
+    scope.currentWorkspaceId();
+    String name = request.name().strip();
+    DepartmentRepository.Current current = repository
+            .lockActive(departmentId)
+            .orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+    if (name.equals(current.name())) {
+        return new DepartmentRefResponse(departmentId, name);
+    }
+    repository.renameDepartment(current.id(), name);
+    UUID spaceId = repository.renameSpace(current.id(), name);
+    audit.record(
+            AuditAction.DEPARTMENT_CHANGE,
+            "DEPARTMENT",
+            departmentId,
+            Map.of(
+                    "operation", "UPDATE",
+                    "before", Map.of("name", current.name()),
+                    "after", Map.of("name", name),
+                    "spaceId", spaceId));
+    return new DepartmentRefResponse(departmentId, name);
+}
+```
+
+Repository additions (`record Current(long id, String name)`):
+
+```sql
+-- findActive (GET)
+SELECT public_id, name FROM department WHERE public_id = :id AND status = 'ACTIVE';
+
+-- lockActive (PUT): the second of two saves waits here and reads the first's name (AC-003.16)
+SELECT department_id, name FROM department WHERE public_id = :id AND status = 'ACTIVE' FOR UPDATE;
+
+-- renameDepartment: DataIntegrityViolationException with SQLState 23505 becomes MSG43 on name
+UPDATE department SET name = :name WHERE department_id = :id;
+
+-- renameSpace: space.department_id is UNIQUE, so 0 or 1 row; 0 rows is broken data
+UPDATE space SET name = :name WHERE department_id = :id RETURNING public_id;
+```
+
+The 23505 check copies `UserRoleUpdateRepository.java:164-167` (`getMostSpecificCause() instanceof SQLException sql && "23505".equals(sql.getSQLState())`); any other failure is rethrown. No pre-check by name: the unique indexes `uq_department_name` and `uq_department_name_lower` cover Deleted rows, so AC-003.10 to AC-003.12 and the race of AC-003.15 come from them, and a case-only change of the row's own name never conflicts with itself (AC-003.13). The failed statement aborts the transaction, but nothing runs after the exception, which rolls back.
+
+`UpdateDepartmentRequest` copies `CreateDepartmentRequest` exactly: `@NotBlank(message = "MSG01") @Size(max = 50, message = "MSG02")` and the compact constructor that turns a Unicode-blank name into `""` (KAN-120 D27). KAN-120 D19 holds for the PUT too: `@Valid` runs before `@PreAuthorize`, so a non-Admin's invalid body gets 400; AC-003.18 says "with an allowed name".
+
+The regex route copies `UserDetailController.java:30` (`UUID_PATTERN`) and `:82-93`: one method mapped to `/{invalidDepartmentId:(?!<UUID_PATTERN>$).+}` for GET and PUT, Admin only, throwing `NotFoundException("MSG04", Map.of())`. It is disjoint from the UUID routes, so the POST on the collection is untouched.
+
+**Web app.** `WorkspaceSettingsPage`'s Name cell becomes `cells.link(paths.departmentDetail(d.departmentId), d.name)`, as `review/components/ReviewQueueTable.tsx:14`. `DepartmentDetailPage` reads `departmentId` with `useParams`, calls the generated `useGetDepartment`, and follows `users/components/UserAccountDetail.tsx:13-40`: `LoadingState` while pending, `ErrorState` with `error` and `onRetry` on error (MSG04 for 404 comes from the code), otherwise a link "Back to Workspace Settings" (`paths.workspaceSettings`) and a `SectionCard` "Department Detail" holding `DepartmentNameForm`. That component shows the name as a `Descriptions` item "Name" and an "Edit" button; Edit shows an antd `Form` with the `FormField` "Department name" (`rules.required('Department name')`, `rules.maxLength('Department name', 50)`, `<Input count={{ show: true, max: 50 }} />`, initial value the current name), Save (`htmlType="submit"`, `loading` while pending) and Cancel. Submit copies `NewDepartmentModal`: a `submitting` ref, `{ name: values.name.trim() }`, `applyApiErrors(form, error)` or `showMessage(error.code, error.params)`; on success it leaves edit mode. Cancel does nothing while `submitting.current` (AC-004.13), otherwise leaves edit mode and resets the form. `useRenameDepartment` in `hooks/useDepartmentMutations.ts` wraps `useUpdateDepartment` with `handlesOwnErrors`, `showMessage('MSG05')` and `client.invalidateQueries()` with no key (K121-D14); the refetched `getDepartment` shows the stored name.
+
+Decided in planning: the header comment of `DepartmentDetailPage.tsx` becomes "UC-13, UC-14" (the SRS's related UCs for 2.3).
+
+Decided in planning: feature keys `rename-department-api` (Task 3) and `rename-department-screen` (Task 4).
+
+Decided in planning: the contract lists 400, 401, 403, 404 and 409 for `updateDepartment`, and 401, 403 and 404 for `getDepartment`; 500 MSG06 is not listed, as for `createDepartment`. The path parameter is `departmentId`, `format: uuid`.
+
 ### Workspace information (KAN-119)
 
 ```
 WorkspaceController (/api/v1/workspace, @PreAuthorize ADMIN)
    └─ WorkspaceService (impl: WorkspaceServiceImpl, @Transactional)
-        ├─ JiraSiteRule            static: validate + normalise the site (AC-009.3)
-        ├─ TicketTrackerClient     tracker: checkServiceAccount(JiraAccount) (AC-009.1/2)
+        ├─ JiraSiteRule            static: validate + normalise the site (AC-011.3)
+        ├─ TicketTrackerClient     tracker: checkServiceAccount(JiraAccount) (AC-011.1/2)
         ├─ JiraSiteLinker (port)   → InterimJiraSiteLinker (reads /_edge/tenant_info) [Interim]
         ├─ TokenCipher             AES-256-GCM, key WORKSPACE_SECRET_KEY, AAD = workspace id
         ├─ WorkspaceInfoRepository JPA, table `workspace` (one row)
@@ -84,7 +167,7 @@ WorkspaceStatusLookupImpl  → common/lookup/WorkspaceStatusLookup (for /me)
 WorkspaceJiraServiceAccount → tracker/service/JiraServiceAccount (replaces ConfiguredJiraServiceAccount)
 ```
 
-Setup order (AC-003.2..11): field checks → `JiraSiteRule` (MSG61) → row exists? (409) → `checkServiceAccount`
+Setup order (AC-005.2..11): field checks → `JiraSiteRule` (MSG61) → row exists? (409) → `checkServiceAccount`
 (MSG156) → in one transaction: `linkJiraSite` (MSG153 / MSG61) → insert row → audit → commit. A unique-key violation
 on the singleton constraint at insert (concurrent Setup) is mapped to 409.
 
@@ -125,11 +208,13 @@ CREATE UNIQUE INDEX uq_department_name_lower ON department (lower(name));
 
 `uq_department_name` stays. The check on `audit_log_entry` was last set in `018-audit-log-entry.sql`; no later changeset touches it.
 
+KAN-121 adds no changeset: the two name indexes and the `DEPARTMENT_CHANGE` audit value already exist, and no version column is needed (K121-D7). `department.status` and `default_project_id` are not touched by a rename (AC-003.6).
+
 `DEPARTMENT_CHANGE` is added in four places together: `AuditAction.java`, changeset 027, the `AuditAction` enum in the contract, and `ACTION_LABELS` in `audit-filters.ts` (label "Department change").
 
 ### Workspace information (KAN-119)
 
-Changeset `029-workspace-info.sql` (author `workspace`):
+Changeset `035-workspace-info.sql` (author `workspace`):
 ```sql
 ALTER TABLE workspace RENAME TO legacy_workspace;          -- changeset 001 table; FKs follow the rename
 CREATE TABLE workspace (
@@ -175,6 +260,20 @@ Token format in `service_account_api_token`: `v1:` + Base64(nonce[12] ‖ cipher
 | D20 Code that assumes case-variant names | Change the `UserListIT` fixture and the `MockUserListSeeder` conflict clause | Case-insensitive check in code only | The `lower(name)` index (D7) rejects the fixture's two case-variant rows and can stop the demo profile at boot |
 | D21 `ACTION_LABELS` entry | In Task 1 | In Task 2 | `Record<AuditAction, string>` does not compile once Task 1 regenerates the client, and each commit must pass `typecheck` |
 | D22 Whitespace and character | What `String.strip()` and `String.length()` do on the server; `trim()` and antd's count in the browser | One Unicode-aware rule shared by both sides | No source defines them. The sides differ only for non-breaking spaces and emoji, and a server refusal still shows below the field |
+| K121-D6 Endpoint | `PUT /api/v1/departments/{departmentId}`, 200 `DepartmentRef` | `PATCH`; `PUT .../name` | Every update in the contract is a `put`; the name is the resource's own field |
+| K121-D7 Same Department saved twice at once | `SELECT ... FOR UPDATE`, last write wins | `version` column with 409; no lock | Identity precedent; true audit `before`; no changeset or new message |
+| K121-D8 Unknown, Deleted or malformed id | 404 MSG04; regex route for non-UUID ids | 409 for Deleted; rename Deleted | Precondition "The Department is Active"; `UserDetailController` precedent; `common/` untouched |
+| K121-D9 Taken name on `UPDATE` | Catch 23505, MSG43 on `name` | Pre-check plus catch; pre-check only | One race-safe path; the row never conflicts with itself |
+| K121-D10 Space rename | Same transaction; 0 rows is 500 MSG06 | Create the Space; ignore 0 rows | GBR-29; a missing Space is broken data |
+| K121-D11 Audit details | `operation UPDATE`, `before`, `after`, `spaceId` | `RENAME` with `previousName`; new action | `ROLE_CHANGE` shape; no changeset |
+| K121-D12 No change | 200, no write, no audit | Write anyway; 400 | An entry with `before` equal to `after` says nothing |
+| K121-D13 Request DTO | New `UpdateDepartmentRequest` | Reuse the create record; shared record | DTO naming rule; only the update body grows later |
+| K121-D14 Other screens | `invalidateQueries()` with no key | Departments keys only; other features' keys | One line; no cross-feature knowledge |
+| K121-D15 How 2.3 reads | New `getDepartment` in `workspace` | Cached `users/departments` list; router state | Deep link and reload work; KAN-122 extends it |
+| K121-D16 Edit form | Inline on 2.3 | `FormModal`; row action on 2.2 | "Name *" is a field of 2.3; no edit popup in the SRS |
+| K121-D17 Rest of 2.3 | Name, Edit, Save, Cancel, back link | Managers tab; disabled Delete | Only the name has criteria |
+| K121-D18 MSW | Seed the `workspace` list with copies of the `users` mock's IT and HR ids and names | Own list only; no mock | Mock mode opens 2.3 from 2.2 without importing another feature |
+| K121-D20 Seeder after a rename | Accept and note | Change the seeder | Demo profile only |
 
 Decided in planning: `DepartmentRefResponse` from `identity/dto` is reused for the 201 body, since `workspace` already depends on `identity` and the contract's `DepartmentRef` has the same shape. `TenantScope` is imported from `identity/signin/port` as `review` already does; it is the interim port until the tenant layer lands.
 
@@ -237,6 +336,37 @@ frontend/src/features/workspace/
   mocks/handlers.ts                                     POST handler
 ```
 
+KAN-121 adds:
+
+```
+backend/src/main/java/vn/tsolve/workspace/
+  controller/DepartmentController.java          + get, update, invalidId
+  service/DepartmentService.java                + get, update
+  service/impl/DepartmentServiceImpl.java       + get, update
+  repository/DepartmentRepository.java          + Current, findActive, lockActive, renameDepartment, renameSpace
+  dto/UpdateDepartmentRequest.java              new
+backend/src/test/java/vn/tsolve/workspace/
+  controller/DepartmentControllerTest.java      + read and rename cases
+  service/impl/DepartmentServiceImplTest.java   + read and rename cases
+  DepartmentRenameIT.java                       new
+frontend/openapi/tsolve-api.yaml                tag text, path /api/v1/departments/{departmentId} (get, put), UpdateDepartmentRequest
+frontend/src/shared/api/generated/**            regenerated
+frontend/src/features/workspace/
+  pages/WorkspaceSettingsPage.tsx               Name cell links to 2.3
+  pages/WorkspaceSettingsPage.test.tsx          + AC-004.1
+  pages/DepartmentDetailPage.tsx                replaces the placeholder
+  pages/DepartmentDetailPage.test.tsx           new
+  components/DepartmentNameForm.tsx             new
+  hooks/useDepartmentMutations.ts               + useRenameDepartment
+  mocks/handlers.ts                             seeded list, GET and PUT handlers
+```
+
+All inside `module.md` `paths`; none added. `DepartmentRenameIT` copies the class annotations of `DepartmentCreationIT` so it shares the cached Spring context; fixtures use a random prefix.
+
+MSW for KAN-121 (K121-D18): the local list starts with `{ departmentId: '00000000-0000-4000-8000-0000000000d1', name: 'IT' }` and `{ departmentId: '00000000-0000-4000-8000-0000000000d2', name: 'HR' }`, copied from `users/mocks/data.ts:6-7`, and `resetMockData` restores it. GET answers the Department or 404 MSG04. PUT applies the rules of the POST, answers 404 MSG04 for an unknown id, 409 MSG43 for another entry's name ignoring case, and otherwise stores and answers 200. The 2.2 table still comes from the `users` mock, so it shows the old name in browser mock mode (spec Interim limit 6). Seeding IT and HR also makes the POST mock answer MSG43 for them; the existing `WorkspaceSettingsPage.test.tsx` cases must be checked for a name that collides.
+
+Seeder after a rename (K121-D20): under `identity-mock`, renaming "Customer Support" makes the next boot insert a fresh "Customer Support" with a new Space, and seeded accounts attach to it by name; the renamed Space loses the " Wiki" suffix the seeder gives. Demo data only.
+
 The `UserListIT` fixture: `'list fixture alpha'` becomes `'list fixture beta'`; the assertion order stays.
 
 `DepartmentCreationIT` copies the class annotations of `UserListIT` exactly (`@SpringBootTest` properties, `@AutoConfigureMockMvc`, `@Import(TwoTenantDatabases.class)`, `@WithTSolveUser(roles = Role.ADMIN)`) so it shares that cached Spring context, adds no `@MockBean`, and starts no container. Fixtures use a random prefix and are cleaned as `UserCreationIT` does.
@@ -257,7 +387,7 @@ backend/src/main/java/vn/tsolve/workspace/
   crypto/TokenCipher.java
 backend/src/main/java/vn/tsolve/common/lookup/WorkspaceStatusLookup.java
 backend/src/main/java/vn/tsolve/tracker/client/TicketTrackerClient.java, JiraClient.java   (+ checkServiceAccount)
-backend/src/main/resources/db/changelog/changes/029-workspace-info.sql (+ master include)
+backend/src/main/resources/db/changelog/changes/035-workspace-info.sql (+ master include)
 backend/src/main/resources/application.yml  (tsolve.workspace.secret-key: ${WORKSPACE_SECRET_KEY}; remove stand-in keys)
 backend/src/test/resources/application*.yml (test key)
 .env.example (WORKSPACE_SECRET_KEY)
@@ -297,7 +427,7 @@ The user delegated the remaining calls on 12/11 ("tự quyết và note lại").
 | D12 | `sign_in_provider` value | `GOOGLE` | null / config | NOT NULL in the DDL; sign-in is Keycloak with Google (ADR-0003) |
 | D13 | Link and insert in one transaction | Link first, then insert, same transaction | insert then link after commit | A refused link stores no row; the left-over risk (commit fails after the link) is a platform change request (AC-004.23 idempotent) |
 | D14 | `WorkspaceStatusLookup` interface does not exist yet | Create it in `common/lookup` with `boolean isReady()` (be-foundation design.md:182 names this file) | wait for be-foundation | Lets `/me` wire it later; path added to `module.md` |
-| D15 | Stand-in `ConfiguredJiraServiceAccount` | Delete it, its test and its 3 settings (`application.yml`, `.env.example`) | keep under a profile | Its own Javadoc says to delete it; one bean only (AC-006.2) |
+| D15 | Stand-in `ConfiguredJiraServiceAccount` | Delete it, its test and its 3 settings (`application.yml`, `.env.example`) | keep under a profile | Its own Javadoc says to delete it; one bean only (AC-008.2) |
 | D16 | Decrypt failure | Log error, return empty | throw | No Jira call with a broken token; tracker already handles "no account" (AC-012.8) |
 | D17 | Request `jiraSiteUrl` on PUT | Ignored | 400 | Read-only field; a client that echoes the form must not fail |
 | D18 | Missing Jira timeouts | Reuse `tsolve.tracker.jira.connect-timeout` 5 s / `read-timeout` 10 s; interim linker uses the same values | new settings | NFR 3, no new knobs |
@@ -305,25 +435,25 @@ The user delegated the remaining calls on 12/11 ("tự quyết và note lại").
 | D20 | Spec depth / risk review | Deep; risk-review done inline below | five-persona subagent | Planner agent was stopped by the user; findings folded into the edge cases |
 | D21 | "Token differs" on UC-11 (builder check) | Any non-blank token counts as changed: it is checked with Jira and `tokenChanged` = true; the stored token is never decrypted to compare | decrypt and compare | Simpler; never handles the old secret in clear for a comparison |
 | D23 | `JIRA_SITE_URL` after removing the stand-in (Task 6) | Keep it in `.env.example` under the Jira import section; only the stand-in's email and token variables go | delete it everywhere | `ticket/client/JiraRestIssueSource` (ticket-repository) still reads it for browse links |
-| D24 | No side menu on 2.1 (AC-007.1, Task 7) | Spec change: "with no menu" removed from AC-007.1; change request to `fe-foundation` (`AppShell`) | edit `AppShell` here | `AppShell` is `fe-foundation` code, locked while its spec is changed since approval |
+| D24 | No side menu on 2.1 (AC-009.1, Task 7) | Spec change: "with no menu" removed from AC-009.1; change request to `fe-foundation` (`AppShell`) | edit `AppShell` here | `AppShell` is `fe-foundation` code, locked while its spec is changed since approval |
 | D25 | Detecting the 409 on 2.1 (Task 7) | Status 409 with no field error on `setupWorkspace` (its only non-field conflict) | read the technical code | The shared transport normalises unknown codes to `MSG06` and drops `WORKSPACE_ALREADY_SET_UP` |
 | D26 | fe-foundation's route-table test still expects the 2.1 placeholder (Task 7) | Remove the 2.1 row, as its comment asks the building module to do; path added to `module.md` | leave the test failing | Same convention chatbot (12.1) and triage (10.1) followed |
 | D27 | Developer for Task 8 after Codex hit its usage limit (until 14/11) | Claude `harnessclaude-developer` subagent with the same brief and rules | wait for Codex | Keeps KAN-119 moving; the Reviewer stays independent of the writer |
-| D28 | Which Workspace `JiraServiceAccount.current()` reads in a worker job (evaluation, Task 6 CRITICAL) | `WorkerTenantService.currentWorkspaceId()` when present (optional bean), else `TenantScope`; AC-006.1 reworded | make `worker`'s `runInTenant` also bind `TenantScope` | `worker` is `completed`; the fix stays inside this module; a later platform tenant binding can replace both |
-| D29 | Email-only update while the stored token cannot be decrypted (evaluation, Task 5) | 400 `MSG156` on `serviceAccountToken`, workspace id logged only; AC-005.5 extended | generic 500 | The Admin must re-enter the token after a key loss; MSG156 tells them which field |
+| D28 | Which Workspace `JiraServiceAccount.current()` reads in a worker job (evaluation, Task 6 CRITICAL) | `WorkerTenantService.currentWorkspaceId()` when present (optional bean), else `TenantScope`; AC-008.1 reworded | make `worker`'s `runInTenant` also bind `TenantScope` | `worker` is `completed`; the fix stays inside this module; a later platform tenant binding can replace both |
+| D29 | Email-only update while the stored token cannot be decrypted (evaluation, Task 5) | 400 `MSG156` on `serviceAccountToken`, workspace id logged only; AC-007.5 extended | generic 500 | The Admin must re-enter the token after a key loss; MSG156 tells them which field |
 | D30 | Jira check inside the `setup` transaction (evaluation, Task 4, backend/AGENTS.md §4) | Check before the transaction; link, persist and audit in a `TransactionTemplate`, like `update` | keep as is | No remote call while a DB transaction is open |
 | D22 | Where the interim linker puts the `cloudId` (builder check) | Returned to the service and only logged (host, not secrets); nothing persists it until the catalog exists | add a `jira_cloud_id` column to the tenant table | The catalog owns `jira_cloud_id` (platform AC-001.15); a tenant column would duplicate it |
 
 ## Risk review (KAN-119, inline, Deep spec)
 
 Verdict: **CAUTION** — go, with the mitigations below folded into the tasks.
-- Secret leak (token in logs/toString/audit/errors) → AC-009.7 tests per type; `JiraAccount.toString` already hides it.
-- SSRF via site address → AC-009.3 rule before any call; no redirects in the interim linker; tests with
+- Secret leak (token in logs/toString/audit/errors) → AC-011.7 tests per type; `JiraAccount.toString` already hides it.
+- SSRF via site address → AC-011.3 rule before any call; no redirects in the interim linker; tests with
   `http://`, `https://localhost`, `https://169.254.169.254`, `https://a.atlassian.net.evil.com`, `https://x@a.atlassian.net`,
   `https://a.atlassian.net:8443`.
 - Key loss = all tokens undecryptable → documented in `.env.example`; decrypt failure returns empty (D16); the Admin
   re-enters the token in 2.2.
-- Cross-tenant copy of ciphertext → AAD = workspace id (AC-009.5).
+- Cross-tenant copy of ciphertext → AAD = workspace id (AC-011.5).
 - Half-done Setup (catalog linked, tenant commit failed) → D13 + platform change request.
 - MSG153 untestable end-to-end until the catalog exists → [Interim] in spec; unit test with a refusing double.
 
@@ -369,6 +499,42 @@ Dimensions analyzed: User types, Input extremes, Timing, Scale, State transition
 | 32 | STORY-002 | Scale | Many Departments | Low | The endpoint is unpaged and the table lists all; a Workspace has few Departments | none |
 | 33 | STORY-002 | User types | Non-Admin opens the page | High | MSG08 page, no button (AC-002.13) | Task 2 |
 | 34 | STORY-002 | Integration | Browser mock mode after a create | Low | MSG05 shows, the table does not change (see File Structure) | none |
+| 35 | STORY-003 | Authorization | Non-Admin reads, or renames with an allowed name | Critical | 403 MSG08, no change (AC-003.18) | Task 3 |
+| 36 | STORY-003 | Authorization | No signed-in user | High | 401 MSG07, service not called (AC-003.19) | Task 3 |
+| 37 | STORY-003 | Authorization | Non-Admin sends an invalid body | Low | 400 from `@Valid`, no change (KAN-120 D19) | none |
+| 38 | STORY-003 | Input extremes | Name missing, `""`, spaces only, 51 spaces, Unicode-blank | High | 400 MSG01 on `name` (AC-003.8) | Task 3 |
+| 39 | STORY-003 | Input extremes | Exactly 50 characters, then 51 | High | 200, then 400 MSG02 with `max_length` 50 (AC-003.3, AC-003.9) | Task 3 |
+| 40 | STORY-003 | Input extremes | Path id `abc` | High | 404 MSG04 for GET and PUT, not 400 or 500 (AC-003.2) | Task 3 |
+| 41 | STORY-003 | Input extremes | `"  IT  "` sent for the Department already named `IT` | Medium | Stripped, equal: 200, no write, no audit (AC-003.14) | Task 3 |
+| 42 | STORY-003 | Data integrity | Rename to another Active name, padded with spaces | High | 409 MSG43, old name kept, no audit (AC-003.10) | Task 3 |
+| 43 | STORY-003 | Data integrity | Rename to a Deleted Department's name | High | 409 MSG43 (AC-003.11) | Task 3 |
+| 44 | STORY-003 | Data integrity | Rename to `PHÒNG IT` when another is `Phòng IT` | High | 409 MSG43 (AC-003.12) | Task 3 |
+| 45 | STORY-003 | Data integrity | Rename own `it support` to `IT Support` | High | 200, stored, Space renamed, audited (AC-003.13) | Task 3 |
+| 46 | STORY-003 | State transitions | Rename a Deleted or unknown Department | High | 404 MSG04, no change (AC-003.2) | Task 3 |
+| 47 | STORY-003 | State transitions | Rename keeps status, default Project and Projects | High | Columns and `project` rows unchanged (AC-003.6) | Task 3 |
+| 48 | STORY-003 | Timing | Two renames of two Departments to one name at once | High | One 200, one 409 MSG43, one audit entry (AC-003.15) | Task 3 |
+| 49 | STORY-003 | Timing | Two renames of the same Department at once | High | Both 200 in order, second `before` equals first `after` (AC-003.16) | Task 3 |
+| 50 | STORY-003 | Error cascades | Department has no Space, or the audit write fails | Critical | Old name kept, 500 MSG06 (AC-003.17) | Task 3 |
+| 51 | STORY-003 | State transitions | No Workspace bound | High | 500 MSG06, no change (AC-003.21) | Task 3 |
+| 52 | STORY-003 | User types | Name held only in another Workspace | Critical | Allowed; only the bound database changes (AC-003.20) | Task 3 |
+| 53 | STORY-003 | Compliance | Successful rename | High | One audit entry with `before`, `after` and `spaceId`; the create entry keeps the old name (AC-003.5, AC-003.22) | Task 3 |
+| 54 | STORY-003 | Compliance | Refused rename (400, 403, 404, 409) | High | No audit entry (AC-003.2, AC-003.8 to AC-003.12, AC-003.18) | Task 3 |
+| 55 | STORY-003 | Integration | Renamed Department in the Add User list and on 2.3 | High | Both GETs return the new name (AC-003.7) | Task 3 |
+| 56 | STORY-003 | Data integrity | Demo seeder boots after a rename | Low | A fresh seeded Department is added (K121-D20) | none |
+| 57 | STORY-004 | Timing | Save clicked twice | High | One PUT (AC-004.8) | Task 4 |
+| 58 | STORY-004 | Timing | Cancel while the PUT runs | Medium | Ignored (AC-004.13) | Task 4 |
+| 59 | STORY-004 | Input extremes | Empty, spaces only, 51 characters | High | MSG01 or MSG02 below the field, no request, text kept (AC-004.6, AC-004.7) | Task 4 |
+| 60 | STORY-004 | Input extremes | Name with spaces around it | High | Trimmed in the PUT (AC-004.8) | Task 4 |
+| 61 | STORY-004 | Error cascades | 409 MSG43 | High | Below the field, form open, text kept (AC-004.10) | Task 4 |
+| 62 | STORY-004 | Error cascades | 404 (deleted meanwhile), 403 or 500 on Save | High | Message by code, form open (AC-004.11) | Task 4 |
+| 63 | STORY-004 | Error cascades | GET fails or answers 404 | High | Error state with the code's message and retry, no Edit (AC-004.4) | Task 4 |
+| 64 | STORY-004 | State transitions | Cancel, then Edit again | High | No request; field holds the current name, not the typed one (AC-004.12) | Task 4 |
+| 65 | STORY-004 | State transitions | Success | High | Form closed, MSG05, new name on 2.3, every query refetched (AC-004.9) | Task 4 |
+| 66 | STORY-004 | Environment | Deep link or reload on 2.3 | High | Reads by id from the URL (AC-004.2) | Task 4 |
+| 67 | STORY-004 | User types | Non-Admin opens 2.3 | High | MSG08 page, no Edit (AC-004.14) | Task 4 |
+| 68 | STORY-004 | Integration | Browser mock mode after a rename | Low | 2.3 shows the new name; the 2.2 table does not (Interim limit 6) | none |
+
+Rows 35 to 68 (KAN-121): Business logic and Scale skipped (no amounts, and one row at a time); Environment covers the deep link only, since the form uses the kit's labelled fields.
 
 Open questions for the spec owner: none.
 
@@ -376,23 +542,23 @@ Open questions for the spec owner: none.
 
 | # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
 |---|-------|-----------|----------|----------|-------------------|-----------|
-| 1 | STORY-003 | Concurrency | Two Admins submit Setup at once | High | One row; the other gets 409 (unique singleton) | Task 4 |
-| 2 | STORY-003 | Security | Site `https://169.254.169.254` / `localhost` / evil suffix | Critical | MSG61, no outbound call | Task 3 |
-| 3 | STORY-003 | Input | Site with trailing `/`, upper case, spaces | Medium | Normalised to `https://<host>` | Task 3 |
-| 4 | STORY-003 | External | Jira 401 / 403 / 500 / timeout | High | MSG156, nothing stored, no body logged | Task 2, Task 4 |
-| 5 | STORY-003 | External | Account authenticates but lacks MODIFY_REPORTER | High | MSG156 | Task 2 |
-| 6 | STORY-003 | External | tenant_info 404 or no cloudId / redirect | High | MSG61, nothing stored | Task 3 |
-| 7 | STORY-003 | State | Linker refuses (another Workspace) | High | MSG153, no row | Task 4 |
-| 8 | STORY-003 | State | Setup when already set up | High | 409, site unchanged | Task 4 |
-| 9 | STORY-009 | Security | Token in logs / audit / response | Critical | Never present | Task 1, Task 4, Task 5 |
-| 10 | STORY-009 | Security | Ciphertext copied to another Workspace id | High | Decrypt fails | Task 1 |
-| 11 | STORY-009 | Config | Key missing / wrong length | High | Startup fails, names setting only | Task 1 |
-| 12 | STORY-005 | Input | Blank token on update | High | Stored token kept; check uses it if the email changed | Task 5 |
-| 13 | STORY-005 | External | Only company name changed while Jira is down | Medium | Saved, no Jira call | Task 5 |
-| 14 | STORY-005 | Input | Body carries `jiraSiteUrl` | Medium | Ignored | Task 5 |
-| 15 | STORY-006 | State | Not set up | High | `current()` empty | Task 6 |
-| 16 | STORY-006 | Security | Tampered ciphertext | High | Error log without value, empty | Task 6 |
-| 17 | STORY-007 | UX | Double click Save | Medium | One request | Task 7 |
-| 18 | STORY-007 | UX | 409 response | Medium | No error, go to 2.2 | Task 7 |
-| 19 | STORY-008 | UX | Token never shown, empty means keep | High | Field empty; PUT omits token | Task 8 |
-| 20 | STORY-004 | Access | Non-Admin calls any endpoint | High | 403 | Task 4, Task 5 |
+| 1 | STORY-005 | Concurrency | Two Admins submit Setup at once | High | One row; the other gets 409 (unique singleton) | Task 4 |
+| 2 | STORY-005 | Security | Site `https://169.254.169.254` / `localhost` / evil suffix | Critical | MSG61, no outbound call | Task 3 |
+| 3 | STORY-005 | Input | Site with trailing `/`, upper case, spaces | Medium | Normalised to `https://<host>` | Task 3 |
+| 4 | STORY-005 | External | Jira 401 / 403 / 500 / timeout | High | MSG156, nothing stored, no body logged | Task 2, Task 4 |
+| 5 | STORY-005 | External | Account authenticates but lacks MODIFY_REPORTER | High | MSG156 | Task 2 |
+| 6 | STORY-005 | External | tenant_info 404 or no cloudId / redirect | High | MSG61, nothing stored | Task 3 |
+| 7 | STORY-005 | State | Linker refuses (another Workspace) | High | MSG153, no row | Task 4 |
+| 8 | STORY-005 | State | Setup when already set up | High | 409, site unchanged | Task 4 |
+| 9 | STORY-011 | Security | Token in logs / audit / response | Critical | Never present | Task 1, Task 4, Task 5 |
+| 10 | STORY-011 | Security | Ciphertext copied to another Workspace id | High | Decrypt fails | Task 1 |
+| 11 | STORY-011 | Config | Key missing / wrong length | High | Startup fails, names setting only | Task 1 |
+| 12 | STORY-007 | Input | Blank token on update | High | Stored token kept; check uses it if the email changed | Task 5 |
+| 13 | STORY-007 | External | Only company name changed while Jira is down | Medium | Saved, no Jira call | Task 5 |
+| 14 | STORY-007 | Input | Body carries `jiraSiteUrl` | Medium | Ignored | Task 5 |
+| 15 | STORY-008 | State | Not set up | High | `current()` empty | Task 6 |
+| 16 | STORY-008 | Security | Tampered ciphertext | High | Error log without value, empty | Task 6 |
+| 17 | STORY-009 | UX | Double click Save | Medium | One request | Task 7 |
+| 18 | STORY-009 | UX | 409 response | Medium | No error, go to 2.2 | Task 7 |
+| 19 | STORY-010 | UX | Token never shown, empty means keep | High | Field empty; PUT omits token | Task 8 |
+| 20 | STORY-006 | Access | Non-Admin calls any endpoint | High | 403 | Task 4, Task 5 |
