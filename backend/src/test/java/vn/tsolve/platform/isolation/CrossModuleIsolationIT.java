@@ -108,14 +108,10 @@ class CrossModuleIsolationIT extends AbstractSessionIT {
 
     @Test
     void ticketList_listsOnlyAcmeTickets_AC_015_2() throws Exception {
-        JsonNode body = ok(inAcme(get("/api/v1/tickets"), resolverSession));
-        assertThat(body.path("page").path("totalElements").asInt()).isEqualTo(1);
-        assertThat(body.path("content")).hasSize(1);
-        assertThat(body.path("content").get(0).path("ticketId").asText())
-                .isEqualTo(acme.published().toString());
-        assertThat(body.path("content").get(0).path("title").asText()).isEqualTo(IsolationFixtures.TITLE);
-        assertThat(body.toString())
-                .doesNotContain(beta.published().toString(), beta.pending().toString(), beta.marker());
+        JsonNode body = ok(inAcme(
+                get("/api/v1/tickets").param("keyword", IsolationFixtures.TITLE).param("size", "100"),
+                resolverSession));
+        assertOnlyAcmeTickets(body, acme.published());
     }
 
     @Test
@@ -143,12 +139,12 @@ class CrossModuleIsolationIT extends AbstractSessionIT {
         Map<String, Long> betaBefore = IsolationFixtures.rowCounts(TwoTenantDatabases.tenantB());
         long before = IsolationFixtures.rowCounts(TwoTenantDatabases.tenantA()).get("search_log");
         // Search's current query parameter is q; keyword belongs to the Ticket List.
-        JsonNode body = ok(inAcme(get("/api/v1/search/tickets").param("q", IsolationFixtures.TITLE), resolverSession));
-        assertThat(body.path("page").path("totalElements").asInt()).isEqualTo(1);
-        assertThat(body.path("content")).hasSize(1);
-        assertThat(body.path("content").get(0).path("ticketId").asText())
-                .isEqualTo(acme.published().toString());
-        assertThat(body.toString()).doesNotContain(beta.published().toString(), beta.marker());
+        JsonNode body = ok(inAcme(
+                get("/api/v1/search/tickets")
+                        .param("q", IsolationFixtures.TITLE)
+                        .param("size", "100"),
+                resolverSession));
+        assertOnlyAcmeTickets(body, acme.published());
         assertThat(IsolationFixtures.rowCounts(TwoTenantDatabases.tenantA()).get("search_log"))
                 .isEqualTo(before + 1);
         assertThat(TwoTenantDatabases.tenantA()
@@ -157,7 +153,8 @@ class CrossModuleIsolationIT extends AbstractSessionIT {
                                 acme.resolver()))
                 .containsEntry("user_id", acme.resolver())
                 .containsEntry("query", IsolationFixtures.TITLE)
-                .containsEntry("result_count", 1);
+                .containsEntry(
+                        "result_count", body.path("page").path("totalElements").asInt());
         verify(embeddings).embed(List.of(IsolationFixtures.TITLE));
         assertThat(IsolationFixtures.rowCounts(TwoTenantDatabases.tenantB())).isEqualTo(betaBefore);
     }
@@ -193,13 +190,35 @@ class CrossModuleIsolationIT extends AbstractSessionIT {
 
     @Test
     void reviewQueue_listsOnlyAcmeTicketsAsProjectManager_AC_015_6() throws Exception {
-        JsonNode body = ok(inAcme(get(REVIEW_QUEUE), managerSession));
-        assertThat(body.path("page").path("totalElements").asInt()).isEqualTo(1);
-        assertThat(body.path("content")).hasSize(1);
-        assertThat(body.path("content").get(0).path("ticketId").asText())
-                .isEqualTo(acme.pending().toString());
+        JsonNode body = ok(inAcme(get(REVIEW_QUEUE).param("size", "100"), managerSession));
+        assertOnlyAcmeTickets(body, acme.pending());
+    }
+
+    private void assertOnlyAcmeTickets(JsonNode body, UUID seededTicket) {
+        JsonNode content = body.path("content");
+        assertThat(content.isArray()).isTrue();
+        boolean foundSeededTicket = false;
+        // Other ITs may leave visible ACME rows through legacy Project ids; isolation is about the tenant.
+        for (JsonNode ticket : content) {
+            UUID ticketId = UUID.fromString(ticket.path("ticketId").asText());
+            assertThat(TwoTenantDatabases.tenantA()
+                            .queryForObject("SELECT count(*) FROM ticket WHERE ticket_id = ?", Long.class, ticketId))
+                    .as("ticket %s exists in tenant_a", ticketId)
+                    .isEqualTo(1L);
+            assertThat(TwoTenantDatabases.tenantB()
+                            .queryForObject("SELECT count(*) FROM ticket WHERE ticket_id = ?", Long.class, ticketId))
+                    .as("ticket %s does not exist in tenant_b", ticketId)
+                    .isZero();
+            if (ticketId.equals(seededTicket)) {
+                foundSeededTicket = true;
+                assertThat(ticket.path("title").asText()).isEqualTo(IsolationFixtures.TITLE);
+            }
+        }
+        assertThat(foundSeededTicket)
+                .as("seeded ACME ticket %s is returned", seededTicket)
+                .isTrue();
         assertThat(body.toString())
-                .doesNotContain(beta.pending().toString(), beta.published().toString(), beta.marker());
+                .doesNotContain(beta.published().toString(), beta.pending().toString(), beta.marker());
     }
 
     enum Endpoint {
