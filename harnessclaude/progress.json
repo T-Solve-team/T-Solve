@@ -349,9 +349,11 @@
         "backup-restore": "pending",
         "monitoring": "pending",
         "load-test": "pending",
-        "forge-security-chain": "pending"
+        "forge-security-chain": "pending",
+        "cross-module-isolation": "in-progress",
+        "e2e-smoke": "pending"
       },
-      "lastUpdated": "2026-11-13T16:03:48.381Z",
+      "lastUpdated": "2026-11-14T04:08:50.776Z",
       "branch": "feat/platform",
       "repos": [
         "default"
