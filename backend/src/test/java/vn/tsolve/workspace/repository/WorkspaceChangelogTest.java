@@ -23,7 +23,8 @@ class WorkspaceChangelogTest {
                     .orElseThrow();
 
             assertThat(workspaceChangeSet.getAuthor()).isEqualTo("workspace");
-            assertThat(workspaceChangeSet.supportsRollback(new PostgresDatabase())).isTrue();
+            assertThat(workspaceChangeSet.supportsRollback(new PostgresDatabase()))
+                    .isTrue();
             assertThat(workspaceChangeSet.getRollback().getChanges()).isNotEmpty();
         }
     }
