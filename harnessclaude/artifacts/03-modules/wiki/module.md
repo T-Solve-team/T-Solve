@@ -2,7 +2,9 @@
 name: wiki
 owner: Đặng Nhật Minh
 repos: [default]
-dependencies: [workspace, ai, platform, worker]
+# wiki also implements ports declared by chatbot (WikiSources) and triage (WikiSourceRetrieval, WikiDocumentAccess);
+# they are not listed here because chatbot and triage already depend on wiki (no cycle).
+dependencies: [workspace, identity, ai, platform, worker]
 complexity: large
 paths:
   - backend/src/main/java/vn/tsolve/wiki/**

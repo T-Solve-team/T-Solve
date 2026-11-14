@@ -39,7 +39,8 @@ AND EXISTS (SELECT 1 FROM app_user u WHERE u.id = :userId AND u.status = 'ACTIVE
               WHERE sm.space_id = s.space_id AND sm.user_id = u.id)
    OR s.department_id = u.department_id
    OR EXISTS (SELECT 1 FROM space_permission p WHERE p.space_id = s.space_id AND p.user_id = u.id)
-   OR EXISTS (SELECT 1 FROM space_permission p WHERE p.space_id = s.space_id AND p.department_id IN (
+   OR EXISTS (SELECT 1 FROM space_permission p JOIN department pd ON pd.department_id = p.department_id AND pd.status = 'ACTIVE'
+              WHERE p.space_id = s.space_id AND p.department_id IN (
           SELECT u.department_id
           UNION
           SELECT pr.department_id FROM project_membership m JOIN project pr ON pr.public_id = m.project_id
@@ -47,7 +48,7 @@ AND EXISTS (SELECT 1 FROM app_user u WHERE u.id = :userId AND u.status = 'ACTIVE
             AND EXISTS (SELECT 1 FROM user_role r WHERE r.user_id = u.id AND r.role = 'TICKET_RESOLVER')))))
 ```
 
-A document `w` is viewable when `w.status = 'PUBLISHED'` and its Space is Active with an Active Department and (`w.visibility = 'COMPANY_WIDE'` or the Space is viewable). `AccessSql.VIEWABLE_DOCUMENT` wraps this. The user's Departments count only when Active (AC-001.2): the implementation joins the `IN` list to `department` with `status = 'ACTIVE'`, so a Deleted Department's permission grants nothing.
+A document `w` is viewable when `w.status = 'PUBLISHED'` and its Space is Active with an Active Department and (`w.visibility = 'COMPANY_WIDE'` or the Space is viewable). `AccessSql.VIEWABLE_DOCUMENT` wraps this. The user's Departments count only when Active (AC-001.2): the fragment joins the granted Department to `department` with `status = 'ACTIVE'`, so a Deleted Department's permission grants nothing. Copy the fragment as it is.
 
 Knowledge Manager check (`AccessSql.MANAGES_SPACE`): the `space_manager` row with the role and the user Active, the Space Active and its Department Active.
 
@@ -212,5 +213,9 @@ frontend/src/features/wiki/  pages (WikiHomePage, WikiDocumentPage, UploadDocume
 | 27 | Performance | 10 × 10 MB upload sent twice | `max-request-size` 101 MB; memory bounded by the request | W21 | Low |
 | 28 | Performance | 200 passages × bge-m3 on CPU | Background job; batches of 16 | AC-004.14 | Medium |
 | 29 | Tenancy | Request bound to Workspace A | Only A's database (platform tenant layer) | Non-Functional 5, after Task 6 | Medium |
+| 30 | Concurrency | Restore races with an upload or another restore of the same title | The update hits `uq_wiki_document_published_title`; 409 MSG84, the document stays in the trash; no retry (W31) | AC-005.17 IT | Medium |
+| 31 | Input | DOCX zip bomb | POI `ZipSecureFile` defaults kept (inflate ratio, entry size); the extractor maps its exception to `UNREADABLE` | AC-004.2 | Medium |
+| 32 | Input | Stored file name with CR/LF or non-ASCII on download | `Content-Disposition` built with Spring `ContentDisposition` (RFC 5987 `filename*`), CR/LF removed | AC-002.12 | Medium |
+| 33 | Input | Browser sniffs a downloaded file as HTML | Download answers `X-Content-Type-Options: nosniff` | AC-002.12 | Low |
 
 Risk: two blockers outside wiki, `FileStorage` (KAN-96) and `TenantContext` (platform Task 6). Tasks 1 and 2 do not need them; tasks that store files start once KAN-96 is merged and use a test fake of `FileStorage` until Task 6 binds a tenant.

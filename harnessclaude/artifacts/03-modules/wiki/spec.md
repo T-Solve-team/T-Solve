@@ -14,6 +14,7 @@ Covers UC-38 to UC-50, Wiki Space and Wiki Document Management (Jira epic KAN-91
 |------|-------|--------|--------|
 | 2026-11-13 | STORY-001 to STORY-006 | Initial spec: UC-38 to UC-50 | KAN-91 |
 | 2026-11-13 | STORY-002 to STORY-004 | Builder check: AC-002.13 leaves the trash read to AC-005.4; `q` limits as received (AC-002.7, AC-002.9); AC-003.7 covers an unknown `folderId`; AC-004.10 names its code; AC-004.12 in the same transaction | Inline builder check |
+| 2026-11-14 | STORY-005 | AC-005.2 excepts the Knowledge Manager's read of AC-005.4; new AC-005.17: a restore that loses its title to a concurrent request answers 409 MSG84; pull request numbers replaced by Jira keys | Review of #223 (findings 1, 4, 8) |
 
 ## Requirements
 
@@ -36,7 +37,7 @@ Covers UC-38 to UC-50, Wiki Space and Wiki Document Management (Jira epic KAN-91
 ### Interim limits
 These are known limits of the code this module builds on. They are not defects of this module.
 
-1. Original files are stored through `FileStorage` (platform, KAN-96, pull request 193). Until it is merged, wiki's tasks that store files wait for it.
+1. Original files are stored through `FileStorage` (platform, KAN-96). Until it is merged, wiki's tasks that store files wait for it.
 2. The shipped app has one datasource until the tenant layer (KAN-98, KAN-99, platform Task 6) lands. Wiki's ITs use the test database and an in-memory `FileStorage` in wiki's test tree.
 3. A real Keycloak sign-in cannot reach these screens until KAN-275 lands; the web app is verified with MSW and the backend with `identity-mock` and MockMvc tests.
 4. The web app does not send the CSRF header yet (workspace interim limit 3); browser writes are verified with MSW.
@@ -136,7 +137,7 @@ These are known limits of the code this module builds on. They are not defects o
 - As a Knowledge Manager, I want to move wrong documents to the trash and then restore them or remove them for good so that mistakes can be undone and outdated content goes away.
 - Acceptance:
   - AC-005.1: WHEN the Space's Knowledge Manager calls `DELETE /api/v1/wiki/documents/{documentId}` for a Published document, THE system SHALL set its status `DELETED` with `deletedBy` the caller and `deletedAt` now, and answer 204.
-  - AC-005.2: WHEN a document is in the trash, THE system SHALL leave it out of every endpoint of STORY-002 and every port of STORY-001 from that request on.
+  - AC-005.2: WHEN a document is in the trash, THE system SHALL leave it out of every endpoint of STORY-002, except the Knowledge Manager's read of AC-005.4, and every port of STORY-001 from that request on.
   - AC-005.3: WHEN the Space's Knowledge Manager calls `GET /api/v1/wiki/spaces/{spaceId}/trash`, THE system SHALL answer 200 with the documents in its trash, newest `deletedAt` first, each with `documentId`, `title`, `folderName`, `owner`, `deletedBy` (full name) and `deletedAt`.
   - AC-005.4: WHEN the Space's Knowledge Manager calls `GET /api/v1/wiki/documents/{documentId}` for a document in the trash of their Space, THE system SHALL answer 200 with the document read-only and `canDelete` false.
   - AC-005.5: WHEN the Space's Knowledge Manager calls `POST /api/v1/wiki/documents/{documentId}/restore` for a document in the trash, THE system SHALL set it Published in its folder, clear `deletedBy` and `deletedAt`, and answer 200 with `title` and `renamed`.
@@ -147,6 +148,7 @@ These are known limits of the code this module builds on. They are not defects o
   - AC-005.10: IF anyone other than the Space's Knowledge Manager calls an endpoint of this story, THEN THE system SHALL answer 403 with code MSG08 for a document they can view, otherwise 404 with code MSG110, and change nothing.
   - AC-005.11: WHEN a document is moved to the trash, restored or permanently deleted, THE system SHALL write one audit entry in the same transaction with target type `WIKI_DOCUMENT`, target id the document id, action `DELETE` with `operation` `TRASH` or `PERMANENT`, or action `PUBLISH` with `operation` `RESTORE`, and details `title` and `spaceId`.
   - AC-005.12: IF deleting the original file from storage fails after a permanent delete, THEN THE system SHALL keep the delete, log the file key at WARN and answer 204.
+  - AC-005.17: IF the free title chosen by AC-005.6 is taken by another request (an upload or a restore) before the restore commits, THEN THE system SHALL answer 409 with code MSG84 and leave the document in the trash.
   - AC-005.13: WHEN the Knowledge Manager clicks Delete on 11.2, THE web app SHALL ask MSG100 with the title; on confirm it SHALL show MSG101 and return to 11.1.
   - AC-005.14: WHEN the Knowledge Manager opens the Trash tab of 11.5, THE web app SHALL show the trash table (Title, Folder, Owner, Deleted by, Deleted on) with Restore and "Delete permanently" on each row, or MSG04 when it is empty.
   - AC-005.15: WHEN Restore succeeds, THE web app SHALL show MSG102, and also MSG84 as information when `renamed` is true, and refresh the trash.
@@ -250,7 +252,7 @@ Error table:
 
 Java ports implemented by wiki (their callers declared them):
 - `vn.tsolve.chatbot.source.service.WikiSources` (AC-001.5, AC-001.6); `NoWikiSources` is deleted.
-- `vn.tsolve.triage.service.WikiSourceRetrieval` (AC-001.7), once triage's pull request 207 is merged.
+- `vn.tsolve.triage.service.WikiSourceRetrieval` (AC-001.7), once triage's KAN-47 is merged.
 - `vn.tsolve.triage.service.WikiDocumentAccess` (AC-001.8); `NoWikiDocumentAccess` is deleted.
 - `vn.tsolve.common.session.lookup.ManagedSpaceLookup` (AC-001.9).
 - `vn.tsolve.common.session.lookup.ViewableSpaceLookup` (AC-001.10), a new interface `List<SpaceRef> findViewableSpaces(UUID userId)` next to `ManagedSpaceLookup`.

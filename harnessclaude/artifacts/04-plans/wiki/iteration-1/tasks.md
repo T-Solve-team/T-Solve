@@ -11,7 +11,7 @@ Spec: `artifacts/03-modules/wiki/spec.md` · Design: `artifacts/04-plans/wiki/it
 
 Branches (team rule, one per Jira issue, from an up-to-date `main`): Tasks 1 to 3 `feat/KAN-170-wiki-view-documents` (also KAN-171); Tasks 4 and 5 `feat/KAN-166-wiki-folders` (also KAN-172, KAN-174); Tasks 6 to 8 `feat/KAN-167-wiki-upload` (also KAN-168, KAN-169); Tasks 9 and 10 `feat/KAN-173-wiki-trash` (also KAN-175 to KAN-177); Tasks 11 and 12 `feat/KAN-163-wiki-space-permissions` (also KAN-164, KAN-165). Each task is one commit after the user agrees. Test names cite the AC id: backend `..._AC_001_4`, frontend `it('AC-002.14 ...')`. Contract first: every API task edits `frontend/openapi/tsolve-api.yaml` and runs `npm run generate:api` before the Java code (`backend/AGENTS.md` rule 8).
 
-Blockers: Tasks 6 and 9 need `FileStorage` (KAN-96, pull request 193) on `main`. AC-001.7 needs triage's `WikiSourceRetrieval` (pull request 207); if it is not merged when Task 1 starts, AC-001.7 is a second commit on the same branch once it is.
+Blockers: Tasks 6 and 9 need `FileStorage` (KAN-96) on `main`. AC-001.7 needs triage's `WikiSourceRetrieval` (KAN-47); if it is not merged when Task 1 starts, AC-001.7 is a second commit on the same branch once it is.
 
 ## Task 1: Wiki tables, view rule and retrieval ports
 
@@ -56,7 +56,7 @@ Blockers: Tasks 6 and 9 need `FileStorage` (KAN-96, pull request 193) on `main`.
 - Modify: `frontend/src/features/wiki/pages/{WikiHomePage,WikiDocumentPage}.tsx`, `frontend/src/features/wiki/mocks/handlers.ts`
 - Create: `frontend/src/features/wiki/components/{CompanyWideView,FolderTree,DocumentsTable}.tsx`, `frontend/src/features/wiki/hooks/*`
 - Test: `frontend/src/features/wiki/pages/WikiHomePage.test.tsx`, `WikiDocumentPage.test.tsx`
-**Tests:** AC-002.14 to AC-002.21.
+**Tests:** AC-002.14 to AC-002.20, AC-002.21 (the three buttons only; its folder actions are tested in Task 5).
 
 ## Task 4: Folder API
 
@@ -80,7 +80,7 @@ Blockers: Tasks 6 and 9 need `FileStorage` (KAN-96, pull request 193) on `main`.
 - Create: `frontend/src/features/wiki/components/FolderModal.tsx`
 - Modify: `frontend/src/features/wiki/components/FolderTree.tsx`, `pages/WikiHomePage.tsx`, `mocks/handlers.ts`
 - Test: `frontend/src/features/wiki/components/FolderModal.test.tsx`, `WikiHomePage.test.tsx`
-**Tests:** AC-003.13 to AC-003.16.
+**Tests:** AC-003.13 to AC-003.16, AC-002.21 (folder actions Rename, Move and Delete).
 
 ## Task 6: Upload API and download
 
@@ -94,7 +94,7 @@ Blockers: Tasks 6 and 9 need `FileStorage` (KAN-96, pull request 193) on `main`.
 - Modify: `backend/src/main/java/vn/tsolve/wiki/controller/WikiDocumentController.java`
 - Create: `backend/src/test/resources/wiki/*` (fixture files), `backend/src/test/java/vn/tsolve/wiki/InMemoryFileStorage.java`
 - Test: `TextExtractorTest.java`, `WikiUploadControllerTest.java`, `WikiUploadIT.java`
-**Tests:** AC-004.1 to AC-004.12, AC-004.17, AC-002.12 · rows 7, 10 to 13, 20, 27.
+**Tests:** AC-004.1 to AC-004.13, AC-004.17, AC-002.12 · rows 7, 10 to 13, 20, 27, 31 to 33. AC-004.13 here: one `wiki-index` job enqueued after commit, none on rollback (the handler comes in Task 7).
 
 ## Task 7: Indexing job
 
@@ -104,7 +104,7 @@ Blockers: Tasks 6 and 9 need `FileStorage` (KAN-96, pull request 193) on `main`.
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/wiki/service/PassageSplitter.java`, `service/impl/WikiIndexJobHandler.java`
 - Test: `PassageSplitterTest.java`, `WikiIndexJobHandlerTest.java`, `WikiIndexIT.java`
-**Tests:** AC-004.13 to AC-004.16 · rows 8, 19, 28.
+**Tests:** AC-004.14 to AC-004.16 · rows 8, 19, 28.
 
 ## Task 8: Upload Documents screen
 
@@ -126,7 +126,7 @@ Blockers: Tasks 6 and 9 need `FileStorage` (KAN-96, pull request 193) on `main`.
 - Create: `backend/src/main/java/vn/tsolve/wiki/controller/WikiTrashController.java`, `service/WikiTrashService.java`, `service/impl/WikiTrashServiceImpl.java`
 - Modify: `backend/src/main/java/vn/tsolve/wiki/service/impl/WikiBrowseServiceImpl.java`
 - Test: `WikiTrashControllerTest.java`, `WikiTrashServiceImplTest.java`, `WikiTrashIT.java`
-**Tests:** AC-005.1 to AC-005.12 · rows 21 to 24.
+**Tests:** AC-005.1 to AC-005.12, AC-005.17 · rows 21 to 24, 30.
 
 ## Task 10: Delete button and Trash tab
 

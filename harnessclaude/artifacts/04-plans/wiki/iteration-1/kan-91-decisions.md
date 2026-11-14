@@ -1,7 +1,8 @@
 # Decisions: wiki (KAN-91, plan)
 
-The user asked for each open choice to be decided and logged here instead of asked (memory "auto-decide and
-log", 11/11). The user approves the spec (`sdd.ts approve wiki`); every decision here can be reversed then.
+The user asked (11/11) for each open choice to be decided and logged here instead of asked one at a time, so
+W1 to W31 were decided without asking. The user approves the spec (`sdd.ts approve wiki`); every decision here can
+be reversed then. Before Task 1 starts, the module owner (Đặng Nhật Minh) confirms W3, W10, W18, W21 and W27.
 Sources: UC list, GBR and MSG of `Report/Sua_31-10/Report_3_BreakDown` (31/10, master), SRS v3460 `Sua_31-10`
 (UC-38 to UC-50, screens 11.1 to 11.5), `SRS_Delta.md` (CR-09, D5, D27), DDL `Notes/DDL_01-11/02_tenant.sql`.
 
@@ -27,13 +28,14 @@ Sources: UC list, GBR and MSG of `Report/Sua_31-10/Report_3_BreakDown` (31/10, m
 | W18 | 13/11 | Error for a Space the user cannot view, or a manager action by someone else | 404; 403 MSG08 | 403 MSG08; an unknown or hidden Space is 404 MSG04 | Same as identity's scope checks (MSG08) |
 | W19 | 13/11 | Download of the original file | signed URL (platform Task 17, not built); stream through the backend | Stream through `GET /api/v1/wiki/documents/{id}/file` after the view check | Works now; the permission is checked on every download |
 | W20 | 13/11 | File larger than 10 MB at the backend | new code in `common` to answer MSG89; keep the global 413 | Keep the global 413 (MSG28, "must not exceed 10 MB"); the web app blocks the file earlier with MSG89 (UC-48 step 4) | No change in `common/exception` |
-| W21 | 13/11 | `spring.servlet.multipart.max-request-size` | per endpoint; global | Global 11 MB → 101 MB (10 files of 10 MB) | One property; the CSV import keeps its 10 MB file limit |
+| W21 | 13/11 | `spring.servlet.multipart.max-request-size` | per endpoint; global | Global 11 MB → 101 MB (10 files of 10 MB) | One property. Spring Boot's multipart limit is one setting for the whole servlet; a per-endpoint limit needs a custom `MultipartResolver` or filter. Consequence for other modules: every multipart endpoint (CSV import, any later upload) accepts a request of up to 101 MB; each keeps its own 10 MB *file* limit (`max-file-size` stays 10 MB) |
 | W22 | 13/11 | Where wiki's ports to Chatbot and triage are implemented | in chatbot and triage; in wiki | In wiki (`chatbot` `WikiSources`; `triage` `WikiSourceRetrieval` and `WikiDocumentAccess`); their fail-closed stand-ins are deleted in the same task | The interfaces were declared by the callers for wiki to implement |
 | W23 | 13/11 | Folder depth check when moving | only the folder; the folder and its sub-tree | The deepest folder of the moved sub-tree must stay at level 3 or above | UC-42 "no folder becomes deeper than three levels" |
 | W24 | 13/11 | Order of the Wiki Home lists | — | Company-wide documents grouped by Space name, then by title; Spaces by name; folders by name; documents by title; trash newest first | The SRS gives only the trash order |
-| W25 | 13/11 | Dependency on file storage | wait; store the file in the database | `FileStorage` (KAN-96, #193); until platform Task 6 (`TenantContext`) lands, the IT uses the test fakes of `ObjectFileStorageIT` | The architecture puts files in object storage (Files row); a blocker for the real run, written in the spec's interim limits |
+| W25 | 13/11 | Dependency on file storage | wait; store the file in the database | `FileStorage` (KAN-96); until platform Task 6 (`TenantContext`) lands, the IT uses the test fakes of `ObjectFileStorageIT` | The architecture puts files in object storage (Files row); a blocker for the real run, written in the spec's interim limits |
 | W26 | 13/11 | Who serves `GET /api/v1/me/spaces` (identity AC-003.4) | wiki adds the endpoint; wiki provides a lookup and identity keeps the endpoint | A new `common.session.lookup.ViewableSpaceLookup` next to `ManagedSpaceLookup`, implemented by wiki | identity owns the endpoint and its ACs; the lookup pattern exists. Wiki Home uses its own `GET /api/v1/wiki/spaces`, which also gives the access level |
 | W27 | 13/11 | Search result size and semantic threshold | unbounded; a cap | At most 50 results; `tsolve.wiki.search.min-similarity` (default 0.55) | The threshold is a calibration knob for bge-m3 on real documents; 50 rows fill the table without paging |
 | W28 | 13/11 | Passages of a document in the trash | delete and rebuild on restore; keep and filter by status | Keep; every query filters on Published. Restore enqueues indexing only when the document is not `INDEXED` | Removal from the Chatbot is immediate either way (GBR-34); restore needs no AI call |
 | W29 | 13/11 | Error for moving a folder inside itself | new message; MSG86 | 400 MSG86 on `parentId`; the web app never offers that parent | The SRS names only MSG01, MSG85, MSG86 for UC-42 |
 | W30 | 13/11 | Granting an existing or invalid grantee | 409; skip; 404 | Already granted: skipped. Unknown, not Active or the own Department: 404 MSG04, nothing saved. One audit entry per permission | Two Knowledge Manager tabs may grant the same one; an invalid id means a stale screen |
+| W31 | 14/11 | A restore that loses its free title to a concurrent upload or restore (review of #223) | retry the probe; 409 MSG84 | 409 MSG84, the document stays in the trash (AC-005.17) | Rare (same title, same folder, same moment); the Knowledge Manager clicks Restore again and gets the next free title. A retry loop adds code for no visible gain |
