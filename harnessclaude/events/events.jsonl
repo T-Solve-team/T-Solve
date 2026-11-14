@@ -1393,3 +1393,10 @@
 {"ts":"2026-11-14T16:46:22.025Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T16:46:58.592Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"9e2e5e349aa35feaf5a084e8f1aaba57ce160c79"}
 {"ts":"2026-11-14T16:46:58.892Z","type":"feature-status","module":"import-ticket-list","feature":"import-tickets-manual-tab","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T17:43:06.610Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-contract","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T17:43:06.975Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-schema","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T17:43:07.353Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-save","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T17:43:07.711Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-evidence","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T17:43:08.063Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-drafts","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T17:43:08.426Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T17:43:08.766Z","type":"feature-status","module":"import-ticket-list","feature":"import-tickets-manual-tab","from":"evaluating","to":"passing"}

@@ -38,9 +38,9 @@
         "import-type-form": "passing",
         "row-solution-popup": "passing",
         "fill-solution-screen": "passing",
-        "import-tickets-manual-tab": "evaluating"
+        "import-tickets-manual-tab": "passing"
       },
-      "lastUpdated": "2026-11-14T16:46:58.890Z",
+      "lastUpdated": "2026-11-14T17:43:08.763Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
@@ -210,14 +210,14 @@
         "jira-gateway-auth": "passing",
         "jira-pull-deadline": "evaluating",
         "ticket-status-model": "passing",
-        "manual-entry-contract": "evaluating",
-        "manual-entry-schema": "evaluating",
-        "manual-entry-save": "evaluating",
-        "manual-entry-evidence": "evaluating",
-        "manual-entry-drafts": "evaluating",
-        "manual-entry-tab": "evaluating"
+        "manual-entry-contract": "passing",
+        "manual-entry-schema": "passing",
+        "manual-entry-save": "passing",
+        "manual-entry-evidence": "passing",
+        "manual-entry-drafts": "passing",
+        "manual-entry-tab": "passing"
       },
-      "lastUpdated": "2026-11-14T16:46:22.023Z",
+      "lastUpdated": "2026-11-14T17:43:08.424Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
