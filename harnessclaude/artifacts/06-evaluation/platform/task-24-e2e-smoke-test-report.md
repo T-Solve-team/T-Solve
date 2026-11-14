@@ -31,7 +31,7 @@ Branch `test/KAN-186-platform-e2e-isolation`, PR #227. Run by Claude Code on the
 - Stack: Docker Compose `db`, `redis`, `keycloak`, `fake-google`; backend `dev` profile with `SEARCH_DEV_SCOPE=all` and
   `TSOLVE_STUB_WORKSPACE_READY=true`; Vite dev server (`VITE_API_MOCKING=false`). Browser: installed Edge 157
   (`E2E_BROWSER_CHANNEL=msedge`), because the Playwright Chromium download stalled on this network. `@playwright/test` 1.64.1.
-- `npm run e2e` at commit `3f58bab4` plus the uncommitted `e2e/` package: **17/17 pass** (19.5 s). The HTML report was
+- `npm run e2e` at commit `3f58bab4` plus the uncommitted `e2e/` package: **17/17 pass** (19.5 s); after the review fixes **24/24 pass** (13.9 s). The HTML report was
   written to `e2e/playwright-report/` (not committed).
 
 | AC | Test | Result |
