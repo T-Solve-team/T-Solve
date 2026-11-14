@@ -406,15 +406,16 @@
         "tenant-jobs": "passing",
         "active-workspaces": "passing",
         "review-email-html-sender": "passing",
-        "email-outbox": "passing"
+        "email-outbox": "passing",
+        "email-outbox-review-fixes": "evaluating"
       },
-      "lastUpdated": "2026-11-14T13:42:46.041Z",
+      "lastUpdated": "2026-11-14T13:58:54.679Z",
       "branch": "feat/worker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "89691ef762c69f0293da164ea5153f7871430937"
+        "default": "c5bfbaee28bae21b89e1db4e4939bf99e56ea7f5"
       }
     },
     "ai": {
@@ -488,15 +489,16 @@
         "review-expiry-job": "passing",
         "review-expired-stored-columns": "passing",
         "review-email-html": "passing",
-        "review-email-outbox": "passing"
+        "review-email-outbox": "passing",
+        "review-email-link-fallback": "evaluating"
       },
-      "lastUpdated": "2026-11-14T13:42:46.093Z",
+      "lastUpdated": "2026-11-14T13:58:54.747Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5cf5c10ba569594a59966e17cdd76e9248e097d0"
+        "default": "e9eec864480ba413e53c2387698dc28e4f893647"
       }
     }
   },

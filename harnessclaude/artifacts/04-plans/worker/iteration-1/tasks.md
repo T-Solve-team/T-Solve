@@ -1,7 +1,7 @@
 ---
 module: worker
 date: 2026-11-07
-total_tasks: 5
+total_tasks: 6
 owner: Dev
 ---
 
@@ -78,3 +78,12 @@ Spec: artifacts/03-modules/worker/spec.md
 - Test: `worker/service/impl/{EmailOutboxServiceImplTest,EmailOutboxDispatchHandlerTest}.java`, `worker/EmailOutboxIT.java`, update `worker/config/WorkerConfigurationTest.java`.
 **Dependencies:** STORY-002 runtime (completed). ticket-review Task 20 builds on it in the same branch.
 **Verification:** tests named with each AC id; PostgreSQL Jobs DB + Mailpit IT; `mvn verify` (tests + spotless:check); `sdd.ts trace worker STORY-001` and `STORY-004`.
+
+## Task 6: Email outbox review fixes (KAN-162)
+
+**Story:** STORY-004
+**Feature:** email-outbox-review-fixes
+**Description:** Fix the Medium findings of the task 5 review (artifacts/06-evaluation/worker/task-5-email-outbox-review.md), each test-first and logged in docs/bug-log.md. No acceptance criterion changes. (a) AC-004.4: held rows of a non-Active Workspace must not use up the batch — the claim keeps reading due rows, oldest first, until `batch-size` rows are claimed for sending or no due row is left (bounded number of reads), and checks each Workspace once per run. (b) The recurring dispatch job runs with no JobRunr retries, since the next tick is the retry. (c) AC-004.6/004.7: a database error while writing one row outcome is logged by class name and does not stop the other rows. (d) Tests: the recurring job through real JobRunr and the AC-004.9 hold path against PostgreSQL in `EmailOutboxIT`.
+**Files:** `backend/src/main/java/vn/tsolve/worker/service/impl/EmailOutboxDispatchHandler.java`, `worker/repository/EmailOutboxRepository.java`; tests `worker/service/impl/EmailOutboxDispatchHandlerTest.java`, `worker/EmailOutboxIT.java`; `docs/bug-log.md`.
+**Dependencies:** Task 5.
+**Verification:** tests named with the AC and BUG ids; `mvn verify` through the PR CI; `sdd.ts trace worker STORY-004`.

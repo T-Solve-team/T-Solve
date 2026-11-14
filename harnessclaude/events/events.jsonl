@@ -1446,3 +1446,12 @@
 {"ts":"2026-11-14T13:33:09.448Z","type":"feature-status","module":"ticket-review","feature":"review-email-outbox","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T13:42:46.042Z","type":"feature-status","module":"worker","feature":"email-outbox","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T13:42:46.094Z","type":"feature-status","module":"ticket-review","feature":"review-email-outbox","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T13:43:48.630Z","type":"feature-status","module":"worker","feature":"email-outbox-review-fixes","from":null,"to":"pending"}
+{"ts":"2026-11-14T13:43:48.678Z","type":"feature-status","module":"worker","feature":"email-outbox-review-fixes","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T13:43:48.726Z","type":"feature-status","module":"ticket-review","feature":"review-email-link-fallback","from":null,"to":"pending"}
+{"ts":"2026-11-14T13:43:48.784Z","type":"feature-status","module":"ticket-review","feature":"review-email-link-fallback","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T13:58:10.798Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"c5bfbaee28bae21b89e1db4e4939bf99e56ea7f5"}
+{"ts":"2026-11-14T13:58:21.884Z","type":"commit-recorded","module":"worker","repo":"default","sha":"c5bfbaee28bae21b89e1db4e4939bf99e56ea7f5"}
+{"ts":"2026-11-14T13:58:35.327Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"e9eec864480ba413e53c2387698dc28e4f893647"}
+{"ts":"2026-11-14T13:58:54.680Z","type":"feature-status","module":"worker","feature":"email-outbox-review-fixes","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T13:58:54.749Z","type":"feature-status","module":"ticket-review","feature":"review-email-link-fallback","from":"in-progress","to":"evaluating"}

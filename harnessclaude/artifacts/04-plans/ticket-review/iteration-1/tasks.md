@@ -1,7 +1,7 @@
 ---
 module: ticket-review
 date: 2026-11-01
-total_tasks: 20
+total_tasks: 21
 owner: Dev
 ---
 
@@ -200,3 +200,12 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** `backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java`, `ReviewNotificationJobHandler.java` (delete); tests `backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotification*`.
 **Dependencies:** worker Task 5 (`email-outbox`), same branch `feat/KAN-162-worker-email-outbox`.
 **Verification:** tests named AC-010.1–010.9, including a PostgreSQL test that a row is stored only after commit, never after rollback, and none for Approve or a ticket with no writer; `mvn verify`; `sdd.ts trace ticket-review STORY-010`.
+
+## Task 21: Review email link fallback (KAN-162)
+
+**Story:** STORY-010
+**Feature:** review-email-link-fallback
+**Description:** Fix the findings of the task 20 review (artifacts/06-evaluation/ticket-review/task-20-review-email-outbox-review.md), test-first and logged in docs/bug-log.md. No acceptance criterion changes. AC-010.8: when the site-host lookup throws, the email is still queued without the button and the link; the host is looked up once per event, not once per decision. Rename the test `stopsAtTheFirstFailedEnqueue_BUG_164` so its name says what it asserts.
+**Files:** `backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java`; tests `backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuerTest.java`, `ReviewNotificationEnqueueBugTest.java`; `docs/bug-log.md`.
+**Dependencies:** Task 20.
+**Verification:** test named AC-010.8 with the BUG id; `sdd.ts trace ticket-review STORY-010`.
