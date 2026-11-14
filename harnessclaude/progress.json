@@ -187,19 +187,19 @@
         "wiki-folder-ui": "evaluating",
         "wiki-upload-api": "evaluating",
         "wiki-indexing": "evaluating",
-        "wiki-upload-ui": "pending",
+        "wiki-upload-ui": "evaluating",
         "wiki-trash-api": "pending",
         "wiki-trash-ui": "pending",
         "wiki-permissions-api": "pending",
         "wiki-permissions-ui": "pending"
       },
-      "lastUpdated": "2026-11-14T20:13:23.511Z",
+      "lastUpdated": "2026-11-14T20:36:52.524Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "a54e8b47c61ecab3d2a6fb1594f3e14c56fa9aa0"
+        "default": "6bd9d92d3ad8aec081a00bb76d8aa80110515f40"
       }
     },
     "ticket-repository": {
