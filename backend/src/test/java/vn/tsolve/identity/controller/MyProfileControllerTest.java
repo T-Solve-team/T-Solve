@@ -265,7 +265,10 @@ class MyProfileControllerTest {
         "from, 2026-02-30",
         "to, 31/10/2026",
         "page, abc",
-        "size, 1.5"
+        "size, 1.5",
+        "to, +999999999-12-31",
+        "from, 10000-01-01",
+        "projectId, 1-1-1-1-1"
     })
     @WithTSolveUser(roles = Role.TICKET_RESOLVER)
     void rejectsAWrongParameter_AC_003_9(String field, String value) throws Exception {
@@ -295,6 +298,19 @@ class MyProfileControllerTest {
         mvc.perform(get(SOLUTIONS).param("from", "2026-01-15").param("to", "2026-01-15"))
                 .andExpect(status().isOk());
         mvc.perform(get(SOLUTIONS).param("to", "2026-01-31")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.TICKET_RESOLVER)
+    void treatsEveryEmptyValueAsMissing_AC_003_9() throws Exception {
+        when(service.getMySolutions(any())).thenReturn(new PageImpl<MySolution>(List.of(), PageRequest.of(0, 20), 0));
+
+        mvc.perform(get(SOLUTIONS + "?page=&size=&status=&projectId=&from=&to="))
+                .andExpect(status().isOk());
+
+        var captor = ArgumentCaptor.forClass(MySolutionsQuery.class);
+        verify(service).getMySolutions(captor.capture());
+        assertThat(captor.getValue()).isEqualTo(new MySolutionsQuery(0, 20, null, null, null, null));
     }
 
     @ParameterizedTest
