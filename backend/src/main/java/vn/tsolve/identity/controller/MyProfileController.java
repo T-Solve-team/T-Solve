@@ -46,10 +46,14 @@ public class MyProfileController {
     @PreAuthorize("hasAnyRole('" + Roles.TICKET_RESOLVER + "','" + Roles.PROJECT_MANAGER + "')")
     public ResponseEntity<PagedModel<MySolution>> getMySolutions(
             @RequestParam(required = false)
-                    @Parameter(schema = @Schema(type = "integer", minimum = "0", defaultValue = "0"))
+                    @Parameter(
+                            description = "Page number, starting at 0.",
+                            schema = @Schema(type = "integer", minimum = "0", defaultValue = "0"))
                     String page,
             @RequestParam(required = false)
-                    @Parameter(schema = @Schema(type = "integer", minimum = "1", maximum = "100", defaultValue = "20"))
+                    @Parameter(
+                            description = "Rows per page (SRS default 20).",
+                            schema = @Schema(type = "integer", minimum = "1", maximum = "100", defaultValue = "20"))
                     String size,
             @RequestParam(required = false) @Parameter(schema = @Schema(implementation = TicketStatus.class))
                     String status,
