@@ -256,3 +256,69 @@ for `audit_event` / the new table and updated if it lists them.
 | An audit failure blocks the demo's review decisions (no `TSolveUser`, e.g. a Jira App principal) | High | Only `ReviewDecisionController` and `ImportController` reach the two callers today, both with a `TSolveUser`; the IT tests run them as such |
 | Two audit specs (be-foundation STORY-004, this one) | Medium | Spec note + follow-up to retire STORY-004 |
 | Changeset number clash with PR #152 | Low | 018 now; renumber at merge |
+
+## Change 2026-11-09 — KAN-150/151: Knowledge Dashboard (STORY-004, STORY-005)
+
+Decided with the user on 09/11 (spec Changelog): the five groups of SRS 9.1 from stored data, no ticket views; one
+endpoint; gaps by the asker's Department; antd + CSS charts, no dependency.
+
+### Backend (`vn.tsolve.analytics`, read only)
+
+```
+DashboardController GET /api/v1/dashboard ─► DashboardServiceImpl
+   (@PreAuthorize PM or ADMIN)                 ├─ DashboardScope.resolve(user, departmentId, projectId)  → Scope
+                                               ├─ DashboardPeriod.parse(from, to, clock)                 → [from, to+1) VN time
+                                               └─ DashboardRepository (NamedParameterJdbcTemplate, one query per group)
+```
+
+- **Scope** = `Scope(Set<departmentPk> departments, UUID projectId|null)`; `null` departments = whole Workspace (Admin
+  without filter). PM-only users: `app_user.department_id`; a different `departmentId`, a `projectId` of another
+  Department, or no Department → `AccessDeniedException` (403 MSG08, AC-004.5). Ids are `public_id` UUIDs taken as
+  `String` and parsed in the service (bad → 400 MSG06; unknown → `NotFoundException` MSG04).
+- **Period** mirrors the audit log's `[from, to+1)` Vietnam-time parsing plus the 366-day cap; absent pair →
+  `today-29 .. today` from the `Clock` bean; errors → `MessageCodeException` 400 MSG39.
+- **Queries** — plain SQL, each filtered by the scope through `ticket → project → department`:
+  - outcomes: `review_decision.decided_at` in period, `GROUP BY decided_at::date (Asia/Ho_Chi_Minh), project`;
+    imports: `ticket.source <> 'SOLUTION_FORM' AND ticket.created_at` in period; per-day rows filled in Java for every
+    day; `pendingReview` / `expired` = current `ticket.status` counts (`PENDING_REVIEW`, `EXPIRED` — the enum names
+    in `ticket-review`).
+  - coverage: current `ticket.status = 'PUBLISHED'` vs all tickets, per Department.
+  - feedback: `ticket_feedback.updated_at` in period (the latest rating of each user counts); rates computed in SQL;
+    top / lowest 5 `ORDER BY rate DESC|ASC, total DESC, title`.
+  - gaps: `search_log` `result_count = 0`, `GROUP BY lower(trim(query))` (shown as the first-seen spelling),
+    `department_id` in scope; `chatbot_answer` `outcome = 'NO_SOURCE'` joined to `app_user.department_id`, grouped
+    the same way; `LIMIT 10`.
+  - suggestions: `suggestion_result.commented_at` in period, `project_id` in scope; solved = `reporter_answer = 'YES'`.
+- **Options**: Admin → active Departments and their active Projects; PM → their Department and its Projects
+  (Project `name` = Jira project key).
+- No query text is logged (AC-004.15). `@Transactional(readOnly = true)`.
+
+### Frontend (`features/knowledge-dashboard`)
+
+- `api/useKnowledgeDashboard.ts` wraps the generated `useGetKnowledgeDashboard`; `hooks/useDashboardFilters.ts` keeps
+  `period` (`7d` | `30d` | `90d` | `custom`), `from`, `to`, `departmentId`, `projectId` in the URL with the
+  shared list-URL helpers; custom range validation (MSG39) before any request.
+- `components/`: `DashboardFilters`, `OutcomesSection` (per-day and per-Project CSS bars: `div` widths computed at
+  runtime, the one allowed `style`), `CoverageSection`, `FeedbackSection`, `GapsSection`, `SuggestionsSection`,
+  `BarList` (shared within the feature). antd `Statistic`, `Progress`, `Table`; MSG04 per empty section.
+- `mocks/handlers.ts`: one hand-written `getKnowledgeDashboard` handler with data for every section and 400 MSG39.
+- Ticket links only when the user has `PROJECT_MANAGER` (AC-005.9), through `paths.ticketDetail`.
+
+| Decision | Chosen | Alternatives | Rationale |
+|----------|--------|--------------|-----------|
+| Groups | Five SRS groups, no ticket views | Add a view counter; minimal | User 09/11: views need another module's change |
+| API | One `GET /api/v1/dashboard` | One per group | User 09/11: one query per filter change, one service |
+| Gaps scope | Asker's Department | Admin only | User 09/11 |
+| Charts | antd + CSS | `@ant-design/plots`, `recharts` | User 09/11: no FE Lead dependency approval needed |
+| Filter options | In the response | New Department / Project list APIs | Decided in planning (builder check): no such API exists |
+| Data access | `NamedParameterJdbcTemplate` aggregates | JPA entities per table | Cross-module read model, aggregates only; no entity of another module is mapped |
+
+| # | Case | Severity | Handling | Test |
+|---|------|----------|----------|------|
+| D1 | PM asks for another Department | High | 403 MSG08 | controller + service test |
+| D2 | PM without Department | Medium | 403 MSG08 | service test |
+| D3 | Period with no data | Low | zeros, null rates, every day listed | IT |
+| D4 | 366-day range | Low | 366 per-day rows | service test |
+| D5 | Same query with other case / spaces | Low | one gap row | IT |
+| D6 | Department deactivated | Low | still counted in figures, not in options | IT |
+| D7 | Invalid custom range in the page | Medium | MSG39, no request | component test |

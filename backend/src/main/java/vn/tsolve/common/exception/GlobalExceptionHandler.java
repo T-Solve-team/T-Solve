@@ -178,7 +178,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                     Map.of());
         }
         ProblemDetail problem = ProblemDetails.of(status, e.getCode(), e.getParams());
-        if (e.getField() != null) {
+        if (e instanceof InvalidFieldsException invalid) {
+            ProblemDetails.withFieldErrors(problem, invalid.getErrors());
+        } else if (e.getField() != null) {
             ProblemDetails.withFieldErrors(
                     problem, List.of(new ProblemDetails.FieldError(e.getField(), e.getCode(), e.getParams())));
         }
@@ -235,13 +237,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static ProblemDetails.FieldError fromConstraint(
             String field, String constraint, Integer max, Object value) {
         return switch (constraint == null ? "" : constraint) {
-            case "NotBlank", "NotNull", "NotEmpty" -> new ProblemDetails.FieldError(
-                    field, REQUIRED, Map.of("field_name", field));
-                // Only "longer than max" is MSG02; a value under @Size(min), or a "Size" with no max known, is another
-                // rule.
-            case "Size" -> max != null && lengthOf(value) > max
-                    ? new ProblemDetails.FieldError(field, TOO_LONG, Map.of("field_name", field, "max_length", max))
-                    : new ProblemDetails.FieldError(field, ProblemDetails.UNEXPECTED_ERROR, Map.of());
+            case "NotBlank", "NotNull", "NotEmpty" ->
+                new ProblemDetails.FieldError(field, REQUIRED, Map.of("field_name", field));
+            // Only "longer than max" is MSG02; a value under @Size(min), or a "Size" with no max known, is another
+            // rule.
+            case "Size" ->
+                max != null && lengthOf(value) > max
+                        ? new ProblemDetails.FieldError(field, TOO_LONG, Map.of("field_name", field, "max_length", max))
+                        : new ProblemDetails.FieldError(field, ProblemDetails.UNEXPECTED_ERROR, Map.of());
             case "Email" -> new ProblemDetails.FieldError(field, INVALID_EMAIL, Map.of());
             default -> new ProblemDetails.FieldError(field, ProblemDetails.UNEXPECTED_ERROR, Map.of());
         };

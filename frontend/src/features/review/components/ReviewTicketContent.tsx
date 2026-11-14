@@ -1,6 +1,6 @@
 import { Descriptions, Flex, Typography } from 'antd';
 import type { ReviewTicketDetail } from '@/shared/api';
-import { formatDateTime, TICKET_SOURCE_LABELS } from '@/shared/lib';
+import { formatDate, formatDateTime, TICKET_SOURCE_LABELS } from '@/shared/lib';
 import { msg } from '@/shared/messages';
 import { SectionCard, StatusTag } from '@/shared/ui';
 import styles from './ReviewTicketDetail.module.css';
@@ -22,7 +22,17 @@ function readableSize(bytes: number): string {
   return `${Number((bytes / (1024 * 1024)).toFixed(1))} MB`;
 }
 
+function sourceReference(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  try {
+    return ['http:', 'https:'].includes(new URL(value).protocol) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function ReviewTicketContent({ ticket }: { ticket: ReviewTicketDetail }) {
+  const sourceHref = sourceReference(ticket.sourceLink);
   return (
     <Flex vertical gap="large" className={styles.content}>
       <SectionCard title="Ticket">
@@ -37,14 +47,35 @@ export function ReviewTicketContent({ ticket }: { ticket: ReviewTicketDetail }) 
               children: <span className={styles.text}>{ticket.description}</span>,
             },
             { key: 'project', label: 'Project', children: ticket.project.name },
+            { key: 'department', label: 'Department', children: ticket.department?.name ?? '—' },
+            {
+              key: 'resolved',
+              label: 'Resolved date',
+              children: formatDate(ticket.resolvedDate) || '—',
+            },
+            {
+              key: 'sourceLink',
+              label: 'Source link',
+              children: sourceHref ? (
+                <a href={sourceHref} target="_blank" rel="noopener noreferrer">
+                  {ticket.sourceLink}
+                </a>
+              ) : (
+                (ticket.sourceLink ?? '—')
+              ),
+            },
             { key: 'source', label: 'Source', children: TICKET_SOURCE_LABELS[ticket.source] },
             { key: 'status', label: 'Status', children: <StatusTag status={ticket.status} /> },
             { key: 'author', label: 'Author', children: ticket.authorName ?? '—' },
-            {
-              key: 'due',
-              label: 'Review due date',
-              children: ticket.reviewDueDate ? formatDateTime(ticket.reviewDueDate) : '—',
-            },
+            ...(ticket.status === 'PENDING_REVIEW'
+              ? [
+                  {
+                    key: 'due',
+                    label: 'Review due date',
+                    children: ticket.reviewDueDate ? formatDateTime(ticket.reviewDueDate) : '—',
+                  },
+                ]
+              : []),
           ]}
         />
         {ticket.source !== 'SOLUTION_FORM' && ticket.status === 'PUBLISHED' && (

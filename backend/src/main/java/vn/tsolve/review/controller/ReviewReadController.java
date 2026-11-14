@@ -107,7 +107,9 @@ public class ReviewReadController {
 
     @GetMapping("/tickets/{ticketId}")
     @Operation(operationId = "getReviewTicketDetail")
-    @PreAuthorize("hasRole('" + Roles.EMPLOYEE + "')")
+    @ApiResponse(responseCode = "403")
+    @ApiResponse(responseCode = "404")
+    @PreAuthorize("hasAnyRole('" + Roles.TICKET_RESOLVER + "', '" + Roles.PROJECT_MANAGER + "')")
     public Detail detail(@AuthenticationPrincipal TSolveUser actor, @PathVariable UUID ticketId) {
         var projects = projects(actor);
         return reads.detail(projects, actor.id(), actor.roles().contains(Role.PROJECT_MANAGER), ticketId);

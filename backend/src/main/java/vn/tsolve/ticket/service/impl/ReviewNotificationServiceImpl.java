@@ -23,7 +23,17 @@ public class ReviewNotificationServiceImpl implements ReviewNotificationService 
     public Optional<ReviewNotification> findNotification(UUID decisionId) {
         Objects.requireNonNull(decisionId, "decisionId");
         return decisions.findWriterNotification(decisionId).flatMap(row -> kind(row.getDecision())
-                .map(kind -> new ReviewNotification(kind, row.getEmail(), row.getTicketKey(), row.getFeedback())));
+                .map(kind -> new ReviewNotification(
+                        kind,
+                        row.getEmail(),
+                        row.getTicketKey(),
+                        row.getFeedback(),
+                        row.getTicketId(),
+                        row.getTicketTitle(),
+                        row.getProjectName(),
+                        row.getReviewerName(),
+                        row.getWriterName(),
+                        row.getDecidedAt())));
     }
 
     private static Optional<ReviewNotification.Kind> kind(String decision) {

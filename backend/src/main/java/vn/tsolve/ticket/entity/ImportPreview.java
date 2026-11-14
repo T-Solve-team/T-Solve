@@ -27,7 +27,8 @@ public class ImportPreview {
     @Column(nullable = false, updatable = false)
     private String owner;
 
-    @Column(name = "project_id", nullable = false, updatable = false)
+    // updatable only for a Manual Draft, whose Project the user may change (moveManualDraft)
+    @Column(name = "project_id", nullable = false)
     private UUID projectId;
 
     @Enumerated(EnumType.STRING)
@@ -85,6 +86,23 @@ public class ImportPreview {
         preview.resolvedTo = to;
         preview.moreAvailable = moreAvailable;
         return preview;
+    }
+
+    /** A manual entry saved as a Draft (D14): its one row holds the fields as typed, so it counts as with Solution. */
+    public static ImportPreview manualDraft(String owner, UUID projectId, Instant savedAt) {
+        ImportPreview preview =
+                new ImportPreview(owner, projectId, TicketSource.MANUAL, ImportType.WITH_SOLUTION, null, savedAt);
+        preview.draftSavedAt = savedAt;
+        return preview;
+    }
+
+    /** Save as draft again on a Manual Draft (AC-006.10): the Project chosen now and the new save time. */
+    public void moveManualDraft(UUID projectId, Instant savedAt) {
+        if (source != TicketSource.MANUAL) {
+            throw new IllegalStateException("Only a Manual Draft changes its Project");
+        }
+        this.projectId = projectId;
+        this.draftSavedAt = savedAt;
     }
 
     /** Marks the preview a Draft, or moves the save time of a Draft saved before (AC-004.1, AC-004.7). */

@@ -138,9 +138,12 @@
         "session-expiry-events": "passing",
         "operator-session": "passing",
         "session-replaced-event": "passing",
-        "jira-link-record": "passing"
+        "jira-link-record": "passing",
+        "profile-spaces-backend": "passing",
+        "my-solutions-backend": "passing",
+        "my-solutions-summary-backend": "pending"
       },
-      "lastUpdated": "2026-11-13T12:30:26.708Z",
+      "lastUpdated": "2026-11-14T18:40:18.990Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -154,15 +157,17 @@
       "currentPhase": "implement",
       "features": {
         "create-department-api": "passing",
-        "create-department-screen": "passing"
+        "create-department-screen": "passing",
+        "rename-department-api": "passing",
+        "rename-department-screen": "passing"
       },
-      "lastUpdated": "2026-11-11T15:54:34.998Z",
+      "lastUpdated": "2026-11-11T21:17:40.264Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5d06062761d473d9153fdfe12fbdf3b5aeeed926"
+        "default": "8a667e27d39a1c4deb80389d9383c07870abb9bb"
       }
     },
     "project-integration": {
@@ -184,10 +189,23 @@
       }
     },
     "wiki": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:22.980Z"
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "wiki-view-rule": "pending",
+        "wiki-browse-api": "pending",
+        "wiki-home-ui": "pending",
+        "wiki-folder-api": "pending",
+        "wiki-folder-ui": "pending",
+        "wiki-upload-api": "pending",
+        "wiki-indexing": "pending",
+        "wiki-upload-ui": "pending",
+        "wiki-trash-api": "pending",
+        "wiki-trash-ui": "pending",
+        "wiki-permissions-api": "pending",
+        "wiki-permissions-ui": "pending"
+      },
+      "lastUpdated": "2026-11-13T16:53:08.292Z"
     },
     "ticket-repository": {
       "status": "implementing",
@@ -204,15 +222,28 @@
         "jira-import-preview-page": "passing",
         "jira-import-verify": "passing",
         "jira-gateway-auth": "passing",
-        "jira-pull-deadline": "evaluating"
+        "jira-pull-deadline": "evaluating",
+        "ticket-status-model": "passing",
+        "manual-ticket-contract": "passing",
+        "manual-ticket-create": "passing",
+        "manual-ticket-drafts": "passing",
+        "manual-entry-tab": "passing",
+        "manual-evidence-contract": "passing",
+        "manual-evidence-backend": "passing",
+        "manual-evidence-tab": "passing",
+        "import-batch-date-range": "pending",
+        "import-history-api": "pending",
+        "import-history-page": "pending",
+        "ticket-detail-scope": "pending",
+        "ticket-detail-page": "pending"
       },
-      "lastUpdated": "2026-11-09T17:11:49.645Z",
+      "lastUpdated": "2026-11-14T15:00:55.440Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "125f4e28d12316d33b41f00d02e21e6fbc05df64"
+        "default": "d6975188e0f34008e0b4bd331a04f4df9a5beeea"
       }
     },
     "search": {
@@ -237,7 +268,8 @@
         "ticket-feedback-api": "passing",
         "give-feedback-connect": "evaluating",
         "ticket-suggestion-api": "passing",
-        "solution-retrieval": "passing"
+        "solution-retrieval": "passing",
+        "department-solution-retrieval": "passing"
       },
       "lastUpdated": "2026-11-09T04:05:02.373Z",
       "branch": "feat/search",
@@ -254,15 +286,16 @@
       "features": {
         "suggestion-history": "passing",
         "suggestion-history-contract": "passing",
-        "suggestion-history-api": "passing"
+        "suggestion-history-api": "passing",
+        "suggestion-generation": "passing"
       },
-      "lastUpdated": "2026-11-05T14:10:40.456Z",
+      "lastUpdated": "2026-11-07T20:18:44.302Z",
       "branch": "feat/triage",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "6cefdf9443d81628a7819c855a363f111cc44cf7"
+        "default": "55ac18a981b2d10c8feee4a6c0fcfca22dd41aa2"
       }
     },
     "chatbot": {
@@ -300,15 +333,29 @@
         "ask-endpoint": "passing",
         "ask-forge-client": "passing",
         "ask-conversation-logic": "passing",
-        "ask-page-ui": "passing"
+        "ask-page-ui": "passing",
+        "solution-contract": "passing",
+        "solution-ticket-storage": "passing",
+        "jira-issue-access": "passing",
+        "solution-ai": "passing",
+        "solution-endpoints": "passing",
+        "solution-forge-client": "passing",
+        "solution-form-ui": "passing",
+        "issue-panel-ui": "passing",
+        "remove-jira-search": "passing",
+        "close-keeps-draft": "passing",
+        "resubmit-backend": "evaluating",
+        "resubmit-forge": "evaluating",
+        "panel-rejected": "evaluating",
+        "panel-published": "evaluating"
       },
-      "lastUpdated": "2026-11-08T04:25:18.975Z",
-      "branch": "feat/jira-app",
+      "lastUpdated": "2026-11-14T19:08:51.881Z",
+      "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "ac7d5c2bb6a89afc0c41b913c57ed2639457009e"
+        "default": "ef1fc5e0db7ee7a071ba4cd4a9ff4932fd7e1f31"
       }
     },
     "dashboard-audit": {
@@ -317,15 +364,20 @@
       "features": {
         "audit-log": "passing",
         "audit-log-api": "passing",
-        "audit-writer": "passing"
+        "audit-writer": "passing",
+        "dashboard-api": "passing",
+        "dashboard-outcomes": "passing",
+        "dashboard-reuse-gaps": "passing",
+        "dashboard-page": "passing",
+        "dashboard-sections": "passing"
       },
-      "lastUpdated": "2026-11-10T02:32:16.649Z",
+      "lastUpdated": "2026-11-11T13:52:46.593Z",
       "branch": "feat/dashboard-audit",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5a20895a921becc1012424819b25c777b82ee69c"
+        "default": "46ae603f6822b4133fe056c98bb34b56a6c2b24f"
       }
     },
     "platform": {
@@ -337,7 +389,7 @@
         "row-level-security": "pending",
         "workspace-registry": "pending",
         "web-tenant-resolver": "pending",
-        "file-storage": "pending",
+        "file-storage": "evaluating",
         "local-compose": "pending",
         "ci-images": "pending",
         "staging-servers": "pending",
@@ -361,14 +413,18 @@
         "backup-restore": "pending",
         "monitoring": "pending",
         "load-test": "pending",
-        "forge-security-chain": "pending"
+        "forge-security-chain": "pending",
+        "cross-module-isolation": "passing",
+        "e2e-smoke": "passing"
       },
-      "lastUpdated": "2026-11-13T16:03:48.381Z",
+      "lastUpdated": "2026-11-14T06:06:15.574Z",
       "branch": "feat/platform",
       "repos": [
         "default"
       ],
-      "lastCommit": {}
+      "lastCommit": {
+        "default": "f6dd0fc4f74ad3539e99bee73ea6e016b97902c0"
+      }
     },
     "platform-console": {
       "status": "decomposed",
@@ -377,20 +433,23 @@
       "lastUpdated": "2026-10-24T23:56:42.775Z"
     },
     "worker": {
-      "status": "completed",
-      "currentPhase": "evaluate",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "review-notification-smtp": "passing",
         "tenant-jobs": "passing",
-        "active-workspaces": "passing"
+        "active-workspaces": "passing",
+        "review-email-html-sender": "passing",
+        "email-outbox": "passing",
+        "email-outbox-review-fixes": "passing"
       },
-      "lastUpdated": "2026-11-08T08:11:10.600Z",
+      "lastUpdated": "2026-11-14T14:22:13.956Z",
       "branch": "feat/worker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "41a1cf7a49021519da485b155111e098ad07796a"
+        "default": "e6570be15d5641689f5c375a52caedf748d2d035"
       }
     },
     "ai": {
@@ -462,15 +521,19 @@
         "review-queue-events-hardening": "passing",
         "review-send-back-api": "passing",
         "review-expiry-job": "passing",
-        "review-expired-stored-columns": "passing"
+        "review-expired-stored-columns": "passing",
+        "review-email-html": "passing",
+        "review-email-outbox": "passing",
+        "review-email-link-fallback": "passing",
+        "jira-rejected-feedback": "evaluating"
       },
-      "lastUpdated": "2026-11-10T02:14:00.291Z",
+      "lastUpdated": "2026-11-14T17:32:18.927Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "53eb36fe9e99b6243ab77c0709c36579831f5794"
+        "default": "e9eec864480ba413e53c2387698dc28e4f893647"
       }
     }
   },
