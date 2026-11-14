@@ -19,6 +19,8 @@ import vn.tsolve.common.exception.BusinessRuleException;
 @Table(name = "ticket")
 public class Ticket {
 
+    private static final int WRITER_MAX_LENGTH = 100;
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "ticket_id")
@@ -82,7 +84,7 @@ public class Ticket {
     @Column(name = "change_request_comment", columnDefinition = "text")
     private String changeRequestComment;
 
-    @Column(name = "writer_id", insertable = false, updatable = false)
+    @Column(name = "writer_id", updatable = false)
     private UUID writerId;
 
     @Column(name = "review_due_date", insertable = false, updatable = false)
@@ -126,6 +128,36 @@ public class Ticket {
         t.resolutionSteps = solution.resolutionSteps();
         t.workaround = solution.workaround();
         t.scope = solution.scope();
+        return t;
+    }
+
+    /**
+     * A ticket its Project Manager entered by hand (UC-22): Published at once (GBR-23), and the Project Manager is
+     * its writer. The name is cut to the 100 characters the column holds.
+     */
+    public static Ticket enteredManually(
+            String ticketId,
+            UUID projectId,
+            Long importBatchId,
+            String title,
+            String description,
+            String writerName,
+            UUID writerId,
+            LocalDate resolvedDate,
+            Solution solution) {
+        String writer =
+                writerName.length() > WRITER_MAX_LENGTH ? writerName.substring(0, WRITER_MAX_LENGTH) : writerName;
+        Ticket t = imported(
+                ticketId,
+                projectId,
+                TicketSource.MANUAL,
+                importBatchId,
+                title,
+                description,
+                writer,
+                resolvedDate,
+                solution);
+        t.writerId = writerId;
         return t;
     }
 

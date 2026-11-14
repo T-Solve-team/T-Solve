@@ -67,7 +67,7 @@ class ReviewStorageIT {
         }
         // The changelog of main before Review: every changeset except Review's own.
         master = master.replaceAll(
-                "(?m)^.*<include file=\"changes/(?:0\\d\\d-review-search|008-review|009-review|0\\d\\d-review-queue-notify|024-review-send-back-decision|0\\d\\d-review-ticket-expiry|030-dashboard-period-indexes).*\n",
+                "(?m)^.*<include file=\"changes/(?:0\\d\\d-review-search|008-review|009-review|0\\d\\d-review-queue-notify|024-review-send-back-decision|0\\d\\d-review-ticket-expiry|030-dashboard-period-indexes|031-ticket-manual-entry).*\n",
                 "");
         Path mainMaster = temporary.resolve("db/changelog/main-before-review.xml");
         Files.createDirectories(mainMaster.getParent());

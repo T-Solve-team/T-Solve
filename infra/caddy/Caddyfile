@@ -66,6 +66,18 @@
 		}
 	}
 
+	# A manual entry carries up to 5 Evidence files of 10 MB in one request (UC-22); the longer path wins over /api/*.
+	handle /api/v1/imports/manual* {
+		request_body {
+			max_size 57MB
+		}
+		reverse_proxy backend:8080 {
+			import proxy_headers
+			lb_try_duration 30s
+			lb_try_interval 1s
+		}
+	}
+
 	handle /api/* {
 		request_body {
 			max_size 12MB

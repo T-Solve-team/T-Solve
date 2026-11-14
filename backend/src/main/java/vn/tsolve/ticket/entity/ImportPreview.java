@@ -10,7 +10,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * An uploaded file or a Jira pull waiting for Confirm. Each Project Manager has at most one that is not a Draft
@@ -56,6 +59,11 @@ public class ImportPreview {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    /** The Evidence files of a Manual Draft; empty for every other preview. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private List<DraftEvidence> evidence = List.of();
+
     protected ImportPreview() {}
 
     public ImportPreview(
@@ -85,6 +93,26 @@ public class ImportPreview {
         preview.resolvedTo = to;
         preview.moreAvailable = moreAvailable;
         return preview;
+    }
+
+    /**
+     * A manual entry saved as a Draft (UC-22, spec D13): it is a Draft from its first save, so the daily cleanup and
+     * a new upload or pull never delete it. Its one row holds the entered fields.
+     */
+    public static ImportPreview manualDraft(String owner, UUID projectId, Instant savedAt) {
+        ImportPreview preview =
+                new ImportPreview(owner, projectId, TicketSource.MANUAL, ImportType.WITH_SOLUTION, null, savedAt);
+        preview.draftSavedAt = savedAt;
+        return preview;
+    }
+
+    /** The Evidence files the Manual Draft has after a save: the kept ones and the new ones (AC-007.5). */
+    public void replaceEvidence(List<DraftEvidence> files) {
+        evidence = List.copyOf(files);
+    }
+
+    public List<DraftEvidence> getEvidence() {
+        return evidence;
     }
 
     /** Marks the preview a Draft, or moves the save time of a Draft saved before (AC-004.1, AC-004.7). */
