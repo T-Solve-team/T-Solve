@@ -20,6 +20,12 @@ describe('messages', () => {
     expect(message('MSG62')).toBe('Sign in to T-Solve to use the T-Solve panel.');
   });
 
+  it('AC-008.7 shows MSG64 without the SRS sentence "Update the solution and resubmit."', () => {
+    expect(message('MSG64', { manager_name: 'Alice Acme', comment: 'Add steps' })).toBe(
+      'Changes requested by Alice Acme: "Add steps".',
+    );
+  });
+
   it('shows MSG06 for a code the app does not know', () => {
     expect(message('MSG999')).toBe(message('MSG06'));
   });
