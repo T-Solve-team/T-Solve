@@ -795,8 +795,8 @@
     }
   },
   "dashboard-audit": {
-    "specHash": "5891309d93562630f7cc69b576faae4ba67db68d2b5a557de5a154fce61b3883",
-    "approvedAt": "2026-11-07T10:37:18.613Z",
+    "specHash": "8230a62f2bf6eb17748c0aab0f9de65fc80edd56b10fe6dc9ce5585588dc8db6",
+    "approvedAt": "2026-11-10T10:44:40.345Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN an Admin opens , THE frontend SHALL show screen 9.2 with the columns , , ,  and .",
@@ -834,7 +834,33 @@
       "AC-003.5": "WHEN  and  are given, THE backend SHALL return entries from  00:00 through the end of",
       "AC-003.6": "IF the date pair is invalid, THEN THE backend SHALL answer 400 with ; invalid means only one",
       "AC-003.7": "IF another query parameter is malformed, THEN THE backend SHALL answer 400 with ; malformed",
-      "AC-003.8": "IF the signed-in user is not an Admin, THEN THE backend SHALL answer 403 with  (no user: 401"
+      "AC-003.8": "IF the signed-in user is not an Admin, THEN THE backend SHALL answer 403 with  (no user: 401",
+      "AC-004.1": "WHEN a Project Manager or an Admin sends , THE backend SHALL answer",
+      "AC-004.2": "WHEN  and  are both absent, THE backend SHALL use the last 30 days in",
+      "AC-004.3": "IF the date pair is invalid, THEN THE backend SHALL answer 400 with MSG39; invalid means only one date",
+      "AC-004.4": "WHILE the user is a Project Manager and not an Admin, THE backend SHALL count only their own Department",
+      "AC-004.5": "IF a Project Manager's request is outside their Department, THEN THE backend SHALL answer 403 with",
+      "AC-004.6": "WHILE the user is an Admin, THE backend SHALL count the whole Workspace, or one Department with",
+      "AC-004.7": "IF  or  is not a UUID, THEN THE backend SHALL answer 400 with MSG06; IF it",
+      "AC-004.8": "THE backend SHALL return as Solution outcomes, for the period and scope: the APPROVED, REJECTED and",
+      "AC-004.9": "THE backend SHALL return as Knowledge coverage the current numbers of Published tickets and of all",
+      "AC-004.10": "THE backend SHALL return as Reuse & feedback the Helpful and Not helpful feedback given in the period",
+      "AC-004.11": "THE backend SHALL return as Knowledge gaps the 10 most frequent searches of the period with no result",
+      "AC-004.12": "THE backend SHALL return as Suggestion results the suggestions posted in Jira in the period (by",
+      "AC-004.13": "THE backend SHALL return as filter options the Departments and the Projects the user may choose:",
+      "AC-004.14": "IF the user has neither the Project Manager nor the Admin role, THEN THE backend SHALL answer 403 with",
+      "AC-004.15": "THE backend SHALL only read, SHALL accept no Workspace parameter or header, and SHALL write no question",
+      "AC-005.1": "WHEN a Project Manager or an Admin opens , THE web app SHALL show screen 9.1 with",
+      "AC-005.2": "THE web app SHALL offer the periods Last 7 days, Last 30 days (default), Last 90 days and a custom",
+      "AC-005.3": "IF a custom range is incomplete, reversed, in the future or longer than 366 days, THEN THE web app SHALL",
+      "AC-005.4": "WHERE the user is an Admin, THE web app SHALL offer All Departments (default) or one Department, and a",
+      "AC-005.5": "THE web app SHALL keep the period, the dates, the Department and the Project in the URL, so they stay",
+      "AC-005.6": "THE web app SHALL draw the outcomes per day and per Project as bars, the approval, helpful, Published",
+      "AC-005.7": "WHILE the request is pending, THE web app SHALL show the existing LoadingState; IF it fails, THEN THE",
+      "AC-005.8": "IF a section has nothing to show for the period, THEN THE web app SHALL show MSG04 in that section.",
+      "AC-005.9": "WHERE the user is a Project Manager, THE web app SHALL open the Ticket Detail when a ticket of the top or",
+      "AC-005.10": "WHEN mock mode is on, THE feature's MSW handler SHALL answer  with data for",
+      "AC-005.11": "WHERE a Project is chosen, THE web app SHALL say in the Knowledge gaps section that its figures count"
     }
   },
   "tracker": {

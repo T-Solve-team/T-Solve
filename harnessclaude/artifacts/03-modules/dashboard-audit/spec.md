@@ -15,6 +15,9 @@ status: draft
 | 2026-10-31 | STORY-001 | Select a text search over actor email instead of a user selector | User chose option 1; supports historical actors without a user-options endpoint |
 | 2026-10-31 | STORY-001 | Finalize the inclusive Vietnam-time date range with no default range and no future dates; complete filter semantics | User chose option 1 for the final date-range decision |
 | 2026-11-07 | STORY-002, STORY-003 | New STORY-002 (write audit entries for review decisions and CSV import through `AuditService.record` into a new append-only `audit_log_entry` table that replaces `audit_event`) and STORY-003 (the backend serves `GET /api/v1/audit-events` of the contract); Out of Scope and Interface Contracts updated; supersedes be-foundation STORY-004 | KAN-152, demo 08/11. The user, 07/11: actions = review decisions + import (no user/role backend exists yet); table = `audit_log_entry` from the team DDL `02_tenant.sql`, adapted to UUID keys and the contract's target fields; build the read API; be-foundation's spec is left untouched for now with a follow-up to retire its STORY-004 |
+| 2026-11-09 | STORY-004, STORY-005 (new) | New STORY-004 Knowledge Dashboard figures API (KAN-150) and STORY-005 screen 9.1 (KAN-151); Requirements 6-7, Out of Scope, Interface Contracts (`getKnowledgeDashboard`, `KnowledgeDashboard`), Sources and Definition of Done follow; STORY-001..003 unchanged | User decisions 09/11: the five groups of SRS 9.1 from stored data without ticket views; one endpoint for all groups; knowledge gaps counted by the asker's Department; charts with antd and CSS, no new dependency. Planning call: the filter options come in the response because no Department or Project list API exists |
+| 2026-11-09 | STORY-004, STORY-005 | AC-004.7: an Admin's `projectId` outside the given `departmentId` answers 400 MSG06; AC-004.10: "given in the period" is the time of the latest rating (`ticket_feedback.updated_at`) and the 5 lowest leave out the 5 highest; new AC-005.11: the page says that Knowledge gaps ignore the chosen Project | Review of PR #178 (trhieudev1309) and the user's decisions 09/11: "400 MSG06", "Loại trùng", "updated_at", and a note on the page for Project-independent gaps |
+| 2026-11-12 | STORY-004 | AC-004.7: a Project Manager gets 403 MSG08 for an unknown id (own Department checked first); AC-004.6, AC-004.9: tickets whose Project does not exist are left out of every figure; Interface Contracts errors list the Admin cross-Department 400 MSG06 | Low items of the PR #178 re-review (trhieudev1309, 12/11) |
 
 ## Requirements
 
@@ -25,6 +28,9 @@ status: draft
 4. Record an audit entry for each successful review decision (approve, reject, request changes) and each successful
    CSV import, in the same transaction as the action (KAN-152; `backend/AGENTS.md` §5).
 5. Serve the recorded entries through the contract's `GET /api/v1/audit-events`, Admin only.
+6. Serve the Knowledge Dashboard figures (UC-34, GBR-18) through one read-only `GET /api/v1/dashboard`: Project
+   Managers see their Department, the Admin the whole Workspace; last 30 days by default (KAN-150).
+7. Show them on screen 9.1 `/knowledge-dashboard` as charts with a period, Department and Project filter (KAN-151).
 
 ### Non-Functional
 1. Keep list filters, page and sort in the URL, using the existing routing conventions.
@@ -106,13 +112,97 @@ status: draft
   - AC-003.8: IF the signed-in user is not an Admin, THEN THE backend SHALL answer 403 with `MSG08` (no user: 401
     `MSG07`).
 
+### STORY-004: Serve the knowledge dashboard figures (KAN-150)
+- As a Project Manager or an Admin, I want the knowledge figures of my Department or of the whole Workspace for a
+  period, so that I can manage the quality and reuse of the knowledge (UC-34, GBR-18).
+- Acceptance:
+  - AC-004.1: WHEN a Project Manager or an Admin sends `GET /api/v1/dashboard`, THE backend SHALL answer
+    `KnowledgeDashboard` with the period, the filter options and the five groups of Interface Contracts, for the
+    period and scope asked, in one response.
+  - AC-004.2: WHEN `from` and `to` are both absent, THE backend SHALL use the last 30 days in `Asia/Ho_Chi_Minh`
+    (from 29 days before today through today, GBR-18) and SHALL return that period.
+  - AC-004.3: IF the date pair is invalid, THEN THE backend SHALL answer 400 with MSG39; invalid means only one date
+    given, a malformed date, `from` after `to`, a date after today in `Asia/Ho_Chi_Minh`, or more than 366 days.
+  - AC-004.4: WHILE the user is a Project Manager and not an Admin, THE backend SHALL count only their own Department
+    (`app_user.department_id`), optionally one of its Projects with `projectId`.
+  - AC-004.5: IF a Project Manager's request is outside their Department, THEN THE backend SHALL answer 403 with
+    MSG08 (another `departmentId`, a `projectId` of another Department, or a user with no Department; Admins excepted).
+  - AC-004.6: WHILE the user is an Admin, THE backend SHALL count the whole Workspace, or one Department with
+    `departmentId`, or one Project with `projectId`. Tickets whose `project_id` matches no Project belong to no
+    Department or Project and SHALL be left out of every figure, the whole Workspace included.
+  - AC-004.7: IF `departmentId` or `projectId` is not a UUID, THEN THE backend SHALL answer 400 with MSG06; IF it
+    names no Department or Project, THEN 404 with MSG04 to an Admin and 403 with MSG08 to a Project Manager (checked
+    against their own Department first, so the answer does not tell whether another Department's id exists); IF an
+    Admin sends a `projectId` whose Project is not in the
+    given `departmentId`, THEN 400 with MSG06.
+  - AC-004.8: THE backend SHALL return as Solution outcomes, for the period and scope: the APPROVED, REJECTED and
+    CHANGES_REQUESTED review decisions, plus as approved the tickets imported or created manually in the period
+    (source other than the Solution Form, by `created_at`); the same per day (every day of the period, zeros
+    included) and per Project; the approval rate (approved / all three, null when zero); and the current numbers of
+    Pending review and Expired tickets of the scope.
+  - AC-004.9: THE backend SHALL return as Knowledge coverage the current numbers of Published tickets and of all
+    tickets of the scope, the Published share (null when there is no ticket), and the same per Department; "all
+    tickets" leaves out tickets whose `project_id` matches no Project (AC-004.6).
+  - AC-004.10: THE backend SHALL return as Reuse & feedback the Helpful and Not helpful feedback given in the period
+    (by the time of each user's latest rating, `ticket_feedback.updated_at`) on tickets of the scope, the helpful
+    rate (null when none), and the 5 highest and the 5 lowest rated tickets by helpful rate among the tickets with
+    feedback in the period (ties: more feedback first, then title); the 5 lowest SHALL leave out the tickets already
+    among the 5 highest.
+  - AC-004.11: THE backend SHALL return as Knowledge gaps the 10 most frequent searches of the period with no result
+    (query trimmed and grouped case-insensitively, every channel) and the number and the 10 most frequent questions
+    of Knowledge Chatbot answers with outcome `NO_SOURCE` in the period; a Department scope counts by the asker's
+    Department (`search_log.department_id`, `app_user.department_id` for the Chatbot); `projectId` does not apply.
+  - AC-004.12: THE backend SHALL return as Suggestion results the suggestions posted in Jira in the period (by
+    `commented_at`) for Projects of the scope, how many of them the reporter answered YES, and the solved share
+    (null when none).
+  - AC-004.13: THE backend SHALL return as filter options the Departments and the Projects the user may choose:
+    every active Department and Project for an Admin, the user's Department and its Projects for a Project Manager.
+  - AC-004.14: IF the user has neither the Project Manager nor the Admin role, THEN THE backend SHALL answer 403 with
+    MSG08; with no web session, 401 with MSG07.
+  - AC-004.15: THE backend SHALL only read, SHALL accept no Workspace parameter or header, and SHALL write no question
+    or query text to the application log.
+
+### STORY-005: Knowledge Dashboard page (KAN-151)
+- As a Project Manager or an Admin, I want the figures of STORY-004 as charts with a period and a Department filter,
+  so that I can see trends at a glance (UC-34, screen 9.1).
+- Acceptance:
+  - AC-005.1: WHEN a Project Manager or an Admin opens `/knowledge-dashboard`, THE web app SHALL show screen 9.1 with
+    the sections Solution outcomes, Knowledge coverage, Reuse & feedback, Knowledge gaps and Suggestion results,
+    filled from one `getKnowledgeDashboard` request.
+  - AC-005.2: THE web app SHALL offer the periods Last 7 days, Last 30 days (default), Last 90 days and a custom
+    range, and SHALL request the figures again with `from` and `to` when the period changes.
+  - AC-005.3: IF a custom range is incomplete, reversed, in the future or longer than 366 days, THEN THE web app SHALL
+    show MSG39 beside the period and SHALL not send a request with it.
+  - AC-005.4: WHERE the user is an Admin, THE web app SHALL offer All Departments (default) or one Department, and a
+    Project of the chosen Department; WHERE the user is a Project Manager only, THE web app SHALL show their
+    Department fixed and offer its Projects; the options come from the response (AC-004.13).
+  - AC-005.5: THE web app SHALL keep the period, the dates, the Department and the Project in the URL, so they stay
+    across reload and browser Back.
+  - AC-005.6: THE web app SHALL draw the outcomes per day and per Project as bars, the approval, helpful, Published
+    and solved shares as progress bars, the totals as statistics, and the top and bottom 5 tickets and the gaps as
+    tables, using antd and CSS only (no new npm dependency).
+  - AC-005.7: WHILE the request is pending, THE web app SHALL show the existing LoadingState; IF it fails, THEN THE
+    web app SHALL show the existing ErrorState (MSG06) with a retry that keeps the filters.
+  - AC-005.8: IF a section has nothing to show for the period, THEN THE web app SHALL show MSG04 in that section.
+  - AC-005.9: WHERE the user is a Project Manager, THE web app SHALL open the Ticket Detail when a ticket of the top or
+    bottom 5 is clicked; for an Admin who is not a Project Manager the tickets are not links.
+  - AC-005.10: WHEN mock mode is on, THE feature's MSW handler SHALL answer `getKnowledgeDashboard` with data for
+    every section, the requested period and 400 MSG39 for an invalid range; with `VITE_API_MOCKING=false` the page
+    SHALL work against the real backend with no change in the feature other than its `mocks/` folder.
+  - AC-005.11: WHERE a Project is chosen, THE web app SHALL say in the Knowledge gaps section that its figures count
+    the whole Department, or the whole Workspace when no Department is chosen (AC-004.11).
+
 ## Out of Scope
 - Frontend changes: the screen of STORY-001 already calls the contract; it reads the backend once mocks are off.
 - Auditing user/role, permission, Department, publish/unpublish, delete and Jira configuration changes: no backend
   writes them yet; each adds its `AuditService.record` call when it is built.
 - `summary` text: no SRS message defines it, so the backend returns `null`.
 - Production tenant isolation beyond "one database per Workspace" (ADR-0002): the read uses the request's database.
-- The knowledge dashboard (UC-34), which remains a separate slice of this module.
+- Dashboard (STORY-004, STORY-005): the number of ticket views (no view is recorded yet; needs a counter on the
+  Ticket Detail, user 09/11), triage classes and routing (`suggestion_result` has neither), opening a filtered
+  Ticket List from an outcome number, and leaving greetings and refused questions out of the gaps (KAN-243 has not
+  built the classification yet: until then every `NO_SOURCE` answer counts).
+- A chart npm dependency (user 09/11: antd and CSS only).
 - Popup 9.3 Audit Entry Detail, removed by D18/CR-15 and fe-foundation AC-005.2.
 - The keyword filter mentioned by the older SRS field table: this slice follows KAN-153's three requested filters.
 - Claiming that MSW or frontend routing enforces authorization or Workspace isolation on the real server.
@@ -174,6 +264,45 @@ DDL's single `target` split into `target_type` + `target_id` to match the contra
 `resourceId`; `actor_id` has no foreign key, because dev and Keycloak users are not always in `app_user` yet.
 Append-only: a trigger refuses UPDATE, DELETE and TRUNCATE.
 
+### Knowledge dashboard (STORY-004, STORY-005)
+
+Screen 9.1 uses the existing `/knowledge-dashboard` route (`PROJECT_MANAGER`, `ADMIN`).
+
+`GET /api/v1/dashboard` (`operationId: getKnowledgeDashboard`, tag `dashboard`), read only, in `vn.tsolve.analytics`:
+
+| Parameter | Shape |
+|-----------|-------|
+| `from`, `to` | Optional pair of calendar dates `YYYY-MM-DD` (`Asia/Ho_Chi_Minh`), inclusive; absent → last 30 days |
+| `departmentId` | Optional Department `public_id` (UUID); Admin only, a Project Manager may send only their own |
+| `projectId` | Optional Project `public_id` (UUID) inside the chosen scope |
+
+`KnowledgeDashboard` (every count an integer, every rate a number 0..1 or null):
+
+```yaml
+period:    { from: date, to: date }
+options:
+  departments: [{ departmentId: uuid, name: string }]
+  projects:    [{ projectId: uuid, name: string, departmentId: uuid }]   # name = Jira project key
+outcomes:
+  approved, rejected, changesRequested, approvalRate, pendingReview, expired
+  perDay:     [{ date, approved, rejected, changesRequested }]           # every day of the period
+  perProject: [{ projectId, name, approved, rejected, changesRequested }]
+coverage:
+  publishedTickets, allTickets, publishedShare
+  perDepartment: [{ departmentId, name, publishedTickets, allTickets, publishedShare }]
+feedback:
+  helpful, notHelpful, helpfulRate
+  topRated, lowestRated: [{ ticketId: uuid, title, helpful, notHelpful, helpfulRate }]   # at most 5 each
+gaps:
+  noResultSearches:  [{ query, count }]      # at most 10, most frequent first
+  chatbotNoSource:   count
+  chatbotQuestions:  [{ question, count }]   # at most 10, most frequent first
+suggestions:
+  posted, solved, solvedShare
+```
+
+Errors: 400 MSG39 (date range), 400 MSG06 (malformed id, or an Admin's `projectId` outside the given `departmentId`), 401 MSG07, 403 MSG08 (a Project Manager outside their Department, unknown ids included), 404 MSG04 (unknown id, Admin only).
+
 ### Required from other modules
 - fe-foundation: session/role guard, same-origin API transport, global session/site errors, list URL state,
   DataTable, loading/error/empty states, catalog and date formatter.
@@ -182,6 +311,9 @@ Append-only: a trigger refuses UPDATE, DELETE and TRUNCATE.
   each call `AuditService.record` on success (STORY-002).
 
 ## Sources
+- SRS v3460 III.9.1 Knowledge Dashboard field table, UC-34, GBR-18; Jira KAN-150, KAN-151 (read 09/11); user
+  decisions 09/11 in chat (five groups without ticket views, one endpoint, gaps by the asker's Department, no chart
+  dependency).
 - Jira KAN-153, read from the authenticated Jira page on 2026-10-31.
 - User decisions in this chat: frontend only; MSW with a proposed OpenAPI contract; Actor email text search;
   no default date range, inclusive Vietnam-time boundaries and no future dates.
@@ -200,3 +332,6 @@ Append-only: a trigger refuses UPDATE, DELETE and TRUNCATE.
 - [ ] A second `npm run generate:api` introduces no further generated-client differences.
 - [ ] Browser verification confirms the usable audit log screen and filters.
 - [ ] Report the feature, changed files, verification and proposed commit message; wait for the user before committing.
+- [ ] STORY-004 and STORY-005: every criterion has a test named with its id (`…_AC_004_1`, `AC-005.1 …`);
+      `sdd.ts trace dashboard-audit STORY-004 STORY-005` passes; `mvn verify` and the frontend verify pass; the page
+      works with `VITE_API_MOCKING=false` against the real backend.
