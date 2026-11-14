@@ -1232,3 +1232,6 @@
 {"ts":"2026-11-11T17:06:57.337Z","type":"spec-approved","module":"identity","specHash":"0ce4e92a3fcb4837874ef03c8f4606a9bae0b141abf9c1d6ba5327f60caba07a"}
 {"ts":"2026-11-12T17:32:36.228Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"221d53ca88689bbacefa2161950340c7e00293c1"}
 {"ts":"2026-11-12T18:22:55.066Z","type":"spec-approved","module":"jira-app","specHash":"827ef6e4896abe5543f73eafb6a2ba547c1e141f69a40c92b439c86ee26b11ae"}
+{"ts":"2026-11-14T04:52:12.913Z","type":"feature-status","module":"jira-app","feature":"remove-jira-search","from":null,"to":"pending"}
+{"ts":"2026-11-14T04:52:29.746Z","type":"spec-approved","module":"jira-app","specHash":"cb554c366577714202f45588580dabe849c7cd7acbe01634da89b3ae59e93eb8"}
+{"ts":"2026-11-14T05:03:52.212Z","type":"feature-status","module":"jira-app","feature":"remove-jira-search","from":"pending","to":"in-progress"}

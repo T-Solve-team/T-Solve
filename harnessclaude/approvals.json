@@ -1134,8 +1134,8 @@
     }
   },
   "jira-app": {
-    "specHash": "827ef6e4896abe5543f73eafb6a2ba547c1e141f69a40c92b439c86ee26b11ae",
-    "approvedAt": "2026-11-12T18:22:55.058Z",
+    "specHash": "cb554c366577714202f45588580dabe849c7cd7acbe01634da89b3ae59e93eb8",
+    "approvedAt": "2026-11-14T04:52:29.744Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1166,13 +1166,7 @@
       "AC-008.1": "IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and nothing else.",
       "AC-008.2": "WHILE the issue's ticket is in Pending review, THE panel SHALL show MSG65.",
       "AC-008.3": "WHILE the user has a Draft for the issue and the issue's ticket does not exist, THE panel SHALL show MSG77 with a button that reopens the form with the Draft.",
-      "AC-008.4": "WHEN the user searches, THE server SHALL return the Published tickets of the Departments the user is a member of, ranked by the  module's ticket search, and THE panel SHALL list title, Ticket ID and Department.",
-      "AC-008.5": "IF the search finds nothing, THEN THE panel SHALL show MSG04.",
-      "AC-008.6": "IF the user is not a member of any Project in the issue's Department, THEN THE panel SHALL show MSG76 instead of the search box.",
       "AC-008.7": "WHILE the issue's Solution Form ticket written by the user is in Changes requested, THE panel SHALL show MSG64 with the Project Manager's name and comment, read from 's .",
-      "AC-008.8": "IF the search is unavailable (the  module or its AI fails), THEN THE panel SHALL show MSG06 and keep the rest of the panel usable.",
-      "AC-009.1": "WHEN the user opens a search result, THE Jira App SHALL show 3.4 Published Ticket Preview with the title, Ticket ID, Department, the Solution section by section and an \"Open in T-Solve\" link.",
-      "AC-009.2": "IF the ticket is not Published or not in one of the user's Departments, THEN THE server SHALL answer 403 MSG08 (GBR-02).",
       "AC-010.1": "THE Jira App SHALL show a project page titled \"Ask T-Solve\" in every Jira project of the site, with a question box, a send button and the note \"Trả lời từ Solution và Wiki của T-Solve\".",
       "AC-010.2": "IF the Jira account is not linked to an active T-Solve user, THEN THE page SHALL show MSG62 instead of the question box and SHALL still show \"Chưa được, tạo ticket\", which opens the Create dialog of AC-010.9 with nothing prefilled.",
       "AC-010.3": "WHEN the user sends a question, THE Jira App SHALL call  with the question and, as history, the earlier turns of the conversation — at most the last 10.",

@@ -145,9 +145,9 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
 | 4 | STORY-002 | Input extremes | Exactly 10,000 characters; emoji / surrogate pairs | Medium | Code points counted; 10,000 accepted, 10,001 → MSG02 | Task 2, Task 7 |
 | 5 | STORY-001 | Timing | Issue moved to Done from the board | Medium | No popup; the panel button opens the form | Task 6, Task 8 |
 | 6 | STORY-005 | Authorization | User B reads or overwrites user A's Draft | High | Draft keyed by creator from the FIT; another's never returned | Task 2 |
-| 7 | STORY-009 | Authorization | Preview of a Pending ticket or another Department's ticket by id | Critical | 403 MSG08 | Task 5 |
+| 7 | ~~STORY-009~~ | — | Removed 14/11 with the Jira search (Task 9) | — | — | — |
 | 8 | STORY-007 | Error cascades | AI hangs or Ollama is down | Medium | Deadline inside 20 s → MSG68 / MSG67, form still usable | Task 4 |
-| 9 | STORY-008 | Error cascades | Search embeddings unavailable | Medium | MSG06 in the search area; status part of the panel unaffected | Task 5, Task 8 |
+| 9 | STORY-008 | — | Removed 14/11 with the Jira search (Task 9) | — | — | — |
 | 10 | STORY-006 | Data integrity | Close after a Draft exists | Medium | Empty ticket created; the Draft deleted | Task 2 |
 | 11 | STORY-008 | Integration | MSG64 for a ticket written by someone else | High | No feedback (ticket-review filters by writer); panel shows status only | Task 3, Task 8 |
 | 12 | All | Integration | FIT without `principal` (app-level call) | High | 401/403, no data | Task 5 |
@@ -168,3 +168,13 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
   MSG64; `ReviewDecisionApiIT`'s test `ReviewJiraAccess` is marked `@Primary` next to the production adapter.
 - Open for the team, not blocking: tracker spec STORY-007/008 (Issue Panel status, Solution Form close) overlap
   this spec's STORY-008/STORY-006 — a change request removes them from the tracker spec before Task 8 lands.
+
+## Change — 2026-11-14: no Published-ticket search in Jira (Task 9)
+- Spec: AC-008.4, AC-008.5, AC-008.6, AC-008.8 removed; STORY-009 (3.4 Published Ticket Preview) retired. User
+  decision in the dev-site test; search stays on the T-Solve web app (deviation from the SRS, to agree with the team).
+- Chosen: remove the UI and the backend (`/jira-app/tickets/**`, `PublishedTicketService`,
+  `JiraProjectDepartmentRepository`, the panel's `canSearch`). Alternative: hide the UI and keep the endpoints.
+  Rationale: user 14/11 — no code nothing calls, and `TSOLVE_WEB_ORIGIN` (only for "Open in T-Solve") goes too.
+- The panel now shows only the Solution status: MSG62, MSG65, MSG64, MSG77 + reopen, and the open-form button.
+  The diagram's search and preview arrows and the Builder Check note on `JiraProjectDepartmentRepository` and
+  `PublishedTicketService` (Task 5) describe the 11/11 design and no longer apply.

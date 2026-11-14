@@ -8,8 +8,8 @@ depth: Normal
 # Spec: jira-app
 
 The T-Solve Jira App (Forge UI Kit, `jira-app/`) and the Jira App API endpoints it calls
-(`/api/v1/jira-app/**`). STORY-001 to STORY-009 (KAN-126): Solution Form, AI Rewrite, Issue Panel, Published Ticket
-Preview. STORY-010 (KAN-294): Ask T-Solve page. Sources: Report3 (UC-19, UC-26, GBR-02, 04, 06, 08, 10, 12, 19, 26,
+(`/api/v1/jira-app/**`). STORY-001 to STORY-008 (KAN-126): Solution Form, AI Rewrite, Issue Panel (STORY-003 and
+STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
 33, 36, System Messages), RESEARCH-003, RESEARCH-004, the `ticket-review` spec (STORY-009, STORY-012), the `chatbot`
 spec (STORY-005 to STORY-007). Terms: **user** = the active T-Solve Account linked to the Jira account in the FIT
 `principal`; **Project** = the ACTIVE T-Solve Project whose `jira_project_key` is the issue's project key;
@@ -29,6 +29,7 @@ an issue has at most one.
 | 2026-11-08 | STORY-010 | AC-010.1: the page title is "Ask T-Solve" (was "Hỏi T-Solve"); requirement 5, the terms and the Exposed table follow. The other page labels stay Vietnamese | User decision in the Task 6 dev-site check (08/11) |
 | 2026-11-11 | STORY-001..009 | Port STORY-001 to STORY-009 from `feat/KAN-126-jira-app-solution-form` (spec of 01/11, Evidence removed, STORY-003 stays retired) and re-base them on `main`: the user and Project membership come from `project_membership`, the linked Account from the Jira App link stand-in; Finish and Close create a Solution Form ticket that enters `ticket-review`'s Review Queue (AC-004.1, AC-006.2); the panel also shows a change request (MSG64, new AC-008.7) through `ticket-review`'s feedback endpoint; panel search reuses the `search` module's ranked ticket search; the AI draft and rewrite call the `ai` module's chat client with a configured stand-in | KAN-126 resumed on a fresh branch from `main` (user, 11/11): the old branch was 61 commits behind and its ticket services predate `ticket-review`'s ticket storage. User decisions 11/11: show MSG64, reuse search, use the ai chat client, keep Evidence out |
 | 2026-11-13 | STORY-001, STORY-004, STORY-008 | New term "the issue's ticket" (the ticket whose Ticket ID is the issue key, of any source). AC-001.2 to AC-001.5, AC-004.3, AC-008.2 and AC-008.3 use it instead of "a Solution Form ticket … in that Project"; AC-004.3 names MSG31. AC-004.1, AC-006.2 and AC-008.7 still mean the Solution Form ticket | KAN-126 PR review: the criteria said only a Solution Form ticket blocks the form, but a Jira-import or CSV ticket with the same key does too, because `ticket.ticket_id` is unique across sources and Projects (changeset 003). A second ticket for the key cannot be stored, so the spec follows the schema; the code (`TicketRepository.findStatusByTicketId`) already does this. User chose to reword the spec, not filter by source (13/11) |
+| 2026-11-14 | STORY-008, STORY-009 | Remove the Published-ticket search from the Jira App: AC-008.4, AC-008.5, AC-008.6 and AC-008.8 are removed, STORY-009 (3.4 Published Ticket Preview, AC-009.1, AC-009.2) is retired. The panel keeps the Solution status only (AC-008.1 to AC-008.3, AC-008.7); `GET /api/v1/jira-app/tickets/search`, `GET /api/v1/jira-app/tickets/{ticketId}` and the panel's "search allowed" flag are removed; `search` is no longer a dependency. Out of Scope gains the search | User decision in the KAN-126 dev-site test (14/11): no Published-ticket search in Jira; it stays on the T-Solve web app. The SRS puts UC-26 search, 3.4 and MSG76 in the Jira App — this is a deviation the user will agree with the team. User chose to remove the UI and the backend endpoints, so no code is left that nothing calls |
 
 ## Requirements
 
@@ -38,8 +39,7 @@ an issue has at most one.
 2. The form edits the five-section Solution, pre-filled by a Draft, the AI draft or the issue; it can Finish, Save
    as draft or Close (STORY-002, STORY-004 to STORY-006). Finish and Close hand the ticket to `ticket-review`.
 3. Rewrite with AI shows 4.2 AI Rewrite Preview (STORY-007).
-4. The panel shows the issue's Solution status, including a Project Manager's change request, and searches
-   Published tickets; a result opens 3.4 Published Ticket Preview (STORY-008, STORY-009).
+4. The panel shows the issue's Solution status, including a Project Manager's change request (STORY-008).
 5. An "Ask T-Solve" page in each Jira project lets a linked user ask the Knowledge Chatbot before creating an issue;
    "Chưa được, tạo ticket" opens Jira's Create dialog prefilled with the conversation (STORY-010).
 
@@ -102,22 +102,12 @@ an issue has at most one.
   - AC-007.4: IF the rewrite fails, is unavailable or takes longer than the UI call allows, THEN THE Jira App SHALL show MSG68 and leave the Solution unchanged.
 
 ### STORY-008: Issue Panel
-- As a Ticket Resolver, I want the panel to show the issue's Solution status and search Published tickets so that I reuse known Solutions.
+- As a Ticket Resolver, I want the panel to show the issue's Solution status so that I know what is left to do for it.
 - Acceptance:
   - AC-008.1: IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and nothing else.
   - AC-008.2: WHILE the issue's ticket is in Pending review, THE panel SHALL show MSG65.
   - AC-008.3: WHILE the user has a Draft for the issue and the issue's ticket does not exist, THE panel SHALL show MSG77 with a button that reopens the form with the Draft.
-  - AC-008.4: WHEN the user searches, THE server SHALL return the Published tickets of the Departments the user is a member of, ranked by the `search` module's ticket search, and THE panel SHALL list title, Ticket ID and Department.
-  - AC-008.5: IF the search finds nothing, THEN THE panel SHALL show MSG04.
-  - AC-008.6: IF the user is not a member of any Project in the issue's Department, THEN THE panel SHALL show MSG76 instead of the search box.
   - AC-008.7: WHILE the issue's Solution Form ticket written by the user is in Changes requested, THE panel SHALL show MSG64 with the Project Manager's name and comment, read from `ticket-review`'s `GET /api/v1/jira-app/issues/{issueKey}/review-feedback`.
-  - AC-008.8: IF the search is unavailable (the `search` module or its AI fails), THEN THE panel SHALL show MSG06 and keep the rest of the panel usable.
-
-### STORY-009: Published Ticket Preview
-- As a Ticket Resolver, I want to read a found ticket without leaving Jira.
-- Acceptance:
-  - AC-009.1: WHEN the user opens a search result, THE Jira App SHALL show 3.4 Published Ticket Preview with the title, Ticket ID, Department, the Solution section by section and an "Open in T-Solve" link.
-  - AC-009.2: IF the ticket is not Published or not in one of the user's Departments, THEN THE server SHALL answer 403 MSG08 (GBR-02).
 
 ### STORY-010: Ask T-Solve before creating an issue
 - As an Employee, I want to ask T-Solve about my problem inside Jira before I create an issue, so that I fix it myself when a known Solution exists and, when not, the issue I create says what I already tried.
@@ -143,8 +133,10 @@ an issue has at most one.
 - Resubmitting after Changes requested (MSG71) — the panel only shows the change request (AC-008.7).
 - The issue-created event and the AI suggestion comment — `tracker`.
 - AI drafting and rewriting quality — `ai` (Trần Hải Anh); this module calls its chat client through one service.
-- The ranking itself — `search`.
-- The T-Solve web Ticket Detail behind "Open in T-Solve" and Evidence download — web app.
+- Searching Published tickets and reading one in Jira (the SRS's 3.3 search box, 3.4 Published Ticket Preview,
+  MSG04 and MSG76 in the panel; formerly AC-008.4 to AC-008.6, AC-008.8 and STORY-009): search stays on the T-Solve
+  web app (UC-26) — user, 2026-11-14; a deviation from the SRS to agree with the team.
+- Evidence download — web app.
 - A reminder for Done issues without a Solution — to propose to the team (worker, email).
 - Images in the question (OCR or a vision model, attaching them to the created issue) — a later version
   (RESEARCH-004).
@@ -167,13 +159,11 @@ feedback endpoint (AC-008.7).
 | `POST /api/v1/jira-app/issues/{issueKey}/solution` (JSON: five sections; all empty = Close) | 4.1 | 004, 006 |
 | `PUT /api/v1/jira-app/issues/{issueKey}/solution-draft` | 4.1 | 005 |
 | `POST /api/v1/jira-app/solution-rewrites` (five sections → rewritten five sections) | 4.2 | 007 |
-| `GET /api/v1/jira-app/issues/{issueKey}/panel` → linked, ticket status, Draft, may open, search allowed | 3.3 | 001, 008 |
-| `GET /api/v1/jira-app/tickets/search?q=` | 3.3 | 008 |
-| `GET /api/v1/jira-app/tickets/{ticketId}` | 3.4 | 009 |
+| `GET /api/v1/jira-app/issues/{issueKey}/panel` → linked, ticket status, Draft, may open | 3.3 | 001, 008 |
 | `GET /api/v1/jira-app/questions/eligibility` (→ `linked`: whether the FIT user is linked to an active T-Solve user; calls no AI) | Ask T-Solve (on open, AC-010.2) | 010 |
 | `POST /api/v1/jira-app/questions` (question + history → the chatbot answer: outcome, text, citations) | Ask T-Solve | 010 |
 
-Forge: `jira:issueViewBackgroundScript` (opens the form), `jira:issuePanel` (panel), Modal for 4.1/4.2/3.4,
+Forge: `jira:issueViewBackgroundScript` (opens the form), `jira:issuePanel` (panel), Modal for 4.1/4.2,
 `requestJira` for the issue summary/description; `jira:projectPage` for the Ask T-Solve page, `invokeRemote` to the
 endpoints above, and `CreateIssueModal`
 (`@forge/jira-bridge`) for the prefilled Create dialog — whether it can prefill labels and where the page shows in
@@ -183,10 +173,9 @@ Jira's navigation are checked in a spike first (RESEARCH-004, open questions).
 | Owner | Needed operation |
 |-------|------------------|
 | `identity` | Jira accountId → T-Solve user (id, active) — stub until built |
-| `project` / `review` | Project of a Jira project key, its Department, the user's `project_membership` rows (today read by `ticket-review`'s `ProjectMembershipRepository`) |
+| `project` / `review` | Project of a Jira project key, the user's `project_membership` rows (today read by `ticket-review`'s `ProjectMembershipRepository`) |
 | `ticket-review` (Phạm Tùng Dương) | The Solution Form ticket storage it reviews (`ticket`, source `SOLUTION_FORM`, entry time and due date, AC-009.11/AC-012.2); `GET /api/v1/jira-app/issues/{issueKey}/review-feedback` (MSG64) |
 | `ai` (Trần Hải Anh) | Chat client (`LlmClient`) for the AI draft and rewrite — prompts owned here, a configured stand-in for demos |
-| `search` | Ranked Published-ticket search limited to given Departments |
 | `chatbot` (Trần Hải Anh) | Answer a question with history for a given T-Solve user (`ChatbotAnswerService`, chatbot STORY-005 to STORY-007), callable from the Jira App API — to agree with the owner |
 | `tracker` | Skip the suggestion job for an issue created with label `tsolve-asked` — a change of tracker AC-011.8 (tracker spec, KAN-22) |
 

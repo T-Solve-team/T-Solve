@@ -1,7 +1,7 @@
 ---
 module: jira-app
 date: 2026-11-11
-total_tasks: 8
+total_tasks: 9
 owner: Dev
 ---
 
@@ -15,7 +15,7 @@ tests start with it (`it('AC-002.3 shows MSG01 under an empty section', …)`). 
 
 ## Task 1: Contract
 
-**Story:** STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008, STORY-009
+**Story:** STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008
 **Feature:** solution-contract
 **Description:** Add the seven paths of the spec's Exposed table to the OpenAPI file, tag `jira-app`, FIT security:
 `POST /issues/{issueKey}/solution-form` (body `{summary, description}` → `{mayOpen, origin: DRAFT|AI|ISSUE,
@@ -93,7 +93,7 @@ AC-002.2 (unavailable → caller falls back), AC-007.4 (timeout, malformed JSON)
 
 ## Task 5: Jira App endpoints
 
-**Story:** STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008, STORY-009
+**Story:** STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008
 **Feature:** solution-endpoints
 **Description:** `JiraAppSolutionController` (solution-form: may-open rule + Draft, else AI draft, else Symptoms from
 summary + description with `aiUnavailable`; solution; solution-draft; solution-rewrites), `JiraAppPanelController`
@@ -144,7 +144,7 @@ Tests: AC-002.3, AC-002.4, AC-004.2, AC-004.4, AC-005.2, AC-005.4, AC-006.1, AC-
 
 ## Task 8: Issue Panel and Published Ticket Preview
 
-**Story:** STORY-001, STORY-008, STORY-009
+**Story:** STORY-001, STORY-008
 **Feature:** issue-panel-ui
 **Description:** 3.3: MSG62 only when not linked; MSG65 (Pending review); MSG64 from review-feedback with the PM's
 name and comment; MSG77 + "reopen" button for a Draft; open-form button while Done, allowed and no ticket; search box
@@ -155,4 +155,28 @@ AC-009.1. Check the whole flow on the dev site with `forge tunnel` and `forge de
 - Create: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, `src/frontend/preview/TicketPreview.jsx`, tests
 - Modify: `jira-app/TSolve_JiraApp/src/frontend/index.jsx`
 **Dependencies:** Task 6, Task 7
+**Estimated size:** medium
+
+---
+
+## Task 9: Remove the Published-ticket search from the Jira App
+
+**Story:** STORY-008
+**Feature:** remove-jira-search
+**Description:** Spec change of 14/11 (AC-008.4, AC-008.5, AC-008.6, AC-008.8 and the Published Ticket Preview story removed). Jira App: the
+panel shows no search box, results, MSG04/MSG76 or 3.4 preview; drop `searchTickets` and the ticket preview call
+from `tsolveClient.js`, `TicketPreviewModal.jsx` and their tests. Backend: delete `JiraAppTicketController`,
+`JiraAppTicketService(Impl)`, `JiraAppTicketResult`, `JiraAppTicketPreview`, `PublishedTicketService(Impl)`,
+`PublishedTicketView`, the `TicketRepository` Published-ticket query, `JiraProjectDepartmentRepository`, the
+`canSearch` field of `IssuePanelResponse` and their tests; `TSOLVE_WEB_ORIGIN` goes from `.env.example` and the test
+config. OpenAPI: remove `GET /jira-app/tickets/search`, `GET /jira-app/tickets/{ticketId}`, their schemas and
+`IssuePanel.canSearch`; regenerate the client. The remaining panel tests (AC-001.4, AC-008.1 to AC-008.3, AC-008.7)
+stay green.
+**Files:**
+- Delete: `backend/src/main/java/vn/tsolve/jiraapp/{controller/JiraAppTicketController,service/JiraAppTicketService,service/impl/JiraAppTicketServiceImpl,dto/JiraAppTicketResult,dto/JiraAppTicketPreview,repository/JiraProjectDepartmentRepository}.java`,
+  `backend/src/main/java/vn/tsolve/ticket/{service/PublishedTicketService,service/impl/PublishedTicketServiceImpl,dto/PublishedTicketView}.java`,
+  `jira-app/TSolve_JiraApp/src/frontend/panel/TicketPreviewModal.jsx`, their tests
+- Modify: `IssuePanelResponse.java`, `JiraAppSolutionServiceImpl.java`, `TicketRepository.java`, `IssuePanel.jsx`,
+  `tsolveClient.js`, `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`, `.env.example`
+**Dependencies:** Task 8
 **Estimated size:** medium
