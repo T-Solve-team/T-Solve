@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -39,6 +41,7 @@ import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.identity.TwoTenantDatabases;
+import vn.tsolve.identity.service.CompanyDomainFallback;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.workspace.service.DepartmentService;
 
@@ -60,9 +63,18 @@ import vn.tsolve.workspace.service.DepartmentService;
             "DB_PASSWORD=unused"
         })
 @AutoConfigureMockMvc
-@Import(TwoTenantDatabases.class)
+@Import({TwoTenantDatabases.class, DepartmentDeletionIT.DomainConfiguration.class})
 @WithTSolveUser(roles = Role.ADMIN)
 class DepartmentDeletionIT {
+    /** creation-options needs a company domain; the identity-mock fallback is not enabled in this IT (AC-005.8). */
+    @TestConfiguration(proxyBeanMethods = false)
+    static class DomainConfiguration {
+        @Bean
+        CompanyDomainFallback companyDomainFallback() {
+            return () -> "acme.test";
+        }
+    }
+
     private final String prefix = UUID.randomUUID().toString().substring(0, 8);
 
     @Autowired
