@@ -392,7 +392,7 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 **Verification:** design risk rows 148, 152, 154, 156, 157, 159. Targeted: `cd backend && mvn spotless:check` and `mvn -Dtest='MyProfileControllerTest,MyProfileServiceImplTest' verify` (the full `mvn verify` runs in CI on the PR). Then Hiếu's check with a real sign-in (Swagger and curl as above).
 **Done when:** the tests above pass; `spotless:check` is clean; `GET /api/v1/me/spaces` on the local app answers 401 without a cookie and `200 []` with one; `frontend/openapi/tsolve-api.yaml` is unchanged.
 
-## Task 19b: `GET /api/v1/me/solutions` — Jira KAN-<n> (new Subtask of KAN-160, a sibling of KAN-301)
+## Task 19b: `GET /api/v1/me/solutions` — Jira KAN-334 (new Subtask of KAN-160, a sibling of KAN-301)
 
 **Story:** STORY-003
 **Feature:** my-solutions-backend
@@ -405,13 +405,13 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 - Modify: `backend/src/main/java/vn/tsolve/identity/controller/MyProfileController.java`, `backend/src/main/java/vn/tsolve/identity/service/MyProfileService.java`, `backend/src/main/java/vn/tsolve/identity/service/impl/MyProfileServiceImpl.java`
 - Test: modify `backend/src/test/java/vn/tsolve/identity/controller/MyProfileControllerTest.java` and `backend/src/test/java/vn/tsolve/identity/service/impl/MyProfileServiceImplTest.java`; create `backend/src/test/java/vn/tsolve/identity/dto/TicketStatusParityTest.java` (asserts the `common` `TicketStatus` names equal `vn.tsolve.ticket.entity.TicketStatus`; dropped, keeping the Javadoc note, if an architecture test forbids the cross-module import in test code; no parity test for `ReviewDecision`, the ticket one has one value today)
 **Dependencies:** Task 19a merged; then the dependency line of the Task 19 note.
-**PR / Jira:** branch `feat/KAN-<n>-identity-my-solutions-backend` from an up-to-date `main`; Jira: a new Subtask of KAN-160, a sibling of KAN-301 (created by a bookkeeping card after the plan is agreed).
+**PR / Jira:** branch `feat/KAN-334-identity-my-solutions-backend` from an up-to-date `main`; Jira: a new Subtask of KAN-160, a sibling of KAN-301 (created by a bookkeeping card after the plan is agreed).
 **Estimated size:** medium (7 new production files and 3 modified, about 300 lines); about 14 tests (over the 12 guide, accepted: AC-003.9 alone has 8 cases and splitting the validation from the endpoint would not be a vertical slice)
 **Tests (names end with the AC id):** controller: a Ticket Resolver gets 200 (`_AC_003_6`); a Project Manager gets 200 (`_AC_003_6`); anonymous gets 401 `MSG07`, service never called (`_AC_003_10`); Employee-only gets 403 `MSG08`, service never called (`_AC_003_17`, a comment naming `RoleChangeTest`); one parameterized test over `page=-1`, `size=0`, `size=101`, `status=FOO`, `projectId=abc`, `from=2026-13-01`, `to=31/10/2026`, each with one `fieldErrors` entry `MSG06` on that field (`_AC_003_9`); `to` before `from` gives the entry on `to`, `from == to` is valid (`_AC_003_9`); two wrong parameters give two entries (`_AC_003_9`); extra `userId` and `workspaceId` parameters change nothing (`_AC_003_7`). Service: `from == to == 2026-01-15` gives `[2026-01-14T17:00Z, 2026-01-15T17:00Z)` (`_AC_003_19`); only `from`, only `to` and no dates leave the other side open (`_AC_003_19`); filters are passed as given, AND-combined, a well-formed foreign `projectId` is passed on, the defaults are page 0 and size 20 (`_AC_003_19`); an empty provider answers an empty page with totals 0 (`_AC_003_8`); the lookup is asked for the signed-in id only and two users each see only their own (`_AC_003_7`, a comment naming `WorkspaceBindingTest`). Parity: `TicketStatusParityTest` (`_AC_003_9`).
 **Verification:** design risk rows 148–155, 158, 159, 161. Targeted: `cd backend && mvn spotless:check` and `mvn -Dtest='MyProfileControllerTest,MyProfileServiceImplTest,TicketStatusParityTest' verify`. Then Hiếu's check with a real sign-in.
 **Done when:** the tests above pass; `spotless:check` is clean; the curl cases above answer as listed; `frontend/openapi/tsolve-api.yaml` is unchanged (`generate:api` leaves no diff).
 
-## Task 19c: `GET /api/v1/me/solutions/summary` — Jira KAN-<n> (new Subtask of KAN-160, a sibling of KAN-301)
+## Task 19c: `GET /api/v1/me/solutions/summary` — Jira KAN-335 (new Subtask of KAN-160, a sibling of KAN-301)
 
 **Story:** STORY-003
 **Feature:** my-solutions-summary-backend
@@ -424,7 +424,7 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 - Modify: `backend/src/main/java/vn/tsolve/common/session/lookup/WrittenTicketLookup.java`, `backend/src/main/java/vn/tsolve/identity/controller/MyProfileController.java`, `backend/src/main/java/vn/tsolve/identity/service/MyProfileService.java`, `backend/src/main/java/vn/tsolve/identity/service/impl/MyProfileServiceImpl.java`
 - Test: modify `backend/src/test/java/vn/tsolve/identity/controller/MyProfileControllerTest.java` and `backend/src/test/java/vn/tsolve/identity/service/impl/MyProfileServiceImplTest.java`; create `backend/src/test/java/vn/tsolve/identity/dto/MySolutionSummaryTest.java`
 **Dependencies:** Task 19b merged; then the dependency line of the Task 19 note.
-**PR / Jira:** branch `feat/KAN-<n>-identity-my-solutions-summary-backend` from an up-to-date `main`; Jira: a new Subtask of KAN-160, a sibling of KAN-301 (created by a bookkeeping card after the plan is agreed).
+**PR / Jira:** branch `feat/KAN-335-identity-my-solutions-summary-backend` from an up-to-date `main`; Jira: a new Subtask of KAN-160, a sibling of KAN-301 (created by a bookkeeping card after the plan is agreed).
 **Estimated size:** small (2 new production files and 4 modified, about 120 lines); about 7 tests
 **Tests (names end with the AC id):** controller: a Ticket Resolver gets 200 with the six counts and the Projects as the service returned them (`_AC_003_18`); anonymous gets 401 `MSG07` (`_AC_003_10`); Employee-only gets 403 `MSG08`, service never called (`_AC_003_17`); extra query parameters are ignored (`_AC_003_18`). Service: the lookup's summary is passed through, asked with the signed-in id only (`_AC_003_18`); an empty provider answers six zeros and no Projects (`_AC_003_8`). `MySolutionSummaryTest`: a missing status is filled with 0 and all six keys are present (`_AC_003_18`).
 **Verification:** design risk rows 154, 156, 160, 162. Targeted: `cd backend && mvn spotless:check` and `mvn -Dtest='MyProfileControllerTest,MyProfileServiceImplTest,MySolutionSummaryTest' verify`. Then Hiếu's check with a real sign-in.
