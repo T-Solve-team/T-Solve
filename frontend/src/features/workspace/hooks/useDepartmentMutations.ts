@@ -3,6 +3,7 @@ import {
   getGetDepartmentQueryKey,
   useCreateDepartment,
   useDeleteDepartment,
+  useRestoreDepartment,
   useUpdateDepartment,
 } from '@/shared/api';
 import { showMessage } from '@/shared/messages';
@@ -42,6 +43,19 @@ export function useRemoveDepartment() {
     mutation: {
       onSuccess: () => {
         showMessage('MSG46');
+        return client.invalidateQueries();
+      },
+    },
+  });
+}
+
+/** UC-15: errors go to the app's handler, which shows the message of the code (AC-008.8). */
+export function useRestoreDepartmentAction() {
+  const client = useQueryClient();
+  return useRestoreDepartment({
+    mutation: {
+      onSuccess: () => {
+        showMessage('MSG52');
         return client.invalidateQueries();
       },
     },

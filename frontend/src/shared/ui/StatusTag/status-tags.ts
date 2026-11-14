@@ -14,6 +14,8 @@ export const STATUS_TAGS = {
   ACTIVE: { label: 'Active', color: 'green' },
   DEACTIVATED: { label: 'Deactivated', color: 'default' },
   REMOVED: { label: 'Removed', color: 'default' },
+  // Department (UC-14, UC-15). Colour is a placeholder until the Figma kit sets it.
+  DELETED: { label: 'Deleted', color: 'default' },
   // Jira connection
   CONNECTED: { label: 'Connected', color: 'green' },
   NOT_CONNECTED: { label: 'Not connected', color: 'red' },
