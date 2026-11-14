@@ -84,6 +84,57 @@ describe('http (fetch wrapper)', () => {
   });
 });
 
+describe('http and CSRF', () => {
+  afterEach(() => {
+    document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+  });
+
+  it('sends the XSRF-TOKEN cookie as X-XSRF-TOKEN on POST, PUT, PATCH and DELETE (BUG-211)', async () => {
+    document.cookie = 'XSRF-TOKEN=token%2Bwith%2Fencoding%3D; path=/';
+    const requests = captureRequests();
+    const methods = ['POST', 'PUT', 'PATCH', 'DELETE', 'post'];
+
+    for (const method of methods) await http(URL, { method });
+
+    expect(requests).toHaveLength(methods.length);
+    for (const request of requests) {
+      expect(request.headers.get('X-XSRF-TOKEN')).toBe('token+with/encoding=');
+    }
+  });
+
+  it('sends no X-XSRF-TOKEN on GET (BUG-211)', async () => {
+    document.cookie = 'XSRF-TOKEN=token; path=/';
+    const requests = captureRequests();
+
+    await http(URL);
+    await http(URL, { method: 'GET' });
+    await http(URL, { method: 'get' });
+
+    expect(requests).toHaveLength(3);
+    for (const request of requests) expect(request.headers.has('X-XSRF-TOKEN')).toBe(false);
+  });
+
+  it('sends no X-XSRF-TOKEN when there is no XSRF-TOKEN cookie (BUG-211)', async () => {
+    document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    const requests = captureRequests();
+
+    await http(URL, { method: 'POST' });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.headers.has('X-XSRF-TOKEN')).toBe(false);
+  });
+
+  it('keeps an X-XSRF-TOKEN the caller set (BUG-211)', async () => {
+    document.cookie = 'XSRF-TOKEN=cookie-token; path=/';
+    const requests = captureRequests();
+
+    await http(URL, { method: 'POST', headers: { 'x-xsrf-token': 'caller-token' } });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.headers.get('X-XSRF-TOKEN')).toBe('caller-token');
+  });
+});
+
 describe('http and the Workspace site', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
