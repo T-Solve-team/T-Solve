@@ -12,20 +12,33 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withUnauthorizedRequest;
 
+import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerProjectLookup;
+import vn.tsolve.tracker.dto.TrackerProjectLookup.Outcome;
+import vn.tsolve.tracker.dto.TrackerStatus;
 import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
+import vn.tsolve.tracker.service.impl.TrackerProjectServiceImpl;
 
 class JiraClientTest {
 
@@ -51,15 +64,12 @@ class JiraClientTest {
         jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/issue/ITSUP-1/comment"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", BASIC))
-                .andExpect(content()
-                        .json(
-                                """
+                .andExpect(content().json("""
                         {"body": {"type": "doc", "version": 1, "content": [
                           {"type": "paragraph", "content": [{"type": "text", "text": "T-Solve suggestion:"}]},
                           {"type": "paragraph", "content": [{"type": "text", "text": "Restart the VPN."}]}
                         ]}}
-                        """,
-                                true))
+                        """, true))
                 .andRespond(withSuccess("{\"id\": \"10042\"}", MediaType.APPLICATION_JSON));
 
         String id = client.addComment(ACCOUNT, "ITSUP-1", List.of("T-Solve suggestion:", "Restart the VPN."));
@@ -81,8 +91,7 @@ class JiraClientTest {
                           {"id": "2", "author": {"accountId": "bot-1"}, "body": %s},
                           {"id": "3", "author": {"accountId": "bot-1"}, "body": %s}
                         ]}
-                        """
-                                .formatted(
+                        """.formatted(
                                         adf("T-Solve suggestion: copied by a person"),
                                         adf("Another bot note"),
                                         adf("T-Solve suggestion:")),
@@ -184,11 +193,369 @@ class JiraClientTest {
                 .hasMessageNotContaining("secret-token");
     }
 
+    @Test
+    void readsProjectAndStatusesWithBasicAuthentication_AC_013_1_AC_013_10() {
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/itsup"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header("Authorization", BASIC))
+                .andExpect(header("Accept", MediaType.APPLICATION_JSON_VALUE))
+                .andRespond(withSuccess("{\"key\":\"ITSUP\",\"name\":\"IT\"}", MediaType.APPLICATION_JSON));
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP/statuses"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header("Authorization", BASIC))
+                .andExpect(header("Accept", MediaType.APPLICATION_JSON_VALUE))
+                .andRespond(
+                        withSuccess("[{\"statuses\":[{\"id\":\"1\",\"name\":\"Open\"}]}]", MediaType.APPLICATION_JSON));
+
+        assertThat(client.findProject(ACCOUNT, "itsup")).contains("ITSUP");
+        assertThat(client.projectStatuses(ACCOUNT, "ITSUP")).containsExactly(new TrackerStatus("1", "Open", false));
+        jira.verify();
+    }
+
+    @Test
+    void flattensStatusesWithoutDeduplicatingAndMapsExactDoneCategory_AC_013_2_AC_013_3() {
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP/statuses"))
+                .andRespond(withSuccess("""
+                    [
+                      {"statuses":[
+                        {"id":"1","name":"Open","statusCategory":{"key":"indeterminate"}},
+                        {"id":"2","name":"Done","statusCategory":{"key":"done"}},
+                        {"id":"3","name":"Review"}
+                      ]},
+                      {"statuses":[
+                        {"id":"1","name":"Reopened","statusCategory":{"key":"done"}},
+                        {"id":"004","name":"Case sensitive","statusCategory":{"key":"Done"}},
+                        {"id":"5","name":"Empty category","statusCategory":{}},
+                        {"id":"6","name":"Trailing space","statusCategory":{"key":"done "}}
+                      ]}
+                    ]
+                    """, MediaType.APPLICATION_JSON));
+
+        assertThat(client.projectStatuses(ACCOUNT, "ITSUP"))
+                .containsExactly(
+                        new TrackerStatus("1", "Open", false),
+                        new TrackerStatus("2", "Done", true),
+                        new TrackerStatus("3", "Review", false),
+                        new TrackerStatus("1", "Reopened", true),
+                        new TrackerStatus("004", "Case sensitive", false),
+                        new TrackerStatus("5", "Empty category", false),
+                        new TrackerStatus("6", "Trailing space", false));
+        jira.verify();
+    }
+
+    @Test
+    void acceptsAnEmptyStatusesArray_AC_013_9() {
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP/statuses"))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+        assertThat(client.projectStatuses(ACCOUNT, "ITSUP")).isEmpty();
+        jira.verify();
+    }
+
+    @Test
+    void returnsEmptyWhenTheProjectDoesNotExist_AC_013_4() {
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP"))
+                .andRespond(withResourceNotFound());
+
+        assertThat(client.findProject(ACCOUNT, "ITSUP")).isEmpty();
+        jira.verify();
+    }
+
+    @Test
+    void rejectsMissingStatusesWithTheExistingStatusMapping_AC_013_4() {
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP/statuses"))
+                .andRespond(withResourceNotFound());
+
+        assertThatThrownBy(() -> client.projectStatuses(ACCOUNT, "ITSUP"))
+                .isInstanceOfSatisfying(JiraRejectedException.class, failure -> assertThat(failure.getStatus())
+                        .isEqualTo(404))
+                .hasNoCause();
+        jira.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {401, 403, 400})
+    void rejectsProjectClientErrors_AC_013_6(int status) {
+        jira.reset();
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP"))
+                .andRespond(withStatus(HttpStatus.valueOf(status)));
+
+        assertThatThrownBy(() -> client.findProject(ACCOUNT, "ITSUP"))
+                .isInstanceOfSatisfying(JiraRejectedException.class, failure -> assertThat(failure.getStatus())
+                        .isEqualTo(status))
+                .hasNoCause();
+        jira.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {401, 403, 400})
+    void rejectsStatusesClientErrors_AC_013_6(int status) {
+        jira.reset();
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP/statuses"))
+                .andRespond(withStatus(HttpStatus.valueOf(status)));
+
+        assertThatThrownBy(() -> client.projectStatuses(ACCOUNT, "ITSUP"))
+                .isInstanceOfSatisfying(JiraRejectedException.class, failure -> assertThat(failure.getStatus())
+                        .isEqualTo(status))
+                .hasNoCause();
+        jira.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {500, 429})
+    void reportsProjectServerErrorsAndRateLimitsAsUnavailable_AC_013_7(int status) {
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP"))
+                .andRespond(withStatus(HttpStatus.valueOf(status)));
+
+        assertThatThrownBy(() -> client.findProject(ACCOUNT, "ITSUP"))
+                .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                        .isEqualTo(status))
+                .hasNoCause();
+        jira.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {500, 429})
+    void reportsStatusesServerErrorsAndRateLimitsAsUnavailable_AC_013_7(int status) {
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP/statuses"))
+                .andRespond(withStatus(HttpStatus.valueOf(status)));
+
+        assertThatThrownBy(() -> client.projectStatuses(ACCOUNT, "ITSUP"))
+                .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                        .isEqualTo(status))
+                .hasNoCause();
+        jira.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void reportsTimeoutsAndUnreachableJiraWithoutLeakingCauses_AC_013_7(boolean statusesRead) {
+        String url = "https://acme.atlassian.net/rest/api/3/project/ITSUP" + (statusesRead ? "/statuses" : "");
+        for (IOException transportFailure :
+                List.of(new SocketTimeoutException("Read timed out"), new IOException("Connection refused"))) {
+            jira.reset();
+            jira.expect(requestTo(url)).andRespond(request -> {
+                throw transportFailure;
+            });
+
+            assertThatThrownBy(() -> {
+                        if (statusesRead) {
+                            client.projectStatuses(ACCOUNT, "ITSUP");
+                        } else {
+                            client.findProject(ACCOUNT, "ITSUP");
+                        }
+                    })
+                    .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                            .isZero())
+                    .hasNoCause();
+            jira.verify();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "{}",
+                "{\"key\":\"\"}",
+                "{\"key\":\"   \"}",
+                "{\"key\":12}",
+                "{\"key\":null}",
+                "null",
+                "",
+                "{not json"
+            })
+    void reportsMissingInvalidOrUnreadableProjectKeysAsUnavailable_AC_013_8(String body) {
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP"))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.findProject(ACCOUNT, "ITSUP"))
+                .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                        .isZero())
+                .hasNoCause();
+        jira.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "{}",
+                "[{\"statuses\":{}}]",
+                "[{}]",
+                "[{\"statuses\":[{\"name\":\"Open\"}]}]",
+                "[{\"statuses\":[{\"id\":\"\",\"name\":\"Open\"}]}]",
+                "[{\"statuses\":[{\"id\":\"   \",\"name\":\"Open\"}]}]",
+                "[{\"statuses\":[{\"id\":1,\"name\":\"Open\"}]}]",
+                "[{\"statuses\":[{\"id\":\"1\"}]}]",
+                "[{\"statuses\":[{\"id\":\"1\",\"name\":\"\"}]}]",
+                "[{\"statuses\":[{\"id\":\"1\",\"name\":\"   \"}]}]",
+                "[{\"statuses\":[{\"id\":\"1\",\"name\":12}]}]",
+                "[{\"statuses\":[{\"id\":\"1\",\"name\":null}]}]",
+                "null",
+                "",
+                "{not json"
+            })
+    void reportsInvalidOrUnreadableStatusesAsUnavailable_AC_013_8(String body) {
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP/statuses"))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.projectStatuses(ACCOUNT, "ITSUP"))
+                .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                        .isZero())
+                .hasNoCause();
+        jira.verify();
+    }
+
+    @Test
+    void stripsCredentialsAndResponseBodiesFromBothReadFailures_AC_013_12_AC_013_13() {
+        String body = "bot@acme.test secret-token JIRA-BODY-SECRET";
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP"))
+                .andRespond(withUnauthorizedRequest().body(body));
+
+        assertThatThrownBy(() -> client.findProject(ACCOUNT, "ITSUP"))
+                .isInstanceOfSatisfying(JiraRejectedException.class, failure -> assertThat(failure.getStatus())
+                        .isEqualTo(401))
+                .hasMessageNotContaining("bot@acme.test")
+                .hasMessageNotContaining("secret-token")
+                .hasMessageNotContaining("JIRA-BODY-SECRET")
+                .hasNoCause();
+        jira.verify();
+
+        jira.reset();
+        jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/project/ITSUP/statuses"))
+                .andRespond(withServerError().body(body));
+
+        assertThatThrownBy(() -> client.projectStatuses(ACCOUNT, "ITSUP"))
+                .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                        .isEqualTo(500))
+                .hasMessageNotContaining("bot@acme.test")
+                .hasMessageNotContaining("secret-token")
+                .hasMessageNotContaining("JIRA-BODY-SECRET")
+                .hasNoCause();
+        jira.verify();
+    }
+
+    @Test
+    void appliesConnectAndReadTimeoutsToTheRequestFactory_AC_013_10() throws NoSuchMethodException {
+        var parameters =
+                JiraClient.class.getConstructor(Duration.class, Duration.class).getParameters();
+
+        assertThat(parameters[0].getAnnotation(Value.class).value())
+                .isEqualTo("${tsolve.tracker.jira.connect-timeout:5s}");
+        assertThat(parameters[1].getAnnotation(Value.class).value())
+                .isEqualTo("${tsolve.tracker.jira.read-timeout:10s}");
+
+        JiraClient configuredClient = new JiraClient(Duration.ofSeconds(3), Duration.ofSeconds(7));
+        Object builder = ReflectionTestUtils.getField(configuredClient, "builder");
+        assertThat(builder).isNotNull();
+        Object factory = ReflectionTestUtils.getField(builder, "requestFactory");
+        assertThat(factory).isInstanceOf(SimpleClientHttpRequestFactory.class);
+        assertThat(ReflectionTestUtils.getField(factory, "connectTimeout")).isEqualTo(3000);
+        assertThat(ReflectionTestUtils.getField(factory, "readTimeout")).isEqualTo(7000);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void reportsSchemeLessSiteAsUnavailable_AC_013_7_AC_013_8_BUG_208(boolean statusesRead) {
+        JiraAccount account = new JiraAccount("acme.atlassian.net", ACCOUNT.email(), ACCOUNT.apiToken());
+        // The mock factory accepts relative URIs; the production factory rejects them before opening a connection.
+        JiraClient realClient = new JiraClient(Duration.ofSeconds(3), Duration.ofSeconds(7));
+
+        assertThatThrownBy(() -> {
+                    if (statusesRead) {
+                        realClient.projectStatuses(account, "ITSUP");
+                    } else {
+                        realClient.findProject(account, "ITSUP");
+                    }
+                })
+                .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                        .isZero())
+                .hasNoCause()
+                .hasMessageNotContaining(account.email())
+                .hasMessageNotContaining(account.apiToken());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "bot:automation@acme.test, false",
+        "bot:automation@acme.test, true",
+        "бот@acme.test, false",
+        "бот@acme.test, true"
+    })
+    void reportsMalformedEmailAsUnavailable_AC_013_7_AC_013_8_BUG_208(String email, boolean statusesRead) {
+        JiraAccount account = new JiraAccount(ACCOUNT.siteUrl(), email, ACCOUNT.apiToken());
+
+        assertThatThrownBy(() -> {
+                    if (statusesRead) {
+                        client.projectStatuses(account, "ITSUP");
+                    } else {
+                        client.findProject(account, "ITSUP");
+                    }
+                })
+                .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                        .isZero())
+                .hasNoCause()
+                .hasMessageNotContaining(email)
+                .hasMessageNotContaining(account.apiToken());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void reportsInvalidContentTypeAsUnavailable_AC_013_7_AC_013_8_BUG_208(boolean statusesRead) {
+        String url = ACCOUNT.siteUrl() + "/rest/api/3/project/ITSUP" + (statusesRead ? "/statuses" : "");
+        jira.expect(requestTo(url))
+                .andRespond(withStatus(HttpStatus.OK)
+                        .header("Content-Type", "not a media type")
+                        .body(statusesRead ? "[]" : "{\"key\":\"ITSUP\"}"));
+
+        assertThatThrownBy(() -> {
+                    if (statusesRead) {
+                        client.projectStatuses(ACCOUNT, "ITSUP");
+                    } else {
+                        client.findProject(ACCOUNT, "ITSUP");
+                    }
+                })
+                .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                        .isZero())
+                .hasNoCause()
+                .hasMessageNotContaining(ACCOUNT.email())
+                .hasMessageNotContaining(ACCOUNT.apiToken());
+        jira.verify();
+    }
+
+    @Test
+    void returnsUNAVAILABLEWithoutPartialProjectForNonHttpScheme_AC_013_7_BUG_208() {
+        JiraAccount account = new JiraAccount("ftp://example.atlassian.net", ACCOUNT.email(), ACCOUNT.apiToken());
+        JiraClient realClient = new JiraClient(Duration.ofSeconds(3), Duration.ofSeconds(7));
+
+        TrackerProjectLookup lookup =
+                new TrackerProjectServiceImpl(() -> Optional.of(account), realClient).findProject("ITSUP");
+
+        assertThat(lookup.outcome()).isEqualTo(Outcome.UNAVAILABLE);
+        assertThat(lookup.key()).isNull();
+        assertThat(lookup.statuses()).isEmpty();
+    }
+
+    @Test
+    void returnsUNAVAILABLEWithoutPartialProjectForInvalidContentType_AC_013_7_AC_013_8_BUG_208() {
+        JiraAccount account = ACCOUNT;
+        jira.expect(requestTo(account.siteUrl() + "/rest/api/3/project/ITSUP"))
+                .andRespond(withStatus(HttpStatus.OK)
+                        .header("Content-Type", "not a media type")
+                        .body("{\"key\":\"ITSUP\"}"));
+
+        TrackerProjectLookup lookup =
+                new TrackerProjectServiceImpl(() -> Optional.of(account), client).findProject("ITSUP");
+
+        assertThat(lookup.outcome()).isEqualTo(Outcome.UNAVAILABLE);
+        assertThat(lookup.key()).isNull();
+        assertThat(lookup.statuses()).isEmpty();
+        jira.verify();
+    }
+
     private static String adf(String text) {
         return """
                 {"type": "doc", "version": 1, "content": [
                   {"type": "paragraph", "content": [{"type": "text", "text": "%s"}]}]}
-                """
-                .formatted(text);
+                """.formatted(text);
     }
 }

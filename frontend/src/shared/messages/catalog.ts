@@ -127,7 +127,7 @@ export const MESSAGES = {
   MSG47: { type: 'toast', level: 'success', text: 'Connected to {tracker_name} successfully.' },
   MSG48: {
     type: 'inline',
-    text: 'Could not connect to {tracker_name}. Check the project and token and try again.',
+    text: 'Could not connect to {tracker_name}. Check the project key and that the service account can browse this project.',
   },
   MSG49: {
     type: 'field',

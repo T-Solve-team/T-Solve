@@ -1,7 +1,7 @@
 ---
 module: tracker
 date: 2026-10-21
-total_tasks: 9
+total_tasks: 12
 owner: Dev
 ---
 
@@ -225,3 +225,33 @@ secret in errors), `SuggestionJobServiceImplTest` (AC-011.7, AC-012.3, AC-012.6)
 (`markCommented` never overwrites), `ConfiguredJiraServiceAccountTest`.
 **Dependencies:** Task 16, Task 17
 **Estimated size:** medium
+
+## Task 19: Read a Jira project and its statuses (KAN-127)
+
+**Story:** STORY-013
+**Feature:** jira-project-read
+**Description:** Dependency 1 for KAN-127's Project connection/create flow; the body belongs to this tracker plan, not the Project task count. Branch `feat/KAN-127-project-integration-add-project`. Write failing JiraClient HTTP tests and Mockito service tests first, then implement the read-only `TrackerProjectService.findProject(String key)` boundary and its implementation. It obtains `JiraServiceAccount.current()`, reads the project, then reads statuses using its canonical key. `TicketTrackerClient.findProject(JiraAccount, String)` returns Optional<String>, with project 404 mapped locally to empty (D38; tracker spec interface row corrected); `projectStatuses` returns List<TrackerStatus>. Keep the existing status-only exception mapping for other failures. Flatten issue-type statuses; validate required key/id/name; service deduplicates by id in first-seen order, first name/category wins. Missing category means done=false; only category key `done` means true. No new REST endpoint, persistence, caller-to-Project lookup, outer transaction or credential source. FOUND carries canonical key/statuses; other outcomes have null key and empty statuses. No raw JSON or exception crosses the service boundary. Existing Basic 5s-connect/10s-read setup stays. Existing comment operations keep their semantics, including their 404 mapping.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/tracker/client/TicketTrackerClient.java`
+- Modify: `backend/src/main/java/vn/tsolve/tracker/client/JiraClient.java`
+- Create: `backend/src/main/java/vn/tsolve/tracker/service/TrackerProjectService.java`
+- Create: `backend/src/main/java/vn/tsolve/tracker/service/impl/TrackerProjectServiceImpl.java`
+- Create: `backend/src/main/java/vn/tsolve/tracker/dto/TrackerProjectLookup.java` (nested Outcome enum)
+- Create: `backend/src/main/java/vn/tsolve/tracker/dto/TrackerStatus.java`
+- Test (Modify): `backend/src/test/java/vn/tsolve/tracker/client/JiraClientTest.java`
+- Test (Create): `backend/src/test/java/vn/tsolve/tracker/service/impl/TrackerProjectServiceImplTest.java`
+**Tests** (tracker master edge rows 58–65):
+- AC-013.1: MockRestServiceServer on the existing RestClient.Builder constructor asserts exact GET project/status URLs, Accept and Basic auth; canonical key feeds the second read; no HTTP mocks/containers added (row 58). Service Mockito verifies ordered calls and FOUND payload.
+- AC-013.2/AC-013.3: repeated id across issue types returns once, first name/category wins; Done key true, other/missing category false; status id/name are exact nonblank strings (row 59).
+- AC-013.4: project 404 → Optional.empty → NOT_FOUND; statuses 404 → existing JiraRejectedException(404) → NOT_FOUND, no partial result (row 60).
+- AC-013.5: absent account → DENIED, verifyNoInteractions(client), no persistence (row 60).
+- AC-013.6: each read independently returns 401/403/other 4xx except 404/429 → DENIED. Assert service boundary returns an outcome, not a client exception (row 60).
+- AC-013.7: each read's 429, 5xx, SocketTimeoutException and connection/I/O failure → UNAVAILABLE with empty payload; 429 precedes generic 4xx. Inject transport failures through MockRestServiceServer rather than waiting for real network timeouts (row 61).
+- AC-013.8: missing/blank/non-text canonical key, null/non-array/unreadable statuses body and missing/blank/non-text status id/name → UNAVAILABLE, no partial FOUND (row 62).
+- AC-013.9: valid empty statuses array → FOUND with empty list (row 63).
+- AC-013.10: retain existing 5-second connect/10-second read configuration, Basic header and same configured account port; no test sleeps for 10 seconds (row 58).
+- AC-013.11: every failed project read, including empty/malformed, has no statuses request; fail test on unexpected server interaction (row 64).
+- AC-013.12/AC-013.13: capture success/failure service log events and inspect returned DTO/client exception metadata: only key/status/outcome, never account email/token/Jira body; no persisted writes and no Project service dependency. Test synthetic secret markers in Jira error bodies for both reads. Retain all existing comment tests (row 65).
+**Verify:** in `backend/`, `mvn spotless:apply` and `mvn verify`; `bun harnessclaude/hooks/sdd.ts check tracker` from root and STORY-013 trace using tracker paths. After checks, report feature/files/results and proposed `feat(tracker): read Jira projects and statuses (KAN-127)` with STORY-013 body and AI Co-Authored-By trailer; stop for user commit agreement before the next feature. One feature plus its harness commit, no push/merge/PR without request. Current tracker spec must be approved separately before code; this planning run performs no approval/status operation.
+**Dependencies:** Task 18.
+**Estimated size:** medium.

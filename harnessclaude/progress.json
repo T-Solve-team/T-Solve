@@ -166,10 +166,25 @@
       }
     },
     "project-integration": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:22.778Z"
+      "status": "completed",
+      "currentPhase": "evaluate",
+      "features": {
+        "project-done-statuses-schema": "passing",
+        "project-connection-test": "passing",
+        "project-create": "passing",
+        "project-reconnect": "passing",
+        "project-list": "passing",
+        "jira-integration-projects-table": "passing",
+        "jira-integration-add-project": "passing"
+      },
+      "lastUpdated": "2026-11-13T09:41:48.788Z",
+      "branch": "feat/project-integration",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "1ac3c6051b2742a4e4a4326b437cd4eccc7a95ae"
+      }
     },
     "wiki": {
       "status": "decomposed",
@@ -418,15 +433,16 @@
         "suggestion-job": "passing",
         "suggestion-job-worker": "passing",
         "suggestion-uuid-keys": "evaluating",
-        "suggestion-comment": "passing"
+        "suggestion-comment": "passing",
+        "jira-project-read": "passing"
       },
-      "lastUpdated": "2026-11-07T16:53:12.227Z",
+      "lastUpdated": "2026-11-13T09:41:30.891Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "c8c32eaeede691bd09f0a1e87a669488d3bbb7b5"
+        "default": "1ac3c6051b2742a4e4a4326b437cd4eccc7a95ae"
       }
     },
     "ticket-review": {

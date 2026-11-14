@@ -31,6 +31,8 @@ the request belongs to; **discovery** = finding that database from the request (
 | 2026-11-07 | STORY-011 | Add STORY-011 (KAN-22): a recorded new issue gets one suggestion job that asks search (KAN-47) and stores its sources and suggested solution in the issue's `suggestion_result`. Functional 2, Out of Scope and "Required from other modules" updated | Jira KAN-22 asks for the suggestion job. The job uses no Jira token and only calls search, so the 01/11 reason for "no background job" no longer applies. Job runner (JobRunr) = `worker` KAN-161 (Dương), search = KAN-47 (Nhat Minh), MSG80 comment = KAN-131; tracker calls them through ports with stand-ins (user, 2026-11-07) |
 | 2026-11-07 | STORY-011 | Run the job on the `worker` module's JobRunr (KAN-102): AC-011.1 stores the issue text in the suggestion result and the job carries only a reference to it; AC-011.6 fails the job so the worker retries it; add AC-011.9 (in-process run while the worker is not enabled). Out of Scope and "Required from other modules" updated | `worker` KAN-102 merged (#139): a job carries only a record UUID and no ticket content, and JobRunr retries a job that fails. User chose retries and, until platform binds the Workspace of a request, a configured dev Workspace (user, 2026-11-07) |
 | 2026-11-07 | STORY-012 (new), STORY-011 | Add STORY-012 (KAN-131): after the suggestion job stores a suggestion, the tracker posts it on the issue as the MSG80 comment with the Workspace's Jira service account, once, and records the comment's id and time; AC-011.7 reworded so a rerun posts a comment that is still missing instead of stopping. Functional 2, Non-Functional 9, Out of Scope, Interface Contracts and Required from other modules follow | KAN-131 completes the flow "issue created → AI answers on the issue". User decisions of 07/11: the backend posts with the Workspace's Jira service account (`workspace.service_account_email` / `service_account_token`, created when a tenant is onboarded) rather than a Forge function or the Forge system token; a stand-in reads it from configuration until `workspace` is built; `suggestion_result` gets `jira_comment_id` and `commented_at`; MSG80 is posted without its "Related documents" sentence and names no source, so no Wiki access check or restricted title reaches the comment, which everyone who can see the issue reads — a deviation from SRS MSG80 (`{wiki_links}`) to tell the SRS author |
+| 2026-11-12 | STORY-013 | Add the Project module's read-only Jira project lookup, Browse check and deduplicated statuses; expose TrackerProjectService and extend TicketTrackerClient | KAN-127 (project-integration) needs the Browse check and the project's statuses; one Jira client per tracker module boundary, decisions D4, D28 of kan-127-decisions.md |
+| 2026-11-12 | STORY-013 | Correct client findProject return type to Optional<String>, empty on project 404; no acceptance criterion changes | Explicit RUN 2 contract, KAN-127 D38 |
 
 ## Requirements
 
@@ -134,6 +136,23 @@ the request belongs to; **discovery** = finding that database from the request (
   - AC-012.7: IF adding the comment fails (Jira unreachable, 5xx or 429, timeout), THEN THE suggestion job SHALL fail so that the job runner retries it, keep the stored suggestion, and log only the issue key, the HTTP status and the error type.
   - AC-012.8: IF the service account is missing, or Jira answers 401, 403 or 404, THEN THE tracker SHALL add no comment, keep the stored suggestion, end the job without a retry and log only the issue key and the reason.
 
+### STORY-013: Read a Jira project for the Project module (KAN-127)
+- As the Project module, I want to read the Jira project and its statuses using the Workspace's service account so that the Project Manager can test Browse projects and choose the initial Project settings without entering a token.
+- Acceptance:
+  - AC-013.1: WHEN `TrackerProjectService.findProject(key)` is called and the Workspace's service account receives 200 from `GET /rest/api/3/project/{key}` and `GET /rest/api/3/project/{key}/statuses`, THE tracker SHALL return `FOUND` with the canonical key returned by the project read and every status returned by the statuses read.
+  - AC-013.2: WHEN statuses occur under several issue types, THE tracker SHALL return each status id once in first-seen order across issue types, keeping the first occurrence's name and category.
+  - AC-013.3: WHEN a status is returned, THE tracker SHALL expose its string `id`, string `name` and boolean `done`, with `done` true exactly when that status's `statusCategory.key` is `done`.
+  - AC-013.4: IF either Jira read answers 404, THEN THE tracker SHALL return `NOT_FOUND` without propagating an exception to the Project module.
+  - AC-013.5: IF `JiraServiceAccount.current()` returns no service account, THEN THE tracker SHALL return `DENIED` without calling Jira.
+  - AC-013.6: IF either Jira read answers 401, 403 or any other 4xx except 404 and 429, THEN THE tracker SHALL return `DENIED` without propagating an exception to the Project module.
+  - AC-013.7: IF either Jira read answers 5xx or 429, times out, is unreachable or does not answer, THEN THE tracker SHALL return `UNAVAILABLE` without a partial project result or an exception crossing the service boundary.
+  - AC-013.8: IF a successful Jira response has no nonblank canonical key, a status has no nonblank id or name, or a response body is unreadable, THEN THE tracker SHALL return `UNAVAILABLE` (KAN-127 D35).
+  - AC-013.9: WHEN both reads succeed and the statuses response is a valid empty array, THE tracker SHALL return `FOUND` with an empty statuses list.
+  - AC-013.10: THE lookup SHALL use `JiraServiceAccount.current()` and the existing `JiraClient` Basic authentication with a 5-second connect timeout and a 10-second read timeout, as STORY-012 does.
+  - AC-013.11: IF the project read fails, THEN THE tracker SHALL make no statuses call.
+  - AC-013.12: THE lookup's logs SHALL carry only the project key, HTTP status when available and lookup outcome, never the service-account email, API token or a Jira response body.
+  - AC-013.13: THE lookup SHALL persist no data and return no service-account credential or Jira response body.
+
 ## Out of Scope
 - Discovery: finding the tenant database from the request (catalog `tenant_workspace`, by site name or Jira
   `cloudId`), and refusing a FIT whose cloudId belongs to no Workspace (was AC-001.6).
@@ -177,7 +196,27 @@ Paths are added to `frontend/openapi/tsolve-api.yaml` before code (backend rule 
 | `POST /api/v1/jira-app/issues/{issueKey}/suggestion-answer` | Issue Panel (reporter) | FIT + principal | 010 |
 
 Java: `TicketTrackerClientFactory.getClient(TrackerType)` → `TicketTrackerClient` (`getIssue`, `getComments`,
-`addComment`), implemented by `JiraClient` (used by STORY-007 and STORY-012).
+`addComment`), implemented by `JiraClient` (used by STORY-007 and STORY-012). KAN-127 adds the following read-only
+service and client operations for STORY-013; it does not change those earlier contracts.
+
+| Java interface | Input | Output and rules |
+|----------------|-------|------------------|
+| `tracker.service.TrackerProjectService.findProject(String projectKey)` | Normalised Jira key from Project; Workspace already bound | `tracker.dto.TrackerProjectLookup(outcome, key, statuses)`; project read first, statuses read next using the returned canonical key. Uses `JiraServiceAccount.current()`, not a Project credential. No database transaction or call back into Project. |
+| `tracker.client.TicketTrackerClient.findProject(JiraAccount account, String projectKey)` | Workspace service account and key | `Optional<String>` containing the canonical key from `GET /rest/api/3/project/{key}`, or empty on 404. Same `JiraClient` and status-only client exceptions as STORY-012 for other failures (KAN-127 D38). |
+| `tracker.client.TicketTrackerClient.projectStatuses(JiraAccount account, String projectKey)` | Same account and canonical key | `List<tracker.dto.TrackerStatus>` from `GET /rest/api/3/project/{key}/statuses`; flattened across issue types in encounter order. Service returns each id once, first occurrence wins. |
+
+`TrackerProjectLookup` has `outcome` = `FOUND`, `NOT_FOUND`, `DENIED` or `UNAVAILABLE`; `key` is the canonical
+nonblank Jira key only for `FOUND`, otherwise null; `statuses` is a non-null list, empty for non-FOUND outcomes.
+`TrackerStatus(String id, String name, boolean done)` carries only those three fields. Missing category or any
+category other than `done` yields `done: false`. A valid empty statuses array is a successful read. The service
+returns no raw JSON or client exception. 429 takes precedence over the generic 4xx mapping. Missing account
+makes no Jira call; failed project read makes no statuses call; a failed statuses read discards the project result.
+Malformed successful responses follow KAN-127 D35. The Project module maps outcomes to HTTP; STORY-013 adds no REST
+endpoint or Forge authentication requirement.
+
+Decisions for this change: `artifacts/04-plans/project-integration/iteration-1/kan-127-decisions.md`, D4-D6,
+D28 and D35. Existing Basic authentication remains an interim limit for real scoped service-account tokens
+(D5, RESEARCH-003); this change does not implement gateway Bearer authentication.
 
 ### Required from other modules
 Declared by tracker as service interfaces it calls; the owners implement them (stubs until then).

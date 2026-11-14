@@ -409,3 +409,70 @@ acceptable on the demo site only.
 - Decided in planning: `suggestion_result` is mapped in tracker (it writes the row first and reads it for
   STORY-010); the AI Solution Suggestion owner updates the same row.
 - No blocking questions.
+
+
+## STORY-013: Read a Jira project for the Project module (KAN-127, 2026-11-12)
+
+Spec: `artifacts/03-modules/tracker/spec.md`, STORY-013. Task: `artifacts/04-plans/tracker/iteration-1/tasks.md`, Task 19 (`jira-project-read`). KAN-127 decisions: `artifacts/04-plans/project-integration/iteration-1/kan-127-decisions.md`, D4-D6, D28, D35, D38. This Change Mode extension leaves earlier stories and the comment client's existing methods intact.
+
+```text
+ProjectService.testConnection / create (Workspace already bound; no transaction)
+  -> TrackerProjectService.findProject(key)
+      JiraServiceAccount.current() empty -> DENIED; no HTTP
+      TicketTrackerClient.findProject(account, key)
+        JiraClient GET /rest/api/3/project/{key}
+        project 404 -> Optional.empty -> NOT_FOUND; no statuses call
+        canonical nonblank key present -> projectStatuses(account, canonicalKey)
+          JiraClient GET /rest/api/3/project/{key}/statuses
+          flatten issue types' statuses; validate exact text id/name and category
+      service deduplicates ids in first-seen order; first occurrence wins
+      FOUND(key, statuses), including valid empty statuses
+      either read 404 -> NOT_FOUND
+      either read 401/403/other 4xx (except 404,429) -> DENIED
+      either read 429/5xx/I/O/timeout/unreadable or malformed success -> UNAVAILABLE
+  -> TrackerProjectLookup; no client exception, credential, raw JSON, or partial result
+Project maps outcomes to its HTTP contract; this service adds no REST endpoint.
+```
+
+`TrackerProjectLookup(Outcome outcome, String key, List<TrackerStatus> statuses)` has a nested Outcome enum FOUND/NOT_FOUND/DENIED/UNAVAILABLE; non-FOUND uses null key and an empty non-null immutable statuses list. `TrackerStatus(String id, String name, boolean done)` contains only those fields. `done` is true exactly for statusCategory.key `done`; missing/other category is false. Required key/id/name must be text and nonblank. Validate the statuses root as an array and each issue-type status collection before flattening; do not treat an object/null/unreadable body as the valid empty-array case. Neither service nor client persists, uses ProjectService, or opens a database transaction. Bound Workspace resolution remains the caller's responsibility.
+
+| Decision | Choice | Alternatives Considered | Rationale |
+|----------|--------|------------------------|-----------|
+| D4 module boundary | Project calls tracker.service.TrackerProjectService and tracker.dto records | Project own HTTP client; expose tracker/client | Keep HTTP/credential/status handling in tracker; no Project dependency in this lookup |
+| D5 credential | Existing JiraServiceAccount.current and JiraClient Basic auth | Import gateway Bearer; credential unification now | Current port is replaceable by KAN-119/KAN-125; real scoped tokens remain a documented limit |
+| D6 Browse check | Project GET then statuses GET with canonical key | mypermissions; both permission and project calls | Project GET answers visibility and key; statuses supply the form defaults |
+| D28 result | Four-outcome TrackerProjectLookup; deduplicate at service | Throw module exceptions; expose raw JSON | Project owns HTTP error mapping; first-seen dedup matches UI storage |
+| D35 malformed response | UNAVAILABLE; valid empty statuses is FOUND | Partial success; silently skip invalid status | No fabricated settings or lost choices; 429 handled before other 4xx |
+| D38 client signature | Optional<String> findProject(JiraAccount, String), project 404 empty | TrackerProject record; throw on project 404 | Explicit RUN 2 contract; synchronized interface row in tracker spec without AC edits. Statuses 404 still uses status-only client exception |
+| Tests | Existing JiraClientTest with MockRestServiceServer plus new Mockito service test | Live Jira; new HTTP server/container | Check real RestClient serialization/error mapping quickly and deterministically |
+| Logging | Project key, HTTP status if known, outcome only | Exception stack/cause or response body | Never expose service-account email/token or Jira JSON, including malformed-success paths |
+
+Files, exact paths (new files are Create, never mislabeled Modify):
+
+- Modify: `backend/src/main/java/vn/tsolve/tracker/client/TicketTrackerClient.java`
+- Modify: `backend/src/main/java/vn/tsolve/tracker/client/JiraClient.java`
+- Create: `backend/src/main/java/vn/tsolve/tracker/service/TrackerProjectService.java`
+- Create: `backend/src/main/java/vn/tsolve/tracker/service/impl/TrackerProjectServiceImpl.java`
+- Create: `backend/src/main/java/vn/tsolve/tracker/dto/TrackerProjectLookup.java`
+- Create: `backend/src/main/java/vn/tsolve/tracker/dto/TrackerStatus.java`
+- Test (Modify): `backend/src/test/java/vn/tsolve/tracker/client/JiraClientTest.java`
+- Test (Create): `backend/src/test/java/vn/tsolve/tracker/service/impl/TrackerProjectServiceImplTest.java`
+
+No new library, schema, config, Forge manifest, client factory or credential DTO. Reuse JiraAccount, JiraRejectedException.getStatus, JiraUnavailableException.getStatus and the existing RestClient error mapper. Catch project-lookup 404 only within the new findProject operation so comment semantics do not change. Both project/statuses success parse failures become status-only unavailable exceptions before the service maps the outcome. Do not log caught causes or account toString.
+
+Decided in planning: statuses use the returned canonical key; invalid project response prevents the second HTTP call. A failed second call discards the project result. Existing Basic connect/read timeouts are 5s/10s; tests inject timeout exceptions rather than wait for time. No new public error handler or backend endpoint.
+
+Edge Cases & Risks for this extension (continue after previous row 57): applicable dimensions are Integration, Input extremes, Scale, Environment, Error cascades, Compliance, Authorization and Timing. User types (internal caller only), State transitions and Data integrity (stateless read, no writes), and Business logic (no Project eligibility decision here) add no separate scenarios; caller-side cases are in project-integration rows 1-38. Existing tracker-wide dimension analysis still applies.
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 58 | STORY-013 | Integration | Both reads succeed using canonical key, configured Basic headers and existing timeout setup | High | FOUND with canonical key/statuses, same account and 5s/10s timeouts (AC-013.1, AC-013.10) | Task 19 |
+| 59 | STORY-013 | Input extremes / Scale | Repeated status id under several issue types; missing/other category | High | First name/category wins in encounter order, exact id/name, done only for done category (AC-013.2, AC-013.3) | Task 19 |
+| 60 | STORY-013 | Authorization / Environment | No configured account; either read 404/401/403/other 4xx except 429 | High | No-account DENIED without HTTP; 404 NOT_FOUND; other 4xx DENIED; null key/empty statuses (AC-013.4-AC-013.6) | Task 19 |
+| 61 | STORY-013 | Error cascades | Project/status read 429, 500, timeout, refused connection or I/O failure | High | UNAVAILABLE, no exception/partial project; 429 precedence (AC-013.7) | Task 19 |
+| 62 | STORY-013 | Input extremes / Integration | Nontext/blank/missing key, id or name; invalid JSON or non-array statuses root | High | UNAVAILABLE without partial/defaulted result (AC-013.8) | Task 19 |
+| 63 | STORY-013 | Scale | Valid empty statuses array; one status | Medium | FOUND with empty or singleton list, never a fabricated Done status (AC-013.1, AC-013.9) | Task 19 |
+| 64 | STORY-013 | Timing / Error cascades | First read fails, but second could answer successfully | High | No second request after any failed/malformed first read (AC-013.11) | Task 19 |
+| 65 | STORY-013 | Compliance | Successful/error Jira body or exception contains secret markers | Critical | Logs only key/status/outcome; DTOs and exceptions contain no service-account credential/body; zero persistence (AC-013.12, AC-013.13) | Task 19 |
+
+Risk Review: **CAUTION** for the retained Basic-auth/scoped-token mismatch; this story is testable with a compatible test credential and mocks, and does not claim real scoped-token support. Project owns MSG48/503 mapping and transaction boundaries; tracker never calls back into Project on this read path. This extension is a dependency on the same KAN-127 issue branch, one feature/commit approved by the user before starting the next task.
