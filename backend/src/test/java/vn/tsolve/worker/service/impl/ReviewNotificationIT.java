@@ -276,6 +276,23 @@ class ReviewNotificationIT {
     }
 
     @Test
+    void usesReviewerEmailWhenFullNameBlank_AC_010_7() {
+        jdbc.update("update app_user set full_name = '  ' where id = ?", reviewerId);
+        UUID ticket = ticket("ITS-13", "PENDING_REVIEW", writerId);
+        decisions.decide(reviewerId, Set.of(PROJECT), List.of(ticket), Action.CHANGES_REQUESTED, FEEDBACK);
+
+        var notification = notifications.findNotification(decisionIds().get(0)).orElseThrow();
+
+        assertThat(notification.reviewerName()).isEqualTo("pm@example.test");
+        handler().execute(decisionIds().get(0));
+        var text = ArgumentCaptor.forClass(String.class);
+        var html = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq(WRITER), anyString(), text.capture(), html.capture());
+        assertThat(text.getValue()).contains("Reviewed by pm@example.test · ");
+        assertThat(html.getValue()).contains(">pm@example.test</b> · ");
+    }
+
+    @Test
     void usesReviewerEmailWhenFullNameMissing_AC_010_7() {
         UUID ticket = ticket("ITS-9", "PENDING_REVIEW", writerId);
         decisions.decide(reviewerId, Set.of(PROJECT), List.of(ticket), Action.CHANGES_REQUESTED, FEEDBACK);

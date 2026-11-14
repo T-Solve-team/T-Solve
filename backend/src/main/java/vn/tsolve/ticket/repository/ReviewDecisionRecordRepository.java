@@ -81,7 +81,8 @@ public interface ReviewDecisionRecordRepository extends JpaRepository<ReviewDeci
     @Query(value = """
                     select d.decision as decision, u.email as email, t.source_ticket_id as ticketKey,
                            d.reason_or_comment as feedback, t.ticket_id as ticketId, t.title as ticketTitle,
-                           p.jira_project_key as projectName, coalesce(r.full_name, r.email) as reviewerName,
+                           p.jira_project_key as projectName,
+                           coalesce(nullif(btrim(r.full_name), ''), r.email) as reviewerName,
                            u.full_name as writerName, d.decided_at as decidedAt
                     from review_decision d
                     join ticket t on t.ticket_id = d.ticket_id

@@ -84,7 +84,7 @@ class ReviewEmailRendererTest {
                             "Changes requested",
                             "Your ticket needs a few changes",
                             "Review comment",
-                            "Update ticket",
+                            ">Update ticket</a>",
                             "#FFFBE6",
                             "#AD6800");
         }
@@ -119,6 +119,86 @@ class ReviewEmailRendererTest {
             assertThat(renderer.html(email)).contains(">ITS-1</div>").doesNotContain("ITS-1 ·");
             assertThat(renderer.plain(email)).contains("\nITS-1\nLogin fails\n").doesNotContain("ITS-1 ·");
         }
+    }
+
+    @Test
+    void omitsReviewedByWhenReviewerMissing_AC_010_7() {
+        for (Decision decision : Decision.values()) {
+            for (String reviewer : new String[] {null, "", "  "}) {
+                var email = new ReviewEmail(
+                        decision,
+                        "ITS-1",
+                        "Login fails",
+                        null,
+                        reviewer,
+                        "Writer",
+                        Instant.parse("2026-11-14T18:42:00Z"),
+                        "Evidence",
+                        null,
+                        null);
+                assertThat(renderer.html(email))
+                        .contains(">15 Nov 2026, 01:42 (GMT+7)</div>")
+                        .doesNotContain("Reviewed by", "·");
+                assertThat(renderer.plain(email))
+                        .contains("\n15 Nov 2026, 01:42 (GMT+7)\n")
+                        .doesNotContain("Reviewed by", "·");
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(Decision.class)
+    void rendersSectionsInOrder_AC_010_7(Decision decision) {
+        var email = email(decision, "acme.example.test", "Linh", "Login fails", "Add evidence");
+        String html = renderer.html(email);
+        boolean rejected = decision == Decision.REJECT;
+        int previous = -1;
+        for (String section : new String[] {
+            ">T-Solve</td>",
+            rejected ? ">Rejected</span>" : ">Changes requested</span>",
+            rejected ? ">Your ticket was rejected</h1>" : ">Your ticket needs a few changes</h1>",
+            "Hi Linh,",
+            ">ITS-1 · ITS</div>",
+            "Login fails",
+            "15 Nov 2026, 01:42 (GMT+7)",
+            rejected ? ">Rejection reason</div>" : ">Review comment</div>",
+            ">Add evidence</td>",
+            rejected ? ">Open ticket</a>" : ">Update ticket</a>",
+            "You got this email because",
+            "This is an automated message"
+        }) {
+            int position = html.indexOf(section);
+            assertThat(position).as("position of %s", section).isGreaterThan(previous);
+            previous = position;
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(Decision.class)
+    void usesNoImagesOrExternalResources_AC_010_7(Decision decision) {
+        var email = email(decision, "acme.example.test", "Linh", "Login fails", "Add evidence");
+        String html = renderer.html(email);
+        assertThat(html).contains("href=\"" + email.ticketUrl() + "\"");
+        assertThat(html.replace(email.ticketUrl(), "").toLowerCase(java.util.Locale.ROOT))
+                .doesNotContain("<img", "<link", "<script", "url(", "http");
+    }
+
+    @ParameterizedTest
+    @EnumSource(Decision.class)
+    void keepsTemplateSyntaxInStoredValuesLiteral_AC_010_9(Decision decision) {
+        var email = email(
+                decision,
+                "acme.example.test",
+                "Linh",
+                "<title>{{feedback}} $1 &</title>",
+                "<reason>{{feedback}} $1 &</reason>");
+        assertThat(renderer.html(email))
+                .contains(
+                        "&lt;title&gt;{{feedback}} $1 &amp;&lt;/title&gt;",
+                        "&lt;reason&gt;{{feedback}} $1 &amp;&lt;/reason&gt;")
+                .doesNotContain("<title>{{feedback}}", "<reason>");
+        assertThat(renderer.plain(email))
+                .contains("<title>{{feedback}} $1 &</title>", "<reason>{{feedback}} $1 &</reason>");
     }
 
     @Test

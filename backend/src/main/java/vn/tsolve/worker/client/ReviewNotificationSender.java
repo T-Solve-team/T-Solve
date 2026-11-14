@@ -4,6 +4,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
 import java.io.UnsupportedEncodingException;
+import java.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
@@ -24,6 +25,9 @@ public class ReviewNotificationSender {
     }
 
     public void send(String recipient, String subject, String text, String html) {
+        Objects.requireNonNull(subject, "subject");
+        Objects.requireNonNull(text, "text");
+        Objects.requireNonNull(html, "html");
         String mailbox = singleMailbox(recipient);
         try {
             var message = mail.createMimeMessage();

@@ -78,6 +78,21 @@ class ReviewNotificationSenderTest {
     }
 
     @Test
+    void rejectsNullContentBeforeDelivery_AC_001_1() {
+        for (String field : new String[] {"subject", "text", "html"}) {
+            assertThatThrownBy(() -> sender.send(
+                            WRITER,
+                            field.equals("subject") ? null : "Subject",
+                            field.equals("text") ? null : "Text",
+                            field.equals("html") ? null : "<p>HTML</p>"))
+                    .isInstanceOf(NullPointerException.class)
+                    .isNotInstanceOf(DeliveryException.class)
+                    .hasMessage(field);
+            verifyNoInteractions(mail);
+        }
+    }
+
+    @Test
     void replacesSubjectLineBreaks_AC_001_1_AC_001_2() throws Exception {
         when(mail.createMimeMessage()).thenReturn(new JavaMailSenderImpl().createMimeMessage());
         sender.send(WRITER, "Arbitrary\r\nsubject\rwith\nbreaks", "Text", "<p>HTML</p>");

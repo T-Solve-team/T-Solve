@@ -43,8 +43,8 @@ public final class ReviewEmailRenderer {
     public String html(ReviewEmail email) {
         String selected = template.replaceAll(
                         "(?s)\\{\\{#button}}(.*?)\\{\\{/button}}", hasText(email.ticketUrl()) ? "$1" : "")
-                .replaceAll(
-                        "(?s)\\{\\{#workspace}}(.*?)\\{\\{/workspace}}", hasText(email.workspaceName()) ? "$1" : "");
+                .replaceAll("(?s)\\{\\{#workspace}}(.*?)\\{\\{/workspace}}", hasText(email.workspaceName()) ? "$1" : "")
+                .replaceAll("(?s)\\{\\{#reviewer}}(.*?)\\{\\{/reviewer}}", hasText(email.reviewerName()) ? "$1" : "");
         Map<String, String> values = values(email);
         Matcher matcher = PLACEHOLDER.matcher(selected);
         StringBuilder result = new StringBuilder();
@@ -62,7 +62,7 @@ public final class ReviewEmailRenderer {
 
     public String plain(ReviewEmail email) {
         var values = values(email);
-        return "T-Solve\n\n%s\n%s\n%s %s\n\n%s%s\n%s\nReviewed by %s · %s\n\n%s\n%s\n\n%s%sThis is an automated message — please do not reply."
+        return "T-Solve\n\n%s\n%s\n%s %s\n\n%s%s\n%s\n%s%s\n\n%s\n%s\n\n%s%sThis is an automated message — please do not reply."
                 .formatted(
                         values.get("badge"),
                         values.get("heading"),
@@ -71,7 +71,7 @@ public final class ReviewEmailRenderer {
                         values.get("ticketKey"),
                         values.get("projectSuffix"),
                         values.get("ticketTitle"),
-                        values.get("reviewerName"),
+                        hasText(email.reviewerName()) ? "Reviewed by " + values.get("reviewerName") + " · " : "",
                         values.get("decidedAt"),
                         values.get("feedbackHeading"),
                         values.get("feedback"),
