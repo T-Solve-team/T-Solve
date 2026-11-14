@@ -1,4 +1,4 @@
-# Task 4: Shared email outbox and dispatcher
+# Task 5: Shared email outbox and dispatcher
 
 **Module:** worker
 **Assignee:** Phạm Tùng Dương (implementation by Codex, review by Claude)

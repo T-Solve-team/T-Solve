@@ -20,6 +20,9 @@ paths:
   - backend/src/main/java/vn/tsolve/ticket/service/impl/ReviewNotificationServiceImpl.java
   - backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotification*.java
   - backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotification*.java
+  - backend/src/main/java/vn/tsolve/worker/client/ReviewEmail*.java
+  - backend/src/test/java/vn/tsolve/worker/client/ReviewEmailRendererTest.java
+  - backend/src/main/resources/mail/review-notification.html
   - backend/src/main/java/vn/tsolve/ticket/entity/Ticket.java
   - backend/src/main/java/vn/tsolve/ticket/dto/TicketReviewView.java
   - backend/src/main/java/vn/tsolve/ticket/repository/TicketRepository.java

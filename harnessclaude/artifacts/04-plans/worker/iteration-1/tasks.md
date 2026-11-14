@@ -1,7 +1,7 @@
 ---
 module: worker
 date: 2026-11-07
-total_tasks: 4
+total_tasks: 5
 owner: Dev
 ---
 
@@ -57,7 +57,16 @@ Spec: artifacts/03-modules/worker/spec.md
 **Dependencies:** worker STORY-002 (completed).
 **Verification:** AC-003.1 and AC-003.2 tests; `mvn verify`; `sdd.ts trace worker STORY-003`.
 
-## Task 4: Shared email outbox and dispatcher (KAN-162)
+## Task 4: Multipart HTML review email sender (KAN-333)
+
+**Story:** STORY-001
+**Feature:** review-email-html-sender
+**Description:** Implement the reworded AC-001.1 and AC-001.2. `ReviewNotificationSender.send(recipient, subject, text, html)` checks for a single mailbox, sends one `MimeMessage` with the given plain-text part and HTML part from "T-Solve <TSOLVE_SMTP_FROM>", and wraps failures in `DeliveryException`. It holds no review content: `ReviewEmailRenderer` (ticket-review Task 19) renders the subject and both bodies, and the job handler calls the renderer and then the sender. The `Decision` enum lives with `ReviewEmail`, not in the sender, so the KAN-162 email outbox can rename and reuse the sender. AC-001.3 to AC-001.7 do not change.
+**Files:** `backend/src/main/java/vn/tsolve/worker/client/{ReviewNotificationSender,ReviewEmailRenderer,ReviewEmail}.java`, `backend/src/main/resources/mail/review-notification.html`, `.env.example`; tests `backend/src/test/java/vn/tsolve/worker/client/{ReviewNotificationSenderTest,ReviewNotificationSenderIT,ReviewEmailRendererTest}.java`.
+**Dependencies:** Task 1.
+**Verification:** AC-001.1 and AC-001.2 tests check that both parts are present and that the From display name is set; `mvn verify`; `sdd.ts trace worker STORY-001`.
+
+## Task 5: Shared email outbox and dispatcher (KAN-162)
 
 **Story:** STORY-004, STORY-001
 **Feature:** email-outbox
@@ -67,5 +76,5 @@ Spec: artifacts/03-modules/worker/spec.md
 - Rename: `worker/client/ReviewNotificationSender.java` → `SmtpEmailSender.java`, and its two tests.
 - Create: `worker/config/{EmailOutboxConfiguration,EmailOutboxProperties}.java`, `worker/dto/{OutboundEmail,EmailOutboxDispatchRequest}.java`, `worker/repository/EmailOutboxRepository.java`, `worker/service/EmailOutboxService.java`, `worker/service/impl/{EmailOutboxServiceImpl,EmailOutboxDispatchHandler,EmailOutboxRegistration}.java`, `worker/util/EmailAddressRules.java`, `backend/src/main/resources/db/jobs-changelog/{db.changelog-master,001-email-outbox}.yaml`.
 - Test: `worker/service/impl/{EmailOutboxServiceImplTest,EmailOutboxDispatchHandlerTest}.java`, `worker/EmailOutboxIT.java`, update `worker/config/WorkerConfigurationTest.java`.
-**Dependencies:** STORY-002 runtime (completed). ticket-review Task 19 builds on it in the same branch.
+**Dependencies:** STORY-002 runtime (completed). ticket-review Task 20 builds on it in the same branch.
 **Verification:** tests named with each AC id; PostgreSQL Jobs DB + Mailpit IT; `mvn verify` (tests + spotless:check); `sdd.ts trace worker STORY-001` and `STORY-004`.

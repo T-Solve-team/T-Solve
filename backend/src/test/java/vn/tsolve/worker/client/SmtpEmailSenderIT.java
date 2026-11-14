@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import jakarta.mail.Multipart;
 import jakarta.mail.Part;
+import jakarta.mail.internet.InternetAddress;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import vn.tsolve.worker.WorkerMailpit;
 import vn.tsolve.worker.dto.OutboundEmail;
 
@@ -19,7 +22,8 @@ class SmtpEmailSenderIT {
         mailpit.sender().send(new OutboundEmail("writer@example.test", "Thông báo", body, null));
         var message = mailpit.onlyMessage();
         assertThat(message.getSubject()).isEqualTo("Thông báo");
-        assertThat(message.getFrom()[0].toString()).isEqualTo("review@example.test");
+        assertThat(((InternetAddress) message.getFrom()[0]).getAddress()).isEqualTo("review@example.test");
+        assertThat(((InternetAddress) message.getFrom()[0]).getPersonal()).isEqualTo("T-Solve");
         assertThat(message.getAllRecipients()).hasSize(1);
         assertThat(message.getAllRecipients()[0].toString()).isEqualTo("writer@example.test");
         assertThat(message.isMimeType("text/plain")).isTrue();
@@ -27,16 +31,22 @@ class SmtpEmailSenderIT {
         assertThat(message.getContentType()).containsIgnoringCase("charset=UTF-8");
     }
 
-    @Test
-    @DisplayName("AC-001.2 sends unchanged Unicode plain text and HTML as multipart alternatives")
-    void sendsAlternatives() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"First arbitrary subject", "Second arbitrary subject"})
+    @DisplayName("AC-001.1 AC-001.2 sends unchanged independent Unicode plain text and HTML alternatives")
+    void sendsAlternatives(String subject) throws Exception {
         var mailpit = WorkerMailpit.instance();
         mailpit.clear();
         String text = "Thêm bước tái hiện — 日本語";
-        String html = "<p>Thêm bước tái hiện — 日本語</p>";
-        mailpit.sender().send(new OutboundEmail("writer@example.test", "Thông báo", text, html));
+        String html = "<p>Independent HTML &amp; " + subject + "</p>";
+        mailpit.sender().send(new OutboundEmail("writer@example.test", subject, text, html));
         var message = mailpit.onlyMessage();
-        assertThat(message.getSubject()).isEqualTo("Thông báo");
+        assertThat(message.getSubject()).isEqualTo(subject);
+        assertThat(((InternetAddress) message.getFrom()[0]).getAddress()).isEqualTo("review@example.test");
+        assertThat(((InternetAddress) message.getFrom()[0]).getPersonal()).isEqualTo("T-Solve");
+        assertThat(message.getAllRecipients()).hasSize(1);
+        assertThat(((InternetAddress) message.getAllRecipients()[0]).getAddress())
+                .isEqualTo("writer@example.test");
         Multipart alternative = alternatives(message);
         assertThat(alternative).isNotNull();
         assertThat(alternative.getCount()).isEqualTo(2);

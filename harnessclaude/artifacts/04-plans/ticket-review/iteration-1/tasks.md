@@ -1,7 +1,7 @@
 ---
 module: ticket-review
 date: 2026-11-01
-total_tasks: 19
+total_tasks: 20
 owner: Dev
 ---
 
@@ -183,11 +183,20 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Dependencies:** Task 16 (Expired list), Task 17 (changeset 025 and JOB-02).
 **Verification:** `ExpiredTicketsApiIT` tests named AC-013.3/AC-013.4 for a CHANGES_REQUESTED ticket with stored columns, a null-columns ticket and the expiredAt sort across both; `mvn verify`; `generate:api` with no diff after regeneration; `sdd.ts trace ticket-review STORY-013`.
 
-## Task 19: Review email through the worker outbox (KAN-162)
+## Task 19: Branded HTML review email (STORY-010 change)
+
+**Story:** STORY-010
+**Feature:** review-email-html
+**Description:** Implement the reworded AC-010.2 and the new AC-010.7–010.9, as described in the master's "STORY-010 change: branded HTML email" section. Add the classpath template and `ReviewEmailRenderer` (escaping, line breaks, Vietnam time). Change `ReviewNotificationSender` to send a multipart HTML and plain-text message from "T-Solve <TSOLVE_SMTP_FROM>", with the new subjects. Widen `ReviewNotification` and `findWriterNotification` (ticket title, Project, reviewer, writer name, decision time, ticket id). In the job handler, build the Ticket Detail link from the bound Workspace's site host, and send without the button when there is no host. The markup follows `04-plans/ticket-review/review-email-mockup.html`. No new dependency, no schema change. Write the tests first.
+**Files:** `backend/src/main/resources/mail/review-notification.html`; `backend/src/main/java/vn/tsolve/worker/client/{ReviewNotificationSender,ReviewEmailRenderer,ReviewEmail}.java`; `worker/service/impl/ReviewNotificationJobHandler.java`; `ticket/dto/ReviewNotification.java`; `ticket/repository/ReviewDecisionRecordRepository.java`; `ticket/service/impl/ReviewNotificationServiceImpl.java`; an identity `service/` interface and impl for the Workspace site host, if none exists; `.env.example` (comment: the sender display name is fixed to T-Solve). Tests: `worker/client/ReviewEmailRendererTest.java`, `ReviewNotificationSenderTest.java`, `ReviewNotificationSenderIT.java` (multipart parts and From name), `worker/service/impl/ReviewNotificationJobHandlerTest.java`, plus the notification query IT.
+**Dependencies:** Task 11 (review-email-notification), KAN-162 SMTP sender.
+**Verification:** Tests named AC-010.2, AC-010.7, AC-010.8 and AC-010.9 cover: both decisions; a missing writer name and a missing reviewer name; `<script>` in the title and the reason coming out escaped; line breaks kept; a line break in the key replaced in the subject; no link when there is no host; and the From display name. `mvn verify` passes (tests and Spotless). `sdd.ts trace ticket-review STORY-010` passes.
+
+## Task 20: Review email through the worker outbox (KAN-162)
 
 **Story:** STORY-010
 **Feature:** review-email-outbox
-**Description:** Implement the changed AC-010.1–010.6 (master design "KAN-162 change"). `ReviewNotificationEnqueuer` composes each Reject / Request Changes email after commit with a new `ReviewNotificationComposer` and queues it through `EmailOutboxService`; delete `ReviewNotificationJobHandler`. Rewrite the existing STORY-010 tests against the outbox. Test first.
-**Files:** `backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java`, `ReviewNotificationComposer.java` (create), `ReviewNotificationJobHandler.java` (delete); tests `backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotification*`.
-**Dependencies:** worker Task 4 (`email-outbox`), same branch `feat/KAN-162-worker-email-outbox`.
-**Verification:** tests named AC-010.1–010.6, including a PostgreSQL test that a row is stored only after commit, never after rollback, and none for Approve or a ticket with no writer; `mvn verify`; `sdd.ts trace ticket-review STORY-010`.
+**Description:** Implement the merged AC-010.1–010.9 (master design "KAN-162 change"). `ReviewNotificationEnqueuer` builds the KAN-333 `ReviewEmail` for each Reject / Request Changes decision after commit (data and site-host link as in the job handler), renders it with `ReviewEmailRenderer` into one `OutboundEmail` (subject, text, HTML) and queues it through `EmailOutboxService`; delete `ReviewNotificationJobHandler`. Rewrite the existing STORY-010 tests against the outbox. Test first.
+**Files:** `backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java`, `ReviewNotificationJobHandler.java` (delete); tests `backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotification*`.
+**Dependencies:** worker Task 5 (`email-outbox`), same branch `feat/KAN-162-worker-email-outbox`.
+**Verification:** tests named AC-010.1–010.9, including a PostgreSQL test that a row is stored only after commit, never after rollback, and none for Approve or a ticket with no writer; `mvn verify`; `sdd.ts trace ticket-review STORY-010`.

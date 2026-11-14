@@ -405,6 +405,7 @@
         "review-notification-smtp": "passing",
         "tenant-jobs": "passing",
         "active-workspaces": "passing",
+        "review-email-html-sender": "passing",
         "email-outbox": "evaluating"
       },
       "lastUpdated": "2026-11-14T09:00:15.453Z",
@@ -486,15 +487,16 @@
         "review-send-back-api": "passing",
         "review-expiry-job": "passing",
         "review-expired-stored-columns": "passing",
+        "review-email-html": "passing",
         "review-email-outbox": "pending"
       },
-      "lastUpdated": "2026-11-14T08:04:22.480Z",
+      "lastUpdated": "2026-11-14T08:47:24.018Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "53eb36fe9e99b6243ab77c0709c36579831f5794"
+        "default": "98ec9c7382a17815f6f001e3a6432225c4bc83b9"
       }
     }
   },

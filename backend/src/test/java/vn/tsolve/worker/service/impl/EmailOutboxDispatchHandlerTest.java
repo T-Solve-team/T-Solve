@@ -120,8 +120,8 @@ class EmailOutboxDispatchHandlerTest {
     }
 
     @Test
-    @DisplayName("AC-004.7 unexpected send failure only retries its own row (BUG-212)")
-    void continuesAfterUnexpectedSendFailure_BUG_212() {
+    @DisplayName("AC-004.7 unexpected send failure only retries its own row (BUG-215)")
+    void continuesAfterUnexpectedSendFailure_BUG_215() {
         Row first = row(0, NOW.minusSeconds(2), null);
         Row second = new Row(
                 UUID.randomUUID(),
@@ -219,7 +219,7 @@ class EmailOutboxDispatchHandlerTest {
 
     @Test
     @DisplayName("AC-004.11 transport and database errors cannot expose message content")
-    void sanitizesErrors_BUG_213(CapturedOutput output) {
+    void sanitizesErrors_BUG_216(CapturedOutput output) {
         Row row = row(0, NOW, null);
         due(row);
         doThrow(new IllegalStateException("private@example.test private subject private body"))

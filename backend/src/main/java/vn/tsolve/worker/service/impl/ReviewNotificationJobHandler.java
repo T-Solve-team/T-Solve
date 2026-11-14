@@ -4,11 +4,16 @@ import java.util.UUID;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import vn.tsolve.identity.service.WorkspaceSiteService;
 import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.service.ReviewNotificationService;
+import vn.tsolve.worker.client.ReviewEmail;
+import vn.tsolve.worker.client.ReviewEmail.Decision;
+import vn.tsolve.worker.client.ReviewEmailRenderer;
 import vn.tsolve.worker.client.SmtpEmailSender;
 import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.service.TenantJobHandler;
+import vn.tsolve.worker.service.WorkerTenantService;
 
 /**
  * Sends one writer email per review decision id. Registered wherever jobs are enabled, because the API process
@@ -22,11 +27,19 @@ public class ReviewNotificationJobHandler implements TenantJobHandler {
 
     private final ReviewNotificationService notifications;
     private final ObjectProvider<SmtpEmailSender> senders;
+    private final WorkerTenantService tenants;
+    private final WorkspaceSiteService sites;
+    private final ReviewEmailRenderer renderer = new ReviewEmailRenderer();
 
     public ReviewNotificationJobHandler(
-            ReviewNotificationService notifications, ObjectProvider<SmtpEmailSender> senders) {
+            ReviewNotificationService notifications,
+            ObjectProvider<SmtpEmailSender> senders,
+            WorkerTenantService tenants,
+            WorkspaceSiteService sites) {
         this.notifications = notifications;
         this.senders = senders;
+        this.tenants = tenants;
+        this.sites = sites;
     }
 
     @Override
@@ -44,15 +57,29 @@ public class ReviewNotificationJobHandler implements TenantJobHandler {
         if (sender == null) {
             throw new IllegalStateException("Review email sender is not configured in this process");
         }
-        boolean rejected = notification.kind() == ReviewNotification.Kind.REJECTED;
+        Decision decision =
+                switch (notification.kind()) {
+                    case REJECTED -> Decision.REJECT;
+                    case CHANGES_REQUESTED -> Decision.REQUEST_CHANGES;
+                };
+        // A DeliveryException fails the job, so JobRunr retries it; the decision is already committed.
+        String host = tenants.currentWorkspaceId()
+                .flatMap(sites::siteHost)
+                .filter(value -> !value.isBlank())
+                .orElse(null);
+        String link = host == null ? null : "https://" + host + "/tickets/" + notification.ticketId();
+        var email = new ReviewEmail(
+                decision,
+                notification.ticketKey(),
+                notification.ticketTitle(),
+                notification.projectName(),
+                notification.reviewerName(),
+                notification.writerName(),
+                notification.decidedAt(),
+                notification.feedback(),
+                link,
+                host);
         sender.send(new OutboundEmail(
-                notification.recipient(),
-                rejected ? "Ticket rejected" : "Changes requested for your ticket",
-                "Ticket %s\n\n%s\n%s"
-                        .formatted(
-                                notification.ticketKey(),
-                                rejected ? "Rejection reason" : "Review comment",
-                                notification.feedback()),
-                null));
+                notification.recipient(), renderer.subject(email), renderer.plain(email), renderer.html(email)));
     }
 }

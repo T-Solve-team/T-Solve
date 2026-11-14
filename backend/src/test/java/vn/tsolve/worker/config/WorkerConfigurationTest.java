@@ -151,7 +151,7 @@ class WorkerConfigurationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"5m", "5m,15m,30m"})
-    void rejectsBackoffWithoutExactlyTwoWaits_BUG_214(String backoff) {
+    void rejectsBackoffWithoutExactlyTwoWaits_BUG_217(String backoff) {
         new ApplicationContextRunner()
                 .withUserConfiguration(OutboxPropertiesConfiguration.class)
                 .withPropertyValues("tsolve.worker.enabled=true", "tsolve.worker.email.backoff=" + backoff)
@@ -162,7 +162,7 @@ class WorkerConfigurationTest {
     }
 
     @Test
-    void rejectsNullOrEmptyBackoff_BUG_214() {
+    void rejectsNullOrEmptyBackoff_BUG_217() {
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             var validator = factory.getValidator();
             for (List<Duration> backoff : java.util.Arrays.<List<Duration>>asList(null, List.of())) {

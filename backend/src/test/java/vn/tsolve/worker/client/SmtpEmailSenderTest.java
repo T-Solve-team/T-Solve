@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import jakarta.mail.Session;
+import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import java.util.Properties;
 import org.junit.jupiter.api.DisplayName;
@@ -51,6 +52,8 @@ class SmtpEmailSenderTest {
         assertThat(message.isMimeType("text/plain")).isTrue();
         assertThat(message.getAllRecipients()).hasSize(1);
         assertThat(message.getAllRecipients()[0].toString()).isEqualTo(WRITER);
+        assertThat(((InternetAddress) message.getFrom()[0]).getPersonal()).isEqualTo("T-Solve");
+        assertThat(((InternetAddress) message.getFrom()[0]).getAddress()).isEqualTo(FROM);
         verify(mail).send(message);
     }
 
@@ -67,6 +70,8 @@ class SmtpEmailSenderTest {
         assertThat(alternative.getCount()).isEqualTo(2);
         assertThat(alternative.getBodyPart(0).getContent()).isEqualTo("Thiếu bằng chứng");
         assertThat(alternative.getBodyPart(1).getContent()).isEqualTo("<p>Thiếu bằng chứng</p>");
+        assertThat(((InternetAddress) message.getFrom()[0]).getPersonal()).isEqualTo("T-Solve");
+        assertThat(((InternetAddress) message.getFrom()[0]).getAddress()).isEqualTo(FROM);
         verify(mail).send(message);
     }
 
@@ -123,6 +128,31 @@ class SmtpEmailSenderTest {
                 .hasNotFailed()
                 .doesNotHaveBean(JavaMailSender.class)
                 .doesNotHaveBean(SmtpEmailSender.class));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.NullSource
+    @ValueSource(strings = "<p>HTML</p>")
+    @DisplayName("AC-001.1 AC-001.2 replaces every subject line break for plain text and HTML")
+    void replacesSubjectLineBreaks(String html) throws Exception {
+        var message = message();
+        sender.send(new OutboundEmail(WRITER, "Arbitrary\r\nsubject\rwith\nbreaks", "Text", html));
+        assertThat(message.getSubject()).isEqualTo("Arbitrary  subject with breaks");
+        verify(mail).send(message);
+    }
+
+    @Test
+    @DisplayName("AC-001.1 rejects null subject and plain text before delivery")
+    void rejectsNullRequiredContentBeforeDelivery() {
+        assertThatThrownBy(() -> sender.send(new OutboundEmail(WRITER, null, "Text", null)))
+                .isInstanceOf(InvalidOutboundEmailException.class)
+                .hasMessage("Invalid outbound email")
+                .hasNoCause();
+        assertThatThrownBy(() -> sender.send(new OutboundEmail(WRITER, "Subject", null, null)))
+                .isInstanceOf(InvalidOutboundEmailException.class)
+                .hasMessage("Invalid outbound email")
+                .hasNoCause();
+        verifyNoInteractions(mail);
     }
 
     private MimeMessage message() {

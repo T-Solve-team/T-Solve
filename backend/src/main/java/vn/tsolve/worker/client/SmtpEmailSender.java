@@ -1,6 +1,8 @@
 package vn.tsolve.worker.client;
 
 import jakarta.mail.MessagingException;
+import jakarta.mail.internet.InternetAddress;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -25,11 +27,19 @@ public class SmtpEmailSender {
     }
 
     public void send(OutboundEmail outbound) {
+        // Queue validation stays strict; direct delivery normalizes subject header line breaks.
+        if (outbound != null && outbound.subject() != null) {
+            outbound = new OutboundEmail(
+                    outbound.recipient(),
+                    outbound.subject().replace('\r', ' ').replace('\n', ' '),
+                    outbound.bodyText(),
+                    outbound.bodyHtml());
+        }
         OutboundEmail email = EmailAddressRules.validate(outbound);
         try {
             var message = mail.createMimeMessage();
             var helper = new MimeMessageHelper(message, email.bodyHtml() != null, StandardCharsets.UTF_8.name());
-            helper.setFrom(from);
+            helper.setFrom(new InternetAddress(from, "T-Solve"));
             helper.setTo(email.recipient());
             helper.setSubject(email.subject());
             if (email.bodyHtml() == null) {
@@ -38,7 +48,7 @@ public class SmtpEmailSender {
                 helper.setText(email.bodyText(), email.bodyHtml());
             }
             mail.send(message);
-        } catch (MailException | MessagingException ignored) {
+        } catch (MailException | MessagingException | UnsupportedEncodingException ignored) {
             // Neither the cause nor transport diagnostics are safe to expose.
             throw new DeliveryException();
         }
