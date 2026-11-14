@@ -20,7 +20,9 @@ import type {
   WikiDocumentRef,
   WikiDocumentSummary,
   WikiFolder,
+  WikiRestoreResult,
   WikiSpace,
+  WikiTrashItem,
   WikiUploadPreview,
 } from '../model';
 
@@ -150,6 +152,27 @@ export const getGetWikiDocumentResponseMock = (): WikiDocumentDetail => ({
     fileSize: faker.number.int(),
     canDelete: faker.datatype.boolean(),
   },
+});
+
+export const getListWikiTrashResponseMock = (): WikiTrashItem[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    documentId: faker.string.uuid(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    folderName: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    owner: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    deletedBy: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    deletedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  }));
+
+export const getRestoreWikiDocumentResponseMock = (
+  overrideResponse: Partial<Extract<WikiRestoreResult, object>> = {},
+): WikiRestoreResult => ({
+  title: faker.string.alpha({ length: { min: 10, max: 200 } }),
+  renamed: faker.datatype.boolean(),
+  ...overrideResponse,
 });
 
 export const getListWikiSpacesMockHandler = (
@@ -417,6 +440,25 @@ export const getSearchWikiDocumentsMockHandler = (
   );
 };
 
+export const getTrashWikiDocumentMockHandler = (
+  overrideResponse?:
+    | void
+    | ((info: Parameters<HttpResponseResolver<{ documentId: string }>>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete<{ documentId: string }>(
+    '*/api/v1/wiki/documents/:documentId',
+    async (info: Parameters<HttpResponseResolver<{ documentId: string }>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getGetWikiDocumentMockHandler = (
   overrideResponse?:
     | WikiDocumentDetail
@@ -440,6 +482,73 @@ export const getGetWikiDocumentMockHandler = (
     options,
   );
 };
+
+export const getListWikiTrashMockHandler = (
+  overrideResponse?:
+    | WikiTrashItem[]
+    | ((
+        info: Parameters<HttpResponseResolver<{ spaceId: string }>>[0],
+      ) => Promise<WikiTrashItem[]> | WikiTrashItem[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ spaceId: string }>(
+    '*/api/v1/wiki/spaces/:spaceId/trash',
+    async (info: Parameters<HttpResponseResolver<{ spaceId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListWikiTrashResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRestoreWikiDocumentMockHandler = (
+  overrideResponse?:
+    | WikiRestoreResult
+    | ((
+        info: Parameters<HttpResponseResolver<{ documentId: string }>>[0],
+      ) => Promise<WikiRestoreResult> | WikiRestoreResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ documentId: string }>(
+    '*/api/v1/wiki/documents/:documentId/restore',
+    async (info: Parameters<HttpResponseResolver<{ documentId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRestoreWikiDocumentResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteWikiDocumentPermanentlyMockHandler = (
+  overrideResponse?:
+    | void
+    | ((info: Parameters<HttpResponseResolver<{ documentId: string }>>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete<{ documentId: string }>(
+    '*/api/v1/wiki/documents/:documentId/permanent',
+    async (info: Parameters<HttpResponseResolver<{ documentId: string }>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
 export const getWikiMock = () => [
   getListWikiSpacesMockHandler(),
   getListCompanyWideDocumentsMockHandler(),
@@ -452,5 +561,9 @@ export const getWikiMock = () => [
   getExtractWikiUploadsMockHandler(),
   getDownloadWikiDocumentFileMockHandler(),
   getSearchWikiDocumentsMockHandler(),
+  getTrashWikiDocumentMockHandler(),
   getGetWikiDocumentMockHandler(),
+  getListWikiTrashMockHandler(),
+  getRestoreWikiDocumentMockHandler(),
+  getDeleteWikiDocumentPermanentlyMockHandler(),
 ];

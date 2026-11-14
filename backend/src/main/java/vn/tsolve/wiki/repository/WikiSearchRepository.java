@@ -14,6 +14,7 @@ import vn.tsolve.wiki.dto.WikiDocumentDetail;
 import vn.tsolve.wiki.dto.WikiDocumentSummary;
 import vn.tsolve.wiki.dto.WikiFolder;
 import vn.tsolve.wiki.dto.WikiSpace;
+import vn.tsolve.wiki.dto.WikiTrashItem;
 import vn.tsolve.wiki.repository.AccessRepository.AccessSql;
 
 /** Read projections join identity names without loading or exposing entities from another module (W10). */
@@ -46,6 +47,37 @@ public class WikiSearchRepository {
                 (row, index) -> new WikiSpace(
                         row.getObject("public_id", UUID.class), row.getString("name"),
                         row.getString("department_name"), row.getString("access_level")));
+    }
+
+    public Optional<UUID> findDocumentSpace(UUID documentId) {
+        return jdbc
+                .query(
+                        "SELECT s.public_id FROM wiki_document w JOIN space s ON s.space_id = w.space_id "
+                                + "WHERE w.wiki_document_id = :documentId",
+                        Map.of("documentId", documentId),
+                        (row, index) -> row.getObject("public_id", UUID.class))
+                .stream()
+                .findFirst();
+    }
+
+    public List<WikiTrashItem> listTrash(long spaceId) {
+        return jdbc.query(
+                "SELECT w.wiki_document_id, w.title, f.name AS folder_name, o.full_name AS owner, "
+                        + "actor.full_name AS deleted_by, w.deleted_at " + DOCUMENT_JOINS
+                        + " JOIN app_user actor ON actor.id = w.deleted_by "
+                        + "WHERE w.space_id = :spaceId AND w.status = 'DELETED' ORDER BY w.deleted_at DESC, w.wiki_document_id",
+                Map.of("spaceId", spaceId),
+                (row, index) -> new WikiTrashItem(
+                        row.getObject("wiki_document_id", UUID.class),
+                        row.getString("title"),
+                        row.getString("folder_name"),
+                        row.getString("owner"),
+                        row.getString("deleted_by"),
+                        row.getTimestamp("deleted_at").toInstant()));
+    }
+
+    public Optional<WikiDocumentDetail> findTrashedDocument(UUID userId, UUID documentId) {
+        return findDocument(userId, documentId, "w.status = 'DELETED' AND " + AccessSql.MANAGES_SPACE, "false");
     }
 
     public Optional<SpaceAccess> findSpace(UUID userId, UUID spaceId) {
@@ -99,11 +131,16 @@ public class WikiSearchRepository {
     }
 
     public Optional<WikiDocumentDetail> findDocument(UUID userId, UUID documentId) {
+        return findDocument(userId, documentId, AccessSql.VIEWABLE_DOCUMENT, "(" + AccessSql.MANAGES_SPACE + ")");
+    }
+
+    private Optional<WikiDocumentDetail> findDocument(
+            UUID userId, UUID documentId, String predicate, String canDelete) {
         return jdbc
                 .query(
-                        "SELECT " + SUMMARY_COLUMNS + ", w.content, w.file_name, w.file_size, ("
-                                + AccessSql.MANAGES_SPACE + ") AS can_delete " + DOCUMENT_JOINS
-                                + " WHERE w.wiki_document_id = :documentId AND " + AccessSql.VIEWABLE_DOCUMENT,
+                        "SELECT " + SUMMARY_COLUMNS + ", w.content, w.file_name, w.file_size, "
+                                + canDelete + " AS can_delete " + DOCUMENT_JOINS
+                                + " WHERE w.wiki_document_id = :documentId AND " + predicate,
                         Map.of("userId", userId, "documentId", documentId),
                         (row, index) -> {
                             var item = summary(row);
