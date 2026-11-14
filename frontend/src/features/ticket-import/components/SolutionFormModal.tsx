@@ -135,7 +135,8 @@ function RowFields({ previewId, rowNo }: { previewId: number; rowNo: number }) {
   );
 }
 
-function SolutionFields({
+/** The Solution sections as fields, in template order — also on the Manual entry tab. */
+export function SolutionFields({
   values,
 }: {
   values?: Pick<ImportPreviewRowResponse, keyof SolutionValues>;
