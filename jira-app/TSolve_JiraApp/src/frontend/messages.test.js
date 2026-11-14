@@ -26,6 +26,12 @@ describe('messages', () => {
     );
   });
 
+  it('AC-008.9 shows the Jira App text REJECTED with the manager and the reason', () => {
+    expect(message('REJECTED', { manager_name: 'Alice Acme', reason: 'Wrong root cause' })).toBe(
+      'Rejected by Alice Acme: "Wrong root cause".',
+    );
+  });
+
   it('shows MSG06 for a code the app does not know', () => {
     expect(message('MSG999')).toBe(message('MSG06'));
   });

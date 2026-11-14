@@ -1,2 +1,4 @@
 * text=auto eol=lf
 *.bat text eol=crlf
+# The harness event log is append-only: keep the lines of both sides on a merge (KAN-338).
+harnessclaude/events/events.jsonl merge=union

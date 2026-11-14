@@ -35,6 +35,15 @@ export const getGetReviewTicketDetailResponseMock = (
     projectId: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
+  department: faker.helpers.arrayElement([
+    { id: faker.string.uuid(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+    null,
+  ]),
+  resolvedDate: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  sourceLink: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   source: faker.helpers.arrayElement(Object.values(TicketSource)),
   status: faker.helpers.arrayElement(Object.values(TicketStatus)),
   authorId: faker.helpers.arrayElement([faker.string.uuid(), null]),

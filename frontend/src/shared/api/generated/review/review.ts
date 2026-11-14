@@ -66,7 +66,7 @@ export const getGetReviewTicketDetailUrl = (ticketId: string) => {
 };
 
 /**
- * @summary Frontend proposal — read-only Ticket Detail with Workspace and unpublished-content access checks.
+ * @summary Read Ticket Detail within the caller's Department or writer and Project Manager access.
  */
 export const getReviewTicketDetail = async (
   ticketId: string,
@@ -176,7 +176,7 @@ export function useGetReviewTicketDetail<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Frontend proposal — read-only Ticket Detail with Workspace and unpublished-content access checks.
+ * @summary Read Ticket Detail within the caller's Department or writer and Project Manager access.
  */
 
 export function useGetReviewTicketDetail<

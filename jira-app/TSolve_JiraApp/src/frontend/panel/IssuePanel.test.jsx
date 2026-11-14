@@ -95,6 +95,27 @@ describe('IssuePanel', () => {
     expect(screen.getAllByText(/Changes requested by Le Minh: "Add steps"/)).toHaveLength(2);
   });
 
+  it('AC-008.9 shows who rejected the ticket and why, with no button', async () => {
+    getReviewFeedback.mockResolvedValue({
+      code: 'REJECTED',
+      params: { manager_name: 'Le Minh', reason: 'Wrong root cause' },
+    });
+    await show({ ...PANEL, ticketStatus: 'REJECTED', mayOpenForm: false, mayResubmit: false });
+
+    expect(await screen.findByText('Rejected by Le Minh: "Wrong root cause".')).toBeInTheDocument();
+    expect(getReviewFeedback).toHaveBeenCalledWith('ITSUP-12');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('AC-008.10 shows that the Solution is approved and published, with no button', async () => {
+    await show({ ...PANEL, ticketStatus: 'PUBLISHED', mayOpenForm: false, mayResubmit: false });
+
+    expect(await screen.findByText(PANEL_LABELS.published)).toBeInTheDocument();
+    expect(PANEL_LABELS.published).toBe('Solution approved and published.');
+    expect(getReviewFeedback).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('AC-012.3 offers no Edit and resubmit when the viewer may not resubmit', async () => {
     getReviewFeedback.mockResolvedValue(null);
     await show({ ...PANEL, ticketStatus: 'CHANGES_REQUESTED', mayOpenForm: false, mayResubmit: false });

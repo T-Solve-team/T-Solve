@@ -2,7 +2,6 @@ package vn.tsolve.worker.config;
 
 import java.time.Clock;
 import liquibase.integration.spring.SpringLiquibase;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.RootBeanDefinition;
@@ -37,19 +36,14 @@ public class EmailOutboxConfiguration {
     }
 
     @Bean
-    Clock workerClock() {
-        return Clock.systemUTC();
-    }
-
-    @Bean
     @DependsOn("jobsLiquibase")
     EmailOutboxRepository emailOutboxRepository(JobRunrRuntime runtime) {
         return new EmailOutboxRepository(runtime.jobsDataSource());
     }
 
     @Bean
-    EmailOutboxService emailOutboxService(
-            EmailOutboxRepository repository, WorkerTenantService tenants, @Qualifier("workerClock") Clock clock) {
-        return new EmailOutboxServiceImpl(repository, tenants, clock);
+    EmailOutboxService emailOutboxService(EmailOutboxRepository repository, WorkerTenantService tenants) {
+        // No Clock bean here: a second one makes every unqualified Clock injection ambiguous (BUG-240).
+        return new EmailOutboxServiceImpl(repository, tenants, Clock.systemUTC());
     }
 }

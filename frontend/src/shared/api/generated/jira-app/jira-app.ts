@@ -64,8 +64,8 @@ export const getGetJiraReviewFeedbackUrl = (issueKey: string) => {
 };
 
 /**
- * Requires a verified Forge principal, registered Workspace, linked active Account and authorized issue. The Workspace is resolved only from the verified cloudId. Returns no feedback when the issue has no current Changes requested Solution Form owned by that Account in the verified Project.
- * @summary Read the latest change request for the verified writer of this issue (MSG64).
+ * Requires a verified Forge principal, registered Workspace, linked active Account and authorized issue. The Workspace is resolved only from the verified cloudId. Returns MSG64 for a Changes requested Solution Form ticket and REJECTED (ticket-review AC-009.13) for a Rejected one, owned by that Account in the verified Project; no feedback otherwise, or when the reviewer has no name.
+ * @summary Read the latest change request (MSG64) or Reject reason (REJECTED) for the verified writer of this issue.
  */
 export const getJiraReviewFeedback = async (
   issueKey: string,
@@ -175,7 +175,7 @@ export function useGetJiraReviewFeedback<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Read the latest change request for the verified writer of this issue (MSG64).
+ * @summary Read the latest change request (MSG64) or Reject reason (REJECTED) for the verified writer of this issue.
  */
 
 export function useGetJiraReviewFeedback<
