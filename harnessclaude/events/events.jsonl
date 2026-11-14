@@ -1371,6 +1371,35 @@
 {"ts":"2026-11-13T16:53:07.962Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":null,"to":"pending"}
 {"ts":"2026-11-13T16:53:08.294Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":null,"to":"pending"}
 {"ts":"2026-11-14T04:19:53.910Z","type":"spec-approved","module":"wiki","specHash":"75e10cbc9301985fbfd3cf1d5d09b0e79987563b15ed1b03d543a10b35727f2a"}
+{"ts":"2026-11-13T21:18:56.750Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-contract","from":null,"to":"pending"}
+{"ts":"2026-11-13T21:18:57.052Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-create","from":null,"to":"pending"}
+{"ts":"2026-11-13T21:18:57.342Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-drafts","from":null,"to":"pending"}
+{"ts":"2026-11-13T21:18:57.638Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":null,"to":"pending"}
+{"ts":"2026-11-13T21:19:18.068Z","type":"spec-approved","module":"ticket-repository","specHash":"0dc5471df359acf501a0e65be78bd01eb9bc569958b2ad2f0c20300610900277"}
+{"ts":"2026-11-13T21:21:25.880Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-contract","from":"pending","to":"in-progress"}
+{"ts":"2026-11-13T21:31:39.044Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"f12974cdb48f8ba9233ace4c1fc6d0ad2e4b6c24"}
+{"ts":"2026-11-13T21:31:39.332Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-contract","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-13T21:31:39.918Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-create","from":"pending","to":"in-progress"}
+{"ts":"2026-11-13T22:23:08.297Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":"pending","to":"in-progress"}
+{"ts":"2026-11-13T22:25:13.608Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"2bd4f2030775a723d3d8efefa65d49fcccbcb6ef"}
+{"ts":"2026-11-13T22:25:13.902Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-create","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-13T22:25:14.210Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-drafts","from":"pending","to":"in-progress"}
+{"ts":"2026-11-13T22:25:14.518Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-drafts","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-13T22:32:31.932Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"5e24ba61e8cbe2f8bc6156a8741b891e8e80faf3"}
+{"ts":"2026-11-13T22:32:32.284Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-contract","from":"evaluating","to":"passing"}
+{"ts":"2026-11-13T22:32:32.555Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-create","from":"evaluating","to":"passing"}
+{"ts":"2026-11-13T22:32:32.843Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-drafts","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T03:02:33.601Z","type":"spec-approved","module":"import-ticket-list","specHash":"8ff44b66546cf9e272878da4ad8a0d5eb1c458917aa88ff604c40151b7760a8b"}
+{"ts":"2026-11-14T03:02:59.571Z","type":"quick-opened","what":"AC-008.1 test: Manual entry tab enabled (KAN-133)","files":["frontend/src/features/ticket-import/pages/ImportTicketsPage.test.tsx"]}
+{"ts":"2026-11-14T04:20:26.201Z","type":"quick-closed","what":"AC-008.1 test: Manual entry tab enabled (KAN-133)","files":["frontend/src/features/ticket-import/pages/ImportTicketsPage.test.tsx"]}
+{"ts":"2026-11-14T04:21:03.249Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"1f040bed5d5924d01192992c9091330b9435bf92"}
+{"ts":"2026-11-14T04:21:03.523Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T04:28:47.457Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-14T05:40:18.301Z","type":"quick-opened","what":"Task 17 review fix: stale Manual Draft cache (AC-006.11), refetch error, unknown field error, unknown tab, mock 201","files":["frontend/src/features/ticket-import/components/ManualEntryForm.tsx","frontend/src/features/ticket-import/components/ManualEntryForm.test.tsx","frontend/src/features/ticket-import/pages/ImportTicketsPage.tsx","frontend/src/features/ticket-import/mocks/handlers.ts"]}
+{"ts":"2026-11-14T06:09:14.482Z","type":"quick-closed","what":"Task 17 review fix: stale Manual Draft cache (AC-006.11), refetch error, unknown field error, unknown tab, mock 201","files":["frontend/src/features/ticket-import/components/ManualEntryForm.tsx","frontend/src/features/ticket-import/components/ManualEntryForm.test.tsx","frontend/src/features/ticket-import/pages/ImportTicketsPage.tsx","frontend/src/features/ticket-import/mocks/handlers.ts"]}
+{"ts":"2026-11-14T06:09:23.577Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"d6975188e0f34008e0b4bd331a04f4df9a5beeea"}
+{"ts":"2026-11-14T06:09:23.859Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-14T06:19:58.947Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T05:27:58.783Z","type":"commit-recorded","module":"platform","repo":"default","sha":"f6dd0fc4f74ad3539e99bee73ea6e016b97902c0"}
 {"ts":"2026-11-14T05:27:58.840Z","type":"feature-status","module":"platform","feature":"e2e-smoke","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T05:27:58.892Z","type":"feature-status","module":"platform","feature":"e2e-smoke","from":"in-progress","to":"evaluating"}
