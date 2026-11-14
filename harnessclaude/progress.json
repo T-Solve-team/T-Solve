@@ -488,15 +488,15 @@
         "review-expiry-job": "passing",
         "review-expired-stored-columns": "passing",
         "review-email-html": "passing",
-        "review-email-outbox": "in-progress"
+        "review-email-outbox": "evaluating"
       },
-      "lastUpdated": "2026-11-14T13:20:30.381Z",
+      "lastUpdated": "2026-11-14T13:33:09.447Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "98ec9c7382a17815f6f001e3a6432225c4bc83b9"
+        "default": "5cf5c10ba569594a59966e17cdd76e9248e097d0"
       }
     }
   },
