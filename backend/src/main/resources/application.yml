@@ -64,6 +64,15 @@ management:
         include: health,info
 
 tsolve:
+  # File storage (STORY-007) on Garage through the S3 API. Empty endpoint = no storage beans (see StorageConfig).
+  storage:
+    endpoint: ${FILE_STORAGE_ENDPOINT:}
+    access-key: ${FILE_STORAGE_ACCESS_KEY:}
+    secret-key: ${FILE_STORAGE_SECRET_KEY:}
+    bucket: ${FILE_STORAGE_BUCKET:}
+    public-url-pattern: ${FILE_STORAGE_PUBLIC_URL_PATTERN:}
+    url-ttl-seconds: ${FILE_STORAGE_URL_TTL_SECONDS:300}
+    max-bytes: ${FILE_STORAGE_MAX_BYTES:10485760}
   worker:
     enabled: ${TSOLVE_WORKER_ENABLED:false}
     # Optional until enabled; validation rejects missing Jobs credentials without a fallback.

@@ -10,7 +10,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
+import vn.tsolve.common.exception.BusinessRuleException;
 
 /** A resolved issue with its Solution (GBR-33). projectId points at the workspace module's Project. */
 @Entity
@@ -131,11 +133,25 @@ public class Ticket {
     public record Solution(
             String symptoms, String rootCause, String resolutionSteps, String workaround, String scope) {}
 
-    public void applyReview(TicketStatus outcome, String feedback, Instant decidedAt) {
-        status = outcome;
+    /** Changes the status, only as {@link TicketStatus#canMoveTo} allows (STORY-005); otherwise MSG06. */
+    public void moveTo(TicketStatus to, Instant at) {
+        if (!status.canMoveTo(to)) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+        status = to;
+        updatedAt = at;
+    }
+
+    /**
+     * Keeps the reviewer's feedback of the decision that moved this ticket to {@code outcome}. Only after
+     * {@link #moveTo} reached {@code outcome}, so a reason never sits on a ticket in another status.
+     */
+    public void recordReviewFeedback(TicketStatus outcome, String feedback) {
+        if (status != outcome) {
+            throw new IllegalStateException("Feedback for " + outcome + " on a ticket that is " + status);
+        }
         rejectionReason = outcome == TicketStatus.REJECTED ? feedback : null;
         changeRequestComment = outcome == TicketStatus.CHANGES_REQUESTED ? feedback : null;
-        updatedAt = decidedAt;
     }
 
     public UUID getId() {
