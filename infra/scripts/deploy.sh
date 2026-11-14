@@ -20,6 +20,10 @@ ENV_FILE="$(cfg TSOLVE_ENV_FILE "$STATE/.env")"
 LOG="$(cfg TSOLVE_DEPLOY_LOG "$STATE/deploy.log")"
 LOCK="$(cfg TSOLVE_DEPLOY_LOCK "$STATE/deploy.lock")"
 DEPLOYED="$(cfg TSOLVE_DEPLOYED_FILE "$STATE/DEPLOYED")"
+# Docker's own config and buildx state live in a folder only this script uses, so root-owned files in ~/.docker (left by
+# an earlier `sudo docker ...`) cannot break the build (BUG-207). Under SSH it is fixed (a DOCKER_CONFIG in the
+# environment is ignored; by hand it follows TSOLVE_STATE_DIR).
+export DOCKER_CONFIG="$STATE/.docker"
 COMPOSE_FILE="$SRC/infra/compose.staging.yml"
 ENV_EXAMPLE="$SRC/infra/staging.env.example"
 API_URL="$(cfg TSOLVE_SMOKE_API https://api.tsolve.io.vn)"
@@ -49,6 +53,30 @@ if ! flock -n 9; then
 fi
 
 log "deploy requested: $SHA"
+
+# --- docker config: must belong to, and be writable by, the user who runs this (no sudo for docker, ever) ---------------
+step "docker config"
+log "docker config dir: $DOCKER_CONFIG"
+ME="$(id -un)"
+if [[ ! -w "$STATE" ]]; then
+  log "FAILED: $STATE not writable by $ME — run: sudo chown -R $ME:$ME $STATE"
+  fail
+fi
+if [[ ! -d "$DOCKER_CONFIG" ]]; then
+  mkdir -p "$DOCKER_CONFIG"
+  chmod 700 "$DOCKER_CONFIG"
+fi
+if [[ ! -w "$DOCKER_CONFIG" || -n "$(find "$DOCKER_CONFIG" \( ! -user "$ME" -o ! -writable \) -print -quit)" ]]; then
+  log "FAILED: $DOCKER_CONFIG not writable by $ME — run: sudo chown -R $ME:$ME $DOCKER_CONFIG"
+  fail
+fi
+# The compose and buildx plugins must be found with this DOCKER_CONFIG: per-user plugins in ~/.docker/cli-plugins are not.
+for plugin in compose buildx; do
+  if ! docker "$plugin" version >/dev/null 2>&1; then
+    log "FAILED: the docker $plugin plugin is not installed system-wide (/usr/libexec/docker/cli-plugins or /usr/local/lib/docker/cli-plugins); per-user plugins in ~/.docker/cli-plugins are not seen"
+    fail
+  fi
+done
 
 step "fetch"
 git -C "$SRC" fetch origin '+refs/heads/main:refs/remotes/origin/main'
