@@ -2,8 +2,8 @@
 module: ticket-repository
 feature: manual-entry-tab
 task: 17
-verdict: fail
-attempt: 1
+verdict: pass
+attempt: 2
 date: 2026-11-14
 reviewer: harnessclaude reviewer (independent subagent)
 iteration: 1
@@ -133,3 +133,110 @@ Informational:
 `npx vitest run src/features/ticket-import --maxWorkers=2` ran 6 files and 116 tests, all passing.
 `npm run typecheck` passed. `npm run lint` gave 0 errors and 1 warning, which predates this commit and is in
 `features/tickets`.
+
+---
+
+# Attempt 2 — 2026-11-14 — verdict: PASS
+
+Reviewed the fix commit default@d6975188 (range `1f040bed..d6975188`). Attempt 1's text above is kept as it was;
+the frontmatter now holds attempt 2's verdict.
+
+## Summary
+The CRITICAL is fixed. After a Save as draft, the cached Manual Draft query is removed
+(`ManualEntryForm.tsx:169-171`). After a Save of a reopened Draft, it is removed as well (`:133-135`). A later reopen
+therefore builds a new query, waits in `LoadingState` and mounts the form from the server's current Draft. A new test
+named AC-006.11 runs the exact sequence from attempt 1. It would fail without the fix, because the stale query's data
+is still fresh within its 30 s `staleTime`. Four of the five INFORMATIONAL items are fixed correctly. Item 3 (a 404
+Draft leaves the error screen) was deliberately not fixed, as the session log records. The fix itself brings one new
+minor regression (INFORMATIONAL 1 below), which does not block the verdict. **PASS.**
+
+## Criteria
+
+| Criterion | Result | Detail |
+|-----------|--------|--------|
+| Functionality | pass | AC-006.9, AC-006.11, AC-006.12 and AC-006.14 behave as the spec says, including a reopen after Save as draft. |
+| Completeness | pass | Trace 14/14. Every new behaviour has a test. |
+| Correctness | pass | 123/123 scoped tests pass, typecheck is clean and eslint finds nothing. No CRITICAL. |
+| Integration | pass | No change to the contract or `src/shared`. The mock now answers 201, as the contract does. |
+
+## Checks
+
+| Check | Result | Evidence |
+|---|---|---|
+| CRITICAL 1 (stale Draft after Save as draft, AC-006.11) | fixed | `:169-171` `removeQueries(getGetManualTicketDraftQueryKey(saved.previewId))`. Test `AC-006.11 reopening a Draft after Save as draft shows the fields as saved`: saves "Original title", reopens it, saves "Saved edit", leaves, reopens, and expects "Saved edit". |
+| Save of a reopened Draft drops its cache (AC-006.12) | fixed | `:133-135`. Test `AC-006.12 reopening a Draft after Save shows MSG04 instead of cached fields`. |
+| Info 1: a failed refetch kept the form | fixed | `:43` gives `ErrorState` only when `!draft.data`. Tests `AC-006.14 a failed background Draft refetch keeps the form and entered fields` (a 500 refetch keeps "Unsaved edit") and `AC-006.11 a Draft load failure without data shows the error screen`. |
+| Info 2: field-error routing in `showFieldErrors` | fixed, no regression | `:60-77`, `:108-114`. See the routing table below. |
+| Info 3: a 404 Draft has no way back | not fixed (decided) | The session log says the fix needs UI text the SRS does not give. Accepted; no spec criterion is affected. |
+| Info 4: unknown `?tab=` | fixed | `ImportTicketsPage.tsx:25` falls back to `csv` for a key not in `TABS`. Test `AC-008.1 an unknown tab value falls back to CSV`. |
+| Info 5: the mock answers 201 | fixed | `mocks/handlers.ts:213-221`. The MSG32 test now asserts `statuses == [201]`. |
+| New UI text outside the MSG catalog | none | The Alert's text is now a string, but it is built only from `msg(code, params)` (`:66`, `:112`). New literals appear only in tests. |
+| `src/app`, `src/shared` untouched (AGENTS.md rule 10) | yes | `git diff 1f040bed d6975188 -- frontend/src/app frontend/src/shared` is empty. |
+
+### Field-error routing (`showFieldErrors`, `onError`)
+
+| Case | Behaviour | Why |
+|---|---|---|
+| An error for a known field | under its field | `Object.hasOwn(form.getFieldsValue(), name)`. `getFieldsValue()` gives a key for every registered field, empty ones included (`@rc-component/form` `cloneByNamePathList` → `set` without `removeIfUndefined`). Every field the backend names (`ManualTicketServiceImpl.java:228-253`: projectId, ticketId, title, description, resolvedDate, symptoms, rootCause, resolutionSteps, scope, and `solution` → `symptoms`), plus `ticketId` for MSG31 (`:223-225`), is a registered top-level field. |
+| A 400 with only known-field errors | no Alert | `unhandled` is empty and `fieldErrors.length > 0`, so `''` → `null`. Covered by the existing AC-006.14 field-error tests, which still pass. |
+| An error for an unknown field | in the Alert | Test `it.each([false, true])` `AC-006.14 shows an unknown field error in the Alert`: `draftId` → MSG04 in the Alert; with `title` added, MSG02 is under Title and Title's value is kept. |
+| A non-field error (403 and others) | its message in the Alert | `fieldErrors.length === 0` → `msg(error.code, error.params)`. The existing 403 → MSG08 test passes. |
+| A previous Alert | cleared | `send()` calls `setRejection(null)` before each request (`:119`). |
+| 401 | no form message | unchanged (`:110`) |
+
+## Traceability
+```
+✓ AC-006.1 … AC-006.8, AC-006.10, AC-006.13 — backend tests
+✓ AC-006.9  frontend ManualEntryForm.test.tsx + backend
+✓ AC-006.11 frontend ManualEntryForm.test.tsx + backend
+✓ AC-006.12 frontend ManualEntryForm.test.tsx + backend
+✓ AC-006.14 frontend ManualEntryForm.test.tsx
+! ids in tests but not in the spec: AC-008.1
+trace ticket-repository (STORY-006): 14/14 acceptance criteria have a test
+```
+`AC-008.1` belongs to import-ticket-list. The trace flags it because the unknown-tab test sits in this module's
+`ManualEntryForm.test.tsx` (INFORMATIONAL 2).
+
+## Issues
+
+CRITICAL: none.
+
+Informational:
+1. **New with this fix:** `ManualEntryForm.tsx:169-171` together with `:39-45`. After a Save as draft on a **reopened**
+   Draft (the URL has `draftId=A`), the query being removed is the one the mounted `ManualEntryForm` observes. On the
+   next render of `ManualEntryForm`, which follows any URL change such as a tab switch (`setSearchParams` keeps
+   `draftId`), `useQuery` builds a new query with no data. In TanStack query-core 5.104.1,
+   `QueryObserver#updateQuery` and `getOptimisticResult` (`queryObserver.js:414-424`) return `isPending`, so the page
+   shows `LoadingState`, unmounts `ManualEntryFields` and then remounts it from the server. Whatever was typed after
+   the last Save as draft is lost, for example after Save as draft, editing the Title, then CSV and back to Manual
+   entry. Before the fix, the form kept that input. Nothing is overwritten on the server, since the form shows the
+   last saved version. This was found by reading the code and the library source; there is no test for it.
+   **Fix:** in Save as draft's `onSuccess`, call
+   `queryClient.setQueryData(getGetManualTicketDraftQueryKey(saved.previewId), …)` instead of `removeQueries`. Pass
+   the saved `ManualTicketDraft` if the response is one, or else the request values with `previewId`. The cache then
+   holds the saved fields, a reopen shows them, and the mounted form is not remounted because its `key` is the same.
+   Alternatively, call `removeQueries` only when `saved.previewId` differs from the URL's `draftId`.
+2. `ManualEntryForm.test.tsx` (`AC-008.1 an unknown tab value falls back to CSV`): the test names a criterion of
+   another module (import-ticket-list), and the fallback is not what AC-008.1 states. Move it to
+   `ImportTicketsPage.test.tsx`, or name it without an AC id.
+3. Still open from attempt 1, as decided:
+   - Info 3: a 404 Draft gives `ErrorState` with no way back to an empty form.
+   - Most of Info 6's test gaps: future days disabled, an invalid stored `resolvedDate`, a Save as draft rejection
+     that keeps the input, and `draftId` removed after Save.
+
+   The Draft load's error state and AC-006.12 on the web side are now tested.
+
+## Assumptions made
+- INFORMATIONAL 1 is classed as non-blocking. It loses only unsaved input, on a tab switch after a Save as draft, and
+  no spec criterion covers keeping input across tab switches; AC-006.14 covers rejections. **Judgment call for the
+  user:** it can be raised to CRITICAL if keeping unsaved Manual input across tab switches is expected.
+- Info 3 was left unfixed because the SRS gives no text for a "new entry" action. I accept that decision and have not
+  failed the task on it.
+- The attempt 1 assumptions still hold: MSG02 for `solution` is shown under Symptoms, and a 401 shows only the global
+  MSG07 dialog.
+
+## Test Report (attempt 2)
+See the attempt 2 section of `task-17-manual-entry-tab-test-report.md`. In `frontend/`,
+`npx vitest run src/features/ticket-import --maxWorkers=2` ran 6 files and **123 tests, all passing** (116 before,
+7 added). `npm run typecheck` is clean and `npx eslint src/features/ticket-import` gives 0 problems. The trace is
+14/14.
