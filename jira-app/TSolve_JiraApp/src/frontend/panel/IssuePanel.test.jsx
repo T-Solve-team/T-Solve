@@ -107,6 +107,15 @@ describe('IssuePanel', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
+  it('AC-008.10 shows that the Solution is approved and published, with no button', async () => {
+    await show({ ...PANEL, ticketStatus: 'PUBLISHED', mayOpenForm: false, mayResubmit: false });
+
+    expect(await screen.findByText(PANEL_LABELS.published)).toBeInTheDocument();
+    expect(PANEL_LABELS.published).toBe('Solution approved and published.');
+    expect(getReviewFeedback).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('AC-012.3 offers no Edit and resubmit when the viewer may not resubmit', async () => {
     getReviewFeedback.mockResolvedValue(null);
     await show({ ...PANEL, ticketStatus: 'CHANGES_REQUESTED', mayOpenForm: false, mayResubmit: false });
