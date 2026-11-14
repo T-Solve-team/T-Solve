@@ -1131,8 +1131,8 @@
     }
   },
   "ticket-repository": {
-    "specHash": "63372498dc9cf51510517898382c0ea11936bfd77fa29bad887763e888bed21b",
-    "approvedAt": "2026-11-13T15:41:50.016Z",
+    "specHash": "147fccd4faa527200ff40df887a7d728aa4fbb44016c0d8ea304de076dff341d",
+    "approvedAt": "2026-11-14T05:11:26.008Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
@@ -1180,7 +1180,27 @@
       "AC-005.2": "WHEN a Ticket is created by an import, THE system SHALL create it in Published (GBR-23).",
       "AC-005.3": "IF a request would change a Ticket's status in a way AC-005.1 does not allow, THEN THE system SHALL reject the request with HTTP 409 (MSG06) and change the status of none of the Tickets of that request (D11).",
       "AC-005.4": "WHEN a request moves one or more Tickets to Published (review Approve, re-publish), THE system SHALL publish one \"tickets published\" event with the ids of all those Tickets, for listeners to handle after the transaction commits.",
-      "AC-005.5": "WHEN a request moves one or more Tickets to Unpublished, THE system SHALL publish one \"tickets unpublished\" event with the ids of all those Tickets, for listeners to handle after the transaction commits."
+      "AC-005.5": "WHEN a request moves one or more Tickets to Unpublished, THE system SHALL publish one \"tickets unpublished\" event with the ids of all those Tickets, for listeners to handle after the transaction commits.",
+      "AC-006.1": "WHEN a Project Manager saves a manual entry for an Active Project they manage with a Ticket ID, title, description and a Solution whose required sections are filled, and every check of AC-006.3–AC-006.8 passes, THE system SHALL, in one transaction, save a Ticket of that Project with source Manual, status Published, the trimmed Ticket ID, title, description and Solution sections, the resolved date if one was entered, writer = the caller's full name and writer id = the caller's user id (D14); record an approve decision by the caller; record one Import Batch of source Manual with status Completed and 1 published (D17); and return HTTP 201 with the new Ticket's id and MSG32 (1 created, 0 skipped).",
+      "AC-006.2": "WHEN a manual entry with Evidence files is saved as in AC-006.1, THE system SHALL store each file through the Workspace file storage (D12) and record it as Evidence of the new Ticket with its file name, type (D18) and size, in the same save.",
+      "AC-006.3": "IF the Project, Ticket ID, title, description, Symptoms, Root cause, Resolution steps or Scope is missing or blank after trimming, THEN THE system SHALL reject the save with HTTP 400 and MSG01 naming every missing field, save nothing, store no file and record no Import Batch.",
+      "AC-006.4": "IF the Ticket ID is longer than 50 characters, the title longer than 200, the description longer than 10,000, or the Solution sections longer than 10,000 characters in total, THEN THE system SHALL reject the save with HTTP 400 and MSG02 naming the field and its limit, save nothing, store no file and record no Import Batch.",
+      "AC-006.5": "IF the resolved date is after today (Vietnam time), THEN THE system SHALL reject the save with HTTP 400 and MSG39 (D15), save nothing, store no file and record no Import Batch.",
+      "AC-006.6": "IF an Evidence file has a name whose extension is not one of D18, or is larger than 10 MB, THEN THE system SHALL reject the save with HTTP 400 and MSG34 naming that file, save nothing, store no file and record no Import Batch.",
+      "AC-006.7": "IF the entry has more than 5 Evidence files, THEN THE system SHALL reject the save with HTTP 400 and MSG72, save nothing, store no file and record no Import Batch.",
+      "AC-006.8": "IF the trimmed Ticket ID is already the Ticket ID of a Ticket, including one saved by another request while this save runs, THEN THE system SHALL reject the save with HTTP 409 and MSG31 with that Ticket ID, save no Ticket, keep no file it stored for this save, and record no Import Batch.",
+      "AC-006.9": "IF the caller does not have the Project Manager role, or the Project is not Active or not managed by the caller, THEN THE system SHALL reject the save with HTTP 403 (MSG08), save nothing and store no file.",
+      "AC-006.10": "WHEN a manual entry is saved as in AC-006.1, THE system SHALL publish one \"tickets published\" event with the new Ticket's id, for listeners to handle after the transaction commits.",
+      "AC-006.11": "IF saving the Ticket, its Evidence or its files fails after the checks of AC-006.3–AC-006.9 pass, THEN THE system SHALL save no Ticket and no Evidence, keep no file it stored for this save, return MSG33, and record one Import Batch of source Manual with status Failed, 0 published and an error description that contains no ticket content.",
+      "AC-006.12": "WHEN the Project Manager uses the Manual entry tab, THE web app SHALL offer only the caller's Active managed Projects and no future resolved date, check the Evidence type, size and count before sending (MSG34, MSG72), show each rejection next to its field, and keep every entered value and chosen file after a rejection.",
+      "AC-007.1": "WHEN the Project Manager clicks Save as draft on the Manual entry tab with a Project they manage, THE system SHALL save every entered field as entered and every Evidence file as a Draft of type Manual owned by the caller with the save time, check nothing else (D16), and return MSG41.",
+      "AC-007.2": "IF a Manual Draft is saved without a Project, THEN THE system SHALL reject it with HTTP 400 and MSG01; IF its Project is not managed by the caller, THEN with HTTP 403 (MSG08); IF its Evidence breaks AC-006.6 or AC-006.7, THEN with MSG34 or MSG72 — and in each case save nothing and store no file.",
+      "AC-007.3": "WHEN the Project Manager opens Import Tickets, THE system SHALL list the caller's Manual Drafts together with their other Drafts (AC-004.2), each with type Manual, its Project, 1 row and the date saved.",
+      "AC-007.4": "WHEN the Project Manager reopens a Manual Draft, THE system SHALL return its fields as saved and its Evidence files (name, type, size), and THE web app SHALL show them on the Manual entry tab.",
+      "AC-007.5": "WHEN the Project Manager saves a reopened Manual Draft again, THE system SHALL update that same Draft and its save time, add the new Evidence files, and delete from the Draft and from file storage the Evidence files the Project Manager removed; the kept and new files together SHALL obey AC-006.7.",
+      "AC-007.6": "WHEN a reopened Manual Draft is saved as a Ticket as in AC-006.1, THE system SHALL make the Draft's kept Evidence files and the new ones the Ticket's Evidence, delete the files the Project Manager removed, and delete the Draft in the same transaction; IF the save is rejected or fails, THEN the Draft SHALL stay as it was saved.",
+      "AC-007.7": "WHEN the Project Manager deletes a Manual Draft after confirming MSG42, THE system SHALL delete the Draft and its Evidence files from file storage.",
+      "AC-007.8": "IF a Manual Draft request names a Draft of another user, a preview that is not a Manual Draft, or none at all, THEN THE system SHALL reject it with HTTP 404 (MSG04); and the Import Preview endpoints ( and its rows, fill-solution, remove-rows, draft, confirm) SHALL reject a Manual Draft with HTTP 404 (MSG04)."
     }
   },
   "jira-app": {

@@ -177,3 +177,114 @@ new protection.
 **Files.** Modify `T/entity/TicketStatus.java`, `T/entity/Ticket.java`, `T/service/impl/TicketDecisionServiceImpl.java`,
 `T/event/TicketsPublishedEvent.java` (javadoc: not only import). Create `T/service/impl/TicketTransitions.java`,
 `T/event/TicketsUnpublishedEvent.java`. Tests `TT/entity/TicketStatusTest.java`, `TT/service/impl/TicketTransitionsTest.java`.
+
+## Change 2026-11-14: Manual entry with Evidence and Drafts (KAN-133, STORY-006, STORY-007)
+
+Decisions: spec D12–D18; the full log with options is `04-plans/ticket-repository/kan-133-decisions.md`.
+
+```
+web (features/ticket-import)                 backend vn.tsolve.ticket
+ Import Tickets: Manual entry tab  ─multipart─▶ ManualEntryController  POST /imports/manual          (STORY-006)
+   ManualEntryForm (+ SolutionFields)                                   POST /imports/manual/drafts   (STORY-007)
+ Drafts list: Open on a Manual Draft ──REST──▶                          GET  /imports/manual/drafts/{id}
+                                     ──REST──▶ ImportDraftController    GET /imports/drafts, DELETE …/{id} (+ MANUAL)
+   ManualEntryServiceImpl ─┬─ ProjectAccess.managesActive (403)
+                           ├─ EvidenceFiles (check D18 / 10 MB / ≤ 5, then FileStorage.store outside the transaction)
+                           ├─ platform.service.FileStorage (PR #193)
+                           └─ TransactionTemplate: ticket + evidence + approve decision + Completed batch + delete Draft
+                                                    + TicketsPublishedEvent + audit IMPORT
+```
+
+**Save** (`POST /imports/manual`, AC-006.1–006.11), in this order:
+1. `@PreAuthorize` PM (AC-006.9 role); `ManualEntryValidator` collects MSG01 (blank after trim, AC-006.3), then
+   MSG02 (lengths in code points, AC-006.4), then MSG39 (`resolvedDate` after today in `Asia/Ho_Chi_Minh` from the
+   injected `Clock`, AC-006.5) — the first message kind found wins, naming every field of that kind, as CSV import
+   does. All checks run before any file is stored.
+2. `projects.managesActive(user, projectId)` else 403 (AC-006.9). `draftId` given → the caller's Manual Draft or 404
+   (AC-007.8); its Evidence minus `keepEvidenceIds` = files to remove later.
+3. Evidence (AC-006.6, 006.7): kept + new count ≤ 5 else MSG72; each new file: extension in D18 and size ≤ 10 MB else
+   MSG34 with its name. Then each new file → `FileStorage.store` (outside any transaction: object storage is an HTTP
+   call, AGENTS.md §4). A failure while storing deletes the keys already stored and goes to step 6.
+4. `tickets.existsByTicketId(trimmed)` → MSG31 409 before the transaction (AC-006.8); the race is caught in step 6.
+5. Transaction: `Ticket.enteredManually(…)` (new factory beside `Ticket.imported`: source MANUAL, PUBLISHED, writer =
+   `TSolveUser.fullName()` cut to 100, `writerId` = `TSolveUser.id()`); `ImportBatch.completed(projectId, user, MANUAL,
+   null, 1, 0, 0)` saved first, as Finish does; one `TicketEvidence.of(ticketId, key, name, type, size)` per kept and
+   new file; `TicketReviewDecision.approve`; the Draft deleted (AC-007.6); `TicketsPublishedEvent(List.of(id))`
+   (AC-006.10); `audit.record(IMPORT, "PROJECT", projectId, {importBatchId, created: 1})`.
+6. Failure of step 3 or 5: a unique violation (SQLState 23505 on `ticket_id`) → delete the new keys, MSG31 409, no
+   batch (AC-006.8). Any other failure → delete the new keys, `ImportBatchRecorder.recordManualFailed(projectId, user,
+   reason)` in its own transaction, MSG33 500 (AC-006.11). The Draft is untouched (AC-007.6).
+7. After commit: `FileStorage.delete` for the Draft files the PM removed. A delete failure is logged (key only) and
+   ignored — an orphan object, never a lost one. `ponytail:` no orphan sweeper; add one if orphans show up in storage.
+
+**Draft** (`POST /imports/manual/drafts`, AC-007.1–007.5): Project required (MSG01) and managed (403); Evidence step 3
+as above; nothing else checked. New Draft = `ImportPreview.manualDraft(owner, projectId, now)` (source MANUAL,
+`import_type` WITH_SOLUTION, no file name, `draft_saved_at` = now) with one `import_preview_row` (row 1, status VALID,
+raw values; `resolved_date` stays text). `draftId` given → update that row, `draft_saved_at` and the Evidence list,
+then delete the removed files after commit. Reopen = `GET /imports/manual/drafts/{id}` (AC-007.4). Delete =
+`ImportDraftServiceImpl.delete`, now accepting MANUAL too, deleting the Draft's files after commit (AC-007.7).
+The preview endpoints (`ImportPreviewServiceImpl`, `ImportConfirmServiceImpl`, `ImportDraftServiceImpl.save`) look a
+preview up only when its source is not MANUAL, so a Manual Draft is 404 there (AC-007.8).
+
+### Data model — changeset `031-ticket-manual-entry.sql` (author `ticket`; the next free number when built)
+
+```sql
+ALTER TABLE evidence ADD COLUMN storage_key VARCHAR(200);  -- FileStorage key; NULL only on rows from before KAN-133
+ALTER TABLE import_preview ADD COLUMN evidence JSONB NOT NULL DEFAULT '[]';
+    -- Manual Draft only: [{id (uuid), storageKey, fileName, fileType, fileSize}]
+```
+
+`TicketEvidence` stays `@Immutable` (never updated, BR "Evidence is permanent") and gets a factory and a generated
+UUID id for inserts. No new table, so the tenant-table convention guard (AC-001.20 of `platform`) is unchanged.
+`application.yml`: `spring.servlet.multipart.max-file-size: 11MB`, `max-request-size: 56MB` (5 × 10 MB + the JSON
+part). The 10 MB rule of MSG34 is checked by the service, so a file between 10 and 11 MB gets MSG34 by name; only a
+file above 11 MB meets the global MSG28 answer, and the web app checks sizes first (AC-006.12).
+
+### Key Decisions (KAN-133)
+
+| Decision | Choice | Alternatives Considered | Rationale |
+|----------|--------|------------------------|-----------|
+| Evidence storage (D12) | `platform` `FileStorage` of PR #193; Evidence tasks wait for its merge | Ship without Evidence; module-local storage | The story's AC includes Evidence; the storage already exists in #193 |
+| Manual Draft (D13) | `import_preview` source MANUAL + one row + JSONB `evidence` | New `ticket_draft` table | Drafts list, delete, 404 and cleanup rules already work there; no new table |
+| Request shape | One multipart request: JSON part `entry` + `files` parts | Upload files first to a temp endpoint, then save | One round trip, no temp-file lifecycle; 56 MB worst case is fine for a PM screen |
+| Storage vs. transaction | Store files before the transaction, delete them on failure; delete removed Draft files after commit | Store inside the transaction | No outbound call inside `@Transactional` (AGENTS.md §4); worst case is an orphan object, never a Ticket without its file |
+| Writer (D14) | `@AuthenticationPrincipal TSolveUser` full name + id | Free text | UC-22 step 6 |
+| File type (D18) | Extension allow-list, type from extension | Content sniffing (Tika) | No new library; files are not shown inline yet (`ponytail:` sniff when UC-24 shows them inline) |
+| Taken Ticket ID (AC-006.8) | Pre-check + unique-violation catch → MSG31 | Pre-check only | The Solution Form or another PM can take the id between check and insert |
+| Decided in planning: validation order (builder check) | MSG01, then MSG02, then MSG39, then Project access, then Evidence, then MSG31 | All errors at once | Same as CSV import; the web app shows every field error inline from its own checks |
+
+### Edge Cases & Risks (KAN-133)
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 17 | 006 | Security | File named `x.pdf.exe`, `../../a.png`, or `A.PNG` | High | Extension = text after the last dot, lower-cased: `.exe` → MSG34; `.PNG` accepted; the name is only stored, never used as a storage path (FileStorage AC-007.2 of `platform`) | Task 17 |
+| 18 | 006 | Concurrency | Two PMs save the same Ticket ID at once | High | One wins; the other gets MSG31 409, its stored files deleted, no batch | Task 16, Task 17 |
+| 19 | 006 | External | Object storage down while storing file 3 of 5 | High | Files 1–2 deleted; MSG33, Failed batch, no Ticket | Task 17 |
+| 20 | 006 | Data | Ticket ID with spaces around it; 50 emoji (100 UTF-16 units) | Medium | Trimmed before the uniqueness check; limits counted in code points | Task 16 |
+| 21 | 006 | Time | Resolved date = today at 00:30 Vietnam (17:30 UTC the day before) | Medium | Accepted; "today" is Vietnam time | Task 16 |
+| 22 | 006 | Validation | Ticket ID blank and title 300 characters | Medium | Backend: MSG01 for Ticket ID (first kind wins); the web app shows both inline | Task 16, Task 19 |
+| 23 | 007 | State | Draft reopened in two tabs, saved as Ticket in one, saved as Draft in the other | Medium | The Draft is gone after the Ticket save; the other tab's Draft save names a missing Draft → 404, web app returns to Import Tickets | Task 18, Task 19 |
+| 24 | 007 | Authorization | `GET /imports/previews/{id}` or `/confirm` on a Manual Draft id | High | 404 (AC-007.8) — a Manual Draft never goes through Confirm | Task 18 |
+| 25 | 007 | Data | Draft with resolved date text "2026-13-40" | Low | Kept as text in the Draft; Save → MSG39 | Task 18 |
+| 26 | 006 | Size | 5 files of 10 MB each | Medium | One 50 MB request fits 56 MB; accepted | Task 15, Task 17 |
+| 27 | 007 | Cleanup | Daily cleanup with a Manual Draft older than 24 h | High | Kept (AC-004.6: `draft_saved_at` is set at creation) | Task 18 |
+
+### Risks (KAN-133)
+- **PR #193 (KAN-96)** must merge first for Tasks 17 and 18; Tasks 14–16 and 19 do not need it. If #193 changes
+  `FileStorage`, only `EvidenceFiles` changes.
+- **Shared file** `application.yml` (multipart limits) also governs the CSV upload; its own 10 MB check (MSG28) stays.
+
+### File Structure (KAN-133)
+```
+backend/src/main/resources/db/changelog/changes/031-ticket-manual-entry.sql (+ master include)     new
+backend/src/main/resources/application.yml                                                         multipart limits
+T/controller/ManualEntryController.java                                                            new
+T/dto/ManualEntryRequest, ManualEntryResponse, ManualDraftResponse, DraftEvidence                   new
+T/service/ManualEntryService.java; T/service/impl/ManualEntryServiceImpl, ManualEntryValidator, EvidenceFiles  new
+T/entity/Ticket (+ enteredManually), TicketEvidence (+ of, storageKey), ImportPreview (+ manualDraft, evidence)
+T/service/impl/ImportBatchRecorder (+ recordManualFailed), ImportDraftServiceImpl, ImportPreviewServiceImpl, ImportConfirmServiceImpl (MANUAL → 404)
+TT/…/Manual*Test, Manual*IT                                                                         tests
+frontend/openapi/tsolve-api.yaml, frontend/src/shared/api/generated/**
+F/components/ManualEntryForm.tsx (+ test), SolutionFields.tsx (extracted from SolutionFormModal), DraftsList.tsx (Open Manual)
+F/pages/ImportTicketsPage.tsx (Manual entry tab), F/api/** (manual entry calls), F/mocks/** (handlers)
+```

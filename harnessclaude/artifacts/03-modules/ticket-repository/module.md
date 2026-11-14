@@ -20,6 +20,8 @@ paths:
   - frontend/src/features/ticket-import/components/Jira*
   - frontend/src/features/ticket-import/components/*Draft*
   - frontend/src/features/ticket-import/components/SolutionFields*
+  - frontend/src/features/ticket-import/components/Manual*
+  - backend/src/test/java/vn/tsolve/ticket/**/Manual*
   - frontend/src/features/ticket-import/api/**
   - frontend/src/features/ticket-import/mocks/**
   - frontend/src/features/tickets/**

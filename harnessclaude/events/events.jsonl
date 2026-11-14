@@ -1360,3 +1360,10 @@
 {"ts":"2026-11-13T16:53:07.962Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":null,"to":"pending"}
 {"ts":"2026-11-13T16:53:08.294Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":null,"to":"pending"}
 {"ts":"2026-11-14T04:19:53.910Z","type":"spec-approved","module":"wiki","specHash":"75e10cbc9301985fbfd3cf1d5d09b0e79987563b15ed1b03d543a10b35727f2a"}
+{"ts":"2026-11-14T05:11:26.013Z","type":"spec-approved","module":"ticket-repository","specHash":"147fccd4faa527200ff40df887a7d728aa4fbb44016c0d8ea304de076dff341d"}
+{"ts":"2026-11-14T05:11:30.738Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-contract","from":null,"to":"pending"}
+{"ts":"2026-11-14T05:11:31.017Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-schema","from":null,"to":"pending"}
+{"ts":"2026-11-14T05:11:31.293Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-save","from":null,"to":"pending"}
+{"ts":"2026-11-14T05:11:31.572Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-evidence","from":null,"to":"pending"}
+{"ts":"2026-11-14T05:11:31.845Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-drafts","from":null,"to":"pending"}
+{"ts":"2026-11-14T05:11:32.118Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":null,"to":"pending"}
