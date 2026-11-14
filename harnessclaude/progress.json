@@ -371,10 +371,10 @@
         "monitoring": "pending",
         "load-test": "pending",
         "forge-security-chain": "pending",
-        "cross-module-isolation": "evaluating",
-        "e2e-smoke": "evaluating"
+        "cross-module-isolation": "passing",
+        "e2e-smoke": "passing"
       },
-      "lastUpdated": "2026-11-14T05:27:58.891Z",
+      "lastUpdated": "2026-11-14T06:06:15.574Z",
       "branch": "feat/platform",
       "repos": [
         "default"
