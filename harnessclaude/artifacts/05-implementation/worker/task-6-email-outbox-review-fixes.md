@@ -33,3 +33,7 @@
 ### Next up
 
 Evaluate `email-outbox-review-fixes`.
+
+## Session 2026-11-14 (attempt 2)
+
+- Review attempt 1 failed: `EmailOutboxIT.recurringJobDispatchesThroughJobRunr_AC_004_4_BUG_221` timed out on CI because the test set no `spring.mail.host`, so `withBean` skipped the conditional `SmtpEmailSender` bean (BUG-225, test only). Fixed in default@e6570be; bug-log commit column filled for BUG-218 to BUG-225.

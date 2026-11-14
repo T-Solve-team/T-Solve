@@ -409,13 +409,13 @@
         "email-outbox": "passing",
         "email-outbox-review-fixes": "evaluating"
       },
-      "lastUpdated": "2026-11-14T13:58:54.679Z",
+      "lastUpdated": "2026-11-14T14:13:00.300Z",
       "branch": "feat/worker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "c5bfbaee28bae21b89e1db4e4939bf99e56ea7f5"
+        "default": "e6570be15d5641689f5c375a52caedf748d2d035"
       }
     },
     "ai": {
@@ -492,7 +492,7 @@
         "review-email-outbox": "passing",
         "review-email-link-fallback": "evaluating"
       },
-      "lastUpdated": "2026-11-14T13:58:54.747Z",
+      "lastUpdated": "2026-11-14T14:13:00.356Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"

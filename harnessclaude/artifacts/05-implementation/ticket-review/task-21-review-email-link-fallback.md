@@ -31,3 +31,7 @@
 ### Next up
 
 Evaluate `review-email-link-fallback`.
+
+## Session 2026-11-14 (attempt 2)
+
+- Review attempt 1 failed only on the red CI caused by worker BUG-225 (another feature); no code change here. Bug-log commit column filled for BUG-223 and BUG-224.

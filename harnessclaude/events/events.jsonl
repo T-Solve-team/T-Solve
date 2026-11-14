@@ -1455,3 +1455,8 @@
 {"ts":"2026-11-14T13:58:35.327Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"e9eec864480ba413e53c2387698dc28e4f893647"}
 {"ts":"2026-11-14T13:58:54.680Z","type":"feature-status","module":"worker","feature":"email-outbox-review-fixes","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T13:58:54.749Z","type":"feature-status","module":"ticket-review","feature":"review-email-link-fallback","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T14:09:17.986Z","type":"feature-status","module":"worker","feature":"email-outbox-review-fixes","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-14T14:09:24.613Z","type":"feature-status","module":"ticket-review","feature":"review-email-link-fallback","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-14T14:12:39.288Z","type":"commit-recorded","module":"worker","repo":"default","sha":"e6570be15d5641689f5c375a52caedf748d2d035"}
+{"ts":"2026-11-14T14:13:00.301Z","type":"feature-status","module":"worker","feature":"email-outbox-review-fixes","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-14T14:13:00.357Z","type":"feature-status","module":"ticket-review","feature":"review-email-link-fallback","from":"fixing","to":"evaluating"}
