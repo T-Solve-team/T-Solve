@@ -1159,8 +1159,8 @@
     }
   },
   "ticket-repository": {
-    "specHash": "c1e6b7ba8fe209df9d060218884feeecce8e01ff0ac31f5daf3dd94777bb6fd0",
-    "approvedAt": "2026-11-14T07:46:09.678Z",
+    "specHash": "d841e21ef53e72298449a8203e5ad8cfa65ff6d2b418245d2b0062e600c60ae7",
+    "approvedAt": "2026-11-14T21:01:34.642Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
@@ -1230,7 +1230,27 @@
       "AC-006.19": "WHEN a save or Save as draft of a reopened Draft leaves out some of the Draft's Evidence files, THE system SHALL drop them from the Draft and delete their stored files after the change commits; WHEN a Manual Draft is deleted, THE system SHALL delete its stored files as well.",
       "AC-006.20": "IF a save or Save as draft fails after some of its files were stored, THEN THE system SHALL delete those files and keep the Draft and its Evidence as they were.",
       "AC-006.21": "IF the file storage is not configured or does not answer, THEN THE system SHALL reject a save or Save as draft that carries files with HTTP 503 and MSG06 and save nothing (D21).",
-      "AC-006.22": "WHILE an entry has Evidence files, THE web app SHALL list them with their names under Evidence, let the Project Manager add files and remove files before saving, refuse a 6th file with MSG72 and a file of another type or larger than 10 MB with MSG34 before sending, and show a reopened Draft's files in the list."
+      "AC-006.22": "WHILE an entry has Evidence files, THE web app SHALL list them with their names under Evidence, let the Project Manager add files and remove files before saving, refuse a 6th file with MSG72 and a file of another type or larger than 10 MB with MSG34 before sending, and show a reopened Draft's files in the list.",
+      "AC-007.1": "WHEN a Project Manager requests Import History, THE system SHALL return the Import Batches of every Project where the caller is  in , newest first by creation time, page by page (page from 0, size 1–100, default 20) (D22).",
+      "AC-007.2": "WHEN Import History returns an Import Batch, THE system SHALL include its creation time, Project Manager name (AC-007.3), Project, Department of the Project, source, Jira date range (Resolved from / Resolved to) or file name, published count, removed count, error count, status (Completed or Failed) and error code (AC-007.4) (D23).",
+      "AC-007.3": "WHEN the stored  of an Import Batch is the id of an , THE system SHALL return that user's full name as the Project Manager; IF it is not a UUID or no  has that id, THEN THE system SHALL return the stored value unchanged (D24).",
+      "AC-007.4": "WHEN an Import Batch has a stored error, THE system SHALL return only the MSG code it contains (e.g. ) as the error, and no error when it contains none (D26).",
+      "AC-007.5": "WHEN the request names a Project, a source (JIRA_IMPORT, CSV or MANUAL), a date from or a date to, THE system SHALL return only the Import Batches that match every given filter; the dates are calendar days in Vietnam time and both are included; a Project the caller does not manage gives an empty page.",
+      "AC-007.6": "IF the date from is after the date to, THEN THE system SHALL reject the request with HTTP 400 and MSG39.",
+      "AC-007.7": "IF the caller does not have the Project Manager role, THEN THE system SHALL reject the request with HTTP 403 (MSG08).",
+      "AC-007.8": "WHEN a Jira Finish succeeds or fails, or a Jira pull fails, THE system SHALL store the pull's Resolved from and Resolved to on the Import Batch it records (D25); Import Batches of other sources SHALL keep no date range.",
+      "AC-007.9": "WHEN the Import History screen loads, THE web app SHALL show one row per Import Batch with the columns of AC-007.2 — the date range for a Jira import and the file name for a CSV import in the same column — and the filters Project (the Projects the user manages), Source and Date range.",
+      "AC-007.10": "IF Import History returns no Import Batch, THEN THE web app SHALL show MSG04 \"No results found.\" instead of the table rows.",
+      "AC-008.1": "WHEN a Ticket Resolver or Project Manager opens a Published ticket and  allows the caller the Department of the ticket's Project, THE system SHALL return the Ticket Detail (D28).",
+      "AC-008.2": "WHEN a ticket is not Published, THE system SHALL return its Ticket Detail only to its Solution writer ( = the caller) and to a Project Manager who is  of the ticket's Project in  (D28).",
+      "AC-008.3": "IF the ticket's Project or its Department does not exist, or the Department is deleted or not Active, THEN THE system SHALL return the Ticket Detail to nobody and answer HTTP 403 (MSG08) (D28).",
+      "AC-008.4": "IF the caller has neither the Ticket Resolver nor the Project Manager role, or AC-008.1 and AC-008.2 do not allow the caller the ticket, THEN THE system SHALL answer HTTP 403 (MSG08) with no ticket data (D31).",
+      "AC-008.5": "IF no ticket has the requested id, THEN THE system SHALL answer HTTP 404 (MSG04).",
+      "AC-008.6": "WHEN the system returns a Ticket Detail, THE system SHALL include the Department of the ticket's Project (id and name), the ticket's resolved date and its source link, together with the fields and  it returned before (D29).",
+      "AC-008.7": "WHEN a Jira Finish saves a Ticket, THE system SHALL store the preview row's link to the Jira issue as the Ticket's source link (D30).",
+      "AC-008.8": "WHEN Ticket Detail shows a ticket, THE web app SHALL show its Department, resolved date and source link; IF the source link is not an  or  URL, THEN THE web app SHALL show it as plain text, not as a link; an / link SHALL open in a new tab with .",
+      "AC-008.9": "WHILE the ticket is Pending review, THE web app SHALL show its review due date; WHILE it is in any other status, THE web app SHALL not show a review due date.",
+      "AC-008.10": "IF Ticket Detail answers HTTP 403, THEN THE web app SHALL show MSG08 inline and no ticket content; IF it fails for another reason than 403 or 404, THEN THE web app SHALL show MSG06 as a toast (D31)."
     }
   },
   "jira-app": {

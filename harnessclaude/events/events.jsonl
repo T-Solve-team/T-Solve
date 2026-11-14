@@ -1561,3 +1561,4 @@
 {"ts":"2026-11-14T11:00:10.397Z","type":"feature-status","module":"ticket-repository","feature":"manual-evidence-backend","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T11:23:10.321Z","type":"feature-status","module":"ticket-repository","feature":"manual-evidence-tab","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T11:34:19.598Z","type":"feature-status","module":"ticket-repository","feature":"manual-evidence-tab","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T21:01:34.651Z","type":"spec-approved","module":"ticket-repository","specHash":"d841e21ef53e72298449a8203e5ad8cfa65ff6d2b418245d2b0062e600c60ae7"}
