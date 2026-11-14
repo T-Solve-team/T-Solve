@@ -1235,3 +1235,4 @@
 {"ts":"2026-11-14T04:52:12.913Z","type":"feature-status","module":"jira-app","feature":"remove-jira-search","from":null,"to":"pending"}
 {"ts":"2026-11-14T04:52:29.746Z","type":"spec-approved","module":"jira-app","specHash":"cb554c366577714202f45588580dabe849c7cd7acbe01634da89b3ae59e93eb8"}
 {"ts":"2026-11-14T05:03:52.212Z","type":"feature-status","module":"jira-app","feature":"remove-jira-search","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T05:15:05.107Z","type":"feature-status","module":"jira-app","feature":"remove-jira-search","from":"in-progress","to":"evaluating"}
