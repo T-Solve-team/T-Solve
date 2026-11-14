@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ import vn.tsolve.worker.client.ReviewNotificationSender.Decision;
 class ReviewNotificationSenderIT {
 
     @Test
-    void deliversBothPlainTextReviewNotificationsToTheWriter_AC_001_1_AC_001_2() {
+    void deliversBothMultipartReviewNotificationsToTheWriter_AC_001_1_AC_001_2_AC_010_2_AC_010_7() {
         try (var mailpit = new GenericContainer<>(DockerImageName.parse("axllent/mailpit:v1.27.4"))
                 .withExposedPorts(1025, 8025)
                 .waitingFor(Wait.forHttp("/api/v1/messages").forPort(8025))) {
@@ -50,13 +51,13 @@ class ReviewNotificationSenderIT {
                             "TSOLVE_SMTP_FROM=review@example.test")
                     .run(context -> {
                         var sender = context.getBean(ReviewNotificationSender.class);
-                        sender.send(Decision.REJECT, "writer@example.test", "ITSUP-1", "Thiếu bằng chứng");
-                        sender.send(Decision.REQUEST_CHANGES, "writer@example.test", "ITSUP-1", "Thêm bước tái hiện");
+                        sender.send("writer@example.test", email(Decision.REJECT, "Thiếu bằng chứng"));
+                        sender.send("writer@example.test", email(Decision.REQUEST_CHANGES, "Thêm bước tái hiện"));
                     });
 
             var expected = Map.of(
-                    "Ticket rejected", "Thiếu bằng chứng",
-                    "Changes requested for your ticket", "Thêm bước tái hiện");
+                    "[ITSUP-1] Your ticket was rejected", "Thiếu bằng chứng",
+                    "[ITSUP-1] Changes requested for your ticket", "Thêm bước tái hiện");
             JsonNode messages = inbox.get()
                     .uri("/api/v1/messages")
                     .retrieve()
@@ -69,6 +70,7 @@ class ReviewNotificationSenderIT {
                 assertThat(expected).containsKey(subject);
                 assertThat(message.required("From").required("Address").asText())
                         .isEqualTo("review@example.test");
+                assertThat(message.required("From").required("Name").asText()).isEqualTo("T-Solve");
                 var recipients = message.required("To");
                 assertThat(recipients.size()).isEqualTo(1);
                 assertThat(recipients.get(0).required("Address").asText()).isEqualTo("writer@example.test");
@@ -77,9 +79,25 @@ class ReviewNotificationSenderIT {
                         .retrieve()
                         .body(JsonNode.class);
                 assertThat(detail.required("Text").asText()).contains("ITSUP-1", expected.get(subject));
-                assertThat(detail.path("HTML").asText()).isEmpty();
+                assertThat(detail.required("HTML").asText())
+                        .contains("ITSUP-1", expected.get(subject), "#5577FF", "https://acme.example.test/tickets/1");
+                assertThat(detail.required("Text").asText()).contains("https://acme.example.test/tickets/1");
             }
             assertThat(subjects).containsExactlyInAnyOrderElementsOf(expected.keySet());
         }
+    }
+
+    private static ReviewEmail email(Decision decision, String feedback) {
+        return new ReviewEmail(
+                decision,
+                "ITSUP-1",
+                "Login fails",
+                "ITSUP",
+                "Reviewer",
+                "Writer",
+                Instant.parse("2026-11-14T18:42:00Z"),
+                feedback,
+                "https://acme.example.test/tickets/1",
+                "acme.example.test");
     }
 }

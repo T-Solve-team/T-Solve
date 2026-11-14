@@ -1,13 +1,15 @@
 package vn.tsolve.worker.client;
 
+import jakarta.mail.MessagingException;
 import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
+import java.io.UnsupportedEncodingException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,21 +18,26 @@ import org.springframework.stereotype.Component;
 public class ReviewNotificationSender {
     private final JavaMailSender mail;
     private final String from;
+    private final ReviewEmailRenderer renderer = new ReviewEmailRenderer();
 
     public ReviewNotificationSender(JavaMailSender mail, @Value("${TSOLVE_SMTP_FROM}") String from) {
         this.mail = mail;
         this.from = singleMailbox(from);
     }
 
-    public void send(Decision decision, String recipient, String ticketKey, String feedback) {
-        var message = new SimpleMailMessage();
-        message.setFrom(from);
-        message.setTo(singleMailbox(recipient));
-        message.setSubject(decision.subject);
-        message.setText("Ticket %s\n\n%s\n%s".formatted(ticketKey, decision.feedbackHeading, feedback));
+    public void send(String recipient, ReviewEmail email) {
+        String mailbox = singleMailbox(recipient);
         try {
+            var message = mail.createMimeMessage();
+            var helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(new InternetAddress(from, "T-Solve"));
+            helper.setTo(mailbox);
+            helper.setSubject(("[" + email.ticketKey() + "] " + email.decision().subject)
+                    .replace('\r', ' ')
+                    .replace('\n', ' '));
+            helper.setText(renderer.plain(email), renderer.html(email));
             mail.send(message);
-        } catch (MailException ignored) {
+        } catch (MailException | MessagingException | UnsupportedEncodingException ignored) {
             // The transport exception can carry recipient addresses and message details.
             throw new DeliveryException();
         }
@@ -53,15 +60,13 @@ public class ReviewNotificationSender {
     }
 
     public enum Decision {
-        REJECT("Ticket rejected", "Rejection reason"),
-        REQUEST_CHANGES("Changes requested for your ticket", "Review comment");
+        REJECT("Your ticket was rejected"),
+        REQUEST_CHANGES("Changes requested for your ticket");
 
         private final String subject;
-        private final String feedbackHeading;
 
-        Decision(String subject, String feedbackHeading) {
+        Decision(String subject) {
             this.subject = subject;
-            this.feedbackHeading = feedbackHeading;
         }
     }
 
