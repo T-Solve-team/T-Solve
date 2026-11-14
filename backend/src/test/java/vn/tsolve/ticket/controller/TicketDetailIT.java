@@ -300,6 +300,7 @@ class TicketDetailIT {
         read(id).andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("MSG08"))
                 .andExpect(jsonPath("$.solution").doesNotExist())
-                .andExpect(jsonPath("$.title").doesNotExist());
+                .andExpect(jsonPath("$.ticketId").doesNotExist())
+                .andExpect(jsonPath("$.description").doesNotExist());
     }
 }
