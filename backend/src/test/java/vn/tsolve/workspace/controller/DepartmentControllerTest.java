@@ -344,4 +344,41 @@ class DepartmentControllerTest {
                 .andExpect(jsonPath("$.code").value("MSG07"));
         verifyNoInteractions(service);
     }
+
+    @Test
+    @WithTSolveUser(roles = Role.ADMIN)
+    void restoresWithDepartment_AC_007_1() throws Exception {
+        when(service.restore(ID)).thenReturn(new DepartmentRefResponse(ID, "IT"));
+        mvc.perform(post(PATH + "/restore").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.departmentId").value(ID.toString()))
+                .andExpect(jsonPath("$.name").value("IT"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"abc", "12345678-1234-1234-1234-12345678901"})
+    @WithTSolveUser(roles = Role.ADMIN)
+    void answersNotFoundForMalformedRestoreId_AC_007_6(String id) throws Exception {
+        mvc.perform(post("/api/v1/departments/" + id + "/restore").with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MSG04"));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @WithTSolveUser
+    void rejectsNonAdminRestore_AC_007_9() throws Exception {
+        mvc.perform(post(PATH + "/restore").with(csrf()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MSG08"));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void rejectsAnonymousRestore_AC_007_10() throws Exception {
+        mvc.perform(post(PATH + "/restore").with(csrf()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("MSG07"));
+        verifyNoInteractions(service);
+    }
 }

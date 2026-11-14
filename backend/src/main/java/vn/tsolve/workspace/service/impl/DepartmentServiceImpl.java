@@ -90,6 +90,23 @@ public class DepartmentServiceImpl implements DepartmentService {
 
     @Override
     @Transactional
+    public DepartmentRefResponse restore(UUID departmentId) {
+        scope.currentWorkspaceId(); // AC-007.11: throws before any write
+        DepartmentRepository.Current current = repository
+                .lockInStatus(departmentId, "DELETED")
+                .orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+        repository.markActive(current.id());
+        UUID spaceId = repository.setSpaceStatus(current.id(), "ACTIVE");
+        audit.record(
+                AuditAction.DEPARTMENT_CHANGE,
+                "DEPARTMENT",
+                departmentId,
+                Map.of("operation", "RESTORE", "name", current.name(), "spaceId", spaceId));
+        return new DepartmentRefResponse(departmentId, current.name());
+    }
+
+    @Override
+    @Transactional
     public DepartmentRefResponse update(UUID departmentId, UpdateDepartmentRequest request) {
         scope.currentWorkspaceId(); // AC-003.21: throws before any repository call
         String name = request.name().strip();

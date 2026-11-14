@@ -614,3 +614,87 @@ export const useDeleteDepartment = <TError = ErrorType<ProblemResponse>, TContex
 > => {
   return useMutation(getDeleteDepartmentMutationOptions(options), queryClient);
 };
+export const getRestoreDepartmentUrl = (departmentId: string) => {
+  return `/api/v1/departments/${departmentId}/restore`;
+};
+
+/**
+ * @summary Restore a Deleted Department and show its Space again; its Projects stay Removed
+ */
+export const restoreDepartment = async (
+  departmentId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<DepartmentRef> => {
+  return http<DepartmentRef>(getRestoreDepartmentUrl(departmentId), {
+    ...options,
+    method: 'POST',
+  });
+};
+
+export const getRestoreDepartmentMutationKey = () => ['restoreDepartment'] as const;
+
+export const getRestoreDepartmentMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof restoreDepartment>>,
+    TError,
+    RestoreDepartmentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof restoreDepartment>>,
+  TError,
+  RestoreDepartmentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRestoreDepartmentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof restoreDepartment>>,
+    RestoreDepartmentMutationVariables
+  > = (props) => {
+    const { departmentId } = props ?? {};
+
+    return restoreDepartment(departmentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RestoreDepartmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof restoreDepartment>>
+>;
+
+export type RestoreDepartmentMutationError = ErrorType<ProblemResponse>;
+export type RestoreDepartmentMutationVariables = { departmentId: string };
+
+/**
+ * @summary Restore a Deleted Department and show its Space again; its Projects stay Removed
+ */
+export const useRestoreDepartment = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof restoreDepartment>>,
+      TError,
+      RestoreDepartmentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof restoreDepartment>>,
+  TError,
+  RestoreDepartmentMutationVariables,
+  TContext
+> => {
+  return useMutation(getRestoreDepartmentMutationOptions(options), queryClient);
+};
