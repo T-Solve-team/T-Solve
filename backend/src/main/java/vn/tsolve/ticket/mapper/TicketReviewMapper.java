@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import vn.tsolve.ticket.dto.TicketReviewView.Department;
 import vn.tsolve.ticket.dto.TicketReviewView.Detail;
 import vn.tsolve.ticket.dto.TicketReviewView.Evidence;
 import vn.tsolve.ticket.dto.TicketReviewView.Project;
@@ -27,6 +28,7 @@ public interface TicketReviewMapper {
     Detail detail(
             Ticket ticket,
             Project project,
+            Department department,
             OffsetDateTime reviewDueDate,
             List<Evidence> evidence,
             String lastReviewComment,

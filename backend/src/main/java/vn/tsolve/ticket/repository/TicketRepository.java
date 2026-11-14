@@ -44,6 +44,27 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
     @Query("select t from Ticket t where t.id = :id or t.publicId = :id")
     Optional<Ticket> findForReviewDetail(@Param("id") UUID id);
 
+    interface Placement {
+        UUID getProjectPublicId();
+
+        String getProjectKey();
+
+        UUID getDepartmentId();
+
+        String getDepartmentName();
+
+        boolean getDepartmentActive();
+    }
+
+    @Query(value = """
+            select p.public_id as "projectPublicId", p.jira_project_key as "projectKey",
+                   d.public_id as "departmentId", d.name as "departmentName",
+                   d.status = 'ACTIVE' as "departmentActive"
+            from project p join department d on d.department_id = p.department_id
+            where p.public_id = :projectId or lpad(to_hex(p.project_id), 32, '0')::uuid = :projectId
+            """, nativeQuery = true)
+    Optional<Placement> findPlacement(@Param("projectId") UUID projectId);
+
     @Query("""
             select new vn.tsolve.ticket.dto.TicketReviewView$QueueRow(
                 t.id, t.ticketId, t.projectId, t.title, t.writer, t.reviewQueueEnteredAt, t.reviewDueDate)

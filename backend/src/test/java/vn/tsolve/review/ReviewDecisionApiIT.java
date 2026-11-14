@@ -65,9 +65,9 @@ class ReviewDecisionApiIT {
 
     static final String MANAGER_ID = "f4b304e6-d813-4e47-9b6c-69b7d61cc6cb";
     private static final UUID MANAGER = UUID.fromString(MANAGER_ID);
-    private static final UUID MANAGED_PROJECT = new UUID(0, 10);
+    private static final UUID MANAGED_PROJECT = new UUID(0x135, 10);
     private static final UUID DEPARTMENT = new UUID(0, 100);
-    private static final UUID PROJECT = new UUID(0, 11);
+    private static final UUID PROJECT = new UUID(0x135, 11);
     private static final UUID WRITER = new UUID(0, 301);
     private static final UUID OTHER_WRITER = new UUID(0, 302);
 
@@ -137,7 +137,7 @@ class ReviewDecisionApiIT {
                 public Optional<Set<UUID>> managedProjectIds(UUID accountId) {
                     try {
                         return scope.currentWorkspaceId().equals(TwoTenantDatabases.ACME) && accountId.equals(MANAGER)
-                                ? Optional.of(Set.of(MANAGED_PROJECT, new UUID(0, 11)))
+                                ? Optional.of(Set.of(MANAGED_PROJECT, PROJECT))
                                 : Optional.empty();
                     } catch (IllegalStateException unbound) {
                         return Optional.empty();
@@ -150,8 +150,8 @@ class ReviewDecisionApiIT {
                             .map(ignored -> Map.of(
                                     MANAGED_PROJECT,
                                     new ProjectAccess(
-                                            new Project(new UUID(0, 10), "Operations"), new UUID(0, 200), true),
-                                    new UUID(0, 11),
+                                            new Project(MANAGED_PROJECT, "Operations"), new UUID(0, 200), true),
+                                    PROJECT,
                                     new ProjectAccess(new Project(PROJECT, "Support"), DEPARTMENT, true),
                                     new UUID(0, 20),
                                     new ProjectAccess(new Project(new UUID(0, 20), "Unmanaged"), DEPARTMENT, false)));
@@ -166,6 +166,18 @@ class ReviewDecisionApiIT {
                 .update(
                         "insert into app_user (id, email, status, created_at) values (?, 'review-manager@example.test', 'ACTIVE', now())",
                         MANAGER);
+        var own = TwoTenantDatabases.tenantA();
+        Long department = own.queryForObject(
+                "insert into department(name, public_id) values ('Review decision IT', ?) returning department_id",
+                Long.class,
+                DEPARTMENT);
+        for (UUID project : List.of(MANAGED_PROJECT, PROJECT)) {
+            own.update(
+                    "insert into project(department_id, jira_project_key, public_id) values (?, ?, ?)",
+                    department,
+                    "RD-" + project.getLeastSignificantBits(),
+                    project);
+        }
         for (JdbcTemplate db : List.of(TwoTenantDatabases.tenantA(), TwoTenantDatabases.tenantB())) {
             db.update(
                     "insert into app_user (id, email, full_name, status, created_at) values (?, 'jira-writer@example.test', 'Writer', 'ACTIVE', now())",
@@ -234,11 +246,11 @@ class ReviewDecisionApiIT {
     @Test
     void listsScopedQueueAndAllEligibleIdsWithUnknownEntryTime_AC_009_1_AC_009_12() throws Exception {
         var own = TwoTenantDatabases.tenantA();
-        UUID later = pending(own, new UUID(0, 11));
-        UUID first = pending(own, new UUID(0, 11));
+        UUID later = pending(own, PROJECT);
+        UUID first = pending(own, PROJECT);
         pending(own, MANAGED_PROJECT);
         pending(own, new UUID(0, 20));
-        pending(TwoTenantDatabases.tenantB(), new UUID(0, 11));
+        pending(TwoTenantDatabases.tenantB(), PROJECT);
         own.update("update ticket set review_due_date = '2026-11-15' where ticket_id = ?", later);
         own.update(
                 "update ticket set review_due_date = '2026-11-12', review_queue_entered_at = null where ticket_id = ?",
@@ -278,11 +290,15 @@ class ReviewDecisionApiIT {
                 .andExpect(jsonPath("$.solution.resolutionSteps").value("Restart"))
                 .andExpect(jsonPath("$.evidence[0].filename").value("error.png"))
                 .andExpect(jsonPath("$.evidence[0].sizeBytes").value(32));
-        inAcme(get("/api/v1/tickets/{ticketId}", unmanaged)).andExpect(status().isNotFound());
+        inAcme(get("/api/v1/tickets/{ticketId}", unmanaged))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MSG08"));
         inAcme(get("/api/v1/tickets/{ticketId}", foreign)).andExpect(status().isNotFound());
 
         own.update("update ticket set status = 'PUBLISHED' where ticket_id = ?", unmanaged);
-        inAcme(get("/api/v1/tickets/{ticketId}", unmanaged)).andExpect(status().isOk());
+        inAcme(get("/api/v1/tickets/{ticketId}", unmanaged))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MSG08"));
     }
 
     @Test
@@ -491,16 +507,12 @@ class ReviewDecisionApiIT {
     }
 
     private static UUID pending(JdbcTemplate tenant, UUID projectId) {
-        return tenant.queryForObject(
-                """
+        return tenant.queryForObject("""
                 insert into ticket (source_ticket_id, project_id, source, status, title, symptoms,
                                     root_cause, resolution_steps, scope)
                 values (?, ?, 'SOLUTION_FORM', 'PENDING_REVIEW', 'Login fails', 'Error', 'Token', 'Restart', 'Users')
                 returning ticket_id
-                """,
-                UUID.class,
-                UUID.randomUUID().toString(),
-                projectId);
+                """, UUID.class, UUID.randomUUID().toString(), projectId);
     }
 
     private static String ticketStatus(JdbcTemplate tenant, UUID id) {

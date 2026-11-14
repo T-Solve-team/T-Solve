@@ -265,9 +265,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 toImport.size(),
                 (int) (isJira(preview) ? skipped : errorRows),
                 (int) removedRows));
-        List<Ticket> saved = tickets.saveAll(toImport.stream()
-                .map(r -> toTicket(r.getValues(), preview, batch.getId()))
-                .toList());
+        List<Ticket> saved = tickets.saveAll(
+                toImport.stream().map(r -> toTicket(r, preview, batch.getId())).toList());
         List<UUID> ticketIds = saved.stream().map(Ticket::getId).toList();
         decisions.saveAll(ticketIds.stream()
                 .map(id -> TicketReviewDecision.approve(id, user))
@@ -297,7 +296,8 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         return text.substring(0, text.offsetByCodePoints(0, max));
     }
 
-    private static Ticket toTicket(ImportPreviewRow.Values v, ImportPreview preview, long batchId) {
+    private static Ticket toTicket(ImportPreviewRow row, ImportPreview preview, long batchId) {
+        var v = row.getValues();
         String resolved = CsvRowValidator.trim(v.resolvedDate());
         return Ticket.imported(
                 CsvRowValidator.trim(v.ticketId()),
@@ -308,6 +308,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 CsvRowValidator.trim(v.description()),
                 cut(CsvRowValidator.trim(v.author()), WRITER_MAX),
                 resolved == null ? null : LocalDate.parse(resolved),
+                isJira(preview) ? row.getSourceUrl() : null,
                 new Ticket.Solution(
                         CsvRowValidator.trim(v.symptoms()),
                         CsvRowValidator.trim(v.rootCause()),

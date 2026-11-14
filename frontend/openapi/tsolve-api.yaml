@@ -570,7 +570,7 @@ paths:
     get:
       tags: [review]
       operationId: getReviewTicketDetail
-      summary: Frontend proposal — read-only Ticket Detail with Workspace and unpublished-content access checks.
+      summary: Read Ticket Detail within the caller's Department or writer and Project Manager access.
       parameters:
         - name: ticketId
           in: path
@@ -2703,6 +2703,14 @@ components:
         title: { type: string }
         description: { type: string }
         project: { $ref: '#/components/schemas/ProjectRef' }
+        department:
+          type: [object, 'null']
+          required: [id, name]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+        resolvedDate: { type: [string, 'null'], format: date }
+        sourceLink: { type: [string, 'null'] }
         source: { $ref: '#/components/schemas/TicketSource' }
         status: { $ref: '#/components/schemas/TicketStatus' }
         authorId: { type: [string, 'null'], format: uuid }

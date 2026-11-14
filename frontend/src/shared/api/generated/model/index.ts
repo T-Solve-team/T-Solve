@@ -116,6 +116,7 @@ export * from './reviewQueueItem';
 export * from './reviewQueuePage';
 export * from './reviewSolution';
 export * from './reviewTicketDetail';
+export * from './reviewTicketDetailDepartment';
 export * from './role';
 export * from './rowError';
 export * from './rowErrorParams';
