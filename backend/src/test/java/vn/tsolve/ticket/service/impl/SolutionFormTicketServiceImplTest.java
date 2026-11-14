@@ -24,6 +24,7 @@ import vn.tsolve.ticket.dto.SubmittedSolutionTicket;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.exception.ProjectNotActiveException;
 import vn.tsolve.ticket.exception.TicketAlreadyExistsException;
+import vn.tsolve.ticket.exception.TicketNotResubmittableException;
 import vn.tsolve.ticket.repository.SolutionDraftRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 
@@ -138,6 +139,59 @@ class SolutionFormTicketServiceImplTest {
         given(tickets.findStatusByTicketId(ISSUE)).willReturn(Optional.of(TicketStatus.CHANGES_REQUESTED));
 
         assertThat(service.findStatus(ISSUE)).contains(TicketStatus.CHANGES_REQUESTED);
+    }
+
+    @Test
+    void resubmitsTheSameTicketWithANewDueDateAndDeletesTheDraft_AC_012_4() {
+        given(tickets.resubmitSolutionFormTicket(any(), any(), any(), any(), any(), any(), any(), any()))
+                .willReturn(Optional.of(TICKET));
+
+        SubmittedSolutionTicket ticket = service.resubmit(submission("VPN drops", full()));
+
+        assertThat(ticket).isEqualTo(new SubmittedSolutionTicket(TICKET, ISSUE, TicketStatus.PENDING_REVIEW));
+        verify(tickets)
+                .resubmitSolutionFormTicket(
+                        ISSUE,
+                        WRITER,
+                        "Drops hourly",
+                        "Old client",
+                        "Update to 5.2",
+                        null,
+                        "Windows laptops",
+                        VIETNAM_TODAY);
+        verify(drafts).deleteDraft(WRITER, PROJECT, ISSUE);
+    }
+
+    @Test
+    void refusesAResubmissionThatIsNoLongerInChangesRequestedWithMsg06_AC_012_5() {
+        given(tickets.resubmitSolutionFormTicket(any(), any(), any(), any(), any(), any(), any(), any()))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.resubmit(submission("VPN drops", full())))
+                .isInstanceOf(TicketNotResubmittableException.class)
+                .satisfies(e -> {
+                    TicketNotResubmittableException coded = (TicketNotResubmittableException) e;
+                    assertThat(coded.getCode()).isEqualTo("MSG06");
+                    assertThat(coded.getStatus().value()).isEqualTo(409);
+                });
+        verify(drafts, never()).deleteDraft(any(), any(), any());
+    }
+
+    @Test
+    void checksTheSectionsOfAResubmissionFirst_AC_012_7() {
+        SolutionSections noRootCause = new SolutionSections("Drops", " ", "Update", "", "Laptops");
+
+        assertThatThrownBy(() -> service.resubmit(submission("VPN drops", noRootCause)))
+                .isInstanceOf(CodedException.class)
+                .satisfies(e -> assertThat(((CodedException) e).getCode()).isEqualTo("MSG01"));
+        verifyNoInteractions(tickets);
+    }
+
+    @Test
+    void readsTheSolutionOfTheWritersTicketInChangesRequested_AC_012_2() {
+        given(tickets.findResubmittableSections(ISSUE, WRITER)).willReturn(Optional.of(full()));
+
+        assertThat(service.findResubmittable(ISSUE, WRITER)).contains(full());
     }
 
     private void givenInserted() {

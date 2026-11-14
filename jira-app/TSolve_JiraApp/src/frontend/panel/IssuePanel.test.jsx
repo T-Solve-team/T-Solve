@@ -82,6 +82,47 @@ describe('IssuePanel', () => {
     expect(screen.getByLabelText(/^Symptoms/)).toHaveValue('Drops');
   });
 
+  it('AC-012.1 AC-012.2 offers Edit and resubmit with MSG64 and opens the resubmission form', async () => {
+    getReviewFeedback.mockResolvedValue({ code: 'MSG64', params: { manager_name: 'Le Minh', comment: 'Add steps' } });
+    openSolutionForm.mockResolvedValue({ mayOpen: true, origin: 'TICKET', sections: SECTIONS, message: null });
+    await show({ ...PANEL, ticketStatus: 'CHANGES_REQUESTED', mayOpenForm: false, mayResubmit: true });
+
+    fireEvent.click(await screen.findByRole('button', { name: PANEL_LABELS.editAndResubmit }));
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(openSolutionForm).toHaveBeenCalledWith('ITSUP-12', { summary: 'VPN', description: '', resubmit: true });
+    expect(screen.getByLabelText(/^Symptoms/)).toHaveValue('Drops');
+    expect(screen.getAllByText(/Changes requested by Le Minh: "Add steps"/)).toHaveLength(2);
+  });
+
+  it('AC-008.9 shows who rejected the ticket and why, with no button', async () => {
+    getReviewFeedback.mockResolvedValue({
+      code: 'REJECTED',
+      params: { manager_name: 'Le Minh', reason: 'Wrong root cause' },
+    });
+    await show({ ...PANEL, ticketStatus: 'REJECTED', mayOpenForm: false, mayResubmit: false });
+
+    expect(await screen.findByText('Rejected by Le Minh: "Wrong root cause".')).toBeInTheDocument();
+    expect(getReviewFeedback).toHaveBeenCalledWith('ITSUP-12');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('AC-008.10 shows that the Solution is approved and published, with no button', async () => {
+    await show({ ...PANEL, ticketStatus: 'PUBLISHED', mayOpenForm: false, mayResubmit: false });
+
+    expect(await screen.findByText(PANEL_LABELS.published)).toBeInTheDocument();
+    expect(PANEL_LABELS.published).toBe('Solution approved and published.');
+    expect(getReviewFeedback).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('AC-012.3 offers no Edit and resubmit when the viewer may not resubmit', async () => {
+    getReviewFeedback.mockResolvedValue(null);
+    await show({ ...PANEL, ticketStatus: 'CHANGES_REQUESTED', mayOpenForm: false, mayResubmit: false });
+
+    expect(screen.queryByRole('button', { name: PANEL_LABELS.editAndResubmit })).not.toBeInTheDocument();
+  });
+
   it('AC-001.4 offers the form button only while the issue is Done', async () => {
     await show(PANEL);
     expect(screen.getByRole('button', { name: PANEL_LABELS.writeSolution })).toBeInTheDocument();

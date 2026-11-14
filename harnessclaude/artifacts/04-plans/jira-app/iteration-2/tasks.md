@@ -1,7 +1,7 @@
 ---
 module: jira-app
 date: 2026-11-11
-total_tasks: 10
+total_tasks: 12
 owner: Dev
 ---
 
@@ -198,4 +198,59 @@ no longer describes "all empty = Close". Re-check Close, the Draft and Finish on
   `backend/src/main/java/vn/tsolve/ticket/service/impl/SolutionFormTicketServiceImpl.java`, its tests,
   `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
 **Dependencies:** Task 9
+**Estimated size:** small
+
+## Task 13: Resubmit — contract, ticket storage and endpoints
+
+**Story:** STORY-012
+**Feature:** resubmit-backend
+**Description:** OpenAPI first: `resubmit` (boolean, default false) on `SolutionFormRequest` and
+`SubmitSolutionRequest`, `mayResubmit` on `IssuePanel`, origin `TICKET`, 409 MSG06 on `submitSolution`; regenerate the
+frontend client. `ticket`: the resubmittable read and the guarded UPDATE of the design (due date reset, Draft deleted,
+409 MSG06 on a guard miss). `jiraapp`: `openForm`, `submit` and `panel` as the design says. Tests: service unit tests
+and one IT on the real database for the UPDATE (status, sections, due date, entry time, Draft gone, guard misses).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`,
+  `backend/src/main/java/vn/tsolve/ticket/repository/TicketRepository.java`, `ticket/service/SolutionFormTicketService.java`,
+  `ticket/service/impl/SolutionFormTicketServiceImpl.java`, `jiraapp/dto/SolutionFormRequest.java`,
+  `jiraapp/dto/SubmitSolutionRequest.java`, `jiraapp/dto/SolutionFormResponse.java`, `jiraapp/dto/IssuePanelResponse.java`,
+  `jiraapp/service/impl/JiraAppSolutionServiceImpl.java`, their tests, `ticket/SolutionFormTicketIT.java`
+- Create: `ticket/exception/TicketNotResubmittableException.java`
+**Dependencies:** Task 10
+**Estimated size:** medium
+
+## Task 14: Resubmit — Issue Panel and Solution Form
+
+**Story:** STORY-012
+**Feature:** resubmit-forge
+**Description:** The panel shows "Edit and resubmit" with MSG64 when `mayResubmit` and opens the form with
+`resubmit: true`; the form shows MSG64 above the sections, sends `resubmit` on Finish, keeps a Draft on Close, and
+checks, rewrites and retries as before (AC-012.7). The client's retry counts 409 MSG06 + panel `PENDING_REVIEW` as
+submitted. Check the flow on the dev site (Request changes → Edit and resubmit → Pending review).
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, `form/SolutionFormModal.jsx`,
+  `api/tsolveClient.js`, their tests
+**Dependencies:** Task 13
+**Estimated size:** small
+
+## Task 15: Issue Panel — Rejected ticket
+
+**Story:** STORY-008
+**Feature:** panel-rejected
+**Description:** AC-008.9: while the writer's Solution Form ticket is Rejected the panel reads the feedback endpoint and
+shows `Rejected by {manager_name}: "{reason}".` (code `REJECTED`, a Jira App text) with no button.
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, `messages.js`, their tests
+**Dependencies:** ticket-review Task 22
+**Estimated size:** small
+
+## Task 16: Issue Panel — Published ticket
+
+**Story:** STORY-008
+**Feature:** panel-published
+**Description:** AC-008.10: while the issue's ticket is Published, whatever its source, the panel shows "Solution
+approved and published." (a Jira App text) with no button. No server change: the panel already reads `ticketStatus`.
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, its test
+**Dependencies:** none
 **Estimated size:** small

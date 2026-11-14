@@ -64,8 +64,8 @@ export const getGetJiraReviewFeedbackUrl = (issueKey: string) => {
 };
 
 /**
- * Requires a verified Forge principal, registered Workspace, linked active Account and authorized issue. The Workspace is resolved only from the verified cloudId. Returns no feedback when the issue has no current Changes requested Solution Form owned by that Account in the verified Project.
- * @summary Read the latest change request for the verified writer of this issue (MSG64).
+ * Requires a verified Forge principal, registered Workspace, linked active Account and authorized issue. The Workspace is resolved only from the verified cloudId. Returns MSG64 for a Changes requested Solution Form ticket and REJECTED (ticket-review AC-009.13) for a Rejected one, owned by that Account in the verified Project; no feedback otherwise, or when the reviewer has no name.
+ * @summary Read the latest change request (MSG64) or Reject reason (REJECTED) for the verified writer of this issue.
  */
 export const getJiraReviewFeedback = async (
   issueKey: string,
@@ -175,7 +175,7 @@ export function useGetJiraReviewFeedback<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Read the latest change request for the verified writer of this issue (MSG64).
+ * @summary Read the latest change request (MSG64) or Reject reason (REJECTED) for the verified writer of this issue.
  */
 
 export function useGetJiraReviewFeedback<
@@ -656,7 +656,7 @@ export const getSubmitSolutionUrl = (issueKey: string) => {
 };
 
 /**
- * @summary Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and deletes the viewer's Draft (STORY-004). Every required section must be filled (400 MSG01), so an empty Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead.
+ * @summary Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and deletes the viewer's Draft (STORY-004). Every required section must be filled (400 MSG01), so an empty Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead. With `resubmit`, it replaces the Solution of the viewer's ticket in Changes requested and moves that ticket back to Pending review with a new due date (STORY-012).
 
  */
 export const submitSolution = async (
@@ -735,7 +735,7 @@ export type SubmitSolutionMutationError = ErrorType<ProblemDetail | ProblemRespo
 export type SubmitSolutionMutationVariables = { issueKey: string; data: SubmitSolutionRequest };
 
 /**
- * @summary Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and deletes the viewer's Draft (STORY-004). Every required section must be filled (400 MSG01), so an empty Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead.
+ * @summary Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and deletes the viewer's Draft (STORY-004). Every required section must be filled (400 MSG01), so an empty Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead. With `resubmit`, it replaces the Solution of the viewer's ticket in Changes requested and moves that ticket back to Pending review with a new due date (STORY-012).
 
  */
 export const useSubmitSolution = <

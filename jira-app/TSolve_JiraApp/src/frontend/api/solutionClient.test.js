@@ -39,6 +39,46 @@ describe('tsolveClient — Solution Form and Issue Panel', () => {
     );
   });
 
+  it('AC-012.2 asks to open the resubmission form', async () => {
+    invokeRemote.mockResolvedValue(answer(200, { mayOpen: true, origin: 'TICKET', sections: SECTIONS, message: null }));
+
+    await openSolutionForm('ITSUP-12', { summary: 'VPN', description: 'After sleep', resubmit: true });
+
+    expect(invokeRemote).toHaveBeenCalledWith(
+      expect.objectContaining({ body: { summary: 'VPN', description: 'After sleep', resubmit: true } }),
+    );
+  });
+
+  it('AC-012.4 sends resubmit with Finish', async () => {
+    invokeRemote.mockResolvedValue(answer(201, TICKET));
+
+    await submitSolution('ITSUP-12', { summary: 'VPN', sections: SECTIONS, resubmit: true }, { sleep });
+
+    expect(invokeRemote).toHaveBeenCalledWith(
+      expect.objectContaining({ body: { summary: 'VPN', sections: SECTIONS, resubmit: true } }),
+    );
+  });
+
+  it('AC-012.4 counts a 409 MSG06 after a retry as resubmitted once the ticket is back in Pending review', async () => {
+    invokeRemote
+      .mockResolvedValueOnce(answer(502, {}))
+      .mockResolvedValueOnce(answer(409, { code: 'MSG06' }))
+      .mockResolvedValueOnce(answer(200, { linked: true, ticketStatus: 'PENDING_REVIEW' }));
+
+    await expect(
+      submitSolution('ITSUP-12', { summary: 'VPN', sections: SECTIONS, resubmit: true }, { sleep }),
+    ).resolves.toMatchObject({ ticketId: 'ITSUP-12', status: 'PENDING_REVIEW' });
+  });
+
+  it('AC-012.5 gives 409 MSG06 back when the ticket is no longer in Changes requested', async () => {
+    invokeRemote.mockResolvedValue(answer(409, { code: 'MSG06' }));
+
+    await expect(
+      submitSolution('ITSUP-12', { summary: 'VPN', sections: SECTIONS, resubmit: true }, { sleep }),
+    ).rejects.toMatchObject({ code: 'MSG06', status: 409 });
+    expect(invokeRemote).toHaveBeenCalledTimes(1);
+  });
+
   it('AC-004.1 submits once when T-Solve answers', async () => {
     invokeRemote.mockResolvedValue(answer(201, TICKET));
 

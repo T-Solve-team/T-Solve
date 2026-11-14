@@ -15,4 +15,6 @@ export interface SubmitSolutionRequest {
    */
   summary: string;
   sections: SolutionSections;
+  /** True = replace the Solution of the viewer's ticket in Changes requested and move it back to Pending review (AC-012.4); 409 MSG06 when it is no longer in Changes requested (AC-012.5). */
+  resubmit?: boolean;
 }
