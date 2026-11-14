@@ -25,8 +25,8 @@ Jira issue view
           ├─ requestJira GET /rest/api/3/issue/{key}?fields=summary,description   (as the viewer)
           ├─ POST …/issues/{key}/solution-form {summary, description} → Draft | AI draft | prefill + MSG67
           ├─ POST …/solution-rewrites ─► step "rewrite" (4.2) Accept / Discard (MSG68)
-          ├─ PUT  …/issues/{key}/solution-draft                    (MSG41 / MSG06)
-          └─ POST …/issues/{key}/solution  (five sections; Close = all empty) — retry ×3 → MSG69
+          ├─ PUT  …/issues/{key}/solution-draft  on Close           ("Saved as draft" / MSG06; 14/11)
+          └─ POST …/issues/{key}/solution  (five sections, Finish only since 14/11) — retry ×3 → MSG69
 
 backend /api/v1/jira-app/** (FIT chain, Roles.JIRA_APP) ─► vn.tsolve.jiraapp.controller
    JiraAppSolutionController, JiraAppPanelController, JiraAppTicketController
@@ -180,7 +180,7 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
   `PublishedTicketService` (Task 5) describe the 11/11 design and no longer apply.
 
 ## Change — 2026-11-14: Close keeps a Draft (Task 10)
-- Spec: AC-005.1 reworded (Close and the dialog's close control save the Draft, MSG41), AC-005.5 new; the Close story
+- Spec: AC-005.1 reworded (Close and the dialog's close control save the Draft, flag "Saved as draft"), AC-005.5 new; the Close story
   (AC-006.1 to AC-006.3, MSG70) retired. The team's Review Queue never holds an empty ticket.
 - Chosen: Close saves the Draft and the Save as draft button goes. Alternatives: keep both buttons; discard on Close
   and only record it. Rationale: user 14/11 — nothing typed is lost and one button does it.

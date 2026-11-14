@@ -189,7 +189,7 @@ stay green.
 **Feature:** close-keeps-draft
 **Description:** Spec change of 14/11 (AC-005.1 reworded, AC-005.5 new, the Close story retired). Jira App: the Solution Form
 has Rewrite with AI, Close and Finish only; Close and the dialog's close control save the Draft (`PUT …/solution-draft`),
-close the form and show MSG41 as a flag; on failure MSG06 and the form stays open (AC-005.4); no MSG70. Backend:
+close the form and show the flag "Saved as draft"; on failure MSG06 and the form stays open (AC-005.4); no MSG70. Backend:
 `SolutionFormTicketServiceImpl.submit` always checks the required sections, so an all-empty submission is 400 MSG01
 and never reaches the Review Queue; the AC-006.2 tests go and AC-005.5 tests come in. OpenAPI: the solution endpoint
 no longer describes "all empty = Close". Re-check Close, the Draft and Finish on the dev site.
