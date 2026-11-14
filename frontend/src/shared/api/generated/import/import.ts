@@ -1444,7 +1444,7 @@ export const getCreateManualTicketUrl = () => {
 };
 
 /**
- * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
 
  */
 export const createManualTicket = async (
@@ -1510,7 +1510,7 @@ export type CreateManualTicketMutationError = ErrorType<ProblemDetail | ProblemR
 export type CreateManualTicketMutationVariables = { data: CreateManualTicketBody };
 
 /**
- * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
 
  */
 export const useCreateManualTicket = <
@@ -1540,7 +1540,7 @@ export const getSaveManualTicketDraftUrl = () => {
 };
 
 /**
- * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
 
  */
 export const saveManualTicketDraft = async (
@@ -1606,7 +1606,7 @@ export type SaveManualTicketDraftMutationError = ErrorType<ProblemDetail | Probl
 export type SaveManualTicketDraftMutationVariables = { data: SaveManualTicketDraftBody };
 
 /**
- * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
 
  */
 export const useSaveManualTicketDraft = <

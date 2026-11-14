@@ -23,10 +23,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
@@ -34,6 +36,7 @@ import vn.tsolve.common.exception.InvalidFieldsException;
 import vn.tsolve.common.exception.ProblemDetails.FieldError;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.ticket.dto.ImportResultResponse;
 import vn.tsolve.ticket.dto.ManualTicketRequest;
 import vn.tsolve.ticket.dto.MessageRef;
@@ -47,8 +50,10 @@ import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
+import vn.tsolve.ticket.repository.ImportPreviewEvidenceRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
+import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ProjectAccess;
@@ -81,7 +86,11 @@ class ManualTicketServiceImplTest {
             projects,
             events,
             audit,
-            CLOCK);
+            CLOCK,
+            mock(ImportPreviewEvidenceRepository.class),
+            mock(TicketEvidenceRepository.class),
+            new StaticListableBeanFactory().getBeanProvider(FileStorage.class),
+            mock(PlatformTransactionManager.class));
 
     static ManualTicketRequest valid() {
         return new ManualTicketRequest(

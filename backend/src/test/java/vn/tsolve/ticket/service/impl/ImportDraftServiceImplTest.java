@@ -19,10 +19,13 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
 import vn.tsolve.common.exception.NotFoundException;
+import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.ticket.dto.DraftSavedResponse;
 import vn.tsolve.ticket.dto.ImportDraftSummary;
 import vn.tsolve.ticket.dto.ImportPreviewResponse;
@@ -33,6 +36,7 @@ import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.mapper.ImportPreviewMapperImpl;
+import vn.tsolve.ticket.repository.ImportPreviewEvidenceRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
 import vn.tsolve.ticket.service.ProjectAccess;
@@ -49,8 +53,14 @@ class ImportDraftServiceImplTest {
     private final ImportPreviewRowRepository rows = mock(ImportPreviewRowRepository.class);
     private final ProjectAccess projects = mock(ProjectAccess.class);
 
-    private final ImportDraftServiceImpl service =
-            new ImportDraftServiceImpl(previews, rows, projects, Clock.fixed(NOW, ZoneId.of("Asia/Ho_Chi_Minh")));
+    private final ImportDraftServiceImpl service = new ImportDraftServiceImpl(
+            previews,
+            rows,
+            projects,
+            Clock.fixed(NOW, ZoneId.of("Asia/Ho_Chi_Minh")),
+            mock(ImportPreviewEvidenceRepository.class),
+            new StaticListableBeanFactory().getBeanProvider(FileStorage.class),
+            mock(PlatformTransactionManager.class));
 
     @BeforeEach
     void setUp() {
@@ -62,6 +72,7 @@ class ImportDraftServiceImplTest {
         ImportPreview preview = ImportPreview.jira(PM, PROJECT, FROM, TO, false, NOW.minusSeconds(3600));
         ReflectionTestUtils.setField(preview, "id", id);
         when(previews.findByIdAndOwner(id, PM)).thenReturn(Optional.of(preview));
+        when(previews.lockByIdAndOwner(id, PM)).thenReturn(Optional.of(preview));
         return preview;
     }
 
@@ -166,6 +177,7 @@ class ImportDraftServiceImplTest {
                 new ImportPreview(PM, PROJECT, TicketSource.CSV, ImportType.WITH_SOLUTION, "tickets.csv", NOW);
         ReflectionTestUtils.setField(csv, "id", 7L);
         when(previews.findByIdAndOwner(7L, PM)).thenReturn(Optional.of(csv));
+        when(previews.lockByIdAndOwner(7L, PM)).thenReturn(Optional.of(csv));
 
         for (Runnable call : List.<Runnable>of(
                 () -> service.delete("other@company.vn", 42L),

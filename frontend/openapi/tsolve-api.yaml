@@ -1311,7 +1311,8 @@ paths:
         Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source
         MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field
         with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project =
-        MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+        MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34,
+        more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
       requestBody:
         required: true
         content:
@@ -1339,7 +1340,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ImportResultResponse'
         '400':
-          description: Invalid fields (one fieldErrors entry per field).
+          description: Invalid fields (one fieldErrors entry per field); Evidence type or size = MSG34 with file_name, count = MSG72 (fieldErrors on files).
           content:
             application/problem+json:
               schema:
@@ -1353,7 +1354,11 @@ paths:
         '409':
           $ref: '#/components/responses/Problem'
         '503':
-          $ref: '#/components/responses/Problem'
+          description: Evidence storage is not configured or is unavailable (MSG06); nothing saved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/manual/drafts:
     post:
       tags: [import]
@@ -1361,7 +1366,8 @@ paths:
       summary: >
         Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId,
         updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's
-        Manual Draft = MSG04 (404).
+        Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72
+        (400, fieldErrors on files); storage unavailable = MSG06 (503).
       requestBody:
         required: true
         content:
@@ -1389,7 +1395,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DraftSavedResponse'
         '400':
-          description: No Project (MSG01 on projectId).
+          description: No Project (MSG01 on projectId); Evidence type or size = MSG34 with file_name, count = MSG72 (fieldErrors on files).
           content:
             application/problem+json:
               schema:
@@ -1401,7 +1407,11 @@ paths:
         '404':
           $ref: '#/components/responses/Problem'
         '503':
-          $ref: '#/components/responses/Problem'
+          description: Evidence storage is not configured or is unavailable (MSG06); nothing saved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/manual/drafts/{previewId}:
     get:
       tags: [import]
