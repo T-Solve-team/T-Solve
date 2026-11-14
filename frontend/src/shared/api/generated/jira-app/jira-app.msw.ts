@@ -11,14 +11,20 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
-import { ChatbotAnswerOutcome } from '../model';
+import { ChatbotAnswerOutcome, SolutionFormOrigin, TicketStatus } from '../model';
 import type {
   ChatbotAnswer,
   ChatbotQuestion,
   IssueCreatedPayload,
+  IssuePanel,
   JiraAskerEligibility,
   JiraReviewFeedback,
   MessageRef,
+  SolutionForm,
+  SolutionFormRequest,
+  SolutionSections,
+  SubmitSolutionRequest,
+  SubmittedTicket,
   TicketSolutionCitation,
   WikiDocumentCitation,
 } from '../model';
@@ -97,6 +103,72 @@ export const getAskJiraAppQuestionResponseMock = (
         { ...getAskJiraAppQuestionResponseTicketSolutionCitationMock() },
       ]),
   ),
+  ...overrideResponse,
+});
+
+export const getOpenSolutionFormResponseMock = (
+  overrideResponse: Partial<Extract<SolutionForm, object>> = {},
+): SolutionForm => ({
+  mayOpen: faker.datatype.boolean(),
+  origin: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(SolutionFormOrigin)),
+    null,
+  ]),
+  sections: faker.helpers.arrayElement([
+    {
+      symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      workaround: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      scopeOfApplicability: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    null,
+  ]),
+  message: faker.helpers.arrayElement([
+    {
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      params: {
+        [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          faker.number.float({ fractionDigits: 2 }),
+        ]),
+      },
+    },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getSubmitSolutionResponseMock = (
+  overrideResponse: Partial<Extract<SubmittedTicket, object>> = {},
+): SubmittedTicket => ({
+  id: faker.string.uuid(),
+  ticketId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(TicketStatus)),
+  ...overrideResponse,
+});
+
+export const getRewriteSolutionResponseMock = (
+  overrideResponse: Partial<Extract<SolutionSections, object>> = {},
+): SolutionSections => ({
+  symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  workaround: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  scopeOfApplicability: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getGetIssuePanelResponseMock = (
+  overrideResponse: Partial<Extract<IssuePanel, object>> = {},
+): IssuePanel => ({
+  linked: faker.datatype.boolean(),
+  ticketStatus: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(TicketStatus)),
+    null,
+  ]),
+  hasDraft: faker.datatype.boolean(),
+  mayOpenForm: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -192,9 +264,135 @@ export const getAskJiraAppQuestionMockHandler = (
     options,
   );
 };
+
+export const getOpenSolutionFormMockHandler = (
+  overrideResponse?:
+    | SolutionForm
+    | ((
+        info: Parameters<HttpResponseResolver<{ issueKey: string }, SolutionFormRequest>>[0],
+      ) => Promise<SolutionForm> | SolutionForm),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ issueKey: string }, SolutionFormRequest>(
+    '*/api/v1/jira-app/issues/:issueKey/solution-form',
+    async (
+      info: Parameters<HttpResponseResolver<{ issueKey: string }, SolutionFormRequest>>[0],
+    ) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getOpenSolutionFormResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSubmitSolutionMockHandler = (
+  overrideResponse?:
+    | SubmittedTicket
+    | ((
+        info: Parameters<HttpResponseResolver<{ issueKey: string }, SubmitSolutionRequest>>[0],
+      ) => Promise<SubmittedTicket> | SubmittedTicket),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ issueKey: string }, SubmitSolutionRequest>(
+    '*/api/v1/jira-app/issues/:issueKey/solution',
+    async (
+      info: Parameters<HttpResponseResolver<{ issueKey: string }, SubmitSolutionRequest>>[0],
+    ) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSubmitSolutionResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSaveSolutionDraftMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<HttpResponseResolver<{ issueKey: string }, SolutionSections>>[0],
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put<{ issueKey: string }, SolutionSections>(
+    '*/api/v1/jira-app/issues/:issueKey/solution-draft',
+    async (info: Parameters<HttpResponseResolver<{ issueKey: string }, SolutionSections>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getRewriteSolutionMockHandler = (
+  overrideResponse?:
+    | SolutionSections
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, SolutionSections>>[0],
+      ) => Promise<SolutionSections> | SolutionSections),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, SolutionSections>(
+    '*/api/v1/jira-app/solution-rewrites',
+    async (info: Parameters<HttpResponseResolver<PathParams, SolutionSections>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRewriteSolutionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetIssuePanelMockHandler = (
+  overrideResponse?:
+    | IssuePanel
+    | ((
+        info: Parameters<HttpResponseResolver<{ issueKey: string }>>[0],
+      ) => Promise<IssuePanel> | IssuePanel),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ issueKey: string }>(
+    '*/api/v1/jira-app/issues/:issueKey/panel',
+    async (info: Parameters<HttpResponseResolver<{ issueKey: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetIssuePanelResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getJiraAppMock = () => [
   getGetJiraReviewFeedbackMockHandler(),
   getReceiveIssueCreatedMockHandler(),
   getGetJiraAskerEligibilityMockHandler(),
   getAskJiraAppQuestionMockHandler(),
+  getOpenSolutionFormMockHandler(),
+  getSubmitSolutionMockHandler(),
+  getSaveSolutionDraftMockHandler(),
+  getRewriteSolutionMockHandler(),
+  getGetIssuePanelMockHandler(),
 ];
