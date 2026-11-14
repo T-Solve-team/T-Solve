@@ -1429,3 +1429,10 @@
 {"ts":"2026-11-14T08:39:03.094Z","type":"spec-approved","module":"ticket-review","specHash":"8ca5fab301424f0d3289249e5235a5ec226b1fb3dd7f6b21964fd453140159fa"}
 {"ts":"2026-11-14T08:47:24.019Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"98ec9c7382a17815f6f001e3a6432225c4bc83b9"}
 {"ts":"2026-11-14T08:47:24.252Z","type":"commit-recorded","module":"worker","repo":"default","sha":"98ec9c7382a17815f6f001e3a6432225c4bc83b9"}
+{"ts":"2026-11-14T14:30:41.069Z","type":"module-status","module":"wiki","from":"planned","to":"implementing"}
+{"ts":"2026-11-14T14:30:41.363Z","type":"feature-status","module":"wiki","feature":"wiki-view-rule","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T15:04:22.700Z","type":"feature-status","module":"wiki","feature":"wiki-view-rule","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T15:04:23.114Z","type":"feature-status","module":"wiki","feature":"wiki-view-rule","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-14T15:16:37.616Z","type":"spec-approved","module":"wiki","specHash":"c47a3ede0c7021da586cd73765155d5e5e0b5d22b00ef446b9d510948f3597fb"}
+{"ts":"2026-11-14T15:52:20.511Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"448b6bed44483307ad3eb2186e84765d85457e4e"}
+{"ts":"2026-11-14T15:52:20.913Z","type":"feature-status","module":"wiki","feature":"wiki-view-rule","from":"fixing","to":"evaluating"}
