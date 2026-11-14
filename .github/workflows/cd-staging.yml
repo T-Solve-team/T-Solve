@@ -1,0 +1,100 @@
+# CD to staging (KAN-14, STORY-010): after CI succeeds on a push to main, a GitHub-hosted job SSHes to the VPS with a
+# dedicated deploy key. The key's authorized_keys entry forces `/usr/local/sbin/tsolve-deploy`, which takes the commit SHA,
+# checks it is on origin/main, builds on the VPS and runs the smoke checks. No runner on the VPS, no registry,
+# no automatic rollback (redeploy an older SHA with "Run workflow"). Setup: infra/README.md, "Continuous deploy (CD)".
+name: CD staging
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit to deploy (40 hex characters). Empty: the latest commit on main."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-24.04
+    environment: staging
+    timeout-minutes: 30
+    env:
+      EVENT_NAME: ${{ github.event_name }}
+      RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+      INPUT_SHA: ${{ inputs.sha }}
+      REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+      SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+      SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+      SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
+    steps:
+      - name: Resolve the commit to deploy
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            SHA="$INPUT_SHA"
+            if [ -z "$SHA" ]; then
+              SHA="$(gh api "repos/$REPO/commits/main" --jq .sha)"
+            fi
+          else
+            SHA="$RUN_SHA"
+          fi
+          if ! [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::not a 40-character lowercase hex commit SHA"
+            exit 1
+          fi
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            HEAD="$(gh api "repos/$REPO/commits/main" --jq .sha)"
+            if [ "$SHA" != "$HEAD" ]; then
+              echo "::notice::Skipped: $SHA is no longer the head of main ($HEAD); the run for the newer commit deploys."
+              echo "SKIP=1" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          fi
+          echo "SHA=$SHA" >> "$GITHUB_ENV"
+
+      - name: Deploy over SSH
+        if: env.SKIP != '1'
+        run: |
+          set -euo pipefail
+          umask 077
+          KEY="$RUNNER_TEMP/deploy_key"
+          KNOWN="$RUNNER_TEMP/known_hosts"
+          printf '%s\n' "$SSH_KEY" > "$KEY"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$KNOWN"
+          chmod 600 "$KEY" "$KNOWN"
+          OUT="$RUNNER_TEMP/deploy.out"
+          set +e
+          ssh -i "$KEY" -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o UserKnownHostsFile="$KNOWN" -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=20 -o ServerAliveInterval=30 \
+            "$SSH_USER@$SSH_HOST" "$SHA" 2>&1 | tee "$OUT"
+          STATUS="${PIPESTATUS[0]}"
+          set -e
+          {
+            echo "### Staging deploy"
+            echo "- Commit: \`$SHA\`"
+            echo "- Result: $([ "$STATUS" -eq 0 ] && echo deployed || echo "FAILED (exit $STATUS)")"
+            echo
+            echo "Smoke checks and warnings:"
+            echo '```'
+            grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z (SMOKE|WARNING|FAILED|DEPLOYED|previous)' "$OUT" || echo "(none)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$STATUS"
+
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/deploy_key" "$RUNNER_TEMP/known_hosts"

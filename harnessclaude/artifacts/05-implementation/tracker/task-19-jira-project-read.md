@@ -81,7 +81,7 @@ Evaluate `jira-project-read` (Reviewer); project-integration Task 1 `project-don
 Fixed MEDIUM-1, LOW-3 and INFO-4 of `06-evaluation/tracker/task-19-jira-project-read-review.md`. LOW-2, INFO-5
 and INFO-6 are left as D45 decided.
 
-- **MEDIUM-1 → BUG-204** (logged in `docs/bug-log.md`, owner Đặng Tấn Bình): `JiraClient.call` now also catches
+- **MEDIUM-1 → BUG-207** (logged in `docs/bug-log.md`, owner Đặng Tấn Bình): `JiraClient.call` now also catches
   `IllegalArgumentException` (a site URL with no scheme, `:` or a non-Latin-1 character in the email, an invalid
   `Content-Type` on a 200) and throws `JiraUnavailableException(0)` with no message or cause. `findProject` therefore
   returns UNAVAILABLE. The comment operations share `call`: their existing tests pass unchanged. For the same inputs
@@ -95,23 +95,23 @@ and INFO-6 are left as D45 decided.
 
 Who wrote what: Codex CLI (`codex exec -s workspace-write --ephemeral`) wrote the code and tests in the four files
 below, tests first. Claude wrote the Codex prompt, reviewed the diff (nothing outside these files under `tracker/`),
-did the mutation check, wrote the BUG-204 row and this entry.
+did the mutation check, wrote the BUG-207 row and this entry.
 
 Files:
 - Modify: `backend/src/main/java/vn/tsolve/tracker/client/JiraClient.java` (+3)
 - Modify: `backend/src/main/java/vn/tsolve/tracker/service/impl/TrackerProjectServiceImpl.java` (+9 −1)
 - Modify: `backend/src/test/java/vn/tsolve/tracker/client/JiraClientTest.java` (+102 −1): 
-  `reportsSchemeLessSiteAsUnavailable_…_BUG_204` (both reads), `reportsMalformedEmailAsUnavailable_…_BUG_204`
-  (`:` and Cyrillic, both reads), `reportsInvalidContentTypeAsUnavailable_…_BUG_204` (both reads),
-  `returnsUNAVAILABLEWithoutPartialProjectForInvalidContentType_AC_013_7_AC_013_8_BUG_204` (service with the real
+  `reportsSchemeLessSiteAsUnavailable_…_BUG_207` (both reads), `reportsMalformedEmailAsUnavailable_…_BUG_207`
+  (`:` and Cyrillic, both reads), `reportsInvalidContentTypeAsUnavailable_…_BUG_207` (both reads),
+  `returnsUNAVAILABLEWithoutPartialProjectForInvalidContentType_AC_013_7_AC_013_8_BUG_207` (service with the real
   client), and the AC-013.10 test above
 - Modify: `backend/src/test/java/vn/tsolve/tracker/service/impl/TrackerProjectServiceImplTest.java` (+7 −2): status 0
   added to `logsFailureKeyStatusAndOutcomeWithoutCredentials_AC_013_11_AC_013_12`
-- Modify: `docs/bug-log.md`: BUG-204 row
+- Modify: `docs/bug-log.md`: BUG-207 row
 
 ### Verify
 - Mutation check: with the new catch and both `factory.set…Timeout` lines removed from `JiraClient`,
-  `JiraClientTest` → `Tests run: 60, Failures: 9, Errors: 1`. All 10 failing runs are the new BUG-204 tests and the
+  `JiraClientTest` → `Tests run: 60, Failures: 9, Errors: 1`. All 10 failing runs are the new BUG-207 tests and the
   AC-013.10 test. The file was then restored.
 - `mvn -B -Dtest='JiraClientTest,TrackerProjectServiceImplTest,*Suggestion*Test,*IssueCreated*Test' -Dsurefire.failIfNoSpecifiedTests=false test spotless:check`
   → `Tests run: 162, Failures: 0, Errors: 0, Skipped: 0` (`JiraClientTest` 60, `TrackerProjectServiceImplTest` 24).
@@ -128,7 +128,7 @@ None from D45. The bug-log row is added under the project rule "log every bug" (
 precedent).
 
 ### Commit
-default@eeaee68d — `fix(tracker): keep request errors inside the Jira project read (KAN-127)`, committed after the user agreed (12/11). Bug id renumbered BUG-200 → BUG-204 by the main session: BUG-200 to 202 are taken on open branches (#202, #203, #206).
+default@eeaee68d — `fix(tracker): keep request errors inside the Jira project read (KAN-127)`, committed after the user agreed (12/11). Bug id renumbered BUG-200 → BUG-207 by the main session: BUG-200 to 202 are taken on open branches (#202, #203, #206).
 
 ### Next up
 Re-evaluate `jira-project-read` (attempt 2) after the commit.
@@ -136,8 +136,8 @@ Re-evaluate `jira-project-read` (attempt 2) after the commit.
 ## Session 2026-11-12 (attempt 3, fixing)
 
 ### Working on: jira-project-read — attempt-2 review findings (D46)
-- MEDIUM-8: a last `catch (RuntimeException)` in `TrackerProjectServiceImpl.findProject` returns UNAVAILABLE and logs only the exception class (a non-HTTP site scheme made RestClient throw `IllegalStateException`). New real-client test `returnsUNAVAILABLEWithoutPartialProjectForNonHttpScheme_AC_013_7_BUG_204`.
-- LOW-7: BUG-204's row now says `findComment` still builds its client outside `call` (STORY-012, out of scope).
+- MEDIUM-8: a last `catch (RuntimeException)` in `TrackerProjectServiceImpl.findProject` returns UNAVAILABLE and logs only the exception class (a non-HTTP site scheme made RestClient throw `IllegalStateException`). New real-client test `returnsUNAVAILABLEWithoutPartialProjectForNonHttpScheme_AC_013_7_BUG_207`.
+- LOW-7: BUG-207's row now says `findComment` still builds its client outside `call` (STORY-012, out of scope).
 - Who wrote what: Codex wrote the test and the fix in one run (prompt `kan127-fix-d46-d47.md` in the scratchpad), run by the main session, which reviewed the diff.
 - Verify: ran inside Task 3's full `mvn verify` (same working tree): unit 1600, IT 462, 0 failures, BUILD SUCCESS; the new test is in `TEST-vn.tsolve.tracker.client.JiraClientTest.xml`.
 - Commit: default@ba276218
