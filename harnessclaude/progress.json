@@ -171,10 +171,22 @@
       }
     },
     "project-integration": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:22.778Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "project-members-api": "passing",
+        "project-members-tab": "passing",
+        "project-member-remove-api": "passing",
+        "project-member-remove-tab": "passing"
+      },
+      "lastUpdated": "2026-11-14T07:40:19.466Z",
+      "branch": "feat/KAN-128-project-integration-add-ticket-resolver",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "df750d443b8a988893ec5c35560ba3b86df9b221"
+      }
     },
     "wiki": {
       "status": "planned",
