@@ -33,4 +33,4 @@
 
 ### Next up
 
-ticket-review Task 19 (`review-email-outbox`), after the rebase on PR 230.
+ticket-review Task 20 (`review-email-outbox`). PR 230 was merged into this branch on 2026-11-14 (merge eab3d9dc): this task became Task 5, the bug ids BUG-215–217.

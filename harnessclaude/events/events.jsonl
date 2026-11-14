@@ -1439,3 +1439,6 @@
 {"ts":"2026-11-14T08:39:03.094Z","type":"spec-approved","module":"ticket-review","specHash":"8ca5fab301424f0d3289249e5235a5ec226b1fb3dd7f6b21964fd453140159fa"}
 {"ts":"2026-11-14T08:47:24.019Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"98ec9c7382a17815f6f001e3a6432225c4bc83b9"}
 {"ts":"2026-11-14T08:47:24.252Z","type":"commit-recorded","module":"worker","repo":"default","sha":"98ec9c7382a17815f6f001e3a6432225c4bc83b9"}
+{"ts":"2026-11-14T13:20:12.344Z","type":"spec-approved","module":"worker","specHash":"b048853538841e767a735e04aaf1fbe67bc37ce5b082b04a7c4fa825f1065dd1"}
+{"ts":"2026-11-14T13:20:19.709Z","type":"spec-approved","module":"ticket-review","specHash":"de462e28b43437f5706e1b6f2d226d644cbf08aa8d77a6030e3887c80939aef8"}
+{"ts":"2026-11-14T13:20:30.382Z","type":"feature-status","module":"ticket-review","feature":"review-email-outbox","from":"pending","to":"in-progress"}

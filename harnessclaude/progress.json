@@ -488,9 +488,9 @@
         "review-expiry-job": "passing",
         "review-expired-stored-columns": "passing",
         "review-email-html": "passing",
-        "review-email-outbox": "pending"
+        "review-email-outbox": "in-progress"
       },
-      "lastUpdated": "2026-11-14T08:47:24.018Z",
+      "lastUpdated": "2026-11-14T13:20:30.381Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
