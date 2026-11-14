@@ -277,3 +277,4 @@ Master registry of all artifacts in this workspace.
 | — | review | fe-foundation | pass | artifacts/06-evaluation/fe-foundation/task-12-logout-url-review.md |
 | — | review | platform | pass | artifacts/06-evaluation/platform/kan-14-staging-cd-review.md |
 | — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-bug-205-stub-workspace-ready-review.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/kan-14-bug-207-cd-docker-config-review.md |

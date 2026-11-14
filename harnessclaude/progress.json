@@ -318,15 +318,20 @@
       "features": {
         "audit-log": "passing",
         "audit-log-api": "passing",
-        "audit-writer": "passing"
+        "audit-writer": "passing",
+        "dashboard-api": "passing",
+        "dashboard-outcomes": "passing",
+        "dashboard-reuse-gaps": "passing",
+        "dashboard-page": "passing",
+        "dashboard-sections": "passing"
       },
-      "lastUpdated": "2026-11-10T02:32:16.649Z",
+      "lastUpdated": "2026-11-11T13:52:46.593Z",
       "branch": "feat/dashboard-audit",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5a20895a921becc1012424819b25c777b82ee69c"
+        "default": "46ae603f6822b4133fe056c98bb34b56a6c2b24f"
       }
     },
     "platform": {

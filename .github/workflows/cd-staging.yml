@@ -35,8 +35,9 @@ jobs:
       INPUT_SHA: ${{ inputs.sha }}
       REPO: ${{ github.repository }}
       GH_TOKEN: ${{ github.token }}
-      SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
-      SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+      # Variables, not secrets: GitHub masks a secret's value in the log, which turned the word "deploy" into "***".
+      SSH_HOST: ${{ vars.STAGING_SSH_HOST }}
+      SSH_USER: ${{ vars.STAGING_SSH_USER }}
       SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
       SSH_KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
     steps:
@@ -69,6 +70,14 @@ jobs:
         if: env.SKIP != '1'
         run: |
           set -euo pipefail
+          if ! [[ "$SSH_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+            echo "::error::STAGING_SSH_USER (environment variable) is missing or not a plain user name"
+            exit 1
+          fi
+          if ! [[ "$SSH_HOST" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$ ]]; then
+            echo "::error::STAGING_SSH_HOST (environment variable) is missing or not a plain host name"
+            exit 1
+          fi
           umask 077
           KEY="$RUNNER_TEMP/deploy_key"
           KNOWN="$RUNNER_TEMP/known_hosts"

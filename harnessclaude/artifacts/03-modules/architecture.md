@@ -62,6 +62,12 @@ Chatbot) is mandatory before the demo (ADR-0002, TS-163). Code: `TenantContext` 
 Folder tree and dependency rules: `backend/AGENTS.md` §1. `common/tenant/` is shared infrastructure like the rest
 of `common/` (no business logic, no entities).
 
+**Exception — read-only reporting queries:** `analytics/repository/DashboardRepository` (Knowledge Dashboard,
+KAN-150) uses native SQL through `NamedParameterJdbcTemplate` instead of Spring Data JPA (`backend/AGENTS.md` allows
+native SQL only for pgvector / full-text). Its figures are cross-module aggregates (`count(*) filter`, window
+functions, `union all` over several modules' tables, Vietnam-time day buckets) that return no entity and that JPQL
+cannot express. The repository only reads; it never writes.
+
 ## Frontend Code Structure
 
 **Chosen:** React single-page app, one folder per feature under `frontend/src/features/`; other code imports a
