@@ -3,7 +3,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import { useProductContext } from '@forge/react';
 import { events, requestJira, showFlag } from '@forge/bridge';
 import { openSolutionForm } from '../api/tsolveClient';
-import { BackgroundApp } from './BackgroundApp';
+import { BackgroundApp, POLL_MS } from './BackgroundApp';
 
 jest.mock('@forge/bridge', () => ({
   events: { on: jest.fn() },
@@ -26,13 +26,29 @@ const FORM = {
 let category;
 let onChange;
 
+let movedAt;
+let movedBy;
+
 function issue(key) {
-  return { ok: true, json: async () => ({ fields: { status: { statusCategory: { key } }, summary: 'VPN', description: null } }) };
+  const fields = { status: { statusCategory: { key } }, summary: 'VPN', description: null };
+  if (movedAt === undefined) {
+    return { ok: true, json: async () => ({ fields }) };
+  }
+  const at = new Date(movedAt).toISOString();
+  return {
+    ok: true,
+    json: async () => ({
+      fields: { ...fields, statuscategorychangedate: at },
+      changelog: { histories: [{ author: { accountId: movedBy }, created: at, items: [{ field: 'status' }] }] },
+    }),
+  };
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
   category = 'indeterminate';
+  movedAt = undefined;
+  movedBy = 'me';
   requestJira.mockImplementation(async () => issue(category));
   events.on.mockImplementation((name, handler) => {
     onChange = handler;
@@ -86,5 +102,69 @@ describe('BackgroundApp', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(showFlag).not.toHaveBeenCalled();
+  });
+  it('opens the form when Jira reloads the script right after the viewer moved the issue into Done (BUG-212)', async () => {
+    category = 'done';
+    movedAt = Date.now() - 3000;
+
+    render(<BackgroundApp />);
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(openSolutionForm).toHaveBeenCalledTimes(1);
+  });
+
+  describe('when Jira sends no event and does not reload the script (BUG-212)', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    async function moveIntoDone(by) {
+      await start();
+      category = 'done';
+      movedAt = Date.now();
+      movedBy = by;
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(POLL_MS);
+      });
+    }
+
+    it('notices the viewer moving the issue into Done on its own check', async () => {
+      await moveIntoDone('me');
+
+      expect(openSolutionForm).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('opens nothing when someone else moved the issue into Done', async () => {
+      await moveIntoDone('other');
+
+      expect(openSolutionForm).not.toHaveBeenCalled();
+    });
+
+    it('asks only once when the event and the check both see the move', async () => {
+      await moveIntoDone('me');
+      await act(() => onChange({ changes: [{ changeType: 'updated', atlassianId: 'me' }] }));
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(POLL_MS);
+      });
+
+      expect(openSolutionForm).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('does not open on load for an issue moved into Done long ago (AC-001.5, BUG-212)', async () => {
+    category = 'done';
+    movedAt = Date.now() - 10 * 60 * 1000;
+    await start();
+
+    expect(openSolutionForm).not.toHaveBeenCalled();
+  });
+
+  it('does not open on load when someone else just moved the issue into Done (BUG-212)', async () => {
+    category = 'done';
+    movedAt = Date.now() - 3000;
+    movedBy = 'other';
+    await start();
+
+    expect(openSolutionForm).not.toHaveBeenCalled();
   });
 });

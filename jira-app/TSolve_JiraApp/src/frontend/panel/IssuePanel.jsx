@@ -2,7 +2,7 @@
 // No Published-ticket search in Jira (spec change 2026-11-14): search is on the T-Solve web app.
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Inline, SectionMessage, Spinner, Stack, Text, useProductContext } from '@forge/react';
-import { requestJira, showFlag } from '@forge/bridge';
+import { events, requestJira, showFlag } from '@forge/bridge';
 import { getIssuePanel, getReviewFeedback, openSolutionForm } from '../api/tsolveClient';
 import { DONE, readIssue } from '../background/watchDone';
 import { SolutionFormModal } from '../form/SolutionFormModal';
@@ -41,9 +41,25 @@ export function IssuePanel() {
     load();
   }, [load]);
 
+  // The status read on load goes stale when the issue moves (BUG-213): reload when Jira reports a change.
+  useEffect(() => {
+    const subscription = events.on('JIRA_ISSUE_CHANGED', () => load());
+    return () => {
+      Promise.resolve(subscription)
+        .then((handle) => handle?.unsubscribe?.())
+        .catch(() => {});
+    };
+  }, [load]);
+
   const openForm = async () => {
     try {
-      const opened = await openSolutionForm(issueKey, { summary: issue.summary, description: issue.description });
+      // The button may be stale (BUG-213): Write Solution only while the issue is still Done (AC-001.4).
+      const current = await readIssue(requestJira, issueKey);
+      if (!panel.hasDraft && current.category !== DONE) {
+        setIssue(current);
+        return;
+      }
+      const opened = await openSolutionForm(issueKey, { summary: current.summary, description: current.description });
       if (opened?.mayOpen) {
         setForm(opened);
       } else {

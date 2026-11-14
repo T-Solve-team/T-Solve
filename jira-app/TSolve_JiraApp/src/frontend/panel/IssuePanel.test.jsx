@@ -1,7 +1,7 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useProductContext } from '@forge/react';
-import { requestJira } from '@forge/bridge';
+import { events, requestJira } from '@forge/bridge';
 import {
   getIssuePanel,
   getReviewFeedback,
@@ -10,7 +10,12 @@ import {
 import { message } from '../messages';
 import { PANEL_LABELS, IssuePanel } from './IssuePanel';
 
-jest.mock('@forge/bridge', () => ({ requestJira: jest.fn(), showFlag: jest.fn(), invokeRemote: jest.fn() }));
+jest.mock('@forge/bridge', () => ({
+  events: { on: jest.fn(() => Promise.resolve({ unsubscribe: jest.fn() })) },
+  requestJira: jest.fn(),
+  showFlag: jest.fn(),
+  invokeRemote: jest.fn(),
+}));
 jest.mock('../api/tsolveClient', () => {
   const actual = jest.requireActual('../api/tsolveClient');
   return {
@@ -85,6 +90,27 @@ describe('IssuePanel', () => {
   it('AC-001.4 hides the form button while the issue is not Done', async () => {
     issueIn('indeterminate');
     await show(PANEL);
+
+    expect(screen.queryByRole('button', { name: PANEL_LABELS.writeSolution })).not.toBeInTheDocument();
+  });
+
+  it('re-checks the status on Write Solution and hides the button once the issue left Done (BUG-213)', async () => {
+    await show(PANEL);
+    issueIn('indeterminate');
+
+    fireEvent.click(screen.getByRole('button', { name: PANEL_LABELS.writeSolution }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: PANEL_LABELS.writeSolution })).not.toBeInTheDocument(),
+    );
+    expect(openSolutionForm).not.toHaveBeenCalled();
+  });
+
+  it('reloads when Jira says the issue changed (BUG-213)', async () => {
+    await show(PANEL);
+    issueIn('indeterminate');
+
+    await act(async () => events.on.mock.calls[0][1]({ changes: [{ changeType: 'updated', atlassianId: 'me' }] }));
 
     expect(screen.queryByRole('button', { name: PANEL_LABELS.writeSolution })).not.toBeInTheDocument();
   });

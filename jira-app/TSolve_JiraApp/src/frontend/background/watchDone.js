@@ -14,23 +14,64 @@ export function movedIntoDone(previous, current) {
 }
 
 /**
- * The issue's status category, summary and description as plain text, read as the viewer with requestJira
- * (`fetch`-like; the caller passes `requestJira` from `@forge/bridge`).
+ * How long after the move into Done a freshly loaded script still opens the form (BUG-212). Jira reloads the
+ * background script after a transition, so the new script finds the issue already Done and no event comes.
  */
-export async function readIssue(requestJira, issueKey) {
+export const RECENT_MS = 60_000;
+
+/**
+ * The issue's status category, summary and description as plain text, read as the viewer with requestJira
+ * (`fetch`-like; the caller passes `requestJira` from `@forge/bridge`). With `changelog`, also when the status
+ * category last changed and who made the newest status change (Jira lists the changelog newest first).
+ */
+export async function readIssue(requestJira, issueKey, { changelog = false } = {}) {
+  const fields = changelog ? 'status,summary,description,statuscategorychangedate' : 'status,summary,description';
   const response = await requestJira(
-    `/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=status,summary,description`,
+    `/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=${fields}${changelog ? '&expand=changelog' : ''}`,
   );
   if (!response.ok) {
     throw new Error(`Issue read failed: ${response.status}`);
   }
   const issue = await response.json();
-  const fields = issue.fields ?? {};
-  return {
-    category: fields.status?.statusCategory?.key,
-    summary: fields.summary ?? '',
-    description: issueText(fields.description),
+  const read = {
+    category: issue.fields?.status?.statusCategory?.key,
+    summary: issue.fields?.summary ?? '',
+    description: issueText(issue.fields?.description),
   };
+  if (!changelog) {
+    return read;
+  }
+  const statusChange = (issue.changelog?.histories ?? []).find((history) =>
+    (history.items ?? []).some((item) => item.field === 'status'),
+  );
+  return {
+    ...read,
+    statusChangedAt: timeOf(issue.fields?.statuscategorychangedate),
+    lastStatusChange: statusChange
+      ? { accountId: statusChange.author?.accountId, at: timeOf(statusChange.created) }
+      : null,
+  };
+}
+
+/**
+ * The script was (re)loaded just after the viewer moved the issue into Done (BUG-212): the status category changed
+ * within {@link RECENT_MS} and the newest status change is the viewer's. An issue Done for longer stays closed
+ * (AC-001.5); someone else's move opens nothing, as for the event.
+ */
+export function recentlyMovedIntoDone(issue, accountId, now = Date.now()) {
+  const recent = (time) => Number.isFinite(time) && Math.abs(now - time) <= RECENT_MS;
+  return (
+    Boolean(accountId) &&
+    issue?.category === DONE &&
+    recent(issue.statusChangedAt) &&
+    issue.lastStatusChange?.accountId === accountId &&
+    recent(issue.lastStatusChange.at)
+  );
+}
+
+function timeOf(value) {
+  const time = value ? Date.parse(value) : NaN;
+  return Number.isNaN(time) ? undefined : time;
 }
 
 /** The text of an Atlassian Document Format value: paragraphs and list items on their own lines. */
