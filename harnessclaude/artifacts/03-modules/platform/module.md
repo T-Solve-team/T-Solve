@@ -24,6 +24,7 @@ paths:
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
   - docs/bug-log.md
+  - e2e/**
 ---
 
 # Module: platform
