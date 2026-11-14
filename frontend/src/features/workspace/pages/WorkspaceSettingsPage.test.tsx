@@ -50,6 +50,19 @@ async function expectModalClosed() {
 }
 
 describe('WorkspaceSettingsPage', () => {
+  // 2.2 opens only after Setup (KAN-119): the company information section loads a set-up Workspace.
+  beforeEach(() => {
+    server.use(
+      http.get('*/api/v1/workspace', () =>
+        HttpResponse.json({
+          companyName: 'Example Company',
+          jiraSiteUrl: 'https://company.atlassian.net',
+          serviceAccountEmail: 'service@company.example',
+        }),
+      ),
+    );
+  });
+
   it('AC-002.1 shows New Department and the Active Departments in a Name-only table', async () => {
     renderApp('/workspace-settings', { role: 'ADMIN' });
     const table = await screen.findByRole('table', { name: 'Departments' }, { timeout: 5000 });

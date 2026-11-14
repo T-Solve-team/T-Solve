@@ -621,7 +621,7 @@
   },
   "MSG61": {
     "type": "Red text below the field",
-    "context": "Retired [CR-06]",
+    "context": "The Jira site address entered during Workspace Setup is invalid or unreadable",
     "text": "Please enter a valid site address, e.g. https://company.atlassian.net."
   },
   "MSG63": {
@@ -703,5 +703,15 @@
     "type": "Tooltip",
     "context": "Retired [CR-11]",
     "text": "There is no other active Department to migrate the data to."
+  },
+  "MSG153": {
+    "type": "Red text below the field",
+    "context": "The tracker site entered during Workspace Setup is linked to another Workspace",
+    "text": "This {tracker_name} site is already linked to another workspace."
+  },
+  "MSG156": {
+    "type": "Red text below the field",
+    "context": "The service account entered during Workspace Setup or Workspace Settings cannot connect to the tracker or lacks required permissions",
+    "text": "The service account could not connect to {tracker_name} or lacks the required permissions."
   }
 }

@@ -35,7 +35,6 @@ class JiraClientTest {
             + Base64.getEncoder().encodeToString("bot@acme.test:secret-token".getBytes(StandardCharsets.UTF_8));
     private static final String COMMENTS =
             "https://acme.atlassian.net/rest/api/3/issue/ITSUP-1/comment?orderBy=-created&maxResults=100";
-
     private MockRestServiceServer jira;
     private JiraClient client;
 
@@ -51,15 +50,12 @@ class JiraClientTest {
         jira.expect(requestTo("https://acme.atlassian.net/rest/api/3/issue/ITSUP-1/comment"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", BASIC))
-                .andExpect(content()
-                        .json(
-                                """
+                .andExpect(content().json("""
                         {"body": {"type": "doc", "version": 1, "content": [
                           {"type": "paragraph", "content": [{"type": "text", "text": "T-Solve suggestion:"}]},
                           {"type": "paragraph", "content": [{"type": "text", "text": "Restart the VPN."}]}
                         ]}}
-                        """,
-                                true))
+                        """, true))
                 .andRespond(withSuccess("{\"id\": \"10042\"}", MediaType.APPLICATION_JSON));
 
         String id = client.addComment(ACCOUNT, "ITSUP-1", List.of("T-Solve suggestion:", "Restart the VPN."));
@@ -81,8 +77,7 @@ class JiraClientTest {
                           {"id": "2", "author": {"accountId": "bot-1"}, "body": %s},
                           {"id": "3", "author": {"accountId": "bot-1"}, "body": %s}
                         ]}
-                        """
-                                .formatted(
+                        """.formatted(
                                         adf("T-Solve suggestion: copied by a person"),
                                         adf("Another bot note"),
                                         adf("T-Solve suggestion:")),
@@ -188,7 +183,6 @@ class JiraClientTest {
         return """
                 {"type": "doc", "version": 1, "content": [
                   {"type": "paragraph", "content": [{"type": "text", "text": "%s"}]}]}
-                """
-                .formatted(text);
+                """.formatted(text);
     }
 }

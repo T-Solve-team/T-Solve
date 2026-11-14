@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -40,8 +41,37 @@ public class JiraClient implements TicketTrackerClient {
         this.builder = RestClient.builder().requestFactory(factory);
     }
 
-    JiraClient(RestClient.Builder builder) {
+    /** For tests: a builder bound to a mock server. */
+    public JiraClient(RestClient.Builder builder) {
         this.builder = builder;
+    }
+
+    @Override
+    public void checkServiceAccount(JiraAccount account) {
+        RestClient http = http(account);
+        ResponseEntity<Void> me =
+                call(() -> http.get().uri("/rest/api/3/myself").retrieve().toBodilessEntity());
+        if (me.getStatusCode().value() != 200) {
+            throw new JiraRejectedException(me.getStatusCode().value());
+        }
+        ResponseEntity<JsonNode> response = call(() -> http.get()
+                .uri("/rest/api/3/mypermissions?permissions=BROWSE_PROJECTS,CREATE_ISSUES,MODIFY_REPORTER")
+                .retrieve()
+                .toEntity(JsonNode.class));
+        if (response.getStatusCode().value() != 200) {
+            throw new JiraRejectedException(response.getStatusCode().value());
+        }
+        JsonNode permissions = response.getBody();
+        for (String permission : List.of("BROWSE_PROJECTS", "CREATE_ISSUES", "MODIFY_REPORTER")) {
+            if (permissions == null
+                    || !permissions
+                            .path("permissions")
+                            .path(permission)
+                            .path("havePermission")
+                            .booleanValue()) {
+                throw new JiraRejectedException(403);
+            }
+        }
     }
 
     @Override

@@ -64,6 +64,8 @@ management:
         include: health,info
 
 tsolve:
+  workspace:
+    secret-key: ${WORKSPACE_SECRET_KEY}
   worker:
     enabled: ${TSOLVE_WORKER_ENABLED:false}
     # Optional until enabled; validation rejects missing Jobs credentials without a fallback.
@@ -83,12 +85,7 @@ tsolve:
     # Dev and mock only: the Workspace bound when the worker enqueues a suggestion job and no Workspace is bound yet
     # (until platform binds the request's Workspace). One of TSOLVE_MOCK_ACTIVE_WORKSPACES. Empty = not bound.
     dev-workspace-id: ${TSOLVE_TRACKER_DEV_WORKSPACE_ID:}
-    # Stand-in for the Workspace's Jira service account until `workspace` stores it (UC-08/09): posts the MSG80
-    # suggestion comment (tracker STORY-012). Any of the three empty = no comment is posted.
     jira:
-      site-url: ${JIRA_SITE_URL:}
-      service-account-email: ${JIRA_SERVICE_ACCOUNT_EMAIL:}
-      service-account-token: ${JIRA_SERVICE_ACCOUNT_TOKEN:}
       connect-timeout: 5s
       read-timeout: 10s
   # Central sign-in (identity). All from the environment with no default: startup fails while one is missing.
