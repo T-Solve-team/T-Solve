@@ -1,20 +1,13 @@
 /** 5.3 Import Ticket Preview with the Solution to write — spec STORY-015 (a file without Solutions). */
-import { Descriptions, Flex, Form, Input } from 'antd';
+import { Descriptions, Flex, Form } from 'antd';
 import { useRef, useState } from 'react';
-import {
-  useGetImportPreviewRow,
-  type ApiError,
-  type FillSolutionRequest,
-  type ImportPreviewRowResponse,
-} from '@/shared/api';
-import { applyApiErrors, rules } from '@/shared/forms';
+import { useGetImportPreviewRow, type ApiError } from '@/shared/api';
+import { applyApiErrors } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
-import { ConfirmDialog, ErrorState, FormField, FormModal, LoadingState } from '@/shared/ui';
+import { ConfirmDialog, ErrorState, FormModal, LoadingState } from '@/shared/ui';
 import { useFillPreviewSolution } from '../hooks/useImportPreview';
-import { SECTIONS } from '../lib/import-row';
 import { jiraSnapshotItems } from './jira-snapshot';
-
-type SolutionValues = Omit<FillSolutionRequest, 'rowNumbers'>;
+import { SolutionFields, type SolutionSectionValues as SolutionValues } from './SolutionFields';
 
 type SolutionFormModalProps = {
   previewId: number;
@@ -131,28 +124,6 @@ function RowFields({ previewId, rowNo }: { previewId: number; rowNo: number }) {
       />
       {/* Mounted once the row is read, so each field starts from the row's saved section (edge case 51). */}
       <SolutionFields values={data} />
-    </Flex>
-  );
-}
-
-function SolutionFields({
-  values,
-}: {
-  values?: Pick<ImportPreviewRowResponse, keyof SolutionValues>;
-}) {
-  return (
-    <Flex vertical gap="middle">
-      {SECTIONS.map(([label, field]) => (
-        <FormField<SolutionValues>
-          key={field}
-          name={field}
-          label={label}
-          initialValue={values?.[field] ?? undefined}
-          rules={field === 'workaround' ? [] : [rules.required(label)]}
-        >
-          <Input.TextArea rows={3} />
-        </FormField>
-      ))}
     </Flex>
   );
 }
