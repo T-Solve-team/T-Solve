@@ -1,6 +1,6 @@
 import { createConnection } from 'node:net';
 
-type Service = { name: string } & ({ port: number } | { url: string });
+export type Service = { name: string } & ({ port: number } | { url: string });
 
 export const services: readonly Service[] = [
   { name: 'PostgreSQL', port: 5432 },
@@ -33,9 +33,9 @@ function tcpReachable(port: number): Promise<boolean> {
   });
 }
 
-export async function checkLocalStack(): Promise<void> {
+export async function checkLocalStack(probedServices: readonly Service[] = services): Promise<void> {
   // Sequential by contract: stop before probing later services, seeding or opening a browser.
-  for (const service of services) {
+  for (const service of probedServices) {
     let reachable = false;
     try {
       if ('port' in service) {

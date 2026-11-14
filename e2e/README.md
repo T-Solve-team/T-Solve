@@ -96,7 +96,10 @@ npx playwright test --list
 npx playwright test --config stack-check.config.ts
 ```
 
-The separate stack-check config runs the decision and site-request helper tests without global setup or database. The helper tests use a browser cookie jar; set `E2E_BROWSER_CHANNEL` as above to use an installed browser.
+The separate stack-check config runs the decision, real probe-loop/setup-abort, and site-request helper tests without
+global setup or database. Probe tests use throwaway local servers and empty storage state and need no browser.
+The site-request helper tests use a browser cookie jar: first run `npx playwright install chromium`, or set
+`$env:E2E_BROWSER_CHANNEL='msedge'` in PowerShell to use installed Edge before running the stack-check command.
 The main listing includes these tests plus the six smoke/session tests and does not execute setup.
 From the repo root, the equivalent typecheck is `e2e/node_modules/.bin/tsc --noEmit -p e2e`.
 

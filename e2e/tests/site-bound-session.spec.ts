@@ -10,6 +10,11 @@ test('AC-015.10 ACME’s session is refused on the BETA site without BETA data',
   expect(acme.status()).toBe(200);
   expect(await acme.text()).toContain('alice@acme.test');
 
+  // Positive control: BETA has a working sign-in entry point before testing its session refusal.
+  const betaSignIn = await siteGet(request, 'http://beta.localhost:8080/api/v1/auth/sign-in', context);
+  expect(betaSignIn.status()).toBe(302);
+  expect(betaSignIn.headers().location).toBeTruthy();
+
   // A cookie jar would omit ACME’s host-only cookie on BETA. Explicitly forward it to test server binding.
   const beta = await siteGet(request, 'http://beta.localhost:8080/api/v1/me', context, new URL(meURL).origin);
   expect(beta.status()).toBe(401);

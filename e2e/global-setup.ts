@@ -4,12 +4,20 @@ import { chromium, expect } from '@playwright/test';
 import { seedDevData } from './fixtures/dev-data';
 import { aliceState, baseURL, webOrigin } from './settings';
 import { siteGet } from './site-request';
-import { checkLocalStack } from './stack-check';
+import { checkLocalStack, services, type Service } from './stack-check';
 
 export default async function globalSetup(): Promise<void> {
-  await checkLocalStack();
-  await seedDevData();
-  const browser = await chromium.launch({ channel: process.env.E2E_BROWSER_CHANNEL || undefined });
+  await runGlobalSetup();
+}
+
+export async function runGlobalSetup(
+  probedServices: readonly Service[] = services,
+  seed = seedDevData,
+  launch = () => chromium.launch({ channel: process.env.E2E_BROWSER_CHANNEL || undefined }),
+): Promise<void> {
+  await checkLocalStack(probedServices);
+  await seed();
+  const browser = await launch();
   try {
     const context = await browser.newContext();
     const page = await context.newPage();

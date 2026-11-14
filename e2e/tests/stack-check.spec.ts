@@ -2,7 +2,8 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { expect, test } from '@playwright/test';
 import { siteGet } from '../site-request';
-import { firstStackFailure, services } from '../stack-check';
+import { checkLocalStack, firstStackFailure, services } from '../stack-check';
+import { runGlobalSetup } from '../global-setup';
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -18,6 +19,74 @@ for (const [index, service] of services.entries()) {
 
 test('AC-015.11 a reachable stack has no failure', () => {
   expect(firstStackFailure(services.map(({ name }) => ({ name, reachable: true })))).toBeNull();
+});
+
+async function closeServer(server: ReturnType<typeof createServer>): Promise<void> {
+  await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+}
+
+async function listen(server: ReturnType<typeof createServer>): Promise<number> {
+  server.listen(0);
+  await once(server, 'listening');
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('Missing test server port');
+  return address.port;
+}
+
+for (const [index, service] of services.entries()) {
+  test(`KAN-186 AC-015.11 real probes stop at unavailable ${service.name} before setup side effects`, async () => {
+    const received: string[] = [];
+    const live = createServer((req, res) => {
+      received.push(req.url!);
+      res.end('ok');
+    });
+    const livePort = await listen(live);
+    try {
+      const closed = createServer();
+      const closedPort = await listen(closed);
+      await closeServer(closed);
+      const probes = services.map((entry, position) => ({
+        name: entry.name,
+        ...(position === index
+          ? ('port' in entry ? { port: closedPort } : { url: `http://localhost:${closedPort}/` })
+          : { url: `http://localhost:${livePort}/${position}` }),
+      }));
+      const expected = `local stack not running: ${service.name}`;
+      await expect(checkLocalStack(probes)).rejects.toThrow(new Error(expected));
+      expect(received).toEqual(services.slice(0, index).map((_, position) => `/${position}`));
+
+      received.length = 0;
+      const reached: string[] = [];
+      await expect(runGlobalSetup(probes, async () => {
+        reached.push('fixture writes');
+      }, async () => {
+        reached.push('browser launch');
+        throw new Error('Browser launch must not be reached');
+      })).rejects.toThrow(new Error(expected));
+      expect(reached).toEqual([]);
+      expect(received).toEqual(services.slice(0, index).map((_, position) => `/${position}`));
+    } finally {
+      await closeServer(live);
+    }
+  });
+}
+
+test('KAN-186 AC-015.11 real TCP and HTTP probes resolve for a reachable stack', async () => {
+  const received: string[] = [];
+  const live = createServer((req, res) => {
+    received.push(req.url!);
+    res.end('ok');
+  });
+  const port = await listen(live);
+  try {
+    await expect(checkLocalStack(services.map((service, index) => ({
+      name: service.name,
+      ...('port' in service ? { port } : { url: `http://localhost:${port}/${index}` }),
+    })))).resolves.toBeUndefined();
+    expect(received).toEqual(['/2', '/3', '/4', '/5']);
+  } finally {
+    await closeServer(live);
+  }
 });
 
 test('KAN-186 AC-015.10 Node site requests use loopback with the original Host and cookies', async ({ context, request }) => {
