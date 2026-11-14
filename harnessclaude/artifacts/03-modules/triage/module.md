@@ -2,11 +2,13 @@
 name: triage
 owner: Trần Hải Anh
 repos: [default]
-dependencies: [search, wiki, ai, worker]
+dependencies: [tracker, search, wiki, ai, worker]
 complexity: medium
 paths:
   - backend/src/main/java/vn/tsolve/triage/**
   - backend/src/test/java/vn/tsolve/triage/**
+  - backend/src/main/java/vn/tsolve/common/config/TriageProperties.java
+  - backend/src/test/java/vn/tsolve/common/config/TriagePropertiesTest.java
   - frontend/src/features/triage/**
   - backend/src/main/resources/db/changelog/**
   - frontend/openapi/**
@@ -30,7 +32,7 @@ change; the backend package `triage` is proposed. The web folder `frontend/src/f
 
 ## Responsibilities
 - The shared search call and the relevance threshold that decides whether to suggest (KAN-47).
-- The suggested solution, run as a `worker` job on the issue-created event of `project-integration` (KAN-126).
+- The suggested solution, run as a `worker` job on the tracker's `IssueRecordedEvent` (KAN-47, triage STORY-005).
 - The reporter's Yes / No answer and the suggestion records (the comment is posted by `jira-app`, KAN-131).
 - UC-37 View suggestion history (KAN-149).
 - Screens 10.1, 10.2.

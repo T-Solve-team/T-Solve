@@ -154,15 +154,17 @@
       "currentPhase": "implement",
       "features": {
         "create-department-api": "passing",
-        "create-department-screen": "passing"
+        "create-department-screen": "passing",
+        "rename-department-api": "passing",
+        "rename-department-screen": "passing"
       },
-      "lastUpdated": "2026-11-11T15:54:34.998Z",
+      "lastUpdated": "2026-11-11T21:17:40.264Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5d06062761d473d9153fdfe12fbdf3b5aeeed926"
+        "default": "8a667e27d39a1c4deb80389d9383c07870abb9bb"
       }
     },
     "project-integration": {
@@ -239,7 +241,8 @@
         "ticket-feedback-api": "passing",
         "give-feedback-connect": "evaluating",
         "ticket-suggestion-api": "passing",
-        "solution-retrieval": "passing"
+        "solution-retrieval": "passing",
+        "department-solution-retrieval": "passing"
       },
       "lastUpdated": "2026-11-09T04:05:02.373Z",
       "branch": "feat/search",
@@ -256,15 +259,16 @@
       "features": {
         "suggestion-history": "passing",
         "suggestion-history-contract": "passing",
-        "suggestion-history-api": "passing"
+        "suggestion-history-api": "passing",
+        "suggestion-generation": "passing"
       },
-      "lastUpdated": "2026-11-05T14:10:40.456Z",
+      "lastUpdated": "2026-11-07T20:18:44.302Z",
       "branch": "feat/triage",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "6cefdf9443d81628a7819c855a363f111cc44cf7"
+        "default": "55ac18a981b2d10c8feee4a6c0fcfca22dd41aa2"
       }
     },
     "chatbot": {
@@ -344,7 +348,7 @@
         "row-level-security": "pending",
         "workspace-registry": "pending",
         "web-tenant-resolver": "pending",
-        "file-storage": "pending",
+        "file-storage": "evaluating",
         "local-compose": "pending",
         "ci-images": "pending",
         "staging-servers": "pending",
@@ -371,7 +375,7 @@
         "forge-security-chain": "pending"
       },
       "lastUpdated": "2026-11-13T16:03:48.381Z",
-      "branch": "feat/platform",
+      "branch": "feat/KAN-96-platform-file-storage",
       "repos": [
         "default"
       ],

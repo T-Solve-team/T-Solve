@@ -5,6 +5,7 @@ import { server } from '@/mocks/server';
 import { getGetUserDepartmentsQueryKey, type DepartmentRef } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
+import { paths } from '@/shared/routing';
 import { renderApp } from '@/test/render';
 
 const DEPARTMENTS_URL = '*/api/v1/departments';
@@ -58,6 +59,20 @@ describe('WorkspaceSettingsPage', () => {
     expect(within(table).getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
     expect(await within(table).findByRole('row', { name: 'IT' })).toBeInTheDocument();
     expect(within(table).getByRole('row', { name: 'HR' })).toBeInTheDocument();
+  });
+
+  it('AC-004.1 shows each Department name as a link to its 2.3 Department Detail', async () => {
+    renderApp('/workspace-settings', { role: 'ADMIN' });
+    const table = await screen.findByRole('table', { name: 'Departments' }, { timeout: 5000 });
+    const it = await within(table).findByRole('link', { name: 'IT' });
+    expect(it).toHaveAttribute(
+      'href',
+      paths.departmentDetail('00000000-0000-4000-8000-0000000000d1'),
+    );
+    expect(within(table).getByRole('link', { name: 'HR' })).toHaveAttribute(
+      'href',
+      paths.departmentDetail('00000000-0000-4000-8000-0000000000d2'),
+    );
   });
 
   it('AC-002.2 shows Loading ... in place of the table and keeps New Department', async () => {

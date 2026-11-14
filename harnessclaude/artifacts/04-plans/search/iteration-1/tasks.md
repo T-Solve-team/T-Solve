@@ -1,7 +1,7 @@
 ---
 module: search
 date: 2026-11-05
-total_tasks: 19
+total_tasks: 20
 owner: Dev
 ---
 
@@ -634,4 +634,32 @@ Spec: STORY-005 to STORY-009 · Design: master section "Backend". Rules: `backen
   `leavesOutUnpublishedInactiveOrFar_AC_010_3`, `ignoresTheUsersDepartments_AC_010_1`)
 **Covers:** AC-010.1 – AC-010.5
 **Dependencies:** Task 6 (ticket_embedding)
+**Estimated size:** small
+
+## Task 20: Department Solution retrieval for the AI Solution Suggestion
+
+**Story:** STORY-011
+**Feature:** department-solution-retrieval
+**Jira:** KAN-47 · branch `feat/KAN-47-triage-ai-suggestion` (its first commit; triage Task 4 follows)
+**Description:**
+- `SolutionRetrieval.nearestInProjectDepartment(UUID projectId, float[] queryVector, double minSimilarity, int limit)`
+  (`projectId` = `project.public_id`, spec change 08/11)
+  in `SolutionRetrievalImpl`: the same argument checks as `nearest` (AC-011.4), maps rows to the new record
+  `RetrievedTicketSolution(UUID ticketId, …, double similarity)`, blank Workaround → null.
+- `SolutionRetrievalRepository.nearestInProjectDepartment`: the `nearest` query plus
+  `AND d.department_id = (SELECT department_id FROM project WHERE public_id = :projectId)`, selecting
+  `t.public_id`; unknown Project → no row.
+- **Fix after review attempt 1 (08/11):** `long projectId` → `UUID projectId` in the interface, impl and repository;
+  AC-011.4 checks also reject a null `projectId`; the IT passes the Project's `public_id` and a random UUID for the
+  unknown Project, and adds one ticket whose `project_id` is the legacy hex form of the internal id (it must come back).
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/search/retrieval/service/SolutionRetrieval.java`,
+  `…/search/retrieval/service/impl/SolutionRetrievalImpl.java`, `…/search/retrieval/repository/SolutionRetrievalRepository.java`
+- Create: `backend/src/main/java/vn/tsolve/search/retrieval/dto/RetrievedTicketSolution.java`
+- Test: `…/test/search/retrieval/service/impl/SolutionRetrievalImplTest.java` (`rejectsBadDepartmentArguments_AC_011_4`,
+  `returnsTicketIdAndSections_AC_011_2`, `takesNoUserAndEmbedsNothing_AC_011_5`),
+  `…/test/search/retrieval/repository/SolutionRetrievalRepositoryIT.java` (`returnsNearestOfTheProjectsDepartment_AC_011_1`,
+  `leavesOutOtherDepartmentsUnpublishedInactiveOrFar_AC_011_3`)
+**Covers:** AC-011.1 – AC-011.5
+**Dependencies:** Task 19 (`SolutionRetrieval`)
 **Estimated size:** small

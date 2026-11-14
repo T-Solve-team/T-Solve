@@ -6,20 +6,49 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type {
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
   MutationFunction,
   QueryClient,
+  QueryFunction,
+  QueryKey,
+  UndefinedInitialDataOptions,
   UseMutationOptions,
   UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult,
 } from '@tanstack/react-query';
 
-import type { CreateDepartmentRequest, DepartmentRef, ProblemResponse } from '../model';
+import type {
+  CreateDepartmentRequest,
+  DepartmentRef,
+  ProblemResponse,
+  UpdateDepartmentRequest,
+} from '../model';
 
 import { http } from '../../http';
 import type { ErrorType } from '../../http';
+import { withBackgroundMarking } from '../../query-options';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === 'queryKey') continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key],
+    });
+  }
+  return result;
+};
 
 export const getCreateDepartmentUrl = () => {
   return `/api/v1/departments`;
@@ -125,4 +154,241 @@ export const useCreateDepartment = <TError = ErrorType<ProblemResponse>, TContex
   TContext
 > => {
   return useMutation(getCreateDepartmentMutationOptions(options), queryClient);
+};
+export const getGetDepartmentUrl = (departmentId: string) => {
+  return `/api/v1/departments/${departmentId}`;
+};
+
+/**
+ * @summary Read an Active Department
+ */
+export const getDepartment = async (
+  departmentId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<DepartmentRef> => {
+  return http<DepartmentRef>(getGetDepartmentUrl(departmentId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetDepartmentQueryKey = (departmentId: string) => {
+  return [`/api/v1/departments/${departmentId}`] as const;
+};
+
+export const getGetDepartmentQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDepartment>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  departmentId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDepartment>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDepartmentQueryKey(departmentId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDepartment>>> = ({ signal }) =>
+    getDepartment(departmentId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: departmentId !== null && departmentId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getDepartment>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetDepartmentQueryResult = NonNullable<Awaited<ReturnType<typeof getDepartment>>>;
+export type GetDepartmentQueryError = ErrorType<ProblemResponse>;
+
+export function useGetDepartment<
+  TData = Awaited<ReturnType<typeof getDepartment>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  departmentId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDepartment>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDepartment>>,
+          TError,
+          Awaited<ReturnType<typeof getDepartment>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDepartment<
+  TData = Awaited<ReturnType<typeof getDepartment>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  departmentId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDepartment>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDepartment>>,
+          TError,
+          Awaited<ReturnType<typeof getDepartment>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDepartment<
+  TData = Awaited<ReturnType<typeof getDepartment>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  departmentId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDepartment>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Read an Active Department
+ */
+
+export function useGetDepartment<
+  TData = Awaited<ReturnType<typeof getDepartment>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  departmentId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDepartment>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetDepartmentQueryOptions(departmentId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateDepartmentUrl = (departmentId: string) => {
+  return `/api/v1/departments/${departmentId}`;
+};
+
+/**
+ * @summary Rename a Department and its Space
+ */
+export const updateDepartment = async (
+  departmentId: string,
+  updateDepartmentRequest: UpdateDepartmentRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<DepartmentRef> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DepartmentRef>(getUpdateDepartmentUrl(departmentId), {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateDepartmentRequest),
+  });
+};
+
+export const getUpdateDepartmentMutationKey = () => ['updateDepartment'] as const;
+
+export const getUpdateDepartmentMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDepartment>>,
+    TError,
+    UpdateDepartmentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateDepartment>>,
+  TError,
+  UpdateDepartmentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateDepartmentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateDepartment>>,
+    UpdateDepartmentMutationVariables
+  > = (props) => {
+    const { departmentId, data } = props ?? {};
+
+    return updateDepartment(departmentId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateDepartmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateDepartment>>
+>;
+export type UpdateDepartmentMutationBody = UpdateDepartmentRequest;
+export type UpdateDepartmentMutationError = ErrorType<ProblemResponse>;
+export type UpdateDepartmentMutationVariables = {
+  departmentId: string;
+  data: UpdateDepartmentRequest;
+};
+
+/**
+ * @summary Rename a Department and its Space
+ */
+export const useUpdateDepartment = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateDepartment>>,
+      TError,
+      UpdateDepartmentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateDepartment>>,
+  TError,
+  UpdateDepartmentMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateDepartmentMutationOptions(options), queryClient);
 };
