@@ -1378,3 +1378,8 @@
 {"ts":"2026-11-13T22:32:32.284Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-contract","from":"evaluating","to":"passing"}
 {"ts":"2026-11-13T22:32:32.555Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-create","from":"evaluating","to":"passing"}
 {"ts":"2026-11-13T22:32:32.843Z","type":"feature-status","module":"ticket-repository","feature":"manual-ticket-drafts","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T03:02:33.601Z","type":"spec-approved","module":"import-ticket-list","specHash":"8ff44b66546cf9e272878da4ad8a0d5eb1c458917aa88ff604c40151b7760a8b"}
+{"ts":"2026-11-14T03:02:59.571Z","type":"quick-opened","what":"AC-008.1 test: Manual entry tab enabled (KAN-133)","files":["frontend/src/features/ticket-import/pages/ImportTicketsPage.test.tsx"]}
+{"ts":"2026-11-14T04:20:26.201Z","type":"quick-closed","what":"AC-008.1 test: Manual entry tab enabled (KAN-133)","files":["frontend/src/features/ticket-import/pages/ImportTicketsPage.test.tsx"]}
+{"ts":"2026-11-14T04:21:03.249Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"1f040bed5d5924d01192992c9091330b9435bf92"}
+{"ts":"2026-11-14T04:21:03.523Z","type":"feature-status","module":"ticket-repository","feature":"manual-entry-tab","from":"in-progress","to":"evaluating"}

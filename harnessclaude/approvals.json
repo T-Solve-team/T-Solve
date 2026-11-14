@@ -77,8 +77,8 @@
     }
   },
   "import-ticket-list": {
-    "specHash": "ed6e2613d6a321dc8f8066573942c55aaf83be8e14661e28e10d8d85c8e9542e",
-    "approvedAt": "2026-11-07T15:29:26.530Z",
+    "specHash": "8ff44b66546cf9e272878da4ad8a0d5eb1c458917aa88ff604c40151b7760a8b",
+    "approvedAt": "2026-11-14T03:02:33.598Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager uploads a file with the  extension that is valid UTF-8, at most 10 MB, has every required column and at least one data row, for a Project they manage, THE system SHALL create an Import Preview and return its counts and the first page of its rows.",
@@ -129,7 +129,7 @@
       "AC-007.1": "WHEN a Project Manager reads their unconfirmed preview, THE system SHALL return its Project, file name, Valid, Error and Removed counts, MSG30 when at least one row is Error, and the first page of its rows, as in AC-001.1.",
       "AC-007.2": "IF the preview belongs to another user, has been confirmed, or no longer exists, THEN THE system SHALL reject the read with HTTP 404.",
       "AC-007.3": "IF the caller no longer manages the preview's Project or the Project is no longer Active, THEN THE system SHALL reject the read with HTTP 403 (MSG08).",
-      "AC-008.1": "WHEN a Project Manager opens Import Tickets, THE web app SHALL show the tabs Jira, CSV and Manual entry with CSV selected and Manual entry disabled; the Jira tab and the Drafts list behave as  STORY-001 and STORY-004 say.",
+      "AC-008.1": "WHEN a Project Manager opens Import Tickets, THE web app SHALL show the tabs Jira, CSV and Manual entry with CSV selected; the Jira tab and the Drafts list behave as  STORY-001 and STORY-004 say, and the Manual entry tab as  STORY-006 says.",
       "AC-008.2": "THE web app SHALL offer in the Project drop-down only the Projects of the signed-in user whose role in the Project is Project Manager, each shown with its Jira project key and Department name.",
       "AC-008.3": "WHEN the Project Manager clicks Download template, THE web app SHALL save the file returned by the template endpoint as .",
       "AC-008.4": "IF the Project Manager clicks Upload without a Project or without a file, THEN THE web app SHALL show MSG01 at each missing field and send nothing.",
