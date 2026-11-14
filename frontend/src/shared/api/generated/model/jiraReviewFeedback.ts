@@ -9,6 +9,6 @@
 import type { MessageRef } from './messageRef';
 
 export interface JiraReviewFeedback {
-  /** MSG64 with manager_name and comment from the committed review decision. */
+  /** MSG64 with manager_name and comment from the latest Request Changes decision, or REJECTED (a Jira App text, not an SRS message) with manager_name and reason from the latest Reject decision. */
   feedback: MessageRef | null;
 }
