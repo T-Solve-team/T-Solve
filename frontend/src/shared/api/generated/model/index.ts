@@ -145,6 +145,7 @@ export * from './ticketSuggestionRequest';
 export * from './ticketSummary';
 export * from './ticketSummaryPage';
 export * from './unavailableDocuments';
+export * from './updateDepartmentRequest';
 export * from './updateUserRolesRequest';
 export * from './updateUserStatusRequest';
 export * from './uploadCsvImportBody';
