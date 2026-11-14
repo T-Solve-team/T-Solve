@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -157,13 +158,16 @@ class DepartmentServiceImplTest {
     }
 
     @Test
-    void readsActiveDepartment_AC_003_1() {
+    void readsActiveDepartmentWithProjectCount_AC_003_1_AC_005_1() {
         when(repository.findActive(ID)).thenReturn(Optional.of(new DepartmentRepository.Current(42L, "IT")));
+
+        when(repository.countProjects(42L)).thenReturn(3);
 
         var result = service.get(ID);
 
         assertThat(result.departmentId()).isEqualTo(ID);
         assertThat(result.name()).isEqualTo("IT");
+        assertThat(result.projectCount()).isEqualTo(3);
     }
 
     @Test
@@ -200,6 +204,65 @@ class DepartmentServiceImplTest {
         assertThatThrownBy(() -> service.get(ID)).isSameAs(failure);
         assertThatThrownBy(() -> service.update(ID, new UpdateDepartmentRequest("IT")))
                 .isSameAs(failure);
+        verifyNoInteractions(repository, audit);
+    }
+
+    @Test
+    void deletesDepartmentRemovesProjectsHidesSpaceAndAudits_AC_005_2_AC_005_6() {
+        UUID spaceId = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+        when(repository.lockInStatus(ID, "ACTIVE"))
+                .thenReturn(Optional.of(new DepartmentRepository.Current(42L, "IT")));
+        when(repository.removeActiveProjects(42L)).thenReturn(List.of(projectId));
+        when(repository.setSpaceStatus(42L, "HIDDEN")).thenReturn(spaceId);
+
+        service.delete(ID);
+
+        verify(repository).markDeleted(42L);
+        verify(audit)
+                .record(
+                        AuditAction.DEPARTMENT_CHANGE,
+                        "DEPARTMENT",
+                        ID,
+                        Map.of(
+                                "operation",
+                                "DELETE",
+                                "name",
+                                "IT",
+                                "spaceId",
+                                spaceId,
+                                "removedProjectIds",
+                                List.of(projectId)));
+    }
+
+    @Test
+    void throwsNotFoundWhenDeletingNoActiveDepartment_AC_005_10() {
+        when(repository.lockInStatus(ID, "ACTIVE")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.delete(ID))
+                .isInstanceOf(NotFoundException.class)
+                .hasFieldOrPropertyWithValue("code", "MSG04");
+        verify(repository, never()).markDeleted(anyLong());
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void recordsNoAuditWhenSpaceIsMissingOnDelete_AC_005_12() {
+        when(repository.lockInStatus(ID, "ACTIVE"))
+                .thenReturn(Optional.of(new DepartmentRepository.Current(42L, "IT")));
+        var failure = new IllegalStateException("no Space");
+        when(repository.setSpaceStatus(42L, "HIDDEN")).thenThrow(failure);
+
+        assertThatThrownBy(() -> service.delete(ID)).isSameAs(failure);
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void deleteFailsBeforeAnyRepositoryCallWithoutWorkspace_AC_005_15() {
+        var failure = new IllegalStateException("no Workspace is bound");
+        when(scope.currentWorkspaceId()).thenThrow(failure);
+
+        assertThatThrownBy(() -> service.delete(ID)).isSameAs(failure);
         verifyNoInteractions(repository, audit);
     }
 }

@@ -1,5 +1,6 @@
 package vn.tsolve.workspace.service.impl;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,8 @@ import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.identity.dto.DepartmentRefResponse;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.workspace.dto.CreateDepartmentRequest;
+import vn.tsolve.workspace.dto.DepartmentDetailResponse;
+import vn.tsolve.workspace.dto.DepartmentSummaryResponse;
 import vn.tsolve.workspace.dto.UpdateDepartmentRequest;
 import vn.tsolve.workspace.repository.DepartmentRepository;
 import vn.tsolve.workspace.service.DepartmentService;
@@ -46,11 +49,43 @@ public class DepartmentServiceImpl implements DepartmentService {
 
     @Override
     @Transactional(readOnly = true)
-    public DepartmentRefResponse get(UUID departmentId) {
+    public DepartmentDetailResponse get(UUID departmentId) {
         scope.currentWorkspaceId(); // AC-003.21
         DepartmentRepository.Current current =
                 repository.findActive(departmentId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
-        return new DepartmentRefResponse(departmentId, current.name());
+        return new DepartmentDetailResponse(departmentId, current.name(), repository.countProjects(current.id()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DepartmentSummaryResponse> list(boolean includeDeleted) {
+        scope.currentWorkspaceId();
+        return repository.list(includeDeleted);
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID departmentId) {
+        scope.currentWorkspaceId(); // AC-005.15: throws before any write
+        DepartmentRepository.Current current = repository
+                .lockInStatus(departmentId, "ACTIVE")
+                .orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+        repository.markDeleted(current.id());
+        List<UUID> removed = repository.removeActiveProjects(current.id());
+        UUID spaceId = repository.setSpaceStatus(current.id(), "HIDDEN");
+        audit.record(
+                AuditAction.DEPARTMENT_CHANGE,
+                "DEPARTMENT",
+                departmentId,
+                Map.of(
+                        "operation",
+                        "DELETE",
+                        "name",
+                        current.name(),
+                        "spaceId",
+                        spaceId,
+                        "removedProjectIds",
+                        removed));
     }
 
     @Override

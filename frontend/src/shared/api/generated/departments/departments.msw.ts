@@ -11,7 +11,20 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
-import type { CreateDepartmentRequest, DepartmentRef, UpdateDepartmentRequest } from '../model';
+import type {
+  CreateDepartmentRequest,
+  DepartmentDetail,
+  DepartmentRef,
+  DepartmentSummary,
+  UpdateDepartmentRequest,
+} from '../model';
+
+export const getListDepartmentsResponseMock = (): DepartmentSummary[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    departmentId: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement(['ACTIVE', 'DELETED'] as const),
+  }));
 
 export const getCreateDepartmentResponseMock = (
   overrideResponse: Partial<Extract<DepartmentRef, object>> = {},
@@ -22,10 +35,11 @@ export const getCreateDepartmentResponseMock = (
 });
 
 export const getGetDepartmentResponseMock = (
-  overrideResponse: Partial<Extract<DepartmentRef, object>> = {},
-): DepartmentRef => ({
+  overrideResponse: Partial<Extract<DepartmentDetail, object>> = {},
+): DepartmentDetail => ({
   departmentId: faker.string.uuid(),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  projectCount: faker.number.int({ min: 0 }),
   ...overrideResponse,
 });
 
@@ -36,6 +50,30 @@ export const getUpdateDepartmentResponseMock = (
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
+
+export const getListDepartmentsMockHandler = (
+  overrideResponse?:
+    | DepartmentSummary[]
+    | ((
+        info: Parameters<HttpResponseResolver>[0],
+      ) => Promise<DepartmentSummary[]> | DepartmentSummary[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/departments',
+    async (info: Parameters<HttpResponseResolver>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListDepartmentsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 
 export const getCreateDepartmentMockHandler = (
   overrideResponse?:
@@ -63,10 +101,10 @@ export const getCreateDepartmentMockHandler = (
 
 export const getGetDepartmentMockHandler = (
   overrideResponse?:
-    | DepartmentRef
+    | DepartmentDetail
     | ((
         info: Parameters<HttpResponseResolver<{ departmentId: string }>>[0],
-      ) => Promise<DepartmentRef> | DepartmentRef),
+      ) => Promise<DepartmentDetail> | DepartmentDetail),
   options?: RequestHandlerOptions,
 ) => {
   return http.get<{ departmentId: string }>(
@@ -112,8 +150,31 @@ export const getUpdateDepartmentMockHandler = (
     options,
   );
 };
+
+export const getDeleteDepartmentMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<HttpResponseResolver<{ departmentId: string }>>[0],
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete<{ departmentId: string }>(
+    '*/api/v1/departments/:departmentId',
+    async (info: Parameters<HttpResponseResolver<{ departmentId: string }>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
 export const getDepartmentsMock = () => [
+  getListDepartmentsMockHandler(),
   getCreateDepartmentMockHandler(),
   getGetDepartmentMockHandler(),
   getUpdateDepartmentMockHandler(),
+  getDeleteDepartmentMockHandler(),
 ];

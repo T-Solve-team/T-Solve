@@ -24,7 +24,10 @@ import type {
 
 import type {
   CreateDepartmentRequest,
+  DepartmentDetail,
   DepartmentRef,
+  DepartmentSummary,
+  ListDepartmentsParams,
   ProblemResponse,
   UpdateDepartmentRequest,
 } from '../model';
@@ -49,6 +52,141 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListDepartmentsUrl = (params?: ListDepartmentsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/departments?${stringifiedParams}`
+    : `/api/v1/departments`;
+};
+
+/**
+ * @summary List the Departments, Active only unless includeDeleted is true
+ */
+export const listDepartments = async (
+  params?: ListDepartmentsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<DepartmentSummary[]> => {
+  return http<DepartmentSummary[]>(getListDepartmentsUrl(params), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getListDepartmentsQueryKey = (params?: ListDepartmentsParams) => {
+  return [`/api/v1/departments`, ...(params ? [params] : [])] as const;
+};
+
+export const getListDepartmentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDepartments>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: ListDepartmentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDepartmentsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDepartments>>> = ({ signal }) =>
+    listDepartments(params, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof listDepartments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListDepartmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listDepartments>>>;
+export type ListDepartmentsQueryError = ErrorType<ProblemResponse>;
+
+export function useListDepartments<
+  TData = Awaited<ReturnType<typeof listDepartments>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params: undefined | ListDepartmentsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDepartments>>,
+          TError,
+          Awaited<ReturnType<typeof listDepartments>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDepartments<
+  TData = Awaited<ReturnType<typeof listDepartments>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: ListDepartmentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDepartments>>,
+          TError,
+          Awaited<ReturnType<typeof listDepartments>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDepartments<
+  TData = Awaited<ReturnType<typeof listDepartments>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: ListDepartmentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List the Departments, Active only unless includeDeleted is true
+ */
+
+export function useListDepartments<
+  TData = Awaited<ReturnType<typeof listDepartments>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: ListDepartmentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListDepartmentsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getCreateDepartmentUrl = () => {
   return `/api/v1/departments`;
@@ -165,8 +303,8 @@ export const getGetDepartmentUrl = (departmentId: string) => {
 export const getDepartment = async (
   departmentId: string,
   options?: Parameters<typeof http>[1],
-): Promise<DepartmentRef> => {
-  return http<DepartmentRef>(getGetDepartmentUrl(departmentId), {
+): Promise<DepartmentDetail> => {
+  return http<DepartmentDetail>(getGetDepartmentUrl(departmentId), {
     ...options,
     method: 'GET',
   });
@@ -391,4 +529,88 @@ export const useUpdateDepartment = <TError = ErrorType<ProblemResponse>, TContex
   TContext
 > => {
   return useMutation(getUpdateDepartmentMutationOptions(options), queryClient);
+};
+export const getDeleteDepartmentUrl = (departmentId: string) => {
+  return `/api/v1/departments/${departmentId}`;
+};
+
+/**
+ * @summary Delete an Active Department, remove its Projects and hide its Space (GBR-17)
+ */
+export const deleteDepartment = async (
+  departmentId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteDepartmentUrl(departmentId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getDeleteDepartmentMutationKey = () => ['deleteDepartment'] as const;
+
+export const getDeleteDepartmentMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDepartment>>,
+    TError,
+    DeleteDepartmentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteDepartment>>,
+  TError,
+  DeleteDepartmentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteDepartmentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteDepartment>>,
+    DeleteDepartmentMutationVariables
+  > = (props) => {
+    const { departmentId } = props ?? {};
+
+    return deleteDepartment(departmentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteDepartmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteDepartment>>
+>;
+
+export type DeleteDepartmentMutationError = ErrorType<ProblemResponse>;
+export type DeleteDepartmentMutationVariables = { departmentId: string };
+
+/**
+ * @summary Delete an Active Department, remove its Projects and hide its Space (GBR-17)
+ */
+export const useDeleteDepartment = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteDepartment>>,
+      TError,
+      DeleteDepartmentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteDepartment>>,
+  TError,
+  DeleteDepartmentMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteDepartmentMutationOptions(options), queryClient);
 };

@@ -5,12 +5,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,8 @@ import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.identity.dto.DepartmentRefResponse;
 import vn.tsolve.workspace.dto.CreateDepartmentRequest;
+import vn.tsolve.workspace.dto.DepartmentDetailResponse;
+import vn.tsolve.workspace.dto.DepartmentSummaryResponse;
 import vn.tsolve.workspace.dto.UpdateDepartmentRequest;
 import vn.tsolve.workspace.service.DepartmentService;
 
@@ -155,7 +159,7 @@ class DepartmentControllerTest {
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
     void readsDepartment_AC_003_1() throws Exception {
-        when(service.get(ID)).thenReturn(new DepartmentRefResponse(ID, "IT"));
+        when(service.get(ID)).thenReturn(new DepartmentDetailResponse(ID, "IT", 2));
         mvc.perform(get(PATH))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.departmentId").value(ID.toString()))
@@ -270,6 +274,72 @@ class DepartmentControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("MSG07"));
         mvc.perform(rename(PATH, "{\"name\":\"IT Support\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("MSG07"));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.ADMIN)
+    void deletesWithNoContent_AC_005_2() throws Exception {
+        mvc.perform(delete(PATH).with(csrf())).andExpect(status().isNoContent());
+        verify(service).delete(ID);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"abc", "12345678-1234-1234-1234-12345678901"})
+    @WithTSolveUser(roles = Role.ADMIN)
+    void answersNotFoundForMalformedDeleteId_AC_005_10(String id) throws Exception {
+        mvc.perform(delete("/api/v1/departments/" + id).with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MSG04"));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @WithTSolveUser
+    void rejectsNonAdminDelete_AC_005_13() throws Exception {
+        mvc.perform(delete(PATH).with(csrf()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MSG08"));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void rejectsAnonymousDelete_AC_005_14() throws Exception {
+        mvc.perform(delete(PATH).with(csrf()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("MSG07"));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.ADMIN)
+    void listsDepartmentsWithIncludeDeleted_AC_005_16() throws Exception {
+        when(service.list(true)).thenReturn(List.of(new DepartmentSummaryResponse(ID, "IT", "DELETED")));
+        when(service.list(false)).thenReturn(List.of());
+        mvc.perform(get("/api/v1/departments").param("includeDeleted", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].departmentId").value(ID.toString()))
+                .andExpect(jsonPath("$[0].status").value("DELETED"));
+        mvc.perform(get("/api/v1/departments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+        verify(service).list(false);
+    }
+
+    @Test
+    @WithTSolveUser
+    void rejectsNonAdminList_AC_005_17() throws Exception {
+        mvc.perform(get("/api/v1/departments"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MSG08"));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void rejectsAnonymousList_AC_005_17() throws Exception {
+        mvc.perform(get("/api/v1/departments"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("MSG07"));
         verifyNoInteractions(service);
