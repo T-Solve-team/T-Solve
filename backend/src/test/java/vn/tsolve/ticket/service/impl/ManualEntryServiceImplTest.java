@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +54,7 @@ import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
+import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ProjectAccess;
@@ -95,8 +97,10 @@ class ManualEntryServiceImplTest {
     private final ManualEntryServiceImpl service = new ManualEntryServiceImpl(
             new ObjectMapper(),
             new ManualEntryValidator(Clock.fixed(Instant.parse("2026-11-14T03:00:00Z"), ZoneOffset.UTC)),
+            new EvidenceFiles(Optional.empty()),
             projects,
             tickets,
+            mock(TicketEvidenceRepository.class),
             decisions,
             batches,
             recorder,
@@ -144,7 +148,7 @@ class ManualEntryServiceImplTest {
     }
 
     private MessageCodeException rejection(String entry) {
-        return catchThrowableOfType(() -> service.save(PM, entry), MessageCodeException.class);
+        return catchThrowableOfType(() -> service.save(PM, entry, List.of()), MessageCodeException.class);
     }
 
     private void assertNothingSaved() {
@@ -154,7 +158,7 @@ class ManualEntryServiceImplTest {
 
     @Test
     void savesAPublishedManualTicketWithItsWriterDecisionAndBatch_AC_006_1() {
-        ManualEntryResponse response = service.save(PM, json());
+        ManualEntryResponse response = service.save(PM, json(), List.of());
 
         assertThat(response.ticketId()).isEqualTo(TICKET);
         assertThat(response.message().code()).isEqualTo("MSG32");
@@ -201,7 +205,7 @@ class ManualEntryServiceImplTest {
         Map<String, Object> changes = new HashMap<>();
         changes.put("resolvedDate", null);
 
-        service.save(PM, json(changes));
+        service.save(PM, json(changes), List.of());
 
         ArgumentCaptor<Ticket> ticket = ArgumentCaptor.forClass(Ticket.class);
         verify(tickets).save(ticket.capture());
@@ -210,7 +214,7 @@ class ManualEntryServiceImplTest {
 
     @Test
     void publishesOneTicketsPublishedEventInsideTheTransaction_AC_006_10() {
-        service.save(PM, json());
+        service.save(PM, json(), List.of());
 
         verify(events).publishEvent(new TicketsPublishedEvent(List.of(TICKET)));
         assertThat(transactions).containsExactly("commit");

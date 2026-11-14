@@ -33,6 +33,17 @@ public class ManualEntryRejectedException extends MessageCodeException {
         return new ManualEntryRejectedException(HttpStatus.BAD_REQUEST, "MSG06", Map.of(), null);
     }
 
+    /** More than five Evidence files (MSG72). */
+    public static ManualEntryRejectedException tooManyFiles() {
+        return new ManualEntryRejectedException(HttpStatus.BAD_REQUEST, "MSG72", Map.of(), "files");
+    }
+
+    /** An Evidence file of a type outside D18 or over 10 MB (MSG34). */
+    public static ManualEntryRejectedException fileRejected(String fileName) {
+        return new ManualEntryRejectedException(
+                HttpStatus.BAD_REQUEST, "MSG34", Map.of("file_name", fileName), "files");
+    }
+
     public static ManualEntryRejectedException ticketIdTaken(String ticketId) {
         return new ManualEntryRejectedException(
                 HttpStatus.CONFLICT, "MSG31", Map.of("ticket_id", ticketId), "ticketId");

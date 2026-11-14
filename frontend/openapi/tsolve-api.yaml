@@ -3028,7 +3028,7 @@ components:
         files:
           type: array
           maxItems: 5
-          description: New Evidence files — pdf, png, jpg, jpeg, txt, log, doc or docx, at most 10 MB each.
+          description: New Evidence files — png, jpg, jpeg, pdf, docx, xlsx, txt or log (spec D18), at most 10 MB each.
           items:
             type: string
             format: binary

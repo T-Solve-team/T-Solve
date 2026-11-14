@@ -14,7 +14,7 @@ import type { ManualEntryRequest } from './manualEntryRequest';
 export interface ManualEntryForm {
   entry: ManualEntryRequest;
   /**
-   * New Evidence files — pdf, png, jpg, jpeg, txt, log, doc or docx, at most 10 MB each.
+   * New Evidence files — png, jpg, jpeg, pdf, docx, xlsx, txt or log (spec D18), at most 10 MB each.
    * @maxItems 5
    */
   files?: (Blob | File)[];

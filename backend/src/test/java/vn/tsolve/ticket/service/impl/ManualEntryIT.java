@@ -3,7 +3,10 @@ package vn.tsolve.ticket.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -19,7 +22,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.web.multipart.MultipartFile;
 import org.testcontainers.containers.PostgreSQLContainer;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.MessageCodeException;
@@ -78,11 +83,20 @@ class ManualEntryIT {
     @Autowired
     private ImportConfirmIT.PublishedEvents published;
 
+    @Autowired
+    private ManualEntryFileStorage storage;
+
     @TestConfiguration
     static class Listener {
         @Bean
         ImportConfirmIT.PublishedEvents publishedEvents(DataSource dataSource) {
             return new ImportConfirmIT.PublishedEvents(dataSource);
+        }
+
+        // no object storage runs here; the platform module tests the real one (ObjectFileStorageIT)
+        @Bean
+        ManualEntryFileStorage fileStorage() {
+            return new ManualEntryFileStorage();
         }
     }
 
@@ -101,6 +115,11 @@ class ManualEntryIT {
         }
         published.seen.clear();
         published.failNext = false;
+        storage.reset();
+    }
+
+    private static MockMultipartFile file(String name, byte[] content) {
+        return new MockMultipartFile("files", name, "application/octet-stream", content);
     }
 
     private static String entry(String ticketId) {
@@ -116,7 +135,7 @@ class ManualEntryIT {
 
     @Test
     void savesTheTicketItsDecisionAndACompletedBatchInOneTransaction_AC_006_1() {
-        ManualEntryResponse response = manualEntries.save(PM, entry(" T-1 "));
+        ManualEntryResponse response = manualEntries.save(PM, entry(" T-1 "), List.of());
 
         assertThat(jdbc.queryForList("select ticket_id, source_ticket_id, source, status, writer, writer_id,"
                         + " resolved_date, symptoms, workaround, import_batch_id from ticket"))
@@ -152,7 +171,7 @@ class ManualEntryIT {
 
     @Test
     void theTicketsPublishedEventArrivesAfterTheTicketIsCommitted_AC_006_10() {
-        manualEntries.save(PM, entry("T-1"));
+        manualEntries.save(PM, entry("T-1"), List.of());
 
         assertThat(published.seen).containsExactly("ids=1 visible=1");
     }
@@ -170,7 +189,7 @@ class ManualEntryIT {
 
             Future<String> save = pool.submit(() -> {
                 try {
-                    manualEntries.save(PM, entry("T-1"));
+                    manualEntries.save(PM, entry("T-1"), List.of(file("a.png", new byte[] {1})));
                     return "ok";
                 } catch (MessageCodeException e) {
                     return e.getStatus().value() + " " + e.getCode() + " "
@@ -185,6 +204,8 @@ class ManualEntryIT {
             pool.shutdownNow();
         }
         assertThat(jdbc.queryForList("select source from ticket", String.class)).containsExactly("CSV");
+        assertThat(count("evidence")).isZero();
+        assertThat(storage.objects).isEmpty();
         assertThat(count("ticket_import_decision")).isZero();
         assertThat(count("import_batch")).isZero();
         assertThat(published.seen).isEmpty();
@@ -198,13 +219,16 @@ class ManualEntryIT {
         jdbc.execute("create trigger fail_for_boom before insert on ticket_import_decision "
                 + "for each row when (new.reviewer = '" + BOOM.id() + "') execute function fail_for_boom()");
 
-        MessageCodeException e =
-                catchThrowableOfType(() -> manualEntries.save(BOOM, entry("T-1")), MessageCodeException.class);
+        MessageCodeException e = catchThrowableOfType(
+                () -> manualEntries.save(BOOM, entry("T-1"), List.of(file("a.png", new byte[] {1}))),
+                MessageCodeException.class);
 
         assertThat(e.getCode()).isEqualTo("MSG33");
         assertThat(e.getStatus().value()).isEqualTo(500);
         assertThat(count("ticket")).isZero();
         assertThat(count("ticket_import_decision")).isZero();
+        assertThat(count("evidence")).isZero();
+        assertThat(storage.objects).isEmpty();
         assertThat(jdbc.queryForList("select source, status, published_count, error from import_batch"))
                 .singleElement()
                 .satisfies(row -> {
@@ -214,6 +238,49 @@ class ManualEntryIT {
                     assertThat((String) row.get("error")).contains("MSG33").doesNotContain("T-1", "Login fails");
                 });
         assertThat(published.seen).isEmpty();
+    }
+
+    @Test
+    void savesEachFileAsEvidenceOfTheTicketWithItsStorageKey_AC_006_2() {
+        ManualEntryResponse response = manualEntries.save(
+                PM,
+                entry("T-1"),
+                List.of(file("log.TXT", "line 1".getBytes(StandardCharsets.UTF_8)), file("shot.jpeg", new byte[] {1, 2
+                })));
+
+        assertThat(
+                        jdbc.queryForList(
+                                "select ticket_id, storage_key, file_name, file_type, file_size from evidence order by file_name"))
+                .satisfiesExactly(
+                        log -> {
+                            assertThat(log.get("ticket_id")).isEqualTo(response.ticketId());
+                            assertThat(log.get("file_name")).isEqualTo("log.TXT");
+                            assertThat(log.get("file_type")).isEqualTo("txt");
+                            assertThat(log.get("file_size")).isEqualTo(6L);
+                            assertThat(storage.objects.get((String) log.get("storage_key")))
+                                    .isEqualTo("line 1".getBytes(StandardCharsets.UTF_8));
+                        },
+                        shot -> {
+                            assertThat(shot.get("file_type")).isEqualTo("jpg");
+                            assertThat(shot.get("file_size")).isEqualTo(2L);
+                            assertThat(storage.objects).containsKey((String) shot.get("storage_key"));
+                        });
+    }
+
+    @Test
+    void fiveFilesOf10MbEachAreAccepted_AC_006_7() {
+        // edge 26: the most one manual entry may carry
+        byte[] tenMb = new byte[10 * 1024 * 1024];
+        List<MultipartFile> files = new ArrayList<>();
+        for (int i = 1; i <= 5; i++) {
+            files.add(file(i + ".pdf", tenMb));
+        }
+
+        manualEntries.save(PM, entry("T-1"), files);
+
+        assertThat(jdbc.queryForList("select file_size from evidence", Long.class))
+                .hasSize(5)
+                .containsOnly(10L * 1024 * 1024);
     }
 
     /** Polls until some session waits for a lock, so the test does not race the other thread. */

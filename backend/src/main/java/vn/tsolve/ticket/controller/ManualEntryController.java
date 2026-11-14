@@ -3,6 +3,7 @@ package vn.tsolve.ticket.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.ticket.dto.ManualEntryResponse;
 import vn.tsolve.ticket.service.ManualEntryService;
@@ -38,7 +40,10 @@ public class ManualEntryController {
     @ApiResponse(responseCode = "409")
     @ApiResponse(responseCode = "500")
     public ResponseEntity<ManualEntryResponse> saveManualEntry(
-            @AuthenticationPrincipal TSolveUser user, @RequestParam("entry") String entry) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(manualEntries.save(user, entry));
+            @AuthenticationPrincipal TSolveUser user,
+            @RequestParam("entry") String entry,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(manualEntries.save(user, entry, files == null ? List.of() : files));
     }
 }

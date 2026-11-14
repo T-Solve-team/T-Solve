@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.multipart.MultipartFile;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.security.TSolveUser;
@@ -21,6 +22,7 @@ import vn.tsolve.ticket.dto.ManualEntryResponse;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportBatch;
 import vn.tsolve.ticket.entity.Ticket;
+import vn.tsolve.ticket.entity.TicketEvidence;
 import vn.tsolve.ticket.entity.TicketReviewDecision;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
@@ -28,6 +30,7 @@ import vn.tsolve.ticket.exception.ImportFailedException;
 import vn.tsolve.ticket.exception.ManualEntryRejectedException;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
+import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ManualEntryService;
@@ -47,8 +50,10 @@ public class ManualEntryServiceImpl implements ManualEntryService {
 
     private final ObjectMapper json;
     private final ManualEntryValidator validator;
+    private final EvidenceFiles evidence;
     private final ProjectAccess projects;
     private final TicketRepository tickets;
+    private final TicketEvidenceRepository evidenceRows;
     private final TicketReviewDecisionRepository decisions;
     private final ImportBatchRepository batches;
     private final ImportBatchRecorder recorder;
@@ -59,8 +64,10 @@ public class ManualEntryServiceImpl implements ManualEntryService {
     public ManualEntryServiceImpl(
             ObjectMapper json,
             ManualEntryValidator validator,
+            EvidenceFiles evidence,
             ProjectAccess projects,
             TicketRepository tickets,
+            TicketEvidenceRepository evidenceRows,
             TicketReviewDecisionRepository decisions,
             ImportBatchRepository batches,
             ImportBatchRecorder recorder,
@@ -69,8 +76,10 @@ public class ManualEntryServiceImpl implements ManualEntryService {
             AuditService audit) {
         this.json = json;
         this.validator = validator;
+        this.evidence = evidence;
         this.projects = projects;
         this.tickets = tickets;
+        this.evidenceRows = evidenceRows;
         this.decisions = decisions;
         this.batches = batches;
         this.recorder = recorder;
@@ -80,7 +89,7 @@ public class ManualEntryServiceImpl implements ManualEntryService {
     }
 
     @Override
-    public ManualEntryResponse save(TSolveUser user, String entry) {
+    public ManualEntryResponse save(TSolveUser user, String entry, List<MultipartFile> files) {
         // order (design Save): field checks, then Project access, then the Ticket ID — a rejected entry saves
         // nothing and records no Import Batch
         ManualEntryValidator.Entry valid = validator.validate(read(entry));
@@ -88,14 +97,25 @@ public class ManualEntryServiceImpl implements ManualEntryService {
         if (!projects.managesActive(caller, valid.projectId())) {
             throw new ProjectAccessDeniedException();
         }
+        evidence.check(files);
         if (!tickets.findExistingTicketIds(List.of(valid.ticketId())).isEmpty()) {
             throw ManualEntryRejectedException.ticketIdTaken(valid.ticketId());
         }
 
+        // stored before the transaction, so no object-storage call holds it open (backend/AGENTS.md §4)
+        List<EvidenceFiles.Stored> stored;
+        try {
+            stored = evidence.store(files);
+        } catch (RuntimeException e) {
+            fail(valid.projectId(), caller, e);
+            throw new ImportFailedException(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
         UUID ticketId;
         try {
-            ticketId = transaction.execute(status -> insert(user, valid));
+            ticketId = transaction.execute(status -> insert(user, valid, stored));
         } catch (RuntimeException e) {
+            evidence.delete(stored);
             if (e instanceof DataIntegrityViolationException && namesTicketIdConstraint(e)) {
                 // another request saved this Ticket ID after the check above (AC-006.8): not a failure, no batch
                 throw ManualEntryRejectedException.ticketIdTaken(valid.ticketId());
@@ -119,7 +139,7 @@ public class ManualEntryServiceImpl implements ManualEntryService {
         }
     }
 
-    private UUID insert(TSolveUser user, ManualEntryValidator.Entry entry) {
+    private UUID insert(TSolveUser user, ManualEntryValidator.Entry entry, List<EvidenceFiles.Stored> stored) {
         String caller = user.getName();
         ImportBatch batch =
                 batches.save(ImportBatch.completed(entry.projectId(), caller, TicketSource.MANUAL, null, 1, 0, 0));
@@ -134,6 +154,12 @@ public class ManualEntryServiceImpl implements ManualEntryService {
                         entry.resolvedDate(),
                         entry.solution()))
                 .getId();
+        if (!stored.isEmpty()) {
+            evidenceRows.saveAll(stored.stream()
+                    .map(file ->
+                            TicketEvidence.of(ticketId, file.key(), file.fileName(), file.fileType(), file.fileSize()))
+                    .toList());
+        }
         decisions.save(TicketReviewDecision.approve(ticketId, caller));
         // inside the transaction: @TransactionalEventListener(AFTER_COMMIT) listeners get it once this commits
         events.publishEvent(new TicketsPublishedEvent(List.of(ticketId)));

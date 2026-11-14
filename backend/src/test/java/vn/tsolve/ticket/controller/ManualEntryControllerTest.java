@@ -19,8 +19,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.multipart.MultipartFile;
 import vn.tsolve.common.config.MethodSecurityConfig;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
@@ -48,7 +50,7 @@ class ManualEntryControllerTest {
     @Test
     @WithTSolveUser(id = PM_ID, fullName = "Nguyen Van An", roles = Role.PROJECT_MANAGER)
     void saveAnswers201WithTheTicketIdAndMsg32_AC_006_1() throws Exception {
-        when(manualEntries.save(any(), eq(ENTRY)))
+        when(manualEntries.save(any(), eq(ENTRY), eq(List.of())))
                 .thenReturn(
                         new ManualEntryResponse(TICKET, new MessageRef("MSG32", Map.of("created", 1, "skipped", 0))));
 
@@ -61,7 +63,7 @@ class ManualEntryControllerTest {
 
         // the writer is the signed-in user, never a value of the request (D14)
         ArgumentCaptor<TSolveUser> user = ArgumentCaptor.forClass(TSolveUser.class);
-        verify(manualEntries).save(user.capture(), eq(ENTRY));
+        verify(manualEntries).save(user.capture(), eq(ENTRY), eq(List.of()));
         org.assertj.core.api.Assertions.assertThat(user.getValue().id()).isEqualTo(UUID.fromString(PM_ID));
         org.assertj.core.api.Assertions.assertThat(user.getValue().fullName()).isEqualTo("Nguyen Van An");
     }
@@ -78,7 +80,7 @@ class ManualEntryControllerTest {
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
     void aRejectedEntryIs400WithItsMessageCodeAndFields_AC_006_3() throws Exception {
-        when(manualEntries.save(any(), any()))
+        when(manualEntries.save(any(), any(), any()))
                 .thenThrow(ManualEntryRejectedException.missing(List.of("ticketId", "title")));
 
         mvc.perform(multipart("/api/v1/imports/manual").param("entry", ENTRY).with(csrf()))
@@ -91,7 +93,7 @@ class ManualEntryControllerTest {
     @Test
     @WithTSolveUser(roles = Role.PROJECT_MANAGER)
     void aTakenTicketIdIs409Msg31_AC_006_8() throws Exception {
-        when(manualEntries.save(any(), any())).thenThrow(ManualEntryRejectedException.ticketIdTaken("T-1"));
+        when(manualEntries.save(any(), any(), any())).thenThrow(ManualEntryRejectedException.ticketIdTaken("T-1"));
 
         mvc.perform(multipart("/api/v1/imports/manual").param("entry", ENTRY).with(csrf()))
                 .andExpect(status().isConflict())
@@ -104,5 +106,41 @@ class ManualEntryControllerTest {
     void aRequestWithoutTheEntryPartIs400_AC_006_3() throws Exception {
         mvc.perform(multipart("/api/v1/imports/manual").with(csrf())).andExpect(status().isBadRequest());
         verifyNoInteractions(manualEntries);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.PROJECT_MANAGER)
+    @SuppressWarnings("unchecked")
+    void theFilesPartsReachTheServiceInOrder_AC_006_2() throws Exception {
+        when(manualEntries.save(any(), eq(ENTRY), any()))
+                .thenReturn(new ManualEntryResponse(TICKET, new MessageRef("MSG32", Map.of())));
+
+        mvc.perform(multipart("/api/v1/imports/manual")
+                        .file(new MockMultipartFile("files", "a.png", "image/png", new byte[] {1}))
+                        .file(new MockMultipartFile("files", "b.log", "text/plain", new byte[] {2, 3}))
+                        .param("entry", ENTRY)
+                        .with(csrf()))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<List<MultipartFile>> files = ArgumentCaptor.forClass(List.class);
+        verify(manualEntries).save(any(), eq(ENTRY), files.capture());
+        org.assertj.core.api.Assertions.assertThat(files.getValue())
+                .extracting(MultipartFile::getOriginalFilename)
+                .containsExactly("a.png", "b.log");
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.PROJECT_MANAGER)
+    void aRejectedFileIs400Msg34OnTheFilesField_AC_006_6() throws Exception {
+        when(manualEntries.save(any(), any(), any())).thenThrow(ManualEntryRejectedException.fileRejected("x.zip"));
+
+        mvc.perform(multipart("/api/v1/imports/manual")
+                        .file(new MockMultipartFile("files", "x.zip", "application/zip", new byte[] {1}))
+                        .param("entry", ENTRY)
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG34"))
+                .andExpect(jsonPath("$.params.file_name").value("x.zip"))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("files"));
     }
 }

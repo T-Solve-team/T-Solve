@@ -7,4 +7,6 @@ import vn.tsolve.ticket.entity.TicketEvidence;
 
 public interface TicketEvidenceRepository extends Repository<TicketEvidence, UUID> {
     List<TicketEvidence> findByTicketIdOrderById(UUID ticketId);
+
+    <S extends TicketEvidence> List<S> saveAll(Iterable<S> rows);
 }
