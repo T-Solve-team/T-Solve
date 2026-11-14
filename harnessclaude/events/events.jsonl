@@ -1405,6 +1405,9 @@
 {"ts":"2026-11-14T05:27:58.892Z","type":"feature-status","module":"platform","feature":"e2e-smoke","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T06:06:15.524Z","type":"feature-status","module":"platform","feature":"cross-module-isolation","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T06:06:15.575Z","type":"feature-status","module":"platform","feature":"e2e-smoke","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T08:07:06.429Z","type":"feature-status","module":"identity","feature":"profile-spaces-backend","from":null,"to":"pending"}
+{"ts":"2026-11-14T08:07:06.672Z","type":"feature-status","module":"identity","feature":"my-solutions-backend","from":null,"to":"pending"}
+{"ts":"2026-11-14T08:07:06.911Z","type":"feature-status","module":"identity","feature":"my-solutions-summary-backend","from":null,"to":"pending"}
 {"ts":"2026-11-14T07:19:02.832Z","type":"spec-approved","module":"ticket-review","specHash":"814240704938db19e3d45042910e7ea30657fe05d3af6ad1edb039c7e2b3b2b1"}
 {"ts":"2026-11-14T07:20:46.340Z","type":"feature-status","module":"ticket-review","feature":"review-email-html","from":null,"to":"pending"}
 {"ts":"2026-11-14T07:23:39.493Z","type":"feature-status","module":"ticket-review","feature":"review-email-html","from":"pending","to":"in-progress"}

@@ -138,9 +138,12 @@
         "session-expiry-events": "passing",
         "operator-session": "passing",
         "session-replaced-event": "passing",
-        "jira-link-record": "passing"
+        "jira-link-record": "passing",
+        "profile-spaces-backend": "pending",
+        "my-solutions-backend": "pending",
+        "my-solutions-summary-backend": "pending"
       },
-      "lastUpdated": "2026-11-13T12:30:26.708Z",
+      "lastUpdated": "2026-11-14T08:07:06.910Z",
       "branch": "feat/identity",
       "repos": [
         "default"
