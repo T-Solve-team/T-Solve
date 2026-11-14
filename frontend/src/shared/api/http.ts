@@ -8,6 +8,8 @@ import { noteFailedResponse } from './site-state';
  * - sends the request to the page's own origin (a relative path: the Vite proxy in dev, Caddy in production), so
  *   the Host of the page decides the Workspace (AC-011.1); it adds no Workspace, site or domain header;
  * - sends the session cookie;
+ * - sends the decoded `XSRF-TOKEN` cookie as `X-XSRF-TOKEN` on unsafe methods unless the caller set it
+ *   (be-foundation AC-002.11);
  * - adds `X-TSolve-Background: 1` for a request marked as background (AC-012.6);
  * - returns the parsed JSON body (undefined for 204 / empty bodies);
  * - rejects with ApiError for every non-2xx response and for network errors; MSG119 / MSG120 / 401 MSG123 are
@@ -17,6 +19,14 @@ export async function http<T>(url: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (!headers.has('Accept')) headers.set('Accept', 'application/json');
   if (isBackground(init.signal)) headers.set(BACKGROUND_HEADER, '1');
+  if (
+    !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes((init.method ?? 'GET').toUpperCase()) &&
+    !headers.has('X-XSRF-TOKEN') &&
+    typeof document !== 'undefined'
+  ) {
+    const token = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/)?.[1];
+    if (token !== undefined) headers.set('X-XSRF-TOKEN', decodeURIComponent(token));
+  }
 
   let response: Response;
   try {
