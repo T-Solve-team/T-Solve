@@ -1519,3 +1519,14 @@
 {"ts":"2026-11-14T19:08:51.367Z","type":"feature-status","module":"jira-app","feature":"resubmit-forge","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T19:08:51.882Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"ef1fc5e0db7ee7a071ba4cd4a9ff4932fd7e1f31"}
 {"ts":"2026-11-14T19:12:41.077Z","type":"spec-approved","module":"jira-app","specHash":"3c82dd068c3e4bf5a84bb2e4703a9418a49cbefb42b7eb84e3a643a04e6be5e9"}
+{"ts":"2026-11-14T14:10:39.478Z","type":"spec-approved","module":"workspace","specHash":"2056ec4e1de7e648fade6b6ee70af84587f380243d0fd5b48b503940df4d4c13"}
+{"ts":"2026-11-14T14:10:45.432Z","type":"feature-status","module":"workspace","feature":"delete-department-api","from":null,"to":"pending"}
+{"ts":"2026-11-14T14:10:45.719Z","type":"feature-status","module":"workspace","feature":"delete-department-screen","from":null,"to":"pending"}
+{"ts":"2026-11-14T14:10:46.017Z","type":"feature-status","module":"workspace","feature":"restore-department-api","from":null,"to":"pending"}
+{"ts":"2026-11-14T14:10:46.328Z","type":"feature-status","module":"workspace","feature":"restore-department-screen","from":null,"to":"pending"}
+{"ts":"2026-11-14T14:10:46.603Z","type":"feature-status","module":"workspace","feature":"delete-department-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T14:40:51.219Z","type":"feature-status","module":"workspace","feature":"delete-department-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T14:40:51.583Z","type":"feature-status","module":"workspace","feature":"delete-department-screen","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T14:40:51.976Z","type":"feature-status","module":"workspace","feature":"restore-department-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T20:15:02.302Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"d2b78999a99638f1477c5e85e0013a3aab611f81"}
+{"ts":"2026-11-14T20:15:02.590Z","type":"feature-status","module":"workspace","feature":"delete-department-screen","from":"in-progress","to":"evaluating"}

@@ -177,3 +177,51 @@ Branch: `feat/KAN-120-workspace-create-department` for Tasks 1 and 2 (KAN-120), 
 **Verify:** in `frontend/`: `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`, and `npm run generate:api` leaves no diff in `src/shared/api/generated`.
 **Dependencies:** Task 3
 **Estimated size:** medium
+
+## Task 5: Delete Department API, with Projects, Space and audit
+
+**Story:** STORY-005
+**Feature:** delete-department-api
+**Description:** KAN-122. Contract first in `frontend/openapi/tsolve-api.yaml`: `DepartmentDetail` (`DepartmentRef` + `projectCount`) for `getDepartment`, `DepartmentSummary` and `listDepartments` (`GET /api/v1/departments?includeDeleted`), `deleteDepartment` (`DELETE`, 204); regenerate the client. Backend: `DepartmentDetailResponse`, `DepartmentSummaryResponse`; `DepartmentRepository` gains `countProjects`, `list(includeDeleted)`, `lockByStatus(publicId, status)`, `markDeleted` (status `DELETED`, `default_project_id = NULL`), `removeProjects` (`ACTIVE` → `REMOVED`, `RETURNING public_id`), `setSpaceStatus` (0 rows throws); service `delete` with `FOR UPDATE`, audit `{operation: DELETE, name, spaceId, removedProjectIds}`; controller `GET ""`, `DELETE DEPARTMENT_PATH`, the invalid-id route also takes `DELETE`. No changeset (K122-D8, spec contracts). Frontend: the 2.3 page types follow `DepartmentDetail`.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
+- Modify: `backend/src/main/java/vn/tsolve/workspace/{controller/DepartmentController,service/DepartmentService,service/impl/DepartmentServiceImpl,repository/DepartmentRepository}.java`
+- Create: `backend/src/main/java/vn/tsolve/workspace/dto/{DepartmentDetailResponse,DepartmentSummaryResponse}.java`
+- Test: `backend/src/test/java/vn/tsolve/workspace/DepartmentDeletionIT.java`, existing unit tests updated for the new `get` return type
+**Tests:** IT on real PostgreSQL citing AC-005.1 to AC-005.17 (suffix `_AC_005_n`).
+**Verify:** `mvn spotless:apply`, unit tests, the new IT (`TSOLVE_WORKER_ENABLED=false`); frontend typecheck after regenerating.
+**Dependencies:** Task 3
+**Estimated size:** medium
+
+## Task 6: Delete on 2.3 Department Detail
+
+**Story:** STORY-006
+**Feature:** delete-department-screen
+**Description:** KAN-122. `DepartmentDetailPage`: "Delete" button (danger) beside "Edit", hidden while the rename form is open (`DepartmentNameForm` reports its editing state); `ConfirmDialog` `isDanger` MSG45 `{department_name, count}`, okText "Delete", `isConfirming` while running, Cancel ignored while running. `useDeleteDepartmentAction` in `useDepartmentMutations.ts`: MSG46, `invalidateQueries()`, navigate to `paths.workspaceSettings`; error → dialog closes, message of the code. MSW: `DELETE` marks the entry deleted; `GET` answers `projectCount` (0 for the mock).
+**Files:** `frontend/src/features/workspace/{pages/DepartmentDetailPage.tsx,components/DepartmentNameForm.tsx,hooks/useDepartmentMutations.ts,mocks/handlers.ts}`; test `pages/DepartmentDetailPage.test.tsx`
+**Tests:** AC-006.1 to AC-006.8.
+**Verify:** `format:check`, `lint`, `typecheck`, `test`, `build`.
+**Dependencies:** Task 5
+**Estimated size:** small
+
+## Task 7: Restore Department API
+
+**Story:** STORY-007
+**Feature:** restore-department-api
+**Description:** KAN-123. Contract: `restoreDepartment` (`POST /api/v1/departments/{departmentId}/restore`, 200 `DepartmentRef`); regenerate. Service `restore`: lock the `DELETED` row `FOR UPDATE` (404 MSG04 otherwise), status `ACTIVE`, Space `ACTIVE` (0 rows throws), Projects untouched, audit `{operation: RESTORE, name, spaceId}`. Controller `POST DEPARTMENT_PATH + "/restore"`; invalid id → 404.
+**Files:** as Task 5; Test: `backend/src/test/java/vn/tsolve/workspace/DepartmentRestoreIT.java`
+**Tests:** AC-007.1 to AC-007.12.
+**Verify:** as Task 5.
+**Dependencies:** Task 5
+**Estimated size:** small
+
+## Task 8: Show deleted and Restore on 2.2
+
+**Story:** STORY-008
+**Feature:** restore-department-screen
+**Description:** KAN-123. `WorkspaceSettingsPage` reads `useListDepartments({includeDeleted})` (AC-002.1, AC-002.4, AC-002.9 reworded); a `Switch` "Show deleted"; Deleted rows: plain name, "Deleted" tag, "Restore" button; `ConfirmDialog` MSG51 `{department_name}`, okText "Restore"; `useRestoreDepartmentAction`: MSG52, `invalidateQueries()`. `useAddDepartment` invalidates every query. MSW: `GET */api/v1/departments` with `includeDeleted`, `POST .../restore`.
+**Files:** `frontend/src/features/workspace/{pages/WorkspaceSettingsPage.tsx,hooks/useDepartmentMutations.ts,mocks/handlers.ts}`; test `pages/WorkspaceSettingsPage.test.tsx`
+**Tests:** AC-008.1 to AC-008.9, the reworded AC-002.1, AC-002.4, AC-002.9.
+**Verify:** as Task 6.
+**Dependencies:** Task 7
+**Estimated size:** small

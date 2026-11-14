@@ -159,15 +159,19 @@
         "create-department-api": "passing",
         "create-department-screen": "passing",
         "rename-department-api": "passing",
-        "rename-department-screen": "passing"
+        "rename-department-screen": "passing",
+        "delete-department-api": "evaluating",
+        "delete-department-screen": "evaluating",
+        "restore-department-api": "in-progress",
+        "restore-department-screen": "pending"
       },
-      "lastUpdated": "2026-11-11T21:17:40.264Z",
+      "lastUpdated": "2026-11-14T20:15:02.589Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "8a667e27d39a1c4deb80389d9383c07870abb9bb"
+        "default": "d2b78999a99638f1477c5e85e0013a3aab611f81"
       }
     },
     "project-integration": {
