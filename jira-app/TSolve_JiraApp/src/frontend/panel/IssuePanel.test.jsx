@@ -135,7 +135,7 @@ describe('IssuePanel', () => {
     expect(screen.queryByRole('button', { name: PANEL_LABELS.writeSolution })).not.toBeInTheDocument();
   });
 
-  it('re-checks the status on Write Solution and hides the button once the issue left Done (BUG-215)', async () => {
+  it('re-checks the status on Write Solution and hides the button once the issue left Done (BUG-231)', async () => {
     await show(PANEL);
     issueIn('indeterminate');
 
@@ -147,7 +147,7 @@ describe('IssuePanel', () => {
     expect(openSolutionForm).not.toHaveBeenCalled();
   });
 
-  it('reloads when Jira says the issue changed (BUG-215)', async () => {
+  it('reloads when Jira says the issue changed (BUG-231)', async () => {
     await show(PANEL);
     issueIn('indeterminate');
 

@@ -97,12 +97,18 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
      * Puts the writer's Solution Form ticket in Changes requested back into Pending review with the new Solution and a
      * new due date counted like the insert above (jira-app AC-012.4, GBR-10); the trigger of changeset 009 sets the new
      * queue entry time because the status changes. Returns no id when the ticket is no longer resubmittable or its
-     * Project is not ACTIVE, and then changes nothing (AC-012.5).
+     * Project is not ACTIVE, and then changes nothing (AC-012.5). It clears the change request comment, as
+     * {@code Ticket.recordReviewFeedback} does for any outcome but Changes requested.
+     *
+     * <p>Deliberate exception: this does not go through {@code TicketTransitions}. The status guard, the Project check
+     * and the write must be one atomic UPDATE, so that two resubmits (or a resubmit and an expiry) cannot both win;
+     * the one move it makes, Changes requested to Pending review, is allowed by {@code TicketStatus}.
      */
     @Query(value = """
             update ticket t
                set symptoms = :symptoms, root_cause = :rootCause, resolution_steps = :resolutionSteps,
                    workaround = :workaround, scope = :scope, status = 'PENDING_REVIEW',
+                   change_request_comment = null,
                    review_due_date = cast(:today as date)
                        + (case when p.review_range > 0 then p.review_range else 3 end),
                    updated_at = now()

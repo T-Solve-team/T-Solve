@@ -49,7 +49,7 @@ export function IssuePanel() {
     load();
   }, [load]);
 
-  // The status read on load goes stale when the issue moves (BUG-215): reload when Jira reports a change.
+  // The status read on load goes stale when the issue moves (BUG-231): reload when Jira reports a change.
   useEffect(() => {
     const subscription = events.on('JIRA_ISSUE_CHANGED', () => load());
     return () => {
@@ -61,7 +61,7 @@ export function IssuePanel() {
 
   const openForm = async () => {
     try {
-      // The button may be stale (BUG-215): Write Solution only while the issue is still Done (AC-001.4).
+      // The button may be stale (BUG-231): Write Solution only while the issue is still Done (AC-001.4).
       const current = await readIssue(requestJira, issueKey);
       if (!panel.hasDraft && current.category !== DONE) {
         setIssue(current);

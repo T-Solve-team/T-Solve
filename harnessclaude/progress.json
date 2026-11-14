@@ -325,17 +325,17 @@
         "remove-jira-search": "passing",
         "close-keeps-draft": "passing",
         "resubmit-backend": "evaluating",
-        "resubmit-forge": "in-progress",
+        "resubmit-forge": "evaluating",
         "panel-rejected": "evaluating",
         "panel-published": "evaluating"
       },
-      "lastUpdated": "2026-11-14T17:39:51.394Z",
-      "branch": "feat/KAN-126-jira-app-solution-form-v2",
+      "lastUpdated": "2026-11-14T19:08:51.881Z",
+      "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "36e22e7c5b82fc6363e6e78729916b148efcddf1"
+        "default": "ef1fc5e0db7ee7a071ba4cd4a9ff4932fd7e1f31"
       }
     },
     "dashboard-audit": {
@@ -419,15 +419,17 @@
         "review-notification-smtp": "passing",
         "tenant-jobs": "passing",
         "active-workspaces": "passing",
-        "review-email-html-sender": "passing"
+        "review-email-html-sender": "passing",
+        "email-outbox": "passing",
+        "email-outbox-review-fixes": "passing"
       },
-      "lastUpdated": "2026-11-14T08:47:24.251Z",
+      "lastUpdated": "2026-11-14T14:22:13.956Z",
       "branch": "feat/worker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "98ec9c7382a17815f6f001e3a6432225c4bc83b9"
+        "default": "e6570be15d5641689f5c375a52caedf748d2d035"
       }
     },
     "ai": {
@@ -501,6 +503,8 @@
         "review-expiry-job": "passing",
         "review-expired-stored-columns": "passing",
         "review-email-html": "passing",
+        "review-email-outbox": "passing",
+        "review-email-link-fallback": "passing",
         "jira-rejected-feedback": "evaluating"
       },
       "lastUpdated": "2026-11-14T17:32:18.927Z",
@@ -509,7 +513,7 @@
         "default"
       ],
       "lastCommit": {
-        "default": "98ec9c7382a17815f6f001e3a6432225c4bc83b9"
+        "default": "e9eec864480ba413e53c2387698dc28e4f893647"
       }
     }
   },

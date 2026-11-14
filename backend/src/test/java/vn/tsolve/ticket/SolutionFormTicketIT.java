@@ -189,8 +189,8 @@ class SolutionFormTicketIT {
         String issue = KEY + "-4";
         scope.runIn(TwoTenantDatabases.ACME, () -> tickets.submit(submission(issue, WRITER)));
         db.update(
-                "UPDATE ticket SET status = 'CHANGES_REQUESTED', review_due_date = DATE '2026-01-04',"
-                        + " review_queue_entered_at = TIMESTAMPTZ '2026-01-01 00:00:00+00' WHERE source_ticket_id = ?",
+                "UPDATE ticket SET status = 'CHANGES_REQUESTED', change_request_comment = 'Add the client version',"
+                        + " review_due_date = DATE '2026-01-04', review_queue_entered_at = TIMESTAMPTZ '2026-01-01 00:00:00+00' WHERE source_ticket_id = ?",
                 issue);
         SolutionSections fixed = new SolutionSections("Drops hourly", "Old client", "Update to 5.3", "", "All laptops");
         SolutionFormSubmission byWriter = new SolutionFormSubmission(PROJECT, issue, "VPN", WRITER, "Ngo Bao", fixed);
@@ -209,14 +209,15 @@ class SolutionFormTicketIT {
         });
 
         Map<String, Object> row = db.queryForMap(
-                "SELECT status, resolution_steps, scope, review_due_date, review_queue_entered_at, title"
-                        + " FROM ticket WHERE source_ticket_id = ?",
+                "SELECT status, resolution_steps, scope, review_due_date, review_queue_entered_at, title,"
+                        + " change_request_comment FROM ticket WHERE source_ticket_id = ?",
                 issue);
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
         assertThat(row.get("status")).isEqualTo("PENDING_REVIEW");
         assertThat(row.get("resolution_steps")).isEqualTo("Update to 5.3");
         assertThat(row.get("scope")).isEqualTo("All laptops");
         assertThat(row.get("title")).isEqualTo("VPN drops after sleep");
+        assertThat(row.get("change_request_comment")).isNull();
         assertThat(((java.sql.Date) row.get("review_due_date")).toLocalDate()).isEqualTo(today.plusDays(REVIEW_RANGE));
         assertThat(((java.sql.Timestamp) row.get("review_queue_entered_at")).toInstant())
                 .isAfter(java.time.Instant.parse("2026-01-02T00:00:00Z"));

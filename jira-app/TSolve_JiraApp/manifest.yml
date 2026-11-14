@@ -36,7 +36,9 @@ modules:
       remote: tsolve-backend
 remotes:
   - key: tsolve-backend
-    baseUrl: https://resigned-ladle-saggy.ngrok-free.dev
+    # Placeholder: Forge manifests do not read environment variables for `baseUrl`. Set your own tunnel or the
+    # staging URL here, locally only, and never commit it (see README, "Point the app at your backend").
+    baseUrl: https://YOUR-TUNNEL.example
 resources:
   - key: issue-panel
     path: src/frontend/panel/index.jsx

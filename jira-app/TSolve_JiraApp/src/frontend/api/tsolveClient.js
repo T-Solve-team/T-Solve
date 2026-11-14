@@ -95,7 +95,7 @@ async function earlierResubmissionGotThrough(issueKey) {
 /**
  * Finish: creates the issue's ticket `{id, ticketId, status}`. Retries 3 times when T-Solve cannot be
  * reached or fails, then gives MSG69 (AC-004.4). A 409 MSG31 after a retry means an earlier try got through; any other
- * 409 (MSG40: the Project is no longer active) is given back (BUG-217). With `resubmit` it puts the viewer's ticket in
+ * 409 (MSG40: the Project is no longer active) is given back (BUG-233). With `resubmit` it puts the viewer's ticket in
  * Changes requested back into Pending review (AC-012.4); its 409 MSG06 (no longer resubmittable, AC-012.5) is given back
  * unless, after a retry, the panel shows the ticket already back in Pending review.
  */

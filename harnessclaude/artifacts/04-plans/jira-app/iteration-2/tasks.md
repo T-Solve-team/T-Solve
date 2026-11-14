@@ -37,7 +37,7 @@ mayOpen, searchAllowed}`), `GET /tickets/search?q=` (list of `{ticketId, publicI
 
 **Story:** STORY-002, STORY-004, STORY-005
 **Feature:** solution-ticket-storage
-**Description:** Changeset `031-jira-app-solution-draft.sql` (table `solution_draft`; no new ticket index — `uq_ticket_ticket_id`
+**Description:** Changeset `033-jira-app-solution-draft.sql` (table `solution_draft`; no new ticket index — `uq_ticket_ticket_id`
 keeps one ticket per issue key, of any source, as the design decides). In `ticket`:
 `Ticket.submitted(...)`; `SolutionFormTicketService.submit(project, issueKey, title, writer, sections)` — validates
 required sections (MSG01 with `field_name`) and 10,000 code points (MSG02) unless all five are empty (Close), sets
@@ -47,7 +47,7 @@ required sections (MSG01 with `field_name`) and 10,000 code points (MSG02) unles
 Testcontainers base): the new ticket appears in `TicketReviewReadService.queue` with entry time and due date;
 two concurrent submits → one ticket. Tests: AC-002.5, AC-004.1, AC-004.3, AC-005.1, AC-005.3, AC-006.2.
 **Files:**
-- Create: `backend/src/main/resources/db/changelog/changes/031-jira-app-solution-draft.sql`,
+- Create: `backend/src/main/resources/db/changelog/changes/033-jira-app-solution-draft.sql`,
   `backend/src/main/java/vn/tsolve/ticket/{entity/SolutionDraft,repository/SolutionDraftRepository,service/SolutionFormTicketService,service/SolutionDraftService,service/impl/*Impl}.java`, tests
 - Modify: `db.changelog-master.xml`, `ticket/entity/Ticket.java`, `ticket/repository/TicketRepository.java`
 **Dependencies:** none
@@ -241,7 +241,7 @@ submitted. Check the flow on the dev site (Request changes → Edit and resubmit
 shows `Rejected by {manager_name}: "{reason}".` (code `REJECTED`, a Jira App text) with no button.
 **Files:**
 - Modify: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, `messages.js`, their tests
-**Dependencies:** ticket-review Task 20
+**Dependencies:** ticket-review Task 22
 **Estimated size:** small
 
 ## Task 16: Issue Panel — Published ticket
