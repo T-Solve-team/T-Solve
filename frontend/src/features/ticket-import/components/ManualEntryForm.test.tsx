@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
@@ -51,7 +51,8 @@ const FIELDS = {
 async function fillAll(user: User, values: Partial<typeof FIELDS> = FIELDS) {
   await chooseProject(user);
   for (const [label, value] of Object.entries(values)) {
-    await user.type(screen.getByLabelText(label), value);
+    await user.click(screen.getByLabelText(label));
+    await user.paste(value);
   }
 }
 
@@ -71,6 +72,25 @@ function captureBodies(path: string) {
   return bodies;
 }
 
+function evidenceInput(): HTMLInputElement {
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+  if (!input) throw new Error('no Evidence input');
+  return input;
+}
+
+function captureMultipart(path: string) {
+  const bodies: FormData[] = [];
+  server.events.on('request:start', ({ request }) => {
+    if (request.method === 'POST' && new URL(request.url).pathname === path) {
+      void request
+        .clone()
+        .formData()
+        .then((body) => bodies.push(body));
+    }
+  });
+  return bodies;
+}
+
 describe('ManualEntryForm', () => {
   beforeAll(async () => {
     await import('../pages/ImportTicketsPage');
@@ -78,6 +98,96 @@ describe('ManualEntryForm', () => {
 
   afterEach(() => {
     server.events.removeAllListeners();
+  });
+
+  it('AC-006.22 sends Evidence as multipart files with the entry and clears it after Save', async () => {
+    const bodies = captureMultipart('/api/v1/imports/manual');
+    const { user } = await openManualTab();
+    await chooseProject(user);
+    // This test covers multipart Evidence; enter the already-covered text fields without typing each one.
+    for (const [label, value] of Object.entries(FIELDS)) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    }
+    await user.upload(evidenceInput(), [
+      new File(['log contents'], 'vpn.log'),
+      new File(['pdf'], 'report.pdf'),
+    ]);
+    expect(await screen.findByText('vpn.log')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByText(msg('MSG32', { created: 1, skipped: 0 }));
+    expect(bodies).toHaveLength(1);
+    const body = bodies[0];
+    expect(JSON.parse(body?.get('entry') as string)).toMatchObject({
+      ticketId: FIELDS['Ticket ID'],
+    });
+    expect(
+      body?.getAll('files').map((file) => (typeof file === 'string' ? file : file.name)),
+    ).toEqual(['vpn.log', 'report.pdf']);
+    expect(JSON.parse(body?.get('entry') as string)).not.toHaveProperty('keepEvidenceIds');
+    await waitFor(() => expect(screen.queryByText('vpn.log')).not.toBeInTheDocument());
+    expect(screen.queryByText('report.pdf')).not.toBeInTheDocument();
+  });
+
+  it('AC-006.18 AC-006.19 reopens Evidence, removes a kept file and never sends new files twice', async () => {
+    const bodies = captureMultipart('/api/v1/imports/manual/drafts');
+    const { user, router } = await openManualTab();
+    await chooseProject(user);
+    await user.upload(evidenceInput(), [
+      new File(['first'], 'first.log'),
+      new File(['second'], 'second.txt'),
+    ]);
+    await user.click(screen.getByRole('button', { name: 'Save as draft' }));
+    await screen.findByText(msg('MSG41'));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Save as draft$/ })).toBeEnabled(),
+    );
+    await user.click(screen.getByRole('button', { name: /Save as draft$/ }));
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies[0]?.getAll('files')).toHaveLength(2);
+    expect(bodies[1]?.getAll('files')).toHaveLength(0);
+    const saved = JSON.parse(bodies[1]?.get('entry') as string) as ManualTicketRequest;
+    expect(saved.keepEvidenceIds).toHaveLength(2);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Save as draft$/ })).toBeEnabled(),
+    );
+    await act(() => router.navigate('/import?tab=manual'));
+    await openManualDraft(user);
+    expect(await screen.findByText('first.log')).toBeInTheDocument();
+    expect(screen.getByText('second.txt')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Remove first.log' }));
+    await user.click(screen.getByRole('button', { name: /Save as draft$/ }));
+    await waitFor(() => expect(bodies).toHaveLength(3));
+    const edited = JSON.parse(bodies[2]?.get('entry') as string) as ManualTicketRequest;
+    expect(edited.keepEvidenceIds).toEqual(saved.keepEvidenceIds?.slice(1));
+    expect(bodies[2]?.getAll('files')).toHaveLength(0);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Save as draft$/ })).toBeEnabled(),
+    );
+    await act(() => router.navigate('/import?tab=manual'));
+    await openManualDraft(user);
+    expect(await screen.findByText('second.txt')).toBeInTheDocument();
+    expect(screen.queryByText('first.log')).not.toBeInTheDocument();
+  });
+
+  it('AC-006.16 shows a server MSG34 field error under Evidence and keeps the file', async () => {
+    server.use(
+      http.post('*/api/v1/imports/manual/drafts', () =>
+        problem(400, 'MSG34', {
+          fieldErrors: [{ field: 'files', code: 'MSG34', params: { file_name: 'vpn.log' } }],
+        }),
+      ),
+    );
+    const { user } = await openManualTab();
+    await chooseProject(user);
+    await user.upload(evidenceInput(), new File(['log'], 'vpn.log'));
+    await user.click(screen.getByRole('button', { name: 'Save as draft' }));
+
+    const error = await screen.findByText(msg('MSG34', { file_name: 'vpn.log' }));
+    expect(error.closest('.ant-form-item')).toHaveTextContent('Evidence');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText('vpn.log')).toBeInTheDocument();
   });
 
   it('AC-006.9 Save as draft shows MSG41, lists the Draft and keeps its id for the next save', async () => {

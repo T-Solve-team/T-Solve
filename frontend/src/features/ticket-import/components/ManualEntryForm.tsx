@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import {
   getGetManualTicketDraftQueryKey,
+  getGetManualTicketDraftQueryOptions,
   getListImportDraftsQueryKey,
   useCreateManualTicket,
   useGetManualTicketDraft,
@@ -16,12 +17,20 @@ import {
 import { rules } from '@/shared/forms';
 import { APP_TIME_ZONE } from '@/shared/lib';
 import { msg, showMessage } from '@/shared/messages';
-import { AppForm, ErrorState, FormField, LoadingState } from '@/shared/ui';
+import {
+  AppForm,
+  ErrorState,
+  EvidenceUpload,
+  FormField,
+  LoadingState,
+  type EvidenceUploadValue,
+} from '@/shared/ui';
 import { useManagedProjectOptions } from '../hooks/useManagedProjects';
 import { SolutionFields } from './SolutionFormModal';
 
-type ManualValues = Omit<ManualTicketRequest, 'resolvedDate' | 'draftId'> & {
+type ManualValues = Omit<ManualTicketRequest, 'resolvedDate' | 'draftId' | 'keepEvidenceIds'> & {
   resolvedDate?: Dayjs | null;
+  files?: EvidenceUploadValue;
 };
 
 const DATE_FORMAT = 'DD/MM/YYYY';
@@ -53,6 +62,18 @@ function toValues(draft: ManualTicketDraft): ManualValues {
     title: draft.title,
     description: draft.description,
     resolvedDate: resolved?.isValid() ? resolved : null,
+    files: draftEvidence(draft),
+  };
+}
+
+function draftEvidence(draft: ManualTicketDraft): EvidenceUploadValue {
+  return {
+    keptFiles: draft.evidence.map(({ evidenceId, fileName, fileSize }) => ({
+      id: evidenceId,
+      name: fileName,
+      size: fileSize,
+    })),
+    newFiles: [],
   };
 }
 
@@ -88,20 +109,27 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
   const projects = useManagedProjectOptions();
   const [draftId, setDraftId] = useState<number | null>(draft?.previewId ?? null);
   const [rejection, setRejection] = useState<string | null>(null);
+  const [evidenceReloadId, setEvidenceReloadId] = useState<number | null>(null);
+  const [hasReloadError, setHasReloadError] = useState(false);
   // A double click reaches the handler twice before `isPending` renders: one request only.
   const isSending = useRef(false);
 
   const create = useCreateManualTicket({ mutation: { meta: { handlesOwnErrors: true } } });
   const saveDraft = useSaveManualTicketDraft({ mutation: { meta: { handlesOwnErrors: true } } });
+  const isBusy = create.isPending || saveDraft.isPending || evidenceReloadId !== null;
 
   const refreshDrafts = () =>
     queryClient.invalidateQueries({ queryKey: getListImportDraftsQueryKey() });
 
   function request(values: ManualValues): ManualTicketRequest {
+    const { files, ...entry } = values;
     return {
-      ...values,
+      ...entry,
       resolvedDate: values.resolvedDate?.format('YYYY-MM-DD') ?? null,
       draftId,
+      ...(draftId !== null
+        ? { keepEvidenceIds: files?.keptFiles.map((file) => file.id) ?? [] }
+        : {}),
     };
   }
 
@@ -114,7 +142,7 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
   }
 
   function send(mutate: () => void) {
-    if (isSending.current) return;
+    if (isSending.current || evidenceReloadId !== null) return;
     isSending.current = true;
     setRejection(null);
     mutate();
@@ -123,7 +151,7 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
   function handleSave(values: ManualValues) {
     send(() =>
       create.mutate(
-        { data: { entry: request(values), files: [] } },
+        { data: { entry: request(values), files: values.files?.newFiles ?? [] } },
         {
           onSettled: () => {
             isSending.current = false;
@@ -151,15 +179,30 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
     );
   }
 
+  async function reloadEvidence(previewId: number) {
+    setHasReloadError(false);
+    try {
+      const savedDraft = await queryClient.fetchQuery(
+        getGetManualTicketDraftQueryOptions(previewId),
+      );
+      form.setFieldValue('files', draftEvidence(savedDraft));
+      setEvidenceReloadId(null);
+    } catch {
+      // The save already succeeded. Block another send until we know the stored Evidence ids.
+      setHasReloadError(true);
+    }
+  }
+
   async function handleSaveDraft() {
     try {
       await form.validateFields(['projectId']);
     } catch {
       return;
     }
+    const values = form.getFieldsValue();
     send(() =>
       saveDraft.mutate(
-        { data: { entry: request(form.getFieldsValue()), files: [] } },
+        { data: { entry: request(values), files: values.files?.newFiles ?? [] } },
         {
           onSettled: () => {
             isSending.current = false;
@@ -170,7 +213,9 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
               queryKey: getGetManualTicketDraftQueryKey(saved.previewId),
             });
             setDraftId(saved.previewId);
+            setEvidenceReloadId(saved.previewId);
             void refreshDrafts();
+            void reloadEvidence(saved.previewId);
           },
           onError,
         },
@@ -181,6 +226,9 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
   return (
     <Flex vertical gap="middle">
       {rejection && <Alert type="error" showIcon title={rejection} />}
+      {hasReloadError && evidenceReloadId !== null && (
+        <ErrorState onRetry={() => void reloadEvidence(evidenceReloadId)} />
+      )}
       {/* name: field ids differ from the other tabs' (label → input). */}
       <AppForm<ManualValues>
         name="manualEntry"
@@ -220,11 +268,18 @@ function ManualEntryFields({ draft }: { draft?: ManualTicketDraft }) {
           <DatePicker format={DATE_FORMAT} disabledDate={isFuture} />
         </FormField>
         <SolutionFields values={draft} />
+        <FormField<ManualValues> name="files" label="Evidence">
+          <EvidenceUpload disabled={isBusy} />
+        </FormField>
         <Flex gap="small">
-          <Button type="primary" htmlType="submit" loading={create.isPending}>
+          <Button type="primary" htmlType="submit" loading={create.isPending} disabled={isBusy}>
             Save
           </Button>
-          <Button loading={saveDraft.isPending} onClick={() => void handleSaveDraft()}>
+          <Button
+            loading={saveDraft.isPending}
+            disabled={isBusy}
+            onClick={() => void handleSaveDraft()}
+          >
             Save as draft
           </Button>
         </Flex>

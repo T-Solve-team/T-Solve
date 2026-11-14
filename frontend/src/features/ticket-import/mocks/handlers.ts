@@ -9,6 +9,7 @@ import type {
   ImportResultResponse,
   ImportType,
   JiraPullRequest,
+  ManualEvidence,
   ManualTicketDraft,
   ManualTicketRequest,
   RemoveRowsRequest,
@@ -72,6 +73,42 @@ const MANUAL_REQUIRED = [
   ['resolutionSteps', 'Resolution steps'],
   ['scope', 'Scope'],
 ] as const;
+
+/** Evidence rules run before changing a Ticket or Draft (AC-006.16–AC-006.19). */
+function manualEvidence(body: ManualTicketRequest, form: FormData) {
+  const kept =
+    manualDrafts
+      .find((draft) => draft.previewId === body.draftId)
+      ?.evidence.filter((file) => body.keepEvidenceIds?.includes(file.evidenceId)) ?? [];
+  const files = form.getAll('files').filter((file): file is File => typeof file !== 'string');
+  const invalid = files.find(
+    (file) =>
+      !/\.(png|jpe?g|pdf|docx|xlsx|txt|log)$/i.test(file.name) || file.size > 10 * 1024 * 1024,
+  );
+  if (invalid) {
+    return {
+      error: problem(400, 'MSG34', {
+        fieldErrors: [{ field: 'files', code: 'MSG34', params: { file_name: invalid.name } }],
+      }),
+    };
+  }
+  if (kept.length + files.length > 5) {
+    return {
+      error: problem(400, 'MSG72', {
+        fieldErrors: [{ field: 'files', code: 'MSG72', params: {} }],
+      }),
+    };
+  }
+  const evidence: ManualEvidence[] = [
+    ...kept,
+    ...files.map((file) => ({
+      evidenceId: crypto.randomUUID(),
+      fileName: file.name,
+      fileSize: file.size,
+    })),
+  ];
+  return { evidence };
+}
 
 /** The open preview or one of the Drafts, for the read endpoints (a reopened Draft, AC-004.3). */
 function findPreview(previewId: string | readonly string[] | undefined): MockPreview | undefined {
@@ -209,6 +246,8 @@ export const handlers: HttpHandler[] = [
         fieldErrors: [{ field: 'ticketId', code: 'MSG31', params }],
       });
     }
+    const result = manualEvidence(body, form);
+    if (result.error) return result.error;
     manualDrafts = manualDrafts.filter((draft) => draft.previewId !== body.draftId);
     lastBatchId += 1;
     return HttpResponse.json<ImportResultResponse>(
@@ -226,7 +265,8 @@ export const handlers: HttpHandler[] = [
   http.post('*/api/v1/imports/manual/drafts', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const form = await request.formData();
-    const { draftId, ...fields } = JSON.parse(form.get('entry') as string) as ManualTicketRequest;
+    const body = JSON.parse(form.get('entry') as string) as ManualTicketRequest;
+    const { draftId, keepEvidenceIds: _keepEvidenceIds, ...fields } = body;
     if (!fields.projectId) {
       return problem(400, 'MSG01', {
         fieldErrors: [{ field: 'projectId', code: 'MSG01', params: { field_name: 'Project' } }],
@@ -235,10 +275,12 @@ export const handlers: HttpHandler[] = [
     if (draftId && !manualDrafts.some((draft) => draft.previewId === draftId)) {
       return problem(404, 'MSG04');
     }
+    const result = manualEvidence(body, form);
+    if (result.error) return result.error;
     const previewId = draftId ?? (lastManualDraftId += 1);
     const savedAt = new Date().toISOString();
     manualDrafts = [
-      { ...fields, previewId, savedAt, evidence: [] },
+      { ...fields, previewId, savedAt, evidence: result.evidence },
       ...manualDrafts.filter((draft) => draft.previewId !== previewId),
     ];
     return HttpResponse.json<DraftSavedResponse>({
