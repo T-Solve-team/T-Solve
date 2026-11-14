@@ -1,0 +1,105 @@
+{
+  "realm": "tsolve-ops",
+  "enabled": true,
+  "sslRequired": "all",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "ssoSessionMaxLifespan": 28800,
+  "ssoSessionIdleTimeout": 3600,
+  "organizationsEnabled": false,
+  "browserFlow": "tsolve-ops browser",
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"validations\":{\"length\":{\"min\":3,\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"email\",\"validations\":{\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}},{\"name\":\"firstName\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"lastName\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}}]}"
+          ]
+        }
+      }
+    ]
+  },
+  "requiredActions": [
+    { "alias": "CONFIGURE_TOTP", "name": "Configure OTP", "providerId": "CONFIGURE_TOTP", "enabled": true, "defaultAction": false, "priority": 10 }
+  ],
+  "authenticatorConfig": [
+    { "alias": "tsolve-ops default provider", "config": { "defaultProvider": "google-operators" } }
+  ],
+  "authenticationFlows": [
+    {
+      "alias": "tsolve-ops browser",
+      "description": "Cookie, then the Google identity provider; no username or password form",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "identity-provider-redirector", "authenticatorConfig": "tsolve-ops default provider", "authenticatorFlow": false, "requirement": "ALTERNATIVE", "priority": 20, "userSetupAllowed": false }
+      ]
+    },
+    {
+      "alias": "tsolve-ops first broker login",
+      "description": "Create the user from the Google account; never review, never link by email",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "idp-create-user-if-unique", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 10, "userSetupAllowed": false }
+      ]
+    },
+    {
+      "alias": "tsolve-ops post broker login",
+      "description": "The second factor: TOTP setup at the first login, the code at every login",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "auth-otp-form", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 10, "userSetupAllowed": false }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "tsolve-console",
+      "name": "T-Solve Platform Console",
+      "baseUrl": "https://admin.${TSOLVE_DOMAIN}/",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KEYCLOAK_CONSOLE_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["https://admin.${TSOLVE_DOMAIN}/api/v1/auth/callback"],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://admin.${TSOLVE_DOMAIN}/login"
+      },
+      "defaultClientScopes": ["email", "profile"]
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "google-operators",
+      "displayName": "Google",
+      "providerId": "google",
+      "enabled": true,
+      "hideOnLogin": false,
+      "trustEmail": true,
+      "firstBrokerLoginFlowAlias": "tsolve-ops first broker login",
+      "postBrokerLoginFlowAlias": "tsolve-ops post broker login",
+      "config": {
+        "clientId": "${GOOGLE_CLIENT_ID}",
+        "clientSecret": "${GOOGLE_CLIENT_SECRET}",
+        "syncMode": "IMPORT"
+      }
+    }
+  ]
+}
