@@ -33,6 +33,7 @@ import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.event.ReviewFeedbackDecidedEvent;
 import vn.tsolve.ticket.service.ReviewNotificationService;
 import vn.tsolve.worker.dto.OutboundEmail;
+import vn.tsolve.worker.exception.EmailOutboxUnavailableException;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.WorkerTenantService;
 import vn.tsolve.worker.service.mock.MockWorkerTenantService;
@@ -142,13 +143,54 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    void continuesAfterAFailedQueueCall_BUG_164() {
-        when(outbox.queue(any(OutboundEmail.class))).thenThrow(new IllegalStateException("Jobs DB unavailable"));
+    void continuesAfterAPerDecisionFailure_BUG_164() {
+        when(outbox.queue(any(OutboundEmail.class))).thenThrow(new IllegalStateException("render failed"));
         var event = new ReviewFeedbackDecidedEvent(List.of(RECORD_ID, new UUID(0, 4), new UUID(0, 5)));
 
         enqueuer(outbox, null).onDecided(event);
 
         verify(outbox, times(3)).queue(any(OutboundEmail.class));
+    }
+
+    @Test
+    void continuesPastAMissingNotification_BUG_164() {
+        when(notifications.findNotification(RECORD_ID)).thenReturn(Optional.empty());
+        var event = new ReviewFeedbackDecidedEvent(List.of(RECORD_ID, new UUID(0, 4)));
+
+        enqueuer(outbox, null).onDecided(event);
+
+        verify(outbox, times(1)).queue(any(OutboundEmail.class));
+    }
+
+    @Test
+    void stopsAtTheFirstOutboxOutageWithOneWarning_BUG_164_BUG_226() {
+        when(outbox.queue(any(OutboundEmail.class))).thenThrow(new EmailOutboxUnavailableException());
+        var event = new ReviewFeedbackDecidedEvent(List.of(RECORD_ID, new UUID(0, 4), new UUID(0, 5)));
+
+        enqueuer(outbox, null).onDecided(event);
+
+        verify(outbox, times(1)).queue(any(OutboundEmail.class));
+        assertThat(enqueuerLog.list)
+                .filteredOn(entry -> entry.getLevel() == Level.WARN)
+                .singleElement()
+                .satisfies(entry ->
+                        assertThat(entry.getFormattedMessage()).contains("3 of 3", "EmailOutboxUnavailableException"));
+    }
+
+    @Test
+    void countsOnlyTheDecisionsAfterAnOutageAsRemaining_BUG_164_BUG_226() {
+        when(outbox.queue(any(OutboundEmail.class)))
+                .thenReturn(UUID.randomUUID())
+                .thenThrow(new EmailOutboxUnavailableException());
+        var event = new ReviewFeedbackDecidedEvent(List.of(RECORD_ID, new UUID(0, 4), new UUID(0, 5)));
+
+        enqueuer(outbox, null).onDecided(event);
+
+        verify(outbox, times(2)).queue(any(OutboundEmail.class));
+        assertThat(enqueuerLog.list)
+                .filteredOn(entry -> entry.getLevel() == Level.WARN)
+                .singleElement()
+                .satisfies(entry -> assertThat(entry.getFormattedMessage()).contains("2 of 3"));
     }
 
     @Test

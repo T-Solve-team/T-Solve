@@ -175,6 +175,70 @@ class WorkerConfigurationTest {
         }
     }
 
+    @Test
+    void jobsPoolFailsFastWithAShortConfigurableConnectionTimeout_BUG_164_BUG_226() {
+        var defaults = new ApplicationContextRunner()
+                .withUserConfiguration(PropertyOnly.class)
+                .withPropertyValues(
+                        "tsolve.worker.enabled=true",
+                        "tsolve.worker.jdbc-url=jdbc:postgresql://localhost/jobs",
+                        "tsolve.worker.username=u",
+                        "tsolve.worker.password=p");
+        defaults.run(context -> assertThat(JobRunrRuntime.poolConfig(context.getBean(WorkerProperties.class))
+                        .getConnectionTimeout())
+                .isEqualTo(3000));
+        defaults.withPropertyValues("tsolve.worker.connection-timeout=2s")
+                .run(context -> assertThat(JobRunrRuntime.poolConfig(context.getBean(WorkerProperties.class))
+                                .getConnectionTimeout())
+                        .isEqualTo(2000));
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(WorkerProperties.class)
+    static class PropertyOnly {}
+
+    @ParameterizedTest
+    @ValueSource(strings = {"interval=0s", "interval=-1s", "lease=0s", "lease=-5m", "retention=0d", "retention=-1d"})
+    void rejectsZeroOrNegativeDurationsAtStartup_BUG_227(String setting) {
+        new ApplicationContextRunner()
+                .withUserConfiguration(OutboxPropertiesConfiguration.class)
+                .withPropertyValues("tsolve.worker.enabled=true", "tsolve.worker.email." + setting)
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                            .hasStackTraceContaining(
+                                    "tsolve.worker.email." + setting.substring(0, setting.indexOf('=')))
+                            .hasStackTraceContaining("must be greater than zero");
+                });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"200s", "199s"})
+    void rejectsALeaseThatDoesNotOutlastAFullBatchOfSlowSends_BUG_227(String lease) {
+        // 20 rows x (5 s connect + 5 s write) = 200 s: the lease must be strictly longer.
+        new ApplicationContextRunner()
+                .withUserConfiguration(OutboxPropertiesConfiguration.class, EmailOutboxLeaseCheck.class)
+                .withPropertyValues("tsolve.worker.enabled=true", "tsolve.worker.email.lease=" + lease)
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                            .hasStackTraceContaining("tsolve.worker.email.lease")
+                            .hasStackTraceContaining("batch-size");
+                });
+    }
+
+    @Test
+    void acceptsTheDefaultLeaseAndFollowsTheConfiguredSmtpTimeouts_BUG_227() {
+        var base = new ApplicationContextRunner()
+                .withUserConfiguration(OutboxPropertiesConfiguration.class, EmailOutboxLeaseCheck.class)
+                .withPropertyValues("tsolve.worker.enabled=true");
+        base.run(context -> assertThat(context).hasNotFailed());
+        base.withPropertyValues(
+                        "spring.mail.properties[mail.smtp.connectiontimeout]=20000",
+                        "spring.mail.properties[mail.smtp.writetimeout]=20000")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
     @Configuration(proxyBeanMethods = false)
     static class SkipMigration {
         @Bean

@@ -29,7 +29,6 @@ import vn.tsolve.worker.client.ReviewEmail;
 import vn.tsolve.worker.client.ReviewEmail.Decision;
 import vn.tsolve.worker.client.ReviewEmailRenderer;
 import vn.tsolve.worker.dto.OutboundEmail;
-import vn.tsolve.worker.exception.EmailOutboxUnavailableException;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.WorkerTenantService;
 
@@ -175,14 +174,14 @@ class ReviewNotificationEnqueuerTest {
         when(notifications.findNotification(DECISION))
                 .thenReturn(Optional.of(notification(ReviewNotification.Kind.CHANGES_REQUESTED)));
         when(outbox.queue(any()))
-                .thenThrow(new EmailOutboxUnavailableException())
+                .thenThrow(new IllegalArgumentException(privateMessage))
                 .thenReturn(UUID.randomUUID());
         assertThatCode(() -> enqueuer.onDecided(
                         new ReviewFeedbackDecidedEvent(List.of(lookupFailure, queueFailure, DECISION))))
                 .doesNotThrowAnyException();
         verify(outbox, times(2)).queue(any());
         assertThat(output.getAll())
-                .contains("IllegalStateException", "EmailOutboxUnavailableException")
+                .contains("IllegalStateException", "IllegalArgumentException")
                 .doesNotContain(WRITER, FEEDBACK, "private-subject", "private-body");
     }
 

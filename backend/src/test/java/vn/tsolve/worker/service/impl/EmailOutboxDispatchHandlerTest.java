@@ -118,7 +118,7 @@ class EmailOutboxDispatchHandlerTest {
         verify(sender).send(active.email());
         verify(repository).finish(active.claimed(NOW), "SENT", NOW);
         verify(tenants).isWorkspaceActive(suspended);
-        for (Row row : held) verify(repository).hold(row, NOW.plusSeconds(30));
+        for (Row row : held) verify(repository).hold(row, NOW.plusSeconds(300));
     }
 
     @Test
@@ -328,17 +328,73 @@ class EmailOutboxDispatchHandlerTest {
         else when(tenants.isWorkspaceActive(held.workspaceId())).thenReturn(false);
         run();
         if (age > 3600) verify(repository).finish(held, "FAILED", NOW);
-        else verify(repository).hold(held, NOW.plusSeconds(30));
+        else verify(repository).hold(held, NOW.plusSeconds(300));
         verify(repository, never()).claim(eq(held), any(), any());
         verify(repository).finish(active.claimed(NOW), "SENT", NOW);
     }
 
     @Test
-    @DisplayName("AC-004.11 missing sender fails before any rows change")
-    void rejectsMissingSender() {
+    @DisplayName("BUG-227 a missing sender sends nothing, does not throw and leaves unexpired rows alone")
+    void skipsQuietlyWithoutSender_BUG_227() {
         when(senders.getIfAvailable()).thenReturn(null);
-        assertThatThrownBy(this::run).hasMessage("Email sender unavailable").hasNoCause();
-        verifyNoInteractions(repository, tenants);
+        Row fresh = row(0, NOW.minusSeconds(60), null);
+        due(fresh);
+
+        run();
+
+        verify(repository, never()).claim(any(), any(), any());
+        verify(repository, never()).hold(any(), any());
+        verify(repository, never()).finish(any(), any(), any());
+        verifyNoInteractions(tenants, sender);
+    }
+
+    @Test
+    @DisplayName("BUG-227 without a sender rows past the hour still go FAILED and retention still runs")
+    void failsExpiredRowsAndAppliesRetentionWithoutSender_BUG_227() {
+        when(senders.getIfAvailable()).thenReturn(null);
+        Row expired = row(0, NOW.minusSeconds(3601), null);
+        Row fresh = row(0, NOW.minusSeconds(60), null);
+        due(expired, fresh);
+
+        run();
+
+        verify(repository).finish(expired, "FAILED", NOW);
+        verify(repository, never()).finish(eq(fresh), any(), any());
+        verify(repository).deleteFinished(NOW.minus(Duration.ofDays(30)), 20);
+    }
+
+    @Test
+    @DisplayName("BUG-227 the missing sender is reported once, not on every run")
+    void reportsMissingSenderOnce_BUG_227(CapturedOutput output) {
+        when(senders.getIfAvailable()).thenReturn(null);
+        due();
+
+        run();
+        run();
+        run();
+
+        assertThat(output.getAll().lines().filter(line -> line.contains("no SMTP sender is configured")))
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("BUG-229 a FAILED row is logged with its id and attempts and no message content")
+    void warnsWhenARowFails_BUG_229(CapturedOutput output) {
+        Row exhausted = row(3, NOW.minusSeconds(60), NOW.minusSeconds(300));
+        Row sendFails = row(2, NOW, null);
+        due(exhausted, sendFails);
+        doThrow(new SmtpEmailSender.DeliveryException()).when(sender).send(any());
+
+        run();
+
+        var lines = output.getAll()
+                .lines()
+                .filter(line -> line.contains("failed after"))
+                .toList();
+        assertThat(lines).hasSize(2).allSatisfy(line -> assertThat(line).contains("WARN"));
+        assertThat(lines.get(0)).contains(exhausted.id().toString(), "3 attempts");
+        assertThat(lines.get(1)).contains(sendFails.id().toString(), "3 attempts");
+        assertThat(output.getAll()).doesNotContain("private@example.test", "private subject", "private body");
     }
 
     @Test

@@ -17,6 +17,7 @@ import vn.tsolve.worker.client.ReviewEmail;
 import vn.tsolve.worker.client.ReviewEmail.Decision;
 import vn.tsolve.worker.client.ReviewEmailRenderer;
 import vn.tsolve.worker.dto.OutboundEmail;
+import vn.tsolve.worker.exception.EmailOutboxUnavailableException;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.WorkerTenantService;
 
@@ -59,6 +60,10 @@ public class ReviewNotificationEnqueuer {
                         notifications
                                 .findNotification(decisionId)
                                 .ifPresent(notification -> queue.queue(render(notification, host)));
+                    } catch (EmailOutboxUnavailableException outage) {
+                        // The Jobs database is down: every further queue call would wait for a connection on the
+                        // request thread (BUG-164), so the outer handler logs the remainder once.
+                        throw outage;
                     } catch (RuntimeException exception) {
                         // Exception messages and causes may contain private mail or database values.
                         LOG.warn(

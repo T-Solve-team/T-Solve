@@ -187,6 +187,59 @@ class EmailOutboxIT {
     }
 
     @Test
+    void sendsAnActiveRowBehindMoreHeldRowsThanOneRunReads_AC_004_9_BUG_228() throws Exception {
+        var dataSource = jobs();
+        var jdbc = new JdbcTemplate(dataSource);
+        var repository = new EmailOutboxRepository(dataSource);
+        UUID suspended = UUID.randomUUID();
+        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(suspended));
+        // One run reads batch size x 10 = 200 rows; 250 older held rows used to be re-read first on every run.
+        for (int i = 0; i < 250; i++)
+            repository.insert(
+                    UUID.randomUUID(),
+                    suspended,
+                    new OutboundEmail("held@example.test", "Held", "Text", null),
+                    NOW.minusSeconds(1000 - i));
+        UUID active = queue(repository, tenants, "Active");
+        var mailpit = WorkerMailpit.instance();
+        mailpit.clear();
+        var handler = dispatcher(repository, tenants, mailpit.sender());
+
+        handler.run(new EmailOutboxDispatchRequest());
+        clock.now = NOW.plusSeconds(30);
+        handler.run(new EmailOutboxDispatchRequest());
+
+        assertThat(jdbc.queryForMap("select * from email_outbox where email_outbox_id = ?", active))
+                .containsEntry("status", "SENT");
+        assertThat(jdbc.queryForObject(
+                        "select count(*) from email_outbox where status = 'PENDING' and attempt_count = 0",
+                        Integer.class))
+                .isEqualTo(250);
+    }
+
+    @Test
+    void withoutASenderExpiresOldRowsAndKeepsTheRest_AC_004_9_BUG_227() throws Exception {
+        var dataSource = jobs();
+        var jdbc = new JdbcTemplate(dataSource);
+        var repository = new EmailOutboxRepository(dataSource);
+        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of());
+        UUID old = queue(repository, tenants, "Old");
+        clock.now = NOW.plusSeconds(3601);
+        UUID fresh = queue(repository, tenants, "Fresh");
+        var beans = new StaticListableBeanFactory();
+        var handler = new EmailOutboxDispatchHandler(
+                repository, tenants, beans.getBeanProvider(SmtpEmailSender.class), DISPATCH, clock);
+
+        handler.run(new EmailOutboxDispatchRequest());
+
+        assertThat(jdbc.queryForObject("select status from email_outbox where email_outbox_id = ?", String.class, old))
+                .isEqualTo("FAILED");
+        assertThat(jdbc.queryForObject(
+                        "select status from email_outbox where email_outbox_id = ?", String.class, fresh))
+                .isEqualTo("PENDING");
+    }
+
+    @Test
     void holdsSuspendedWithoutAttemptThenFailsPastHour_AC_004_9_BUG_222() throws Exception {
         var dataSource = jobs();
         var jdbc = new JdbcTemplate(dataSource);
@@ -204,7 +257,7 @@ class EmailOutboxIT {
                 .containsEntry("attempt_count", 0)
                 .containsEntry("claimed_at", null)
                 .containsEntry("finished_at", null);
-        assertThat(((Timestamp) held.get("next_attempt_at")).toInstant()).isEqualTo(NOW.plusSeconds(30));
+        assertThat(((Timestamp) held.get("next_attempt_at")).toInstant()).isEqualTo(NOW.plusSeconds(300));
         clock.now = NOW.plusSeconds(3601);
         handler.run(new EmailOutboxDispatchRequest());
         var failed = jdbc.queryForMap("select * from email_outbox where email_outbox_id = ?", id);

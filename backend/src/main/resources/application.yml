@@ -80,6 +80,8 @@ tsolve:
     username: ${JOBS_DB_USER:}
     password: ${JOBS_DB_PASSWORD:}
     worker-count: ${TSOLVE_WORKER_COUNT:4}
+    # How long a request waits for a Jobs connection before the outbox reports an outage (BUG-226).
+    connection-timeout: ${TSOLVE_WORKER_CONNECTION_TIMEOUT:3s}
     email:
       interval: ${TSOLVE_WORKER_EMAIL_INTERVAL:30s}
       backoff: ${TSOLVE_WORKER_EMAIL_BACKOFF:5m,15m}
