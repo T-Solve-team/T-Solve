@@ -13,8 +13,7 @@ import vn.tsolve.ticket.entity.ReviewDecisionRecord;
 
 public interface ReviewDecisionRecordRepository extends JpaRepository<ReviewDecisionRecord, UUID> {
 
-    String HISTORY_FROM =
-            """
+    String HISTORY_FROM = """
             from review_decision d
             join ticket t on t.ticket_id = d.ticket_id
             join app_user u on u.id = d.project_manager_id
@@ -24,8 +23,7 @@ public interface ReviewDecisionRecordRepository extends JpaRepository<ReviewDeci
               and d.decided_at < :toExclusive
             """;
 
-    String HISTORY_SELECT =
-            """
+    String HISTORY_SELECT = """
             select d.review_decision_id as decisionId, t.ticket_id as ticketId, t.source_ticket_id as sourceTicketId,
                    t.title as title, t.project_id as projectId, d.decision as decision,
                    d.project_manager_id as actorId, coalesce(u.full_name, u.email) as actorName,
@@ -79,21 +77,36 @@ public interface ReviewDecisionRecordRepository extends JpaRepository<ReviewDeci
         String getFeedback();
     }
 
-    /** One decision with its ticket key and the writer's email; no row when the ticket has no writer account. */
-    @Query(
-            value =
-                    """
+    /** Review email facts; no row when the ticket has no writer account. */
+    @Query(value = """
                     select d.decision as decision, u.email as email, t.source_ticket_id as ticketKey,
-                           d.reason_or_comment as feedback
+                           d.reason_or_comment as feedback, t.ticket_id as ticketId, t.title as ticketTitle,
+                           p.jira_project_key as projectName,
+                           coalesce(nullif(btrim(r.full_name), ''), r.email) as reviewerName,
+                           u.full_name as writerName, d.decided_at as decidedAt
                     from review_decision d
                     join ticket t on t.ticket_id = d.ticket_id
                     join app_user u on u.id = t.writer_id
+                    left join project p on (p.public_id = t.project_id
+                        or lpad(to_hex(p.project_id), 32, '0')::uuid = t.project_id)
+                    left join app_user r on r.id = d.project_manager_id
                     where d.review_decision_id = :decisionId
-                    """,
-            nativeQuery = true)
+                    """, nativeQuery = true)
     Optional<WriterNotificationRow> findWriterNotification(@Param("decisionId") UUID decisionId);
 
     interface WriterNotificationRow {
+        UUID getTicketId();
+
+        String getTicketTitle();
+
+        String getProjectName();
+
+        String getReviewerName();
+
+        String getWriterName();
+
+        Instant getDecidedAt();
+
         String getDecision();
 
         String getEmail();

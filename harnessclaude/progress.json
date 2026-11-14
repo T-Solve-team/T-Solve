@@ -399,20 +399,21 @@
       "lastUpdated": "2026-10-24T23:56:42.775Z"
     },
     "worker": {
-      "status": "completed",
-      "currentPhase": "evaluate",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "review-notification-smtp": "passing",
         "tenant-jobs": "passing",
-        "active-workspaces": "passing"
+        "active-workspaces": "passing",
+        "review-email-html-sender": "passing"
       },
-      "lastUpdated": "2026-11-08T08:11:10.600Z",
+      "lastUpdated": "2026-11-14T08:47:24.251Z",
       "branch": "feat/worker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "41a1cf7a49021519da485b155111e098ad07796a"
+        "default": "98ec9c7382a17815f6f001e3a6432225c4bc83b9"
       }
     },
     "ai": {
@@ -484,15 +485,16 @@
         "review-queue-events-hardening": "passing",
         "review-send-back-api": "passing",
         "review-expiry-job": "passing",
-        "review-expired-stored-columns": "passing"
+        "review-expired-stored-columns": "passing",
+        "review-email-html": "passing"
       },
-      "lastUpdated": "2026-11-10T02:14:00.291Z",
+      "lastUpdated": "2026-11-14T08:47:24.018Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "53eb36fe9e99b6243ab77c0709c36579831f5794"
+        "default": "98ec9c7382a17815f6f001e3a6432225c4bc83b9"
       }
     }
   },
