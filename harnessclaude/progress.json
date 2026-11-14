@@ -211,12 +211,12 @@
         "ticket-status-model": "passing",
         "manual-entry-contract": "evaluating",
         "manual-entry-schema": "evaluating",
-        "manual-entry-save": "pending",
-        "manual-entry-evidence": "pending",
+        "manual-entry-save": "evaluating",
+        "manual-entry-evidence": "in-progress",
         "manual-entry-drafts": "pending",
         "manual-entry-tab": "pending"
       },
-      "lastUpdated": "2026-11-14T07:50:03.014Z",
+      "lastUpdated": "2026-11-14T08:15:08.899Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
