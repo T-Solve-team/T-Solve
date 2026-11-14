@@ -218,9 +218,9 @@
         "manual-entry-tab": "passing",
         "manual-evidence-contract": "passing",
         "manual-evidence-backend": "passing",
-        "manual-evidence-tab": "in-progress"
+        "manual-evidence-tab": "evaluating"
       },
-      "lastUpdated": "2026-11-14T11:00:10.395Z",
+      "lastUpdated": "2026-11-14T11:23:10.319Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
