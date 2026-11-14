@@ -260,7 +260,7 @@ class JiraImportServiceImplTest {
 
         assertCode(() -> service.pull(PM, PROJECT, FROM, TO), HttpStatus.BAD_GATEWAY, "MSG50");
 
-        verify(recorder).recordJiraFailed(eq(PROJECT), eq(PM), anyString());
+        verify(recorder).recordJiraFailed(eq(PROJECT), eq(PM), eq(FROM), eq(TO), anyString());
         verify(previews, never()).deleteByOwner(anyString());
         verify(previews, never()).save(any());
     }
@@ -285,7 +285,7 @@ class JiraImportServiceImplTest {
                 .thenThrow(new JiraUnavailableException("HTTP 401"));
         doThrow(new DataAccessResourceFailureException("database down"))
                 .when(recorder)
-                .recordJiraFailed(any(), anyString(), anyString());
+                .recordJiraFailed(any(), anyString(), any(), any(), anyString());
 
         assertCode(() -> service.pull(PM, PROJECT, FROM, TO), HttpStatus.BAD_GATEWAY, "MSG50");
     }
@@ -315,7 +315,7 @@ class JiraImportServiceImplTest {
         assertCode(() -> service.pull(PM, PROJECT, FROM, TO), HttpStatus.BAD_GATEWAY, "MSG50");
 
         verifyNoInteractions(jira);
-        verify(recorder).recordJiraFailed(eq(PROJECT), eq(PM), anyString());
+        verify(recorder).recordJiraFailed(eq(PROJECT), eq(PM), eq(FROM), eq(TO), anyString());
         verify(previews, never()).save(any());
     }
 

@@ -21,8 +21,10 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.CodedException;
@@ -31,6 +33,7 @@ import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.exception.ProblemDetails.FieldError;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.ticket.dto.DraftSavedResponse;
 import vn.tsolve.ticket.dto.ManualTicketDraft;
 import vn.tsolve.ticket.dto.ManualTicketRequest;
@@ -45,8 +48,10 @@ import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.mapper.ImportPreviewMapperImpl;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
+import vn.tsolve.ticket.repository.ImportPreviewEvidenceRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
+import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ProjectAccess;
@@ -77,12 +82,27 @@ class ManualTicketDraftTest {
             projects,
             mock(ApplicationEventPublisher.class),
             mock(AuditService.class),
-            ManualTicketServiceImplTest.CLOCK);
+            ManualTicketServiceImplTest.CLOCK,
+            mock(ImportPreviewEvidenceRepository.class),
+            mock(TicketEvidenceRepository.class),
+            new StaticListableBeanFactory().getBeanProvider(FileStorage.class),
+            mock(PlatformTransactionManager.class));
 
     static ManualTicketRequest draftRequest(UUID projectId, Long draftId) {
         // invalid on purpose: a Draft is not validated (AC-006.9)
         return new ManualTicketRequest(
-                projectId, " ITSUP-1 ", "  ", "d".repeat(10_001), "not a date", "S", null, null, null, null, draftId);
+                projectId,
+                " ITSUP-1 ",
+                "  ",
+                "d".repeat(10_001),
+                "not a date",
+                "S",
+                null,
+                null,
+                null,
+                null,
+                draftId,
+                null);
     }
 
     static ManualTicketRequest validWithDraft(Long draftId) {
@@ -98,7 +118,8 @@ class ManualTicketDraftTest {
                 v.resolutionSteps(),
                 v.workaround(),
                 v.scope(),
-                draftId);
+                draftId,
+                null);
     }
 
     static ImportPreview draft(String owner, TicketSource source) {
@@ -227,7 +248,8 @@ class ManualTicketDraftTest {
                         null,
                         null,
                         null,
-                        EARLIER));
+                        EARLIER,
+                        List.of()));
     }
 
     @Test
@@ -298,11 +320,18 @@ class ManualTicketDraftTest {
 
     @Test
     void AC_006_13_deleteRemovesAManualDraftAndACsvPreviewStays404() {
-        ImportDraftServiceImpl drafts =
-                new ImportDraftServiceImpl(previews, previewRows, projects, ManualTicketServiceImplTest.CLOCK);
+        ImportDraftServiceImpl drafts = new ImportDraftServiceImpl(
+                previews,
+                previewRows,
+                projects,
+                ManualTicketServiceImplTest.CLOCK,
+                mock(ImportPreviewEvidenceRepository.class),
+                new StaticListableBeanFactory().getBeanProvider(FileStorage.class),
+                mock(PlatformTransactionManager.class));
         ImportPreview csv = draft(OWNER, TicketSource.CSV);
         csv.saveAsDraft(EARLIER);
         when(previews.findByIdAndOwner(88L, OWNER)).thenReturn(Optional.of(csv));
+        when(previews.lockByIdAndOwner(88L, OWNER)).thenReturn(Optional.of(csv));
 
         drafts.delete(OWNER, DRAFT);
         verify(previews).delete(stored);
