@@ -64,6 +64,9 @@ management:
         include: health,info
 
 tsolve:
+  wiki:
+    search:
+      min-similarity: ${WIKI_SEARCH_MIN_SIMILARITY:0.55}
   # File storage (STORY-007) on Garage through the S3 API. Empty endpoint = no storage beans (see StorageConfig).
   storage:
     endpoint: ${FILE_STORAGE_ENDPOINT:}

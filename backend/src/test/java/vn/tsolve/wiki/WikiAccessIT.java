@@ -98,7 +98,11 @@ class WikiAccessIT {
         access = new JpaRepositoryFactory(entityManager).getRepository(AccessRepository.class);
         context = new AnnotationConfigApplicationContext();
         context.registerBean(AccessRepository.class, () -> access);
-        context.scan("vn.tsolve.wiki.service.impl");
+        context.register(
+                vn.tsolve.wiki.service.impl.WikiSourcesImpl.class,
+                vn.tsolve.wiki.service.impl.WikiSourceRetrievalImpl.class,
+                vn.tsolve.wiki.service.impl.WikiDocumentAccessImpl.class,
+                vn.tsolve.wiki.service.impl.WikiSpaceLookups.class);
         context.refresh();
         chatbot = context.getBean(WikiSources.class);
         triage = context.getBean(WikiSourceRetrieval.class);
