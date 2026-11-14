@@ -372,15 +372,15 @@
         "load-test": "pending",
         "forge-security-chain": "pending",
         "cross-module-isolation": "evaluating",
-        "e2e-smoke": "pending"
+        "e2e-smoke": "evaluating"
       },
-      "lastUpdated": "2026-11-14T05:04:56.518Z",
+      "lastUpdated": "2026-11-14T05:27:58.891Z",
       "branch": "feat/platform",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "8f75599b196372ea8e734ce06271a336e159674c"
+        "default": "f6dd0fc4f74ad3539e99bee73ea6e016b97902c0"
       }
     },
     "platform-console": {
