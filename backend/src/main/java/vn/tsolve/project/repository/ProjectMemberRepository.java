@@ -106,7 +106,7 @@ public class ProjectMemberRepository {
     /**
      * How many of {@code userIds} may be added. Locks those accounts FOR SHARE so identity's role removal
      * ({@code FOR UPDATE}) cannot interleave with the add. The lock and the check are separate statements
-     * (BUG-204): under READ COMMITTED the check must take a fresh snapshot after any wait on the lock.
+     * (BUG-208): under READ COMMITTED the check must take a fresh snapshot after any wait on the lock.
      */
     public int lockEligible(UUID projectId, List<UUID> userIds) {
         jdbc.query(
