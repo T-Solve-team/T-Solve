@@ -320,15 +320,15 @@
         "solution-form-ui": "evaluating",
         "issue-panel-ui": "evaluating",
         "remove-jira-search": "evaluating",
-        "close-keeps-draft": "in-progress"
+        "close-keeps-draft": "evaluating"
       },
-      "lastUpdated": "2026-11-14T07:54:38.482Z",
+      "lastUpdated": "2026-11-14T08:12:36.523Z",
       "branch": "feat/KAN-126-jira-app-solution-form-v2",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "221d53ca88689bbacefa2161950340c7e00293c1"
+        "default": "36e22e7c5b82fc6363e6e78729916b148efcddf1"
       }
     },
     "dashboard-audit": {
