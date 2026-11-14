@@ -195,6 +195,7 @@ Table `email_outbox` in the Jobs database, created by its own Liquibase changelo
 | `status` | `varchar(10) not null` | `PENDING`, `SENT`, `FAILED` (check constraint) |
 | `attempt_count` | `int not null default 0` | attempts started |
 | `next_attempt_at` | `timestamptz not null` | creation time on insert; lease or backoff afterwards |
+| `claimed_at` | `timestamptz null` | set while an attempt has no outcome yet (see "Dispatch run", step 2) |
 | `created_at` | `timestamptz not null` | |
 | `finished_at` | `timestamptz null` | send time for SENT, give-up time for FAILED |
 
@@ -224,15 +225,15 @@ Decided in planning: batch size 20 (`tsolve.worker.email.batch-size`); lease 5 m
 All times come from an injected `java.time.Clock` (bean `workerClock`, `Clock.systemUTC()` by default) and are passed to SQL as parameters, never `now()`, so tests move time without waiting. One run of `EmailOutboxDispatchHandler`:
 
 1. **Sender check** — no `SmtpEmailSender` bean → throw before touching rows (edge case 7).
-2. **Expire leases** — rows `PENDING` with `attempt_count > 0` whose `next_attempt_at` (the lease end) has passed and who were never re-scheduled are, by construction, attempts with no outcome. They need no special step: they are simply due again, and the claim in step 3 decides them with the same rule as a reported failure, because a claimed attempt is counted when it starts (decided: a lease-expired attempt is a failed attempt, user, AC-004.7).
+2. **Lease marker** — the table has one more column, `claimed_at timestamptz null`: set when an attempt is claimed, cleared when its outcome is written (SENT, FAILED or a backoff). A due row with `claimed_at` set is therefore an attempt whose lease expired with no outcome; a due row with `claimed_at` null is waiting for its first attempt or for a scheduled retry. (Corrected 2026-11-14: the first version of step 3 applied the 60-minute rule to every previously attempted row, which contradicted step 4.)
 3. **Claim** — in one transaction `select … for update skip locked` the due rows (`status = 'PENDING' and next_attempt_at <= :now`, `order by created_at`, `limit :batch`). For each locked row, in this order:
-   - `attempt_count >= 3` (the third attempt was claimed and never finished) or (`attempt_count > 0` and `:now > created_at + 60 min`) → `FAILED`, `finished_at = :now`. Not sent.
-   - Workspace not Active, or `isWorkspaceActive` throws → if `:now > created_at + 60 min` then `FAILED`, else `next_attempt_at = :now + interval`, `attempt_count` unchanged. Not sent. A throw affects only that row; the batch continues (AC-004.9).
-   - Otherwise → `attempt_count + 1`, `next_attempt_at = :now + lease`, kept for sending.
+   - `claimed_at` set (lease expired — a failed attempt, AC-004.7): if `attempt_count >= 3` or `:now > created_at + 60 min` → `FAILED`, `finished_at = :now`, `claimed_at = null`. Not sent. Otherwise fall through to the next two checks, so the retry happens in this run with no extra backoff.
+   - Workspace not Active, or `isWorkspaceActive` throws → if `:now > created_at + 60 min` then `FAILED` (`finished_at = :now`), else `next_attempt_at = :now + interval`; `attempt_count` unchanged, `claimed_at = null`. Not sent. A throw affects only that row; the batch continues (AC-004.9).
+   - Otherwise → `attempt_count + 1`, `claimed_at = :now`, `next_attempt_at = :now + lease`, kept for sending. A row with `claimed_at` null is claimed whatever its age: the 60-minute rule applies only when a failure happens.
    Commit. A row that is not claimed by this run (locked by another dispatcher) is skipped (AC-004.8).
-4. **Send** each kept row, outside any transaction, then update it with a guard `where email_outbox_id = :id and attempt_count = :claimedCount and status = 'PENDING'`:
+4. **Send** each kept row, outside any transaction, then update it with a guard `where email_outbox_id = :id and attempt_count = :claimedCount and status = 'PENDING'`, always clearing `claimed_at`:
    - accepted → `SENT`, `finished_at = :sentAt`.
-   - `DeliveryException` → if `attempt_count = 3` or `:now > created_at + 60 min` → `FAILED`; else `next_attempt_at = :now + backoff[attempt_count - 1]` (5 min after attempt 1, 15 min after attempt 2). The 60-minute check uses the failure time, as the spec says; a scheduled `next_attempt_at` may lie past the hour, and that attempt still runs.
+   - `DeliveryException` → if `attempt_count = 3` or `:now > created_at + 60 min` → `FAILED`; else `next_attempt_at = :now + backoff[attempt_count - 1]` (5 min after attempt 1, 15 min after attempt 2). The 60-minute check uses the failure time, as the spec says; a retry scheduled before the hour still runs if it comes due after it.
 5. **Retention** — `delete … where email_outbox_id in (select … where status <> 'PENDING' and finished_at < :now - retention limit :batch)`. Larger backlogs drain over later runs; the AC-004.10 test uses fewer than 20 rows.
 
 A row that was never attempted because the dispatcher was down is attempted once when it comes due, whatever its age; only a failure after the hour marks it FAILED.

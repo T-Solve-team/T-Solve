@@ -392,21 +392,21 @@
       "lastUpdated": "2026-10-24T23:56:42.775Z"
     },
     "worker": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "review-notification-smtp": "passing",
         "tenant-jobs": "passing",
         "active-workspaces": "passing",
-        "email-outbox": "pending"
+        "email-outbox": "evaluating"
       },
-      "lastUpdated": "2026-11-14T08:04:22.439Z",
+      "lastUpdated": "2026-11-14T09:00:15.453Z",
       "branch": "feat/worker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "41a1cf7a49021519da485b155111e098ad07796a"
+        "default": "89691ef762c69f0293da164ea5153f7871430937"
       }
     },
     "ai": {
