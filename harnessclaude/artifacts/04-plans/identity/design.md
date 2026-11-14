@@ -1202,7 +1202,7 @@ are re-read per request and the Workspace is bound from the cookie. `common/sess
 
 ```text
 GET /api/v1/me/spaces | solutions | solutions/summary
-  MyProfileController (identity.controller)   @PreAuthorize, @Valid MySolutionsQuery, one service call each
+  MyProfileController (identity.controller)   @PreAuthorize, String parameters parsed by MySolutionsQuery.parse, one service call each
     MyProfileService / MyProfileServiceImpl   (identity.service, .impl) Account id from TSolveUser.current() only
       ObjectProvider<ViewableSpaceLookup>     common.session.lookup  → empty List when no bean   (owner: wiki)
       ObjectProvider<WrittenTicketLookup>     common.session.lookup  → Page.empty / summary empty (owner: ticket-repository)
@@ -1211,14 +1211,19 @@ GET /api/v1/me/spaces | solutions | solutions/summary
 `ViewableSpaceLookup.findViewableSpaces(UUID accountId)` returns `List<SpaceRef>`. `WrittenTicketLookup` has
 `findSolutions(UUID accountId, MySolutionFilter filter, Pageable page)` (19b) and `summarize(UUID accountId)` (19c).
 DTOs in `common.session.dto`: `MySolution` (+ `LatestDecision`), `MySolutionFilter`, `MySolutionSummary`, `ProjectRef`,
-and the enums `TicketStatus` and `ReviewDecision`. `MySolutionsQuery` and `ValidDateRange` are in `identity.dto`.
+and the enums `TicketStatus` and `ReviewDecision`. `MySolutionsQuery` is in `identity.dto`.
 The page answer is the shared `PagedModel` shape (`{content, page{size,number,totalElements,totalPages}}`).
 
 **Decided in planning (not new decisions):**
-- **400 versus 403 (Q3).** `@PreAuthorize` runs after Spring has bound and validated the arguments, so a signed-in
-  non-resolver who also sends a bad parameter most likely gets 400, not 403. No criterion fixes this order (nothing is
-  revealed either way); the 403 tests use valid parameters and none asserts the mixed case. An anonymous request is
-  always 401 first (the security chain, AC-003.10).
+- **400 versus 403 (Q3).** The solutions handler takes plain `String` parameters and parses them inside the handler,
+  after `@PreAuthorize`, so a signed-in non-resolver who also sends a bad parameter gets 403, not 400. No criterion fixes
+  this order (nothing is revealed either way); the 403 tests use valid parameters and none asserts the mixed case. An
+  anonymous request is always 401 first (the security chain, AC-003.10).
+- **Decided during Task 19b (KAN-334).** The six query values are `String` parameters; `MySolutionsQuery.parse(...)`
+  collects every wrong one into one `InvalidFieldsException` (one `MSG06` entry per field, sorted by name) before the
+  service is called, because spring-web 6.1.14 skips Bean Validation after a binding type error. `from` and `to` must
+  match `\d{4}-\d{2}-\d{2}` and be a real date; an empty value is missing; `projectId` is the canonical UUID form
+  only; Swagger uses `@Parameter`.
 - **Spaces order (Q5).** AC-003.4's "sorted by name, exactly as the viewable Space lookup returns them" is read as
   "exactly the lookup's Spaces, in name order": the service sorts (Vietnamese `Collator`, ties by `spaceId`); the
   `wiki` owner does not have to sort. No spec edit.
@@ -1240,7 +1245,7 @@ The page answer is the shared `PagedModel` shape (`{content, page{size,number,to
 | Q1 Where the ports and DTOs live | `common.session.lookup` (ports) and `common.session.dto` (DTOs, with new `TicketStatus` and `ReviewDecision` enums of the YAML's values; a parity test on the status names) | `common.profile` package (B); ports in `identity.service` (C, breaks the one-way rule) | The spec says "in `common`", the team pattern is there and `SpaceRef` already is; `common` cannot import the ticket module, so the enums are copies, guarded by the parity test; the ticket module's enum is another owner's code and is not edited |
 | Q2 Stand-in until the owner builds the lookup | `ObjectProvider` in the service, empty answer when no bean, no stub classes | Stub `@Component`s (B: two beans fail startup when the owner adds theirs); `@ConditionalOnMissingBean` (C, unreliable on a scanned component) | The pattern of `SessionServiceImpl`; the owner only adds a bean and deletes nothing; two files and a test class fewer |
 | Q3 The 403 check | `@PreAuthorize` (`hasAnyRole('TICKET_RESOLVER','PROJECT_MANAGER')` on the two solutions endpoints, `hasRole('EMPLOYEE')` on spaces); order against 400 not made a criterion | A check that makes 403 win (B); a role check in the service (C, breaks AGENTS rule 7) | AGENTS rule 7; the handler already renders 403 `MSG08` and 401 `MSG07`; a spec edit would re-lock all identity code for a case that reveals nothing |
-| Q4 Binding and validation | `MySolutionsQuery` record with `@Valid`, typed fields, `@Min` / `@Max`, class-level `@ValidDateRange` reporting on `to`, defaults in the record | Strings parsed in the service (B); plain `@RequestParam` (C, no `fieldErrors`) | Least code; the handler already turns `typeMismatch` and constraint errors into `fieldErrors` `MSG06`; two wrong parameters give two entries. Fallback to B for the affected fields only if record binding does not give one entry per field on this Spring version |
+| Q4 Binding and validation | `String` request parameters parsed by the static `MySolutionsQuery.parse(...)` into the typed record (defaults 0 and 20); all wrong parameters collected into one `InvalidFieldsException`, one `MSG06` entry per field, sorted by name | `MySolutionsQuery` record with `@Valid` and `@ValidDateRange` (A, dropped: spring-web 6.1.14 skips Bean Validation after a binding type error, so two wrong parameters gave one entry); plain `@RequestParam` (C, no `fieldErrors`) | Gives one entry per wrong parameter on this Spring version, and runs after `@PreAuthorize`, so 403 wins over a bad parameter |
 | Q5 Who sorts the Spaces | The service, Vietnamese `Collator`, ties by `spaceId` | The port contract says sorted (B); `CASE_INSENSITIVE_ORDER` (C) | AC-003.4 holds whatever the `wiki` lookup does and matches the web mock |
 | Q6 Dependence on Tasks 26a and 26b | None to wait for (merged); `@WithTSolveUser` tests, no new integration test | An end-to-end integration test with Redis (B); wait (C) | The Role re-read, the cookie and the binding are already tested on `main`; Task 19 adds only `@PreAuthorize`; no Docker for these tests; Hiếu's check with a real sign-in is the end-to-end proof |
 | Q7 Cards | Three (19a, 19b, 19c), one PR and branch each; KAN-301 for 19a, two new Subtasks of KAN-160 for 19b and 19c; no sprint fields | Two cards (B, about 550 lines); one (C) | Each is one thing Hiếu can try; folding 19c into 19b is about 13 production files and 20 tests |
@@ -1268,7 +1273,7 @@ apply to the screens. Every Critical or High row has its test task.
 | 152 | STORY-003 | Authorization | A request carries `userId` or `workspaceId` (query string edited); two users in two Workspaces | Critical | Not bound; the lookups are asked for the signed-in Account's id only, and user A never sees B's rows; the Workspace comes from the session binding (AC-003.7, GBR-37; `WorkspaceBindingTest` on `main`) | Tasks 19a, 19b |
 | 153 | STORY-003 | Authorization | The Ticket Resolver Role is removed between two calls | High | 403 `MSG08` on the next call, never cached in the controller; the real re-read is `WebSessionFilter` (AC-003.17; `RoleChangeTest` on `main`); the controller test proves the check is made on the principal it is given | Task 19b |
 | 154 | STORY-003 | Authorization | Anonymous call to each of the three paths, with or without a bad parameter or a non-resolver Role | Critical | 401 `MSG07` from the security chain before validation and before the Role check; the service is never called (AC-003.10) | Tasks 19a, 19b, 19c |
-| 155 | STORY-003 | Authorization | A signed-in non-resolver sends a bad parameter | Low | Most likely 400 (arguments are validated before `@PreAuthorize`); no criterion fixes the order and nothing is revealed; decided in planning (Q3), no test asserts it | none (decided in planning) |
+| 155 | STORY-003 | Authorization | A signed-in non-resolver sends a bad parameter | Low | 403 (parameters are parsed in the handler, after `@PreAuthorize`; 401 first for anonymous); no criterion fixes the order and nothing is revealed; decided in planning (Q3), no test asserts it | none (decided in planning) |
 | 156 | STORY-003 | Error cascades | A lookup throws (the owner's database is down) | Medium | 500 `MSG06` through `GlobalExceptionHandler`, no detail and no stack trace in the body; the exception is not swallowed | Tasks 19a, 19b |
 | 157 | STORY-003 | Data integrity | The lookup returns Spaces in any order, with equal names or Vietnamese diacritics; a lookup returns `null` | Medium | Sorted by name with the Vietnamese `Collator`, ties by `spaceId`; the port contract is non-null, so the service never passes `null` on (AC-003.4) | Task 19a |
 | 158 | STORY-003 | Scale | 0 Solutions; a page past the end | Medium | 200 with an empty `content`, the lookup's real totals (AC-003.6, AC-003.8) | Task 19b |

@@ -4,16 +4,22 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import vn.tsolve.common.exception.NotFoundException;
+import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.ticket.dto.DraftSavedResponse;
 import vn.tsolve.ticket.dto.ImportDraftSummary;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportPreview;
+import vn.tsolve.ticket.entity.ImportPreviewEvidence;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
+import vn.tsolve.ticket.repository.ImportPreviewEvidenceRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
 import vn.tsolve.ticket.service.ImportDraftService;
@@ -26,16 +32,25 @@ public class ImportDraftServiceImpl implements ImportDraftService {
     private final ImportPreviewRowRepository previewRows;
     private final ProjectAccess projects;
     private final Clock clock;
+    private final ImportPreviewEvidenceRepository draftEvidence;
+    private final EvidenceFiles evidenceFiles;
+    private final TransactionTemplate transaction;
 
     public ImportDraftServiceImpl(
             ImportPreviewRepository previews,
             ImportPreviewRowRepository previewRows,
             ProjectAccess projects,
-            Clock clock) {
+            Clock clock,
+            ImportPreviewEvidenceRepository draftEvidence,
+            ObjectProvider<FileStorage> storage,
+            PlatformTransactionManager transactions) {
         this.previews = previews;
         this.previewRows = previewRows;
         this.projects = projects;
         this.clock = clock;
+        this.draftEvidence = draftEvidence;
+        this.evidenceFiles = new EvidenceFiles(storage);
+        this.transaction = new TransactionTemplate(transactions);
     }
 
     @Override
@@ -66,14 +81,22 @@ public class ImportDraftServiceImpl implements ImportDraftService {
     }
 
     @Override
-    @Transactional
     public void delete(String user, long previewId) {
-        // a Jira Draft or a Manual Draft (AC-006.13); a CSV preview is not a Draft
-        ImportPreview preview = previews.findByIdAndOwner(previewId, user)
-                .filter(p -> p.getSource() != TicketSource.CSV && p.isDraft())
-                .orElseThrow(ImportDraftServiceImpl::notFound);
-        // rows go through ON DELETE CASCADE
-        previews.delete(preview);
+        List<String> keys = transaction.execute(status -> {
+            // a Jira Draft or a Manual Draft (AC-006.13); a CSV preview is not a Draft
+            ImportPreview preview = previews.lockByIdAndOwner(previewId, user)
+                    .filter(p -> p.getSource() != TicketSource.CSV && p.isDraft())
+                    .orElseThrow(ImportDraftServiceImpl::notFound);
+            List<String> stored = preview.getSource() == TicketSource.MANUAL
+                    ? draftEvidence.findByPreviewIdOrderByCreatedAt(previewId).stream()
+                            .map(ImportPreviewEvidence::getStorageKey)
+                            .toList()
+                    : List.of();
+            // rows go through ON DELETE CASCADE
+            previews.delete(preview);
+            return stored;
+        });
+        evidenceFiles.delete(keys);
     }
 
     /** Another user's preview, a CSV one or none at all is "not found", so ids cannot be probed (AC-004.5). */

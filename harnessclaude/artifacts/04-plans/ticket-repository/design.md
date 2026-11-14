@@ -215,6 +215,52 @@ is compared with today in `Asia/Ho_Chi_Minh` through the injected `Clock`. Two t
 save answers 404 (Draft gone) and saves nothing. Draft of a Project the caller no longer manages: save / Save as draft
 answer 403 (MSG08), the Draft stays.
 
+## Change 2026-11-14 (2): Evidence of manual entry (KAN-133, STORY-006, AC-006.15–AC-006.22)
+
+**Storage.** `platform` `FileStorage` (`store(InputStream) → StoredFile(key, size)`, `delete(key)`), injected as
+`ObjectProvider<FileStorage>`: the bean exists only when `FILE_STORAGE_ENDPOINT` is set (KAN-96 D9), so no bean
+→ a request with files answers 503 MSG06 (AC-006.21). Until `platform` binds a `TenantContext`, `store` itself
+refuses ("no Workspace bound"); that also maps to 503. Tests mock `FileStorage`.
+
+**Schema** (new changeset `NNN-manual-entry-evidence.sql`, author ticket):
+- `evidence` gains `storage_key VARCHAR(100)` (nullable: rows from the review module have none).
+- New `import_preview_evidence`: `import_preview_evidence_id UUID PK DEFAULT gen_random_uuid()`, `preview_id` FK →
+  `import_preview` ON DELETE CASCADE, `file_name`, `file_type`, `file_size`, `storage_key` NOT NULL, timestamps as
+  the tenant-table convention (platform AC-001.20) asks; index on `preview_id`. Follow the convention guard test.
+
+**Request shape (D17).** Multipart: part `entry` = `ManualTicketRequest` JSON (+ `keepEvidenceIds`), part `files`
+= `List<MultipartFile>` (optional). Controller: `@RequestPart("entry") ManualTicketRequest`, `@RequestPart(value =
+"files", required = false) List<MultipartFile>`; `consumes = MULTIPART_FORM_DATA_VALUE`.
+
+**Flow of save and Save as draft.**
+1. Existing checks (fields 400 for save only, Project 403, Draft 404) — before any file is stored.
+2. File rules (AC-006.16, AC-006.17): extension in the D19 list (case-insensitive), size ≤ 10 MB (10,485,760 bytes),
+   kept + new ≤ 5. `keepEvidenceIds` not belonging to the Draft are ignored. Rejection → 400 `InvalidFieldsException`
+   with one entry on field `files` (MSG34 `{file_name}` or MSG72) — nothing stored yet.
+3. Store each new file (outside the transaction) → list of keys. Any storage failure → delete the keys stored so
+   far, 503 MSG06 (`StorageUnavailableException extends MessageCodeException`, status 503; module exception).
+4. The existing transaction (`TransactionTemplate`, not `@Transactional` on the method, so steps 3 and 5 sit
+   outside it): writes Ticket/Draft as today plus Evidence rows (save: `evidence` rows for kept Draft files + new
+   files, with `storage_key`; Save as draft: `import_preview_evidence` rows for new files, delete rows left out of
+   `keepEvidenceIds`). If it throws → delete the keys stored in step 3 (AC-006.20), rethrow.
+5. After commit: delete the stored files of Draft Evidence that was left out (AC-006.19). On a save, kept Draft
+   files are NOT deleted — their keys move to the Ticket's Evidence; the Draft rows go with the Draft (cascade).
+   `ImportDraftServiceImpl.delete` of a Manual Draft deletes its files after commit. A failing delete is logged
+   (key only) and never fails the request. ponytail: an orphan object stays if the process dies between store and
+   commit; a storage sweep can collect keys without a row later.
+
+**Reopen.** `ManualTicketDraft.evidence` = the Draft's `import_preview_evidence` rows (id, file name, size).
+`file_type` = the file's content type as sent (fallback by extension).
+
+**Web app.**
+- New kit component `shared/ui/EvidenceUpload` (antd `Upload` is banned outside `shared/ui`; FE Lead review
+  needed, AGENTS.md rule 10): controlled list of picked files + kept Draft files, `beforeUpload` returns false (no
+  auto upload), checks type/size (MSG34) and count (MSG72) on add, remove button per file.
+- `ManualEntryForm`: Evidence field after the Solution sections; sends multipart through the generated client
+  (orval generates `FormData` for multipart bodies; check the generated signature after `generate:api`).
+  Reopened Draft → its files listed as kept; removing one drops its id from `keepEvidenceIds`. Server
+  `fieldErrors` on `files` show under Evidence.
+
 ## Change 2026-11-14: Import History and Ticket Detail (KAN-134 STORY-007, KAN-135 STORY-008)
 
 ### Import History (STORY-007)
@@ -222,7 +268,7 @@ answer 403 (MSG08), the Draft stays.
 **Shape.** New `ImportHistoryController` (`GET /api/v1/imports/history`, `@PreAuthorize(ImportController.PROJECT_MANAGER)`
 → 403 MSG08, AC-007.7) → `ImportHistoryService.list(TSolveUser, ImportHistoryQuery)` → one native page query in
 `ImportBatchRepository`. Answer `PagedModel<ImportHistoryItem>` as `GET /api/v1/tickets` (page from 0, size 1–100,
-default 20; D17).
+default 20; D22).
 
 - **Query.** `import_batch b JOIN project p ON (p.public_id = b.project_id OR lpad(to_hex(p.project_id),32,'0')::uuid =
   b.project_id) JOIN department d ON d.department_id = p.department_id LEFT JOIN app_user u ON u.id::text =
@@ -237,9 +283,9 @@ default 20; D17).
   `TicketSource` (SOLUTION_FORM gives an empty page; an unknown value → 400 as any bad enum). `dateFrom` / `dateTo` =
   `LocalDate`, turned into `[from 00:00, to+1 00:00)` in `Asia/Ho_Chi_Minh` through the injected `Clock` zone;
   `from > to` → `InvalidPullRangeException.invalid()` (400 MSG39).
-- **Error code (AC-007.4, D21).** The service returns the first `MSG\w+` match of `import_batch.error` (stored as
+- **Error code (AC-007.4, D26).** The service returns the first `MSG\w+` match of `import_batch.error` (stored as
   "ExceptionName MSGxx" by `ImportBatchRecorder`), else null.
-- **Date range (AC-007.8, D20).** Changeset `032-ticket-import-batch-date-range.sql` (author `ticket`):
+- **Date range (AC-007.8, D25).** Changeset `032-ticket-import-batch-date-range.sql` (author `ticket`):
   `ALTER TABLE import_batch ADD COLUMN date_from DATE, ADD COLUMN date_to DATE;` + include in
   `db.changelog-master.xml`. `ImportBatch` gets both fields; `completed(…)` / `failed(…)` take them (null for CSV and
   Manual). `ImportBatchRecorder.recordJiraFailed(projectId, user, from, to, error)` gets the pull request's range;
@@ -254,7 +300,7 @@ default 20; D17).
 
 ### Ticket Detail (STORY-008)
 
-**Shape.** Extend, do not add (D24). `ReviewReadController.detail` keeps its path and operationId; its guard becomes
+**Shape.** Extend, do not add (D29). `ReviewReadController.detail` keeps its path and operationId; its guard becomes
 `hasAnyRole(TICKET_RESOLVER, PROJECT_MANAGER)` (AC-008.4 role part; today it is EMPLOYEE). The files are
 `ticket-review`'s (owner Phạm Tùng Dương); module.md `paths` of this module lists them so the gate opens them with
 this spec's approval.
@@ -262,7 +308,7 @@ this spec's approval.
 - **Department of the ticket.** New native query `TicketRepository.findPlacement(UUID projectId)` →
   `Optional<Placement(UUID projectPublicId, String projectKey, UUID departmentId, String departmentName, boolean
   departmentActive)>`: `project p JOIN department d`, matched by `public_id` or the legacy hex id (as above), with no
-  `p.status` condition: the Department decides (D23). No row = no Department = nobody (AC-008.3).
+  `p.status` condition: the Department decides (D28). No row = no Department = nobody (AC-008.3).
 - **Visibility in `TicketReviewReadServiceImpl.detail`.** Order: ticket by id, else 404 MSG04 (AC-008.5) → placement
   missing or `!departmentActive` → 403 MSG08 (AC-008.3) → PUBLISHED: `scopeAccess.canAccessDepartment(accountId,
   departmentId)`, else 403 (AC-008.1) → not PUBLISHED: `writerId == accountId`, or `managed` of the ticket's Project
@@ -277,7 +323,7 @@ this spec's approval.
   ticket of an inactive Project still shows its key. `TicketReviewMapper.detail` fills them. OpenAPI
   `ReviewTicketDetail`: the three fields optional and nullable. Decided in planning: optional, so the `ticket-review`
   mock data still type-checks without edits (builder check).
-- **Source link (AC-008.7, D25).** `Ticket` maps `source_link` (`VARCHAR(500)`, insertable). `Ticket.imported(…)`
+- **Source link (AC-008.7, D30).** `Ticket` maps `source_link` (`VARCHAR(500)`, insertable). `Ticket.imported(…)`
   takes `sourceLink`; `ImportConfirmServiceImpl.toTicket` passes `row.getSourceUrl()` for a Jira preview, null for CSV;
   manual entry passes null.
 - **Web app (AC-008.8–AC-008.10).** `ReviewTicketContent` adds Department, Resolved date and Source link items; the
@@ -292,23 +338,23 @@ this spec's approval.
 
 | # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
 |---|-------|-----------|----------|----------|-------------------|-----------|
-| 17 | 007 | Data | `performed_by` = "stub-user", or a UUID with no `app_user` | Medium | Stored value shown | Task 19 |
-| 18 | 007 | Authorization | Batch of a Project the PM no longer manages | High | Not listed | Task 19 |
-| 19 | 007 | Data | Batch whose `project_id` is the legacy hex form | Medium | Listed with Project and Department | Task 19 |
-| 20 | 007 | Time | Batch created 23:30 Vietnam time on `dateTo` | Medium | Included | Task 19 |
-| 21 | 008 | Authorization | Published ticket, Ticket Resolver of another Department | High | 403 MSG08 | Task 21 |
-| 22 | 008 | Authorization | Pending ticket, PM of the same Department but not of the Project | High | 403 MSG08 | Task 21 |
-| 23 | 008 | State | Published ticket of an inactive Project in an Active Department | Medium | Visible to that Department | Task 21 |
-| 24 | 008 | State | Department soft-deleted | High | 403 for everyone, the writer and the PM too | Task 21 |
-| 25 | 008 | Security | `sourceLink` = `javascript:alert(1)` | Critical | Plain text, no link | Task 22 |
-| 26 | 008 | Tenancy | Ticket id of another Workspace | High | 404, the same answer as an unknown id (platform AC-015.3) | Task 21 |
+| 17 | 007 | Data | `performed_by` = "stub-user", or a UUID with no `app_user` | Medium | Stored value shown | Task 22 |
+| 18 | 007 | Authorization | Batch of a Project the PM no longer manages | High | Not listed | Task 22 |
+| 19 | 007 | Data | Batch whose `project_id` is the legacy hex form | Medium | Listed with Project and Department | Task 22 |
+| 20 | 007 | Time | Batch created 23:30 Vietnam time on `dateTo` | Medium | Included | Task 22 |
+| 21 | 008 | Authorization | Published ticket, Ticket Resolver of another Department | High | 403 MSG08 | Task 24 |
+| 22 | 008 | Authorization | Pending ticket, PM of the same Department but not of the Project | High | 403 MSG08 | Task 24 |
+| 23 | 008 | State | Published ticket of an inactive Project in an Active Department | Medium | Visible to that Department | Task 24 |
+| 24 | 008 | State | Department soft-deleted | High | 403 for everyone, the writer and the PM too | Task 24 |
+| 25 | 008 | Security | `sourceLink` = `javascript:alert(1)` | Critical | Plain text, no link | Task 25 |
+| 26 | 008 | Tenancy | Ticket id of another Workspace | High | 404, the same answer as an unknown id (platform AC-015.3) | Task 24 |
 
 ### Risks
 
 - `ReviewDecisionApiIT.readsPersistedSolutionAndEvidenceAndHidesUnmanagedPendingTickets_AC_009_2_AC_009_3`
   (`ticket-review`) expects 404 for an unmanaged pending ticket and 200 for a Published ticket of project
-  `new UUID(0, 20)`, which has no `project` row: both answers become 403. Task 21 updates that test; tell its owner.
+  `new UUID(0, 20)`, which has no `project` row: both answers become 403. Task 24 updates that test; tell its owner.
 - `CrossModuleIsolationIT` (platform) reads a Published ticket as a Ticket Resolver MEMBER of the Project: still
   allowed by `canAccessDepartment`; it must stay green.
-- `ticket-review` AC-006.6 describes a mock-API 404 for a hidden ticket; the real API now answers 403 (D26). Its spec
+- `ticket-review` AC-006.6 describes a mock-API 404 for a hidden ticket; the real API now answers 403 (D31). Its spec
   is not changed here.

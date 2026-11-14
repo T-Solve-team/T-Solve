@@ -80,7 +80,9 @@ class ReviewDecisionApiIT {
     @TestConfiguration(proxyBeanMethods = false)
     static class WorkspaceAccessConfiguration {
 
+        // @Primary: the production JiraIssueAccessReviewAdapter (jira-app KAN-126) is also a ReviewJiraAccess.
         @Bean
+        @Primary
         ReviewJiraAccess reviewJiraAccess(TwoTenantDatabases.RoutingTenantScope scope) {
             return new ReviewJiraAccess() {
                 @Override
@@ -361,6 +363,29 @@ class ReviewDecisionApiIT {
                 "update ticket set source = 'SOLUTION_FORM', project_id = '00000000-0000-0000-0000-000000000014' where ticket_id = ?",
                 ticket);
         jiraFeedback("acme-jira", "jira-writer", "OPS-301")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback").value(nullValue()));
+    }
+
+    @Test
+    void showsTheRejectReasonToTheJiraWriter_AC_009_13() throws Exception {
+        var own = TwoTenantDatabases.tenantA();
+        own.update("update app_user set full_name = 'Review Manager' where id = ?", MANAGER);
+        UUID ticket = pending(own, MANAGED_PROJECT);
+        own.update("update ticket set source_ticket_id = 'OPS-313', writer_id = ? where ticket_id = ?", WRITER, ticket);
+        inAcme("reject", body(ticket, ",\"reason\":\"Wrong root cause\"")).andExpect(status().isOk());
+
+        jiraFeedback("acme-jira", "jira-writer", "OPS-313")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback.code").value("REJECTED"))
+                .andExpect(jsonPath("$.feedback.params.manager_name").value("Review Manager"))
+                .andExpect(jsonPath("$.feedback.params.reason").value("Wrong root cause"))
+                .andExpect(jsonPath("$.feedback.params.comment").doesNotExist());
+        jiraFeedback("acme-jira", "jira-other", "OPS-313")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback").value(nullValue()));
+        own.update("update ticket set source = 'JIRA_IMPORT' where ticket_id = ?", ticket);
+        jiraFeedback("acme-jira", "jira-writer", "OPS-313")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.feedback").value(nullValue()));
     }

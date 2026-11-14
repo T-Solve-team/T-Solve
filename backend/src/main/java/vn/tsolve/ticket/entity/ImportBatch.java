@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /** One import (UC-21): recorded once, Completed or Failed, never updated or deleted. */
@@ -32,6 +33,12 @@ public class ImportBatch {
 
     @Column(name = "file_name", updatable = false)
     private String fileName;
+
+    @Column(name = "date_from", updatable = false)
+    private LocalDate dateFrom;
+
+    @Column(name = "date_to", updatable = false)
+    private LocalDate dateTo;
 
     @Column(name = "published_count", nullable = false, updatable = false)
     private int publishedCount;
@@ -59,6 +66,8 @@ public class ImportBatch {
             String performedBy,
             TicketSource source,
             String fileName,
+            LocalDate dateFrom,
+            LocalDate dateTo,
             int publishedCount,
             int errorCount,
             int removedCount,
@@ -68,6 +77,8 @@ public class ImportBatch {
         this.performedBy = performedBy;
         this.source = source;
         this.fileName = fileName;
+        this.dateFrom = dateFrom;
+        this.dateTo = dateTo;
         this.publishedCount = publishedCount;
         this.errorCount = errorCount;
         this.removedCount = removedCount;
@@ -80,6 +91,8 @@ public class ImportBatch {
             String performedBy,
             TicketSource source,
             String fileName,
+            LocalDate dateFrom,
+            LocalDate dateTo,
             int publishedCount,
             int errorCount,
             int removedCount) {
@@ -88,6 +101,8 @@ public class ImportBatch {
                 performedBy,
                 source,
                 fileName,
+                dateFrom,
+                dateTo,
                 publishedCount,
                 errorCount,
                 removedCount,
@@ -100,11 +115,23 @@ public class ImportBatch {
             String performedBy,
             TicketSource source,
             String fileName,
+            LocalDate dateFrom,
+            LocalDate dateTo,
             int errorCount,
             int removedCount,
             String error) {
         return new ImportBatch(
-                projectId, performedBy, source, fileName, 0, errorCount, removedCount, ImportBatchStatus.FAILED, error);
+                projectId,
+                performedBy,
+                source,
+                fileName,
+                dateFrom,
+                dateTo,
+                0,
+                errorCount,
+                removedCount,
+                ImportBatchStatus.FAILED,
+                error);
     }
 
     public Long getId() {
@@ -125,6 +152,14 @@ public class ImportBatch {
 
     public String getFileName() {
         return fileName;
+    }
+
+    public LocalDate getDateFrom() {
+        return dateFrom;
+    }
+
+    public LocalDate getDateTo() {
+        return dateTo;
     }
 
     public int getPublishedCount() {

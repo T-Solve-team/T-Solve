@@ -23,21 +23,24 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CreateManualTicketBody,
   DownloadCsvTemplateParams,
   DraftSavedResponse,
   FillSolutionRequest,
+  GetImportHistoryParams,
   GetImportPreviewRowsParams,
   ImportDraftSummary,
+  ImportHistoryPage,
   ImportPreviewResponse,
   ImportPreviewRowPage,
   ImportPreviewRowResponse,
   ImportResultResponse,
   JiraPullRequest,
   ManualTicketDraft,
-  ManualTicketRequest,
   ProblemDetail,
   ProblemResponse,
   RemoveRowsRequest,
+  SaveManualTicketDraftBody,
   UploadCsvImportBody,
 } from '../model';
 
@@ -1438,42 +1441,163 @@ export const useDeleteImportDraft = <TError = ErrorType<ProblemResponse>, TConte
 > => {
   return useMutation(getDeleteImportDraftMutationOptions(options), queryClient);
 };
+export const getGetImportHistoryUrl = (params?: GetImportHistoryParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/imports/history?${stringifiedParams}`
+    : `/api/v1/imports/history`;
+};
+
+/**
+ * @summary Import Batches of the caller's managed Projects, newest first.
+ */
+export const getImportHistory = async (
+  params?: GetImportHistoryParams,
+  options?: Parameters<typeof http>[1],
+): Promise<ImportHistoryPage> => {
+  return http<ImportHistoryPage>(getGetImportHistoryUrl(params), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetImportHistoryQueryKey = (params?: GetImportHistoryParams) => {
+  return [`/api/v1/imports/history`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetImportHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getImportHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetImportHistoryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportHistory>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetImportHistoryQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getImportHistory>>> = ({ signal }) =>
+    getImportHistory(params, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getImportHistory>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetImportHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getImportHistory>>>;
+export type GetImportHistoryQueryError = ErrorType<ProblemResponse>;
+
+export function useGetImportHistory<
+  TData = Awaited<ReturnType<typeof getImportHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params: undefined | GetImportHistoryParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportHistory>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImportHistory>>,
+          TError,
+          Awaited<ReturnType<typeof getImportHistory>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetImportHistory<
+  TData = Awaited<ReturnType<typeof getImportHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetImportHistoryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportHistory>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImportHistory>>,
+          TError,
+          Awaited<ReturnType<typeof getImportHistory>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetImportHistory<
+  TData = Awaited<ReturnType<typeof getImportHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetImportHistoryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportHistory>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Import Batches of the caller's managed Projects, newest first.
+ */
+
+export function useGetImportHistory<
+  TData = Awaited<ReturnType<typeof getImportHistory>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: GetImportHistoryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportHistory>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetImportHistoryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getCreateManualTicketUrl = () => {
   return `/api/v1/imports/manual`;
 };
 
 /**
- * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
 
  */
 export const createManualTicket = async (
-  manualTicketRequest: ManualTicketRequest,
+  createManualTicketBody: CreateManualTicketBody,
   options?: Parameters<typeof http>[1],
 ): Promise<ImportResultResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit['headers']>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
+  const formData = new FormData();
+  formData.append(`entry`, JSON.stringify(createManualTicketBody.entry));
+  if (createManualTicketBody.files !== undefined) {
+    createManualTicketBody.files.forEach((value) => formData.append(`files`, value));
+  }
+
   return http<ImportResultResponse>(getCreateManualTicketUrl(), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(manualTicketRequest),
+    body: formData,
   });
 };
 
@@ -1518,12 +1642,12 @@ export const getCreateManualTicketMutationOptions = <
 export type CreateManualTicketMutationResult = NonNullable<
   Awaited<ReturnType<typeof createManualTicket>>
 >;
-export type CreateManualTicketMutationBody = ManualTicketRequest;
+export type CreateManualTicketMutationBody = CreateManualTicketBody;
 export type CreateManualTicketMutationError = ErrorType<ProblemDetail | ProblemResponse>;
-export type CreateManualTicketMutationVariables = { data: ManualTicketRequest };
+export type CreateManualTicketMutationVariables = { data: CreateManualTicketBody };
 
 /**
- * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
 
  */
 export const useCreateManualTicket = <
@@ -1553,37 +1677,23 @@ export const getSaveManualTicketDraftUrl = () => {
 };
 
 /**
- * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
 
  */
 export const saveManualTicketDraft = async (
-  manualTicketRequest: ManualTicketRequest,
+  saveManualTicketDraftBody: SaveManualTicketDraftBody,
   options?: Parameters<typeof http>[1],
 ): Promise<DraftSavedResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit['headers']>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
+  const formData = new FormData();
+  formData.append(`entry`, JSON.stringify(saveManualTicketDraftBody.entry));
+  if (saveManualTicketDraftBody.files !== undefined) {
+    saveManualTicketDraftBody.files.forEach((value) => formData.append(`files`, value));
+  }
+
   return http<DraftSavedResponse>(getSaveManualTicketDraftUrl(), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(manualTicketRequest),
+    body: formData,
   });
 };
 
@@ -1628,12 +1738,12 @@ export const getSaveManualTicketDraftMutationOptions = <
 export type SaveManualTicketDraftMutationResult = NonNullable<
   Awaited<ReturnType<typeof saveManualTicketDraft>>
 >;
-export type SaveManualTicketDraftMutationBody = ManualTicketRequest;
+export type SaveManualTicketDraftMutationBody = SaveManualTicketDraftBody;
 export type SaveManualTicketDraftMutationError = ErrorType<ProblemDetail | ProblemResponse>;
-export type SaveManualTicketDraftMutationVariables = { data: ManualTicketRequest };
+export type SaveManualTicketDraftMutationVariables = { data: SaveManualTicketDraftBody };
 
 /**
- * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+ * @summary Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId, updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
 
  */
 export const useSaveManualTicketDraft = <
