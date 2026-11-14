@@ -911,9 +911,10 @@ Open questions for the spec owner: none. Every row is closed by the answers Q1�
 
 **Scope.** identity STORY-003 (KAN-160, "[UC-03] Xem profile của tôi") on the web app only, on MSW mocks (D1,
 Hiếu, 2026-10-31), plus AC-002.7 (the "Log out" button, Q7): Tasks 15–18 of `iteration-1/tasks.md`. The backend
-criteria AC-003.4–AC-003.10 are not built here; they are Task 19 (a stub, no Jira issue yet, no `progress.json`
-feature, Q11), which waits for the `ticket-repository` written-ticket lookup (KAN-132, To Do), the `wiki` viewable
-Space lookup and be-foundation. The OpenAPI contract and the mock handlers follow AC-003.4–.10 exactly, so the
+criteria AC-003.4–AC-003.10 (and AC-003.17–AC-003.19) are not built in Tasks 15–18; they are Tasks 19a, 19b and 19c
+(planned 2026-11-14, KAN-301; "Backend: My Profile endpoints (Task 19)" below), which build on the real session and
+Roles (Tasks 26a and 26b, on `main`) and answer empty until the `ticket-repository` written-ticket lookup
+(KAN-132, merged) and the `wiki` viewable Space lookup add their beans. The OpenAPI contract and the mock handlers follow AC-003.4–.10 exactly, so the
 backend can come later without changing the screen; mock tests cite them as "contract mirror of AC-003.x", never as
 passed. This plan is stacked on `chore/KAN-231-identity-plan` (PR #94, Q0). Layout: the four Figma frames of 1.2.1
 (Q1); where a frame and a decision disagree, the decision wins (listed under "Figma vs decisions").
@@ -1116,7 +1117,7 @@ Handler rules (mirror of the contract; MSW, `delay(MOCK_DELAY_MS)`):
 
 | Decision | Choice | Alternatives considered | Rationale |
 |----------|--------|------------------------|-----------|
-| Scope (D1) | Web app on MSW mocks; backend AC-003.4–.10 deferred to Task 19 (stub, Q11) | Backend now | No backend dependency is ready (KAN-132 To Do, `wiki` not built); the contract fixes the shape now |
+| Scope (D1) | Web app on MSW mocks (Tasks 15–18); backend AC-003.4–.10, .17–.19 are Tasks 19a–19c, planned 2026-11-14 | Backend now | When D1 was decided no backend dependency was ready; the contract fixes the shape. The backend now answers empty until the owners' lookups exist |
 | Stacking (Q0) | Branched from `chore/KAN-231-identity-plan` (PR #94) | Wait for PR #94 | The plan files are the same; rebase when #94 merges |
 | Layout (Q1) | The four Figma frames of 1.2.1; decisions win where they differ | SRS wording only | Frames exist; differences listed above |
 | Projects (Q2) | Shown by `jiraProjectKey`, with Department and role; no `/me` change | Add `projectName` to `/me` (fe- and be-foundation contract change) | All else is already in `/me` |
@@ -1128,7 +1129,7 @@ Handler rules (mirror of the contract; MSW, `delay(MOCK_DELAY_MS)`):
 | Mock scenarios (Q8) | Empty from data; error only in tests | A `localStorage` switch; a `?mock=` parameter | No mock concern in product code |
 | Error state (Q9) | MSG06 text only, no "Try again" | A retry button (needs a criterion) | No spec change |
 | PRs (Q10) | PR 1 = T15, PR 2 = T16, PR 3 = T17 + T18 (~450 lines) | A contract-only PR; PR 3 split | Each endpoint's YAML in its screen's PR (spec rule); contract, mock and table are one behaviour |
-| Deferred backend (Q11) | Task 19 stub; no feature until it has a Jira issue | A `pending` feature now; a design note only | Visible to the evaluator without an idle feature |
+| Deferred backend (Q11; closed 2026-11-14) | Task 19 was a stub with no feature; now Tasks 19a, 19b and 19c, each a `pending` feature with a Jira issue (KAN-301 and two new Subtasks of KAN-160) | Keep the stub | Q11's condition, a Jira issue, is met; decisions in "Backend: My Profile endpoints (Task 19)" |
 | OpenAPI tag (accepted minor) | `profile` | `session` | `/me` stays the session; the profile reads are their own group |
 | Row click (R1 A, Hiếu 31/10; AC-003.12 reworded) | Only the Ticket ID of a `canOpen` row is a link (`cells.link`); the row is not clickable; a `canOpen: false` row shows plain text | Whole row clickable via a new prop pair on the shared `DataTable` (a shared edit); antd `Table` directly in the feature (bypasses the kit) | Same as Review Queue and Ticket List; no shared edit, no FE Lead gate |
 | Page past the last (accepted minor) | Go to the last page (history replace) | MSG04 | The user asked for a page that moved, not for an empty list |
@@ -1160,7 +1161,7 @@ the Figma count cards are not built, Figma vs decisions item 6).
 | 67 | STORY-003 | Error cascades | `/me/spaces` or `/me/solutions` answers 401 (session ended meanwhile) | High | The global 401 handling opens Login (fe-foundation); not MSG06 in the section | Tasks 16, 18 |
 | 68 | STORY-003 | Error cascades | The Role is removed while the page is open, so a 403 comes from `GET /api/v1/me/solutions` or `/summary` (AC-003.17) | Low | The My Solutions section shows MSG08 in an `ErrorState` (the counters and the table each show it); the other cards stay (AC-003.14, AC-003.17) | Task 18 |
 | 69 | STORY-003 | Authorization | Row with `canOpen: false` | High | Ticket ID is plain text; no link, no pointer, no click handler, nothing focusable; a click stays on `/profile` (AC-003.12) | Task 18 |
-| 70 | STORY-003 | Authorization | Request carrying `userId` / `workspaceId` (someone edits the URL or the call) | Critical | Backend risk, Task 19. Mock ignores them and answers for the dev user (contract mirror of AC-003.7); the real guarantee is Task 19 | Tasks 17, 19 |
+| 70 | STORY-003 | Authorization | Request carrying `userId` / `workspaceId` (someone edits the URL or the call) | Critical | Backend risk. Mock ignores them and answers for the dev user (contract mirror of AC-003.7); the real guarantee is Tasks 19a and 19b (row 152) | Tasks 17, 19a, 19b |
 | 71 | STORY-003 | Authorization | `canOpen: true` row for a user whose Roles cannot open Ticket Detail (route guard TR / PM) | Medium | Not produced by the mocks (only TR / PM users get `canOpen: true`); in production the guard's own page answers; `canOpen` is the backend's UC-24 decision | Task 17 |
 | 72 | STORY-003 | Environment | Keyboard and screen reader on the table and the lists | Medium | The Ticket ID link is reachable by Tab and opens with Enter; the table has the accessible name "My Solutions"; card titles are visible text; icons `aria-hidden` | Tasks 15, 18 |
 | 73 | STORY-003 | Environment | Browser in another time zone (UTC−5) looking at an `updatedAt` near midnight Vietnam time | Low | Date shown in Vietnam time by `formatDate`, the same for every viewer | Task 18 |
@@ -1184,6 +1185,99 @@ the Figma count cards are not built, Figma vs decisions item 6).
 Open questions for the spec owner: none blocking this plan. The Figma extras of item 6 (count cards, filters,
 "Latest decision") are specified now (AC-003.18 to AC-003.23, Tasks 20 and 21). For Hiếu to decide later: the
 "you" / "I" wording of item 9.
+
+### Backend: My Profile endpoints (Task 19) — KAN-301 plan, 2026-11-14
+
+Tasks 19a, 19b and 19c of `iteration-1/tasks.md` build AC-003.4–.10 and .17–.19. The contract is already on `main`
+(`getMyViewableSpaces`, `getMySolutions`, `getMySolutionSummary`, Tasks 16, 17 and 20), so no task edits the YAML and
+the DTOs match it field for field. Decisions Q1–Q8 were made by the decider for Hiếu on 2026-11-14 (Q8 default).
+
+**Facts it builds on.** `WebSessionFilter`, `user_role` and `@WithTSolveUser` are on `main` (Tasks 26a and 26b), so Roles
+are re-read per request and the Workspace is bound from the cookie. `common/session/lookup` already holds
+`ManagedSpaceLookup` and `SpaceRef` sits in `common/session/dto`; `SessionServiceImpl` takes a lookup as an
+`ObjectProvider` and answers empty when none exists. `common` imports no module, so it cannot use
+`vn.tsolve.ticket.entity.TicketStatus` (six values; `ReviewDecision` there has only `APPROVE`).
+
+**Layers.**
+
+```text
+GET /api/v1/me/spaces | solutions | solutions/summary
+  MyProfileController (identity.controller)   @PreAuthorize, @Valid MySolutionsQuery, one service call each
+    MyProfileService / MyProfileServiceImpl   (identity.service, .impl) Account id from TSolveUser.current() only
+      ObjectProvider<ViewableSpaceLookup>     common.session.lookup  → empty List when no bean   (owner: wiki)
+      ObjectProvider<WrittenTicketLookup>     common.session.lookup  → Page.empty / summary empty (owner: ticket-repository)
+```
+
+`ViewableSpaceLookup.findViewableSpaces(UUID accountId)` returns `List<SpaceRef>`. `WrittenTicketLookup` has
+`findSolutions(UUID accountId, MySolutionFilter filter, Pageable page)` (19b) and `summarize(UUID accountId)` (19c).
+DTOs in `common.session.dto`: `MySolution` (+ `LatestDecision`), `MySolutionFilter`, `MySolutionSummary`, `ProjectRef`,
+and the enums `TicketStatus` and `ReviewDecision`. `MySolutionsQuery` and `ValidDateRange` are in `identity.dto`.
+The page answer is the shared `PagedModel` shape (`{content, page{size,number,totalElements,totalPages}}`).
+
+**Decided in planning (not new decisions):**
+- **400 versus 403 (Q3).** `@PreAuthorize` runs after Spring has bound and validated the arguments, so a signed-in
+  non-resolver who also sends a bad parameter most likely gets 400, not 403. No criterion fixes this order (nothing is
+  revealed either way); the 403 tests use valid parameters and none asserts the mixed case. An anonymous request is
+  always 401 first (the security chain, AC-003.10).
+- **Spaces order (Q5).** AC-003.4's "sorted by name, exactly as the viewable Space lookup returns them" is read as
+  "exactly the lookup's Spaces, in name order": the service sorts (Vietnamese `Collator`, ties by `spaceId`); the
+  `wiki` owner does not have to sort. No spec edit.
+- **One zone constant.** The Workspace day is `Asia/Ho_Chi_Minh` (AC-003.19), one private constant in
+  `MyProfileServiceImpl`; the repo has several private copies and this task does not add a shared helper. The port takes
+  `Instant` bounds so the SQL owner does not repeat the zone logic.
+- **No `@Transactional`, no database** in these tasks; no integration test needed (Q6).
+- **Tests** are `@WebMvcTest` with the real `SecurityConfig` and `GlobalExceptionHandler` and `@WithTSolveUser`, plus
+  plain unit tests. The tests of AC-003.17 and AC-003.7 name `RoleChangeTest`, `WebSessionFilterTest` and
+  `WorkspaceBindingTest` (on `main`) in a comment for the per-request Roles and the Workspace binding.
+- **Module paths.** The code of `common/session/lookup` and `common/session/dto` is outside the identity `paths` in
+  `module.md`; the new tests are all under `backend/src/test/java/vn/tsolve/identity/`, which is covered, so `trace` sees
+  them. Adding the `common` paths is a separate bookkeeping item (not part of these cards).
+
+**Key decisions (Task 19).**
+
+| Decision | Chosen | Alternatives | Rationale |
+|----------|--------|--------------|-----------|
+| Q1 Where the ports and DTOs live | `common.session.lookup` (ports) and `common.session.dto` (DTOs, with new `TicketStatus` and `ReviewDecision` enums of the YAML's values; a parity test on the status names) | `common.profile` package (B); ports in `identity.service` (C, breaks the one-way rule) | The spec says "in `common`", the team pattern is there and `SpaceRef` already is; `common` cannot import the ticket module, so the enums are copies, guarded by the parity test; the ticket module's enum is another owner's code and is not edited |
+| Q2 Stand-in until the owner builds the lookup | `ObjectProvider` in the service, empty answer when no bean, no stub classes | Stub `@Component`s (B: two beans fail startup when the owner adds theirs); `@ConditionalOnMissingBean` (C, unreliable on a scanned component) | The pattern of `SessionServiceImpl`; the owner only adds a bean and deletes nothing; two files and a test class fewer |
+| Q3 The 403 check | `@PreAuthorize` (`hasAnyRole('TICKET_RESOLVER','PROJECT_MANAGER')` on the two solutions endpoints, `hasRole('EMPLOYEE')` on spaces); order against 400 not made a criterion | A check that makes 403 win (B); a role check in the service (C, breaks AGENTS rule 7) | AGENTS rule 7; the handler already renders 403 `MSG08` and 401 `MSG07`; a spec edit would re-lock all identity code for a case that reveals nothing |
+| Q4 Binding and validation | `MySolutionsQuery` record with `@Valid`, typed fields, `@Min` / `@Max`, class-level `@ValidDateRange` reporting on `to`, defaults in the record | Strings parsed in the service (B); plain `@RequestParam` (C, no `fieldErrors`) | Least code; the handler already turns `typeMismatch` and constraint errors into `fieldErrors` `MSG06`; two wrong parameters give two entries. Fallback to B for the affected fields only if record binding does not give one entry per field on this Spring version |
+| Q5 Who sorts the Spaces | The service, Vietnamese `Collator`, ties by `spaceId` | The port contract says sorted (B); `CASE_INSENSITIVE_ORDER` (C) | AC-003.4 holds whatever the `wiki` lookup does and matches the web mock |
+| Q6 Dependence on Tasks 26a and 26b | None to wait for (merged); `@WithTSolveUser` tests, no new integration test | An end-to-end integration test with Redis (B); wait (C) | The Role re-read, the cookie and the binding are already tested on `main`; Task 19 adds only `@PreAuthorize`; no Docker for these tests; Hiếu's check with a real sign-in is the end-to-end proof |
+| Q7 Cards | Three (19a, 19b, 19c), one PR and branch each; KAN-301 for 19a, two new Subtasks of KAN-160 for 19b and 19c; no sprint fields | Two cards (B, about 550 lines); one (C) | Each is one thing Hiếu can try; folding 19c into 19b is about 13 production files and 20 tests |
+| Q8 Fake data on the real backend | None now (default; Hiếu may still say yes) | A dev-profile fake per port (A); a separate card 19d (C) | Every task still gives real feedback (Swagger, 400 / 401 / 403, empty states through a real session); the ticket module is landing, so fakes would be throwaway |
+
+**Open for later (not planned as a task).** Q8: if Hiếu wants rows on the real backend before the owners deliver, one
+extra card 19d (`feat/KAN-<n>-identity-my-profile-dev-data`, feature `my-profile-dev-data`) adds two fake lookups
+behind `@ConditionalOnProperty(tsolve.stub.my-profile-data = true)`, default off, as `StubWorkspaceStatusLookup` does,
+removed by the owners with their beans. A message to the ticket and wiki owner (Đặng Nhật Minh) with the two port
+names and the enum mapping once 19b is merged (a message, not a blocker).
+
+### Edge cases and risks (Task 19)
+
+Dimensions analyzed: user types, input extremes, timing, scale, error cascades, authorization, data integrity,
+integration, compliance. Skipped: state transitions and environment (stateless reads, no UI), business logic (no
+amounts or quotas). Rows 148–162 continue the numbering of the Keycloak section; the web-app rows 53–89 above still
+apply to the screens. Every Critical or High row has its test task.
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 148 | STORY-003 | Input extremes | `page=-1`, `size=0`, `size=101`, `status=FOO`, `projectId=abc`, `from=2026-13-01`, `to=31/10/2026` | High | 400 with one `fieldErrors` entry `MSG06` on that parameter, never a 500 or a body with no entry (AC-003.9) | Task 19b |
+| 149 | STORY-003 | Input extremes | `to` before `from`; two wrong parameters at once; `from` equal to `to` | High | The range error is reported on `to`; two wrong give two entries sorted by name; one day is valid (AC-003.9, AC-003.19) | Task 19b |
+| 150 | STORY-003 | Input extremes | Day boundary: an `updatedAt` at 16:59:59Z and at 17:00:00Z; only `from`; only `to`; no dates | High | `from` at 00:00 `Asia/Ho_Chi_Minh` inclusive, the day after `to` at 00:00 exclusive; a missing side is open; the bounds are `[2026-01-14T17:00Z, 2026-01-15T17:00Z)` for `from = to = 2026-01-15` (AC-003.19) | Task 19b |
+| 151 | STORY-003 | Authorization | A well-formed `projectId` that is not one of the Account's Projects | High | Passed to the lookup as given; an empty page, never 403 or 404 (AC-003.19) | Task 19b |
+| 152 | STORY-003 | Authorization | A request carries `userId` or `workspaceId` (query string edited); two users in two Workspaces | Critical | Not bound; the lookups are asked for the signed-in Account's id only, and user A never sees B's rows; the Workspace comes from the session binding (AC-003.7, GBR-37; `WorkspaceBindingTest` on `main`) | Tasks 19a, 19b |
+| 153 | STORY-003 | Authorization | The Ticket Resolver Role is removed between two calls | High | 403 `MSG08` on the next call, never cached in the controller; the real re-read is `WebSessionFilter` (AC-003.17; `RoleChangeTest` on `main`); the controller test proves the check is made on the principal it is given | Task 19b |
+| 154 | STORY-003 | Authorization | Anonymous call to each of the three paths, with or without a bad parameter or a non-resolver Role | Critical | 401 `MSG07` from the security chain before validation and before the Role check; the service is never called (AC-003.10) | Tasks 19a, 19b, 19c |
+| 155 | STORY-003 | Authorization | A signed-in non-resolver sends a bad parameter | Low | Most likely 400 (arguments are validated before `@PreAuthorize`); no criterion fixes the order and nothing is revealed; decided in planning (Q3), no test asserts it | none (decided in planning) |
+| 156 | STORY-003 | Error cascades | A lookup throws (the owner's database is down) | Medium | 500 `MSG06` through `GlobalExceptionHandler`, no detail and no stack trace in the body; the exception is not swallowed | Tasks 19a, 19b |
+| 157 | STORY-003 | Data integrity | The lookup returns Spaces in any order, with equal names or Vietnamese diacritics; a lookup returns `null` | Medium | Sorted by name with the Vietnamese `Collator`, ties by `spaceId`; the port contract is non-null, so the service never passes `null` on (AC-003.4) | Task 19a |
+| 158 | STORY-003 | Scale | 0 Solutions; a page past the end | Medium | 200 with an empty `content`, the lookup's real totals (AC-003.6, AC-003.8) | Task 19b |
+| 159 | STORY-003 | Integration | The owner adds a bean; the common enums drift from the ticket module's | High | With no bean the service answers empty; with a bean it is used (`ObjectProvider`); the parity test fails the build if the `common` `TicketStatus` names differ from the ticket module's (AC-003.9) | Tasks 19a, 19b |
+| 160 | STORY-003 | Integration | The lookup's summary lacks a status key | High | `MySolutionSummary` always has all six keys (a missing one is 0), so the YAML's required keys hold (AC-003.18) | Task 19c |
+| 161 | STORY-003 | Compliance | Personal data in logs or error bodies; a Solution title or Project name | Medium | The service logs nothing about the user; the error body holds the `MSG` code and the field names only (AC-003.9) | Task 19b |
+| 162 | STORY-003 | Authorization | An Employee-only Account calls the summary | High | 403 `MSG08`, the service is never called; Ticket Resolver and Project Manager are allowed (AC-003.17, AC-003.18) | Task 19c |
+
+Open questions for the spec owner: none. Q8 is open for Hiếu only (default: no fake data).
 
 ## Task 4 contract proposal — KAN-110
 `PUT /api/v1/users/{userId}` (`updateUserRoles`) accepts generated UpdateUserRolesRequest: roles, nullable UUID Department, UUID Space ids, optional Project/Space handovers and `confirmTicketResolverRemoval`. It returns confirmed UserDetail or400/401/403/404/409 Problem. UserDetail adds `ticketResolverProjectIds` (UUID[]) for the memberships that MSG78 actually removes; preserve historical references separately from current membership and management.

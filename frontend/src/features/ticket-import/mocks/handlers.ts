@@ -9,6 +9,8 @@ import type {
   ImportResultResponse,
   ImportType,
   JiraPullRequest,
+  ManualTicketDraft,
+  ManualTicketRequest,
   RemoveRowsRequest,
 } from '@/shared/api';
 import { getDownloadCsvTemplateMockHandler } from '@/shared/api/generated/import/import.msw';
@@ -42,6 +44,9 @@ let preview: MockPreview = seedImport();
 let isConfirmed = false;
 let lastBatchId = 0;
 let drafts: MockPreview[] = seedDrafts();
+/** The PM's Manual Drafts (AC-006.9), listed with the other Drafts. */
+let manualDrafts: ManualTicketDraft[] = [];
+let lastManualDraftId = 800;
 
 /** Back to the starting preview — called after every test (src/test/setup.ts). */
 export function resetMockData(): void {
@@ -49,7 +54,24 @@ export function resetMockData(): void {
   isConfirmed = false;
   lastBatchId = 0;
   drafts = seedDrafts();
+  manualDrafts = [];
+  lastManualDraftId = 800;
 }
+
+/** A Ticket ID the mock repository already holds: MSG31 on a manual save (AC-006.7). */
+const TAKEN_TICKET_ID = 'ITSUP-0871';
+
+/** The manual entry fields Save requires (AC-006.3), with their labels. */
+const MANUAL_REQUIRED = [
+  ['projectId', 'Project'],
+  ['ticketId', 'Ticket ID'],
+  ['title', 'Title'],
+  ['description', 'Description'],
+  ['symptoms', 'Symptoms'],
+  ['rootCause', 'Root cause'],
+  ['resolutionSteps', 'Resolution steps'],
+  ['scope', 'Scope'],
+] as const;
 
 /** The open preview or one of the Drafts, for the read endpoints (a reopened Draft, AC-004.3). */
 function findPreview(previewId: string | readonly string[] | undefined): MockPreview | undefined {
@@ -137,24 +159,98 @@ export const handlers: HttpHandler[] = [
   http.get('*/api/v1/imports/drafts', async () => {
     await delay(MOCK_DELAY_MS);
     const saved = !isConfirmed && preview.draftSavedAt ? [preview, ...drafts] : drafts;
-    return HttpResponse.json<ImportDraftSummary[]>(
-      saved.map((draft) => ({
+    return HttpResponse.json<ImportDraftSummary[]>([
+      ...manualDrafts.map((draft) => ({
+        previewId: draft.previewId,
+        source: 'MANUAL' as const,
+        projectId: draft.projectId,
+        rowCount: 1,
+        savedAt: draft.savedAt,
+      })),
+      ...saved.map((draft) => ({
         previewId: draft.previewId,
         source: draft.source ?? 'CSV',
         projectId: draft.projectId,
         rowCount: draft.rows.filter((row) => row.status !== 'REMOVED').length,
         savedAt: draft.draftSavedAt ?? '',
       })),
-    );
+    ]);
   }),
 
   http.delete('*/api/v1/imports/drafts/:previewId', async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    if (!drafts.some((draft) => String(draft.previewId) === params.previewId)) {
+    const isDraft = (draft: { previewId: number }) => String(draft.previewId) === params.previewId;
+    if (!drafts.some(isDraft) && !manualDrafts.some(isDraft)) return problem(404, 'MSG04');
+    drafts = drafts.filter((draft) => !isDraft(draft));
+    manualDrafts = manualDrafts.filter((draft) => !isDraft(draft));
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // Manual entry (AC-006.1, AC-006.3, AC-006.7, AC-006.12): every missing field at once; the taken Ticket ID → MSG31.
+  http.post('*/api/v1/imports/manual', async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    const body = (await request.json()) as ManualTicketRequest;
+    const missing = MANUAL_REQUIRED.filter(([field]) => !body[field]?.trim());
+    if (missing.length > 0) {
+      return problem(400, 'MSG01', {
+        fieldErrors: missing.map(([field, label]) => ({
+          field,
+          code: 'MSG01',
+          params: { field_name: label },
+        })),
+      });
+    }
+    const ticketId = body.ticketId?.trim();
+    if (ticketId === TAKEN_TICKET_ID) {
+      const params = { ticket_id: ticketId };
+      return problem(409, 'MSG31', {
+        params,
+        fieldErrors: [{ field: 'ticketId', code: 'MSG31', params }],
+      });
+    }
+    manualDrafts = manualDrafts.filter((draft) => draft.previewId !== body.draftId);
+    lastBatchId += 1;
+    return HttpResponse.json<ImportResultResponse>(
+      {
+        importBatchId: lastBatchId,
+        created: 1,
+        skipped: 0,
+        message: { code: 'MSG32', params: { created: 1, skipped: 0 } },
+      },
+      { status: 201 },
+    );
+  }),
+
+  // Save as draft (AC-006.9, AC-006.10): only the Project is checked; a draftId rewrites that Draft.
+  http.post('*/api/v1/imports/manual/drafts', async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    const { draftId, ...fields } = (await request.json()) as ManualTicketRequest;
+    if (!fields.projectId) {
+      return problem(400, 'MSG01', {
+        fieldErrors: [{ field: 'projectId', code: 'MSG01', params: { field_name: 'Project' } }],
+      });
+    }
+    if (draftId && !manualDrafts.some((draft) => draft.previewId === draftId)) {
       return problem(404, 'MSG04');
     }
-    drafts = drafts.filter((draft) => String(draft.previewId) !== params.previewId);
-    return new HttpResponse(null, { status: 204 });
+    const previewId = draftId ?? (lastManualDraftId += 1);
+    const savedAt = new Date().toISOString();
+    manualDrafts = [
+      { ...fields, previewId, savedAt },
+      ...manualDrafts.filter((draft) => draft.previewId !== previewId),
+    ];
+    return HttpResponse.json<DraftSavedResponse>({
+      previewId,
+      savedAt,
+      message: { code: 'MSG41', params: {} },
+    });
+  }),
+
+  http.get('*/api/v1/imports/manual/drafts/:previewId', async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const found = manualDrafts.find((draft) => String(draft.previewId) === params.previewId);
+    if (!found) return problem(404, 'MSG04');
+    return HttpResponse.json<ManualTicketDraft>(found);
   }),
 
   http.get('*/api/v1/imports/previews/:previewId', async ({ params }) => {
