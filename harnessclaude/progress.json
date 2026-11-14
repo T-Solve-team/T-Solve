@@ -324,16 +324,16 @@
         "issue-panel-ui": "passing",
         "remove-jira-search": "passing",
         "close-keeps-draft": "passing",
-        "draft-reminder-query": "pending",
-        "draft-reminder-job": "pending"
+        "draft-reminder-query": "evaluating",
+        "draft-reminder-job": "evaluating"
       },
-      "lastUpdated": "2026-11-14T18:12:01.535Z",
-      "branch": "feat/KAN-126-jira-app-solution-form-v2",
+      "lastUpdated": "2026-11-14T08:51:42.476Z",
+      "branch": "feat/KAN-336-jira-app-draft-reminder",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "19215afba9f44eb4f6dfc48ddb6f85e65e68c6b0"
+        "default": "0d5eed03dbb31a1ee16def1043457c57d2b964a8"
       }
     },
     "dashboard-audit": {

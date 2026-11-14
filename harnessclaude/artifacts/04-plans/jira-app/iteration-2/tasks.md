@@ -208,7 +208,8 @@ no longer describes "all empty = Close". Re-check Close, the Draft and Finish on
 **Feature:** draft-reminder-query
 **Description:** In `ticket`: `SolutionDraftService` gains the open Drafts of the current Workspace — per writer and for
 one writer — as `(creatorId, issueKey, updatedAt)`, newest first: `solution_draft` rows whose `jira_issue_key` has no
-`ticket` of any source and whose creator is ACTIVE. Read-only, no schema change. Tests: AC-011.2 (a Draft with a
+`ticket` of any source (whether the creator is still ACTIVE is the job's check through `identity`, so `ticket` reads
+no `identity` table). Read-only, no schema change. Tests: AC-011.2 (a Draft with a
 ticket, an inactive creator and a writer with none are left out), ordering for AC-011.3; an IT on PostgreSQL.
 **Files:**
 - Modify: `backend/src/main/java/vn/tsolve/ticket/service/SolutionDraftService.java`, its impl,

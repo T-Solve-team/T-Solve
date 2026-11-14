@@ -1513,3 +1513,7 @@
 {"ts":"2026-11-14T08:35:25.351Z","type":"spec-approved","module":"jira-app","specHash":"3fcd90db567191b28aa648a6da4e023bb513935ca63291b7d2e77cf291f04302"}
 {"ts":"2026-11-14T08:35:25.668Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-query","from":null,"to":"pending"}
 {"ts":"2026-11-14T08:35:25.967Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-job","from":null,"to":"pending"}
+{"ts":"2026-11-14T08:47:36.497Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-query","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T08:47:36.781Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-job","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T08:51:42.214Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-query","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T08:51:42.478Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-job","from":"in-progress","to":"evaluating"}
