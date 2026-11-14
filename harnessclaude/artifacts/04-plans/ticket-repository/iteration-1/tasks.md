@@ -1,7 +1,7 @@
 ---
 module: ticket-repository
 date: 2026-11-07
-total_tasks: 22
+total_tasks: 25
 owner: Dev
 ---
 
@@ -260,11 +260,58 @@ each field with the input kept (AC-006.14).
 **Dependencies:** Task 14 (Tasks 15–16 only for a live run)
 **Estimated size:** medium
 
-## Task 18: Date range on Import Batches
+## Task 18: Evidence contract and schema
+
+**Story:** STORY-006
+**Feature:** manual-evidence-contract
+**Description:** Master design "Change 2026-11-14 (2)". `frontend/openapi/tsolve-api.yaml`: `createManualTicket` and
+`saveManualTicketDraft` take `multipart/form-data` (part `entry` = `ManualTicketRequest` as JSON, part `files` =
+array of binary, 0–5); `ManualTicketRequest` gains `keepEvidenceIds` (uuid[], optional); `ManualTicketDraft`
+gains `evidence` (array of `{ evidenceId uuid, fileName, fileSize int64 }`, required, may be empty); 503 on both.
+`npm run generate:api`. New Liquibase changeset: `evidence.storage_key`, table `import_preview_evidence`. Backend
+DTO changes (`ManualTicketRequest.keepEvidenceIds`, `ManualTicketDraft.evidence` + record `ManualEvidence`) and
+entities (`TicketEvidence` gets a constructor and `storage_key`; new `ImportPreviewEvidence` + repository).
+Existing callers compile; frontend compiles (the form may send an empty `files` for now).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`, `T/dto/ManualTicketRequest.java`, `T/dto/ManualTicketDraft.java`, `T/entity/TicketEvidence.java`
+- Create: `backend/src/main/resources/db/changelog/changes/NNN-manual-entry-evidence.sql` (+ master include), `T/dto/ManualEvidence.java`, `T/entity/ImportPreviewEvidence.java`, `T/repository/ImportPreviewEvidenceRepository.java`
+**Dependencies:** none
+**Estimated size:** small
+
+## Task 19: Store Evidence on save and Save as draft
+
+**Story:** STORY-006
+**Feature:** manual-evidence-backend
+**Description:** Master design "Change 2026-11-14 (2)" (Flow, Reopen). Controller takes multipart. File rules
+(AC-006.16, AC-006.17), store outside the transaction, compensate on failure (AC-006.20), 503 MSG06 when storage is
+missing or failing (AC-006.21), Evidence rows on save (AC-006.15) and on Save as draft (AC-006.18), dropped Draft
+files deleted after commit and on Draft delete (AC-006.19), reopen lists Evidence (AC-006.18).
+**Files:**
+- Modify: `T/controller/ManualTicketController.java`, `T/service/ManualTicketService.java`, `T/service/impl/ManualTicketServiceImpl.java`, `T/service/impl/ImportDraftServiceImpl.java`
+- Create: `T/exception/StorageUnavailableException.java` (if no fitting base/exception exists)
+- Test: `TT/service/impl/ManualTicketEvidenceTest.java` (AC-006.15–AC-006.21, FileStorage mocked), extend `TT/controller/ManualTicketControllerIT.java` (multipart save with a mocked `FileStorage` bean: Evidence rows with storage keys; MSG34/MSG72 400; 503 without storage)
+**Dependencies:** Task 18
+**Estimated size:** medium
+
+## Task 20: Evidence on the Manual entry tab
+
+**Story:** STORY-006
+**Feature:** manual-evidence-tab
+**Description:** Master design "Change 2026-11-14 (2)" (Web app). Kit component `shared/ui/EvidenceUpload` (FE Lead
+review); `ManualEntryForm` Evidence field, multipart send, kept Draft files, `files` field errors; MSW handlers
+accept multipart and return Draft evidence (AC-006.22, AC-006.18 on screen).
+**Files:**
+- Create: `frontend/src/shared/ui/EvidenceUpload/EvidenceUpload.tsx`, `index.ts`, `EvidenceUpload.test.tsx`
+- Modify: `frontend/src/shared/ui/index.ts`, `F/components/ManualEntryForm.tsx`, `F/components/ManualEntryForm.test.tsx`, `F/mocks/handlers.ts`
+- Test: `ManualEntryForm.test.tsx` (AC-006.22, AC-006.18), `EvidenceUpload.test.tsx`
+**Dependencies:** Task 18
+**Estimated size:** medium
+
+## Task 21: Date range on Import Batches
 
 **Story:** STORY-007
 **Feature:** import-batch-date-range
-**Description:** KAN-134, master design "Change 2026-11-14: Import History and Ticket Detail" (Date range, D20).
+**Description:** KAN-134, master design "Change 2026-11-14: Import History and Ticket Detail" (Date range, D25).
 Changeset `032-ticket-import-batch-date-range.sql` adds `import_batch.date_from` / `date_to` (DATE, nullable).
 `ImportBatch` maps them; `completed(…)` / `failed(…)` take them. Jira Finish (Completed and Failed) passes the
 preview's `resolvedFrom` / `resolvedTo`; `ImportBatchRecorder.recordJiraFailed` takes the pull request's range; CSV
@@ -280,7 +327,7 @@ and Manual pass null (AC-007.8).
 **Dependencies:** none
 **Estimated size:** small
 
-## Task 19: Import History API
+## Task 22: Import History API
 
 **Story:** STORY-007
 **Feature:** import-history-api
@@ -300,10 +347,10 @@ stored value, newest first), MSG code extraction, Vietnam-time date filter, `fro
   AC-007.6 MSG39), `TT/controller/ImportHistoryControllerIT.java` with the real DB (AC-007.1 only managed Projects,
   newest first, paging; AC-007.2 every field incl. Department and legacy hex Project id; AC-007.3; AC-007.5 each
   filter, 23:30 Vietnam time on `dateTo`, unmanaged `projectId` → empty page; AC-007.6; AC-007.7 TR → 403)
-**Dependencies:** Task 18
+**Dependencies:** Task 21
 **Estimated size:** medium
 
-## Task 20: Import History screen
+## Task 23: Import History screen
 
 **Story:** STORY-007
 **Feature:** import-history-page
@@ -315,15 +362,15 @@ name); empty page → MSG04 (AC-007.10). MSW handler and data for `GET /imports/
 - Modify: `F/pages/ImportHistoryPage.tsx`, `F/mocks/handlers.ts`, `F/mocks/data.ts`
 - Test: `F/pages/ImportHistoryPage.test.tsx` (AC-007.9 columns, Jira range vs CSV file name, filters sent as query
   params; AC-007.10 MSG04 — test names cite the ids)
-**Dependencies:** Task 19 (Task 19's generated client; the backend only for a live run)
+**Dependencies:** Task 22 (Task 22's generated client; the backend only for a live run)
 **Estimated size:** medium
 
-## Task 21: Ticket Detail visibility and fields
+## Task 24: Ticket Detail visibility and fields
 
 **Story:** STORY-008
 **Feature:** ticket-detail-scope
 **Description:** Master design "Change 2026-11-14: Import History and Ticket Detail" (Ticket Detail). Extends
-`ticket-review` code (D24, owner Phạm Tùng Dương). OpenAPI `ReviewTicketDetail` + optional nullable `department`
+`ticket-review` code (D29, owner Phạm Tùng Dương). OpenAPI `ReviewTicketDetail` + optional nullable `department`
 `{id, name}`, `resolvedDate`, `sourceLink`, and 403 on `getReviewTicketDetail`; `npm run generate:api`.
 `ReviewReadController.detail` guard → `hasAnyRole(TICKET_RESOLVER, PROJECT_MANAGER)`.
 `TicketRepository.findPlacement`; `TicketReviewReadServiceImpl.detail` applies AC-008.1–AC-008.5 in the design's
@@ -346,7 +393,7 @@ order with `ScopeAccessService.canAccessDepartment` and answers `AccessDeniedExc
 **Dependencies:** none
 **Estimated size:** medium
 
-## Task 22: Ticket Detail screen
+## Task 25: Ticket Detail screen
 
 **Story:** STORY-008
 **Feature:** ticket-detail-page
@@ -361,5 +408,5 @@ MSG06 toast. Decision buttons unchanged.
 - Test: `frontend/src/features/tickets/pages/TicketDetailPage.test.tsx` (AC-008.8 fields, `javascript:` link as
   text, https link attributes; AC-008.9 due date only for PENDING_REVIEW; AC-008.10 403 → MSG08 and no content, 500 →
   MSG06 toast — test names cite the ids); the existing `ReviewTicketDetail.test.tsx` stays green.
-**Dependencies:** Task 21 (its generated client; the backend only for a live run)
+**Dependencies:** Task 24 (its generated client; the backend only for a live run)
 **Estimated size:** small

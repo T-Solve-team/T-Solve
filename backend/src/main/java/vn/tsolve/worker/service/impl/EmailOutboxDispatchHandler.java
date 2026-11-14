@@ -12,7 +12,6 @@ import org.jobrunr.jobs.lambdas.JobRequestHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -41,7 +40,7 @@ public class EmailOutboxDispatchHandler implements JobRequestHandler<EmailOutbox
             WorkerTenantService tenants,
             ObjectProvider<SmtpEmailSender> senders,
             EmailOutboxProperties properties,
-            @Qualifier("workerClock") Clock clock) {
+            Clock clock) {
         this.repository = repository;
         this.tenants = tenants;
         this.senders = senders;

@@ -882,11 +882,12 @@ paths:
     get:
       tags: [jira-app]
       operationId: getJiraReviewFeedback
-      summary: Read the latest change request for the verified writer of this issue (MSG64).
+      summary: Read the latest change request (MSG64) or Reject reason (REJECTED) for the verified writer of this issue.
       description: >
         Requires a verified Forge principal, registered Workspace, linked active Account and authorized issue.
-        The Workspace is resolved only from the verified cloudId. Returns no feedback when the issue has no
-        current Changes requested Solution Form owned by that Account in the verified Project.
+        The Workspace is resolved only from the verified cloudId. Returns MSG64 for a Changes requested Solution
+        Form ticket and REJECTED (ticket-review AC-009.13) for a Rejected one, owned by that Account in the
+        verified Project; no feedback otherwise, or when the reviewer has no name.
       security:
         - forgeInvocationToken: []
       parameters:
@@ -990,6 +991,207 @@ paths:
           $ref: '#/components/responses/Problem'
         '503':
           $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/issues/{issueKey}/solution-form:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    post:
+      tags: [jira-app]
+      operationId: openSolutionForm
+      summary: >
+        Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft,
+        else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolutionFormRequest'
+      responses:
+        '200':
+          description: >
+            The answer; mayOpen false when the viewer is not linked, not a member of the issue's Project, or the
+            issue already has a Solution Form ticket.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolutionForm'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG08 — a Jira site with no registered Workspace, or no Jira user.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/issues/{issueKey}/solution:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    post:
+      tags: [jira-app]
+      operationId: submitSolution
+      summary: >
+        Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and
+        deletes the viewer's Draft (STORY-004). Every required section must be filled (400 MSG01), so an empty
+        Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead. With `resubmit`, it
+        replaces the Solution of the viewer's ticket in Changes requested and moves that ticket back to Pending review
+        with a new due date (STORY-012).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitSolutionRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmittedTicket'
+        '400':
+          description: MSG01 (a required section is empty, `field_name` names it) or MSG02 (more than 10,000 characters in total).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG62 (not linked) or MSG08 (not a member of the issue's Project, a Jira site with no registered Workspace, or no Jira user).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '409':
+          description: >
+            MSG31 — a ticket with the issue key as its Ticket ID already exists; MSG40 — the issue's Project or its
+            Department is no longer active, so no ticket was created; MSG06 — a resubmission whose ticket is no longer
+            the viewer's ticket in Changes requested (AC-012.5).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/issues/{issueKey}/solution-draft:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    put:
+      tags: [jira-app]
+      operationId: saveSolutionDraft
+      summary: Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed; the Jira App then shows "Saved as draft" (STORY-005).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolutionSections'
+      responses:
+        '204':
+          description: Saved.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG62 (not linked) or MSG08 (not a member of the issue's Project, a Jira site with no registered Workspace, or no Jira user).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/solution-rewrites:
+    post:
+      tags: [jira-app]
+      operationId: rewriteSolution
+      summary: The AI rewrite of the five sections, for 4.2 AI Rewrite Preview (STORY-007).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolutionSections'
+      responses:
+        '200':
+          description: The rewritten sections.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolutionSections'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG62 (not linked) or MSG08 (a Jira site with no registered Workspace, or no Jira user).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: >
+            MSG68 — the AI rewrite is unavailable or took too long; MSG06 — the Forge token could not be checked.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/issues/{issueKey}/panel:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    get:
+      tags: [jira-app]
+      operationId: getIssuePanel
+      summary: What 3.3 Issue Panel shows for the issue and the viewer (STORY-001, STORY-008).
+      security:
+        - forgeInvocationToken: []
+      responses:
+        '200':
+          description: The panel state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuePanel'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG08 — a Jira site with no registered Workspace, or no Jira user.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/csv/template:
     get:
       tags: [import]
@@ -1354,13 +1556,27 @@ paths:
         Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source
         MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field
         with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project =
-        MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+        MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34,
+        more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ManualTicketRequest'
+              type: object
+              required: [entry]
+              properties:
+                entry:
+                  $ref: '#/components/schemas/ManualTicketRequest'
+                files:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: string
+                    format: binary
+            encoding:
+              entry:
+                contentType: application/json
       responses:
         '201':
           description: Ticket published.
@@ -1369,7 +1585,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ImportResultResponse'
         '400':
-          description: Invalid fields (one fieldErrors entry per field).
+          description: Invalid fields (one fieldErrors entry per field); Evidence type or size = MSG34 with file_name, count = MSG72 (fieldErrors on files).
           content:
             application/problem+json:
               schema:
@@ -1382,6 +1598,12 @@ paths:
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
+        '503':
+          description: Evidence storage is not configured or is unavailable (MSG06); nothing saved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/manual/drafts:
     post:
       tags: [import]
@@ -1389,13 +1611,27 @@ paths:
       summary: >
         Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId,
         updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's
-        Manual Draft = MSG04 (404).
+        Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72
+        (400, fieldErrors on files); storage unavailable = MSG06 (503).
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ManualTicketRequest'
+              type: object
+              required: [entry]
+              properties:
+                entry:
+                  $ref: '#/components/schemas/ManualTicketRequest'
+                files:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: string
+                    format: binary
+            encoding:
+              entry:
+                contentType: application/json
       responses:
         '200':
           description: Draft saved.
@@ -1404,7 +1640,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DraftSavedResponse'
         '400':
-          description: No Project (MSG01 on projectId).
+          description: No Project (MSG01 on projectId); Evidence type or size = MSG34 with file_name, count = MSG72 (fieldErrors on files).
           content:
             application/problem+json:
               schema:
@@ -1415,6 +1651,12 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+        '503':
+          description: Evidence storage is not configured or is unavailable (MSG06); nothing saved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/manual/drafts/{previewId}:
     get:
       tags: [import]
@@ -1787,6 +2029,15 @@ components:
       schema:
         type: integer
         format: int64
+    IssueKey:
+      name: issueKey
+      in: path
+      required: true
+      description: The Jira issue key, e.g. ITSUP-1031.
+      schema:
+        type: string
+        maxLength: 50
+        pattern: '^[A-Z][A-Z0-9_]*-[1-9][0-9]*$'
   responses:
     Problem:
       description: Error (RFC 9457 Problem Details with an SRS MSG code).
@@ -2774,7 +3025,9 @@ components:
           oneOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
-          description: MSG64 with manager_name and comment from the committed review decision.
+          description: >
+            MSG64 with manager_name and comment from the latest Request Changes decision, or REJECTED (a Jira App
+            text, not an SRS message) with manager_name and reason from the latest Reject decision.
     ReviewDecisionResult:
       type: object
       required: [count]
@@ -2782,6 +3035,123 @@ components:
         count:
           type: integer
           description: Number of tickets the decision was applied to (the {count} of MSG14 / MSG16 / MSG17).
+    SolutionSections:
+      type: object
+      description: The five Solution sections (GBR-33); Workaround is the only optional one. Plain text.
+      required: [symptoms, rootCause, resolutionSteps, workaround, scopeOfApplicability]
+      properties:
+        symptoms:
+          type: string
+        rootCause:
+          type: string
+        resolutionSteps:
+          type: string
+        workaround:
+          type: string
+        scopeOfApplicability:
+          type: string
+    SolutionFormRequest:
+      type: object
+      description: The issue text the Jira App read with requestJira, for the AI draft or the prefill.
+      required: [summary, description]
+      properties:
+        summary:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 32767
+          description: The issue description as plain text; empty when the issue has none.
+        resubmit:
+          type: boolean
+          default: false
+          description: >
+            True = open the resubmission form of a ticket in Changes requested ("Edit and resubmit", STORY-012); it
+            opens only while the viewer is a member and the ticket's writer and the ticket is in Changes requested.
+    SolutionFormOrigin:
+      type: string
+      description: >
+        Where the sections come from — the viewer's Draft, the AI draft, the issue text (MSG67), or the ticket's
+        current Solution (a resubmission without a Draft, AC-012.2).
+      enum: [DRAFT, AI_DRAFT, ISSUE, TICKET]
+    SolutionForm:
+      type: object
+      required: [mayOpen, origin, sections, message]
+      properties:
+        mayOpen:
+          type: boolean
+        origin:
+          anyOf:
+            - $ref: '#/components/schemas/SolutionFormOrigin'
+            - type: 'null'
+          description: Null when mayOpen is false.
+        sections:
+          anyOf:
+            - $ref: '#/components/schemas/SolutionSections'
+            - type: 'null'
+          description: Null when mayOpen is false.
+        message:
+          anyOf:
+            - $ref: '#/components/schemas/MessageRef'
+            - type: 'null'
+          description: MSG67 when the AI draft is unavailable; otherwise null.
+    SubmitSolutionRequest:
+      type: object
+      required: [summary, sections]
+      properties:
+        summary:
+          type: string
+          maxLength: 255
+          description: The issue summary, the ticket title.
+        sections:
+          $ref: '#/components/schemas/SolutionSections'
+        resubmit:
+          type: boolean
+          default: false
+          description: >
+            True = replace the Solution of the viewer's ticket in Changes requested and move it back to Pending review
+            (AC-012.4); 409 MSG06 when it is no longer in Changes requested (AC-012.5).
+    SubmittedTicket:
+      type: object
+      required: [id, ticketId, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The ticket's UUID.
+        ticketId:
+          type: string
+          description: The Ticket ID — the issue key.
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+    IssuePanel:
+      type: object
+      required: [linked, ticketStatus, hasDraft, mayOpenForm, mayResubmit]
+      properties:
+        linked:
+          type: boolean
+          description: False = the Jira account is not linked to an active T-Solve Account (MSG62); the other fields are false/null.
+        ticketStatus:
+          anyOf:
+            - $ref: '#/components/schemas/TicketStatus'
+            - type: 'null'
+          description: >
+            The status of the issue's ticket, of any source (its Ticket ID is the issue key); null = none.
+            CHANGES_REQUESTED makes the Jira App read
+            getJiraReviewFeedback for MSG64.
+        hasDraft:
+          type: boolean
+          description: The viewer has a Draft for the issue (MSG77).
+        mayOpenForm:
+          type: boolean
+          description: >
+            The viewer is a member of the issue's Project and the issue has no ticket of any source. The Jira App also checks
+            that the issue is Done before it shows the button.
+        mayResubmit:
+          type: boolean
+          description: >
+            The issue's ticket is a Solution Form ticket written by the viewer, in Changes requested, and the viewer is
+            a member of its Project: the panel shows "Edit and resubmit" (AC-012.1).
     MessageRef:
       type: object
       description: An SRS message to show, by code; the web app fills the template from params.
@@ -3157,9 +3527,14 @@ components:
           type: [integer, 'null']
           format: int64
           description: The Manual Draft this entry was reopened from.
+        keepEvidenceIds:
+          type: [array, 'null']
+          items:
+            type: string
+            format: uuid
     ManualTicketDraft:
       type: object
-      required: [previewId, projectId, savedAt]
+      required: [previewId, projectId, savedAt, evidence]
       properties:
         previewId:
           type: integer
@@ -3189,6 +3564,22 @@ components:
         savedAt:
           type: string
           format: date-time
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/ManualEvidence'
+    ManualEvidence:
+      type: object
+      required: [evidenceId, fileName, fileSize]
+      properties:
+        evidenceId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
     ChatbotQuestion:
       type: object
       required: [question, history]

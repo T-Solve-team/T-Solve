@@ -239,6 +239,7 @@ class ImportHistoryDateRangeIT {
                         "Restart",
                         null,
                         "All users",
+                        null,
                         null));
         assertBatch("MANUAL", "COMPLETED", null, null);
     }

@@ -25,6 +25,7 @@ paths:
   - frontend/src/features/ticket-import/api/**
   - frontend/src/features/ticket-import/mocks/**
   - frontend/src/features/tickets/**
+  - frontend/src/shared/ui/EvidenceUpload/**
   - backend/src/main/resources/db/changelog/**
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
@@ -75,6 +76,6 @@ Ticket Import & Repository (UC-20–25), plus the backend of Solution Authoring 
 - Spec: `artifacts/03-modules/ticket-repository/spec.md` (written when the module is planned)
 - Map: `artifacts/03-modules/module-map.md`
 - Stories: KAN-29 (epic), KAN-31, KAN-45, KAN-132…137
-- KAN-135 (STORY-008) extends Ticket Detail code owned by `ticket-review` (spec D24): `ReviewReadController`,
+- KAN-135 (STORY-008) extends Ticket Detail code owned by `ticket-review` (spec D29): `ReviewReadController`,
   `ReviewTicketContent`, `ReviewTicketDetail` and `ReviewDecisionApiIT` are listed in `paths` for that reason; the
   `ticket/` files it touches are already covered by `backend/src/main/java/vn/tsolve/ticket/**`.
