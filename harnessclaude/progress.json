@@ -330,7 +330,7 @@
         "ci-images": "pending",
         "staging-servers": "pending",
         "edge-caddy": "pending",
-        "staging-cd": "pending",
+        "staging-cd": "in-progress",
         "demo-seed-workspaces": "pending",
         "local-data-plane": "pending",
         "registry-db": "pending",
@@ -351,7 +351,7 @@
         "load-test": "pending",
         "forge-security-chain": "pending"
       },
-      "lastUpdated": "2026-11-13T14:52:33.719Z",
+      "lastUpdated": "2026-11-13T16:03:48.381Z",
       "branch": "feat/KAN-96-platform-file-storage",
       "repos": [
         "default"

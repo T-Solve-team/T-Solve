@@ -183,8 +183,8 @@
     }
   },
   "be-foundation": {
-    "specHash": "0879bacf1c486e77afe58974f98abfa955bf1b9ea738174669a95daaa5ea0bb6",
-    "approvedAt": "2026-10-30T16:01:43.528Z",
+    "specHash": "045771d2bbca1abf203acc1bc361c2bb5133a937987e910ce56a074869b1c922",
+    "approvedAt": "2026-11-13T16:31:24.803Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a request fails with a , THE backend SHALL answer 404 with content type",
@@ -217,6 +217,7 @@
       "AC-003.2": "WHEN  is answered, THE backend SHALL take  from the Department lookup,",
       "AC-003.3": "WHEN  is answered, THE backend SHALL set  to the user's  (if any) plus the",
       "AC-003.4": "WHILE a lookup has no implementation yet (its module is not built), THE backend SHALL answer  with",
+      "AC-003.7": "WHILE the staging stub flag  is true, THE backend SHALL report",
       "AC-003.5": "IF nobody is signed in, THEN THE backend SHALL answer  with 401 and  .",
       "AC-003.6": "THE response of  SHALL match the  schema of",
       "AC-004.1": "THE backend SHALL list the audited actions as : , , ,",
