@@ -1376,3 +1376,9 @@
 {"ts":"2026-11-14T05:27:58.892Z","type":"feature-status","module":"platform","feature":"e2e-smoke","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T06:06:15.524Z","type":"feature-status","module":"platform","feature":"cross-module-isolation","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T06:06:15.575Z","type":"feature-status","module":"platform","feature":"e2e-smoke","from":"evaluating","to":"passing"}
+{"ts":"2026-11-14T07:58:30.714Z","type":"spec-approved","module":"worker","specHash":"7743c932adcc16177bb201bb499d7b88a21eec673baaa75157767461c9b61efc"}
+{"ts":"2026-11-14T07:58:36.261Z","type":"spec-approved","module":"ticket-review","specHash":"a721bde88c705e4b6fa3b1d26557b1d0882f75c372ef6d9d486fe59f0db0806e"}
+{"ts":"2026-11-14T08:04:17.697Z","type":"spec-approved","module":"worker","specHash":"55f040b896e63e5958e311b791fdb29c6d5565dc927b69031f6cd18c34ae22b1"}
+{"ts":"2026-11-14T08:04:22.400Z","type":"module-status","module":"worker","from":"completed","to":"planned"}
+{"ts":"2026-11-14T08:04:22.440Z","type":"feature-status","module":"worker","feature":"email-outbox","from":null,"to":"pending"}
+{"ts":"2026-11-14T08:04:22.480Z","type":"feature-status","module":"ticket-review","feature":"review-email-outbox","from":null,"to":"pending"}

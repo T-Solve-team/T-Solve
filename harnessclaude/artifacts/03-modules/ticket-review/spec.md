@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-14 | STORY-010 | The review email is composed when the decision commits and queued in the worker email outbox; the per-decision review-notification job, which loaded the decision, ticket and writer at send time, is removed (KAN-162) | Worker STORY-004 adds a shared outbox so the sender never reads the business database; user chose that every email goes through it |
 | 2026-11-10 | STORY-013 | The Expired list reports and sorts by the expiry time and previous status that JOB-02 stores, keeping the derived values only for tickets without them (KAN-307) | KAN-156 shipped derived values until JOB-02 stored the real ones (KAN-157, changeset 025); user chose to keep the derived values for EXPIRED rows whose columns are null instead of a backfill changeset |
 | 2026-11-08 | STORY-013 | Serve Expired tickets and send them back to the Review Queue from stored data, storing one SEND_BACK review decision per ticket and returning it in Review History (KAN-156) | KAN-158 served the Expired page from MSW only; user chose review_decision for SEND_BACK, SEND_BACK in History, derived expiry fields and project.review_range with a 3-day default |
 | 2026-11-08 | STORY-014 | JOB-02 sets overdue Pending review and Changes requested tickets to Expired at 00:00 Vietnam time in every Active Workspace, through a JobRunr recurring job that fans out one tenant job per Workspace (KAN-157) | UC-33 and GBR-10; user chose the JobRunr fan-out, ticket columns plus a per-Project log line (no decision or audit row), and a 15-minute retry up to 3 attempts. STORY-012 and STORY-013 are taken by KAN-154 and KAN-156 |
@@ -144,12 +145,12 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
 
 - As a ticket writer, I want an email with the review decision and its reason or comment so that I learn about it without opening T-Solve.
 - Acceptance:
-  - AC-010.1: WHEN a Reject or Request Changes decision commits, THE backend SHALL enqueue, after the commit, one review notification job per decided ticket in the decision's Workspace, identified by that ticket's review decision id. WHEN an Approve decision commits, THE backend SHALL enqueue no notification job.
-  - AC-010.2: WHEN a review notification job runs, THE worker SHALL load the review decision, its ticket and the writer's account in that Workspace and send one plain-text email through the KAN-162 SMTP sender to the writer's account email, with the matching decision subject, the ticket's source ticket key and the stored reason or comment.
-  - AC-010.3: IF enqueueing a notification job fails or job queueing is disabled in the API process, THEN THE decision SHALL stay committed and THE API SHALL return the same success response without sending an email.
-  - AC-010.4: IF SMTP delivery fails while a job runs, THEN THE worker SHALL fail that job so the job queue retries it, and THE committed decision SHALL be unaffected.
-  - AC-010.5: IF the decision no longer exists, is an Approve decision, or its ticket has no writer account, THEN THE job SHALL complete without sending an email.
-  - AC-010.6: THE notification enqueue and job SHALL not write the recipient address, reason or comment to application logs.
+  - AC-010.1: WHEN a Reject or Request Changes decision commits, THE backend SHALL, after the commit and in the decision's Workspace, queue one email per decided ticket in the worker email outbox (worker STORY-004). WHEN an Approve decision commits, THE backend SHALL queue no email.
+  - AC-010.2: WHEN the backend queues a review email, THE backend SHALL compose it from the committed decision: addressed to the writer's account email, with the subject "Ticket rejected" for Reject or "Changes requested for your ticket" for Request Changes, and a plain-text body with no HTML body that holds the ticket's source ticket key and the stored reason (Reject) or comment (Request Changes).
+  - AC-010.3: IF queueing a review email fails or job queueing is disabled in the API process, THEN THE decision SHALL stay committed and THE API SHALL return the same success response without sending an email.
+  - AC-010.4: IF SMTP delivery of a queued review email fails, THEN THE worker email outbox SHALL retry it under worker AC-004.7, and THE committed decision SHALL be unaffected.
+  - AC-010.5: IF a decided ticket has no writer account, THEN THE backend SHALL queue no email for that ticket and SHALL still queue the emails of the other decided tickets.
+  - AC-010.6: THE review email queueing SHALL not write the recipient address, reason or comment to application logs.
 
 ### STORY-011: Read Review History in the production Workspace (KAN-159)
 

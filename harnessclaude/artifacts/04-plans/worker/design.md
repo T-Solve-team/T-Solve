@@ -160,3 +160,135 @@ Focused unit/config tests, PostgreSQL-backed JobRunr serialization and dispatch 
 ## STORY-003: Active Workspaces for recurring jobs (KAN-157)
 
 `WorkerTenantService` gains `Set<UUID> activeWorkspaceIds()`. It is abstract, so the future platform adapter must implement it from the catalog, and it binds nothing on the calling thread (AC-003.1). `MockWorkerTenantService` returns an unmodifiable copy of its configured Active allow-list, never a Suspended or unlisted UUID (AC-003.2). The only consumer is ticket-review's JOB-02 fan-out (STORY-014). No payload, runtime or storage change.
+
+# STORY-004: Shared email outbox (KAN-162 change, 2026-11-14)
+
+Spec: STORY-004 and the reworded AC-001.1 / AC-001.2. This replaces the per-decision `review-notification` job of ticket-review STORY-010.
+
+## Architecture Overview
+
+```text
+ any backend feature (API or worker process)          worker process (profile worker)
+ ───────────────────────────────────────────          ──────────────────────────────────────────────
+ business tx commits                                   JobRunr recurring job "worker-email-outbox" (every 30 s)
+   └─ AFTER_COMMIT listener composes the email           └─ EmailOutboxDispatchHandler
+        └─ EmailOutboxService.queue(OutboundEmail)            1. claim due PENDING rows (SKIP LOCKED, lease)
+             └─ INSERT email_outbox (PENDING) ──► Jobs DB ◄── 2. per row: Workspace Active? → SmtpEmailSender.send
+                                                              3. mark SENT / back off / FAILED
+                                                              4. delete rows finished > 30 days ago
+```
+
+Callers never touch JobRunr. The dispatcher never opens a Workspace database: a row holds everything needed to send it (AC-004.5). The Workspace check uses `WorkerTenantService.isWorkspaceActive`, which reads the platform catalog, not tenant data.
+
+## Data Model
+
+Table `email_outbox` in the Jobs database, created by its own Liquibase changelog (Key Decisions):
+
+| Column | Type | Notes |
+|---|---|---|
+| `email_outbox_id` | `uuid` PK | returned by `queue` |
+| `workspace_id` | `uuid not null` | captured from the bound Workspace |
+| `recipient` | `varchar(320) not null` | one mailbox, already validated |
+| `subject` | `varchar(255) not null` | no CR/LF |
+| `body_text` | `text not null` | |
+| `body_html` | `text null` | caller-escaped |
+| `status` | `varchar(10) not null` | `PENDING`, `SENT`, `FAILED` (check constraint) |
+| `attempt_count` | `int not null default 0` | attempts started |
+| `next_attempt_at` | `timestamptz not null` | creation time on insert; lease or backoff afterwards |
+| `created_at` | `timestamptz not null` | |
+| `finished_at` | `timestamptz null` | send time for SENT, give-up time for FAILED |
+
+Indexes: partial `(next_attempt_at, created_at) where status = 'PENDING'` for the claim; `(finished_at) where status <> 'PENDING'` for retention.
+
+## Key Decisions
+
+| Decision | Choice | Alternatives Considered | Rationale |
+|---|---|---|---|
+| Where the email lives | `email_outbox` in the Jobs database (user, 2026-11-14) | content in the JobRunr payload; an outbox per tenant database | User wants one shared table any feature can write to; JobRunr payloads stay UUID-only (NFR-5). |
+| How sending starts | Callers only insert; a JobRunr recurring job polls (user) | insert + one JobRunr job per email | New emails need no JobRunr knowledge; no row is stranded by a failed enqueue. Costs up to one interval of delay. |
+| Schema management | Second Liquibase changelog `db/jobs-changelog/db.changelog-master.yaml`, run by a `SpringLiquibase` bean on the Jobs pool whenever `tsolve.worker.enabled` (user) | `CREATE TABLE IF NOT EXISTS` script at startup | Keeps the team's migration tooling and history; Liquibase's lock serialises API and worker starting together. The tenant changelog stays unchanged. |
+| Recurring job | `scheduleRecurrently("worker-email-outbox", Duration.ofSeconds(interval), new EmailOutboxDispatchRequest())`, registered on `ApplicationReadyEvent`, like ticket-review's `ReviewExpiryRegistration` | Spring `@Scheduled` | One recurring definition shared by every worker instance, visible in JobRunr storage; the claim below still makes concurrent runs safe. |
+| Claim | One short transaction: `select … where status = 'PENDING' and next_attempt_at <= now() order by created_at limit :batch for update skip locked`, then `attempt_count = attempt_count + 1, next_attempt_at = now() + lease`; commit before any SMTP call | hold the row lock while sending | No database lock is held across SMTP waits. A dispatcher that dies mid-send leaves a lease that expires, so the row is retried (at least once, as the spec says). |
+| Retry schedule | Attempt 1 when due; after failure 1 wait 5 min, after failure 2 wait 15 min; failure 3 → FAILED. Also FAILED on any failure later than `created_at + 60 min` | exponential with jitter | Three attempts end about 20 minutes after creation, well inside the hour (AC-004.7). Values in `tsolve.worker.email.backoff` (`5m,15m`). |
+| Suspended Workspace | Checked before the attempt is claimed: no SMTP, no `attempt_count` change, `next_attempt_at` moved by one interval; FAILED once `now() > created_at + 60 min` (user) | fail at once; send anyway | GBR-38, with the same one-hour bound as delivery failures (AC-004.9). Eligibility lookup errors are treated the same way. |
+| Retention | Each run deletes up to `batch-size` rows with `finished_at < now() - retention` (default `P30D`) | a separate daily job | Keeps deletes small and needs no second schedule (AC-004.10). |
+| Database access | `JdbcClient` over the Jobs pool, exposed by `JobRunrRuntime.jobsDataSource()`; not a Spring `DataSource` bean | JPA entity | The pool must not become a candidate business `DataSource` (AC-002.13); JPA is bound to the business database. |
+| Message model | `OutboundEmail(recipient, subject, bodyText, bodyHtml)` record in `worker/dto`; shared validation in `EmailAddressRules` | separate request types per feature | One shape for queue and send; AC-001.3 and AC-004.2 use the same checks. |
+| SMTP sender | `ReviewNotificationSender` becomes `SmtpEmailSender.send(OutboundEmail)`; `MimeMessageHelper(multipart = bodyHtml != null, UTF-8)` with `setText(text, html)` | keep `SimpleMailMessage` for text | `SimpleMailMessage` cannot carry HTML; one helper path builds both forms (AC-001.1, AC-001.2). |
+| Sender missing | If the worker has no `SmtpEmailSender` (no `spring.mail.host`), the dispatch run fails before claiming any row | claim and fail rows | Rows must not burn attempts because of local configuration; JobRunr shows the failed run. |
+
+Decided in planning: batch size 20 (`tsolve.worker.email.batch-size`); lease 5 minutes (`lease`), longer than one batch of SMTP timeouts (20 × 13 s).
+
+### Dispatch run, step by step (builder check, 2026-11-14)
+
+All times come from an injected `java.time.Clock` (bean `workerClock`, `Clock.systemUTC()` by default) and are passed to SQL as parameters, never `now()`, so tests move time without waiting. One run of `EmailOutboxDispatchHandler`:
+
+1. **Sender check** — no `SmtpEmailSender` bean → throw before touching rows (edge case 7).
+2. **Expire leases** — rows `PENDING` with `attempt_count > 0` whose `next_attempt_at` (the lease end) has passed and who were never re-scheduled are, by construction, attempts with no outcome. They need no special step: they are simply due again, and the claim in step 3 decides them with the same rule as a reported failure, because a claimed attempt is counted when it starts (decided: a lease-expired attempt is a failed attempt, user, AC-004.7).
+3. **Claim** — in one transaction `select … for update skip locked` the due rows (`status = 'PENDING' and next_attempt_at <= :now`, `order by created_at`, `limit :batch`). For each locked row, in this order:
+   - `attempt_count >= 3` (the third attempt was claimed and never finished) or (`attempt_count > 0` and `:now > created_at + 60 min`) → `FAILED`, `finished_at = :now`. Not sent.
+   - Workspace not Active, or `isWorkspaceActive` throws → if `:now > created_at + 60 min` then `FAILED`, else `next_attempt_at = :now + interval`, `attempt_count` unchanged. Not sent. A throw affects only that row; the batch continues (AC-004.9).
+   - Otherwise → `attempt_count + 1`, `next_attempt_at = :now + lease`, kept for sending.
+   Commit. A row that is not claimed by this run (locked by another dispatcher) is skipped (AC-004.8).
+4. **Send** each kept row, outside any transaction, then update it with a guard `where email_outbox_id = :id and attempt_count = :claimedCount and status = 'PENDING'`:
+   - accepted → `SENT`, `finished_at = :sentAt`.
+   - `DeliveryException` → if `attempt_count = 3` or `:now > created_at + 60 min` → `FAILED`; else `next_attempt_at = :now + backoff[attempt_count - 1]` (5 min after attempt 1, 15 min after attempt 2). The 60-minute check uses the failure time, as the spec says; a scheduled `next_attempt_at` may lie past the hour, and that attempt still runs.
+5. **Retention** — `delete … where email_outbox_id in (select … where status <> 'PENDING' and finished_at < :now - retention limit :batch)`. Larger backlogs drain over later runs; the AC-004.10 test uses fewer than 20 rows.
+
+A row that was never attempted because the dispatcher was down is attempted once when it comes due, whatever its age; only a failure after the hour marks it FAILED.
+
+### Contracts (builder check)
+
+- `EmailOutboxService.queue(OutboundEmail) → UUID`. Throws `InvalidOutboundEmailException` (fixed message "Invalid outbound email", AC-004.2, also used by `SmtpEmailSender` for AC-001.3), `EmailOutboxUnavailableException` (fixed message "Email outbox unavailable", AC-004.3: no bound Workspace counts as invalid input; a database error maps here). Both extend `EmailOutboxException`. No cause is attached when the cause text can carry content.
+- "Not configured" (AC-004.3) = no `EmailOutboxService` bean: `EmailOutboxConfiguration` is `@ConditionalOnProperty(tsolve.worker.enabled=true)`, like `WorkerConfiguration`, and callers take it through `ObjectProvider` (ticket-review AC-010.3).
+- The Workspace is read from `WorkerTenantService.currentWorkspaceId()`. Queueing does not check eligibility; a Suspended Workspace's row is held by the dispatcher (AC-004.9).
+- Mailbox rule: `InternetAddress.parse(value, true)`, exactly one non-group address, `validate()`, stored as `getAddress()` (display name dropped), at most 320 characters. Subject: not blank, no `\r` or `\n`, at most 255 characters. Text body: not blank. Over-long values are invalid input.
+- Properties `tsolve.worker.email.{interval=30s, backoff=5m,15m, lease=5m, batch-size=20, retention=30d}` in `EmailOutboxProperties`.
+- `EmailOutboxRegistration` registers the recurring job only when the background job server runs (`JobRunrRuntime.isAutoStartup()`, i.e. the `worker` profile); `EmailOutboxService` exists in the API too.
+- Test fixtures: `ReviewNotificationSenderIT` already runs Mailpit and `JobRunrTenantIT` PostgreSQL through Testcontainers; `EmailOutboxIT` reuses both.
+
+## File Structure
+
+```text
+backend/src/main/java/vn/tsolve/worker/
+├── client/SmtpEmailSender.java                 (replaces ReviewNotificationSender)
+├── config/JobRunrRuntime.java                  (+ jobsDataSource())
+├── config/EmailOutboxConfiguration.java        (SpringLiquibase on the Jobs pool, outbox beans)
+├── config/EmailOutboxProperties.java           (interval, backoff, lease, batch-size, retention)
+├── dto/OutboundEmail.java
+├── dto/EmailOutboxDispatchRequest.java
+├── repository/EmailOutboxRepository.java       (JdbcClient: insert, claim, mark, delete)
+├── service/EmailOutboxService.java
+├── service/impl/EmailOutboxServiceImpl.java
+├── service/impl/EmailOutboxDispatchHandler.java
+├── service/impl/EmailOutboxRegistration.java
+└── util/EmailAddressRules.java
+backend/src/main/resources/db/jobs-changelog/db.changelog-master.yaml (+ 001-email-outbox.yaml)
+backend/src/test/java/vn/tsolve/worker/
+├── client/SmtpEmailSenderTest.java, SmtpEmailSenderIT.java   (renamed from ReviewNotificationSender*)
+├── service/impl/EmailOutboxServiceImplTest.java
+├── service/impl/EmailOutboxDispatchHandlerTest.java
+└── EmailOutboxIT.java                          (PostgreSQL Jobs DB + Mailpit)
+```
+
+`module.md` paths gain `backend/src/main/resources/db/jobs-changelog/**`.
+
+## External Dependencies
+
+No new library: Spring Boot Mail (`MimeMessageHelper`), Liquibase and JobRunr are already on the classpath; Mailpit and PostgreSQL Testcontainers are the existing fixtures.
+
+## Edge Cases & Risks
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test |
+|---|---|---|---|---|---|---|
+| 1 | STORY-004 | Concurrency | Two dispatchers run the same tick | Critical | `SKIP LOCKED` + lease: each due row is attempted once per attempt (AC-004.8) | `EmailOutboxIT`, two threads |
+| 2 | STORY-004 | Error cascade | Worker stops after SMTP accepted, before SENT | High | Lease expires; counted as a failed attempt; retried (a duplicate is accepted, spec Out of Scope) or FAILED after the third | `EmailOutboxDispatchHandlerTest` (no duplicate-delivery assertion) |
+| 3 | STORY-004 | Timing | Dispatcher down for over an hour | High | A row never attempted is attempted once; on failure it is FAILED (past 60 min) | `EmailOutboxDispatchHandlerTest` |
+| 4 | STORY-004 | Tenancy | Row of a Suspended or unknown Workspace | High | Not sent, no attempt counted; FAILED after 60 min (AC-004.9) | `EmailOutboxIT` with the mock allow-list |
+| 5 | STORY-004 | Input | Recipient list or group, CR/LF in subject, blank text | High | Rejected before insert (AC-004.2) | `EmailOutboxServiceImplTest` |
+| 6 | STORY-004 | Environment | API runs without `tsolve.worker.enabled` | High | No `EmailOutboxService` bean; callers handle its absence (ticket-review AC-010.3) | `WorkerConfigurationTest` |
+| 7 | STORY-004 | Environment | Worker without SMTP host | Medium | Dispatch run fails before claiming; rows untouched | `EmailOutboxDispatchHandlerTest` |
+| 8 | STORY-004 | Compliance | Errors or logs carry addresses or bodies | High | Fixed messages and counts only (AC-004.11) | log-capture assertions |
+| 9 | STORY-004 | Integrity | API and worker run the Jobs changelog at the same time | Medium | Liquibase lock serialises; the second run applies nothing | `EmailOutboxIT` startup |
+| 10 | STORY-001 | Input | HTML body with Unicode | Medium | multipart/alternative, both parts UTF-8 and unchanged (AC-001.2) | `SmtpEmailSenderIT` |
+| 11 | STORY-004 | Scale | Large backlog | Low | 20 rows per run, oldest first; the rest wait for the next tick | `EmailOutboxIT` |

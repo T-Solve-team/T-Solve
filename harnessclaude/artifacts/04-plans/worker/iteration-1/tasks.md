@@ -1,7 +1,7 @@
 ---
 module: worker
 date: 2026-11-07
-total_tasks: 3
+total_tasks: 4
 owner: Dev
 ---
 
@@ -56,3 +56,16 @@ Spec: artifacts/03-modules/worker/spec.md
 **Files:** `backend/src/main/java/vn/tsolve/worker/service/WorkerTenantService.java`, `backend/src/main/java/vn/tsolve/worker/service/mock/MockWorkerTenantService.java`; test `backend/src/test/java/vn/tsolve/worker/service/mock/MockWorkerTenantServiceTest.java` (create or extend).
 **Dependencies:** worker STORY-002 (completed).
 **Verification:** AC-003.1 and AC-003.2 tests; `mvn verify`; `sdd.ts trace worker STORY-003`.
+
+## Task 4: Shared email outbox and dispatcher (KAN-162)
+
+**Story:** STORY-004, STORY-001
+**Feature:** email-outbox
+**Description:** Implement AC-004.1–004.12 and the reworded AC-001.1/001.2 (master design "STORY-004"). Thin TDD slices in one feature: (a) `OutboundEmail` + `EmailAddressRules` + `SmtpEmailSender` (rename of `ReviewNotificationSender`, MIME text or multipart); (b) Jobs changelog + `EmailOutboxRepository` + `EmailOutboxService.queue`; (c) `EmailOutboxDispatchHandler` (claim, Workspace check, send, backoff, FAILED, retention) and its recurring registration. Cover design edge cases 1–11.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/worker/config/{JobRunrRuntime,WorkerConfiguration}.java`, `backend/src/main/resources/application.yml`, `application-worker.yml`, `.env.example`, `backend/README-worker.md`.
+- Rename: `worker/client/ReviewNotificationSender.java` → `SmtpEmailSender.java`, and its two tests.
+- Create: `worker/config/{EmailOutboxConfiguration,EmailOutboxProperties}.java`, `worker/dto/{OutboundEmail,EmailOutboxDispatchRequest}.java`, `worker/repository/EmailOutboxRepository.java`, `worker/service/EmailOutboxService.java`, `worker/service/impl/{EmailOutboxServiceImpl,EmailOutboxDispatchHandler,EmailOutboxRegistration}.java`, `worker/util/EmailAddressRules.java`, `backend/src/main/resources/db/jobs-changelog/{db.changelog-master,001-email-outbox}.yaml`.
+- Test: `worker/service/impl/{EmailOutboxServiceImplTest,EmailOutboxDispatchHandlerTest}.java`, `worker/EmailOutboxIT.java`, update `worker/config/WorkerConfigurationTest.java`.
+**Dependencies:** STORY-002 runtime (completed). ticket-review Task 19 builds on it in the same branch.
+**Verification:** tests named with each AC id; PostgreSQL Jobs DB + Mailpit IT; `mvn verify` (tests + spotless:check); `sdd.ts trace worker STORY-001` and `STORY-004`.

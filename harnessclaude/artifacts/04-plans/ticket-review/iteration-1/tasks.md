@@ -1,7 +1,7 @@
 ---
 module: ticket-review
 date: 2026-11-01
-total_tasks: 18
+total_tasks: 19
 owner: Dev
 ---
 
@@ -182,3 +182,12 @@ Master: artifacts/04-plans/ticket-review/design.md
 **Files:** `backend/src/main/java/vn/tsolve/ticket/entity/Ticket.java`, `ticket/repository/TicketRepository.java`, `ticket/dto/TicketReviewView.java`, `ticket/service/impl/TicketReviewReadServiceImpl.java`; `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated` (regenerated); tests `review/ExpiredTicketsApiIT.java`.
 **Dependencies:** Task 16 (Expired list), Task 17 (changeset 025 and JOB-02).
 **Verification:** `ExpiredTicketsApiIT` tests named AC-013.3/AC-013.4 for a CHANGES_REQUESTED ticket with stored columns, a null-columns ticket and the expiredAt sort across both; `mvn verify`; `generate:api` with no diff after regeneration; `sdd.ts trace ticket-review STORY-013`.
+
+## Task 19: Review email through the worker outbox (KAN-162)
+
+**Story:** STORY-010
+**Feature:** review-email-outbox
+**Description:** Implement the changed AC-010.1–010.6 (master design "KAN-162 change"). `ReviewNotificationEnqueuer` composes each Reject / Request Changes email after commit with a new `ReviewNotificationComposer` and queues it through `EmailOutboxService`; delete `ReviewNotificationJobHandler`. Rewrite the existing STORY-010 tests against the outbox. Test first.
+**Files:** `backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java`, `ReviewNotificationComposer.java` (create), `ReviewNotificationJobHandler.java` (delete); tests `backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotification*`.
+**Dependencies:** worker Task 4 (`email-outbox`), same branch `feat/KAN-162-worker-email-outbox`.
+**Verification:** tests named AC-010.1–010.6, including a PostgreSQL test that a row is stored only after commit, never after rollback, and none for Approve or a ticket with no writer; `mvn verify`; `sdd.ts trace ticket-review STORY-010`.

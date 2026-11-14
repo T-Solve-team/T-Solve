@@ -392,14 +392,15 @@
       "lastUpdated": "2026-10-24T23:56:42.775Z"
     },
     "worker": {
-      "status": "completed",
-      "currentPhase": "evaluate",
+      "status": "planned",
+      "currentPhase": "plan",
       "features": {
         "review-notification-smtp": "passing",
         "tenant-jobs": "passing",
-        "active-workspaces": "passing"
+        "active-workspaces": "passing",
+        "email-outbox": "pending"
       },
-      "lastUpdated": "2026-11-08T08:11:10.600Z",
+      "lastUpdated": "2026-11-14T08:04:22.439Z",
       "branch": "feat/worker",
       "repos": [
         "default"
@@ -477,9 +478,10 @@
         "review-queue-events-hardening": "passing",
         "review-send-back-api": "passing",
         "review-expiry-job": "passing",
-        "review-expired-stored-columns": "passing"
+        "review-expired-stored-columns": "passing",
+        "review-email-outbox": "pending"
       },
-      "lastUpdated": "2026-11-10T02:14:00.291Z",
+      "lastUpdated": "2026-11-14T08:04:22.480Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
