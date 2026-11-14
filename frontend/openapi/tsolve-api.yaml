@@ -882,11 +882,12 @@ paths:
     get:
       tags: [jira-app]
       operationId: getJiraReviewFeedback
-      summary: Read the latest change request for the verified writer of this issue (MSG64).
+      summary: Read the latest change request (MSG64) or Reject reason (REJECTED) for the verified writer of this issue.
       description: >
         Requires a verified Forge principal, registered Workspace, linked active Account and authorized issue.
-        The Workspace is resolved only from the verified cloudId. Returns no feedback when the issue has no
-        current Changes requested Solution Form owned by that Account in the verified Project.
+        The Workspace is resolved only from the verified cloudId. Returns MSG64 for a Changes requested Solution
+        Form ticket and REJECTED (ticket-review AC-009.13) for a Rejected one, owned by that Account in the
+        verified Project; no feedback otherwise, or when the reviewer has no name.
       security:
         - forgeInvocationToken: []
       parameters:
@@ -2941,7 +2942,9 @@ components:
           oneOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
-          description: MSG64 with manager_name and comment from the committed review decision.
+          description: >
+            MSG64 with manager_name and comment from the latest Request Changes decision, or REJECTED (a Jira App
+            text, not an SRS message) with manager_name and reason from the latest Reject decision.
     ReviewDecisionResult:
       type: object
       required: [count]

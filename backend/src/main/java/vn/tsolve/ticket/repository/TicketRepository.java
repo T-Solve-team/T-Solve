@@ -162,4 +162,19 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
             @Param("writerId") UUID writerId,
             @Param("issueKey") String issueKey,
             Pageable page);
+
+    /** The Reject decisions of the writer's Rejected Solution Form ticket of this issue, latest first (AC-009.13). */
+    @Query("""
+            select new vn.tsolve.ticket.dto.TicketReviewView$Feedback(d.reviewerId, d.feedback)
+            from Ticket t, ReviewDecisionRecord d
+            where t.id = d.ticketId and t.projectId = :projectId and t.writerId = :writerId
+                and t.ticketId = :issueKey and t.source = SOLUTION_FORM and t.status = REJECTED
+                and d.decision = 'REJECTED'
+            order by d.decidedAt desc, d.id desc
+            """)
+    List<Feedback> findJiraRejection(
+            @Param("projectId") UUID projectId,
+            @Param("writerId") UUID writerId,
+            @Param("issueKey") String issueKey,
+            Pageable page);
 }

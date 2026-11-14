@@ -325,10 +325,12 @@
         "remove-jira-search": "passing",
         "close-keeps-draft": "passing",
         "resubmit-backend": "evaluating",
-        "resubmit-forge": "evaluating"
+        "resubmit-forge": "evaluating",
+        "panel-rejected": "evaluating",
+        "panel-published": "evaluating"
       },
       "lastUpdated": "2026-11-14T19:08:51.881Z",
-      "branch": "feat/KAN-130-jira-app-resubmit",
+      "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
       ],
@@ -502,9 +504,10 @@
         "review-expired-stored-columns": "passing",
         "review-email-html": "passing",
         "review-email-outbox": "passing",
-        "review-email-link-fallback": "passing"
+        "review-email-link-fallback": "passing",
+        "jira-rejected-feedback": "evaluating"
       },
-      "lastUpdated": "2026-11-14T14:22:14.009Z",
+      "lastUpdated": "2026-11-14T17:32:18.927Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
