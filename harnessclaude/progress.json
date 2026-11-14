@@ -324,16 +324,16 @@
         "issue-panel-ui": "passing",
         "remove-jira-search": "passing",
         "close-keeps-draft": "passing",
-        "resubmit-backend": "in-progress",
-        "resubmit-forge": "pending"
+        "resubmit-backend": "evaluating",
+        "resubmit-forge": "evaluating"
       },
-      "lastUpdated": "2026-11-14T18:12:01.535Z",
-      "branch": "feat/KAN-126-jira-app-solution-form-v2",
+      "lastUpdated": "2026-11-14T19:08:51.881Z",
+      "branch": "feat/KAN-130-jira-app-resubmit",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "19215afba9f44eb4f6dfc48ddb6f85e65e68c6b0"
+        "default": "ef1fc5e0db7ee7a071ba4cd4a9ff4932fd7e1f31"
       }
     },
     "dashboard-audit": {
