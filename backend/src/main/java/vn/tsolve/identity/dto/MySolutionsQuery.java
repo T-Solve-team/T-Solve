@@ -32,8 +32,8 @@ public record MySolutionsQuery(
         Integer pageSize = read("size", size, Integer::valueOf, errors);
         TicketStatus ticketStatus = read("status", status, TicketStatus::valueOf, errors);
         UUID project = read("projectId", projectId, MySolutionsQuery::uuid, errors);
-        LocalDate fromDay = read("from", from, LocalDate::parse, errors);
-        LocalDate toDay = read("to", to, LocalDate::parse, errors);
+        LocalDate fromDay = read("from", from, MySolutionsQuery::isoDate, errors);
+        LocalDate toDay = read("to", to, MySolutionsQuery::isoDate, errors);
         if (pageNumber != null && pageNumber < 0) {
             errors.add(wrong("page"));
         }
@@ -70,6 +70,14 @@ public record MySolutionsQuery(
             throw new IllegalArgumentException("not a canonical UUID");
         }
         return id;
+    }
+
+    // LocalDate.parse also takes signed and 5-9 digit years; only yyyy-MM-dd with a four-digit year is valid.
+    private static LocalDate isoDate(String value) {
+        if (!value.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            throw new IllegalArgumentException("not a yyyy-MM-dd date");
+        }
+        return LocalDate.parse(value);
     }
 
     private static ProblemDetails.FieldError wrong(String field) {
