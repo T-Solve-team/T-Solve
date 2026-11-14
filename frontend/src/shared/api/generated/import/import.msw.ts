@@ -21,6 +21,9 @@ import type {
   ImportPreviewRowResponse,
   ImportResultResponse,
   JiraPullRequest,
+  ManualDraftResponse,
+  ManualEntryForm,
+  ManualEntryResponse,
   MessageRef,
   RemoveRowsRequest,
   UploadCsvImportBody,
@@ -769,6 +772,86 @@ export const getListImportDraftsResponseMock = (): ImportDraftSummary[] =>
     savedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
   }));
 
+export const getSaveManualEntryResponseMock = (
+  overrideResponse: Partial<Extract<ManualEntryResponse, object>> = {},
+): ManualEntryResponse => ({
+  ticketId: faker.string.uuid(),
+  message: {
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getSaveManualDraftResponseMock = (
+  overrideResponse: Partial<Extract<DraftSavedResponse, object>> = {},
+): DraftSavedResponse => ({
+  previewId: faker.number.int(),
+  savedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  message: {
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getGetManualDraftResponseMock = (
+  overrideResponse: Partial<Extract<ManualDraftResponse, object>> = {},
+): ManualDraftResponse => ({
+  previewId: faker.number.int(),
+  projectId: faker.string.uuid(),
+  ticketId: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  description: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  resolvedDate: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  symptoms: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  rootCause: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  resolutionSteps: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  workaround: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  scope: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  evidence: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.uuid(),
+      fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      fileType: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      fileSize: faker.number.int(),
+    }),
+  ),
+  savedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  ...overrideResponse,
+});
+
 export const getDownloadCsvTemplateMockHandler = (
   overrideResponse?:
     string | ((info: Parameters<HttpResponseResolver>[0]) => Promise<string> | string),
@@ -1051,6 +1134,78 @@ export const getDeleteImportDraftMockHandler = (
     options,
   );
 };
+
+export const getSaveManualEntryMockHandler = (
+  overrideResponse?:
+    | ManualEntryResponse
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, ManualEntryForm>>[0],
+      ) => Promise<ManualEntryResponse> | ManualEntryResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, ManualEntryForm>(
+    '*/api/v1/imports/manual',
+    async (info: Parameters<HttpResponseResolver<PathParams, ManualEntryForm>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSaveManualEntryResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSaveManualDraftMockHandler = (
+  overrideResponse?:
+    | DraftSavedResponse
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, ManualEntryForm>>[0],
+      ) => Promise<DraftSavedResponse> | DraftSavedResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, ManualEntryForm>(
+    '*/api/v1/imports/manual/drafts',
+    async (info: Parameters<HttpResponseResolver<PathParams, ManualEntryForm>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSaveManualDraftResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetManualDraftMockHandler = (
+  overrideResponse?:
+    | ManualDraftResponse
+    | ((
+        info: Parameters<HttpResponseResolver<{ previewId: string }>>[0],
+      ) => Promise<ManualDraftResponse> | ManualDraftResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ previewId: string }>(
+    '*/api/v1/imports/manual/drafts/:previewId',
+    async (info: Parameters<HttpResponseResolver<{ previewId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetManualDraftResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getImportMock = () => [
   getDownloadCsvTemplateMockHandler(),
   getUploadCsvImportMockHandler(),
@@ -1064,4 +1219,7 @@ export const getImportMock = () => [
   getSaveImportDraftMockHandler(),
   getListImportDraftsMockHandler(),
   getDeleteImportDraftMockHandler(),
+  getSaveManualEntryMockHandler(),
+  getSaveManualDraftMockHandler(),
+  getGetManualDraftMockHandler(),
 ];

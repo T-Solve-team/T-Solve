@@ -1303,6 +1303,95 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/imports/manual:
+    post:
+      tags: [import]
+      operationId: saveManualEntry
+      summary: >
+        Saves one resolved ticket entered by hand, with its Solution and up to 5 Evidence files, as a Published
+        Ticket of source MANUAL with an approve decision by the caller (MSG32). With draftId the Manual Draft becomes
+        the Ticket and is deleted. Missing field = MSG01, too long = MSG02, resolved date invalid or in the future =
+        MSG39, Evidence type or size = MSG34, more than 5 files = MSG72 (400); Ticket ID taken = MSG31 (409); Project
+        not Active or not managed = 403; Draft not found = 404; saving failed = MSG33 (500, Failed Import Batch).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ManualEntryForm'
+      responses:
+        '201':
+          description: Ticket created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualEntryResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/manual/drafts:
+    post:
+      tags: [import]
+      operationId: saveManualDraft
+      summary: >
+        Saves a manual entry as a Draft of source MANUAL without validating it (MSG41, GBR-26); only the Project
+        (MSG01, 403) and the Evidence files (MSG34, MSG72) are checked. With draftId it updates that Draft.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ManualEntryForm'
+      responses:
+        '200':
+          description: Draft saved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftSavedResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/manual/drafts/{previewId}:
+    get:
+      tags: [import]
+      operationId: getManualDraft
+      summary: >
+        One of the caller's Manual Drafts with its fields as saved and its Evidence files. Another user's Draft or a
+        preview that is not a Manual Draft = 404.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '200':
+          description: The Manual Draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualDraftResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
   /api/v1/chatbot/answers:
     post:
       tags: [chatbot]
@@ -2899,7 +2988,7 @@ components:
           description: Plain text.
     ImportSource:
       type: string
-      enum: [JIRA_IMPORT, CSV]
+      enum: [JIRA_IMPORT, CSV, MANUAL]
     ImportDraftSummary:
       type: object
       required: [previewId, source, projectId, rowCount, savedAt]
@@ -2929,6 +3018,122 @@ components:
           format: date-time
         message:
           $ref: '#/components/schemas/MessageRef'
+    ManualEntryForm:
+      type: object
+      description: The multipart body of a manual entry — the entry as JSON text and its new Evidence files.
+      required: [entry]
+      properties:
+        entry:
+          $ref: '#/components/schemas/ManualEntryRequest'
+        files:
+          type: array
+          maxItems: 5
+          description: New Evidence files — pdf, png, jpg, jpeg, txt, log, doc or docx, at most 10 MB each.
+          items:
+            type: string
+            format: binary
+    ManualEntryRequest:
+      type: object
+      description: >
+        Save needs projectId, ticketId, title, description, symptoms, rootCause, resolutionSteps and scope (MSG01);
+        a Draft needs only projectId.
+      properties:
+        projectId:
+          type: [string, 'null']
+          format: uuid
+        ticketId:
+          type: [string, 'null']
+          description: At most 50 characters after trimming.
+        title:
+          type: [string, 'null']
+          description: At most 200 characters.
+        description:
+          type: [string, 'null']
+          description: At most 10,000 characters.
+        resolvedDate:
+          type: [string, 'null']
+          description: Text yyyy-MM-dd, Vietnam time. A Draft keeps it as entered; Save rejects an invalid or future date (MSG39).
+        symptoms:
+          type: [string, 'null']
+        rootCause:
+          type: [string, 'null']
+        resolutionSteps:
+          type: [string, 'null']
+        workaround:
+          type: [string, 'null']
+        scope:
+          type: [string, 'null']
+        draftId:
+          type: [integer, 'null']
+          format: int64
+          description: The Manual Draft this entry was reopened from.
+        keepEvidenceIds:
+          type: [array, 'null']
+          description: The Draft's Evidence files to keep; null keeps every file, an empty list removes them all.
+          items:
+            type: string
+            format: uuid
+    ManualEntryResponse:
+      type: object
+      required: [ticketId, message]
+      properties:
+        ticketId:
+          type: string
+          format: uuid
+          description: The id of the new Ticket.
+        message:
+          $ref: '#/components/schemas/MessageRef'
+    DraftEvidenceResponse:
+      type: object
+      required: [id, fileName, fileType, fileSize]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        fileType:
+          type: string
+          description: The lower-cased extension without the dot.
+        fileSize:
+          type: integer
+          format: int64
+          description: Bytes.
+    ManualDraftResponse:
+      type: object
+      required: [previewId, projectId, evidence, savedAt]
+      properties:
+        previewId:
+          type: integer
+          format: int64
+        projectId:
+          type: string
+          format: uuid
+        ticketId:
+          type: [string, 'null']
+        title:
+          type: [string, 'null']
+        description:
+          type: [string, 'null']
+        resolvedDate:
+          type: [string, 'null']
+        symptoms:
+          type: [string, 'null']
+        rootCause:
+          type: [string, 'null']
+        resolutionSteps:
+          type: [string, 'null']
+        workaround:
+          type: [string, 'null']
+        scope:
+          type: [string, 'null']
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/DraftEvidenceResponse'
+        savedAt:
+          type: string
+          format: date-time
     ChatbotQuestion:
       type: object
       required: [question, history]

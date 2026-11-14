@@ -33,6 +33,9 @@ import type {
   ImportPreviewRowResponse,
   ImportResultResponse,
   JiraPullRequest,
+  ManualDraftResponse,
+  ManualEntryForm,
+  ManualEntryResponse,
   ProblemResponse,
   RemoveRowsRequest,
   UploadCsvImportBody,
@@ -1435,3 +1438,318 @@ export const useDeleteImportDraft = <TError = ErrorType<ProblemResponse>, TConte
 > => {
   return useMutation(getDeleteImportDraftMutationOptions(options), queryClient);
 };
+export const getSaveManualEntryUrl = () => {
+  return `/api/v1/imports/manual`;
+};
+
+/**
+ * @summary Saves one resolved ticket entered by hand, with its Solution and up to 5 Evidence files, as a Published Ticket of source MANUAL with an approve decision by the caller (MSG32). With draftId the Manual Draft becomes the Ticket and is deleted. Missing field = MSG01, too long = MSG02, resolved date invalid or in the future = MSG39, Evidence type or size = MSG34, more than 5 files = MSG72 (400); Ticket ID taken = MSG31 (409); Project not Active or not managed = 403; Draft not found = 404; saving failed = MSG33 (500, Failed Import Batch).
+
+ */
+export const saveManualEntry = async (
+  manualEntryForm: ManualEntryForm,
+  options?: Parameters<typeof http>[1],
+): Promise<ManualEntryResponse> => {
+  const formData = new FormData();
+  formData.append(`entry`, JSON.stringify(manualEntryForm.entry));
+  if (manualEntryForm.files !== undefined) {
+    manualEntryForm.files.forEach((value) => formData.append(`files`, value));
+  }
+
+  return http<ManualEntryResponse>(getSaveManualEntryUrl(), {
+    ...options,
+    method: 'POST',
+    body: formData,
+  });
+};
+
+export const getSaveManualEntryMutationKey = () => ['saveManualEntry'] as const;
+
+export const getSaveManualEntryMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveManualEntry>>,
+    TError,
+    SaveManualEntryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveManualEntry>>,
+  TError,
+  SaveManualEntryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSaveManualEntryMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveManualEntry>>,
+    SaveManualEntryMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return saveManualEntry(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveManualEntryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveManualEntry>>
+>;
+export type SaveManualEntryMutationBody = ManualEntryForm;
+export type SaveManualEntryMutationError = ErrorType<ProblemResponse>;
+export type SaveManualEntryMutationVariables = { data: ManualEntryForm };
+
+/**
+ * @summary Saves one resolved ticket entered by hand, with its Solution and up to 5 Evidence files, as a Published Ticket of source MANUAL with an approve decision by the caller (MSG32). With draftId the Manual Draft becomes the Ticket and is deleted. Missing field = MSG01, too long = MSG02, resolved date invalid or in the future = MSG39, Evidence type or size = MSG34, more than 5 files = MSG72 (400); Ticket ID taken = MSG31 (409); Project not Active or not managed = 403; Draft not found = 404; saving failed = MSG33 (500, Failed Import Batch).
+
+ */
+export const useSaveManualEntry = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof saveManualEntry>>,
+      TError,
+      SaveManualEntryMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof saveManualEntry>>,
+  TError,
+  SaveManualEntryMutationVariables,
+  TContext
+> => {
+  return useMutation(getSaveManualEntryMutationOptions(options), queryClient);
+};
+export const getSaveManualDraftUrl = () => {
+  return `/api/v1/imports/manual/drafts`;
+};
+
+/**
+ * @summary Saves a manual entry as a Draft of source MANUAL without validating it (MSG41, GBR-26); only the Project (MSG01, 403) and the Evidence files (MSG34, MSG72) are checked. With draftId it updates that Draft.
+
+ */
+export const saveManualDraft = async (
+  manualEntryForm: ManualEntryForm,
+  options?: Parameters<typeof http>[1],
+): Promise<DraftSavedResponse> => {
+  const formData = new FormData();
+  formData.append(`entry`, JSON.stringify(manualEntryForm.entry));
+  if (manualEntryForm.files !== undefined) {
+    manualEntryForm.files.forEach((value) => formData.append(`files`, value));
+  }
+
+  return http<DraftSavedResponse>(getSaveManualDraftUrl(), {
+    ...options,
+    method: 'POST',
+    body: formData,
+  });
+};
+
+export const getSaveManualDraftMutationKey = () => ['saveManualDraft'] as const;
+
+export const getSaveManualDraftMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveManualDraft>>,
+    TError,
+    SaveManualDraftMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveManualDraft>>,
+  TError,
+  SaveManualDraftMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSaveManualDraftMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveManualDraft>>,
+    SaveManualDraftMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return saveManualDraft(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveManualDraftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveManualDraft>>
+>;
+export type SaveManualDraftMutationBody = ManualEntryForm;
+export type SaveManualDraftMutationError = ErrorType<ProblemResponse>;
+export type SaveManualDraftMutationVariables = { data: ManualEntryForm };
+
+/**
+ * @summary Saves a manual entry as a Draft of source MANUAL without validating it (MSG41, GBR-26); only the Project (MSG01, 403) and the Evidence files (MSG34, MSG72) are checked. With draftId it updates that Draft.
+
+ */
+export const useSaveManualDraft = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof saveManualDraft>>,
+      TError,
+      SaveManualDraftMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof saveManualDraft>>,
+  TError,
+  SaveManualDraftMutationVariables,
+  TContext
+> => {
+  return useMutation(getSaveManualDraftMutationOptions(options), queryClient);
+};
+export const getGetManualDraftUrl = (previewId: number) => {
+  return `/api/v1/imports/manual/drafts/${previewId}`;
+};
+
+/**
+ * @summary One of the caller's Manual Drafts with its fields as saved and its Evidence files. Another user's Draft or a preview that is not a Manual Draft = 404.
+
+ */
+export const getManualDraft = async (
+  previewId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ManualDraftResponse> => {
+  return http<ManualDraftResponse>(getGetManualDraftUrl(previewId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetManualDraftQueryKey = (previewId: number) => {
+  return [`/api/v1/imports/manual/drafts/${previewId}`] as const;
+};
+
+export const getGetManualDraftQueryOptions = <
+  TData = Awaited<ReturnType<typeof getManualDraft>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getManualDraft>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetManualDraftQueryKey(previewId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getManualDraft>>> = ({ signal }) =>
+    getManualDraft(previewId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: previewId !== null && previewId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getManualDraft>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetManualDraftQueryResult = NonNullable<Awaited<ReturnType<typeof getManualDraft>>>;
+export type GetManualDraftQueryError = ErrorType<ProblemResponse>;
+
+export function useGetManualDraft<
+  TData = Awaited<ReturnType<typeof getManualDraft>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getManualDraft>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getManualDraft>>,
+          TError,
+          Awaited<ReturnType<typeof getManualDraft>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetManualDraft<
+  TData = Awaited<ReturnType<typeof getManualDraft>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getManualDraft>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getManualDraft>>,
+          TError,
+          Awaited<ReturnType<typeof getManualDraft>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetManualDraft<
+  TData = Awaited<ReturnType<typeof getManualDraft>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getManualDraft>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary One of the caller's Manual Drafts with its fields as saved and its Evidence files. Another user's Draft or a preview that is not a Manual Draft = 404.
+
+ */
+
+export function useGetManualDraft<
+  TData = Awaited<ReturnType<typeof getManualDraft>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  previewId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getManualDraft>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetManualDraftQueryOptions(previewId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

@@ -14,7 +14,11 @@ import { cells, ConfirmDialog, DataTable, type DataTableColumn } from '@/shared/
 import { useManagedProjectOptions } from '../hooks/useManagedProjects';
 
 /** "Type (Jira / CSV / Manual)" of SRS III.5.1 Drafts. */
-const TYPE_LABELS: Record<ImportSource, string> = { JIRA_IMPORT: 'Jira', CSV: 'CSV' };
+const TYPE_LABELS: Record<ImportSource, string> = {
+  JIRA_IMPORT: 'Jira',
+  CSV: 'CSV',
+  MANUAL: 'Manual',
+};
 
 /**
  * Drafts of 5.1 Import Tickets — SRS III.5.1, AC-004.2…AC-004.5: the caller's own Drafts, newest first; Open goes
