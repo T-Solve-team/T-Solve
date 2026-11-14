@@ -30,7 +30,6 @@ import vn.tsolve.ticket.exception.ReviewSourceNotEligibleException;
 import vn.tsolve.ticket.repository.ReviewDecisionRecordRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.service.TicketDecisionService;
-import vn.tsolve.ticket.service.TicketTransitions;
 
 @Service
 public class TicketDecisionServiceImpl implements TicketDecisionService {

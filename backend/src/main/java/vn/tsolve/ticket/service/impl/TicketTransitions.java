@@ -1,4 +1,4 @@
-package vn.tsolve.ticket.service;
+package vn.tsolve.ticket.service.impl;
 
 import java.time.Instant;
 import java.util.List;

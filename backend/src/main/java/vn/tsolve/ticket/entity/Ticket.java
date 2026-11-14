@@ -142,8 +142,14 @@ public class Ticket {
         updatedAt = at;
     }
 
-    /** Keeps the reviewer's feedback of the decision that moved this ticket to {@code outcome}. */
+    /**
+     * Keeps the reviewer's feedback of the decision that moved this ticket to {@code outcome}. Only after
+     * {@link #moveTo} reached {@code outcome}, so a reason never sits on a ticket in another status.
+     */
     public void recordReviewFeedback(TicketStatus outcome, String feedback) {
+        if (status != outcome) {
+            throw new IllegalStateException("Feedback for " + outcome + " on a ticket that is " + status);
+        }
         rejectionReason = outcome == TicketStatus.REJECTED ? feedback : null;
         changeRequestComment = outcome == TicketStatus.CHANGES_REQUESTED ? feedback : null;
     }

@@ -47,10 +47,10 @@ import vn.tsolve.ticket.service.ImportConfirmService;
 import vn.tsolve.ticket.service.ProjectAccess;
 import vn.tsolve.ticket.service.TicketDecisionService;
 import vn.tsolve.ticket.service.TicketDecisionService.Action;
-import vn.tsolve.ticket.service.TicketTransitions;
 import vn.tsolve.ticket.service.impl.ImportBatchRecorder;
 import vn.tsolve.ticket.service.impl.ImportConfirmServiceImpl;
 import vn.tsolve.ticket.service.impl.TicketDecisionServiceImpl;
+import vn.tsolve.ticket.service.impl.TicketTransitions;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

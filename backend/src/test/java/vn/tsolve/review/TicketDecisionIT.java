@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -27,6 +28,8 @@ import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.server.ResponseStatusException;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -38,13 +41,18 @@ import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.exception.ReviewSourceNotEligibleException;
 import vn.tsolve.ticket.service.TicketDecisionService;
 import vn.tsolve.ticket.service.TicketDecisionService.Action;
-import vn.tsolve.ticket.service.TicketTransitions;
 import vn.tsolve.ticket.service.impl.TicketDecisionServiceImpl;
+import vn.tsolve.ticket.service.impl.TicketTransitions;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({TicketClockConfig.class, TicketDecisionServiceImpl.class, TicketTransitions.class})
+@Import({
+    TicketClockConfig.class,
+    TicketDecisionServiceImpl.class,
+    TicketTransitions.class,
+    TicketDecisionIT.AfterCommitProbe.class
+})
 @RecordApplicationEvents
 class TicketDecisionIT {
     @org.springframework.boot.test.mock.mockito.MockBean
@@ -67,10 +75,14 @@ class TicketDecisionIT {
     @Autowired
     private ApplicationEvents events;
 
+    @Autowired
+    private AfterCommitProbe afterCommit;
+
     private UUID reviewerId;
 
     @BeforeEach
     void seedReviewer() {
+        afterCommit.published.clear();
         jdbc.update("delete from review_decision");
         jdbc.update("delete from evidence");
         jdbc.update("delete from ticket");
@@ -137,7 +149,7 @@ class TicketDecisionIT {
     }
 
     @Test
-    void approvePublishesOneTicketsPublishedEventAndRejectNone_AC_005_4() {
+    void approvePublishesOneTicketsPublishedEventAfterCommitAndRejectNone_AC_005_4_BUG_209() {
         UUID first = ticket("TEST-1", 10, "PENDING_REVIEW", null);
         UUID second = ticket("TEST-2", 10, "PENDING_REVIEW", null);
         UUID rejected = ticket("TEST-3", 10, "PENDING_REVIEW", null);
@@ -148,6 +160,8 @@ class TicketDecisionIT {
         assertThat(events.stream(TicketsPublishedEvent.class))
                 .singleElement()
                 .satisfies(event -> assertThat(event.ticketIds()).containsExactlyInAnyOrder(first, second));
+        assertThat(afterCommit.published).singleElement().satisfies(ids -> assertThat(ids)
+                .containsExactlyInAnyOrder(first, second));
     }
 
     @Test
@@ -212,6 +226,7 @@ class TicketDecisionIT {
             assertThat(status(first)).isEqualTo("PENDING_REVIEW");
             assertThat(status(second)).isEqualTo("PENDING_REVIEW");
             assertThat(decisionCount()).isZero();
+            assertThat(afterCommit.published).isEmpty();
         } finally {
             jdbc.execute("alter table ticket drop constraint test_reject_publish");
         }
@@ -262,5 +277,15 @@ class TicketDecisionIT {
 
     private int decisionCount() {
         return jdbc.queryForObject("select count(*) from review_decision", Integer.class);
+    }
+
+    /** Receives TicketsPublishedEvent only after the decision commits, as the real listeners do (AC-005.4). */
+    static class AfterCommitProbe {
+        final List<List<UUID>> published = new CopyOnWriteArrayList<>();
+
+        @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+        void on(TicketsPublishedEvent event) {
+            published.add(List.copyOf(event.ticketIds()));
+        }
     }
 }

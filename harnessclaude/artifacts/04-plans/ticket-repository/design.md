@@ -153,8 +153,10 @@ frontend/src/features/ticket-import/
 AC-005.1 (D9). Creation is not a transition: `Ticket.imported` keeps setting `PUBLISHED` (AC-005.2).
 
 **One transition step.** `Ticket.moveTo(TicketStatus to, Instant at)` throws `BusinessRuleException("MSG06")` (→ 409,
-D11) when `canMoveTo` is false, else sets `status` and `updatedAt`. `applyReview` calls `moveTo` first, then sets the
-reason/comment. A new `@Component TicketTransitions` (`T/service/TicketTransitions.java`) with
+D11) when `canMoveTo` is false, else sets `status` and `updatedAt`. `recordReviewFeedback(outcome, feedback)` sets the
+reason/comment and throws `IllegalStateException` unless `moveTo` already reached `outcome`, so a reason never sits on a
+ticket in another status. A new module-internal `@Component TicketTransitions` (`T/service/impl/TicketTransitions.java`,
+like `ImportBatchRecorder`) with
 `List<UUID> move(List<Ticket> tickets, TicketStatus to, Instant at)`:
 1. checks every Ticket first and throws MSG06 before changing any (AC-005.3 — no half-moved batch in memory either);
 2. calls `moveTo` on each;
@@ -168,10 +170,10 @@ pre-check (MSG06 when not Pending review) stays: it also guards the source rule.
 
 **Not routed through the step (and why).** Bulk SQL updates keep their own `WHERE` guard, which encodes the same
 table: `ReviewExpiryRepository.expireOverdue` (`status IN ('PENDING_REVIEW','CHANGES_REQUESTED')` → EXPIRED) and
-`TicketRepository.sendBack` (service checks EXPIRED first). Import Finish keeps its batched event (AC-003.9).
+`TicketRepository.sendBack` (`t.status = 'EXPIRED'`, and the service checks EXPIRED first under the row lock). Import Finish keeps its batched event (AC-003.9).
 `ponytail:` loading every expired Ticket as an entity just to run `moveTo` would cost one row read per Ticket for no
 new protection.
 
 **Files.** Modify `T/entity/TicketStatus.java`, `T/entity/Ticket.java`, `T/service/impl/TicketDecisionServiceImpl.java`,
-`T/event/TicketsPublishedEvent.java` (javadoc: not only import). Create `T/service/TicketTransitions.java`,
-`T/event/TicketsUnpublishedEvent.java`. Tests `TT/entity/TicketStatusTest.java`, `TT/service/TicketStatusTransitionsTest.java`.
+`T/event/TicketsPublishedEvent.java` (javadoc: not only import). Create `T/service/impl/TicketTransitions.java`,
+`T/event/TicketsUnpublishedEvent.java`. Tests `TT/entity/TicketStatusTest.java`, `TT/service/impl/TicketTransitionsTest.java`.

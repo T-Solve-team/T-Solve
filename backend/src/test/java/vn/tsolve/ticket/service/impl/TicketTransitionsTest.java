@@ -1,4 +1,4 @@
-package vn.tsolve.ticket.service;
+package vn.tsolve.ticket.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,7 +21,7 @@ import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.event.TicketsUnpublishedEvent;
 
-class TicketStatusTransitionsTest {
+class TicketTransitionsTest {
 
     private static final Instant AT = Instant.parse("2026-11-13T00:00:00Z");
 

@@ -75,11 +75,25 @@ class TicketStatusTest {
         assertThatThrownBy(() -> imported().moveTo(EXPIRED, Instant.now())).isInstanceOf(BusinessRuleException.class);
     }
 
+    @Test
+    void reviewFeedbackIsKeptOnlyOnATicketInThatStatus_AC_005_1() {
+        Ticket ticket = imported();
+        ReflectionTestUtils.setField(ticket, "status", PENDING_REVIEW);
+
+        assertThatThrownBy(() -> ticket.recordReviewFeedback(REJECTED, "Wrong cause"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(ticket.getRejectionReason()).isNull();
+
+        ticket.moveTo(REJECTED, Instant.now());
+        ticket.recordReviewFeedback(REJECTED, "Wrong cause");
+        assertThat(ticket.getRejectionReason()).isEqualTo("Wrong cause");
+    }
+
     static Ticket imported() {
         return Ticket.imported(
                 "KAN-1",
                 null,
-                TicketSource.values()[0],
+                TicketSource.SOLUTION_FORM,
                 null,
                 "Title",
                 null,

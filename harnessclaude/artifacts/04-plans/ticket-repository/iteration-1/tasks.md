@@ -183,10 +183,10 @@ New `TicketTransitions.move(tickets, to, at)`: check all, then move all, then pu
 (to PUBLISHED) or new `TicketsUnpublishedEvent` (to UNPUBLISHED) with every id. `TicketDecisionServiceImpl.decide`
 uses it, so review Approve publishes `TicketsPublishedEvent`. Bulk SQL (expiry, send back) and import Finish unchanged.
 **Files:**
-- Create: `T/service/TicketTransitions.java`, `T/event/TicketsUnpublishedEvent.java`
+- Create: `T/service/impl/TicketTransitions.java`, `T/event/TicketsUnpublishedEvent.java`
 - Modify: `T/entity/TicketStatus.java`, `T/entity/Ticket.java`, `T/service/impl/TicketDecisionServiceImpl.java`, `T/event/TicketsPublishedEvent.java`
 - Test: `TT/entity/TicketStatusTest.java` (AC-005.1 every one of the 36 pairs, AC-005.2 `Ticket.imported`),
-  `TT/service/TicketStatusTransitionsTest.java` (AC-005.3 mixed batch → MSG06 and no status changed, AC-005.4 one
+  `TT/service/impl/TicketTransitionsTest.java` (AC-005.3 mixed batch → MSG06 and no status changed, AC-005.4 one
   event with all ids, AC-005.5 one unpublished event, no event for REJECTED/CHANGES_REQUESTED); existing
   `review/TicketDecisionIT` and `ImportConfirm*` tests stay green.
 **Dependencies:** none
