@@ -188,3 +188,31 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
   put an empty ticket in the Review Queue.
 - The daily Draft reminder email (worker job, own recurring id and mail sender, reuses `WorkerTenantService` only) is
   a separate Jira issue.
+
+## Change — 2026-11-14: Draft reminder email (STORY-011, KAN-336, Tasks 11–12)
+
+Branch `feat/KAN-336-jira-app-draft-reminder`, cut from the KAN-126 branch (Close keeps a Draft is not on `main` yet);
+rebased onto `main` once PR #203 merges.
+
+```
+JobRunr recurring "jira-app-draft-reminder"  0 8 * * *  Asia/Ho_Chi_Minh   (DraftReminderRegistration)
+  └─ DraftReminderDispatchHandler          for each WorkerTenantService.activeWorkspaceIds()
+       └─ DraftReminderWorkspaceHandler    runInTenant: writers with an open Draft (ticket's SolutionDraftService)
+            └─ enqueue(jobId = UUID(workspace, account, date), DraftReminderEmailRequest)   ← one per writer per day
+                 └─ DraftReminderEmailHandler   runInTenant: active Account (identity) + its open Drafts → DraftReminderMailer
+```
+
+| Decision | Chosen | Alternatives | Rationale |
+|---|---|---|---|
+| Where the code lives | `vn.tsolve.jiraapp` (handlers, mailer); the open-Draft query in `ticket` (`SolutionDraftService`) | in `worker`; in `ticket-review` | User 14/11: do not change Dương's `worker`/`ticket-review` code; only use `WorkerTenantService`, `TenantExecutionService`, `JobRunrRuntime` |
+| Schedule | own recurring id `jira-app-draft-reminder`, `0 8 * * *`, Asia/Ho_Chi_Minh | reuse JOB-02's run | A shared id would overwrite JOB-02; 08:00 avoids JOB-02's 00:00 |
+| One email per writer per day (AC-011.5) | JobRunr job id = name-based UUID of workspace + account + date; JobRunr ignores a second enqueue with the same id | a "last reminded" column | No schema change; a retried dispatch cannot mail twice |
+| Retry per writer (AC-011.4) | one JobRunr job per writer, JobRunr's default retries | one job per Workspace | A failed address does not resend the others |
+| Mail sender | own `DraftReminderMailer` (`@Profile("worker")`, needs `spring.mail.host`), plain text, from `TSOLVE_SMTP_FROM` | reuse `ReviewNotificationSender` | Its subjects and wording are review decisions; it is Dương's class |
+| No sender configured (AC-011.6) | the Workspace handler checks the mailer once, logs one warning and enqueues nothing | fail every writer job | Avoids a burst of failing jobs with no SMTP |
+| Open Draft | `solution_draft` row whose `jira_issue_key` has no `ticket` (any source, as "the issue's ticket"), creator ACTIVE | also check Project membership | The spec says nothing of membership; a Draft stays the writer's |
+| Jira link | `JIRA_SITE_URL` (already read by `tracker`) + `/browse/` + key; omitted when empty | per-Workspace site registry | No registry yet (platform); one dev site today |
+| Logs (AC-011.7) | Workspace id, account id, counts, error class only | — | NF 3 |
+
+Decided in planning: "last saved" is `solution_draft.updated_at`; dates format `yyyy-MM-dd` in Asia/Ho_Chi_Minh; the
+singular subject is used for exactly one open Draft (builder check).

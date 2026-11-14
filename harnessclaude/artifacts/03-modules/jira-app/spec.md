@@ -9,7 +9,7 @@ depth: Normal
 
 The T-Solve Jira App (Forge UI Kit, `jira-app/`) and the Jira App API endpoints it calls
 (`/api/v1/jira-app/**`). STORY-001 to STORY-008 (KAN-126): Solution Form, AI Rewrite, Issue Panel (STORY-003, STORY-006
-and STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
+and STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. STORY-011 (KAN-336): daily Draft reminder email. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
 33, 36, System Messages), RESEARCH-003, RESEARCH-004, the `ticket-review` spec (STORY-009, STORY-012), the `chatbot`
 spec (STORY-005 to STORY-007). Terms: **user** = the active T-Solve Account linked to the Jira account in the FIT
 `principal`; **Project** = the ACTIVE T-Solve Project whose `jira_project_key` is the issue's project key;
@@ -33,6 +33,7 @@ an issue has at most one.
 | 2026-11-14 | STORY-008, STORY-009 | Remove the Published-ticket search from the Jira App: AC-008.4, AC-008.5, AC-008.6 and AC-008.8 are removed, STORY-009 (3.4 Published Ticket Preview, AC-009.1, AC-009.2) is retired. The panel keeps the Solution status only (AC-008.1 to AC-008.3, AC-008.7); `GET /api/v1/jira-app/tickets/search`, `GET /api/v1/jira-app/tickets/{ticketId}` and the panel's "search allowed" flag are removed; `search` is no longer a dependency. Out of Scope gains the search | User decision in the KAN-126 dev-site test (14/11): no Published-ticket search in Jira; it stays on the T-Solve web app. The SRS puts UC-26 search, 3.4 and MSG76 in the Jira App — this is a deviation the user will agree with the team. User chose to remove the UI and the backend endpoints, so no code is left that nothing calls |
 | 2026-11-14 | STORY-005, STORY-006 | Close keeps a Draft instead of submitting an empty ticket: AC-005.1 reworded (closing the form — Close or the dialog's close control — stores the Draft and shows MSG41), new AC-005.5 (no Save as draft button, no ticket on close, the server never stores an empty Solution); STORY-006 retired (AC-006.1, AC-006.2, AC-006.3 removed, MSG70 no longer shown); the solution endpoint no longer takes "all empty = Close". The Draft reminder email moves to a separate issue (Out of Scope) | KAN-126 dev-site test (14/11): the team's Review Queue never holds an empty ticket, so the empty Solution of AC-006.2 must not reach it; with Close saving the Draft a separate Save as draft button is redundant (user 14/11). Deviation from the SRS (Save as draft button, MSG70) to agree with the team |
 | 2026-11-14 | STORY-005 | AC-005.1: closing the form shows the flag "Saved as draft" instead of MSG41 | User in the dev-site test (14/11): the short text says what Close did |
+| 2026-11-14 | STORY-011 (new) | Add STORY-011 (KAN-336): a daily worker job emails each writer one plain-text list of their open Drafts (issue key, last saved date, Jira link) at 08:00 Asia/Ho_Chi_Minh; one email per writer per day, retried per writer, no email without an open Draft; `worker` and `identity` added to Required interfaces | User decisions of 14/11: Close keeps a Draft (STORY-005), so writers need a reminder instead of an empty ticket; daily digest per person; the job reuses `worker`'s tenant loop and SMTP settings without changing `worker`'s or `ticket-review`'s jobs |
 
 ## Requirements
 
@@ -125,6 +126,19 @@ an issue has at most one.
   - AC-010.11: IF the FIT user is not linked to an active T-Solve user, THEN THE server SHALL answer `POST /api/v1/jira-app/questions` with 403 MSG62 and call no AI.
   - AC-010.12: THE Jira App SHALL keep the conversation only while the page is open; it SHALL store no question or answer itself and SHALL log no question or answer text.
 
+### STORY-011: Remind writers of their unsubmitted Drafts
+- As a Ticket Resolver, I want a daily email listing the Solutions I left as Drafts so that I finish and submit them.
+- Terms: **reminder job** = the worker job of this story; **open Draft** = a Solution Form Draft (STORY-005) whose
+  issue's ticket does not exist; **writer** = the active Account that owns an open Draft.
+- Acceptance:
+  - AC-011.1: WHILE the worker runs with jobs enabled, THE server SHALL run the reminder job every day at 08:00 Asia/Ho_Chi_Minh, under its own recurring job id (not shared with any other job), once for each active Workspace.
+  - AC-011.2: WHEN the reminder job runs for a Workspace, THE server SHALL send exactly one email to each writer of that Workspace and SHALL send no email to an Account without an open Draft, to an inactive Account or for a Draft whose issue's ticket exists.
+  - AC-011.3: THE email SHALL go to the writer's Account email, with the subject "You have 1 unsubmitted Solution draft in T-Solve" for one open Draft and "You have N unsubmitted Solution drafts in T-Solve" for N of them (N > 1), and a plain-text body with one line per open Draft, newest saved first — the issue key, the date it was last saved (yyyy-MM-dd, Asia/Ho_Chi_Minh) and, when the Jira site URL is configured, a link made of that URL, `/browse/` and the issue key — followed by the line "Open the issue in Jira and use Continue draft in the T-Solve panel to submit it." It SHALL contain no Solution text.
+  - AC-011.4: IF sending a writer's email fails, THEN THE server SHALL retry that writer's email by itself, without sending again to the other writers.
+  - AC-011.5: IF the reminder job runs again for a Workspace on the same day, THEN THE server SHALL not send a writer a second email that day.
+  - AC-011.6: IF no mail sender is configured in the worker, THEN THE reminder job SHALL send nothing and log one warning per run.
+  - AC-011.7: THE reminder job SHALL log only ids, counts and error types — never an email address, an issue key list or Draft content.
+
 ## Out of Scope
 - Evidence in the Jira App (attach, MSG34, MSG72, the Evidence list of 3.4): Forge UI calls carry at most 500 KB
   (RESEARCH-003); Evidence is added on the T-Solve web app (user, 2026-11-01, kept 2026-11-11). KAN-126 "Done when"
@@ -136,8 +150,8 @@ an issue has at most one.
   MSG04 and MSG76 in the panel; formerly AC-008.4 to AC-008.6, AC-008.8 and STORY-009): search stays on the T-Solve
   web app (UC-26) — user, 2026-11-14; a deviation from the SRS to agree with the team.
 - Evidence download — web app.
-- Reminding writers of their unsubmitted Drafts — a daily email digest per writer from a worker job, in a separate
-  Jira issue (user, 2026-11-14); it does not change `worker`'s or `ticket-review`'s existing jobs.
+- Turning the Draft reminder off per person, HTML or Vietnamese email, reminders by other channels — a later version
+  (STORY-011 sends a plain-text English email, like `ticket-review`'s notifications).
 - Images in the question (OCR or a vision model, attaching them to the created issue) — a later version
   (RESEARCH-004).
 - Recording "Solved" on the server — after the chatbot ratings backend (KAN-182).
@@ -178,6 +192,8 @@ Jira's navigation are checked in a spike first (RESEARCH-004, open questions).
 | `ai` (Trần Hải Anh) | Chat client (`LlmClient`) for the AI draft and rewrite — prompts owned here, a configured stand-in for demos |
 | `chatbot` (Trần Hải Anh) | Answer a question with history for a given T-Solve user (`ChatbotAnswerService`, chatbot STORY-005 to STORY-007), callable from the Jira App API — to agree with the owner |
 | `tracker` | Skip the suggestion job for an issue created with label `tsolve-asked` — a change of tracker AC-011.8 (tracker spec, KAN-22) |
+| `worker` (Phạm Tùng Dương) | Used, not changed: `WorkerTenantService` (active Workspaces, run in a Workspace), `JobRunrRuntime` scheduler for a recurring job and per-writer jobs, the SMTP settings (`spring.mail.*`, `TSOLVE_SMTP_FROM`) of the `worker` profile (STORY-011) |
+| `identity` | An Account's email and status by id (STORY-011) |
 
 ## Definition of Done
 - [ ] Every acceptance criterion has a test whose name starts with its AC id
