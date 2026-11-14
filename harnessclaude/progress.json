@@ -172,10 +172,23 @@
       "lastUpdated": "2026-10-22T14:21:22.778Z"
     },
     "wiki": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:22.980Z"
+      "status": "planned",
+      "currentPhase": "plan",
+      "features": {
+        "wiki-view-rule": "pending",
+        "wiki-browse-api": "pending",
+        "wiki-home-ui": "pending",
+        "wiki-folder-api": "pending",
+        "wiki-folder-ui": "pending",
+        "wiki-upload-api": "pending",
+        "wiki-indexing": "pending",
+        "wiki-upload-ui": "pending",
+        "wiki-trash-api": "pending",
+        "wiki-trash-ui": "pending",
+        "wiki-permissions-api": "pending",
+        "wiki-permissions-ui": "pending"
+      },
+      "lastUpdated": "2026-11-13T16:53:08.292Z"
     },
     "ticket-repository": {
       "status": "implementing",
