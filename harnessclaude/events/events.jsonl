@@ -1429,3 +1429,7 @@
 {"ts":"2026-11-14T08:39:03.094Z","type":"spec-approved","module":"ticket-review","specHash":"8ca5fab301424f0d3289249e5235a5ec226b1fb3dd7f6b21964fd453140159fa"}
 {"ts":"2026-11-14T08:47:24.019Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"98ec9c7382a17815f6f001e3a6432225c4bc83b9"}
 {"ts":"2026-11-14T08:47:24.252Z","type":"commit-recorded","module":"worker","repo":"default","sha":"98ec9c7382a17815f6f001e3a6432225c4bc83b9"}
+{"ts":"2026-11-14T07:43:10.873Z","type":"feature-status","module":"ticket-repository","feature":"manual-evidence-contract","from":null,"to":"pending"}
+{"ts":"2026-11-14T07:43:11.146Z","type":"feature-status","module":"ticket-repository","feature":"manual-evidence-backend","from":null,"to":"pending"}
+{"ts":"2026-11-14T07:43:11.445Z","type":"feature-status","module":"ticket-repository","feature":"manual-evidence-tab","from":null,"to":"pending"}
+{"ts":"2026-11-14T07:46:09.685Z","type":"spec-approved","module":"ticket-repository","specHash":"c1e6b7ba8fe209df9d060218884feeecce8e01ff0ac31f5daf3dd94777bb6fd0"}
