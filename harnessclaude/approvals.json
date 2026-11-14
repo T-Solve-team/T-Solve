@@ -1184,8 +1184,8 @@
     }
   },
   "jira-app": {
-    "specHash": "bf9f83eec4a3f7e215529ac337c6df763927139d7812c0ffa230a34de307b6c8",
-    "approvedAt": "2026-11-14T07:44:40.691Z",
+    "specHash": "a63ebfa40796fee066e169113d530ceaa492a76e7ef63dab1ed1d9d899366f44",
+    "approvedAt": "2026-11-14T07:58:56.751Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1202,7 +1202,7 @@
       "AC-004.2": "WHEN the submission succeeds, THE Jira App SHALL close the form and show MSG66.",
       "AC-004.3": "IF the issue's ticket already exists, THEN THE server SHALL not create a Solution Form ticket and SHALL answer 409 MSG31.",
       "AC-004.4": "IF the server cannot be reached or answers 5xx, THEN THE Jira App SHALL retry automatically up to 3 times and, if it still fails, show MSG69 and keep the form open with its content.",
-      "AC-005.1": "WHEN the user closes the form (its Close button or the dialog's close control), THE server SHALL store the five sections as the user's only Solution Form Draft for the issue, without validation and without creating a ticket, and THE Jira App SHALL close the form and show MSG41.",
+      "AC-005.1": "WHEN the user closes the form (its Close button or the dialog's close control), THE server SHALL store the five sections as the user's only Solution Form Draft for the issue, without validation and without creating a ticket, and THE Jira App SHALL close the form and show the flag \"Saved as draft\" (a Jira App label, not an SRS message — user, 2026-11-14).",
       "AC-005.2": "WHEN the form opens and the user has a Draft for the issue, THE Jira App SHALL fill the sections from the Draft instead of the AI draft.",
       "AC-005.3": "THE server SHALL show a Draft only to its creator.",
       "AC-005.4": "IF saving the Draft fails, THEN THE Jira App SHALL show MSG06 and keep the form open with its content.",
