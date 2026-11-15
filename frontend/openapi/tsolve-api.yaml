@@ -10,6 +10,8 @@ info:
 tags:
   - name: wiki
     description: Wiki Spaces, folders and documents (SRS UC-38 to UC-50).
+  - name: workspace
+    description: Admin Workspace Setup and company information (UC-10, UC-11).
   - name: users
     description: Workspace User List (frontend mock proposal, SRS III.1.3.1).
   - name: departments
@@ -34,6 +36,8 @@ tags:
     description: Calls from the T-Solve Jira App through Forge Remote (Forge Invocation Token).
   - name: triage
     description: Suggestion History and result detail (KAN-149), served by the backend triage module.
+  - name: projects
+    description: Projects of the caller's Department, their Jira link and members (SRS UC-15, UC-16, screen 3.2; KAN-127).
   - name: dashboard
     description: Knowledge Dashboard figures, screen 9.1.
 paths:
@@ -162,6 +166,184 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           description: Unknown, deleted or non-viewable document (MSG110).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/projects/connection-test:
+    post:
+      tags: [projects]
+      operationId: testProjectConnection
+      summary: Test a Jira project connection (Project Manager only).
+      description: >
+        Read-only lookup and settings prefill. 400 MSG01 for missing/null/blank key,
+        MSG02 for a nonblank key over 20 UTF-16 units, MSG06 for unreadable JSON.
+        401 MSG07 for anonymous callers; 403 MSG08 for non-Project Managers, inactive
+        callers or missing/inactive own Department. 409 MSG48 for invalid key format
+        (without Jira), NOT_FOUND or DENIED (including missing service account and
+        Jira 401/403/other 4xx except 429), with tracker_name Jira and no field error.
+        409 MSG49 on jiraProjectKey for an Active link anywhere, foreign Removed link,
+        protected previous manager or canonical-key conflict, with tracker_name Jira
+        and department_name of the owning Department; local conflicts do not call Jira.
+        500 MSG06 for unbound Workspace or unexpected failure. 503 MSG06 for tracker
+        UNAVAILABLE (429, 5xx, timeout, transport failure or unreadable Jira response).
+        MSG01/MSG02 use field_name jiraProjectKey; MSG02 also uses max_length 20.
+        Other errors have empty params and no fieldErrors.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProjectConnectionTestRequest' }
+      responses:
+        '200':
+          description: Jira lookup is FOUND and the link is allowed; no write.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectConnectionTest' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '500': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /api/v1/projects:
+    post:
+      tags: [projects]
+      operationId: createProject
+      summary: Add or reconnect a Project (Project Manager only).
+      description: >
+        201 for a new Project, membership and audit committed; 200 for a Removed
+        Project reconnected with membership and audit committed. 400 MSG01 for a
+        jiraProjectKey that is missing, null or blank; doneStatusIds that is missing, null, empty, or holds a null, blank or unknown
+        selected id, or missing/null reviewRange; field_name names the rejected field.
+        400 MSG02 for a nonblank key over 20 UTF-16 units, with field_name
+        jiraProjectKey and max_length 20. 400 MSG44 on reviewRange for a fractional
+        numeric value, below 1 or above 2147483647, with empty params. 400 MSG06 for
+        unreadable JSON, doneStatusIds not an array or reviewRange unreadable as a number.
+        401 MSG07 for anonymous callers. 403 MSG08 for non-Project Managers, inactive
+        callers or missing/inactive own Department, including failed eligibility recheck.
+        409 MSG48 for invalid key format (without Jira), NOT_FOUND or DENIED on the
+        new read, with tracker_name Jira and no field error. 409 MSG49 on jiraProjectKey
+        for a disallowed existing/canonical link or lost create/reconnect race, with
+        tracker_name Jira and department_name of the owning Department. 500 MSG06 for
+        unbound Workspace, failed Project/membership/audit write or unexpected failure;
+        the transaction rolls back. 503 MSG06 for tracker UNAVAILABLE on either read;
+        no write. Errors other than the named field errors have no fieldErrors;
+        MSG06/MSG07/MSG08 have empty params.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateProjectRequest' }
+      responses:
+        '201':
+          description: New Project committed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Project' }
+        '200':
+          description: Removed Project reconnected.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Project' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '500': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    get:
+      tags: [projects]
+      operationId: listProjects
+      summary: List own Department Projects (Project Manager only).
+      description: >
+        200 returns the caller's own Department and all its Active and Removed Projects,
+        sorted by key, including an empty list. 401 MSG07 for anonymous callers.
+        403 MSG08 for non-Project Managers, inactive callers or missing/inactive own
+        Department. 500 MSG06 for unbound Workspace or unexpected read failure.
+        All errors have empty params and no fieldErrors. No Jira call or write.
+      responses:
+        '200':
+          description: Own Department and its Projects.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectList' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '500': { $ref: '#/components/responses/Problem' }
+  /api/v1/workspace/setup:
+    post:
+      tags: [workspace]
+      operationId: setupWorkspace
+      summary: Set up the bound Workspace once (Admin only).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorkspaceSetupRequest' }
+      responses:
+        '201':
+          description: Workspace set up; the token is never returned.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceInfo' }
+        '400':
+          description: Field error MSG01, MSG02, MSG03, MSG61, MSG153 or MSG156.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          description: WORKSPACE_ALREADY_SET_UP; refetch the session and open Workspace Settings.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/workspace:
+    get:
+      tags: [workspace]
+      operationId: getWorkspace
+      summary: Read the bound Workspace information (Admin only).
+      responses:
+        '200':
+          description: Company information; no token or token metadata.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceInfo' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: Workspace not set up (MSG60).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+    put:
+      tags: [workspace]
+      operationId: updateWorkspace
+      summary: Update company information and service account (Admin only; UC-11).
+      description: The Jira site is immutable. An absent or blank token keeps the current token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorkspaceUpdateRequest' }
+      responses:
+        '200':
+          description: Updated company information; the token is never returned.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceInfo' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: Workspace not set up (MSG60).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -319,6 +501,126 @@ paths:
         '404':
           $ref: '#/components/responses/Problem'
         '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}:
+    get:
+      tags: [projects]
+      operationId: getProject
+      summary: Project Detail header
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The Project.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectSummaryResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}/members:
+    get:
+      tags: [projects]
+      operationId: listProjectMembers
+      summary: Members of a Project
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The Project Manager first, then the other members by full name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProjectMemberResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [projects]
+      operationId: addProjectMembers
+      summary: Add Ticket Resolvers to a Project
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddProjectMembersRequest' }
+      responses:
+        '201':
+          description: Members added; the full member list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProjectMemberResponse' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}/members/{userId}:
+    delete:
+      tags: [projects]
+      operationId: removeProjectMember
+      summary: Remove a member from a Project
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Member removed; the full member list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProjectMemberResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}/member-candidates:
+    get:
+      tags: [projects]
+      operationId: searchProjectMemberCandidates
+      summary: Active Ticket Resolvers that can be added to a Project
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+        - name: q
+          in: query
+          description: Trimmed, case-insensitive substring of full name or email; at most 20 results.
+          schema: { type: string, maxLength: 100 }
+      responses:
+        '200':
+          description: Candidates by full name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MemberCandidateResponse' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
           $ref: '#/components/responses/Problem'
   /api/v1/users:
     post:
@@ -700,7 +1002,7 @@ paths:
     get:
       tags: [review]
       operationId: getReviewTicketDetail
-      summary: Frontend proposal — read-only Ticket Detail with Workspace and unpublished-content access checks.
+      summary: Read Ticket Detail within the caller's Department or writer and Project Manager access.
       parameters:
         - name: ticketId
           in: path
@@ -1012,11 +1314,12 @@ paths:
     get:
       tags: [jira-app]
       operationId: getJiraReviewFeedback
-      summary: Read the latest change request for the verified writer of this issue (MSG64).
+      summary: Read the latest change request (MSG64) or Reject reason (REJECTED) for the verified writer of this issue.
       description: >
         Requires a verified Forge principal, registered Workspace, linked active Account and authorized issue.
-        The Workspace is resolved only from the verified cloudId. Returns no feedback when the issue has no
-        current Changes requested Solution Form owned by that Account in the verified Project.
+        The Workspace is resolved only from the verified cloudId. Returns MSG64 for a Changes requested Solution
+        Form ticket and REJECTED (ticket-review AC-009.13) for a Rejected one, owned by that Account in the
+        verified Project; no feedback otherwise, or when the reviewer has no name.
       security:
         - forgeInvocationToken: []
       parameters:
@@ -1120,6 +1423,207 @@ paths:
           $ref: '#/components/responses/Problem'
         '503':
           $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/issues/{issueKey}/solution-form:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    post:
+      tags: [jira-app]
+      operationId: openSolutionForm
+      summary: >
+        Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft,
+        else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolutionFormRequest'
+      responses:
+        '200':
+          description: >
+            The answer; mayOpen false when the viewer is not linked, not a member of the issue's Project, or the
+            issue already has a Solution Form ticket.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolutionForm'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG08 — a Jira site with no registered Workspace, or no Jira user.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/issues/{issueKey}/solution:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    post:
+      tags: [jira-app]
+      operationId: submitSolution
+      summary: >
+        Creates the issue's Solution Form ticket in Pending review, which enters the Project's Review Queue, and
+        deletes the viewer's Draft (STORY-004). Every required section must be filled (400 MSG01), so an empty
+        Solution never enters the Review Queue (AC-005.5); closing the form saves a Draft instead. With `resubmit`, it
+        replaces the Solution of the viewer's ticket in Changes requested and moves that ticket back to Pending review
+        with a new due date (STORY-012).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitSolutionRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmittedTicket'
+        '400':
+          description: MSG01 (a required section is empty, `field_name` names it) or MSG02 (more than 10,000 characters in total).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG62 (not linked) or MSG08 (not a member of the issue's Project, a Jira site with no registered Workspace, or no Jira user).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '409':
+          description: >
+            MSG31 — a ticket with the issue key as its Ticket ID already exists; MSG40 — the issue's Project or its
+            Department is no longer active, so no ticket was created; MSG06 — a resubmission whose ticket is no longer
+            the viewer's ticket in Changes requested (AC-012.5).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/issues/{issueKey}/solution-draft:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    put:
+      tags: [jira-app]
+      operationId: saveSolutionDraft
+      summary: Stores the five sections, unvalidated, as the viewer's only Draft for the issue when the form is closed; the Jira App then shows "Saved as draft" (STORY-005).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolutionSections'
+      responses:
+        '204':
+          description: Saved.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG62 (not linked) or MSG08 (not a member of the issue's Project, a Jira site with no registered Workspace, or no Jira user).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/solution-rewrites:
+    post:
+      tags: [jira-app]
+      operationId: rewriteSolution
+      summary: The AI rewrite of the five sections, for 4.2 AI Rewrite Preview (STORY-007).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolutionSections'
+      responses:
+        '200':
+          description: The rewritten sections.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolutionSections'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG62 (not linked) or MSG08 (a Jira site with no registered Workspace, or no Jira user).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: >
+            MSG68 — the AI rewrite is unavailable or took too long; MSG06 — the Forge token could not be checked.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/issues/{issueKey}/panel:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    get:
+      tags: [jira-app]
+      operationId: getIssuePanel
+      summary: What 3.3 Issue Panel shows for the issue and the viewer (STORY-001, STORY-008).
+      security:
+        - forgeInvocationToken: []
+      responses:
+        '200':
+          description: The panel state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuePanel'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG08 — a Jira site with no registered Workspace, or no Jira user.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG06 — the Forge token could not be checked (its signing keys could not be fetched).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/csv/template:
     get:
       tags: [import]
@@ -1433,6 +1937,49 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/imports/history:
+    get:
+      tags: [import]
+      operationId: getImportHistory
+      summary: Import Batches of the caller's managed Projects, newest first.
+      parameters:
+        - name: projectId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: source
+          in: query
+          description: Import source; SOLUTION_FORM returns an empty page.
+          schema:
+            $ref: '#/components/schemas/TicketSource'
+        - name: dateFrom
+          in: query
+          description: First creation day, inclusive in Vietnam time.
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          description: Last creation day, inclusive in Vietnam time; before dateFrom gives MSG39.
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of Import History.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportHistoryPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/imports/manual:
     post:
       tags: [import]
@@ -1441,13 +1988,27 @@ paths:
         Saves one manually entered ticket as a Published ticket (MSG32) with a Completed Import Batch of source
         MANUAL; with draftId, deletes that Draft in the same transaction. Invalid fields = 400 listing every field
         with MSG01 / MSG02 / MSG39; Ticket ID taken = MSG31 (409); not a Project Manager of an Active Project =
-        MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404).
+        MSG08 (403); draftId not the caller's Manual Draft = MSG04 (404). Evidence type or size = MSG34,
+        more than 5 kept and new files = MSG72 (400, fieldErrors on files); storage unavailable = MSG06 (503).
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ManualTicketRequest'
+              type: object
+              required: [entry]
+              properties:
+                entry:
+                  $ref: '#/components/schemas/ManualTicketRequest'
+                files:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: string
+                    format: binary
+            encoding:
+              entry:
+                contentType: application/json
       responses:
         '201':
           description: Ticket published.
@@ -1456,7 +2017,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ImportResultResponse'
         '400':
-          description: Invalid fields (one fieldErrors entry per field).
+          description: Invalid fields (one fieldErrors entry per field); Evidence type or size = MSG34 with file_name, count = MSG72 (fieldErrors on files).
           content:
             application/problem+json:
               schema:
@@ -1469,6 +2030,12 @@ paths:
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
+        '503':
+          description: Evidence storage is not configured or is unavailable (MSG06); nothing saved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/manual/drafts:
     post:
       tags: [import]
@@ -1476,13 +2043,27 @@ paths:
       summary: >
         Saves the entry as a Manual Draft without validating any field but the Project (MSG41; no Project = MSG01, 400); with draftId,
         updates that Draft. Not a Project Manager of an Active Project = MSG08 (403); draftId not the caller's
-        Manual Draft = MSG04 (404).
+        Manual Draft = MSG04 (404). Evidence type or size = MSG34, more than 5 kept and new files = MSG72
+        (400, fieldErrors on files); storage unavailable = MSG06 (503).
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ManualTicketRequest'
+              type: object
+              required: [entry]
+              properties:
+                entry:
+                  $ref: '#/components/schemas/ManualTicketRequest'
+                files:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: string
+                    format: binary
+            encoding:
+              entry:
+                contentType: application/json
       responses:
         '200':
           description: Draft saved.
@@ -1491,7 +2072,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DraftSavedResponse'
         '400':
-          description: No Project (MSG01 on projectId).
+          description: No Project (MSG01 on projectId); Evidence type or size = MSG34 with file_name, count = MSG72 (fieldErrors on files).
           content:
             application/problem+json:
               schema:
@@ -1502,6 +2083,12 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+        '503':
+          description: Evidence storage is not configured or is unavailable (MSG06); nothing saved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/imports/manual/drafts/{previewId}:
     get:
       tags: [import]
@@ -1874,6 +2461,15 @@ components:
       schema:
         type: integer
         format: int64
+    IssueKey:
+      name: issueKey
+      in: path
+      required: true
+      description: The Jira issue key, e.g. ITSUP-1031.
+      schema:
+        type: string
+        maxLength: 50
+        pattern: '^[A-Z][A-Z0-9_]*-[1-9][0-9]*$'
   responses:
     Problem:
       description: Error (RFC 9457 Problem Details with an SRS MSG code).
@@ -1921,6 +2517,36 @@ components:
             fileName: { type: string }
             fileSize: { type: integer, format: int64 }
             canDelete: { type: boolean }
+    WorkspaceSetupRequest:
+      type: object
+      required: [companyName, jiraSiteUrl, serviceAccountEmail, serviceAccountToken]
+      properties:
+        companyName: { type: string, minLength: 1, maxLength: 100 }
+        jiraSiteUrl:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: HTTPS Jira Cloud site; a single label followed by .atlassian.net, optionally a trailing slash.
+        serviceAccountEmail: { type: string, format: email, minLength: 1, maxLength: 100 }
+        serviceAccountToken: { type: string, format: password, minLength: 1, writeOnly: true }
+    WorkspaceUpdateRequest:
+      type: object
+      required: [companyName, serviceAccountEmail]
+      properties:
+        companyName: { type: string, minLength: 1, maxLength: 100 }
+        serviceAccountEmail: { type: string, format: email, minLength: 1, maxLength: 100 }
+        serviceAccountToken:
+          type: string
+          format: password
+          writeOnly: true
+          description: Absent or blank keeps the stored token.
+    WorkspaceInfo:
+      type: object
+      required: [companyName, jiraSiteUrl, serviceAccountEmail]
+      properties:
+        companyName: { type: string }
+        jiraSiteUrl: { type: string }
+        serviceAccountEmail: { type: string, format: email }
     KnowledgeDashboard:
       type: object
       required: [period, options, outcomes, coverage, feedback, gaps, suggestions]
@@ -2124,6 +2750,7 @@ components:
           PERMISSION_CHANGE,
           TRACKER_CONFIGURATION_CHANGE,
           DEPARTMENT_CHANGE,
+          PROJECT_MEMBER_CHANGE,
         ]
     AuditEntry:
       type: object
@@ -2274,6 +2901,40 @@ components:
       required: [name]
       properties:
         name: { type: string, minLength: 1, maxLength: 50 }
+    ProjectSummaryResponse:
+      type: object
+      required: [id, jiraProjectKey, departmentName, projectManagerName, status]
+      properties:
+        id: { type: string, format: uuid }
+        jiraProjectKey: { type: string }
+        departmentName: { type: string }
+        projectManagerName: { type: [string, 'null'] }
+        status: { type: string, enum: [ACTIVE, REMOVED] }
+    ProjectMemberResponse:
+      type: object
+      required: [userId, fullName, email, role, dateAdded]
+      properties:
+        userId: { type: string, format: uuid }
+        fullName: { type: [string, 'null'] }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/ProjectRole' }
+        dateAdded: { type: string, format: date-time }
+    MemberCandidateResponse:
+      type: object
+      required: [userId, fullName, email]
+      properties:
+        userId: { type: string, format: uuid }
+        fullName: { type: [string, 'null'] }
+        email: { type: string, format: email }
+    AddProjectMembersRequest:
+      type: object
+      required: [userIds]
+      properties:
+        userIds:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { type: string, format: uuid }
     CreateUserRequest:
       type: object
       required: [email, roles]
@@ -2363,6 +3024,102 @@ components:
           type: string
         roleInProject:
           $ref: '#/components/schemas/ProjectRole'
+    ProjectConnectionTestRequest:
+      type: object
+      required: [jiraProjectKey]
+      properties:
+        jiraProjectKey:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Nonblank key; original UTF-16 length; server strips and upper-cases with Locale.ROOT.
+    CreateProjectRequest:
+      type: object
+      required: [jiraProjectKey, doneStatusIds, reviewRange]
+      properties:
+        jiraProjectKey:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Nonblank key, normalised as for the connection test.
+        doneStatusIds:
+          type: array
+          minItems: 1
+          items: { type: string }
+          description: Exact nonblank Jira status ids; duplicates collapse in first-seen order.
+        reviewRange:
+          type: number
+          multipleOf: 1
+          minimum: 1
+          maximum: 2147483647
+          description: Whole calendar days; required even when the prefill was 3.
+    TrackerStatus:
+      type: object
+      required: [id, name, done]
+      properties:
+        id: { type: string, description: Opaque nonblank Jira status id. }
+        name: { type: string, description: Nonblank Jira status name. }
+        done: { type: boolean, description: Whether the Jira status category is done. }
+    ProjectConnectionTest:
+      type: object
+      required: [jiraProjectKey, statuses, reconnect, doneStatusIds, reviewRange]
+      properties:
+        jiraProjectKey: { type: string, description: Canonical key returned by Jira. }
+        statuses:
+          type: array
+          items: { $ref: '#/components/schemas/TrackerStatus' }
+          description: Every returned status once in first-seen order; may be empty.
+        reconnect: { type: boolean, description: Eligible Removed Project of the caller's Department. }
+        projectId: { type: string, format: uuid, description: Existing public id; omitted for a new Project. }
+        doneStatusIds:
+          type: array
+          items: { type: string }
+          description: Retained stored ids or Done-category defaults; unique and possibly empty.
+        reviewRange: { type: integer, description: Stored range or 3 only when new or SQL NULL. }
+    Project:
+      type: object
+      required: [projectId, departmentId, jiraProjectKey, doneStatusIds, reviewRange, status]
+      properties:
+        projectId: { type: string, format: uuid, description: Public id retained on reconnect. }
+        departmentId: { type: string, format: uuid, description: Caller's own Department public id. }
+        jiraProjectKey: { type: string, description: Stored canonical Jira key. }
+        doneStatusIds:
+          type: array
+          items: { type: string }
+          description: Saved unique selected status ids.
+        reviewRange: { type: integer, description: Saved whole calendar days from 1 through 2147483647. }
+        status: { $ref: '#/components/schemas/ProjectStatus' }
+    ProjectStatus:
+      type: string
+      enum: [ACTIVE, REMOVED]
+    ProjectList:
+      type: object
+      required: [department, projects]
+      properties:
+        department: { $ref: '#/components/schemas/DepartmentRef' }
+        projects:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectRow' }
+          description: Own Department's Active and Removed Projects sorted by key.
+    ProjectRow:
+      type: object
+      required: [projectId, jiraProjectKey, projectManager, memberCount, status]
+      properties:
+        projectId: { type: string, format: uuid }
+        jiraProjectKey: { type: string }
+        projectManager:
+          oneOf:
+            - { $ref: '#/components/schemas/ProjectManagerRef' }
+            - { type: 'null' }
+          description: Active account in the Project Manager membership; otherwise null.
+        memberCount: { type: integer, minimum: 0, description: All memberships including the Project Manager. }
+        status: { $ref: '#/components/schemas/ProjectStatus' }
+    ProjectManagerRef:
+      type: object
+      required: [userId, fullName]
+      properties:
+        userId: { type: string, format: uuid }
+        fullName: { type: string }
     DepartmentRef:
       type: object
       required: [departmentId, name]
@@ -2872,6 +3629,14 @@ components:
         title: { type: string }
         description: { type: string }
         project: { $ref: '#/components/schemas/ProjectRef' }
+        department:
+          type: [object, 'null']
+          required: [id, name]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+        resolvedDate: { type: [string, 'null'], format: date }
+        sourceLink: { type: [string, 'null'] }
         source: { $ref: '#/components/schemas/TicketSource' }
         status: { $ref: '#/components/schemas/TicketStatus' }
         authorId: { type: [string, 'null'], format: uuid }
@@ -2900,7 +3665,9 @@ components:
           oneOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
-          description: MSG64 with manager_name and comment from the committed review decision.
+          description: >
+            MSG64 with manager_name and comment from the latest Request Changes decision, or REJECTED (a Jira App
+            text, not an SRS message) with manager_name and reason from the latest Reject decision.
     ReviewDecisionResult:
       type: object
       required: [count]
@@ -2908,6 +3675,123 @@ components:
         count:
           type: integer
           description: Number of tickets the decision was applied to (the {count} of MSG14 / MSG16 / MSG17).
+    SolutionSections:
+      type: object
+      description: The five Solution sections (GBR-33); Workaround is the only optional one. Plain text.
+      required: [symptoms, rootCause, resolutionSteps, workaround, scopeOfApplicability]
+      properties:
+        symptoms:
+          type: string
+        rootCause:
+          type: string
+        resolutionSteps:
+          type: string
+        workaround:
+          type: string
+        scopeOfApplicability:
+          type: string
+    SolutionFormRequest:
+      type: object
+      description: The issue text the Jira App read with requestJira, for the AI draft or the prefill.
+      required: [summary, description]
+      properties:
+        summary:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 32767
+          description: The issue description as plain text; empty when the issue has none.
+        resubmit:
+          type: boolean
+          default: false
+          description: >
+            True = open the resubmission form of a ticket in Changes requested ("Edit and resubmit", STORY-012); it
+            opens only while the viewer is a member and the ticket's writer and the ticket is in Changes requested.
+    SolutionFormOrigin:
+      type: string
+      description: >
+        Where the sections come from — the viewer's Draft, the AI draft, the issue text (MSG67), or the ticket's
+        current Solution (a resubmission without a Draft, AC-012.2).
+      enum: [DRAFT, AI_DRAFT, ISSUE, TICKET]
+    SolutionForm:
+      type: object
+      required: [mayOpen, origin, sections, message]
+      properties:
+        mayOpen:
+          type: boolean
+        origin:
+          anyOf:
+            - $ref: '#/components/schemas/SolutionFormOrigin'
+            - type: 'null'
+          description: Null when mayOpen is false.
+        sections:
+          anyOf:
+            - $ref: '#/components/schemas/SolutionSections'
+            - type: 'null'
+          description: Null when mayOpen is false.
+        message:
+          anyOf:
+            - $ref: '#/components/schemas/MessageRef'
+            - type: 'null'
+          description: MSG67 when the AI draft is unavailable; otherwise null.
+    SubmitSolutionRequest:
+      type: object
+      required: [summary, sections]
+      properties:
+        summary:
+          type: string
+          maxLength: 255
+          description: The issue summary, the ticket title.
+        sections:
+          $ref: '#/components/schemas/SolutionSections'
+        resubmit:
+          type: boolean
+          default: false
+          description: >
+            True = replace the Solution of the viewer's ticket in Changes requested and move it back to Pending review
+            (AC-012.4); 409 MSG06 when it is no longer in Changes requested (AC-012.5).
+    SubmittedTicket:
+      type: object
+      required: [id, ticketId, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The ticket's UUID.
+        ticketId:
+          type: string
+          description: The Ticket ID — the issue key.
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+    IssuePanel:
+      type: object
+      required: [linked, ticketStatus, hasDraft, mayOpenForm, mayResubmit]
+      properties:
+        linked:
+          type: boolean
+          description: False = the Jira account is not linked to an active T-Solve Account (MSG62); the other fields are false/null.
+        ticketStatus:
+          anyOf:
+            - $ref: '#/components/schemas/TicketStatus'
+            - type: 'null'
+          description: >
+            The status of the issue's ticket, of any source (its Ticket ID is the issue key); null = none.
+            CHANGES_REQUESTED makes the Jira App read
+            getJiraReviewFeedback for MSG64.
+        hasDraft:
+          type: boolean
+          description: The viewer has a Draft for the issue (MSG77).
+        mayOpenForm:
+          type: boolean
+          description: >
+            The viewer is a member of the issue's Project and the issue has no ticket of any source. The Jira App also checks
+            that the issue is Done before it shows the button.
+        mayResubmit:
+          type: boolean
+          description: >
+            The issue's ticket is a Solution Form ticket written by the viewer, in Changes requested, and the viewer is
+            a member of its Project: the panel shows "Edit and resubmit" (AC-012.1).
     MessageRef:
       type: object
       description: An SRS message to show, by code; the web app fills the template from params.
@@ -3127,6 +4011,69 @@ components:
           oneOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
+    ImportHistoryPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportHistoryItem'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+    ImportHistoryItem:
+      type: object
+      required: [batchId, createdAt, performedBy, project, department, source, publishedCount, removedCount, errorCount, status]
+      properties:
+        batchId:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+        performedBy:
+          type: string
+          description: Account full name, or the stored performer when no account matches.
+        project:
+          type: object
+          required: [projectId, projectKey]
+          properties:
+            projectId:
+              type: string
+              format: uuid
+            projectKey:
+              type: string
+        department:
+          type: object
+          required: [id, name]
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        source:
+          $ref: '#/components/schemas/ImportSource'
+        dateFrom:
+          type: [string, 'null']
+          format: date
+        dateTo:
+          type: [string, 'null']
+          format: date
+        fileName:
+          type: [string, 'null']
+        publishedCount:
+          type: integer
+        removedCount:
+          type: integer
+        errorCount:
+          type: integer
+        status:
+          type: string
+          enum: [COMPLETED, FAILED]
+        errorCode:
+          type: [string, 'null']
+          description: Only the first MSG code in the stored error, or null.
     JiraPullRequest:
       type: object
       required: [projectId, resolvedFrom, resolvedTo]
@@ -3220,9 +4167,14 @@ components:
           type: [integer, 'null']
           format: int64
           description: The Manual Draft this entry was reopened from.
+        keepEvidenceIds:
+          type: [array, 'null']
+          items:
+            type: string
+            format: uuid
     ManualTicketDraft:
       type: object
-      required: [previewId, projectId, savedAt]
+      required: [previewId, projectId, savedAt, evidence]
       properties:
         previewId:
           type: integer
@@ -3252,6 +4204,22 @@ components:
         savedAt:
           type: string
           format: date-time
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/ManualEvidence'
+    ManualEvidence:
+      type: object
+      required: [evidenceId, fileName, fileSize]
+      properties:
+        evidenceId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
     ChatbotQuestion:
       type: object
       required: [question, history]

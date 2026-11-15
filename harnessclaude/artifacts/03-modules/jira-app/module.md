@@ -8,6 +8,7 @@ paths:
   - jira-app/**
   - backend/src/main/java/vn/tsolve/jiraapp/**
   - backend/src/test/java/vn/tsolve/jiraapp/**
+  - backend/src/test/java/vn/tsolve/ticket/**/SolutionForm*
   - frontend/openapi/**
   - frontend/src/shared/api/generated/**
   - docs/bug-log.md
