@@ -1452,3 +1452,8 @@
 {"ts":"2026-11-15T04:51:38.289Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"2f212b192f81c70a677b3fda692127f0759fd9f8"}
 {"ts":"2026-11-15T05:30:10.750Z","type":"quick-opened","what":"ReviewStorageIT old-DB build skips wiki changesets that need pgvector (BUG-246)","files":["backend/src/test/java/vn/tsolve/review/ReviewStorageIT.java","docs/bug-log.md"]}
 {"ts":"2026-11-15T05:32:04.703Z","type":"quick-closed","what":"ReviewStorageIT old-DB build skips wiki changesets that need pgvector (BUG-246)","files":["backend/src/test/java/vn/tsolve/review/ReviewStorageIT.java","docs/bug-log.md"]}
+{"ts":"2026-11-15T05:36:05.042Z","type":"feature-status","module":"wiki","feature":"wiki-view-rule","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:05.352Z","type":"feature-status","module":"wiki","feature":"wiki-browse-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:05.666Z","type":"feature-status","module":"wiki","feature":"wiki-home-ui","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:05.984Z","type":"feature-status","module":"wiki","feature":"wiki-folder-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:06.281Z","type":"feature-status","module":"wiki","feature":"wiki-folder-ui","from":"evaluating","to":"passing"}
