@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.MapPropertySource;
+import vn.tsolve.search.scope.repository.ScopeMembershipRepository;
 import vn.tsolve.search.scope.repository.ScopeTicketRepository;
 import vn.tsolve.search.scope.service.VisibleScope;
 
@@ -18,17 +19,19 @@ class VisibleScopeSelectionTest {
     private final ScopeTicketRepository repository = mock(ScopeTicketRepository.class);
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withBean(ScopeTicketRepository.class, () -> repository)
+            .withBean(ScopeMembershipRepository.class, () -> mock(ScopeMembershipRepository.class))
             .withUserConfiguration(Providers.class);
 
     @TestConfiguration(proxyBeanMethods = false)
-    @Import({NoVisibleScope.class, DevAllVisibleScope.class})
+    @Import({MembershipVisibleScope.class, DevAllVisibleScope.class})
     static class Providers {}
 
     @Test
-    void failsClosedWhenUnsetEmptyOrOtherValue_AC_006_2_AC_006_12() {
-        runner.run(context -> assertThat(
-                        context.getBean(VisibleScope.class).of(null).isEmpty())
-                .isTrue());
+    void usesMembershipWhenUnsetEmptyOrOtherValue_AC_006_2_AC_006_12() {
+        runner.run(context -> assertThat(context)
+                .hasSingleBean(MembershipVisibleScope.class)
+                .hasSingleBean(VisibleScope.class)
+                .doesNotHaveBean(DevAllVisibleScope.class));
         for (String value : new String[] {"", "ALL", "true", "all "}) {
             runner.withInitializer(context -> context.getEnvironment()
                             .getPropertySources()
@@ -37,8 +40,7 @@ class VisibleScopeSelectionTest {
                         assertThat(context.getEnvironment().getProperty("SEARCH_DEV_SCOPE"))
                                 .isEqualTo(value);
                         assertThat(context).hasSingleBean(VisibleScope.class).doesNotHaveBean(DevAllVisibleScope.class);
-                        assertThat(context.getBean(VisibleScope.class).of(null).isEmpty())
-                                .isTrue();
+                        assertThat(context).hasSingleBean(MembershipVisibleScope.class);
                     });
         }
     }
@@ -48,7 +50,7 @@ class VisibleScopeSelectionTest {
         when(repository.activeDepartments()).thenReturn(Set.of(1L));
         when(repository.projects()).thenReturn(Set.of(7L, 9L));
         runner.withPropertyValues("SEARCH_DEV_SCOPE=all").run(context -> {
-            assertThat(context).hasSingleBean(VisibleScope.class).doesNotHaveBean(NoVisibleScope.class);
+            assertThat(context).hasSingleBean(VisibleScope.class).doesNotHaveBean(MembershipVisibleScope.class);
             var scope = context.getBean(VisibleScope.class).of(null);
             assertThat(scope.departmentIds()).containsExactly(1L);
             assertThat(scope.managedProjectIds()).containsExactlyInAnyOrder(7L, 9L);
