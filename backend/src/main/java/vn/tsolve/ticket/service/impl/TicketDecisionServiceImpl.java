@@ -20,14 +20,14 @@ import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.NotFoundException;
-import vn.tsolve.ticket.entity.ReviewDecisionRecord;
 import vn.tsolve.ticket.entity.Ticket;
+import vn.tsolve.ticket.entity.TicketDecision;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.event.ReviewFeedbackDecidedEvent;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.exception.ReviewSourceNotEligibleException;
-import vn.tsolve.ticket.repository.ReviewDecisionRecordRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.service.TicketDecisionService;
 
@@ -38,7 +38,7 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
     private static final int MAX_FEEDBACK_LENGTH = 1000;
 
     private final TicketRepository tickets;
-    private final ReviewDecisionRecordRepository decisions;
+    private final TicketDecisionRepository decisions;
     private final Clock clock;
     private final ApplicationEventPublisher events;
     private final AuditService audit;
@@ -46,7 +46,7 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
 
     public TicketDecisionServiceImpl(
             TicketRepository tickets,
-            ReviewDecisionRecordRepository decisions,
+            TicketDecisionRepository decisions,
             Clock clock,
             ApplicationEventPublisher events,
             AuditService audit,
@@ -81,13 +81,13 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
                     case CHANGES_REQUESTED -> TicketStatus.CHANGES_REQUESTED;
                 };
         Instant now = clock.instant();
-        List<ReviewDecisionRecord> history = new ArrayList<>(batch.size());
+        List<TicketDecision> history = new ArrayList<>(batch.size());
         transitions.move(batch, outcome, now);
         for (Ticket ticket : batch) {
             ticket.recordReviewFeedback(outcome, text);
-            history.add(new ReviewDecisionRecord(ticket.getId(), reviewerId, action.name(), text, now));
+            history.add(new TicketDecision(ticket.getId(), reviewerId, action.name(), text, now));
         }
-        List<ReviewDecisionRecord> saved = decisions.saveAll(history);
+        List<TicketDecision> saved = decisions.saveAll(history);
         AuditAction auditAction =
                 switch (action) {
                     case APPROVED -> AuditAction.APPROVE;
@@ -100,7 +100,7 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
         if (action != Action.APPROVED) {
             // Consumed after commit (STORY-010): the writer email never runs inside this transaction.
             events.publishEvent(new ReviewFeedbackDecidedEvent(
-                    saved.stream().map(ReviewDecisionRecord::getId).toList()));
+                    saved.stream().map(TicketDecision::getId).toList()));
         }
         return batch.size();
     }
@@ -125,7 +125,7 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
             throw new BusinessRuleException("MSG06", Map.of());
         }
         decisions.saveAll(storedIds.stream()
-                .map(id -> new ReviewDecisionRecord(id, reviewerId, "SEND_BACK", null, now))
+                .map(id -> new TicketDecision(id, reviewerId, "SEND_BACK", null, now))
                 .toList());
         return count;
     }
@@ -156,7 +156,7 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
         Instant now = clock.instant();
         transitions.move(batch, to, now);
         decisions.saveAll(batch.stream()
-                .map(ticket -> new ReviewDecisionRecord(
+                .map(ticket -> new TicketDecision(
                         ticket.getId(), reviewerId, unpublish ? "UNPUBLISH" : "REPUBLISH", null, now))
                 .toList());
         for (Ticket ticket : batch) {

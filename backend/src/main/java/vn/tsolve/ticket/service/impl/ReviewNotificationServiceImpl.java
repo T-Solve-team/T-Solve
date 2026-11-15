@@ -6,15 +6,15 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.ticket.dto.ReviewNotification;
-import vn.tsolve.ticket.repository.ReviewDecisionRecordRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
 import vn.tsolve.ticket.service.ReviewNotificationService;
 
 @Service
 public class ReviewNotificationServiceImpl implements ReviewNotificationService {
 
-    private final ReviewDecisionRecordRepository decisions;
+    private final TicketDecisionRepository decisions;
 
-    public ReviewNotificationServiceImpl(ReviewDecisionRecordRepository decisions) {
+    public ReviewNotificationServiceImpl(TicketDecisionRepository decisions) {
         this.decisions = decisions;
     }
 

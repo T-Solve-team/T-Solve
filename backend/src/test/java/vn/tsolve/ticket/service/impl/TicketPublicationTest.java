@@ -31,15 +31,15 @@ import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.NotFoundException;
-import vn.tsolve.ticket.entity.ReviewDecisionRecord;
 import vn.tsolve.ticket.entity.Ticket;
+import vn.tsolve.ticket.entity.TicketDecision;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.event.ReviewFeedbackDecidedEvent;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.event.TicketsUnpublishedEvent;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
-import vn.tsolve.ticket.repository.ReviewDecisionRecordRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 
 /** Unpublish / re-publish (STORY-009, KAN-136). */
@@ -52,7 +52,7 @@ class TicketPublicationTest {
     private static final LocalDate DUE = LocalDate.of(2026, 11, 1);
 
     private final TicketRepository tickets = mock(TicketRepository.class);
-    private final ReviewDecisionRecordRepository decisions = mock(ReviewDecisionRecordRepository.class);
+    private final TicketDecisionRepository decisions = mock(TicketDecisionRepository.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final AuditService audit = mock(AuditService.class);
     private final TicketDecisionServiceImpl service = new TicketDecisionServiceImpl(
@@ -70,8 +70,8 @@ class TicketPublicationTest {
         assertThat(savedDecisions())
                 .extracting("ticketId", "reviewerId", "decision", "feedback", "decidedAt")
                 .containsExactly(
-                        tuple(a.getId(), REVIEWER, ReviewDecisionRecord.Decision.UNPUBLISH, null, NOW),
-                        tuple(b.getId(), REVIEWER, ReviewDecisionRecord.Decision.UNPUBLISH, null, NOW));
+                        tuple(a.getId(), REVIEWER, TicketDecision.Decision.UNPUBLISH, null, NOW),
+                        tuple(b.getId(), REVIEWER, TicketDecision.Decision.UNPUBLISH, null, NOW));
         verify(audit).record(AuditAction.UNPUBLISH, "TICKET", a.getId());
         verify(audit).record(AuditAction.UNPUBLISH, "TICKET", b.getId());
         verify(events).publishEvent(new TicketsUnpublishedEvent(List.of(a.getId(), b.getId())));
@@ -94,7 +94,7 @@ class TicketPublicationTest {
         assertThat(ticket).extracting("symptoms", "resolutionSteps").containsExactly("s", "steps");
         assertThat(savedDecisions())
                 .extracting("ticketId", "reviewerId", "decision", "feedback", "decidedAt")
-                .containsExactly(tuple(ticket.getId(), REVIEWER, ReviewDecisionRecord.Decision.REPUBLISH, null, NOW));
+                .containsExactly(tuple(ticket.getId(), REVIEWER, TicketDecision.Decision.REPUBLISH, null, NOW));
         verify(audit).record(AuditAction.PUBLISH, "TICKET", ticket.getId());
         verify(events).publishEvent(new TicketsPublishedEvent(List.of(ticket.getId())));
         verify(events, never()).publishEvent(any(ReviewFeedbackDecidedEvent.class));
@@ -187,8 +187,8 @@ class TicketPublicationTest {
     }
 
     @SuppressWarnings("unchecked")
-    private List<ReviewDecisionRecord> savedDecisions() {
-        ArgumentCaptor<List<ReviewDecisionRecord>> saved = ArgumentCaptor.forClass(List.class);
+    private List<TicketDecision> savedDecisions() {
+        ArgumentCaptor<List<TicketDecision>> saved = ArgumentCaptor.forClass(List.class);
         verify(decisions).saveAll(saved.capture());
         return saved.getValue();
     }
