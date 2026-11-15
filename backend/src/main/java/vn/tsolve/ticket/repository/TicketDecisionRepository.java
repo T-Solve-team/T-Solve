@@ -9,30 +9,31 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import vn.tsolve.ticket.entity.ReviewDecisionRecord;
+import vn.tsolve.ticket.entity.TicketDecision;
 
-public interface ReviewDecisionRecordRepository extends JpaRepository<ReviewDecisionRecord, UUID> {
+public interface TicketDecisionRepository extends JpaRepository<TicketDecision, UUID> {
 
     String HISTORY_FROM = """
-            from review_decision d
+            from ticket_decision d
             join ticket t on t.ticket_id = d.ticket_id
-            join app_user u on u.id = d.project_manager_id
+            join app_user u on u.id = d.reviewer_id
             where t.project_id in (:projectIds)
+              and t.source = 'SOLUTION_FORM'
               and d.decision in (:decisions)
               and d.decided_at >= :fromInclusive
               and d.decided_at < :toExclusive
             """;
 
     String HISTORY_SELECT = """
-            select d.review_decision_id as decisionId, t.ticket_id as ticketId, t.source_ticket_id as sourceTicketId,
+            select d.ticket_decision_id as decisionId, t.ticket_id as ticketId, t.source_ticket_id as sourceTicketId,
                    t.title as title, t.project_id as projectId, d.decision as decision,
-                   d.project_manager_id as actorId, coalesce(u.full_name, u.email) as actorName,
-                   t.writer as authorName, d.decided_at as decidedAt, d.reason_or_comment as feedback
+                   d.reviewer_id as actorId, coalesce(u.full_name, u.email) as actorName,
+                   t.writer as authorName, d.decided_at as decidedAt, d.feedback as feedback
             """;
 
     /** Review History, newest first; the decision id breaks ties so pages never overlap (STORY-011). */
     @Query(
-            value = HISTORY_SELECT + HISTORY_FROM + " order by d.decided_at desc, d.review_decision_id desc",
+            value = HISTORY_SELECT + HISTORY_FROM + " order by d.decided_at desc, d.ticket_decision_id desc",
             countQuery = "select count(*) " + HISTORY_FROM,
             nativeQuery = true)
     Page<HistoryRow> findHistoryNewestFirst(
@@ -43,7 +44,7 @@ public interface ReviewDecisionRecordRepository extends JpaRepository<ReviewDeci
             Pageable page);
 
     @Query(
-            value = HISTORY_SELECT + HISTORY_FROM + " order by d.decided_at asc, d.review_decision_id asc",
+            value = HISTORY_SELECT + HISTORY_FROM + " order by d.decided_at asc, d.ticket_decision_id asc",
             countQuery = "select count(*) " + HISTORY_FROM,
             nativeQuery = true)
     Page<HistoryRow> findHistoryOldestFirst(
@@ -80,17 +81,17 @@ public interface ReviewDecisionRecordRepository extends JpaRepository<ReviewDeci
     /** Review email facts; no row when the ticket has no writer account. */
     @Query(value = """
                     select d.decision as decision, u.email as email, t.source_ticket_id as ticketKey,
-                           d.reason_or_comment as feedback, t.ticket_id as ticketId, t.title as ticketTitle,
+                           d.feedback as feedback, t.ticket_id as ticketId, t.title as ticketTitle,
                            p.jira_project_key as projectName,
                            coalesce(nullif(btrim(r.full_name), ''), r.email) as reviewerName,
                            u.full_name as writerName, d.decided_at as decidedAt
-                    from review_decision d
-                    join ticket t on t.ticket_id = d.ticket_id
+                    from ticket_decision d
+                    join ticket t on t.ticket_id = d.ticket_id and t.source = 'SOLUTION_FORM'
                     join app_user u on u.id = t.writer_id
                     left join project p on (p.public_id = t.project_id
                         or lpad(to_hex(p.project_id), 32, '0')::uuid = t.project_id)
-                    left join app_user r on r.id = d.project_manager_id
-                    where d.review_decision_id = :decisionId
+                    left join app_user r on r.id = d.reviewer_id
+                    where d.ticket_decision_id = :decisionId
                     """, nativeQuery = true)
     Optional<WriterNotificationRow> findWriterNotification(@Param("decisionId") UUID decisionId);
 

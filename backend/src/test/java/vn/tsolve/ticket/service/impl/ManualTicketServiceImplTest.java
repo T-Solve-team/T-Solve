@@ -42,9 +42,8 @@ import vn.tsolve.ticket.dto.ManualTicketRequest;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportBatch;
 import vn.tsolve.ticket.entity.ImportBatchStatus;
-import vn.tsolve.ticket.entity.ReviewDecision;
 import vn.tsolve.ticket.entity.Ticket;
-import vn.tsolve.ticket.entity.TicketReviewDecision;
+import vn.tsolve.ticket.entity.TicketDecision;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
@@ -53,9 +52,9 @@ import vn.tsolve.ticket.repository.ImportBatchRepository;
 import vn.tsolve.ticket.repository.ImportPreviewEvidenceRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
 import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
-import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ProjectAccess;
 
 class ManualTicketServiceImplTest {
@@ -71,7 +70,7 @@ class ManualTicketServiceImplTest {
     static final UUID TICKET = UUID.fromString("22222222-2222-2222-2222-222222222222");
 
     final TicketRepository tickets = mock(TicketRepository.class);
-    final TicketReviewDecisionRepository decisions = mock(TicketReviewDecisionRepository.class);
+    final TicketDecisionRepository decisions = mock(TicketDecisionRepository.class);
     final ImportBatchRepository batches = mock(ImportBatchRepository.class);
     final ProjectAccess projects = mock(ProjectAccess.class);
     final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
@@ -196,11 +195,11 @@ class ManualTicketServiceImplTest {
         assertThat(b.getErrorCount()).isZero();
         assertThat(b.getRemovedCount()).isZero();
 
-        ArgumentCaptor<TicketReviewDecision> decision = ArgumentCaptor.forClass(TicketReviewDecision.class);
+        ArgumentCaptor<TicketDecision> decision = ArgumentCaptor.forClass(TicketDecision.class);
         verify(decisions).save(decision.capture());
         assertThat(decision.getValue())
                 .extracting("ticketId", "reviewer", "decision")
-                .containsExactly(TICKET, PM.getName(), ReviewDecision.APPROVE);
+                .containsExactly(TICKET, PM.getName(), TicketDecision.Decision.APPROVED);
         verify(audit).record(AuditAction.IMPORT, "PROJECT", PROJECT, Map.of("importBatchId", 7L, "created", 1));
 
         assertThat(result)

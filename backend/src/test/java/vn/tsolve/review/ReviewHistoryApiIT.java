@@ -2,6 +2,8 @@ package vn.tsolve.review;
 
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -267,7 +269,7 @@ class ReviewHistoryApiIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].ticketId").value(ticket.toString()))
                 .andExpect(jsonPath("$.content[0].comment").value("Attach the log"));
-        TwoTenantDatabases.tenantA().update("delete from review_decision where ticket_id = ?", ticket);
+        TwoTenantDatabases.tenantA().update("delete from ticket_decision where ticket_id = ?", ticket);
         TwoTenantDatabases.tenantA().update("delete from ticket where ticket_id = ?", ticket);
     }
 
@@ -275,14 +277,10 @@ class ReviewHistoryApiIT {
     void returnsStoredSendBackAndFiltersIt_AC_013_8() throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         UUID ticket = ticket(db, OPS, "HIS-SEND-BACK", "PENDING_REVIEW");
-        UUID decision = db.queryForObject(
-                """
-                insert into review_decision (ticket_id, project_manager_id, decision, decided_at)
-                values (?, ?, 'SEND_BACK', now()) returning review_decision_id
-                """,
-                UUID.class,
-                ticket,
-                MANAGER);
+        UUID decision = db.queryForObject("""
+                insert into ticket_decision (ticket_id, reviewer_id, decision, decided_at)
+                values (?, ?, 'SEND_BACK', now()) returning ticket_decision_id
+                """, UUID.class, ticket, MANAGER);
         try {
             for (var request : java.util.List.of(
                     get("/api/v1/review-history"), get("/api/v1/review-history").param("decision", "SEND_BACK"))) {
@@ -305,7 +303,32 @@ class ReviewHistoryApiIT {
                     .andExpect(jsonPath("$.content[*].decisionId").value(contains(decision.toString())))
                     .andExpect(jsonPath("$.page.totalElements").value(1));
         } finally {
-            db.update("delete from review_decision where review_decision_id = ?", decision);
+            db.update("delete from ticket_decision where ticket_decision_id = ?", decision);
+            db.update("delete from ticket where ticket_id = ?", ticket);
+        }
+    }
+
+    @Test
+    void leavesOutTheApproveDecisionOfAnImportedTicket_AC_010_5() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        UUID ticket = db.queryForObject("""
+                insert into ticket (source_ticket_id, project_id, source, status, writer, title, symptoms,
+                                    root_cause, resolution_steps, scope)
+                values ('HIS-MANUAL', ?, 'MANUAL', 'PUBLISHED', 'Lan Pham', 'Login fails', 'Error', 'Token',
+                        'Restart', 'Users')
+                returning ticket_id
+                """, UUID.class, OPS);
+        // Even with a reviewer id, a decision on an imported Ticket is not a review decision (D43).
+        UUID decision = db.queryForObject("""
+                insert into ticket_decision (ticket_id, reviewer_id, reviewer, decision, decided_at)
+                values (?, ?, 'pm-signin', 'APPROVED', now() + interval '1 hour') returning ticket_decision_id
+                """, UUID.class, ticket, MANAGER);
+        try {
+            inAcme(get("/api/v1/review-history"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[*].decisionId").value(not(hasItem(decision.toString()))));
+        } finally {
+            db.update("delete from ticket_decision where ticket_decision_id = ?", decision);
             db.update("delete from ticket where ticket_id = ?", ticket);
         }
     }
@@ -328,31 +351,19 @@ class ReviewHistoryApiIT {
                     default -> decision;
                 };
         UUID ticket = ticket(db, project, key, status);
-        return db.queryForObject(
-                """
-                insert into review_decision (ticket_id, project_manager_id, decision, reason_or_comment, decided_at)
+        return db.queryForObject("""
+                insert into ticket_decision (ticket_id, reviewer_id, decision, feedback, decided_at)
                 values (?, ?, ?, ?, cast(? as timestamptz))
-                returning review_decision_id
-                """,
-                UUID.class,
-                ticket,
-                reviewer,
-                decision,
-                text,
-                at);
+                returning ticket_decision_id
+                """, UUID.class, ticket, reviewer, decision, text, at);
     }
 
     private static UUID ticket(JdbcTemplate db, UUID project, String key, String status) {
-        return db.queryForObject(
-                """
+        return db.queryForObject("""
                 insert into ticket (source_ticket_id, project_id, source, status, writer, title, symptoms,
                                     root_cause, resolution_steps, scope)
                 values (?, ?, 'SOLUTION_FORM', ?, 'Minh Tran', 'Login fails', 'Error', 'Token', 'Restart', 'Users')
                 returning ticket_id
-                """,
-                UUID.class,
-                key,
-                project,
-                status);
+                """, UUID.class, key, project, status);
     }
 }

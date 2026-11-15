@@ -762,6 +762,227 @@ export const useSendBackTickets = <TError = ErrorType<ProblemResponse>, TContext
 > => {
   return useMutation(getSendBackTicketsMutationOptions(options), queryClient);
 };
+export const getUnpublishTicketsUrl = () => {
+  return `/api/v1/reviews/unpublish`;
+};
+
+/**
+ * Validate and authorize the entire unique 1–500 UUID batch in the signed-in Workspace. Only PUBLISHED tickets
+ * of Projects the caller manages are eligible. Atomically set UNPUBLISHED, store one UNPUBLISH review decision
+ * per ticket with the caller, the time and no reason, and record one UNPUBLISH audit entry per ticket. Invalid
+ * shapes return 400, a missing Workspace ticket returns 404 MSG04, an unmanaged Project returns 403 MSG08, and
+ * a ticket that is not Published returns 409 MSG06; every refused batch leaves all tickets unchanged.
+ * @summary Unpublishes Published tickets (UC-25, MSG22).
+ */
+export const unpublishTickets = async (
+  approveTicketsRequest: ApproveTicketsRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<ReviewDecisionResult> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ReviewDecisionResult>(getUnpublishTicketsUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(approveTicketsRequest),
+  });
+};
+
+export const getUnpublishTicketsMutationKey = () => ['unpublishTickets'] as const;
+
+export const getUnpublishTicketsMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unpublishTickets>>,
+    TError,
+    UnpublishTicketsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unpublishTickets>>,
+  TError,
+  UnpublishTicketsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUnpublishTicketsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unpublishTickets>>,
+    UnpublishTicketsMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return unpublishTickets(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnpublishTicketsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unpublishTickets>>
+>;
+export type UnpublishTicketsMutationBody = ApproveTicketsRequest;
+export type UnpublishTicketsMutationError = ErrorType<ProblemResponse>;
+export type UnpublishTicketsMutationVariables = { data: ApproveTicketsRequest };
+
+/**
+ * @summary Unpublishes Published tickets (UC-25, MSG22).
+ */
+export const useUnpublishTickets = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof unpublishTickets>>,
+      TError,
+      UnpublishTicketsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof unpublishTickets>>,
+  TError,
+  UnpublishTicketsMutationVariables,
+  TContext
+> => {
+  return useMutation(getUnpublishTicketsMutationOptions(options), queryClient);
+};
+export const getRepublishTicketsUrl = () => {
+  return `/api/v1/reviews/republish`;
+};
+
+/**
+ * Validate and authorize the entire unique 1–500 UUID batch in the signed-in Workspace. Only UNPUBLISHED tickets
+ * of Projects the caller manages are eligible. Atomically set PUBLISHED, leaving Solution, Evidence, feedback
+ * and review due date unchanged, store one REPUBLISH review decision per ticket with the caller, the time and
+ * no reason, and record one PUBLISH audit entry per ticket. Invalid shapes return 400, a missing Workspace
+ * ticket returns 404 MSG04, an unmanaged Project returns 403 MSG08, and a ticket that is not Unpublished
+ * returns 409 MSG06; every refused batch leaves all tickets unchanged.
+ * @summary Re-publishes Unpublished tickets without a new review (UC-25, MSG24).
+ */
+export const republishTickets = async (
+  approveTicketsRequest: ApproveTicketsRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<ReviewDecisionResult> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ReviewDecisionResult>(getRepublishTicketsUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(approveTicketsRequest),
+  });
+};
+
+export const getRepublishTicketsMutationKey = () => ['republishTickets'] as const;
+
+export const getRepublishTicketsMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof republishTickets>>,
+    TError,
+    RepublishTicketsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof republishTickets>>,
+  TError,
+  RepublishTicketsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRepublishTicketsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof republishTickets>>,
+    RepublishTicketsMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return republishTickets(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RepublishTicketsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof republishTickets>>
+>;
+export type RepublishTicketsMutationBody = ApproveTicketsRequest;
+export type RepublishTicketsMutationError = ErrorType<ProblemResponse>;
+export type RepublishTicketsMutationVariables = { data: ApproveTicketsRequest };
+
+/**
+ * @summary Re-publishes Unpublished tickets without a new review (UC-25, MSG24).
+ */
+export const useRepublishTickets = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof republishTickets>>,
+      TError,
+      RepublishTicketsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof republishTickets>>,
+  TError,
+  RepublishTicketsMutationVariables,
+  TContext
+> => {
+  return useMutation(getRepublishTicketsMutationOptions(options), queryClient);
+};
 export const getGetReviewQueueUrl = (params?: GetReviewQueueParams) => {
   const normalizedParams = new URLSearchParams();
 

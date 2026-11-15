@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset wiki:038-wiki-audit-folder-change
+--changeset wiki:041-wiki-audit-folder-change
 ALTER TABLE audit_log_entry DROP CONSTRAINT ck_audit_log_entry_action;
 ALTER TABLE audit_log_entry ADD CONSTRAINT ck_audit_log_entry_action CHECK (action IN (
     'APPROVE', 'REJECT', 'REQUEST_CHANGES', 'PUBLISH', 'UNPUBLISH', 'IMPORT', 'DELETE',

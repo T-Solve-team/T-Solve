@@ -158,7 +158,7 @@ class SendBackApiIT {
     }
 
     @Test
-    void sendsBackAtomicallyWithVietnamDatesAndPreservesContent_AC_013_5() throws Exception {
+    void sendsBackAtomicallyWithVietnamDatesAndPreservesContent_AC_013_5_AC_010_4() throws Exception {
         var db = TwoTenantDatabases.tenantA();
         UUID first = ticket(db, OPS, "EXPIRED", "SOLUTION_FORM");
         UUID second = ticket(db, SUPPORT, "EXPIRED", "SOLUTION_FORM");
@@ -195,16 +195,15 @@ class SendBackApiIT {
             assertThat(db.queryForObject("select updated_at from ticket where ticket_id = ?", OffsetDateTime.class, id)
                             .toInstant())
                     .isBetween(before, after);
-            assertThat(db.queryForObject("select count(*) from review_decision where ticket_id = ?", Integer.class, id))
+            assertThat(db.queryForObject("select count(*) from ticket_decision where ticket_id = ?", Integer.class, id))
                     .isEqualTo(1);
             assertThat(db.queryForMap(
-                            "select decision, project_manager_id, reason_or_comment from review_decision where ticket_id = ?",
-                            id))
+                            "select decision, reviewer_id, feedback from ticket_decision where ticket_id = ?", id))
                     .containsEntry("decision", "SEND_BACK")
-                    .containsEntry("project_manager_id", MANAGER)
-                    .containsEntry("reason_or_comment", null);
+                    .containsEntry("reviewer_id", MANAGER)
+                    .containsEntry("feedback", null);
             assertThat(db.queryForObject(
-                                    "select decided_at from review_decision where ticket_id = ?",
+                                    "select decided_at from ticket_decision where ticket_id = ?",
                                     OffsetDateTime.class,
                                     id)
                             .toInstant())
@@ -297,7 +296,7 @@ class SendBackApiIT {
     private void assertUnchanged(JdbcTemplate db, UUID id, Map<String, Object> before) {
         assertThat(db.queryForMap("select * from ticket where ticket_id = ?", id))
                 .isEqualTo(before);
-        assertThat(db.queryForObject("select count(*) from review_decision where ticket_id = ?", Integer.class, id))
+        assertThat(db.queryForObject("select count(*) from ticket_decision where ticket_id = ?", Integer.class, id))
                 .isZero();
         verifyNoInteractions(jobs);
     }
@@ -325,16 +324,10 @@ class SendBackApiIT {
     }
 
     private static UUID ticket(JdbcTemplate db, UUID project, String status, String source) {
-        return db.queryForObject(
-                """
+        return db.queryForObject("""
                 insert into ticket (source_ticket_id, project_id, source, status, title, symptoms, root_cause,
                                     resolution_steps, workaround, scope, rejection_reason, change_request_comment, review_due_date)
                 values (?, ?, ?, ?, 'Login fails', 'Error', 'Token', 'Restart', 'Retry', 'Users', 'Old reason', 'Old comment', '2026-11-01') returning ticket_id
-                """,
-                UUID.class,
-                UUID.randomUUID().toString(),
-                project,
-                source,
-                status);
+                """, UUID.class, UUID.randomUUID().toString(), project, source, status);
     }
 }
