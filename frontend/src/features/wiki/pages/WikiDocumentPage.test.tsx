@@ -25,6 +25,7 @@ const document: WikiDocumentDetail = {
   fileName: 'vpn.pdf',
   fileSize: 1024,
   canDelete: false,
+  inTrash: false,
 };
 
 describe('WikiDocumentPage', () => {
@@ -60,7 +61,18 @@ describe('WikiDocumentPage', () => {
     release();
     expect(await screen.findByText(msg('MSG101'))).toBeInTheDocument();
     await waitFor(() => expect(view.router.state.location.pathname).toBe(paths.wikiHome));
+    expect(view.router.state.location.search).toBe(`?space=${document.spaceId}`);
     await waitFor(() => expect(view.queryClient.isFetching()).toBe(0));
+  });
+
+  it('AC-005.18 shows the In trash tag and neither Download nor Delete for a trashed document', async () => {
+    server.use(getGetWikiDocumentMockHandler({ ...document, inTrash: true }));
+    renderApp(paths.wikiDocument(ID), { role: 'KNOWLEDGE_MANAGER' });
+    await screen.findByRole('heading', { name: document.title }, { timeout: 5000 });
+    expect(screen.getByText('In trash')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Download' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Content' }).textContent).toBe(document.content);
   });
 
   it('AC-005.13 keeps the document and confirmation after a failed delete and allows retry', async () => {

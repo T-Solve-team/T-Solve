@@ -2950,12 +2950,13 @@ components:
       allOf:
         - $ref: '#/components/schemas/WikiDocumentSummary'
         - type: object
-          required: [content, fileName, fileSize, canDelete]
+          required: [content, fileName, fileSize, canDelete, inTrash]
           properties:
             content: { type: string, description: Extracted plain text. }
             fileName: { type: string }
             fileSize: { type: integer, format: int64 }
             canDelete: { type: boolean }
+            inTrash: { type: boolean, description: True only on the Knowledge Manager's read of a trashed document. }
     WorkspaceSetupRequest:
       type: object
       required: [companyName, jiraSiteUrl, serviceAccountEmail, serviceAccountToken]

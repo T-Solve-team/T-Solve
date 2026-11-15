@@ -61,6 +61,7 @@ const initialDocuments: WikiDocumentDetail[] = [
     fileName: 'vpn-guide.pdf',
     fileSize: 24680,
     canDelete: false,
+    inTrash: false,
   },
   {
     documentId: '00000000-0000-4000-8000-000000009002',
@@ -76,6 +77,7 @@ const initialDocuments: WikiDocumentDetail[] = [
     fileName: 'employee-handbook.docx',
     fileSize: 18200,
     canDelete: false,
+    inTrash: false,
   },
   {
     documentId: '00000000-0000-4000-8000-000000009003',
@@ -92,6 +94,7 @@ const initialDocuments: WikiDocumentDetail[] = [
     fileName: 'support-procedures.pdf',
     fileSize: 12900,
     canDelete: false,
+    inTrash: false,
   },
 ];
 let documents = initialDocuments.map((document) => ({ ...document }));
@@ -440,6 +443,7 @@ export const handlers: HttpHandler[] = [
           fileName: file.name,
           fileSize: file.size,
           canDelete: true,
+          inTrash: false,
         },
       ];
     });
@@ -489,6 +493,7 @@ export const handlers: HttpHandler[] = [
         getGetWikiDocumentMockHandler({
           ...document,
           canDelete: !isTrashed && space?.accessLevel === 'KNOWLEDGE_MANAGER',
+          inTrash: isTrashed,
         }),
       ],
       request,

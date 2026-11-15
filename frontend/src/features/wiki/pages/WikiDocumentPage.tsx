@@ -4,7 +4,14 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { formatDateTime } from '@/shared/lib';
 import { paths } from '@/shared/routing';
-import { ConfirmDialog, EmptyState, ErrorState, LoadingState, SectionCard } from '@/shared/ui';
+import {
+  ConfirmDialog,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  SectionCard,
+  StatusTag,
+} from '@/shared/ui';
 import { useWikiDocument, wikiDocumentFileUrl } from '../hooks/useWikiDocument';
 import { useWikiTrashMutations } from '../hooks/useWikiTrashMutations';
 import styles from './WikiDocumentPage.module.css';
@@ -30,12 +37,17 @@ export function WikiDocumentPage() {
     <Flex vertical gap="large">
       <SectionCard>
         <Flex justify="space-between" align="center" gap="middle">
-          <Typography.Title level={2}>{data.title}</Typography.Title>
           <Space>
-            <Button href={wikiDocumentFileUrl(data.documentId)} download={data.fileName}>
-              Download
-            </Button>
-            {data.canDelete && (
+            <Typography.Title level={2}>{data.title}</Typography.Title>
+            {data.inTrash && <StatusTag status="IN_TRASH" />}
+          </Space>
+          <Space>
+            {!data.inTrash && (
+              <Button href={wikiDocumentFileUrl(data.documentId)} download={data.fileName}>
+                Download
+              </Button>
+            )}
+            {data.canDelete && !data.inTrash && (
               <Button danger disabled={trash.isPending} onClick={() => setDeleteOpen(true)}>
                 Delete
               </Button>
@@ -72,7 +84,7 @@ export function WikiDocumentPage() {
               { documentId },
               {
                 onSuccess: () => {
-                  void navigate(paths.wikiHome);
+                  void navigate(`${paths.wikiHome}?space=${data.spaceId}`);
                 },
               },
             );

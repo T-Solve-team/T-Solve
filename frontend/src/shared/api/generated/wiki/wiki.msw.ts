@@ -151,6 +151,7 @@ export const getGetWikiDocumentResponseMock = (): WikiDocumentDetail => ({
     fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
     fileSize: faker.number.int(),
     canDelete: faker.datatype.boolean(),
+    inTrash: faker.datatype.boolean(),
   },
 });
 
