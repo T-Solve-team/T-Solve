@@ -204,8 +204,8 @@
       }
     },
     "wiki": {
-      "status": "implementing",
-      "currentPhase": "implement",
+      "status": "completed",
+      "currentPhase": "evaluate",
       "features": {
         "wiki-view-rule": "passing",
         "wiki-browse-api": "passing",
@@ -220,7 +220,7 @@
         "wiki-permissions-api": "passing",
         "wiki-permissions-ui": "passing"
       },
-      "lastUpdated": "2026-11-15T11:18:21.079Z",
+      "lastUpdated": "2026-11-15T11:23:00.911Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
