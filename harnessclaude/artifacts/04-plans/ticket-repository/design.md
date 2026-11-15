@@ -546,8 +546,8 @@ Agreements (four or more personas):
 - The drops are safe in code: nothing but the `knowledge` package reads the five tables, no foreign key points into
   them from outside changeset 001, and no view, trigger or function names any table of this change.
 - The real risk is merge order, not the SQL. Re-checked 2026-11-15 after rebasing: #234, #235, #236 and #241 are
-  merged; #248 (KAN-136 code, changeset 037, `ReviewDecisionRecord` gains UNPUBLISH / REPUBLISH) is open, so this
-  work is stacked on its branch and its pull request targets `main` only after #248 merges.
+  merged; #248 (KAN-136 code, changeset 037, `ReviewDecisionRecord` gains UNPUBLISH / REPUBLISH) merged too, so this
+  work now sits on `main` directly.
 - AC-010.5 is the one place where behavior could change by accident; its tests are not optional.
 
 | Topic | Architect | Security | Performance | User | Devil's advocate | Resolution |

@@ -1745,3 +1745,6 @@
 {"ts":"2026-11-15T04:47:32.371Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication","from":"evaluating","to":"passing"}
 {"ts":"2026-11-15T04:47:32.995Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-buttons","from":"evaluating","to":"passing"}
 {"ts":"2026-11-15T04:52:59.621Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"92b1e9d6bc17b9cb8b8dadf49139a9af763c68cf"}
+{"ts":"2026-11-15T06:14:01.037Z","type":"feature-status","module":"ticket-repository","feature":"ticket-decision-table","from":null,"to":"pending"}
+{"ts":"2026-11-15T06:14:01.273Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":null,"to":"pending"}
+{"ts":"2026-11-15T06:15:28.331Z","type":"spec-approved","module":"ticket-repository","specHash":"a8ff743ebfbb26695e43c6f55435fd1a3aecf2d41f9d853d00c4deca64f743ef"}

@@ -472,7 +472,7 @@ error invalidate the detail, Ticket List and Review History queries. `ReviewTick
 **Feature:** ticket-decision-table
 **Description:** KAN-137, master design "Change 2026-11-15 (2)" (data model, changeset steps 1–2, code, reads).
 Preconditions (risk review): `DashboardRepository.java` and `DashboardOutcomesIT.java` are listed in this module's
-`paths` (design E6); #234, #235, #236 and #241 are merged (done); the work is stacked on #248 (KAN-136, changeset 037)
+`paths` (design E6); #234, #235, #236 and #241 are merged (done); the work follows #248 (KAN-136, changeset 037, merged)
 and is one pull request of its own. New changeset renames `review_decision` to
 `ticket_decision`, copies the import decisions in with `CASE decision WHEN 'APPROVE' THEN 'APPROVED' ELSE decision
 END` (an unknown value must fail on the CHECK) and drops `ticket_import_decision` (AC-010.1,

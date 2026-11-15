@@ -13,6 +13,7 @@ paths:
   - backend/src/test/java/vn/tsolve/ticket/jira/**
   - backend/src/test/java/vn/tsolve/ticket/**/TicketStatus*
   - backend/src/test/java/vn/tsolve/ticket/**/Manual*
+  - backend/src/test/java/vn/tsolve/ticket/**/TicketDecision*
   - backend/src/test/java/vn/tsolve/ticket/**/TicketPublication*
   - backend/src/main/java/vn/tsolve/review/controller/ReviewDecisionController.java
   - backend/src/main/java/vn/tsolve/knowledge/**
@@ -35,6 +36,7 @@ paths:
   - backend/src/main/java/vn/tsolve/project/service/**
   - backend/src/main/resources/application.yml
   - .env.example
+  - README.md
   - backend/src/test/java/vn/tsolve/ticket/**/ImportHistory*
   - backend/src/test/java/vn/tsolve/ticket/**/TicketDetail*
   - frontend/src/features/ticket-import/pages/ImportHistory*
