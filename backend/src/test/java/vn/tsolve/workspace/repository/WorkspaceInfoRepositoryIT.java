@@ -20,8 +20,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.signin.SignInTestFixtures;
 import vn.tsolve.identity.signin.port.TenantScope;
@@ -56,12 +54,6 @@ class WorkspaceInfoRepositoryIT {
 
     @Autowired
     private TokenCipher cipher;
-
-    @Autowired
-    private PlatformTransactionManager transactions;
-
-    @Autowired
-    private JdbcTemplate routingJdbc;
 
     @BeforeEach
     @AfterEach
@@ -149,37 +141,15 @@ class WorkspaceInfoRepositoryIT {
     }
 
     @Test
-    @DisplayName("AC-005.1 legacy snapshot and solution foreign keys still reference legacy_workspace")
-    void preservesLegacyForeignKeysAndRows() {
+    @DisplayName("AC-005.1 legacy workspace rows are kept; the legacy tables that referenced them are gone (KAN-137)")
+    void preservesLegacyRows() {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
-        assertLegacyReferences(db, "legacy_workspace");
         assertThat(db.queryForObject("SELECT count(*) FROM legacy_workspace WHERE id BETWEEN 1 AND 4", Integer.class))
                 .isEqualTo(4);
-
-        scope.runIn(TwoTenantDatabases.ACME, () -> {
-            new TransactionTemplate(transactions).executeWithoutResult(status -> {
-                long legacy = routingJdbc.queryForObject(
-                        "INSERT INTO legacy_workspace (name, domain) VALUES ('Fake legacy', 'IT') RETURNING id",
-                        Long.class);
-                long snapshot = routingJdbc.queryForObject(
-                        "INSERT INTO resolved_ticket_snapshot (workspace_id, source, external_id, title)"
-                                + " VALUES (?, 'CSV', 'KAN-119-legacy-test', 'Fake snapshot') RETURNING id",
-                        Long.class,
-                        legacy);
-                long solution = routingJdbc.queryForObject(
-                        "INSERT INTO solution (workspace_id, title) VALUES (?, 'Fake solution') RETURNING id",
-                        Long.class,
-                        legacy);
-                assertThat(routingJdbc.queryForObject(
-                                "SELECT workspace_id FROM resolved_ticket_snapshot WHERE id = ?", Long.class, snapshot))
-                        .isEqualTo(legacy);
-                assertThat(routingJdbc.queryForObject(
-                                "SELECT workspace_id FROM solution WHERE id = ?", Long.class, solution))
-                        .isEqualTo(legacy);
-                status.setRollbackOnly();
-            });
-            return null;
-        });
+        assertThat(db.queryForObject(
+                        "SELECT to_regclass('resolved_ticket_snapshot') IS NULL AND to_regclass('solution') IS NULL",
+                        Boolean.class))
+                .isTrue();
     }
 
     @Test
@@ -213,7 +183,8 @@ class WorkspaceInfoRepositoryIT {
                 liquibase.update("");
             }
         }
-        assertLegacyReferences(db, "legacy_workspace");
+        assertThat(db.queryForObject("SELECT to_regclass('solution') IS NULL", Boolean.class))
+                .isTrue();
         assertThat(db.queryForObject("SELECT count(*) FROM workspace", Integer.class))
                 .isZero();
     }

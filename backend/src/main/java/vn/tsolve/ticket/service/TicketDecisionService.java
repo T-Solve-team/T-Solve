@@ -14,6 +14,12 @@ public interface TicketDecisionService {
 
     int sendBack(UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds);
 
+    /** Published → Unpublished for the whole batch or none (STORY-009). */
+    int unpublish(UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds);
+
+    /** Unpublished → Published without a new review, for the whole batch or none (STORY-009). */
+    int republish(UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds);
+
     /** The caller supplies a verified Account and its managed Projects in the bound Workspace. */
     int decide(UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds, Action action, String feedback);
 }

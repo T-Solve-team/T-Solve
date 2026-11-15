@@ -31,7 +31,7 @@ import vn.tsolve.ticket.entity.Ticket;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.mapper.TicketReviewMapper;
-import vn.tsolve.ticket.repository.ReviewDecisionRecordRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
 import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.repository.TicketRepository.Placement;
@@ -50,7 +50,7 @@ class TicketDetailVisibilityTest {
     private TicketEvidenceRepository evidence;
 
     @Mock
-    private ReviewDecisionRecordRepository decisions;
+    private TicketDecisionRepository decisions;
 
     @Mock
     private ScopeAccessService scopeAccess;

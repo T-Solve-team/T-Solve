@@ -55,6 +55,30 @@ public class ReviewDecisionController {
         return new DecisionResult(decisions.sendBack(actor.id(), managed, body.ticketIds()));
     }
 
+    @PostMapping("/unpublish")
+    @Operation(operationId = "unpublishTickets", summary = "Unpublish Published tickets")
+    @ApiResponse(responseCode = "400")
+    @ApiResponse(responseCode = "403")
+    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "409")
+    public DecisionResult unpublish(
+            @AuthenticationPrincipal TSolveUser actor, @Valid @RequestBody ApproveRequest body) {
+        var managed = managedProjects(actor);
+        return new DecisionResult(decisions.unpublish(actor.id(), managed, body.ticketIds()));
+    }
+
+    @PostMapping("/republish")
+    @Operation(operationId = "republishTickets", summary = "Re-publish Unpublished tickets without a new review")
+    @ApiResponse(responseCode = "400")
+    @ApiResponse(responseCode = "403")
+    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "409")
+    public DecisionResult republish(
+            @AuthenticationPrincipal TSolveUser actor, @Valid @RequestBody ApproveRequest body) {
+        var managed = managedProjects(actor);
+        return new DecisionResult(decisions.republish(actor.id(), managed, body.ticketIds()));
+    }
+
     @PostMapping("/reject")
     @Operation(operationId = "rejectTickets")
     public DecisionResult reject(@AuthenticationPrincipal TSolveUser actor, @Valid @RequestBody RejectRequest body) {
@@ -85,10 +109,12 @@ public class ReviewDecisionController {
     public record ApproveRequest(@NotEmpty @Size(max = 500) List<@NotNull UUID> ticketIds) {}
 
     public record RejectRequest(
-            @NotEmpty @Size(max = 500) List<@NotNull UUID> ticketIds, @NotBlank @Size(max = 1000) String reason) {}
+            @NotEmpty @Size(max = 500) List<@NotNull UUID> ticketIds,
+            @NotBlank @Size(max = 1000) String reason) {}
 
     public record RequestChangesRequest(
-            @NotEmpty @Size(max = 500) List<@NotNull UUID> ticketIds, @NotBlank @Size(max = 1000) String comment) {}
+            @NotEmpty @Size(max = 500) List<@NotNull UUID> ticketIds,
+            @NotBlank @Size(max = 1000) String comment) {}
 
     public record DecisionResult(int count) {}
 }
