@@ -1,7 +1,7 @@
 {
   "fe-foundation": {
-    "specHash": "6aef3f501ac532c7dbd01e18dadf819752bf01bb6837f8c278089960be7765d6",
-    "approvedAt": "2026-11-12T16:56:54.365Z",
+    "specHash": "56c03d35d6d9d8f5a60203809f23a8bd5539c3a899265775784fe0830482916d",
+    "approvedAt": "2026-11-14T20:43:23.285Z",
     "by": "user",
     "acs": {
       "AC-001.1": "THE web app SHALL know exactly five roles — , , ,",
@@ -12,6 +12,7 @@
       "AC-001.6": "IF  fails for another reason, THEN THE web app SHALL show the session error page with",
       "AC-001.7": "IF  lists a role the web app does not know, THEN THE session SHALL leave it out and keep",
       "AC-001.8": "WHEN  answers 200, THE session SHALL keep the ids of the user, the Departments, the",
+      "AC-001.9": "WHEN  answers 200, THE session SHALL keep each Project's  ( or",
       "AC-002.1": "WHEN a signed-in user opens a screen, THE web app SHALL show it if the user has at least one of the",
       "AC-002.2": "IF the user has none of the screen's roles, THEN THE web app SHALL show the 403 page with MSG08 in place",
       "AC-002.3": "IF nobody is signed in, THEN THE web app SHALL send the user to Login with a  link to the page",
@@ -183,8 +184,8 @@
     }
   },
   "be-foundation": {
-    "specHash": "045771d2bbca1abf203acc1bc361c2bb5133a937987e910ce56a074869b1c922",
-    "approvedAt": "2026-11-13T16:31:24.803Z",
+    "specHash": "08fc1f42b9c2ee789d3656b587a124808cc72e6668ed8969038b8fb350640788",
+    "approvedAt": "2026-11-14T20:43:33.768Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a request fails with a , THE backend SHALL answer 404 with content type",
@@ -219,6 +220,7 @@
       "AC-003.4": "WHILE a lookup has no implementation yet (its module is not built), THE backend SHALL answer  with",
       "AC-003.7": "WHILE the staging stub flag  is true, THE backend SHALL report",
       "AC-003.5": "IF nobody is signed in, THEN THE backend SHALL answer  with 401 and  .",
+      "AC-003.8": "WHEN  is answered, THE backend SHALL give each entry of  the  ( or",
       "AC-003.6": "THE response of  SHALL match the  schema of",
       "AC-004.1": "THE backend SHALL list the audited actions as : , , ,",
       "AC-004.2": "WHEN a module calls  inside its transaction, THE backend SHALL store one audit",

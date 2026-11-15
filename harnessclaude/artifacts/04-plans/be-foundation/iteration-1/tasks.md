@@ -137,3 +137,22 @@ database tests with Testcontainers; tell the `dashboard-audit` owner the table a
 **Dependencies:** Task 2 (`TSolveUser.current()`); `platform` STORY-001…STORY-003 merged (`workspaces` with UUID
 ids, `TenantContext`, row-level security setup, the guard test and its allow-lists)
 **Estimated size:** medium
+
+## Task 5: Project status in `/me`
+
+**Story:** STORY-003
+**Feature:** me-project-status
+**Jira:** KAN-133 (BUG-216) · branch `feat/KAN-133-ticket-repository-manual-entry`
+**Description:** Spec change of 2026-11-15 (AC-003.8, BUG-216). `ProjectMembership` gets `projectStatus`, a new
+`common/session/dto/ProjectStatus` enum (`ACTIVE`, `REMOVED`; `common` does not depend on `project`), required and
+`enumAsRef`. `ProjectMembershipLookup` Javadoc says it returns the status. `SessionServiceImpl` passes the entries
+through unchanged. The contract change is fe-foundation Task 13 (do it first).
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/common/session/dto/ProjectStatus.java`
+- Modify: `backend/src/main/java/vn/tsolve/common/session/dto/ProjectMembership.java`,
+  `backend/src/main/java/vn/tsolve/common/session/lookup/ProjectMembershipLookup.java`
+- Test: `backend/src/test/java/vn/tsolve/common/session/SessionServiceImplTest.java` (AC-003.8: the status of each
+  Project as the lookup gives it), `SessionControllerTest.java` (the JSON has `projectStatus`)
+**Covers:** AC-003.8
+**Dependencies:** fe-foundation Task 13 (contract)
+**Estimated size:** small

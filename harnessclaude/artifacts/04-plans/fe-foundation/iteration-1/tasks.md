@@ -310,3 +310,19 @@ before or with KAN-106's PR.
 **Covers:** AC-008.1, AC-008.2, AC-008.3, AC-008.4
 **Dependencies:** none (merge before or with identity Task 27)
 **Estimated size:** small
+
+## Task 13: Project status in the `/me` contract and the session
+
+**Story:** STORY-001
+**Feature:** session-project-status
+**Description:** Spec change of 2026-11-15 (AC-001.9, BUG-216). In `frontend/openapi/tsolve-api.yaml`: a new
+`ProjectStatus` schema (`enum [ACTIVE, REMOVED]`) and `ProjectMembership.projectStatus` (required). Run
+`npm run generate:api`. The session passes it through as it does the other fields; every fixture user's Projects get
+`projectStatus: 'ACTIVE'`, and the session and fixture tests that build a `ProjectMembership` set it.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/` (regenerated)
+- Modify: `frontend/src/mocks/session.ts`
+- Test: `frontend/src/shared/auth/session.test.ts` (AC-001.9), `frontend/src/shared/auth/useSession.test.tsx`
+**Covers:** AC-001.9
+**Dependencies:** none (be-foundation Task 5 serves it; ticket-repository BUG-216 filters on it)
+**Estimated size:** small

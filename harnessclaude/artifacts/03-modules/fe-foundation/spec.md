@@ -20,6 +20,7 @@ owner: BA
 | 2026-11-01 | STORY-006 | AC-006.3 also holds MSG142 "No Spaces found" and MSG143 "Not a member of any Project." (type inline); AC-006.7 lists them | Identity STORY-003 (AC-003.15, AC-003.16) needs two empty-state messages; numbered by incrementing from MSG141, Report3 System_Messages updated later (KAN-237, Hiếu, 1/11) |
 | 2026-11-01 | STORY-006 | New AC-006.9 (`MSG_NEW_3`, a duplicate Ticket ID inside one CSV file); AC-006.7 also allows `MSG_NEW_3` | import-ticket-list asked for MSG78 as a new code, but System_Messages v3460 gave MSG78 to another message; the Import Preview shows the row error from the catalog (import-ticket-list D14, user decision 2026-11-01) |
 | 2026-11-12 | STORY-008 | AC-008.1 reworded (order: call, then clear); AC-008.2 reworded (navigate the browser to `logoutUrl`, full page load); new AC-008.4 (no usable `logoutUrl` or old 204: clear and go to Login, no error); AC-008.3 says Login inside the app; Interface: logout answers 200 `{ logoutUrl }` | `POST /api/v1/auth/logout` answers 200 `{ logoutUrl }` instead of 204 (identity Task 27, AC-002.1, AC-002.8; KAN-311, KAN-106) so Keycloak ends its own SSO session |
+| 2026-11-15 | STORY-001 | New AC-001.9: the session keeps each Project's `projectStatus` and every fixture user's Projects carry one; Interface Contracts: `ProjectMembership.projectStatus` (`ProjectStatus` enum `ACTIVE`, `REMOVED`) | BUG-216 (KAN-133 review): ticket-repository AC-006.12 offers only Active managed Projects, and `/me` had no Project status (be-foundation AC-003.8; the user, 15/11: add the status) |
 
 ## Requirements
 
@@ -74,6 +75,8 @@ owner: BA
   - AC-001.8: WHEN `GET /api/v1/me` answers 200, THE session SHALL keep the ids of the user, the Departments, the
     Projects and the Spaces as the UUID strings the response gives, and `isProjectManagerOf` and `isMemberOf` SHALL
     take a Project id as a UUID string and compare it as a string, never as a number.
+  - AC-001.9: WHEN `GET /api/v1/me` answers 200, THE session SHALL keep each Project's `projectStatus` (`ACTIVE` or
+    `REMOVED`) as the response gives it, and every fixture user's Projects SHALL carry one (be-foundation AC-003.8).
 
 ### STORY-002: Screens open by role
 - As the team, we want each screen to open only for the roles the Permission Matrix allows so that users see only
@@ -350,7 +353,7 @@ owner: BA
       roles:          Role[]                 # contains EMPLOYEE for every user
       department:     DepartmentRef | null   # anyOf [$ref, {type: 'null'}]; only a Project Manager has one
       departments:    DepartmentRef[]        # PM: [department]; Ticket Resolver: Departments of their Projects; others: []
-      projects:       ProjectMembership[]    # fields unchanged; ids are UUID strings
+      projects:       ProjectMembership[]    # ids are UUID strings; projectStatus added 2026-11-15
       managedSpaces:  SpaceRef[]             # Knowledge Manager's Spaces; others: []
       workspaceReady: boolean
   Role:     enum [EMPLOYEE, TICKET_RESOLVER, PROJECT_MANAGER, KNOWLEDGE_MANAGER, ADMIN]
@@ -358,7 +361,8 @@ owner: BA
   UserSummary:       { id: uuid, fullName: string, email: string (email) }
   DepartmentRef:     { departmentId: uuid, name: string }
   ProjectMembership: { projectId: uuid, jiraProjectKey: string, departmentId: uuid, departmentName: string,
-                       roleInProject: ProjectRole }
+                       roleInProject: ProjectRole, projectStatus: ProjectStatus }
+  ProjectStatus:     enum [ACTIVE, REMOVED]
   SpaceRef:          { spaceId: uuid, name: string }
   ```
   401 = signed out. `POST /api/v1/auth/logout` → 200 `{ logoutUrl: string }` (was 204; identity AC-002.1, KAN-311).
