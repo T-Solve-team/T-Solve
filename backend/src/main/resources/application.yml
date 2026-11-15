@@ -34,8 +34,8 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.xml
   servlet:
     multipart:
-      max-file-size: 10MB     # SRS UC-21: one CSV of at most 10 MB (MSG28)
-      max-request-size: 101MB
+      max-file-size: 20MB     # Services enforce 10 MB: CSV MSG28, manual Evidence MSG34, Wiki file MSG28.
+      max-request-size: 101MB # Ten 10 MB Wiki files plus the metadata and multipart headers.
 
 server:
   port: ${SERVER_PORT}
@@ -56,6 +56,9 @@ logging:
     # their own line with the exception type and SQLState instead
     org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
     org.hibernate.orm.jdbc.batch: OFF
+    # the JDK HTTP client logs every request header at FINE, including the Jira service account's Authorization
+    # header; pinned so a DEBUG root never writes it (D69)
+    sun.net.www: INFO
 
 management:
   endpoints:
@@ -67,6 +70,8 @@ tsolve:
   wiki:
     search:
       min-similarity: ${WIKI_SEARCH_MIN_SIMILARITY:0.55}
+  workspace:
+    secret-key: ${WORKSPACE_SECRET_KEY}
   # File storage (STORY-007) on Garage through the S3 API. Empty endpoint = no storage beans (see StorageConfig).
   storage:
     endpoint: ${FILE_STORAGE_ENDPOINT:}
@@ -83,6 +88,14 @@ tsolve:
     username: ${JOBS_DB_USER:}
     password: ${JOBS_DB_PASSWORD:}
     worker-count: ${TSOLVE_WORKER_COUNT:4}
+    # How long a request waits for a Jobs connection before the outbox reports an outage (BUG-226).
+    connection-timeout: ${TSOLVE_WORKER_CONNECTION_TIMEOUT:3s}
+    email:
+      interval: ${TSOLVE_WORKER_EMAIL_INTERVAL:30s}
+      backoff: ${TSOLVE_WORKER_EMAIL_BACKOFF:5m,15m}
+      lease: ${TSOLVE_WORKER_EMAIL_LEASE:5m}
+      batch-size: ${TSOLVE_WORKER_EMAIL_BATCH_SIZE:20}
+      retention: ${TSOLVE_WORKER_EMAIL_RETENTION:30d}
   review:
     events:
       # Review Queue event stream: interval of the keep-alive comment (ISO-8601 duration).
@@ -95,12 +108,7 @@ tsolve:
     # Dev and mock only: the Workspace bound when the worker enqueues a suggestion job and no Workspace is bound yet
     # (until platform binds the request's Workspace). One of TSOLVE_MOCK_ACTIVE_WORKSPACES. Empty = not bound.
     dev-workspace-id: ${TSOLVE_TRACKER_DEV_WORKSPACE_ID:}
-    # Stand-in for the Workspace's Jira service account until `workspace` stores it (UC-08/09): posts the MSG80
-    # suggestion comment (tracker STORY-012). Any of the three empty = no comment is posted.
     jira:
-      site-url: ${JIRA_SITE_URL:}
-      service-account-email: ${JIRA_SERVICE_ACCOUNT_EMAIL:}
-      service-account-token: ${JIRA_SERVICE_ACCOUNT_TOKEN:}
       connect-timeout: 5s
       read-timeout: 10s
   # Central sign-in (identity). All from the environment with no default: startup fails while one is missing.
@@ -113,6 +121,7 @@ tsolve:
   # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId", ids as UUIDs. Empty = nobody can import.
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
+    workspace-id: ${TSOLVE_STUB_WORKSPACE_ID:}
     inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}
     # Jira import: "projectId:JIRAKEY,projectId:JIRAKEY". A Project without a key cannot pull from Jira (MSG50).
     jira-keys: ${TSOLVE_STUB_JIRA_KEYS:}

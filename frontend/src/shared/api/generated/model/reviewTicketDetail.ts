@@ -9,6 +9,7 @@
 import type { ProjectRef } from './projectRef';
 import type { ReviewEvidence } from './reviewEvidence';
 import type { ReviewSolution } from './reviewSolution';
+import type { ReviewTicketDetailDepartment } from './reviewTicketDetailDepartment';
 import type { TicketSource } from './ticketSource';
 import type { TicketStatus } from './ticketStatus';
 
@@ -21,6 +22,12 @@ export interface ReviewTicketDetail {
   title: string;
   description: string;
   project: ProjectRef;
+  /** @nullable */
+  department?: ReviewTicketDetailDepartment;
+  /** @nullable */
+  resolvedDate?: string | null;
+  /** @nullable */
+  sourceLink?: string | null;
   source: TicketSource;
   status: TicketStatus;
   /** @nullable */

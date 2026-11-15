@@ -9,6 +9,9 @@ Spec: `artifacts/03-modules/jira-app/spec.md` (approved, version 5b0840de) · Mo
 Research: `artifacts/01-research/RESEARCH-004-ask-ai-before-creating-a-jira-issue.md`
 Conventions: `jira-app/AGENTS.md` (UI Kit only, one server client, no secrets, fewest scopes), `backend/AGENTS.md`.
 
+> **KAN-126 (STORY-001..009):** planned in `iteration-2/design.md` and `iteration-2/tasks.md` (2026-11-11), on
+> branch `feat/KAN-126-jira-app-solution-form-v2`.
+
 This branch (`feat/KAN-294-jira-app-ask-tsolve`) covers **STORY-010 only**. KAN-126 (STORY-001..009) has its own
 `design.md` on `feat/KAN-126-jira-app-solution-form`; when both reach `main` the two designs are joined into one
 file (sections per story group) — the add/add conflict is expected and resolved by keeping both.
