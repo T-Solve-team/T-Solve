@@ -28,7 +28,7 @@ const document: WikiDocumentDetail = {
 };
 
 describe('WikiDocumentPage', () => {
-  it('AC-002.19 shows the complete header, literal plain text and original-file Download (BUG-220)', async () => {
+  it('AC-002.19 shows the complete header, literal plain text and original-file Download (BUG-255)', async () => {
     server.use(getGetWikiDocumentMockHandler(document));
     const view = renderApp(paths.wikiDocument(ID), { role: 'EMPLOYEE' });
     expect(
@@ -77,7 +77,7 @@ describe('WikiDocumentPage', () => {
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
   });
 
-  it('AC-002.20 shows MSG110 for an invalid document id without requesting it (BUG-221)', async () => {
+  it('AC-002.20 shows MSG110 for an invalid document id without requesting it (BUG-256)', async () => {
     const requests = vi.fn();
     server.use(
       http.get('*/api/v1/wiki/documents/:documentId', () => {

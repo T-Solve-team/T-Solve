@@ -76,7 +76,7 @@ class WikiSearchIT extends WikiReadTestSupport {
     }
 
     @Test
-    void filtersAccessStatusAndDeletedDepartmentsForBothSearchPaths_AC_002_7_AC_002_8_BUG_240() {
+    void filtersAccessStatusAndDeletedDepartmentsForBothSearchPaths_AC_002_7_AC_002_8_BUG_258() {
         long other = space(department("Other"), "Other Wiki");
         long hidden = space(department("Hidden"), "Hidden Wiki");
         long deletedDepartment = department("Deleted");

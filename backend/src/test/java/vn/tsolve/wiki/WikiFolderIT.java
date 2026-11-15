@@ -108,7 +108,7 @@ class WikiFolderIT extends WikiReadTestSupport {
     }
 
     @Test
-    void recountsCommittedDocumentsAfterRestrictRollsBack_AC_003_9_AC_003_12_BUG_243() {
+    void recountsCommittedDocumentsAfterRestrictRollsBack_AC_003_9_AC_003_12_BUG_266() {
         WikiFolder folder = create("Upload destination", null);
         UUID documentId = document(space, folder.folderId(), "Upload", "DEPARTMENT", "PENDING", "Text");
         WikiDocumentRepository realDocuments = context.getBean(WikiDocumentRepository.class);

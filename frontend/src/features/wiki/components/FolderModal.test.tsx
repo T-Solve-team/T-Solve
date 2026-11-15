@@ -151,7 +151,7 @@ describe('FolderModal', () => {
   });
 
   it.each(['Rename', 'Move'])(
-    'AC-003.15 %s submits the existing folder id, name and parent and refreshes after 200 (BUG-224)',
+    'AC-003.15 %s submits the existing folder id, name and parent and refreshes after 200 (BUG-263)',
     async (action) => {
       const submitted = vi.fn();
       server.use(
@@ -229,7 +229,7 @@ describe('FolderModal', () => {
   );
 
   it.each(['New folder', 'Move'])(
-    'AC-003.15 clears MSG86 when the parent changes in %s and preserves Name (BUG-245)',
+    'AC-003.15 clears MSG86 when the parent changes in %s and preserves Name (BUG-268)',
     async (action) => {
       const submitted = vi.fn(() => problem(400, 'MSG86'));
       server.use(
@@ -250,7 +250,7 @@ describe('FolderModal', () => {
     },
   );
 
-  it('AC-003.16 keeps the folder name and cancel behavior when extracting DeleteFolderModal (BUG-244)', async () => {
+  it('AC-003.16 keeps the folder name and cancel behavior when extracting DeleteFolderModal (BUG-267)', async () => {
     const user = userEvent.setup();
     const submitted = vi.fn(() => new Response(null, { status: 204 }));
     server.use(http.delete('*/api/v1/wiki/folders/:folderId', submitted));
@@ -299,7 +299,7 @@ describe('FolderModal', () => {
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
   });
 
-  it('AC-003.15 persists create, rename and move through the feature mocks and AC-003.16 deletes the refreshed folder (BUG-225)', async () => {
+  it('AC-003.15 persists create, rename and move through the feature mocks and AC-003.16 deletes the refreshed folder (BUG-264)', async () => {
     server.resetHandlers();
     const { user, dialog, name } = await openFolder();
     await user.click(name);

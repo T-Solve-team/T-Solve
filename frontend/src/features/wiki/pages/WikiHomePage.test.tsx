@@ -72,7 +72,7 @@ async function openHome(query = `?space=${IT}&folder=${FOLDER}`) {
 }
 
 describe('WikiHomePage', () => {
-  it('AC-002.14 groups Company-wide documents before Spaces and renders access levels, folders and columns (BUG-219, BUG-220)', async () => {
+  it('AC-002.14 groups Company-wide documents before Spaces and renders access levels, folders and columns (BUG-254, BUG-255)', async () => {
     await openHome();
     const company = screen.getByRole('region', { name: 'Company-wide' });
     expect(
@@ -155,7 +155,7 @@ describe('WikiHomePage', () => {
     expect(screen.getByRole('tree', { name: 'Folders' })).toHaveTextContent('Guides');
   });
 
-  it('AC-002.17 clears a foreign or missing folder on 404 and shows the selected Space root (BUG-241)', async () => {
+  it('AC-002.17 clears a foreign or missing folder on 404 and shows the selected Space root (BUG-259)', async () => {
     const requestedFolders: (string | null)[] = [];
     server.use(
       http.get('*/api/v1/wiki/spaces/:spaceId/documents', ({ request }) => {
@@ -220,7 +220,7 @@ describe('WikiHomePage', () => {
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
   });
 
-  it('AC-002.21 shows the three buttons for the selected manager Space and navigates Upload with folder context (BUG-219)', async () => {
+  it('AC-002.21 shows the three buttons for the selected manager Space and navigates Upload with folder context (BUG-254)', async () => {
     const { user, router } = await openHome();
     expect(screen.getByRole('button', { name: 'New folder' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Space Settings' })).toBeEnabled();
@@ -230,7 +230,7 @@ describe('WikiHomePage', () => {
     expect(new URLSearchParams(router.state.location.search).get('folder')).toBe(FOLDER);
   });
 
-  it('AC-002.21 navigates Space Settings and hides manager buttons on a different Space (BUG-219)', async () => {
+  it('AC-002.21 navigates Space Settings and hides manager buttons on a different Space (BUG-254)', async () => {
     const { user, router, queryClient } = await openHome();
     await user.click(screen.getByRole('button', { name: 'Space Settings' }));
     await waitFor(() => expect(router.state.location.pathname).toBe(paths.spaceSettings(IT)));
